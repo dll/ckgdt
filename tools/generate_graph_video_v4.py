@@ -651,10 +651,10 @@ def build_slides(
         ),
         SlideSpec(
             title="项目总览",
-            subtitle="认识知识图谱学习系统的整体结构",
+            subtitle="认识知识图谱教学系统的整体结构",
             bullets=["Flutter", "Dart", "SQLite", "UML", "知识图谱", "测试资产"],
             narration=(
-                "本视频聚焦 Flutter 与 Dart 技术栈下的知识图谱学习系统设计。"
+                "本视频聚焦 Flutter 与 Dart 技术栈下的知识图谱教学系统设计。"
                 "重点说明系统架构、核心类、顺序流程、开发过程、测试资产以及运行效果。"
             ),
             image_path=crops.get("framework_full"),

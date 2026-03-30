@@ -665,7 +665,7 @@ def build_slides(
         ),
         SlideSpec(
             title="项目总览",
-            subtitle="认识知识图谱学习系统的整体结构",
+            subtitle="认识知识图谱教学系统的整体结构",
             bullets=[
                 "Flutter 页面层",
                 "Dart 业务层",

@@ -8,7 +8,7 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: LoginPage()));
     await tester.pumpAndSettle();
 
-    expect(find.text('移动应用开发\n知识图谱学习系统'), findsOneWidget);
+    expect(find.text('移动应用开发\n知识图谱教学系统'), findsOneWidget);
     expect(find.text('学号/工号'), findsOneWidget);
     expect(find.text('密码'), findsOneWidget);
     expect(find.text('登录'), findsOneWidget);
