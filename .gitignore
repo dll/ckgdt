@@ -54,3 +54,4 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+docs/分层架构HelloWorldAndroid版AI问答系统/
