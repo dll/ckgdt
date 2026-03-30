@@ -20,6 +20,7 @@ skinparam class {
 }
 
 package "Flutter UI Layer" {
+package "Flutter UI Layer" {
   class MyApp {
     +build(context)
   }
