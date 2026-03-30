@@ -1,7 +1,7 @@
 # mad-fd
 
 #### Description
-移动应用开发知识图谱的学习系统
+移动应用开发知识图谱的教学系统
 
 #### Software Architecture
 Software architecture description

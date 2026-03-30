@@ -89,7 +89,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 16),
                     const Text(
-                      '移动应用开发\n知识图谱学习系统',
+                      '移动应用开发\n知识图谱教学系统',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 24,

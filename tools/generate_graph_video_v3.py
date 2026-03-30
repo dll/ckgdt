@@ -335,7 +335,7 @@ def build_slides() -> List[SlideSpec]:
 
     return [
         SlideSpec(
-            title="Flutter + Dart 知识图谱学习系统",
+            title="Flutter + Dart 知识图谱教学系统",
             subtitle="核心功能教程 v3",
             bullets=[
                 "Flutter UI",
@@ -345,7 +345,7 @@ def build_slides() -> List[SlideSpec]:
                 "知识图谱",
             ],
             narration=(
-                "本视频聚焦移动应用开发知识图谱学习系统的核心设计。"
+                "本视频聚焦移动应用开发知识图谱教学系统的核心设计。"
                 "重点说明 Flutter 与 Dart 的技术分工，解释系统框架图、类图、顺序图，"
                 "并进一步说明知识图谱功能的开发过程，以及测试代码、测试用例和测试报告等工程化成果。"
             ),
@@ -393,7 +393,7 @@ def build_slides() -> List[SlideSpec]:
                 "这张框架图展示了系统整体架构。顶部和左侧是 Flutter 页面层，包括登录、首页、图谱、视频、资料、测验、进度与收藏等页面。"
                 "中间是 Service 与 DAO 层，负责把页面请求转换为数据库读写。"
                 "底部是 SQLite 本地数据库，用于保存图谱结构和学习行为。"
-                "因此，知识图谱不仅是一个页面，而是整个学习系统的组织核心。"
+                "因此，知识图谱不仅是一个页面，而是整个教学系统的组织核心。"
             ),
             image_path=FRAMEWORK_IMG if FRAMEWORK_IMG.exists() else None,
             image_caption="框架图解释：UI、业务逻辑、数据存储三层分工",
