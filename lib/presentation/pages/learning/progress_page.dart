@@ -17,7 +17,7 @@ class _ProgressPageState extends State<ProgressPage> with SingleTickerProviderSt
   final _learningRecordDao = LearningRecordDao();
   final _authService = AuthService();
   late TabController _tabController;
-  
+
   List<QuizResultModel> _results = [];
   Map<String, dynamic> _quizSummary = {};
   Map<String, dynamic> _learningStats = {};
@@ -63,7 +63,7 @@ class _ProgressPageState extends State<ProgressPage> with SingleTickerProviderSt
         preferredSize: const Size.fromHeight(48),
         child: TabBar(
           controller: _tabController,
-          labelColor: const Color(0xFF667eea),
+          labelColor: Theme.of(context).colorScheme.primary,
           unselectedLabelColor: Colors.grey,
           tabs: const [
             Tab(text: '测验成绩'),
@@ -107,7 +107,7 @@ class _ProgressPageState extends State<ProgressPage> with SingleTickerProviderSt
               ],
             ),
             const SizedBox(height: 24),
-            
+
             // 成绩趋势图
             if (_results.isNotEmpty) ...[
               const Text('成绩趋势', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -115,7 +115,7 @@ class _ProgressPageState extends State<ProgressPage> with SingleTickerProviderSt
               SizedBox(height: 200, child: _buildChart()),
               const SizedBox(height: 24),
             ],
-            
+
             // 测验记录
             const Text('测验记录', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
@@ -163,7 +163,7 @@ class _ProgressPageState extends State<ProgressPage> with SingleTickerProviderSt
               ],
             ),
             const SizedBox(height: 24),
-            
+
             const Text('学习建议', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             Card(
@@ -226,10 +226,10 @@ class _ProgressPageState extends State<ProgressPage> with SingleTickerProviderSt
           LineChartBarData(
             spots: spots,
             isCurved: true,
-            color: const Color(0xFF667eea),
+            color: Theme.of(context).colorScheme.primary,
             barWidth: 3,
             dotData: const FlDotData(show: true),
-            belowBarData: BarAreaData(show: true, color: const Color(0xFF667eea).withValues(alpha: 0.1)),
+            belowBarData: BarAreaData(show: true, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)),
           ),
         ],
       ),
@@ -239,7 +239,7 @@ class _ProgressPageState extends State<ProgressPage> with SingleTickerProviderSt
   Widget _buildTip(IconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: const Color(0xFF667eea)),
+        Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: 12),
         Expanded(child: Text(text)),
       ],

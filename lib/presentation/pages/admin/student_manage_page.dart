@@ -13,7 +13,7 @@ class StudentManagePage extends StatefulWidget {
 class _StudentManagePageState extends State<StudentManagePage> {
   final _userDao = UserDao();
   final _authService = AuthService();
-  
+
   List<UserModel> _students = [];
   bool _isLoading = true;
 
@@ -41,7 +41,7 @@ class _StudentManagePageState extends State<StudentManagePage> {
       context: context,
       builder: (context) => _AddStudentDialog(),
     );
-    
+
     if (result != null) {
       final student = UserModel(
         userId: result['userId']!,
@@ -49,7 +49,7 @@ class _StudentManagePageState extends State<StudentManagePage> {
         role: 'student',
         createdAt: DateTime.now().toIso8601String(),
       );
-      
+
       final success = await _authService.createStudent(student);
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -65,7 +65,7 @@ class _StudentManagePageState extends State<StudentManagePage> {
       context: context,
       builder: (context) => _EditStudentDialog(student: student),
     );
-    
+
     if (result != null) {
       final updatedStudent = UserModel(
         userId: student.userId,
@@ -73,7 +73,7 @@ class _StudentManagePageState extends State<StudentManagePage> {
         role: student.role,
         createdAt: student.createdAt,
       );
-      
+
       final success = await _authService.updateStudent(updatedStudent);
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -103,7 +103,7 @@ class _StudentManagePageState extends State<StudentManagePage> {
         ],
       ),
     );
-    
+
     if (confirm == true) {
       final success = await _authService.deleteStudent(student.userId);
       if (success && mounted) {
@@ -120,8 +120,7 @@ class _StudentManagePageState extends State<StudentManagePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('学生管理'),
-        backgroundColor: const Color(0xFF667eea),
-        foregroundColor: Colors.white,
+
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -187,7 +186,7 @@ class _StudentManagePageState extends State<StudentManagePage> {
                 ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addStudent,
-        backgroundColor: const Color(0xFF667eea),
+        backgroundColor: Theme.of(context).colorScheme.primary,
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
@@ -267,7 +266,7 @@ class _AddStudentDialogState extends State<_AddStudentDialog> {
 
 class _EditStudentDialog extends StatefulWidget {
   final UserModel student;
-  
+
   const _EditStudentDialog({required this.student});
 
   @override

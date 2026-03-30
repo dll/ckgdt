@@ -12,7 +12,7 @@ class WrongAnswersPage extends StatefulWidget {
 class _WrongAnswersPageState extends State<WrongAnswersPage> {
   final _wrongAnswerDao = WrongAnswerDao();
   final _authService = AuthService();
-  
+
   List<Map<String, dynamic>> _wrongAnswers = [];
   bool _isLoading = true;
 
@@ -86,8 +86,7 @@ class _WrongAnswersPageState extends State<WrongAnswersPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('错题本'),
-        backgroundColor: const Color(0xFF667eea),
-        foregroundColor: Colors.white,
+
         actions: [
           if (_wrongAnswers.isNotEmpty)
             IconButton(

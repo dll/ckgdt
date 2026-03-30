@@ -17,7 +17,7 @@ class _QuizPageState extends State<QuizPage> {
   final _quizDao = QuizDao();
   final _wrongAnswerDao = WrongAnswerDao();
   final _authService = AuthService();
-  
+
   List<String> _chapters = [];
   String? _selectedChapter;
   List<QuestionModel> _questions = [];
@@ -52,7 +52,7 @@ class _QuizPageState extends State<QuizPage> {
       _selectedChapter = chapter;
       _isLoading = true;
     });
-    
+
     try {
       final questions = await _quizDao.getQuestionsByChapter(chapter);
       setState(() {
@@ -71,15 +71,15 @@ class _QuizPageState extends State<QuizPage> {
 
   void _submitAnswer() {
     if (_selectedAnswer == null) return;
-    
+
     final currentQuestion = _questions[_currentIndex];
     final isCorrect = _selectedAnswer == currentQuestion.answerIndex;
-    
+
     // 记录错题
     if (!isCorrect) {
       _recordWrongAnswer(currentQuestion);
     }
-    
+
     setState(() {
       _answered = true;
       if (isCorrect) _correctCount++;
@@ -95,8 +95,8 @@ class _QuizPageState extends State<QuizPage> {
           userId: user.userId,
           questionId: question.id ?? 0,
           question: question.question,
-          userAnswer: _selectedAnswer != null && _selectedAnswer! < options.length 
-              ? options[_selectedAnswer!] 
+          userAnswer: _selectedAnswer != null && _selectedAnswer! < options.length
+              ? options[_selectedAnswer!]
               : '',
           correctAnswer: question.correctAnswer,
           chapter: _selectedChapter ?? '',
@@ -145,12 +145,12 @@ class _QuizPageState extends State<QuizPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                _correctCount > _questions.length / 2 
-                    ? Icons.celebration 
+                _correctCount > _questions.length / 2
+                    ? Icons.celebration
                     : Icons.sentiment_neutral,
                 size: 64,
-                color: _correctCount > _questions.length / 2 
-                    ? Colors.green 
+                color: _correctCount > _questions.length / 2
+                    ? Colors.green
                     : Colors.orange,
               ),
               const SizedBox(height: 16),
@@ -262,14 +262,14 @@ class _QuizPageState extends State<QuizPage> {
 
   Widget _buildQuizView() {
     final question = _questions[_currentIndex];
-    
+
     return Column(
       children: [
         // 进度条
         LinearProgressIndicator(
           value: (_currentIndex + 1) / _questions.length,
           backgroundColor: Colors.grey[200],
-          valueColor: const AlwaysStoppedAnimation(Color(0xFF667eea)),
+          valueColor: AlwaysStoppedAnimation(Theme.of(context).colorScheme.primary),
         ),
         Expanded(
           child: SingleChildScrollView(
@@ -294,10 +294,10 @@ class _QuizPageState extends State<QuizPage> {
                   final options = question.options;
                   final isSelected = _selectedAnswer == index;
                   final isCorrect = index == question.answerIndex;
-                  
+
                   Color? bgColor;
                   Color? borderColor;
-                  
+
                   if (_answered) {
                     if (isCorrect) {
                       bgColor = Colors.green[100];
@@ -307,10 +307,10 @@ class _QuizPageState extends State<QuizPage> {
                       borderColor = Colors.red;
                     }
                   } else if (isSelected) {
-                    bgColor = const Color(0xFF667eea).withValues(alpha: 0.3);
-                    borderColor = const Color(0xFF667eea);
+                    bgColor = Theme.of(context).colorScheme.primary.withValues(alpha: 0.3);
+                    borderColor = Theme.of(context).colorScheme.primary;
                   }
-                  
+
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: InkWell(
@@ -340,7 +340,7 @@ class _QuizPageState extends State<QuizPage> {
                                 ),
                                 color: isSelected ? borderColor : null,
                               ),
-                              child: isSelected 
+                              child: isSelected
                                   ? const Icon(Icons.check, size: 16, color: Colors.white)
                                   : null,
                             ),
@@ -363,15 +363,15 @@ class _QuizPageState extends State<QuizPage> {
             width: double.infinity,
             height: 48,
             child: ElevatedButton(
-              onPressed: _answered 
-                  ? _nextQuestion 
+              onPressed: _answered
+                  ? _nextQuestion
                   : (_selectedAnswer != null ? _submitAnswer : null),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF667eea),
+                backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Colors.white,
               ),
               child: Text(
-                _answered 
+                _answered
                     ? (_currentIndex < _questions.length - 1 ? '下一题' : '完成测验')
                     : '提交答案'
               ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/constants/app_theme.dart';
 import '../../../services/auth_service.dart';
 import '../home/home_page.dart';
 
@@ -14,7 +15,7 @@ class _LoginPageState extends State<LoginPage> {
   final _userIdController = TextEditingController();
   final _passwordController = TextEditingController();
   final _authService = AuthService();
-  
+
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -65,12 +66,8 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-          ),
+        decoration: BoxDecoration(
+          gradient: AppGradientTheme.of(context).verticalGradient,
         ),
         child: SafeArea(
           child: Center(
@@ -158,7 +155,7 @@ class _LoginPageState extends State<LoginPage> {
                               child: ElevatedButton(
                                 onPressed: _isLoading ? null : _login,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF667eea),
+                                  backgroundColor: Theme.of(context).colorScheme.primary,
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8),

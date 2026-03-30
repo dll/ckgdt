@@ -22,7 +22,7 @@ class _VideoListPageState extends State<VideoListPage> {
   Future<void> _loadVideos() async {
     try {
       final db = await _dbHelper.database;
-      
+
       // First check if we have videos in database
       var result = await db.query(
         'resource_files',
@@ -30,7 +30,7 @@ class _VideoListPageState extends State<VideoListPage> {
         whereArgs: ['video'],
         orderBy: 'chapter',
       );
-      
+
       if (result.isEmpty) {
         // Insert video resources from assets
         final videos = [
@@ -50,11 +50,11 @@ class _VideoListPageState extends State<VideoListPage> {
           {'file_name': '第六章 综合开发实践2.mp4', 'file_path': 'assets/第六章 综合开发实践2.mp4', 'file_type': 'video', 'chapter': '第六章 综合开发实践2', 'description': '视频教程'},
           {'file_name': '第六章 综合开发实践3.mp4', 'file_path': 'assets/第六章 综合开发实践3.mp4', 'file_type': 'video', 'chapter': '第六章 综合开发实践3', 'description': '视频教程'},
         ];
-        
+
         for (final video in videos) {
           await db.insert('resource_files', video);
         }
-        
+
         result = await db.query(
           'resource_files',
           where: 'file_type = ?',
@@ -62,7 +62,7 @@ class _VideoListPageState extends State<VideoListPage> {
           orderBy: 'chapter',
         );
       }
-      
+
       setState(() {
         _videos = result;
         _isLoading = false;
@@ -80,8 +80,7 @@ class _VideoListPageState extends State<VideoListPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('视频教程'),
-        backgroundColor: const Color(0xFF667eea),
-        foregroundColor: Colors.white,
+
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

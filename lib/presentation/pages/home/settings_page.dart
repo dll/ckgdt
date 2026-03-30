@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../core/constants/app_theme.dart';
+import '../../../main.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/settings_service.dart';
 import '../learning/video_page.dart';
@@ -13,7 +15,8 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  bool _isDarkMode = false;
+  ThemeMode _themeMode = ThemeMode.system;
+  int _colorIndex = 0;
   bool _notificationsEnabled = true;
 
   @override
@@ -23,23 +26,28 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _loadSettings() async {
-    final isDark = await SettingsService.isDarkMode();
+    final mode = await SettingsService.getThemeMode();
+    final index = await SettingsService.getColorIndex();
     final notifEnabled = await SettingsService.isNotificationEnabled();
-    setState(() {
-      _isDarkMode = isDark;
-      _notificationsEnabled = notifEnabled;
-    });
+    if (mounted) {
+      setState(() {
+        _themeMode = mode;
+        _colorIndex = index;
+        _notificationsEnabled = notifEnabled;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final authService = AuthService();
     final user = authService.currentUser;
+    final primaryColor = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('设置'),
-        backgroundColor: const Color(0xFF667eea),
+        backgroundColor: primaryColor,
         foregroundColor: Colors.white,
       ),
       body: ListView(
@@ -47,10 +55,8 @@ class _SettingsPageState extends State<SettingsPage> {
           // 用户信息
           Container(
             padding: const EdgeInsets.all(20),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-              ),
+            decoration: BoxDecoration(
+              gradient: AppGradientTheme.of(context).verticalGradient,
             ),
             child: Row(
               children: [
@@ -59,10 +65,10 @@ class _SettingsPageState extends State<SettingsPage> {
                   backgroundColor: Colors.white,
                   child: Text(
                     (user?.realName ?? user?.userId ?? 'U').substring(0, 1),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF667eea),
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 ),
@@ -80,8 +86,11 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                       ),
                       Text(
-                        user?.role == 'admin' ? '管理员' : 
-                        user?.role == 'teacher' ? '教师' : '学生',
+                        user?.role == 'admin'
+                            ? '管理员'
+                            : user?.role == 'teacher'
+                                ? '教师'
+                                : '学生',
                         style: const TextStyle(color: Colors.white70),
                       ),
                     ],
@@ -90,37 +99,46 @@ class _SettingsPageState extends State<SettingsPage> {
               ],
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // 学习工具
-          _buildSectionHeader('学习工具'),
+          _buildSectionHeader(context, '学习工具'),
           _buildMenuItem(
             context,
             icon: Icons.error,
             title: '错题本',
             subtitle: '查看和复习错题',
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WrongAnswersPage())),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const WrongAnswersPage()),
+            ),
           ),
           _buildMenuItem(
             context,
             icon: Icons.star,
             title: '我的收藏',
             subtitle: '查看收藏的知识点',
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesPage())),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const FavoritesPage()),
+            ),
           ),
           _buildMenuItem(
             context,
             icon: Icons.video_library,
             title: '视频教程',
             subtitle: '观看学习视频',
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VideoListPage())),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const VideoListPage()),
+            ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // 系统设置
-          _buildSectionHeader('系统设置'),
+          _buildSectionHeader(context, '系统设置'),
           _buildMenuItem(
             context,
             icon: Icons.notifications,
@@ -136,32 +154,136 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           _buildMenuItem(
             context,
-            icon: Icons.dark_mode,
-            title: '深色模式',
-            subtitle: '切换应用主题',
-            trailing: Switch(
-              value: _isDarkMode,
-              onChanged: (value) async {
-                await SettingsService.setDarkMode(value);
-                setState(() => _isDarkMode = value);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(value ? '已开启深色模式' : '已关闭深色模式')),
-                );
-              },
-            ),
-          ),
-          _buildMenuItem(
-            context,
             icon: Icons.storage,
             title: '清除缓存',
             subtitle: '释放存储空间',
             onTap: () => _showClearCacheDialog(context),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
+          // 外观设置
+          _buildSectionHeader(context, '外观设置'),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('主题色', style: TextStyle(fontSize: 14)),
+                const SizedBox(height: 12),
+                Row(
+                  children: List.generate(AppColors.presets.length, (i) {
+                    final preset = AppColors.presets[i];
+                    final selected = _colorIndex == i;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 20),
+                      child: GestureDetector(
+                        onTap: () async {
+                          await SettingsService.setColorIndex(i);
+                          setState(() => _colorIndex = i);
+                          MyApp.refreshTheme();
+                        },
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: preset.primary,
+                                shape: BoxShape.circle,
+                                border: selected
+                                    ? Border.all(
+                                        color: preset.primary,
+                                        width: 3,
+                                      )
+                                    : null,
+                                boxShadow: selected
+                                    ? [
+                                        BoxShadow(
+                                          color: preset.primary
+                                              .withValues(alpha: 0.4),
+                                          blurRadius: 8,
+                                          spreadRadius: 1,
+                                        )
+                                      ]
+                                    : null,
+                              ),
+                              child: selected
+                                  ? const Icon(
+                                      Icons.check,
+                                      color: Colors.white,
+                                      size: 22,
+                                    )
+                                  : null,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              preset.name,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color:
+                                    selected ? preset.primary : Colors.grey,
+                                fontWeight: selected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          // 显示模式 —— SegmentedButton
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('显示模式', style: TextStyle(fontSize: 14)),
+                const SizedBox(height: 12),
+                SegmentedButton<ThemeMode>(
+                  segments: const [
+                    ButtonSegment(
+                      value: ThemeMode.system,
+                      label: Text('跟随系统'),
+                      icon: Icon(Icons.brightness_auto),
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.light,
+                      label: Text('浅色'),
+                      icon: Icon(Icons.light_mode),
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.dark,
+                      label: Text('深色'),
+                      icon: Icon(Icons.dark_mode),
+                    ),
+                  ],
+                  selected: {_themeMode},
+                  onSelectionChanged: (Set<ThemeMode> selected) async {
+                    final mode = selected.first;
+                    await SettingsService.setThemeMode(mode);
+                    setState(() => _themeMode = mode);
+                    MyApp.refreshTheme();
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          const SizedBox(height: 16),
+
           // 关于
-          _buildSectionHeader('关于'),
+          _buildSectionHeader(context, '关于'),
           _buildMenuItem(
             context,
             icon: Icons.info,
@@ -176,22 +298,22 @@ class _SettingsPageState extends State<SettingsPage> {
             subtitle: '获取帮助或提交建议',
             onTap: () => _showTip(context, '帮助与反馈功能开发中'),
           ),
-          
+
           const SizedBox(height: 32),
         ],
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.bold,
-          color: Color(0xFF667eea),
+          color: Theme.of(context).colorScheme.primary,
         ),
       ),
     );
@@ -205,13 +327,17 @@ class _SettingsPageState extends State<SettingsPage> {
     VoidCallback? onTap,
     Widget? trailing,
   }) {
+    final primary = Theme.of(context).colorScheme.primary;
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: const Color(0xFF667eea).withValues(alpha: 0.1),
-        child: Icon(icon, color: const Color(0xFF667eea)),
+        backgroundColor: primary.withValues(alpha: 0.1),
+        child: Icon(icon, color: primary),
       ),
       title: Text(title),
-      subtitle: Text(subtitle, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+      subtitle: Text(
+        subtitle,
+        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+      ),
       trailing: trailing ?? const Icon(Icons.chevron_right),
       onTap: onTap,
     );
@@ -252,11 +378,11 @@ class _SettingsPageState extends State<SettingsPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.school, color: Color(0xFF667eea)),
-            SizedBox(width: 12),
-            Text('移动应用开发知识图谱'),
+            Icon(Icons.school, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 12),
+            const Text('移动应用开发知识图谱'),
           ],
         ),
         content: const Column(

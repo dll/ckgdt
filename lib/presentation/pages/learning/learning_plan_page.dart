@@ -46,8 +46,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('学习计划'),
-        backgroundColor: const Color(0xFF667eea),
-        foregroundColor: Colors.white,
+
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
@@ -61,7 +60,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showCreatePlanDialog(context),
-        backgroundColor: const Color(0xFF667eea),
+        backgroundColor: Theme.of(context).colorScheme.primary,
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
@@ -94,17 +93,17 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                       value: totalProgress / 100,
                       minHeight: 10,
                       backgroundColor: Colors.grey[200],
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                          Color(0xFF667eea)),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                          Theme.of(context).colorScheme.primary),
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Text(
                   '${totalProgress.toInt()}%',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF667eea),
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
               ],
