@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">3AI+PUML</string>
+    <string name="tab_text_1">聊天</string>
+    <string name="tab_text_2">语音</string>
+    <string name="tab_text_3">PUML</string>
+    <string name="action_settings">设置</string>
+    <string name="section_format">Hello World from section: %1$d</string>
+    <string name="chat_title">聊天</string>
+    <string name="refresh_button">刷新</string>
+    <string name="clear_button">清除</string>
+    <string name="save_button">保存</string>
+    <string name="load_button">加载最新</string>
+    
+    <!-- Chat Fragment -->
+    <string name="send_button">发送</string>
+    <string name="message_hint">输入消息...</string>
+    <string name="status_connected">已连接</string>
+    <string name="status_disconnected">未连接</string>
+    <string name="status_connecting">连接中...</string>
+    <string name="connection_error">连接错误</string>
+    
+    <!-- Voice Fragment -->
+    <string name="start_recording">开始录音</string>
+    <string name="stop_recording">停止录音</string>
+    <string name="voice_recording">录音中...</string>
+    <string name="voice_ready">准备就绪</string>
+    <string name="voice_processing">处理中...</string>
+    <string name="voice_permission_required">需要录音权限</string>
+    <string name="voice_permission_denied">录音权限被拒绝</string>
+    <string name="voice_recording_error">录音错误</string>
+    <string name="voice_instructions">点击下方按钮开始录音，再次点击停止录音</string>
+    
+    <!-- PUML Fragment -->
+    <string name="generate_button">生成PUML</string>
+    <string name="function_description">选择AI模型并点击生成按钮，系统将根据选择的模型生成相应的PlantUML时序图代码。</string>
+    <string name="model_selector">选择AI模型</string>
+    <string name="function_title">功能说明</string>
+    <string name="connection_status">连接状态</string>
+    <string name="status_ready">准备就绪</string>
+    <string name="record_button">录音按钮</string>
+</resources>

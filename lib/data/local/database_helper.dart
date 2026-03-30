@@ -21,53 +21,63 @@ class DatabaseHelper {
     try {
       final dbFolder = await getDatabasesPath();
       final dbPath = p.join(dbFolder, 'knowledge_graph.db');
-      
+
       debugPrint('=== DatabaseHelper: Checking path: $dbPath');
-      
+
       // Check if database file exists
       final file = File(dbPath);
       final exists = await file.exists();
       debugPrint('=== DatabaseHelper: Database exists = $exists');
-      
+
       Database db;
-      
+
       if (!exists) {
         // Copy from assets
         try {
           debugPrint('=== DatabaseHelper: Trying to load from assets...');
           final data = await rootBundle.load('assets/learning_data.db');
           final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-          
+
           // Create directory if needed
           await Directory(dbFolder).create(recursive: true);
           await file.writeAsBytes(bytes);
-          
+
           debugPrint('=== DatabaseHelper: Copied database from assets');
         } catch (e) {
           debugPrint('=== DatabaseHelper: Error loading from assets: $e');
           // Create empty database
-          db = await openDatabase(dbPath, version: 1, onCreate: _createTables);
+          db = await openDatabase(
+            dbPath,
+            version: 2,
+            onCreate: _createTables,
+            onUpgrade: _onUpgrade,
+          );
           _database = db;
           return db;
         }
       }
-      
-      db = await openDatabase(dbPath, version: 1);
+
+      db = await openDatabase(
+        dbPath,
+        version: 2,
+        onCreate: _createTables,
+        onUpgrade: _onUpgrade,
+      );
       debugPrint('=== DatabaseHelper: Database opened successfully');
-      
+
       // Verify tables exist
       final tables = await db.rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
       debugPrint('=== DatabaseHelper: Tables in database: ${tables.map((t) => t['name']).toList()}');
-      
+
       // Verify data
       final graphCount = await db.rawQuery('SELECT COUNT(*) as count FROM graphs');
       debugPrint('=== DatabaseHelper: Graphs count: ${graphCount.first}');
       final questionCount = await db.rawQuery('SELECT COUNT(*) as count FROM questions');
       debugPrint('=== DatabaseHelper: Questions count: ${questionCount.first}');
-      
+
       // Import students if needed
       await _importStudents(db);
-      
+
       return db;
     } catch (e) {
       debugPrint('=== DatabaseHelper: ERROR = $e');
@@ -80,13 +90,13 @@ class DatabaseHelper {
       final result = await db.rawQuery('SELECT COUNT(*) as count FROM users WHERE role = "student"');
       final count = result.first['count'] as int? ?? 0;
       debugPrint('=== DatabaseHelper: Current students count = $count');
-      
+
       if (count == 0) {
         try {
           final jsonStr = await rootBundle.loadString('assets/students.json');
           final students = json.decode(jsonStr) as List;
           debugPrint('=== DatabaseHelper: Loaded ${students.length} students from JSON');
-          
+
           final batch = db.batch();
           for (final s in students) {
             batch.insert('users', {
@@ -246,7 +256,9 @@ class DatabaseHelper {
         description TEXT
       )
     ''');
-    
+
+    await _createNewTablesV2(db);
+
     // Add admin user
     await db.insert('users', {
       'user_id': '419116',
@@ -255,6 +267,53 @@ class DatabaseHelper {
       'created_at': DateTime.now().toIso8601String(),
       'is_active': 1,
     });
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await _createNewTablesV2(db);
+    }
+  }
+
+  Future<void> _createNewTablesV2(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS generated_materials(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        type TEXT NOT NULL,
+        file_path TEXT,
+        content TEXT,
+        chapter TEXT,
+        created_at TEXT,
+        size INTEGER DEFAULT 0,
+        thumbnail_path TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS puml_files(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        file_path TEXT,
+        rendered_url TEXT,
+        diagram_type TEXT DEFAULT 'class',
+        chapter TEXT,
+        created_at TEXT,
+        updated_at TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ai_configs(
+        id INTEGER PRIMARY KEY CHECK(id=1),
+        provider TEXT DEFAULT 'deepseek',
+        api_key TEXT,
+        model TEXT DEFAULT 'deepseek-chat',
+        base_url TEXT,
+        updated_at TEXT
+      )
+    ''');
   }
 
   Future<void> close() async {

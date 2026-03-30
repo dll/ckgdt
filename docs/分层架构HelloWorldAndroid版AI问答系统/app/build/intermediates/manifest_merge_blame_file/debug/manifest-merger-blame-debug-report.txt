@@ -1,0 +1,129 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.example.aipumlapp"
+4    android:versionCode="1"
+5    android:versionName="1.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="24"
+9        android:targetSdkVersion="32" />
+10
+11    <!-- 网络权限 -->
+12    <uses-permission android:name="android.permission.INTERNET" />
+12-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:6:5-67
+12-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:6:22-64
+13    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+13-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:7:5-79
+13-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:7:22-76
+14
+15    <!-- 音频录制权限 -->
+16    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+16-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:10:5-71
+16-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:10:22-68
+17    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+17-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:11:5-80
+17-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:11:22-77
+18
+19    <!-- 存储权限 -->
+20    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+20-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:14:5-81
+20-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:14:22-78
+21    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+21-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:15:5-80
+21-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:15:22-77
+22
+23    <application
+23-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:17:5-47:19
+24        android:allowBackup="true"
+24-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:18:9-35
+25        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+25-->[androidx.core:core:1.7.0] C:\Users\ldl\.gradle\caches\transforms-3\044efa5003bafaae5cec776523727751\transformed\core-1.7.0\AndroidManifest.xml:24:18-86
+26        android:dataExtractionRules="@xml/data_extraction_rules"
+26-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:19:9-65
+27        android:debuggable="true"
+28        android:extractNativeLibs="false"
+29        android:fullBackupContent="@xml/backup_rules"
+29-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:20:9-54
+30        android:icon="@mipmap/ic_launcher"
+30-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:21:9-43
+31        android:label="@string/app_name"
+31-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:22:9-41
+32        android:roundIcon="@mipmap/ic_launcher_round"
+32-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:23:9-54
+33        android:supportsRtl="true"
+33-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:24:9-35
+34        android:theme="@style/Theme.HelloWorld"
+34-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:25:9-48
+35        android:usesCleartextTraffic="true" >
+35-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:26:9-44
+36        <activity
+36-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:29:9-38:20
+37            android:name="com.example.helloworld.MainActivity"
+37-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:30:13-41
+38            android:exported="true"
+38-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:31:13-36
+39            android:label="@string/app_name"
+39-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:32:13-45
+40            android:theme="@style/Theme.HelloWorld" >
+40-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:33:13-52
+41            <intent-filter>
+41-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:34:13-37:29
+42                <action android:name="android.intent.action.MAIN" />
+42-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:35:17-69
+42-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:35:25-66
+43
+44                <category android:name="android.intent.category.LAUNCHER" />
+44-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:36:17-77
+44-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:36:27-74
+45            </intent-filter>
+46        </activity>
+47
+48        <!-- 标签页活动 -->
+49        <activity
+49-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:41:9-45:59
+50            android:name="com.example.helloworld.TabbedActivity"
+50-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:42:13-43
+51            android:exported="false"
+51-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:43:13-37
+52            android:label="@string/app_name"
+52-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:44:13-45
+53            android:theme="@style/AppTheme.NoActionBar" />
+53-->E:\2025-2026\软件工程基础\EA\OOD\OOD\分层架构HelloWorldAndroid版AI问答系统\app\src\main\AndroidManifest.xml:45:13-56
+54
+55        <provider
+55-->[androidx.emoji2:emoji2:1.0.0] C:\Users\ldl\.gradle\caches\transforms-3\6c960a190ba4255510c04d260169d251\transformed\emoji2-1.0.0\AndroidManifest.xml:26:9-34:20
+56            android:name="androidx.startup.InitializationProvider"
+56-->[androidx.emoji2:emoji2:1.0.0] C:\Users\ldl\.gradle\caches\transforms-3\6c960a190ba4255510c04d260169d251\transformed\emoji2-1.0.0\AndroidManifest.xml:27:13-67
+57            android:authorities="com.example.aipumlapp.androidx-startup"
+57-->[androidx.emoji2:emoji2:1.0.0] C:\Users\ldl\.gradle\caches\transforms-3\6c960a190ba4255510c04d260169d251\transformed\emoji2-1.0.0\AndroidManifest.xml:28:13-68
+58            android:exported="false" >
+58-->[androidx.emoji2:emoji2:1.0.0] C:\Users\ldl\.gradle\caches\transforms-3\6c960a190ba4255510c04d260169d251\transformed\emoji2-1.0.0\AndroidManifest.xml:29:13-37
+59            <meta-data
+59-->[androidx.emoji2:emoji2:1.0.0] C:\Users\ldl\.gradle\caches\transforms-3\6c960a190ba4255510c04d260169d251\transformed\emoji2-1.0.0\AndroidManifest.xml:31:13-33:52
+60                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+60-->[androidx.emoji2:emoji2:1.0.0] C:\Users\ldl\.gradle\caches\transforms-3\6c960a190ba4255510c04d260169d251\transformed\emoji2-1.0.0\AndroidManifest.xml:32:17-75
+61                android:value="androidx.startup" />
+61-->[androidx.emoji2:emoji2:1.0.0] C:\Users\ldl\.gradle\caches\transforms-3\6c960a190ba4255510c04d260169d251\transformed\emoji2-1.0.0\AndroidManifest.xml:33:17-49
+62            <meta-data
+62-->[androidx.lifecycle:lifecycle-process:2.4.0] C:\Users\ldl\.gradle\caches\transforms-3\3d0db5a5bc1f3d6f24e2cb257e48b08a\transformed\lifecycle-process-2.4.0\AndroidManifest.xml:31:13-33:52
+63                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+63-->[androidx.lifecycle:lifecycle-process:2.4.0] C:\Users\ldl\.gradle\caches\transforms-3\3d0db5a5bc1f3d6f24e2cb257e48b08a\transformed\lifecycle-process-2.4.0\AndroidManifest.xml:32:17-78
+64                android:value="androidx.startup" />
+64-->[androidx.lifecycle:lifecycle-process:2.4.0] C:\Users\ldl\.gradle\caches\transforms-3\3d0db5a5bc1f3d6f24e2cb257e48b08a\transformed\lifecycle-process-2.4.0\AndroidManifest.xml:33:17-49
+65        </provider>
+66
+67        <uses-library
+67-->[androidx.window:window:1.0.0] C:\Users\ldl\.gradle\caches\transforms-3\e609815b7b43c1bb652de7bb51719624\transformed\window-1.0.0\AndroidManifest.xml:25:9-27:40
+68            android:name="androidx.window.extensions"
+68-->[androidx.window:window:1.0.0] C:\Users\ldl\.gradle\caches\transforms-3\e609815b7b43c1bb652de7bb51719624\transformed\window-1.0.0\AndroidManifest.xml:26:13-54
+69            android:required="false" />
+69-->[androidx.window:window:1.0.0] C:\Users\ldl\.gradle\caches\transforms-3\e609815b7b43c1bb652de7bb51719624\transformed\window-1.0.0\AndroidManifest.xml:27:13-37
+70        <uses-library
+70-->[androidx.window:window:1.0.0] C:\Users\ldl\.gradle\caches\transforms-3\e609815b7b43c1bb652de7bb51719624\transformed\window-1.0.0\AndroidManifest.xml:28:9-30:40
+71            android:name="androidx.window.sidecar"
+71-->[androidx.window:window:1.0.0] C:\Users\ldl\.gradle\caches\transforms-3\e609815b7b43c1bb652de7bb51719624\transformed\window-1.0.0\AndroidManifest.xml:29:13-51
+72            android:required="false" />
+72-->[androidx.window:window:1.0.0] C:\Users\ldl\.gradle\caches\transforms-3\e609815b7b43c1bb652de7bb51719624\transformed\window-1.0.0\AndroidManifest.xml:30:13-37
+73    </application>
+74
+75</manifest>

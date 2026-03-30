@@ -1,10 +1,10 @@
 name: knowledge_graph_app
 description: 移动应用开发知识图谱教学系统
-publish_to: 'none'
+publish_to: "none"
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: ">=3.0.0 <4.0.0"
 
 dependencies:
   flutter:
@@ -15,6 +15,10 @@ dependencies:
   path: ^1.9.0
   fl_chart: ^0.66.0
   shared_preferences: ^2.2.2
+  http: ^1.2.1
+  pdf: ^3.10.8
+  printing: ^5.13.1
+  cached_network_image: ^3.3.1
 
 dev_dependencies:
   flutter_test:
@@ -23,7 +27,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  
+
   assets:
     - assets/
     - assets/learning_data.db

@@ -543,3 +543,56 @@ feat_xxx/
 6. **`lib/data/repositories/` 目前为空**：当前 DAO 直接被 Service/Page 调用，引入 Repository 层前无需修改现有代码。
 7. **TLS 警告**：当前 Git 配置存在 TLS 证书验证禁用警告，建议在安全网络环境下推送。
 8. **`main.dart` 重复 import**：文件中存在重复的 `theme_manager.dart` 和 `settings_service.dart` import，后续清理时注意不要引入新的重复。
+
+---
+
+## AI 服务集成
+
+> **当前版本支持**：DeepSeek / 智谱清言 GLM
+
+### 新增服务
+
+| 服务 | 文件 | 说明 |
+|------|------|------|
+| `AiService` | `lib/services/ai_service.dart` | chat/generateSlides/generateScript/generateQuestions/generatePuml/testConnection |
+| `PlantUmlService` | `lib/services/plantuml_service.dart` | Kroki.io POST 渲染，fallback 到 plantuml.com |
+| `SlideGeneratorService` | `lib/services/slide_generator_service.dart` | pdf package 生成 PDF 课件 |
+| `MaterialService` | `lib/services/material_service.dart` | 生成素材的 CRUD 管理 |
+
+### 新增页面（素材中心）
+
+| 页面 | 路径 | 功能 |
+|------|------|------|
+| `MaterialsHubPage` | `pages/materials/materials_hub_page.dart` | 替代 DocumentListPage，4 Tab 素材中心 |
+| `AiAssistPage` | `pages/materials/ai_assist_page.dart` | AI 对话/脚本生成/UML生成 |
+| `SlideGeneratorPage` | `pages/materials/slide_generator_page.dart` | AI → PDF 课件生成 |
+| `PumlManagerPage` | `pages/materials/puml_manager_page.dart` | PlantUML 编辑 + Kroki 渲染 |
+| `AiSettingsPage` | `pages/materials/ai_settings_page.dart` | API Key 和服务商配置 |
+
+### AI 配置规范
+
+- API Key 存入 `ai_configs` 表（单行 id=1），通过 `AiConfigDao` 读写
+- 不要在代码中硬编码 API Key
+- 配置入口：素材中心 AppBar → 设置图标 → `AiSettingsPage`
+
+### PlantUML 渲染规范
+
+- 优先使用 Kroki.io（POST，无需编码）
+- 失败时 fallback 到 plantuml.com（需 deflate + base64 编码）
+- 渲染 URL 存入 `puml_files.rendered_url`，用 `CachedNetworkImage` 显示
+
+### PDF 课件字体
+
+- 中文字体需放置于 `assets/fonts/NotoSansSC-Regular.ttf`
+- 未配置字体时自动降级（中文显示为方块，功能不影响）
+- 在 pubspec.yaml 的 flutter.fonts 中声明
+
+---
+
+## 开发计划
+
+详见 `docs/flutter_development_plan.md`，包含：
+- Python 版功能对照表
+- 15 周分阶段计划（对齐 MADQA 计划）
+- AI 集成技术规范（含踩坑经验）
+- 数据库版本历史

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="appbar_padding_top">8dp</dimen>
+    <dimen name="fab_margin">16dp</dimen>
+    <dimen name="text_margin">16dp</dimen>
+    <dimen name="button_height">48dp</dimen>
+    <dimen name="button_margin">8dp</dimen>
+    <dimen name="edittext_margin">16dp</dimen>
+    <dimen name="recording_button_size">200dp</dimen>
+</resources>
