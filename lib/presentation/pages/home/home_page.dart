@@ -8,7 +8,7 @@ import '../quiz/quiz_page.dart';
 import '../quiz/wrong_answers_page.dart';
 import '../learning/progress_page.dart';
 import '../learning/video_page.dart';
-import '../learning/document_page.dart';
+import '../materials/materials_hub_page.dart';
 import '../learning/learning_plan_page.dart';
 import '../admin/student_manage_page.dart';
 import '../admin/data_import_page.dart';
@@ -156,7 +156,7 @@ class _HomePageState extends State<HomePage> {
       case 3:
         return const VideoListPage();
       case 4:
-        return const DocumentListPage();
+        return const MaterialsHubPage();
       case 5:
         return const ProgressPage();
       case 6:

@@ -1,0 +1,177 @@
+@startuml Android版AI问答系统类图
+!theme plain
+
+' 包声明
+package "UI层" {
+    class MainActivity {
+        +onCreate(savedInstanceState: Bundle): void
+    }
+    
+    class TabbedActivity {
+        -SectionsPagerAdapter mSectionsPagerAdapter
+        -ViewPager mViewPager
+        -ServiceManager serviceManager
+        -ApiService apiService
+        +onCreate(savedInstanceState: Bundle): void
+        +onCreateOptionsMenu(menu: Menu): boolean
+        +onOptionsItemSelected(item: MenuItem): boolean
+        +initializeServices(): void
+    }
+    
+    class ChatFragment {
+        -EditText inputText
+        -RecyclerView recyclerView
+        -MessageAdapter messageAdapter
+        -ServiceManager serviceManager
+        -StorageService storageService
+        -TextToSpeech tts
+        +onCreateView(inflater: LayoutInflater, container: ViewGroup, savedInstanceState: Bundle): View
+        +onViewCreated(view: View, savedInstanceState: Bundle): void
+        +sendMessage(): void
+        +speak(text: String): void
+        +loadMessages(): void
+        +saveMessages(): void
+        +clearMessages(): void
+        +onInit(status: int): void
+    }
+}
+
+package "Service层" {
+    class AIService {
+        -ApiService apiService
+        +getAnswer(question: String, model: AIModel): String
+    }
+    
+    class ApiService {
+        -Context context
+        -Handler mainHandler
+        +getAnswer(question: String, model: AIModel, callback: AnswerCallback): void
+        +recognizeSpeech(audioData: byte[], callback: SpeechCallback): void
+        +synthesizeSpeech(text: String, callback: SpeechCallback): void
+        -makeApiCall(url: String, requestBody: String, callback: ApiCallback): void
+        -callZhipuAPI(question: String, callback: AnswerCallback): void
+        -callDeepSeekAPI(question: String, callback: AnswerCallback): void
+    }
+    
+    class ServiceManager {
+        -static ServiceManager instance
+        -MessageAdapter messageAdapter
+        -StorageService storageService
+        -ApiService apiService
+        +getInstance(): ServiceManager
+        +getMessageAdapter(): MessageAdapter
+        +setMessageAdapter(adapter: MessageAdapter): void
+        +getStorageService(): StorageService
+        +setStorageService(service: StorageService): void
+        +getApiService(): ApiService
+        +setApiService(service: ApiService): void
+    }
+    
+    enum AIModel {
+        DEEPSEEK
+        ZHIPU
+    }
+}
+
+package "数据层" {
+    class Message {
+        -String sender
+        -String content
+        -String type
+        -String timestamp
+        +Message(sender: String, content: String, type: String, timestamp: String)
+        +getSender(): String
+        +getContent(): String
+        +getType(): String
+        +getTimestamp(): String
+        +setSender(sender: String): void
+        +setContent(content: String): void
+        +setType(type: String): void
+        +setTimestamp(timestamp: String): void
+    }
+    
+    class MessageAdapter {
+        -List<Message> messages
+        -Context context
+        -ChatFragment chatFragment
+        +MessageAdapter(context: Context, messages: List<Message>, fragment: ChatFragment)
+        +onCreateViewHolder(parent: ViewGroup, viewType: int): MessageViewHolder
+        +onBindViewHolder(holder: MessageViewHolder, position: int): void
+        +getItemCount(): int
+        +addMessage(message: Message): void
+        +clearMessages(): void
+        +setMessages(newMessages: List<Message>): void
+        +getMessages(): List<Message>
+    }
+    
+    class StorageService {
+        -Context context
+        -SharedPreferences prefs
+        +StorageService(context: Context)
+        +saveMessages(messages: List<Message>): void
+        +loadMessages(): List<Message>
+        +clearMessages(): void
+        +saveSetting(key: String, value: String): void
+        +loadSetting(key: String, defaultValue: String): String
+        +saveSettings(settings: JSONObject): void
+        +loadSettings(): JSONObject
+        +savePUMLChart(name: String, pumlCode: String): void
+        +loadPUMLChart(name: String): String
+    }
+    
+    class MessageViewHolder {
+        -TextView messageText
+        -TextView timeText
+        -ImageButton speakButton
+        +MessageViewHolder(itemView: View)
+    }
+}
+
+package "接口" {
+    interface AnswerCallback {
+        +onSuccess(answer: String): void
+        +onError(error: String): void
+    }
+    
+    interface SpeechCallback {
+        +onSuccess(result: String): void
+        +onError(error: String): void
+    }
+    
+    interface ApiCallback {
+        +onSuccess(response: String): void
+        +onError(error: String): void
+    }
+}
+
+' 关系定义
+MainActivity --> TabbedActivity : 启动
+
+TabbedActivity --> ServiceManager : 使用
+TabbedActivity --> ApiService : 使用
+
+ChatFragment --> ServiceManager : 使用
+ChatFragment --> StorageService : 使用
+ChatFragment --> MessageAdapter : 使用
+ChatFragment --> Message : 创建
+ChatFragment --> AnswerCallback : 实现
+
+AIService --> ApiService : 使用
+AIService --> AIModel : 使用
+
+ApiService --> AnswerCallback : 使用
+ApiService --> SpeechCallback : 使用
+ApiService --> ApiCallback : 使用
+
+ServiceManager --> MessageAdapter : 管理
+ServiceManager --> StorageService : 管理
+ServiceManager --> ApiService : 管理
+
+MessageAdapter --> MessageViewHolder : 创建
+MessageAdapter --> Message : 管理
+
+MessageViewHolder --> Message : 显示
+
+StorageService --> Message : 序列化/反序列化
+
+@enduml

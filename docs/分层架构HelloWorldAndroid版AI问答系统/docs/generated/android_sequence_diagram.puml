@@ -1,0 +1,144 @@
+@startuml Android版AI问答系统顺序图
+!theme plain
+
+actor User as 用户
+participant "MainActivity" as MainAct
+participant "TabbedActivity" as TabAct
+participant "ChatFragment" as ChatFrag
+participant "ServiceManager" as ServiceMgr
+participant "AIService" as AIService
+participant "ApiService" as ApiService
+participant "MessageAdapter" as MsgAdapter
+participant "StorageService" as StorageSvc
+participant "TextToSpeech" as TTS
+
+== 应用启动流程 ==
+autonumber 1
+用户 -> MainAct: 启动应用
+activate MainAct
+MainAct -> MainAct: onCreate()
+MainAct -> TabAct: 启动TabbedActivity
+deactivate MainAct
+
+activate TabAct
+TabAct -> TabAct: onCreate()
+TabAct -> TabAct: initializeServices()
+TabAct -> ServiceMgr: getInstance()
+activate ServiceMgr
+ServiceMgr --> TabAct: 返回ServiceManager实例
+deactivate ServiceMgr
+TabAct -> ServiceMgr: setApiService(new ApiService(this))
+TabAct -> ServiceMgr: setStorageService(new StorageService(this))
+TabAct -> TabAct: 设置ViewPager和Adapter
+TabAct --> User: 显示主界面
+deactivate TabAct
+
+== 文本问答流程 ==
+autonumber 10
+用户 -> ChatFrag: 输入问题并点击发送
+activate ChatFrag
+ChatFrag -> ChatFrag: sendMessage()
+ChatFrag -> ChatFrag: 创建用户消息
+ChatFrag -> MsgAdapter: addMessage(userMessage)
+activate MsgAdapter
+MsgAdapter -> MsgAdapter: notifyItemInserted()
+MsgAdapter --> ChatFrag: 更新UI完成
+deactivate MsgAdapter
+
+ChatFrag -> ServiceMgr: getApiService()
+activate ServiceMgr
+ServiceMgr --> ChatFrag: 返回ApiService实例
+deactivate ServiceMgr
+
+ChatFrag -> AIService: getAnswer(question, model)
+activate AIService
+AIService -> ApiService: getAnswer(question, model, callback)
+activate ApiService
+
+ApiService -> ApiService: 选择AI模型
+alt model = ZHIPU
+    ApiService -> ApiService: callZhipuAPI(question)
+else model = DEEPSEEK
+    ApiService -> ApiService: callDeepSeekAPI(question)
+end
+
+ApiService -> ApiService: makeApiCall(url, requestBody, callback)
+ApiService -> ApiService: 发送HTTP请求
+ApiService --> AIService: 返回AI回答
+deactivate ApiService
+
+AIService --> ChatFrag: 返回AI回答
+deactivate AIService
+
+ChatFrag -> ChatFrag: 创建AI回复消息
+ChatFrag -> MsgAdapter: addMessage(aiMessage)
+activate MsgAdapter
+MsgAdapter -> MsgAdapter: notifyItemInserted()
+MsgAdapter --> ChatFrag: 更新UI完成
+deactivate MsgAdapter
+
+ChatFrag -> StorageSvc: saveMessages(messages)
+activate StorageSvc
+StorageSvc -> StorageSvc: 序列化消息到JSON
+StorageSvc -> StorageSvc: 保存到本地文件
+StorageSvc --> ChatFrag: 保存完成
+deactivate StorageSvc
+
+deactivate ChatFrag
+
+== 语音合成流程 ==
+autonumber 30
+用户 -> ChatFrag: 点击消息的语音按钮
+activate ChatFrag
+ChatFrag -> ChatFrag: speak(messageContent)
+ChatFrag -> TTS: speak(text, queueMode, params)
+activate TTS
+TTS -> TTS: 初始化语音合成引擎
+TTS -> TTS: 合成语音
+TTS --> ChatFrag: 播放语音
+deactivate TTS
+deactivate ChatFrag
+
+== 消息历史加载流程 ==
+autonumber 40
+用户 -> ChatFrag: 打开聊天界面
+activate ChatFrag
+ChatFrag -> ChatFrag: onViewCreated()
+ChatFrag -> ServiceMgr: getStorageService()
+activate ServiceMgr
+ServiceMgr --> ChatFrag: 返回StorageService实例
+deactivate ServiceMgr
+
+ChatFrag -> StorageSvc: loadMessages()
+activate StorageSvc
+StorageSvc -> StorageSvc: 从本地文件读取
+StorageSvc -> StorageSvc: 反序列化JSON为消息列表
+StorageSvc --> ChatFrag: 返回消息列表
+deactivate StorageSvc
+
+ChatFrag -> MsgAdapter: setMessages(messages)
+activate MsgAdapter
+MsgAdapter -> MsgAdapter: notifyDataSetChanged()
+MsgAdapter --> ChatFrag: 更新UI完成
+deactivate MsgAdapter
+deactivate ChatFrag
+
+== 清空消息流程 ==
+autonumber 50
+用户 -> ChatFrag: 点击清空按钮
+activate ChatFrag
+ChatFrag -> MsgAdapter: clearMessages()
+activate MsgAdapter
+MsgAdapter -> MsgAdapter: 清空消息列表
+MsgAdapter -> MsgAdapter: notifyDataSetChanged()
+MsgAdapter --> ChatFrag: 更新UI完成
+deactivate MsgAdapter
+
+ChatFrag -> StorageSvc: clearMessages()
+activate StorageSvc
+StorageSvc -> StorageSvc: 删除本地消息文件
+StorageSvc --> ChatFrag: 清空完成
+deactivate StorageSvc
+deactivate ChatFrag
+
+@enduml
