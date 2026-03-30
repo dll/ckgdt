@@ -1,0 +1,143 @@
+@startuml
+title 图谱功能交互顺序图（v3）
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName Microsoft YaHei
+skinparam sequence {
+  ArrowColor #444444
+  LifeLineBorderColor #6C8EF5
+  LifeLineBackgroundColor #F8FAFF
+  ParticipantBorderColor #6C8EF5
+  ParticipantBackgroundColor #FFFFFF
+  ActorBorderColor #666666
+  ActorBackgroundColor #FFFFFF
+}
+skinparam NoteBackgroundColor #FFFBEA
+skinparam NoteBorderColor #D6B656
+
+actor 用户 as User
+participant "HomePage" as HomePage
+participant "GraphListPage" as GraphListPage
+participant "GraphDao" as GraphDao
+participant "DatabaseHelper" as DatabaseHelper
+database "SQLite\nlearning_data.db" as DB
+participant "GraphDetailPage" as GraphDetailPage
+participant "FavoriteDao" as FavoriteDao
+participant "LearningRecordDao" as LearningRecordDao
+
+== 进入图谱模块 ==
+
+User -> HomePage : 打开首页
+HomePage -> GraphListPage : 切换到底部导航“图谱”
+activate GraphListPage
+
+GraphListPage -> GraphDao : getAllGraphs()
+activate GraphDao
+GraphDao -> DatabaseHelper : database
+activate DatabaseHelper
+DatabaseHelper -> DB : query graphs
+activate DB
+DB --> DatabaseHelper : 图谱列表数据
+deactivate DB
+DatabaseHelper --> GraphDao : Database实例 / 查询结果
+deactivate DatabaseHelper
+GraphDao --> GraphListPage : List<GraphModel>
+deactivate GraphDao
+
+alt 存在图谱数据
+  GraphListPage --> User : 展示图谱卡片列表
+else 无图谱数据
+  GraphListPage --> User : 显示“暂无图谱数据”
+end
+
+== 进入图谱详情 ==
+
+User -> GraphListPage : 点击某个图谱
+GraphListPage -> GraphDetailPage : Navigator.push(graphId, graphTitle)
+deactivate GraphListPage
+activate GraphDetailPage
+
+GraphDetailPage -> GraphDao : getNodes(graphId)
+activate GraphDao
+GraphDao -> DatabaseHelper : database
+activate DatabaseHelper
+DatabaseHelper -> DB : query nodes
+activate DB
+DB --> DatabaseHelper : 节点数据
+deactivate DB
+DatabaseHelper --> GraphDao : 查询结果
+deactivate DatabaseHelper
+GraphDao --> GraphDetailPage : List<NodeModel>
+deactivate GraphDao
+
+GraphDetailPage -> GraphDao : getEdges(graphId)
+activate GraphDao
+GraphDao -> DatabaseHelper : database
+activate DatabaseHelper
+DatabaseHelper -> DB : query edges
+activate DB
+DB --> DatabaseHelper : 边数据
+deactivate DB
+DatabaseHelper --> GraphDao : 查询结果
+deactivate DatabaseHelper
+GraphDao --> GraphDetailPage : List<EdgeModel>
+deactivate GraphDao
+
+GraphDetailPage -> GraphDetailPage : _calculateNodePositions()
+GraphDetailPage --> User : 展示图谱结构视图\n支持缩放、拖拽、浏览
+
+== 节点交互 ==
+
+User -> GraphDetailPage : 点击某个节点
+GraphDetailPage -> GraphDetailPage : _handleTap(position)
+GraphDetailPage --> User : 显示节点详情卡片
+
+alt 执行“开始学习”
+  User -> GraphDetailPage : 点击开始学习
+  GraphDetailPage -> LearningRecordDao : addRecord(userId, nodeId, nodeTitle)
+  activate LearningRecordDao
+  LearningRecordDao -> DatabaseHelper : database
+  activate DatabaseHelper
+  DatabaseHelper -> DB : insert learning_records
+  activate DB
+  DB --> DatabaseHelper : 写入成功
+  deactivate DB
+  DatabaseHelper --> LearningRecordDao : Database实例
+  deactivate DatabaseHelper
+  LearningRecordDao --> GraphDetailPage : 记录完成
+  deactivate LearningRecordDao
+  GraphDetailPage --> User : 提示“开始学习”
+else 执行“收藏”
+  User -> GraphDetailPage : 点击收藏
+  GraphDetailPage -> FavoriteDao : addFavorite(userId, nodeId, nodeTitle)
+  activate FavoriteDao
+  FavoriteDao -> DatabaseHelper : database
+  activate DatabaseHelper
+  DatabaseHelper -> DB : query favorites\n检查是否已收藏
+  activate DB
+  DB --> DatabaseHelper : 检查结果
+  DatabaseHelper -> DB : insert favorites
+  DB --> DatabaseHelper : 写入成功
+  deactivate DB
+  DatabaseHelper --> FavoriteDao : Database实例
+  deactivate DatabaseHelper
+  FavoriteDao --> GraphDetailPage : 收藏完成
+  deactivate FavoriteDao
+  GraphDetailPage --> User : 提示“添加收藏”
+end
+
+== 返回继续浏览 ==
+
+User -> GraphDetailPage : 继续浏览图谱
+GraphDetailPage --> User : 更新选中节点 / 保持当前图谱状态
+
+note right of GraphDetailPage
+图谱详情页是核心交互节点：
+1. 查询 nodes / edges
+2. 自动布局与可视化
+3. 点击节点查看详情
+4. 将浏览行为转化为学习记录或收藏
+end note
+
+@enduml

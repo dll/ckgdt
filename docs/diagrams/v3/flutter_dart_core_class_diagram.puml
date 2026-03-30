@@ -1,0 +1,348 @@
+@startuml
+title Flutter + Dart 知识图谱学习系统核心类图（v3）
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName Microsoft YaHei
+skinparam classAttributeIconSize 0
+skinparam ArrowColor #444444
+skinparam ArrowThickness 1.2
+skinparam packageStyle rectangle
+skinparam package {
+  BorderColor #6C8EF5
+  BackgroundColor #F8FAFF
+  RoundCorner 18
+}
+skinparam class {
+  BorderColor #6C8EF5
+  BackgroundColor #FFFFFF
+  RoundCorner 12
+}
+
+package "Flutter UI Layer" {
+  class MyApp {
+    +build(context)
+  }
+
+  class LoginPage
+  class HomePage {
+    -_selectedIndex : int
+    +build(context)
+    -_buildBody()
+    -_buildHome()
+  }
+
+  class GraphListPage {
+    -_graphs : List<GraphModel>
+    -_isLoading : bool
+    -_loadGraphs() : Future<void>
+    +build(context)
+  }
+
+  class GraphDetailPage {
+    -_nodes : List<NodeModel>
+    -_edges : List<EdgeModel>
+    -_selectedNode : NodeModel?
+    -_isLoading : bool
+    -_loadGraphData() : Future<void>
+    -_buildGraphView()
+    -_buildNodeDetail()
+    -_calculateNodePositions() : List<NodeModel>
+    -_handleTap(position)
+    +build(context)
+  }
+
+  class GraphPainter {
+    -nodes : List<NodeModel>
+    -edges : List<EdgeModel>
+    -selectedNode : NodeModel?
+    +paint(canvas, size)
+    +shouldRepaint(oldDelegate) : bool
+  }
+
+  class DocumentListPage {
+    -_pdfs : List<Map<String,dynamic>>
+    -_ppts : List<Map<String,dynamic>>
+    -_loadDocuments() : Future<void>
+    +build(context)
+  }
+
+  class VideoListPage {
+    -_videos : List<Map<String,dynamic>>
+    -_loadVideos() : Future<void>
+    -_playVideo(video)
+    +build(context)
+  }
+
+  class QuizPage {
+    -_chapters : List<String>
+    -_questions : List<QuestionModel>
+    -_selectedChapter : String?
+    -_currentIndex : int
+    -_correctCount : int
+    -_quizStarted : bool
+    -_loadChapters() : Future<void>
+    -_startQuiz(chapter) : Future<void>
+    -_submitAnswer()
+    -_nextQuestion()
+    -_finishQuiz() : Future<void>
+    +build(context)
+  }
+
+  class ProgressPage {
+    -_results : List<QuizResultModel>
+    -_quizSummary : Map<String,dynamic>
+    -_learningStats : Map<String,dynamic>
+    -_loadData() : Future<void>
+    +build(context)
+  }
+
+  class FavoritesPage {
+    -_favorites : List<Map<String,dynamic>>
+    -_loadData() : Future<void>
+    -_removeFavorite(nodeId) : Future<void>
+    +build(context)
+  }
+}
+
+package "Service / DAO Layer" {
+  class AuthService {
+    -_userDao : UserDao
+    -_currentUser : UserModel?
+    +currentUser : UserModel?
+    +isLoggedIn : bool
+    +isAdmin : bool
+    +isTeacher : bool
+    +checkLoginStatus() : Future<void>
+    +login(userId, password) : Future<bool>
+    +logout() : Future<void>
+    +getStudents() : Future<List<UserModel>>
+    +createStudent(student) : Future<bool>
+    +updateStudent(student) : Future<bool>
+    +deleteStudent(userId) : Future<bool>
+  }
+
+  class DatabaseHelper {
+    {static} +instance : DatabaseHelper
+    {static} -_database : Database?
+    +database : Future<Database>
+    -_initDB() : Future<Database>
+    -_createTables(db, version) : Future<void>
+    -_importStudents(db) : Future<void>
+    +close() : Future<void>
+  }
+
+  class UserDao {
+    -_dbHelper : DatabaseHelper
+    +getUser(userId) : Future<UserModel?>
+    +getAllUsers() : Future<List<UserModel>>
+    +getStudents() : Future<List<UserModel>>
+    +getTeachers() : Future<List<UserModel>>
+    +createUser(user) : Future<bool>
+    +updateUser(user) : Future<bool>
+    +deleteUser(userId) : Future<bool>
+    +setCurrentUser(userId, machineCode) : Future<void>
+    +getCurrentUser() : Future<UserModel?>
+    +clearCurrentUser() : Future<void>
+    +login(userId, password) : Future<bool>
+    +logout() : Future<void>
+  }
+
+  class GraphDao {
+    -_dbHelper : DatabaseHelper
+    +getAllGraphs() : Future<List<GraphModel>>
+    +getGraph(graphId) : Future<GraphModel?>
+    +getNodes(graphId) : Future<List<NodeModel>>
+    +getEdges(graphId) : Future<List<EdgeModel>>
+    +getNode(nodeId) : Future<NodeModel?>
+  }
+
+  class QuizDao {
+    -_dbHelper : DatabaseHelper
+    +getAllQuestions() : Future<List<QuestionModel>>
+    +getQuestionsByChapter(chapter) : Future<List<QuestionModel>>
+    +getChapters() : Future<List<String>>
+    +saveQuizResult(result) : Future<int>
+    +getQuizResults(userId) : Future<List<QuizResultModel>>
+    +getAllQuizResults() : Future<List<QuizResultModel>>
+    +getQuizSummary(userId) : Future<Map<String,dynamic>>
+  }
+
+  class FavoriteDao {
+    -_dbHelper : DatabaseHelper
+    +addFavorite(userId, nodeId, nodeTitle) : Future<int>
+    +getFavorites(userId) : Future<List<Map<String,dynamic>>>
+    +isFavorite(userId, nodeId) : Future<bool>
+    +removeFavorite(userId, nodeId) : Future<void>
+    +getFavoriteCount(userId) : Future<int>
+  }
+
+  class LearningRecordDao {
+    -_dbHelper : DatabaseHelper
+    +addRecord(userId, nodeId, nodeTitle, studyTime) : Future<int>
+    +getRecords(userId) : Future<List<Map<String,dynamic>>>
+    +getTotalTime(userId) : Future<int>
+    +getCompletedNodes(userId) : Future<int>
+    +hasLearned(userId, nodeId) : Future<bool>
+    +deleteRecord(id) : Future<void>
+    +getStatistics(userId) : Future<Map<String,dynamic>>
+  }
+}
+
+package "Dart Data Model Layer" {
+  class UserModel {
+    +userId : String
+    +realName : String?
+    +machineCode : String?
+    +role : String
+    +createdAt : String?
+    +lastLogin : String?
+    +isActive : bool
+    +isAdmin : bool
+    +isTeacher : bool
+    +fromMap(map) : UserModel
+    +toMap() : Map<String,dynamic>
+  }
+
+  class GraphModel {
+    +id : String
+    +title : String
+    +graphType : String?
+    +layout : String?
+    +fromMap(map) : GraphModel
+    +toMap() : Map<String,dynamic>
+  }
+
+  class NodeModel {
+    +id : String
+    +graphId : String
+    +title : String
+    +content : String?
+    +nodeType : String?
+    +level : int
+    +x : double
+    +y : double
+    +color : String?
+    +parentId : String?
+    +visible : bool
+    +metadata : Map<String,dynamic>?
+    +fromMap(map) : NodeModel
+    +toMap() : Map<String,dynamic>
+  }
+
+  class EdgeModel {
+    +id : String
+    +graphId : String
+    +sourceId : String
+    +targetId : String
+    +edgeType : String?
+    +label : String?
+    +weight : double
+    +color : String?
+    +width : double
+    +style : String?
+    +visible : bool
+    +fromMap(map) : EdgeModel
+    +toMap() : Map<String,dynamic>
+  }
+
+  class QuestionModel {
+    +id : int?
+    +source : String?
+    +question : String
+    +options : List<String>
+    +answerIndex : int
+    +correctAnswer : String
+    +fromMap(map) : QuestionModel
+    +toMap() : Map<String,dynamic>
+  }
+
+  class QuizResultModel {
+    +id : int?
+    +userId : String
+    +quizTimestamp : String?
+    +score : int
+    +numCorrect : int
+    +numTotal : int
+    +chapter : String?
+    +quizType : String?
+    +completedAt : String?
+    +fromMap(map) : QuizResultModel
+    +toMap() : Map<String,dynamic>
+  }
+}
+
+MyApp --> LoginPage
+LoginPage --> AuthService
+HomePage --> GraphListPage
+HomePage --> QuizPage
+HomePage --> VideoListPage
+HomePage --> DocumentListPage
+HomePage --> ProgressPage
+HomePage --> FavoritesPage
+
+GraphListPage --> GraphDao
+GraphListPage --> GraphModel
+
+GraphDetailPage --> GraphDao
+GraphDetailPage --> FavoriteDao
+GraphDetailPage --> LearningRecordDao
+GraphDetailPage --> NodeModel
+GraphDetailPage --> EdgeModel
+GraphDetailPage --> GraphPainter
+
+QuizPage --> QuizDao
+QuizPage --> QuestionModel
+QuizPage --> QuizResultModel
+ProgressPage --> QuizDao
+ProgressPage --> LearningRecordDao
+ProgressPage --> QuizResultModel
+FavoritesPage --> FavoriteDao
+
+AuthService --> UserDao
+AuthService --> UserModel
+
+UserDao --> DatabaseHelper
+GraphDao --> DatabaseHelper
+QuizDao --> DatabaseHelper
+FavoriteDao --> DatabaseHelper
+LearningRecordDao --> DatabaseHelper
+
+GraphDao ..> GraphModel
+GraphDao ..> NodeModel
+GraphDao ..> EdgeModel
+QuizDao ..> QuestionModel
+QuizDao ..> QuizResultModel
+UserDao ..> UserModel
+
+DatabaseHelper ..> UserModel
+DatabaseHelper ..> GraphModel
+DatabaseHelper ..> NodeModel
+DatabaseHelper ..> EdgeModel
+DatabaseHelper ..> QuestionModel
+DatabaseHelper ..> QuizResultModel
+
+note right of GraphDetailPage
+核心图谱交互页面：
+1. 加载 nodes / edges
+2. 计算节点布局
+3. 支持缩放拖拽
+4. 点击节点查看详情
+5. 触发学习与收藏动作
+end note
+
+note bottom of DatabaseHelper
+统一管理 SQLite 初始化：
+- users
+- current_session
+- graphs
+- nodes
+- edges
+- questions
+- quiz_results
+- learning_records
+- favorites
+- resource_files
+end note
+
+@enduml

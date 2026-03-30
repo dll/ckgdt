@@ -1,0 +1,63 @@
+@startuml
+skinparam backgroundColor #F8FAFF
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Microsoft YaHei
+skinparam rectangle {
+  BorderColor #4C6EF5
+  RoundCorner 18
+  BackgroundColor #FFFFFF
+}
+title 知识图谱核心功能架构图
+
+actor 学生
+actor 教师
+actor 管理员
+
+rectangle "Flutter UI" {
+  rectangle "LoginPage\n登录入口"
+  rectangle "HomePage\n导航中心"
+  rectangle "GraphListPage\n图谱列表"
+  rectangle "GraphDetailPage\n图谱详情与节点交互"
+  rectangle "DocumentListPage\n资料 / PPT"
+  rectangle "VideoListPage\n视频资源"
+  rectangle "QuizPage\n章节测验"
+  rectangle "ProgressPage\n学习进度"
+  rectangle "FavoritesPage\n收藏内容"
+}
+
+rectangle "Service / DAO" {
+  rectangle "AuthService"
+  rectangle "GraphDao"
+  rectangle "QuizDao"
+  rectangle "FavoriteDao"
+  rectangle "LearningRecordDao"
+  rectangle "UserDao"
+  rectangle "DatabaseHelper"
+}
+
+database "SQLite / learning_data.db" as DB
+
+学生 --> LoginPage
+教师 --> LoginPage
+管理员 --> LoginPage
+LoginPage --> HomePage
+
+HomePage --> GraphListPage
+GraphListPage --> GraphDetailPage
+GraphDetailPage --> FavoriteDao
+GraphDetailPage --> LearningRecordDao
+GraphListPage --> GraphDao
+GraphDetailPage --> GraphDao
+QuizPage --> QuizDao
+ProgressPage --> QuizDao
+ProgressPage --> LearningRecordDao
+FavoritesPage --> FavoriteDao
+
+GraphDao --> DatabaseHelper
+QuizDao --> DatabaseHelper
+FavoriteDao --> DatabaseHelper
+LearningRecordDao --> DatabaseHelper
+UserDao --> DatabaseHelper
+DatabaseHelper --> DB
+@enduml

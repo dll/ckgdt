@@ -1,0 +1,130 @@
+@startuml
+title Flutter + Dart 知识图谱学习系统框架图（v3）
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName Microsoft YaHei
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+skinparam ArrowColor #444444
+skinparam ArrowThickness 1.2
+skinparam package {
+  BorderColor #6C8EF5
+  BackgroundColor #F8FAFF
+  RoundCorner 18
+}
+skinparam rectangle {
+  BorderColor #6C8EF5
+  BackgroundColor #FFFFFF
+  RoundCorner 14
+}
+skinparam database {
+  BorderColor #666666
+  BackgroundColor #FCFCFC
+}
+
+actor 学生 as Student
+actor 教师 as Teacher
+actor 管理员 as Admin
+
+package "Flutter UI" as UI {
+  [LoginPage\n登录入口]
+  [HomePage\n导航中心]
+  [GraphListPage\n图谱列表]
+  [GraphDetailPage\n图谱详情与节点交互]
+  [DocumentListPage\nPPT / PDF 资料]
+  [VideoListPage\n视频资源]
+  [QuizPage\n章节测验]
+  [ProgressPage\n学习进度]
+  [FavoritesPage\n收藏内容]
+  [LearningPlanPage\n学习计划]
+  [SettingsPage\n设置]
+  [SearchPage\n搜索]
+}
+
+package "Application Service / DAO" as APP {
+  [AuthService]
+  [GraphDao]
+  [QuizDao]
+  [FavoriteDao]
+  [LearningRecordDao]
+  [UserDao]
+  [DatabaseHelper]
+}
+
+package "Dart Data Model" as MODEL {
+  [GraphModel]
+  [NodeModel]
+  [EdgeModel]
+  [QuestionModel]
+  [QuizResultModel]
+  [UserModel]
+}
+
+database "SQLite\nassets/learning_data.db" as DB
+
+Student --> [LoginPage]
+Teacher --> [LoginPage]
+Admin --> [LoginPage]
+
+[LoginPage] --> [AuthService]
+[AuthService] --> [UserDao]
+[UserDao] --> [DatabaseHelper]
+
+[HomePage] --> [GraphListPage]
+[HomePage] --> [QuizPage]
+[HomePage] --> [VideoListPage]
+[HomePage] --> [DocumentListPage]
+[HomePage] --> [ProgressPage]
+[HomePage] --> [LearningPlanPage]
+[HomePage] --> [FavoritesPage]
+[HomePage] --> [SettingsPage]
+[HomePage] --> [SearchPage]
+
+[GraphListPage] --> [GraphDao]
+[GraphDetailPage] --> [GraphDao]
+[GraphDetailPage] --> [FavoriteDao]
+[GraphDetailPage] --> [LearningRecordDao]
+
+[QuizPage] --> [QuizDao]
+[ProgressPage] --> [QuizDao]
+[ProgressPage] --> [LearningRecordDao]
+[FavoritesPage] --> [FavoriteDao]
+
+[GraphDao] --> [DatabaseHelper]
+[QuizDao] --> [DatabaseHelper]
+[FavoriteDao] --> [DatabaseHelper]
+[LearningRecordDao] --> [DatabaseHelper]
+[DatabaseHelper] --> DB
+
+[GraphDao] ..> [GraphModel]
+[GraphDao] ..> [NodeModel]
+[GraphDao] ..> [EdgeModel]
+[QuizDao] ..> [QuestionModel]
+[QuizDao] ..> [QuizResultModel]
+[UserDao] ..> [UserModel]
+
+note right of UI
+Flutter 负责页面渲染、导航与交互：
+1. MaterialApp 启动应用
+2. HomePage 提供底部导航
+3. 图谱、资料、视频、测验、进度等页面
+   构成完整学习闭环
+end note
+
+note right of APP
+Dart 业务层负责：
+1. 登录状态管理
+2. 图谱、测验、收藏、学习记录访问
+3. 封装本地 SQLite 读写逻辑
+end note
+
+note bottom of DB
+本地数据库保存：
+- 图谱数据 graphs / nodes / edges
+- 题库与测验结果
+- 收藏与学习记录
+- 用户与当前会话信息
+end note
+
+@enduml

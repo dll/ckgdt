@@ -1,0 +1,27 @@
+@startuml
+skinparam backgroundColor #F8FAFF
+skinparam defaultFontName Microsoft YaHei
+skinparam shadowing false
+title 图谱功能演示流程图
+
+start
+:进入 HomePage;
+:点击底部导航“图谱”;
+:GraphListPage 加载图谱列表;
+if (图谱数据存在?) then (是)
+  :进入 GraphDetailPage;
+  :读取 nodes 和 edges;
+  :InteractiveViewer 缩放与拖拽浏览;
+  :点击节点;
+  :显示节点详情卡片;
+  if (开始学习?) then (是)
+    :写入 learning_records;
+  else (收藏)
+    :写入 favorites;
+  endif
+  :继续图谱浏览;
+else (否)
+  :显示暂无图谱数据;
+endif
+stop
+@enduml

@@ -1,0 +1,233 @@
+@startuml
+title 知识图谱功能开发过程图（v3）
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName Microsoft YaHei
+skinparam ArrowColor #444444
+skinparam ArrowThickness 1.2
+skinparam activity {
+  BackgroundColor #FFFFFF
+  BorderColor #6C8EF5
+  FontColor #222222
+  StartColor #222222
+  EndColor #222222
+  DiamondBackgroundColor #FFFFFF
+  DiamondBorderColor #666666
+  BarColor #6C8EF5
+  RoundCorner 18
+}
+skinparam note {
+  BackgroundColor #FFFBEA
+  BorderColor #D6B656
+  FontColor #333333
+}
+
+start
+
+:需求分析与目标定义;
+note right
+1. 明确项目基于 Flutter + Dart
+2. 确定“知识图谱”是系统核心功能
+3. 确定图谱需联动资料、视频、测验、进度
+end note
+
+:业务建模;
+note right
+梳理核心业务对象：
+- 图谱 Graph
+- 节点 Node
+- 边 Edge
+- 用户 User
+- 收藏 Favorite
+- 学习记录 LearningRecord
+- 测验 Question / QuizResult
+end note
+
+:设计本地数据库结构;
+note right
+规划 SQLite 表：
+users
+current_session
+graphs
+nodes
+edges
+questions
+quiz_results
+learning_records
+favorites
+resource_files
+end note
+
+:设计 Dart 数据模型;
+note right
+创建模型类：
+GraphModel
+NodeModel
+EdgeModel
+QuestionModel
+QuizResultModel
+UserModel
+end note
+
+:封装数据库初始化与建表逻辑;
+:实现 DatabaseHelper;
+note right
+负责：
+1. 初始化数据库
+2. 从 assets 复制 learning_data.db
+3. 创建缺失数据表
+4. 导入学生信息
+end note
+
+:设计 DAO 数据访问层;
+fork
+  :实现 GraphDao;
+fork again
+  :实现 UserDao;
+fork again
+  :实现 FavoriteDao;
+fork again
+  :实现 LearningRecordDao;
+fork again
+  :实现 QuizDao;
+end fork
+
+:构建基础服务层;
+:实现 AuthService;
+note right
+统一处理：
+- 登录状态
+- 当前用户
+- 学生管理
+- 角色判断
+end note
+
+:设计 Flutter 页面结构;
+note right
+页面划分：
+LoginPage
+HomePage
+GraphListPage
+GraphDetailPage
+DocumentListPage
+VideoListPage
+QuizPage
+ProgressPage
+FavoritesPage
+end note
+
+:实现 HomePage 导航中心;
+note right
+底部导航统一串联：
+图谱、测验、视频、资料、进度、计划、设置
+end note
+
+:实现 GraphListPage 图谱列表;
+:从 GraphDao 读取 graphs 数据;
+if (图谱数据是否存在?) then (是)
+  :展示图谱卡片列表;
+  :支持点击进入详情页;
+else (否)
+  :显示“暂无图谱数据”;
+  :提供刷新入口;
+endif
+
+:实现 GraphDetailPage 图谱详情;
+:查询 nodes / edges;
+:计算节点布局;
+:绘制图谱结构;
+note right
+核心可视化能力：
+1. CustomPainter 绘制图谱
+2. InteractiveViewer 支持缩放拖拽
+3. 节点点击后显示详情
+end note
+
+:实现节点交互逻辑;
+if (点击节点?) then (是)
+  :展示节点详情卡片;
+  if (执行“开始学习”?) then (是)
+    :调用 LearningRecordDao.addRecord();
+    :写入 learning_records;
+  else (否)
+    if (执行“收藏”?) then (是)
+      :调用 FavoriteDao.addFavorite();
+      :写入 favorites;
+    else (否)
+      :继续浏览节点;
+    endif
+  endif
+else (否)
+  :保持图谱浏览状态;
+endif
+
+:扩展学习闭环功能;
+fork
+  :实现 DocumentListPage;
+  note right
+  管理 PDF / PPT 资料
+  end note
+fork again
+  :实现 VideoListPage;
+  note right
+  管理视频资源
+  end note
+fork again
+  :实现 QuizPage;
+  note right
+  章节测验、提交答案、保存成绩
+  end note
+fork again
+  :实现 ProgressPage;
+  note right
+  汇总学习记录与测验统计
+  end note
+fork again
+  :实现 FavoritesPage;
+  note right
+  展示和管理收藏知识点
+  end note
+end fork
+
+:形成知识图谱学习闭环;
+note right
+图谱成为系统核心入口：
+图谱浏览
+-> 节点学习
+-> 收藏沉淀
+-> 测验验证
+-> 进度反馈
+end note
+
+:测试与验证;
+note right
+验证内容包括：
+- 页面显示是否正常
+- 数据库是否初始化成功
+- 图谱能否正确加载
+- 节点交互是否有效
+- 测验与进度是否联动
+end note
+
+:构建 Android APK;
+note right
+输出：
+Debug APK
+Release APK
+end note
+
+:生成教学展示素材;
+note right
+生成内容：
+- 框架图
+- 类图
+- 顺序图
+- 开发过程图
+- 脚本
+- PPT
+- 视频
+end note
+
+stop
+@enduml
