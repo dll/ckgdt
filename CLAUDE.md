@@ -102,8 +102,8 @@ knowledge_graph_app/
 │   ├── learning_data.db                   # 预置 SQLite（图谱、题目等）
 │   ├── students.json                      # 预置学生名单
 │   └── images/
-├── tools/                                 # Python 视频生成工具链（v6 为当前版本）
-│   ├── generate_graph_video_v6.py         # 知识图谱核心功能教学视频（主版本）
+├── tools/                                 # Python 视频生成工具链
+│   ├── generate_graph_video_v6.py         # 知识图谱核心功能教学视频
 │   ├── gen_quiz_v6.py                     # 测验功能视频
 │   ├── gen_learning_path_v6.py            # 学习路径功能视频
 │   ├── gen_document_v6.py                 # 课程资料功能视频
@@ -424,6 +424,8 @@ flutter clean
 
 ## Python 视频生成工具链
 
+> **当前版本：v6**
+
 ### 环境依赖
 
 ```bash
@@ -455,7 +457,7 @@ feat_xxx/
 └── temp/              # 临时文件（gitignore）
 ```
 
-### v6 视频生成机制
+### 视频生成机制
 
 1. 旁白按标点自动分句（或 `voice_segments` 手动指定）
 2. 每句用 `edge-tts`（`zh-CN-XiaoxiaoNeural`，语速 `-5%`）生成独立 MP3，获取真实时长
@@ -480,8 +482,8 @@ feat_xxx/
 | 类型 | 路径 |
 |------|------|
 | 最终 MP4 / PPTX | `video_output/` |
-| v6 字幕 | `docs/video/v6/subtitles_v6.srt` |
-| v6 脚本 | `docs/video/v6/script_v6.md` |
+| 字幕 | `docs/video/v6/subtitles_v6.srt` |
+| 脚本 | `docs/video/v6/script_v6.md` |
 | feat_* 字幕 | `docs/video/feat_xxx/subtitles.srt` |
 | 中间产物 | `docs/video/**/audio/`、`slides/`、`sent/`、`crops/`、`temp/`（已 gitignore） |
 
