@@ -76,7 +76,7 @@ class _GraphListPageState extends State<GraphListPage> {
             margin: const EdgeInsets.only(bottom: 12),
             child: ListTile(
               leading: CircleAvatar(
-                backgroundColor: const Color(0xFF667eea),
+                backgroundColor: Theme.of(context).colorScheme.primary,
                 child: const Icon(Icons.account_tree, color: Colors.white),
               ),
               title: Text(

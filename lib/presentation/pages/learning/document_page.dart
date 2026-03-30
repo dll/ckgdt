@@ -12,7 +12,7 @@ class _DocumentListPageState extends State<DocumentListPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
-  
+
   List<Map<String, dynamic>> _pdfs = [];
   List<Map<String, dynamic>> _ppts = [];
   bool _isLoading = true;
@@ -27,21 +27,21 @@ class _DocumentListPageState extends State<DocumentListPage>
   Future<void> _loadDocuments() async {
     try {
       final db = await _dbHelper.database;
-      
+
       var pdfs = await db.query(
         'resource_files',
         where: 'file_type = ?',
         whereArgs: ['pdf'],
         orderBy: 'chapter',
       );
-      
+
       var ppts = await db.query(
         'resource_files',
         where: 'file_type = ?',
         whereArgs: ['ppt'],
         orderBy: 'chapter',
       );
-      
+
       if (pdfs.isEmpty && ppts.isEmpty) {
         // Insert PDF resources
         final pdfFiles = [
@@ -61,11 +61,11 @@ class _DocumentListPageState extends State<DocumentListPage>
           {'file_name': '第六章 综合开发实践2.pdf', 'file_path': 'assets/课件/清言智谱/第六章 综合开发实践2.pdf', 'file_type': 'pdf', 'chapter': '第六章 综合开发实践2', 'description': 'PDF课件'},
           {'file_name': '第六章 综合开发实践3.pdf', 'file_path': 'assets/课件/清言智谱/第六章 综合开发实践3.pdf', 'file_type': 'pdf', 'chapter': '第六章 综合开发实践3', 'description': 'PDF课件'},
         ];
-        
+
         for (final pdf in pdfFiles) {
           await db.insert('resource_files', pdf);
         }
-        
+
         // Insert PPT resources
         final pptFiles = [
           {'file_name': '第一章 移动应用开发技术体系1.pptx', 'file_path': 'assets/课件/秒出PPT/第一章 移动应用开发技术体系1.pptx', 'file_type': 'ppt', 'chapter': '第一章 移动应用开发技术体系1', 'description': 'PPT课件'},
@@ -84,18 +84,18 @@ class _DocumentListPageState extends State<DocumentListPage>
           {'file_name': '第六章 综合开发实践2.pptx', 'file_path': 'assets/课件/秒出PPT/第六章 综合开发实践2.pptx', 'file_type': 'ppt', 'chapter': '第六章 综合开发实践2', 'description': 'PPT课件'},
           {'file_name': '第六章 综合开发实践3.pptx', 'file_path': 'assets/课件/秒出PPT/第六章 综合开发实践3.pptx', 'file_type': 'ppt', 'chapter': '第六章 综合开发实践3', 'description': 'PPT课件'},
         ];
-        
+
         for (final ppt in pptFiles) {
           await db.insert('resource_files', ppt);
         }
-        
+
         pdfs = await db.query(
           'resource_files',
           where: 'file_type = ?',
           whereArgs: ['pdf'],
           orderBy: 'chapter',
         );
-        
+
         ppts = await db.query(
           'resource_files',
           where: 'file_type = ?',
@@ -103,7 +103,7 @@ class _DocumentListPageState extends State<DocumentListPage>
           orderBy: 'chapter',
         );
       }
-      
+
       setState(() {
         _pdfs = pdfs;
         _ppts = ppts;
@@ -129,8 +129,7 @@ class _DocumentListPageState extends State<DocumentListPage>
     return Scaffold(
       appBar: AppBar(
         title: const Text('课程资料'),
-        backgroundColor: const Color(0xFF667eea),
-        foregroundColor: Colors.white,
+
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,

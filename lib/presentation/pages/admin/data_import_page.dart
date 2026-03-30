@@ -25,7 +25,7 @@ class _DataImportPageState extends State<DataImportPage> {
     try {
       final quizDao = QuizDao();
       final results = await quizDao.getAllQuizResults();
-      
+
       if (results.isEmpty) {
         setState(() {
           _isSuccess = false;
@@ -36,9 +36,9 @@ class _DataImportPageState extends State<DataImportPage> {
 
       final buffer = StringBuffer();
       buffer.writeln('学生ID,章节,分数,正确题数,总题数,正确率,完成时间');
-      
+
       for (final result in results) {
-        final accuracy = result.numTotal > 0 
+        final accuracy = result.numTotal > 0
             ? (result.numCorrect / result.numTotal * 100).toStringAsFixed(1)
             : '0.0';
         buffer.writeln(
@@ -149,7 +149,7 @@ class _DataImportPageState extends State<DataImportPage> {
 
   Future<void> _showImportDialog() async {
     final controller = TextEditingController();
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -183,7 +183,7 @@ class _DataImportPageState extends State<DataImportPage> {
                 );
                 return;
               }
-              
+
               Navigator.pop(context);
               await _importData(controller.text);
             },
@@ -296,7 +296,7 @@ class _DataImportPageState extends State<DataImportPage> {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  const Icon(Icons.upload, size: 48, color: Color(0xFF667eea)),
+                  Icon(Icons.upload, size: 48, color: Theme.of(context).colorScheme.primary),
                   const SizedBox(height: 16),
                   const Text('导入数据', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
@@ -307,7 +307,7 @@ class _DataImportPageState extends State<DataImportPage> {
                     icon: const Icon(Icons.download),
                     label: const Text('导入备份'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF667eea),
+                      backgroundColor: Theme.of(context).colorScheme.primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                     ),
@@ -398,7 +398,7 @@ class _DataImportPageState extends State<DataImportPage> {
               ),
             ),
           ),
-          
+
           // 消息提示
           if (_message != null) ...[
             const SizedBox(height: 16),
@@ -418,7 +418,7 @@ class _DataImportPageState extends State<DataImportPage> {
               ),
             ),
           ],
-          
+
           // 加载指示器
           if (_isLoading) ...[
             const SizedBox(height: 16),

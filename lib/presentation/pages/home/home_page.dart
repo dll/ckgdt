@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/constants/app_theme.dart';
 import '../../../services/auth_service.dart';
 import '../login/login_page.dart';
 import '../graph/graph_list_page.dart';
@@ -16,7 +17,7 @@ import 'search_page.dart';
 
 class HomePage extends StatefulWidget {
   final int initialTabIndex;
-  
+
   const HomePage({super.key, this.initialTabIndex = 0});
 
   @override
@@ -41,8 +42,7 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('移动应用开发知识图谱'),
-        backgroundColor: const Color(0xFF667eea),
-        foregroundColor: Colors.white,
+
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
@@ -71,7 +71,7 @@ class _HomePageState extends State<HomePage> {
                 child: ListTile(
                   leading: const Icon(Icons.person),
                   title: Text(user?.realName ?? user?.userId ?? '用户'),
-                  subtitle: Text(user?.role == 'admin' ? '管理员' : 
+                  subtitle: Text(user?.role == 'admin' ? '管理员' :
                                  user?.role == 'teacher' ? '教师' : '学生'),
                 ),
               ),
@@ -172,7 +172,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildHome() {
     final user = _authService.currentUser;
-    
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -186,9 +186,7 @@ class _HomePageState extends State<HomePage> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                ),
+                gradient: AppGradientTheme.of(context).linearGradient,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -351,12 +349,12 @@ class _AdminToolsPage extends StatelessWidget {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: const TabBar(
-          tabs: [
+        appBar: TabBar(
+          tabs: const [
             Tab(text: '学生管理', icon: Icon(Icons.people)),
             Tab(text: '数据管理', icon: Icon(Icons.storage)),
           ],
-          labelColor: Color(0xFF667eea),
+          labelColor: Theme.of(context).colorScheme.primary,
         ),
         body: const TabBarView(
           children: [

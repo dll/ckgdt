@@ -13,7 +13,7 @@ class _SearchPageState extends State<SearchPage> {
   final _searchController = TextEditingController();
   final _graphDao = GraphDao();
   final _quizDao = QuizDao();
-  
+
   List<Map<String, dynamic>> _graphResults = [];
   List<Map<String, dynamic>> _questionResults = [];
   bool _isSearching = false;
@@ -41,7 +41,7 @@ class _SearchPageState extends State<SearchPage> {
         _searchGraphs(query),
         _searchQuestions(query),
       ]);
-      
+
       setState(() {
         _graphResults = results[0] as List<Map<String, dynamic>>;
         _questionResults = results[1] as List<Map<String, dynamic>>;
@@ -55,7 +55,7 @@ class _SearchPageState extends State<SearchPage> {
   Future<List<Map<String, dynamic>>> _searchGraphs(String query) async {
     if (_searchType == 'questions') return [];
     final graphs = await _graphDao.getAllGraphs();
-    return graphs.where((g) => 
+    return graphs.where((g) =>
       g.title.toLowerCase().contains(query.toLowerCase())
     ).map((g) => {'type': 'graph', 'data': g}).toList();
   }
@@ -63,7 +63,7 @@ class _SearchPageState extends State<SearchPage> {
   Future<List<Map<String, dynamic>>> _searchQuestions(String query) async {
     if (_searchType == 'graphs') return [];
     final questions = await _quizDao.getAllQuestions();
-    return questions.where((q) => 
+    return questions.where((q) =>
       q.question.toLowerCase().contains(query.toLowerCase())
     ).map((q) => {'type': 'question', 'data': q}).toList();
   }
@@ -73,8 +73,7 @@ class _SearchPageState extends State<SearchPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('搜索'),
-        backgroundColor: const Color(0xFF667eea),
-        foregroundColor: Colors.white,
+
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
           child: Padding(
@@ -121,7 +120,7 @@ class _SearchPageState extends State<SearchPage> {
               ],
             ),
           ),
-          
+
           // 搜索结果
           Expanded(
             child: _isSearching
@@ -144,8 +143,8 @@ class _SearchPageState extends State<SearchPage> {
         setState(() => _searchType = value);
         _search(_searchController.text);
       },
-      selectedColor: const Color(0xFF667eea).withValues(alpha: 0.2),
-      checkmarkColor: const Color(0xFF667eea),
+      selectedColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+      checkmarkColor: Theme.of(context).colorScheme.primary,
     );
   }
 
@@ -172,7 +171,7 @@ class _SearchPageState extends State<SearchPage> {
 
   Widget _buildResults() {
     final totalResults = _graphResults.length + _questionResults.length;
-    
+
     if (totalResults == 0) {
       return Center(
         child: Column(
@@ -218,7 +217,7 @@ class _SearchPageState extends State<SearchPage> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
-              color: const Color(0xFF667eea),
+              color: Theme.of(context).colorScheme.primary,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(

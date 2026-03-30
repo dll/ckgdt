@@ -52,8 +52,7 @@ class _GraphDetailPageState extends State<GraphDetailPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.graphTitle),
-        backgroundColor: const Color(0xFF667eea),
-        foregroundColor: Colors.white,
+
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -128,7 +127,7 @@ class _GraphDetailPageState extends State<GraphDetailPage> {
   List<NodeModel> _calculateNodePositions() {
     // Check if nodes have valid positions
     final hasValidPositions = _nodes.any((n) => n.x != 0 || n.y != 0);
-    
+
     if (hasValidPositions) {
       return _nodes;
     }
@@ -136,7 +135,7 @@ class _GraphDetailPageState extends State<GraphDetailPage> {
     // Auto-calculate positions in a tree-like layout
     final positioned = <NodeModel>[];
     final levelGroups = <int, List<NodeModel>>{};
-    
+
     for (final node in _nodes) {
       levelGroups.putIfAbsent(node.level, () => []).add(node);
     }
@@ -150,7 +149,7 @@ class _GraphDetailPageState extends State<GraphDetailPage> {
       final level = levels[i];
       final levelNodes = levelGroups[level]!;
       final horizontalSpacing = screenWidth / (levelNodes.length + 1);
-      
+
       for (int j = 0; j < levelNodes.length; j++) {
         final node = levelNodes[j];
         positioned.add(NodeModel(
@@ -244,7 +243,7 @@ class _GraphDetailPageState extends State<GraphDetailPage> {
                     icon: const Icon(Icons.play_arrow),
                     label: const Text('开始学习'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF667eea),
+                      backgroundColor: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 ),
@@ -323,7 +322,7 @@ class GraphPainter extends CustomPainter {
           Offset(targetNode.x, targetNode.y),
           edgePaint,
         );
-        
+
         // Draw arrow
         _drawArrow(canvas, Offset(sourceNode.x, sourceNode.y), Offset(targetNode.x, targetNode.y), edgePaint);
       }
@@ -333,7 +332,7 @@ class GraphPainter extends CustomPainter {
     for (final node in positionedNodes) {
       final isSelected = selectedNode?.id == node.id;
       final nodeRadius = isSelected ? 40.0 : 30.0;
-      
+
       final nodePaint = Paint()
         ..color = _getNodeColor(node.level)
         ..style = PaintingStyle.fill;
@@ -373,7 +372,7 @@ class GraphPainter extends CustomPainter {
       levelTextPainter.layout();
       levelTextPainter.paint(
         canvas,
-        Offset(node.x + nodeRadius - 8 - levelTextPainter.width / 2, 
+        Offset(node.x + nodeRadius - 8 - levelTextPainter.width / 2,
                node.y - nodeRadius + 8 - levelTextPainter.height / 2),
       );
 
@@ -401,7 +400,7 @@ class GraphPainter extends CustomPainter {
   List<NodeModel> _calculateNodePositions() {
     // Check if nodes have valid positions
     final hasValidPositions = nodes.any((n) => n.x != 0 || n.y != 0);
-    
+
     if (hasValidPositions) {
       return nodes;
     }
@@ -409,7 +408,7 @@ class GraphPainter extends CustomPainter {
     // Auto-calculate positions in a tree-like layout
     final positioned = <NodeModel>[];
     final levelGroups = <int, List<NodeModel>>{};
-    
+
     for (final node in nodes) {
       levelGroups.putIfAbsent(node.level, () => []).add(node);
     }
@@ -423,7 +422,7 @@ class GraphPainter extends CustomPainter {
       final level = levels[i];
       final levelNodes = levelGroups[level]!;
       final horizontalSpacing = screenWidth / (levelNodes.length + 1);
-      
+
       for (int j = 0; j < levelNodes.length; j++) {
         final node = levelNodes[j];
         positioned.add(NodeModel(

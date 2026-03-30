@@ -12,7 +12,7 @@ class FavoritesPage extends StatefulWidget {
 class _FavoritesPageState extends State<FavoritesPage> {
   final _favoriteDao = FavoriteDao();
   final _authService = AuthService();
-  
+
   List<Map<String, dynamic>> _favorites = [];
   bool _isLoading = true;
 
@@ -56,8 +56,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('我的收藏'),
-        backgroundColor: const Color(0xFF667eea),
-        foregroundColor: Colors.white,
+
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
