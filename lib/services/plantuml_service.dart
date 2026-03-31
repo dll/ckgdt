@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io' show ZLibEncoder;
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class PlantUmlService {
@@ -11,21 +12,43 @@ class PlantUmlService {
 
   /// 渲染 PUML 内容为 PNG 字节（优先 Kroki，失败后尝试 PlantUML）
   Future<Uint8List?> render(String pumlContent) async {
+    // 尝试 Kroki POST
     try {
+      debugPrint('=== PlantUmlService: Trying Kroki POST...');
       final bytes = await _renderKroki(pumlContent);
-      if (bytes != null) return bytes;
-    } catch (_) {}
-    try {
-      return await _renderPlantUml(pumlContent);
-    } catch (_) {
-      return null;
+      if (bytes != null && bytes.isNotEmpty) {
+        debugPrint('=== PlantUmlService: Kroki POST success, ${bytes.length} bytes');
+        return bytes;
+      }
+    } catch (e) {
+      debugPrint('=== PlantUmlService: Kroki POST failed: $e');
     }
+    // 尝试 PlantUML GET
+    try {
+      debugPrint('=== PlantUmlService: Trying PlantUML GET...');
+      final bytes = await _renderPlantUml(pumlContent);
+      if (bytes != null && bytes.isNotEmpty) {
+        debugPrint('=== PlantUmlService: PlantUML GET success, ${bytes.length} bytes');
+        return bytes;
+      }
+    } catch (e) {
+      debugPrint('=== PlantUmlService: PlantUML GET failed: $e');
+    }
+    debugPrint('=== PlantUmlService: All render methods failed');
+    return null;
   }
 
-  /// 获取 Kroki 渲染 URL（用于 Image.network）
+  /// 获取 Kroki GET 渲染 URL（需要 deflate + base64url 编码）
   String getKrokiUrl(String pumlContent) {
-    final encoded = base64Url.encode(utf8.encode(pumlContent));
-    return 'https://kroki.io/plantuml/png/$encoded';
+    try {
+      final deflated = _deflate(utf8.encode(pumlContent));
+      final encoded = base64Url.encode(Uint8List.fromList(deflated));
+      return 'https://kroki.io/plantuml/png/$encoded';
+    } catch (_) {
+      // fallback to PlantUML encoding
+      final encoded = _encodePlantUml(pumlContent);
+      return '$_plantUmlUrl$encoded';
+    }
   }
 
   Future<Uint8List?> _renderKroki(String pumlContent) async {
@@ -41,6 +64,7 @@ class PlantUmlService {
         .timeout(const Duration(seconds: 30));
 
     if (response.statusCode == 200) return response.bodyBytes;
+    debugPrint('=== PlantUmlService: Kroki status=${response.statusCode}');
     return null;
   }
 
@@ -53,6 +77,7 @@ class PlantUmlService {
       headers: {'User-Agent': 'Mozilla/5.0 (compatible; knowledge-graph-app)'},
     ).timeout(const Duration(seconds: 30));
     if (response.statusCode == 200) return response.bodyBytes;
+    debugPrint('=== PlantUmlService: PlantUML status=${response.statusCode}');
     return null;
   }
 

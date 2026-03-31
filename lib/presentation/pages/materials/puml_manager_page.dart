@@ -1,6 +1,6 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../../data/local/puml_dao.dart';
 import '../../../data/models/puml_file_model.dart';
 import '../../../services/plantuml_service.dart';
@@ -16,11 +16,11 @@ class PumlManagerPage extends StatefulWidget {
 
 class _PumlManagerPageState extends State<PumlManagerPage>
     with SingleTickerProviderStateMixin {
-  static const _chapters = [
+  static const _defaultChapters = [
     '第1章', '第2章', '第3章', '第4章', '第5章', '第6章',
   ];
 
-  static const _diagramTypes = [
+  static const _defaultDiagramTypes = [
     'class', 'sequence', 'activity', 'component', 'usecase',
   ];
 
@@ -31,6 +31,12 @@ class _PumlManagerPageState extends State<PumlManagerPage>
     'component': '组件图',
     'usecase': '用例图',
   };
+
+  /// 动态章节列表（确保包含当前选中值）
+  late List<String> _chapters;
+
+  /// 动态图类型列表（确保包含当前选中值）
+  late List<String> _diagramTypes;
 
   // ── 内置模板 ──────────────────────────────────────────────────────────────
 
@@ -101,9 +107,11 @@ stop
 
   String _selectedChapter = '第1章';
   String _selectedDiagramType = 'class';
-  String? _renderedUrl;
+  Uint8List? _renderedBytes;        // PNG 字节数据
+  String? _renderedUrl;             // 用于保存到数据库
   bool _rendering = false;
   bool _saving = false;
+  String? _renderError;
 
   final PumlDao _pumlDao = PumlDao();
   final PlantUmlService _pumlService = PlantUmlService();
@@ -115,6 +123,10 @@ stop
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
 
+    // 初始化列表副本
+    _chapters = List<String>.from(_defaultChapters);
+    _diagramTypes = List<String>.from(_defaultDiagramTypes);
+
     // 加载现有数据或初始化新建默认值
     if (widget.pumlFile != null) {
       final f = widget.pumlFile!;
@@ -123,10 +135,30 @@ stop
       _selectedChapter = f.chapter ?? '第1章';
       _selectedDiagramType = f.diagramType;
       _renderedUrl = f.renderedUrl;
+
+      // 确保数据库中的值在下拉列表中，否则动态追加
+      if (!_chapters.contains(_selectedChapter)) {
+        _chapters.add(_selectedChapter);
+      }
+      if (!_diagramTypes.contains(_selectedDiagramType)) {
+        _diagramTypes.add(_selectedDiagramType);
+      }
+
+      // 如果有已保存的渲染URL，尝试自动渲染
+      if (_renderedUrl != null && _renderedUrl!.isNotEmpty) {
+        _autoRender();
+      }
     } else {
       _titleController.text = '新建 UML 图';
       _codeController.text = _classTemplate;
     }
+  }
+
+  /// 页面打开时如果有已有代码，自动渲染
+  void _autoRender() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _render();
+    });
   }
 
   @override
@@ -148,19 +180,34 @@ stop
     }
     setState(() {
       _rendering = true;
-      _renderedUrl = null;
+      _renderedBytes = null;
+      _renderError = null;
     });
     try {
-      final url = _pumlService.getKrokiUrl(code);
+      // 使用 POST 方式直接获取 PNG 字节
+      final bytes = await _pumlService.render(code);
       if (!mounted) return;
-      setState(() {
-        _renderedUrl = url;
-        _rendering = false;
-      });
+      if (bytes != null && bytes.isNotEmpty) {
+        // 生成 URL 用于保存到数据库（不用于显示）
+        final url = _pumlService.getKrokiUrl(code);
+        setState(() {
+          _renderedBytes = bytes;
+          _renderedUrl = url;
+          _rendering = false;
+          _renderError = null;
+        });
+      } else {
+        setState(() {
+          _rendering = false;
+          _renderError = '渲染失败：无法连接渲染服务，请检查网络连接';
+        });
+      }
     } catch (e) {
       if (!mounted) return;
-      setState(() => _rendering = false);
-      _showSnack('渲染失败：$e');
+      setState(() {
+        _rendering = false;
+        _renderError = '渲染失败：$e';
+      });
     }
   }
 
@@ -205,7 +252,7 @@ stop
         await _pumlDao.update(updated);
       }
       if (!mounted) return;
-      _showSnack('✅ 保存成功', success: true);
+      _showSnack('保存成功', success: true);
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
@@ -225,7 +272,7 @@ stop
     }
     await Clipboard.setData(ClipboardData(text: code));
     if (!mounted) return;
-    _showSnack('✅ 代码已复制到剪贴板', success: true);
+    _showSnack('代码已复制到剪贴板', success: true);
   }
 
   // ── 插入模板 ──────────────────────────────────────────────────────────────
@@ -324,13 +371,49 @@ stop
           children: [
             CircularProgressIndicator(color: primary),
             const SizedBox(height: 12),
-            const Text('渲染中…', style: TextStyle(color: Colors.grey)),
+            const Text('正在渲染中，请稍候…',
+                style: TextStyle(color: Colors.grey)),
           ],
         ),
       );
     }
 
-    if (_renderedUrl == null || _renderedUrl!.isEmpty) {
+    // 渲染错误
+    if (_renderError != null) {
+      return Container(
+        color: Colors.grey.shade50,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.cloud_off_outlined,
+                  size: 48, color: Colors.redAccent),
+              const SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  _renderError!,
+                  style: const TextStyle(color: Colors.redAccent, fontSize: 14),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('重试'),
+                onPressed: _render,
+                style: FilledButton.styleFrom(
+                  backgroundColor: primary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // 无渲染结果 — 提示用户
+    if (_renderedBytes == null) {
       return GestureDetector(
         onTap: _render,
         child: Container(
@@ -363,7 +446,7 @@ stop
       );
     }
 
-    // 显示渲染结果
+    // 显示渲染结果（使用 Image.memory 直接展示 PNG 字节）
     return Container(
       color: Colors.white,
       child: Stack(
@@ -372,20 +455,17 @@ stop
             minScale: 0.5,
             maxScale: 4.0,
             child: Center(
-              child: CachedNetworkImage(
-                imageUrl: _renderedUrl!,
+              child: Image.memory(
+                _renderedBytes!,
                 fit: BoxFit.contain,
-                placeholder: (_, __) => Center(
-                  child: CircularProgressIndicator(color: primary),
-                ),
-                errorWidget: (_, __, ___) => Center(
+                errorBuilder: (_, __, ___) => Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(Icons.broken_image_outlined,
                           size: 40, color: Colors.redAccent),
                       const SizedBox(height: 8),
-                      const Text('图片加载失败',
+                      const Text('图片解码失败',
                           style: TextStyle(color: Colors.redAccent)),
                       const SizedBox(height: 8),
                       TextButton.icon(

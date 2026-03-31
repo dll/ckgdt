@@ -4,6 +4,7 @@ import '../../../data/local/database_helper.dart';
 import '../../../data/local/puml_dao.dart';
 import '../../../data/models/material_model.dart';
 import '../../../data/models/puml_file_model.dart';
+import '../../../services/file_opener_service.dart';
 import '../../../services/material_service.dart';
 import 'ai_assist_page.dart';
 import 'ai_settings_page.dart';
@@ -221,26 +222,29 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
     if (_resourceLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    return Column(
-      children: [
-        TabBar(
-          indicatorColor: primary,
-          labelColor: primary,
-          unselectedLabelColor: Colors.grey,
-          tabs: [
-            Tab(text: 'PDF (${_pdfFiles.length})'),
-            Tab(text: 'PPT (${_pptFiles.length})'),
-          ],
-        ),
-        Expanded(
-          child: TabBarView(
-            children: [
-              _buildFileList(_pdfFiles, '📄', 'PDF'),
-              _buildFileList(_pptFiles, '🖼️', 'PPT'),
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          TabBar(
+            indicatorColor: primary,
+            labelColor: primary,
+            unselectedLabelColor: Colors.grey,
+            tabs: [
+              Tab(text: 'PDF (${_pdfFiles.length})'),
+              Tab(text: 'PPT (${_pptFiles.length})'),
             ],
           ),
-        ),
-      ],
+          Expanded(
+            child: TabBarView(
+              children: [
+                _buildFileList(_pdfFiles, '📄', 'PDF'),
+                _buildFileList(_pptFiles, '🖼️', 'PPT'),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -300,12 +304,13 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
             ),
             trailing: const Icon(Icons.chevron_right, color: Colors.grey),
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(path.isEmpty ? '文件路径未设置' : path),
-                  duration: const Duration(seconds: 3),
-                ),
-              );
+              if (path.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('文件路径未设置')),
+                );
+                return;
+              }
+              FileOpenerService.openFile(context, path, name);
             },
           );
         },

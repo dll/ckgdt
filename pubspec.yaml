@@ -19,6 +19,7 @@ dependencies:
   pdf: ^3.10.8
   printing: ^5.13.1
   cached_network_image: ^3.3.1
+  open_filex: ^4.7.0
 
 dev_dependencies:
   flutter_test:
@@ -30,3 +31,9 @@ flutter:
 
   assets:
     - assets/
+    - assets/graphs/01-课程图谱/
+    - assets/graphs/02-技术栈图谱/
+    - assets/graphs/03-实验图谱/
+    - assets/graphs/04-项目图谱/
+    - assets/graphs/05-教学图谱/
+    - assets/graphs/06-学习图谱/

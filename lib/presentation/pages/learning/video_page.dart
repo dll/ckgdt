@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../../data/local/database_helper.dart';
+import '../../../services/file_opener_service.dart';
 
 class VideoListPage extends StatefulWidget {
-  const VideoListPage({super.key});
+  final String? filterChapter; // 可选：按章节过滤
+
+  const VideoListPage({super.key, this.filterChapter});
 
   @override
   State<VideoListPage> createState() => _VideoListPageState();
@@ -23,128 +26,16 @@ class _VideoListPageState extends State<VideoListPage> {
     try {
       final db = await _dbHelper.database;
 
-      // First check if we have videos in database
-      var result = await db.query(
-        'resource_files',
-        where: 'file_type = ?',
-        whereArgs: ['video'],
-        orderBy: 'chapter',
-      );
-
-      if (result.isEmpty) {
-        // Insert video resources from assets
-        final videos = [
-          {
-            'file_name': '第一章 移动应用开发技术体系1.mp4',
-            'file_path': 'assets/video/第一章 移动应用开发技术体系1.mp4',
-            'file_type': 'video',
-            'chapter': '第一章 移动应用开发技术体系1',
-            'description': '视频教程'
-          },
-          {
-            'file_name': '第一章 移动应用开发技术体系2.mp4',
-            'file_path': 'assets/video/第一章 移动应用开发技术体系2.mp4',
-            'file_type': 'video',
-            'chapter': '第一章 移动应用开发技术体系2',
-            'description': '视频教程'
-          },
-          {
-            'file_name': '第二章 原生开发基础1.mp4',
-            'file_path': 'assets/video/第二章 原生开发基础1.mp4',
-            'file_type': 'video',
-            'chapter': '第二章 原生开发基础1',
-            'description': '视频教程'
-          },
-          {
-            'file_name': '第二章 原生开发基础2.mp4',
-            'file_path': 'assets/video/第二章 原生开发基础2.mp4',
-            'file_type': 'video',
-            'chapter': '第二章 原生开发基础2',
-            'description': '视频教程'
-          },
-          {
-            'file_name': '第三章 混合开发技术1.mp4',
-            'file_path': 'assets/video/第三章 混合开发技术1.mp4',
-            'file_type': 'video',
-            'chapter': '第三章 混合开发技术1',
-            'description': '视频教程'
-          },
-          {
-            'file_name': '第三章 混合开发技术2.mp4',
-            'file_path': 'assets/video/第三章 混合开发技术2.mp4',
-            'file_type': 'video',
-            'chapter': '第三章 混合开发技术2',
-            'description': '视频教程'
-          },
-          {
-            'file_name': '第三章 混合开发技术3.mp4',
-            'file_path': 'assets/video/第三章 混合开发技术3.mp4',
-            'file_type': 'video',
-            'chapter': '第三章 混合开发技术3',
-            'description': '视频教程'
-          },
-          {
-            'file_name': '第四章 小程序开发1.mp4',
-            'file_path': 'assets/video/第四章 小程序开发1.mp4',
-            'file_type': 'video',
-            'chapter': '第四章 小程序开发1',
-            'description': '视频教程'
-          },
-          {
-            'file_name': '第四章 小程序开发2.mp4',
-            'file_path': 'assets/video/第四章 小程序开发2.mp4',
-            'file_type': 'video',
-            'chapter': '第四章 小程序开发2',
-            'description': '视频教程'
-          },
-          {
-            'file_name': '第五章 华为多端应用开发1.mp4',
-            'file_path': 'assets/video/第五章 华为多端应用开发1.mp4',
-            'file_type': 'video',
-            'chapter': '第五章 华为多端应用开发1',
-            'description': '视频教程'
-          },
-          {
-            'file_name': '第五章 华为多端应用开发2.mp4',
-            'file_path': 'assets/video/第五章 华为多端应用开发2.mp4',
-            'file_type': 'video',
-            'chapter': '第五章 华为多端应用开发2',
-            'description': '视频教程'
-          },
-          {
-            'file_name': '第五章 华为多端应用开发3.mp4',
-            'file_path': 'assets/video/第五章 华为多端应用开发3.mp4',
-            'file_type': 'video',
-            'chapter': '第五章 华为多端应用开发3',
-            'description': '视频教程'
-          },
-          {
-            'file_name': '第六章 综合开发实践1.mp4',
-            'file_path': 'assets/video/第六章 综合开发实践1.mp4',
-            'file_type': 'video',
-            'chapter': '第六章 综合开发实践1',
-            'description': '视频教程'
-          },
-          {
-            'file_name': '第六章 综合开发实践2.mp4',
-            'file_path': 'assets/video/第六章 综合开发实践2.mp4',
-            'file_type': 'video',
-            'chapter': '第六章 综合开发实践2',
-            'description': '视频教程'
-          },
-          {
-            'file_name': '第六章 综合开发实践3.mp4',
-            'file_path': 'assets/video/第六章 综合开发实践3.mp4',
-            'file_type': 'video',
-            'chapter': '第六章 综合开发实践3',
-            'description': '视频教程'
-          },
-        ];
-
-        for (final video in videos) {
-          await db.insert('resource_files', video);
-        }
-
+      List<Map<String, dynamic>> result;
+      if (widget.filterChapter != null && widget.filterChapter!.isNotEmpty) {
+        // 模糊匹配章节
+        result = await db.query(
+          'resource_files',
+          where: 'file_type = ? AND chapter LIKE ?',
+          whereArgs: ['video', '%${widget.filterChapter}%'],
+          orderBy: 'chapter',
+        );
+      } else {
         result = await db.query(
           'resource_files',
           where: 'file_type = ?',
@@ -167,9 +58,13 @@ class _VideoListPageState extends State<VideoListPage> {
 
   @override
   Widget build(BuildContext context) {
+    final title = widget.filterChapter != null
+        ? '视频: ${widget.filterChapter}'
+        : '视频教程';
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('视频教程'),
+        title: Text(title),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -220,7 +115,9 @@ class _VideoListPageState extends State<VideoListPage> {
           Icon(Icons.video_library, size: 80, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(
-            '暂无视频教程',
+            widget.filterChapter != null
+                ? '未找到「${widget.filterChapter}」的视频'
+                : '暂无视频教程',
             style: TextStyle(fontSize: 18, color: Colors.grey[600]),
           ),
         ],
@@ -229,9 +126,14 @@ class _VideoListPageState extends State<VideoListPage> {
   }
 
   void _playVideo(Map<String, dynamic> video) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-          content: Text('播放: ${video['chapter']}\n文件: ${video['file_path']}')),
-    );
+    final filePath = video['file_path'] as String? ?? '';
+    final fileName = video['file_name'] as String? ?? '${video['chapter']}.mp4';
+    if (filePath.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('文件路径未设置')),
+      );
+      return;
+    }
+    FileOpenerService.openFile(context, filePath, fileName);
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../data/local/database_helper.dart';
+import '../../../services/file_opener_service.dart';
 
 class DocumentListPage extends StatefulWidget {
   const DocumentListPage({super.key});
@@ -381,8 +382,14 @@ class _DocumentListPageState extends State<DocumentListPage>
   }
 
   void _openDocument(Map<String, dynamic> doc) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('打开: ${doc['chapter']}\n文件: ${doc['file_path']}')),
-    );
+    final filePath = doc['file_path'] as String? ?? '';
+    final fileName = doc['file_name'] as String? ?? '';
+    if (filePath.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('文件路径未设置')),
+      );
+      return;
+    }
+    FileOpenerService.openFile(context, filePath, fileName);
   }
 }
