@@ -155,7 +155,8 @@ class _LoginPageState extends State<LoginPage> {
                               child: ElevatedButton(
                                 onPressed: _isLoading ? null : _login,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Theme.of(context).colorScheme.primary,
+                                  backgroundColor:
+                                      Theme.of(context).colorScheme.primary,
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8),
@@ -190,16 +191,18 @@ class _LoginPageState extends State<LoginPage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         ElevatedButton(
-                          onPressed: () => _quickLogin('2023211985', '321198', '测试学生'),
+                          onPressed: () =>
+                              _quickLogin('2023211985', '211985', '学生'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.orange,
                             foregroundColor: Colors.white,
                           ),
-                          child: const Text('测试学生'),
+                          child: const Text('学生'),
                         ),
                         const SizedBox(width: 16),
                         ElevatedButton(
-                          onPressed: () => _quickLogin('206004', '206004', '教师'),
+                          onPressed: () =>
+                              _quickLogin('206004', '206004', '教师'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green,
                             foregroundColor: Colors.white,
@@ -208,7 +211,8 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         const SizedBox(width: 16),
                         ElevatedButton(
-                          onPressed: () => _quickLogin('419116', 'osgis123', '管理员'),
+                          onPressed: () =>
+                              _quickLogin('419116', '419116', '管理员'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.blue,
                             foregroundColor: Colors.white,
@@ -219,7 +223,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 16),
                     const Text(
-                      '提示：学生密码为学号后6位\n教师密码为工号后6位',
+                      '提示：学生/教师/管理员密码均为账号后6位',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Colors.white60,

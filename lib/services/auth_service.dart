@@ -2,6 +2,10 @@ import '../data/local/user_dao.dart';
 import '../data/models/user_model.dart';
 
 class AuthService {
+  static final AuthService _instance = AuthService._internal();
+  factory AuthService() => _instance;
+  AuthService._internal();
+
   final UserDao _userDao = UserDao();
   UserModel? _currentUser;
 
@@ -41,5 +45,9 @@ class AuthService {
 
   Future<bool> deleteStudent(String userId) async {
     return await _userDao.deleteUser(userId);
+  }
+
+  String? getCurrentUserId() {
+    return _currentUser?.userId;
   }
 }

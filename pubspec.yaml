@@ -30,5 +30,3 @@ flutter:
 
   assets:
     - assets/
-    - assets/learning_data.db
-    - assets/students.json

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../services/auth_service.dart';
+import '../../../data/local/learning_path_dao.dart';
+import '../../../data/models/learning_path_model.dart';
 
 class LearningPlanPage extends StatefulWidget {
   const LearningPlanPage({super.key});
@@ -10,54 +12,65 @@ class LearningPlanPage extends StatefulWidget {
 
 class _LearningPlanPageState extends State<LearningPlanPage> {
   final _authService = AuthService();
+  final _learningPathDao = LearningPathDao();
 
-  final List<Map<String, dynamic>> _plans = [
-    {
-      'title': 'Flutter入门计划',
-      'description': '7天学会Flutter基础开发',
-      'progress': 60,
-      'days': 7,
-      'completedDays': 4,
-      'chapters': ['Flutter概述', 'Dart语言基础', 'Widget介绍', '状态管理'],
-      'color': Colors.blue,
-    },
-    {
-      'title': 'Android开发进阶',
-      'description': '14天掌握Android高级特性',
-      'progress': 30,
-      'days': 14,
-      'completedDays': 4,
-      'chapters': ['自定义View', '性能优化', 'NDK开发', '架构模式'],
-      'color': Colors.green,
-    },
-    {
-      'title': '跨平台开发实战',
-      'description': '30天完成一个完整项目',
-      'progress': 10,
-      'days': 30,
-      'completedDays': 3,
-      'chapters': ['项目规划', '需求分析', '架构设计', '编码实现', '测试部署'],
-      'color': Colors.purple,
-    },
-  ];
+  List<LearningPathModel> _paths = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPaths();
+  }
+
+  Future<void> _loadPaths() async {
+    setState(() => _isLoading = true);
+    try {
+      final userId = _authService.getCurrentUserId();
+      if (userId != null) {
+        final paths = await _learningPathDao.getPathsByUser(userId);
+        setState(() {
+          _paths = paths;
+          _isLoading = false;
+        });
+      } else {
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('学习计划'),
-
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadPaths,
+          ),
+        ],
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: _plans.length + 1,
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            return _buildHeader();
-          }
-          return _buildPlanCard(_plans[index - 1]);
-        },
-      ),
+      body: _paths.isEmpty
+          ? _buildEmptyState()
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _paths.length + 1,
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return _buildHeader();
+                }
+                return _buildPathCard(_paths[index - 1]);
+              },
+            ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showCreatePlanDialog(context),
         backgroundColor: Theme.of(context).colorScheme.primary,
@@ -66,11 +79,31 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
     );
   }
 
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.route, size: 80, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          Text(
+            '暂无学习计划',
+            style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '从知识图谱节点生成学习路径',
+            style: TextStyle(color: Colors.grey[500]),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHeader() {
-    final totalProgress = _plans.isEmpty
+    final totalProgress = _paths.isEmpty
         ? 0.0
-        : _plans.map((p) => p['progress'] as int).reduce((a, b) => a + b) /
-            _plans.length;
+        : _paths.map((p) => p.progress).reduce((a, b) => a + b) / _paths.length;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -110,7 +143,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              '正在参与 ${_plans.length} 个学习计划',
+              '正在参与 ${_paths.length} 个学习计划',
               style: TextStyle(color: Colors.grey[600], fontSize: 12),
             ),
           ],
@@ -119,11 +152,20 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
     );
   }
 
-  Widget _buildPlanCard(Map<String, dynamic> plan) {
+  Widget _buildPathCard(LearningPathModel path) {
+    final colors = [
+      Colors.blue,
+      Colors.green,
+      Colors.purple,
+      Colors.orange,
+      Colors.red
+    ];
+    final color = colors[path.id.hashCode % colors.length];
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
-        onTap: () => _showPlanDetail(context, plan),
+        onTap: () => _showPathDetail(context, path),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -135,12 +177,12 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: (plan['color'] as Color).withValues(alpha: 0.1),
+                      color: color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
                       Icons.calendar_today,
-                      color: plan['color'] as Color,
+                      color: color,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -149,14 +191,14 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          plan['title'] as String,
+                          path.title,
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         Text(
-                          plan['description'] as String,
+                          path.description ?? '',
                           style: TextStyle(
                             color: Colors.grey[600],
                             fontSize: 12,
@@ -168,7 +210,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                   PopupMenuButton<String>(
                     onSelected: (value) {
                       if (value == 'delete') {
-                        _deletePlan(plan);
+                        _deletePath(path);
                       }
                     },
                     itemBuilder: (context) => [
@@ -187,20 +229,19 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: LinearProgressIndicator(
-                        value: (plan['progress'] as int) / 100,
+                        value: path.progress / 100,
                         minHeight: 8,
                         backgroundColor: Colors.grey[200],
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                            plan['color'] as Color),
+                        valueColor: AlwaysStoppedAnimation<Color>(color),
                       ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    '${plan['progress']}%',
+                    '${path.progress.toInt()}%',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: plan['color'] as Color,
+                      color: color,
                     ),
                   ),
                 ],
@@ -210,11 +251,11 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '已完成 ${plan['completedDays']}/${plan['days']} 天',
+                    '${path.nodeIds.length} 个节点',
                     style: TextStyle(color: Colors.grey[600], fontSize: 12),
                   ),
                   Text(
-                    '${(plan['chapters'] as List).length} 个章节',
+                    path.status == 'active' ? '进行中' : '已完成',
                     style: TextStyle(color: Colors.grey[600], fontSize: 12),
                   ),
                 ],
@@ -226,7 +267,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
     );
   }
 
-  void _showPlanDetail(BuildContext context, Map<String, dynamic> plan) {
+  void _showPathDetail(BuildContext context, LearningPathModel path) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -257,7 +298,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                     children: [
                       Expanded(
                         child: Text(
-                          plan['title'] as String,
+                          path.title,
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -276,31 +317,15 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                   child: ListView.builder(
                     controller: scrollController,
                     padding: const EdgeInsets.all(16),
-                    itemCount: (plan['chapters'] as List).length,
+                    itemCount: path.nodeIds.length,
                     itemBuilder: (context, index) {
-                      final isCompleted = index < plan['completedDays'];
                       return ListTile(
                         leading: CircleAvatar(
-                          backgroundColor:
-                              isCompleted ? Colors.green : Colors.grey[300],
-                          child: isCompleted
-                              ? const Icon(Icons.check, color: Colors.white)
-                              : Text('${index + 1}'),
+                          backgroundColor: Colors.grey[300],
+                          child: Text('${index + 1}'),
                         ),
-                        title: Text(
-                          plan['chapters'][index] as String,
-                          style: TextStyle(
-                            decoration: isCompleted
-                                ? TextDecoration.lineThrough
-                                : null,
-                            color: isCompleted ? Colors.grey : null,
-                          ),
-                        ),
-                        trailing: isCompleted
-                            ? const Icon(Icons.check_circle,
-                                color: Colors.green)
-                            : const Icon(Icons.radio_button_unchecked,
-                                color: Colors.grey),
+                        title: Text('节点 ${index + 1}'),
+                        subtitle: Text(path.nodeIds[index]),
                       );
                     },
                   ),
@@ -314,6 +339,9 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
   }
 
   void _showCreatePlanDialog(BuildContext context) {
+    final titleController = TextEditingController();
+    final descController = TextEditingController();
+
     showDialog(
       context: context,
       builder: (context) {
@@ -323,6 +351,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
+                controller: titleController,
                 decoration: const InputDecoration(
                   labelText: '计划名称',
                   hintText: '输入计划名称',
@@ -330,6 +359,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
               ),
               const SizedBox(height: 16),
               TextField(
+                controller: descController,
                 decoration: const InputDecoration(
                   labelText: '计划描述',
                   hintText: '输入计划描述',
@@ -344,11 +374,22 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
               child: const Text('取消'),
             ),
             ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('学习计划创建功能开发中')),
+              onPressed: () async {
+                if (titleController.text.isEmpty) return;
+
+                final userId = _authService.getCurrentUserId();
+                if (userId == null) return;
+
+                final path = LearningPathModel(
+                  userId: userId,
+                  title: titleController.text,
+                  description: descController.text,
+                  nodeIds: [],
                 );
+
+                await _learningPathDao.createPath(path);
+                Navigator.pop(context);
+                _loadPaths();
               },
               child: const Text('创建'),
             ),
@@ -358,12 +399,12 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
     );
   }
 
-  void _deletePlan(Map<String, dynamic> plan) {
-    setState(() {
-      _plans.remove(plan);
-    });
+  void _deletePath(LearningPathModel path) async {
+    if (path.id == null) return;
+    await _learningPathDao.deletePath(path.id!);
+    _loadPaths();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('已删除 "${plan['title']}"')),
+      SnackBar(content: Text('已删除 "${path.title}"')),
     );
   }
 }

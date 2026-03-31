@@ -34,21 +34,111 @@ class _VideoListPageState extends State<VideoListPage> {
       if (result.isEmpty) {
         // Insert video resources from assets
         final videos = [
-          {'file_name': '第一章 移动应用开发技术体系1.mp4', 'file_path': 'assets/第一章 移动应用开发技术体系1.mp4', 'file_type': 'video', 'chapter': '第一章 移动应用开发技术体系1', 'description': '视频教程'},
-          {'file_name': '第一章 移动应用开发技术体系2.mp4', 'file_path': 'assets/第一章 移动应用开发技术体系2.mp4', 'file_type': 'video', 'chapter': '第一章 移动应用开发技术体系2', 'description': '视频教程'},
-          {'file_name': '第二章 原生开发基础1.mp4', 'file_path': 'assets/第二章 原生开发基础1.mp4', 'file_type': 'video', 'chapter': '第二章 原生开发基础1', 'description': '视频教程'},
-          {'file_name': '第二章 原生开发基础2.mp4', 'file_path': 'assets/第二章 原生开发基础2.mp4', 'file_type': 'video', 'chapter': '第二章 原生开发基础2', 'description': '视频教程'},
-          {'file_name': '第三章 混合开发技术1.mp4', 'file_path': 'assets/第三章 混合开发技术1.mp4', 'file_type': 'video', 'chapter': '第三章 混合开发技术1', 'description': '视频教程'},
-          {'file_name': '第三章 混合开发技术2.mp4', 'file_path': 'assets/第三章 混合开发技术2.mp4', 'file_type': 'video', 'chapter': '第三章 混合开发技术2', 'description': '视频教程'},
-          {'file_name': '第三章 混合开发技术3.mp4', 'file_path': 'assets/第三章 混合开发技术3.mp4', 'file_type': 'video', 'chapter': '第三章 混合开发技术3', 'description': '视频教程'},
-          {'file_name': '第四章 小程序开发1.mp4', 'file_path': 'assets/第四章 小程序开发1.mp4', 'file_type': 'video', 'chapter': '第四章 小程序开发1', 'description': '视频教程'},
-          {'file_name': '第四章 小程序开发2.mp4', 'file_path': 'assets/第四章 小程序开发2.mp4', 'file_type': 'video', 'chapter': '第四章 小程序开发2', 'description': '视频教程'},
-          {'file_name': '第五章 华为多端应用开发1.mp4', 'file_path': 'assets/第五章 华为多端应用开发1.mp4', 'file_type': 'video', 'chapter': '第五章 华为多端应用开发1', 'description': '视频教程'},
-          {'file_name': '第五章 华为多端应用开发2.mp4', 'file_path': 'assets/第五章 华为多端应用开发2.mp4', 'file_type': 'video', 'chapter': '第五章 华为多端应用开发2', 'description': '视频教程'},
-          {'file_name': '第五章 华为多端应用开发3.mp4', 'file_path': 'assets/第五章 华为多端应用开发3.mp4', 'file_type': 'video', 'chapter': '第五章 华为多端应用开发3', 'description': '视频教程'},
-          {'file_name': '第六章 综合开发实践1.mp4', 'file_path': 'assets/第六章 综合开发实践1.mp4', 'file_type': 'video', 'chapter': '第六章 综合开发实践1', 'description': '视频教程'},
-          {'file_name': '第六章 综合开发实践2.mp4', 'file_path': 'assets/第六章 综合开发实践2.mp4', 'file_type': 'video', 'chapter': '第六章 综合开发实践2', 'description': '视频教程'},
-          {'file_name': '第六章 综合开发实践3.mp4', 'file_path': 'assets/第六章 综合开发实践3.mp4', 'file_type': 'video', 'chapter': '第六章 综合开发实践3', 'description': '视频教程'},
+          {
+            'file_name': '第一章 移动应用开发技术体系1.mp4',
+            'file_path': 'assets/video/第一章 移动应用开发技术体系1.mp4',
+            'file_type': 'video',
+            'chapter': '第一章 移动应用开发技术体系1',
+            'description': '视频教程'
+          },
+          {
+            'file_name': '第一章 移动应用开发技术体系2.mp4',
+            'file_path': 'assets/video/第一章 移动应用开发技术体系2.mp4',
+            'file_type': 'video',
+            'chapter': '第一章 移动应用开发技术体系2',
+            'description': '视频教程'
+          },
+          {
+            'file_name': '第二章 原生开发基础1.mp4',
+            'file_path': 'assets/video/第二章 原生开发基础1.mp4',
+            'file_type': 'video',
+            'chapter': '第二章 原生开发基础1',
+            'description': '视频教程'
+          },
+          {
+            'file_name': '第二章 原生开发基础2.mp4',
+            'file_path': 'assets/video/第二章 原生开发基础2.mp4',
+            'file_type': 'video',
+            'chapter': '第二章 原生开发基础2',
+            'description': '视频教程'
+          },
+          {
+            'file_name': '第三章 混合开发技术1.mp4',
+            'file_path': 'assets/video/第三章 混合开发技术1.mp4',
+            'file_type': 'video',
+            'chapter': '第三章 混合开发技术1',
+            'description': '视频教程'
+          },
+          {
+            'file_name': '第三章 混合开发技术2.mp4',
+            'file_path': 'assets/video/第三章 混合开发技术2.mp4',
+            'file_type': 'video',
+            'chapter': '第三章 混合开发技术2',
+            'description': '视频教程'
+          },
+          {
+            'file_name': '第三章 混合开发技术3.mp4',
+            'file_path': 'assets/video/第三章 混合开发技术3.mp4',
+            'file_type': 'video',
+            'chapter': '第三章 混合开发技术3',
+            'description': '视频教程'
+          },
+          {
+            'file_name': '第四章 小程序开发1.mp4',
+            'file_path': 'assets/video/第四章 小程序开发1.mp4',
+            'file_type': 'video',
+            'chapter': '第四章 小程序开发1',
+            'description': '视频教程'
+          },
+          {
+            'file_name': '第四章 小程序开发2.mp4',
+            'file_path': 'assets/video/第四章 小程序开发2.mp4',
+            'file_type': 'video',
+            'chapter': '第四章 小程序开发2',
+            'description': '视频教程'
+          },
+          {
+            'file_name': '第五章 华为多端应用开发1.mp4',
+            'file_path': 'assets/video/第五章 华为多端应用开发1.mp4',
+            'file_type': 'video',
+            'chapter': '第五章 华为多端应用开发1',
+            'description': '视频教程'
+          },
+          {
+            'file_name': '第五章 华为多端应用开发2.mp4',
+            'file_path': 'assets/video/第五章 华为多端应用开发2.mp4',
+            'file_type': 'video',
+            'chapter': '第五章 华为多端应用开发2',
+            'description': '视频教程'
+          },
+          {
+            'file_name': '第五章 华为多端应用开发3.mp4',
+            'file_path': 'assets/video/第五章 华为多端应用开发3.mp4',
+            'file_type': 'video',
+            'chapter': '第五章 华为多端应用开发3',
+            'description': '视频教程'
+          },
+          {
+            'file_name': '第六章 综合开发实践1.mp4',
+            'file_path': 'assets/video/第六章 综合开发实践1.mp4',
+            'file_type': 'video',
+            'chapter': '第六章 综合开发实践1',
+            'description': '视频教程'
+          },
+          {
+            'file_name': '第六章 综合开发实践2.mp4',
+            'file_path': 'assets/video/第六章 综合开发实践2.mp4',
+            'file_type': 'video',
+            'chapter': '第六章 综合开发实践2',
+            'description': '视频教程'
+          },
+          {
+            'file_name': '第六章 综合开发实践3.mp4',
+            'file_path': 'assets/video/第六章 综合开发实践3.mp4',
+            'file_type': 'video',
+            'chapter': '第六章 综合开发实践3',
+            'description': '视频教程'
+          },
         ];
 
         for (final video in videos) {
@@ -80,7 +170,6 @@ class _VideoListPageState extends State<VideoListPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('视频教程'),
-
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -102,12 +191,14 @@ class _VideoListPageState extends State<VideoListPage> {
                       child: ListTile(
                         leading: CircleAvatar(
                           backgroundColor: Colors.red,
-                          child: const Icon(Icons.play_arrow, color: Colors.white),
+                          child:
+                              const Icon(Icons.play_arrow, color: Colors.white),
                         ),
                         title: Text(video['chapter'] ?? '视频'),
                         subtitle: Row(
                           children: [
-                            const Icon(Icons.access_time, size: 14, color: Colors.grey),
+                            const Icon(Icons.access_time,
+                                size: 14, color: Colors.grey),
                             const SizedBox(width: 4),
                             const Text('点击播放'),
                           ],
@@ -139,7 +230,8 @@ class _VideoListPageState extends State<VideoListPage> {
 
   void _playVideo(Map<String, dynamic> video) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('播放: ${video['chapter']}\n文件: ${video['file_path']}')),
+      SnackBar(
+          content: Text('播放: ${video['chapter']}\n文件: ${video['file_path']}')),
     );
   }
 }

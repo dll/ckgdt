@@ -45,21 +45,111 @@ class _DocumentListPageState extends State<DocumentListPage>
       if (pdfs.isEmpty && ppts.isEmpty) {
         // Insert PDF resources
         final pdfFiles = [
-          {'file_name': '第一章 移动应用开发技术体系1.pdf', 'file_path': 'assets/课件/清言智谱/第一章 移动应用开发技术体系1.pdf', 'file_type': 'pdf', 'chapter': '第一章 移动应用开发技术体系1', 'description': 'PDF课件'},
-          {'file_name': '第一章 移动应用开发技术体系2.pdf', 'file_path': 'assets/课件/清言智谱/第一章 移动应用开发技术体系2.pdf', 'file_type': 'pdf', 'chapter': '第一章 移动应用开发技术体系2', 'description': 'PDF课件'},
-          {'file_name': '第二章 原生开发基础1.pdf', 'file_path': 'assets/课件/清言智谱/第二章 原生开发基础1.pdf', 'file_type': 'pdf', 'chapter': '第二章 原生开发基础1', 'description': 'PDF课件'},
-          {'file_name': '第二章 原生开发基础2.pdf', 'file_path': 'assets/课件/清言智谱/第二章 原生开发基础2.pdf', 'file_type': 'pdf', 'chapter': '第二章 原生开发基础2', 'description': 'PDF课件'},
-          {'file_name': '第三章 混合开发技术1.pdf', 'file_path': 'assets/课件/清言智谱/第三章 混合开发技术1.pdf', 'file_type': 'pdf', 'chapter': '第三章 混合开发技术1', 'description': 'PDF课件'},
-          {'file_name': '第三章 混合开发技术2.pdf', 'file_path': 'assets/课件/清言智谱/第三章 混合开发技术2.pdf', 'file_type': 'pdf', 'chapter': '第三章 混合开发技术2', 'description': 'PDF课件'},
-          {'file_name': '第三章 混合开发技术3.pdf', 'file_path': 'assets/课件/清言智谱/第三章 混合开发技术3.pdf', 'file_type': 'pdf', 'chapter': '第三章 混合开发技术3', 'description': 'PDF课件'},
-          {'file_name': '第四章 小程序开发1.pdf', 'file_path': 'assets/课件/清言智谱/第四章 小程序开发1.pdf', 'file_type': 'pdf', 'chapter': '第四章 小程序开发1', 'description': 'PDF课件'},
-          {'file_name': '第四章 小程序开发2.pdf', 'file_path': 'assets/课件/清言智谱/第四章 小程序开发2.pdf', 'file_type': 'pdf', 'chapter': '第四章 小程序开发2', 'description': 'PDF课件'},
-          {'file_name': '第五章 华为多端应用开发1.pdf', 'file_path': 'assets/课件/清言智谱/第五章 华为多端应用开发1.pdf', 'file_type': 'pdf', 'chapter': '第五章 华为多端应用开发1', 'description': 'PDF课件'},
-          {'file_name': '第五章 华为多端应用开发2.pdf', 'file_path': 'assets/课件/清言智谱/第五章 华为多端应用开发2.pdf', 'file_type': 'pdf', 'chapter': '第五章 华为多端应用开发2', 'description': 'PDF课件'},
-          {'file_name': '第五章 华为多端应用开发3.pdf', 'file_path': 'assets/课件/清言智谱/第五章 华为多端应用开发3.pdf', 'file_type': 'pdf', 'chapter': '第五章 华为多端应用开发3', 'description': 'PDF课件'},
-          {'file_name': '第六章 综合开发实践1.pdf', 'file_path': 'assets/课件/清言智谱/第六章 综合开发实践1.pdf', 'file_type': 'pdf', 'chapter': '第六章 综合开发实践1', 'description': 'PDF课件'},
-          {'file_name': '第六章 综合开发实践2.pdf', 'file_path': 'assets/课件/清言智谱/第六章 综合开发实践2.pdf', 'file_type': 'pdf', 'chapter': '第六章 综合开发实践2', 'description': 'PDF课件'},
-          {'file_name': '第六章 综合开发实践3.pdf', 'file_path': 'assets/课件/清言智谱/第六章 综合开发实践3.pdf', 'file_type': 'pdf', 'chapter': '第六章 综合开发实践3', 'description': 'PDF课件'},
+          {
+            'file_name': '第一章 移动应用开发技术体系1.pdf',
+            'file_path': 'assets/pdf/第一章 移动应用开发技术体系1.pdf',
+            'file_type': 'pdf',
+            'chapter': '第一章 移动应用开发技术体系1',
+            'description': 'PDF课件'
+          },
+          {
+            'file_name': '第一章 移动应用开发技术体系2.pdf',
+            'file_path': 'assets/pdf/第一章 移动应用开发技术体系2.pdf',
+            'file_type': 'pdf',
+            'chapter': '第一章 移动应用开发技术体系2',
+            'description': 'PDF课件'
+          },
+          {
+            'file_name': '第二章 原生开发基础1.pdf',
+            'file_path': 'assets/pdf/第二章 原生开发基础1.pdf',
+            'file_type': 'pdf',
+            'chapter': '第二章 原生开发基础1',
+            'description': 'PDF课件'
+          },
+          {
+            'file_name': '第二章 原生开发基础2.pdf',
+            'file_path': 'assets/pdf/第二章 原生开发基础2.pdf',
+            'file_type': 'pdf',
+            'chapter': '第二章 原生开发基础2',
+            'description': 'PDF课件'
+          },
+          {
+            'file_name': '第三章 混合开发技术1.pdf',
+            'file_path': 'assets/pdf/第三章 混合开发技术1.pdf',
+            'file_type': 'pdf',
+            'chapter': '第三章 混合开发技术1',
+            'description': 'PDF课件'
+          },
+          {
+            'file_name': '第三章 混合开发技术2.pdf',
+            'file_path': 'assets/pdf/第三章 混合开发技术2.pdf',
+            'file_type': 'pdf',
+            'chapter': '第三章 混合开发技术2',
+            'description': 'PDF课件'
+          },
+          {
+            'file_name': '第三章 混合开发技术3.pdf',
+            'file_path': 'assets/pdf/第三章 混合开发技术3.pdf',
+            'file_type': 'pdf',
+            'chapter': '第三章 混合开发技术3',
+            'description': 'PDF课件'
+          },
+          {
+            'file_name': '第四章 小程序开发1.pdf',
+            'file_path': 'assets/pdf/第四章 小程序开发1.pdf',
+            'file_type': 'pdf',
+            'chapter': '第四章 小程序开发1',
+            'description': 'PDF课件'
+          },
+          {
+            'file_name': '第四章 小程序开发2.pdf',
+            'file_path': 'assets/pdf/第四章 小程序开发2.pdf',
+            'file_type': 'pdf',
+            'chapter': '第四章 小程序开发2',
+            'description': 'PDF课件'
+          },
+          {
+            'file_name': '第五章 华为多端应用开发1.pdf',
+            'file_path': 'assets/pdf/第五章 华为多端应用开发1.pdf',
+            'file_type': 'pdf',
+            'chapter': '第五章 华为多端应用开发1',
+            'description': 'PDF课件'
+          },
+          {
+            'file_name': '第五章 华为多端应用开发2.pdf',
+            'file_path': 'assets/pdf/第五章 华为多端应用开发2.pdf',
+            'file_type': 'pdf',
+            'chapter': '第五章 华为多端应用开发2',
+            'description': 'PDF课件'
+          },
+          {
+            'file_name': '第五章 华为多端应用开发3.pdf',
+            'file_path': 'assets/pdf/第五章 华为多端应用开发3.pdf',
+            'file_type': 'pdf',
+            'chapter': '第五章 华为多端应用开发3',
+            'description': 'PDF课件'
+          },
+          {
+            'file_name': '第六章 综合开发实践1.pdf',
+            'file_path': 'assets/pdf/第六章 综合开发实践1.pdf',
+            'file_type': 'pdf',
+            'chapter': '第六章 综合开发实践1',
+            'description': 'PDF课件'
+          },
+          {
+            'file_name': '第六章 综合开发实践2.pdf',
+            'file_path': 'assets/pdf/第六章 综合开发实践2.pdf',
+            'file_type': 'pdf',
+            'chapter': '第六章 综合开发实践2',
+            'description': 'PDF课件'
+          },
+          {
+            'file_name': '第六章 综合开发实践3.pdf',
+            'file_path': 'assets/pdf/第六章 综合开发实践3.pdf',
+            'file_type': 'pdf',
+            'chapter': '第六章 综合开发实践3',
+            'description': 'PDF课件'
+          },
         ];
 
         for (final pdf in pdfFiles) {
@@ -68,21 +158,111 @@ class _DocumentListPageState extends State<DocumentListPage>
 
         // Insert PPT resources
         final pptFiles = [
-          {'file_name': '第一章 移动应用开发技术体系1.pptx', 'file_path': 'assets/课件/秒出PPT/第一章 移动应用开发技术体系1.pptx', 'file_type': 'ppt', 'chapter': '第一章 移动应用开发技术体系1', 'description': 'PPT课件'},
-          {'file_name': '第一章 移动应用开发技术体系2.pptx', 'file_path': 'assets/课件/秒出PPT/第一章 移动应用开发技术体系2.pptx', 'file_type': 'ppt', 'chapter': '第一章 移动应用开发技术体系2', 'description': 'PPT课件'},
-          {'file_name': '第二章 原生开发基础1.pptx', 'file_path': 'assets/课件/秒出PPT/第二章 原生开发基础1.pptx', 'file_type': 'ppt', 'chapter': '第二章 原生开发基础1', 'description': 'PPT课件'},
-          {'file_name': '第二章 原生开发基础2.pptx', 'file_path': 'assets/课件/秒出PPT/第二章 原生开发基础2.pptx', 'file_type': 'ppt', 'chapter': '第二章 原生开发基础2', 'description': 'PPT课件'},
-          {'file_name': '第三章 混合开发技术1.pptx', 'file_path': 'assets/课件/秒出PPT/第三章 混合开发技术1.pptx', 'file_type': 'ppt', 'chapter': '第三章 混合开发技术1', 'description': 'PPT课件'},
-          {'file_name': '第三章 混合开发技术2.pptx', 'file_path': 'assets/课件/秒出PPT/第三章 混合开发技术2.pptx', 'file_type': 'ppt', 'chapter': '第三章 混合开发技术2', 'description': 'PPT课件'},
-          {'file_name': '第三章 混合开发技术3.pptx', 'file_path': 'assets/课件/秒出PPT/第三章 混合开发技术3.pptx', 'file_type': 'ppt', 'chapter': '第三章 混合开发技术3', 'description': 'PPT课件'},
-          {'file_name': '第四章 小程序开发1.pptx', 'file_path': 'assets/课件/秒出PPT/第四章 小程序开发1.pptx', 'file_type': 'ppt', 'chapter': '第四章 小程序开发1', 'description': 'PPT课件'},
-          {'file_name': '第四章 小程序开发2.pptx', 'file_path': 'assets/课件/秒出PPT/第四章 小程序开发2.pptx', 'file_type': 'ppt', 'chapter': '第四章 小程序开发2', 'description': 'PPT课件'},
-          {'file_name': '第五章 华为多端应用开发1.pptx', 'file_path': 'assets/课件/秒出PPT/第五章 华为多端应用开发1.pptx', 'file_type': 'ppt', 'chapter': '第五章 华为多端应用开发1', 'description': 'PPT课件'},
-          {'file_name': '第五章 华为多端应用开发2.pptx', 'file_path': 'assets/课件/秒出PPT/第五章 华为多端应用开发2.pptx', 'file_type': 'ppt', 'chapter': '第五章 华为多端应用开发2', 'description': 'PPT课件'},
-          {'file_name': '第五章 华为多端应用开发3.pptx', 'file_path': 'assets/课件/秒出PPT/第五章 华为多端应用开发3.pptx', 'file_type': 'ppt', 'chapter': '第五章 华为多端应用开发3', 'description': 'PPT课件'},
-          {'file_name': '第六章 综合开发实践1.pptx', 'file_path': 'assets/课件/秒出PPT/第六章 综合开发实践1.pptx', 'file_type': 'ppt', 'chapter': '第六章 综合开发实践1', 'description': 'PPT课件'},
-          {'file_name': '第六章 综合开发实践2.pptx', 'file_path': 'assets/课件/秒出PPT/第六章 综合开发实践2.pptx', 'file_type': 'ppt', 'chapter': '第六章 综合开发实践2', 'description': 'PPT课件'},
-          {'file_name': '第六章 综合开发实践3.pptx', 'file_path': 'assets/课件/秒出PPT/第六章 综合开发实践3.pptx', 'file_type': 'ppt', 'chapter': '第六章 综合开发实践3', 'description': 'PPT课件'},
+          {
+            'file_name': '第一章 移动应用开发技术体系1.pptx',
+            'file_path': 'assets/ppt/第一章 移动应用开发技术体系1.pptx',
+            'file_type': 'ppt',
+            'chapter': '第一章 移动应用开发技术体系1',
+            'description': 'PPT课件'
+          },
+          {
+            'file_name': '第一章 移动应用开发技术体系2.pptx',
+            'file_path': 'assets/ppt/第一章 移动应用开发技术体系2.pptx',
+            'file_type': 'ppt',
+            'chapter': '第一章 移动应用开发技术体系2',
+            'description': 'PPT课件'
+          },
+          {
+            'file_name': '第二章 原生开发基础1.pptx',
+            'file_path': 'assets/ppt/第二章 原生开发基础1.pptx',
+            'file_type': 'ppt',
+            'chapter': '第二章 原生开发基础1',
+            'description': 'PPT课件'
+          },
+          {
+            'file_name': '第二章 原生开发基础2.pptx',
+            'file_path': 'assets/ppt/第二章 原生开发基础2.pptx',
+            'file_type': 'ppt',
+            'chapter': '第二章 原生开发基础2',
+            'description': 'PPT课件'
+          },
+          {
+            'file_name': '第三章 混合开发技术1.pptx',
+            'file_path': 'assets/ppt/第三章 混合开发技术1.pptx',
+            'file_type': 'ppt',
+            'chapter': '第三章 混合开发技术1',
+            'description': 'PPT课件'
+          },
+          {
+            'file_name': '第三章 混合开发技术2.pptx',
+            'file_path': 'assets/ppt/第三章 混合开发技术2.pptx',
+            'file_type': 'ppt',
+            'chapter': '第三章 混合开发技术2',
+            'description': 'PPT课件'
+          },
+          {
+            'file_name': '第三章 混合开发技术3.pptx',
+            'file_path': 'assets/ppt/第三章 混合开发技术3.pptx',
+            'file_type': 'ppt',
+            'chapter': '第三章 混合开发技术3',
+            'description': 'PPT课件'
+          },
+          {
+            'file_name': '第四章 小程序开发1.pptx',
+            'file_path': 'assets/ppt/第四章 小程序开发1.pptx',
+            'file_type': 'ppt',
+            'chapter': '第四章 小程序开发1',
+            'description': 'PPT课件'
+          },
+          {
+            'file_name': '第四章 小程序开发2.pptx',
+            'file_path': 'assets/ppt/第四章 小程序开发2.pptx',
+            'file_type': 'ppt',
+            'chapter': '第四章 小程序开发2',
+            'description': 'PPT课件'
+          },
+          {
+            'file_name': '第五章 华为多端应用开发1.pptx',
+            'file_path': 'assets/ppt/第五章 华为多端应用开发1.pptx',
+            'file_type': 'ppt',
+            'chapter': '第五章 华为多端应用开发1',
+            'description': 'PPT课件'
+          },
+          {
+            'file_name': '第五章 华为多端应用开发2.pptx',
+            'file_path': 'assets/ppt/第五章 华为多端应用开发2.pptx',
+            'file_type': 'ppt',
+            'chapter': '第五章 华为多端应用开发2',
+            'description': 'PPT课件'
+          },
+          {
+            'file_name': '第五章 华为多端应用开发3.pptx',
+            'file_path': 'assets/ppt/第五章 华为多端应用开发3.pptx',
+            'file_type': 'ppt',
+            'chapter': '第五章 华为多端应用开发3',
+            'description': 'PPT课件'
+          },
+          {
+            'file_name': '第六章 综合开发实践1.pptx',
+            'file_path': 'assets/ppt/第六章 综合开发实践1.pptx',
+            'file_type': 'ppt',
+            'chapter': '第六章 综合开发实践1',
+            'description': 'PPT课件'
+          },
+          {
+            'file_name': '第六章 综合开发实践2.pptx',
+            'file_path': 'assets/ppt/第六章 综合开发实践2.pptx',
+            'file_type': 'ppt',
+            'chapter': '第六章 综合开发实践2',
+            'description': 'PPT课件'
+          },
+          {
+            'file_name': '第六章 综合开发实践3.pptx',
+            'file_path': 'assets/ppt/第六章 综合开发实践3.pptx',
+            'file_type': 'ppt',
+            'chapter': '第六章 综合开发实践3',
+            'description': 'PPT课件'
+          },
         ];
 
         for (final ppt in pptFiles) {
@@ -129,7 +309,6 @@ class _DocumentListPageState extends State<DocumentListPage>
     return Scaffold(
       appBar: AppBar(
         title: const Text('课程资料'),
-
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
@@ -152,15 +331,17 @@ class _DocumentListPageState extends State<DocumentListPage>
           : TabBarView(
               controller: _tabController,
               children: [
-                _buildDocumentList(_pdfs, Icons.picture_as_pdf, Colors.red, 'PDF'),
-                _buildDocumentList(_ppts, Icons.slideshow, Colors.orange, 'PPT'),
+                _buildDocumentList(
+                    _pdfs, Icons.picture_as_pdf, Colors.red, 'PDF'),
+                _buildDocumentList(
+                    _ppts, Icons.slideshow, Colors.orange, 'PPT'),
               ],
             ),
     );
   }
 
-  Widget _buildDocumentList(
-      List<Map<String, dynamic>> documents, IconData icon, Color color, String type) {
+  Widget _buildDocumentList(List<Map<String, dynamic>> documents, IconData icon,
+      Color color, String type) {
     if (documents.isEmpty) {
       return Center(
         child: Column(
