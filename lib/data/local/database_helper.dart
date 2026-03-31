@@ -59,25 +59,29 @@ class DatabaseHelper {
 
       db = await openDatabase(
         dbPath,
-        version: 2,
+        version: 3,
         onCreate: _createTables,
         onUpgrade: _onUpgrade,
       );
       debugPrint('=== DatabaseHelper: Database opened successfully');
 
       // Verify tables exist
-      final tables = await db
-          .rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
-      debugPrint(
-          '=== DatabaseHelper: Tables in database: ${tables.map((t) => t['name']).toList()}');
+      try {
+        final tables = await db
+            .rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
+        debugPrint(
+            '=== DatabaseHelper: Tables in database: ${tables.map((t) => t['name']).toList()}');
 
-      // Verify data
-      final graphCount =
-          await db.rawQuery('SELECT COUNT(*) as count FROM graphs');
-      debugPrint('=== DatabaseHelper: Graphs count: ${graphCount.first}');
-      final questionCount =
-          await db.rawQuery('SELECT COUNT(*) as count FROM questions');
-      debugPrint('=== DatabaseHelper: Questions count: ${questionCount.first}');
+        // Verify data
+        final graphCount =
+            await db.rawQuery('SELECT COUNT(*) as count FROM graphs');
+        debugPrint('=== DatabaseHelper: Graphs count: ${graphCount.first}');
+        final questionCount =
+            await db.rawQuery('SELECT COUNT(*) as count FROM questions');
+        debugPrint('=== DatabaseHelper: Questions count: ${questionCount.first}');
+      } catch (e) {
+        debugPrint('=== DatabaseHelper: Verification warning: $e');
+      }
 
       // Import students if needed
       await _importStudents(db);
@@ -91,36 +95,30 @@ class DatabaseHelper {
 
   Future<void> _importStudents(Database db) async {
     try {
-      final result = await db.rawQuery(
-          'SELECT COUNT(*) as count FROM users WHERE role = "student"');
-      final count = result.first['count'] as int? ?? 0;
-      debugPrint('=== DatabaseHelper: Current students count = $count');
+      // 始终尝试导入 students.json（使用 conflictAlgorithm.ignore 安全合并）
+      try {
+        final jsonStr = await rootBundle.loadString('assets/students.json');
+        final students = json.decode(jsonStr) as List;
+        debugPrint(
+            '=== DatabaseHelper: Loading ${students.length} students from JSON');
 
-      if (count == 0) {
-        try {
-          final jsonStr = await rootBundle.loadString('assets/students.json');
-          final students = json.decode(jsonStr) as List;
-          debugPrint(
-              '=== DatabaseHelper: Loaded ${students.length} students from JSON');
-
-          final batch = db.batch();
-          for (final s in students) {
-            batch.insert(
-                'users',
-                {
-                  'user_id': s['user_id'],
-                  'real_name': s['real_name'],
-                  'role': 'student',
-                  'is_active': 1,
-                  'created_at': DateTime.now().toIso8601String(),
-                },
-                conflictAlgorithm: ConflictAlgorithm.ignore);
-          }
-          await batch.commit(noResult: true);
-          debugPrint('=== DatabaseHelper: Students imported');
-        } catch (e) {
-          debugPrint('=== DatabaseHelper: Error importing students: $e');
+        final batch = db.batch();
+        for (final s in students) {
+          batch.insert(
+              'users',
+              {
+                'user_id': s['user_id'],
+                'real_name': s['real_name'],
+                'role': 'student',
+                'is_active': 1,
+                'created_at': DateTime.now().toIso8601String(),
+              },
+              conflictAlgorithm: ConflictAlgorithm.ignore);
         }
+        await batch.commit(noResult: true);
+        debugPrint('=== DatabaseHelper: Students import completed (new entries merged)');
+      } catch (e) {
+        debugPrint('=== DatabaseHelper: Error importing students: $e');
       }
     } catch (e) {
       debugPrint('=== DatabaseHelper: Error checking students: $e');
@@ -267,32 +265,104 @@ class DatabaseHelper {
     ''');
 
     await _createNewTablesV2(db);
+    await _createNewTablesV3(db);
 
-    // Add admin user
+    // 修复 asset DB 中旧表缺少的列
+    await _ensureResourceFileColumns(db);
+
+    // Add admin user (ignore if already exists from asset DB)
     await db.insert('users', {
       'user_id': '419116',
       'real_name': '管理员',
       'role': 'admin',
       'created_at': DateTime.now().toIso8601String(),
       'is_active': 1,
-    });
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
 
-    // Add teacher user - 刘老师
+    // Add teacher user - 刘老师 (ignore if already exists)
     await db.insert('users', {
       'user_id': '206004',
       'real_name': '刘老师',
       'role': 'teacher',
       'created_at': DateTime.now().toIso8601String(),
       'is_active': 1,
-    });
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    debugPrint('=== DatabaseHelper: Upgrading from v$oldVersion to v$newVersion');
     if (oldVersion < 2) {
       await _createNewTablesV2(db);
     }
     if (oldVersion < 3) {
       await _createNewTablesV3(db);
+    }
+    // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
+    await _ensureAllTables(db);
+  }
+
+  /// 确保所有核心表存在（适用于从 asset 复制的旧版 DB 升级场景）
+  Future<void> _ensureAllTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS wrong_answers(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        question_id INTEGER NOT NULL,
+        question TEXT,
+        user_answer TEXT,
+        correct_answer TEXT,
+        chapter TEXT,
+        times INTEGER DEFAULT 1,
+        wrong_time TEXT,
+        last_wrong_time TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS favorites(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        node_id TEXT NOT NULL,
+        node_title TEXT,
+        favorite_time TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS resource_files(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        file_name TEXT,
+        file_path TEXT,
+        file_type TEXT,
+        chapter TEXT,
+        description TEXT
+      )
+    ''');
+
+    // 如果 resource_files 表已存在但缺少 chapter/description 列，补上
+    await _ensureResourceFileColumns(db);
+
+    await _createNewTablesV2(db);
+    await _createNewTablesV3(db);
+  }
+
+  /// 补齐 resource_files 表可能缺少的列
+  Future<void> _ensureResourceFileColumns(Database db) async {
+    try {
+      await db.rawQuery('SELECT chapter FROM resource_files LIMIT 1');
+    } catch (_) {
+      try {
+        await db.execute('ALTER TABLE resource_files ADD COLUMN chapter TEXT');
+        debugPrint('=== DatabaseHelper: Added chapter column to resource_files');
+      } catch (_) {}
+    }
+    try {
+      await db.rawQuery('SELECT description FROM resource_files LIMIT 1');
+    } catch (_) {
+      try {
+        await db.execute('ALTER TABLE resource_files ADD COLUMN description TEXT');
+        debugPrint('=== DatabaseHelper: Added description column to resource_files');
+      } catch (_) {}
     }
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'data/local/database_helper.dart';
+import 'services/data_loading_service.dart';
 import 'services/theme_manager.dart';
 import 'services/settings_service.dart';
 import 'presentation/pages/login/login_page.dart';
@@ -14,7 +15,18 @@ void main() async {
   ]);
 
   // Initialize database first
-  await DatabaseHelper.instance.database;
+  try {
+    await DatabaseHelper.instance.database;
+  } catch (e) {
+    debugPrint('=== main: Database init error: $e');
+  }
+
+  // Initialize all preset data (resources, PUML samples, clean empty graphs)
+  try {
+    await DataLoadingService.instance.initialize();
+  } catch (e) {
+    debugPrint('=== main: DataLoadingService init error: $e');
+  }
 
   runApp(const MyApp());
 }

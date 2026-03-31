@@ -63,4 +63,49 @@ class GraphDao {
     }
     return null;
   }
+
+  /// 获取图谱的节点数
+  Future<int> getNodeCount(String graphId) async {
+    final db = await _dbHelper.database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as c FROM nodes WHERE graph_id = ?',
+      [graphId],
+    );
+    return (result.first['c'] as int?) ?? 0;
+  }
+
+  /// 获取图谱的边数
+  Future<int> getEdgeCount(String graphId) async {
+    final db = await _dbHelper.database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as c FROM edges WHERE graph_id = ?',
+      [graphId],
+    );
+    return (result.first['c'] as int?) ?? 0;
+  }
+
+  /// 批量获取多个图谱的统计数据
+  Future<Map<String, Map<String, int>>> getGraphStats(List<String> graphIds) async {
+    final db = await _dbHelper.database;
+    final stats = <String, Map<String, int>>{};
+    for (final gid in graphIds) {
+      final nodeResult = await db.rawQuery(
+        'SELECT COUNT(*) as c FROM nodes WHERE graph_id = ?', [gid]);
+      final edgeResult = await db.rawQuery(
+        'SELECT COUNT(*) as c FROM edges WHERE graph_id = ?', [gid]);
+      stats[gid] = {
+        'nodes': (nodeResult.first['c'] as int?) ?? 0,
+        'edges': (edgeResult.first['c'] as int?) ?? 0,
+      };
+    }
+    return stats;
+  }
+
+  /// 删除指定图谱及其所有节点和边
+  Future<void> deleteGraph(String graphId) async {
+    final db = await _dbHelper.database;
+    await db.delete('edges', where: 'graph_id = ?', whereArgs: [graphId]);
+    await db.delete('nodes', where: 'graph_id = ?', whereArgs: [graphId]);
+    await db.delete('graphs', where: 'id = ?', whereArgs: [graphId]);
+  }
 }

@@ -139,6 +139,28 @@ class UserDao {
       return false;
     }
 
+    // 纠正特殊账号的角色（数据库中可能是旧数据）
+    String? expectedRole;
+    if (userId == '419116') {
+      expectedRole = 'admin';
+    } else if (userId == '206004') {
+      expectedRole = 'teacher';
+    }
+    if (expectedRole != null && user.role != expectedRole) {
+      final corrected = UserModel(
+        userId: user.userId,
+        realName: user.realName,
+        machineCode: user.machineCode,
+        role: expectedRole,
+        createdAt: user.createdAt,
+        lastLogin: user.lastLogin,
+        isActive: user.isActive,
+      );
+      await updateUser(corrected);
+      user = corrected;
+      debugPrint('=== UserDao: Corrected role for $userId to $expectedRole');
+    }
+
     // Admin login: userId=419116, password=419116 (last 6 digits)
     if (userId == '419116' && password == '419116') {
       await setCurrentUser(userId, '');
