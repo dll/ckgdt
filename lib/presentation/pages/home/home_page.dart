@@ -57,9 +57,10 @@ class _HomePageState extends State<HomePage> {
             icon: const Icon(Icons.person),
             onSelected: (value) async {
               if (value == 'logout') {
+                final navigator = Navigator.of(context);
                 await _authService.logout();
                 if (mounted) {
-                  Navigator.of(context).pushReplacement(
+                  navigator.pushReplacement(
                     MaterialPageRoute(builder: (_) => const LoginPage()),
                   );
                 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../services/data_service.dart';
 import '../../../data/local/quiz_dao.dart';
+import '../../../data/local/database_helper.dart';
 
 class DataImportPage extends StatefulWidget {
   const DataImportPage({super.key});
@@ -238,7 +239,8 @@ class _DataImportPageState extends State<DataImportPage> {
               const SizedBox(height: 8),
               SelectableText(path, style: const TextStyle(fontSize: 12)),
               const SizedBox(height: 16),
-              const Text('使用方法：', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('使用方法：',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               const Text('1. 复制原项目的 learning_data.db 到此位置'),
               const Text('2. 重命名为 knowledge_graph.db'),
               const Text('3. 重启应用'),
@@ -253,6 +255,145 @@ class _DataImportPageState extends State<DataImportPage> {
         ),
       );
     }
+  }
+
+  void _showAddResourceDialog(String fileType, String targetDir) {
+    final nameController = TextEditingController();
+    final pathController = TextEditingController();
+
+    pathController.text = 'assets/$targetDir/';
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+            '添加${fileType == 'video' ? 'video' : (fileType == 'pdf' ? 'PDF' : 'PPT')}资源'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: '文件名',
+                hintText: '例如: 第一章 移动应用开发技术体系1.mp4',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: pathController,
+              decoration: InputDecoration(
+                labelText: '文件路径',
+                hintText: 'assets/video/xxx.mp4',
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '提示：请先将文件复制到 assets/$targetDir/ 目录',
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (nameController.text.isEmpty) return;
+
+              Navigator.pop(context);
+              await _addResource(
+                  fileType, nameController.text, pathController.text);
+            },
+            child: const Text('添加'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _addResource(
+      String fileType, String fileName, String filePath) async {
+    setState(() {
+      _isLoading = true;
+      _message = null;
+    });
+
+    try {
+      final db = await DatabaseHelper.instance.database;
+
+      final chapter = fileName.replaceAll(RegExp(r'\.[^.]+$'), '');
+
+      await db.insert('resource_files', {
+        'file_name': fileName,
+        'file_path': filePath,
+        'file_type': fileType,
+        'chapter': chapter,
+        'description': fileType == 'video'
+            ? '视频教程'
+            : (fileType == 'pdf' ? 'PDF课件' : 'PPT课件'),
+      });
+
+      setState(() {
+        _isSuccess = true;
+        _message = '成功添加 $fileName';
+      });
+    } catch (e) {
+      setState(() {
+        _isSuccess = false;
+        _message = '添加失败: $e';
+      });
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _showUploadDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('添加学习资源'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.video_library, color: Colors.orange),
+              title: const Text('添加视频'),
+              subtitle: const Text('保存到 assets/video/'),
+              onTap: () {
+                Navigator.pop(context);
+                _showAddResourceDialog('video', 'video');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.picture_as_pdf, color: Colors.red),
+              title: const Text('添加PDF'),
+              subtitle: const Text('保存到 assets/pdf/'),
+              onTap: () {
+                Navigator.pop(context);
+                _showAddResourceDialog('pdf', 'pdf');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.slideshow, color: Colors.blue),
+              title: const Text('添加PPT'),
+              subtitle: const Text('保存到 assets/ppt/'),
+              onTap: () {
+                Navigator.pop(context);
+                _showAddResourceDialog('ppt', 'ppt');
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -270,9 +411,13 @@ class _DataImportPageState extends State<DataImportPage> {
                 children: [
                   const Icon(Icons.download, size: 48, color: Colors.green),
                   const SizedBox(height: 16),
-                  const Text('导出数据', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text('导出数据',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
-                  const Text('将当前数据导出为JSON备份文件', style: TextStyle(color: Colors.grey), textAlign: TextAlign.center),
+                  const Text('将当前数据导出为JSON备份文件',
+                      style: TextStyle(color: Colors.grey),
+                      textAlign: TextAlign.center),
                   const SizedBox(height: 16),
                   ElevatedButton.icon(
                     onPressed: _isLoading ? null : _exportData,
@@ -281,7 +426,8 @@ class _DataImportPageState extends State<DataImportPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
                     ),
                   ),
                 ],
@@ -296,11 +442,16 @@ class _DataImportPageState extends State<DataImportPage> {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  Icon(Icons.upload, size: 48, color: Theme.of(context).colorScheme.primary),
+                  Icon(Icons.upload,
+                      size: 48, color: Theme.of(context).colorScheme.primary),
                   const SizedBox(height: 16),
-                  const Text('导入数据', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text('导入数据',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
-                  const Text('从JSON备份文件导入数据', style: TextStyle(color: Colors.grey), textAlign: TextAlign.center),
+                  const Text('从JSON备份文件导入数据',
+                      style: TextStyle(color: Colors.grey),
+                      textAlign: TextAlign.center),
                   const SizedBox(height: 16),
                   ElevatedButton.icon(
                     onPressed: _isLoading ? null : _showImportDialog,
@@ -309,7 +460,42 @@ class _DataImportPageState extends State<DataImportPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.primary,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // 上传资源卡片
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  const Icon(Icons.cloud_upload,
+                      size: 48, color: Colors.purple),
+                  const SizedBox(height: 16),
+                  const Text('上传学习资源',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  const Text('上传视频、PDF、PPT到指定目录',
+                      style: TextStyle(color: Colors.grey),
+                      textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: _isLoading ? null : _showUploadDialog,
+                    icon: const Icon(Icons.add),
+                    label: const Text('上传资源'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.purple,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
                     ),
                   ),
                 ],
@@ -326,16 +512,21 @@ class _DataImportPageState extends State<DataImportPage> {
                 children: [
                   const Icon(Icons.folder, size: 48, color: Colors.orange),
                   const SizedBox(height: 16),
-                  const Text('手动迁移', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text('手动迁移',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
-                  const Text('直接复制数据库文件进行迁移', style: TextStyle(color: Colors.grey), textAlign: TextAlign.center),
+                  const Text('直接复制数据库文件进行迁移',
+                      style: TextStyle(color: Colors.grey),
+                      textAlign: TextAlign.center),
                   const SizedBox(height: 16),
                   OutlinedButton.icon(
                     onPressed: _showDBPath,
                     icon: const Icon(Icons.info),
                     label: const Text('查看数据库位置'),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
                     ),
                   ),
                 ],
@@ -352,9 +543,13 @@ class _DataImportPageState extends State<DataImportPage> {
                 children: [
                   const Icon(Icons.assessment, size: 48, color: Colors.blue),
                   const SizedBox(height: 16),
-                  const Text('导出成绩', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text('导出成绩',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
-                  const Text('将学生成绩导出为CSV文件', style: TextStyle(color: Colors.grey), textAlign: TextAlign.center),
+                  const Text('将学生成绩导出为CSV文件',
+                      style: TextStyle(color: Colors.grey),
+                      textAlign: TextAlign.center),
                   const SizedBox(height: 16),
                   ElevatedButton.icon(
                     onPressed: _isLoading ? null : _exportGrades,
@@ -363,7 +558,8 @@ class _DataImportPageState extends State<DataImportPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
                     ),
                   ),
                 ],
@@ -380,9 +576,13 @@ class _DataImportPageState extends State<DataImportPage> {
                 children: [
                   const Icon(Icons.group_add, size: 48, color: Colors.purple),
                   const SizedBox(height: 16),
-                  const Text('批量导入学生', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text('批量导入学生',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
-                  const Text('从文本批量添加学生账号', style: TextStyle(color: Colors.grey), textAlign: TextAlign.center),
+                  const Text('从文本批量添加学生账号',
+                      style: TextStyle(color: Colors.grey),
+                      textAlign: TextAlign.center),
                   const SizedBox(height: 16),
                   ElevatedButton.icon(
                     onPressed: _importStudentsFromExcel,
@@ -391,7 +591,8 @@ class _DataImportPageState extends State<DataImportPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.purple,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
                     ),
                   ),
                 ],
@@ -407,11 +608,13 @@ class _DataImportPageState extends State<DataImportPage> {
               decoration: BoxDecoration(
                 color: _isSuccess ? Colors.green[50] : Colors.red[50],
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: _isSuccess ? Colors.green : Colors.red),
+                border:
+                    Border.all(color: _isSuccess ? Colors.green : Colors.red),
               ),
               child: Row(
                 children: [
-                  Icon(_isSuccess ? Icons.check_circle : Icons.error, color: _isSuccess ? Colors.green : Colors.red),
+                  Icon(_isSuccess ? Icons.check_circle : Icons.error,
+                      color: _isSuccess ? Colors.green : Colors.red),
                   const SizedBox(width: 12),
                   Expanded(child: Text(_message!)),
                 ],

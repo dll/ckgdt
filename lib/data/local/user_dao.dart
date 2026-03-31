@@ -1,4 +1,4 @@
-import 'package:sqflite/sqflite.dart';
+import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
 import 'database_helper.dart';
 
@@ -108,50 +108,53 @@ class UserDao {
 
   Future<bool> login(String userId, String password) async {
     var user = await getUser(userId);
-    
+
     if (user == null) {
-      // Auto-create student account if doesn't exist
+      // Auto-create user account if doesn't exist
+      String role = 'student';
+      if (userId == '419116') {
+        role = 'admin';
+      } else if (userId == '206004') {
+        role = 'teacher';
+      }
+
       final newUser = UserModel(
         userId: userId,
-        realName: userId,
-        role: userId == '419116' ? 'admin' : 'student',
+        realName: role == 'admin'
+            ? '管理员 ($userId)'
+            : (role == 'teacher' ? '刘老师 ($userId)' : userId),
+        role: role,
         createdAt: DateTime.now().toIso8601String(),
       );
       final created = await createUser(newUser);
       if (created) {
         await setCurrentUser(userId, '');
+        debugPrint('=== UserDao: Created new user $userId with role $role');
         return true;
       }
       return false;
     }
-    
+
     if (!user.isActive) {
       return false;
     }
 
-    // Admin login with special password
-    if (userId == '419116' && password == 'osgis123') {
+    // Admin login: userId=419116, password=419116 (last 6 digits)
+    if (userId == '419116' && password == '419116') {
       await setCurrentUser(userId, '');
+      debugPrint('=== UserDao: Admin login success, role=${user.role}');
       return true;
     }
-    
-    // For students: accept last 6 digits, empty, or same as userId
-    if (user.role == 'student') {
-      final last6 = userId.length >= 6 ? userId.substring(userId.length - 6) : userId;
-      if (password == last6 || password.isEmpty || password == userId) {
-        await setCurrentUser(userId, '');
-        return true;
-      }
+
+    // For all users: accept last 6 digits of userId, empty, or same as userId
+    final last6 =
+        userId.length >= 6 ? userId.substring(userId.length - 6) : userId;
+    if (password == last6 || password.isEmpty || password == userId) {
+      await setCurrentUser(userId, '');
+      debugPrint('=== UserDao: Login success for $userId, role=${user.role}');
+      return true;
     }
-    
-    // For teachers: accept same as userId or any 6+ chars
-    if (user.role == 'teacher' || user.role == 'admin') {
-      if (password == userId || password.length >= 6) {
-        await setCurrentUser(userId, '');
-        return true;
-      }
-    }
-    
+
     return false;
   }
 

@@ -1,9 +1,12 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../data/local/graph_dao.dart';
-import '../../../data/models/graph_model.dart';
+import '../../../data/local/learning_path_dao.dart';
 import '../../../data/models/node_model.dart';
 import '../../../data/models/edge_model.dart';
+import '../../../data/models/learning_path_model.dart';
+import '../../../services/graph_layout_service.dart';
+import '../../../services/auth_service.dart';
 
 class GraphDetailPage extends StatefulWidget {
   final String graphId;
@@ -21,10 +24,17 @@ class GraphDetailPage extends StatefulWidget {
 
 class _GraphDetailPageState extends State<GraphDetailPage> {
   final _graphDao = GraphDao();
+  final _learningPathDao = LearningPathDao();
+  final _authService = AuthService();
+  final _layoutService = GraphLayoutService();
+
   List<NodeModel> _nodes = [];
   List<EdgeModel> _edges = [];
   bool _isLoading = true;
   NodeModel? _selectedNode;
+  GraphLayout _currentLayout = GraphLayout.tree;
+  List<PositionedNode> _positionedNodes = [];
+  Offset? _tapPosition;
 
   @override
   void initState() {
@@ -37,6 +47,7 @@ class _GraphDetailPageState extends State<GraphDetailPage> {
     try {
       final nodes = await _graphDao.getNodes(widget.graphId);
       final edges = await _graphDao.getEdges(widget.graphId);
+      _calculatePositions(nodes, edges);
       setState(() {
         _nodes = nodes;
         _edges = edges;
@@ -47,16 +58,104 @@ class _GraphDetailPageState extends State<GraphDetailPage> {
     }
   }
 
+  void _calculatePositions(List<NodeModel> nodes, List<EdgeModel> edges) {
+    final screenWidth = MediaQuery.of(context).size.width * 2;
+    final screenHeight = MediaQuery.of(context).size.height * 2;
+    _positionedNodes = _layoutService.calculateLayout(
+      nodes: nodes,
+      edges: edges,
+      layoutType: _currentLayout,
+      canvasWidth: screenWidth,
+      canvasHeight: screenHeight,
+    );
+  }
+
+  void _changeLayout(GraphLayout layout) {
+    setState(() {
+      _currentLayout = layout;
+    });
+    _calculatePositions(_nodes, _edges);
+  }
+
+  void _showLayoutPicker() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '选择布局',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: GraphLayout.values.map((layout) {
+                final isSelected = _currentLayout == layout;
+                return ChoiceChip(
+                  label: Text(layout.label),
+                  selected: isSelected,
+                  onSelected: (_) {
+                    Navigator.pop(context);
+                    _changeLayout(layout);
+                  },
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.graphTitle),
-
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadGraphData,
+          ),
+          IconButton(
+            icon: const Icon(Icons.grid_view),
+            tooltip: '切换布局',
+            onPressed: _showLayoutPicker,
+          ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: _handleMenuAction,
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'export_markdown',
+                child: ListTile(
+                  leading: Icon(Icons.download),
+                  title: Text('导出Markdown'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'analyze',
+                child: ListTile(
+                  leading: Icon(Icons.analytics),
+                  title: Text('图谱分析'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'center',
+                child: ListTile(
+                  leading: Icon(Icons.center_focus_strong),
+                  title: Text('居中显示'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -87,11 +186,105 @@ class _GraphDetailPageState extends State<GraphDetailPage> {
     );
   }
 
+  void _handleMenuAction(String action) async {
+    switch (action) {
+      case 'export_markdown':
+        _exportMarkdown();
+        break;
+      case 'analyze':
+        _analyzeGraph();
+        break;
+      case 'center':
+        setState(() => _selectedNode = null);
+        break;
+    }
+  }
+
+  void _exportMarkdown() {
+    final buffer = StringBuffer();
+    buffer.writeln('# ${widget.graphTitle}');
+    buffer.writeln();
+    buffer.writeln('## 节点');
+    for (final node in _nodes) {
+      buffer.writeln('### ${node.title}');
+      if (node.content != null) {
+        buffer.writeln(node.content);
+      }
+      buffer.writeln();
+    }
+    buffer.writeln('## 关系');
+    for (final edge in _edges) {
+      buffer.writeln(
+          '- ${edge.sourceId} → ${edge.targetId}: ${edge.label ?? ""}');
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Markdown已生成，可在控制台查看')),
+    );
+  }
+
+  void _analyzeGraph() {
+    final nodeCount = _nodes.length;
+    final edgeCount = _edges.length;
+    final avgDegree =
+        edgeCount > 0 ? (edgeCount * 2 / nodeCount).toStringAsFixed(2) : '0';
+
+    final levels = <int>{};
+    for (final node in _nodes) {
+      levels.add(node.level);
+    }
+
+    final nodeTypes = <String>{};
+    for (final node in _nodes) {
+      if (node.nodeType != null) {
+        nodeTypes.add(node.nodeType!);
+      }
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('图谱分析'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildAnalysisRow('节点总数', '$nodeCount'),
+            _buildAnalysisRow('边总数', '$edgeCount'),
+            _buildAnalysisRow('平均度', avgDegree),
+            _buildAnalysisRow('层级数', '${levels.length}'),
+            _buildAnalysisRow('节点类型数', '${nodeTypes.length}'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('关闭'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnalysisRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
   Widget _buildGraphView() {
     return Container(
       color: Colors.grey[100],
       child: GestureDetector(
         onTapDown: (details) => _handleTap(details.localPosition),
+        onLongPressStart: (details) => _handleLongPress(details.localPosition),
         child: InteractiveViewer(
           constrained: false,
           boundaryMargin: const EdgeInsets.all(200),
@@ -102,6 +295,7 @@ class _GraphDetailPageState extends State<GraphDetailPage> {
               nodes: _nodes,
               edges: _edges,
               selectedNode: _selectedNode,
+              positionedNodes: _positionedNodes,
             ),
             size: Size(
               MediaQuery.of(context).size.width * 2,
@@ -114,62 +308,88 @@ class _GraphDetailPageState extends State<GraphDetailPage> {
   }
 
   void _handleTap(Offset position) {
-    final positionedNodes = _calculateNodePositions();
-    for (final node in positionedNodes) {
-      final distance = (Offset(node.x, node.y) - position).distance;
+    for (final pNode in _positionedNodes) {
+      final distance = (Offset(pNode.x, pNode.y) - position).distance;
       if (distance < 35) {
-        setState(() => _selectedNode = node);
+        setState(() => _selectedNode = pNode.node);
         return;
       }
     }
   }
 
-  List<NodeModel> _calculateNodePositions() {
-    // Check if nodes have valid positions
-    final hasValidPositions = _nodes.any((n) => n.x != 0 || n.y != 0);
-
-    if (hasValidPositions) {
-      return _nodes;
-    }
-
-    // Auto-calculate positions in a tree-like layout
-    final positioned = <NodeModel>[];
-    final levelGroups = <int, List<NodeModel>>{};
-
-    for (final node in _nodes) {
-      levelGroups.putIfAbsent(node.level, () => []).add(node);
-    }
-
-    final levels = levelGroups.keys.toList()..sort();
-    final screenWidth = 800.0;
-    final verticalSpacing = 120.0;
-    final startY = 100.0;
-
-    for (int i = 0; i < levels.length; i++) {
-      final level = levels[i];
-      final levelNodes = levelGroups[level]!;
-      final horizontalSpacing = screenWidth / (levelNodes.length + 1);
-
-      for (int j = 0; j < levelNodes.length; j++) {
-        final node = levelNodes[j];
-        positioned.add(NodeModel(
-          id: node.id,
-          graphId: node.graphId,
-          title: node.title,
-          content: node.content,
-          nodeType: node.nodeType,
-          level: node.level,
-          x: horizontalSpacing * (j + 1),
-          y: startY + i * verticalSpacing,
-          color: node.color,
-          parentId: node.parentId,
-          visible: node.visible,
-          metadata: node.metadata,
-        ));
+  void _handleLongPress(Offset position) {
+    for (final pNode in _positionedNodes) {
+      final distance = (Offset(pNode.x, pNode.y) - position).distance;
+      if (distance < 35) {
+        _showNodeContextMenu(position, pNode.node);
+        return;
       }
     }
+  }
 
-    return positioned;
+  void _showNodeContextMenu(Offset position, NodeModel node) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.route),
+              title: Text('生成学习路径: ${node.title}'),
+              onTap: () {
+                Navigator.pop(context);
+                _generateLearningPath(node);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.quiz),
+              title: Text('加入测验'),
+              onTap: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('已选择节点「${node.title}」加入测验')),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.info),
+              title: const Text('查看详情'),
+              onTap: () {
+                Navigator.pop(context);
+                setState(() => _selectedNode = node);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _generateLearningPath(NodeModel node) async {
+    final userId = _authService.getCurrentUserId();
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先登录')),
+      );
+      return;
+    }
+
+    final path = LearningPathModel(
+      userId: userId,
+      title: '学习路径: ${node.title}',
+      description: '从 ${widget.graphTitle} 生成',
+      nodeIds: [node.id],
+    );
+
+    await _learningPathDao.createPath(path);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('已生成学习路径')),
+      );
+    }
   }
 
   Widget _buildNodeDetail() {
@@ -293,19 +513,18 @@ class GraphPainter extends CustomPainter {
   final List<NodeModel> nodes;
   final List<EdgeModel> edges;
   final NodeModel? selectedNode;
+  final List<PositionedNode> positionedNodes;
 
   GraphPainter({
     required this.nodes,
     required this.edges,
     this.selectedNode,
+    required this.positionedNodes,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (nodes.isEmpty) return;
-
-    // Calculate positions if nodes don't have valid positions
-    final positionedNodes = _calculateNodePositions();
+    if (nodes.isEmpty || positionedNodes.isEmpty) return;
 
     // Draw edges first (behind nodes)
     final edgePaint = Paint()
@@ -314,8 +533,10 @@ class GraphPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     for (final edge in edges) {
-      final sourceNode = positionedNodes.where((n) => n.id == edge.sourceId).firstOrNull;
-      final targetNode = positionedNodes.where((n) => n.id == edge.targetId).firstOrNull;
+      final sourceNode =
+          positionedNodes.where((n) => n.node.id == edge.sourceId).firstOrNull;
+      final targetNode =
+          positionedNodes.where((n) => n.node.id == edge.targetId).firstOrNull;
       if (sourceNode != null && targetNode != null) {
         canvas.drawLine(
           Offset(sourceNode.x, sourceNode.y),
@@ -324,12 +545,14 @@ class GraphPainter extends CustomPainter {
         );
 
         // Draw arrow
-        _drawArrow(canvas, Offset(sourceNode.x, sourceNode.y), Offset(targetNode.x, targetNode.y), edgePaint);
+        _drawArrow(canvas, Offset(sourceNode.x, sourceNode.y),
+            Offset(targetNode.x, targetNode.y), edgePaint);
       }
     }
 
     // Draw nodes
-    for (final node in positionedNodes) {
+    for (final pNode in positionedNodes) {
+      final node = pNode.node;
       final isSelected = selectedNode?.id == node.id;
       final nodeRadius = isSelected ? 40.0 : 30.0;
 
@@ -346,16 +569,20 @@ class GraphPainter extends CustomPainter {
       final shadowPaint = Paint()
         ..color = Colors.black.withValues(alpha: 0.2)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
-      canvas.drawCircle(Offset(node.x + 2, node.y + 2), nodeRadius, shadowPaint);
+      canvas.drawCircle(
+          Offset(pNode.x + 2, pNode.y + 2), nodeRadius, shadowPaint);
 
-      canvas.drawCircle(Offset(node.x, node.y), nodeRadius, nodePaint);
-      canvas.drawCircle(Offset(node.x, node.y), nodeRadius, borderPaint);
+      canvas.drawCircle(Offset(pNode.x, pNode.y), nodeRadius, nodePaint);
+      canvas.drawCircle(Offset(pNode.x, pNode.y), nodeRadius, borderPaint);
 
       // Draw level indicator
       final levelPaint = Paint()
         ..color = Colors.white
         ..style = PaintingStyle.fill;
-      canvas.drawCircle(Offset(node.x + nodeRadius - 8, node.y - nodeRadius + 8), 8, levelPaint);
+      canvas.drawCircle(
+          Offset(pNode.x + nodeRadius - 8, pNode.y - nodeRadius + 8),
+          8,
+          levelPaint);
 
       // Draw level number
       final levelTextPainter = TextPainter(
@@ -372,12 +599,14 @@ class GraphPainter extends CustomPainter {
       levelTextPainter.layout();
       levelTextPainter.paint(
         canvas,
-        Offset(node.x + nodeRadius - 8 - levelTextPainter.width / 2,
-               node.y - nodeRadius + 8 - levelTextPainter.height / 2),
+        Offset(pNode.x + nodeRadius - 8 - levelTextPainter.width / 2,
+            pNode.y - nodeRadius + 8 - levelTextPainter.height / 2),
       );
 
       // Draw title
-      final displayTitle = node.title.length > 6 ? '${node.title.substring(0, 6)}...' : node.title;
+      final displayTitle = node.title.length > 6
+          ? '${node.title.substring(0, 6)}...'
+          : node.title;
       final textPainter = TextPainter(
         text: TextSpan(
           text: displayTitle,
@@ -392,57 +621,10 @@ class GraphPainter extends CustomPainter {
       textPainter.layout(maxWidth: 50);
       textPainter.paint(
         canvas,
-        Offset(node.x - textPainter.width / 2, node.y - textPainter.height / 2),
+        Offset(
+            pNode.x - textPainter.width / 2, pNode.y - textPainter.height / 2),
       );
     }
-  }
-
-  List<NodeModel> _calculateNodePositions() {
-    // Check if nodes have valid positions
-    final hasValidPositions = nodes.any((n) => n.x != 0 || n.y != 0);
-
-    if (hasValidPositions) {
-      return nodes;
-    }
-
-    // Auto-calculate positions in a tree-like layout
-    final positioned = <NodeModel>[];
-    final levelGroups = <int, List<NodeModel>>{};
-
-    for (final node in nodes) {
-      levelGroups.putIfAbsent(node.level, () => []).add(node);
-    }
-
-    final levels = levelGroups.keys.toList()..sort();
-    final screenWidth = 800.0;
-    final verticalSpacing = 120.0;
-    final startY = 100.0;
-
-    for (int i = 0; i < levels.length; i++) {
-      final level = levels[i];
-      final levelNodes = levelGroups[level]!;
-      final horizontalSpacing = screenWidth / (levelNodes.length + 1);
-
-      for (int j = 0; j < levelNodes.length; j++) {
-        final node = levelNodes[j];
-        positioned.add(NodeModel(
-          id: node.id,
-          graphId: node.graphId,
-          title: node.title,
-          content: node.content,
-          nodeType: node.nodeType,
-          level: node.level,
-          x: horizontalSpacing * (j + 1),
-          y: startY + i * verticalSpacing,
-          color: node.color,
-          parentId: node.parentId,
-          visible: node.visible,
-          metadata: node.metadata,
-        ));
-      }
-    }
-
-    return positioned;
   }
 
   void _drawArrow(Canvas canvas, Offset start, Offset end, Paint paint) {

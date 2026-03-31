@@ -32,27 +32,27 @@ class DatabaseHelper {
       Database db;
 
       if (!exists) {
-        // Copy from assets
+        // Try to copy from assets first
         try {
-          debugPrint('=== DatabaseHelper: Trying to load from assets...');
+          debugPrint(
+              '=== DatabaseHelper: Trying to copy database from assets...');
           final data = await rootBundle.load('assets/learning_data.db');
-          final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-
-          // Create directory if needed
+          final bytes =
+              data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
           await Directory(dbFolder).create(recursive: true);
           await file.writeAsBytes(bytes);
-
           debugPrint('=== DatabaseHelper: Copied database from assets');
         } catch (e) {
-          debugPrint('=== DatabaseHelper: Error loading from assets: $e');
+          debugPrint('=== DatabaseHelper: Failed to copy from assets: $e');
           // Create empty database
           db = await openDatabase(
             dbPath,
-            version: 2,
+            version: 3,
             onCreate: _createTables,
             onUpgrade: _onUpgrade,
           );
           _database = db;
+          debugPrint('=== DatabaseHelper: Created new empty database');
           return db;
         }
       }
@@ -66,13 +66,17 @@ class DatabaseHelper {
       debugPrint('=== DatabaseHelper: Database opened successfully');
 
       // Verify tables exist
-      final tables = await db.rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
-      debugPrint('=== DatabaseHelper: Tables in database: ${tables.map((t) => t['name']).toList()}');
+      final tables = await db
+          .rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
+      debugPrint(
+          '=== DatabaseHelper: Tables in database: ${tables.map((t) => t['name']).toList()}');
 
       // Verify data
-      final graphCount = await db.rawQuery('SELECT COUNT(*) as count FROM graphs');
+      final graphCount =
+          await db.rawQuery('SELECT COUNT(*) as count FROM graphs');
       debugPrint('=== DatabaseHelper: Graphs count: ${graphCount.first}');
-      final questionCount = await db.rawQuery('SELECT COUNT(*) as count FROM questions');
+      final questionCount =
+          await db.rawQuery('SELECT COUNT(*) as count FROM questions');
       debugPrint('=== DatabaseHelper: Questions count: ${questionCount.first}');
 
       // Import students if needed
@@ -87,7 +91,8 @@ class DatabaseHelper {
 
   Future<void> _importStudents(Database db) async {
     try {
-      final result = await db.rawQuery('SELECT COUNT(*) as count FROM users WHERE role = "student"');
+      final result = await db.rawQuery(
+          'SELECT COUNT(*) as count FROM users WHERE role = "student"');
       final count = result.first['count'] as int? ?? 0;
       debugPrint('=== DatabaseHelper: Current students count = $count');
 
@@ -95,17 +100,21 @@ class DatabaseHelper {
         try {
           final jsonStr = await rootBundle.loadString('assets/students.json');
           final students = json.decode(jsonStr) as List;
-          debugPrint('=== DatabaseHelper: Loaded ${students.length} students from JSON');
+          debugPrint(
+              '=== DatabaseHelper: Loaded ${students.length} students from JSON');
 
           final batch = db.batch();
           for (final s in students) {
-            batch.insert('users', {
-              'user_id': s['user_id'],
-              'real_name': s['real_name'],
-              'role': 'student',
-              'is_active': 1,
-              'created_at': DateTime.now().toIso8601String(),
-            }, conflictAlgorithm: ConflictAlgorithm.ignore);
+            batch.insert(
+                'users',
+                {
+                  'user_id': s['user_id'],
+                  'real_name': s['real_name'],
+                  'role': 'student',
+                  'is_active': 1,
+                  'created_at': DateTime.now().toIso8601String(),
+                },
+                conflictAlgorithm: ConflictAlgorithm.ignore);
           }
           await batch.commit(noResult: true);
           debugPrint('=== DatabaseHelper: Students imported');
@@ -267,12 +276,63 @@ class DatabaseHelper {
       'created_at': DateTime.now().toIso8601String(),
       'is_active': 1,
     });
+
+    // Add teacher user - 刘老师
+    await db.insert('users', {
+      'user_id': '206004',
+      'real_name': '刘老师',
+      'role': 'teacher',
+      'created_at': DateTime.now().toIso8601String(),
+      'is_active': 1,
+    });
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await _createNewTablesV2(db);
     }
+    if (oldVersion < 3) {
+      await _createNewTablesV3(db);
+    }
+  }
+
+  Future<void> _createNewTablesV3(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS learning_paths(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT,
+        node_ids TEXT,
+        progress REAL DEFAULT 0,
+        status TEXT DEFAULT 'active',
+        created_at TEXT,
+        updated_at TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS path_nodes(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        path_id INTEGER NOT NULL,
+        node_id TEXT NOT NULL,
+        node_title TEXT,
+        sequence INTEGER,
+        is_completed INTEGER DEFAULT 0,
+        completed_at TEXT,
+        FOREIGN KEY (path_id) REFERENCES learning_paths(id) ON DELETE CASCADE
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS graph_analysis(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        graph_id TEXT NOT NULL,
+        analysis_type TEXT NOT NULL,
+        result_json TEXT,
+        created_at TEXT
+      )
+    ''');
   }
 
   Future<void> _createNewTablesV2(Database db) async {
