@@ -336,8 +336,8 @@ class _AiAssistPageState extends State<AiAssistPage> {
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
       decoration: BoxDecoration(
-        color: primary.withOpacity(0.05),
-        border: Border(bottom: BorderSide(color: primary.withOpacity(0.15))),
+        color: primary.withValues(alpha: 0.05),
+        border: Border(bottom: BorderSide(color: primary.withValues(alpha: 0.15))),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -396,8 +396,8 @@ class _AiAssistPageState extends State<AiAssistPage> {
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
       decoration: BoxDecoration(
-        color: primary.withOpacity(0.05),
-        border: Border(bottom: BorderSide(color: primary.withOpacity(0.15))),
+        color: primary.withValues(alpha: 0.05),
+        border: Border(bottom: BorderSide(color: primary.withValues(alpha: 0.15))),
       ),
       child: Row(
         children: [
@@ -544,7 +544,7 @@ class _AiAssistPageState extends State<AiAssistPage> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.06),
+                        color: Colors.black.withValues(alpha: 0.06),
                         blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),
@@ -617,10 +617,10 @@ class _AiAssistPageState extends State<AiAssistPage> {
       width: 32,
       height: 32,
       decoration: BoxDecoration(
-        color: isUser ? primary.withOpacity(0.15) : primary.withOpacity(0.12),
+        color: isUser ? primary.withValues(alpha: 0.15) : primary.withValues(alpha: 0.12),
         shape: BoxShape.circle,
         border: Border.all(
-          color: isUser ? primary.withOpacity(0.3) : primary.withOpacity(0.2),
+          color: isUser ? primary.withValues(alpha: 0.3) : primary.withValues(alpha: 0.2),
         ),
       ),
       child: Center(
@@ -691,7 +691,7 @@ class _AiAssistPageState extends State<AiAssistPage> {
         border: Border(top: BorderSide(color: Colors.grey.shade200)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -792,10 +792,10 @@ class _AiAssistPageState extends State<AiAssistPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: selected ? primary : primary.withOpacity(0.08),
+          color: selected ? primary : primary.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selected ? primary : primary.withOpacity(0.3),
+            color: selected ? primary : primary.withValues(alpha: 0.3),
           ),
         ),
         child: Text(

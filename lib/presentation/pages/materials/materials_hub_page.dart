@@ -115,7 +115,8 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
   }
 
   Future<void> _deleteMaterial(MaterialModel item) async {
-    final ok = await _showConfirmDialog('删除确认', '确定要删除"${item.title}"吗？此操作不可恢复。');
+    final ok =
+        await _showConfirmDialog('删除确认', '确定要删除"${item.title}"吗？此操作不可恢复。');
     if (!ok || !mounted) return;
     await _materialService.delete(item);
     if (!mounted) return;
@@ -220,29 +221,26 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
     if (_resourceLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    return DefaultTabController(
-      length: 2,
-      child: Column(
-        children: [
-          TabBar(
-            indicatorColor: primary,
-            labelColor: primary,
-            unselectedLabelColor: Colors.grey,
-            tabs: [
-              Tab(text: 'PDF (${_pdfFiles.length})'),
-              Tab(text: 'PPT (${_pptFiles.length})'),
+    return Column(
+      children: [
+        TabBar(
+          indicatorColor: primary,
+          labelColor: primary,
+          unselectedLabelColor: Colors.grey,
+          tabs: [
+            Tab(text: 'PDF (${_pdfFiles.length})'),
+            Tab(text: 'PPT (${_pptFiles.length})'),
+          ],
+        ),
+        Expanded(
+          child: TabBarView(
+            children: [
+              _buildFileList(_pdfFiles, '📄', 'PDF'),
+              _buildFileList(_pptFiles, '🖼️', 'PPT'),
             ],
           ),
-          Expanded(
-            child: TabBarView(
-              children: [
-                _buildFileList(_pdfFiles, '📄', 'PDF'),
-                _buildFileList(_pptFiles, '🖼️', 'PPT'),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -295,8 +293,7 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
               style: const TextStyle(fontWeight: FontWeight.w500),
             ),
             subtitle: Text(
-              [if (chapter != null) chapter, if (desc != null) desc]
-                  .join('  '),
+              [if (chapter != null) chapter, if (desc != null) desc].join('  '),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 12),
@@ -337,8 +334,7 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
         color: Colors.green,
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(
-              builder: (_) => const AiAssistPage(mode: 'script')),
+          MaterialPageRoute(builder: (_) => const AiAssistPage(mode: 'script')),
         ).then((_) => _loadMaterials()),
       ),
       _AiFeature(
@@ -348,8 +344,7 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
         color: Colors.purple,
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(
-              builder: (_) => const AiAssistPage(mode: 'uml')),
+          MaterialPageRoute(builder: (_) => const AiAssistPage(mode: 'uml')),
         ).then((_) => _loadPumlFiles()),
       ),
       _AiFeature(
@@ -359,8 +354,7 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
         color: Colors.orange,
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(
-              builder: (_) => const AiAssistPage(mode: 'chat')),
+          MaterialPageRoute(builder: (_) => const AiAssistPage(mode: 'chat')),
         ),
       ),
     ];
@@ -432,7 +426,7 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: f.color.withOpacity(0.12),
+                  color: f.color.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(f.icon, color: f.color, size: 28),
@@ -440,14 +434,13 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
               const SizedBox(height: 10),
               Text(
                 f.title,
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, fontSize: 15),
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
               ),
               const SizedBox(height: 4),
               Text(
                 f.desc,
-                style:
-                    const TextStyle(fontSize: 11, color: Colors.grey),
+                style: const TextStyle(fontSize: 11, color: Colors.grey),
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -513,13 +506,12 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
         : (item.createdAt != null ? _formatDate(item.createdAt!) : '');
 
     return ListTile(
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: Container(
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: primary.withOpacity(0.10),
+          color: primary.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(10),
         ),
         child: const Center(
@@ -536,22 +528,19 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
         spacing: 6,
         children: [
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
-              color: primary.withOpacity(0.12),
+              color: primary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(item.typeLabel,
                 style: TextStyle(fontSize: 11, color: primary)),
           ),
           if (item.chapter != null)
-            Text(item.chapter!,
-                style: const TextStyle(fontSize: 12)),
+            Text(item.chapter!, style: const TextStyle(fontSize: 12)),
           if (dateStr.isNotEmpty)
             Text(dateStr,
-                style:
-                    const TextStyle(fontSize: 11, color: Colors.grey)),
+                style: const TextStyle(fontSize: 11, color: Colors.grey)),
         ],
       ),
       trailing: Row(
@@ -563,8 +552,7 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
             onPressed: () => _openPumlEditor(item),
           ),
           IconButton(
-            icon: const Icon(Icons.delete_outline,
-                color: Colors.redAccent),
+            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
             tooltip: '删除',
             onPressed: () => _deletePuml(item),
           ),
@@ -577,8 +565,7 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
   void _openPumlEditor(PumlFileModel? item) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-          builder: (_) => PumlManagerPage(pumlFile: item)),
+      MaterialPageRoute(builder: (_) => PumlManagerPage(pumlFile: item)),
     ).then((_) => _loadPumlFiles());
   }
 
@@ -593,13 +580,11 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
         // 统计头部
         Container(
           width: double.infinity,
-          padding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          color: primary.withOpacity(0.07),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          color: primary.withValues(alpha: 0.07),
           child: Text(
             '共 ${_materials.length} 个素材  •  长按可删除',
-            style:
-                TextStyle(color: primary, fontWeight: FontWeight.w500),
+            style: TextStyle(color: primary, fontWeight: FontWeight.w500),
           ),
         ),
         Expanded(
@@ -612,8 +597,7 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
                       SizedBox(height: 12),
                       Text(
                         '暂无素材，先去「AI生成」Tab 创建',
-                        style:
-                            TextStyle(color: Colors.grey, fontSize: 15),
+                        style: TextStyle(color: Colors.grey, fontSize: 15),
                       ),
                     ],
                   ),
@@ -636,21 +620,17 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
 
   Widget _buildMaterialTile(MaterialModel item, Color primary) {
     final icon = MaterialService.typeIcon(item.type);
-    final dateStr =
-        item.createdAt != null ? _formatDate(item.createdAt!) : '';
-    final sizeStr =
-        item.size > 0 ? MaterialService.formatSize(item.size) : '';
-    final hasContent =
-        item.content != null && item.content!.isNotEmpty;
+    final dateStr = item.createdAt != null ? _formatDate(item.createdAt!) : '';
+    final sizeStr = item.size > 0 ? MaterialService.formatSize(item.size) : '';
+    final hasContent = item.content != null && item.content!.isNotEmpty;
 
     return ListTile(
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: Container(
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: primary.withOpacity(0.10),
+          color: primary.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Center(
@@ -667,26 +647,22 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
         spacing: 6,
         children: [
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
             decoration: BoxDecoration(
-              color: primary.withOpacity(0.10),
+              color: primary.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(item.typeLabel,
                 style: TextStyle(fontSize: 11, color: primary)),
           ),
           if (item.chapter != null)
-            Text(item.chapter!,
-                style: const TextStyle(fontSize: 12)),
+            Text(item.chapter!, style: const TextStyle(fontSize: 12)),
           if (dateStr.isNotEmpty)
             Text(dateStr,
-                style:
-                    const TextStyle(fontSize: 11, color: Colors.grey)),
+                style: const TextStyle(fontSize: 11, color: Colors.grey)),
           if (sizeStr.isNotEmpty)
             Text(sizeStr,
-                style:
-                    const TextStyle(fontSize: 11, color: Colors.grey)),
+                style: const TextStyle(fontSize: 11, color: Colors.grey)),
         ],
       ),
       trailing: hasContent

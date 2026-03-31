@@ -34,7 +34,8 @@ class QuizDao {
       if (maps.isNotEmpty) {
         debugPrint('=== QuizDao: First chapter record: ${maps.first}');
       }
-      return maps.map((map) => map['source'] as String).toList();
+      final chapters = maps.map((map) => map['source'] as String).toList();
+      return chapters.toSet().toList();
     } catch (e) {
       debugPrint('=== QuizDao: Error getting chapters: $e');
       return [];

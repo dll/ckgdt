@@ -31,7 +31,8 @@ class PumlDao {
 
   Future<int> update(PumlFileModel p) async {
     final db = await _db.database;
-    return db.update('puml_files', p.toMap(), where: 'id = ?', whereArgs: [p.id]);
+    return db
+        .update('puml_files', p.toMap(), where: 'id = ?', whereArgs: [p.id]);
   }
 
   Future<int> delete(int id) async {
@@ -49,6 +50,9 @@ class PumlDao {
   Future<void> initSamples() async {
     final c = await count();
     if (c > 0) return;
+
+    // 确保 chapter 值唯一
+    final existingChapters = <String>{};
     final samples = [
       PumlFileModel(
         title: '知识图谱系统架构图',
