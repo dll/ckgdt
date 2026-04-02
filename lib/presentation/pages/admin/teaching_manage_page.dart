@@ -520,6 +520,8 @@ class _LessonPlanTabState extends State<_LessonPlanTab>
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
+      // 首次加载时初始化默认教案
+      await _dao.initDefaultLessonPlans();
       final plans = await _dao.getAllLessonPlans();
       final stats = await _dao.getLessonPlanStats();
       setState(() {

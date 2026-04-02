@@ -12,6 +12,7 @@ import '../analytics/learning_analytics_page.dart';
 import '../graph/graph_list_page.dart';
 import '../admin/teaching_manage_page.dart';
 import '../admin/lab_task_manage_page.dart';
+import '../achievement/achievement_page.dart';
 
 class TeacherWorkspacePage extends StatefulWidget {
   const TeacherWorkspacePage({super.key});
@@ -373,6 +374,15 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const LabTaskManagePage()),
+        ),
+      ),
+      _ToolItem(
+        icon: Icons.emoji_events,
+        label: '课程达成',
+        color: Colors.deepOrange,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AchievementPage()),
         ),
       ),
     ];
