@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../services/auth_service.dart';
 import '../login/login_page.dart';
-import '../graph/graph_list_page.dart';
+import '../graph/knowledge_graph_page.dart';
 import '../graph/favorites_page.dart';
 import '../quiz/quiz_page.dart';
 import '../quiz/wrong_answers_page.dart';
@@ -248,7 +248,7 @@ class _HomePageState extends State<HomePage> {
       case 0:
         return _buildHome();
       case 1:
-        return const GraphListPage();
+        return const KnowledgeGraphPage();
       case 2:
         return const LearningPlanPage();
       case 3:

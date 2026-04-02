@@ -9,7 +9,6 @@ import '../admin/data_export_page.dart';
 import '../admin/class_manage_page.dart';
 import '../admin/survey_manage_page.dart';
 import '../analytics/learning_analytics_page.dart';
-import '../graph/graph_list_page.dart';
 import '../graph/knowledge_graph_page.dart';
 import '../admin/teaching_manage_page.dart';
 import '../admin/lab_task_manage_page.dart';
@@ -324,18 +323,9 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
         ),
       ),
       _ToolItem(
-        icon: Icons.account_tree,
-        label: '图谱编辑',
-        color: Colors.teal,
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const GraphListPage()),
-        ),
-      ),
-      _ToolItem(
         icon: Icons.hub,
         label: '知识图谱',
-        color: Colors.cyan,
+        color: Colors.teal,
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const KnowledgeGraphPage()),
