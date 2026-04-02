@@ -1,7 +1,13 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../data/local/knowledge_graph_dao.dart';
+import '../../../data/local/learning_path_dao.dart';
+import '../../../data/models/learning_path_model.dart';
+import '../../../services/auth_service.dart';
 import '../../../services/knowledge_seed_service.dart';
+import '../learning/video_page.dart';
+import '../materials/resource_viewer_page.dart';
+import 'graph_list_page.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // 概念类型颜色映射
@@ -203,6 +209,10 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
 
   // ── 统计 ────────────────────────────────────────────────────────────────
   Map<String, dynamic> _stats = {};
+
+  // ── 学习路径 ────────────────────────────────────────────────────────────
+  final _learningPathDao = LearningPathDao();
+  final _authService = AuthService();
 
   // ── 画布参数 ─────────────────────────────────────────────────────────────
   static const double _canvasWidth = 2400;
@@ -1208,6 +1218,96 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                   }),
                 ],
 
+                // ── 资源链接 ─────────────────────────────────────────
+                if (node.chapter != null) ...[
+                  const SizedBox(height: 16),
+                  const Text('相关资源',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 14)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _resourceButton(
+                          icon: Icons.play_circle,
+                          label: '视频',
+                          color: Colors.red,
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => VideoListPage(
+                                  filterChapter: _chapterName(node.chapter!),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _resourceButton(
+                          icon: Icons.slideshow,
+                          label: 'PPT',
+                          color: Colors.orange,
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ResourceViewerPage(
+                                  fileType: 'ppt',
+                                  filterChapter: _chapterName(node.chapter!),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _resourceButton(
+                          icon: Icons.picture_as_pdf,
+                          label: 'PDF',
+                          color: Colors.blue,
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ResourceViewerPage(
+                                  fileType: 'pdf',
+                                  filterChapter: _chapterName(node.chapter!),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _generatePathFromNode(node);
+                    },
+                    icon: const Icon(Icons.route, size: 18),
+                    label: const Text('生成学习路径'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+
                 // 查看前置链
                 const SizedBox(height: 20),
                 SizedBox(
@@ -1419,6 +1519,233 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   }
 
   // ══════════════════════════════════════════════════════════════════════════
+  // 学习路径生成
+  // ══════════════════════════════════════════════════════════════════════════
+
+  String _chapterName(int chapter) {
+    const names = {
+      1: '第一章',
+      2: '第二章',
+      3: '第三章',
+      4: '第四章',
+      5: '第五章',
+      6: '第六章',
+    };
+    return names[chapter] ?? '第$chapter章';
+  }
+
+  /// 从选中概念开始，沿 prerequisite 链向前追溯生成学习路径
+  Future<void> _generatePathFromNode(_ConceptNode node) async {
+    final userId = _authService.getCurrentUserId();
+    if (userId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('请先登录')),
+        );
+      }
+      return;
+    }
+
+    // BFS 反向追溯所有前置概念
+    final chain = <_ConceptNode>[node];
+    final visited = <int>{node.id};
+    final nodeById = {for (final n in _nodes) n.id: n};
+    var current = node;
+
+    bool findNext = true;
+    while (findNext) {
+      findNext = false;
+      for (final edge in _edges) {
+        if (edge.relationType == 'prerequisite' &&
+            edge.targetId == current.id &&
+            !visited.contains(edge.sourceId)) {
+          final prereq = nodeById[edge.sourceId];
+          if (prereq != null) {
+            chain.add(prereq);
+            visited.add(prereq.id);
+            current = prereq;
+            findNext = true;
+            break;
+          }
+        }
+      }
+    }
+
+    final reversedChain = chain.reversed.toList();
+
+    // 也收集该概念的相关概念（related_to, builds_upon）
+    final related = <_ConceptNode>[];
+    for (final edge in _edges) {
+      if (edge.sourceId == node.id &&
+          (edge.relationType == 'related_to' ||
+              edge.relationType == 'builds_upon') &&
+          !visited.contains(edge.targetId)) {
+        final r = nodeById[edge.targetId];
+        if (r != null) {
+          related.add(r);
+          visited.add(r.id);
+        }
+      }
+    }
+
+    // 构建路径节点列表：前置链 + 目标 + 相关拓展
+    final pathNodes = [...reversedChain, ...related];
+    final nodeIds = pathNodes.map((n) => 'c_${n.id}').toList();
+
+    final path = LearningPathModel(
+      userId: userId,
+      title: '${node.name} 学习路径',
+      description:
+          '基于前置关系自动生成 · ${reversedChain.length}个前置概念 · ${related.length}个拓展概念',
+      nodeIds: nodeIds,
+      progress: 0,
+      status: 'active',
+    );
+
+    try {
+      await _learningPathDao.createPath(path);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('已生成「${node.name}」学习路径（${pathNodes.length}个概念）'),
+            action: SnackBarAction(
+              label: '查看',
+              onPressed: () {
+                // 切换到路径tab（index=2 in HomePage）
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('生成路径失败: $e')),
+        );
+      }
+    }
+  }
+
+  /// 智能推荐：为所有"核心"概念自动生成学习路径
+  Future<void> _generateRecommendedPaths() async {
+    final userId = _authService.getCurrentUserId();
+    if (userId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('请先登录')),
+        );
+      }
+      return;
+    }
+
+    // 找到所有核心概念
+    final coreNodes =
+        _nodes.where((n) => n.importance == 'core').toList();
+    if (coreNodes.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('暂无核心概念')),
+        );
+      }
+      return;
+    }
+
+    // 检查是否已有推荐路径
+    final existing = await _learningPathDao.getPathsByUser(userId);
+    final existingTitles = existing.map((p) => p.title).toSet();
+
+    int created = 0;
+    for (final core in coreNodes) {
+      final pathTitle = '${core.name} 学习路径';
+      if (existingTitles.contains(pathTitle)) continue;
+
+      // BFS 前置链
+      final chain = <_ConceptNode>[core];
+      final visited = <int>{core.id};
+      final nodeById = {for (final n in _nodes) n.id: n};
+      var current = core;
+
+      bool findNext = true;
+      while (findNext) {
+        findNext = false;
+        for (final edge in _edges) {
+          if (edge.relationType == 'prerequisite' &&
+              edge.targetId == current.id &&
+              !visited.contains(edge.sourceId)) {
+            final prereq = nodeById[edge.sourceId];
+            if (prereq != null) {
+              chain.add(prereq);
+              visited.add(prereq.id);
+              current = prereq;
+              findNext = true;
+              break;
+            }
+          }
+        }
+      }
+
+      final pathNodes = chain.reversed.toList();
+      if (pathNodes.length < 2) continue; // 无前置依赖，跳过
+
+      final nodeIds = pathNodes.map((n) => 'c_${n.id}').toList();
+      final path = LearningPathModel(
+        userId: userId,
+        title: pathTitle,
+        description: '自动推荐 · ${pathNodes.length}个概念 · 基于前置关系链',
+        nodeIds: nodeIds,
+        progress: 0,
+        status: 'active',
+      );
+
+      try {
+        await _learningPathDao.createPath(path);
+        created++;
+      } catch (_) {}
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(created > 0
+              ? '已生成 $created 条推荐学习路径'
+              : '所有推荐路径已存在'),
+        ),
+      );
+    }
+  }
+
+  Widget _resourceButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: color.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Column(
+            children: [
+              Icon(icon, color: color, size: 26),
+              const SizedBox(height: 4),
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: color,
+                      fontWeight: FontWeight.w500)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
   // Build — 主界面
   // ══════════════════════════════════════════════════════════════════════════
 
@@ -1486,6 +1813,39 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
             await _loadStats();
             _showStatsDialog();
           },
+        ),
+        // 更多
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.more_vert),
+          tooltip: '更多',
+          onSelected: (value) {
+            if (value == 'structure') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const GraphListPage()),
+              );
+            } else if (value == 'recommend') {
+              _generateRecommendedPaths();
+            }
+          },
+          itemBuilder: (_) => [
+            const PopupMenuItem(
+              value: 'structure',
+              child: ListTile(
+                leading: Icon(Icons.account_tree, color: Colors.teal),
+                title: Text('结构视图'),
+                subtitle: Text('查看章节层级结构', style: TextStyle(fontSize: 11)),
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'recommend',
+              child: ListTile(
+                leading: Icon(Icons.route, color: Colors.orange),
+                title: Text('生成推荐路径'),
+                subtitle: Text('基于前置关系自动生成', style: TextStyle(fontSize: 11)),
+              ),
+            ),
+          ],
         ),
       ],
     );

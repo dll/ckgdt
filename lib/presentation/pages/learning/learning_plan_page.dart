@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../services/auth_service.dart';
 import '../../../data/local/learning_path_dao.dart';
 import '../../../data/local/graph_dao.dart';
+import '../../../data/local/knowledge_graph_dao.dart';
 import '../../../data/models/learning_path_model.dart';
 import '../../../data/models/node_model.dart';
 import '../learning/video_page.dart';
@@ -22,13 +23,14 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
   final _authService = AuthService();
   final _learningPathDao = LearningPathDao();
   final _graphDao = GraphDao();
+  final _kgDao = KnowledgeGraphDao();
 
   List<LearningPathModel> _paths = [];
   bool _isLoading = true;
 
   // 详情模式
   LearningPathModel? _selectedPath;
-  List<NodeModel> _pathNodes = []; // 路径中各节点的完整信息
+  List<_UnifiedNode> _pathNodes = []; // 路径中各节点的完整信息
   bool _loadingDetail = false;
 
   @override
@@ -61,11 +63,24 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
       _loadingDetail = true;
     });
     try {
-      // 根据 nodeIds 批量查询节点详情
-      final nodes = <NodeModel>[];
+      final nodes = <_UnifiedNode>[];
       for (final nid in path.nodeIds) {
-        final node = await _graphDao.getNode(nid);
-        if (node != null) nodes.add(node);
+        if (nid.startsWith('c_')) {
+          // New concept-based node
+          final conceptId = int.tryParse(nid.substring(2));
+          if (conceptId != null) {
+            final concept = await _kgDao.getConceptById(conceptId);
+            if (concept != null) {
+              nodes.add(_UnifiedNode.fromConcept(concept));
+            }
+          }
+        } else {
+          // Old tree-based node
+          final node = await _graphDao.getNode(nid);
+          if (node != null) {
+            nodes.add(_UnifiedNode.fromNodeModel(node));
+          }
+        }
       }
       setState(() {
         _pathNodes = nodes;
@@ -154,7 +169,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
             Text('暂无学习路径',
                 style: TextStyle(fontSize: 18, color: Colors.grey[600])),
             const SizedBox(height: 8),
-            Text('在知识图谱中长按节点 → 生成学习路径',
+            Text('在知识图谱中点击概念 → 生成学习路径',
                 style: TextStyle(color: Colors.grey[500], fontSize: 13)),
             const SizedBox(height: 20),
             OutlinedButton.icon(
@@ -417,7 +432,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
     );
   }
 
-  Widget _buildNodeTile(NodeModel node, int index, Color pathColor) {
+  Widget _buildNodeTile(_UnifiedNode node, int index, Color pathColor) {
     final isFirst = index == 0;
     final isLast = index == _pathNodes.length - 1;
     final nodeColor = _parseColor(node.color) ?? pathColor;
@@ -514,13 +529,21 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                           runSpacing: 4,
                           children: [
                             _attrChip(Icons.category,
-                                _nodeTypeLabel(node.nodeType), Colors.grey),
+                                node.isConcept ? _conceptTypeLabel(node.conceptType) : _nodeTypeLabel(node.nodeType), Colors.grey),
                             if (isFirst)
                               _attrChip(Icons.play_arrow, '起点',
                                   Colors.green),
                             if (isLast)
                               _attrChip(
                                   Icons.flag, '终点', Colors.red),
+                            if (node.isConcept && node.importance != null)
+                              _attrChip(
+                                Icons.star,
+                                node.importance == 'core' ? '核心' : node.importance == 'important' ? '重要' : '补充',
+                                node.importance == 'core' ? Colors.red : node.importance == 'important' ? Colors.orange : Colors.grey,
+                              ),
+                            if (node.chapter != null)
+                              _attrChip(Icons.book, '第${node.chapter}章', Colors.indigo),
                           ],
                         ),
                         // 内容摘要
@@ -581,6 +604,19 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
     return labels[type] ?? type ?? '节点';
   }
 
+  String _conceptTypeLabel(String? type) {
+    const labels = {
+      'concept': '概念',
+      'technology': '技术',
+      'tool': '工具',
+      'framework': '框架',
+      'language': '语言',
+      'platform': '平台',
+      'pattern': '模式',
+    };
+    return labels[type] ?? type ?? '概念';
+  }
+
   Color? _parseColor(String? hex) {
     if (hex == null || hex.isEmpty) return null;
     try {
@@ -591,7 +627,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
   }
 
   /// 节点到章节的映射 — 根据节点标题模糊匹配章节名
-  String? _matchChapter(NodeModel node) {
+  String? _matchChapterByTitle(String title, String? content) {
     const chapterKeywords = {
       '移动应用开发技术': '第一章',
       '技术体系': '第一章',
@@ -613,19 +649,24 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
       '实战': '第六章',
     };
 
-    final title = node.title;
-    final content = node.content ?? '';
+    final c = content ?? '';
 
     for (final entry in chapterKeywords.entries) {
-      if (title.contains(entry.key) || content.contains(entry.key)) {
+      if (title.contains(entry.key) || c.contains(entry.key)) {
         return entry.value;
       }
     }
     return null;
   }
 
-  void _showNodeInfo(NodeModel node) {
-    final chapter = _matchChapter(node);
+  void _showNodeInfo(_UnifiedNode node) {
+    String? chapter;
+    if (node.isConcept && node.chapter != null) {
+      const chapterNames = {1: '第一章', 2: '第二章', 3: '第三章', 4: '第四章', 5: '第五章', 6: '第六章'};
+      chapter = chapterNames[node.chapter];
+    } else {
+      chapter = _matchChapterByTitle(node.title, node.content);
+    }
 
     showModalBottomSheet(
       context: context,
@@ -669,11 +710,13 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
             ),
             const SizedBox(height: 6),
             // 节点属性信息
-            _infoRow('ID', node.id),
-            _infoRow('类型', _nodeTypeLabel(node.nodeType)),
+            _infoRow('ID', node.isConcept ? '概念 ${node.id.substring(2)}' : node.id),
+            _infoRow('类型', node.isConcept ? _conceptTypeLabel(node.conceptType) : _nodeTypeLabel(node.nodeType)),
             _infoRow('层级', 'Level ${node.level}'),
             if (chapter != null)
               _infoRow('关联章节', chapter),
+            if (node.keywords != null)
+              _infoRow('关键词', node.keywords!),
 
             if (node.content != null && node.content!.isNotEmpty) ...[
               const Divider(),
@@ -815,7 +858,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
 // ══════════════════════════════════════════════════════════════════════════════
 
 class _PathGraphPainter extends CustomPainter {
-  final List<NodeModel> nodes;
+  final List<_UnifiedNode> nodes;
   final Color color;
 
   _PathGraphPainter({required this.nodes, required this.color});
@@ -965,4 +1008,74 @@ class _PathGraphPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _PathGraphPainter old) =>
       old.nodes != nodes || old.color != color;
+}
+
+/// Unified node representation for both old tree nodes and new semantic concepts
+class _UnifiedNode {
+  final String id;
+  final String title;
+  final String? content;
+  final int level;
+  final String? nodeType;
+  final String? color;
+  final int? chapter;
+  final String? conceptType;
+  final String? importance;
+  final String? keywords;
+  final bool isConcept;
+
+  _UnifiedNode({
+    required this.id,
+    required this.title,
+    this.content,
+    this.level = 0,
+    this.nodeType,
+    this.color,
+    this.chapter,
+    this.conceptType,
+    this.importance,
+    this.keywords,
+    this.isConcept = false,
+  });
+
+  /// Create from old NodeModel
+  factory _UnifiedNode.fromNodeModel(NodeModel node) {
+    return _UnifiedNode(
+      id: node.id,
+      title: node.title,
+      content: node.content,
+      level: node.level,
+      nodeType: node.nodeType,
+      color: node.color,
+      isConcept: false,
+    );
+  }
+
+  /// Create from concept map
+  factory _UnifiedNode.fromConcept(Map<String, dynamic> concept) {
+    // Map concept_type to a display color
+    const typeColors = {
+      'concept': '#9C27B0',
+      'technology': '#1E88E5',
+      'tool': '#FF9800',
+      'framework': '#43A047',
+      'language': '#E53935',
+      'platform': '#00BCD4',
+      'pattern': '#795548',
+    };
+    final cType = concept['concept_type'] as String? ?? 'concept';
+    return _UnifiedNode(
+      id: 'c_${concept['id']}',
+      title: concept['concept_name'] as String? ?? '未命名概念',
+      content: concept['description'] as String?,
+      level: concept['importance'] == 'core' ? 0 : (concept['importance'] == 'important' ? 1 : 2),
+      nodeType: cType,
+      color: typeColors[cType] ?? '#667eea',
+      chapter: concept['chapter'] as int?,
+      conceptType: cType,
+      importance: concept['importance'] as String?,
+      keywords: concept['keywords'] as String?,
+      isConcept: true,
+    );
+  }
 }

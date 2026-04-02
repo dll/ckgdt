@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import '../../../data/local/graph_dao.dart';
 import '../../../data/models/graph_model.dart';
 import 'graph_detail_page.dart';
-import 'knowledge_graph_page.dart';
-
 /// 图谱列表页 — 层级树形展示
 /// 根节点: "移动应用开发图谱" (graph_main_overview)
 /// 子节点: 6 个分类图谱 (graph_detail_XX-...)
@@ -141,56 +139,6 @@ class _GraphListPageState extends State<GraphListPage>
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // ── 知识图谱入口卡片 ──
-          Card(
-            elevation: 3,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const KnowledgeGraphPage()),
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF00BCD4), Color(0xFF4CAF50)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.hub, color: Colors.white, size: 28),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('语义知识图谱', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                          const SizedBox(height: 4),
-                          Text('力导向布局 · 语义关系 · 跨章节连接', style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.8))),
-                        ],
-                      ),
-                    ),
-                    const Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 18),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-
           // ── 根节点卡片：移动应用开发图谱 ──
           _buildRootCard(),
           const SizedBox(height: 12),
