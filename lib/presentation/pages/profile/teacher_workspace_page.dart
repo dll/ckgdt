@@ -6,8 +6,12 @@ import '../admin/student_manage_page.dart';
 import '../admin/data_import_page.dart';
 import '../admin/question_manage_page.dart';
 import '../admin/data_export_page.dart';
+import '../admin/class_manage_page.dart';
+import '../admin/survey_manage_page.dart';
 import '../analytics/learning_analytics_page.dart';
 import '../graph/graph_list_page.dart';
+import '../admin/teaching_manage_page.dart';
+import '../admin/lab_task_manage_page.dart';
 
 class TeacherWorkspacePage extends StatefulWidget {
   const TeacherWorkspacePage({super.key});
@@ -333,6 +337,42 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const DataExportPage()),
+        ),
+      ),
+      _ToolItem(
+        icon: Icons.class_,
+        label: '班级管理',
+        color: Colors.cyan,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ClassManagePage()),
+        ),
+      ),
+      _ToolItem(
+        icon: Icons.poll,
+        label: '问卷管理',
+        color: Colors.pink,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SurveyManagePage()),
+        ),
+      ),
+      _ToolItem(
+        icon: Icons.school,
+        label: '教学管理',
+        color: Colors.deepOrange,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const TeachingManagePage()),
+        ),
+      ),
+      _ToolItem(
+        icon: Icons.science,
+        label: '实验管理',
+        color: Colors.brown,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const LabTaskManagePage()),
         ),
       ),
     ];

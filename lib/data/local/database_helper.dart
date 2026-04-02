@@ -56,7 +56,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 4,
+      version: 7,
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -110,7 +110,7 @@ class DatabaseHelper {
         // 重新打开
         final db2 = await openDatabase(
           dbName,
-          version: 4,
+          version: 7,
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
         );
@@ -168,7 +168,7 @@ class DatabaseHelper {
         // Create empty database
         db = await openDatabase(
           dbPath,
-          version: 4,
+          version: 7,
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
         );
@@ -180,7 +180,7 @@ class DatabaseHelper {
 
     db = await openDatabase(
       dbPath,
-      version: 3,
+      version: 7,
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -384,6 +384,9 @@ class DatabaseHelper {
     await _createNewTablesV2(db);
     await _createNewTablesV3(db);
     await _createNewTablesV4(db);
+    await _createNewTablesV5(db);
+    await _createNewTablesV6(db);
+    await _createNewTablesV7(db);
     await _ensureResourceFileColumns(db);
 
     // Add admin user (ignore if already exists from asset DB)
@@ -415,6 +418,15 @@ class DatabaseHelper {
     }
     if (oldVersion < 4) {
       await _createNewTablesV4(db);
+    }
+    if (oldVersion < 5) {
+      await _createNewTablesV5(db);
+    }
+    if (oldVersion < 6) {
+      await _createNewTablesV6(db);
+    }
+    if (oldVersion < 7) {
+      await _createNewTablesV7(db);
     }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
@@ -464,6 +476,9 @@ class DatabaseHelper {
     await _createNewTablesV2(db);
     await _createNewTablesV3(db);
     await _createNewTablesV4(db);
+    await _createNewTablesV5(db);
+    await _createNewTablesV6(db);
+    await _createNewTablesV7(db);
   }
 
   /// 补齐 resource_files 表可能缺少的列
@@ -590,6 +605,252 @@ class DatabaseHelper {
         comment TEXT,
         scored_at TEXT,
         FOREIGN KEY (work_id) REFERENCES student_works(id) ON DELETE CASCADE
+      )
+    ''');
+  }
+
+  /// V5 新增: 班级管理 + 问卷调查 表
+  Future<void> _createNewTablesV5(Database db) async {
+    // ── 班级表 ──────────────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS classes(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        semester TEXT,
+        teacher_id TEXT,
+        teacher_name TEXT,
+        description TEXT,
+        student_count INTEGER DEFAULT 0,
+        is_archived INTEGER DEFAULT 0,
+        created_at TEXT,
+        updated_at TEXT
+      )
+    ''');
+
+    // ── 班级成员表 ──────────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS class_members(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        class_id INTEGER NOT NULL,
+        user_id TEXT NOT NULL,
+        role TEXT DEFAULT 'student',
+        joined_at TEXT,
+        FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE,
+        UNIQUE(class_id, user_id)
+      )
+    ''');
+
+    // ── 问卷调查表 ──────────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS surveys(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        description TEXT,
+        class_id INTEGER,
+        creator_id TEXT,
+        status TEXT DEFAULT 'draft',
+        total_responses INTEGER DEFAULT 0,
+        created_at TEXT,
+        updated_at TEXT,
+        deadline TEXT
+      )
+    ''');
+
+    // ── 问卷题目表 ──────────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS survey_questions(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        survey_id INTEGER NOT NULL,
+        question TEXT NOT NULL,
+        question_type TEXT DEFAULT 'single_choice',
+        options_json TEXT,
+        is_required INTEGER DEFAULT 1,
+        seq INTEGER DEFAULT 0,
+        FOREIGN KEY (survey_id) REFERENCES surveys(id) ON DELETE CASCADE
+      )
+    ''');
+
+    // ── 问卷回答表 ──────────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS survey_responses(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        survey_id INTEGER NOT NULL,
+        user_id TEXT NOT NULL,
+        answers_json TEXT,
+        submitted_at TEXT,
+        FOREIGN KEY (survey_id) REFERENCES surveys(id) ON DELETE CASCADE,
+        UNIQUE(survey_id, user_id)
+      )
+    ''');
+  }
+
+  /// V6 新增: 教学管理（大纲+教案+教学进度）表
+  Future<void> _createNewTablesV6(Database db) async {
+    // ── 课程大纲表 ──────────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS syllabus_items(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_name TEXT DEFAULT '移动应用开发',
+        chapter_number INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT,
+        objectives TEXT,
+        hours INTEGER DEFAULT 2,
+        week_start INTEGER,
+        week_end INTEGER,
+        resources_json TEXT,
+        status TEXT DEFAULT 'planned',
+        created_at TEXT,
+        updated_at TEXT
+      )
+    ''');
+
+    // ── 教案表 ──────────────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS lesson_plans(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        chapter INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        objectives TEXT,
+        key_points TEXT,
+        difficult_points TEXT,
+        content TEXT,
+        activities TEXT,
+        homework TEXT,
+        reflection TEXT,
+        resources_json TEXT,
+        ai_generated INTEGER DEFAULT 0,
+        status TEXT DEFAULT 'draft',
+        teacher_id TEXT,
+        created_at TEXT,
+        updated_at TEXT
+      )
+    ''');
+
+    // ── 教学进度表 ──────────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS teaching_progress(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        class_id INTEGER,
+        chapter INTEGER NOT NULL,
+        topic TEXT,
+        planned_date TEXT,
+        actual_date TEXT,
+        status TEXT DEFAULT 'planned',
+        notes TEXT,
+        attendance INTEGER DEFAULT 0,
+        homework_completion REAL DEFAULT 0,
+        teacher_id TEXT,
+        created_at TEXT,
+        updated_at TEXT,
+        FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE SET NULL
+      )
+    ''');
+  }
+
+  /// V7 新增: 实验任务 + 实验提交 + 报告模板 表
+  Future<void> _createNewTablesV7(Database db) async {
+    // ── 实验任务表 ──────────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS lab_tasks(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        chapter TEXT,
+        description TEXT,
+        requirements TEXT,
+        deliverables TEXT,
+        due_date TEXT,
+        difficulty TEXT DEFAULT '中等',
+        max_score INTEGER DEFAULT 100,
+        status TEXT DEFAULT 'active',
+        creator_id TEXT,
+        created_at TEXT,
+        updated_at TEXT
+      )
+    ''');
+
+    // ── 实验提交表 ──────────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS lab_submissions(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id INTEGER NOT NULL,
+        user_id TEXT NOT NULL,
+        content TEXT,
+        file_paths TEXT,
+        file_names TEXT,
+        submit_time TEXT,
+        status TEXT DEFAULT '已提交',
+        score INTEGER,
+        feedback TEXT,
+        scorer_id TEXT,
+        scored_at TEXT,
+        created_at TEXT,
+        updated_at TEXT,
+        FOREIGN KEY (task_id) REFERENCES lab_tasks(id) ON DELETE CASCADE
+      )
+    ''');
+
+    // ── 报告模板表 ──────────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS report_templates(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        category TEXT DEFAULT '实验报告',
+        sections_json TEXT,
+        description TEXT,
+        creator_id TEXT,
+        is_default INTEGER DEFAULT 0,
+        created_at TEXT,
+        updated_at TEXT
+      )
+    ''');
+
+    // ── 学生报告表 ──────────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS student_reports(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        template_id INTEGER,
+        task_id INTEGER,
+        user_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        content_json TEXT,
+        status TEXT DEFAULT '草稿',
+        submit_time TEXT,
+        score INTEGER,
+        feedback TEXT,
+        created_at TEXT,
+        updated_at TEXT,
+        FOREIGN KEY (template_id) REFERENCES report_templates(id) ON DELETE SET NULL,
+        FOREIGN KEY (task_id) REFERENCES lab_tasks(id) ON DELETE SET NULL
+      )
+    ''');
+
+    // ── 协作消息表 ──────────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS collaboration_messages(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        group_id INTEGER,
+        task_id INTEGER,
+        sender_id TEXT NOT NULL,
+        sender_name TEXT,
+        message TEXT NOT NULL,
+        message_type TEXT DEFAULT 'text',
+        created_at TEXT
+      )
+    ''');
+
+    // ── 互评记录表 ──────────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS peer_reviews(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        submission_id INTEGER NOT NULL,
+        reviewer_id TEXT NOT NULL,
+        reviewer_name TEXT,
+        score INTEGER,
+        comment TEXT,
+        reviewed_at TEXT,
+        FOREIGN KEY (submission_id) REFERENCES lab_submissions(id) ON DELETE CASCADE,
+        UNIQUE(submission_id, reviewer_id)
       )
     ''');
   }
