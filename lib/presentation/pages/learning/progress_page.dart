@@ -59,9 +59,9 @@ class _ProgressPageState extends State<ProgressPage> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(48),
-        child: TabBar(
+      appBar: AppBar(
+        title: const Text('学习进度'),
+        bottom: TabBar(
           controller: _tabController,
           labelColor: Theme.of(context).colorScheme.primary,
           unselectedLabelColor: Colors.grey,

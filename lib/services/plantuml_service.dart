@@ -1,8 +1,11 @@
 import 'dart:convert';
-import 'dart:io' show ZLibEncoder;
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+
+// 条件导入用于 deflate 压缩
+import 'plantuml_service_stub.dart'
+    if (dart.library.io) 'plantuml_service_native.dart' as impl;
 
 class PlantUmlService {
   // Kroki 服务（POST，直接发 PUML 文本，无需编码）
@@ -41,7 +44,7 @@ class PlantUmlService {
   /// 获取 Kroki GET 渲染 URL（需要 deflate + base64url 编码）
   String getKrokiUrl(String pumlContent) {
     try {
-      final deflated = _deflate(utf8.encode(pumlContent));
+      final deflated = impl.deflate(utf8.encode(pumlContent));
       final encoded = base64Url.encode(Uint8List.fromList(deflated));
       return 'https://kroki.io/plantuml/png/$encoded';
     } catch (_) {
@@ -83,17 +86,8 @@ class PlantUmlService {
 
   // PlantUML 特有编码（压缩 + base64 变体）
   String _encodePlantUml(String content) {
-    final compressed = _deflate(utf8.encode(content));
+    final compressed = impl.deflate(utf8.encode(content));
     return _encode64(compressed);
-  }
-
-  List<int> _deflate(List<int> data) {
-    // 使用 dart:io 的 ZLibEncoder，raw: true 表示 raw deflate（无 header/checksum）
-    try {
-      return ZLibEncoder(raw: true).convert(data);
-    } catch (_) {
-      return data;
-    }
   }
 
   // PlantUML 自定义 base64 字符表

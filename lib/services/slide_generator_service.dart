@@ -1,11 +1,14 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import '../data/local/material_dao.dart';
 import '../data/models/material_model.dart';
 import 'ai_service.dart';
+
+// 条件导入
+import 'slide_generator_service_stub.dart'
+    if (dart.library.io) 'slide_generator_service_native.dart' as impl;
 
 class SlideGeneratorService {
   final MaterialDao _materialDao = MaterialDao();
@@ -35,6 +38,7 @@ class SlideGeneratorService {
     required List<Map<String, dynamic>> slides,
     String? chapter,
   }) async {
+    if (kIsWeb) return null; // Web 平台暂不支持 PDF 文件保存
     try {
       final pdf = pw.Document();
 
@@ -70,24 +74,25 @@ class SlideGeneratorService {
         ));
       }
 
-      // 保存文件
-      final dir = await getApplicationDocumentsDirectory();
+      // 保存文件（原生平台）
+      final pdfBytes = await pdf.save();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final fileName =
           '${title.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_')}_$timestamp.pdf';
-      final filePath = '${dir.path}/$fileName';
 
-      final file = File(filePath);
-      await file.writeAsBytes(await pdf.save());
+      final result = await impl.savePdfFile(fileName, pdfBytes);
+      if (result == null) return null;
 
-      final stat = await file.stat();
+      final filePath = result['path'] as String;
+      final fileSize = result['size'] as int;
+
       final material = MaterialModel(
         title: '$title - 课件',
         type: 'pdf',
         filePath: filePath,
         chapter: chapter,
         createdAt: DateTime.now().toIso8601String(),
-        size: stat.size,
+        size: fileSize,
       );
 
       final id = await _materialDao.insert(material);
@@ -141,7 +146,6 @@ class SlideGeneratorService {
     pw.Font? font,
   ) {
     return pw.Container(
-      // PdfColor.fromInt 是工厂构造器，不可 const，BoxDecoration 也不可 const
       decoration: pw.BoxDecoration(
         gradient: pw.LinearGradient(
           colors: [
@@ -172,7 +176,6 @@ class SlideGeneratorService {
                 style: pw.TextStyle(
                   font: font,
                   fontSize: 20,
-                  // PdfColors.white70 在 pdf 包中不存在，使用带透明度的 PdfColor
                   color: const PdfColor(1, 1, 1, 0.7),
                 ),
               ),
@@ -183,7 +186,6 @@ class SlideGeneratorService {
               style: pw.TextStyle(
                 font: font,
                 fontSize: 14,
-                // PdfColors.white60 在 pdf 包中不存在，使用带透明度的 PdfColor
                 color: const PdfColor(1, 1, 1, 0.6),
               ),
             ),
@@ -210,7 +212,6 @@ class SlideGeneratorService {
           // 标题区域（底部蓝色边框）
           pw.Container(
             padding: const pw.EdgeInsets.only(bottom: 8),
-            // PdfColor.fromInt 不可 const，BoxDecoration 也不可 const
             decoration: pw.BoxDecoration(
               border: pw.Border(
                 bottom: pw.BorderSide(
@@ -252,7 +253,6 @@ class SlideGeneratorService {
               child: pw.Row(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  // 蓝色圆点，PdfColor.fromInt 不可 const
                   pw.Container(
                     width: 6,
                     height: 6,
@@ -277,7 +277,6 @@ class SlideGeneratorService {
           if ((slide['notes'] as String?)?.isNotEmpty == true)
             pw.Container(
               padding: const pw.EdgeInsets.all(8),
-              // PdfColor.fromInt 不可 const，BoxDecoration 也不可 const
               decoration: pw.BoxDecoration(
                 color: PdfColor.fromInt(0xFFF5F7FA),
                 borderRadius:

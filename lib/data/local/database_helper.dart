@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:sqflite/sqflite.dart';
@@ -19,78 +18,196 @@ class DatabaseHelper {
 
   Future<Database> _initDB() async {
     try {
-      final dbFolder = await getDatabasesPath();
-      final dbPath = p.join(dbFolder, 'knowledge_graph.db');
-
-      debugPrint('=== DatabaseHelper: Checking path: $dbPath');
-
-      // Check if database file exists
-      final file = File(dbPath);
-      final exists = await file.exists();
-      debugPrint('=== DatabaseHelper: Database exists = $exists');
-
-      Database db;
-
-      if (!exists) {
-        // Try to copy from assets first
-        try {
-          debugPrint(
-              '=== DatabaseHelper: Trying to copy database from assets...');
-          final data = await rootBundle.load('assets/learning_data.db');
-          final bytes =
-              data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-          await Directory(dbFolder).create(recursive: true);
-          await file.writeAsBytes(bytes);
-          debugPrint('=== DatabaseHelper: Copied database from assets');
-        } catch (e) {
-          debugPrint('=== DatabaseHelper: Failed to copy from assets: $e');
-          // Create empty database
-          db = await openDatabase(
-            dbPath,
-            version: 3,
-            onCreate: _createTables,
-            onUpgrade: _onUpgrade,
-          );
-          _database = db;
-          debugPrint('=== DatabaseHelper: Created new empty database');
-          return db;
-        }
+      if (kIsWeb) {
+        return await _initDBWeb();
+      } else {
+        return await _initDBNative();
       }
-
-      db = await openDatabase(
-        dbPath,
-        version: 3,
-        onCreate: _createTables,
-        onUpgrade: _onUpgrade,
-      );
-      debugPrint('=== DatabaseHelper: Database opened successfully');
-
-      // Verify tables exist
-      try {
-        final tables = await db
-            .rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
-        debugPrint(
-            '=== DatabaseHelper: Tables in database: ${tables.map((t) => t['name']).toList()}');
-
-        // Verify data
-        final graphCount =
-            await db.rawQuery('SELECT COUNT(*) as count FROM graphs');
-        debugPrint('=== DatabaseHelper: Graphs count: ${graphCount.first}');
-        final questionCount =
-            await db.rawQuery('SELECT COUNT(*) as count FROM questions');
-        debugPrint('=== DatabaseHelper: Questions count: ${questionCount.first}');
-      } catch (e) {
-        debugPrint('=== DatabaseHelper: Verification warning: $e');
-      }
-
-      // Import students if needed
-      await _importStudents(db);
-
-      return db;
     } catch (e) {
       debugPrint('=== DatabaseHelper: ERROR = $e');
       rethrow;
     }
+  }
+
+  /// Web 平台数据库初始化
+  /// 使用 sqflite_common_ffi_web，数据存储在 IndexedDB 中
+  Future<Database> _initDBWeb() async {
+    const dbName = 'knowledge_graph.db';
+
+    debugPrint('=== DatabaseHelper [Web]: Initializing database...');
+
+    // 检查数据库是否已存在（IndexedDB 中）
+    final exists = await databaseFactory.databaseExists(dbName);
+    debugPrint('=== DatabaseHelper [Web]: Database exists = $exists');
+
+    if (!exists) {
+      // 尝试从 assets 加载预置数据库
+      try {
+        debugPrint('=== DatabaseHelper [Web]: Loading database from assets...');
+        final data = await rootBundle.load('assets/learning_data.db');
+        final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+        await databaseFactory.writeDatabaseBytes(dbName, bytes);
+        debugPrint('=== DatabaseHelper [Web]: Loaded database from assets (${bytes.length} bytes)');
+      } catch (e) {
+        debugPrint('=== DatabaseHelper [Web]: Failed to load from assets: $e');
+        // 将在 openDatabase 的 onCreate 中创建空表
+      }
+    }
+
+    final db = await openDatabase(
+      dbName,
+      version: 3,
+      onCreate: _createTables,
+      onUpgrade: _onUpgrade,
+    );
+    debugPrint('=== DatabaseHelper [Web]: Database opened successfully');
+
+    // 验证表和数据
+    try {
+      final tables = await db
+          .rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
+      final tableNames = tables.map((t) => t['name']).toList();
+      debugPrint('=== DatabaseHelper [Web]: Tables: $tableNames');
+
+      // 检查关键表数据是否存在
+      bool needsDataImport = false;
+
+      // 检查 graphs 表
+      if (tableNames.contains('graphs')) {
+        final graphCount = await db.rawQuery('SELECT COUNT(*) as c FROM graphs');
+        final count = (graphCount.first['c'] as int?) ?? 0;
+        debugPrint('=== DatabaseHelper [Web]: Graphs count: $count');
+        if (count == 0) needsDataImport = true;
+      } else {
+        needsDataImport = true;
+      }
+
+      // 检查 questions 表
+      if (tableNames.contains('questions')) {
+        final qCount = await db.rawQuery('SELECT COUNT(*) as c FROM questions');
+        final count = (qCount.first['c'] as int?) ?? 0;
+        debugPrint('=== DatabaseHelper [Web]: Questions count: $count');
+        if (count == 0) needsDataImport = true;
+      } else {
+        needsDataImport = true;
+      }
+
+      if (needsDataImport) {
+        debugPrint('=== DatabaseHelper [Web]: Data is empty, trying to reimport from assets...');
+        // 关闭现有数据库，删除后重新尝试导入
+        await db.close();
+        await databaseFactory.deleteDatabase(dbName);
+
+        try {
+          final data = await rootBundle.load('assets/learning_data.db');
+          final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+          await databaseFactory.writeDatabaseBytes(dbName, bytes);
+          debugPrint('=== DatabaseHelper [Web]: Reimported from assets (${bytes.length} bytes)');
+        } catch (e) {
+          debugPrint('=== DatabaseHelper [Web]: Reimport failed: $e');
+        }
+
+        // 重新打开
+        final db2 = await openDatabase(
+          dbName,
+          version: 3,
+          onCreate: _createTables,
+          onUpgrade: _onUpgrade,
+        );
+
+        // 确保新表存在
+        await _ensureAllTables(db2);
+        await _importStudents(db2);
+
+        // 最终验证
+        try {
+          final gc = await db2.rawQuery('SELECT COUNT(*) as c FROM graphs');
+          final qc = await db2.rawQuery('SELECT COUNT(*) as c FROM questions');
+          debugPrint('=== DatabaseHelper [Web]: After reimport - Graphs: ${gc.first['c']}, Questions: ${qc.first['c']}');
+        } catch (_) {}
+
+        return db2;
+      }
+    } catch (e) {
+      debugPrint('=== DatabaseHelper [Web]: Verification warning: $e');
+    }
+
+    // 导入学生数据
+    await _importStudents(db);
+
+    return db;
+  }
+
+  /// 原生平台数据库初始化（Android/iOS/Windows/macOS/Linux）
+  Future<Database> _initDBNative() async {
+    // 延迟导入 dart:io（仅在原生平台使用）
+    final dbFolder = await getDatabasesPath();
+    final dbPath = p.join(dbFolder, 'knowledge_graph.db');
+
+    debugPrint('=== DatabaseHelper: Checking path: $dbPath');
+
+    // 使用 databaseFactory 检查文件是否存在
+    final exists = await databaseFactory.databaseExists(dbPath);
+    debugPrint('=== DatabaseHelper: Database exists = $exists');
+
+    Database db;
+
+    if (!exists) {
+      // Try to copy from assets first
+      try {
+        debugPrint(
+            '=== DatabaseHelper: Trying to copy database from assets...');
+        final data = await rootBundle.load('assets/learning_data.db');
+        final bytes =
+            data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+        // 使用 writeDatabaseBytes 代替 File 操作，保持平台兼容性
+        await databaseFactory.writeDatabaseBytes(dbPath, bytes);
+        debugPrint('=== DatabaseHelper: Copied database from assets');
+      } catch (e) {
+        debugPrint('=== DatabaseHelper: Failed to copy from assets: $e');
+        // Create empty database
+        db = await openDatabase(
+          dbPath,
+          version: 3,
+          onCreate: _createTables,
+          onUpgrade: _onUpgrade,
+        );
+        _database = db;
+        debugPrint('=== DatabaseHelper: Created new empty database');
+        return db;
+      }
+    }
+
+    db = await openDatabase(
+      dbPath,
+      version: 3,
+      onCreate: _createTables,
+      onUpgrade: _onUpgrade,
+    );
+    debugPrint('=== DatabaseHelper: Database opened successfully');
+
+    // Verify tables exist
+    try {
+      final tables = await db
+          .rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
+      debugPrint(
+          '=== DatabaseHelper: Tables in database: ${tables.map((t) => t['name']).toList()}');
+
+      // Verify data
+      final graphCount =
+          await db.rawQuery('SELECT COUNT(*) as count FROM graphs');
+      debugPrint('=== DatabaseHelper: Graphs count: ${graphCount.first}');
+      final questionCount =
+          await db.rawQuery('SELECT COUNT(*) as count FROM questions');
+      debugPrint('=== DatabaseHelper: Questions count: ${questionCount.first}');
+    } catch (e) {
+      debugPrint('=== DatabaseHelper: Verification warning: $e');
+    }
+
+    // Import students if needed
+    await _importStudents(db);
+
+    return db;
   }
 
   Future<void> _importStudents(Database db) async {

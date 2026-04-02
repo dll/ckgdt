@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/constants/chapter_sorter.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../services/file_opener_service.dart';
 
@@ -49,8 +50,11 @@ class _ResourceViewerPageState extends State<ResourceViewerPage> {
         );
       }
 
+      final sorted = List<Map<String, dynamic>>.from(result);
+      ChapterSorter.sortByChapter(sorted);
+
       setState(() {
-        _resources = result;
+        _resources = sorted;
         _isLoading = false;
       });
     } catch (e) {

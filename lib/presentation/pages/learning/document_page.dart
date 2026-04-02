@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/constants/chapter_sorter.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../services/file_opener_service.dart';
 
@@ -285,9 +286,14 @@ class _DocumentListPageState extends State<DocumentListPage>
         );
       }
 
+      final sortedPdfs = List<Map<String, dynamic>>.from(pdfs);
+      final sortedPpts = List<Map<String, dynamic>>.from(ppts);
+      ChapterSorter.sortByChapter(sortedPdfs);
+      ChapterSorter.sortByChapter(sortedPpts);
+
       setState(() {
-        _pdfs = pdfs;
-        _ppts = ppts;
+        _pdfs = sortedPdfs;
+        _ppts = sortedPpts;
         _isLoading = false;
       });
     } catch (e) {

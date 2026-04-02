@@ -1,6 +1,10 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../data/local/material_dao.dart';
 import '../data/models/material_model.dart';
+
+// 条件导入
+import 'material_service_stub.dart'
+    if (dart.library.io) 'material_service_native.dart' as impl;
 
 class MaterialService {
   final MaterialDao _dao = MaterialDao();
@@ -15,12 +19,9 @@ class MaterialService {
   Future<int> count() => _dao.count();
 
   Future<bool> delete(MaterialModel material) async {
-    // 删除物理文件
-    if (material.filePath != null) {
-      try {
-        final file = File(material.filePath!);
-        if (await file.exists()) await file.delete();
-      } catch (_) {}
+    // 删除物理文件（仅原生平台）
+    if (!kIsWeb && material.filePath != null) {
+      await impl.deleteFileIfExists(material.filePath!);
     }
     final rows = await _dao.delete(material.id!);
     return rows > 0;

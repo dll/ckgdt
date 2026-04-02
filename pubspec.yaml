@@ -11,6 +11,9 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.6
   sqflite: ^2.3.0
+  sqflite_common_ffi: ^2.3.3
+  sqflite_common_ffi_web: ^0.4.3+1
+  sqlite3_flutter_libs: ^0.5.42
   path_provider: ^2.1.1
   path: ^1.9.0
   fl_chart: ^0.66.0
@@ -20,6 +23,8 @@ dependencies:
   printing: ^5.13.1
   cached_network_image: ^3.3.1
   open_filex: ^4.7.0
+  file_picker: ^10.3.10
+  excel: ^4.0.6
 
 dev_dependencies:
   flutter_test:
