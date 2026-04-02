@@ -10,6 +10,7 @@ import '../admin/class_manage_page.dart';
 import '../admin/survey_manage_page.dart';
 import '../analytics/learning_analytics_page.dart';
 import '../graph/graph_list_page.dart';
+import '../graph/knowledge_graph_page.dart';
 import '../admin/teaching_manage_page.dart';
 import '../admin/lab_task_manage_page.dart';
 import '../achievement/achievement_page.dart';
@@ -329,6 +330,15 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const GraphListPage()),
+        ),
+      ),
+      _ToolItem(
+        icon: Icons.hub,
+        label: '知识图谱',
+        color: Colors.cyan,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const KnowledgeGraphPage()),
         ),
       ),
       _ToolItem(

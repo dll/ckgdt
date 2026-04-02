@@ -56,7 +56,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 8,
+      version: 9,
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -110,7 +110,7 @@ class DatabaseHelper {
         // 重新打开
         final db2 = await openDatabase(
           dbName,
-          version: 8,
+          version: 9,
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
         );
@@ -168,7 +168,7 @@ class DatabaseHelper {
         // Create empty database
         db = await openDatabase(
           dbPath,
-          version: 8,
+          version: 9,
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
         );
@@ -180,7 +180,7 @@ class DatabaseHelper {
 
     db = await openDatabase(
       dbPath,
-      version: 8,
+      version: 9,
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -388,6 +388,7 @@ class DatabaseHelper {
     await _createNewTablesV6(db);
     await _createNewTablesV7(db);
     await _createNewTablesV8(db);
+    await _createNewTablesV9(db);
     await _ensureResourceFileColumns(db);
 
     // Add admin user (ignore if already exists from asset DB)
@@ -431,6 +432,9 @@ class DatabaseHelper {
     }
     if (oldVersion < 8) {
       await _createNewTablesV8(db);
+    }
+    if (oldVersion < 9) {
+      await _createNewTablesV9(db);
     }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
@@ -484,6 +488,7 @@ class DatabaseHelper {
     await _createNewTablesV6(db);
     await _createNewTablesV7(db);
     await _createNewTablesV8(db);
+    await _createNewTablesV9(db);
   }
 
   /// 补齐 resource_files 表可能缺少的列
@@ -914,6 +919,45 @@ class DatabaseHelper {
         match_confidence REAL DEFAULT 1.0,
         created_at TEXT,
         FOREIGN KEY (resource_id) REFERENCES resource_files(id) ON DELETE CASCADE
+      )
+    ''');
+  }
+
+  /// V9 新增: 真正的知识图谱 — 知识概念 + 语义关系
+  Future<void> _createNewTablesV9(Database db) async {
+    // ── 知识概念表（独立于文档结构的纯知识概念节点）──────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS knowledge_concepts(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        concept_name TEXT NOT NULL,
+        concept_type TEXT DEFAULT 'concept',
+        chapter INTEGER,
+        description TEXT,
+        importance TEXT DEFAULT 'important',
+        keywords TEXT,
+        source_node_ids TEXT,
+        created_at TEXT,
+        updated_at TEXT
+      )
+    ''');
+
+    // ── 概念间语义关系表 ──────────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS concept_relations(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        source_concept_id INTEGER NOT NULL,
+        target_concept_id INTEGER NOT NULL,
+        relation_type TEXT NOT NULL,
+        relation_label TEXT,
+        weight REAL DEFAULT 1.0,
+        bidirectional INTEGER DEFAULT 0,
+        description TEXT,
+        ai_generated INTEGER DEFAULT 0,
+        confidence REAL DEFAULT 1.0,
+        created_at TEXT,
+        FOREIGN KEY (source_concept_id) REFERENCES knowledge_concepts(id) ON DELETE CASCADE,
+        FOREIGN KEY (target_concept_id) REFERENCES knowledge_concepts(id) ON DELETE CASCADE,
+        UNIQUE(source_concept_id, target_concept_id, relation_type)
       )
     ''');
   }
