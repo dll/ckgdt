@@ -56,7 +56,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 7,
+      version: 8,
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -110,7 +110,7 @@ class DatabaseHelper {
         // 重新打开
         final db2 = await openDatabase(
           dbName,
-          version: 7,
+          version: 8,
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
         );
@@ -168,7 +168,7 @@ class DatabaseHelper {
         // Create empty database
         db = await openDatabase(
           dbPath,
-          version: 7,
+          version: 8,
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
         );
@@ -180,7 +180,7 @@ class DatabaseHelper {
 
     db = await openDatabase(
       dbPath,
-      version: 7,
+      version: 8,
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -387,6 +387,7 @@ class DatabaseHelper {
     await _createNewTablesV5(db);
     await _createNewTablesV6(db);
     await _createNewTablesV7(db);
+    await _createNewTablesV8(db);
     await _ensureResourceFileColumns(db);
 
     // Add admin user (ignore if already exists from asset DB)
@@ -427,6 +428,9 @@ class DatabaseHelper {
     }
     if (oldVersion < 7) {
       await _createNewTablesV7(db);
+    }
+    if (oldVersion < 8) {
+      await _createNewTablesV8(db);
     }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
@@ -479,6 +483,7 @@ class DatabaseHelper {
     await _createNewTablesV5(db);
     await _createNewTablesV6(db);
     await _createNewTablesV7(db);
+    await _createNewTablesV8(db);
   }
 
   /// 补齐 resource_files 表可能缺少的列
@@ -851,6 +856,64 @@ class DatabaseHelper {
         reviewed_at TEXT,
         FOREIGN KEY (submission_id) REFERENCES lab_submissions(id) ON DELETE CASCADE,
         UNIQUE(submission_id, reviewer_id)
+      )
+    ''');
+  }
+
+  /// V8 新增: 课程达成度相关表
+  Future<void> _createNewTablesV8(Database db) async {
+    // ── 达成度评价批次表 ──────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS achievement_batches(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        batch_name TEXT NOT NULL,
+        course_name TEXT DEFAULT '移动应用开发',
+        class_name TEXT DEFAULT '软件23',
+        semester TEXT,
+        teacher_id TEXT,
+        objective_weights_json TEXT DEFAULT '{"目标1":0.15,"目标2":0.25,"目标3":0.30,"目标4":0.30}',
+        assessment_weights_json TEXT DEFAULT '{"平时":0.20,"实验":0.30,"期末":0.50}',
+        status TEXT DEFAULT 'draft',
+        report_content TEXT,
+        created_at TEXT,
+        updated_at TEXT
+      )
+    ''');
+
+    // ── 学生达成度分数表 ──────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS achievement_scores(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        batch_id INTEGER NOT NULL,
+        student_id TEXT NOT NULL,
+        student_name TEXT,
+        obj1_score REAL DEFAULT 0,
+        obj1_achievement REAL DEFAULT 0,
+        obj2_score REAL DEFAULT 0,
+        obj2_achievement REAL DEFAULT 0,
+        obj3_score REAL DEFAULT 0,
+        obj3_achievement REAL DEFAULT 0,
+        obj4_score REAL DEFAULT 0,
+        obj4_achievement REAL DEFAULT 0,
+        total_score REAL DEFAULT 0,
+        created_at TEXT,
+        updated_at TEXT,
+        FOREIGN KEY (batch_id) REFERENCES achievement_batches(id) ON DELETE CASCADE,
+        UNIQUE(batch_id, student_id)
+      )
+    ''');
+
+    // ── 资源关联表（视频/PPT/PDF ↔ 大纲章节）──────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS resource_chapter_mapping(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        resource_id INTEGER,
+        resource_type TEXT,
+        chapter_number INTEGER NOT NULL,
+        chapter_title TEXT,
+        match_confidence REAL DEFAULT 1.0,
+        created_at TEXT,
+        FOREIGN KEY (resource_id) REFERENCES resource_files(id) ON DELETE CASCADE
       )
     ''');
   }
