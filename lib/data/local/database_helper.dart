@@ -56,7 +56,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 3,
+      version: 4,
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -110,7 +110,7 @@ class DatabaseHelper {
         // 重新打开
         final db2 = await openDatabase(
           dbName,
-          version: 3,
+          version: 4,
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
         );
@@ -168,7 +168,7 @@ class DatabaseHelper {
         // Create empty database
         db = await openDatabase(
           dbPath,
-          version: 3,
+          version: 4,
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
         );
@@ -383,8 +383,7 @@ class DatabaseHelper {
 
     await _createNewTablesV2(db);
     await _createNewTablesV3(db);
-
-    // 修复 asset DB 中旧表缺少的列
+    await _createNewTablesV4(db);
     await _ensureResourceFileColumns(db);
 
     // Add admin user (ignore if already exists from asset DB)
@@ -413,6 +412,9 @@ class DatabaseHelper {
     }
     if (oldVersion < 3) {
       await _createNewTablesV3(db);
+    }
+    if (oldVersion < 4) {
+      await _createNewTablesV4(db);
     }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
@@ -461,6 +463,7 @@ class DatabaseHelper {
 
     await _createNewTablesV2(db);
     await _createNewTablesV3(db);
+    await _createNewTablesV4(db);
   }
 
   /// 补齐 resource_files 表可能缺少的列
@@ -481,6 +484,114 @@ class DatabaseHelper {
         debugPrint('=== DatabaseHelper: Added description column to resource_files');
       } catch (_) {}
     }
+  }
+
+  /// V4 新增: 考核管理 + 作品管理 表
+  Future<void> _createNewTablesV4(Database db) async {
+    // ── 考核：分组 ──────────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS assessment_groups(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        leader TEXT,
+        member_ids TEXT,
+        member_names TEXT,
+        project_name TEXT,
+        created_at TEXT,
+        updated_at TEXT
+      )
+    ''');
+
+    // ── 考核：项目立项 ──────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS assessment_projects(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        group_id INTEGER,
+        name TEXT NOT NULL,
+        description TEXT,
+        tech_stack TEXT,
+        status TEXT DEFAULT '设计阶段',
+        progress REAL DEFAULT 0,
+        created_at TEXT,
+        updated_at TEXT,
+        FOREIGN KEY (group_id) REFERENCES assessment_groups(id) ON DELETE SET NULL
+      )
+    ''');
+
+    // ── 考核：项目评分 ──────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS project_scores(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        project_id INTEGER NOT NULL,
+        group_id INTEGER,
+        scorer_id TEXT,
+        score_functionality INTEGER DEFAULT 0,
+        score_tech_depth INTEGER DEFAULT 0,
+        score_integration INTEGER DEFAULT 0,
+        score_quality INTEGER DEFAULT 0,
+        score_documentation INTEGER DEFAULT 0,
+        total_score INTEGER DEFAULT 0,
+        comment TEXT,
+        scored_at TEXT,
+        FOREIGN KEY (project_id) REFERENCES assessment_projects(id) ON DELETE CASCADE
+      )
+    ''');
+
+    // ── 考核：答辩记录 ──────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS defense_records(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        group_id INTEGER NOT NULL,
+        project_id INTEGER,
+        scheduled_time TEXT,
+        location TEXT,
+        duration_minutes INTEGER DEFAULT 15,
+        status TEXT DEFAULT '待答辩',
+        notes TEXT,
+        created_at TEXT,
+        FOREIGN KEY (group_id) REFERENCES assessment_groups(id) ON DELETE CASCADE
+      )
+    ''');
+
+    // ── 作品管理：学生作品 ──────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS student_works(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        description TEXT,
+        tech_stack TEXT,
+        work_type TEXT DEFAULT '综合项目',
+        group_name TEXT,
+        leader_name TEXT,
+        user_id TEXT,
+        file_path TEXT,
+        file_size TEXT,
+        status TEXT DEFAULT '待提交',
+        submit_time TEXT,
+        tags TEXT,
+        created_at TEXT,
+        updated_at TEXT
+      )
+    ''');
+
+    // ── 作品管理：作品评分 ──────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS work_scores(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        work_id INTEGER NOT NULL,
+        scorer_id TEXT,
+        scorer_name TEXT,
+        score_functionality INTEGER DEFAULT 0,
+        score_tech_depth INTEGER DEFAULT 0,
+        score_integration INTEGER DEFAULT 0,
+        score_quality INTEGER DEFAULT 0,
+        score_documentation INTEGER DEFAULT 0,
+        total_score INTEGER DEFAULT 0,
+        comment TEXT,
+        scored_at TEXT,
+        FOREIGN KEY (work_id) REFERENCES student_works(id) ON DELETE CASCADE
+      )
+    ''');
   }
 
   Future<void> _createNewTablesV3(Database db) async {

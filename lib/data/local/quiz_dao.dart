@@ -70,7 +70,7 @@ class QuizDao {
   Future<Map<String, dynamic>> getQuizSummary(String userId) async {
     final db = await _dbHelper.database;
     final result = await db.rawQuery('''
-      SELECT 
+      SELECT
         COUNT(*) as total_count,
         SUM(num_correct) as total_correct,
         SUM(num_total) as total_questions,
@@ -83,5 +83,55 @@ class QuizDao {
       return result.first;
     }
     return {};
+  }
+
+  // ══════════════════════════════════════════════════════════
+  //  题库管理 CRUD（教师/管理员用）
+  // ══════════════════════════════════════════════════════════
+
+  /// 添加题目
+  Future<int> addQuestion(QuestionModel question) async {
+    final db = await _dbHelper.database;
+    return db.insert('questions', question.toMap());
+  }
+
+  /// 更新题目
+  Future<int> updateQuestion(int id, QuestionModel question) async {
+    final db = await _dbHelper.database;
+    return db.update('questions', question.toMap(),
+        where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// 删除题目
+  Future<int> deleteQuestion(int id) async {
+    final db = await _dbHelper.database;
+    return db.delete('questions', where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// 按章节统计题目数量
+  Future<List<Map<String, dynamic>>> getChapterStats() async {
+    final db = await _dbHelper.database;
+    return db.rawQuery('''
+      SELECT source, COUNT(*) as count
+      FROM questions
+      WHERE source IS NOT NULL AND source != ''
+      GROUP BY source
+      ORDER BY source
+    ''');
+  }
+
+  /// 获取题目总数
+  Future<int> getQuestionCount() async {
+    final db = await _dbHelper.database;
+    final result =
+        await db.rawQuery('SELECT COUNT(*) as c FROM questions');
+    return (result.first['c'] as int?) ?? 0;
+  }
+
+  /// 批量删除题目
+  Future<int> deleteQuestionsByChapter(String chapter) async {
+    final db = await _dbHelper.database;
+    return db.delete('questions',
+        where: 'source = ?', whereArgs: [chapter]);
   }
 }

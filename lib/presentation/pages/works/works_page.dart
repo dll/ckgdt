@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../../data/local/works_dao.dart';
 import '../../../services/auth_service.dart';
 
 /// 作品管理页面 — 参考 Python 版 works_tab.py
@@ -14,11 +16,17 @@ class _WorksPageState extends State<WorksPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _authService = AuthService();
+  final _worksDao = WorksDao();
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _initData();
+  }
+
+  Future<void> _initData() async {
+    await _worksDao.initDemoDataIfEmpty();
   }
 
   @override
@@ -81,98 +89,37 @@ class _WorksGalleryTab extends StatefulWidget {
 class _WorksGalleryTabState extends State<_WorksGalleryTab> {
   String _selectedFilter = '全部';
   final _searchController = TextEditingController();
+  final _worksDao = WorksDao();
 
-  // 模拟作品数据
-  final List<Map<String, dynamic>> _works = [
-    {
-      'title': '智慧校园生活服务平台',
-      'group': '第1组',
-      'leader': '张三',
-      'tech': 'Flutter + Android 原生',
-      'desc': '面向高校师生的跨平台校园服务，整合课表、场馆预约、校园导航等功能',
-      'status': '已提交',
-      'submitTime': '2024-12-15 14:30',
-      'score': 92,
-      'tags': ['Flutter', 'Android', '跨平台'],
-      'type': '综合项目',
-    },
-    {
-      'title': '在线学习辅助平台',
-      'group': '第2组',
-      'leader': '陈九',
-      'tech': 'Flutter + React Native',
-      'desc': '提供在线学习、笔记管理、学习计划和协作讨论功能',
-      'status': '已提交',
-      'submitTime': '2024-12-14 16:20',
-      'score': 88,
-      'tags': ['Flutter', 'React Native', '学习'],
-      'type': '综合项目',
-    },
-    {
-      'title': '智能健康运动记录',
-      'group': '第3组',
-      'leader': '卫五',
-      'tech': 'Flutter + HarmonyOS',
-      'desc': '记录运动轨迹、健康数据分析、社交分享健身成果',
-      'status': '已评分',
-      'submitTime': '2024-12-13 10:45',
-      'score': 85,
-      'tags': ['Flutter', 'HarmonyOS', '健康'],
-      'type': '综合项目',
-    },
-    {
-      'title': '二手物品交易平台',
-      'group': '第4组',
-      'leader': '秦一',
-      'tech': 'Flutter + 小程序',
-      'desc': '校园二手商品发布、搜索、即时聊天、交易管理',
-      'status': '已评分',
-      'submitTime': '2024-12-12 09:30',
-      'score': 90,
-      'tags': ['Flutter', '小程序', '电商'],
-      'type': '综合项目',
-    },
-    {
-      'title': 'Android 原生 TODO 应用',
-      'group': '第1组',
-      'leader': '张三',
-      'tech': 'Android (Kotlin)',
-      'desc': '基于 Room + MVVM 架构的本地待办事项管理应用',
-      'status': '已提交',
-      'submitTime': '2024-11-20 11:00',
-      'score': null,
-      'tags': ['Android', 'Kotlin', 'MVVM'],
-      'type': '实验作业',
-    },
-    {
-      'title': '微信小程序天气查询',
-      'group': '第2组',
-      'leader': '陈九',
-      'tech': '微信小程序',
-      'desc': '基于和风天气 API 的小程序，支持城市搜索和 7 天预报',
-      'status': '待提交',
-      'submitTime': null,
-      'score': null,
-      'tags': ['小程序', 'API', '天气'],
-      'type': '实验作业',
-    },
-  ];
+  List<Map<String, dynamic>> _works = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWorks();
+  }
+
+  Future<void> _loadWorks() async {
+    setState(() => _isLoading = true);
+    try {
+      final filter = _selectedFilter == '全部' ? null : _selectedFilter;
+      final works = await _worksDao.getWorks(workType: filter);
+      if (mounted) setState(() { _works = works; _isLoading = false; });
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   List<Map<String, dynamic>> get _filteredWorks {
-    var result = _works;
-    if (_selectedFilter != '全部') {
-      result = result.where((w) => w['type'] == _selectedFilter).toList();
-    }
     final query = _searchController.text.trim().toLowerCase();
-    if (query.isNotEmpty) {
-      result = result
-          .where((w) =>
-              (w['title'] as String).toLowerCase().contains(query) ||
-              (w['group'] as String).toLowerCase().contains(query) ||
-              (w['tech'] as String).toLowerCase().contains(query))
-          .toList();
-    }
-    return result;
+    if (query.isEmpty) return _works;
+    return _works
+        .where((w) =>
+            (w['title'] as String? ?? '').toLowerCase().contains(query) ||
+            (w['group_name'] as String? ?? '').toLowerCase().contains(query) ||
+            (w['tech_stack'] as String? ?? '').toLowerCase().contains(query))
+        .toList();
   }
 
   @override
@@ -184,87 +131,286 @@ class _WorksGalleryTabState extends State<_WorksGalleryTab> {
   @override
   Widget build(BuildContext context) {
     final filtered = _filteredWorks;
-    return Column(
+    final isTeacherOrAdmin =
+        widget.authService.isTeacher || widget.authService.isAdmin;
+
+    return Stack(
       children: [
-        // 搜索栏 + 筛选
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: '搜索作品名称、小组、技术栈...',
-              prefixIcon: const Icon(Icons.search, size: 20),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              filled: true,
-              fillColor: Colors.grey[100],
-              contentPadding: const EdgeInsets.symmetric(vertical: 0),
-            ),
-            onChanged: (_) => setState(() {}),
-          ),
-        ),
-        const SizedBox(height: 8),
-        // 筛选 Chips
-        SizedBox(
-          height: 36,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: ['全部', '综合项目', '实验作业'].map((label) {
-              final selected = _selectedFilter == label;
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: FilterChip(
-                  label: Text(label, style: const TextStyle(fontSize: 12)),
-                  selected: selected,
-                  onSelected: (_) => setState(() => _selectedFilter = label),
-                  showCheckmark: false,
-                  selectedColor:
-                      Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
-                  padding: EdgeInsets.zero,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-        const SizedBox(height: 4),
-        // 作品列表
-        Expanded(
-          child: filtered.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.search_off, size: 56, color: Colors.grey[300]),
-                      const SizedBox(height: 12),
-                      Text('没有找到匹配的作品',
-                          style: TextStyle(color: Colors.grey[500])),
-                    ],
+        Column(
+          children: [
+            // 搜索栏 + 筛选
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: '搜索作品名称、小组、技术栈...',
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: filtered.length,
-                  itemBuilder: (ctx, i) =>
-                      _buildWorkCard(context, filtered[i]),
+                  filled: true,
+                  fillColor: Colors.grey[100],
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
                 ),
+                onChanged: (_) => setState(() {}),
+              ),
+            ),
+            const SizedBox(height: 8),
+            // 筛选 Chips
+            SizedBox(
+              height: 36,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: ['全部', '综合项目', '实验作业', '课外实践'].map((label) {
+                  final selected = _selectedFilter == label;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: FilterChip(
+                      label: Text(label, style: const TextStyle(fontSize: 12)),
+                      selected: selected,
+                      onSelected: (_) {
+                        setState(() => _selectedFilter = label);
+                        _loadWorks();
+                      },
+                      showCheckmark: false,
+                      selectedColor: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: 0.15),
+                      padding: EdgeInsets.zero,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 4),
+            // 作品列表
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : filtered.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.search_off,
+                                  size: 56, color: Colors.grey[300]),
+                              const SizedBox(height: 12),
+                              Text('没有找到匹配的作品',
+                                  style: TextStyle(color: Colors.grey[500])),
+                            ],
+                          ),
+                        )
+                      : RefreshIndicator(
+                          onRefresh: _loadWorks,
+                          child: ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: filtered.length,
+                            itemBuilder: (ctx, i) =>
+                                _buildWorkCard(context, filtered[i]),
+                          ),
+                        ),
+            ),
+          ],
         ),
+        // 教师/管理员添加作品按钮
+        if (isTeacherOrAdmin)
+          Positioned(
+            right: 16,
+            bottom: 16,
+            child: FloatingActionButton(
+              heroTag: 'gallery_add',
+              onPressed: () => _showAddWorkDialog(context),
+              child: const Icon(Icons.add),
+            ),
+          ),
       ],
     );
   }
 
+  void _showAddWorkDialog(BuildContext context) {
+    final titleCtrl = TextEditingController();
+    final descCtrl = TextEditingController();
+    final techCtrl = TextEditingController();
+    final groupCtrl = TextEditingController();
+    final leaderCtrl = TextEditingController();
+    String selectedType = '综合项目';
+    final tagsCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('添加作品'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleCtrl,
+                  decoration: InputDecoration(
+                    labelText: '作品名称 *',
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: selectedType,
+                  decoration: InputDecoration(
+                    labelText: '作品类型',
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 12),
+                  ),
+                  items: ['综合项目', '实验作业', '课外实践']
+                      .map((t) =>
+                          DropdownMenuItem(value: t, child: Text(t)))
+                      .toList(),
+                  onChanged: (v) =>
+                      setDialogState(() => selectedType = v!),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: groupCtrl,
+                  decoration: InputDecoration(
+                    labelText: '小组名称',
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: leaderCtrl,
+                  decoration: InputDecoration(
+                    labelText: '组长姓名',
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: techCtrl,
+                  decoration: InputDecoration(
+                    labelText: '技术栈',
+                    hintText: '如: Flutter + Android',
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: descCtrl,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: '作品描述',
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: tagsCtrl,
+                  decoration: InputDecoration(
+                    labelText: '标签（逗号分隔）',
+                    hintText: 'Flutter, Android, 跨平台',
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('取消'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (titleCtrl.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('请输入作品名称')),
+                  );
+                  return;
+                }
+                final tagsList = tagsCtrl.text
+                    .split(',')
+                    .map((t) => t.trim())
+                    .where((t) => t.isNotEmpty)
+                    .toList();
+                try {
+                  await _worksDao.addWork(
+                    title: titleCtrl.text.trim(),
+                    description: descCtrl.text.trim().isNotEmpty
+                        ? descCtrl.text.trim()
+                        : null,
+                    techStack: techCtrl.text.trim().isNotEmpty
+                        ? techCtrl.text.trim()
+                        : null,
+                    workType: selectedType,
+                    groupName: groupCtrl.text.trim().isNotEmpty
+                        ? groupCtrl.text.trim()
+                        : null,
+                    leaderName: leaderCtrl.text.trim().isNotEmpty
+                        ? leaderCtrl.text.trim()
+                        : null,
+                    userId: widget.authService.getCurrentUserId(),
+                    status: '待提交',
+                    tags: tagsList.isNotEmpty ? tagsList : null,
+                  );
+                  if (context.mounted) {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('作品添加成功')),
+                    );
+                    _loadWorks();
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('添加失败: $e')),
+                    );
+                  }
+                }
+              },
+              child: const Text('添加'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildWorkCard(BuildContext context, Map<String, dynamic> work) {
-    final statusColor = switch (work['status']) {
+    final status = work['status'] as String? ?? '待提交';
+    final statusColor = switch (status) {
       '已评分' => Colors.green,
       '已提交' => Colors.blue,
       '待提交' => Colors.orange,
       _ => Colors.grey,
     };
     final score = work['score'] as int?;
-    final tags = work['tags'] as List;
+    final tags = work['tags'] != null
+        ? (jsonDecode(work['tags'] as String) as List)
+        : [];
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -281,7 +427,7 @@ class _WorksGalleryTabState extends State<_WorksGalleryTab> {
               Row(
                 children: [
                   Expanded(
-                    child: Text(work['title'] as String,
+                    child: Text(work['title'] as String? ?? '',
                         style: const TextStyle(
                             fontSize: 15, fontWeight: FontWeight.w600)),
                   ),
@@ -292,7 +438,7 @@ class _WorksGalleryTabState extends State<_WorksGalleryTab> {
                       color: statusColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(work['status'] as String,
+                    child: Text(status,
                         style: TextStyle(
                             fontSize: 11,
                             color: statusColor,
@@ -302,7 +448,7 @@ class _WorksGalleryTabState extends State<_WorksGalleryTab> {
               ),
               const SizedBox(height: 6),
               // 描述
-              Text(work['desc'] as String,
+              Text(work['description'] as String? ?? '',
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis),
@@ -312,14 +458,17 @@ class _WorksGalleryTabState extends State<_WorksGalleryTab> {
                 children: [
                   Icon(Icons.group, size: 14, color: Colors.grey[400]),
                   const SizedBox(width: 4),
-                  Text('${work['group']} · ${work['leader']}',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                  Text(
+                      '${work['group_name'] ?? '未分组'} · ${work['leader_name'] ?? '未指定'}',
+                      style:
+                          TextStyle(fontSize: 12, color: Colors.grey[500])),
                   const SizedBox(width: 12),
                   Icon(Icons.code, size: 14, color: Colors.grey[400]),
                   const SizedBox(width: 4),
                   Expanded(
-                    child: Text(work['tech'] as String,
-                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                    child: Text(work['tech_stack'] as String? ?? '',
+                        style:
+                            TextStyle(fontSize: 12, color: Colors.grey[500]),
                         overflow: TextOverflow.ellipsis),
                   ),
                   if (score != null)
@@ -334,30 +483,33 @@ class _WorksGalleryTabState extends State<_WorksGalleryTab> {
                                     : Colors.orange)),
                 ],
               ),
-              const SizedBox(height: 8),
-              // 标签
-              Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                children: tags
-                    .map((t) => Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(t.toString(),
-                              style: TextStyle(
-                                  fontSize: 10,
-                                  color:
-                                      Theme.of(context).colorScheme.primary)),
-                        ))
-                    .toList(),
-              ),
+              if (tags.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                // 标签
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: tags
+                      .map((t) => Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(t.toString(),
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary)),
+                          ))
+                      .toList(),
+                ),
+              ],
             ],
           ),
         ),
@@ -366,6 +518,10 @@ class _WorksGalleryTabState extends State<_WorksGalleryTab> {
   }
 
   void _showWorkDetail(Map<String, dynamic> work) {
+    final tags = work['tags'] != null
+        ? (jsonDecode(work['tags'] as String) as List)
+        : [];
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -395,19 +551,38 @@ class _WorksGalleryTabState extends State<_WorksGalleryTab> {
                 ),
               ),
               const SizedBox(height: 16),
-              Text(work['title'] as String,
+              Text(work['title'] as String? ?? '',
                   style: const TextStyle(
                       fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
               // 基本信息
-              _detailRow(Icons.group, '小组', '${work['group']} (组长: ${work['leader']})'),
-              _detailRow(Icons.code, '技术栈', work['tech'] as String),
-              _detailRow(Icons.category, '类型', work['type'] as String),
-              if (work['submitTime'] != null)
-                _detailRow(Icons.schedule, '提交时间', work['submitTime'] as String),
-              _detailRow(Icons.flag, '状态', work['status'] as String),
+              _detailRow(Icons.group, '小组',
+                  '${work['group_name'] ?? '未分组'} (组长: ${work['leader_name'] ?? '未指定'})'),
+              _detailRow(Icons.code, '技术栈',
+                  work['tech_stack'] as String? ?? '未指定'),
+              _detailRow(Icons.category, '类型',
+                  work['work_type'] as String? ?? '未分类'),
+              if (work['submit_time'] != null)
+                _detailRow(Icons.schedule, '提交时间',
+                    work['submit_time'] as String),
+              if (work['created_at'] != null && work['submit_time'] == null)
+                _detailRow(Icons.schedule, '创建时间',
+                    work['created_at'] as String),
+              _detailRow(
+                  Icons.flag, '状态', work['status'] as String? ?? '待提交'),
               if (work['score'] != null)
                 _detailRow(Icons.star, '评分', '${work['score']}分'),
+              if (work['score_comment'] != null) ...[
+                const Divider(height: 24),
+                Text('教师评语',
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: primary)),
+                const SizedBox(height: 8),
+                Text(work['score_comment'] as String,
+                    style: TextStyle(fontSize: 14, color: Colors.grey[700])),
+              ],
               const Divider(height: 24),
               Text('作品描述',
                   style: TextStyle(
@@ -415,27 +590,29 @@ class _WorksGalleryTabState extends State<_WorksGalleryTab> {
                       fontWeight: FontWeight.bold,
                       color: primary)),
               const SizedBox(height: 8),
-              Text(work['desc'] as String,
+              Text(work['description'] as String? ?? '暂无描述',
                   style: TextStyle(fontSize: 14, color: Colors.grey[700])),
-              const SizedBox(height: 16),
-              // 标签
-              Text('技术标签',
-                  style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: primary)),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 6,
-                children: (work['tags'] as List)
-                    .map((t) => Chip(
-                          label: Text(t.toString(),
-                              style: const TextStyle(fontSize: 12)),
-                          backgroundColor: primary.withValues(alpha: 0.08),
-                        ))
-                    .toList(),
-              ),
+              if (tags.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text('技术标签',
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: primary)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: tags
+                      .map((t) => Chip(
+                            label: Text(t.toString(),
+                                style: const TextStyle(fontSize: 12)),
+                            backgroundColor:
+                                primary.withValues(alpha: 0.08),
+                          ))
+                      .toList(),
+                ),
+              ],
             ],
           );
         },
@@ -457,8 +634,7 @@ class _WorksGalleryTabState extends State<_WorksGalleryTab> {
                 style: TextStyle(fontSize: 13, color: Colors.grey[500])),
           ),
           Expanded(
-            child:
-                Text(value, style: const TextStyle(fontSize: 13)),
+            child: Text(value, style: const TextStyle(fontSize: 13)),
           ),
         ],
       ),
@@ -482,29 +658,103 @@ class _WorksUploadTabState extends State<_WorksUploadTab> {
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _techCtrl = TextEditingController();
+  final _tagsCtrl = TextEditingController();
   String _selectedType = '综合项目';
+  final _worksDao = WorksDao();
 
-  // 模拟上传记录
-  final List<Map<String, dynamic>> _uploadRecords = [
-    {
-      'title': '智慧校园生活服务平台',
-      'time': '2024-12-15 14:30',
-      'size': '25.6 MB',
-      'status': '上传成功',
-    },
-    {
-      'title': 'Android TODO 应用',
-      'time': '2024-11-20 11:00',
-      'size': '12.3 MB',
-      'status': '上传成功',
-    },
-  ];
+  List<Map<String, dynamic>> _uploadRecords = [];
+  bool _isLoading = true;
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUploadRecords();
+  }
+
+  Future<void> _loadUploadRecords() async {
+    setState(() => _isLoading = true);
+    try {
+      final userId = widget.authService.getCurrentUserId();
+      if (userId != null) {
+        final records = await _worksDao.getWorks(userId: userId);
+        if (mounted) setState(() { _uploadRecords = records; _isLoading = false; });
+      } else {
+        if (mounted) setState(() { _uploadRecords = []; _isLoading = false; });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _submitWork() async {
+    if (_titleCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请输入作品名称')),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    try {
+      final userId = widget.authService.getCurrentUserId();
+      final tagsList = _tagsCtrl.text
+          .split(',')
+          .map((t) => t.trim())
+          .where((t) => t.isNotEmpty)
+          .toList();
+
+      // 先添加作品
+      final workId = await _worksDao.addWork(
+        title: _titleCtrl.text.trim(),
+        description: _descCtrl.text.trim().isNotEmpty
+            ? _descCtrl.text.trim()
+            : null,
+        techStack: _techCtrl.text.trim().isNotEmpty
+            ? _techCtrl.text.trim()
+            : null,
+        workType: _selectedType,
+        userId: userId,
+        status: '待提交',
+        tags: tagsList.isNotEmpty ? tagsList : null,
+      );
+
+      // 再提交作品
+      await _worksDao.submitWork(workId);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('作品提交成功！'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        // 清空表单
+        _titleCtrl.clear();
+        _descCtrl.clear();
+        _techCtrl.clear();
+        _tagsCtrl.clear();
+        setState(() => _selectedType = '综合项目');
+        // 刷新上传记录
+        _loadUploadRecords();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('提交失败: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
 
   @override
   void dispose() {
     _titleCtrl.dispose();
     _descCtrl.dispose();
     _techCtrl.dispose();
+    _tagsCtrl.dispose();
     super.dispose();
   }
 
@@ -540,7 +790,7 @@ class _WorksUploadTabState extends State<_WorksUploadTab> {
                 TextField(
                   controller: _titleCtrl,
                   decoration: InputDecoration(
-                    labelText: '作品名称',
+                    labelText: '作品名称 *',
                     hintText: '请输入作品名称',
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10)),
@@ -560,7 +810,8 @@ class _WorksUploadTabState extends State<_WorksUploadTab> {
                         horizontal: 12, vertical: 12),
                   ),
                   items: ['综合项目', '实验作业', '课外实践']
-                      .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                      .map((t) =>
+                          DropdownMenuItem(value: t, child: Text(t)))
                       .toList(),
                   onChanged: (v) => setState(() => _selectedType = v!),
                 ),
@@ -571,6 +822,19 @@ class _WorksUploadTabState extends State<_WorksUploadTab> {
                   decoration: InputDecoration(
                     labelText: '技术栈',
                     hintText: '如: Flutter + Android + HarmonyOS',
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // 标签
+                TextField(
+                  controller: _tagsCtrl,
+                  decoration: InputDecoration(
+                    labelText: '标签（逗号分隔）',
+                    hintText: 'Flutter, Android, 跨平台',
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10)),
                     contentPadding: const EdgeInsets.symmetric(
@@ -630,20 +894,16 @@ class _WorksUploadTabState extends State<_WorksUploadTab> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      if (_titleCtrl.text.trim().isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('请输入作品名称')),
-                        );
-                        return;
-                      }
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('提交功能将在后续版本中开放')),
-                      );
-                    },
-                    icon: const Icon(Icons.send),
-                    label: const Text('提交作品'),
+                    onPressed: _isSubmitting ? null : _submitWork,
+                    icon: _isSubmitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.send),
+                    label: Text(_isSubmitting ? '提交中...' : '提交作品'),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
@@ -658,32 +918,66 @@ class _WorksUploadTabState extends State<_WorksUploadTab> {
         const SizedBox(height: 20),
 
         // 上传记录
-        const Text('上传记录',
+        const Text('提交记录',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        ..._uploadRecords.map((r) => Card(
+        if (_isLoading)
+          const Center(
+              child: Padding(
+            padding: EdgeInsets.all(20),
+            child: CircularProgressIndicator(),
+          ))
+        else if (_uploadRecords.isEmpty)
+          Card(
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(Icons.inbox, size: 40, color: Colors.grey[300]),
+                    const SizedBox(height: 8),
+                    Text('暂无提交记录',
+                        style: TextStyle(color: Colors.grey[500])),
+                  ],
+                ),
+              ),
+            ),
+          )
+        else
+          ..._uploadRecords.map((r) {
+            final status = r['status'] as String? ?? '待提交';
+            final isSubmitted = status == '已提交' || status == '已评分';
+            final statusColor = isSubmitted ? Colors.green : Colors.orange;
+            final statusIcon =
+                isSubmitted ? Icons.check_circle : Icons.pending;
+            return Card(
               margin: const EdgeInsets.only(bottom: 8),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10)),
               child: ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: Colors.green.withValues(alpha: 0.1),
-                  child: const Icon(Icons.check_circle,
-                      color: Colors.green, size: 20),
+                  backgroundColor: statusColor.withValues(alpha: 0.1),
+                  child:
+                      Icon(statusIcon, color: statusColor, size: 20),
                 ),
-                title: Text(r['title'] as String,
+                title: Text(r['title'] as String? ?? '',
                     style: const TextStyle(
                         fontSize: 14, fontWeight: FontWeight.w500)),
                 subtitle: Text(
-                    '${r['time']} · ${r['size']}',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-                trailing: Text(r['status'] as String,
-                    style: const TextStyle(
+                    '${r['submit_time'] ?? r['created_at'] ?? '未知时间'}'
+                    '${r['file_size'] != null ? ' · ${r['file_size']}' : ''}',
+                    style:
+                        TextStyle(fontSize: 12, color: Colors.grey[500])),
+                trailing: Text(status,
+                    style: TextStyle(
                         fontSize: 12,
-                        color: Colors.green,
+                        color: statusColor,
                         fontWeight: FontWeight.w500)),
               ),
-            )),
+            );
+          }),
       ],
     );
   }
@@ -693,169 +987,420 @@ class _WorksUploadTabState extends State<_WorksUploadTab> {
 // 评分记录 Tab
 // ══════════════════════════════════════════════════════════════════════════════
 
-class _ScoreRecordTab extends StatelessWidget {
+class _ScoreRecordTab extends StatefulWidget {
   final AuthService authService;
   const _ScoreRecordTab({required this.authService});
 
   @override
-  Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-    final isTeacherOrAdmin = authService.isTeacher || authService.isAdmin;
+  State<_ScoreRecordTab> createState() => _ScoreRecordTabState();
+}
 
-    // 评分维度
-    const dimensions = [
-      {'name': '功能完整性', 'max': 25, 'icon': Icons.check_circle},
-      {'name': '技术实现深度', 'max': 20, 'icon': Icons.code},
-      {'name': '跨框架整合', 'max': 25, 'icon': Icons.integration_instructions},
-      {'name': '性能与质量', 'max': 15, 'icon': Icons.speed},
-      {'name': '文档与协作', 'max': 15, 'icon': Icons.description},
-    ];
+class _ScoreRecordTabState extends State<_ScoreRecordTab> {
+  final _worksDao = WorksDao();
+  List<Map<String, dynamic>> _scoreRecords = [];
+  bool _isLoading = true;
 
-    // 模拟评分记录
-    final scoreRecords = [
-      {
-        'title': '智慧校园生活服务平台',
-        'group': '第1组',
-        'scores': {'功能完整性': 23, '技术实现深度': 18, '跨框架整合': 22, '性能与质量': 13, '文档与协作': 14},
-        'total': 92,
-        'teacher': '刘东良教师',
-        'time': '2024-12-16',
-        'comment': '功能完整，技术栈选型合理，UI 交互流畅',
-      },
-      {
-        'title': '二手物品交易平台',
-        'group': '第4组',
-        'scores': {'功能完整性': 22, '技术实现深度': 18, '跨框架整合': 21, '性能与质量': 14, '文档与协作': 13},
-        'total': 90,
-        'teacher': '刘东良教师',
-        'time': '2024-12-16',
-        'comment': '交易流程完善，即时聊天功能亮点突出',
-      },
-      {
-        'title': '在线学习辅助平台',
-        'group': '第2组',
-        'scores': {'功能完整性': 21, '技术实现深度': 17, '跨框架整合': 20, '性能与质量': 13, '文档与协作': 12},
-        'total': 88,
-        'teacher': '刘东良教师',
-        'time': '2024-12-16',
-        'comment': '学习功能全面，建议优化笔记同步性能',
-      },
-      {
-        'title': '智能健康运动记录',
-        'group': '第3组',
-        'scores': {'功能完整性': 20, '技术实现深度': 16, '跨框架整合': 20, '性能与质量': 12, '文档与协作': 12},
-        'total': 85,
-        'teacher': '刘东良教师',
-        'time': '2024-12-16',
-        'comment': '运动记录功能扎实，HarmonyOS 适配值得肯定',
-      },
-    ];
+  // 评分维度
+  static const dimensions = [
+    {'name': '功能完整性', 'max': 25, 'icon': Icons.check_circle},
+    {'name': '技术实现深度', 'max': 20, 'icon': Icons.code},
+    {'name': '跨框架整合', 'max': 25, 'icon': Icons.integration_instructions},
+    {'name': '性能与质量', 'max': 15, 'icon': Icons.speed},
+    {'name': '文档与协作', 'max': 15, 'icon': Icons.description},
+  ];
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // 评分标准说明
-        Card(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              gradient: LinearGradient(
-                colors: [
-                  primary.withValues(alpha: 0.08),
-                  primary.withValues(alpha: 0.02)
-                ],
-              ),
-            ),
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+  @override
+  void initState() {
+    super.initState();
+    _loadScoreRecords();
+  }
+
+  Future<void> _loadScoreRecords() async {
+    setState(() => _isLoading = true);
+    try {
+      final records = await _worksDao.getScoreRecords();
+      if (mounted) setState(() { _scoreRecords = records; _isLoading = false; });
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showScoreDialog(BuildContext context) async {
+    // Load unscored works (status = '已提交')
+    final works = await _worksDao.getWorks();
+    final unscoredWorks = works
+        .where((w) => w['status'] == '已提交')
+        .toList();
+
+    if (!mounted) return;
+
+    if (unscoredWorks.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('没有待评分的作品')),
+      );
+      return;
+    }
+
+    Map<String, dynamic>? selectedWork = unscoredWorks.first;
+    double functionality = 15;
+    double techDepth = 12;
+    double integration = 15;
+    double quality = 9;
+    double documentation = 9;
+    final commentCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final total = functionality.round() +
+              techDepth.round() +
+              integration.round() +
+              quality.round() +
+              documentation.round();
+          return AlertDialog(
+            title: const Text('作品评分'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.rule, color: primary, size: 20),
-                    const SizedBox(width: 8),
-                    Text('作品评分标准（100分）',
-                        style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: primary)),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                ...dimensions.map((d) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
-                        children: [
-                          Icon(d['icon'] as IconData,
-                              size: 16, color: Colors.grey[600]),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(d['name'] as String,
-                                style: const TextStyle(fontSize: 13)),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text('${d['max']}分',
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    color: primary,
-                                    fontWeight: FontWeight.bold)),
-                          ),
-                        ],
+                    // 选择作品
+                    DropdownButtonFormField<int>(
+                      value: selectedWork!['id'] as int,
+                      decoration: InputDecoration(
+                        labelText: '选择作品',
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 12),
                       ),
-                    )),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // 教师打分提示
-        if (isTeacherOrAdmin)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Card(
-              color: Colors.amber.shade50,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline,
-                        color: Colors.amber[800], size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text('作为教师，您可以点击作品卡片进行评分操作',
+                      items: unscoredWorks.map((w) {
+                        return DropdownMenuItem<int>(
+                          value: w['id'] as int,
+                          child: Text(w['title'] as String? ?? '',
+                              overflow: TextOverflow.ellipsis),
+                        );
+                      }).toList(),
+                      onChanged: (v) {
+                        setDialogState(() {
+                          selectedWork = unscoredWorks
+                              .firstWhere((w) => w['id'] == v);
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    // 功能完整性 (max 25)
+                    _sliderDimension(
+                      '功能完整性',
+                      functionality,
+                      25,
+                      (v) => setDialogState(() => functionality = v),
+                    ),
+                    // 技术实现深度 (max 20)
+                    _sliderDimension(
+                      '技术实现深度',
+                      techDepth,
+                      20,
+                      (v) => setDialogState(() => techDepth = v),
+                    ),
+                    // 跨框架整合 (max 25)
+                    _sliderDimension(
+                      '跨框架整合',
+                      integration,
+                      25,
+                      (v) => setDialogState(() => integration = v),
+                    ),
+                    // 性能与质量 (max 15)
+                    _sliderDimension(
+                      '性能与质量',
+                      quality,
+                      15,
+                      (v) => setDialogState(() => quality = v),
+                    ),
+                    // 文档与协作 (max 15)
+                    _sliderDimension(
+                      '文档与协作',
+                      documentation,
+                      15,
+                      (v) => setDialogState(() => documentation = v),
+                    ),
+                    const SizedBox(height: 8),
+                    // 总分
+                    Center(
+                      child: Text('总分: $total / 100',
                           style: TextStyle(
-                              fontSize: 13, color: Colors.amber[800])),
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: total >= 90
+                                  ? Colors.green
+                                  : total >= 80
+                                      ? Colors.blue
+                                      : total >= 60
+                                          ? Colors.orange
+                                          : Colors.red)),
+                    ),
+                    const SizedBox(height: 12),
+                    // 评语
+                    TextField(
+                      controller: commentCtrl,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        labelText: '教师评语',
+                        hintText: '请输入评语...',
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 12),
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
-          ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('取消'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  try {
+                    final user = widget.authService.currentUser;
+                    await _worksDao.scoreWork(
+                      workId: selectedWork!['id'] as int,
+                      scorerId: widget.authService.getCurrentUserId(),
+                      scorerName: user?.realName ?? '教师',
+                      functionality: functionality.round(),
+                      techDepth: techDepth.round(),
+                      integration: integration.round(),
+                      quality: quality.round(),
+                      documentation: documentation.round(),
+                      comment: commentCtrl.text.trim().isNotEmpty
+                          ? commentCtrl.text.trim()
+                          : null,
+                    );
+                    if (context.mounted) {
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('评分成功！'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                      _loadScoreRecords();
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('评分失败: $e')),
+                      );
+                    }
+                  }
+                },
+                child: const Text('提交评分'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
 
-        // 评分记录列表
-        const Text('评分记录',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        ...scoreRecords.map((r) => _buildScoreRecordCard(context, r)),
+  Widget _sliderDimension(
+      String name, double value, int max, ValueChanged<double> onChanged) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                  child:
+                      Text(name, style: const TextStyle(fontSize: 13))),
+              Text('${value.round()} / $max',
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          Slider(
+            value: value,
+            min: 0,
+            max: max.toDouble(),
+            divisions: max,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final isTeacherOrAdmin =
+        widget.authService.isTeacher || widget.authService.isAdmin;
+
+    return Stack(
+      children: [
+        RefreshIndicator(
+          onRefresh: _loadScoreRecords,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              // 评分标准说明
+              Card(
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    gradient: LinearGradient(
+                      colors: [
+                        primary.withValues(alpha: 0.08),
+                        primary.withValues(alpha: 0.02)
+                      ],
+                    ),
+                  ),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.rule, color: primary, size: 20),
+                          const SizedBox(width: 8),
+                          Text('作品评分标准（100分）',
+                              style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: primary)),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ...dimensions.map((d) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Row(
+                              children: [
+                                Icon(d['icon'] as IconData,
+                                    size: 16, color: Colors.grey[600]),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(d['name'] as String,
+                                      style:
+                                          const TextStyle(fontSize: 13)),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        primary.withValues(alpha: 0.1),
+                                    borderRadius:
+                                        BorderRadius.circular(8),
+                                  ),
+                                  child: Text('${d['max']}分',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          color: primary,
+                                          fontWeight: FontWeight.bold)),
+                                ),
+                              ],
+                            ),
+                          )),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // 教师打分提示
+              if (isTeacherOrAdmin)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Card(
+                    color: Colors.amber.shade50,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline,
+                              color: Colors.amber[800], size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                                '作为教师，您可以点击右下方按钮对已提交作品进行评分',
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.amber[800])),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+              // 评分记录列表
+              const Text('评分记录',
+                  style: TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              if (_isLoading)
+                const Center(
+                    child: Padding(
+                  padding: EdgeInsets.all(20),
+                  child: CircularProgressIndicator(),
+                ))
+              else if (_scoreRecords.isEmpty)
+                Card(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(Icons.star_border,
+                              size: 40, color: Colors.grey[300]),
+                          const SizedBox(height: 8),
+                          Text('暂无评分记录',
+                              style:
+                                  TextStyle(color: Colors.grey[500])),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+              else
+                ..._scoreRecords.map(
+                    (r) => _buildScoreRecordCard(context, r)),
+            ],
+          ),
+        ),
+        // 教师评分按钮
+        if (isTeacherOrAdmin)
+          Positioned(
+            right: 16,
+            bottom: 16,
+            child: FloatingActionButton.extended(
+              heroTag: 'score_fab',
+              onPressed: () => _showScoreDialog(context),
+              icon: const Icon(Icons.rate_review),
+              label: const Text('评分'),
+            ),
+          ),
       ],
     );
   }
 
   Widget _buildScoreRecordCard(
       BuildContext context, Map<String, dynamic> record) {
-    final scores = record['scores'] as Map<String, int>;
-    final total = record['total'] as int;
+    final total = (record['total_score'] as int?) ?? 0;
     final scoreColor = total >= 90
         ? Colors.green
         : total >= 80
@@ -864,9 +1409,16 @@ class _ScoreRecordTab extends StatelessWidget {
                 ? Colors.orange
                 : Colors.red;
 
+    final functionality = record['score_functionality'] as int?;
+    final techDepth = record['score_tech_depth'] as int?;
+    final integration = record['score_integration'] as int?;
+    final quality = record['score_quality'] as int?;
+    final documentation = record['score_documentation'] as int?;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ExpansionTile(
         leading: CircleAvatar(
           backgroundColor: scoreColor.withValues(alpha: 0.1),
@@ -876,10 +1428,11 @@ class _ScoreRecordTab extends StatelessWidget {
                   fontSize: 14,
                   color: scoreColor)),
         ),
-        title: Text(record['title'] as String,
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+        title: Text(record['work_title'] as String? ?? '',
+            style:
+                const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
         subtitle: Text(
-            '${record['group']} · ${record['teacher']} · ${record['time']}',
+            '${record['group_name'] ?? '未分组'} · ${record['scorer_name'] ?? '教师'} · ${record['scored_at'] ?? ''}',
             style: TextStyle(fontSize: 11, color: Colors.grey[500])),
         children: [
           Padding(
@@ -888,38 +1441,41 @@ class _ScoreRecordTab extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // 各维度分数条
-                ...scores.entries.map((e) {
-                  final max = e.key == '功能完整性' || e.key == '跨框架整合'
-                      ? 25
-                      : e.key == '技术实现深度'
-                          ? 20
-                          : 15;
-                  return _dimensionBar(e.key, e.value, max);
-                }),
+                if (functionality != null)
+                  _dimensionBar('功能完整性', functionality, 25),
+                if (techDepth != null)
+                  _dimensionBar('技术实现深度', techDepth, 20),
+                if (integration != null)
+                  _dimensionBar('跨框架整合', integration, 25),
+                if (quality != null)
+                  _dimensionBar('性能与质量', quality, 15),
+                if (documentation != null)
+                  _dimensionBar('文档与协作', documentation, 15),
                 const SizedBox(height: 8),
                 // 教师评语
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(8),
+                if (record['comment'] != null)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('教师评语',
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey[700])),
+                        const SizedBox(height: 4),
+                        Text(record['comment'] as String,
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey[600])),
+                      ],
+                    ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('教师评语',
-                          style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey[700])),
-                      const SizedBox(height: 4),
-                      Text(record['comment'] as String,
-                          style: TextStyle(
-                              fontSize: 12, color: Colors.grey[600])),
-                    ],
-                  ),
-                ),
               ],
             ),
           ),
@@ -956,7 +1512,9 @@ class _ScoreRecordTab extends StatelessWidget {
           const SizedBox(width: 8),
           Text('$score/$max',
               style: TextStyle(
-                  fontSize: 12, color: color, fontWeight: FontWeight.bold)),
+                  fontSize: 12,
+                  color: color,
+                  fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -967,88 +1525,132 @@ class _ScoreRecordTab extends StatelessWidget {
 // 排行榜 Tab
 // ══════════════════════════════════════════════════════════════════════════════
 
-class _LeaderboardTab extends StatelessWidget {
+class _LeaderboardTab extends StatefulWidget {
   final AuthService authService;
   const _LeaderboardTab({required this.authService});
+
+  @override
+  State<_LeaderboardTab> createState() => _LeaderboardTabState();
+}
+
+class _LeaderboardTabState extends State<_LeaderboardTab> {
+  final _worksDao = WorksDao();
+  List<Map<String, dynamic>> _leaderboard = [];
+  Map<String, dynamic> _overview = {
+    'total_works': 0,
+    'avg_score': 0.0,
+    'max_score': 0,
+  };
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    try {
+      final leaderboard = await _worksDao.getLeaderboard();
+      final overview = await _worksDao.getOverview();
+      if (mounted) {
+        setState(() {
+          _leaderboard = leaderboard;
+          _overview = overview;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
 
-    final leaderboard = [
-      {
-        'rank': 1,
-        'title': '智慧校园生活服务平台',
-        'group': '第1组',
-        'leader': '张三',
-        'score': 92,
-        'highlight': '功能完整，跨平台体验优秀',
-      },
-      {
-        'rank': 2,
-        'title': '二手物品交易平台',
-        'group': '第4组',
-        'leader': '秦一',
-        'score': 90,
-        'highlight': '交易流程完善，即时聊天亮点',
-      },
-      {
-        'rank': 3,
-        'title': '在线学习辅助平台',
-        'group': '第2组',
-        'leader': '陈九',
-        'score': 88,
-        'highlight': '学习功能全面，协作设计出色',
-      },
-      {
-        'rank': 4,
-        'title': '智能健康运动记录',
-        'group': '第3组',
-        'leader': '卫五',
-        'score': 85,
-        'highlight': 'HarmonyOS 适配值得肯定',
-      },
-    ];
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // 统计概览
-        Card(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              gradient: LinearGradient(
-                colors: [primary, primary.withValues(alpha: 0.7)],
+    final totalWorks = _overview['total_works'] ?? 0;
+    final avgScore = (_overview['avg_score'] as num?)?.toDouble() ?? 0.0;
+    final maxScore = _overview['max_score'] ?? 0;
+
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // 统计概览
+          Card(
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14)),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                gradient: LinearGradient(
+                  colors: [primary, primary.withValues(alpha: 0.7)],
+                ),
+              ),
+              padding: const EdgeInsets.all(18),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _overviewItem(
+                      '作品总数', '$totalWorks', Icons.workspace_premium),
+                  Container(
+                      width: 1, height: 40, color: Colors.white30),
+                  _overviewItem('平均分', avgScore.toStringAsFixed(1),
+                      Icons.analytics),
+                  Container(
+                      width: 1, height: 40, color: Colors.white30),
+                  _overviewItem(
+                      '最高分', '$maxScore', Icons.emoji_events),
+                ],
               ),
             ),
-            padding: const EdgeInsets.all(18),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _overviewItem('作品总数', '6', Icons.workspace_premium),
-                Container(width: 1, height: 40, color: Colors.white30),
-                _overviewItem('平均分', '88.8', Icons.analytics),
-                Container(width: 1, height: 40, color: Colors.white30),
-                _overviewItem('最高分', '92', Icons.emoji_events),
-              ],
-            ),
           ),
-        ),
-        const SizedBox(height: 20),
+          const SizedBox(height: 20),
 
-        // 领奖台
-        _buildPodium(context, leaderboard),
-        const SizedBox(height: 20),
+          // 领奖台
+          if (_leaderboard.length >= 3)
+            _buildPodium(context, _leaderboard),
+          const SizedBox(height: 20),
 
-        // 完整排行
-        const Text('完整排行',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        ...leaderboard.map((s) => _buildRankCard(context, s)),
-      ],
+          // 完整排行
+          const Text('完整排行',
+              style:
+                  TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          if (_leaderboard.isEmpty)
+            Card(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(Icons.leaderboard,
+                          size: 40, color: Colors.grey[300]),
+                      const SizedBox(height: 8),
+                      Text('暂无排行数据',
+                          style: TextStyle(color: Colors.grey[500])),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          else
+            ...List.generate(_leaderboard.length, (i) {
+              final entry = Map<String, dynamic>.from(_leaderboard[i]);
+              entry['rank'] = i + 1;
+              return _buildRankCard(context, entry);
+            }),
+        ],
+      ),
     );
   }
 
@@ -1063,8 +1665,8 @@ class _LeaderboardTab extends StatelessWidget {
                 fontSize: 20,
                 fontWeight: FontWeight.bold)),
         Text(label,
-            style:
-                TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 11)),
+            style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.7), fontSize: 11)),
       ],
     );
   }
@@ -1073,18 +1675,25 @@ class _LeaderboardTab extends StatelessWidget {
       BuildContext context, List<Map<String, dynamic>> leaderboard) {
     if (leaderboard.length < 3) return const SizedBox.shrink();
 
+    final first = Map<String, dynamic>.from(leaderboard[0]);
+    first['rank'] = 1;
+    final second = Map<String, dynamic>.from(leaderboard[1]);
+    second['rank'] = 2;
+    final third = Map<String, dynamic>.from(leaderboard[2]);
+    third['rank'] = 3;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         // 第2名
-        _podiumItem(leaderboard[1], Colors.grey.shade400, 80),
+        _podiumItem(second, Colors.grey.shade400, 80),
         const SizedBox(width: 8),
         // 第1名
-        _podiumItem(leaderboard[0], Colors.amber, 100),
+        _podiumItem(first, Colors.amber, 100),
         const SizedBox(width: 8),
         // 第3名
-        _podiumItem(leaderboard[2], Colors.brown.shade300, 64),
+        _podiumItem(third, Colors.brown.shade300, 64),
       ],
     );
   }
@@ -1092,6 +1701,7 @@ class _LeaderboardTab extends StatelessWidget {
   Widget _podiumItem(
       Map<String, dynamic> entry, Color color, double height) {
     final rank = entry['rank'] as int;
+    final score = entry['score'] as int? ?? 0;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1108,12 +1718,14 @@ class _LeaderboardTab extends StatelessWidget {
                   fontSize: rank == 1 ? 16 : 14)),
         ),
         const SizedBox(height: 4),
-        Text(entry['group'] as String,
-            style:
-                const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
-        Text('${entry['score']}分',
+        Text(entry['group_name'] as String? ?? '未分组',
+            style: const TextStyle(
+                fontSize: 11, fontWeight: FontWeight.w600)),
+        Text('$score分',
             style: TextStyle(
-                fontSize: 13, fontWeight: FontWeight.bold, color: color)),
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: color)),
         const SizedBox(height: 4),
         // 底座
         Container(
@@ -1126,7 +1738,7 @@ class _LeaderboardTab extends StatelessWidget {
           ),
           alignment: Alignment.center,
           child: Text(
-            entry['title'] as String,
+            entry['title'] as String? ?? '',
             style: const TextStyle(fontSize: 9),
             textAlign: TextAlign.center,
             maxLines: 3,
@@ -1137,9 +1749,10 @@ class _LeaderboardTab extends StatelessWidget {
     );
   }
 
-  Widget _buildRankCard(BuildContext context, Map<String, dynamic> entry) {
+  Widget _buildRankCard(
+      BuildContext context, Map<String, dynamic> entry) {
     final rank = entry['rank'] as int;
-    final score = entry['score'] as int;
+    final score = entry['score'] as int? ?? 0;
     final rankColor = rank == 1
         ? Colors.amber
         : rank == 2
@@ -1150,26 +1763,35 @@ class _LeaderboardTab extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: rankColor.withValues(alpha: 0.15),
           child: Text('#$rank',
               style: TextStyle(
-                  fontWeight: FontWeight.bold, color: rankColor, fontSize: 14)),
+                  fontWeight: FontWeight.bold,
+                  color: rankColor,
+                  fontSize: 14)),
         ),
-        title: Text(entry['title'] as String,
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+        title: Text(entry['title'] as String? ?? '',
+            style:
+                const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('${entry['group']} · 组长: ${entry['leader']}',
-                style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-            const SizedBox(height: 2),
-            Text(entry['highlight'] as String,
-                style: TextStyle(fontSize: 11, color: Colors.grey[400]),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis),
+            Text(
+                '${entry['group_name'] ?? '未分组'} · 组长: ${entry['leader_name'] ?? '未指定'}',
+                style:
+                    TextStyle(fontSize: 12, color: Colors.grey[500])),
+            if (entry['comment'] != null) ...[
+              const SizedBox(height: 2),
+              Text(entry['comment'] as String,
+                  style:
+                      TextStyle(fontSize: 11, color: Colors.grey[400]),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis),
+            ],
           ],
         ),
         trailing: Text('$score',

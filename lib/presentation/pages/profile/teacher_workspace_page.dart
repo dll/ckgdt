@@ -4,6 +4,10 @@ import '../../../data/local/database_helper.dart';
 import '../../../core/constants/app_theme.dart';
 import '../admin/student_manage_page.dart';
 import '../admin/data_import_page.dart';
+import '../admin/question_manage_page.dart';
+import '../admin/data_export_page.dart';
+import '../analytics/learning_analytics_page.dart';
+import '../graph/graph_list_page.dart';
 
 class TeacherWorkspacePage extends StatefulWidget {
   const TeacherWorkspacePage({super.key});
@@ -290,11 +294,10 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
         icon: Icons.quiz,
         label: '题库管理',
         color: Colors.orange,
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('题库管理功能开发中')),
-          );
-        },
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const QuestionManagePage()),
+        ),
       ),
       _ToolItem(
         icon: Icons.folder_open,
@@ -309,21 +312,19 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
         icon: Icons.assessment,
         label: '成绩统计',
         color: Colors.green,
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('成绩统计功能开发中')),
-          );
-        },
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const LearningAnalyticsPage()),
+        ),
       ),
       _ToolItem(
         icon: Icons.account_tree,
         label: '图谱编辑',
         color: Colors.teal,
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('图谱编辑功能开发中')),
-          );
-        },
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const GraphListPage()),
+        ),
       ),
       _ToolItem(
         icon: Icons.download,
@@ -331,7 +332,7 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
         color: Colors.indigo,
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const DataImportPage()),
+          MaterialPageRoute(builder: (_) => const DataExportPage()),
         ),
       ),
     ];
