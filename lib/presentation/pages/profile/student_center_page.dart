@@ -9,6 +9,7 @@ import '../quiz/wrong_answers_page.dart';
 import '../graph/favorites_page.dart';
 import '../learning/learning_plan_page.dart';
 import '../learning/progress_page.dart';
+import '../learning/weakness_diagnosis_page.dart';
 
 class StudentCenterPage extends StatefulWidget {
   const StudentCenterPage({super.key});
@@ -563,6 +564,15 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const ProgressPage()),
+        ),
+      ),
+      _QuickAction(
+        icon: Icons.psychology,
+        label: '薄弱诊断',
+        color: Colors.deepPurple,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const WeaknessDiagnosisPage()),
         ),
       ),
     ];
