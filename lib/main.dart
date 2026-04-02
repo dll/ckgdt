@@ -1,18 +1,24 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:sqflite/sqflite.dart';
 import 'data/local/database_helper.dart';
 import 'services/data_loading_service.dart';
 import 'services/theme_manager.dart';
 import 'services/settings_service.dart';
 import 'presentation/pages/login/login_page.dart';
 
+// 条件导入：Web 端使用 ffi_web，桌面端使用 ffi
+import 'platform/platform_init_stub.dart'
+    if (dart.library.io) 'platform/platform_init_native.dart'
+    if (dart.library.html) 'platform/platform_init_web.dart'
+    as platform_init;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+  // 平台相关初始化（数据库工厂、屏幕方向等）
+  await platform_init.initPlatform();
 
   // Initialize database first
   try {

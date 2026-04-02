@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_theme.dart';
+import '../../../core/constants/chapter_sorter.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../data/local/puml_dao.dart';
 import '../../../data/models/material_model.dart';
@@ -65,9 +66,13 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
         whereArgs: ['ppt'],
       );
       if (!mounted) return;
+      final sortedPdfs = List<Map<String, dynamic>>.from(pdfs);
+      final sortedPpts = List<Map<String, dynamic>>.from(ppts);
+      ChapterSorter.sortByChapter(sortedPdfs);
+      ChapterSorter.sortByChapter(sortedPpts);
       setState(() {
-        _pdfFiles = pdfs;
-        _pptFiles = ppts;
+        _pdfFiles = sortedPdfs;
+        _pptFiles = sortedPpts;
         _resourceLoading = false;
       });
     } catch (_) {
