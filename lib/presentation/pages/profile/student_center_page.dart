@@ -10,6 +10,8 @@ import '../graph/favorites_page.dart';
 import '../learning/learning_plan_page.dart';
 import '../learning/progress_page.dart';
 import '../learning/weakness_diagnosis_page.dart';
+import '../learning/student_lab_page.dart';
+import '../lab/productization_guide_page.dart';
 
 class StudentCenterPage extends StatefulWidget {
   const StudentCenterPage({super.key});
@@ -573,6 +575,24 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const WeaknessDiagnosisPage()),
+        ),
+      ),
+      _QuickAction(
+        icon: Icons.science,
+        label: '我的实验',
+        color: Colors.brown,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const StudentLabPage()),
+        ),
+      ),
+      _QuickAction(
+        icon: Icons.checklist,
+        label: '产品化',
+        color: Colors.teal,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ProductizationGuidePage()),
         ),
       ),
     ];

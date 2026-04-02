@@ -13,7 +13,11 @@ import '../learning/learning_plan_page.dart';
 import '../assessment/assessment_page.dart';
 import '../admin/student_manage_page.dart';
 import '../admin/data_import_page.dart';
+import '../admin/teacher_manage_page.dart';
+import '../admin/class_manage_page.dart';
+import '../admin/survey_manage_page.dart';
 import '../works/works_page.dart';
+import '../lab/lab_tasks_page.dart';
 import '../profile/student_center_page.dart';
 import '../profile/teacher_workspace_page.dart';
 import 'settings_page.dart';
@@ -203,7 +207,13 @@ class _HomePageState extends State<HomePage> {
             selectedIcon: Icon(Icons.workspace_premium),
             label: '作品',
           ),
-          // 8: 管理（仅管理员）
+          // 8: 实验
+          const NavigationDestination(
+            icon: Icon(Icons.science_outlined),
+            selectedIcon: Icon(Icons.science),
+            label: '实验',
+          ),
+          // 9: 管理（仅管理员）
           if (isAdmin)
             const NavigationDestination(
               icon: Icon(Icons.admin_panel_settings_outlined),
@@ -216,7 +226,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   /// Tab 索引映射:
-  /// 0=首页 1=图谱 2=路径 3=视频 4=课件 5=测验 6=考核 7=作品 8=管理
+  /// 0=首页 1=图谱 2=路径 3=视频 4=课件 5=测验 6=考核 7=作品 8=实验 9=管理
   Widget _buildBody() {
     switch (_selectedIndex) {
       case 0:
@@ -236,6 +246,8 @@ class _HomePageState extends State<HomePage> {
       case 7:
         return const WorksPage();
       case 8:
+        return const LabTasksPage();
+      case 9:
         return const _AdminToolsPage();
       default:
         return _buildHome();
@@ -344,6 +356,12 @@ class _HomePageState extends State<HomePage> {
                 onTap: () => setState(() => _selectedIndex = 7),
               ),
               _buildMenuCard(
+                icon: Icons.science,
+                title: '实验任务',
+                color: Colors.deepPurple,
+                onTap: () => setState(() => _selectedIndex = 8),
+              ),
+              _buildMenuCard(
                 icon: Icons.trending_up,
                 title: '学习进度',
                 color: Colors.green,
@@ -381,7 +399,7 @@ class _HomePageState extends State<HomePage> {
                   icon: Icons.people,
                   title: '学生管理',
                   color: Colors.brown,
-                  onTap: () => setState(() => _selectedIndex = 8),
+                  onTap: () => setState(() => _selectedIndex = 9),
                 ),
             ],
           ),
@@ -430,11 +448,15 @@ class _AdminToolsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 5,
       child: Scaffold(
         appBar: TabBar(
+          isScrollable: true,
           tabs: const [
             Tab(text: '学生管理', icon: Icon(Icons.people)),
+            Tab(text: '教师管理', icon: Icon(Icons.school)),
+            Tab(text: '班级管理', icon: Icon(Icons.class_)),
+            Tab(text: '问卷管理', icon: Icon(Icons.poll)),
             Tab(text: '数据管理', icon: Icon(Icons.storage)),
           ],
           labelColor: Theme.of(context).colorScheme.primary,
@@ -442,6 +464,9 @@ class _AdminToolsPage extends StatelessWidget {
         body: const TabBarView(
           children: [
             StudentManagePage(),
+            TeacherManagePage(),
+            ClassManagePage(),
+            SurveyManagePage(),
             DataImportPage(),
           ],
         ),
