@@ -475,9 +475,9 @@ class _LearningHubPageState extends State<LearningHubPage>
     try {
       final aiService = AiService();
       final reply = await aiService.chat(
-        '你是一个移动应用开发课程的AI学习助手，帮助学生解答关于Android、iOS、Flutter、'
-        'React Native、微信小程序、鸿蒙等移动开发技术的问题。请用中文简洁回答。\n\n'
-        '学生问题：$text',
+        [{'role': 'user', 'content': text}],
+        systemPrompt: '你是一个移动应用开发课程的AI学习助手，帮助学生解答关于Android、iOS、Flutter、'
+            'React Native、微信小程序、鸿蒙等移动开发技术的问题。请用中文简洁回答。',
       );
       if (!mounted) return;
       setState(() {
