@@ -16,6 +16,7 @@ import '../achievement/achievement_page.dart';
 import '../materials/slide_generator_page.dart';
 import '../materials/puml_manager_page.dart';
 import '../materials/materials_hub_page.dart';
+import '../admin/repo_analytics_page.dart';
 
 class TeacherWorkspacePage extends StatefulWidget {
   const TeacherWorkspacePage({super.key});
@@ -413,6 +414,15 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const MaterialsHubPage()),
+        ),
+      ),
+      _ToolItem(
+        icon: Icons.analytics,
+        label: '仓库分析',
+        color: Colors.indigo[600]!,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const RepoAnalyticsPage()),
         ),
       ),
     ];

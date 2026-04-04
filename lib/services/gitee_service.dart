@@ -182,6 +182,58 @@ class GiteeService {
     }
   }
 
+  /// 获取仓库协作者/成员列表
+  Future<List<Map<String, dynamic>>> getCollaborators(
+    String owner,
+    String repo, {
+    int page = 1,
+    int perPage = 100,
+  }) async {
+    try {
+      final result = await _get(
+        '/repos/$owner/$repo/collaborators',
+        queryParams: {
+          'page': '$page',
+          'per_page': '$perPage',
+        },
+      );
+      return List<Map<String, dynamic>>.from(
+        (result as List).map((r) => Map<String, dynamic>.from(r)),
+      );
+    } catch (e) {
+      debugPrint('GiteeService: getCollaborators error: $e');
+      return [];
+    }
+  }
+
+  /// 获取仓库所有提交（自动分页获取全部）
+  Future<List<Map<String, dynamic>>> getAllCommits(
+    String owner,
+    String repo, {
+    String? since,
+    String? until,
+  }) async {
+    final allCommits = <Map<String, dynamic>>[];
+    int page = 1;
+    const perPage = 100;
+
+    while (true) {
+      final batch = await getCommits(
+        owner, repo,
+        page: page,
+        perPage: perPage,
+        since: since,
+        until: until,
+      );
+      allCommits.addAll(batch);
+      if (batch.length < perPage) break;
+      page++;
+      // 安全限制：最多获取 1000 条
+      if (allCommits.length >= 1000) break;
+    }
+    return allCommits;
+  }
+
   // ── 统计/Release API ──────────────────────────────────────────────────
 
   /// 获取仓库 Releases
