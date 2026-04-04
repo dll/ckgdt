@@ -232,12 +232,11 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
     });
 
     try {
-      // 1. 获取教师账号的所有仓库（分页获取全部）
+      // 1. 获取教师账号的所有仓库（使用认证用户接口，避免限流）
       final allRepos = <Map<String, dynamic>>[];
       int page = 1;
       while (true) {
-        final batch = await _giteeService.getUserRepos(
-          _owner,
+        final batch = await _giteeService.getMyRepos(
           page: page,
           perPage: 100,
           sort: 'full_name',

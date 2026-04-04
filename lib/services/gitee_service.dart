@@ -84,6 +84,28 @@ class GiteeService {
 
   // ── 仓库 API ──────────────────────────────────────────────────────────
 
+  /// 获取当前认证用户的仓库列表（推荐，不受限流影响）
+  Future<List<Map<String, dynamic>>> getMyRepos({
+    int page = 1,
+    int perPage = 100,
+    String sort = 'full_name',
+    String direction = 'asc',
+  }) async {
+    final result = await _get(
+      '/user/repos',
+      queryParams: {
+        'page': '$page',
+        'per_page': '$perPage',
+        'sort': sort,
+        'direction': direction,
+        'type': 'all',
+      },
+    );
+    return List<Map<String, dynamic>>.from(
+      (result as List).map((r) => Map<String, dynamic>.from(r)),
+    );
+  }
+
   /// 获取指定用户的仓库列表
   Future<List<Map<String, dynamic>>> getUserRepos(
     String username, {
