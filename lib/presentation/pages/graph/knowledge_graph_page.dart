@@ -1,13 +1,17 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../../core/constants/chapter_helper.dart';
+import '../../../core/constants/mask_shapes.dart';
 import '../../../data/local/knowledge_graph_dao.dart';
 import '../../../data/local/learning_path_dao.dart';
 import '../../../data/models/learning_path_model.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/knowledge_seed_service.dart';
+import '../learning/learning_chain_page.dart';
 import '../learning/video_page.dart';
 import '../materials/resource_viewer_page.dart';
 import 'graph_list_page.dart';
+import 'graph_properties_page.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // 概念类型颜色映射
@@ -160,7 +164,8 @@ class _ConceptEdge {
 enum _ViewMode {
   global('全局视图', Icons.public),
   chapter('章节视图', Icons.view_module),
-  relation('关系视图', Icons.device_hub);
+  relation('关系视图', Icons.device_hub),
+  mask('蒙版视图', Icons.auto_awesome);
 
   final String label;
   final IconData icon;
@@ -206,6 +211,10 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   // ── 关系视图 ─────────────────────────────────────────────────────────────
   _ConceptNode? _focusedNode; // 关系视图中聚焦的节点
   int _focusDepth = 2;
+
+  // ── 蒙版视图 ─────────────────────────────────────────────────────────────
+  MaskShape _selectedMask = MaskShape.android;
+  Path? _currentMaskPath; // 缓存当前蒙版路径
 
   // ── 统计 ────────────────────────────────────────────────────────────────
   Map<String, dynamic> _stats = {};
@@ -332,6 +341,9 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
         } else {
           _calculateForceLayout(_nodes, _edges);
         }
+        break;
+      case _ViewMode.mask:
+        _calculateMaskLayout();
         break;
     }
   }
@@ -621,6 +633,120 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
     }
 
     // 隐藏不在范围内的节点（不修改 _nodes，通过过滤显示）
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // 蒙版布局 — 节点按Logo轮廓分布
+  // ══════════════════════════════════════════════════════════════════════════
+
+  void _calculateMaskLayout() {
+    if (_nodes.isEmpty || _selectedMask == MaskShape.none) {
+      _calculateForceLayout(_nodes, _edges);
+      return;
+    }
+
+    final maskPath = MaskShapeBuilder.getPath(
+      _selectedMask, _canvasWidth, _canvasHeight,
+    );
+    _currentMaskPath = maskPath;
+
+    // 初始化：在蒙版内采样节点位置
+    final initPositions = MaskShapeBuilder.samplePoints(
+      _selectedMask, _canvasWidth, _canvasHeight, _nodes.length,
+    );
+
+    for (int i = 0; i < _nodes.length; i++) {
+      if (i < initPositions.length) {
+        _nodes[i].x = initPositions[i].dx;
+        _nodes[i].y = initPositions[i].dy;
+      } else {
+        _nodes[i].x = _canvasWidth / 2;
+        _nodes[i].y = _canvasHeight / 2;
+      }
+      _nodes[i].vx = 0;
+      _nodes[i].vy = 0;
+    }
+
+    // 力导向布局（带蒙版约束）
+    final bounds = maskPath.getBounds();
+    const iterations = 80;
+    const kRepel = 80000.0;
+    const kAttract = 0.005;
+    const damping = 0.82;
+    const maxVelocity = 12.0;
+
+    for (int iter = 0; iter < iterations; iter++) {
+      final temperature = 1.0 - (iter / iterations) * 0.6;
+
+      // Coulomb 斥力
+      for (int i = 0; i < _nodes.length; i++) {
+        for (int j = i + 1; j < _nodes.length; j++) {
+          final dx = _nodes[i].x - _nodes[j].x;
+          final dy = _nodes[i].y - _nodes[j].y;
+          final dist = math.sqrt(dx * dx + dy * dy).clamp(10.0, 1000.0);
+          final force = kRepel / (dist * dist) * temperature;
+          final fx = (dx / dist) * force;
+          final fy = (dy / dist) * force;
+          _nodes[i].vx += fx;
+          _nodes[i].vy += fy;
+          _nodes[j].vx -= fx;
+          _nodes[j].vy -= fy;
+        }
+      }
+
+      // 弹簧引力（边）
+      for (final edge in _edges) {
+        final src = _nodes.where((n) => n.id == edge.sourceId).firstOrNull;
+        final tgt = _nodes.where((n) => n.id == edge.targetId).firstOrNull;
+        if (src == null || tgt == null) continue;
+
+        final dx = tgt.x - src.x;
+        final dy = tgt.y - src.y;
+        final dist = math.sqrt(dx * dx + dy * dy).clamp(1.0, 1000.0);
+        final idealDist = 120.0 / edge.weight.clamp(0.1, 3.0);
+        final force = kAttract * (dist - idealDist) * temperature;
+        final fx = (dx / dist) * force;
+        final fy = (dy / dist) * force;
+        src.vx += fx;
+        src.vy += fy;
+        tgt.vx -= fx;
+        tgt.vy -= fy;
+      }
+
+      // 向蒙版中心的微弱引力（防止节点飞出）
+      final center = bounds.center;
+      for (final node in _nodes) {
+        final dx = center.dx - node.x;
+        final dy = center.dy - node.y;
+        node.vx += dx * 0.0005 * temperature;
+        node.vy += dy * 0.0005 * temperature;
+      }
+
+      // 更新位置 + 蒙版约束
+      for (final node in _nodes) {
+        node.vx *= damping;
+        node.vy *= damping;
+        final speed = math.sqrt(node.vx * node.vx + node.vy * node.vy);
+        if (speed > maxVelocity) {
+          node.vx = node.vx / speed * maxVelocity;
+          node.vy = node.vy / speed * maxVelocity;
+        }
+        node.x += node.vx;
+        node.y += node.vy;
+
+        // 蒙版约束：将节点拉回蒙版内
+        final pos = Offset(node.x, node.y);
+        if (!maskPath.contains(pos)) {
+          final constrained = MaskShapeBuilder.constrainToMask(
+            pos, maskPath, bounds,
+          );
+          node.x = constrained.dx;
+          node.y = constrained.dy;
+          node.vx *= 0.3;
+          node.vy *= 0.3;
+        }
+      }
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -1289,6 +1415,37 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                   ),
                 ],
 
+                // ── 学习链路入口 ─────────────────────────────────────
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => LearningChainPage(
+                            conceptId: node.id,
+                            conceptName: node.name,
+                            chapter: node.chapter,
+                            description: node.description,
+                            keywords: node.keywords,
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.link, size: 18),
+                    label: const Text('打开学习链路'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
@@ -1826,6 +1983,12 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
               );
             } else if (value == 'recommend') {
               _generateRecommendedPaths();
+            } else if (value == 'properties') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const GraphPropertiesPage()),
+              ).then((_) => _loadData());
             }
           },
           itemBuilder: (_) => [
@@ -1843,6 +2006,14 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                 leading: Icon(Icons.route, color: Colors.orange),
                 title: Text('生成推荐路径'),
                 subtitle: Text('基于前置关系自动生成', style: TextStyle(fontSize: 11)),
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'properties',
+              child: ListTile(
+                leading: Icon(Icons.table_chart, color: Color(0xFF667eea)),
+                title: Text('属性管理'),
+                subtitle: Text('查看和编辑节点/关系', style: TextStyle(fontSize: 11)),
               ),
             ),
           ],
@@ -1939,6 +2110,9 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
         // 视图切换
         _buildViewModeSelector(),
 
+        // 蒙版选择器（蒙版视图时显示）
+        if (_viewMode == _ViewMode.mask) _buildMaskSelector(),
+
         // 搜索结果提示
         if (_highlightedNodeIds.isNotEmpty) _buildSearchResultBar(),
 
@@ -1992,6 +2166,65 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                 textStyle: WidgetStateProperty.all(
                   const TextStyle(fontSize: 12),
                 ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── 蒙版形状选择器 ───────────────────────────────────────────────────────
+
+  Widget _buildMaskSelector() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      color: Colors.deepPurple.withValues(alpha: 0.05),
+      child: Row(
+        children: [
+          const Icon(Icons.auto_awesome, size: 16, color: Colors.deepPurple),
+          const SizedBox(width: 8),
+          const Text(
+            '蒙版:',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: MaskShape.values
+                    .where((s) => s != MaskShape.none)
+                    .map((shape) {
+                  final isSelected = _selectedMask == shape;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: ChoiceChip(
+                      label: Text(
+                        shape.label,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isSelected ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      selected: isSelected,
+                      selectedColor: Colors.deepPurple,
+                      backgroundColor: Colors.white,
+                      side: BorderSide(
+                        color: isSelected
+                            ? Colors.deepPurple
+                            : Colors.grey.shade300,
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      visualDensity: VisualDensity.compact,
+                      onSelected: (_) {
+                        setState(() => _selectedMask = shape);
+                        _calculateLayout();
+                        setState(() {});
+                      },
+                    ),
+                  );
+                }).toList(),
               ),
             ),
           ),
@@ -2174,31 +2407,122 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
       visibleEdges = _edges;
     }
 
-    return Container(
-      color: const Color(0xFFF8FAFE),
-      child: GestureDetector(
-        onTapDown: (d) => _handleTap(d.localPosition),
-        onDoubleTapDown: (d) => _handleDoubleTap(d.localPosition),
-        child: InteractiveViewer(
-          transformationController: _transformationController,
-          constrained: false,
-          boundaryMargin: const EdgeInsets.all(200),
-          minScale: 0.08,
-          maxScale: 4.0,
-          child: CustomPaint(
-            painter: _KnowledgeGraphPainter(
-              nodes: visibleNodes,
-              edges: visibleEdges,
-              selectedNode: _selectedNode,
-              highlightedNodeIds: _highlightedNodeIds,
-              adjacentNodeIds: _adjacentNodeIds,
-              adjacentEdgeIds: _adjacentEdgeIds,
-              focusedNode: _focusedNode,
-              viewMode: _viewMode,
+    return Stack(
+      children: [
+        Container(
+          color: const Color(0xFFF8FAFE),
+          child: GestureDetector(
+            onTapDown: (d) => _handleTap(d.localPosition),
+            onDoubleTapDown: (d) => _handleDoubleTap(d.localPosition),
+            child: InteractiveViewer(
+              transformationController: _transformationController,
+              constrained: false,
+              boundaryMargin: const EdgeInsets.all(200),
+              minScale: 0.08,
+              maxScale: 4.0,
+              child: CustomPaint(
+                painter: _KnowledgeGraphPainter(
+                  nodes: visibleNodes,
+                  edges: visibleEdges,
+                  selectedNode: _selectedNode,
+                  highlightedNodeIds: _highlightedNodeIds,
+                  adjacentNodeIds: _adjacentNodeIds,
+                  adjacentEdgeIds: _adjacentEdgeIds,
+                  focusedNode: _focusedNode,
+                  viewMode: _viewMode,
+                  maskShape: _selectedMask,
+                  maskPath: _currentMaskPath,
+                ),
+                size: const Size(_canvasWidth, _canvasHeight),
+              ),
             ),
-            size: const Size(_canvasWidth, _canvasHeight),
           ),
         ),
+        // ── 鹰眼小地图 ──
+        Positioned(
+          right: 8,
+          bottom: 8,
+          child: _buildMinimap(visibleNodes, visibleEdges),
+        ),
+      ],
+    );
+  }
+
+  // ── 鹰眼小地图 ──────────────────────────────────────────────────────────
+
+  Widget _buildMinimap(
+      List<_ConceptNode> visibleNodes, List<_ConceptEdge> visibleEdges) {
+    const mapW = 140.0;
+    const mapH = 120.0;
+    final scaleX = mapW / _canvasWidth;
+    final scaleY = mapH / _canvasHeight;
+
+    return GestureDetector(
+      onTapDown: (details) {
+        // 点击小地图定位
+        final tapX = details.localPosition.dx / scaleX;
+        final tapY = details.localPosition.dy / scaleY;
+        _animateCenterOnNode(tapX, tapY);
+      },
+      onPanUpdate: (details) {
+        // 拖拽小地图定位
+        final tapX = details.localPosition.dx / scaleX;
+        final tapY = details.localPosition.dy / scaleY;
+        _animateCenterOnNode(tapX, tapY);
+      },
+      child: AnimatedBuilder(
+        animation: _transformationController,
+        builder: (context, child) {
+          // 计算当前视口在画布上的位置
+          final matrix = _transformationController.value;
+          final inv = Matrix4.inverted(matrix);
+          // 获取当前组件尺寸（使用 LayoutBuilder 的 context）
+          final renderBox = context.findRenderObject() as RenderBox?;
+          final parentSize = renderBox?.size ?? const Size(400, 600);
+
+          // 视口在画布坐标中的矩形
+          final topLeft = MatrixUtils.transformPoint(inv, Offset.zero);
+          final bottomRight = MatrixUtils.transformPoint(
+            inv,
+            Offset(parentSize.width, parentSize.height),
+          );
+
+          final vpLeft = (topLeft.dx * scaleX).clamp(0.0, mapW);
+          final vpTop = (topLeft.dy * scaleY).clamp(0.0, mapH);
+          final vpRight = (bottomRight.dx * scaleX).clamp(0.0, mapW);
+          final vpBottom = (bottomRight.dy * scaleY).clamp(0.0, mapH);
+
+          return Container(
+            width: mapW,
+            height: mapH,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.92),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade300),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: CustomPaint(
+                painter: _MinimapPainter(
+                  nodes: visibleNodes,
+                  edges: visibleEdges,
+                  canvasWidth: _canvasWidth,
+                  canvasHeight: _canvasHeight,
+                  viewportRect: Rect.fromLTRB(vpLeft, vpTop, vpRight, vpBottom),
+                  maskPath: _viewMode == _ViewMode.mask ? _currentMaskPath : null,
+                ),
+                size: const Size(mapW, mapH),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -2348,6 +2672,8 @@ class _KnowledgeGraphPainter extends CustomPainter {
   final Set<int> adjacentEdgeIds;
   final _ConceptNode? focusedNode;
   final _ViewMode viewMode;
+  final MaskShape maskShape;
+  final Path? maskPath;
 
   _KnowledgeGraphPainter({
     required this.nodes,
@@ -2358,6 +2684,8 @@ class _KnowledgeGraphPainter extends CustomPainter {
     this.adjacentEdgeIds = const {},
     this.focusedNode,
     this.viewMode = _ViewMode.global,
+    this.maskShape = MaskShape.none,
+    this.maskPath,
   });
 
   @override
@@ -2369,6 +2697,12 @@ class _KnowledgeGraphPainter extends CustomPainter {
     // ── 章节视图：绘制章节分组背景 ────────────────────────────────────────
     if (viewMode == _ViewMode.chapter) {
       _drawChapterBackgrounds(canvas, nodeMap);
+    } else if (viewMode == _ViewMode.mask && maskPath != null) {
+      // 蒙版视图：绘制蒙版轮廓
+      _drawMaskOutline(canvas, size);
+    } else {
+      // 全局视图：绘制分散的技术Logo水印
+      _drawGlobalWatermarks(canvas, size);
     }
 
     // ── 绘制边 ─────────────────────────────────────────────────────────────
@@ -2676,21 +3010,11 @@ class _KnowledgeGraphPainter extends CustomPainter {
       byChapter.putIfAbsent(ch, () => []).add(node);
     }
 
-    final chapterColors = [
-      const Color(0xFFE53935),
-      const Color(0xFF2196F3),
-      const Color(0xFF4CAF50),
-      const Color(0xFFFF9800),
-      const Color(0xFF9C27B0),
-      const Color(0xFF00BCD4),
-      const Color(0xFF795548),
-    ];
-
-    int colorIdx = 0;
     for (final entry in byChapter.entries) {
       if (entry.value.isEmpty) continue;
-      final color = chapterColors[colorIdx % chapterColors.length];
-      colorIdx++;
+      final ch = entry.key;
+      final color = ChapterHelper.chapterColors[ch] ??
+          const Color(0xFF667eea);
 
       // 找边界
       double minX = double.infinity,
@@ -2725,10 +3049,17 @@ class _KnowledgeGraphPainter extends CustomPainter {
           ..strokeWidth = 1.5,
       );
 
-      // 章节标题
+      // ── 技术 Logo 水印 ────────────────────────────────────────────────
+      _drawChapterLogoWatermarks(canvas, ch, bgRect.outerRect, color);
+
+      // 章节标题（含简称）
+      final shortName = ChapterHelper.chapterShortNames[ch] ?? '';
+      final titleText = ch == 0
+          ? '未分类'
+          : '第 $ch 章 $shortName';
       final tp = TextPainter(
         text: TextSpan(
-          text: entry.key == 0 ? '未分类' : '第 ${entry.key} 章',
+          text: titleText,
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.bold,
@@ -2738,6 +3069,152 @@ class _KnowledgeGraphPainter extends CustomPainter {
         textDirection: TextDirection.ltr,
       )..layout();
       tp.paint(canvas, Offset(minX - margin + 12, minY - margin - 18));
+    }
+  }
+
+  /// 在章节背景中绘制技术 Logo 水印（半透明文字 + 图标）
+  void _drawChapterLogoWatermarks(
+      Canvas canvas, int chapter, Rect rect, Color color) {
+    final logos = ChapterHelper.chapterLogos[chapter];
+    if (logos == null || logos.isEmpty) return;
+
+    // 裁剪区域防溢出
+    canvas.save();
+    canvas.clipRRect(RRect.fromRectAndRadius(rect, const Radius.circular(20)));
+
+    // 计算布局：Logo 分散在背景区域中
+    final rng = math.Random(chapter * 1337);
+    final areaW = rect.width;
+    final areaH = rect.height;
+
+    // 大号文字水印 — 每个logo绘制一次
+    for (int i = 0; i < logos.length; i++) {
+      final logo = logos[i];
+      // 使用确定性随机位置，分散在区域内
+      final col = i % 2;
+      final row = i ~/ 2;
+      final cellW = areaW / 2;
+      final cellH = areaH / math.max(((logos.length + 1) ~/ 2), 1);
+
+      final cx = rect.left + cellW * col + cellW * 0.5 +
+          (rng.nextDouble() - 0.5) * cellW * 0.4;
+      final cy = rect.top + cellH * row + cellH * 0.5 +
+          (rng.nextDouble() - 0.5) * cellH * 0.3;
+
+      // 旋转角度（轻微倾斜）
+      final angle = (rng.nextDouble() - 0.5) * 0.3; // -0.15 ~ +0.15 rad
+
+      canvas.save();
+      canvas.translate(cx, cy);
+      canvas.rotate(angle);
+
+      // 绘制文字水印
+      final fontSize = logo.length <= 3 ? 42.0 : (logo.length <= 5 ? 34.0 : 26.0);
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: logo,
+          style: TextStyle(
+            fontSize: fontSize,
+            fontWeight: FontWeight.w900,
+            color: color.withValues(alpha: 0.06),
+            letterSpacing: 2,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      textPainter.paint(
+        canvas,
+        Offset(-textPainter.width / 2, -textPainter.height / 2),
+      );
+
+      canvas.restore();
+    }
+
+    // 绘制章节主图标水印（居中大图标）
+    final iconData = ChapterHelper.chapterIcons[chapter];
+    if (iconData != null) {
+      final iconPainter = TextPainter(
+        text: TextSpan(
+          text: String.fromCharCode(iconData.codePoint),
+          style: TextStyle(
+            fontSize: 120,
+            fontFamily: iconData.fontFamily,
+            package: iconData.fontPackage,
+            color: color.withValues(alpha: 0.04),
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      iconPainter.paint(
+        canvas,
+        Offset(
+          rect.center.dx - iconPainter.width / 2,
+          rect.center.dy - iconPainter.height / 2,
+        ),
+      );
+    }
+
+    canvas.restore();
+  }
+
+  /// 全局视图：在画布上绘制分散的技术Logo水印
+  void _drawGlobalWatermarks(Canvas canvas, Size size) {
+    // 按章节收集节点中心，计算每个章节的质心
+    final chapterCenters = <int, Offset>{};
+    final chapterCounts = <int, int>{};
+    for (final node in nodes) {
+      final ch = node.chapter ?? 0;
+      if (ch == 0) continue;
+      final prev = chapterCenters[ch] ?? Offset.zero;
+      chapterCenters[ch] = Offset(prev.dx + node.x, prev.dy + node.y);
+      chapterCounts[ch] = (chapterCounts[ch] ?? 0) + 1;
+    }
+    // 计算质心
+    for (final ch in chapterCenters.keys.toList()) {
+      final count = chapterCounts[ch]!;
+      chapterCenters[ch] = Offset(
+        chapterCenters[ch]!.dx / count,
+        chapterCenters[ch]!.dy / count,
+      );
+    }
+
+    // 在每个章节质心附近绘制1-2个主Logo
+    for (final ch in chapterCenters.keys) {
+      final center = chapterCenters[ch]!;
+      final color = ChapterHelper.chapterColors[ch] ??
+          const Color(0xFF667eea);
+      final logos = ChapterHelper.chapterLogos[ch];
+      if (logos == null || logos.isEmpty) continue;
+
+      // 只绘制前2个最关键的Logo
+      final rng = math.Random(ch * 2023);
+      for (int i = 0; i < math.min(2, logos.length); i++) {
+        final logo = logos[i];
+        final offsetX = (rng.nextDouble() - 0.5) * 160;
+        final offsetY = (rng.nextDouble() - 0.5) * 120;
+        final angle = (rng.nextDouble() - 0.5) * 0.25;
+
+        canvas.save();
+        canvas.translate(center.dx + offsetX, center.dy + offsetY);
+        canvas.rotate(angle);
+
+        final fontSize = logo.length <= 3 ? 36.0 : 28.0;
+        final tp = TextPainter(
+          text: TextSpan(
+            text: logo,
+            style: TextStyle(
+              fontSize: fontSize,
+              fontWeight: FontWeight.w900,
+              color: color.withValues(alpha: 0.05),
+              letterSpacing: 2,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        tp.paint(canvas, Offset(-tp.width / 2, -tp.height / 2));
+
+        canvas.restore();
+      }
     }
   }
 
@@ -2831,6 +3308,48 @@ class _KnowledgeGraphPainter extends CustomPainter {
     return color.computeLuminance() > 0.5;
   }
 
+  // ── 蒙版轮廓绘制 ──────────────────────────────────────────────────────
+
+  void _drawMaskOutline(Canvas canvas, Size size) {
+    if (maskPath == null) return;
+
+    // 蒙版填充（极淡）
+    canvas.drawPath(
+      maskPath!,
+      Paint()
+        ..color = Colors.deepPurple.withValues(alpha: 0.04)
+        ..style = PaintingStyle.fill,
+    );
+
+    // 蒙版轮廓虚线
+    canvas.drawPath(
+      maskPath!,
+      Paint()
+        ..color = Colors.deepPurple.withValues(alpha: 0.25)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5,
+    );
+
+    // 蒙版名称标签
+    final labelText = maskShape.label;
+    final tp = TextPainter(
+      text: TextSpan(
+        text: labelText,
+        style: TextStyle(
+          fontSize: 80,
+          fontWeight: FontWeight.w900,
+          color: Colors.deepPurple.withValues(alpha: 0.05),
+          letterSpacing: 8,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(
+      canvas,
+      Offset(size.width / 2 - tp.width / 2, size.height / 2 - tp.height / 2),
+    );
+  }
+
   @override
   bool shouldRepaint(covariant _KnowledgeGraphPainter old) =>
       old.selectedNode != selectedNode ||
@@ -2840,5 +3359,114 @@ class _KnowledgeGraphPainter extends CustomPainter {
       old.adjacentNodeIds != adjacentNodeIds ||
       old.adjacentEdgeIds != adjacentEdgeIds ||
       old.focusedNode != focusedNode ||
-      old.viewMode != viewMode;
+      old.viewMode != viewMode ||
+      old.maskShape != maskShape;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MinimapPainter — 鹰眼小地图绘制
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _MinimapPainter extends CustomPainter {
+  final List<_ConceptNode> nodes;
+  final List<_ConceptEdge> edges;
+  final double canvasWidth;
+  final double canvasHeight;
+  final Rect viewportRect;
+  final Path? maskPath;
+
+  _MinimapPainter({
+    required this.nodes,
+    required this.edges,
+    required this.canvasWidth,
+    required this.canvasHeight,
+    required this.viewportRect,
+    this.maskPath,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final sx = size.width / canvasWidth;
+    final sy = size.height / canvasHeight;
+
+    // 背景
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Paint()..color = const Color(0xFFF8FAFE),
+    );
+
+    // 蒙版轮廓（如果有）
+    if (maskPath != null) {
+      final scaledMask = maskPath!.transform(
+        Matrix4.diagonal3Values(sx, sy, 1).storage,
+      );
+      canvas.drawPath(
+        scaledMask,
+        Paint()
+          ..color = Colors.deepPurple.withValues(alpha: 0.1)
+          ..style = PaintingStyle.fill,
+      );
+    }
+
+    // 绘制边（细线）
+    final nodeMap = {for (final n in nodes) n.id: n};
+    for (final edge in edges) {
+      final src = nodeMap[edge.sourceId];
+      final tgt = nodeMap[edge.targetId];
+      if (src == null || tgt == null) continue;
+      canvas.drawLine(
+        Offset(src.x * sx, src.y * sy),
+        Offset(tgt.x * sx, tgt.y * sy),
+        Paint()
+          ..color = Colors.grey.withValues(alpha: 0.25)
+          ..strokeWidth = 0.5,
+      );
+    }
+
+    // 绘制节点（小点）
+    for (final node in nodes) {
+      final center = Offset(node.x * sx, node.y * sy);
+      final r = (node.radius * sx).clamp(1.5, 4.0);
+      canvas.drawCircle(
+        center,
+        r,
+        Paint()..color = node.color.withValues(alpha: 0.8),
+      );
+    }
+
+    // 绘制视口矩形
+    canvas.drawRect(
+      viewportRect,
+      Paint()
+        ..color = const Color(0xFF667eea).withValues(alpha: 0.3)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawRect(
+      viewportRect,
+      Paint()
+        ..color = const Color(0xFF667eea)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+
+    // 标签
+    final tp = TextPainter(
+      text: TextSpan(
+        text: '鹰眼',
+        style: TextStyle(
+          fontSize: 8,
+          color: Colors.grey.shade500,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, const Offset(3, 2));
+  }
+
+  @override
+  bool shouldRepaint(covariant _MinimapPainter old) =>
+      old.viewportRect != viewportRect ||
+      old.nodes != nodes ||
+      old.edges != edges;
 }

@@ -56,7 +56,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 9,
+      version: 10,
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -180,7 +180,7 @@ class DatabaseHelper {
 
     db = await openDatabase(
       dbPath,
-      version: 9,
+      version: 10,
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -436,6 +436,9 @@ class DatabaseHelper {
     if (oldVersion < 9) {
       await _createNewTablesV9(db);
     }
+    if (oldVersion < 10) {
+      await _createNewTablesV10(db);
+    }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
   }
@@ -489,6 +492,7 @@ class DatabaseHelper {
     await _createNewTablesV7(db);
     await _createNewTablesV8(db);
     await _createNewTablesV9(db);
+    await _createNewTablesV10(db);
   }
 
   /// 补齐 resource_files 表可能缺少的列
@@ -960,6 +964,18 @@ class DatabaseHelper {
         UNIQUE(source_concept_id, target_concept_id, relation_type)
       )
     ''');
+  }
+
+  /// V10 新增: 用户表添加 repository_url 字段（Gitee 仓库地址）
+  Future<void> _createNewTablesV10(Database db) async {
+    try {
+      await db.execute(
+        'ALTER TABLE users ADD COLUMN repository_url TEXT',
+      );
+    } catch (e) {
+      // 列可能已存在（IF NOT EXISTS 不适用于 ALTER TABLE）
+      debugPrint('V10: repository_url column may already exist: $e');
+    }
   }
 
   Future<void> _createNewTablesV3(Database db) async {

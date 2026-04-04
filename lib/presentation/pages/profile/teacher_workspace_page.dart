@@ -13,6 +13,9 @@ import '../graph/knowledge_graph_page.dart';
 import '../admin/teaching_manage_page.dart';
 import '../admin/lab_task_manage_page.dart';
 import '../achievement/achievement_page.dart';
+import '../materials/slide_generator_page.dart';
+import '../materials/puml_manager_page.dart';
+import '../materials/materials_hub_page.dart';
 
 class TeacherWorkspacePage extends StatefulWidget {
   const TeacherWorkspacePage({super.key});
@@ -383,6 +386,33 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const AchievementPage()),
+        ),
+      ),
+      _ToolItem(
+        icon: Icons.auto_awesome,
+        label: 'AI生成',
+        color: Colors.amber[800]!,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SlideGeneratorPage()),
+        ),
+      ),
+      _ToolItem(
+        icon: Icons.account_tree_outlined,
+        label: 'UML图谱',
+        color: Colors.deepPurple,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const PumlManagerPage()),
+        ),
+      ),
+      _ToolItem(
+        icon: Icons.inventory_2,
+        label: '素材中心',
+        color: Colors.teal[700]!,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const MaterialsHubPage()),
         ),
       ),
     ];

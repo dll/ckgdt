@@ -267,55 +267,169 @@ class ClassDao {
   // 示例数据
   // ─────────────────────────────────────────────────────────────────────────
 
-  /// 生成示例班级数据
+  /// 生成示例班级数据（计科22 已归档 + 软件23 当前学期）
   Future<void> generateDemoData() async {
     final db = await _dbHelper.database;
     final count = await db.rawQuery('SELECT COUNT(*) as c FROM classes');
     if (((count.first['c'] as int?) ?? 0) > 0) return; // 已有数据则跳过
 
-    // 创建示例班级
-    final classId1 = await createClass(
-      name: '移动应用开发 2024-A班',
+    // ── 计科22：已结课归档（上一学年） ──────────────────────────────────
+    final classIdJK22 = await createClass(
+      name: '计科22 移动应用开发',
       semester: '2024-2025学年第一学期',
       teacherId: '206004',
-      teacherName: '刘老师',
-      description: '《移动应用开发》课程A班，Flutter方向',
+      teacherName: '刘东良',
+      description: '计算机科学与技术2022级，86名学生，3个班组，9个实验项目。'
+          '每组6人，实验中每人选择一个技术栈独立完成对应实验任务。',
     );
+    await archiveClass(classIdJK22);
 
-    final classId2 = await createClass(
-      name: '移动应用开发 2024-B班',
-      semester: '2024-2025学年第一学期',
+    // ── 软件23：当前活跃学期 ──────────────────────────────────────────
+    final classIdRJ23 = await createClass(
+      name: '软件23 移动应用开发',
+      semester: '2025-2026学年第一学期',
       teacherId: '206004',
-      teacherName: '刘老师',
-      description: '《移动应用开发》课程B班，React Native方向',
+      teacherName: '刘东良',
+      description: '软件工程2023级，项目分组待定（占位模拟中）。'
+          '每组6人协作探究模式，每人负责一个技术栈。',
     );
 
-    // 归档一个旧班级做示例
-    final classId3 = await createClass(
-      name: '移动应用开发 2023-A班',
-      semester: '2023-2024学年第二学期',
-      teacherId: '206004',
-      teacherName: '刘老师',
-      description: '已结课归档',
-    );
-    await archiveClass(classId3);
-
-    // 将现有学生分配到班级
+    // 将所有在册学生分配到软件23（计科22已归档，无需分配）
     final students = await db.query('users',
         where: 'role = ? AND is_active = 1',
         whereArgs: ['student'],
         orderBy: 'user_id');
 
-    for (int i = 0; i < students.length; i++) {
-      final uid = students[i]['user_id'] as String;
-      if (i < students.length ~/ 2) {
-        await addMember(classId1, uid);
-      } else {
-        await addMember(classId2, uid);
-      }
+    for (final s in students) {
+      final uid = s['user_id'] as String;
+      await addMember(classIdRJ23, uid);
     }
 
-    debugPrint('ClassDao: 示例数据生成完成 — $classId1, $classId2, $classId3');
+    debugPrint('ClassDao: 示例数据生成完成 — '
+        '计科22(id=$classIdJK22, archived), '
+        '软件23(id=$classIdRJ23, active, ${students.length}名学生)');
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 项目分组
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// 课程实验项目定义（9 个项目 × 3 个班组）
+  static const List<Map<String, String>> _projectDefinitions = [
+    // ── 班组1 ──
+    {
+      'group_name': '班组1',
+      'project_name': '适老居家生活辅助系统',
+      'project_abbr': 'EHLAS',
+      'tech_stacks': 'Android开发, iOS/HarmonyOS开发, Uniapp开发, Flutter开发, 小程序开发, MAUI开发',
+    },
+    {
+      'group_name': '班组1',
+      'project_name': '智慧社区生活服务平台开发与整合',
+      'project_abbr': 'SCLSPDI',
+      'tech_stacks': 'Android开发, iOS/HarmonyOS开发, Uniapp开发, Flutter开发, 小程序开发, MAUI开发',
+    },
+    {
+      'group_name': '班组1',
+      'project_name': '智能健康运动记录平台开发与整合',
+      'project_abbr': 'IHFTPDI',
+      'tech_stacks': 'Android开发, iOS/HarmonyOS开发, Uniapp开发, Flutter开发, 小程序开发, MAUI开发',
+    },
+    // ── 班组2 ──
+    {
+      'group_name': '班组2',
+      'project_name': '云端智能畜牧养殖管理系统',
+      'project_abbr': 'CIFMS',
+      'tech_stacks': 'Android开发, iOS/HarmonyOS开发, Uniapp开发, Flutter开发, 小程序开发, MAUI开发',
+    },
+    {
+      'group_name': '班组2',
+      'project_name': '线上购物平台开发与整合',
+      'project_abbr': 'OSPDI',
+      'tech_stacks': 'Android开发, iOS/HarmonyOS开发, Uniapp开发, Flutter开发, 小程序开发, MAUI开发',
+    },
+    {
+      'group_name': '班组2',
+      'project_name': '二手物品交易平台开发与整合',
+      'project_abbr': 'SGTPDI',
+      'tech_stacks': 'Android开发, iOS/HarmonyOS开发, Uniapp开发, Flutter开发, 小程序开发, MAUI开发',
+    },
+    // ── 班组3 ──
+    {
+      'group_name': '班组3',
+      'project_name': '在线学习辅助平台开发与整合',
+      'project_abbr': 'OLAPDI',
+      'tech_stacks': 'Android开发, iOS/HarmonyOS开发, Uniapp开发, Flutter开发, 小程序开发, MAUI开发',
+    },
+    {
+      'group_name': '班组3',
+      'project_name': '智慧校园生活服务平台开发与整合',
+      'project_abbr': 'SCLSPI',
+      'tech_stacks': 'Android开发, iOS/HarmonyOS开发, Uniapp开发, Flutter开发, 小程序开发, MAUI开发',
+    },
+    {
+      'group_name': '班组3',
+      'project_name': '农业大棚监控系统',
+      'project_abbr': 'AGMS',
+      'tech_stacks': 'Android开发, iOS/HarmonyOS开发, Uniapp开发, Flutter开发, 小程序开发, MAUI开发',
+    },
+  ];
+
+  /// 获取班级的项目分组数据
+  ///
+  /// - 归档的"计科22"班级返回历史分组（含真实人数分布）
+  /// - 活跃的"软件23"班级返回待分组占位数据
+  /// - 其他班级返回空列表
+  Future<List<Map<String, dynamic>>> getProjectGroups(int classId) async {
+    final classInfo = await getClass(classId);
+    if (classInfo == null) return [];
+
+    final name = classInfo['name'] as String? ?? '';
+    final isArchived = (classInfo['is_archived'] as int? ?? 0) == 1;
+
+    // ── 计科22（已归档）：返回历史真实分组数据 ───────────────────────
+    if (name.contains('计科22') && isArchived) {
+      // 班组1: 29人, 班组2: 29人, 班组3: 28人  →  总计86人
+      const groupSizes = {'班组1': 29, '班组2': 29, '班组3': 28};
+      const projectsPerGroup = 3; // 每个班组 3 个项目
+      return _projectDefinitions.map((p) {
+        final group = p['group_name']!;
+        final totalInGroup = groupSizes[group] ?? 0;
+        // 每个项目 6 人（一个项目组）
+        final memberCount = (totalInGroup / projectsPerGroup).round();
+        return <String, dynamic>{
+          'group_name': group,
+          'project_name': p['project_name'],
+          'project_abbr': p['project_abbr'],
+          'member_count': memberCount,
+          'tech_stacks': p['tech_stacks'],
+        };
+      }).toList();
+    }
+
+    // ── 软件23（活跃）：返回待分组占位数据 ───────────────────────────
+    if (name.contains('软件23') && !isArchived) {
+      // 获取实际学生总数用于显示
+      final members = await getClassMembers(classId);
+      final studentCount = members
+          .where((m) => (m['role'] ?? m['user_role']) == 'student')
+          .length;
+
+      return _projectDefinitions.map((p) {
+        return <String, dynamic>{
+          'group_name': '待分组',
+          'project_name': p['project_name'],
+          'project_abbr': p['project_abbr'],
+          'member_count': 0, // 尚未分配
+          'tech_stacks': p['tech_stacks'],
+          'status': '待分组',
+          'total_students': studentCount, // 附加：班级学生总数，供 UI 参考
+        };
+      }).toList();
+    }
+
+    // 其他班级暂无分组数据
+    return [];
   }
 
   // ─────────────────────────────────────────────────────────────────────────
