@@ -5,11 +5,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 import 'dart:io';
 import 'package:intl/intl.dart';
-import '../../../services/auth_service.dart';
 import '../../../services/gitee_service.dart';
-import '../../../data/models/user_model.dart';
 
 /// 仓库成员分析 & 学生进度排行
+/// 直接从教师 Gitee 账号拉取仓库，仓库协作者 = 学生
 class RepoAnalyticsPage extends StatefulWidget {
   const RepoAnalyticsPage({super.key});
 
@@ -19,26 +18,31 @@ class RepoAnalyticsPage extends StatefulWidget {
 
 class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
     with SingleTickerProviderStateMixin {
-  final _authService = AuthService();
   final _giteeService = GiteeService();
 
   late TabController _tabController;
 
-  bool _isLoading = true;
+  bool _isLoading = false;
+  bool _isConfigured = false;
   String? _errorMessage;
   double _progress = 0.0;
   String _progressText = '';
 
+  // Gitee 配置
+  String _owner = '';
+  String _token = '';
+
   // 数据
-  List<_RepoMembersData> _repoMembersList = [];
-  List<_AggregatedMember> _allMembers = [];
-  List<_StudentProgress> _studentRankings = [];
+  List<_RepoData> _repos = []; // 所有仓库
+  List<_RepoMembersData> _repoMembersList = []; // 每仓库的成员
+  List<_AggregatedMember> _allMembers = []; // 汇总去重成员
+  List<_StudentProgress> _studentRankings = []; // 学生进度排行
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _loadAllData();
+    _checkConfig();
   }
 
   @override
@@ -47,152 +51,373 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
     super.dispose();
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Gitee 配置检查
+  // ─────────────────────────────────────────────────────────────────────────
+
+  Future<void> _checkConfig() async {
+    final token = await _giteeService.getToken();
+    final owner = await _giteeService.getDefaultOwner();
+
+    if (token != null && token.isNotEmpty && owner != null && owner.isNotEmpty) {
+      setState(() {
+        _token = token;
+        _owner = owner;
+        _isConfigured = true;
+      });
+      _loadAllData();
+    } else {
+      setState(() => _isConfigured = false);
+      // 自动弹出配置对话框
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showConfigDialog();
+      });
+    }
+  }
+
+  Future<void> _showConfigDialog() async {
+    final tokenCtrl = TextEditingController(text: _token);
+    final ownerCtrl = TextEditingController(text: _owner);
+    bool testing = false;
+    String? testResult;
+
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: _isConfigured,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Gitee 配置'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  '请配置 Gitee 私人令牌和用户名，用于获取仓库和成员信息。',
+                  style: TextStyle(fontSize: 13, color: Colors.grey),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: ownerCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Gitee 用户名/组织名',
+                    hintText: '例如: chzuczldl',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.person),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: tokenCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Gitee 私人令牌',
+                    hintText: '在 gitee.com/personal_access_tokens 创建',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.key),
+                  ),
+                  obscureText: true,
+                ),
+                const SizedBox(height: 12),
+                if (testResult != null)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: testResult!.startsWith('✅')
+                          ? Colors.green.withValues(alpha: 0.1)
+                          : Colors.red.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      testResult!,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: testResult!.startsWith('✅')
+                            ? Colors.green[700]
+                            : Colors.red[700],
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: testing
+                        ? null
+                        : () async {
+                            if (tokenCtrl.text.trim().isEmpty) {
+                              setDialogState(() =>
+                                  testResult = '❌ 请输入令牌');
+                              return;
+                            }
+                            setDialogState(() {
+                              testing = true;
+                              testResult = null;
+                            });
+                            try {
+                              await _giteeService
+                                  .saveToken(tokenCtrl.text.trim());
+                              final user =
+                                  await _giteeService.testConnection();
+                              final name = user['name'] ?? user['login'] ?? '';
+                              setDialogState(() {
+                                testing = false;
+                                testResult = '✅ 连接成功! 用户: $name';
+                              });
+                            } catch (e) {
+                              setDialogState(() {
+                                testing = false;
+                                testResult = '❌ 连接失败: $e';
+                              });
+                            }
+                          },
+                    icon: testing
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.wifi_tethering),
+                    label: Text(testing ? '测试中...' : '测试连接'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            if (_isConfigured)
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('取消'),
+              ),
+            ElevatedButton(
+              onPressed: () {
+                if (ownerCtrl.text.trim().isEmpty ||
+                    tokenCtrl.text.trim().isEmpty) {
+                  setDialogState(
+                      () => testResult = '❌ 请填写用户名和令牌');
+                  return;
+                }
+                Navigator.pop(ctx, true);
+              },
+              child: const Text('保存并加载'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result == true) {
+      final newToken = tokenCtrl.text.trim();
+      final newOwner = ownerCtrl.text.trim();
+      await _giteeService.saveToken(newToken);
+      await _giteeService.saveDefaultOwner(newOwner);
+      setState(() {
+        _token = newToken;
+        _owner = newOwner;
+        _isConfigured = true;
+      });
+      _loadAllData();
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 加载数据
+  // ─────────────────────────────────────────────────────────────────────────
+
   Future<void> _loadAllData() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
       _progress = 0;
-      _progressText = '正在加载学生列表...';
+      _progressText = '正在获取仓库列表...';
     });
 
     try {
-      // 1. 获取所有学生
-      final students = await _authService.getStudents();
-      final studentsWithRepo = students
-          .where((s) =>
-              s.repositoryUrl != null && s.repositoryUrl!.isNotEmpty)
-          .toList();
+      // 1. 获取教师账号的所有仓库（分页获取全部）
+      final allRepos = <Map<String, dynamic>>[];
+      int page = 1;
+      while (true) {
+        final batch = await _giteeService.getUserRepos(
+          _owner,
+          page: page,
+          perPage: 100,
+          sort: 'full_name',
+          direction: 'asc',
+        );
+        allRepos.addAll(batch);
+        if (batch.length < 100) break;
+        page++;
+      }
 
-      if (studentsWithRepo.isEmpty) {
+      if (allRepos.isEmpty) {
         setState(() {
           _isLoading = false;
-          _errorMessage = '暂无配置仓库地址的学生';
+          _errorMessage = '该账号下没有仓库';
         });
         return;
       }
 
+      // 存储仓库基础数据
+      final repos = allRepos.map((r) => _RepoData(
+            name: r['name']?.toString() ?? '',
+            fullName: r['full_name']?.toString() ?? '',
+            description: r['description']?.toString() ?? '',
+            language: r['language']?.toString() ?? '',
+            htmlUrl: r['html_url']?.toString() ?? '',
+            starsCount: r['stargazers_count'] as int? ?? 0,
+            forksCount: r['forks_count'] as int? ?? 0,
+            updatedAt: r['updated_at']?.toString() ?? '',
+          )).toList();
+
+      setState(() {
+        _repos = repos;
+        _progressText = '正在加载仓库成员和提交数据...';
+      });
+
+      // 2. 逐个加载每个仓库的成员和提交
       final repoMembersList = <_RepoMembersData>[];
       final memberMap = <String, _AggregatedMember>{};
-      final rankings = <_StudentProgress>[];
+      final progressMap = <String, _StudentProgress>{};
 
-      // 2. 逐个加载每个学生的仓库数据
-      for (int i = 0; i < studentsWithRepo.length; i++) {
-        final student = studentsWithRepo[i];
-        final parsed = GiteeService.parseRepoUrl(student.repositoryUrl!);
-        if (parsed == null) continue;
-
+      for (int i = 0; i < repos.length; i++) {
+        final repo = repos[i];
         setState(() {
-          _progress = (i + 1) / studentsWithRepo.length;
-          _progressText =
-              '正在加载 ${student.realName ?? student.userId} 的仓库 (${i + 1}/${studentsWithRepo.length})...';
+          _progress = (i + 1) / repos.length;
+          _progressText = '正在加载 ${repo.name} (${i + 1}/${repos.length})...';
         });
 
         try {
           // 并行加载成员和提交
           final results = await Future.wait([
-            _giteeService.getCollaborators(parsed.owner, parsed.repo),
-            _giteeService.getAllCommits(parsed.owner, parsed.repo),
-            _giteeService.getBranches(parsed.owner, parsed.repo),
+            _giteeService.getCollaborators(_owner, repo.name),
+            _giteeService.getAllCommits(_owner, repo.name),
           ]);
 
-          final members =
-              results[0] as List<Map<String, dynamic>>;
-          final commits =
-              results[1] as List<Map<String, dynamic>>;
-          final branches =
-              results[2] as List<Map<String, dynamic>>;
+          final members = results[0] as List<Map<String, dynamic>>;
+          final commits = results[1] as List<Map<String, dynamic>>;
 
-          // 每仓库成员
+          // 每仓库成员数据
           repoMembersList.add(_RepoMembersData(
-            student: student,
-            owner: parsed.owner,
-            repo: parsed.repo,
+            repoName: repo.name,
+            repoFullName: repo.fullName,
             members: members,
             commitCount: commits.length,
           ));
 
-          // 聚合所有成员
+          // 聚合所有成员（去重）
           for (final m in members) {
             final login = m['login'] as String? ?? '';
             if (login.isEmpty) continue;
             if (memberMap.containsKey(login)) {
-              memberMap[login]!.repos
-                  .add('${parsed.owner}/${parsed.repo}');
+              memberMap[login]!.repos.add(repo.name);
             } else {
               memberMap[login] = _AggregatedMember(
                 login: login,
                 name: m['name'] as String? ?? login,
                 avatarUrl: m['avatar_url'] as String? ?? '',
-                htmlUrl: m['html_url'] as String? ?? '',
-                repos: ['${parsed.owner}/${parsed.repo}'],
+                repos: [repo.name],
+                permissions: m['permissions'] as Map<String, dynamic>? ?? {},
               );
             }
           }
 
-          // 学生进度统计
+          // 按提交者统计进度（提交者 = 学生）
           final now = DateTime.now();
-          int last7 = 0, last30 = 0;
-          DateTime? lastCommitDate;
-          final commitAuthors = <String>{};
+          // 按 author 聚合
+          final authorStats = <String, _AuthorStats>{};
 
           for (final commit in commits) {
             final commitData =
                 commit['commit'] as Map<String, dynamic>? ?? {};
-            final author =
+            final authorInfo =
                 commitData['author'] as Map<String, dynamic>? ?? {};
-            final committer =
+            final committerInfo =
                 commitData['committer'] as Map<String, dynamic>? ?? {};
-            final dateStr = committer['date'] ?? author['date'];
-            final authorName = author['name'] ?? '';
-            if (authorName is String && authorName.isNotEmpty) {
-              commitAuthors.add(authorName);
-            }
+            final authorName =
+                authorInfo['name']?.toString() ?? '';
+            final authorEmail =
+                authorInfo['email']?.toString() ?? '';
+            final dateStr =
+                committerInfo['date'] ?? authorInfo['date'];
+
+            // 用 Gitee login 作 key（来自 commit.author，非 commit.commit.author）
+            final commitAuthor =
+                commit['author'] as Map<String, dynamic>?;
+            final login =
+                commitAuthor?['login']?.toString() ?? authorEmail;
+            if (login.isEmpty) continue;
+
+            authorStats.putIfAbsent(
+              login,
+              () => _AuthorStats(
+                login: login,
+                name: commitAuthor?['name']?.toString() ??
+                    authorName,
+                avatarUrl:
+                    commitAuthor?['avatar_url']?.toString() ?? '',
+              ),
+            );
+            final stats = authorStats[login]!;
+            stats.totalCommits++;
 
             if (dateStr != null) {
               try {
                 final date = DateTime.parse(dateStr);
-                if (lastCommitDate == null || date.isAfter(lastCommitDate)) {
-                  lastCommitDate = date;
+                if (stats.lastCommitDate == null ||
+                    date.isAfter(stats.lastCommitDate!)) {
+                  stats.lastCommitDate = date;
                 }
                 final diff = now.difference(date).inDays;
-                if (diff <= 7) last7++;
-                if (diff <= 30) last30++;
+                if (diff <= 7) stats.last7Days++;
+                if (diff <= 30) stats.last30Days++;
               } catch (_) {}
             }
+            stats.repoNames.add(repo.name);
           }
 
-          rankings.add(_StudentProgress(
-            student: student,
-            owner: parsed.owner,
-            repo: parsed.repo,
-            totalCommits: commits.length,
-            last7DaysCommits: last7,
-            last30DaysCommits: last30,
-            branchCount: branches.length,
-            memberCount: members.length,
-            lastCommitDate: lastCommitDate,
-            commitAuthors: commitAuthors.toList(),
-          ));
+          // 合并到全局 progressMap
+          for (final entry in authorStats.entries) {
+            final key = entry.key;
+            final stats = entry.value;
+            if (progressMap.containsKey(key)) {
+              final existing = progressMap[key]!;
+              existing.totalCommits += stats.totalCommits;
+              existing.last7DaysCommits += stats.last7Days;
+              existing.last30DaysCommits += stats.last30Days;
+              existing.repoNames.addAll(stats.repoNames);
+              if (stats.lastCommitDate != null &&
+                  (existing.lastCommitDate == null ||
+                      stats.lastCommitDate!
+                          .isAfter(existing.lastCommitDate!))) {
+                existing.lastCommitDate = stats.lastCommitDate;
+              }
+            } else {
+              progressMap[key] = _StudentProgress(
+                login: key,
+                name: stats.name,
+                avatarUrl: stats.avatarUrl,
+                totalCommits: stats.totalCommits,
+                last7DaysCommits: stats.last7Days,
+                last30DaysCommits: stats.last30Days,
+                lastCommitDate: stats.lastCommitDate,
+                repoNames: stats.repoNames,
+              );
+            }
+          }
         } catch (e) {
-          debugPrint('加载 ${student.userId} 仓库失败: $e');
-          rankings.add(_StudentProgress(
-            student: student,
-            owner: parsed.owner,
-            repo: parsed.repo,
-            totalCommits: 0,
-            last7DaysCommits: 0,
-            last30DaysCommits: 0,
-            branchCount: 0,
-            memberCount: 0,
-            lastCommitDate: null,
-            commitAuthors: [],
+          debugPrint('加载仓库 ${repo.name} 失败: $e');
+          repoMembersList.add(_RepoMembersData(
+            repoName: repo.name,
+            repoFullName: repo.fullName,
+            members: [],
+            commitCount: 0,
             error: '$e',
           ));
         }
       }
 
       // 3. 排行排序（按总提交数降序）
-      rankings.sort((a, b) => b.totalCommits.compareTo(a.totalCommits));
+      final rankings = progressMap.values.toList()
+        ..sort((a, b) => b.totalCommits.compareTo(a.totalCommits));
 
       setState(() {
         _repoMembersList = repoMembersList;
@@ -209,72 +434,136 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
     }
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Build
+  // ─────────────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('仓库分析'),
+        title: Text(_isConfigured ? '仓库分析 ($_owner)' : '仓库分析'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Gitee 配置',
+            onPressed: _showConfigDialog,
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _isLoading ? null : _loadAllData,
+            onPressed: _isLoading || !_isConfigured ? null : _loadAllData,
           ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.file_download),
-            tooltip: '导出',
-            onSelected: _onExport,
-            itemBuilder: (_) => [
-              const PopupMenuItem(
-                value: 'members_excel',
-                child: ListTile(
-                  leading: Icon(Icons.table_chart, color: Colors.green),
-                  title: Text('导出成员Excel'),
+          if (!_isLoading && _repoMembersList.isNotEmpty)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.file_download),
+              tooltip: '导出',
+              onSelected: _onExport,
+              itemBuilder: (_) => [
+                const PopupMenuItem(
+                  value: 'members_excel',
+                  child: ListTile(
+                    leading: Icon(Icons.table_chart, color: Colors.green),
+                    title: Text('导出成员Excel'),
+                  ),
                 ),
-              ),
-              const PopupMenuItem(
-                value: 'ranking_excel',
-                child: ListTile(
-                  leading: Icon(Icons.leaderboard, color: Colors.blue),
-                  title: Text('导出排行Excel'),
+                const PopupMenuItem(
+                  value: 'ranking_excel',
+                  child: ListTile(
+                    leading: Icon(Icons.leaderboard, color: Colors.blue),
+                    title: Text('导出排行Excel'),
+                  ),
                 ),
-              ),
-              const PopupMenuItem(
-                value: 'copy_text',
-                child: ListTile(
-                  leading: Icon(Icons.copy, color: Colors.orange),
-                  title: Text('复制排行文本'),
+                const PopupMenuItem(
+                  value: 'copy_text',
+                  child: ListTile(
+                    leading: Icon(Icons.copy, color: Colors.orange),
+                    title: Text('复制排行文本'),
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
         ],
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: '仓库成员', icon: Icon(Icons.group)),
-            Tab(text: '成员汇总', icon: Icon(Icons.people)),
-            Tab(text: '进度排行', icon: Icon(Icons.leaderboard)),
+          tabs: [
+            Tab(
+              text: '仓库成员',
+              icon: Badge(
+                label: Text('${_repoMembersList.length}'),
+                isLabelVisible: _repoMembersList.isNotEmpty,
+                child: const Icon(Icons.folder_shared),
+              ),
+            ),
+            Tab(
+              text: '成员汇总',
+              icon: Badge(
+                label: Text('${_allMembers.length}'),
+                isLabelVisible: _allMembers.isNotEmpty,
+                child: const Icon(Icons.people),
+              ),
+            ),
+            Tab(
+              text: '进度排行',
+              icon: Badge(
+                label: Text('${_studentRankings.length}'),
+                isLabelVisible: _studentRankings.isNotEmpty,
+                child: const Icon(Icons.leaderboard),
+              ),
+            ),
           ],
         ),
       ),
-      body: _isLoading
-          ? _buildLoadingView()
-          : _errorMessage != null
-              ? _buildErrorView()
-              : TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildRepoMembersTab(),
-                    _buildAllMembersTab(),
-                    _buildRankingTab(),
-                  ],
-                ),
+      body: !_isConfigured
+          ? _buildNotConfiguredView()
+          : _isLoading
+              ? _buildLoadingView()
+              : _errorMessage != null
+                  ? _buildErrorView()
+                  : TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildRepoMembersTab(),
+                        _buildAllMembersTab(),
+                        _buildRankingTab(),
+                      ],
+                    ),
     );
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Loading & Error
+  // 状态视图
   // ─────────────────────────────────────────────────────────────────────────
+
+  Widget _buildNotConfiguredView() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.settings_outlined, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            const Text(
+              '请先配置 Gitee 账号',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '需要 Gitee 私人令牌和用户名才能获取仓库和成员信息',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _showConfigDialog,
+              icon: const Icon(Icons.settings),
+              label: const Text('配置 Gitee'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildLoadingView() {
     return Center(
@@ -320,10 +609,21 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
               style: TextStyle(color: Colors.red[700], fontSize: 16),
             ),
             const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _loadAllData,
-              icon: const Icon(Icons.refresh),
-              label: const Text('重试'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _loadAllData,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('重试'),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: _showConfigDialog,
+                  icon: const Icon(Icons.settings),
+                  label: const Text('重新配置'),
+                ),
+              ],
             ),
           ],
         ),
@@ -337,7 +637,7 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
 
   Widget _buildRepoMembersTab() {
     if (_repoMembersList.isEmpty) {
-      return const Center(child: Text('暂无仓库成员数据'));
+      return const Center(child: Text('暂无仓库数据'));
     }
 
     return ListView.builder(
@@ -345,56 +645,47 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
       itemCount: _repoMembersList.length,
       itemBuilder: (context, index) {
         final data = _repoMembersList[index];
-        return _buildRepoMemberCard(data, index);
+        return _buildRepoMemberCard(data);
       },
     );
   }
 
-  Widget _buildRepoMemberCard(_RepoMembersData data, int index) {
-    final student = data.student;
-    final studentName = student.realName ?? student.userId;
+  Widget _buildRepoMemberCard(_RepoMembersData data) {
+    final hasError = data.error != null;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ExpansionTile(
-        leading: CircleAvatar(
-          backgroundColor: Colors.purple,
-          child: Text(
-            studentName.substring(0, 1),
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
+        leading: Icon(
+          hasError ? Icons.error : Icons.folder,
+          color: hasError ? Colors.red : Colors.blue[700],
+          size: 28,
         ),
         title: Text(
-          studentName,
+          data.repoName,
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${data.owner}/${data.repo}',
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-            ),
-            Row(
-              children: [
-                _miniChip(Icons.people, '${data.members.length}名成员',
-                    Colors.blue),
-                const SizedBox(width: 8),
-                _miniChip(Icons.commit, '${data.commitCount}次提交',
-                    Colors.green),
-              ],
-            ),
-          ],
-        ),
+        subtitle: hasError
+            ? Text('加载失败: ${data.error}',
+                style: const TextStyle(fontSize: 12, color: Colors.red))
+            : Row(
+                children: [
+                  _miniChip(
+                      Icons.people, '${data.members.length}人', Colors.blue),
+                  const SizedBox(width: 10),
+                  _miniChip(Icons.commit, '${data.commitCount}次提交',
+                      Colors.green),
+                ],
+              ),
         children: [
-          if (data.members.isEmpty)
+          if (data.members.isEmpty && !hasError)
             const Padding(
               padding: EdgeInsets.all(16),
-              child: Text('暂无成员信息', style: TextStyle(color: Colors.grey)),
+              child: Text('暂无成员', style: TextStyle(color: Colors.grey)),
             )
           else
-            ...data.members.map((m) => _buildMemberTile(m)),
+            ...data.members.map(_buildMemberTile),
           const SizedBox(height: 8),
         ],
       ),
@@ -402,43 +693,40 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
   }
 
   Widget _buildMemberTile(Map<String, dynamic> member) {
-    final login = member['login'] ?? '';
-    final name = member['name'] ?? login;
-    final avatarUrl = member['avatar_url'] as String? ?? '';
+    final login = member['login']?.toString() ?? '';
+    final name = member['name']?.toString() ?? login;
+    final avatarUrl = member['avatar_url']?.toString() ?? '';
     final permissions = member['permissions'] as Map<String, dynamic>? ?? {};
     final isAdmin = permissions['admin'] == true;
+    final isPush = permissions['push'] == true;
+
+    String role = '只读';
+    Color roleColor = Colors.grey;
+    if (isAdmin) {
+      role = '管理员';
+      roleColor = Colors.amber[800]!;
+    } else if (isPush) {
+      role = '开发者';
+      roleColor = Colors.green;
+    }
 
     return ListTile(
       dense: true,
-      leading: CircleAvatar(
-        radius: 18,
-        backgroundColor: Colors.grey[300],
-        child: avatarUrl.isNotEmpty
-            ? ClipOval(
-                child: Image.network(
-                  avatarUrl,
-                  width: 36,
-                  height: 36,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) =>
-                      Text(login.substring(0, 1).toUpperCase()),
-                ),
-              )
-            : Text(login.isNotEmpty ? login.substring(0, 1).toUpperCase() : '?'),
-      ),
+      leading: _avatar(avatarUrl, login, 18),
       title: Text(name, style: const TextStyle(fontSize: 14)),
-      subtitle: Text('@$login', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-      trailing: isAdmin
-          ? Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.amber.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Text('管理员',
-                  style: TextStyle(fontSize: 11, color: Colors.amber)),
-            )
-          : null,
+      subtitle: Text('@$login',
+          style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+      trailing: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          color: roleColor.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: roleColor.withValues(alpha: 0.3)),
+        ),
+        child: Text(role,
+            style: TextStyle(
+                fontSize: 11, color: roleColor, fontWeight: FontWeight.w600)),
+      ),
     );
   }
 
@@ -456,18 +744,22 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
         // 统计头
         Container(
           padding: const EdgeInsets.all(16),
-          color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+          color: Theme.of(context)
+              .colorScheme
+              .primaryContainer
+              .withValues(alpha: 0.3),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _statItem('总成员数', '${_allMembers.length}', Icons.people, Colors.blue),
-              _statItem('总仓库数', '${_repoMembersList.length}',
-                  Icons.folder, Colors.teal),
               _statItem(
-                '平均成员',
-                _repoMembersList.isNotEmpty
-                    ? (_allMembers.fold<int>(0, (s, m) => s + m.repos.length) /
-                            _repoMembersList.length)
+                  '总成员', '${_allMembers.length}', Icons.people, Colors.blue),
+              _statItem('总仓库', '${_repos.length}', Icons.folder, Colors.teal),
+              _statItem(
+                '人均仓库',
+                _allMembers.isNotEmpty
+                    ? (_allMembers.fold<int>(
+                                0, (s, m) => s + m.repos.length) /
+                            _allMembers.length)
                         .toStringAsFixed(1)
                     : '0',
                 Icons.analytics,
@@ -476,7 +768,7 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
             ],
           ),
         ),
-        // 成员列表
+        // 列表
         Expanded(
           child: ListView.separated(
             padding: const EdgeInsets.all(12),
@@ -484,30 +776,30 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
             separatorBuilder: (_, __) => const Divider(height: 1),
             itemBuilder: (context, index) {
               final member = _allMembers[index];
+              final isAdmin =
+                  member.permissions['admin'] == true;
               return ListTile(
-                leading: CircleAvatar(
-                  radius: 22,
-                  backgroundColor: Colors.grey[300],
-                  child: member.avatarUrl.isNotEmpty
-                      ? ClipOval(
-                          child: Image.network(
-                            member.avatarUrl,
-                            width: 44,
-                            height: 44,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Text(
-                              member.login.substring(0, 1).toUpperCase(),
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        )
-                      : Text(
-                          member.login.substring(0, 1).toUpperCase(),
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                leading: _avatar(member.avatarUrl, member.login, 22),
+                title: Row(
+                  children: [
+                    Text(member.name,
+                        style: const TextStyle(fontWeight: FontWeight.w500)),
+                    if (isAdmin) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
                         ),
+                        child: Text('管理员',
+                            style: TextStyle(
+                                fontSize: 10, color: Colors.amber[800])),
+                      ),
+                    ],
+                  ],
                 ),
-                title: Text(member.name,
-                    style: const TextStyle(fontWeight: FontWeight.w500)),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -530,9 +822,9 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    '${member.repos.length}个仓库',
+                    '${member.repos.length}',
                     style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: Colors.blue[700]),
                   ),
@@ -549,47 +841,48 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
   // Tab 3: 学生进度排行
   // ─────────────────────────────────────────────────────────────────────────
 
+  String _sortMode = 'total';
+
   Widget _buildRankingTab() {
     if (_studentRankings.isEmpty) {
-      return const Center(child: Text('暂无排行数据'));
+      return const Center(child: Text('暂无提交数据'));
     }
 
     return Column(
       children: [
-        // 排序选项
+        // 排序
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [
-              const Text('排序方式: ', style: TextStyle(fontWeight: FontWeight.w500)),
+              const Icon(Icons.sort, size: 18),
               const SizedBox(width: 8),
-              SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(value: 'total', label: Text('总提交')),
-                  ButtonSegment(value: 'recent', label: Text('近7天')),
-                  ButtonSegment(value: 'monthly', label: Text('近30天')),
-                ],
-                selected: {_sortMode},
-                onSelectionChanged: (s) => _changeSortMode(s.first),
+              Expanded(
+                child: SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'total', label: Text('总提交')),
+                    ButtonSegment(value: 'recent', label: Text('近7天')),
+                    ButtonSegment(value: 'monthly', label: Text('近30天')),
+                  ],
+                  selected: {_sortMode},
+                  onSelectionChanged: (s) => _changeSortMode(s.first),
+                ),
               ),
             ],
           ),
         ),
-        // 排行列表
+        // 排行
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             itemCount: _studentRankings.length,
-            itemBuilder: (context, index) {
-              return _buildRankingCard(_studentRankings[index], index + 1);
-            },
+            itemBuilder: (context, index) =>
+                _buildRankingCard(_studentRankings[index], index + 1),
           ),
         ),
       ],
     );
   }
-
-  String _sortMode = 'total';
 
   void _changeSortMode(String mode) {
     setState(() {
@@ -611,17 +904,14 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
   }
 
   Widget _buildRankingCard(_StudentProgress p, int rank) {
-    final studentName = p.student.realName ?? p.student.userId;
-    final hasError = p.error != null;
-
-    // 排名颜色
+    // 排名奖杯
     Color rankColor;
     IconData? rankIcon;
     if (rank == 1) {
       rankColor = Colors.amber;
       rankIcon = Icons.emoji_events;
     } else if (rank == 2) {
-      rankColor = Colors.grey;
+      rankColor = Colors.blueGrey;
       rankIcon = Icons.emoji_events;
     } else if (rank == 3) {
       rankColor = Colors.brown;
@@ -631,23 +921,20 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
       rankIcon = null;
     }
 
-    // 活跃度评价
+    // 活跃度
     String activityLevel;
     Color activityColor;
-    if (hasError) {
-      activityLevel = '加载失败';
-      activityColor = Colors.red;
-    } else if (p.last7DaysCommits >= 5) {
+    if (p.last7DaysCommits >= 5) {
       activityLevel = '非常活跃';
       activityColor = Colors.green;
     } else if (p.last7DaysCommits >= 2) {
       activityLevel = '较为活跃';
       activityColor = Colors.blue;
     } else if (p.last30DaysCommits >= 3) {
-      activityLevel = '一般活跃';
+      activityLevel = '一般';
       activityColor = Colors.orange;
     } else if (p.totalCommits > 0) {
-      activityLevel = '活跃度低';
+      activityLevel = '低活跃';
       activityColor = Colors.orange[800]!;
     } else {
       activityLevel = '无提交';
@@ -663,32 +950,28 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
           children: [
             // 排名
             SizedBox(
-              width: 48,
-              child: Column(
-                children: [
-                  if (rankIcon != null)
-                    Icon(rankIcon, color: rankColor, size: 28)
-                  else
-                    Container(
-                      width: 28,
-                      height: 28,
+              width: 44,
+              child: rankIcon != null
+                  ? Icon(rankIcon, color: rankColor, size: 30)
+                  : Container(
+                      width: 30,
+                      height: 30,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: rankColor.withValues(alpha: 0.2),
                       ),
                       child: Center(
-                        child: Text(
-                          '$rank',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: rankColor,
-                          ),
-                        ),
+                        child: Text('$rank',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: rankColor,
+                                fontSize: 14)),
                       ),
                     ),
-                ],
-              ),
             ),
+            // 头像
+            _avatar(p.avatarUrl, p.login, 20),
+            const SizedBox(width: 10),
             // 信息
             Expanded(
               child: Column(
@@ -698,7 +981,7 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
                     children: [
                       Expanded(
                         child: Text(
-                          studentName,
+                          p.name.isNotEmpty ? p.name : p.login,
                           style: const TextStyle(
                               fontSize: 15, fontWeight: FontWeight.bold),
                         ),
@@ -712,50 +995,46 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
                           border: Border.all(
                               color: activityColor.withValues(alpha: 0.3)),
                         ),
-                        child: Text(
-                          activityLevel,
-                          style: TextStyle(
-                              fontSize: 11,
-                              color: activityColor,
-                              fontWeight: FontWeight.w600),
-                        ),
+                        child: Text(activityLevel,
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: activityColor,
+                                fontWeight: FontWeight.w600)),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
-                    '学号: ${p.student.userId}  |  ${p.owner}/${p.repo}',
+                    '@${p.login}  |  参与 ${p.repoNames.length} 个仓库',
                     style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                   ),
-                  const SizedBox(height: 8),
-                  // 统计行
+                  const SizedBox(height: 6),
+                  // 统计
                   Row(
                     children: [
                       _rankStat('总提交', '${p.totalCommits}', Colors.blue),
-                      _rankStat('近7天', '${p.last7DaysCommits}',
-                          p.last7DaysCommits > 0 ? Colors.green : Colors.grey),
+                      _rankStat(
+                          '近7天',
+                          '${p.last7DaysCommits}',
+                          p.last7DaysCommits > 0
+                              ? Colors.green
+                              : Colors.grey),
                       _rankStat(
                           '近30天',
                           '${p.last30DaysCommits}',
                           p.last30DaysCommits > 0
                               ? Colors.teal
                               : Colors.grey),
-                      _rankStat('分支', '${p.branchCount}', Colors.purple),
-                      _rankStat('成员', '${p.memberCount}', Colors.orange),
+                      _rankStat(
+                          '仓库', '${p.repoNames.length}', Colors.purple),
                     ],
                   ),
                   if (p.lastCommitDate != null) ...[
                     const SizedBox(height: 4),
                     Text(
-                      '最近提交: ${DateFormat('yyyy-MM-dd HH:mm').format(p.lastCommitDate!)}',
-                      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-                    ),
-                  ],
-                  if (p.commitAuthors.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      '提交者: ${p.commitAuthors.join(', ')}',
-                      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                      '最近: ${DateFormat('yyyy-MM-dd HH:mm').format(p.lastCommitDate!)}  |  仓库: ${p.repoNames.join(', ')}',
+                      style:
+                          TextStyle(fontSize: 11, color: Colors.grey[500]),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -773,11 +1052,9 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
     return Expanded(
       child: Column(
         children: [
-          Text(
-            value,
-            style: TextStyle(
-                fontSize: 16, fontWeight: FontWeight.bold, color: color),
-          ),
+          Text(value,
+              style: TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.bold, color: color)),
           Text(label, style: TextStyle(fontSize: 10, color: Colors.grey[500])),
         ],
       ),
@@ -809,22 +1086,36 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
       // Sheet 1: 每仓库成员
       final sheet1 = excel['仓库成员'];
       sheet1.appendRow([
-        xl.TextCellValue('学号'),
-        xl.TextCellValue('姓名'),
-        xl.TextCellValue('仓库'),
+        xl.TextCellValue('仓库名称'),
         xl.TextCellValue('成员账号'),
         xl.TextCellValue('成员名称'),
+        xl.TextCellValue('角色'),
         xl.TextCellValue('仓库提交数'),
       ]);
 
       for (final data in _repoMembersList) {
-        for (final m in data.members) {
+        if (data.members.isEmpty) {
           sheet1.appendRow([
-            xl.TextCellValue(data.student.userId),
-            xl.TextCellValue(data.student.realName ?? ''),
-            xl.TextCellValue('${data.owner}/${data.repo}'),
+            xl.TextCellValue(data.repoName),
+            xl.TextCellValue(''),
+            xl.TextCellValue('（无成员）'),
+            xl.TextCellValue(''),
+            xl.IntCellValue(data.commitCount),
+          ]);
+        }
+        for (final m in data.members) {
+          final perms = m['permissions'] as Map<String, dynamic>? ?? {};
+          String role = '只读';
+          if (perms['admin'] == true) {
+            role = '管理员';
+          } else if (perms['push'] == true) {
+            role = '开发者';
+          }
+          sheet1.appendRow([
+            xl.TextCellValue(data.repoName),
             xl.TextCellValue(m['login']?.toString() ?? ''),
             xl.TextCellValue(m['name']?.toString() ?? ''),
+            xl.TextCellValue(role),
             xl.IntCellValue(data.commitCount),
           ]);
         }
@@ -838,7 +1129,6 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
         xl.TextCellValue('参与仓库数'),
         xl.TextCellValue('参与仓库列表'),
       ]);
-
       for (final m in _allMembers) {
         sheet2.appendRow([
           xl.TextCellValue(m.login),
@@ -848,97 +1138,76 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
         ]);
       }
 
-      // 删除默认sheet
-      if (excel.sheets.containsKey('Sheet1')) {
-        excel.delete('Sheet1');
-      }
-
-      await _saveExcel(excel, '仓库成员分析');
+      if (excel.sheets.containsKey('Sheet1')) excel.delete('Sheet1');
+      await _saveExcel(excel, '仓库成员分析_$_owner');
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('导出失败: $e')),
-        );
-      }
+      _showError('导出失败: $e');
     }
   }
 
   Future<void> _exportRankingExcel() async {
     try {
       final excel = xl.Excel.createExcel();
-      final sheet = excel['学生进度排行'];
+      final sheet = excel['进度排行'];
 
       sheet.appendRow([
         xl.TextCellValue('排名'),
-        xl.TextCellValue('学号'),
+        xl.TextCellValue('Gitee账号'),
         xl.TextCellValue('姓名'),
-        xl.TextCellValue('仓库'),
         xl.TextCellValue('总提交数'),
         xl.TextCellValue('近7天提交'),
         xl.TextCellValue('近30天提交'),
-        xl.TextCellValue('分支数'),
-        xl.TextCellValue('成员数'),
+        xl.TextCellValue('参与仓库数'),
+        xl.TextCellValue('参与仓库'),
         xl.TextCellValue('最近提交时间'),
-        xl.TextCellValue('提交者'),
         xl.TextCellValue('活跃度'),
       ]);
 
       for (int i = 0; i < _studentRankings.length; i++) {
         final p = _studentRankings[i];
-        String activityLevel;
-        if (p.error != null) {
-          activityLevel = '加载失败';
-        } else if (p.last7DaysCommits >= 5) {
-          activityLevel = '非常活跃';
+        String level;
+        if (p.last7DaysCommits >= 5) {
+          level = '非常活跃';
         } else if (p.last7DaysCommits >= 2) {
-          activityLevel = '较为活跃';
+          level = '较为活跃';
         } else if (p.last30DaysCommits >= 3) {
-          activityLevel = '一般活跃';
+          level = '一般';
         } else if (p.totalCommits > 0) {
-          activityLevel = '活跃度低';
+          level = '低活跃';
         } else {
-          activityLevel = '无提交';
+          level = '无提交';
         }
 
         sheet.appendRow([
           xl.IntCellValue(i + 1),
-          xl.TextCellValue(p.student.userId),
-          xl.TextCellValue(p.student.realName ?? ''),
-          xl.TextCellValue('${p.owner}/${p.repo}'),
+          xl.TextCellValue(p.login),
+          xl.TextCellValue(p.name),
           xl.IntCellValue(p.totalCommits),
           xl.IntCellValue(p.last7DaysCommits),
           xl.IntCellValue(p.last30DaysCommits),
-          xl.IntCellValue(p.branchCount),
-          xl.IntCellValue(p.memberCount),
+          xl.IntCellValue(p.repoNames.length),
+          xl.TextCellValue(p.repoNames.join('; ')),
           xl.TextCellValue(p.lastCommitDate != null
               ? DateFormat('yyyy-MM-dd HH:mm').format(p.lastCommitDate!)
               : ''),
-          xl.TextCellValue(p.commitAuthors.join(', ')),
-          xl.TextCellValue(activityLevel),
+          xl.TextCellValue(level),
         ]);
       }
 
-      if (excel.sheets.containsKey('Sheet1')) {
-        excel.delete('Sheet1');
-      }
-
-      await _saveExcel(excel, '学生进度排行');
+      if (excel.sheets.containsKey('Sheet1')) excel.delete('Sheet1');
+      await _saveExcel(excel, '学生进度排行_$_owner');
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('导出失败: $e')),
-        );
-      }
+      _showError('导出失败: $e');
     }
   }
 
   Future<void> _saveExcel(xl.Excel excel, String name) async {
     final bytes = excel.save();
-    if (bytes == null) throw Exception('生成Excel失败');
+    if (bytes == null) throw Exception('生成 Excel 失败');
 
     final dir = await getApplicationDocumentsDirectory();
-    final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-    final file = File('${dir.path}/${name}_$timestamp.xlsx');
+    final ts = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+    final file = File('${dir.path}/${name}_$ts.xlsx');
     await file.writeAsBytes(bytes);
 
     if (mounted) {
@@ -958,41 +1227,70 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
   void _copyRankingText() {
     final buf = StringBuffer();
     buf.writeln('═══════════════════════════════════════════');
-    buf.writeln('        学生仓库进度排行榜');
-    buf.writeln('    ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now())}');
-    buf.writeln('═══════════════════════════════════════════');
-    buf.writeln();
+    buf.writeln('       学生仓库进度排行榜 ($_owner)');
+    buf.writeln('   ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now())}');
+    buf.writeln('═══════════════════════════════════════════\n');
 
     for (int i = 0; i < _studentRankings.length; i++) {
       final p = _studentRankings[i];
-      final name = p.student.realName ?? p.student.userId;
-      buf.writeln(
-          '第${i + 1}名  $name (${p.student.userId})');
-      buf.writeln(
-          '  仓库: ${p.owner}/${p.repo}');
+      final name = p.name.isNotEmpty ? p.name : p.login;
+      buf.writeln('第${i + 1}名  $name (@${p.login})');
       buf.writeln(
           '  总提交: ${p.totalCommits}  近7天: ${p.last7DaysCommits}  近30天: ${p.last30DaysCommits}');
-      buf.writeln(
-          '  分支: ${p.branchCount}  成员: ${p.memberCount}');
+      buf.writeln('  参与仓库: ${p.repoNames.join(', ')}');
       if (p.lastCommitDate != null) {
         buf.writeln(
             '  最近提交: ${DateFormat('yyyy-MM-dd HH:mm').format(p.lastCommitDate!)}');
-      }
-      if (p.commitAuthors.isNotEmpty) {
-        buf.writeln('  提交者: ${p.commitAuthors.join(', ')}');
       }
       buf.writeln();
     }
 
     Clipboard.setData(ClipboardData(text: buf.toString()));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('排行榜已复制到剪贴板')),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('排行榜已复制到剪贴板')));
+    }
+  }
+
+  void _showError(String msg) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
   // 辅助 Widgets
   // ─────────────────────────────────────────────────────────────────────────
+
+  Widget _avatar(String url, String fallback, double radius) {
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: Colors.grey[300],
+      child: url.isNotEmpty
+          ? ClipOval(
+              child: Image.network(
+                url,
+                width: radius * 2,
+                height: radius * 2,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Text(
+                  fallback.isNotEmpty
+                      ? fallback.substring(0, 1).toUpperCase()
+                      : '?',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: radius * 0.8),
+                ),
+              ),
+            )
+          : Text(
+              fallback.isNotEmpty
+                  ? fallback.substring(0, 1).toUpperCase()
+                  : '?',
+              style: TextStyle(
+                  fontWeight: FontWeight.bold, fontSize: radius * 0.8),
+            ),
+    );
+  }
 
   Widget _miniChip(IconData icon, String text, Color color) {
     return Row(
@@ -1005,7 +1303,8 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
     );
   }
 
-  Widget _statItem(String label, String value, IconData icon, Color color) {
+  Widget _statItem(
+      String label, String value, IconData icon, Color color) {
     return Column(
       children: [
         Icon(icon, color: color, size: 24),
@@ -1023,19 +1322,41 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
 // 数据模型
 // ─────────────────────────────────────────────────────────────────────────────
 
+class _RepoData {
+  final String name;
+  final String fullName;
+  final String description;
+  final String language;
+  final String htmlUrl;
+  final int starsCount;
+  final int forksCount;
+  final String updatedAt;
+
+  _RepoData({
+    required this.name,
+    required this.fullName,
+    required this.description,
+    required this.language,
+    required this.htmlUrl,
+    required this.starsCount,
+    required this.forksCount,
+    required this.updatedAt,
+  });
+}
+
 class _RepoMembersData {
-  final UserModel student;
-  final String owner;
-  final String repo;
+  final String repoName;
+  final String repoFullName;
   final List<Map<String, dynamic>> members;
   final int commitCount;
+  final String? error;
 
   _RepoMembersData({
-    required this.student,
-    required this.owner,
-    required this.repo,
+    required this.repoName,
+    required this.repoFullName,
     required this.members,
     required this.commitCount,
+    this.error,
   });
 }
 
@@ -1043,42 +1364,53 @@ class _AggregatedMember {
   final String login;
   final String name;
   final String avatarUrl;
-  final String htmlUrl;
   final List<String> repos;
+  final Map<String, dynamic> permissions;
 
   _AggregatedMember({
     required this.login,
     required this.name,
     required this.avatarUrl,
-    required this.htmlUrl,
     required this.repos,
+    required this.permissions,
+  });
+}
+
+class _AuthorStats {
+  final String login;
+  final String name;
+  final String avatarUrl;
+  int totalCommits = 0;
+  int last7Days = 0;
+  int last30Days = 0;
+  DateTime? lastCommitDate;
+  final Set<String> repoNames = {};
+
+  _AuthorStats({
+    required this.login,
+    required this.name,
+    required this.avatarUrl,
   });
 }
 
 class _StudentProgress {
-  final UserModel student;
-  final String owner;
-  final String repo;
-  final int totalCommits;
-  final int last7DaysCommits;
-  final int last30DaysCommits;
-  final int branchCount;
-  final int memberCount;
-  final DateTime? lastCommitDate;
-  final List<String> commitAuthors;
-  final String? error;
+  final String login;
+  final String name;
+  final String avatarUrl;
+  int totalCommits;
+  int last7DaysCommits;
+  int last30DaysCommits;
+  DateTime? lastCommitDate;
+  final Set<String> repoNames;
 
   _StudentProgress({
-    required this.student,
-    required this.owner,
-    required this.repo,
+    required this.login,
+    required this.name,
+    required this.avatarUrl,
     required this.totalCommits,
     required this.last7DaysCommits,
     required this.last30DaysCommits,
-    required this.branchCount,
-    required this.memberCount,
     required this.lastCommitDate,
-    required this.commitAuthors,
-    this.error,
-  });
+    required Set<String> repoNames,
+  }) : repoNames = repoNames;
 }
