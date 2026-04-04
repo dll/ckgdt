@@ -9,6 +9,7 @@ class GiteeService {
   static const String _baseUrl = 'https://gitee.com/api/v5';
   static const String _tokenKey = 'gitee_access_token';
   static const String _ownerKey = 'gitee_default_owner';
+  static const String _repoPrefixKey = 'gitee_repo_prefix';
 
   // ── Token 管理 ──────────────────────────────────────────────────────────
 
@@ -34,6 +35,37 @@ class GiteeService {
   Future<String?> getDefaultOwner() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_ownerKey);
+  }
+
+  /// 保存仓库名称前缀过滤（逗号分隔，如 cg1,cg2,cg3）
+  Future<void> saveRepoPrefix(String prefix) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_repoPrefixKey, prefix);
+  }
+
+  /// 获取仓库名称前缀过滤
+  Future<String?> getRepoPrefix() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_repoPrefixKey);
+  }
+
+  /// 根据前缀过滤仓库列表
+  /// [repos] 仓库列表, [prefix] 逗号分隔的前缀，如 "cg1,cg2,cg3"
+  List<Map<String, dynamic>> filterReposByPrefix(
+    List<Map<String, dynamic>> repos,
+    String? prefix,
+  ) {
+    if (prefix == null || prefix.trim().isEmpty) return repos;
+    final prefixes = prefix
+        .split(',')
+        .map((p) => p.trim().toLowerCase())
+        .where((p) => p.isNotEmpty)
+        .toList();
+    if (prefixes.isEmpty) return repos;
+    return repos.where((r) {
+      final name = (r['name']?.toString() ?? '').toLowerCase();
+      return prefixes.any((p) => name.startsWith(p));
+    }).toList();
   }
 
   // ── 通用请求 ──────────────────────────────────────────────────────────
@@ -257,6 +289,37 @@ class GiteeService {
   }
 
   // ── 统计/Release API ──────────────────────────────────────────────────
+
+  /// 获取单次提交的详细信息（包含 additions / deletions / files）
+  Future<Map<String, dynamic>> getCommitDetail(
+    String owner,
+    String repo,
+    String sha,
+  ) async {
+    final result = await _get('/repos/$owner/$repo/commits/$sha');
+    return Map<String, dynamic>.from(result);
+  }
+
+  /// 批量获取提交详情（带 additions/deletions）
+  /// [shas] 最多获取前 maxCount 条的详情，避免过多请求
+  Future<List<Map<String, dynamic>>> getCommitDetails(
+    String owner,
+    String repo,
+    List<String> shas, {
+    int maxCount = 50,
+  }) async {
+    final limited = shas.take(maxCount).toList();
+    final details = <Map<String, dynamic>>[];
+    for (final sha in limited) {
+      try {
+        final detail = await getCommitDetail(owner, repo, sha);
+        details.add(detail);
+      } catch (e) {
+        debugPrint('GiteeService: getCommitDetail($sha) error: $e');
+      }
+    }
+    return details;
+  }
 
   /// 获取仓库 Releases
   Future<List<Map<String, dynamic>>> getReleases(

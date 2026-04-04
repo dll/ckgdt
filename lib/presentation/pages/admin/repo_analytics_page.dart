@@ -31,6 +31,7 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
   // Gitee 配置
   String _owner = '';
   String _token = '';
+  String _repoPrefix = '';
 
   // 数据
   List<_RepoData> _repos = []; // 所有仓库
@@ -58,11 +59,13 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
   Future<void> _checkConfig() async {
     final token = await _giteeService.getToken();
     final owner = await _giteeService.getDefaultOwner();
+    final prefix = await _giteeService.getRepoPrefix();
 
     if (token != null && token.isNotEmpty && owner != null && owner.isNotEmpty) {
       setState(() {
         _token = token;
         _owner = owner;
+        _repoPrefix = (prefix == null || prefix.isEmpty) ? 'cg1,cg2,cg3' : prefix;
         _isConfigured = true;
       });
       _loadAllData();
@@ -78,6 +81,7 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
   Future<void> _showConfigDialog() async {
     final tokenCtrl = TextEditingController(text: _token);
     final ownerCtrl = TextEditingController(text: _owner);
+    final prefixCtrl = TextEditingController(text: _repoPrefix);
     bool testing = false;
     String? testResult;
 
@@ -115,6 +119,18 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
                     prefixIcon: Icon(Icons.key),
                   ),
                   obscureText: true,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: prefixCtrl,
+                  decoration: const InputDecoration(
+                    labelText: '仓库前缀过滤（可选）',
+                    hintText: '例如: cg1,cg2,cg3（逗号分隔，留空显示全部）',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.filter_list),
+                    helperText: '只显示名称以指定前缀开头的仓库',
+                    helperMaxLines: 2,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 if (testResult != null)
@@ -208,11 +224,14 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
     if (result == true) {
       final newToken = tokenCtrl.text.trim();
       final newOwner = ownerCtrl.text.trim();
+      final newPrefix = prefixCtrl.text.trim();
       await _giteeService.saveToken(newToken);
       await _giteeService.saveDefaultOwner(newOwner);
+      await _giteeService.saveRepoPrefix(newPrefix);
       setState(() {
         _token = newToken;
         _owner = newOwner;
+        _repoPrefix = newPrefix;
         _isConfigured = true;
       });
       _loadAllData();
@@ -255,8 +274,21 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
         return;
       }
 
+      // 根据前缀过滤仓库（只保留实验班组仓库）
+      final filteredRepos = _giteeService.filterReposByPrefix(allRepos, _repoPrefix);
+
+      if (filteredRepos.isEmpty) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = _repoPrefix.isNotEmpty
+              ? '没有匹配前缀 "$_repoPrefix" 的仓库（共 ${allRepos.length} 个仓库）'
+              : '该账号下没有仓库';
+        });
+        return;
+      }
+
       // 存储仓库基础数据
-      final repos = allRepos.map((r) => _RepoData(
+      final repos = filteredRepos.map((r) => _RepoData(
             name: r['name']?.toString() ?? '',
             fullName: r['full_name']?.toString() ?? '',
             description: r['description']?.toString() ?? '',
@@ -441,7 +473,9 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isConfigured ? '仓库分析 ($_owner)' : '仓库分析'),
+        title: Text(_isConfigured
+            ? '仓库分析 ($_owner${_repoPrefix.isNotEmpty ? ' · $_repoPrefix' : ''})'
+            : '仓库分析'),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
