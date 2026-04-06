@@ -1,0 +1,45 @@
+{
+  "version": "1.0.0",
+  "course_name": "移动应用开发",
+  "total_score": 100,
+  "components": [
+    {
+      "name": "平时成绩",
+      "weight": 30,
+      "sub_items": [
+        {"name": "课堂参与", "weight": 10, "description": "课堂互动、回答问题"},
+        {"name": "课后作业", "weight": 10, "description": "每章课后练习题"},
+        {"name": "考勤", "weight": 10, "description": "出勤记录"}
+      ]
+    },
+    {
+      "name": "实验成绩",
+      "weight": 30,
+      "sub_items": [
+        {"name": "实验一 开发环境搭建", "weight": 3, "max_score": 100},
+        {"name": "实验二 原生应用开发", "weight": 5, "max_score": 100},
+        {"name": "实验三 跨平台应用开发", "weight": 5, "max_score": 100},
+        {"name": "实验四 微信小程序开发", "weight": 5, "max_score": 100},
+        {"name": "实验五 鸿蒙多端应用开发", "weight": 5, "max_score": 100},
+        {"name": "实验六 跨平台综合项目实战", "weight": 7, "max_score": 100}
+      ]
+    },
+    {
+      "name": "期末考核",
+      "weight": 40,
+      "sub_items": [
+        {"name": "项目完成度", "weight": 15, "description": "功能实现、代码质量"},
+        {"name": "答辩表现", "weight": 10, "description": "演示效果、问答表现"},
+        {"name": "技术报告", "weight": 10, "description": "文档完整性、技术深度"},
+        {"name": "团队协作", "weight": 5, "description": "Git提交记录、分工合理性"}
+      ]
+    }
+  ],
+  "grading_scale": [
+    {"grade": "优秀", "min": 90, "max": 100},
+    {"grade": "良好", "min": 80, "max": 89},
+    {"grade": "中等", "min": 70, "max": 79},
+    {"grade": "及格", "min": 60, "max": 69},
+    {"grade": "不及格", "min": 0, "max": 59}
+  ]
+}
