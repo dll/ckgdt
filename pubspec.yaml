@@ -1,7 +1,7 @@
 name: knowledge_graph_app
 description: 移动应用开发知识图谱教学系统
 publish_to: "none"
-version: 1.0.0+1
+version: 0.8.0+8
 
 environment:
   sdk: ">=3.0.0 <4.0.0"

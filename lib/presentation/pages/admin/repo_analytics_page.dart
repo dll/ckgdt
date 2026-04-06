@@ -65,7 +65,7 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
       setState(() {
         _token = token;
         _owner = owner;
-        _repoPrefix = (prefix == null || prefix.isEmpty) ? 'cg1,cg2,cg3' : prefix;
+        _repoPrefix = (prefix == null || prefix.isEmpty) ? 'cg1-,cg2-,cg3-' : prefix;
         _isConfigured = true;
       });
       _loadAllData();
@@ -125,7 +125,7 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
                   controller: prefixCtrl,
                   decoration: const InputDecoration(
                     labelText: '仓库前缀过滤（可选）',
-                    hintText: '例如: cg1,cg2,cg3（逗号分隔，留空显示全部）',
+                    hintText: '例如: cg1-,cg2-,cg3-（逗号分隔，留空显示全部）',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.filter_list),
                     helperText: '只显示名称以指定前缀开头的仓库',

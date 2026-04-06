@@ -4,6 +4,8 @@ import '../data/local/database_helper.dart';
 import '../data/local/quiz_dao.dart';
 import '../data/local/puml_dao.dart';
 import 'graph_import_service.dart';
+import 'gitee_service.dart';
+import 'course_resource_service.dart';
 
 /// 统一数据加载服务 — 启动时一次性初始化所有预置数据
 class DataLoadingService {
@@ -26,11 +28,55 @@ class DataLoadingService {
       await _initPumlSamples();
       await _importMdGraphs();
       await _cleanEmptyGraphs();
+      await _initGiteeToken();
+      await _prefetchRemoteConfigs();
       debugPrint('=== DataLoadingService: Initialization complete');
     } catch (e) {
       debugPrint('=== DataLoadingService: Initialization error: $e');
     }
     _isInitialized = true;
+  }
+
+  // ── Gitee Token 自动初始化 ──────────────────────────────────────────
+
+  /// 如果 Gitee Token 尚未配置，则自动设置预置 Token
+  Future<void> _initGiteeToken() async {
+    try {
+      final gitee = GiteeService();
+      final existing = await gitee.getToken();
+      if (existing == null || existing.isEmpty) {
+        // 预置 Token（mad-fd 仓库的只读访问令牌）
+        await gitee.saveToken('17d6948aabc0764e4f18bb7b215fa32c');
+        await gitee.saveDefaultOwner('chzuczldl');
+        await gitee.saveRepoPrefix('cg1-,cg2-,cg3-');
+        debugPrint('=== DataLoadingService: Gitee token auto-configured');
+      }
+    } catch (e) {
+      debugPrint('=== DataLoadingService: Gitee token init error: $e');
+    }
+  }
+
+  // ── 远程配置预取 ──────────────────────────────────────────────────────
+
+  /// 启动时异步预取远程课程配置到本地缓存（静默失败，不阻塞启动流程）
+  Future<void> _prefetchRemoteConfigs() async {
+    try {
+      final resource = CourseResourceService();
+      // 并行预取所有配置，缓存到 SharedPreferences
+      await Future.wait([
+        resource.getLabTasks().then((_) =>
+            debugPrint('=== DataLoadingService: Lab tasks config cached')),
+        resource.getChapters().then((_) =>
+            debugPrint('=== DataLoadingService: Chapters config cached')),
+        resource.getAssessment().then((_) =>
+            debugPrint('=== DataLoadingService: Assessment config cached')),
+        resource.getReportTemplates().then((_) =>
+            debugPrint('=== DataLoadingService: Report templates cached')),
+      ]);
+      debugPrint('=== DataLoadingService: Remote configs pre-fetched');
+    } catch (e) {
+      debugPrint('=== DataLoadingService: Remote config prefetch error (non-fatal): $e');
+    }
   }
 
   // ── 资源文件初始化（视频/PDF/PPT）────────────────────────────────────────
@@ -58,35 +104,38 @@ class DataLoadingService {
     try {
       final db = await _dbHelper.database;
 
-      // 检查是否已有数据
-      final existing = await db.rawQuery(
-          'SELECT COUNT(*) as c FROM resource_files');
-      final count = existing.first['c'] as int? ?? 0;
-
       // 计算课件根目录：基于可执行文件所在目录向上查找 data/ 文件夹
       final dataDir = _resolveDataDir();
       final videoDir = '$dataDir/视频';
       final pdfDir = '$dataDir/课件/清言智谱';
       final pptDir = '$dataDir/课件/秒出PPT';
 
+      debugPrint('=== DataLoadingService: Resolved dataDir=$dataDir');
+      debugPrint('=== DataLoadingService: videoDir=$videoDir');
+
+      // 检查是否已有数据 且 路径正确（包含当前 dataDir 前缀）
+      final existing = await db.rawQuery(
+          'SELECT COUNT(*) as c FROM resource_files');
+      final count = existing.first['c'] as int? ?? 0;
+
       if (count > 0) {
-        // 已有数据 → 检查路径是否需要更新（从 assets/ 迁移到绝对路径）
+        // 取一行样本检查路径是否和当前 dataDir 一致
         final sample = await db.rawQuery(
             "SELECT file_path FROM resource_files LIMIT 1");
         final samplePath = sample.isNotEmpty
             ? (sample.first['file_path'] as String? ?? '')
             : '';
-        if (samplePath.startsWith('assets/')) {
-          debugPrint('=== DataLoadingService: Migrating asset paths → filesystem paths');
-          // 清空旧数据重新插入
-          await db.delete('resource_files');
-        } else {
-          debugPrint('=== DataLoadingService: resource_files already has $count rows, skip');
+        if (samplePath.startsWith(dataDir)) {
+          debugPrint('=== DataLoadingService: resource_files paths OK ($count rows, prefix=$dataDir)');
           return;
         }
+        debugPrint('=== DataLoadingService: Paths mismatch! sample=$samplePath, expected prefix=$dataDir');
       }
 
-      debugPrint('=== DataLoadingService: Inserting resource files (dataDir=$dataDir)');
+      // 清空旧数据（无论是 assets/ 前缀还是其他错误路径）
+      await db.delete('resource_files');
+      debugPrint('=== DataLoadingService: Cleared old resource_files, re-inserting with correct paths');
+
       final batch = db.batch();
 
       for (final chapter in _chapterNames) {
@@ -120,6 +169,13 @@ class DataLoadingService {
 
       await batch.commit(noResult: true);
       debugPrint('=== DataLoadingService: Inserted ${_chapterNames.length * 3} resource files');
+
+      // 验证插入结果
+      final verify = await db.rawQuery(
+          "SELECT file_path FROM resource_files LIMIT 1");
+      if (verify.isNotEmpty) {
+        debugPrint('=== DataLoadingService: Verify → ${verify.first['file_path']}');
+      }
     } catch (e) {
       debugPrint('=== DataLoadingService: Error loading resource files: $e');
     }
