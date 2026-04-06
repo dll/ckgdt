@@ -175,6 +175,82 @@ answer_index 为 0-3（对应 A-D），仅返回 JSON，不要其他文字。
     return match?.group(0) ?? raw;
   }
 
+  // ── AI 辅助图谱推荐 ────────────────────────────────────────────────────────
+
+  /// 根据当前图谱中已有的概念和关系，让 AI 推荐新的概念节点和关系边。
+  /// 返回格式：{ "concepts": [...], "relations": [...] }
+  Future<Map<String, dynamic>> recommendGraphElements({
+    required List<Map<String, dynamic>> existingConcepts,
+    required List<Map<String, dynamic>> existingRelations,
+    String courseTopic = '移动应用开发',
+  }) async {
+    const system = '你是一位移动应用开发课程的知识图谱专家。'
+        '根据现有的知识概念和关系，推荐补充的新概念节点和关系边，帮助完善知识图谱。'
+        '只返回 JSON，不要其他文字。';
+
+    // 构建现有概念摘要
+    final conceptSummary = existingConcepts.map((c) {
+      return '${c['concept_name']}(${c['concept_type'] ?? 'concept'}, '
+          '第${c['chapter'] ?? '?'}章, ${c['importance'] ?? 'important'})';
+    }).join('、');
+
+    // 构建现有关系摘要
+    String relationSummary = '暂无';
+    if (existingRelations.isNotEmpty) {
+      final conceptMap = <int, String>{};
+      for (final c in existingConcepts) {
+        conceptMap[c['id'] as int] = c['concept_name'] as String? ?? '?';
+      }
+      relationSummary = existingRelations.take(30).map((r) {
+        final src = conceptMap[r['source_concept_id']] ?? '?';
+        final tgt = conceptMap[r['target_concept_id']] ?? '?';
+        return '$src -[${r['relation_type']}]-> $tgt';
+      }).join('；');
+    }
+
+    final prompt = '''
+课程主题：$courseTopic
+已有概念（${existingConcepts.length}个）：$conceptSummary
+已有关系（${existingRelations.length}条）：$relationSummary
+
+请分析上述知识图谱，推荐 3~6 个新概念节点和 3~8 条新关系边来完善图谱。
+要求：
+1. 新概念不能与已有概念重名
+2. 新关系可以连接已有概念，也可以连接新推荐的概念
+3. 返回 JSON 格式如下：
+{
+  "concepts": [
+    {"concept_name":"名称","concept_type":"concept|technology|tool|framework|language|platform|pattern","chapter":1,"importance":"core|important|supplementary","description":"简要描述","keywords":"关键词","confidence":0.85}
+  ],
+  "relations": [
+    {"source":"源概念名","target":"目标概念名","relation_type":"prerequisite|related_to|part_of|compared_with|applied_in|builds_upon|alternative_to|extends","description":"关系描述","weight":1.0,"confidence":0.9}
+  ]
+}
+4. confidence 表示 AI 对该推荐的置信度（0~1）
+5. 仅返回 JSON，不要其他文字
+''';
+
+    final raw = await chat(
+      [{'role': 'user', 'content': prompt}],
+      systemPrompt: system,
+    );
+
+    // 提取 JSON 对象
+    final match = RegExp(r'\{[\s\S]*\}').firstMatch(raw);
+    if (match == null) {
+      return {'concepts': <Map<String, dynamic>>[], 'relations': <Map<String, dynamic>>[]};
+    }
+    try {
+      final parsed = jsonDecode(match.group(0)!) as Map<String, dynamic>;
+      return {
+        'concepts': (parsed['concepts'] as List?)?.cast<Map<String, dynamic>>() ?? [],
+        'relations': (parsed['relations'] as List?)?.cast<Map<String, dynamic>>() ?? [],
+      };
+    } catch (_) {
+      return {'concepts': <Map<String, dynamic>>[], 'relations': <Map<String, dynamic>>[]};
+    }
+  }
+
   // ── 检查连通性 ───────────────────────────────────────────────────────────
   Future<bool> testConnection() async {
     try {

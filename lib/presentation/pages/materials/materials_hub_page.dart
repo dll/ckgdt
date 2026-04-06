@@ -11,6 +11,7 @@ import 'ai_assist_page.dart';
 import 'ai_settings_page.dart';
 import 'puml_manager_page.dart';
 import 'slide_generator_page.dart';
+import 'courseware_workshop_page.dart';
 
 class MaterialsHubPage extends StatefulWidget {
   const MaterialsHubPage({super.key});
@@ -366,6 +367,16 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
           context,
           MaterialPageRoute(builder: (_) => const AiAssistPage(mode: 'chat')),
         ),
+      ),
+      _AiFeature(
+        icon: Icons.movie_creation,
+        title: '课件工坊',
+        desc: '教案→PDF→语音→视频',
+        color: Colors.deepOrange,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const CoursewareWorkshopPage()),
+        ).then((_) => _loadMaterials()),
       ),
     ];
 

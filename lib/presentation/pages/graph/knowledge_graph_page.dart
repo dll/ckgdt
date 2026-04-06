@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../core/constants/chapter_helper.dart';
 import '../../../core/constants/mask_shapes.dart';
+import '../../../core/constants/tech_logo_painter.dart';
 import '../../../data/local/knowledge_graph_dao.dart';
 import '../../../data/local/learning_path_dao.dart';
 import '../../../data/models/learning_path_model.dart';
@@ -2174,61 +2175,101 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
     );
   }
 
-  // ── 蒙版形状选择器 ───────────────────────────────────────────────────────
+  // ── 蒙版形状选择器（当前选中 + 下拉弹出网格） ──────────────────────────
 
   Widget _buildMaskSelector() {
+    final allShapes = MaskShape.values.where((s) => s != MaskShape.none).toList();
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      color: Colors.deepPurple.withValues(alpha: 0.05),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.deepPurple.withValues(alpha: 0.05),
+        border: Border(
+          bottom: BorderSide(
+            color: Colors.deepPurple.withValues(alpha: 0.12),
+            width: 1,
+          ),
+        ),
+      ),
       child: Row(
         children: [
           const Icon(Icons.auto_awesome, size: 16, color: Colors.deepPurple),
           const SizedBox(width: 8),
           const Text(
             '蒙版:',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: MaskShape.values
-                    .where((s) => s != MaskShape.none)
-                    .map((shape) {
-                  final isSelected = _selectedMask == shape;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: ChoiceChip(
-                      label: Text(
-                        shape.label,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isSelected ? Colors.white : Colors.black87,
-                        ),
-                      ),
-                      selected: isSelected,
-                      selectedColor: Colors.deepPurple,
-                      backgroundColor: Colors.white,
-                      side: BorderSide(
-                        color: isSelected
-                            ? Colors.deepPurple
-                            : Colors.grey.shade300,
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      visualDensity: VisualDensity.compact,
-                      onSelected: (_) {
-                        setState(() => _selectedMask = shape);
-                        _calculateLayout();
-                        setState(() {});
-                      },
-                    ),
-                  );
-                }).toList(),
-              ),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.deepPurple,
             ),
           ),
+          const SizedBox(width: 10),
+
+          // ── 当前选中的蒙版按钮，点击弹出网格选择 ────────────────────────
+          _MaskDropdownButton(
+            selectedShape: _selectedMask,
+            allShapes: allShapes,
+            onSelected: (shape) {
+              setState(() => _selectedMask = shape);
+              _calculateLayout();
+              setState(() {});
+            },
+          ),
+
+          const SizedBox(width: 8),
+
+          // ── 左右快捷切换 ─────────────────────────────────────────────────
+          _buildMaskNavButton(
+            icon: Icons.chevron_left,
+            onTap: () {
+              final idx = allShapes.indexOf(_selectedMask);
+              final prev = idx <= 0 ? allShapes.length - 1 : idx - 1;
+              setState(() => _selectedMask = allShapes[prev]);
+              _calculateLayout();
+              setState(() {});
+            },
+          ),
+          const SizedBox(width: 4),
+          // 显示当前序号
+          Text(
+            '${allShapes.indexOf(_selectedMask) + 1}/${allShapes.length}',
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.deepPurple.withValues(alpha: 0.6),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(width: 4),
+          _buildMaskNavButton(
+            icon: Icons.chevron_right,
+            onTap: () {
+              final idx = allShapes.indexOf(_selectedMask);
+              final next = idx >= allShapes.length - 1 ? 0 : idx + 1;
+              setState(() => _selectedMask = allShapes[next]);
+              _calculateLayout();
+              setState(() {});
+            },
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMaskNavButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: Colors.deepPurple.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Icon(icon, size: 18, color: Colors.deepPurple),
       ),
     );
   }
@@ -2432,12 +2473,24 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                   viewMode: _viewMode,
                   maskShape: _selectedMask,
                   maskPath: _currentMaskPath,
+                  userName: _selectedMask == MaskShape.avatar
+                      ? (_authService.currentUser?.realName ??
+                          _authService.currentUser?.userId)
+                      : null,
                 ),
                 size: const Size(_canvasWidth, _canvasHeight),
               ),
             ),
           ),
         ),
+
+        // ── 图操作工具栏（放大 / 缩小 / 复位 / 全图 / 居中） ──
+        Positioned(
+          left: 8,
+          bottom: 8,
+          child: _buildGraphToolbar(),
+        ),
+
         // ── 鹰眼小地图 ──
         Positioned(
           right: 8,
@@ -2445,6 +2498,282 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
           child: _buildMinimap(visibleNodes, visibleEdges),
         ),
       ],
+    );
+  }
+
+  // ── 图操作工具栏 ──────────────────────────────────────────────────────────
+
+  /// 获取当前缩放比例
+  double _getCurrentScale() {
+    final m = _transformationController.value;
+    return m.getMaxScaleOnAxis();
+  }
+
+  /// 平滑缩放到指定比例（以屏幕中心为锚点）
+  void _animateZoomTo(double targetScale) {
+    final screenSize = MediaQuery.of(context).size;
+    final currentMatrix = _transformationController.value.clone();
+
+    // 计算当前视口中心对应的画布坐标
+    final inverted = currentMatrix.clone()..invert();
+    final viewCenter = Offset(screenSize.width / 2, screenSize.height / 2);
+    final canvasCenter = MatrixUtils.transformPoint(inverted, viewCenter);
+
+    // 构建目标矩阵
+    final endMatrix = Matrix4.identity()
+      ..scale(targetScale)
+      ..translate(
+        -canvasCenter.dx + screenSize.width / (2 * targetScale),
+        -canvasCenter.dy + screenSize.height / (2 * targetScale),
+      );
+
+    final startMatrix = currentMatrix;
+    final controller = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    final animation =
+        CurvedAnimation(parent: controller, curve: Curves.easeOut);
+
+    animation.addListener(() {
+      final t = animation.value;
+      final m = Matrix4.zero();
+      for (int i = 0; i < 16; i++) {
+        m.storage[i] = startMatrix.storage[i] +
+            (endMatrix.storage[i] - startMatrix.storage[i]) * t;
+      }
+      _transformationController.value = m;
+    });
+    controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed) controller.dispose();
+    });
+    controller.forward();
+  }
+
+  /// 放大（+30%）
+  void _zoomIn() {
+    final current = _getCurrentScale();
+    final target = (current * 1.3).clamp(0.08, 4.0);
+    _animateZoomTo(target);
+  }
+
+  /// 缩小（-30%）
+  void _zoomOut() {
+    final current = _getCurrentScale();
+    final target = (current / 1.3).clamp(0.08, 4.0);
+    _animateZoomTo(target);
+  }
+
+  /// 复位（恢复初始 1:1 视图，居中画布）
+  void _resetView() {
+    final screenSize = MediaQuery.of(context).size;
+    final endMatrix = Matrix4.identity()
+      ..translate(
+        -((_canvasWidth - screenSize.width) / 2),
+        -((_canvasHeight - screenSize.height) / 2),
+      );
+
+    final startMatrix = _transformationController.value.clone();
+    final controller = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+    final animation =
+        CurvedAnimation(parent: controller, curve: Curves.easeInOut);
+
+    animation.addListener(() {
+      final t = animation.value;
+      final m = Matrix4.zero();
+      for (int i = 0; i < 16; i++) {
+        m.storage[i] = startMatrix.storage[i] +
+            (endMatrix.storage[i] - startMatrix.storage[i]) * t;
+      }
+      _transformationController.value = m;
+    });
+    controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed) controller.dispose();
+    });
+    controller.forward();
+  }
+
+  /// 全图显示 — 缩放到刚好包含所有节点
+  void _fitAll() {
+    if (_nodes.isEmpty) return;
+    final screenSize = MediaQuery.of(context).size;
+
+    // 计算所有节点的包围盒
+    double minX = double.infinity, minY = double.infinity;
+    double maxX = double.negativeInfinity, maxY = double.negativeInfinity;
+    for (final n in _nodes) {
+      final r = n.radius;
+      if (n.x - r < minX) minX = n.x - r;
+      if (n.y - r < minY) minY = n.y - r;
+      if (n.x + r > maxX) maxX = n.x + r;
+      if (n.y + r > maxY) maxY = n.y + r;
+    }
+
+    // 添加边距
+    const padding = 60.0;
+    minX -= padding;
+    minY -= padding;
+    maxX += padding;
+    maxY += padding;
+
+    final nodesW = maxX - minX;
+    final nodesH = maxY - minY;
+    if (nodesW <= 0 || nodesH <= 0) return;
+
+    // 计算缩放比例（取最小值使全部节点可见）
+    final scaleX = screenSize.width / nodesW;
+    final scaleY = (screenSize.height - 180) / nodesH; // 减去顶部栏高度
+    final scale = (scaleX < scaleY ? scaleX : scaleY).clamp(0.08, 4.0);
+
+    // 居中偏移
+    final centerX = (minX + maxX) / 2;
+    final centerY = (minY + maxY) / 2;
+
+    final endMatrix = Matrix4.identity()
+      ..scale(scale)
+      ..translate(
+        -centerX + screenSize.width / (2 * scale),
+        -centerY + (screenSize.height - 180) / (2 * scale),
+      );
+
+    final startMatrix = _transformationController.value.clone();
+    final controller = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    final animation =
+        CurvedAnimation(parent: controller, curve: Curves.easeInOut);
+
+    animation.addListener(() {
+      final t = animation.value;
+      final m = Matrix4.zero();
+      for (int i = 0; i < 16; i++) {
+        m.storage[i] = startMatrix.storage[i] +
+            (endMatrix.storage[i] - startMatrix.storage[i]) * t;
+      }
+      _transformationController.value = m;
+    });
+    controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed) controller.dispose();
+    });
+    controller.forward();
+  }
+
+  Widget _buildGraphToolbar() {
+    return AnimatedBuilder(
+      animation: _transformationController,
+      builder: (context, _) {
+        final scale = _getCurrentScale();
+        final percent = (scale * 100).round();
+
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 放大
+              _graphToolBtn(
+                icon: Icons.add,
+                tooltip: '放大',
+                onTap: _zoomIn,
+              ),
+              // 缩放比例
+              Container(
+                width: 40,
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  border: Border.symmetric(
+                    horizontal: BorderSide(
+                      color: Colors.grey.shade200,
+                      width: 1,
+                    ),
+                  ),
+                ),
+                child: Text(
+                  '$percent%',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ),
+              // 缩小
+              _graphToolBtn(
+                icon: Icons.remove,
+                tooltip: '缩小',
+                onTap: _zoomOut,
+              ),
+              Divider(height: 1, color: Colors.grey.shade200),
+              // 复位
+              _graphToolBtn(
+                icon: Icons.crop_free,
+                tooltip: '复位 (1:1)',
+                onTap: _resetView,
+              ),
+              Divider(height: 1, color: Colors.grey.shade200),
+              // 全图
+              _graphToolBtn(
+                icon: Icons.fit_screen,
+                tooltip: '全图显示',
+                onTap: _fitAll,
+              ),
+              Divider(height: 1, color: Colors.grey.shade200),
+              // 居中到选中节点
+              _graphToolBtn(
+                icon: Icons.my_location,
+                tooltip: '居中选中节点',
+                onTap: () {
+                  if (_selectedNode != null) {
+                    _animateCenterOnNode(
+                        _selectedNode!.x, _selectedNode!.y,
+                        scale: 1.2);
+                  } else {
+                    // 未选中节点时居中到画布中心
+                    _animateCenterOnNode(
+                        _canvasWidth / 2, _canvasHeight / 2,
+                        scale: 0.6);
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _graphToolBtn({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      preferBelow: false,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: SizedBox(
+          width: 40,
+          height: 36,
+          child: Icon(icon, size: 20, color: Colors.grey.shade700),
+        ),
+      ),
     );
   }
 
@@ -2674,6 +3003,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
   final _ViewMode viewMode;
   final MaskShape maskShape;
   final Path? maskPath;
+  final String? userName;
 
   _KnowledgeGraphPainter({
     required this.nodes,
@@ -2686,6 +3016,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
     this.viewMode = _ViewMode.global,
     this.maskShape = MaskShape.none,
     this.maskPath,
+    this.userName,
   });
 
   @override
@@ -3330,13 +3661,17 @@ class _KnowledgeGraphPainter extends CustomPainter {
         ..strokeWidth = 2.5,
     );
 
-    // 蒙版名称标签
-    final labelText = maskShape.label;
+    // 蒙版名称标签（头像蒙版时显示用户姓名）
+    final labelText = (maskShape == MaskShape.avatar && userName != null)
+        ? userName!
+        : maskShape.label;
+    final labelFontSize =
+        (maskShape == MaskShape.avatar && userName != null) ? 120.0 : 80.0;
     final tp = TextPainter(
       text: TextSpan(
         text: labelText,
         style: TextStyle(
-          fontSize: 80,
+          fontSize: labelFontSize,
           fontWeight: FontWeight.w900,
           color: Colors.deepPurple.withValues(alpha: 0.05),
           letterSpacing: 8,
@@ -3360,7 +3695,8 @@ class _KnowledgeGraphPainter extends CustomPainter {
       old.adjacentEdgeIds != adjacentEdgeIds ||
       old.focusedNode != focusedNode ||
       old.viewMode != viewMode ||
-      old.maskShape != maskShape;
+      old.maskShape != maskShape ||
+      old.userName != userName;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -3469,4 +3805,271 @@ class _MinimapPainter extends CustomPainter {
       old.viewportRect != viewportRect ||
       old.nodes != nodes ||
       old.edges != edges;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// _MaskDropdownButton — 蒙版下拉选择按钮（点击弹出网格浮层）
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _MaskDropdownButton extends StatelessWidget {
+  final MaskShape selectedShape;
+  final List<MaskShape> allShapes;
+  final ValueChanged<MaskShape> onSelected;
+
+  const _MaskDropdownButton({
+    required this.selectedShape,
+    required this.allShapes,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _showMaskGrid(context),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.deepPurple,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.deepPurple.withValues(alpha: 0.30),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TechLogoWidget(
+              shape: selectedShape,
+              size: 20,
+              selected: true,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              selectedShape.label,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.arrow_drop_down, size: 18, color: Colors.white70),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showMaskGrid(BuildContext context) {
+    showDialog<MaskShape>(
+      context: context,
+      barrierColor: Colors.black26,
+      builder: (ctx) {
+        return Align(
+          alignment: Alignment.topCenter,
+          child: Padding(
+            padding: EdgeInsets.only(
+              top: MediaQuery.of(ctx).padding.top + 120,
+              left: 16,
+              right: 16,
+            ),
+            child: Material(
+              elevation: 12,
+              borderRadius: BorderRadius.circular(16),
+              color: Colors.white,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(ctx).size.width * 0.92,
+                  maxHeight: 460,
+                ),
+                child: _MaskGridPanel(
+                  allShapes: allShapes,
+                  selectedShape: selectedShape,
+                  onSelected: (shape) {
+                    Navigator.of(ctx).pop(shape);
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    ).then((selected) {
+      if (selected != null) {
+        onSelected(selected);
+      }
+    });
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// _MaskGridPanel — 弹窗内的蒙版网格面板
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _MaskGridPanel extends StatelessWidget {
+  final List<MaskShape> allShapes;
+  final MaskShape selectedShape;
+  final ValueChanged<MaskShape> onSelected;
+
+  const _MaskGridPanel({
+    required this.allShapes,
+    required this.selectedShape,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // 按类别分组
+    final groups = <String, List<MaskShape>>{
+      '移动平台': [
+        MaskShape.android, MaskShape.apple, MaskShape.harmonyOS,
+      ],
+      '跨平台框架': [
+        MaskShape.flutter, MaskShape.reactNative, MaskShape.uniapp,
+        MaskShape.maui, MaskShape.cordova,
+      ],
+      '编程语言': [
+        MaskShape.dart, MaskShape.kotlin, MaskShape.swift,
+        MaskShape.java, MaskShape.python, MaskShape.typeScript,
+        MaskShape.golang,
+      ],
+      '工具与平台': [
+        MaskShape.wechat, MaskShape.docker, MaskShape.gitHub,
+        MaskShape.vsCode, MaskShape.linux,
+      ],
+      '个性化': [
+        MaskShape.avatar, MaskShape.brain,
+      ],
+    };
+
+    return SizedBox(
+      width: MediaQuery.of(context).size.width * 0.84,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 标题
+            Row(
+              children: [
+                const Icon(Icons.auto_awesome,
+                    size: 16, color: Colors.deepPurple),
+                const SizedBox(width: 6),
+                const Text(
+                  '选择蒙版形状',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.deepPurple,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '共 ${allShapes.length} 个',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            // 按分类显示
+            ...groups.entries.map((entry) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 分类标签
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6, top: 4),
+                    child: Text(
+                      entry.key,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  // 网格
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: entry.value.map((shape) {
+                      final isSelected = shape == selectedShape;
+                      return GestureDetector(
+                        onTap: () => onSelected(shape),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          width: 76,
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 8, horizontal: 4),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? Colors.deepPurple
+                                : Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected
+                                  ? Colors.deepPurple
+                                  : Colors.grey.shade200,
+                              width: isSelected ? 2 : 1,
+                            ),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color: Colors.deepPurple
+                                          .withValues(alpha: 0.25),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TechLogoWidget(
+                                shape: shape,
+                                size: 28,
+                                selected: isSelected,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                shape.label,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : Colors.black87,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 4),
+                ],
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
 }
