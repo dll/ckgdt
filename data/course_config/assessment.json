@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "course_name": "移动应用开发",
   "total_score": 100,
   "components": [
@@ -35,11 +35,30 @@
       ]
     }
   ],
+  "scoring_dimensions": [
+    {"name": "功能完整性", "max_score": 25, "description": "需求覆盖、功能完整"},
+    {"name": "技术实现深度", "max_score": 20, "description": "代码质量、架构设计"},
+    {"name": "跨框架整合", "max_score": 25, "description": "多端适配、框架运用"},
+    {"name": "性能与质量", "max_score": 15, "description": "性能优化、稳定性"},
+    {"name": "文档与协作", "max_score": 15, "description": "文档规范、Git协作"}
+  ],
   "grading_scale": [
     {"grade": "优秀", "min": 90, "max": 100},
     {"grade": "良好", "min": 80, "max": 89},
     {"grade": "中等", "min": 70, "max": 79},
     {"grade": "及格", "min": 60, "max": 69},
     {"grade": "不及格", "min": 0, "max": 59}
-  ]
+  ],
+  "repo_norms": {
+    "repo_prefix": ["cg1-", "cg2-", "cg3-"],
+    "repo_format": "cg{组号}-{项目简称}",
+    "branch_format": "feat-{姓名拼音首字母小写}",
+    "branch_pattern": "^feat-[a-z]{2,5}$",
+    "commit_format": "<类型>: <简短描述>",
+    "commit_types": ["feat", "fix", "docs", "style", "refactor", "test", "chore"],
+    "report_dir": "docs/reports/",
+    "report_naming": "实验X_姓名.md",
+    "defense_dir": "docs/defense/",
+    "works_dir": "works/"
+  }
 }
