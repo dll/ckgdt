@@ -1,0 +1,72 @@
+[
+  {
+    "id": 1,
+    "number": "第1章",
+    "title": "移动应用开发技术体系全景",
+    "sub_chapters": [
+      "移动应用开发技术体系1",
+      "移动应用开发技术体系2"
+    ],
+    "color": "#1677FF",
+    "icon": "devices"
+  },
+  {
+    "id": 2,
+    "number": "第2章",
+    "title": "Android 与 iOS 原生开发基础",
+    "sub_chapters": [
+      "Android原生开发基础1",
+      "Android原生开发基础2",
+      "iOS原生开发基础"
+    ],
+    "color": "#00B42A",
+    "icon": "phone_android"
+  },
+  {
+    "id": 3,
+    "number": "第3章",
+    "title": "Flutter、React Native 等混合开发技术",
+    "sub_chapters": [
+      "Flutter跨平台开发1",
+      "Flutter跨平台开发2",
+      "React Native跨平台开发"
+    ],
+    "color": "#722ED1",
+    "icon": "flutter_dash"
+  },
+  {
+    "id": 4,
+    "number": "第4章",
+    "title": "微信小程序开发流程",
+    "sub_chapters": [
+      "微信小程序开发1",
+      "微信小程序开发2",
+      "微信小程序开发3"
+    ],
+    "color": "#07C160",
+    "icon": "wechat"
+  },
+  {
+    "id": 5,
+    "number": "第5章",
+    "title": "华为 HarmonyOS 多端应用开发",
+    "sub_chapters": [
+      "HarmonyOS开发1",
+      "HarmonyOS开发2",
+      "HarmonyOS开发3"
+    ],
+    "color": "#FF6A00",
+    "icon": "developer_board"
+  },
+  {
+    "id": 6,
+    "number": "第6章",
+    "title": "综合开发实践",
+    "sub_chapters": [
+      "综合开发实践1",
+      "综合开发实践2"
+    ],
+    "color": "#F5222D",
+    "icon": "integration_instructions"
+  }
+]
