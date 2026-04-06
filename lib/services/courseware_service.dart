@@ -1,0 +1,2061 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:flutter/services.dart';
+import '../data/local/material_dao.dart';
+import '../data/models/material_model.dart';
+import 'ai_service.dart';
+import 'plantuml_service.dart';
+
+/// 课件工坊服务 — 教案→MD→PDF/UML/语音/视频 全流水线
+class CoursewareService {
+  final AiService _aiService = AiService();
+  final MaterialDao _materialDao = MaterialDao();
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Step 1: 教案生成
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// 生成结构化教案（JSON 格式）
+  /// 返回: { title, chapter, classHours, objectives[], keyPoints[],
+  ///         sections: [{ title, duration, content, activities, notes }],
+  ///         experiments: [{ name, objective, steps[], deliverables }],
+  ///         homework }
+  Future<Map<String, dynamic>> generateLessonPlan({
+    required String topic,
+    String? chapter,
+    int classHours = 2,
+    String? additionalRequirements,
+  }) async {
+    const system = '''你是一位资深的移动应用开发课程教师，擅长制定教学教案。
+请用中文回复，回复必须是合法的 JSON 对象。
+你的教案应结构清晰、内容专业、可操作性强。''';
+
+    final prompt = '''
+请为"$topic"${chapter != null ? '（$chapter）' : ''}生成一份 $classHours 课时的教学教案。
+${additionalRequirements != null ? '额外要求: $additionalRequirements' : ''}
+
+要求返回 JSON 对象，格式如下：
+{
+  "title": "课程标题",
+  "chapter": "章节",
+  "classHours": $classHours,
+  "objectives": ["教学目标1", "教学目标2", "教学目标3"],
+  "keyPoints": ["重点1", "重点2"],
+  "difficulties": ["难点1", "难点2"],
+  "sections": [
+    {
+      "title": "章节标题",
+      "duration": "15分钟",
+      "content": "详细教学内容描述...",
+      "activities": "教学活动描述（如讲授、演示、练习）",
+      "codeExample": "相关代码示例（如有）",
+      "notes": "教师备注"
+    }
+  ],
+  "experiments": [
+    {
+      "name": "实验名称",
+      "objective": "实验目标",
+      "steps": ["步骤1", "步骤2", "步骤3"],
+      "deliverables": "实验提交物"
+    }
+  ],
+  "umlDiagrams": [
+    {
+      "type": "class/sequence/activity",
+      "title": "图表标题",
+      "description": "图表描述"
+    }
+  ],
+  "homework": "课后作业描述",
+  "references": ["参考资料1", "参考资料2"]
+}
+
+仅返回 JSON，不要包含其他文字。''';
+
+    final raw = await _aiService.chat(
+      [{'role': 'user', 'content': prompt}],
+      systemPrompt: system,
+    );
+
+    // 提取 JSON 对象
+    final match = RegExp(r'\{[\s\S]*\}').firstMatch(raw);
+    if (match == null) {
+      return _fallbackLessonPlan(topic, chapter, classHours);
+    }
+    try {
+      return jsonDecode(match.group(0)!) as Map<String, dynamic>;
+    } catch (_) {
+      return _fallbackLessonPlan(topic, chapter, classHours);
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Step 2: 内容生成 — Markdown
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// 从教案生成完整的 Markdown 文档
+  String generateMarkdown(Map<String, dynamic> lessonPlan) {
+    final buf = StringBuffer();
+    final title = lessonPlan['title'] ?? '教学课件';
+    final chapter = lessonPlan['chapter'] ?? '';
+    final classHours = lessonPlan['classHours'] ?? 2;
+
+    // 标题
+    buf.writeln('# $title');
+    if (chapter.toString().isNotEmpty) buf.writeln('\n> $chapter');
+    buf.writeln('\n**课时**: ${classHours}课时\n');
+
+    // 教学目标
+    final objectives = lessonPlan['objectives'] as List? ?? [];
+    if (objectives.isNotEmpty) {
+      buf.writeln('## 一、教学目标\n');
+      for (var i = 0; i < objectives.length; i++) {
+        buf.writeln('${i + 1}. ${objectives[i]}');
+      }
+      buf.writeln();
+    }
+
+    // 重点难点
+    final keyPoints = lessonPlan['keyPoints'] as List? ?? [];
+    final difficulties = lessonPlan['difficulties'] as List? ?? [];
+    if (keyPoints.isNotEmpty || difficulties.isNotEmpty) {
+      buf.writeln('## 二、重点与难点\n');
+      if (keyPoints.isNotEmpty) {
+        buf.writeln('### 教学重点');
+        for (final kp in keyPoints) {
+          buf.writeln('- $kp');
+        }
+        buf.writeln();
+      }
+      if (difficulties.isNotEmpty) {
+        buf.writeln('### 教学难点');
+        for (final d in difficulties) {
+          buf.writeln('- $d');
+        }
+        buf.writeln();
+      }
+    }
+
+    // 教学过程
+    final sections = lessonPlan['sections'] as List? ?? [];
+    if (sections.isNotEmpty) {
+      buf.writeln('## 三、教学过程\n');
+      for (var i = 0; i < sections.length; i++) {
+        final s = sections[i] as Map<String, dynamic>;
+        buf.writeln('### ${i + 1}. ${s['title'] ?? '环节${i + 1}'}');
+        buf.writeln('\n**时间**: ${s['duration'] ?? '—'}');
+        if (s['activities'] != null) {
+          buf.writeln('\n**教学活动**: ${s['activities']}');
+        }
+        buf.writeln('\n${s['content'] ?? ''}');
+        if (s['codeExample'] != null &&
+            s['codeExample'].toString().isNotEmpty) {
+          buf.writeln('\n```java');
+          buf.writeln(s['codeExample']);
+          buf.writeln('```');
+        }
+        if (s['notes'] != null && s['notes'].toString().isNotEmpty) {
+          buf.writeln('\n> 💡 **教师备注**: ${s['notes']}');
+        }
+        buf.writeln();
+      }
+    }
+
+    // 实验项目
+    final experiments = lessonPlan['experiments'] as List? ?? [];
+    if (experiments.isNotEmpty) {
+      buf.writeln('## 四、实验项目\n');
+      for (var i = 0; i < experiments.length; i++) {
+        final e = experiments[i] as Map<String, dynamic>;
+        buf.writeln('### 实验${i + 1}: ${e['name'] ?? ''}');
+        buf.writeln('\n**目标**: ${e['objective'] ?? ''}');
+        final steps = e['steps'] as List? ?? [];
+        if (steps.isNotEmpty) {
+          buf.writeln('\n**实验步骤**:');
+          for (var j = 0; j < steps.length; j++) {
+            buf.writeln('${j + 1}. ${steps[j]}');
+          }
+        }
+        buf.writeln('\n**提交物**: ${e['deliverables'] ?? ''}');
+        buf.writeln();
+      }
+    }
+
+    // UML 图表说明
+    final umlDiagrams = lessonPlan['umlDiagrams'] as List? ?? [];
+    if (umlDiagrams.isNotEmpty) {
+      buf.writeln('## 五、UML 图表\n');
+      for (final uml in umlDiagrams) {
+        final u = uml as Map<String, dynamic>;
+        buf.writeln('### ${u['title'] ?? 'UML图'}');
+        buf.writeln('\n- **类型**: ${u['type'] ?? 'class'}');
+        buf.writeln('- **说明**: ${u['description'] ?? ''}');
+        buf.writeln();
+      }
+    }
+
+    // 课后作业
+    if (lessonPlan['homework'] != null) {
+      buf.writeln('## 六、课后作业\n');
+      buf.writeln(lessonPlan['homework']);
+      buf.writeln();
+    }
+
+    // 参考资料
+    final refs = lessonPlan['references'] as List? ?? [];
+    if (refs.isNotEmpty) {
+      buf.writeln('## 参考资料\n');
+      for (var i = 0; i < refs.length; i++) {
+        buf.writeln('${i + 1}. ${refs[i]}');
+      }
+    }
+
+    buf.writeln('\n---\n*由 AI 课件工坊自动生成*');
+    return buf.toString();
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Step 2b: 从代码生成 PUML
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// 从 Java/Dart/Kotlin 源代码分析并生成 PlantUML 代码
+  Future<String> generatePumlFromCode({
+    required String code,
+    required String diagramType, // class, sequence, activity
+    String? language,
+    String? context,
+  }) async {
+    const system = '''你是一位资深软件架构师和 UML 专家。
+根据提供的源代码，分析其结构并生成对应的 PlantUML 代码。
+只返回 @startuml ... @enduml 代码块，不要其他内容。
+使用中文标签和注释。''';
+
+    final typeDesc = {
+          'class': '类图（展示类的属性、方法和类之间的关系）',
+          'sequence': '时序图（展示方法调用的交互流程）',
+          'activity': '活动图（展示业务逻辑的流程）',
+          'component': '组件图（展示模块间的依赖关系）',
+        }[diagramType] ??
+        '类图';
+
+    final prompt = '''
+请分析以下${language ?? ''}源代码，生成一个 $typeDesc 的 PlantUML 代码：
+
+```
+$code
+```
+
+${context != null ? '上下文说明: $context' : ''}
+
+要求：
+- 使用中文标签
+- 包含完整的 @startuml 和 @enduml
+- 类图需包含属性和方法
+- 时序图需展示主要交互流程
+- 风格专业简洁、配色美观
+''';
+
+    final raw = await _aiService.chat(
+      [{'role': 'user', 'content': prompt}],
+      systemPrompt: system,
+    );
+    final match = RegExp(r'@startuml[\s\S]*?@enduml').firstMatch(raw);
+    return match?.group(0) ?? raw;
+  }
+
+  /// 生成教案中所有 UML 图的 PUML 代码
+  Future<List<Map<String, String>>> generateAllPuml(
+    Map<String, dynamic> lessonPlan,
+  ) async {
+    final umlDiagrams = lessonPlan['umlDiagrams'] as List? ?? [];
+    final results = <Map<String, String>>[];
+
+    for (final uml in umlDiagrams) {
+      final u = uml as Map<String, dynamic>;
+      final type = u['type']?.toString() ?? 'class';
+      final title = u['title']?.toString() ?? 'UML图';
+      final desc = u['description']?.toString() ?? '';
+
+      try {
+        final puml = await _aiService.generatePuml(
+          '$title - $desc',
+          diagramType: type,
+        );
+        results.add({
+          'title': title,
+          'type': type,
+          'puml': puml,
+        });
+      } catch (e) {
+        debugPrint('CoursewareService: generatePuml failed for $title: $e');
+      }
+    }
+    return results;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Step 2c: PUML → PNG 渲染
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// 渲染 PUML 代码为 PNG 图片（通过 Kroki 或 PlantUML 服务）
+  Future<Uint8List?> renderPumlToPng(String pumlCode) async {
+    try {
+      final service = PlantUmlService();
+      return await service.render(pumlCode);
+    } catch (e) {
+      debugPrint('CoursewareService: renderPumlToPng error: $e');
+      return null;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Step 3: 导出 — PDF 增强版（含 UML 图）
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// 从教案生成增强版 PDF（含 UML 图）
+  Future<String?> generateEnhancedPdf({
+    required Map<String, dynamic> lessonPlan,
+    List<Uint8List>? umlImages,
+  }) async {
+    if (kIsWeb) return null;
+
+    try {
+      final pdf = pw.Document();
+      final title = lessonPlan['title']?.toString() ?? '教学课件';
+      final chapter = lessonPlan['chapter']?.toString();
+
+      // 加载中文字体（常规 + 粗体）
+      pw.Font? font;
+      pw.Font? boldFont;
+      try {
+        final fontData =
+            await rootBundle.load('assets/fonts/NotoSansSC-Regular.ttf');
+        font = pw.Font.ttf(fontData);
+      } catch (_) {}
+      try {
+        final boldFontData =
+            await rootBundle.load('assets/fonts/NotoSansSC-Bold.ttf');
+        boldFont = pw.Font.ttf(boldFontData);
+      } catch (_) {
+        // 粗体字体不可用时回退到常规字体
+        boldFont = font;
+      }
+
+      final theme = font != null
+          ? pw.ThemeData.withFont(base: font, bold: boldFont ?? font)
+          : null;
+
+      // ─── 封面页 ──────────────────────────────────────────────────────
+      pdf.addPage(pw.Page(
+        pageFormat: PdfPageFormat.a4.landscape,
+        theme: theme,
+        build: (_) => pw.Container(
+          decoration: pw.BoxDecoration(
+            gradient: pw.LinearGradient(
+              colors: [
+                PdfColor.fromInt(0xFF1677FF),
+                PdfColor.fromInt(0xFF0958D9),
+              ],
+            ),
+          ),
+          child: pw.Center(
+            child: pw.Column(
+              mainAxisAlignment: pw.MainAxisAlignment.center,
+              children: [
+                pw.Text(title,
+                    style: pw.TextStyle(
+                        font: font,
+                        fontSize: 36,
+                        color: PdfColors.white,
+                        fontWeight: pw.FontWeight.bold)),
+                if (chapter != null) ...[
+                  pw.SizedBox(height: 16),
+                  pw.Text(chapter,
+                      style: pw.TextStyle(
+                          font: font,
+                          fontSize: 20,
+                          color: const PdfColor(1, 1, 1, 0.7))),
+                ],
+                pw.SizedBox(height: 8),
+                pw.Text(
+                    '${lessonPlan['classHours'] ?? 2} 课时',
+                    style: pw.TextStyle(
+                        font: font,
+                        fontSize: 16,
+                        color: const PdfColor(1, 1, 1, 0.5))),
+                pw.SizedBox(height: 32),
+                pw.Text('移动应用开发知识图谱教学系统',
+                    style: pw.TextStyle(
+                        font: font,
+                        fontSize: 14,
+                        color: const PdfColor(1, 1, 1, 0.5))),
+              ],
+            ),
+          ),
+        ),
+      ));
+
+      // ─── 教学目标页 ──────────────────────────────────────────────────
+      final objectives = lessonPlan['objectives'] as List? ?? [];
+      final keyPoints = lessonPlan['keyPoints'] as List? ?? [];
+      final difficulties = lessonPlan['difficulties'] as List? ?? [];
+
+      if (objectives.isNotEmpty) {
+        pdf.addPage(_buildContentPage(
+          theme: theme,
+          font: font,
+          title: '教学目标',
+          items: objectives.map((o) => '• $o').toList().cast<String>(),
+          extras: [
+            if (keyPoints.isNotEmpty)
+              '重点: ${keyPoints.join(', ')}',
+            if (difficulties.isNotEmpty)
+              '难点: ${difficulties.join(', ')}',
+          ],
+          slideNum: 2,
+        ));
+      }
+
+      // ─── 教学过程 — 每个 section 一页 ──────────────────────────────
+      final sections = lessonPlan['sections'] as List? ?? [];
+      for (var i = 0; i < sections.length; i++) {
+        final s = sections[i] as Map<String, dynamic>;
+        final items = <String>[];
+        if (s['content'] != null) items.add(s['content'].toString());
+        if (s['activities'] != null) {
+          items.add('教学活动: ${s['activities']}');
+        }
+        if (s['codeExample'] != null &&
+            s['codeExample'].toString().isNotEmpty) {
+          items.add('代码示例: ${s['codeExample']}');
+        }
+
+        pdf.addPage(_buildContentPage(
+          theme: theme,
+          font: font,
+          title: s['title']?.toString() ?? '环节 ${i + 1}',
+          subtitle: '时间: ${s['duration'] ?? '—'}',
+          items: items,
+          notes: s['notes']?.toString(),
+          slideNum: 3 + i,
+        ));
+      }
+
+      // ─── UML 图表页 ─────────────────────────────────────────────────
+      if (umlImages != null) {
+        for (var i = 0; i < umlImages.length; i++) {
+          final umlList = lessonPlan['umlDiagrams'] as List? ?? [];
+          final umlTitle = i < umlList.length
+              ? (umlList[i] as Map)['title']?.toString() ?? 'UML图 ${i + 1}'
+              : 'UML图 ${i + 1}';
+
+          pdf.addPage(pw.Page(
+            pageFormat: PdfPageFormat.a4.landscape,
+            theme: theme,
+            build: (_) => pw.Container(
+              padding: const pw.EdgeInsets.all(32),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(umlTitle,
+                      style: pw.TextStyle(
+                          font: font,
+                          fontSize: 24,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColor.fromInt(0xFF1677FF))),
+                  pw.SizedBox(height: 16),
+                  pw.Expanded(
+                    child: pw.Center(
+                      child: pw.Image(
+                        pw.MemoryImage(umlImages[i]),
+                        fit: pw.BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ));
+        }
+      }
+
+      // ─── 实验项目页 ─────────────────────────────────────────────────
+      final experiments = lessonPlan['experiments'] as List? ?? [];
+      for (var i = 0; i < experiments.length; i++) {
+        final e = experiments[i] as Map<String, dynamic>;
+        final steps = (e['steps'] as List? ?? [])
+            .asMap()
+            .entries
+            .map((entry) => '${entry.key + 1}. ${entry.value}')
+            .toList()
+            .cast<String>();
+        pdf.addPage(_buildContentPage(
+          theme: theme,
+          font: font,
+          title: '实验: ${e['name'] ?? '实验${i + 1}'}',
+          subtitle: '目标: ${e['objective'] ?? ''}',
+          items: steps,
+          notes: '提交物: ${e['deliverables'] ?? ''}',
+          slideNum: 3 + sections.length + (umlImages?.length ?? 0) + i,
+        ));
+      }
+
+      // ─── 总结页 ─────────────────────────────────────────────────────
+      pdf.addPage(pw.Page(
+        pageFormat: PdfPageFormat.a4.landscape,
+        theme: theme,
+        build: (_) => pw.Container(
+          decoration: pw.BoxDecoration(
+            gradient: pw.LinearGradient(
+              colors: [
+                PdfColor.fromInt(0xFF0958D9),
+                PdfColor.fromInt(0xFF1677FF),
+              ],
+            ),
+          ),
+          child: pw.Center(
+            child: pw.Column(
+              mainAxisAlignment: pw.MainAxisAlignment.center,
+              children: [
+                pw.Text('课后作业',
+                    style: pw.TextStyle(
+                        font: font,
+                        fontSize: 28,
+                        color: PdfColors.white,
+                        fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 20),
+                pw.Text(
+                  lessonPlan['homework']?.toString() ?? '无',
+                  style: pw.TextStyle(
+                      font: font,
+                      fontSize: 16,
+                      color: const PdfColor(1, 1, 1, 0.8)),
+                  textAlign: pw.TextAlign.center,
+                ),
+                pw.SizedBox(height: 40),
+                pw.Text('谢谢！',
+                    style: pw.TextStyle(
+                        font: font,
+                        fontSize: 36,
+                        color: PdfColors.white,
+                        fontWeight: pw.FontWeight.bold)),
+              ],
+            ),
+          ),
+        ),
+      ));
+
+      // ─── 保存 ──────────────────────────────────────────────────────
+      final pdfBytes = await pdf.save();
+      final dir = await getApplicationDocumentsDirectory();
+      final coursewareDir =
+          Directory('${dir.path}/courseware');
+      if (!coursewareDir.existsSync()) {
+        coursewareDir.createSync(recursive: true);
+      }
+
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final safeTitle =
+          title.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
+      final filePath =
+          '${coursewareDir.path}/${safeTitle}_$timestamp.pdf';
+      final file = File(filePath);
+      await file.writeAsBytes(pdfBytes);
+
+      // 保存到素材库
+      final material = MaterialModel(
+        title: '$title - 教案课件',
+        type: 'pdf',
+        filePath: filePath,
+        chapter: chapter,
+        createdAt: DateTime.now().toIso8601String(),
+        size: pdfBytes.length,
+      );
+      await _materialDao.insert(material);
+
+      return filePath;
+    } catch (e) {
+      debugPrint('CoursewareService: generateEnhancedPdf error: $e');
+      return null;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Step 3b: 导出 Markdown 文件
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// 将 Markdown 内容保存为文件
+  Future<String?> exportMarkdownFile({
+    required String markdown,
+    required String title,
+    String? chapter,
+  }) async {
+    if (kIsWeb) return null;
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final coursewareDir = Directory('${dir.path}/courseware');
+      if (!coursewareDir.existsSync()) {
+        coursewareDir.createSync(recursive: true);
+      }
+
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final safeTitle =
+          title.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
+      final filePath =
+          '${coursewareDir.path}/${safeTitle}_$timestamp.md';
+      final file = File(filePath);
+      await file.writeAsString(markdown, encoding: utf8);
+
+      // 保存到素材库
+      final material = MaterialModel(
+        title: '$title - 教案文档',
+        type: 'script',
+        content: markdown,
+        filePath: filePath,
+        chapter: chapter,
+        createdAt: DateTime.now().toIso8601String(),
+        size: utf8.encode(markdown).length,
+      );
+      await _materialDao.insert(material);
+
+      return filePath;
+    } catch (e) {
+      debugPrint('CoursewareService: exportMarkdownFile error: $e');
+      return null;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Step 4: 生成讲解脚本（TTS 文本）
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// 从教案生成 TTS 朗读脚本（分段，每段对应一张幻灯片）
+  Future<List<Map<String, String>>> generateNarrationScripts(
+    Map<String, dynamic> lessonPlan,
+  ) async {
+    const system = '''你是一位专业的移动应用开发课程讲师，正在录制教学视频。
+请用中文、口语化、清晰的语言生成教学视频旁白脚本。
+回复必须是合法的 JSON 数组。''';
+
+    final title = lessonPlan['title'] ?? '';
+    final sections = lessonPlan['sections'] as List? ?? [];
+    final sectionTitles = sections
+        .map((s) => (s as Map)['title']?.toString() ?? '')
+        .join(', ');
+
+    final prompt = '''
+为教案"$title"生成视频旁白脚本。教案包含以下教学环节: $sectionTitles
+
+请为每个幻灯片（含封面、每个教学环节、实验说明、总结）生成一段旁白。
+返回 JSON 数组，格式:
+[
+  {"slide": "封面", "narration": "同学们好，今天我们学习..."},
+  {"slide": "教学目标", "narration": "本节课的教学目标包括..."},
+  ...
+]
+
+要求:
+- 每段旁白 100-200 字，适合 TTS 朗读
+- 语言口语化、节奏自然
+- 仅返回 JSON，不要其他文字
+''';
+
+    final raw = await _aiService.chat(
+      [{'role': 'user', 'content': prompt}],
+      systemPrompt: system,
+    );
+
+    final match = RegExp(r'\[[\s\S]*\]').firstMatch(raw);
+    if (match == null) return [];
+    try {
+      final list = jsonDecode(match.group(0)!) as List;
+      return list
+          .map((item) => {
+                'slide': (item as Map)['slide']?.toString() ?? '',
+                'narration': item['narration']?.toString() ?? '',
+              })
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 辅助：保存 UML 图片
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// 保存 UML PNG 图片到课件目录
+  Future<String?> saveUmlImage({
+    required Uint8List imageBytes,
+    required String title,
+  }) async {
+    if (kIsWeb) return null;
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final umlDir = Directory('${dir.path}/courseware/uml');
+      if (!umlDir.existsSync()) {
+        umlDir.createSync(recursive: true);
+      }
+
+      final safeTitle =
+          title.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final filePath = '${umlDir.path}/${safeTitle}_$timestamp.png';
+      final file = File(filePath);
+      await file.writeAsBytes(imageBytes);
+      return filePath;
+    } catch (e) {
+      debugPrint('CoursewareService: saveUmlImage error: $e');
+      return null;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 获取课件目录
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  Future<String> getCoursewareDir() async {
+    final dir = await getApplicationDocumentsDirectory();
+    final coursewareDir = Directory('${dir.path}/courseware');
+    if (!coursewareDir.existsSync()) {
+      coursewareDir.createSync(recursive: true);
+    }
+    return coursewareDir.path;
+  }
+
+  // ─── 内部 ──────────────────────────────────────────────────────────────────
+
+  /// 构建单个内容项的 widget（根据内容类型智能选择样式）
+  pw.Widget _buildContentItem(String item, pw.Font? font) {
+    final trimmed = item.trim();
+
+    // ── 代码示例：灰色背景 + 等宽小字体 ──
+    if (trimmed.startsWith('代码示例:') || trimmed.startsWith('代码示例：')) {
+      final code = trimmed.replaceFirst(RegExp(r'^代码示例[：:]'), '').trim();
+      return pw.Padding(
+        padding: const pw.EdgeInsets.only(bottom: 14),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Container(
+              padding:
+                  const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: const pw.BoxDecoration(
+                color: PdfColor.fromInt(0xFF424242),
+                borderRadius:
+                    pw.BorderRadius.only(
+                      topLeft: pw.Radius.circular(4),
+                      topRight: pw.Radius.circular(4)),
+              ),
+              child: pw.Text('Code',
+                  style: pw.TextStyle(
+                      font: font,
+                      fontSize: 9,
+                      color: PdfColors.white)),
+            ),
+            pw.Container(
+              width: double.infinity,
+              padding: const pw.EdgeInsets.all(12),
+              decoration: pw.BoxDecoration(
+                color: PdfColor.fromInt(0xFFF5F5F5),
+                border: pw.Border.all(
+                    color: PdfColor.fromInt(0xFFE0E0E0), width: 0.5),
+                borderRadius: const pw.BorderRadius.only(
+                    topRight: pw.Radius.circular(4),
+                    bottomLeft: pw.Radius.circular(4),
+                    bottomRight: pw.Radius.circular(4)),
+              ),
+              child: pw.Text(code,
+                  style: pw.TextStyle(
+                      font: pw.Font.courier(),
+                      fontSize: 11,
+                      color: PdfColor.fromInt(0xFF37474F),
+                      lineSpacing: 4)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // ── 教学活动：带强调色前缀 ──
+    if (trimmed.startsWith('教学活动:') || trimmed.startsWith('教学活动：')) {
+      final activity =
+          trimmed.replaceFirst(RegExp(r'^教学活动[：:]'), '').trim();
+      return pw.Padding(
+        padding: const pw.EdgeInsets.only(bottom: 12),
+        child: pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Container(
+              margin: const pw.EdgeInsets.only(top: 2, right: 8),
+              width: 18,
+              height: 18,
+              decoration: pw.BoxDecoration(
+                color: PdfColor.fromInt(0xFFFF9800),
+                borderRadius:
+                    const pw.BorderRadius.all(pw.Radius.circular(9)),
+              ),
+              child: pw.Center(
+                child: pw.Text('▶',
+                    style: pw.TextStyle(
+                        font: font,
+                        fontSize: 9,
+                        color: PdfColors.white)),
+              ),
+            ),
+            pw.Expanded(
+              child: pw.RichText(
+                text: pw.TextSpan(
+                  children: [
+                    pw.TextSpan(
+                      text: '教学活动  ',
+                      style: pw.TextStyle(
+                          font: font,
+                          fontSize: 13,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColor.fromInt(0xFFE65100)),
+                    ),
+                    pw.TextSpan(
+                      text: activity,
+                      style: pw.TextStyle(
+                          font: font,
+                          fontSize: 13,
+                          color: PdfColor.fromInt(0xFF424242)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // ── 表格内容：检测以 "|" 开头的行并渲染为 Table ──
+    if (trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.split('|').length >= 4) {
+      final cells = trimmed
+          .split('|')
+          .map((c) => c.trim())
+          .where((c) => c.isNotEmpty)
+          .toList();
+      if (cells.length >= 2) {
+        return pw.Padding(
+          padding: const pw.EdgeInsets.only(bottom: 12),
+          child: pw.Table(
+            border: pw.TableBorder.all(
+                color: PdfColor.fromInt(0xFFBDBDBD), width: 0.5),
+            children: [
+              pw.TableRow(
+                decoration:
+                    const pw.BoxDecoration(color: PdfColor.fromInt(0xFFE3F2FD)),
+                children: cells
+                    .map((c) => pw.Padding(
+                          padding: const pw.EdgeInsets.all(6),
+                          child: pw.Text(c,
+                              style: pw.TextStyle(
+                                  font: font,
+                                  fontSize: 11,
+                                  fontWeight: pw.FontWeight.bold,
+                                  color: PdfColor.fromInt(0xFF1565C0))),
+                        ))
+                    .toList(),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+
+    // ── 普通内容：添加圆点前缀 ──
+    final bool alreadyHasBullet = trimmed.startsWith('•') ||
+        trimmed.startsWith('-') ||
+        trimmed.startsWith('·') ||
+        RegExp(r'^\d+[.、]').hasMatch(trimmed);
+    final String displayText = alreadyHasBullet ? trimmed : '•  $trimmed';
+
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(bottom: 10),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.SizedBox(width: 4),
+          pw.Expanded(
+            child: pw.Text(displayText,
+                style: pw.TextStyle(
+                    font: font,
+                    fontSize: 14,
+                    color: PdfColor.fromInt(0xFF333333),
+                    lineSpacing: 3)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  pw.Page _buildContentPage({
+    required pw.ThemeData? theme,
+    required pw.Font? font,
+    required String title,
+    String? subtitle,
+    required List<String> items,
+    List<String>? extras,
+    String? notes,
+    int slideNum = 1,
+  }) {
+    return pw.Page(
+      pageFormat: PdfPageFormat.a4.landscape,
+      theme: theme,
+      build: (_) => pw.Container(
+        padding: const pw.EdgeInsets.all(32),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            // 标题
+            pw.Container(
+              padding: const pw.EdgeInsets.only(bottom: 10),
+              decoration: pw.BoxDecoration(
+                border: pw.Border(
+                  bottom: pw.BorderSide(
+                    color: PdfColor.fromInt(0xFF1677FF),
+                    width: 2,
+                  ),
+                ),
+              ),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Expanded(
+                    child: pw.Text(title,
+                        style: pw.TextStyle(
+                            font: font,
+                            fontSize: 24,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColor.fromInt(0xFF1677FF))),
+                  ),
+                  pw.Text('$slideNum',
+                      style: pw.TextStyle(
+                          font: font,
+                          fontSize: 12,
+                          color: PdfColors.grey)),
+                ],
+              ),
+            ),
+            if (subtitle != null) ...[
+              pw.SizedBox(height: 10),
+              pw.Text(subtitle,
+                  style: pw.TextStyle(
+                      font: font,
+                      fontSize: 14,
+                      color: PdfColors.grey700)),
+            ],
+            pw.SizedBox(height: 20),
+            // 内容（智能样式渲染）
+            ...items.map((item) => _buildContentItem(item, font)),
+            pw.SizedBox(height: 8),
+            // 额外信息
+            if (extras != null) ...[
+              pw.Divider(
+                  color: PdfColor.fromInt(0xFFE0E0E0), thickness: 0.5),
+              pw.SizedBox(height: 6),
+              ...extras.map((e) => pw.Padding(
+                    padding: const pw.EdgeInsets.only(bottom: 6),
+                    child: pw.Text(e,
+                        style: pw.TextStyle(
+                            font: font,
+                            fontSize: 12,
+                            color: PdfColors.grey700,
+                            fontWeight: pw.FontWeight.bold)),
+                  )),
+            ],
+            pw.Spacer(),
+            // 备注
+            if (notes != null && notes.isNotEmpty)
+              pw.Container(
+                width: double.infinity,
+                padding: const pw.EdgeInsets.all(10),
+                decoration: pw.BoxDecoration(
+                  color: PdfColor.fromInt(0xFFF5F7FA),
+                  borderRadius:
+                      const pw.BorderRadius.all(pw.Radius.circular(6)),
+                  border: pw.Border(
+                    left: pw.BorderSide(
+                        color: PdfColor.fromInt(0xFF1677FF), width: 3),
+                  ),
+                ),
+                child: pw.Text('💡 $notes',
+                    style: pw.TextStyle(
+                        font: font,
+                        fontSize: 10,
+                        color: PdfColors.grey700)),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Map<String, dynamic> _fallbackLessonPlan(
+      String topic, String? chapter, int hours) {
+    return {
+      'title': topic,
+      'chapter': chapter ?? '',
+      'classHours': hours,
+      'objectives': ['了解$topic的基本概念', '掌握$topic的核心技术', '能够实践$topic相关操作'],
+      'keyPoints': ['$topic核心概念'],
+      'difficulties': ['$topic高级应用'],
+      'sections': [
+        {
+          'title': '课程导入',
+          'duration': '10分钟',
+          'content': '介绍$topic的背景和重要性',
+          'activities': '讲授+讨论',
+          'notes': ''
+        },
+        {
+          'title': '核心讲解',
+          'duration': '${hours * 45 - 20}分钟',
+          'content': '详细讲解$topic的核心内容',
+          'activities': '讲授+演示',
+          'notes': ''
+        },
+        {
+          'title': '总结回顾',
+          'duration': '10分钟',
+          'content': '总结本节课重点',
+          'activities': '讨论+答疑',
+          'notes': ''
+        },
+      ],
+      'experiments': [],
+      'umlDiagrams': [],
+      'homework': '复习$topic相关内容',
+      'references': [],
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MD 文件解析 → 幻灯片数据
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// 解析教学 Markdown 文件为幻灯片数据列表
+  /// 支持格式: ### 幻灯片N：标题 → 自动拆分为独立幻灯片
+  List<Map<String, dynamic>> parseMarkdownToSlides(String markdown) {
+    final slides = <Map<String, dynamic>>[];
+    final lines = markdown.split('\n');
+
+    String? currentTitle;
+    String? currentSubtitle;
+    final currentBullets = <String>[];
+    final currentCode = <String>[];
+    String? currentNotes;
+    bool inCodeBlock = false;
+    String codeLanguage = '';
+
+    void flushSlide() {
+      if (currentTitle != null) {
+        final slide = <String, dynamic>{
+          'title': currentTitle,
+          if (currentSubtitle != null) 'subtitle': currentSubtitle,
+          'bullets':
+              List<String>.from(currentBullets.where((b) => b.isNotEmpty)),
+          if (currentCode.isNotEmpty)
+            'code': currentCode.join('\n'),
+          if (codeLanguage.isNotEmpty) 'codeLanguage': codeLanguage,
+          if (currentNotes != null) 'notes': currentNotes,
+        };
+        slides.add(slide);
+      }
+      currentTitle = null;
+      currentSubtitle = null;
+      currentBullets.clear();
+      currentCode.clear();
+      currentNotes = null;
+      codeLanguage = '';
+    }
+
+    for (var i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      final trimmed = line.trim();
+
+      // 代码块
+      if (trimmed.startsWith('```')) {
+        if (inCodeBlock) {
+          inCodeBlock = false;
+        } else {
+          inCodeBlock = true;
+          codeLanguage = trimmed.length > 3
+              ? trimmed.substring(3).trim()
+              : '';
+        }
+        continue;
+      }
+
+      if (inCodeBlock) {
+        currentCode.add(line);
+        continue;
+      }
+
+      // 幻灯片标题: ### 幻灯片N：xxx
+      final slideMatch =
+          RegExp(r'^###\s*幻灯片\d+[：:]\s*(.+)$').firstMatch(trimmed);
+      if (slideMatch != null) {
+        flushSlide();
+        currentTitle = slideMatch.group(1)!.trim();
+        continue;
+      }
+
+      // 标题行: - **标题**：xxx
+      final titleMatch =
+          RegExp(r'^-\s*\*\*标题\*\*[：:]\s*(.+)$').firstMatch(trimmed);
+      if (titleMatch != null) {
+        currentSubtitle = titleMatch.group(1)!.trim();
+        continue;
+      }
+
+      // 章节标题: # or ## (作为新幻灯片)
+      if (trimmed.startsWith('## ') && !trimmed.startsWith('### ')) {
+        final title = trimmed.replaceFirst(RegExp(r'^##\s+'), '');
+        if (title.startsWith('学前测验')) {
+          // 学前测验 → 生成测验幻灯片（不跳过）
+          flushSlide();
+          _parseQuizSection(lines, i, slides);
+        } else if (!title.startsWith('课件')) {
+          flushSlide();
+          currentTitle = title;
+        }
+        continue;
+      }
+      // # 标题只有后续有内容才创建幻灯片，避免空页
+      if (trimmed.startsWith('# ')) {
+        // 向后看是否紧跟 ### 幻灯片 或 ## 章节 → 如果是则跳过此 # 标题
+        bool hasOwnContent = false;
+        for (var j = i + 1; j < lines.length; j++) {
+          final next = lines[j].trim();
+          if (next.isEmpty) continue;
+          if (next.startsWith('### ') || next.startsWith('## ')) break;
+          hasOwnContent = true;
+          break;
+        }
+        if (hasOwnContent) {
+          final title = trimmed.replaceFirst(RegExp(r'^#\s+'), '');
+          flushSlide();
+          currentTitle = title;
+        }
+        continue;
+      }
+
+      // 加粗标题行: - **XXX**：(作为子标题)
+      final boldLabelMatch =
+          RegExp(r'^-?\s*\*\*(.+?)\*\*[：:]?\s*$').firstMatch(trimmed);
+      if (boldLabelMatch != null && currentTitle != null) {
+        currentBullets.add('【${boldLabelMatch.group(1)}】');
+        continue;
+      }
+
+      // 普通列表项
+      final bulletMatch =
+          RegExp(r'^[-*]\s+(.+)$').firstMatch(trimmed);
+      if (bulletMatch != null && currentTitle != null) {
+        var text = bulletMatch.group(1)!;
+        // 清理 Markdown 加粗
+        text = text.replaceAll(RegExp(r'\*\*(.+?)\*\*'), '\$1');
+        currentBullets.add(text);
+        continue;
+      }
+
+      // 缩进列表项
+      final indentMatch =
+          RegExp(r'^\s{2,}[-*]\s+(.+)$').firstMatch(line);
+      if (indentMatch != null && currentTitle != null) {
+        var text = indentMatch.group(1)!;
+        text = text.replaceAll(RegExp(r'\*\*(.+?)\*\*'), '\$1');
+        currentBullets.add('  · $text');
+        continue;
+      }
+
+      // 表格行
+      if (trimmed.startsWith('|') && currentTitle != null) {
+        if (!trimmed.contains('---')) {
+          currentBullets.add(trimmed);
+        }
+        continue;
+      }
+    }
+    flushSlide();
+    return slides;
+  }
+
+  /// 解析学前测验章节，生成测验幻灯片
+  void _parseQuizSection(
+    List<String> lines,
+    int startIdx,
+    List<Map<String, dynamic>> slides,
+  ) {
+    // 收集测验题目
+    final questions = <Map<String, String>>[];
+    Map<String, String>? currentQ;
+    final buffer = StringBuffer();
+
+    for (var i = startIdx + 1; i < lines.length; i++) {
+      final trimmed = lines[i].trim();
+      if (trimmed.isEmpty) continue;
+      // 遇到下一个 ## 或 ### 标题就停止
+      if (trimmed.startsWith('## ') || trimmed.startsWith('### ')) break;
+
+      // 题目行: 1. / 2. / 3. etc.
+      final qMatch = RegExp(r'^(\d+)\.\s+(.+)$').firstMatch(trimmed);
+      if (qMatch != null) {
+        if (currentQ != null) questions.add(currentQ);
+        currentQ = {'question': '${qMatch.group(1)}. ${qMatch.group(2)}'};
+        buffer.clear();
+        continue;
+      }
+
+      // 选项行: A) / A. / - A.
+      final optMatch =
+          RegExp(r'^[-\s]*([A-D])[.)]\s*(.+)$').firstMatch(trimmed);
+      if (optMatch != null && currentQ != null) {
+        buffer.write('${optMatch.group(1)}. ${optMatch.group(2)}  ');
+        currentQ!['options'] = buffer.toString();
+        continue;
+      }
+
+      // 答案行
+      if (trimmed.contains('答案') && currentQ != null) {
+        currentQ!['answer'] = trimmed;
+        continue;
+      }
+    }
+    if (currentQ != null) questions.add(currentQ);
+
+    if (questions.isEmpty) return;
+
+    // 每 2-3 道题生成一页幻灯片
+    const perSlide = 2;
+    for (var start = 0; start < questions.length; start += perSlide) {
+      final end = (start + perSlide).clamp(0, questions.length);
+      final chunk = questions.sublist(start, end);
+      final bullets = <String>[];
+      for (final q in chunk) {
+        bullets.add('【${q['question']}】');
+        if (q['options'] != null) {
+          for (final opt in q['options']!.trim().split(RegExp(r'\s{2,}'))) {
+            if (opt.trim().isNotEmpty) bullets.add('  · $opt');
+          }
+        }
+      }
+      final slideNum = (start ~/ perSlide) + 1;
+      final totalPages = (questions.length / perSlide).ceil();
+      slides.add({
+        'title': '学前测验 ($slideNum/$totalPages)',
+        'subtitle': '请思考以下问题',
+        'bullets': bullets,
+        'notes': chunk.map((q) => q['answer'] ?? '').join('\n'),
+      });
+    }
+  }
+
+  /// 从 MD 文件路径读取并解析
+  Future<List<Map<String, dynamic>>> parseMdFile(String filePath) async {
+    final file = File(filePath);
+    if (!file.existsSync()) return [];
+    final content = await file.readAsString(encoding: utf8);
+    return parseMarkdownToSlides(content);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PPTX 生成 (via python-pptx)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// 检查 python-pptx 是否安装
+  Future<bool> isPythonPptxInstalled() async {
+    if (kIsWeb) return false;
+    try {
+      final result = await Process.run(
+        'pip', ['show', 'python-pptx'],
+        runInShell: true,
+      );
+      return result.exitCode == 0;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// 生成 PPTX 课件
+  /// [slides] 每项: {title, subtitle?, bullets:[], code?, codeLanguage?, notes?}
+  Future<String?> generatePptx({
+    required String title,
+    required List<Map<String, dynamic>> slides,
+    String? chapter,
+  }) async {
+    if (kIsWeb) return null;
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final coursewareDir = Directory('${dir.path}/courseware');
+      if (!coursewareDir.existsSync()) {
+        coursewareDir.createSync(recursive: true);
+      }
+
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final safeTitle =
+          title.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
+      final outputPath =
+          '${coursewareDir.path}/${safeTitle}_$timestamp.pptx';
+
+      // 将幻灯片数据写为 JSON 临时文件
+      final tempDir = await getTemporaryDirectory();
+      final dataFile = File('${tempDir.path}/slides_data.json');
+      await dataFile.writeAsString(jsonEncode({
+        'title': title,
+        'chapter': chapter ?? '',
+        'slides': slides,
+        'output': outputPath.replaceAll('\\', '/'),
+      }));
+
+      // 生成 Python 脚本
+      final scriptFile = File('${tempDir.path}/gen_pptx.py');
+      await scriptFile.writeAsString(_pptxPythonScript());
+
+      final result = await Process.run(
+        'python',
+        [scriptFile.path, dataFile.path],
+        runInShell: true,
+      ).timeout(const Duration(seconds: 120));
+
+      // 清理
+      if (scriptFile.existsSync()) scriptFile.deleteSync();
+      if (dataFile.existsSync()) dataFile.deleteSync();
+
+      if (result.exitCode != 0) {
+        debugPrint('PPTX generation error: ${result.stderr}');
+        return null;
+      }
+
+      final outFile = File(outputPath);
+      if (!outFile.existsSync()) return null;
+
+      // 保存到素材库
+      final fileSize = outFile.lengthSync();
+      final material = MaterialModel(
+        title: '$title - PPT课件',
+        type: 'pptx',
+        filePath: outputPath,
+        chapter: chapter,
+        createdAt: DateTime.now().toIso8601String(),
+        size: fileSize,
+      );
+      await _materialDao.insert(material);
+
+      return outputPath;
+    } catch (e) {
+      debugPrint('CoursewareService: generatePptx error: $e');
+      return null;
+    }
+  }
+
+  /// 生成 python-pptx 的 Python 脚本（专业课件风格，CJK 字体 + 表格支持）
+  String _pptxPythonScript() {
+    return r'''
+import json, sys, os
+
+def main():
+    if len(sys.argv) < 2:
+        print("Usage: python gen_pptx.py data.json", file=sys.stderr)
+        sys.exit(1)
+
+    with open(sys.argv[1], 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    from pptx import Presentation
+    from pptx.util import Inches, Pt, Emu
+    from pptx.dml.color import RGBColor
+    from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+    from pptx.oxml.ns import qn
+
+    CJK_FONT = '\u5fae\u8f6f\u96c5\u9ed1'
+
+    prs = Presentation()
+    prs.slide_width = Inches(13.333)
+    prs.slide_height = Inches(7.5)
+
+    title = data.get('title', '\u6559\u5b66\u8bfe\u4ef6')
+    chapter = data.get('chapter', '')
+    slides_data = data.get('slides', [])
+    output = data.get('output', 'output.pptx')
+
+    # 颜色常量
+    BLUE = RGBColor(0x16, 0x77, 0xFF)
+    DARK_BLUE = RGBColor(0x09, 0x58, 0xD9)
+    WHITE = RGBColor(0xFF, 0xFF, 0xFF)
+    GRAY = RGBColor(0x66, 0x66, 0x66)
+    LIGHT_BG = RGBColor(0xF0, 0xF4, 0xF8)
+    LIGHT_BLUE_BG = RGBColor(0xE8, 0xF0, 0xFE)
+    CODE_BG = RGBColor(0x28, 0x2C, 0x34)
+    CODE_FG = RGBColor(0xAB, 0xB2, 0xBF)
+
+    def set_font(p, size, color, bold=False, name=CJK_FONT):
+        """Set font at both paragraph and run level for reliable CJK rendering."""
+        p.font.size = Pt(size)
+        p.font.color.rgb = color
+        p.font.bold = bold
+        p.font.name = name
+        # Also set on each run for portability
+        for run in p.runs:
+            run.font.size = Pt(size)
+            run.font.color.rgb = color
+            run.font.bold = bold
+            run.font.name = name
+            # Set East Asian font via XML for CJK
+            rPr = run._r.get_or_add_rPr()
+            ea = rPr.find(qn('a:ea'))
+            if ea is None:
+                ea = rPr.makeelement(qn('a:ea'), {})
+                rPr.append(ea)
+            ea.set('typeface', name)
+
+    def set_p_font(p, text, size, color, bold=False, name=CJK_FONT):
+        """Set paragraph text and apply font at run level (preferred method)."""
+        p.text = text
+        set_font(p, size, color, bold, name)
+
+    def add_bg(slide, color1=DARK_BLUE, color2=BLUE, solid=None):
+        bg = slide.background
+        fill = bg.fill
+        if solid:
+            fill.solid()
+            fill.fore_color.rgb = solid
+        else:
+            fill.solid()
+            fill.fore_color.rgb = color1
+
+    def parse_table_rows(rows):
+        """Parse | delimited table rows into list of lists."""
+        result = []
+        for r in rows:
+            cols = [c.strip() for c in r.strip().strip('|').split('|')]
+            if cols and any(c for c in cols):
+                result.append(cols)
+        return result
+
+    def add_table(slide, table_rows, left, top, width):
+        """Add a styled table to the slide from parsed table rows."""
+        try:
+            parsed = parse_table_rows(table_rows)
+            if not parsed:
+                return top
+            n_rows = len(parsed)
+            n_cols = max(len(r) for r in parsed)
+            # Pad rows
+            for r in parsed:
+                while len(r) < n_cols:
+                    r.append('')
+            row_h = Inches(0.42)
+            tbl_h = row_h * n_rows
+            col_w = Inches(width / n_cols)
+            table_shape = slide.shapes.add_table(
+                n_rows, n_cols,
+                Inches(left), Inches(top),
+                Inches(width), tbl_h
+            )
+            tbl = table_shape.table
+            # Set uniform column widths
+            for ci in range(n_cols):
+                tbl.columns[ci].width = col_w
+            # Style each cell
+            for ri, row in enumerate(parsed):
+                for ci, val in enumerate(row):
+                    cell = tbl.cell(ri, ci)
+                    cell.text = val
+                    cell.vertical_anchor = MSO_ANCHOR.MIDDLE
+                    p = cell.text_frame.paragraphs[0]
+                    p.alignment = PP_ALIGN.CENTER
+                    if ri == 0:
+                        set_font(p, 13, WHITE, bold=True)
+                        cell.fill.solid()
+                        cell.fill.fore_color.rgb = DARK_BLUE
+                    else:
+                        set_font(p, 12, RGBColor(0x33, 0x33, 0x33))
+                        if ri % 2 == 0:
+                            cell.fill.solid()
+                            cell.fill.fore_color.rgb = LIGHT_BG
+                        else:
+                            cell.fill.solid()
+                            cell.fill.fore_color.rgb = LIGHT_BLUE_BG
+                    cell.margin_left = Inches(0.08)
+                    cell.margin_right = Inches(0.08)
+                    cell.margin_top = Inches(0.04)
+                    cell.margin_bottom = Inches(0.04)
+            return top + (n_rows * 0.42) + 0.15
+        except Exception as e:
+            print(f"add_table error: {e}", file=sys.stderr)
+            return top
+
+    def build_auto_notes(s_title, subtitle, bullets):
+        """Auto-generate speaker notes from slide content."""
+        parts = []
+        parts.append(f'\u672c\u9875\uff1a{s_title}')
+        if subtitle:
+            parts.append(subtitle)
+        for b in bullets:
+            text = str(b)
+            if text.startswith('\u3010'):
+                parts.append(f'\n{text}')
+            elif text.startswith('|'):
+                continue
+            elif text.startswith('  \u00b7'):
+                parts.append(f'  {text.strip()}')
+            else:
+                parts.append(f'- {text}')
+        return '\n'.join(parts)
+
+    # ── 封面 ──────────────────────────────────────────────────
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    add_bg(slide, solid=DARK_BLUE)
+
+    tx = slide.shapes.add_textbox(Inches(1), Inches(2.2), Inches(11.3), Inches(1.5))
+    tf = tx.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
+    set_p_font(p, title, 44, WHITE, bold=True)
+    p.alignment = PP_ALIGN.CENTER
+
+    if chapter:
+        p2 = tf.add_paragraph()
+        set_p_font(p2, chapter, 22, RGBColor(0xBB, 0xCC, 0xFF))
+        p2.alignment = PP_ALIGN.CENTER
+        p2.space_before = Pt(12)
+
+    tx2 = slide.shapes.add_textbox(Inches(1), Inches(5.8), Inches(11.3), Inches(0.5))
+    tf2 = tx2.text_frame
+    p3 = tf2.paragraphs[0]
+    set_p_font(p3, '\u79fb\u52a8\u5e94\u7528\u5f00\u53d1\u77e5\u8bc6\u56fe\u8c31\u6559\u5b66\u7cfb\u7edf', 14, RGBColor(0x99, 0xAA, 0xDD))
+    p3.alignment = PP_ALIGN.CENTER
+
+    # ── 内容页 ────────────────────────────────────────────────
+    for idx, s in enumerate(slides_data):
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        add_bg(slide, solid=WHITE)
+
+        s_title = s.get('title', f'\u5e7b\u706f\u7247 {idx+1}')
+        subtitle = s.get('subtitle', '')
+        bullets = s.get('bullets', [])
+        code = s.get('code', '')
+        notes = s.get('notes', '')
+
+        # 顶部蓝色装饰条
+        bar = slide.shapes.add_shape(
+            1, Inches(0), Inches(0), prs.slide_width, Inches(0.08)
+        )
+        bar.fill.solid()
+        bar.fill.fore_color.rgb = BLUE
+        bar.line.fill.background()
+
+        # 标题
+        tx = slide.shapes.add_textbox(Inches(0.6), Inches(0.25), Inches(10), Inches(0.7))
+        tf = tx.text_frame
+        p = tf.paragraphs[0]
+        set_p_font(p, s_title, 28, DARK_BLUE, bold=True)
+
+        # 副标题
+        if subtitle:
+            tx_sub = slide.shapes.add_textbox(Inches(0.6), Inches(0.9), Inches(10), Inches(0.4))
+            tf_sub = tx_sub.text_frame
+            p_sub = tf_sub.paragraphs[0]
+            set_p_font(p_sub, subtitle, 16, GRAY)
+
+        # 页码
+        tx_pg = slide.shapes.add_textbox(Inches(12), Inches(0.3), Inches(1), Inches(0.4))
+        tf_pg = tx_pg.text_frame
+        p_pg = tf_pg.paragraphs[0]
+        set_p_font(p_pg, f'{idx+1}/{len(slides_data)}', 11, GRAY)
+        p_pg.alignment = PP_ALIGN.RIGHT
+
+        # 分隔线
+        line_shape = slide.shapes.add_shape(
+            1, Inches(0.6), Inches(1.25), Inches(12), Emu(18000)
+        )
+        line_shape.fill.solid()
+        line_shape.fill.fore_color.rgb = RGBColor(0xDD, 0xDD, 0xDD)
+        line_shape.line.fill.background()
+
+        # 内容区域起始 Y
+        content_y = 1.5
+        has_code = bool(code.strip())
+
+        if has_code:
+            bullet_width = 5.5
+            code_left = 6.5
+            code_width = 6.2
+        else:
+            bullet_width = 11.5
+            code_left = 0
+            code_width = 0
+
+        # 分离表格行和普通要点
+        normal_bullets = []
+        table_rows = []
+        pending_table = []
+        if bullets:
+            for b in bullets:
+                text = str(b)
+                if text.startswith('|'):
+                    pending_table.append(text)
+                else:
+                    if pending_table:
+                        table_rows.extend(pending_table)
+                        pending_table = []
+                    normal_bullets.append(text)
+            if pending_table:
+                table_rows.extend(pending_table)
+
+        # 要点列表（非表格部分）
+        bullet_count = 0
+        if normal_bullets:
+            tx_b = slide.shapes.add_textbox(
+                Inches(0.8), Inches(content_y),
+                Inches(bullet_width), Inches(5.2 if not table_rows else 2.8)
+            )
+            tf_b = tx_b.text_frame
+            tf_b.word_wrap = True
+            for bi, text in enumerate(normal_bullets):
+                if bi == 0:
+                    p = tf_b.paragraphs[0]
+                else:
+                    p = tf_b.add_paragraph()
+
+                if text.startswith('\u3010'):
+                    set_p_font(p, text, 16, DARK_BLUE, bold=True)
+                    p.space_before = Pt(12)
+                elif text.startswith('  \u00b7'):
+                    set_p_font(p, text, 14, GRAY)
+                    p.space_before = Pt(4)
+                    p.level = 1
+                else:
+                    set_p_font(p, f'\u2022 {text}', 15, RGBColor(0x33, 0x33, 0x33))
+                    p.space_before = Pt(6)
+                bullet_count += 1
+
+        # 表格（作为独立 shape）
+        if table_rows:
+            if normal_bullets:
+                tbl_top = content_y + min(bullet_count * 0.32 + 0.3, 3.0)
+            else:
+                tbl_top = content_y
+            tbl_top = min(tbl_top, 4.5)
+            add_table(slide, table_rows, 0.8, tbl_top, bullet_width)
+
+        # 代码块
+        if has_code:
+            code_box = slide.shapes.add_textbox(
+                Inches(code_left), Inches(content_y),
+                Inches(code_width), Inches(5.2)
+            )
+            code_box.fill.solid()
+            code_box.fill.fore_color.rgb = CODE_BG
+
+            tf_c = code_box.text_frame
+            tf_c.word_wrap = True
+            code_lines = code.strip().split('\n')
+            for ci, cl in enumerate(code_lines):
+                if ci == 0:
+                    p = tf_c.paragraphs[0]
+                else:
+                    p = tf_c.add_paragraph()
+                set_p_font(p, cl, 12, CODE_FG, name='Consolas')
+                p.space_before = Pt(2)
+
+        # 备注（优先使用 MD 中的 notes，否则自动生成）
+        final_notes = notes if notes else build_auto_notes(s_title, subtitle, bullets)
+        if final_notes:
+            slide.notes_slide.notes_text_frame.text = final_notes
+
+    # ── 结束页 ────────────────────────────────────────────────
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    add_bg(slide, solid=DARK_BLUE)
+    tx = slide.shapes.add_textbox(Inches(1), Inches(2.5), Inches(11.3), Inches(2))
+    tf = tx.text_frame
+    p = tf.paragraphs[0]
+    set_p_font(p, '\u8c22\u8c22\uff01', 48, WHITE, bold=True)
+    p.alignment = PP_ALIGN.CENTER
+
+    p2 = tf.add_paragraph()
+    set_p_font(p2, 'Q & A', 24, RGBColor(0xBB, 0xCC, 0xFF))
+    p2.alignment = PP_ALIGN.CENTER
+    p2.space_before = Pt(20)
+
+    # 保存
+    os.makedirs(os.path.dirname(output), exist_ok=True)
+    prs.save(output)
+    print(f"PPTX saved: {output}")
+
+if __name__ == '__main__':
+    main()
+''';
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 幻灯片 → PNG 图片 (Python PIL 直接渲染，不经过 PDF)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// 检查 Pillow 是否安装
+  Future<bool> isPillowInstalled() async {
+    if (kIsWeb) return false;
+    try {
+      final result = await Process.run(
+        'python', ['-c', 'from PIL import Image; print("OK")'],
+        runInShell: true,
+      );
+      return result.exitCode == 0;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// 将幻灯片数据直接渲染为 1920×1080 PNG 图片（使用 Python PIL + 微软雅黑）
+  /// 返回生成的 PNG 路径列表，顺序为: 封面 + 内容页×N + 结束页
+  /// 确保数量 = slides.length + 2，与 TTS 旁白严格对齐
+  Future<List<String>> generateSlideImages({
+    required String title,
+    required List<Map<String, dynamic>> slides,
+    required String outputDir,
+    String? chapter,
+  }) async {
+    if (kIsWeb) return [];
+
+    final dir = Directory(outputDir);
+    if (dir.existsSync()) dir.deleteSync(recursive: true);
+    dir.createSync(recursive: true);
+
+    try {
+      final tempDir = await getTemporaryDirectory();
+
+      // 写入幻灯片数据 JSON
+      final dataFile = File('${tempDir.path}/slide_img_data.json');
+      await dataFile.writeAsString(jsonEncode({
+        'title': title,
+        'chapter': chapter ?? '',
+        'slides': slides,
+        'output_dir': outputDir.replaceAll('\\', '/'),
+      }));
+
+      // 写入 Python 渲染脚本
+      final scriptFile = File('${tempDir.path}/render_slides.py');
+      await scriptFile.writeAsString(_slideImagesPythonScript());
+
+      final result = await Process.run(
+        'python', [scriptFile.path, dataFile.path],
+        runInShell: true,
+      ).timeout(const Duration(seconds: 120));
+
+      // 清理
+      if (scriptFile.existsSync()) scriptFile.deleteSync();
+      if (dataFile.existsSync()) dataFile.deleteSync();
+
+      if (result.exitCode == 0) {
+        final paths = result.stdout
+            .toString()
+            .trim()
+            .split('\n')
+            .map((l) => l.trim())
+            .where((l) => l.isNotEmpty && l.endsWith('.png'))
+            .toList();
+        debugPrint('CoursewareService: generateSlideImages → ${paths.length} images');
+        return paths;
+      }
+      debugPrint('CoursewareService: render_slides.py failed: ${result.stderr}');
+      return [];
+    } catch (e) {
+      debugPrint('CoursewareService: generateSlideImages error: $e');
+      return [];
+    }
+  }
+
+  /// Python PIL 渲染脚本 — 生成专业课件幻灯片 PNG
+  String _slideImagesPythonScript() {
+    return r'''
+import json, sys, os, textwrap
+
+def main():
+    with open(sys.argv[1], 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    from PIL import Image, ImageDraw, ImageFont
+
+    title = data.get('title', '')
+    chapter = data.get('chapter', '')
+    slides = data.get('slides', [])
+    out_dir = data.get('output_dir', '.')
+    os.makedirs(out_dir, exist_ok=True)
+
+    W, H = 1920, 1080
+
+    # ── 加载字体 ──────────────────────────────────────────────
+    font_paths = [
+        "C:/Windows/Fonts/msyh.ttc",
+        "C:/Windows/Fonts/msyhbd.ttc",
+        "C:/Windows/Fonts/simhei.ttf",
+        "C:/Windows/Fonts/simsun.ttc",
+    ]
+    code_paths = [
+        "C:/Windows/Fonts/consola.ttf",
+        "C:/Windows/Fonts/cour.ttf",
+    ]
+
+    def load(paths, size):
+        for p in paths:
+            try:
+                return ImageFont.truetype(p, size)
+            except:
+                pass
+        return ImageFont.load_default()
+
+    ft_cover  = load(font_paths, 72)
+    ft_ch     = load(font_paths, 36)
+    ft_title  = load(font_paths, 48)
+    ft_sub    = load(font_paths, 28)
+    ft_body   = load(font_paths, 26)
+    ft_bold   = load([font_paths[1]] + font_paths, 28)
+    ft_small  = load(font_paths, 22)
+    ft_tiny   = load(font_paths, 18)
+    ft_code   = load(code_paths, 20)
+    ft_tbl    = load(font_paths, 22)
+    ft_tblh   = load([font_paths[1]] + font_paths, 22)
+
+    # ── 颜色常量 ──────────────────────────────────────────────
+    DARK_BLUE = '#0958D9'
+    BLUE      = '#1677FF'
+    WHITE     = '#FFFFFF'
+    GRAY      = '#666666'
+    LIGHT_BG  = '#F0F4F8'
+    CODE_BG   = '#282C34'
+    CODE_FG   = '#ABB2BF'
+
+    def draw_wrapped(draw, text, x, y, font, fill, max_w, line_h=None):
+        """Draw text with word-wrap, return final y."""
+        if not text:
+            return y
+        if line_h is None:
+            try:
+                line_h = font.getbbox("测")[3] + 8
+            except:
+                line_h = 36
+        # Estimate chars per line
+        try:
+            cw = font.getbbox("测测")[2] / 2
+        except:
+            cw = 20
+        chars = max(int(max_w / cw), 10)
+        lines = textwrap.wrap(text, width=chars)
+        for ln in lines:
+            draw.text((x, y), ln, font=font, fill=fill)
+            y += line_h
+        return y
+
+    idx = 0  # output image counter
+
+    # ══════════════════════════════════════════════════════════
+    #  封面
+    # ══════════════════════════════════════════════════════════
+    idx += 1
+    img = Image.new('RGB', (W, H), DARK_BLUE)
+    draw = ImageDraw.Draw(img)
+
+    # 装饰线
+    draw.rectangle([(0, 0), (W, 10)], fill=BLUE)
+    draw.rectangle([(0, H-10), (W, H)], fill=BLUE)
+
+    # 标题（居中）
+    try:
+        bbox = draw.textbbox((0,0), title, font=ft_cover)
+        tw = bbox[2] - bbox[0]
+    except:
+        tw = len(title) * 72
+    tx = (W - tw) // 2
+    draw.text((tx, H//2 - 100), title, font=ft_cover, fill=WHITE)
+
+    # 章节
+    if chapter:
+        try:
+            bbox = draw.textbbox((0,0), chapter, font=ft_ch)
+            tw = bbox[2] - bbox[0]
+        except:
+            tw = len(chapter) * 36
+        draw.text(((W - tw)//2, H//2 + 10), chapter, font=ft_ch, fill='#BBCCFF')
+
+    # 底部
+    bot = '移动应用开发知识图谱教学系统'
+    try:
+        bbox = draw.textbbox((0,0), bot, font=ft_small)
+        tw = bbox[2] - bbox[0]
+    except:
+        tw = len(bot) * 22
+    draw.text(((W - tw)//2, H - 80), bot, font=ft_small, fill='#99AADD')
+
+    out = f"{out_dir}/slide_{idx:03d}.png"
+    img.save(out)
+    print(out)
+
+    # ══════════════════════════════════════════════════════════
+    #  内容页
+    # ══════════════════════════════════════════════════════════
+    for si, s in enumerate(slides):
+        idx += 1
+        img = Image.new('RGB', (W, H), WHITE)
+        draw = ImageDraw.Draw(img)
+
+        s_title  = s.get('title', f'Slide {si+1}')
+        subtitle = s.get('subtitle', '')
+        bullets  = s.get('bullets', [])
+        code     = s.get('code', '')
+        has_code = bool(code.strip())
+
+        # 顶部蓝色装饰条
+        draw.rectangle([(0, 0), (W, 8)], fill=BLUE)
+
+        # 标题
+        draw.text((60, 25), s_title, font=ft_title, fill=DARK_BLUE)
+
+        # 页码
+        pg = f'{si+1}/{len(slides)}'
+        try:
+            bbox = draw.textbbox((0,0), pg, font=ft_small)
+            pw_ = bbox[2] - bbox[0]
+        except:
+            pw_ = len(pg) * 22
+        draw.text((W - 60 - pw_, 35), pg, font=ft_small, fill=GRAY)
+
+        # 副标题
+        top_y = 85
+        if subtitle:
+            draw.text((60, top_y), subtitle, font=ft_sub, fill=GRAY)
+            top_y += 40
+
+        # 分隔线
+        draw.line([(60, top_y), (W - 60, top_y)], fill='#DDDDDD', width=2)
+        top_y += 15
+
+        # 内容区域
+        content_x = 60
+        content_w = (W // 2 - 40) if has_code else (W - 120)
+        y = top_y
+
+        # 分离 table rows 和普通 bullets
+        normal = []
+        table_rows = []
+        for b in bullets:
+            t = str(b)
+            if t.startswith('|'):
+                table_rows.append(t)
+            else:
+                normal.append(t)
+
+        # 绘制普通 bullets
+        for b in normal:
+            if y > H - 80:
+                break
+            if b.startswith('\u3010'):
+                # 子标题 【xxx】
+                y += 8
+                draw.text((content_x, y), b, font=ft_bold, fill=DARK_BLUE)
+                y += 38
+            elif b.startswith('  \u00b7'):
+                # 缩进项
+                draw.text((content_x + 40, y), b.strip(), font=ft_body, fill=GRAY)
+                y += 34
+            else:
+                # 普通要点
+                text = f'\u2022 {b}' if not b.startswith('\u2022') else b
+                y = draw_wrapped(draw, text, content_x + 10, y, ft_body, '#333333', content_w - 10, 34)
+                y += 4
+
+        # 绘制表格
+        if table_rows and y < H - 120:
+            y += 10
+            parsed = []
+            for r in table_rows:
+                cols = [c.strip() for c in r.strip().strip('|').split('|')]
+                if cols:
+                    parsed.append(cols)
+            if parsed:
+                n_cols = max(len(r) for r in parsed)
+                col_w = min(content_w // n_cols, 350)
+                row_h = 36
+                for ri, row in enumerate(parsed):
+                    while len(row) < n_cols:
+                        row.append('')
+                    rx = content_x + 10
+                    for ci, val in enumerate(row):
+                        x1, y1 = rx, y
+                        x2, y2 = rx + col_w, y + row_h
+                        if ri == 0:
+                            draw.rectangle([(x1, y1), (x2, y2)], fill=DARK_BLUE, outline='#BBBBBB')
+                            draw.text((x1 + 8, y1 + 6), val[:20], font=ft_tblh, fill=WHITE)
+                        else:
+                            bg = LIGHT_BG if ri % 2 == 0 else WHITE
+                            draw.rectangle([(x1, y1), (x2, y2)], fill=bg, outline='#CCCCCC')
+                            draw.text((x1 + 8, y1 + 6), val[:25], font=ft_tbl, fill='#333333')
+                        rx += col_w
+                    y += row_h
+
+        # 代码块
+        if has_code:
+            code_x = W // 2 + 20
+            code_w = W - code_x - 40
+            code_y = top_y
+            # 背景
+            draw.rectangle([(code_x, code_y), (W - 40, H - 40)], fill=CODE_BG)
+            # 代码头标签
+            draw.rectangle([(code_x, code_y), (code_x + 70, code_y + 24)], fill='#3C4049')
+            draw.text((code_x + 8, code_y + 3), 'Code', font=ft_tiny, fill='#999999')
+            cy = code_y + 30
+            for cl in code.strip().split('\n'):
+                if cy > H - 60:
+                    break
+                draw.text((code_x + 15, cy), cl, font=ft_code, fill=CODE_FG)
+                cy += 26
+
+        out = f"{out_dir}/slide_{idx:03d}.png"
+        img.save(out)
+        print(out)
+
+    # ══════════════════════════════════════════════════════════
+    #  结束页
+    # ══════════════════════════════════════════════════════════
+    idx += 1
+    img = Image.new('RGB', (W, H), DARK_BLUE)
+    draw = ImageDraw.Draw(img)
+    draw.rectangle([(0, 0), (W, 10)], fill=BLUE)
+    draw.rectangle([(0, H-10), (W, H)], fill=BLUE)
+
+    txt = '谢谢！'
+    try:
+        bbox = draw.textbbox((0,0), txt, font=ft_cover)
+        tw = bbox[2] - bbox[0]
+    except:
+        tw = 216
+    draw.text(((W - tw)//2, H//2 - 80), txt, font=ft_cover, fill=WHITE)
+
+    txt2 = 'Q & A'
+    try:
+        bbox = draw.textbbox((0,0), txt2, font=ft_ch)
+        tw = bbox[2] - bbox[0]
+    except:
+        tw = 120
+    draw.text(((W - tw)//2, H//2 + 30), txt2, font=ft_ch, fill='#BBCCFF')
+
+    out = f"{out_dir}/slide_{idx:03d}.png"
+    img.save(out)
+    print(out)
+
+    print(f"Total: {idx} images", file=sys.stderr)
+
+if __name__ == '__main__':
+    main()
+''';
+  }
+}

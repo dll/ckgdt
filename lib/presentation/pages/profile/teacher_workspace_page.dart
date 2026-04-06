@@ -17,6 +17,7 @@ import '../materials/slide_generator_page.dart';
 import '../materials/puml_manager_page.dart';
 import '../materials/materials_hub_page.dart';
 import '../admin/repo_analytics_page.dart';
+import '../materials/courseware_workshop_page.dart';
 
 class TeacherWorkspacePage extends StatefulWidget {
   const TeacherWorkspacePage({super.key});
@@ -396,6 +397,16 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const SlideGeneratorPage()),
+        ),
+      ),
+      _ToolItem(
+        icon: Icons.movie_creation,
+        label: '课件工坊',
+        color: Colors.deepOrange[600]!,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (_) => const CoursewareWorkshopPage()),
         ),
       ),
       _ToolItem(
