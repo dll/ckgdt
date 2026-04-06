@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import '../data/local/database_helper.dart';
 import '../data/local/quiz_dao.dart';
@@ -61,19 +62,38 @@ class DataLoadingService {
       final existing = await db.rawQuery(
           'SELECT COUNT(*) as c FROM resource_files');
       final count = existing.first['c'] as int? ?? 0;
+
+      // 计算课件根目录：基于可执行文件所在目录向上查找 data/ 文件夹
+      final dataDir = _resolveDataDir();
+      final videoDir = '$dataDir/视频';
+      final pdfDir = '$dataDir/课件/清言智谱';
+      final pptDir = '$dataDir/课件/秒出PPT';
+
       if (count > 0) {
-        debugPrint('=== DataLoadingService: resource_files already has $count rows, skip');
-        return;
+        // 已有数据 → 检查路径是否需要更新（从 assets/ 迁移到绝对路径）
+        final sample = await db.rawQuery(
+            "SELECT file_path FROM resource_files LIMIT 1");
+        final samplePath = sample.isNotEmpty
+            ? (sample.first['file_path'] as String? ?? '')
+            : '';
+        if (samplePath.startsWith('assets/')) {
+          debugPrint('=== DataLoadingService: Migrating asset paths → filesystem paths');
+          // 清空旧数据重新插入
+          await db.delete('resource_files');
+        } else {
+          debugPrint('=== DataLoadingService: resource_files already has $count rows, skip');
+          return;
+        }
       }
 
-      debugPrint('=== DataLoadingService: Inserting resource files...');
+      debugPrint('=== DataLoadingService: Inserting resource files (dataDir=$dataDir)');
       final batch = db.batch();
 
       for (final chapter in _chapterNames) {
         // 视频
         batch.insert('resource_files', {
           'file_name': '$chapter.mp4',
-          'file_path': 'assets/video/$chapter.mp4',
+          'file_path': '$videoDir/$chapter.mp4',
           'file_type': 'video',
           'chapter': chapter,
           'description': '视频教程',
@@ -82,7 +102,7 @@ class DataLoadingService {
         // PDF
         batch.insert('resource_files', {
           'file_name': '$chapter.pdf',
-          'file_path': 'assets/清言智谱/$chapter.pdf',
+          'file_path': '$pdfDir/$chapter.pdf',
           'file_type': 'pdf',
           'chapter': chapter,
           'description': '$chapter 课件',
@@ -91,7 +111,7 @@ class DataLoadingService {
         // PPT
         batch.insert('resource_files', {
           'file_name': '$chapter.pptx',
-          'file_path': 'assets/秒出PPT/$chapter.pptx',
+          'file_path': '$pptDir/$chapter.pptx',
           'file_type': 'ppt',
           'chapter': chapter,
           'description': '$chapter 课件',
@@ -102,6 +122,41 @@ class DataLoadingService {
       debugPrint('=== DataLoadingService: Inserted ${_chapterNames.length * 3} resource files');
     } catch (e) {
       debugPrint('=== DataLoadingService: Error loading resource files: $e');
+    }
+  }
+
+  /// 解析课件 data 目录的绝对路径
+  /// 优先查找可执行文件同级或上级的 data/ 文件夹
+  static String _resolveDataDir() {
+    if (kIsWeb) return 'data';
+    try {
+      // 可执行文件所在目录
+      final exeDir = File(Platform.resolvedExecutable).parent.path
+          .replaceAll('\\', '/');
+
+      // 策略 1: 开发模式 — 项目根目录/data
+      // 从 exe 目录向上查找 data/ 文件夹
+      var dir = exeDir;
+      for (var i = 0; i < 6; i++) {
+        final candidate = '$dir/data';
+        if (Directory(candidate).existsSync() &&
+            (Directory('$candidate/视频').existsSync() ||
+             Directory('$candidate/课件').existsSync())) {
+          debugPrint('=== DataLoadingService: Found data dir: $candidate');
+          return candidate;
+        }
+        final parent = Directory(dir).parent.path.replaceAll('\\', '/');
+        if (parent == dir) break; // 到达根目录
+        dir = parent;
+      }
+
+      // 策略 2: 发布模式 — exe 同级 data/
+      final fallback = '$exeDir/data';
+      debugPrint('=== DataLoadingService: Using fallback data dir: $fallback');
+      return fallback;
+    } catch (e) {
+      debugPrint('=== DataLoadingService: _resolveDataDir error: $e');
+      return 'data';
     }
   }
 
