@@ -41,6 +41,24 @@ docs/video/**/temp/
 docs/video/**/crops/
 docs/video/**/assets/
 
+# ── 课件资源（视频/PPT/PDF/音频）排除 ──
+# 这些文件体积大，不适合放在 Git 仓库中
+data/视频/
+data/课件/
+data/courseware_output/
+video_output/
+docs/video/generated/
+docs/video/v3/
+docs/video/v4/
+docs/video/v5/
+*.mp4
+*.wav
+*.mp3
+*.avi
+*.mov
+*.pptx
+*.pdf
+
 # Windows reserved file accidentally created
 nul
 
