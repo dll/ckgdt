@@ -1,0 +1,26 @@
+{
+  "version": "1.0.0",
+  "course_name": "移动应用开发",
+  "last_updated": "2025-06-01",
+  "description": "《移动应用开发》课程资源配置清单",
+  "resources": {
+    "lab_tasks": "lab_tasks.json",
+    "report_templates": "report_templates.json",
+    "chapters": "chapters.json",
+    "assessment": "assessment.json"
+  },
+  "repositories": {
+    "system": {
+      "owner": "osgisOne",
+      "repo": "mad-fd",
+      "description": "系统级课程资源仓库"
+    },
+    "enterprise": {
+      "path": "chzuczldl",
+      "name": "滁州学院-刘东良",
+      "description": "学生项目仓库所在企业"
+    },
+    "student_repo_prefixes": ["cg1", "cg2", "cg3"],
+    "branch_convention": "feat-{学生姓名拼音缩写}"
+  }
+}

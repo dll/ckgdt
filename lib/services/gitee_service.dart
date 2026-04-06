@@ -37,7 +37,7 @@ class GiteeService {
     return prefs.getString(_ownerKey);
   }
 
-  /// 保存仓库名称前缀过滤（逗号分隔，如 cg1,cg2,cg3）
+  /// 保存仓库名称前缀过滤（逗号分隔，如 cg1-,cg2-,cg3-）
   Future<void> saveRepoPrefix(String prefix) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_repoPrefixKey, prefix);
@@ -50,7 +50,7 @@ class GiteeService {
   }
 
   /// 根据前缀过滤仓库列表
-  /// [repos] 仓库列表, [prefix] 逗号分隔的前缀，如 "cg1,cg2,cg3"
+  /// [repos] 仓库列表, [prefix] 逗号分隔的前缀，如 "cg1-,cg2-,cg3-"
   List<Map<String, dynamic>> filterReposByPrefix(
     List<Map<String, dynamic>> repos,
     String? prefix,
@@ -69,15 +69,6 @@ class GiteeService {
   }
 
   // ── 通用请求 ──────────────────────────────────────────────────────────
-
-  /// 构建带 token 的请求头
-  Future<Map<String, String>> _headers() async {
-    final token = await getToken();
-    return {
-      'Content-Type': 'application/json',
-      if (token != null && token.isNotEmpty) 'Authorization': 'token $token',
-    };
-  }
 
   /// 通用 GET 请求
   Future<dynamic> _get(String path, {Map<String, String>? queryParams}) async {
@@ -264,6 +255,7 @@ class GiteeService {
   Future<List<Map<String, dynamic>>> getAllCommits(
     String owner,
     String repo, {
+    String? sha,
     String? since,
     String? until,
   }) async {
@@ -274,6 +266,7 @@ class GiteeService {
     while (true) {
       final batch = await getCommits(
         owner, repo,
+        sha: sha,
         page: page,
         perPage: perPage,
         since: since,

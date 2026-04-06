@@ -45,6 +45,10 @@ class _RepoDetailPageState extends State<RepoDetailPage> {
   List<Map<String, dynamic>> _collaborators = [];
   List<_CommitRow> _commitRows = [];
 
+  // 分支筛选
+  String? _selectedBranch; // null = 全部(默认分支)
+  bool _loadingBranchCommits = false;
+
   // 加载详情进度
   bool _loadingStats = false;
   double _statsProgress = 0;
@@ -62,13 +66,18 @@ class _RepoDetailPageState extends State<RepoDetailPage> {
     });
 
     try {
-      // 并行获取仓库详情、分支、提交、协作者、releases
+      // 并行获取仓库详情、分支、提交、协作者、releases（每个独立容错）
       final results = await Future.wait([
-        _giteeService.getRepoDetail(widget.owner, widget.repoName),
-        _giteeService.getBranches(widget.owner, widget.repoName),
-        _giteeService.getAllCommits(widget.owner, widget.repoName),
-        _giteeService.getCollaborators(widget.owner, widget.repoName),
-        _giteeService.getReleases(widget.owner, widget.repoName),
+        _giteeService.getRepoDetail(widget.owner, widget.repoName)
+            .catchError((_) => <String, dynamic>{}),
+        _giteeService.getBranches(widget.owner, widget.repoName)
+            .catchError((_) => <Map<String, dynamic>>[]),
+        _giteeService.getAllCommits(widget.owner, widget.repoName)
+            .catchError((_) => <Map<String, dynamic>>[]),
+        _giteeService.getCollaborators(widget.owner, widget.repoName)
+            .catchError((_) => <Map<String, dynamic>>[]),
+        _giteeService.getReleases(widget.owner, widget.repoName)
+            .catchError((_) => <Map<String, dynamic>>[]),
       ]);
 
       final repoDetail = results[0] as Map<String, dynamic>;
@@ -76,6 +85,12 @@ class _RepoDetailPageState extends State<RepoDetailPage> {
       final commits = results[2] as List<Map<String, dynamic>>;
       final collaborators = results[3] as List<Map<String, dynamic>>;
       final releases = results[4] as List<Map<String, dynamic>>;
+
+      // 如果仓库详情获取失败，尝试用 namespace 中的 path 重试
+      if (repoDetail.isEmpty) {
+        // 尝试直接用仓库名和 owner 组合，可能 owner 不对
+        debugPrint('RepoDetailPage: repoDetail empty for ${widget.owner}/${widget.repoName}');
+      }
 
       // 构建简易 commit 行（无 additions/deletions）
       final commitRows = commits.map((c) {
@@ -170,6 +185,58 @@ class _RepoDetailPageState extends State<RepoDetailPage> {
     setState(() => _loadingStats = false);
   }
 
+  /// 切换分支并重新加载该分支的提交记录
+  Future<void> _switchBranch(String? branchName) async {
+    if (branchName == _selectedBranch) return;
+    setState(() {
+      _selectedBranch = branchName;
+      _loadingBranchCommits = true;
+      _totalAdditions = 0;
+      _totalDeletions = 0;
+      _totalFilesChanged = 0;
+    });
+
+    try {
+      final commits = await _giteeService.getAllCommits(
+        widget.owner, widget.repoName,
+        sha: branchName,
+      );
+
+      final commitRows = commits.map((c) {
+        final sha = c['sha']?.toString() ?? '';
+        final commitMap = c['commit'] as Map<String, dynamic>? ?? {};
+        final authorMap = commitMap['author'] as Map<String, dynamic>? ?? {};
+        final message = commitMap['message']?.toString() ?? '';
+        final dateStr = authorMap['date']?.toString();
+        DateTime? date;
+        if (dateStr != null) {
+          try { date = DateTime.parse(dateStr).toLocal(); } catch (_) {}
+        }
+        return _CommitRow(
+          sha: sha,
+          message: message.split('\n').first,
+          date: date,
+          authorName: authorMap['name']?.toString() ?? '',
+        );
+      }).toList();
+
+      setState(() {
+        _commitRows = commitRows;
+        _totalCommits = commits.length;
+        _loadingBranchCommits = false;
+      });
+
+      _loadCommitStats(commits);
+    } catch (e) {
+      setState(() => _loadingBranchCommits = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('加载分支提交失败: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -259,7 +326,7 @@ class _RepoDetailPageState extends State<RepoDetailPage> {
           _buildBranchAndReleaseRow(),
           const SizedBox(height: 16),
 
-          // ── 提交记录表格 ──
+          // ── 分支切换器 + 提交记录表格 ──
           _buildCommitTable(),
           const SizedBox(height: 32),
         ],
@@ -647,6 +714,7 @@ class _RepoDetailPageState extends State<RepoDetailPage> {
 
                 return ListTile(
                   dense: true,
+                  onTap: () => _switchBranch(name),
                   leading: Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 4),
@@ -820,10 +888,50 @@ class _RepoDetailPageState extends State<RepoDetailPage> {
                 const Icon(Icons.history, size: 18, color: Colors.orange),
                 const SizedBox(width: 8),
                 Text(
-                  '📝 提交记录 (${_commitRows.length})',
+                  '提交记录 ($_totalCommits)',
                   style: const TextStyle(
                       fontSize: 15, fontWeight: FontWeight.bold),
                 ),
+                const Spacer(),
+                // ── 分支切换下拉 ──
+                if (_branches.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _selectedBranch ?? '',
+                        icon: _loadingBranchCommits
+                            ? const SizedBox(
+                                width: 16, height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.arrow_drop_down, size: 20),
+                        isDense: true,
+                        style: const TextStyle(fontSize: 13, color: Colors.black87),
+                        items: [
+                          const DropdownMenuItem(
+                            value: '',
+                            child: Text('全部分支'),
+                          ),
+                          ..._branches.map((b) {
+                            final name = b['name']?.toString() ?? '';
+                            return DropdownMenuItem(
+                              value: name,
+                              child: Text(name),
+                            );
+                          }),
+                        ],
+                        onChanged: _loadingBranchCommits
+                            ? null
+                            : (val) => _switchBranch(
+                                val == null || val.isEmpty ? null : val),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/course_resource_service.dart';
 import '../../../data/local/assessment_dao.dart';
 
 /// 考核页面 — 参考 Python 版 assessment_tab.py
@@ -669,26 +670,66 @@ class _ProjectTabState extends State<_ProjectTab> {
 // 贡献评分 Tab
 // ══════════════════════════════════════════════════════════════════════════════
 
-class _ContributionTab extends StatelessWidget {
+class _ContributionTab extends StatefulWidget {
   final AuthService authService;
   const _ContributionTab({required this.authService});
+
+  @override
+  State<_ContributionTab> createState() => _ContributionTabState();
+}
+
+class _ContributionTabState extends State<_ContributionTab> {
+  Map<String, dynamic>? _remoteAssessment;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAssessment();
+  }
+
+  Future<void> _loadAssessment() async {
+    try {
+      final data = await CourseResourceService().getAssessment();
+      if (mounted) {
+        setState(() {
+          _remoteAssessment = data;
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
 
-    // 评分维度（硬编码 OK）
-    const dimensions = [
-      {'name': '功能完整性', 'max': 25, 'icon': Icons.check_circle},
-      {'name': '技术实现深度', 'max': 20, 'icon': Icons.code},
-      {'name': '跨框架整合', 'max': 25, 'icon': Icons.integration_instructions},
-      {'name': '性能与质量', 'max': 15, 'icon': Icons.speed},
-      {'name': '文档与协作', 'max': 15, 'icon': Icons.description},
-    ];
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // 评分维度 — 优先从远程加载，否则使用默认值
+    final dimensions = _buildDimensions();
+    final components = _buildScoreComponents();
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        // 数据来源指示器
+        if (_remoteAssessment != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                Icon(Icons.cloud_done, size: 14, color: Colors.green[400]),
+                const SizedBox(width: 4),
+                Text('考核方案已从远程同步',
+                    style: TextStyle(fontSize: 11, color: Colors.green[400])),
+              ],
+            ),
+          ),
         // 评分标准说明
         Card(
           shape:
@@ -765,26 +806,91 @@ class _ContributionTab extends StatelessWidget {
                     style:
                         TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
-                _scoreComponent('理论考核', 40, Colors.blue, [
-                  '平时成绩 15%（课堂5%+作业5%+小测5%）',
-                  '期末考试 25%（选择8%+简答10%+综合7%）',
-                ]),
-                _scoreComponent('实验考核', 35, Colors.green, [
-                  '实验1-6 各5%（环境/Android/Flutter/UniApp/小程序/华为）',
-                  '实验7 综合实战 5%',
-                ]),
-                _scoreComponent('综合项目', 25, Colors.orange, [
-                  '项目设计 8%',
-                  '技术实现 10%',
-                  '团队协作 4%',
-                  '项目答辩 3%',
-                ]),
+                ...components,
               ],
             ),
           ),
         ),
       ],
     );
+  }
+
+  /// 构建评分维度：优先远程数据，fallback 硬编码
+  List<Map<String, dynamic>> _buildDimensions() {
+    if (_remoteAssessment != null) {
+      final dims = _remoteAssessment!['scoring_dimensions'];
+      if (dims is List && dims.isNotEmpty) {
+        const iconMap = {
+          '功能完整性': Icons.check_circle,
+          '技术实现深度': Icons.code,
+          '跨框架整合': Icons.integration_instructions,
+          '性能与质量': Icons.speed,
+          '文档与协作': Icons.description,
+        };
+        return dims.map((d) {
+          final name = d['name']?.toString() ?? '';
+          return {
+            'name': name,
+            'max': d['max_score'] ?? d['max'] ?? 20,
+            'icon': iconMap[name] ?? Icons.star,
+          };
+        }).toList().cast<Map<String, dynamic>>();
+      }
+    }
+    // Fallback 默认维度
+    return const [
+      {'name': '功能完整性', 'max': 25, 'icon': Icons.check_circle},
+      {'name': '技术实现深度', 'max': 20, 'icon': Icons.code},
+      {'name': '跨框架整合', 'max': 25, 'icon': Icons.integration_instructions},
+      {'name': '性能与质量', 'max': 15, 'icon': Icons.speed},
+      {'name': '文档与协作', 'max': 15, 'icon': Icons.description},
+    ];
+  }
+
+  /// 构建成绩构成组件：优先远程数据，fallback 硬编码
+  List<Widget> _buildScoreComponents() {
+    if (_remoteAssessment != null) {
+      final comps = _remoteAssessment!['components'];
+      if (comps is List && comps.isNotEmpty) {
+        final colorMap = {
+          '理论考核': Colors.blue,
+          '平时成绩': Colors.blue,
+          '实验考核': Colors.green,
+          '综合项目': Colors.orange,
+          '期末考核': Colors.purple,
+        };
+        return comps.map<Widget>((c) {
+          final name = c['name']?.toString() ?? '';
+          final weight = c['weight'] ?? c['percent'] ?? 0;
+          final percent = weight is double
+              ? (weight * 100).toInt()
+              : (weight is int ? weight : 0);
+          final details = c['details'] ?? c['sub_items'];
+          final detailList = details is List
+              ? details.map((d) => d.toString()).toList()
+              : <String>[];
+          final color = colorMap[name] ?? Colors.grey;
+          return _scoreComponent(name, percent, color, detailList);
+        }).toList();
+      }
+    }
+    // Fallback 默认构成
+    return [
+      _scoreComponent('理论考核', 40, Colors.blue, [
+        '平时成绩 15%（课堂5%+作业5%+小测5%）',
+        '期末考试 25%（选择8%+简答10%+综合7%）',
+      ]),
+      _scoreComponent('实验考核', 35, Colors.green, [
+        '实验1-6 各5%（环境/Android/Flutter/UniApp/小程序/华为）',
+        '实验7 综合实战 5%',
+      ]),
+      _scoreComponent('综合项目', 25, Colors.orange, [
+        '项目设计 8%',
+        '技术实现 10%',
+        '团队协作 4%',
+        '项目答辩 3%',
+      ]),
+    ];
   }
 
   Widget _scoreComponent(

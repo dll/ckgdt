@@ -33,7 +33,7 @@ class UserModel {
   }
 
   Map<String, dynamic> toMap() {
-    return {
+    final map = <String, dynamic>{
       'user_id': userId,
       'real_name': realName,
       'machine_code': machineCode,
@@ -41,8 +41,12 @@ class UserModel {
       'created_at': createdAt,
       'last_login': lastLogin,
       'is_active': isActive ? 1 : 0,
-      'repository_url': repositoryUrl,
     };
+    // repository_url 仅在有值时写入，避免表缺少此列时 insert/update 失败
+    if (repositoryUrl != null) {
+      map['repository_url'] = repositoryUrl;
+    }
+    return map;
   }
 
   /// 创建一个更新了部分字段的副本

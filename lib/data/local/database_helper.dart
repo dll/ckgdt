@@ -186,6 +186,11 @@ class DatabaseHelper {
     );
     debugPrint('=== DatabaseHelper: Database opened successfully');
 
+    // 补齐 seed DB 可能缺少的列（seed 版本为 0 时 onCreate 无法通过
+    // CREATE TABLE IF NOT EXISTS 添加新列到已有表）
+    await _ensureUsersColumns(db);
+    await _ensureResourceFileColumns(db);
+
     // Verify tables exist
     try {
       final tables = await db
@@ -493,6 +498,18 @@ class DatabaseHelper {
     await _createNewTablesV8(db);
     await _createNewTablesV9(db);
     await _createNewTablesV10(db);
+  }
+
+  /// 补齐 users 表可能缺少的列（V10: repository_url）
+  Future<void> _ensureUsersColumns(Database db) async {
+    try {
+      await db.rawQuery('SELECT repository_url FROM users LIMIT 1');
+    } catch (_) {
+      try {
+        await db.execute('ALTER TABLE users ADD COLUMN repository_url TEXT');
+        debugPrint('=== DatabaseHelper: Added repository_url column to users');
+      } catch (_) {}
+    }
   }
 
   /// 补齐 resource_files 表可能缺少的列

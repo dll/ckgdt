@@ -1,5 +1,8 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'database_helper.dart';
+import '../../services/course_resource_service.dart';
 
 /// 实验任务 DAO — 任务发布 / 学生提交 / 评分 / 报告
 class LabTaskDao {
@@ -312,7 +315,7 @@ class LabTaskDao {
     });
   }
 
-  // ═══════════ 初始化示例数据 ═══════════
+  // ═══════════ 初始化示例数据（优先远程，兜底硬编码） ═══════════
 
   Future<void> initDemoDataIfEmpty() async {
     final db = await _dbHelper.database;
@@ -320,7 +323,98 @@ class LabTaskDao {
       final count = await db.rawQuery('SELECT COUNT(*) as c FROM lab_tasks');
       if ((count.first['c'] as int? ?? 0) > 0) return;
 
-      final now = DateTime.now().toIso8601String();
+      // 1. 尝试从 Gitee 远程获取实验任务定义
+      bool remoteDone = false;
+      try {
+        final resource = CourseResourceService();
+        final remoteTasks = await resource.getLabTasks();
+        if (remoteTasks != null && remoteTasks.isNotEmpty) {
+          await _insertTasksFromRemote(db, remoteTasks);
+          remoteDone = true;
+          debugPrint('LabTaskDao: Loaded ${remoteTasks.length} tasks from Gitee');
+        }
+      } catch (e) {
+        debugPrint('LabTaskDao: Remote load failed: $e');
+      }
+
+      // 2. 远程失败 → 用本地硬编码兜底
+      if (!remoteDone) {
+        debugPrint('LabTaskDao: Falling back to hardcoded tasks');
+        await _insertHardcodedTasks(db);
+      }
+
+      // 3. 初始化报告模板（同样优先远程）
+      await _initReportTemplates(db);
+    } catch (e) {
+      // 表可能不存在，静默忽略
+      debugPrint('LabTaskDao: initDemoDataIfEmpty error: $e');
+    }
+  }
+
+  /// 从远程 JSON 插入实验任务
+  Future<void> _insertTasksFromRemote(
+      Database db, List<Map<String, dynamic>> remoteTasks) async {
+    final now = DateTime.now().toIso8601String();
+    for (final task in remoteTasks) {
+      final dueOffset = task['due_days_offset'] as int? ?? 14;
+      await db.insert('lab_tasks', {
+        'title': task['title'] ?? '',
+        'chapter': task['chapter'] ?? '',
+        'description': task['description'] ?? '',
+        'requirements': task['requirements'] ?? '',
+        'deliverables': task['deliverables'] ?? '',
+        'difficulty': task['difficulty'] ?? '中等',
+        'max_score': task['max_score'] ?? 100,
+        'due_date': DateTime.now()
+            .add(Duration(days: dueOffset))
+            .toIso8601String(),
+        'status': 'active',
+        'creator_id': '206004',
+        'created_at': now,
+        'updated_at': now,
+      });
+    }
+  }
+
+  /// 初始化报告模板（优先远程）
+  Future<void> _initReportTemplates(Database db) async {
+    final tCount =
+        await db.rawQuery('SELECT COUNT(*) as c FROM report_templates');
+    if ((tCount.first['c'] as int? ?? 0) > 0) return;
+
+    // 尝试远程
+    try {
+      final resource = CourseResourceService();
+      final remoteTemplates = await resource.getReportTemplates();
+      if (remoteTemplates != null && remoteTemplates.isNotEmpty) {
+        final now = DateTime.now().toIso8601String();
+        for (final t in remoteTemplates) {
+          await db.insert('report_templates', {
+            'name': t['name'] ?? '',
+            'category': t['category'] ?? '',
+            'sections_json': jsonEncode(t['sections'] ?? []),
+            'description': t['description'] ?? '',
+            'creator_id': '206004',
+            'is_default': (t['is_default'] == true) ? 1 : 0,
+            'created_at': now,
+            'updated_at': now,
+          });
+        }
+        debugPrint(
+            'LabTaskDao: Loaded ${remoteTemplates.length} templates from Gitee');
+        return;
+      }
+    } catch (e) {
+      debugPrint('LabTaskDao: Remote templates load failed: $e');
+    }
+
+    // 兜底硬编码
+    await _initDefaultReportTemplates(db);
+  }
+
+  /// 硬编码实验任务（离线兜底）
+  Future<void> _insertHardcodedTasks(Database db) async {
+    final now = DateTime.now().toIso8601String();
       final tasks = [
         {
           'title': '实验一 开发环境搭建',
@@ -433,12 +527,6 @@ class LabTaskDao {
           'updated_at': now,
         });
       }
-
-      // 插入默认报告模板
-      await _initDefaultReportTemplates(db);
-    } catch (e) {
-      // 表可能不存在，静默忽略
-    }
   }
 
   Future<void> _initDefaultReportTemplates(Database db) async {

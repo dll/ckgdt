@@ -18,9 +18,11 @@ import '../admin/class_manage_page.dart';
 import '../admin/survey_manage_page.dart';
 import '../works/works_page.dart';
 import '../lab/lab_tasks_page.dart';
+import '../repo/git_repo_page.dart';
 import '../achievement/achievement_page.dart';
 import '../profile/student_center_page.dart';
 import '../profile/teacher_workspace_page.dart';
+import '../help/handbook_page.dart';
 import 'settings_page.dart';
 import 'search_page.dart';
 
@@ -96,6 +98,17 @@ class _HomePageState extends State<HomePage> {
                   MaterialPageRoute(
                       builder: (_) => const TeacherWorkspacePage()),
                 );
+              } else if (value == 'handbook') {
+                final handRole = isAdmin
+                    ? 'admin'
+                    : isTeacher
+                        ? 'teacher'
+                        : 'student';
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => HandbookPage(role: handRole)),
+                );
               }
             },
             itemBuilder: (context) => [
@@ -139,6 +152,22 @@ class _HomePageState extends State<HomePage> {
                 child: ListTile(
                   leading: Icon(Icons.settings),
                   title: Text('设置'),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'handbook',
+                child: ListTile(
+                  leading: Icon(Icons.menu_book,
+                      color: isAdmin
+                          ? Colors.deepPurple
+                          : isTeacher
+                              ? Colors.indigo
+                              : Colors.blue),
+                  title: Text(isAdmin
+                      ? '管理员手册'
+                      : isTeacher
+                          ? '教师手册'
+                          : '学生手册'),
                 ),
               ),
               const PopupMenuDivider(),
@@ -190,32 +219,38 @@ class _HomePageState extends State<HomePage> {
             selectedIcon: Icon(Icons.quiz),
             label: '测验',
           ),
-          // 5: 考核
-          const NavigationDestination(
-            icon: Icon(Icons.assessment_outlined),
-            selectedIcon: Icon(Icons.assessment),
-            label: '考核',
-          ),
-          // 6: 作品
-          const NavigationDestination(
-            icon: Icon(Icons.workspace_premium_outlined),
-            selectedIcon: Icon(Icons.workspace_premium),
-            label: '作品',
-          ),
-          // 7: 实验
+          // 5: 实验
           const NavigationDestination(
             icon: Icon(Icons.science_outlined),
             selectedIcon: Icon(Icons.science),
             label: '实验',
           ),
-          // 8: 达成（教师/管理员）
+          // 6: 考核
+          const NavigationDestination(
+            icon: Icon(Icons.assessment_outlined),
+            selectedIcon: Icon(Icons.assessment),
+            label: '考核',
+          ),
+          // 7: 作品
+          const NavigationDestination(
+            icon: Icon(Icons.workspace_premium_outlined),
+            selectedIcon: Icon(Icons.workspace_premium),
+            label: '作品',
+          ),
+          // 8: 仓库（Git仓库总览）
+          const NavigationDestination(
+            icon: Icon(Icons.source_outlined),
+            selectedIcon: Icon(Icons.source),
+            label: '仓库',
+          ),
+          // 9: 达成（教师/管理员）
           if (isTeacher || isAdmin)
             const NavigationDestination(
               icon: Icon(Icons.emoji_events_outlined),
               selectedIcon: Icon(Icons.emoji_events),
               label: '达成',
             ),
-          // 9: 管理（仅管理员）
+          // 10: 管理（仅管理员）
           if (isAdmin)
             const NavigationDestination(
               icon: Icon(Icons.admin_panel_settings_outlined),
@@ -228,16 +263,16 @@ class _HomePageState extends State<HomePage> {
   }
 
   /// Tab 索引映射（动态，取决于角色）:
-  /// 0=首页 1=图谱 2=路径 3=学习(视频/PPT/PDF/AI助手) 4=测验 5=考核 6=作品 7=实验
-  /// 教师/管理员: 8=达成
-  /// 管理员: 9=管理（教师时无此项）
-  /// 学生: 无8/9
+  /// 0=首页 1=图谱 2=路径 3=学习(视频/PPT/PDF/AI助手) 4=测验 5=实验 6=考核 7=作品 8=仓库
+  /// 教师/管理员: 9=达成
+  /// 管理员: 10=管理（教师时无此项）
+  /// 学生: 无9/10
   Widget _buildBody() {
     final isAdmin = _authService.isAdmin;
     final isTeacher = _authService.isTeacher;
     final isTeacherOrAdmin = isTeacher || isAdmin;
 
-    // 固定索引 0-7 映射
+    // 固定索引 0-8 映射
     switch (_selectedIndex) {
       case 0:
         return _buildHome();
@@ -250,16 +285,18 @@ class _HomePageState extends State<HomePage> {
       case 4:
         return const QuizPage();
       case 5:
-        return const AssessmentPage();
-      case 6:
-        return const WorksPage();
-      case 7:
         return const LabTasksPage();
+      case 6:
+        return const AssessmentPage();
+      case 7:
+        return const WorksPage();
       case 8:
-        // 教师/管理员: 达成; 其他角色不会有 index 8
+        return const GitRepoPage();
+      case 9:
+        // 教师/管理员: 达成; 其他角色不会有 index 9
         if (isTeacherOrAdmin) return const AchievementPage();
         return _buildHome();
-      case 9:
+      case 10:
         // 管理员: 管理
         if (isAdmin) return const _AdminToolsPage();
         return _buildHome();
@@ -355,19 +392,25 @@ class _HomePageState extends State<HomePage> {
                 icon: Icons.assessment,
                 title: '课程考核',
                 color: Colors.purple,
-                onTap: () => setState(() => _selectedIndex = 5),
+                onTap: () => setState(() => _selectedIndex = 6),
               ),
               _buildMenuCard(
                 icon: Icons.workspace_premium,
                 title: '作品管理',
                 color: Colors.cyan,
-                onTap: () => setState(() => _selectedIndex = 6),
+                onTap: () => setState(() => _selectedIndex = 7),
               ),
               _buildMenuCard(
                 icon: Icons.science,
                 title: '实验任务',
                 color: Colors.deepPurple,
-                onTap: () => setState(() => _selectedIndex = 7),
+                onTap: () => setState(() => _selectedIndex = 5),
+              ),
+              _buildMenuCard(
+                icon: Icons.source,
+                title: 'Git仓库',
+                color: Colors.blueGrey,
+                onTap: () => setState(() => _selectedIndex = 8),
               ),
               _buildMenuCard(
                 icon: Icons.trending_up,
@@ -407,14 +450,14 @@ class _HomePageState extends State<HomePage> {
                   icon: Icons.emoji_events,
                   title: '课程达成',
                   color: Colors.deepOrange,
-                  onTap: () => setState(() => _selectedIndex = 8),
+                  onTap: () => setState(() => _selectedIndex = 9),
                 ),
               if (_authService.isAdmin)
                 _buildMenuCard(
                   icon: Icons.people,
                   title: '学生管理',
                   color: Colors.brown,
-                  onTap: () => setState(() => _selectedIndex = 9),
+                  onTap: () => setState(() => _selectedIndex = 10),
                 ),
             ],
           ),

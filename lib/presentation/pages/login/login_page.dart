@@ -37,14 +37,29 @@ class _LoginPageState extends State<LoginPage> {
         _passwordController.text,
       );
 
-      if (success && mounted) {
+      if (!mounted) return;
+
+      if (success) {
+        // 清除可能残留的 SnackBar，然后导航
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const HomePage(initialTabIndex: 1)),
         );
-      } else if (mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('登录失败，请检查账号密码'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } catch (e) {
+      debugPrint('=== LoginPage: Login error: $e');
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('登录失败，请检查账号密码'),
+          SnackBar(
+            content: Text('登录出错: $e'),
             backgroundColor: Colors.red,
           ),
         );
