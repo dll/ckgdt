@@ -337,7 +337,7 @@ class HandbookPage extends StatelessWidget {
           _Step('统计分析', '查看实验完成率、平均分等统计数据'),
         ],
         tips: const [
-          '实验任务定义同步到 Gitee 仓库 mad-fd',
+          '实验任务定义同步到 Gitee 仓库 mad-data',
           '学生代码通过 Gitee 分支查看',
         ],
       ),
@@ -486,13 +486,13 @@ class HandbookPage extends StatelessWidget {
         isDark: isDark,
         steps: const [
           _Step('Gitee 令牌', '「仓库」→ Gitee设置 → 配置/更换访问令牌'),
-          _Step('资源同步', '系统启动时自动从 mad-fd 仓库同步课程配置'),
-          _Step('配置管理', 'data/course_config/ 目录下的 JSON 文件'),
+          _Step('资源同步', '系统启动时自动从 mad-data 仓库同步课程配置'),
+          _Step('配置管理', 'course_config/ 目录下的 JSON 文件'),
           _Step('缓存管理', '一键清除本地缓存，强制重新同步'),
         ],
         tips: const [
           '令牌泄露时需立即在 Gitee 网站撤销并重新生成',
-          'mad-fd 仓库存储: 实验定义/章节/考核方案/报告模板',
+          'mad-data 仓库存储: 实验定义/章节/考核方案/报告模板/课件/视频',
         ],
       ),
 

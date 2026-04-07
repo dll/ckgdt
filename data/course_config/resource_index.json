@@ -1,32 +1,38 @@
 {
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "课件资源索引 — 指定各类教学资源的远程存储位置",
   "updated_at": "2026-04-07",
-  "notes": "PDF文档已推送到 Gitee 仓库可直接下载；视频和PPT由于Gitee 1GB仓库限制需本地部署",
+  "notes": "所有课件（PDF/PPT/视频）均已推送到 Gitee mad-data 仓库，应用可远程下载",
   "resource_base": {
     "pdf": {
       "type": "gitee_raw",
       "owner": "osgisOne",
-      "repo": "mad-fd",
+      "repo": "mad-data",
       "branch": "master",
-      "base_path": "data/课件/清言智谱",
+      "base_path": "课件/清言智谱",
       "extension": ".pdf",
       "status": "available",
-      "description": "PDF文档已推送到 Gitee 仓库，应用可远程下载"
+      "description": "PDF文档已推送到 mad-data 仓库，应用可远程下载"
     },
     "ppt": {
-      "type": "local_only",
-      "base_path": "data/课件/秒出PPT",
+      "type": "gitee_raw",
+      "owner": "osgisOne",
+      "repo": "mad-data",
+      "branch": "master",
+      "base_path": "课件/秒出PPT",
       "extension": ".pptx",
-      "status": "local_only",
-      "description": "PPT文件较大，需本地部署或通过教师分发获取"
+      "status": "available",
+      "description": "PPT课件已推送到 mad-data 仓库，应用可远程下载"
     },
     "video": {
-      "type": "local_only",
-      "base_path": "data/视频",
+      "type": "gitee_raw",
+      "owner": "osgisOne",
+      "repo": "mad-data",
+      "branch": "master",
+      "base_path": "视频",
       "extension": ".mp4",
-      "status": "local_only",
-      "description": "视频文件较大，需本地部署或通过教师分发获取"
+      "status": "available",
+      "description": "教学视频已推送到 mad-data 仓库，应用可远程下载"
     }
   },
   "chapters": [
