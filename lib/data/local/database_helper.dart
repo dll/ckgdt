@@ -498,6 +498,19 @@ class DatabaseHelper {
     await _createNewTablesV8(db);
     await _createNewTablesV9(db);
     await _createNewTablesV10(db);
+    await _ensureAchievementColumns(db);
+  }
+
+  /// 补齐 achievement_batches 表可能缺少的 calc_results_json 列
+  Future<void> _ensureAchievementColumns(Database db) async {
+    try {
+      await db.rawQuery('SELECT calc_results_json FROM achievement_batches LIMIT 1');
+    } catch (_) {
+      try {
+        await db.execute('ALTER TABLE achievement_batches ADD COLUMN calc_results_json TEXT');
+        debugPrint('=== DatabaseHelper: Added calc_results_json column to achievement_batches');
+      } catch (_) {}
+    }
   }
 
   /// 补齐 users 表可能缺少的列（V10: repository_url）
@@ -901,6 +914,7 @@ class DatabaseHelper {
         assessment_weights_json TEXT DEFAULT '{"平时":0.20,"实验":0.30,"期末":0.50}',
         status TEXT DEFAULT 'draft',
         report_content TEXT,
+        calc_results_json TEXT,
         created_at TEXT,
         updated_at TEXT
       )

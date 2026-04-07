@@ -107,16 +107,16 @@ String _statusLabel(String? status) {
 }
 
 String _achievementLevel(double value) {
-  if (value >= 0.9) return '优秀';
-  if (value >= 0.7) return '良好';
-  if (value >= 0.6) return '中等';
+  if (value >= 0.85) return '优秀';
+  if (value >= 0.70) return '良好';
+  if (value >= 0.60) return '中等';
   return '未达成';
 }
 
 Color _achievementLevelColor(double value) {
-  if (value >= 0.9) return Colors.green;
-  if (value >= 0.7) return Colors.blue;
-  if (value >= 0.6) return Colors.orange;
+  if (value >= 0.85) return Colors.green;
+  if (value >= 0.70) return Colors.blue;
+  if (value >= 0.60) return Colors.orange;
   return Colors.red;
 }
 
@@ -1411,17 +1411,19 @@ class _ReportTabState extends State<_ReportTab> {
         return;
       }
 
-      // 计算每个目标的达成度
+      // 计算每个目标的达成度（满分：目标1=15, 目标2=25, 目标3=30, 目标4=30）
       final objScores = List<List<double>>.generate(4, (i) {
         return scores.map<double>((s) {
           return (s['obj${i + 1}_score'] ?? 0).toDouble();
         }).toList();
       });
 
+      // 使用与 DAO addScore() 一致的满分比计算达成度
+      const fullMarks = [15.0, 25.0, 30.0, 30.0];
       final objAchievements = List<double>.generate(4, (i) {
         final values = objScores[i];
         final mean = values.reduce((a, b) => a + b) / values.length;
-        return (mean / 100.0).clamp(0.0, 1.0);
+        return (mean / fullMarks[i]).clamp(0.0, 1.0);
       });
 
       // 加权达成度
