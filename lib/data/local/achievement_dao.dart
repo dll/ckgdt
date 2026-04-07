@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' show sqrt;
 import 'package:sqflite/sqflite.dart';
 import 'database_helper.dart';
 
@@ -8,10 +9,15 @@ class AchievementDao {
   // 批次 CRUD
   // ═══════════════════════════════════════════════════════════════════════
 
-  /// 获取所有批次
+  /// 获取所有批次（含学生人数子查询）
   Future<List<Map<String, dynamic>>> getAllBatches() async {
     final db = await DatabaseHelper.instance.database;
-    return db.query('achievement_batches', orderBy: 'created_at DESC');
+    return db.rawQuery('''
+      SELECT ab.*,
+        (SELECT COUNT(*) FROM achievement_scores WHERE batch_id = ab.id) AS student_count
+      FROM achievement_batches ab
+      ORDER BY ab.created_at DESC
+    ''');
   }
 
   /// 获取单个批次
@@ -182,17 +188,8 @@ class AchievementDao {
     final max = values.reduce((a, b) => a > b ? a : b);
     final min = values.reduce((a, b) => a < b ? a : b);
     final variance = values.map((v) => (v - mean) * (v - mean)).reduce((a, b) => a + b) / n;
-    final std = _sqrt(variance);
+    final std = sqrt(variance);
     return {'mean': mean, 'max': max, 'min': min, 'std': std};
-  }
-
-  double _sqrt(double value) {
-    if (value <= 0) return 0;
-    double x = value;
-    for (int i = 0; i < 20; i++) {
-      x = (x + value / x) / 2;
-    }
-    return x;
   }
 
   /// 获取达成度等级
@@ -553,7 +550,7 @@ class AchievementDao {
     );
 
     if (quizData.isEmpty) {
-      throw Exception('没有测验成绩数据');
+      throw Exception('没有测验成绩数据，请先让学生完成章节测验，或使用「批量录入」生成演示数据');
     }
 
     final batchOp = db.batch();
