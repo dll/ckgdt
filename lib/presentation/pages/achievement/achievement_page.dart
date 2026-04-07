@@ -1,6 +1,9 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import '../../../data/local/achievement_dao.dart';
 import '../../../services/auth_service.dart';
 
@@ -22,7 +25,7 @@ class _AchievementPageState extends State<AchievementPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -48,6 +51,7 @@ class _AchievementPageState extends State<AchievementPage>
             tabs: const [
               Tab(icon: Icon(Icons.analytics_outlined, size: 18), text: '达成度概览'),
               Tab(icon: Icon(Icons.edit_note, size: 18), text: '成绩管理'),
+              Tab(icon: Icon(Icons.calculate_outlined, size: 18), text: '计算过程'),
               Tab(icon: Icon(Icons.summarize_outlined, size: 18), text: '报告生成'),
             ],
           ),
@@ -62,6 +66,9 @@ class _AchievementPageState extends State<AchievementPage>
               ),
               _ScoreManagementTab(
                 authService: _authService,
+                achievementDao: _achievementDao,
+              ),
+              _CalculationProcessTab(
                 achievementDao: _achievementDao,
               ),
               _ReportTab(
@@ -1444,15 +1451,19 @@ class _ReportTabState extends State<_ReportTab> {
         stats['objective${i + 1}'] = [mean, maxVal, minVal, std];
       }
 
-      // 保存计算结果到数据库
-      await widget.achievementDao.saveCalculationResults(
-        batchId: _selectedBatchId!,
-        objective1Achievement: objAchievements[0],
-        objective2Achievement: objAchievements[1],
-        objective3Achievement: objAchievements[2],
-        objective4Achievement: objAchievements[3],
-        weightedAchievement: weighted,
-      );
+      // 保存计算结果到数据库（容错：calc_results_json 列可能不存在于旧 DB）
+      try {
+        await widget.achievementDao.saveCalculationResults(
+          batchId: _selectedBatchId!,
+          objective1Achievement: objAchievements[0],
+          objective2Achievement: objAchievements[1],
+          objective3Achievement: objAchievements[2],
+          objective4Achievement: objAchievements[3],
+          weightedAchievement: weighted,
+        );
+      } catch (_) {
+        // 旧数据库可能缺少 calc_results_json 列，忽略保存失败
+      }
 
       // 同时更新批次状态
       await widget.achievementDao.updateBatchStatus(_selectedBatchId!, 'completed');
@@ -1639,13 +1650,122 @@ class _ReportTabState extends State<_ReportTab> {
     );
   }
 
-  void _exportReport() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('导出功能将在后续版本中支持，敬请期待'),
-        backgroundColor: Colors.orange,
-      ),
-    );
+  Future<void> _exportReport() async {
+    if (_calcResults == null) return;
+
+    setState(() => _generatingReport = true);
+
+    try {
+      final batch = _batches.firstWhere(
+        (b) => b['id'] == _selectedBatchId,
+        orElse: () => <String, dynamic>{},
+      );
+      final scores = await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
+
+      final pdf = pw.Document();
+      // 尝试加载中文字体
+      pw.Font? chineseFont;
+      try {
+        final fontData = await rootBundle.load('assets/fonts/NotoSansSC-Regular.ttf');
+        chineseFont = pw.Font.ttf(fontData);
+      } catch (_) {}
+
+      final baseStyle = chineseFont != null
+          ? pw.TextStyle(font: chineseFont, fontSize: 10)
+          : const pw.TextStyle(fontSize: 10);
+      final titleStyle = baseStyle.copyWith(fontSize: 18, fontWeight: pw.FontWeight.bold);
+      final headerStyle = baseStyle.copyWith(fontSize: 14, fontWeight: pw.FontWeight.bold);
+      final boldStyle = baseStyle.copyWith(fontWeight: pw.FontWeight.bold);
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          build: (context) => [
+            pw.Center(child: pw.Text(
+              '${batch['class_name'] ?? ''}《${batch['course_name'] ?? '移动应用开发'}》课程达成度报告',
+              style: titleStyle,
+            )),
+            pw.SizedBox(height: 16),
+            pw.Text('批次：${batch['batch_name'] ?? '-'}  学期：${batch['semester'] ?? '-'}  '
+                '学生人数：${scores.length}', style: baseStyle),
+            pw.SizedBox(height: 20),
+            pw.Text('一、课程目标达成度', style: headerStyle),
+            pw.SizedBox(height: 8),
+            pw.TableHelper.fromTextArray(
+              headerStyle: boldStyle,
+              cellStyle: baseStyle,
+              headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
+              headers: ['课程目标', '权重', '班级平均达成度', '等级'],
+              data: [
+                for (int i = 0; i < 4; i++) [
+                  '课程目标${i + 1}',
+                  '${(_kDefaultWeights[i] * 100).toStringAsFixed(0)}%',
+                  '${(_objectiveAchievements[i] * 100).toStringAsFixed(2)}%',
+                  _achievementLevel(_objectiveAchievements[i]),
+                ],
+                ['加权总达成度', '100%',
+                  '${(_weightedAchievement * 100).toStringAsFixed(2)}%',
+                  _achievementLevel(_weightedAchievement)],
+              ],
+            ),
+            pw.SizedBox(height: 20),
+            pw.Text('二、学生个体达成度', style: headerStyle),
+            pw.SizedBox(height: 8),
+            pw.TableHelper.fromTextArray(
+              headerStyle: boldStyle,
+              cellStyle: baseStyle,
+              headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
+              headers: ['学号', '姓名', '目标1', '目标2', '目标3', '目标4', '总分'],
+              data: scores.map((s) => [
+                s['student_id']?.toString() ?? '',
+                s['student_name']?.toString() ?? '',
+                ((s['obj1_achievement'] as num?)?.toDouble() ?? 0).toStringAsFixed(2),
+                ((s['obj2_achievement'] as num?)?.toDouble() ?? 0).toStringAsFixed(2),
+                ((s['obj3_achievement'] as num?)?.toDouble() ?? 0).toStringAsFixed(2),
+                ((s['obj4_achievement'] as num?)?.toDouble() ?? 0).toStringAsFixed(2),
+                ((s['total_score'] as num?)?.toDouble() ?? 0).toStringAsFixed(1),
+              ]).toList(),
+            ),
+            pw.SizedBox(height: 20),
+            pw.Text('三、统计分析', style: headerStyle),
+            pw.SizedBox(height: 8),
+            if (_statistics.isNotEmpty)
+              pw.TableHelper.fromTextArray(
+                headerStyle: boldStyle,
+                cellStyle: baseStyle,
+                headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
+                headers: ['统计指标', '目标1', '目标2', '目标3', '目标4'],
+                data: ['平均分', '最高分', '最低分', '标准差'].asMap().entries.map((e) {
+                  return [
+                    e.value,
+                    for (int i = 0; i < 4; i++)
+                      (_statistics['objective${i + 1}']?[e.key] ?? 0).toStringAsFixed(2),
+                  ];
+                }).toList(),
+              ),
+            pw.SizedBox(height: 20),
+            pw.Text('报告生成时间：${DateTime.now().toString().substring(0, 19)}', style: baseStyle),
+          ],
+        ),
+      );
+
+      // 使用 printing 包进行分享/打印/保存
+      await Printing.sharePdf(
+        bytes: await pdf.save(),
+        filename: '${batch['class_name'] ?? '课程'}达成度报告.pdf',
+      );
+
+      if (mounted) {
+        setState(() => _generatingReport = false);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _generatingReport = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('导出PDF失败：$e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   @override
@@ -1785,9 +1905,9 @@ class _ReportTabState extends State<_ReportTab> {
           label: const Text('生成Markdown报告'),
         ),
         OutlinedButton.icon(
-          onPressed: _calcResults != null ? _exportReport : null,
-          icon: const Icon(Icons.file_download_outlined, size: 18),
-          label: const Text('导出报告'),
+          onPressed: (_calcResults != null && !_generatingReport) ? _exportReport : null,
+          icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+          label: const Text('导出PDF报告'),
         ),
       ],
     );
@@ -2193,5 +2313,323 @@ class _ReportTabState extends State<_ReportTab> {
         ),
       ),
     );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Tab 3 — 计算过程（大纲目标、计算公式、个体达成度、可视化）
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _CalculationProcessTab extends StatefulWidget {
+  final AchievementDao achievementDao;
+
+  const _CalculationProcessTab({required this.achievementDao});
+
+  @override
+  State<_CalculationProcessTab> createState() => _CalculationProcessTabState();
+}
+
+class _CalculationProcessTabState extends State<_CalculationProcessTab> {
+  List<Map<String, dynamic>> _batches = [];
+  List<Map<String, dynamic>> _scores = [];
+  int? _selectedBatchId;
+  bool _loading = true;
+  List<double> _classAvgAchievements = [0, 0, 0, 0];
+  double _weightedAchievement = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBatches();
+  }
+
+  Future<void> _loadBatches() async {
+    try {
+      final batches = await widget.achievementDao.getBatches();
+      if (mounted) {
+        setState(() {
+          _batches = batches;
+          _loading = false;
+          if (_batches.isNotEmpty && _selectedBatchId == null) {
+            _selectedBatchId = _batches.first['id'] as int;
+            _loadScoresAndCalc();
+          }
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _loadScoresAndCalc() async {
+    if (_selectedBatchId == null) return;
+    setState(() => _loading = true);
+    try {
+      final scores = await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
+      if (scores.isNotEmpty) {
+        final avgs = List<double>.filled(4, 0);
+        for (final s in scores) {
+          for (int i = 0; i < 4; i++) {
+            avgs[i] += (s['obj${i + 1}_achievement'] as num?)?.toDouble() ?? 0;
+          }
+        }
+        for (int i = 0; i < 4; i++) avgs[i] /= scores.length;
+        double weighted = 0;
+        for (int i = 0; i < 4; i++) weighted += avgs[i] * _kDefaultWeights[i];
+        _classAvgAchievements = avgs;
+        _weightedAchievement = weighted;
+      }
+      if (mounted) setState(() { _scores = scores; _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading && _batches.isEmpty) return const Center(child: CircularProgressIndicator());
+    final primary = Theme.of(context).colorScheme.primary;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _buildBatchSelector(primary),
+        const SizedBox(height: 16),
+        _buildSyllabusObjectives(primary),
+        const SizedBox(height: 16),
+        _buildAssessmentStructure(primary),
+        const SizedBox(height: 16),
+        _buildFormula(primary),
+        const SizedBox(height: 16),
+        if (_scores.isNotEmpty) ...[
+          _buildClassOverview(primary),
+          const SizedBox(height: 16),
+          _buildStudentTable(primary),
+          const SizedBox(height: 16),
+          _buildObjectiveCharts(primary),
+        ],
+        if (_scores.isEmpty && !_loading)
+          Padding(padding: const EdgeInsets.only(top: 40), child: Center(child: Column(children: [
+            Icon(Icons.info_outline, size: 64, color: Colors.grey.withValues(alpha: 0.4)),
+            const SizedBox(height: 12),
+            const Text('暂无成绩数据，请先在"成绩管理"中录入', style: TextStyle(color: Colors.grey)),
+          ]))),
+      ]),
+    );
+  }
+
+  Widget _buildBatchSelector(Color primary) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(border: Border.all(color: primary.withValues(alpha: 0.3)), borderRadius: BorderRadius.circular(12)),
+      child: DropdownButtonHideUnderline(child: DropdownButton<int>(
+        isExpanded: true, value: _selectedBatchId, hint: const Text('选择批次'),
+        items: _batches.map((b) => DropdownMenuItem<int>(value: b['id'] as int, child: Text(b['batch_name'] ?? '未命名'))).toList(),
+        onChanged: (v) { setState(() { _selectedBatchId = v; _scores = []; }); _loadScoresAndCalc(); },
+      )),
+    );
+  }
+
+  Widget _buildSyllabusObjectives(Color primary) {
+    const objectives = [
+      {'id': '课程目标1', 'weight': 0.15, 'req': '毕业要求 1.4', 'desc': '掌握移动应用开发技术体系（原生/混合/跨平台）及主流平台特性，理解技术选型逻辑', 'ch': '第1章 + 第2章'},
+      {'id': '课程目标2', 'weight': 0.25, 'req': '毕业要求 3.2', 'desc': '运用跨平台开发框架及小程序技术，结合AI编程工具与后端API交互，设计实现跨平台应用', 'ch': '第3章 + 第4章'},
+      {'id': '课程目标3', 'weight': 0.30, 'req': '毕业要求 4.2', 'desc': '调研对比多端开发方案，分析不同技术栈在跨设备适配场景中的优劣，具备技术方案评估与选型能力', 'ch': '第5章'},
+      {'id': '课程目标4', 'weight': 0.30, 'req': '毕业要求 5.1', 'desc': '遵循软件工程规范，使用现代开发工具（含AI编程工具、Git版本控制）完成应用测试与优化', 'ch': '第6章'},
+    ];
+    return Card(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [Icon(Icons.menu_book, color: primary, size: 22), const SizedBox(width: 8), const Text('一、大纲课程目标', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))]),
+      const Divider(height: 20),
+      ...objectives.asMap().entries.map((e) {
+        final i = e.key; final o = e.value;
+        return Padding(padding: const EdgeInsets.only(bottom: 12), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(width: 70, padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 6),
+            decoration: BoxDecoration(color: _kObjectiveColors[i].withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
+            child: Column(children: [
+              Text(o['id'] as String, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: _kObjectiveColors[i])),
+              Text('权重 ${((o['weight'] as double) * 100).toStringAsFixed(0)}%', style: const TextStyle(fontSize: 9, color: Colors.grey)),
+            ])),
+          const SizedBox(width: 10),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(o['desc'] as String, style: const TextStyle(fontSize: 12.5, height: 1.4)),
+            const SizedBox(height: 2),
+            Text('${o['req']} · ${o['ch']}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+          ])),
+        ]));
+      }),
+    ])));
+  }
+
+  Widget _buildAssessmentStructure(Color primary) {
+    return Card(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [Icon(Icons.assignment, color: primary, size: 22), const SizedBox(width: 8), const Text('二、考核方式与满分分配', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))]),
+      const Divider(height: 20),
+      Row(children: [_wChip('平时成绩', '20%', Colors.blue), const SizedBox(width: 8), _wChip('实验成绩', '30%', Colors.green), const SizedBox(width: 8), _wChip('期末成绩', '50%', Colors.orange)]),
+      const SizedBox(height: 16),
+      Container(decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.grey.withValues(alpha: 0.2))),
+        child: Table(border: TableBorder.symmetric(inside: BorderSide(color: Colors.grey.withValues(alpha: 0.15))),
+          columnWidths: const {0: FlexColumnWidth(2), 1: FlexColumnWidth(1.5), 2: FlexColumnWidth(1.5), 3: FlexColumnWidth(1.5)},
+          children: [
+            _tRow(['课程目标', '平时(20%)', '实验(30%)', '期末(50%)'], h: true, p: primary),
+            _tRow(['目标1', '15分', '15分', '15分']), _tRow(['目标2', '25分', '25分', '25分']),
+            _tRow(['目标3', '30分', '30分', '30分']), _tRow(['目标4', '30分', '30分', '30分']),
+            _tRow(['合计', '100分', '100分', '100分'], h: true, p: primary),
+          ])),
+    ])));
+  }
+
+  Widget _wChip(String label, String value, Color color) => Expanded(child: Container(
+    padding: const EdgeInsets.symmetric(vertical: 10),
+    decoration: BoxDecoration(color: color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(10), border: Border.all(color: color.withValues(alpha: 0.2))),
+    child: Column(children: [Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)), const SizedBox(height: 2), Text(label, style: TextStyle(fontSize: 11, color: color))]),
+  ));
+
+  TableRow _tRow(List<String> c, {bool h = false, Color? p}) => TableRow(
+    decoration: h ? BoxDecoration(color: (p ?? Colors.grey).withValues(alpha: 0.06)) : null,
+    children: c.map((t) => Padding(padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+      child: Text(t, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: h ? FontWeight.bold : FontWeight.normal)))).toList(),
+  );
+
+  Widget _buildFormula(Color primary) {
+    return Card(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [Icon(Icons.functions, color: primary, size: 22), const SizedBox(width: 8), const Text('三、达成度计算公式', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))]),
+      const Divider(height: 20),
+      _fItem('Step 1', '目标i综合得分', '= 平时目标i分×0.20 + 实验目标i分×0.30 + 期末目标i分×0.50'),
+      _fItem('Step 2', '目标i达成度', '= 目标i综合得分 / 目标i满分\n  满分：目标1=15, 目标2=25, 目标3=30, 目标4=30'),
+      _fItem('Step 3', '班级平均达成度', '= Σ(所有学生目标i达成度) / 学生人数'),
+      _fItem('Step 4', '加权总达成度', '= 目标1×0.15 + 目标2×0.25 + 目标3×0.30 + 目标4×0.30'),
+      const SizedBox(height: 8),
+      Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.blue.withValues(alpha: 0.15))),
+        child: Row(children: [const Icon(Icons.info_outline, size: 16, color: Colors.blue), const SizedBox(width: 8),
+          Expanded(child: Text('等级标准：≥85% 优秀 · ≥70% 良好 · ≥60% 中等 · <60% 未达成', style: TextStyle(fontSize: 11, color: Colors.blue[700])))])),
+    ])));
+  }
+
+  Widget _fItem(String step, String title, String formula) => Padding(padding: const EdgeInsets.only(bottom: 12), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: Colors.indigo.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
+      child: Text(step, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.indigo))),
+    const SizedBox(width: 8),
+    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+      const SizedBox(height: 2),
+      Text(formula, style: TextStyle(fontSize: 11, color: Colors.grey[600], fontFamily: 'monospace')),
+    ])),
+  ]));
+
+  Widget _buildClassOverview(Color primary) {
+    return Card(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [Icon(Icons.bar_chart, color: primary, size: 22), const SizedBox(width: 8), Text('四、班级达成度概览（${_scores.length}人）', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold))]),
+      const Divider(height: 20),
+      ...List.generate(4, (i) {
+        final val = _classAvgAchievements[i];
+        return Padding(padding: const EdgeInsets.only(bottom: 10), child: Row(children: [
+          SizedBox(width: 65, child: Text('目标${i + 1}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: _kObjectiveColors[i]))),
+          Text('${(_kDefaultWeights[i] * 100).toStringAsFixed(0)}%', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+          const SizedBox(width: 8),
+          Expanded(child: Stack(children: [
+            Container(height: 22, decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4))),
+            FractionallySizedBox(widthFactor: val.clamp(0.0, 1.0), child: Container(height: 22, decoration: BoxDecoration(color: _kObjectiveColors[i].withValues(alpha: 0.7), borderRadius: BorderRadius.circular(4)))),
+          ])),
+          const SizedBox(width: 8),
+          SizedBox(width: 50, child: Text('${(val * 100).toStringAsFixed(1)}%', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _kObjectiveColors[i]), textAlign: TextAlign.right)),
+        ]));
+      }),
+      const Divider(),
+      Row(children: [
+        const SizedBox(width: 65, child: Text('总达成度', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
+        const SizedBox(width: 34),
+        Expanded(child: Stack(children: [
+          Container(height: 26, decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(5))),
+          FractionallySizedBox(widthFactor: _weightedAchievement.clamp(0.0, 1.0), child: Container(height: 26, decoration: BoxDecoration(
+            gradient: LinearGradient(colors: [primary.withValues(alpha: 0.8), primary.withValues(alpha: 0.5)]), borderRadius: BorderRadius.circular(5)))),
+        ])),
+        const SizedBox(width: 8),
+        SizedBox(width: 50, child: Text('${(_weightedAchievement * 100).toStringAsFixed(1)}%', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: primary), textAlign: TextAlign.right)),
+      ]),
+      const SizedBox(height: 10),
+      Center(child: Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        decoration: BoxDecoration(color: _achievementLevelColor(_weightedAchievement).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)),
+        child: Text('达成等级：${_achievementLevel(_weightedAchievement)}', style: TextStyle(fontWeight: FontWeight.bold, color: _achievementLevelColor(_weightedAchievement))))),
+    ])));
+  }
+
+  Widget _buildStudentTable(Color primary) {
+    return Card(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [Icon(Icons.people, color: primary, size: 22), const SizedBox(width: 8), const Text('五、学生个体达成度', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))]),
+      const Divider(height: 20),
+      Container(padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4), decoration: BoxDecoration(color: primary.withValues(alpha: 0.06), borderRadius: const BorderRadius.vertical(top: Radius.circular(8))),
+        child: const Row(children: [
+          SizedBox(width: 70, child: Text('学号', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
+          SizedBox(width: 50, child: Text('姓名', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
+          Expanded(child: Text('目标1', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
+          Expanded(child: Text('目标2', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
+          Expanded(child: Text('目标3', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
+          Expanded(child: Text('目标4', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
+          SizedBox(width: 45, child: Text('总分', textAlign: TextAlign.right, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
+        ])),
+      ...(_scores.length > 30 ? _scores.sublist(0, 30) : _scores).asMap().entries.map((entry) {
+        final i = entry.key; final s = entry.value;
+        final total = (s['total_score'] as num?)?.toDouble() ?? 0;
+        return Container(padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+          decoration: BoxDecoration(color: i.isEven ? Colors.transparent : Colors.grey.withValues(alpha: 0.03), border: Border(bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.08)))),
+          child: Row(children: [
+            SizedBox(width: 70, child: Text(s['student_id']?.toString() ?? '', style: const TextStyle(fontSize: 10, fontFamily: 'monospace'))),
+            SizedBox(width: 50, child: Text(s['student_name']?.toString() ?? '', style: const TextStyle(fontSize: 10), overflow: TextOverflow.ellipsis)),
+            ...List.generate(4, (j) {
+              final ach = (s['obj${j + 1}_achievement'] as num?)?.toDouble() ?? 0;
+              return Expanded(child: Text((ach * 100).toStringAsFixed(1), textAlign: TextAlign.center, style: TextStyle(fontSize: 10, color: _achievementLevelColor(ach))));
+            }),
+            SizedBox(width: 45, child: Text(total.toStringAsFixed(1), textAlign: TextAlign.right, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500))),
+          ]));
+      }),
+      if (_scores.length > 30) Padding(padding: const EdgeInsets.only(top: 8), child: Text('... 仅显示前30条，共${_scores.length}条', style: const TextStyle(fontSize: 11, color: Colors.grey))),
+    ])));
+  }
+
+  Widget _buildObjectiveCharts(Color primary) {
+    return Card(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [Icon(Icons.insert_chart, color: primary, size: 22), const SizedBox(width: 8), const Text('六、各目标达成度分布', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))]),
+      const Divider(height: 20),
+      ...List.generate(4, (objIdx) => _buildSingleObjChart(objIdx)),
+    ])));
+  }
+
+  Widget _buildSingleObjChart(int objIdx) {
+    final color = _kObjectiveColors[objIdx];
+    final key = 'obj${objIdx + 1}_achievement';
+    final fullMark = [15.0, 25.0, 30.0, 30.0][objIdx];
+    int cLow = 0, cMid = 0, cGood = 0, cExcel = 0;
+    for (final s in _scores) {
+      final v = (s[key] as num?)?.toDouble() ?? 0;
+      if (v >= 0.85) cExcel++; else if (v >= 0.70) cGood++; else if (v >= 0.60) cMid++; else cLow++;
+    }
+    final total = _scores.length;
+    return Padding(padding: const EdgeInsets.only(bottom: 16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Container(width: 10, height: 10, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
+        const SizedBox(width: 6),
+        Text('课程目标${objIdx + 1}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: color)),
+        const SizedBox(width: 8),
+        Text('满分${fullMark.toInt()}分 · 权重${(_kDefaultWeights[objIdx] * 100).toStringAsFixed(0)}%', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+        const Spacer(),
+        Text('均值 ${(_classAvgAchievements[objIdx] * 100).toStringAsFixed(1)}%', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color)),
+      ]),
+      const SizedBox(height: 8),
+      Row(children: [
+        _distBar('未达成', cLow, total, Colors.red), const SizedBox(width: 4),
+        _distBar('中等', cMid, total, Colors.orange), const SizedBox(width: 4),
+        _distBar('良好', cGood, total, Colors.blue), const SizedBox(width: 4),
+        _distBar('优秀', cExcel, total, Colors.green),
+      ]),
+    ]));
+  }
+
+  Widget _distBar(String label, int count, int total, Color color) {
+    final pct = total > 0 ? count / total : 0.0;
+    return Expanded(flex: max(1, (pct * 100).round()), child: Column(children: [
+      Container(height: 20, decoration: BoxDecoration(color: color.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(3)),
+        child: Center(child: Text(count > 0 ? '$count' : '', style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold)))),
+      const SizedBox(height: 2),
+      Text(label, style: TextStyle(fontSize: 8, color: color)),
+    ]));
   }
 }

@@ -376,7 +376,7 @@ class AchievementDao {
       seed = (seed * 1103515245 + 12345) & 0x7fffffff;
       final obj4Ach = 0.55 + (seed % 40) / 100;
 
-      final totalScore = (obj1Ach * 15 + obj2Ach * 25 + obj3Ach * 30 + obj4Ach * 30) * 100;
+      final totalScore = obj1Ach * 15 + obj2Ach * 25 + obj3Ach * 30 + obj4Ach * 30;
 
       batch.insert('achievement_scores', {
         'batch_id': batchId,
