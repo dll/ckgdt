@@ -1,7 +1,10 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../core/constants/chapter_sorter.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../services/file_opener_service.dart';
+import '../../../services/courseware_download_service.dart';
 
 class DocumentListPage extends StatefulWidget {
   const DocumentListPage({super.key});
@@ -120,6 +123,11 @@ class _DocumentListPageState extends State<DocumentListPage>
               '暂无${type}文档',
               style: TextStyle(fontSize: 18, color: Colors.grey[600]),
             ),
+            const SizedBox(height: 8),
+            Text(
+              '文档将从 Gitee 仓库自动获取',
+              style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+            ),
           ],
         ),
       );
@@ -147,15 +155,118 @@ class _DocumentListPageState extends State<DocumentListPage>
     );
   }
 
-  void _openDocument(Map<String, dynamic> doc) {
+  void _openDocument(Map<String, dynamic> doc) async {
     final filePath = doc['file_path'] as String? ?? '';
     final fileName = doc['file_name'] as String? ?? '';
+    final fileType = doc['file_type'] as String? ?? '';
+    final chapter = doc['chapter'] as String? ?? '';
+
     if (filePath.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('文件路径未设置')),
       );
       return;
     }
-    FileOpenerService.openFile(context, filePath, fileName);
+
+    // 本地文件存在 → 直接打开
+    if (!kIsWeb) {
+      final localFile = File(filePath);
+      if (await localFile.exists()) {
+        if (!mounted) return;
+        FileOpenerService.openFile(context, filePath, fileName);
+        return;
+      }
+    }
+
+    // 本地不存在 → 检查是否可远程下载
+    if (!mounted) return;
+
+    if (!CoursewareDownloadService.isRemoteAvailable(fileType)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(CoursewareDownloadService.getLocalOnlyMessage(fileType)),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
+    await _downloadAndOpen(
+      filePath: filePath,
+      fileName: fileName,
+      fileType: fileType,
+      chapter: chapter,
+    );
+  }
+
+  Future<void> _downloadAndOpen({
+    required String filePath,
+    required String fileName,
+    required String fileType,
+    required String chapter,
+  }) async {
+    final downloadService = CoursewareDownloadService();
+    bool cancelled = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('下载课件'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(fileName,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 12),
+              const Text('正在从 Gitee 仓库下载...',
+                  style: TextStyle(fontSize: 12, color: Colors.grey)),
+              const SizedBox(height: 16),
+              const LinearProgressIndicator(),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                cancelled = true;
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('取消'),
+            ),
+          ],
+        );
+      },
+    );
+
+    final resultPath = await downloadService.getLocalOrDownload(
+      localPath: filePath,
+      fileType: fileType,
+      chapter: chapter,
+      fileName: fileName,
+    );
+
+    if (cancelled || !mounted) return;
+
+    if (mounted) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+
+    if (resultPath != null) {
+      if (!mounted) return;
+      FileOpenerService.openFile(context, resultPath, fileName);
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('下载失败: $fileName\n请检查网络连接'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
   }
 }

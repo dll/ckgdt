@@ -1,0 +1,49 @@
+{
+  "version": "1.0.0",
+  "description": "课件资源索引 — 指定各类教学资源的远程存储位置",
+  "updated_at": "2026-04-07",
+  "notes": "PDF文档已推送到 Gitee 仓库可直接下载；视频和PPT由于Gitee 1GB仓库限制需本地部署",
+  "resource_base": {
+    "pdf": {
+      "type": "gitee_raw",
+      "owner": "osgisOne",
+      "repo": "mad-fd",
+      "branch": "master",
+      "base_path": "data/课件/清言智谱",
+      "extension": ".pdf",
+      "status": "available",
+      "description": "PDF文档已推送到 Gitee 仓库，应用可远程下载"
+    },
+    "ppt": {
+      "type": "local_only",
+      "base_path": "data/课件/秒出PPT",
+      "extension": ".pptx",
+      "status": "local_only",
+      "description": "PPT文件较大，需本地部署或通过教师分发获取"
+    },
+    "video": {
+      "type": "local_only",
+      "base_path": "data/视频",
+      "extension": ".mp4",
+      "status": "local_only",
+      "description": "视频文件较大，需本地部署或通过教师分发获取"
+    }
+  },
+  "chapters": [
+    "第一章 移动应用开发技术体系1",
+    "第一章 移动应用开发技术体系2",
+    "第二章 原生开发基础1",
+    "第二章 原生开发基础2",
+    "第三章 混合开发技术1",
+    "第三章 混合开发技术2",
+    "第三章 混合开发技术3",
+    "第四章 小程序开发1",
+    "第四章 小程序开发2",
+    "第五章 华为多端应用开发1",
+    "第五章 华为多端应用开发2",
+    "第五章 华为多端应用开发3",
+    "第六章 综合开发实践1",
+    "第六章 综合开发实践2",
+    "第六章 综合开发实践3"
+  ]
+}

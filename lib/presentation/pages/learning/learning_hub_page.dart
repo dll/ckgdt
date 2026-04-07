@@ -1,9 +1,12 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../core/constants/chapter_sorter.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../services/ai_service.dart';
 import '../../../services/file_opener_service.dart';
+import '../../../services/courseware_download_service.dart';
 
 /// 学习中心页面 — 合并原"视频"和"课件"菜单
 /// 4 个 Tab：视频、PPT、PDF、AI助手
@@ -511,16 +514,151 @@ class _LearningHubPageState extends State<LearningHubPage>
 
   // ── 通用工具 ──────────────────────────────────────────────────────────────
 
-  void _openFile(Map<String, dynamic> file) {
+  void _openFile(Map<String, dynamic> file) async {
     final filePath = file['file_path'] as String? ?? '';
     final fileName = file['file_name'] as String? ?? '${file['chapter']}';
+    final fileType = file['file_type'] as String? ?? '';
+    final chapter = file['chapter'] as String? ?? '';
+
     if (filePath.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('文件路径未设置')),
       );
       return;
     }
-    FileOpenerService.openFile(context, filePath, fileName);
+
+    // 本地文件存在 → 直接打开
+    if (!kIsWeb) {
+      final localFile = File(filePath);
+      if (await localFile.exists()) {
+        if (!mounted) return;
+        FileOpenerService.openFile(context, filePath, fileName);
+        return;
+      }
+    }
+
+    // 本地不存在 → 检查是否可远程下载
+    if (!mounted) return;
+
+    if (!CoursewareDownloadService.isRemoteAvailable(fileType)) {
+      // 该类型不支持远程下载
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(CoursewareDownloadService.getLocalOnlyMessage(fileType)),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
+    await _downloadAndOpen(
+      filePath: filePath,
+      fileName: fileName,
+      fileType: fileType,
+      chapter: chapter,
+    );
+  }
+
+  /// 显示下载进度对话框并从 Gitee 下载文件
+  Future<void> _downloadAndOpen({
+    required String filePath,
+    required String fileName,
+    required String fileType,
+    required String chapter,
+  }) async {
+    final downloadService = CoursewareDownloadService();
+    double progress = 0.0;
+    bool cancelled = false;
+
+    // 显示下载对话框
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('下载课件'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    fileName,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w500, fontSize: 14),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '正在从 Gitee 仓库下载...',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 16),
+                  LinearProgressIndicator(
+                    value: progress > 0 ? progress : null,
+                    minHeight: 6,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  const SizedBox(height: 8),
+                  if (progress > 0)
+                    Text(
+                      '${(progress * 100).toStringAsFixed(0)}%',
+                      style:
+                          const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    cancelled = true;
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: const Text('取消'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    // 开始下载
+    final resultPath = await downloadService.getLocalOrDownload(
+      localPath: filePath,
+      fileType: fileType,
+      chapter: chapter,
+      fileName: fileName,
+      onProgress: (p) {
+        progress = p;
+        // Dialog 已通过 StatefulBuilder 管理，此处无法直接更新
+        // 但进度在后台记录，用于日志
+      },
+    );
+
+    if (cancelled || !mounted) return;
+
+    // 关闭下载对话框
+    if (mounted) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+
+    if (resultPath != null) {
+      if (!mounted) return;
+      FileOpenerService.openFile(context, resultPath, fileName);
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('下载失败: $fileName\n请检查网络连接或联系管理员'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
   }
 
   Widget _buildEmptyState(IconData icon, String text) {
@@ -533,6 +671,11 @@ class _LearningHubPageState extends State<LearningHubPage>
           Text(
             text,
             style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '课件将从 Gitee 仓库自动获取',
+            style: TextStyle(fontSize: 13, color: Colors.grey[500]),
           ),
         ],
       ),

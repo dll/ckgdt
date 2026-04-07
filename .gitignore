@@ -41,10 +41,12 @@ docs/video/**/temp/
 docs/video/**/crops/
 docs/video/**/assets/
 
-# ── 课件资源（视频/PPT/PDF/音频）排除 ──
-# 这些文件体积大，不适合放在 Git 仓库中
+# ── 课件大文件 ──
+# 视频/PPT 文件超出 Gitee 免费仓库 1GB 限制，不推送
+# 应用通过 CoursewareDownloadService 从配置的资源地址获取
 data/视频/
-data/课件/
+data/课件/秒出PPT/
+data/课件/讯飞智文/
 data/courseware_output/
 video_output/
 docs/video/generated/
@@ -53,11 +55,9 @@ docs/video/v4/
 docs/video/v5/
 *.mp4
 *.wav
-*.mp3
 *.avi
 *.mov
 *.pptx
-*.pdf
 
 # Windows reserved file accidentally created
 nul
