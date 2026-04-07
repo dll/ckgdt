@@ -168,10 +168,10 @@ class UserDao {
       return true;
     }
 
-    // For all users: accept last 6 digits of userId, empty, or same as userId
+    // For all users: accept last 6 digits of userId or same as userId
     final last6 =
         userId.length >= 6 ? userId.substring(userId.length - 6) : userId;
-    if (password == last6 || password.isEmpty || password == userId) {
+    if (password == last6 || password == userId) {
       await setCurrentUser(userId, '');
       debugPrint('=== UserDao: Login success for $userId, role=${user.role}');
       return true;

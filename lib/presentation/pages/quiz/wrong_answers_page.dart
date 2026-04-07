@@ -39,7 +39,8 @@ class _WrongAnswersPageState extends State<WrongAnswersPage> {
   }
 
   Future<void> _removeWrongAnswer(int id) async {
-    await _wrongAnswerDao.removeWrongAnswer(id);
+    final userId = _authService.currentUser?.userId ?? '';
+    await _wrongAnswerDao.removeWrongAnswer(id, userId);
     _loadData();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

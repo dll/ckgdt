@@ -19,6 +19,8 @@ import '../materials/materials_hub_page.dart';
 import '../admin/repo_analytics_page.dart';
 import '../materials/courseware_workshop_page.dart';
 
+import '../../../core/constants/role_guard.dart';
+
 class TeacherWorkspacePage extends StatefulWidget {
   const TeacherWorkspacePage({super.key});
 
@@ -76,6 +78,27 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
   @override
   Widget build(BuildContext context) {
     final user = _authService.currentUser;
+
+    // 权限守卫：仅教师/管理员可访问
+    final role = user?.role ?? 'student';
+    if (!RoleGuard.isTeacherOrAdmin(role)) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('教师工作台')),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.lock, size: 64, color: Colors.grey),
+              SizedBox(height: 16),
+              Text('无权限访问', style: TextStyle(fontSize: 18, color: Colors.grey)),
+              SizedBox(height: 8),
+              Text('仅教师和管理员可访问工作台', style: TextStyle(color: Colors.grey)),
+            ],
+          ),
+        ),
+      );
+    }
+
     final gradient = AppGradientTheme.of(context);
 
     if (_isLoading) {

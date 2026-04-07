@@ -3,6 +3,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import '../../../services/data_service.dart';
+import '../../../services/auth_service.dart';
+import '../../../core/constants/role_guard.dart';
 import '../../../data/local/quiz_dao.dart';
 import '../../../data/local/database_helper.dart';
 
@@ -340,6 +342,21 @@ class _DataImportPageState extends State<DataImportPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 权限守卫：仅管理员可访问
+    final role = AuthService().currentUser?.role ?? 'student';
+    if (!RoleGuard.canImportData(role)) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.lock, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text('无权限访问', style: TextStyle(fontSize: 18, color: Colors.grey)),
+          ],
+        ),
+      );
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(

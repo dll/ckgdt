@@ -19,6 +19,7 @@ import '../admin/survey_manage_page.dart';
 import '../works/works_page.dart';
 import '../lab/lab_tasks_page.dart';
 import '../repo/git_repo_page.dart';
+import '../repo/student_repo_page.dart';
 import '../achievement/achievement_page.dart';
 import '../profile/student_center_page.dart';
 import '../profile/teacher_workspace_page.dart';
@@ -291,7 +292,9 @@ class _HomePageState extends State<HomePage> {
       case 7:
         return const WorksPage();
       case 8:
-        return const GitRepoPage();
+        // 教师/管理员 → 完整仓库管理; 学生 → 简化的个人仓库视图
+        if (isTeacherOrAdmin) return const GitRepoPage();
+        return const StudentRepoPage();
       case 9:
         // 教师/管理员: 达成; 其他角色不会有 index 9
         if (isTeacherOrAdmin) return const AchievementPage();

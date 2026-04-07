@@ -68,12 +68,12 @@ class WrongAnswerDao {
     return (result.first['count'] as int?) ?? 0;
   }
 
-  Future<void> removeWrongAnswer(int id) async {
+  Future<void> removeWrongAnswer(int id, String userId) async {
     final db = await _dbHelper.database;
     await db.delete(
       'wrong_answers',
-      where: 'id = ?',
-      whereArgs: [id],
+      where: 'id = ? AND user_id = ?',
+      whereArgs: [id, userId],
     );
   }
 
