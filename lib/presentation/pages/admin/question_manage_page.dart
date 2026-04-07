@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../data/local/quiz_dao.dart';
 import '../../../data/models/question_model.dart';
+import '../../../services/auth_service.dart';
+import '../../../core/constants/role_guard.dart';
 
 /// 题库管理页面 — 教师/管理员专用
 /// 功能：题目列表、按章节筛选、添加/编辑/删除题目、章节统计
@@ -13,6 +15,7 @@ class QuestionManagePage extends StatefulWidget {
 
 class _QuestionManagePageState extends State<QuestionManagePage> {
   final _quizDao = QuizDao();
+  final _authService = AuthService();
 
   List<QuestionModel> _questions = [];
   List<String> _chapters = [];
@@ -71,6 +74,26 @@ class _QuestionManagePageState extends State<QuestionManagePage> {
 
   @override
   Widget build(BuildContext context) {
+    // 权限守卫：仅教师/管理员可访问
+    final role = _authService.currentUser?.role ?? 'student';
+    if (!RoleGuard.canManageQuestions(role)) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('题库管理')),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.lock, size: 64, color: Colors.grey),
+              SizedBox(height: 16),
+              Text('无权限访问', style: TextStyle(fontSize: 18, color: Colors.grey)),
+              SizedBox(height: 8),
+              Text('仅教师和管理员可管理题库', style: TextStyle(color: Colors.grey)),
+            ],
+          ),
+        ),
+      );
+    }
+
     final primary = Theme.of(context).colorScheme.primary;
     final filtered = _filteredQuestions;
     final totalCount =

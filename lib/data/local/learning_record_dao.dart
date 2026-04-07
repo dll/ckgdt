@@ -58,12 +58,12 @@ class LearningRecordDao {
     return result.isNotEmpty;
   }
 
-  Future<void> deleteRecord(int id) async {
+  Future<void> deleteRecord(int id, String userId) async {
     final db = await _dbHelper.database;
     await db.delete(
       'learning_records',
-      where: 'id = ?',
-      whereArgs: [id],
+      where: 'id = ? AND user_id = ?',
+      whereArgs: [id, userId],
     );
   }
 
