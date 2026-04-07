@@ -1487,7 +1487,7 @@ class _GiteeSettingsTabState extends State<_GiteeSettingsTab> {
                   ),
                   SizedBox(height: 12),
                   Text(
-                    '• 系统资源从 mad-fd 仓库读取（实验/课件/考核配置）\n'
+                    '• 系统资源从 mad-data 仓库读取（实验/课件/考核配置）\n'
                     '• 学生仓库从 chzuczldl 企业读取（cg1-/cg2-/cg3- 前缀）\n'
                     '• 每个仓库使用 feat-姓名拼音首字母小写 标识学生\n'
                     '• 需要有企业仓库的读取权限\n'
@@ -1588,7 +1588,7 @@ class _GiteeSettingsTabState extends State<_GiteeSettingsTab> {
           // 仓库配置信息
           const Text('仓库配置', style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          _buildConfigItem('系统资源仓库', 'osgisOne/mad-fd'),
+          _buildConfigItem('系统资源仓库', 'osgisOne/mad-data'),
           _buildConfigItem('企业命名空间', 'chzuczldl (滁州学院-刘东良)'),
           _buildConfigItem('学生仓库前缀', 'cg1-, cg2-, cg3-'),
           _buildConfigItem('分支命名规范', 'feat-{姓名拼音首字母小写}'),

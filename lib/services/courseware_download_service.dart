@@ -10,7 +10,7 @@ import 'gitee_service.dart';
 /// 工作流程：
 /// 1. 检查本地原始路径（DataLoadingService 写入的绝对路径）
 /// 2. 检查本地缓存目录（之前下载过的文件）
-/// 3. 仅 PDF 文件可从 Gitee 远程下载（视频/PPT 因仓库容量限制需本地部署）
+/// 3. 从 Gitee mad-data 仓库远程下载（PDF / PPT / 视频均已推送）
 class CoursewareDownloadService {
   static final CoursewareDownloadService instance =
       CoursewareDownloadService._();
@@ -19,25 +19,25 @@ class CoursewareDownloadService {
 
   final GiteeService _gitee = GiteeService();
 
-  /// Gitee 仓库信息
+  /// Gitee 仓库信息 — 课件数据独立仓库
   static const String _owner = 'osgisOne';
-  static const String _repo = 'mad-fd';
+  static const String _repo = 'mad-data';
   static const String _branch = 'master';
 
-  /// 可远程下载的文件类型（PDF 已推送到仓库）
-  static const Set<String> _remoteAvailableTypes = {'pdf'};
+  /// 可远程下载的文件类型（所有课件均已推送到 mad-data 仓库）
+  static const Set<String> _remoteAvailableTypes = {'pdf', 'ppt', 'video'};
 
-  /// 远程路径映射
+  /// 远程路径映射（mad-data 仓库根目录直接存放）
   static String _remotePath(String fileType, String chapter) {
     switch (fileType) {
       case 'video':
-        return 'data/视频/$chapter.mp4';
+        return '视频/$chapter.mp4';
       case 'pdf':
-        return 'data/课件/清言智谱/$chapter.pdf';
+        return '课件/清言智谱/$chapter.pdf';
       case 'ppt':
-        return 'data/课件/秒出PPT/$chapter.pptx';
+        return '课件/秒出PPT/$chapter.pptx';
       default:
-        return 'data/$chapter';
+        return chapter;
     }
   }
 
@@ -59,15 +59,15 @@ class CoursewareDownloadService {
   static bool isRemoteAvailable(String fileType) =>
       _remoteAvailableTypes.contains(fileType);
 
-  /// 获取不可远程下载时的提示消息
+  /// 获取不可远程下载时的提示消息（当前所有类型均可远程下载，保留兜底）
   static String getLocalOnlyMessage(String fileType) {
     switch (fileType) {
       case 'video':
-        return '视频文件较大，需从教师处获取或本地部署。\n请联系教师获取课件分发包。';
+        return '视频文件较大，正在尝试从远程下载...\n如失败请联系教师获取课件分发包。';
       case 'ppt':
-        return 'PPT文件较大，需从教师处获取或本地部署。\n请联系教师获取课件分发包。';
+        return 'PPT文件较大，正在尝试从远程下载...\n如失败请联系教师获取课件分发包。';
       default:
-        return '该类型文件需要本地部署。';
+        return '该类型文件需要本地部署或远程下载。';
     }
   }
 

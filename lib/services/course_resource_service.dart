@@ -6,7 +6,7 @@ import 'gitee_service.dart';
 
 /// 课程资源同步服务
 /// 职责：
-/// 1. 从 mad-fd 仓库读取系统级课程配置（实验定义、模板、章节、考核方案）
+/// 1. 从 mad-data 仓库读取系统级课程配置（实验定义、模板、章节、考核方案）
 /// 2. 从 chzuczldl 企业下 cg1-*/cg2-*/cg3-* 仓库读取学生项目组数据
 /// 3. 本地缓存 + 版本化增量同步
 class CourseResourceService {
@@ -14,10 +14,10 @@ class CourseResourceService {
 
   // ── 仓库常量 ────────────────────────────────────────────────────────
 
-  /// 系统资源仓库（mad-fd）
+  /// 系统资源仓库（mad-data — 课件数据独立仓库）
   static const String sysOwner = 'osgisOne';
-  static const String sysRepo = 'mad-fd';
-  static const String configDir = 'data/course_config';
+  static const String sysRepo = 'mad-data';
+  static const String configDir = 'course_config';
 
   /// 学生项目仓库所在企业
   static const String enterprise = 'chzuczldl';
@@ -121,7 +121,7 @@ class CourseResourceService {
   }
 
   // ══════════════════════════════════════════════════════════════════════
-  // 高层 API：系统级课程资源（从 mad-fd 读取 + 本地缓存）
+  // 高层 API：系统级课程资源（从 mad-data 读取 + 本地缓存）
   // ══════════════════════════════════════════════════════════════════════
 
   /// 获取实验任务定义
