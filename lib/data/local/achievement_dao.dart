@@ -250,9 +250,9 @@ class AchievementDao {
       final key = '课程目标$i';
       final ach = avgAchievements[key] ?? 0;
       final w = objWeights[key] ?? 0;
-      buf.writeln('| $key | ${ach.toStringAsFixed(4)} | ${w.toStringAsFixed(2)} | ${(ach * w).toStringAsFixed(4)} |');
+      buf.writeln('| $key | ${ach.toStringAsFixed(2)} | ${w.toStringAsFixed(2)} | ${(ach * w).toStringAsFixed(2)} |');
     }
-    buf.writeln('| **加权总达成度** | **${weighted.toStringAsFixed(4)}** | **1.00** | **${weighted.toStringAsFixed(4)}** |');
+    buf.writeln('| **加权总达成度** | **${weighted.toStringAsFixed(2)}** | **1.00** | **${weighted.toStringAsFixed(2)}** |');
     buf.writeln();
     buf.writeln('### 2. 学生个体达成情况');
     buf.writeln();
@@ -269,7 +269,7 @@ class AchievementDao {
       for (int i = 1; i <= 4; i++) {
         final key = '课程目标$i';
         final val = stats[key]?[metric] ?? 0;
-        buf.write('| ${val.toStringAsFixed(4)} ');
+        buf.write('| ${val.toStringAsFixed(2)} ');
       }
       buf.writeln('|');
     }
@@ -285,7 +285,7 @@ class AchievementDao {
       final ach = avgAchievements[key] ?? 0;
       final performance = ach >= 0.7 ? '良好' : '一般';
       buf.writeln('#### ${key}分析');
-      buf.writeln('**达成度：** ${ach.toStringAsFixed(4)}');
+      buf.writeln('**达成度：** ${ach.toStringAsFixed(2)}');
       buf.writeln();
       buf.writeln('从达成度结果可以看出，学生在$key方面表现$performance。');
       buf.writeln();
@@ -297,7 +297,7 @@ class AchievementDao {
     buf.writeln();
     buf.writeln('通过本次课程达成度评价，我们可以看到：');
     buf.writeln();
-    buf.writeln('1. **整体表现**：学生在${courseName}课程的学习中取得了一定的成果，加权总达成度为${weighted.toStringAsFixed(4)}。');
+    buf.writeln('1. **整体表现**：学生在${courseName}课程的学习中取得了一定的成果，加权总达成度为${weighted.toStringAsFixed(2)}。');
     buf.writeln();
     buf.writeln('2. **达成度等级**：$level');
     buf.writeln();
@@ -1018,5 +1018,416 @@ class AchievementDao {
     suggestions.add('每学期末开展课程满意度调查，建立教学质量持续反馈机制');
 
     return suggestions;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // 三类评价分项成绩 — 平时 / 实验 / 期末
+  // ═══════════════════════════════════════════════════════════════════════
+
+  // ── 平时成绩 ─────────────────────────────────────────────────────────
+  /// 课堂表现→目标1, 期间测验→目标2, 课外学习→目标4; 目标3无平时成绩
+
+  Future<List<Map<String, dynamic>>> getPingshiScores(int batchId) async {
+    final db = await DatabaseHelper.instance.database;
+    return db.query('achievement_pingshi_scores',
+        where: 'batch_id = ?', whereArgs: [batchId], orderBy: 'student_id ASC');
+  }
+
+  Future<int> insertPingshiScore(Map<String, dynamic> score) async {
+    final db = await DatabaseHelper.instance.database;
+    final now = DateTime.now().toIso8601String();
+    score['created_at'] = now;
+    score['updated_at'] = now;
+    return db.insert('achievement_pingshi_scores', score,
+        conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<int> clearPingshiScores(int batchId) async {
+    final db = await DatabaseHelper.instance.database;
+    return db.delete('achievement_pingshi_scores',
+        where: 'batch_id = ?', whereArgs: [batchId]);
+  }
+
+  /// 计算平时成绩的分项达成度
+  /// 课堂表现(20%) → 目标1达成度 = score/100
+  /// 期间测验(30%) → 目标2达成度 = score/100
+  /// 课外学习(50%) → 目标4达成度 = score/100
+  /// 总评 = 课堂×0.2 + 测验×0.3 + 课外×0.5
+  Map<String, double> calculatePingshiAchievement(Map<String, dynamic> score) {
+    final classScore = (score['class_activity_score'] as num?)?.toDouble() ?? 0;
+    final quizScore = (score['quiz_homework_score'] as num?)?.toDouble() ?? 0;
+    final extraScore = (score['extra_learning_score'] as num?)?.toDouble() ?? 0;
+
+    final obj1Ach = (classScore / 100).clamp(0.0, 1.0);
+    final obj2Ach = (quizScore / 100).clamp(0.0, 1.0);
+    final obj4Ach = (extraScore / 100).clamp(0.0, 1.0);
+    final total = classScore * 0.2 + quizScore * 0.3 + extraScore * 0.5;
+
+    return {
+      'obj1_achievement': obj1Ach,  // 课堂表现→目标1
+      'obj2_achievement': obj2Ach,  // 期间测验→目标2
+      'obj3_achievement': 0.0,      // 平时无目标3
+      'obj4_achievement': obj4Ach,  // 课外学习→目标4
+      'total_score': total,
+    };
+  }
+
+  /// 计算平时成绩的班级平均达成度
+  Future<Map<String, double>> calculatePingshiClassAverage(int batchId) async {
+    final scores = await getPingshiScores(batchId);
+    if (scores.isEmpty) return {'obj1': 0, 'obj2': 0, 'obj3': 0, 'obj4': 0};
+    final n = scores.length.toDouble();
+    double s1 = 0, s2 = 0, s4 = 0;
+    for (final s in scores) {
+      s1 += (s['class_activity_achievement'] as num?)?.toDouble() ?? 0;
+      s2 += (s['quiz_homework_achievement'] as num?)?.toDouble() ?? 0;
+      s4 += (s['extra_learning_achievement'] as num?)?.toDouble() ?? 0;
+    }
+    return {'obj1': s1 / n, 'obj2': s2 / n, 'obj3': 0.0, 'obj4': s4 / n};
+  }
+
+  /// 生成平时演示数据
+  Future<int> generatePingshiDemoScores(int batchId) async {
+    final db = await DatabaseHelper.instance.database;
+    final now = DateTime.now().toIso8601String();
+    await clearPingshiScores(batchId);
+
+    final students = await db.query('users',
+        where: "role = 'student' AND is_active = 1",
+        orderBy: 'user_id ASC', limit: 50);
+
+    List<Map<String, String>> stuData;
+    if (students.isEmpty) {
+      stuData = List.generate(30, (i) => <String, String>{
+        'student_id': '2023${(i + 1).toString().padLeft(4, '0')}',
+        'student_name': '学生${i + 1}',
+      });
+    } else {
+      stuData = students.map((s) => <String, String>{
+        'student_id': s['user_id'] as String? ?? '',
+        'student_name': s['real_name'] as String? ?? s['user_id'] as String? ?? '',
+      }).toList();
+    }
+
+    final batch = db.batch();
+    int seed = 123;
+    for (final stu in stuData) {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      final classScore = 55.0 + (seed % 45); // 55-99
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      final quizScore = 50.0 + (seed % 50); // 50-99
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      final extraScore = 50.0 + (seed % 50); // 50-99
+
+      final ach = calculatePingshiAchievement({
+        'class_activity_score': classScore,
+        'quiz_homework_score': quizScore,
+        'extra_learning_score': extraScore,
+      });
+
+      batch.insert('achievement_pingshi_scores', {
+        'batch_id': batchId,
+        'student_id': stu['student_id'],
+        'student_name': stu['student_name'],
+        'class_activity_score': classScore,
+        'class_activity_achievement': ach['obj1_achievement'],
+        'quiz_homework_score': quizScore,
+        'quiz_homework_achievement': ach['obj2_achievement'],
+        'extra_learning_score': extraScore,
+        'extra_learning_achievement': ach['obj4_achievement'],
+        'total_score': ach['total_score'],
+        'created_at': now,
+        'updated_at': now,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+    return stuData.length;
+  }
+
+  // ── 实验成绩 ─────────────────────────────────────────────────────────
+  /// 实验1-2→目标1, 实验3-4→目标2, 实验5-6→目标3, 实验7→目标4
+
+  Future<List<Map<String, dynamic>>> getExperimentScores(int batchId) async {
+    final db = await DatabaseHelper.instance.database;
+    return db.query('achievement_experiment_scores',
+        where: 'batch_id = ?', whereArgs: [batchId], orderBy: 'student_id ASC');
+  }
+
+  Future<int> insertExperimentScore(Map<String, dynamic> score) async {
+    final db = await DatabaseHelper.instance.database;
+    final now = DateTime.now().toIso8601String();
+    score['created_at'] = now;
+    score['updated_at'] = now;
+    return db.insert('achievement_experiment_scores', score,
+        conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<int> clearExperimentScores(int batchId) async {
+    final db = await DatabaseHelper.instance.database;
+    return db.delete('achievement_experiment_scores',
+        where: 'batch_id = ?', whereArgs: [batchId]);
+  }
+
+  /// 计算实验成绩的分项达成度
+  /// 实验1-2平均/100→目标1, 实验3-4平均/100→目标2,
+  /// 实验5-6平均/100→目标3, 实验7/100→目标4
+  /// 总评 = 七次实验平均分
+  Map<String, double> calculateExperimentAchievement(Map<String, dynamic> score) {
+    final e1 = (score['exp1_score'] as num?)?.toDouble() ?? 0;
+    final e2 = (score['exp2_score'] as num?)?.toDouble() ?? 0;
+    final e3 = (score['exp3_score'] as num?)?.toDouble() ?? 0;
+    final e4 = (score['exp4_score'] as num?)?.toDouble() ?? 0;
+    final e5 = (score['exp5_score'] as num?)?.toDouble() ?? 0;
+    final e6 = (score['exp6_score'] as num?)?.toDouble() ?? 0;
+    final e7 = (score['exp7_score'] as num?)?.toDouble() ?? 0;
+
+    final obj1Ach = ((e1 + e2) / 2 / 100).clamp(0.0, 1.0);
+    final obj2Ach = ((e3 + e4) / 2 / 100).clamp(0.0, 1.0);
+    final obj3Ach = ((e5 + e6) / 2 / 100).clamp(0.0, 1.0);
+    final obj4Ach = (e7 / 100).clamp(0.0, 1.0);
+    final total = (e1 + e2 + e3 + e4 + e5 + e6 + e7) / 7;
+
+    return {
+      'obj1_achievement': obj1Ach,
+      'obj2_achievement': obj2Ach,
+      'obj3_achievement': obj3Ach,
+      'obj4_achievement': obj4Ach,
+      'total_score': total,
+    };
+  }
+
+  /// 计算实验成绩的班级平均达成度
+  Future<Map<String, double>> calculateExperimentClassAverage(int batchId) async {
+    final scores = await getExperimentScores(batchId);
+    if (scores.isEmpty) return {'obj1': 0, 'obj2': 0, 'obj3': 0, 'obj4': 0};
+    final n = scores.length.toDouble();
+    double s1 = 0, s2 = 0, s3 = 0, s4 = 0;
+    for (final s in scores) {
+      s1 += (s['obj1_achievement'] as num?)?.toDouble() ?? 0;
+      s2 += (s['obj2_achievement'] as num?)?.toDouble() ?? 0;
+      s3 += (s['obj3_achievement'] as num?)?.toDouble() ?? 0;
+      s4 += (s['obj4_achievement'] as num?)?.toDouble() ?? 0;
+    }
+    return {'obj1': s1 / n, 'obj2': s2 / n, 'obj3': s3 / n, 'obj4': s4 / n};
+  }
+
+  /// 生成实验演示数据
+  Future<int> generateExperimentDemoScores(int batchId) async {
+    final db = await DatabaseHelper.instance.database;
+    final now = DateTime.now().toIso8601String();
+    await clearExperimentScores(batchId);
+
+    final students = await db.query('users',
+        where: "role = 'student' AND is_active = 1",
+        orderBy: 'user_id ASC', limit: 50);
+
+    List<Map<String, String>> stuData;
+    if (students.isEmpty) {
+      stuData = List.generate(30, (i) => <String, String>{
+        'student_id': '2023${(i + 1).toString().padLeft(4, '0')}',
+        'student_name': '学生${i + 1}',
+      });
+    } else {
+      stuData = students.map((s) => <String, String>{
+        'student_id': s['user_id'] as String? ?? '',
+        'student_name': s['real_name'] as String? ?? s['user_id'] as String? ?? '',
+      }).toList();
+    }
+
+    final batch = db.batch();
+    int seed = 456;
+    for (final stu in stuData) {
+      final expScores = <double>[];
+      for (int j = 0; j < 7; j++) {
+        seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+        expScores.add(50.0 + (seed % 50)); // 50-99
+      }
+
+      final ach = calculateExperimentAchievement({
+        'exp1_score': expScores[0],
+        'exp2_score': expScores[1],
+        'exp3_score': expScores[2],
+        'exp4_score': expScores[3],
+        'exp5_score': expScores[4],
+        'exp6_score': expScores[5],
+        'exp7_score': expScores[6],
+      });
+
+      batch.insert('achievement_experiment_scores', {
+        'batch_id': batchId,
+        'student_id': stu['student_id'],
+        'student_name': stu['student_name'],
+        'exp1_score': expScores[0],
+        'exp2_score': expScores[1],
+        'exp3_score': expScores[2],
+        'exp4_score': expScores[3],
+        'exp5_score': expScores[4],
+        'exp6_score': expScores[5],
+        'exp7_score': expScores[6],
+        'obj1_achievement': ach['obj1_achievement'],
+        'obj2_achievement': ach['obj2_achievement'],
+        'obj3_achievement': ach['obj3_achievement'],
+        'obj4_achievement': ach['obj4_achievement'],
+        'total_score': ach['total_score'],
+        'created_at': now,
+        'updated_at': now,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+    return stuData.length;
+  }
+
+  // ── 期末考核成绩 ──────────────────────────────────────────────────────
+  /// 项目30%→目标1, 小组20%→目标2, 个人20%→目标3, 答辩30%→目标4
+
+  Future<List<Map<String, dynamic>>> getExamScores(int batchId) async {
+    final db = await DatabaseHelper.instance.database;
+    return db.query('achievement_exam_scores',
+        where: 'batch_id = ?', whereArgs: [batchId], orderBy: 'student_id ASC');
+  }
+
+  Future<int> insertExamScore(Map<String, dynamic> score) async {
+    final db = await DatabaseHelper.instance.database;
+    final now = DateTime.now().toIso8601String();
+    score['created_at'] = now;
+    score['updated_at'] = now;
+    return db.insert('achievement_exam_scores', score,
+        conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<int> clearExamScores(int batchId) async {
+    final db = await DatabaseHelper.instance.database;
+    return db.delete('achievement_exam_scores',
+        where: 'batch_id = ?', whereArgs: [batchId]);
+  }
+
+  /// 计算期末考核的分项达成度
+  /// 项目/100→目标1, 小组/100→目标2, 个人/100→目标3, 答辩/100→目标4
+  /// 总评 = 项目×0.3 + 小组×0.2 + 个人×0.2 + 答辩×0.3
+  Map<String, double> calculateExamAchievement(Map<String, dynamic> score) {
+    final project = (score['project_score'] as num?)?.toDouble() ?? 0;
+    final group = (score['group_score'] as num?)?.toDouble() ?? 0;
+    final individual = (score['individual_score'] as num?)?.toDouble() ?? 0;
+    final defense = (score['defense_score'] as num?)?.toDouble() ?? 0;
+
+    final obj1Ach = (project / 100).clamp(0.0, 1.0);
+    final obj2Ach = (group / 100).clamp(0.0, 1.0);
+    final obj3Ach = (individual / 100).clamp(0.0, 1.0);
+    final obj4Ach = (defense / 100).clamp(0.0, 1.0);
+    final total = project * 0.3 + group * 0.2 + individual * 0.2 + defense * 0.3;
+
+    return {
+      'obj1_achievement': obj1Ach,
+      'obj2_achievement': obj2Ach,
+      'obj3_achievement': obj3Ach,
+      'obj4_achievement': obj4Ach,
+      'total_score': total,
+    };
+  }
+
+  /// 计算期末考核的班级平均达成度
+  Future<Map<String, double>> calculateExamClassAverage(int batchId) async {
+    final scores = await getExamScores(batchId);
+    if (scores.isEmpty) return {'obj1': 0, 'obj2': 0, 'obj3': 0, 'obj4': 0};
+    final n = scores.length.toDouble();
+    double s1 = 0, s2 = 0, s3 = 0, s4 = 0;
+    for (final s in scores) {
+      s1 += (s['obj1_achievement'] as num?)?.toDouble() ?? 0;
+      s2 += (s['obj2_achievement'] as num?)?.toDouble() ?? 0;
+      s3 += (s['obj3_achievement'] as num?)?.toDouble() ?? 0;
+      s4 += (s['obj4_achievement'] as num?)?.toDouble() ?? 0;
+    }
+    return {'obj1': s1 / n, 'obj2': s2 / n, 'obj3': s3 / n, 'obj4': s4 / n};
+  }
+
+  /// 生成期末考核演示数据
+  Future<int> generateExamDemoScores(int batchId) async {
+    final db = await DatabaseHelper.instance.database;
+    final now = DateTime.now().toIso8601String();
+    await clearExamScores(batchId);
+
+    final students = await db.query('users',
+        where: "role = 'student' AND is_active = 1",
+        orderBy: 'user_id ASC', limit: 50);
+
+    List<Map<String, String>> stuData;
+    if (students.isEmpty) {
+      stuData = List.generate(30, (i) => <String, String>{
+        'student_id': '2023${(i + 1).toString().padLeft(4, '0')}',
+        'student_name': '学生${i + 1}',
+      });
+    } else {
+      stuData = students.map((s) => <String, String>{
+        'student_id': s['user_id'] as String? ?? '',
+        'student_name': s['real_name'] as String? ?? s['user_id'] as String? ?? '',
+      }).toList();
+    }
+
+    final batch = db.batch();
+    int seed = 789;
+    for (final stu in stuData) {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      final project = 50.0 + (seed % 50);
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      final group = 50.0 + (seed % 50);
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      final individual = 50.0 + (seed % 50);
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      final defense = 50.0 + (seed % 50);
+
+      final ach = calculateExamAchievement({
+        'project_score': project,
+        'group_score': group,
+        'individual_score': individual,
+        'defense_score': defense,
+      });
+
+      batch.insert('achievement_exam_scores', {
+        'batch_id': batchId,
+        'student_id': stu['student_id'],
+        'student_name': stu['student_name'],
+        'project_score': project,
+        'group_score': group,
+        'individual_score': individual,
+        'defense_score': defense,
+        'obj1_achievement': ach['obj1_achievement'],
+        'obj2_achievement': ach['obj2_achievement'],
+        'obj3_achievement': ach['obj3_achievement'],
+        'obj4_achievement': ach['obj4_achievement'],
+        'total_score': ach['total_score'],
+        'created_at': now,
+        'updated_at': now,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+    return stuData.length;
+  }
+
+  // ── 综合达成度计算（三类评价加权汇总）──────────────────────────────
+  /// 综合达成度 = 平时×0.2 + 实验×0.3 + 期末×0.5
+  Future<Map<String, dynamic>> calculateCombinedAchievement(int batchId) async {
+    final pingshi = await calculatePingshiClassAverage(batchId);
+    final experiment = await calculateExperimentClassAverage(batchId);
+    final exam = await calculateExamClassAverage(batchId);
+
+    const pWeight = 0.2;
+    const eWeight = 0.3;
+    const xWeight = 0.5;
+
+    final combined = <String, double>{};
+    for (int i = 1; i <= 4; i++) {
+      final key = 'obj$i';
+      combined[key] = (pingshi[key] ?? 0) * pWeight +
+          (experiment[key] ?? 0) * eWeight +
+          (exam[key] ?? 0) * xWeight;
+    }
+
+    return {
+      'pingshi': pingshi,
+      'experiment': experiment,
+      'exam': exam,
+      'combined': combined,
+      'weights': {'平时': pWeight, '实验': eWeight, '期末': xWeight},
+    };
   }
 }

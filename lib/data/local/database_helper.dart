@@ -56,7 +56,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 10,
+      version: 11,
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -180,7 +180,7 @@ class DatabaseHelper {
 
     db = await openDatabase(
       dbPath,
-      version: 10,
+      version: 11,
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -394,6 +394,8 @@ class DatabaseHelper {
     await _createNewTablesV7(db);
     await _createNewTablesV8(db);
     await _createNewTablesV9(db);
+    await _createNewTablesV10(db);
+    await _createNewTablesV11(db);
     await _ensureResourceFileColumns(db);
 
     // Add admin user (ignore if already exists from asset DB)
@@ -443,6 +445,9 @@ class DatabaseHelper {
     }
     if (oldVersion < 10) {
       await _createNewTablesV10(db);
+    }
+    if (oldVersion < 11) {
+      await _createNewTablesV11(db);
     }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
@@ -498,6 +503,7 @@ class DatabaseHelper {
     await _createNewTablesV8(db);
     await _createNewTablesV9(db);
     await _createNewTablesV10(db);
+    await _createNewTablesV11(db);
     await _ensureAchievementColumns(db);
   }
 
@@ -1007,6 +1013,82 @@ class DatabaseHelper {
       // 列可能已存在（IF NOT EXISTS 不适用于 ALTER TABLE）
       debugPrint('V10: repository_url column may already exist: $e');
     }
+  }
+
+  /// V11 新增: 平时/实验/期末 三类评价分项成绩表
+  Future<void> _createNewTablesV11(Database db) async {
+    // ── 平时成绩分项表 ──────────────────────────────────────────
+    // 课堂表现→目标1, 期间测验→目标2, 课外学习→目标4
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS achievement_pingshi_scores(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        batch_id INTEGER NOT NULL,
+        student_id TEXT NOT NULL,
+        student_name TEXT,
+        class_activity_score REAL DEFAULT 0,
+        class_activity_achievement REAL DEFAULT 0,
+        quiz_homework_score REAL DEFAULT 0,
+        quiz_homework_achievement REAL DEFAULT 0,
+        extra_learning_score REAL DEFAULT 0,
+        extra_learning_achievement REAL DEFAULT 0,
+        total_score REAL DEFAULT 0,
+        created_at TEXT,
+        updated_at TEXT,
+        FOREIGN KEY (batch_id) REFERENCES achievement_batches(id) ON DELETE CASCADE,
+        UNIQUE(batch_id, student_id)
+      )
+    ''');
+
+    // ── 实验成绩分项表 ──────────────────────────────────────────
+    // 实验1-2→目标1, 实验3-4→目标2, 实验5-6→目标3, 实验7→目标4
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS achievement_experiment_scores(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        batch_id INTEGER NOT NULL,
+        student_id TEXT NOT NULL,
+        student_name TEXT,
+        exp1_score REAL DEFAULT 0,
+        exp2_score REAL DEFAULT 0,
+        exp3_score REAL DEFAULT 0,
+        exp4_score REAL DEFAULT 0,
+        exp5_score REAL DEFAULT 0,
+        exp6_score REAL DEFAULT 0,
+        exp7_score REAL DEFAULT 0,
+        obj1_achievement REAL DEFAULT 0,
+        obj2_achievement REAL DEFAULT 0,
+        obj3_achievement REAL DEFAULT 0,
+        obj4_achievement REAL DEFAULT 0,
+        total_score REAL DEFAULT 0,
+        created_at TEXT,
+        updated_at TEXT,
+        FOREIGN KEY (batch_id) REFERENCES achievement_batches(id) ON DELETE CASCADE,
+        UNIQUE(batch_id, student_id)
+      )
+    ''');
+
+    // ── 期末考核成绩分项表 ──────────────────────────────────────
+    // 项目30%→目标1, 小组20%→目标2, 个人20%→目标3, 答辩30%→目标4
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS achievement_exam_scores(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        batch_id INTEGER NOT NULL,
+        student_id TEXT NOT NULL,
+        student_name TEXT,
+        project_score REAL DEFAULT 0,
+        group_score REAL DEFAULT 0,
+        individual_score REAL DEFAULT 0,
+        defense_score REAL DEFAULT 0,
+        obj1_achievement REAL DEFAULT 0,
+        obj2_achievement REAL DEFAULT 0,
+        obj3_achievement REAL DEFAULT 0,
+        obj4_achievement REAL DEFAULT 0,
+        total_score REAL DEFAULT 0,
+        created_at TEXT,
+        updated_at TEXT,
+        FOREIGN KEY (batch_id) REFERENCES achievement_batches(id) ON DELETE CASCADE,
+        UNIQUE(batch_id, student_id)
+      )
+    ''');
   }
 
   Future<void> _createNewTablesV3(Database db) async {
