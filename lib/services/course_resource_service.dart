@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'gitee_service.dart';
@@ -358,17 +359,43 @@ class CourseResourceService {
   // 学生仓库过滤（只返回学生所属的仓库）
   // ══════════════════════════════════════════════════════════════════════
 
-  /// 缓存键：仓库 → 成员映射表（所有仓库的成员信息，一次拉取全局缓存）
-  static const _kRepoMembersMap = 'cr_repo_members_map';
-  static const _kRepoMembersSync = 'cr_repo_members_sync';
+  /// 内存缓存：学号 → 仓库名称 映射表（从 assets/student_repo_map.json 加载）
+  static Map<String, String>? _studentRepoMapCache;
+
+  /// 从 assets/student_repo_map.json 加载 学号→仓库名称 映射
+  ///
+  /// JSON 格式: [{ "userId": "2023210575", "name": "安豪", "repo": "cg1-cifms", "url": "..." }, ...]
+  Future<Map<String, String>> _loadStudentRepoMap() async {
+    if (_studentRepoMapCache != null) return _studentRepoMapCache!;
+
+    try {
+      final jsonStr =
+          await rootBundle.loadString('assets/student_repo_map.json');
+      final list = jsonDecode(jsonStr) as List;
+      final map = <String, String>{};
+      for (final item in list) {
+        final uid = item['userId']?.toString() ?? '';
+        final repo = item['repo']?.toString() ?? '';
+        if (uid.isNotEmpty && repo.isNotEmpty) {
+          map[uid] = repo;
+        }
+      }
+      _studentRepoMapCache = map;
+      debugPrint(
+          'CourseResourceService: 已加载学生-仓库映射表 (${map.length} 条)');
+      return map;
+    } catch (e) {
+      debugPrint('CourseResourceService: 加载 student_repo_map.json 失败: $e');
+      return {};
+    }
+  }
 
   /// 为学生过滤仓库，只返回学生所属的仓库
   ///
   /// 核心逻辑：
-  /// 1. 拉取所有 cg 仓库
-  /// 2. 对每个仓库获取成员列表（collaborators / contributors / commits 作者）
-  /// 3. 用学生的 userId 和 realName 对成员的 login 和 name 做模糊匹配
-  /// 4. 只返回匹配到的仓库
+  /// 1. 从 assets/student_repo_map.json 读取 学号→仓库名称 映射
+  /// 2. 用当前学生的 userId 查找所属仓库名称
+  /// 3. 从 allRepos 中筛选出该仓库
   Future<List<Map<String, dynamic>>> getStudentOwnRepos({
     required String userId,
     required String realName,
@@ -378,158 +405,48 @@ class CourseResourceService {
     final allRepos = await getStudentRepos(forceRefresh: forceRefresh);
     if (allRepos.isEmpty) return [];
 
-    // ── 策略 1: repositoryUrl 直接匹配（必须是 chzuczldl 命名空间）──
+    // ── 策略 1（最可靠）: 从映射文件精确查找 ──
+    final repoMap = await _loadStudentRepoMap();
+    final myRepoName = repoMap[userId];
+
+    if (myRepoName != null && myRepoName.isNotEmpty) {
+      final matched = allRepos.where((repo) {
+        final path = (repo['path']?.toString() ?? '').toLowerCase();
+        return path == myRepoName.toLowerCase();
+      }).toList();
+
+      if (matched.isNotEmpty) {
+        debugPrint(
+            'getStudentOwnRepos: 映射表匹配成功 userId=$userId → repo=$myRepoName (${matched.length} 个)');
+        return matched;
+      }
+      debugPrint(
+          'getStudentOwnRepos: 映射表有记录 $myRepoName 但在仓库列表中未找到');
+    }
+
+    // ── 策略 2: repositoryUrl 直接匹配 ──
     if (repositoryUrl != null && repositoryUrl.isNotEmpty) {
       final matched = allRepos.where((repo) {
-        final htmlUrl = (repo['html_url']?.toString() ?? '').toLowerCase();
+        final htmlUrl =
+            (repo['html_url']?.toString() ?? '').toLowerCase();
         final path = (repo['path']?.toString() ?? '').toLowerCase();
         final repoUrlLower = repositoryUrl.toLowerCase();
-        // 严格匹配 chzuczldl 命名空间
         return (htmlUrl == repoUrlLower ||
-                repoUrlLower.endsWith('/$path') ||
-                repoUrlLower.endsWith('/$path.git') ||
-                repoUrlLower.contains('/$enterprise/$path'));
+            repoUrlLower.endsWith('/$path') ||
+            repoUrlLower.endsWith('/$path.git') ||
+            repoUrlLower.contains('/$enterprise/$path'));
       }).toList();
       if (matched.isNotEmpty) {
-        debugPrint('getStudentOwnRepos: 策略1 repositoryUrl 匹配到 ${matched.length} 个仓库');
+        debugPrint(
+            'getStudentOwnRepos: repositoryUrl 匹配到 ${matched.length} 个仓库');
         return matched;
       }
     }
 
-    // ── 策略 2: 获取所有仓库成员映射表，按学号/姓名匹配 ──
-    final membersMap = await _loadAllRepoMembers(allRepos, forceRefresh: forceRefresh);
-
-    final List<Map<String, dynamic>> matchedRepos = [];
-    for (final repo in allRepos) {
-      final repoPath = repo['path']?.toString() ?? '';
-      final members = membersMap[repoPath] ?? [];
-
-      for (final m in members) {
-        final login = m['login']?.toString() ?? '';
-        final name = m['name']?.toString() ?? '';
-        final email = m['email']?.toString() ?? '';
-        if (_matchStudent(login, name, email, userId, realName)) {
-          matchedRepos.add(repo);
-          debugPrint(
-              'getStudentOwnRepos: 策略2 匹配到仓库 $repoPath (login=$login, name=$name, userId=$userId, realName=$realName)');
-          break;
-        }
-      }
-    }
-
-    if (matchedRepos.isNotEmpty) {
-      debugPrint('getStudentOwnRepos: 共匹配到 ${matchedRepos.length} 个仓库');
-      return matchedRepos;
-    }
-
     // 未匹配到，返回所有仓库（降级）
     debugPrint(
-        'getStudentOwnRepos: 未匹配到任何仓库 (userId=$userId, realName=$realName)，降级显示全部');
+        'getStudentOwnRepos: 未匹配 (userId=$userId, realName=$realName)，降级显示全部');
     return allRepos;
-  }
-
-  /// 加载所有仓库的成员映射表（带缓存，2小时有效）
-  ///
-  /// 返回 { repoPath: [ {login, name, email, ...}, ... ] }
-  Future<Map<String, List<Map<String, dynamic>>>> _loadAllRepoMembers(
-    List<Map<String, dynamic>> repos, {
-    bool forceRefresh = false,
-  }) async {
-    final prefs = await SharedPreferences.getInstance();
-
-    // 读缓存
-    if (!forceRefresh) {
-      final cached = prefs.getString(_kRepoMembersMap);
-      final lastSync = prefs.getString(_kRepoMembersSync);
-      if (cached != null && lastSync != null) {
-        final syncTime = DateTime.tryParse(lastSync);
-        if (syncTime != null &&
-            DateTime.now().difference(syncTime).inHours < 2) {
-          try {
-            final decoded = jsonDecode(cached) as Map<String, dynamic>;
-            final result = <String, List<Map<String, dynamic>>>{};
-            for (final entry in decoded.entries) {
-              result[entry.key] = List<Map<String, dynamic>>.from(
-                  (entry.value as List)
-                      .map((e) => Map<String, dynamic>.from(e)));
-            }
-            if (result.isNotEmpty) return result;
-          } catch (_) {}
-        }
-      }
-    }
-
-    // 并行获取所有仓库的成员
-    final result = <String, List<Map<String, dynamic>>>{};
-
-    await Future.wait(repos.map((repo) async {
-      final owner =
-          repo['namespace']?['path']?.toString() ?? enterprise;
-      final repoPath = repo['path']?.toString() ?? '';
-
-      try {
-        final members = await _gitee.getRepoMembers(owner, repoPath);
-        if (members.isNotEmpty) {
-          result[repoPath] = members;
-          debugPrint(
-              '_loadAllRepoMembers: $repoPath → ${members.length} 成员 [${members.map((m) => '${m['login']}/${m['name']}').join(', ')}]');
-        }
-      } catch (e) {
-        debugPrint('_loadAllRepoMembers: $repoPath error: $e');
-      }
-    }));
-
-    // 缓存
-    if (result.isNotEmpty) {
-      try {
-        await prefs.setString(_kRepoMembersMap, jsonEncode(result));
-        await prefs.setString(
-            _kRepoMembersSync, DateTime.now().toIso8601String());
-      } catch (_) {}
-    }
-
-    return result;
-  }
-
-  /// 匹配学生：多维度宽松匹配
-  ///
-  /// 匹配规则：
-  /// - login 包含 userId（或反向包含）
-  /// - name 包含 realName（或反向包含）
-  /// - email 前缀包含 userId
-  /// - login 或 name 完全等于 userId 或 realName
-  bool _matchStudent(
-      String login, String name, String email,
-      String userId, String realName) {
-    final loginL = login.toLowerCase().trim();
-    final nameL = name.trim();
-    final emailL = email.toLowerCase().trim();
-    final uidL = userId.toLowerCase().trim();
-
-    // 学号匹配
-    if (uidL.isNotEmpty) {
-      if (loginL == uidL) return true;
-      if (loginL.isNotEmpty && loginL.contains(uidL)) return true;
-      if (loginL.isNotEmpty && uidL.contains(loginL)) return true;
-      if (nameL.isNotEmpty && nameL.contains(userId)) return true;
-      if (emailL.isNotEmpty && emailL.split('@').first == uidL) return true;
-      if (emailL.isNotEmpty && emailL.contains(uidL)) return true;
-    }
-
-    // 姓名匹配
-    if (realName.trim().isNotEmpty && nameL.isNotEmpty) {
-      final rn = realName.trim();
-      if (nameL == rn) return true;
-      if (nameL.contains(rn)) return true;
-      if (rn.contains(nameL) && nameL.length >= 2) return true;
-    }
-
-    // 姓名 vs login（有些人 login 是拼音）
-    if (realName.trim().isNotEmpty && loginL.isNotEmpty) {
-      if (loginL == realName.trim().toLowerCase()) return true;
-    }
-
-    return false;
   }
 
   // ── 缓存管理 ────────────────────────────────────────────────────────
@@ -539,10 +456,10 @@ class CourseResourceService {
     for (final key in [
       _kLabTasks, _kTemplates, _kChapters, _kAssessment,
       _kStudentRepos, _kLastSync,
-      _kRepoMembersMap, _kRepoMembersSync,
     ]) {
       await prefs.remove(key);
     }
+    _studentRepoMapCache = null;
   }
 
   Future<DateTime?> getLastSyncTime() async {
