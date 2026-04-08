@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../data/local/lab_task_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/gitee_service.dart';
+import '../../../services/course_resource_service.dart';
 import '../../../core/constants/app_theme.dart';
 import '../admin/repo_detail_page.dart';
 
@@ -2537,6 +2538,7 @@ class _StudentRepoTab extends StatefulWidget {
 class _StudentRepoTabState extends State<_StudentRepoTab>
     with AutomaticKeepAliveClientMixin {
   final _giteeService = GiteeService();
+  final _resource = CourseResourceService();
 
   bool _isLoading = true;
   String? _errorMessage;
@@ -2582,14 +2584,34 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
     });
 
     final user = widget.authService.currentUser;
-    final repoUrl = user?.repositoryUrl;
+    String? repoUrl = user?.repositoryUrl;
 
+    // 如果 repositoryUrl 未配置，尝试通过学号/姓名自动匹配
     if (repoUrl == null || repoUrl.isEmpty) {
-      setState(() {
-        _isLoading = false;
-        _errorMessage = '尚未配置 Gitee 仓库地址。\n请联系教师在「学生管理」中设置你的仓库 URL。';
-      });
-      return;
+      final userId = user?.userId ?? '';
+      final realName = user?.realName ?? '';
+
+      try {
+        final myRepos = await _resource.getStudentOwnRepos(
+          userId: userId,
+          realName: realName,
+        );
+
+        if (myRepos.isNotEmpty) {
+          // 自动使用匹配到的第一个仓库
+          repoUrl = myRepos.first['html_url']?.toString();
+        }
+      } catch (_) {}
+
+      if (repoUrl == null || repoUrl.isEmpty) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage =
+              '尚未配置 Gitee 仓库地址，且无法自动识别所属仓库。\n'
+              '请联系教师在「学生管理」中设置你的仓库 URL。';
+        });
+        return;
+      }
     }
 
     // 解析仓库 URL
@@ -2615,19 +2637,23 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
         return;
       }
 
+      // 先并行获取详情、分支、提交、releases
       final results = await Future.wait([
         _giteeService.getRepoDetail(_owner, _repoName),
         _giteeService.getBranches(_owner, _repoName),
         _giteeService.getAllCommits(_owner, _repoName),
-        _giteeService.getCollaborators(_owner, _repoName).catchError((_) => <Map<String, dynamic>>[]),
         _giteeService.getReleases(_owner, _repoName).catchError((_) => <Map<String, dynamic>>[]),
       ]);
 
       final repoDetail = results[0] as Map<String, dynamic>;
       final branches = results[1] as List<Map<String, dynamic>>;
       final commits = results[2] as List<Map<String, dynamic>>;
-      final collaborators = results[3] as List<Map<String, dynamic>>;
-      final releases = results[4] as List<Map<String, dynamic>>;
+      final releases = results[3] as List<Map<String, dynamic>>;
+
+      // 获取成员（多策略容错，传入 commits 作为兜底数据源）
+      final collaborators = await _giteeService
+          .getRepoMembers(_owner, _repoName, commits: commits)
+          .catchError((_) => <Map<String, dynamic>>[]);
 
       final commitRows = commits.map((c) {
         final sha = c['sha']?.toString() ?? '';
@@ -3233,19 +3259,19 @@ class _RepoReportTabState extends State<_RepoReportTab>
         debugPrint('_RepoReportTab: loading $repoName path=$repoPath owner=$repoOwner (full=$fullName)');
 
         try {
-          // 并行获取，每个调用单独容错，使用 repoPath 而非 repoName
+          // 并行获取提交和分支，每个调用单独容错
           final results = await Future.wait([
-            _giteeService.getCollaborators(repoOwner, repoPath)
-                .catchError((_) => <Map<String, dynamic>>[]),
             _giteeService.getCommits(repoOwner, repoPath, perPage: 100)
                 .catchError((_) => <Map<String, dynamic>>[]),
             _giteeService.getBranches(repoOwner, repoPath)
                 .catchError((_) => <Map<String, dynamic>>[]),
           ]);
 
-          var collaborators = results[0] as List<Map<String, dynamic>>;
-          var commits = results[1] as List<Map<String, dynamic>>;
-          var branches = results[2] as List<Map<String, dynamic>>;
+          var commits = results[0] as List<Map<String, dynamic>>;
+          var branches = results[1] as List<Map<String, dynamic>>;
+
+          // 用于 getRepoMembers 的 effectiveOwner
+          var effectiveOwner = repoOwner;
 
           // 如果全部返回空且 owner 可能不对，尝试用 namespace.path 重试
           if (commits.isEmpty && branches.isEmpty) {
@@ -3256,19 +3282,22 @@ class _RepoReportTabState extends State<_RepoReportTab>
                 : (ownerLogin != null && ownerLogin != repoOwner ? ownerLogin : null);
             if (altOwner != null) {
               debugPrint('_RepoReportTab: retrying $repoPath with altOwner=$altOwner');
+              effectiveOwner = altOwner;
               final retryResults = await Future.wait([
-                _giteeService.getCollaborators(altOwner, repoPath)
-                    .catchError((_) => <Map<String, dynamic>>[]),
                 _giteeService.getCommits(altOwner, repoPath, perPage: 100)
                     .catchError((_) => <Map<String, dynamic>>[]),
                 _giteeService.getBranches(altOwner, repoPath)
                     .catchError((_) => <Map<String, dynamic>>[]),
               ]);
-              collaborators = retryResults[0] as List<Map<String, dynamic>>;
-              commits = retryResults[1] as List<Map<String, dynamic>>;
-              branches = retryResults[2] as List<Map<String, dynamic>>;
+              commits = retryResults[0] as List<Map<String, dynamic>>;
+              branches = retryResults[1] as List<Map<String, dynamic>>;
             }
           }
+
+          // 获取成员（多策略容错，传入 commits 作为兜底数据源）
+          final collaborators = await _giteeService
+              .getRepoMembers(effectiveOwner, repoPath, commits: commits)
+              .catchError((_) => <Map<String, dynamic>>[]);
 
           // 从提交记录中提取 unique 作者
           final authorSet = <String>{};

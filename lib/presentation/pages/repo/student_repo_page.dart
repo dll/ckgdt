@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../services/auth_service.dart';
-import '../../../services/gitee_service.dart';
 import '../../../services/course_resource_service.dart';
 
 /// 学生仓库页面 — 学生专属视图
@@ -20,17 +19,19 @@ class _StudentRepoPageState extends State<StudentRepoPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _authService = AuthService();
-  final _gitee = GiteeService();
   final _resource = CourseResourceService();
 
   // 数据
   List<Map<String, dynamic>> _myRepos = [];
+  List<Map<String, dynamic>> _allRepos = []; // 所有仓库（用于"查看全部"）
   Map<String, dynamic>? _selectedRepo;
   List<Map<String, dynamic>> _myBranches = [];
   List<Map<String, dynamic>> _myCommits = [];
   bool _isLoadingRepos = true;
   bool _isLoadingDetail = false;
   String? _errorMessage;
+  bool _isFiltered = true; // 是否正在过滤模式
+  bool _showAllRepos = false; // 是否展示全部仓库
 
   @override
   void initState() {
@@ -45,33 +46,52 @@ class _StudentRepoPageState extends State<StudentRepoPage>
     super.dispose();
   }
 
-  /// 加载学生所在的项目仓库
-  Future<void> _loadMyRepos() async {
+  /// 加载学生所在的项目仓库（过滤后只显示自己的）
+  Future<void> _loadMyRepos({bool forceRefresh = false}) async {
     setState(() {
       _isLoadingRepos = true;
       _errorMessage = null;
     });
 
     try {
-      final allRepos = await _resource.getStudentRepos();
+      final userId = _authService.currentUser?.userId ?? '';
+      final realName = _authService.currentUser?.realName ?? '';
+      final repoUrl = _authService.currentUser?.repositoryUrl;
+
+      // 先加载所有仓库（用于"查看全部"功能）
+      final allRepos = await _resource.getStudentRepos(forceRefresh: forceRefresh);
       if (allRepos.isEmpty) {
         setState(() {
           _myRepos = [];
+          _allRepos = [];
           _isLoadingRepos = false;
           _errorMessage = '未找到项目仓库，请确认 Gitee 令牌已配置';
         });
         return;
       }
 
-      // 学生看到所有 CG 仓库（他们需要找到自己的组）
+      _allRepos = allRepos;
+
+      // 使用过滤方法，根据学号/姓名筛选学生自己的仓库
+      final filteredRepos = await _resource.getStudentOwnRepos(
+        userId: userId,
+        realName: realName,
+        repositoryUrl: repoUrl,
+        forceRefresh: forceRefresh,
+      );
+
+      // 判断是否实际进行了过滤
+      final didFilter = filteredRepos.length < allRepos.length;
+
       setState(() {
-        _myRepos = allRepos;
+        _myRepos = _showAllRepos ? allRepos : filteredRepos;
+        _isFiltered = didFilter;
         _isLoadingRepos = false;
       });
 
       // 如果只有一个仓库，自动选中
-      if (allRepos.length == 1) {
-        _selectRepo(allRepos.first);
+      if (filteredRepos.length == 1) {
+        _selectRepo(filteredRepos.first);
       }
     } catch (e) {
       setState(() {
@@ -79,6 +99,20 @@ class _StudentRepoPageState extends State<StudentRepoPage>
         _errorMessage = '加载仓库失败: $e';
       });
     }
+  }
+
+  /// 切换显示全部/只显示我的
+  void _toggleShowAll() {
+    setState(() {
+      _showAllRepos = !_showAllRepos;
+      if (_showAllRepos) {
+        _myRepos = _allRepos;
+      } else {
+        // 重新加载过滤后的列表
+        _loadMyRepos();
+        return;
+      }
+    });
   }
 
   /// 选中仓库后加载分支和提交
@@ -202,7 +236,7 @@ class _StudentRepoPageState extends State<StudentRepoPage>
     }
 
     return RefreshIndicator(
-      onRefresh: _loadMyRepos,
+      onRefresh: () => _loadMyRepos(forceRefresh: true),
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -210,9 +244,37 @@ class _StudentRepoPageState extends State<StudentRepoPage>
           _buildUserInfoCard(),
           const SizedBox(height: 16),
 
+          // 过滤状态提示
+          _buildFilterStatusBar(),
+          const SizedBox(height: 8),
+
           // 仓库列表
-          const Text('项目仓库',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Row(
+            children: [
+              const Text('项目仓库',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(width: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '${_myRepos.length}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 8),
           ..._myRepos.map((repo) => _buildRepoCard(repo)),
 
@@ -224,6 +286,101 @@ class _StudentRepoPageState extends State<StudentRepoPage>
         ],
       ),
     );
+  }
+
+  /// 过滤状态提示栏
+  Widget _buildFilterStatusBar() {
+    final user = _authService.currentUser;
+    final userId = user?.userId ?? '';
+    final realName = user?.realName ?? '';
+
+    if (_isFiltered && !_showAllRepos) {
+      // 已过滤 → 显示匹配信息
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.green.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.green.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.filter_alt, size: 18, color: Colors.green),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '已筛选：$realName ($userId) 所属仓库',
+                style: const TextStyle(fontSize: 13, color: Colors.green),
+              ),
+            ),
+            TextButton(
+              onPressed: _toggleShowAll,
+              style: TextButton.styleFrom(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: const Text('查看全部', style: TextStyle(fontSize: 12)),
+            ),
+          ],
+        ),
+      );
+    } else if (_showAllRepos && _isFiltered) {
+      // 展示全部模式
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.orange.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.orange.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.visibility, size: 18, color: Colors.orange),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text(
+                '当前显示所有仓库',
+                style: TextStyle(fontSize: 13, color: Colors.orange),
+              ),
+            ),
+            TextButton(
+              onPressed: _toggleShowAll,
+              style: TextButton.styleFrom(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: const Text('只看我的', style: TextStyle(fontSize: 12)),
+            ),
+          ],
+        ),
+      );
+    } else {
+      // 未过滤（无法识别学生所属仓库）
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.blue.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.blue.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.info_outline, size: 18, color: Colors.blue),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '未能自动识别所属仓库，显示全部 (${_allRepos.length})',
+                style: const TextStyle(fontSize: 13, color: Colors.blue),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   /// 用户信息卡片
