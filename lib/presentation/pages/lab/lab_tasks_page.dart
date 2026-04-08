@@ -2586,6 +2586,20 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
     final user = widget.authService.currentUser;
     String? repoUrl = user?.repositoryUrl;
 
+    // 如果 repositoryUrl 指向非 chzuczldl 命名空间，自动纠正
+    if (repoUrl != null && repoUrl.isNotEmpty) {
+      final parsed = GiteeService.parseRepoUrl(repoUrl);
+      if (parsed != null &&
+          parsed.owner.toLowerCase() !=
+              CourseResourceService.enterprise.toLowerCase()) {
+        // 替换为 chzuczldl 命名空间下的同名仓库
+        repoUrl =
+            'https://gitee.com/${CourseResourceService.enterprise}/${parsed.repo}';
+        debugPrint(
+            'StudentRepoTab: 纠正仓库 URL → $repoUrl (原: ${user?.repositoryUrl})');
+      }
+    }
+
     // 如果 repositoryUrl 未配置，尝试通过学号/姓名自动匹配
     if (repoUrl == null || repoUrl.isEmpty) {
       final userId = user?.userId ?? '';

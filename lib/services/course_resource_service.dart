@@ -219,9 +219,18 @@ class CourseResourceService {
         if (syncTime != null &&
             DateTime.now().difference(syncTime).inMinutes < 60) {
           try {
-            return List<Map<String, dynamic>>.from(
+            final list = List<Map<String, dynamic>>.from(
                 (jsonDecode(cached) as List)
                     .map((e) => Map<String, dynamic>.from(e)));
+            // 对缓存数据也执行命名空间过滤（兼容旧缓存）
+            final filtered = list
+                .where((r) =>
+                    (r['namespace']?['path']?.toString() ?? '')
+                        .toLowerCase() ==
+                    enterprise.toLowerCase())
+                .toList();
+            if (filtered.isNotEmpty) return filtered;
+            // 旧缓存全被过滤掉了，跳过缓存重新拉取
           } catch (_) {}
         }
       }
@@ -270,9 +279,15 @@ class CourseResourceService {
     final cached = prefs.getString(_kStudentRepos);
     if (cached != null) {
       try {
-        return List<Map<String, dynamic>>.from(
+        final list = List<Map<String, dynamic>>.from(
             (jsonDecode(cached) as List)
                 .map((e) => Map<String, dynamic>.from(e)));
+        // 对兜底缓存也执行命名空间过滤
+        return list
+            .where((r) =>
+                (r['namespace']?['path']?.toString() ?? '').toLowerCase() ==
+                enterprise.toLowerCase())
+            .toList();
       } catch (_) {}
     }
     return [];
