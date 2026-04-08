@@ -670,4 +670,353 @@ class AchievementDao {
     await batch.commit(noResult: true);
     return count;
   }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // 问卷满意度集成 — 将问卷调查结果整合到达成度报告
+  // ═══════════════════════════════════════════════════════════════════════
+
+  /// 获取满意度调查汇总（用于达成度报告整合）
+  /// 返回: {surveys: [...], overallSatisfaction: 0.0~1.0, totalResponses: N, questionStats: [...]}
+  Future<Map<String, dynamic>> getSurveySatisfactionSummary() async {
+    final db = await DatabaseHelper.instance.database;
+
+    try {
+      // 获取所有已发布/关闭的问卷
+      final surveys = await db.query('surveys',
+          where: "status IN ('published', 'closed')",
+          orderBy: 'created_at DESC');
+
+      if (surveys.isEmpty) {
+        return {
+          'surveys': <Map<String, dynamic>>[],
+          'overallSatisfaction': 0.0,
+          'totalResponses': 0,
+          'questionStats': <Map<String, dynamic>>[],
+          'hasSurveyData': false,
+        };
+      }
+
+      int totalResponses = 0;
+      double satisfactionSum = 0;
+      int satisfactionCount = 0;
+      final allQuestionStats = <Map<String, dynamic>>[];
+
+      for (final survey in surveys) {
+        final surveyId = survey['id'] as int;
+        final responses = await db.query('survey_responses',
+            where: 'survey_id = ?', whereArgs: [surveyId]);
+        totalResponses += responses.length;
+
+        // 获取题目
+        final questions = await db.query('survey_questions',
+            where: 'survey_id = ?',
+            whereArgs: [surveyId],
+            orderBy: 'seq ASC');
+
+        for (final q in questions) {
+          final qId = q['id'].toString();
+          final qType = q['question_type'] as String? ?? 'single_choice';
+          final optionsJson = q['options_json'] as String?;
+          final options = optionsJson != null
+              ? List<String>.from(jsonDecode(optionsJson))
+              : <String>[];
+
+          if (qType == 'rating') {
+            // 评分题直接计算满意度
+            double sum = 0;
+            int count = 0;
+            for (final resp in responses) {
+              final answersJson = resp['answers_json'] as String?;
+              if (answersJson == null) continue;
+              final answers =
+                  jsonDecode(answersJson) as Map<String, dynamic>;
+              final answer = answers[qId];
+              if (answer != null) {
+                final val = int.tryParse(answer.toString()) ?? 0;
+                if (val > 0) {
+                  sum += val;
+                  count++;
+                }
+              }
+            }
+            if (count > 0) {
+              satisfactionSum += sum / count / 5.0; // 归一化到0~1
+              satisfactionCount++;
+            }
+            allQuestionStats.add({
+              'question': q['question'],
+              'type': 'rating',
+              'average': count > 0 ? sum / count : 0,
+              'count': count,
+              'surveyTitle': survey['title'],
+            });
+          } else if (qType == 'single_choice' && options.isNotEmpty) {
+            // 单选题 — 统计各选项
+            final optionCounts = <String, int>{};
+            for (final opt in options) {
+              optionCounts[opt] = 0;
+            }
+            for (final resp in responses) {
+              final answersJson = resp['answers_json'] as String?;
+              if (answersJson == null) continue;
+              final answers =
+                  jsonDecode(answersJson) as Map<String, dynamic>;
+              final answer = answers[qId];
+              if (answer is String) {
+                optionCounts[answer] = (optionCounts[answer] ?? 0) + 1;
+              }
+            }
+
+            // 如果选项包含满意度关键词，计算满意度指数
+            final satisfactionKeywords = ['非常满意', '满意'];
+            int satisfiedCount = 0;
+            int totalCount = 0;
+            for (final entry in optionCounts.entries) {
+              totalCount += entry.value;
+              if (satisfactionKeywords
+                  .any((k) => entry.key.contains(k))) {
+                satisfiedCount += entry.value;
+              }
+            }
+            if (totalCount > 0 &&
+                options.any((o) => o.contains('满意'))) {
+              satisfactionSum += satisfiedCount / totalCount;
+              satisfactionCount++;
+            }
+
+            allQuestionStats.add({
+              'question': q['question'],
+              'type': 'single_choice',
+              'options': options,
+              'counts': optionCounts,
+              'total': responses.length,
+              'surveyTitle': survey['title'],
+            });
+          } else if (qType == 'text') {
+            // 文本题收集文本
+            final textAnswers = <String>[];
+            for (final resp in responses) {
+              final answersJson = resp['answers_json'] as String?;
+              if (answersJson == null) continue;
+              final answers =
+                  jsonDecode(answersJson) as Map<String, dynamic>;
+              final answer = answers[qId];
+              if (answer != null && answer.toString().isNotEmpty) {
+                textAnswers.add(answer.toString());
+              }
+            }
+            allQuestionStats.add({
+              'question': q['question'],
+              'type': 'text',
+              'answers': textAnswers,
+              'surveyTitle': survey['title'],
+            });
+          }
+        }
+      }
+
+      final overallSatisfaction =
+          satisfactionCount > 0 ? satisfactionSum / satisfactionCount : 0.0;
+
+      return {
+        'surveys': surveys,
+        'overallSatisfaction': overallSatisfaction,
+        'totalResponses': totalResponses,
+        'questionStats': allQuestionStats,
+        'hasSurveyData': true,
+      };
+    } catch (e) {
+      return {
+        'surveys': <Map<String, dynamic>>[],
+        'overallSatisfaction': 0.0,
+        'totalResponses': 0,
+        'questionStats': <Map<String, dynamic>>[],
+        'hasSurveyData': false,
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// 生成持续改进建议（基于达成度分析）
+  Future<List<Map<String, dynamic>>> generateImprovementSuggestions(
+      int batchId) async {
+    final scores = await getScores(batchId);
+    if (scores.isEmpty) return [];
+
+    const fullMarks = [15.0, 25.0, 30.0, 30.0];
+    const objectiveChapters = [
+      '第1章 + 第2章',
+      '第3章 + 第4章',
+      '第5章',
+      '第6章',
+    ];
+    const objectiveTopics = [
+      ['移动应用开发技术体系', '原生/混合/跨平台技术', 'Android原生开发', 'iOS开发基础'],
+      ['Flutter框架', 'React Native', '小程序开发', 'AI编程工具'],
+      ['HarmonyOS多端开发', '跨设备适配', '技术方案评估', 'ArkUI/ArkTS'],
+      ['Git版本控制', '软件工程规范', '应用测试与优化', '综合开发实践'],
+    ];
+
+    // 计算每个目标的平均达成度
+    final objAchievements = List<double>.generate(4, (i) {
+      final values = scores.map<double>((s) {
+        return (s['obj${i + 1}_score'] ?? 0).toDouble();
+      }).toList();
+      final mean = values.reduce((a, b) => a + b) / values.length;
+      return (mean / fullMarks[i]).clamp(0.0, 1.0);
+    });
+
+    // 统计低于60%的学生数
+    final lowCountPerObj = List<int>.generate(4, (i) {
+      return scores.where((s) {
+        final ach = (s['obj${i + 1}_achievement'] as num?)?.toDouble() ?? 0;
+        return ach < 0.6;
+      }).length;
+    });
+
+    // 获取知识图谱节点数
+    final db = await DatabaseHelper.instance.database;
+    int graphNodeCount = 0;
+    try {
+      final nodeResult =
+          await db.rawQuery('SELECT COUNT(*) as c FROM nodes');
+      graphNodeCount = (nodeResult.first['c'] as int?) ?? 0;
+    } catch (_) {}
+
+    // 获取测验题数
+    int quizQuestionCount = 0;
+    try {
+      final quizResult =
+          await db.rawQuery('SELECT COUNT(*) as c FROM questions');
+      quizQuestionCount = (quizResult.first['c'] as int?) ?? 0;
+    } catch (_) {}
+
+    // 每章测验题数
+    final chapterQuizCounts = <int, int>{};
+    try {
+      final chapterStats = await db.rawQuery(
+          'SELECT source, COUNT(*) as c FROM questions GROUP BY source');
+      for (final row in chapterStats) {
+        final source = row['source'] as String? ?? '';
+        // 尝试从source中提取章节号
+        final match = RegExp(r'(\d+)').firstMatch(source);
+        if (match != null) {
+          final ch = int.tryParse(match.group(1)!) ?? 0;
+          chapterQuizCounts[ch] = (row['c'] as int?) ?? 0;
+        }
+      }
+    } catch (_) {}
+
+    final suggestions = <Map<String, dynamic>>[];
+
+    for (int i = 0; i < 4; i++) {
+      final ach = objAchievements[i];
+      final level = getAchievementLevel(ach);
+      final lowCount = lowCountPerObj[i];
+      final topics = objectiveTopics[i];
+      final chapters = objectiveChapters[i];
+      final actions = <String>[];
+
+      if (ach < 0.60) {
+        // 未达成 — 重点改进
+        actions.addAll([
+          '在知识图谱中增加${topics.join("、")}相关节点，丰富知识结构',
+          '增加$chapters相关课时（建议增加2-4学时）',
+          '增设${topics.first}和${topics.last}的章节测验和练习题',
+          '增加$chapters的实验项目，强化动手能力',
+          '对$lowCount名未达标学生制定一对一帮扶计划',
+          '组织$chapters相关的技术专题工作坊',
+        ]);
+      } else if (ach < 0.70) {
+        // 中等 — 有提升空间
+        actions.addAll([
+          '补充${topics.first}和${topics[1]}相关的知识图谱节点',
+          '适当增加$chapters的课时（建议增加1-2学时）',
+          '针对$chapters新增综合性测验，提高应用能力',
+          '对$lowCount名未达标学生安排额外练习',
+          '增加${topics.last}的案例教学内容',
+        ]);
+      } else if (ach < 0.85) {
+        // 良好 — 巩固提高
+        actions.addAll([
+          '在知识图谱中补充${topics.first}的进阶节点',
+          '增加$chapters的拓展阅读和实践项目',
+          '保持现有$chapters教学节奏，适当提高考核难度',
+        ]);
+      } else {
+        // 优秀 — 保持水平
+        actions.addAll([
+          '保持现有教学方案，持续更新$chapters教学内容',
+          '鼓励优秀学生参与${topics.first}的教学辅助工作',
+        ]);
+      }
+
+      suggestions.add({
+        'objectiveIndex': i,
+        'objectiveName': '课程目标${i + 1}',
+        'achievement': ach,
+        'level': level,
+        'lowStudentCount': lowCount,
+        'totalStudents': scores.length,
+        'chapters': chapters,
+        'topics': topics,
+        'actions': actions,
+      });
+    }
+
+    // 添加整体建议
+    double weighted = 0;
+    for (int i = 0; i < 4; i++) {
+      weighted += objAchievements[i] * _kDefaultWeightsForSuggestion[i];
+    }
+
+    suggestions.add({
+      'objectiveIndex': -1,
+      'objectiveName': '整体教学改进',
+      'achievement': weighted,
+      'level': getAchievementLevel(weighted),
+      'graphNodeCount': graphNodeCount,
+      'quizQuestionCount': quizQuestionCount,
+      'chapterQuizCounts': chapterQuizCounts,
+      'totalStudents': scores.length,
+      'actions': _buildOverallSuggestions(
+          weighted, graphNodeCount, quizQuestionCount),
+    });
+
+    return suggestions;
+  }
+
+  static const _kDefaultWeightsForSuggestion = [0.15, 0.25, 0.30, 0.30];
+
+  List<String> _buildOverallSuggestions(
+      double weighted, int graphNodes, int quizCount) {
+    final suggestions = <String>[];
+
+    if (graphNodes < 50) {
+      suggestions.add('当前知识图谱仅有$graphNodes个节点，建议扩展至60+个以覆盖完整知识体系');
+    } else {
+      suggestions.add('知识图谱已有$graphNodes个节点，建议持续更新以跟踪技术发展');
+    }
+
+    if (quizCount < 60) {
+      suggestions.add('当前测验题库仅有$quizCount道题，建议扩充至100+道以覆盖所有知识点');
+    }
+
+    if (weighted < 0.7) {
+      suggestions.addAll([
+        '加权总达成度偏低，建议调整考核比例（增加平时过程性考核权重）',
+        '增加实验课时占比，从30%提升至35%~40%',
+        '引入阶段性小测验，及时发现学习困难学生',
+      ]);
+    } else {
+      suggestions.addAll([
+        '保持现有考核体系框架，在细节上持续优化',
+        '定期更新教学案例，保持内容时效性',
+      ]);
+    }
+
+    suggestions.add('每学期末开展课程满意度调查，建立教学质量持续反馈机制');
+
+    return suggestions;
+  }
 }
