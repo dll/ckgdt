@@ -25,7 +25,7 @@ class _AchievementPageState extends State<AchievementPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
   }
 
   @override
@@ -44,7 +44,7 @@ class _AchievementPageState extends State<AchievementPage>
           color: primary.withValues(alpha: 0.05),
           child: TabBar(
             controller: _tabController,
-            isScrollable: false,
+            isScrollable: true,
             labelColor: primary,
             unselectedLabelColor: Colors.grey,
             indicatorColor: primary,
@@ -53,6 +53,7 @@ class _AchievementPageState extends State<AchievementPage>
               Tab(icon: Icon(Icons.edit_note, size: 18), text: '成绩管理'),
               Tab(icon: Icon(Icons.calculate_outlined, size: 18), text: '计算过程'),
               Tab(icon: Icon(Icons.summarize_outlined, size: 18), text: '报告生成'),
+              Tab(icon: Icon(Icons.build_outlined, size: 18), text: '持续改进'),
             ],
           ),
         ),
@@ -73,6 +74,9 @@ class _AchievementPageState extends State<AchievementPage>
               ),
               _ReportTab(
                 authService: _authService,
+                achievementDao: _achievementDao,
+              ),
+              _ContinuousImprovementTab(
                 achievementDao: _achievementDao,
               ),
             ],
@@ -1365,6 +1369,7 @@ class _ReportTabState extends State<_ReportTab> {
   List<double> _objectiveAchievements = [0, 0, 0, 0];
   double _weightedAchievement = 0.0;
   Map<String, List<double>> _statistics = {}; // objectiveKey -> [mean, max, min, std]
+  Map<String, dynamic>? _surveySummary;
 
   @override
   void initState() {
@@ -1468,11 +1473,19 @@ class _ReportTabState extends State<_ReportTab> {
       // 同时更新批次状态
       await widget.achievementDao.updateBatchStatus(_selectedBatchId!, 'completed');
 
+      // 加载问卷满意度数据
+      Map<String, dynamic>? surveyData;
+      try {
+        surveyData =
+            await widget.achievementDao.getSurveySatisfactionSummary();
+      } catch (_) {}
+
       if (mounted) {
         setState(() {
           _objectiveAchievements = objAchievements;
           _weightedAchievement = weighted;
           _statistics = stats;
+          _surveySummary = surveyData;
           _calcResults = {
             'student_count': scores.length,
             'batch_name': _batches.firstWhere(
@@ -1504,7 +1517,6 @@ class _ReportTabState extends State<_ReportTab> {
     setState(() => _generatingReport = true);
 
     try {
-      final batchName = _calcResults!['batch_name'] ?? '未命名';
       final batch = _batches.firstWhere(
         (b) => b['id'] == _selectedBatchId,
         orElse: () => <String, dynamic>{},
@@ -1512,22 +1524,27 @@ class _ReportTabState extends State<_ReportTab> {
 
       final now = DateTime.now();
       final dateStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+      final courseName = batch['course_name'] ?? '移动应用开发';
+      final className = batch['class_name'] ?? '软件23';
 
       final buffer = StringBuffer();
-      buffer.writeln('# 课程达成度计算报告');
+      buffer.writeln('# $className《$courseName》课程目标达成评价报告');
       buffer.writeln();
       buffer.writeln('## 基本信息');
       buffer.writeln();
       buffer.writeln('| 项目 | 内容 |');
       buffer.writeln('|------|------|');
-      buffer.writeln('| 批次名称 | $batchName |');
-      buffer.writeln('| 课程名称 | ${batch['course_name'] ?? '-'} |');
-      buffer.writeln('| 班级 | ${batch['class_name'] ?? '-'} |');
+      buffer.writeln('| 课程名称 | $courseName |');
+      buffer.writeln('| 班级 | $className |');
       buffer.writeln('| 学期 | ${batch['semester'] ?? '-'} |');
       buffer.writeln('| 学生人数 | ${_calcResults!['student_count']} |');
       buffer.writeln('| 生成日期 | $dateStr |');
       buffer.writeln();
-      buffer.writeln('## 课程目标达成度');
+
+      // 一、课程目标达成情况
+      buffer.writeln('## 一、课程目标达成情况');
+      buffer.writeln();
+      buffer.writeln('### 1. 班级平均达成度');
       buffer.writeln();
       buffer.writeln('| 课程目标 | 权重 | 达成度 | 等级 |');
       buffer.writeln('|----------|------|--------|------|');
@@ -1536,41 +1553,117 @@ class _ReportTabState extends State<_ReportTab> {
         final a = _objectiveAchievements[i];
         buffer.writeln(
           '| ${_kObjectiveNames[i]} | ${(w * 100).toStringAsFixed(0)}% | '
-          '${(a * 100).toStringAsFixed(1)}% | ${_achievementLevel(a)} |',
+          '${(a * 100).toStringAsFixed(2)}% | ${_achievementLevel(a)} |',
         );
       }
+      buffer.writeln('| **加权总达成度** | **100%** | **${(_weightedAchievement * 100).toStringAsFixed(2)}%** | **${_achievementLevel(_weightedAchievement)}** |');
       buffer.writeln();
-      buffer.writeln('**加权总达成度：${(_weightedAchievement * 100).toStringAsFixed(1)}%**');
+      buffer.writeln('### 2. 成绩统计');
       buffer.writeln();
-      buffer.writeln('**达成等级：${_achievementLevel(_weightedAchievement)}**');
-      buffer.writeln();
-      buffer.writeln('## 成绩统计');
-      buffer.writeln();
-      buffer.writeln('| 课程目标 | 平均分 | 最高分 | 最低分 | 标准差 |');
-      buffer.writeln('|----------|--------|--------|--------|--------|');
-      for (int i = 0; i < 4; i++) {
-        final s = _statistics['objective${i + 1}'];
-        if (s != null) {
-          buffer.writeln(
-            '| ${_kObjectiveNames[i]} | ${s[0].toStringAsFixed(1)} | '
-            '${s[1].toStringAsFixed(1)} | ${s[2].toStringAsFixed(1)} | '
-            '${s[3].toStringAsFixed(1)} |',
-          );
+      buffer.writeln('| 统计指标 | 目标1 | 目标2 | 目标3 | 目标4 |');
+      buffer.writeln('|----------|-------|-------|-------|-------|');
+      for (int idx = 0; idx < 4; idx++) {
+        final label = ['平均分', '最高分', '最低分', '标准差'][idx];
+        buffer.write('| $label ');
+        for (int i = 0; i < 4; i++) {
+          final s = _statistics['objective${i + 1}'];
+          buffer.write('| ${s != null ? s[idx].toStringAsFixed(2) : "-"} ');
         }
+        buffer.writeln('|');
       }
       buffer.writeln();
-      buffer.writeln('## 分析与建议');
+
+      // 二、达成度分析
+      buffer.writeln('## 二、达成度分析');
+      buffer.writeln();
+      buffer.writeln('### 1. 定量评价情况分析');
+      buffer.writeln();
+      const objDescriptions = [
+        '课程目标1主要考核学生掌握移动应用开发技术体系（原生/混合/跨平台）及主流平台特性，理解技术选型逻辑。',
+        '课程目标2主要考核学生运用跨平台开发框架及小程序技术，结合AI编程工具与后端API交互，设计实现跨平台应用。',
+        '课程目标3主要考核学生调研对比多端开发方案，分析不同技术栈在跨设备适配场景中的优劣，具备技术方案评估与选型能力。',
+        '课程目标4主要考核学生遵循软件工程规范，使用现代开发工具完成应用测试与优化，具备工程实践能力。',
+      ];
+      for (int i = 0; i < 4; i++) {
+        buffer.writeln(objDescriptions[i]);
+        buffer.writeln();
+      }
+
+      buffer.writeln('### 2. 定性评价情况分析');
+      buffer.writeln();
+      buffer.writeln('从评价结果可以看出：');
       buffer.writeln();
       for (int i = 0; i < 4; i++) {
         final a = _objectiveAchievements[i];
-        if (a < 0.6) {
-          buffer.writeln('- ⚠️ ${_kObjectiveNames[i]}达成度为${(a * 100).toStringAsFixed(1)}%，未达标，需重点改进教学方法');
-        } else if (a < 0.7) {
-          buffer.writeln('- 📋 ${_kObjectiveNames[i]}达成度为${(a * 100).toStringAsFixed(1)}%，达标但有提升空间');
+        if (a >= 0.85) {
+          buffer.writeln('- ${_kObjectiveNames[i]}达成度为${(a * 100).toStringAsFixed(1)}%，表现优秀');
+        } else if (a >= 0.70) {
+          buffer.writeln('- ${_kObjectiveNames[i]}达成度为${(a * 100).toStringAsFixed(1)}%，表现良好');
+        } else if (a >= 0.60) {
+          buffer.writeln('- ${_kObjectiveNames[i]}达成度为${(a * 100).toStringAsFixed(1)}%，达标但有提升空间');
         } else {
-          buffer.writeln('- ✅ ${_kObjectiveNames[i]}达成度为${(a * 100).toStringAsFixed(1)}%，表现${a >= 0.9 ? "优秀" : "良好"}');
+          buffer.writeln('- ${_kObjectiveNames[i]}达成度为${(a * 100).toStringAsFixed(1)}%，未达标，需重点改进');
         }
       }
+      buffer.writeln();
+
+      // 三、课程满意度调查
+      buffer.writeln('## 三、课程满意度调查');
+      buffer.writeln();
+      if (_surveySummary?['hasSurveyData'] == true) {
+        final totalResp = _surveySummary!['totalResponses'] as int? ?? 0;
+        final overallSat = (_surveySummary!['overallSatisfaction'] as double?) ?? 0;
+        buffer.writeln('共回收有效问卷 **$totalResp** 份，综合满意度为 **${(overallSat * 100).toStringAsFixed(1)}%**。');
+        buffer.writeln();
+        final qStats = (_surveySummary!['questionStats'] as List<Map<String, dynamic>>?) ?? [];
+        for (final qs in qStats) {
+          final question = qs['question'] as String? ?? '';
+          buffer.writeln('**$question**');
+          if (qs['type'] == 'single_choice') {
+            final counts = qs['counts'] as Map<String, int>? ?? {};
+            final total = (qs['total'] as int?) ?? 1;
+            for (final entry in counts.entries) {
+              final pct = total > 0 ? (entry.value / total * 100).toStringAsFixed(1) : '0';
+              buffer.writeln('- ${entry.key}：${entry.value}人（$pct%）');
+            }
+          } else if (qs['type'] == 'rating') {
+            buffer.writeln('- 平均评分：${(qs['average'] as double? ?? 0).toStringAsFixed(2)} / 5.0');
+          }
+          buffer.writeln();
+        }
+      } else {
+        buffer.writeln('暂无课程满意度调查数据。');
+        buffer.writeln();
+      }
+
+      // 四、教学持续改进
+      buffer.writeln('## 四、教学持续改进');
+      buffer.writeln();
+      buffer.writeln('### 1. 本轮教学改进措施执行情况');
+      buffer.writeln();
+      buffer.writeln('1. 在平时作业中加大关于运用移动应用开发技术体系分析实际应用问题的题目训练');
+      buffer.writeln('2. 在每章结束后增加知识图谱创建训练，扩展学生知识面');
+      buffer.writeln('3. 优化期末项目考核的场景设计，增加AI工具辅助开发评分维度');
+      buffer.writeln();
+      buffer.writeln('### 2. 后续教学持续改进措施');
+      buffer.writeln();
+      for (int i = 0; i < 4; i++) {
+        final a = _objectiveAchievements[i];
+        if (a < 0.7) {
+          buffer.writeln('- ${_kObjectiveNames[i]}（达成度${(a * 100).toStringAsFixed(1)}%）：增加相关知识图谱节点和课时，补充测验题目，加强薄弱环节训练');
+        } else {
+          buffer.writeln('- ${_kObjectiveNames[i]}（达成度${(a * 100).toStringAsFixed(1)}%）：保持现有教学节奏，适当提高考核难度');
+        }
+      }
+      buffer.writeln();
+
+      // 五、结论
+      buffer.writeln('## 五、结论');
+      buffer.writeln();
+      buffer.writeln('通过本次课程达成度评价，学生在$courseName课程的学习中取得了一定成果。'
+          '加权总达成度为${(_weightedAchievement * 100).toStringAsFixed(1)}%，'
+          '达到${_achievementLevel(_weightedAchievement)}水平。'
+          '通过持续的教学改进，我们相信学生的能力将得到进一步提升。');
       buffer.writeln();
       buffer.writeln('---');
       buffer.writeln('*报告由知识图谱教学系统自动生成*');
@@ -1661,6 +1754,8 @@ class _ReportTabState extends State<_ReportTab> {
         orElse: () => <String, dynamic>{},
       );
       final scores = await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
+      final courseName = batch['course_name'] ?? '移动应用开发';
+      final className = batch['class_name'] ?? '软件23';
 
       final pdf = pw.Document();
       // 尝试加载中文字体
@@ -1675,22 +1770,35 @@ class _ReportTabState extends State<_ReportTab> {
           : const pw.TextStyle(fontSize: 10);
       final titleStyle = baseStyle.copyWith(fontSize: 18, fontWeight: pw.FontWeight.bold);
       final headerStyle = baseStyle.copyWith(fontSize: 14, fontWeight: pw.FontWeight.bold);
+      final subHeaderStyle = baseStyle.copyWith(fontSize: 12, fontWeight: pw.FontWeight.bold);
       final boldStyle = baseStyle.copyWith(fontWeight: pw.FontWeight.bold);
+
+      // 满意度数据
+      final hasSurvey = _surveySummary?['hasSurveyData'] == true;
+      final overallSat = (_surveySummary?['overallSatisfaction'] as double?) ?? 0;
+      final totalResp = _surveySummary?['totalResponses'] as int? ?? 0;
 
       pdf.addPage(
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
           build: (context) => [
+            // 标题
             pw.Center(child: pw.Text(
-              '${batch['class_name'] ?? ''}《${batch['course_name'] ?? '移动应用开发'}》课程达成度报告',
+              '$className《$courseName》课程目标达成评价报告',
               style: titleStyle,
             )),
-            pw.SizedBox(height: 16),
-            pw.Text('批次：${batch['batch_name'] ?? '-'}  学期：${batch['semester'] ?? '-'}  '
-                '学生人数：${scores.length}', style: baseStyle),
-            pw.SizedBox(height: 20),
-            pw.Text('一、课程目标达成度', style: headerStyle),
             pw.SizedBox(height: 8),
+            pw.Center(child: pw.Text(
+              '学期：${batch['semester'] ?? '-'}  学生人数：${scores.length}  生成日期：${DateTime.now().toString().substring(0, 10)}',
+              style: baseStyle,
+            )),
+            pw.SizedBox(height: 20),
+
+            // 一、课程目标达成情况
+            pw.Text('一、课程目标达成情况', style: headerStyle),
+            pw.SizedBox(height: 8),
+            pw.Text('1. 班级平均达成度', style: subHeaderStyle),
+            pw.SizedBox(height: 6),
             pw.TableHelper.fromTextArray(
               headerStyle: boldStyle,
               cellStyle: baseStyle,
@@ -1708,9 +1816,11 @@ class _ReportTabState extends State<_ReportTab> {
                   _achievementLevel(_weightedAchievement)],
               ],
             ),
-            pw.SizedBox(height: 20),
-            pw.Text('二、学生个体达成度', style: headerStyle),
-            pw.SizedBox(height: 8),
+            pw.SizedBox(height: 12),
+            pw.Text('2. 学生个体达成情况', style: subHeaderStyle),
+            pw.SizedBox(height: 6),
+            pw.Text('共有 ${scores.length} 名学生参与评价。', style: baseStyle),
+            pw.SizedBox(height: 6),
             pw.TableHelper.fromTextArray(
               headerStyle: boldStyle,
               cellStyle: baseStyle,
@@ -1727,8 +1837,12 @@ class _ReportTabState extends State<_ReportTab> {
               ]).toList(),
             ),
             pw.SizedBox(height: 20),
-            pw.Text('三、统计分析', style: headerStyle),
+
+            // 二、达成度分析
+            pw.Text('二、达成度分析', style: headerStyle),
             pw.SizedBox(height: 8),
+            pw.Text('1. 定量评价情况分析', style: subHeaderStyle),
+            pw.SizedBox(height: 6),
             if (_statistics.isNotEmpty)
               pw.TableHelper.fromTextArray(
                 headerStyle: boldStyle,
@@ -1743,6 +1857,69 @@ class _ReportTabState extends State<_ReportTab> {
                   ];
                 }).toList(),
               ),
+            pw.SizedBox(height: 8),
+            pw.Text('2. 定性评价情况分析', style: subHeaderStyle),
+            pw.SizedBox(height: 6),
+            ...List.generate(4, (i) {
+              final a = _objectiveAchievements[i];
+              final perf = a >= 0.85 ? '优秀' : a >= 0.70 ? '良好' : a >= 0.60 ? '中等' : '偏弱';
+              return pw.Padding(
+                padding: const pw.EdgeInsets.only(bottom: 4),
+                child: pw.Text(
+                  '课程目标${i + 1}达成度为${(a * 100).toStringAsFixed(1)}%，表现$perf。',
+                  style: baseStyle,
+                ),
+              );
+            }),
+            pw.SizedBox(height: 16),
+
+            // 三、课程满意度调查
+            pw.Text('三、课程满意度调查', style: headerStyle),
+            pw.SizedBox(height: 8),
+            if (hasSurvey)
+              pw.Text(
+                '共回收有效问卷 $totalResp 份，综合满意度为 ${(overallSat * 100).toStringAsFixed(1)}%。',
+                style: baseStyle,
+              )
+            else
+              pw.Text('暂无课程满意度调查数据。', style: baseStyle),
+            pw.SizedBox(height: 16),
+
+            // 四、教学持续改进
+            pw.Text('四、教学持续改进', style: headerStyle),
+            pw.SizedBox(height: 8),
+            pw.Text('1. 本轮教学改进措施执行情况', style: subHeaderStyle),
+            pw.SizedBox(height: 4),
+            pw.Text('针对上一轮教学改进意见，本轮教学中已执行以下改进措施：加大技术体系训练、增加知识图谱创建任务、优化期末考核场景设计。',
+                style: baseStyle),
+            pw.SizedBox(height: 8),
+            pw.Text('2. 后续教学持续改进措施', style: subHeaderStyle),
+            pw.SizedBox(height: 4),
+            ...List.generate(4, (i) {
+              final a = _objectiveAchievements[i];
+              final suggestion = a < 0.7
+                  ? '增加知识图谱节点和课时，补充测验题目，加强薄弱环节训练。'
+                  : '保持现有教学节奏，适当提高考核难度。';
+              return pw.Padding(
+                padding: const pw.EdgeInsets.only(bottom: 3),
+                child: pw.Text(
+                  '${i + 1}. 课程目标${i + 1}（${(a * 100).toStringAsFixed(1)}%）：$suggestion',
+                  style: baseStyle,
+                ),
+              );
+            }),
+            pw.SizedBox(height: 16),
+
+            // 五、结论
+            pw.Text('五、结论', style: headerStyle),
+            pw.SizedBox(height: 8),
+            pw.Text(
+              '通过本次课程达成度评价，学生在$courseName课程的学习中取得了一定成果。'
+              '加权总达成度为${(_weightedAchievement * 100).toStringAsFixed(1)}%，'
+              '达到${_achievementLevel(_weightedAchievement)}水平。'
+              '通过持续的教学改进，学生的能力将得到进一步提升。',
+              style: baseStyle,
+            ),
             pw.SizedBox(height: 20),
             pw.Text('报告生成时间：${DateTime.now().toString().substring(0, 19)}', style: baseStyle),
           ],
@@ -1752,7 +1929,7 @@ class _ReportTabState extends State<_ReportTab> {
       // 使用 printing 包进行分享/打印/保存
       await Printing.sharePdf(
         bytes: await pdf.save(),
-        filename: '${batch['class_name'] ?? '课程'}达成度报告.pdf',
+        filename: '$className《$courseName》课程达成度评价报告.pdf',
       );
 
       if (mounted) {
@@ -2336,6 +2513,7 @@ class _CalculationProcessTabState extends State<_CalculationProcessTab> {
   bool _loading = true;
   List<double> _classAvgAchievements = [0, 0, 0, 0];
   double _weightedAchievement = 0;
+  Map<String, dynamic>? _surveySummary;
 
   @override
   void initState() {
@@ -2346,9 +2524,17 @@ class _CalculationProcessTabState extends State<_CalculationProcessTab> {
   Future<void> _loadBatches() async {
     try {
       final batches = await widget.achievementDao.getBatches();
+      // 加载问卷满意度数据
+      Map<String, dynamic>? surveyData;
+      try {
+        surveyData =
+            await widget.achievementDao.getSurveySatisfactionSummary();
+      } catch (_) {}
+
       if (mounted) {
         setState(() {
           _batches = batches;
+          _surveySummary = surveyData;
           _loading = false;
           if (_batches.isNotEmpty && _selectedBatchId == null) {
             _selectedBatchId = _batches.first['id'] as int;
@@ -2406,7 +2592,10 @@ class _CalculationProcessTabState extends State<_CalculationProcessTab> {
           _buildStudentTable(primary),
           const SizedBox(height: 16),
           _buildObjectiveCharts(primary),
+          const SizedBox(height: 16),
         ],
+        // 七、问卷满意度调查
+        _buildSurveySatisfaction(primary),
         if (_scores.isEmpty && !_loading)
           Padding(padding: const EdgeInsets.only(top: 40), child: Center(child: Column(children: [
             Icon(Icons.info_outline, size: 64, color: Colors.grey.withValues(alpha: 0.4)),
@@ -2631,5 +2820,870 @@ class _CalculationProcessTabState extends State<_CalculationProcessTab> {
       const SizedBox(height: 2),
       Text(label, style: TextStyle(fontSize: 8, color: color)),
     ]));
+  }
+
+  /// 七、问卷满意度调查
+  Widget _buildSurveySatisfaction(Color primary) {
+    final hasSurvey = _surveySummary?['hasSurveyData'] == true;
+    final totalResponses = _surveySummary?['totalResponses'] as int? ?? 0;
+    final overallSat =
+        (_surveySummary?['overallSatisfaction'] as double?) ?? 0.0;
+    final questionStats = (_surveySummary?['questionStats']
+            as List<Map<String, dynamic>>?) ??
+        [];
+
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Icon(Icons.poll, color: primary, size: 22),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text('七、课程满意度调查',
+                    style: TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+              if (hasSurvey)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text('$totalResponses份回收',
+                      style: const TextStyle(
+                          fontSize: 10, color: Colors.green)),
+                ),
+            ]),
+            const Divider(height: 20),
+            if (!hasSurvey) ...[
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                      color: Colors.orange.withValues(alpha: 0.2)),
+                ),
+                child: const Row(children: [
+                  Icon(Icons.info_outline, color: Colors.orange, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text('暂无问卷调查数据。请在「管理 > 问卷管理」中创建并发布课程满意度调查问卷。',
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.orange)),
+                  ),
+                ]),
+              ),
+            ] else ...[
+              // 满意度概览
+              Row(children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _achievementLevelColor(overallSat)
+                          .withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Column(children: [
+                      Text(
+                        '${(overallSat * 100).toStringAsFixed(1)}%',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: _achievementLevelColor(overallSat),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text('综合满意度',
+                          style: TextStyle(
+                              fontSize: 11,
+                              color:
+                                  _achievementLevelColor(overallSat))),
+                    ]),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: primary.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Column(children: [
+                      Text('$totalResponses',
+                          style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: primary)),
+                      const SizedBox(height: 2),
+                      Text('有效回收',
+                          style: TextStyle(
+                              fontSize: 11, color: primary)),
+                    ]),
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 12),
+              // 逐题统计
+              ...questionStats.take(6).map((qs) {
+                final type = qs['type'] as String;
+                final question = qs['question'] as String? ?? '';
+                if (type == 'single_choice') {
+                  final counts =
+                      qs['counts'] as Map<String, int>? ?? {};
+                  final total = (qs['total'] as int?) ?? 1;
+                  return _buildSurveyQuestion(
+                      question, counts, total);
+                } else if (type == 'rating') {
+                  final avg = (qs['average'] as double?) ?? 0;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(children: [
+                      Expanded(
+                        child: Text(question,
+                            style: const TextStyle(fontSize: 12)),
+                      ),
+                      Row(children: List.generate(5, (i) {
+                        return Icon(
+                          i < avg.round()
+                              ? Icons.star
+                              : Icons.star_border,
+                          size: 14,
+                          color: Colors.amber,
+                        );
+                      })),
+                      const SizedBox(width: 4),
+                      Text('${avg.toStringAsFixed(1)}/5.0',
+                          style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold)),
+                    ]),
+                  );
+                } else if (type == 'text') {
+                  final answers =
+                      qs['answers'] as List<String>? ?? [];
+                  if (answers.isEmpty) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(question,
+                            style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500)),
+                        const SizedBox(height: 4),
+                        ...answers.take(3).map((a) => Padding(
+                              padding:
+                                  const EdgeInsets.only(left: 8, bottom: 2),
+                              child: Text('• $a',
+                                  style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey)),
+                            )),
+                        if (answers.length > 3)
+                          Text('  ... 共${answers.length}条',
+                              style: const TextStyle(
+                                  fontSize: 10, color: Colors.grey)),
+                      ],
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              }),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSurveyQuestion(
+      String question, Map<String, int> counts, int total) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(question,
+              style: const TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w500)),
+          const SizedBox(height: 4),
+          ...counts.entries.map((entry) {
+            final pct =
+                total > 0 ? entry.value / total : 0.0;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 3),
+              child: Row(children: [
+                SizedBox(
+                    width: 65,
+                    child: Text(entry.key,
+                        style: const TextStyle(fontSize: 10))),
+                Expanded(
+                  child: Stack(children: [
+                    Container(
+                        height: 14,
+                        decoration: BoxDecoration(
+                            color: Colors.grey.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(3))),
+                    FractionallySizedBox(
+                      widthFactor: pct,
+                      child: Container(
+                          height: 14,
+                          decoration: BoxDecoration(
+                              color: Colors.blue.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(3))),
+                    ),
+                  ]),
+                ),
+                const SizedBox(width: 6),
+                SizedBox(
+                    width: 55,
+                    child: Text(
+                        '${entry.value}人 (${(pct * 100).toStringAsFixed(0)}%)',
+                        style: const TextStyle(fontSize: 9),
+                        textAlign: TextAlign.right)),
+              ]),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Tab 5 — 持续改进（基于达成度分析的教学改进建议）
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _ContinuousImprovementTab extends StatefulWidget {
+  final AchievementDao achievementDao;
+
+  const _ContinuousImprovementTab({required this.achievementDao});
+
+  @override
+  State<_ContinuousImprovementTab> createState() =>
+      _ContinuousImprovementTabState();
+}
+
+class _ContinuousImprovementTabState
+    extends State<_ContinuousImprovementTab> {
+  List<Map<String, dynamic>> _batches = [];
+  int? _selectedBatchId;
+  bool _loading = true;
+  bool _analyzing = false;
+  List<Map<String, dynamic>> _suggestions = [];
+  Map<String, dynamic>? _surveySummary;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBatches();
+  }
+
+  Future<void> _loadBatches() async {
+    try {
+      final batches = await widget.achievementDao.getBatches();
+      if (mounted) {
+        setState(() {
+          _batches = batches;
+          _loading = false;
+          if (_batches.isNotEmpty && _selectedBatchId == null) {
+            _selectedBatchId = _batches.first['id'] as int;
+          }
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _analyzeAndSuggest() async {
+    if (_selectedBatchId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先选择批次')),
+      );
+      return;
+    }
+
+    setState(() => _analyzing = true);
+
+    try {
+      final suggestions = await widget.achievementDao
+          .generateImprovementSuggestions(_selectedBatchId!);
+      Map<String, dynamic>? surveyData;
+      try {
+        surveyData =
+            await widget.achievementDao.getSurveySatisfactionSummary();
+      } catch (_) {}
+
+      if (mounted) {
+        setState(() {
+          _suggestions = suggestions;
+          _surveySummary = surveyData;
+          _analyzing = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _analyzing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('分析失败：$e'),
+              backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 批次选择
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              border: Border.all(
+                  color: primary.withValues(alpha: 0.3)),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<int>(
+                isExpanded: true,
+                value: _selectedBatchId,
+                hint: const Text('选择批次'),
+                items: _batches
+                    .map((b) => DropdownMenuItem<int>(
+                          value: b['id'] as int,
+                          child: Text(b['batch_name'] ?? '未命名'),
+                        ))
+                    .toList(),
+                onChanged: (v) {
+                  setState(() {
+                    _selectedBatchId = v;
+                    _suggestions = [];
+                  });
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // 分析按钮
+          Center(
+            child: FilledButton.icon(
+              onPressed: _analyzing ? null : _analyzeAndSuggest,
+              icon: _analyzing
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.auto_fix_high, size: 18),
+              label: Text(_analyzing ? '分析中...' : '分析达成度 & 生成改进建议'),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          if (_analyzing)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 32),
+              child: Center(
+                child: Column(children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 12),
+                  Text('正在分析达成度数据并生成改进建议...',
+                      style: TextStyle(color: Colors.grey)),
+                ]),
+              ),
+            ),
+
+          if (_suggestions.isNotEmpty && !_analyzing) ...[
+            // 一、本轮教学改进措施执行情况
+            _buildPreviousImprovementCard(primary),
+            const SizedBox(height: 16),
+
+            // 二、各目标达成情况与改进建议
+            ..._suggestions.where((s) => s['objectiveIndex'] != -1).map(
+                (s) => Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child:
+                        _buildObjectiveImprovementCard(s, primary))),
+
+            // 三、整体教学改进建议
+            ..._suggestions
+                .where((s) => s['objectiveIndex'] == -1)
+                .map((s) => _buildOverallImprovementCard(s, primary)),
+            const SizedBox(height: 16),
+
+            // 四、满意度反馈
+            _buildSurveyFeedbackCard(primary),
+          ],
+
+          if (_suggestions.isEmpty && !_analyzing)
+            Padding(
+              padding: const EdgeInsets.only(top: 40),
+              child: Center(
+                child: Column(children: [
+                  Icon(Icons.build_outlined,
+                      size: 80,
+                      color: Colors.grey.withValues(alpha: 0.3)),
+                  const SizedBox(height: 16),
+                  const Text('选择批次后点击"分析达成度"查看改进建议',
+                      style:
+                          TextStyle(color: Colors.grey, fontSize: 14)),
+                ]),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreviousImprovementCard(Color primary) {
+    return Card(
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Icon(Icons.history, color: primary, size: 22),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text('一、上轮教学改进措施执行情况',
+                    style: TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ]),
+            const Divider(height: 20),
+            _previousItem(
+                '1',
+                '加大运用移动应用开发技术体系分析实际应用问题的题目训练',
+                '已执行。平时作业中增设了技术选型分析题，学生对技术体系理解有明显提升。',
+                Colors.green),
+            _previousItem(
+                '2',
+                '增加章节结束后知识图谱创建训练',
+                '已执行。在每章布置知识图谱绘制作业，帮助学生梳理知识结构。',
+                Colors.green),
+            _previousItem(
+                '3',
+                '优化期末项目考核的场景设计',
+                '已执行。降低跨设备适配模块分值占比，增加AI工具辅助开发评分维度。',
+                Colors.green),
+            _previousItem(
+                '4',
+                '对过程性考核中达标偏低的同学制定帮扶计划',
+                '部分执行。已组织3次技术专题工作坊，但个别化辅导仍需加强。',
+                Colors.orange),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _previousItem(
+      String num, String title, String status, Color statusColor) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 22,
+            height: 22,
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Center(
+              child: Text(num,
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: statusColor)),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w500)),
+                const SizedBox(height: 2),
+                Text(status,
+                    style: TextStyle(
+                        fontSize: 11, color: statusColor)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildObjectiveImprovementCard(
+      Map<String, dynamic> suggestion, Color primary) {
+    final objIdx = suggestion['objectiveIndex'] as int;
+    final objName = suggestion['objectiveName'] as String;
+    final ach = (suggestion['achievement'] as double?) ?? 0;
+    final level = suggestion['level'] as String? ?? '';
+    final lowCount = suggestion['lowStudentCount'] as int? ?? 0;
+    final totalStudents = suggestion['totalStudents'] as int? ?? 0;
+    final chapters = suggestion['chapters'] as String? ?? '';
+    final topics =
+        (suggestion['topics'] as List<String>?) ?? [];
+    final actions =
+        (suggestion['actions'] as List<String>?) ?? [];
+    final color = _kObjectiveColors[objIdx.clamp(0, 3)];
+
+    return Card(
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 目标名称 + 达成度
+            Row(children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(objName,
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: color)),
+              ),
+              const SizedBox(width: 8),
+              Text('达成度 ${(ach * 100).toStringAsFixed(1)}%',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: _achievementLevelColor(ach))),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: _achievementLevelColor(ach)
+                      .withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(level,
+                    style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: _achievementLevelColor(ach))),
+              ),
+            ]),
+            const SizedBox(height: 8),
+
+            // 现状分析
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.grey.withValues(alpha: 0.04),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('关联内容: $chapters',
+                      style: const TextStyle(
+                          fontSize: 11, color: Colors.grey)),
+                  Text('核心知识点: ${topics.join("、")}',
+                      style: const TextStyle(
+                          fontSize: 11, color: Colors.grey)),
+                  if (lowCount > 0)
+                    Text(
+                        '未达标学生: $lowCount人（占$totalStudents人的${(lowCount / totalStudents * 100).toStringAsFixed(0)}%）',
+                        style: const TextStyle(
+                            fontSize: 11, color: Colors.red)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // 改进建议
+            const Text('改进措施：',
+                style: TextStyle(
+                    fontSize: 12, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 6),
+            ...actions.asMap().entries.map((entry) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 20,
+                      height: 20,
+                      margin: const EdgeInsets.only(right: 6),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Center(
+                        child: Text('${entry.key + 1}',
+                            style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: color)),
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(entry.value,
+                          style: const TextStyle(
+                              fontSize: 12, height: 1.4)),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOverallImprovementCard(
+      Map<String, dynamic> suggestion, Color primary) {
+    final ach = (suggestion['achievement'] as double?) ?? 0;
+    final actions =
+        (suggestion['actions'] as List<String>?) ?? [];
+    final graphNodes =
+        suggestion['graphNodeCount'] as int? ?? 0;
+    final quizCount =
+        suggestion['quizQuestionCount'] as int? ?? 0;
+
+    return Card(
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Icon(Icons.lightbulb_outline,
+                  color: primary, size: 22),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text('三、整体教学改进建议',
+                    style: TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ]),
+            const Divider(height: 20),
+
+            // 现状概览
+            Row(children: [
+              _statChip('加权达成度',
+                  '${(ach * 100).toStringAsFixed(1)}%', primary),
+              const SizedBox(width: 8),
+              _statChip('图谱节点', '$graphNodes个', Colors.teal),
+              const SizedBox(width: 8),
+              _statChip('测验题库', '$quizCount道', Colors.orange),
+            ]),
+            const SizedBox(height: 12),
+
+            // 建议列表
+            ...actions.asMap().entries.map((entry) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.arrow_forward_ios,
+                          size: 12, color: primary),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(entry.value,
+                            style: const TextStyle(
+                                fontSize: 12, height: 1.4)),
+                      ),
+                    ],
+                  ),
+                )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _statChip(String label, String value, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+              color: color.withValues(alpha: 0.15)),
+        ),
+        child: Column(children: [
+          Text(value,
+              style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: color)),
+          const SizedBox(height: 2),
+          Text(label,
+              style:
+                  TextStyle(fontSize: 10, color: color)),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildSurveyFeedbackCard(Color primary) {
+    final hasSurvey = _surveySummary?['hasSurveyData'] == true;
+    final overallSat =
+        (_surveySummary?['overallSatisfaction'] as double?) ?? 0.0;
+    final totalResponses =
+        _surveySummary?['totalResponses'] as int? ?? 0;
+    final questionStats = (_surveySummary?['questionStats']
+            as List<Map<String, dynamic>>?) ??
+        [];
+
+    return Card(
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Icon(Icons.feedback_outlined,
+                  color: primary, size: 22),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text('四、课程满意度调查反馈',
+                    style: TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ]),
+            const Divider(height: 20),
+            if (!hasSurvey) ...[
+              const Text('暂无满意度调查数据，建议在下学期增加课程满意度调查。',
+                  style: TextStyle(
+                      fontSize: 12, color: Colors.grey)),
+            ] else ...[
+              Row(children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _achievementLevelColor(overallSat)
+                          .withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Column(children: [
+                      Text(
+                          '${(overallSat * 100).toStringAsFixed(1)}%',
+                          style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: _achievementLevelColor(
+                                  overallSat))),
+                      const Text('综合满意度',
+                          style: TextStyle(fontSize: 11)),
+                    ]),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: primary.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Column(children: [
+                      Text('$totalResponses',
+                          style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: primary)),
+                      const Text('有效回收数',
+                          style: TextStyle(fontSize: 11)),
+                    ]),
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 12),
+              // 学生建议汇总
+              ..._buildTextSuggestions(questionStats),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildTextSuggestions(
+      List<Map<String, dynamic>> questionStats) {
+    final textQuestions =
+        questionStats.where((q) => q['type'] == 'text').toList();
+    if (textQuestions.isEmpty) return [];
+
+    final widgets = <Widget>[
+      const Text('学生改进建议汇总：',
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+      const SizedBox(height: 6),
+    ];
+
+    for (final q in textQuestions) {
+      final answers = q['answers'] as List<String>? ?? [];
+      for (final a in answers.take(5)) {
+        widgets.add(Padding(
+          padding: const EdgeInsets.only(left: 8, bottom: 4),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('• ', style: TextStyle(color: Colors.grey)),
+              Expanded(
+                child: Text(a,
+                    style: const TextStyle(
+                        fontSize: 12, color: Colors.grey)),
+              ),
+            ],
+          ),
+        ));
+      }
+    }
+
+    return widgets;
   }
 }
