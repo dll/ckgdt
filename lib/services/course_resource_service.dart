@@ -246,7 +246,10 @@ class CourseResourceService {
       final allRepos = jsonDecode(utf8.decode(resp.bodyBytes)) as List;
       final cgRepos = allRepos.where((r) {
         final path = (r['path']?.toString() ?? '').toLowerCase();
-        return cgRepoPattern.hasMatch(path);
+        // 必须属于 chzuczldl 命名空间，且匹配 cg1-/cg2-/cg3- 前缀
+        final namespace = (r['namespace']?['path']?.toString() ?? '').toLowerCase();
+        return namespace == enterprise.toLowerCase() &&
+            cgRepoPattern.hasMatch(path);
       }).toList();
 
       final result = List<Map<String, dynamic>>.from(
@@ -336,6 +339,157 @@ class CourseResourceService {
     }
   }
 
+  // ══════════════════════════════════════════════════════════════════════
+  // 学生仓库过滤（只返回学生所属的仓库）
+  // ══════════════════════════════════════════════════════════════════════
+
+  /// 缓存键：学生个人过滤后的仓库
+  static const _kMyFilteredRepos = 'cr_my_filtered_repos';
+  static const _kMyFilteredSync = 'cr_my_filtered_sync';
+
+  /// 为学生过滤仓库，只返回学生所属的仓库
+  ///
+  /// 匹配策略（按优先级）：
+  /// 1. repositoryUrl 直接匹配
+  /// 2. 仓库成员列表匹配学号或姓名
+  /// 3. 仓库分支提交作者匹配姓名
+  Future<List<Map<String, dynamic>>> getStudentOwnRepos({
+    required String userId,
+    required String realName,
+    String? repositoryUrl,
+    bool forceRefresh = false,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // 缓存检查（30分钟有效）
+    if (!forceRefresh) {
+      final cached = prefs.getString(_kMyFilteredRepos);
+      final lastSync = prefs.getString(_kMyFilteredSync);
+      if (cached != null && lastSync != null) {
+        final syncTime = DateTime.tryParse(lastSync);
+        if (syncTime != null &&
+            DateTime.now().difference(syncTime).inMinutes < 30) {
+          try {
+            return List<Map<String, dynamic>>.from(
+                (jsonDecode(cached) as List)
+                    .map((e) => Map<String, dynamic>.from(e)));
+          } catch (_) {}
+        }
+      }
+    }
+
+    final allRepos = await getStudentRepos(forceRefresh: forceRefresh);
+    if (allRepos.isEmpty) return [];
+
+    // ── 策略 1: repositoryUrl 直接匹配 ──
+    if (repositoryUrl != null && repositoryUrl.isNotEmpty) {
+      final matched = allRepos.where((repo) {
+        final htmlUrl = repo['html_url']?.toString() ?? '';
+        final path = repo['path']?.toString() ?? '';
+        final fullName = repo['full_name']?.toString() ?? '';
+        return htmlUrl == repositoryUrl ||
+            repositoryUrl.contains('/$path') ||
+            repositoryUrl.contains('/$fullName');
+      }).toList();
+      if (matched.isNotEmpty) {
+        await _cacheFilteredRepos(prefs, matched);
+        return matched;
+      }
+    }
+
+    // ── 策略 2: 并行检查每个仓库的成员列表 + 分支提交作者 ──
+    final List<Map<String, dynamic>> matchedRepos = [];
+
+    await Future.wait(allRepos.map((repo) async {
+      final owner =
+          repo['namespace']?['path']?.toString() ?? enterprise;
+      final repoPath = repo['path']?.toString() ?? '';
+
+      try {
+        // 获取仓库成员
+        final members = await _gitee.getRepoMembers(owner, repoPath);
+        for (final m in members) {
+          final login = m['login']?.toString() ?? '';
+          final name = m['name']?.toString() ?? '';
+          if (_matchStudent(login, name, userId, realName)) {
+            matchedRepos.add(repo);
+            return;
+          }
+        }
+
+        // 如果成员列表未匹配，检查分支提交作者
+        final branches = await getStudentBranches(owner, repoPath);
+        for (final b in branches) {
+          final branchName = b['name']?.toString() ?? '';
+          try {
+            final commits = await getBranchCommits(
+                owner, repoPath, branchName,
+                perPage: 5);
+            for (final c in commits) {
+              final commitData =
+                  c['commit'] as Map<String, dynamic>? ?? {};
+              final authorData =
+                  commitData['author'] as Map<String, dynamic>? ?? {};
+              final authorName = authorData['name']?.toString() ?? '';
+              final authorEmail = authorData['email']?.toString() ?? '';
+              if (_matchStudent(
+                  authorEmail, authorName, userId, realName)) {
+                matchedRepos.add(repo);
+                return;
+              }
+            }
+          } catch (_) {}
+        }
+      } catch (e) {
+        debugPrint(
+            'CourseResourceService: filterRepo($repoPath) error: $e');
+      }
+    }));
+
+    // 缓存过滤结果
+    if (matchedRepos.isNotEmpty) {
+      await _cacheFilteredRepos(prefs, matchedRepos);
+    }
+
+    // 如果没有匹配到任何仓库，返回所有仓库（降级）
+    return matchedRepos.isNotEmpty ? matchedRepos : allRepos;
+  }
+
+  /// 匹配学生：login/name 与 userId/realName 比较
+  bool _matchStudent(
+      String login, String name, String userId, String realName) {
+    final loginLower = login.toLowerCase().trim();
+    final userIdLower = userId.toLowerCase().trim();
+
+    // 学号匹配
+    if (userIdLower.isNotEmpty && loginLower.isNotEmpty) {
+      if (loginLower == userIdLower || loginLower.contains(userIdLower)) {
+        return true;
+      }
+    }
+
+    // 姓名匹配
+    if (realName.isNotEmpty && name.isNotEmpty) {
+      if (name.trim() == realName.trim() ||
+          name.trim().contains(realName.trim()) ||
+          realName.trim().contains(name.trim())) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /// 缓存过滤后的仓库列表
+  Future<void> _cacheFilteredRepos(
+      SharedPreferences prefs, List<Map<String, dynamic>> repos) async {
+    try {
+      await prefs.setString(_kMyFilteredRepos, jsonEncode(repos));
+      await prefs.setString(
+          _kMyFilteredSync, DateTime.now().toIso8601String());
+    } catch (_) {}
+  }
+
   // ── 缓存管理 ────────────────────────────────────────────────────────
 
   Future<void> clearCache() async {
@@ -343,6 +497,7 @@ class CourseResourceService {
     for (final key in [
       _kLabTasks, _kTemplates, _kChapters, _kAssessment,
       _kStudentRepos, _kLastSync,
+      _kMyFilteredRepos, _kMyFilteredSync,
     ]) {
       await prefs.remove(key);
     }
