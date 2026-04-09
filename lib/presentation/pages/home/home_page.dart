@@ -152,7 +152,7 @@ class _HomePageState extends State<HomePage> {
                 value: 'settings',
                 child: ListTile(
                   leading: Icon(Icons.settings),
-                  title: Text('设置'),
+                  title: Text('系统设置'),
                 ),
               ),
               PopupMenuItem(

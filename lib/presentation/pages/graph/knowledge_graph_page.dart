@@ -197,7 +197,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   String? _errorMessage;
 
   // ── 视图状态 ─────────────────────────────────────────────────────────────
-  _ViewMode _viewMode = _ViewMode.global;
+  _ViewMode _viewMode = _ViewMode.mask;
   int? _chapterFilter; // null = 全部
   _ConceptNode? _selectedNode;
   Set<int> _highlightedNodeIds = {};
