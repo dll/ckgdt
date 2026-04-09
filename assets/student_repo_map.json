@@ -1,5 +1,11 @@
 [
   {
+    "userId": "2023211985",
+    "name": "测试用户",
+    "repo": "cg1-mtcs",
+    "url": "https://gitee.com/chzuczldl/cg1-mtcs"
+  },
+  {
     "userId": "2020210158",
     "name": "苏洲",
     "repo": "cg1-olapdi",
