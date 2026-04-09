@@ -671,13 +671,12 @@ class _LearningChainPageState extends State<LearningChainPage>
   void _navigateToCourseware() {
     if (widget.chapter == null) return;
     final chFilter = _chapterFilter(widget.chapter!);
-    // 优先打开PPT，没有则打开PDF
-    final fileType = _pptCount > 0 ? 'ppt' : 'pdf';
+    // 同时显示 PPT 和 PDF，用 TabBar 切换
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => ResourceViewerPage(
-          fileType: fileType,
+          fileType: 'all',
           filterChapter: chFilter,
         ),
       ),
