@@ -25,8 +25,7 @@ class _LabTasksPageState extends State<LabTasksPage>
   final _labTaskDao = LabTaskDao();
   bool _initialized = false;
 
-  bool get _isTeacherOrAdmin =>
-      _authService.isTeacher || _authService.isAdmin;
+  bool get _isTeacherOrAdmin => _authService.isTeacher || _authService.isAdmin;
 
   @override
   void initState() {
@@ -71,23 +70,18 @@ class _LabTasksPageState extends State<LabTasksPage>
             unselectedLabelColor: Colors.grey,
             indicatorColor: primary,
             tabs: [
-              const Tab(
-                  icon: Icon(Icons.science, size: 18), text: '任务列表'),
+              const Tab(icon: Icon(Icons.science, size: 18), text: '任务列表'),
               Tab(
                 icon: const Icon(Icons.assignment_turned_in, size: 18),
                 text: _isTeacherOrAdmin ? '提交管理' : '我的提交',
               ),
-              const Tab(
-                  icon: Icon(Icons.description, size: 18), text: '实验报告'),
+              const Tab(icon: Icon(Icons.description, size: 18), text: '实验报告'),
               if (!_isTeacherOrAdmin)
-                const Tab(
-                    icon: Icon(Icons.analytics, size: 18), text: '仓库报表'),
+                const Tab(icon: Icon(Icons.analytics, size: 18), text: '仓库报表'),
               if (_isTeacherOrAdmin)
-                const Tab(
-                    icon: Icon(Icons.settings, size: 18), text: '任务管理'),
+                const Tab(icon: Icon(Icons.settings, size: 18), text: '任务管理'),
               if (_isTeacherOrAdmin)
-                const Tab(
-                    icon: Icon(Icons.analytics, size: 18), text: '仓库报表'),
+                const Tab(icon: Icon(Icons.analytics, size: 18), text: '仓库报表'),
             ],
           ),
         ),
@@ -104,8 +98,7 @@ class _LabTasksPageState extends State<LabTasksPage>
               if (_isTeacherOrAdmin)
                 _TaskManageTab(
                     authService: _authService, labTaskDao: _labTaskDao),
-              if (_isTeacherOrAdmin)
-                const _RepoReportTab(),
+              if (_isTeacherOrAdmin) const _RepoReportTab(),
             ],
           ),
         ),
@@ -154,8 +147,7 @@ class _TaskListTabState extends State<_TaskListTab> {
       for (final task in tasks) {
         final taskId = task['id'] as int;
         if (_isTeacherOrAdmin) {
-          statsCache[taskId] =
-              await widget.labTaskDao.getTaskStats(taskId);
+          statsCache[taskId] = await widget.labTaskDao.getTaskStats(taskId);
         } else if (userId != null) {
           subCache[taskId] =
               await widget.labTaskDao.getSubmission(taskId, userId);
@@ -343,8 +335,8 @@ class _TaskListTabState extends State<_TaskListTab> {
                       Icon(Icons.star, size: 14, color: Colors.grey[400]),
                       const SizedBox(width: 4),
                       Text('满分$maxScore',
-                          style: TextStyle(
-                              fontSize: 12, color: Colors.grey[500])),
+                          style:
+                              TextStyle(fontSize: 12, color: Colors.grey[500])),
                       const Spacer(),
                       if (dueDateDisplay.isNotEmpty)
                         Container(
@@ -401,9 +393,7 @@ class _TaskListTabState extends State<_TaskListTab> {
         const SizedBox(width: 4),
         Text(status,
             style: TextStyle(
-                fontSize: 12,
-                color: statusColor,
-                fontWeight: FontWeight.w500)),
+                fontSize: 12, color: statusColor, fontWeight: FontWeight.w500)),
       ],
     );
   }
@@ -542,8 +532,8 @@ class _TaskListTabState extends State<_TaskListTab> {
                   Row(
                     children: [
                       Text('得分: ',
-                          style: TextStyle(
-                              fontSize: 14, color: Colors.grey[700])),
+                          style:
+                              TextStyle(fontSize: 14, color: Colors.grey[700])),
                       Text('${submission['score']}/$maxScore',
                           style: const TextStyle(
                               fontSize: 18,
@@ -596,8 +586,7 @@ class _TaskListTabState extends State<_TaskListTab> {
                     },
                     icon: Icon(
                         submission == null ? Icons.upload_file : Icons.edit),
-                    label:
-                        Text(submission == null ? '提交实验' : '修改提交'),
+                    label: Text(submission == null ? '提交实验' : '修改提交'),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
@@ -694,8 +683,7 @@ class _TaskListTabState extends State<_TaskListTab> {
                   InkWell(
                     onTap: () {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('文件上传功能将在后续版本中开放')),
+                        const SnackBar(content: Text('文件上传功能将在后续版本中开放')),
                       );
                     },
                     borderRadius: BorderRadius.circular(12),
@@ -704,8 +692,7 @@ class _TaskListTabState extends State<_TaskListTab> {
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
                         border: Border.all(
-                            color: Colors.grey[300]!,
-                            style: BorderStyle.solid),
+                            color: Colors.grey[300]!, style: BorderStyle.solid),
                         borderRadius: BorderRadius.circular(12),
                         color: Colors.grey[50],
                       ),
@@ -856,10 +843,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                           Icon(Icons.inbox_outlined,
                               size: 56, color: Colors.grey[300]),
                           const SizedBox(height: 12),
-                          Text(
-                              _isTeacherOrAdmin
-                                  ? '暂无学生提交'
-                                  : '暂无提交记录',
+                          Text(_isTeacherOrAdmin ? '暂无学生提交' : '暂无提交记录',
                               style: TextStyle(color: Colors.grey[500])),
                           if (!_isTeacherOrAdmin) ...[
                             const SizedBox(height: 8),
@@ -928,8 +912,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                           children: [
                             Text(taskTitle,
                                 style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600),
+                                    fontSize: 14, fontWeight: FontWeight.w600),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis),
                             const SizedBox(height: 2),
@@ -1027,8 +1010,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text('点击提交卡片可进行批改评分',
-                      style:
-                          TextStyle(fontSize: 13, color: Colors.amber[800])),
+                      style: TextStyle(fontSize: 13, color: Colors.amber[800])),
                 ),
               ],
             ),
@@ -1093,10 +1075,9 @@ class _SubmissionTabState extends State<_SubmissionTab> {
           leading: CircleAvatar(
             radius: 18,
             backgroundColor: statusColor.withValues(alpha: 0.1),
-            child: Text(
-                userName.isNotEmpty ? userName.substring(0, 1) : '?',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold, color: statusColor)),
+            child: Text(userName.isNotEmpty ? userName.substring(0, 1) : '?',
+                style:
+                    TextStyle(fontWeight: FontWeight.bold, color: statusColor)),
           ),
           title: Text(userName,
               style:
@@ -1106,11 +1087,10 @@ class _SubmissionTabState extends State<_SubmissionTab> {
               style: TextStyle(fontSize: 12, color: Colors.grey[500])),
           trailing: isGraded && score != null
               ? Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color:
-                        _scoreColor(score, maxScore).withValues(alpha: 0.1),
+                    color: _scoreColor(score, maxScore).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text('$score分',
@@ -1120,8 +1100,8 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                           color: _scoreColor(score, maxScore))),
                 )
               : Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: Colors.orange.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -1173,8 +1153,8 @@ class _SubmissionTabState extends State<_SubmissionTab> {
             ),
             const SizedBox(height: 16),
             Text(taskTitle,
-                style: const TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.bold)),
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Text(
                 '提交时间: ${submitTime.isNotEmpty ? submitTime.substring(0, 16).replaceAll('T', ' ') : ""}',
@@ -1211,8 +1191,8 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                 decoration: BoxDecoration(
                   color: Colors.green.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: Colors.green.withValues(alpha: 0.2)),
+                  border:
+                      Border.all(color: Colors.green.withValues(alpha: 0.2)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1224,8 +1204,8 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                             color: Colors.green[700])),
                     const SizedBox(height: 6),
                     Text(feedback,
-                        style: TextStyle(
-                            fontSize: 14, color: Colors.grey[700])),
+                        style:
+                            TextStyle(fontSize: 14, color: Colors.grey[700])),
                   ],
                 ),
               ),
@@ -1285,8 +1265,8 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(content,
-                          style: TextStyle(
-                              fontSize: 12, color: Colors.grey[600]),
+                          style:
+                              TextStyle(fontSize: 12, color: Colors.grey[600]),
                           maxLines: 5,
                           overflow: TextOverflow.ellipsis),
                     ),
@@ -1302,8 +1282,8 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                           style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: _scoreColor(
-                                  scoreValue.round(), maxScore))),
+                              color:
+                                  _scoreColor(scoreValue.round(), maxScore))),
                     ],
                   ),
                   Slider(
@@ -1312,21 +1292,18 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                     max: maxScore.toDouble(),
                     divisions: maxScore,
                     label: '${scoreValue.round()}',
-                    onChanged: (v) =>
-                        setDialogState(() => scoreValue = v),
+                    onChanged: (v) => setDialogState(() => scoreValue = v),
                   ),
                   Wrap(
                     spacing: 8,
                     children: [60, 70, 80, 85, 90, 95, 100].map((v) {
-                      final clamped =
-                          v > maxScore ? maxScore : v;
+                      final clamped = v > maxScore ? maxScore : v;
                       final isSelected = scoreValue.round() == clamped;
                       return ActionChip(
                         label: Text('$clamped',
                             style: TextStyle(
                                 fontSize: 12,
-                                color:
-                                    isSelected ? Colors.white : null)),
+                                color: isSelected ? Colors.white : null)),
                         backgroundColor: isSelected
                             ? Theme.of(context).colorScheme.primary
                             : null,
@@ -1369,8 +1346,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                           feedback: feedbackCtrl.text.trim().isNotEmpty
                               ? feedbackCtrl.text.trim()
                               : null,
-                          scorerId:
-                              widget.authService.getCurrentUserId(),
+                          scorerId: widget.authService.getCurrentUserId(),
                         );
                         if (context.mounted) {
                           Navigator.pop(ctx);
@@ -1447,9 +1423,24 @@ class _ReportTabState extends State<_ReportTab> {
     setState(() => _isLoading = true);
     try {
       final userId = widget.authService.getCurrentUserId();
-      final reports =
-          await widget.labTaskDao.getStudentReports(userId: userId);
+      debugPrint('=== _ReportTab: Loading reports for userId=$userId');
+
+      List<Map<String, dynamic>> reports;
+      if (userId != null && userId.isNotEmpty) {
+        reports = await widget.labTaskDao.getStudentReports(userId: userId);
+      } else {
+        debugPrint('=== _ReportTab: userId is null/empty, loading all reports');
+        reports = await widget.labTaskDao.getStudentReports();
+      }
+
       final templates = await widget.labTaskDao.getReportTemplates();
+
+      debugPrint('=== _ReportTab: Loaded ${reports.length} reports');
+      for (final r in reports) {
+        debugPrint(
+            '  - Report: ${r['title']}, status=${r['status']}, user_id=${r['user_id']}');
+      }
+
       if (mounted) {
         setState(() {
           _reports = reports;
@@ -1457,8 +1448,14 @@ class _ReportTabState extends State<_ReportTab> {
           _isLoading = false;
         });
       }
-    } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+    } catch (e, stack) {
+      debugPrint('=== _ReportTab: Error loading data: $e\n$stack');
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('加载失败: $e')),
+        );
+      }
     }
   }
 
@@ -1481,13 +1478,11 @@ class _ReportTabState extends State<_ReportTab> {
                                   size: 56, color: Colors.grey[300]),
                               const SizedBox(height: 12),
                               Text('暂无实验报告',
-                                  style:
-                                      TextStyle(color: Colors.grey[500])),
+                                  style: TextStyle(color: Colors.grey[500])),
                               const SizedBox(height: 8),
                               Text('点击右下角按钮新建报告',
                                   style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[400])),
+                                      fontSize: 12, color: Colors.grey[400])),
                             ],
                           ),
                         ),
@@ -1514,8 +1509,7 @@ class _ReportTabState extends State<_ReportTab> {
     );
   }
 
-  Widget _buildReportCard(
-      BuildContext context, Map<String, dynamic> report) {
+  Widget _buildReportCard(BuildContext context, Map<String, dynamic> report) {
     final primary = Theme.of(context).colorScheme.primary;
     final title = report['title'] as String? ?? '未命名报告';
     final status = report['status'] as String? ?? '草稿';
@@ -1524,8 +1518,7 @@ class _ReportTabState extends State<_ReportTab> {
     final updatedAt = report['updated_at'] as String? ?? '';
 
     final statusColor = status == '已提交' ? Colors.green : Colors.orange;
-    final statusIcon =
-        status == '已提交' ? Icons.check_circle : Icons.edit_note;
+    final statusIcon = status == '已提交' ? Icons.check_circle : Icons.edit_note;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
@@ -1564,23 +1557,21 @@ class _ReportTabState extends State<_ReportTab> {
                               const SizedBox(width: 4),
                               Text(templateName,
                                   style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey[500])),
+                                      fontSize: 11, color: Colors.grey[500])),
                               const SizedBox(width: 8),
                             ],
                             if (updatedAt.isNotEmpty)
                               Text(updatedAt.substring(0, 10),
                                   style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey[400])),
+                                      fontSize: 11, color: Colors.grey[400])),
                           ],
                         ),
                       ],
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: statusColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
@@ -1633,8 +1624,7 @@ class _ReportTabState extends State<_ReportTab> {
                         Icon(Icons.folder_open,
                             size: 40, color: Colors.grey[300]),
                         const SizedBox(height: 8),
-                        Text('暂无模板',
-                            style: TextStyle(color: Colors.grey[500])),
+                        Text('暂无模板', style: TextStyle(color: Colors.grey[500])),
                       ],
                     ),
                   ),
@@ -1665,8 +1655,8 @@ class _ReportTabState extends State<_ReportTab> {
                     return ListTile(
                       leading: CircleAvatar(
                         backgroundColor: primary.withValues(alpha: 0.1),
-                        child: Icon(Icons.description,
-                            color: primary, size: 20),
+                        child:
+                            Icon(Icons.description, color: primary, size: 20),
                       ),
                       title: Text(name),
                       subtitle: Text(desc,
@@ -1814,8 +1804,7 @@ class _ReportTabState extends State<_ReportTab> {
                         template: template,
                         existingReport: report,
                         status: '草稿',
-                        setIsSaving: (v) =>
-                            setDialogState(() => isSaving = v),
+                        setIsSaving: (v) => setDialogState(() => isSaving = v),
                       ),
               child: const Text('保存草稿'),
             ),
@@ -1832,8 +1821,7 @@ class _ReportTabState extends State<_ReportTab> {
                         template: template,
                         existingReport: report,
                         status: '已提交',
-                        setIsSaving: (v) =>
-                            setDialogState(() => isSaving = v),
+                        setIsSaving: (v) => setDialogState(() => isSaving = v),
                       ),
               child: const Text('提交'),
             ),
@@ -1862,7 +1850,19 @@ class _ReportTabState extends State<_ReportTab> {
       return;
     }
 
+    final userId = widget.authService.getCurrentUserId();
+    if (userId == null || userId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('用户未登录，请重新登录'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
     setIsSaving(true);
+    debugPrint(
+        '=== _ReportTab: Saving report - title=${titleCtrl.text.trim()}, status=$status, userId=$userId');
+
     try {
       final contentMap = <String, String>{};
       if (sections.isNotEmpty) {
@@ -1873,9 +1873,7 @@ class _ReportTabState extends State<_ReportTab> {
         contentMap['content'] = generalContentCtrl.text.trim();
       }
 
-      final userId = widget.authService.getCurrentUserId() ?? '';
-
-      await widget.labTaskDao.saveReport(
+      final result = await widget.labTaskDao.saveReport(
         id: existingReport != null ? existingReport['id'] as int? : null,
         templateId: template != null ? template['id'] as int? : null,
         userId: userId,
@@ -1884,20 +1882,23 @@ class _ReportTabState extends State<_ReportTab> {
         status: status,
       );
 
-      if (context.mounted) {
+      debugPrint('=== _ReportTab: Save result - rows affected=$result');
+
+      if (ctx.mounted) {
         Navigator.pop(ctx);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(status == '草稿' ? '草稿已保存' : '报告已提交'),
+            content: Text(status == '草稿' ? '草稿已保存' : '报告已提交成功'),
             backgroundColor: status == '草稿' ? null : Colors.green,
           ),
         );
         _loadData();
       }
-    } catch (e) {
-      if (context.mounted) {
+    } catch (e, stack) {
+      debugPrint('=== _ReportTab: Save error - $e\n$stack');
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存失败: $e')),
+          SnackBar(content: Text('保存失败: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -1972,13 +1973,11 @@ class _TaskManageTabState extends State<_TaskManageTab> {
                                   size: 56, color: Colors.grey[300]),
                               const SizedBox(height: 12),
                               Text('暂无实验任务',
-                                  style:
-                                      TextStyle(color: Colors.grey[500])),
+                                  style: TextStyle(color: Colors.grey[500])),
                               const SizedBox(height: 8),
                               Text('点击右下角按钮创建新任务',
                                   style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[400])),
+                                      fontSize: 12, color: Colors.grey[400])),
                             ],
                           ),
                         ),
@@ -2061,16 +2060,14 @@ class _TaskManageTabState extends State<_TaskManageTab> {
                     }
                   },
                   itemBuilder: (ctx) => [
-                    const PopupMenuItem(
-                        value: 'edit', child: Text('编辑任务')),
+                    const PopupMenuItem(value: 'edit', child: Text('编辑任务')),
                     PopupMenuItem(
                         value: 'toggle',
-                        child: Text(
-                            status == 'active' ? '设为归档' : '设为激活')),
+                        child: Text(status == 'active' ? '设为归档' : '设为激活')),
                     const PopupMenuItem(
                         value: 'delete',
-                        child: Text('删除任务',
-                            style: TextStyle(color: Colors.red))),
+                        child:
+                            Text('删除任务', style: TextStyle(color: Colors.red))),
                   ],
                 ),
               ],
@@ -2082,8 +2079,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
                   Icon(Icons.book, size: 14, color: Colors.grey[400]),
                   const SizedBox(width: 4),
                   Text(chapter,
-                      style:
-                          TextStyle(fontSize: 12, color: Colors.grey[500])),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                   const SizedBox(width: 10),
                 ],
                 Container(
@@ -2103,13 +2099,12 @@ class _TaskManageTabState extends State<_TaskManageTab> {
                 Icon(Icons.star, size: 14, color: Colors.grey[400]),
                 const SizedBox(width: 4),
                 Text('$maxScore分',
-                    style:
-                        TextStyle(fontSize: 12, color: Colors.grey[500])),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                 const Spacer(),
                 if (status != 'active')
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: Colors.grey.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
@@ -2126,8 +2121,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
                   Icon(Icons.schedule, size: 14, color: Colors.grey[400]),
                   const SizedBox(width: 4),
                   Text('截止: ${dueDate.substring(0, 10)}',
-                      style:
-                          TextStyle(fontSize: 12, color: Colors.grey[500])),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                 ],
               ),
             ],
@@ -2141,14 +2135,11 @@ class _TaskManageTabState extends State<_TaskManageTab> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
+                  _statItem('提交', '$totalSub人', Icons.upload_file, Colors.blue),
+                  Container(width: 1, height: 24, color: Colors.grey[200]),
                   _statItem(
-                      '提交', '$totalSub人', Icons.upload_file, Colors.blue),
-                  Container(
-                      width: 1, height: 24, color: Colors.grey[200]),
-                  _statItem('已批改', '$gradedCount人', Icons.grading,
-                      Colors.green),
-                  Container(
-                      width: 1, height: 24, color: Colors.grey[200]),
+                      '已批改', '$gradedCount人', Icons.grading, Colors.green),
+                  Container(width: 1, height: 24, color: Colors.grey[200]),
                   _statItem(
                       '均分',
                       avgScore > 0 ? avgScore.toStringAsFixed(1) : '-',
@@ -2163,8 +2154,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
     );
   }
 
-  Widget _statItem(
-      String label, String value, IconData icon, Color color) {
+  Widget _statItem(String label, String value, IconData icon, Color color) {
     return Column(
       children: [
         Icon(icon, size: 18, color: color),
@@ -2172,8 +2162,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
         Text(value,
             style: TextStyle(
                 fontSize: 14, fontWeight: FontWeight.bold, color: color)),
-        Text(label,
-            style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+        Text(label, style: TextStyle(fontSize: 10, color: Colors.grey[500])),
       ],
     );
   }
@@ -2190,8 +2179,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
             child: const Text('取消'),
           ),
           ElevatedButton(
-            style:
-                ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
               try {
                 await widget.labTaskDao.deleteTask(taskId);
@@ -2210,8 +2198,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
                 }
               }
             },
-            child:
-                const Text('删除', style: TextStyle(color: Colors.white)),
+            child: const Text('删除', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -2224,9 +2211,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
       await widget.labTaskDao.updateTask(taskId, {'status': newStatus});
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(
-                  newStatus == 'archived' ? '任务已归档' : '任务已激活')),
+          SnackBar(content: Text(newStatus == 'archived' ? '任务已归档' : '任务已激活')),
         );
         _loadTasks();
       }
@@ -2244,22 +2229,15 @@ class _TaskManageTabState extends State<_TaskManageTab> {
     final titleCtrl = TextEditingController(
         text: isEditing ? (existingTask['title'] as String? ?? '') : '');
     final descCtrl = TextEditingController(
-        text: isEditing
-            ? (existingTask['description'] as String? ?? '')
-            : '');
+        text: isEditing ? (existingTask['description'] as String? ?? '') : '');
     final reqCtrl = TextEditingController(
-        text: isEditing
-            ? (existingTask['requirements'] as String? ?? '')
-            : '');
+        text: isEditing ? (existingTask['requirements'] as String? ?? '') : '');
     final delCtrl = TextEditingController(
-        text: isEditing
-            ? (existingTask['deliverables'] as String? ?? '')
-            : '');
+        text: isEditing ? (existingTask['deliverables'] as String? ?? '') : '');
     String selectedChapter =
         isEditing ? (existingTask['chapter'] as String? ?? '第1章') : '第1章';
-    String selectedDifficulty = isEditing
-        ? (existingTask['difficulty'] as String? ?? '中等')
-        : '中等';
+    String selectedDifficulty =
+        isEditing ? (existingTask['difficulty'] as String? ?? '中等') : '中等';
     final maxScoreCtrl = TextEditingController(
         text:
             '${isEditing ? (existingTask['max_score'] as int? ?? 100) : 100}');
@@ -2310,8 +2288,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
                           horizontal: 12, vertical: 12),
                     ),
                     items: ['第1章', '第2章', '第3章', '第4章', '第5章', '第6章']
-                        .map(
-                            (c) => DropdownMenuItem(value: c, child: Text(c)))
+                        .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                         .toList(),
                     onChanged: (v) =>
                         setDialogState(() => selectedChapter = v!),
@@ -2327,8 +2304,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
                           horizontal: 12, vertical: 12),
                     ),
                     items: ['简单', '中等', '较难', '困难']
-                        .map(
-                            (d) => DropdownMenuItem(value: d, child: Text(d)))
+                        .map((d) => DropdownMenuItem(value: d, child: Text(d)))
                         .toList(),
                     onChanged: (v) =>
                         setDialogState(() => selectedDifficulty = v!),
@@ -2352,8 +2328,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
                         context: ctx,
                         initialDate: dueDate,
                         firstDate: DateTime.now(),
-                        lastDate:
-                            DateTime.now().add(const Duration(days: 365)),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
                       );
                       if (picked != null) {
                         setDialogState(() => dueDate = picked);
@@ -2445,8 +2420,8 @@ class _TaskManageTabState extends State<_TaskManageTab> {
                         final parsedMaxScore =
                             int.tryParse(maxScoreCtrl.text.trim()) ?? 100;
                         if (isEditing) {
-                          await widget.labTaskDao.updateTask(
-                              existingTask['id'] as int, {
+                          await widget.labTaskDao
+                              .updateTask(existingTask['id'] as int, {
                             'title': titleCtrl.text.trim(),
                             'chapter': selectedChapter,
                             'description': descCtrl.text.trim().isNotEmpty
@@ -2478,16 +2453,14 @@ class _TaskManageTabState extends State<_TaskManageTab> {
                             difficulty: selectedDifficulty,
                             maxScore: parsedMaxScore,
                             dueDate: dueDate.toIso8601String(),
-                            creatorId:
-                                widget.authService.getCurrentUserId(),
+                            creatorId: widget.authService.getCurrentUserId(),
                           );
                         }
                         if (context.mounted) {
                           Navigator.pop(ctx);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(
-                                  isEditing ? '任务已更新' : '任务创建成功'),
+                              content: Text(isEditing ? '任务已更新' : '任务创建成功'),
                               backgroundColor: Colors.green,
                             ),
                           );
@@ -2513,8 +2486,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
                           strokeWidth: 2, color: Colors.white),
                     )
                   : const Icon(Icons.save),
-              label:
-                  Text(isSaving ? '保存中...' : (isEditing ? '更新' : '创建')),
+              label: Text(isSaving ? '保存中...' : (isEditing ? '更新' : '创建')),
             ),
           ],
         ),
@@ -2620,8 +2592,7 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
       if (repoUrl == null || repoUrl.isEmpty) {
         setState(() {
           _isLoading = false;
-          _errorMessage =
-              '尚未配置 Gitee 仓库地址，且无法自动识别所属仓库。\n'
+          _errorMessage = '尚未配置 Gitee 仓库地址，且无法自动识别所属仓库。\n'
               '请联系教师在「学生管理」中设置你的仓库 URL。';
         });
         return;
@@ -2656,7 +2627,9 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
         _giteeService.getRepoDetail(_owner, _repoName),
         _giteeService.getBranches(_owner, _repoName),
         _giteeService.getAllCommits(_owner, _repoName),
-        _giteeService.getReleases(_owner, _repoName).catchError((_) => <Map<String, dynamic>>[]),
+        _giteeService
+            .getReleases(_owner, _repoName)
+            .catchError((_) => <Map<String, dynamic>>[]),
       ]);
 
       final repoDetail = results[0] as Map<String, dynamic>;
@@ -2677,7 +2650,9 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
         final dateStr = authorMap['date']?.toString();
         DateTime? date;
         if (dateStr != null) {
-          try { date = DateTime.parse(dateStr).toLocal(); } catch (_) {}
+          try {
+            date = DateTime.parse(dateStr).toLocal();
+          } catch (_) {}
         }
         return _StudentCommitRow(
           sha: sha,
@@ -2717,7 +2692,8 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
       final sha = commits[i]['sha']?.toString() ?? '';
       if (sha.isEmpty) continue;
       try {
-        final detail = await _giteeService.getCommitDetail(_owner, _repoName, sha);
+        final detail =
+            await _giteeService.getCommitDetail(_owner, _repoName, sha);
         final stats = detail['stats'] as Map<String, dynamic>? ?? {};
         final add = (stats['additions'] as int?) ?? 0;
         final del = (stats['deletions'] as int?) ?? 0;
@@ -2728,7 +2704,9 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
 
         if (i < _commitRows.length) {
           _commitRows[i] = _commitRows[i].copyWith(
-            additions: add, deletions: del, filesChanged: files?.length ?? 0,
+            additions: add,
+            deletions: del,
+            filesChanged: files?.length ?? 0,
           );
         }
         if (i % 5 == 0 || i == maxLoad - 1) {
@@ -2755,7 +2733,8 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
     });
 
     try {
-      final commits = await _giteeService.getAllCommits(_owner, _repoName, sha: branchName);
+      final commits =
+          await _giteeService.getAllCommits(_owner, _repoName, sha: branchName);
       final commitRows = commits.map((c) {
         final sha = c['sha']?.toString() ?? '';
         final commitMap = c['commit'] as Map<String, dynamic>? ?? {};
@@ -2764,11 +2743,15 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
         final dateStr = authorMap['date']?.toString();
         DateTime? date;
         if (dateStr != null) {
-          try { date = DateTime.parse(dateStr).toLocal(); } catch (_) {}
+          try {
+            date = DateTime.parse(dateStr).toLocal();
+          } catch (_) {}
         }
         return _StudentCommitRow(
-          sha: sha, message: message.split('\n').first,
-          date: date, authorName: authorMap['name']?.toString() ?? '',
+          sha: sha,
+          message: message.split('\n').first,
+          date: date,
+          authorName: authorMap['name']?.toString() ?? '',
         );
       }).toList();
       setState(() {
@@ -2808,7 +2791,8 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
             children: [
               const Icon(Icons.info_outline, size: 48, color: Colors.grey),
               const SizedBox(height: 16),
-              Text(_errorMessage!, textAlign: TextAlign.center,
+              Text(_errorMessage!,
+                  textAlign: TextAlign.center,
                   style: const TextStyle(color: Colors.grey)),
               const SizedBox(height: 16),
               ElevatedButton.icon(
@@ -2838,7 +2822,8 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
           // ── 仓库头部 ──
           Card(
             elevation: 3,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -2846,7 +2831,8 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
                 borderRadius: BorderRadius.circular(14),
                 gradient: LinearGradient(
                   colors: [Colors.blue.shade600, Colors.indigo.shade700],
-                  begin: Alignment.topLeft, end: Alignment.bottomRight,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
               ),
               child: Column(
@@ -2854,33 +2840,45 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.folder_special, color: Colors.white, size: 28),
+                      const Icon(Icons.folder_special,
+                          color: Colors.white, size: 28),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(fullName,
-                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                            style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white)),
                       ),
                     ],
                   ),
                   if (desc.isNotEmpty) ...[
                     const SizedBox(height: 8),
-                    Text(desc, style: const TextStyle(fontSize: 13, color: Colors.white70),
-                        maxLines: 2, overflow: TextOverflow.ellipsis),
+                    Text(desc,
+                        style: const TextStyle(
+                            fontSize: 13, color: Colors.white70),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis),
                   ],
                   const SizedBox(height: 12),
                   Wrap(
-                    spacing: 16, runSpacing: 8,
+                    spacing: 16,
+                    runSpacing: 8,
                     children: [
                       if (language != null) _chipWhite(Icons.code, language),
                       _chipWhite(Icons.star_border, '$stars'),
                       _chipWhite(Icons.call_split, '$forks'),
-                      _chipWhite(Icons.people_outline, '${_collaborators.length} 成员'),
+                      _chipWhite(
+                          Icons.people_outline, '${_collaborators.length} 成员'),
                     ],
                   ),
                   if (htmlUrl.isNotEmpty) ...[
                     const SizedBox(height: 10),
-                    Text(htmlUrl, style: const TextStyle(fontSize: 11, color: Colors.white60,
-                        decoration: TextDecoration.underline)),
+                    Text(htmlUrl,
+                        style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.white60,
+                            decoration: TextDecoration.underline)),
                   ],
                 ],
               ),
@@ -2893,11 +2891,23 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
             children: [
               _statCard('提交次数', '$_totalCommits', Colors.blue, Icons.commit),
               const SizedBox(width: 8),
-              _statCard('新增行数', _loadingStats ? '...' : _fmtNum(_totalAdditions), Colors.green, Icons.add_circle_outline),
+              _statCard(
+                  '新增行数',
+                  _loadingStats ? '...' : _fmtNum(_totalAdditions),
+                  Colors.green,
+                  Icons.add_circle_outline),
               const SizedBox(width: 8),
-              _statCard('删除行数', _loadingStats ? '...' : _fmtNum(_totalDeletions), Colors.red, Icons.remove_circle_outline),
+              _statCard(
+                  '删除行数',
+                  _loadingStats ? '...' : _fmtNum(_totalDeletions),
+                  Colors.red,
+                  Icons.remove_circle_outline),
               const SizedBox(width: 8),
-              _statCard('修改文件', _loadingStats ? '...' : _fmtNum(_totalFilesChanged), Colors.cyan, Icons.description_outlined),
+              _statCard(
+                  '修改文件',
+                  _loadingStats ? '...' : _fmtNum(_totalFilesChanged),
+                  Colors.cyan,
+                  Icons.description_outlined),
             ],
           ),
           if (_loadingStats) ...[
@@ -2905,7 +2915,8 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
             LinearProgressIndicator(value: _statsProgress),
             const SizedBox(height: 4),
             Text('正在加载提交统计... ${(_statsProgress * 100).toInt()}%',
-                style: const TextStyle(fontSize: 11, color: Colors.grey), textAlign: TextAlign.center),
+                style: const TextStyle(fontSize: 11, color: Colors.grey),
+                textAlign: TextAlign.center),
           ],
           const SizedBox(height: 16),
 
@@ -2939,7 +2950,8 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
   Widget _statCard(String title, String value, Color color, IconData icon) {
     return Expanded(
       child: Card(
-        elevation: 2, color: color,
+        elevation: 2,
+        color: color,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
@@ -2947,10 +2959,15 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
             children: [
               Icon(icon, color: Colors.white70, size: 22),
               const SizedBox(height: 6),
-              Text(title, style: const TextStyle(fontSize: 11, color: Colors.white70)),
+              Text(title,
+                  style: const TextStyle(fontSize: 11, color: Colors.white70)),
               const SizedBox(height: 4),
               FittedBox(
-                child: Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+                child: Text(value,
+                    style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white)),
               ),
             ],
           ),
@@ -2970,19 +2987,23 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: Colors.grey.shade100,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(12)),
             ),
             child: Row(
               children: [
                 const Icon(Icons.people, size: 18, color: Colors.blue),
                 const SizedBox(width: 8),
                 Text('仓库成员 (${_collaborators.length})',
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.bold)),
               ],
             ),
           ),
           if (_collaborators.isEmpty)
-            const Padding(padding: EdgeInsets.all(16), child: Text('暂无成员数据', style: TextStyle(color: Colors.grey)))
+            const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('暂无成员数据', style: TextStyle(color: Colors.grey)))
           else
             ListView.separated(
               shrinkWrap: true,
@@ -2997,21 +3018,28 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
                 final isAdmin = m['permissions']?['admin'] == true;
                 return ListTile(
                   leading: CircleAvatar(
-                    backgroundImage: avatar != null ? NetworkImage(avatar) : null,
-                    child: avatar == null ? Text(name.isNotEmpty ? name[0] : '?') : null,
+                    backgroundImage:
+                        avatar != null ? NetworkImage(avatar) : null,
+                    child: avatar == null
+                        ? Text(name.isNotEmpty ? name[0] : '?')
+                        : null,
                   ),
                   title: Text(name),
                   subtitle: Text(login, style: const TextStyle(fontSize: 12)),
                   trailing: isAdmin
                       ? Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
                             color: Colors.orange.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Text('管理员', style: TextStyle(fontSize: 11, color: Colors.orange)),
+                          child: const Text('管理员',
+                              style: TextStyle(
+                                  fontSize: 11, color: Colors.orange)),
                         )
-                      : const Text('成员', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                      : const Text('成员',
+                          style: TextStyle(fontSize: 11, color: Colors.grey)),
                 );
               },
             ),
@@ -3031,19 +3059,23 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: Colors.grey.shade100,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(12)),
             ),
             child: Row(
               children: [
                 const Icon(Icons.call_split, size: 18, color: Colors.teal),
                 const SizedBox(width: 8),
                 Text('分支列表 (${_branches.length})',
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.bold)),
               ],
             ),
           ),
           if (_branches.isEmpty)
-            const Padding(padding: EdgeInsets.all(16), child: Text('暂无分支数据', style: TextStyle(color: Colors.grey)))
+            const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('暂无分支数据', style: TextStyle(color: Colors.grey)))
           else
             Wrap(
               spacing: 8,
@@ -3053,19 +3085,25 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
                 final isSelected = _selectedBranch == name;
                 final isDefault = name == 'master' || name == 'main';
                 Color color = Colors.grey;
-                if (isDefault) color = Colors.blue;
-                else if (name == 'develop') color = Colors.cyan;
-                else if (name.startsWith('feature')) color = Colors.orange;
+                if (isDefault)
+                  color = Colors.blue;
+                else if (name == 'develop')
+                  color = Colors.cyan;
+                else if (name.startsWith('feature'))
+                  color = Colors.orange;
                 else if (name == 'release') color = Colors.green;
 
                 return Padding(
                   padding: const EdgeInsets.only(left: 12, bottom: 4),
                   child: ActionChip(
-                    label: Text(name, style: TextStyle(
-                      color: isSelected ? Colors.white : color,
-                      fontSize: 12, fontWeight: FontWeight.w500,
-                    )),
-                    backgroundColor: isSelected ? color : color.withValues(alpha: 0.1),
+                    label: Text(name,
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : color,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        )),
+                    backgroundColor:
+                        isSelected ? color : color.withValues(alpha: 0.1),
                     side: BorderSide(color: color.withValues(alpha: 0.3)),
                     onPressed: () => _switchBranch(isSelected ? null : name),
                   ),
@@ -3089,22 +3127,28 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: Colors.grey.shade100,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(12)),
             ),
             child: Row(
               children: [
                 const Icon(Icons.history, size: 18, color: Colors.orange),
                 const SizedBox(width: 8),
                 Text('提交记录 ($_totalCommits)',
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.bold)),
                 if (_loadingBranch) ...[
                   const SizedBox(width: 12),
-                  const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                  const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2)),
                 ],
                 const Spacer(),
                 if (_selectedBranch != null)
                   Chip(
-                    label: Text(_selectedBranch!, style: const TextStyle(fontSize: 11)),
+                    label: Text(_selectedBranch!,
+                        style: const TextStyle(fontSize: 11)),
                     deleteIcon: const Icon(Icons.close, size: 14),
                     onDeleted: () => _switchBranch(null),
                     visualDensity: VisualDensity.compact,
@@ -3113,7 +3157,9 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
             ),
           ),
           if (_commitRows.isEmpty)
-            const Padding(padding: EdgeInsets.all(16), child: Text('暂无提交记录', style: TextStyle(color: Colors.grey)))
+            const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('暂无提交记录', style: TextStyle(color: Colors.grey)))
           else
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -3123,32 +3169,70 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
                 dataRowMinHeight: 36,
                 dataRowMaxHeight: 52,
                 columns: const [
-                  DataColumn(label: Text('SHA', style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('日期', style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('作者', style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('消息', style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('新增', style: TextStyle(fontWeight: FontWeight.bold)), numeric: true),
-                  DataColumn(label: Text('删除', style: TextStyle(fontWeight: FontWeight.bold)), numeric: true),
-                  DataColumn(label: Text('文件', style: TextStyle(fontWeight: FontWeight.bold)), numeric: true),
+                  DataColumn(
+                      label: Text('SHA',
+                          style: TextStyle(fontWeight: FontWeight.bold))),
+                  DataColumn(
+                      label: Text('日期',
+                          style: TextStyle(fontWeight: FontWeight.bold))),
+                  DataColumn(
+                      label: Text('作者',
+                          style: TextStyle(fontWeight: FontWeight.bold))),
+                  DataColumn(
+                      label: Text('消息',
+                          style: TextStyle(fontWeight: FontWeight.bold))),
+                  DataColumn(
+                      label: Text('新增',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      numeric: true),
+                  DataColumn(
+                      label: Text('删除',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      numeric: true),
+                  DataColumn(
+                      label: Text('文件',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      numeric: true),
                 ],
                 rows: _commitRows.map((c) {
-                  final shortSha = c.sha.length > 7 ? c.sha.substring(0, 7) : c.sha;
-                  final dateStr = c.date != null ? DateFormat('MM-dd HH:mm').format(c.date!) : '-';
+                  final shortSha =
+                      c.sha.length > 7 ? c.sha.substring(0, 7) : c.sha;
+                  final dateStr = c.date != null
+                      ? DateFormat('MM-dd HH:mm').format(c.date!)
+                      : '-';
                   return DataRow(cells: [
-                    DataCell(Text(shortSha, style: const TextStyle(fontSize: 12, fontFamily: 'monospace', color: Colors.blue))),
-                    DataCell(Text(dateStr, style: const TextStyle(fontSize: 12))),
-                    DataCell(Text(c.authorName, style: const TextStyle(fontSize: 12))),
+                    DataCell(Text(shortSha,
+                        style: const TextStyle(
+                            fontSize: 12,
+                            fontFamily: 'monospace',
+                            color: Colors.blue))),
+                    DataCell(
+                        Text(dateStr, style: const TextStyle(fontSize: 12))),
+                    DataCell(Text(c.authorName,
+                        style: const TextStyle(fontSize: 12))),
                     DataCell(ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 300),
-                      child: Text(c.message, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis),
+                      child: Text(c.message,
+                          style: const TextStyle(fontSize: 12),
+                          overflow: TextOverflow.ellipsis),
                     )),
                     DataCell(c.additions != null
-                        ? Text('+${c.additions}', style: const TextStyle(fontSize: 12, color: Colors.green))
-                        : const Text('-', style: TextStyle(fontSize: 12, color: Colors.grey))),
+                        ? Text('+${c.additions}',
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.green))
+                        : const Text('-',
+                            style:
+                                TextStyle(fontSize: 12, color: Colors.grey))),
                     DataCell(c.deletions != null
-                        ? Text('-${c.deletions}', style: const TextStyle(fontSize: 12, color: Colors.red))
-                        : const Text('-', style: TextStyle(fontSize: 12, color: Colors.grey))),
-                    DataCell(Text(c.filesChanged != null ? '${c.filesChanged}' : '-', style: const TextStyle(fontSize: 12))),
+                        ? Text('-${c.deletions}',
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.red))
+                        : const Text('-',
+                            style:
+                                TextStyle(fontSize: 12, color: Colors.grey))),
+                    DataCell(Text(
+                        c.filesChanged != null ? '${c.filesChanged}' : '-',
+                        style: const TextStyle(fontSize: 12))),
                   ]);
                 }).toList(),
               ),
@@ -3175,14 +3259,22 @@ class _StudentCommitRow {
   final int? filesChanged;
 
   const _StudentCommitRow({
-    required this.sha, required this.message,
-    this.date, required this.authorName,
-    this.additions, this.deletions, this.filesChanged,
+    required this.sha,
+    required this.message,
+    this.date,
+    required this.authorName,
+    this.additions,
+    this.deletions,
+    this.filesChanged,
   });
 
-  _StudentCommitRow copyWith({int? additions, int? deletions, int? filesChanged}) {
+  _StudentCommitRow copyWith(
+      {int? additions, int? deletions, int? filesChanged}) {
     return _StudentCommitRow(
-      sha: sha, message: message, date: date, authorName: authorName,
+      sha: sha,
+      message: message,
+      date: date,
+      authorName: authorName,
       additions: additions ?? this.additions,
       deletions: deletions ?? this.deletions,
       filesChanged: filesChanged ?? this.filesChanged,
@@ -3233,7 +3325,8 @@ class _RepoReportTabState extends State<_RepoReportTab>
       final owner = await _giteeService.getDefaultOwner();
       final prefix = await _giteeService.getRepoPrefix();
       // 默认只显示实验班组仓库
-      final effectivePrefix = (prefix == null || prefix.isEmpty) ? 'cg1-,cg2-,cg3-' : prefix;
+      final effectivePrefix =
+          (prefix == null || prefix.isEmpty) ? 'cg1-,cg2-,cg3-' : prefix;
 
       if (token == null || token.isEmpty || owner == null || owner.isEmpty) {
         setState(() {
@@ -3270,14 +3363,17 @@ class _RepoReportTabState extends State<_RepoReportTab>
             ? fullName.split('/').first
             : ((repo['owner'] as Map?)?['login']?.toString() ?? owner);
 
-        debugPrint('_RepoReportTab: loading $repoName path=$repoPath owner=$repoOwner (full=$fullName)');
+        debugPrint(
+            '_RepoReportTab: loading $repoName path=$repoPath owner=$repoOwner (full=$fullName)');
 
         try {
           // 并行获取提交和分支，每个调用单独容错
           final results = await Future.wait([
-            _giteeService.getCommits(repoOwner, repoPath, perPage: 100)
+            _giteeService
+                .getCommits(repoOwner, repoPath, perPage: 100)
                 .catchError((_) => <Map<String, dynamic>>[]),
-            _giteeService.getBranches(repoOwner, repoPath)
+            _giteeService
+                .getBranches(repoOwner, repoPath)
                 .catchError((_) => <Map<String, dynamic>>[]),
           ]);
 
@@ -3293,14 +3389,19 @@ class _RepoReportTabState extends State<_RepoReportTab>
             final ownerLogin = (repo['owner'] as Map?)?['login']?.toString();
             final altOwner = nsPath != null && nsPath != repoOwner
                 ? nsPath
-                : (ownerLogin != null && ownerLogin != repoOwner ? ownerLogin : null);
+                : (ownerLogin != null && ownerLogin != repoOwner
+                    ? ownerLogin
+                    : null);
             if (altOwner != null) {
-              debugPrint('_RepoReportTab: retrying $repoPath with altOwner=$altOwner');
+              debugPrint(
+                  '_RepoReportTab: retrying $repoPath with altOwner=$altOwner');
               effectiveOwner = altOwner;
               final retryResults = await Future.wait([
-                _giteeService.getCommits(altOwner, repoPath, perPage: 100)
+                _giteeService
+                    .getCommits(altOwner, repoPath, perPage: 100)
                     .catchError((_) => <Map<String, dynamic>>[]),
-                _giteeService.getBranches(altOwner, repoPath)
+                _giteeService
+                    .getBranches(altOwner, repoPath)
                     .catchError((_) => <Map<String, dynamic>>[]),
               ]);
               commits = retryResults[0] as List<Map<String, dynamic>>;
@@ -3326,8 +3427,9 @@ class _RepoReportTabState extends State<_RepoReportTab>
           // 最近一次提交时间
           String? lastCommitDate;
           if (commits.isNotEmpty) {
-            final dateStr = (commits.first['commit']
-                as Map?)?['committer']?['date']?.toString();
+            final dateStr = (commits.first['commit'] as Map?)?['committer']
+                    ?['date']
+                ?.toString();
             if (dateStr != null) {
               try {
                 final dt = DateTime.parse(dateStr);
@@ -3344,8 +3446,8 @@ class _RepoReportTabState extends State<_RepoReportTab>
           final weekAgo = now.subtract(const Duration(days: 7));
           int recentCommits = 0;
           for (final c in commits) {
-            final dateStr = (c['commit']
-                as Map?)?['committer']?['date']?.toString();
+            final dateStr =
+                (c['commit'] as Map?)?['committer']?['date']?.toString();
             if (dateStr != null) {
               try {
                 final dt = DateTime.parse(dateStr);
@@ -3361,9 +3463,8 @@ class _RepoReportTabState extends State<_RepoReportTab>
           totalCommits += commitCount;
 
           // 如果全部为空，标记为部分加载失败
-          final partialError = commits.isEmpty && branches.isEmpty
-              ? '无法获取提交/分支数据（可能无权限）'
-              : null;
+          final partialError =
+              commits.isEmpty && branches.isEmpty ? '无法获取提交/分支数据（可能无权限）' : null;
 
           items.add(_RepoReportItem(
             repoName: repoName,
@@ -3477,9 +3578,8 @@ class _RepoReportTabState extends State<_RepoReportTab>
   // ── 汇总卡片 ──────────────────────────────────────────────────────────────
 
   Widget _buildSummaryCard() {
-    final avgCommits = _repoItems.isEmpty
-        ? 0.0
-        : _totalCommits / _repoItems.length;
+    final avgCommits =
+        _repoItems.isEmpty ? 0.0 : _totalCommits / _repoItems.length;
 
     return Card(
       elevation: 3,
@@ -3564,8 +3664,11 @@ class _RepoReportTabState extends State<_RepoReportTab>
   Widget _buildRepoCard(_RepoReportItem item) {
     final hasError = item.error != null;
     // 区分：是完全加载失败(404)还是部分数据缺失(无权限)
-    final isFatalError = hasError && item.commitCount == 0 && item.branchCount == 0 && item.memberCount == 0
-        && item.error!.contains('GiteeApiException');
+    final isFatalError = hasError &&
+        item.commitCount == 0 &&
+        item.branchCount == 0 &&
+        item.memberCount == 0 &&
+        item.error!.contains('GiteeApiException');
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -3573,107 +3676,115 @@ class _RepoReportTabState extends State<_RepoReportTab>
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () {
-                final owner = item.fullName.contains('/')
-                    ? item.fullName.split('/').first
-                    : '';
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => RepoDetailPage(
-                      owner: owner,
-                      repoName: item.repoPath,
-                      description: item.description,
-                      htmlUrl: item.htmlUrl,
-                    ),
-                  ),
-                );
-              },
-        child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 仓库名 + 描述
-            Row(
-              children: [
-                Icon(
-                  Icons.folder_outlined,
-                  color: isFatalError ? Colors.red : (hasError ? Colors.orange : Colors.indigo),
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    item.repoName,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: isFatalError ? Colors.red : null,
-                    ),
-                  ),
-                ),
-                if (item.recentCommits > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.green.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Text(
-                      '近7天 ${item.recentCommits} 提交',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Colors.green,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-              if (!hasError)
-                Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
-              if (hasError)
-                Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
-              ],
-            ),
-
-            if (item.description != null && item.description!.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(
-                item.description!,
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+          final owner =
+              item.fullName.contains('/') ? item.fullName.split('/').first : '';
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => RepoDetailPage(
+                owner: owner,
+                repoName: item.repoPath,
+                description: item.description,
+                htmlUrl: item.htmlUrl,
               ),
-            ],
-
-            if (hasError) ...[
-              const SizedBox(height: 6),
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 仓库名 + 描述
               Row(
                 children: [
-                  Icon(isFatalError ? Icons.error_outline : Icons.warning_amber,
-                      size: 14, color: isFatalError ? Colors.red : Colors.orange),
-                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.folder_outlined,
+                    color: isFatalError
+                        ? Colors.red
+                        : (hasError ? Colors.orange : Colors.indigo),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      item.error!,
-                      style: TextStyle(fontSize: 11,
-                          color: isFatalError ? Colors.red : Colors.orange),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      item.repoName,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isFatalError ? Colors.red : null,
+                      ),
                     ),
                   ),
+                  if (item.recentCommits > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.green.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Text(
+                        '近7天 ${item.recentCommits} 提交',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.green,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  if (!hasError)
+                    Icon(Icons.chevron_right,
+                        color: Colors.grey[400], size: 20),
+                  if (hasError)
+                    Icon(Icons.chevron_right,
+                        color: Colors.grey[400], size: 20),
                 ],
               ),
-            ],
 
-            const SizedBox(height: 12),
-            // 统计行 — 始终显示
-            Row(
-              children: [
-                _buildRepoStatChip(
+              if (item.description != null && item.description!.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  item.description!,
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+
+              if (hasError) ...[
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Icon(
+                        isFatalError
+                            ? Icons.error_outline
+                            : Icons.warning_amber,
+                        size: 14,
+                        color: isFatalError ? Colors.red : Colors.orange),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        item.error!,
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: isFatalError ? Colors.red : Colors.orange),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+
+              const SizedBox(height: 12),
+              // 统计行 — 始终显示
+              Row(
+                children: [
+                  _buildRepoStatChip(
                     Icons.people_outline,
                     '${item.memberCount}',
                     '成员',
@@ -3707,8 +3818,7 @@ class _RepoReportTabState extends State<_RepoReportTab>
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    Icon(Icons.access_time,
-                        size: 14, color: Colors.grey[500]),
+                    Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
                     const SizedBox(width: 4),
                     Text(
                       '最近提交: ${item.lastCommitDate}',
@@ -3720,9 +3830,9 @@ class _RepoReportTabState extends State<_RepoReportTab>
                   ],
                 ),
               ],
-          ],
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -3765,8 +3875,8 @@ class _RepoReportTabState extends State<_RepoReportTab>
 // ── 仓库报表数据模型 ────────────────────────────────────────────────────────
 
 class _RepoReportItem {
-  final String repoName;   // 显示名称 (e.g. CG1-CIFMS)
-  final String repoPath;   // API 路径 (e.g. cg1cifms)
+  final String repoName; // 显示名称 (e.g. CG1-CIFMS)
+  final String repoPath; // API 路径 (e.g. cg1cifms)
   final String fullName;
   final int memberCount;
   final int commitCount;
