@@ -679,38 +679,6 @@ class _TaskListTabState extends State<_TaskListTab> {
                           horizontal: 12, vertical: 12),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  InkWell(
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('文件上传功能将在后续版本中开放')),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                            color: Colors.grey[300]!, style: BorderStyle.solid),
-                        borderRadius: BorderRadius.circular(12),
-                        color: Colors.grey[50],
-                      ),
-                      child: Column(
-                        children: [
-                          Icon(Icons.cloud_upload_outlined,
-                              size: 36, color: Colors.grey[400]),
-                          const SizedBox(height: 6),
-                          Text('点击上传附件',
-                              style: TextStyle(color: Colors.grey[500])),
-                          const SizedBox(height: 4),
-                          Text('支持 ZIP/PDF/图片 格式',
-                              style: TextStyle(
-                                  fontSize: 11, color: Colors.grey[400])),
-                        ],
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -1701,9 +1669,110 @@ class _ReportTabState extends State<_ReportTab> {
     );
   }
 
+  void _showReadOnlyReport(Map<String, dynamic> report) {
+    final title = report['title'] as String? ?? '未命名报告';
+    final contentRaw = report['content_json'] as String? ?? '';
+    Map<String, String> contentMap = {};
+    if (contentRaw.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(contentRaw) as Map;
+        contentMap =
+            decoded.map((k, v) => MapEntry(k.toString(), v.toString()));
+      } catch (_) {}
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.description, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(title,
+                  style: const TextStyle(fontSize: 16),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle,
+                          size: 16, color: Colors.green[700]),
+                      const SizedBox(width: 4),
+                      Text('已提交',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.green[700],
+                              fontWeight: FontWeight.w500)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                if (contentMap.isNotEmpty) ...[
+                  for (final entry in contentMap.entries)
+                    if (entry.value.isNotEmpty) ...[
+                      Text(entry.key,
+                          style: const TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 4),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(entry.value,
+                            style: const TextStyle(fontSize: 13)),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                ] else ...[
+                  Text('无报告内容', style: TextStyle(color: Colors.grey[500])),
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('关闭'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showReportEditor(
       {Map<String, dynamic>? report, Map<String, dynamic>? template}) {
     final isEditing = report != null;
+    final isSubmitted = isEditing && report['status'] == '已提交';
+    final isStudent = !_isTeacherOrAdmin;
+
+    // 已提交的报告不允许编辑（只读查看）
+    if (isSubmitted && isStudent) {
+      _showReadOnlyReport(report);
+      return;
+    }
+
     final titleCtrl = TextEditingController(
         text: isEditing ? (report['title'] as String? ?? '') : '');
 
