@@ -920,6 +920,39 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                                   color: statusColor,
                                   fontWeight: FontWeight.w500)),
                         ),
+                      PopupMenuButton<String>(
+                        icon: Icon(Icons.more_vert,
+                            size: 20, color: Colors.grey[500]),
+                        onSelected: (value) {
+                          if (value == 'edit') {
+                            _showEditSubmissionDialog(sub);
+                          } else if (value == 'delete') {
+                            _confirmDeleteSubmission(sub);
+                          }
+                        },
+                        itemBuilder: (ctx) => [
+                          const PopupMenuItem(
+                            value: 'edit',
+                            child: Row(
+                              children: [
+                                Icon(Icons.edit, size: 18),
+                                SizedBox(width: 8),
+                                Text('编辑'),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(Icons.delete, size: 18, color: Colors.red),
+                                SizedBox(width: 8),
+                                Text('删除', style: TextStyle(color: Colors.red)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                   if (sub['feedback'] != null) ...[
@@ -953,6 +986,137 @@ class _SubmissionTabState extends State<_SubmissionTab> {
           ),
         );
       },
+    );
+  }
+
+  void _showEditSubmissionDialog(Map<String, dynamic> submission) {
+    final submissionId = submission['id'] as int;
+    final contentCtrl =
+        TextEditingController(text: submission['content'] as String? ?? '');
+    bool isSaving = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.edit, size: 20),
+              SizedBox(width: 8),
+              Text('编辑提交'),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: TextField(
+              controller: contentCtrl,
+              maxLines: 6,
+              decoration: InputDecoration(
+                labelText: '实验总结 *',
+                hintText: '请简要描述实验完成情况...',
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('取消'),
+            ),
+            ElevatedButton(
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      if (contentCtrl.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('请填写实验总结')),
+                        );
+                        return;
+                      }
+                      setDialogState(() => isSaving = true);
+                      try {
+                        await widget.labTaskDao.updateSubmission(
+                          submissionId: submissionId,
+                          content: contentCtrl.text.trim(),
+                        );
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('修改成功'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                          _loadSubmissions();
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('修改失败: $e')),
+                          );
+                        }
+                      } finally {
+                        if (ctx.mounted) {
+                          setDialogState(() => isSaving = false);
+                        }
+                      }
+                    },
+              child: isSaving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('保存'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteSubmission(Map<String, dynamic> submission) {
+    final submissionId = submission['id'] as int?;
+    final taskTitle = submission['task_title'] as String? ?? '未知任务';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('确认删除'),
+        content: Text('确定要删除任务"$taskTitle"的提交吗？\n此操作不可恢复。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              if (submissionId == null) return;
+              Navigator.pop(ctx);
+              try {
+                await widget.labTaskDao.deleteSubmission(submissionId);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('提交已删除')),
+                  );
+                  _loadSubmissions();
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('删除失败: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('删除', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
     );
   }
 
