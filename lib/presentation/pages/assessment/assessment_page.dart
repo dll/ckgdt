@@ -496,7 +496,7 @@ class _GroupTabState extends State<_GroupTab>
           ...base,
           _ColDef('班组', 'classGroup', 60),
           _ColDef('角色', 'role', 140),
-          _ColDef('特色功能', 'features', 200),
+          _ColDef('功能详解', 'feature_detail', 300),
         ];
       case _GroupDimension.classGroup:
         return [
@@ -517,14 +517,14 @@ class _GroupTabState extends State<_GroupTab>
           ...base,
           _ColDef('仓库', 'repo', 100),
           _ColDef('技术栈', 'techStack', 140),
-          _ColDef('特色功能', 'features', 200),
+          _ColDef('功能详解', 'feature_detail', 300),
         ];
       case _GroupDimension.techStack:
         return [
           ...base,
           _ColDef('仓库', 'repo', 100),
           _ColDef('角色', 'role', 140),
-          _ColDef('特色功能', 'features', 200),
+          _ColDef('功能详解', 'feature_detail', 300),
         ];
     }
   }
