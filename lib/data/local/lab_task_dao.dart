@@ -163,6 +163,27 @@ class LabTaskDao {
         whereArgs: [submissionId]);
   }
 
+  Future<int> updateSubmission({
+    required int submissionId,
+    String? content,
+  }) async {
+    final db = await _dbHelper.database;
+    final data = <String, dynamic>{
+      'updated_at': DateTime.now().toIso8601String(),
+    };
+    if (content != null) {
+      data['content'] = content;
+    }
+    return db.update('lab_submissions', data,
+        where: 'id = ?', whereArgs: [submissionId]);
+  }
+
+  Future<int> deleteSubmission(int submissionId) async {
+    final db = await _dbHelper.database;
+    return db
+        .delete('lab_submissions', where: 'id = ?', whereArgs: [submissionId]);
+  }
+
   // ═══════════ 统计 ═══════════
 
   Future<Map<String, dynamic>> getTaskStats(int taskId) async {
