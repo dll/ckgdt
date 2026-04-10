@@ -1021,12 +1021,11 @@ class _ProjectTabState extends State<_ProjectTab> {
       context: context,
       builder: (ctx) => Dialog(
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: 650, maxHeight: 750),
+          constraints: BoxConstraints(maxWidth: 700, maxHeight: 800),
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
@@ -1036,17 +1035,6 @@ class _ProjectTabState extends State<_ProjectTab> {
                       child: Text(name,
                           style: const TextStyle(
                               fontSize: 18, fontWeight: FontWeight.bold)),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(status,
-                          style: TextStyle(
-                              fontSize: 11, color: Colors.green[700])),
                     ),
                     IconButton(
                       icon: const Icon(Icons.close),
@@ -1060,132 +1048,23 @@ class _ProjectTabState extends State<_ProjectTab> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('基本信息',
-                            style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.blue)),
-                        const SizedBox(height: 12),
-                        _buildDetailRow('仓库', repo, Icons.cloud),
-                        _buildDetailRow('班组', classGroup, Icons.group),
+                        _buildSectionTitle('项目基本信息'),
+                        _buildInfoRow('仓库', repo),
+                        _buildInfoRow('班组', classGroup),
                         if (description.isNotEmpty)
-                          _buildDetailRow(
-                              '项目描述', description, Icons.description),
+                          _buildInfoRow('项目描述', description),
                         if (techStack.isNotEmpty)
-                          _buildDetailRow('技术栈', techStack, Icons.code),
-                        const SizedBox(height: 20),
+                          _buildInfoRow('技术栈', techStack),
+                        const SizedBox(height: 16),
                         if (featureDetail.isNotEmpty) ...[
-                          const Text('功能详解',
-                              style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.blue)),
-                          const SizedBox(height: 12),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(featureDetail,
-                                style:
-                                    const TextStyle(fontSize: 12, height: 1.5)),
-                          ),
-                          const SizedBox(height: 20),
+                          _buildSectionTitle('功能详解'),
+                          _buildContentBox(featureDetail),
+                          const SizedBox(height: 16),
                         ],
                         if (members.isNotEmpty) ...[
-                          Text('团队成员（共${members.length}人）',
-                              style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.blue)),
+                          _buildSectionTitle('团队成员（${members.length}人）'),
                           const SizedBox(height: 12),
-                          ...members.map((m) => Container(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[50],
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.grey[200]!),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        CircleAvatar(
-                                          radius: 14,
-                                          backgroundColor: Colors.blue
-                                              .withValues(alpha: 0.2),
-                                          child: Text(
-                                              (m['name'] as String? ?? '')
-                                                      .isNotEmpty
-                                                  ? (m['name'] as String)
-                                                      .substring(0, 1)
-                                                  : '?',
-                                              style: const TextStyle(
-                                                  fontSize: 12)),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                              m['name'] as String? ?? '',
-                                              style: const TextStyle(
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.w500)),
-                                        ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: Colors.orange
-                                                .withValues(alpha: 0.1),
-                                            borderRadius:
-                                                BorderRadius.circular(4),
-                                          ),
-                                          child: Text(
-                                              m['role'] as String? ?? '',
-                                              style: TextStyle(
-                                                  fontSize: 10,
-                                                  color: Colors.orange[700])),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 6),
-                                    _buildMemberDetailRow(
-                                        '技术栈', m['techStack'] as String? ?? ''),
-                                    _buildMemberDetailRow(
-                                        '核心职责', m['coreDuty'] as String? ?? ''),
-                                    _buildMemberDetailRow(
-                                        '特色功能', m['features'] as String? ?? ''),
-                                    if ((m['feature_detail'] as String? ?? '')
-                                        .isNotEmpty) ...[
-                                      const SizedBox(height: 4),
-                                      const Text('个人功能详解：',
-                                          style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w500)),
-                                      const SizedBox(height: 2),
-                                      Container(
-                                        width: double.infinity,
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: Colors.purple
-                                              .withValues(alpha: 0.05),
-                                          borderRadius:
-                                              BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                            m['feature_detail'] as String? ??
-                                                '',
-                                            style:
-                                                const TextStyle(fontSize: 11)),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              )),
+                          ...members.map((m) => _buildMemberCard(m)),
                         ],
                       ],
                     ),
@@ -1199,12 +1078,155 @@ class _ProjectTabState extends State<_ProjectTab> {
     );
   }
 
-  Widget _buildMemberDetailRow(String label, String value) {
+  Widget _buildSectionTitle(String title) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: Colors.blue[100]!)),
+      ),
+      child: Text(title,
+          style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.blue[700])),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
     if (value.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(top: 2),
-      child: Text('$label: $value',
-          style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text('$label:',
+                style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500)),
+          ),
+          Expanded(
+            child: Text(value, style: const TextStyle(fontSize: 13)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContentBox(String content) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+      ),
+      child: Text(content, style: const TextStyle(fontSize: 12, height: 1.6)),
+    );
+  }
+
+  Widget _buildMemberCard(Map<String, dynamic> m) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: Colors.blue.withValues(alpha: 0.2),
+                child: Text(
+                    (m['name'] as String? ?? '').isNotEmpty
+                        ? (m['name'] as String).substring(0, 1)
+                        : '?',
+                    style: TextStyle(fontSize: 14, color: Colors.blue[700])),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(m['name'] as String? ?? '',
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w600)),
+                    Text('学号: ${m['userId'] ?? ''}',
+                        style:
+                            TextStyle(fontSize: 11, color: Colors.grey[500])),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(m['role'] as String? ?? '',
+                    style: TextStyle(fontSize: 11, color: Colors.orange[800])),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _buildMemberRow('签名', m['signature'] as String? ?? ''),
+          _buildMemberRow('仓库', m['repo'] as String? ?? ''),
+          _buildMemberRow('技术栈', m['techStack'] as String? ?? ''),
+          _buildMemberRow('核心职责', m['coreDuty'] as String? ?? ''),
+          _buildMemberRow('特色功能', m['features'] as String? ?? ''),
+          if ((m['feature_detail'] as String? ?? '').isNotEmpty) ...[
+            const SizedBox(height: 8),
+            const Text('个人功能详解：',
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.purple)),
+            const SizedBox(height: 4),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.purple.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(m['feature_detail'] as String? ?? '',
+                  style: const TextStyle(fontSize: 11, height: 1.5)),
+            ),
+          ],
+          if ((m['remark'] as String? ?? '').isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _buildMemberRow('备注', m['remark'] as String? ?? ''),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMemberRow(String label, String value) {
+    if (value.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: RichText(
+        text: TextSpan(
+          children: [
+            TextSpan(
+              text: '$label: ',
+              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+            ),
+            TextSpan(text: value, style: const TextStyle(fontSize: 11)),
+          ],
+        ),
+      ),
     );
   }
 
