@@ -401,15 +401,17 @@ class AssessmentDao {
 
   Future<int> submitReport({
     required String userId,
-    required String title,
-    required String content,
+    String? studentName,
+    String? reportType,
+    String? fileName,
+    String? filePath,
     String? groupId,
   }) async {
     final db = await DatabaseHelper.instance.database;
     return db.insert('student_reports', {
       'user_id': userId,
-      'title': title,
-      'content_json': content,
+      'title': reportType ?? '考核报告',
+      'content_json': fileName ?? '',
       'status': '已提交',
       'task_id': groupId != null ? int.tryParse(groupId) : null,
       'submit_time': DateTime.now().toIso8601String(),
