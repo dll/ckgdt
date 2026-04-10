@@ -67,9 +67,7 @@ class AssessmentDao {
     return {
       'group_count': groups.length,
       'total_members': totalMembers,
-      'avg_members': groups.isEmpty
-          ? 0.0
-          : (totalMembers / groups.length),
+      'avg_members': groups.isEmpty ? 0.0 : (totalMembers / groups.length),
     };
   }
 
@@ -111,8 +109,8 @@ class AssessmentDao {
   Future<int> updateProject(int id, Map<String, dynamic> data) async {
     final db = await DatabaseHelper.instance.database;
     data['updated_at'] = DateTime.now().toIso8601String();
-    return db.update('assessment_projects', data,
-        where: 'id = ?', whereArgs: [id]);
+    return db
+        .update('assessment_projects', data, where: 'id = ?', whereArgs: [id]);
   }
 
   Future<int> deleteProject(int id) async {
@@ -202,13 +200,11 @@ class AssessmentDao {
       final count = (r['count'] as int?) ?? 0;
       return {
         'count': count,
-        'avg_score': count > 0
-            ? ((r['avg_score'] as num?)?.toDouble() ?? 0.0)
-            : 0.0,
+        'avg_score':
+            count > 0 ? ((r['avg_score'] as num?)?.toDouble() ?? 0.0) : 0.0,
         'max_score': (r['max_score'] as int?) ?? 0,
         'min_score': (r['min_score'] as int?) ?? 0,
-        'pass_rate':
-            count > 0 ? '100%' : '0%', // simplified
+        'pass_rate': count > 0 ? '100%' : '0%', // simplified
       };
     }
     return {
@@ -274,8 +270,8 @@ class AssessmentDao {
 
   Future<void> initDemoDataIfEmpty() async {
     final db = await DatabaseHelper.instance.database;
-    final count = await db.rawQuery(
-        'SELECT COUNT(*) as c FROM assessment_groups');
+    final count =
+        await db.rawQuery('SELECT COUNT(*) as c FROM assessment_groups');
     if ((count.first['c'] as int? ?? 0) > 0) return;
 
     // 插入示例分组
@@ -385,5 +381,44 @@ class AssessmentDao {
         groupId: g3, projectId: p3, scheduledTime: '第16周 周一 9:30-9:45');
     await addDefenseRecord(
         groupId: g4, projectId: p4, scheduledTime: '第16周 周一 9:45-10:00');
+  }
+
+  // ══════════════════════════════════════════════════════════
+  //  报告提交（学生提交考核报告）
+  // ══════════════════════════════════════════════════════════
+
+  Future<List<Map<String, dynamic>>> getSubmittedReports(
+      {String? userId}) async {
+    final db = await DatabaseHelper.instance.database;
+    if (userId != null) {
+      return db.query('student_reports',
+          where: 'user_id = ?',
+          whereArgs: [userId],
+          orderBy: 'created_at DESC');
+    }
+    return db.query('student_reports', orderBy: 'created_at DESC');
+  }
+
+  Future<int> submitReport({
+    required String userId,
+    required String title,
+    required String content,
+    String? groupId,
+  }) async {
+    final db = await DatabaseHelper.instance.database;
+    return db.insert('student_reports', {
+      'user_id': userId,
+      'title': title,
+      'content_json': content,
+      'status': '已提交',
+      'task_id': groupId != null ? int.tryParse(groupId) : null,
+      'submit_time': DateTime.now().toIso8601String(),
+      'created_at': DateTime.now().toIso8601String(),
+    });
+  }
+
+  Future<int> deleteSubmittedReport(int id) async {
+    final db = await DatabaseHelper.instance.database;
+    return db.delete('student_reports', where: 'id = ?', whereArgs: [id]);
   }
 }

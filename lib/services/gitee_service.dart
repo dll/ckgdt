@@ -153,8 +153,7 @@ class GiteeService {
   }
 
   /// 获取仓库详情
-  Future<Map<String, dynamic>> getRepoDetail(
-      String owner, String repo) async {
+  Future<Map<String, dynamic>> getRepoDetail(String owner, String repo) async {
     final result = await _get('/repos/$owner/$repo');
     return Map<String, dynamic>.from(result);
   }
@@ -265,7 +264,8 @@ class GiteeService {
 
     while (true) {
       final batch = await getCommits(
-        owner, repo,
+        owner,
+        repo,
         sha: sha,
         page: page,
         perPage: perPage,
@@ -358,8 +358,7 @@ class GiteeService {
   }
 
   /// 从多个仓库 URL 批量获取仓库信息
-  Future<List<Map<String, dynamic>>> getReposFromUrls(
-      List<String> urls) async {
+  Future<List<Map<String, dynamic>>> getReposFromUrls(List<String> urls) async {
     final repos = <Map<String, dynamic>>[];
     for (final url in urls) {
       final parsed = parseRepoUrl(url);
@@ -381,6 +380,70 @@ class GiteeService {
       }
     }
     return repos;
+  }
+
+  /// 获取仓库成员列表
+  /// 优先通过 Collaborators API 获取，失败则从 commits 中提取作者
+  Future<List<Map<String, dynamic>>> getRepoMembers(
+    String owner,
+    String repo, {
+    List<Map<String, dynamic>>? commits,
+  }) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      return _extractMembersFromCommits(commits ?? []);
+    }
+
+    try {
+      final url = '$_baseUrl/repos/$owner/$repo/collaborators';
+      final uri = Uri.parse(url).replace(queryParameters: {
+        'access_token': token,
+        'per_page': '100',
+      });
+
+      final resp = await http.get(uri);
+      if (resp.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(resp.body);
+        return data
+            .map((c) => {
+                  'login': c['login'] ?? '',
+                  'name': c['name'] ?? c['login'] ?? '',
+                  'avatar_url': c['avatar_url'] ?? '',
+                  'permissions': c['permissions'] ?? {},
+                })
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('GiteeService: Failed to get collaborators: $e');
+    }
+
+    return _extractMembersFromCommits(commits ?? []);
+  }
+
+  /// 从提交记录中提取贡献者
+  List<Map<String, dynamic>> _extractMembersFromCommits(
+      List<Map<String, dynamic>> commits) {
+    final seen = <String>{};
+    final members = <Map<String, dynamic>>[];
+
+    for (final c in commits) {
+      final commit = c['commit'] as Map<String, dynamic>? ?? {};
+      final author = commit['author'] as Map<String, dynamic>? ?? {};
+      final name = author['name']?.toString() ?? '';
+      final email = author['email']?.toString() ?? '';
+
+      if (name.isNotEmpty && !seen.contains(name)) {
+        seen.add(name);
+        members.add({
+          'login': name,
+          'name': name,
+          'email': email,
+          'avatar_url': '',
+        });
+      }
+    }
+
+    return members;
   }
 }
 
