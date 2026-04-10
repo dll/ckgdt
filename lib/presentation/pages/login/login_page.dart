@@ -211,7 +211,7 @@ class _LoginPageState extends State<LoginPage> {
                         const SizedBox(width: 16),
                         ElevatedButton(
                           onPressed: () =>
-                              _quickLogin('203014', '301014', '教师'),
+                              _quickLogin('206004', '206004', '刘东良'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green,
                             foregroundColor: Colors.white,
