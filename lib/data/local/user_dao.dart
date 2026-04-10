@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import '../models/user_model.dart';
 import 'database_helper.dart';
 
@@ -112,27 +114,62 @@ class UserDao {
     if (user == null) {
       // Auto-create user account if doesn't exist
       String role = 'student';
+      String? realName;
+
       if (userId == '419116') {
         role = 'admin';
+        realName = '刘畅';
       } else if (userId == '206004') {
         role = 'teacher';
+        realName = '刘东良';
+      } else {
+        // Try to get real name from students.json
+        realName = await _getStudentRealName(userId);
+        realName ??= userId;
       }
 
       final newUser = UserModel(
         userId: userId,
-        realName: role == 'admin'
-            ? '管理员 ($userId)'
-            : (role == 'teacher' ? '刘老师 ($userId)' : userId),
+        realName: realName,
         role: role,
         createdAt: DateTime.now().toIso8601String(),
       );
       final created = await createUser(newUser);
       if (created) {
         await setCurrentUser(userId, '');
-        debugPrint('=== UserDao: Created new user $userId with role $role');
+        debugPrint(
+            '=== UserDao: Created new user $userId with role $role, name $realName');
         return true;
       }
       return false;
+    }
+
+    // Update real name for existing users (including admin and teacher)
+    String? realNameUpdate;
+    if (userId == '419116') {
+      realNameUpdate = '刘畅';
+    } else if (userId == '206004') {
+      realNameUpdate = '刘东良';
+    } else if (userId == '203014') {
+      realNameUpdate = '徐志红';
+    } else {
+      realNameUpdate = await _getStudentRealName(userId);
+    }
+
+    if (realNameUpdate != null && user.realName != realNameUpdate) {
+      final updatedUser = UserModel(
+        userId: user.userId,
+        realName: realNameUpdate,
+        machineCode: user.machineCode,
+        role: user.role,
+        createdAt: user.createdAt,
+        lastLogin: user.lastLogin,
+        isActive: user.isActive,
+      );
+      await updateUser(updatedUser);
+      user = updatedUser;
+      debugPrint(
+          '=== UserDao: Updated real name for $userId to $realNameUpdate');
     }
 
     if (!user.isActive) {
@@ -143,7 +180,7 @@ class UserDao {
     String? expectedRole;
     if (userId == '419116') {
       expectedRole = 'admin';
-    } else if (userId == '206004') {
+    } else if (userId == '206004' || userId == '203014') {
       expectedRole = 'teacher';
     }
     if (expectedRole != null && user.role != expectedRole) {
@@ -161,8 +198,18 @@ class UserDao {
       debugPrint('=== UserDao: Corrected role for $userId to $expectedRole');
     }
 
-    // Admin login: userId=419116, password=419116 (last 6 digits)
-    if (userId == '419116' && password == '419116') {
+    // Teacher login: userId=206004 or 203014, password=账号 or 后6位
+    if ((userId == '206004' || userId == '203014') &&
+        (password == userId ||
+            password == userId.substring(userId.length - 6))) {
+      await setCurrentUser(userId, '');
+      debugPrint(
+          '=== UserDao: Teacher login success for $userId, role=${user.role}');
+      return true;
+    }
+
+    // Admin login: userId=419116, password=419116 or last 6 digits (9116)
+    if (userId == '419116' && (password == '419116' || password == '9116')) {
       await setCurrentUser(userId, '');
       debugPrint('=== UserDao: Admin login success, role=${user.role}');
       return true;
@@ -182,5 +229,20 @@ class UserDao {
 
   Future<void> logout() async {
     await clearCurrentUser();
+  }
+
+  Future<String?> _getStudentRealName(String userId) async {
+    try {
+      final jsonStr = await rootBundle.loadString('assets/students.json');
+      final students = json.decode(jsonStr) as List;
+      for (final s in students) {
+        if (s['user_id'] == userId) {
+          return s['real_name'] as String?;
+        }
+      }
+    } catch (e) {
+      debugPrint('=== UserDao: Error loading students.json: $e');
+    }
+    return null;
   }
 }

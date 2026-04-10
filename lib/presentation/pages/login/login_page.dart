@@ -40,7 +40,6 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
 
       if (success) {
-        // 清除可能残留的 SnackBar，然后导航
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const HomePage(initialTabIndex: 1)),
@@ -93,7 +92,6 @@ class _LoginPageState extends State<LoginPage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Logo
                     const Icon(
                       Icons.school,
                       size: 80,
@@ -110,8 +108,6 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     const SizedBox(height: 48),
-
-                    // 登录表单
                     Card(
                       elevation: 8,
                       shape: RoundedRectangleBorder(
@@ -192,8 +188,6 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     const SizedBox(height: 24),
-
-                    // 快速登录
                     const Text(
                       '快速登录',
                       style: TextStyle(
@@ -217,7 +211,7 @@ class _LoginPageState extends State<LoginPage> {
                         const SizedBox(width: 16),
                         ElevatedButton(
                           onPressed: () =>
-                              _quickLogin('206004', '206004', '教师'),
+                              _quickLogin('203014', '301014', '教师'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green,
                             foregroundColor: Colors.white,
@@ -226,8 +220,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         const SizedBox(width: 16),
                         ElevatedButton(
-                          onPressed: () =>
-                              _quickLogin('419116', '419116', '管理员'),
+                          onPressed: () => _quickLogin('419116', '9116', '管理员'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.blue,
                             foregroundColor: Colors.white,
@@ -238,7 +231,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 16),
                     const Text(
-                      '提示：学生/教师/管理员密码均为账号后6位',
+                      '提示：密码为账号后6位',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Colors.white60,
