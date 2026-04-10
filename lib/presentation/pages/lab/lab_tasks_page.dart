@@ -1419,14 +1419,22 @@ class _ReportTabState extends State<_ReportTab> {
     _loadData();
   }
 
+  bool get _isTeacherOrAdmin =>
+      widget.authService.isTeacher || widget.authService.isAdmin;
+
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
       final userId = widget.authService.getCurrentUserId();
-      debugPrint('=== _ReportTab: Loading reports for userId=$userId');
+      debugPrint(
+          '=== _ReportTab: Loading reports for userId=$userId, isTeacherOrAdmin=$_isTeacherOrAdmin');
 
       List<Map<String, dynamic>> reports;
-      if (userId != null && userId.isNotEmpty) {
+      if (_isTeacherOrAdmin) {
+        reports = await widget.labTaskDao.getStudentReports();
+        debugPrint(
+            '=== _ReportTab: Teacher/Admin - loading all student reports');
+      } else if (userId != null && userId.isNotEmpty) {
         reports = await widget.labTaskDao.getStudentReports(userId: userId);
       } else {
         debugPrint('=== _ReportTab: userId is null/empty, loading all reports');
@@ -1477,12 +1485,13 @@ class _ReportTabState extends State<_ReportTab> {
                               Icon(Icons.description_outlined,
                                   size: 56, color: Colors.grey[300]),
                               const SizedBox(height: 12),
-                              Text('暂无实验报告',
+                              Text(_isTeacherOrAdmin ? '暂无学生提交报告' : '暂无实验报告',
                                   style: TextStyle(color: Colors.grey[500])),
                               const SizedBox(height: 8),
-                              Text('点击右下角按钮新建报告',
-                                  style: TextStyle(
-                                      fontSize: 12, color: Colors.grey[400])),
+                              if (!_isTeacherOrAdmin)
+                                Text('点击右下角按钮新建报告',
+                                    style: TextStyle(
+                                        fontSize: 12, color: Colors.grey[400])),
                             ],
                           ),
                         ),
@@ -1495,16 +1504,17 @@ class _ReportTabState extends State<_ReportTab> {
                           _buildReportCard(context, _reports[i]),
                     ),
         ),
-        Positioned(
-          right: 16,
-          bottom: 16,
-          child: FloatingActionButton.extended(
-            heroTag: 'fab_report',
-            onPressed: () => _showTemplatePickerDialog(),
-            icon: const Icon(Icons.add),
-            label: const Text('新建报告'),
+        if (!_isTeacherOrAdmin)
+          Positioned(
+            right: 16,
+            bottom: 16,
+            child: FloatingActionButton.extended(
+              heroTag: 'fab_report',
+              onPressed: () => _showTemplatePickerDialog(),
+              icon: const Icon(Icons.add),
+              label: const Text('新建报告'),
+            ),
           ),
-        ),
       ],
     );
   }
@@ -1516,6 +1526,7 @@ class _ReportTabState extends State<_ReportTab> {
     final templateName = report['template_name'] as String? ?? '';
     final taskTitle = report['task_title'] as String?;
     final updatedAt = report['updated_at'] as String? ?? '';
+    final userId = report['user_id'] as String? ?? '';
 
     final statusColor = status == '已提交' ? Colors.green : Colors.orange;
     final statusIcon = status == '已提交' ? Icons.check_circle : Icons.edit_note;
@@ -1551,6 +1562,15 @@ class _ReportTabState extends State<_ReportTab> {
                         const SizedBox(height: 2),
                         Row(
                           children: [
+                            if (_isTeacherOrAdmin) ...[
+                              Icon(Icons.person,
+                                  size: 12, color: Colors.grey[400]),
+                              const SizedBox(width: 4),
+                              Text(userId,
+                                  style: TextStyle(
+                                      fontSize: 11, color: Colors.grey[500])),
+                              const SizedBox(width: 8),
+                            ],
                             if (templateName.isNotEmpty) ...[
                               Icon(Icons.file_copy,
                                   size: 12, color: Colors.grey[400]),
