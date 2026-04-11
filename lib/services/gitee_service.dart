@@ -445,6 +445,125 @@ class GiteeService {
 
     return members;
   }
+
+  // ── 文件内容 API ────────────────────────────────────────────────────
+
+  /// 通过 Contents API 读取文件内容或列出目录
+  /// 文件 → 返回 Map（含 content/sha/size/name/path/type）
+  /// 目录 → 返回 List<Map>（每项含 name/path/type/size/sha）
+  /// [ref] 分支名或 commit SHA，默认 master
+  Future<dynamic> getContents(
+    String owner,
+    String repo,
+    String path, {
+    String ref = 'master',
+  }) async {
+    final token = await getToken();
+    final params = <String, String>{
+      if (token != null && token.isNotEmpty) 'access_token': token,
+      'ref': ref,
+    };
+    final uri = Uri.parse(
+            '$_baseUrl/repos/$owner/$repo/contents/$path')
+        .replace(queryParameters: params);
+
+    final resp = await http.get(uri).timeout(const Duration(seconds: 30));
+    if (resp.statusCode != 200) {
+      throw GiteeApiException(
+        statusCode: resp.statusCode,
+        message: 'getContents($path): ${resp.statusCode}',
+      );
+    }
+    return jsonDecode(utf8.decode(resp.bodyBytes));
+  }
+
+  /// 读取单个文件的文本内容（自动 base64 解码）
+  /// 返回 null 表示文件不存在或读取失败
+  Future<String?> getFileContent(
+    String owner,
+    String repo,
+    String path, {
+    String ref = 'master',
+  }) async {
+    try {
+      final data = await getContents(owner, repo, path, ref: ref);
+      if (data is Map && data.containsKey('content')) {
+        final b64 = (data['content'] as String).replaceAll('\n', '');
+        return utf8.decode(base64Decode(b64));
+      }
+      return null;
+    } catch (e) {
+      debugPrint('GiteeService: getFileContent($path) error: $e');
+      return null;
+    }
+  }
+
+  /// 列出目录内容
+  /// 返回 [{name, path, type, size, sha, download_url}, ...]
+  /// type 为 "file" 或 "dir"
+  Future<List<Map<String, dynamic>>> listDir(
+    String owner,
+    String repo,
+    String path, {
+    String ref = 'master',
+  }) async {
+    try {
+      final data = await getContents(owner, repo, path, ref: ref);
+      if (data is List) {
+        return List<Map<String, dynamic>>.from(
+            data.map((e) => Map<String, dynamic>.from(e)));
+      }
+      return [];
+    } catch (e) {
+      debugPrint('GiteeService: listDir($path) error: $e');
+      return [];
+    }
+  }
+
+  /// 获取文件的 Raw 下载 URL
+  /// 格式: https://gitee.com/{owner}/{repo}/raw/{ref}/{path}
+  Future<String> getRawUrl(
+    String owner,
+    String repo,
+    String path, {
+    String ref = 'master',
+  }) async {
+    final token = await getToken();
+    final encodedPath = Uri.encodeFull(path);
+    final url = 'https://gitee.com/$owner/$repo/raw/$ref/$encodedPath';
+    if (token != null && token.isNotEmpty) {
+      return '$url?access_token=$token';
+    }
+    return url;
+  }
+
+  /// 获取仓库 Git Tree（递归列出全部文件）
+  /// [sha] 通常传分支名（如 master）或 commit SHA
+  /// [recursive] 为 true 时递归列出子目录
+  Future<List<Map<String, dynamic>>> getTree(
+    String owner,
+    String repo, {
+    String sha = 'master',
+    bool recursive = true,
+  }) async {
+    try {
+      final params = <String, String>{};
+      if (recursive) params['recursive'] = '1';
+      final result = await _get(
+        '/repos/$owner/$repo/git/trees/$sha',
+        queryParams: params,
+      );
+      final tree = result['tree'];
+      if (tree is List) {
+        return List<Map<String, dynamic>>.from(
+            tree.map((e) => Map<String, dynamic>.from(e)));
+      }
+      return [];
+    } catch (e) {
+      debugPrint('GiteeService: getTree error: $e');
+      return [];
+    }
+  }
 }
 
 /// Gitee API 异常
