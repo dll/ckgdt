@@ -7,7 +7,6 @@ import '../graph/favorites_page.dart';
 import '../quiz/quiz_page.dart';
 import '../quiz/wrong_answers_page.dart';
 import '../learning/progress_page.dart';
-import '../learning/video_page.dart';
 import '../learning/learning_hub_page.dart';
 import '../learning/learning_plan_page.dart';
 import '../assessment/assessment_page.dart';
@@ -30,6 +29,7 @@ import '../achievement/achievement_page.dart';
 import '../profile/student_center_page.dart';
 import '../profile/teacher_workspace_page.dart';
 import '../help/handbook_page.dart';
+import '../skill/ai_skill_page.dart';
 import 'settings_page.dart';
 import 'search_page.dart';
 
@@ -470,6 +470,17 @@ class _HomePageState extends State<HomePage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const SurveyPage()),
+                  );
+                },
+              ),
+              _buildMenuCard(
+                icon: Icons.auto_awesome,
+                title: 'AI 技能',
+                color: Colors.deepPurple[400]!,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SkillsHubPage()),
                   );
                 },
               ),
