@@ -936,7 +936,7 @@ class _ScoreManagementTabState extends State<_ScoreManagementTab> {
                 controller: studentNameCtrl,
                 decoration: const InputDecoration(
                   labelText: '姓名',
-                  hintText: '如：张三',
+                  hintText: '如：姓名',
                   border: OutlineInputBorder(),
                 ),
               ),
