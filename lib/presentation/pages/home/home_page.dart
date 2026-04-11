@@ -123,7 +123,7 @@ class _HomePageState extends State<HomePage> {
                 value: 'profile',
                 child: ListTile(
                   leading: const Icon(Icons.person),
-                  title: Text(user?.userId ?? '用户'),
+                  title: Text(user?.realName ?? user?.userId ?? '用户'),
                   subtitle: Text(user?.role == 'admin' ? '管理员' :
                                  user?.role == 'teacher' ? '教师' : '学生'),
                 ),
@@ -344,7 +344,7 @@ class _HomePageState extends State<HomePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '欢迎回来，${user?.userId ?? '同学'}！',
+                    '欢迎回来，${user?.realName ?? user?.userId ?? '同学'}！',
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
