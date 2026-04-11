@@ -17,6 +17,11 @@ import '../admin/data_import_page.dart';
 import '../admin/teacher_manage_page.dart';
 import '../admin/class_manage_page.dart';
 import '../admin/survey_manage_page.dart';
+import '../admin/question_manage_page.dart';
+import '../admin/data_export_page.dart';
+import '../admin/teaching_manage_page.dart';
+import '../admin/lab_task_manage_page.dart';
+import '../admin/repo_analytics_page.dart';
 import '../works/works_page.dart';
 import '../lab/lab_tasks_page.dart';
 import '../repo/git_repo_page.dart';
@@ -350,23 +355,31 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
 
           // 功能菜单
           const Text(
             '功能菜单',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 12),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
+          const SizedBox(height: 10),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final cols = constraints.maxWidth > 900
+                  ? 5
+                  : constraints.maxWidth > 600
+                      ? 4
+                      : 3;
+              return GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: cols,
+                childAspectRatio: 1.1,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
             children: [
               _buildMenuCard(
                 icon: Icons.account_tree,
@@ -474,7 +487,9 @@ class _HomePageState extends State<HomePage> {
                   color: Colors.brown,
                   onTap: () => setState(() => _selectedIndex = 10),
                 ),
-            ],
+              ],
+              );
+            },
           ),
         ],
       ),
@@ -488,24 +503,25 @@ class _HomePageState extends State<HomePage> {
     required VoidCallback onTap,
   }) {
     return Card(
-      elevation: 2,
+      elevation: 1,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(10),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 40, color: color),
-              const SizedBox(height: 8),
+              Icon(icon, size: 30, color: color),
+              const SizedBox(height: 6),
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: FontWeight.w500,
                   color: color,
                 ),
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -521,7 +537,7 @@ class _AdminToolsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 5,
+      length: 10,
       child: Scaffold(
         appBar: TabBar(
           isScrollable: true,
@@ -529,8 +545,13 @@ class _AdminToolsPage extends StatelessWidget {
             Tab(text: '学生管理', icon: Icon(Icons.people)),
             Tab(text: '教师管理', icon: Icon(Icons.school)),
             Tab(text: '班级管理', icon: Icon(Icons.class_)),
+            Tab(text: '题库管理', icon: Icon(Icons.quiz)),
             Tab(text: '问卷管理', icon: Icon(Icons.poll)),
-            Tab(text: '数据管理', icon: Icon(Icons.storage)),
+            Tab(text: '教学管理', icon: Icon(Icons.menu_book)),
+            Tab(text: '实验管理', icon: Icon(Icons.science)),
+            Tab(text: '数据导入', icon: Icon(Icons.upload)),
+            Tab(text: '数据导出', icon: Icon(Icons.download)),
+            Tab(text: '仓库分析', icon: Icon(Icons.analytics)),
           ],
           labelColor: Theme.of(context).colorScheme.primary,
         ),
@@ -539,8 +560,13 @@ class _AdminToolsPage extends StatelessWidget {
             StudentManagePage(),
             TeacherManagePage(),
             ClassManagePage(),
+            QuestionManagePage(),
             SurveyManagePage(),
+            TeachingManagePage(),
+            LabTaskManagePage(),
             DataImportPage(),
+            DataExportPage(),
+            RepoAnalyticsPage(),
           ],
         ),
       ),

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import '../../../core/constants/app_theme.dart';
 import '../../../data/local/quiz_dao.dart';
 import '../../../data/local/wrong_answer_dao.dart';
 import '../../../data/models/question_model.dart';
 import '../../../data/models/quiz_result_model.dart';
 import '../../../services/auth_service.dart';
+import '../admin/question_manage_page.dart';
+import '../analytics/learning_analytics_page.dart';
 import 'wrong_answers_page.dart';
 
 class QuizPage extends StatefulWidget {
@@ -28,10 +31,22 @@ class _QuizPageState extends State<QuizPage> {
   bool _isLoading = true;
   bool _quizStarted = false;
 
+  // ── 教师数据 ───────────────────────────────────────────────
+  Map<String, dynamic> _classOverview = {};
+  List<Map<String, dynamic>> _chapterPerformance = [];
+  List<Map<String, dynamic>> _recentResults = [];
+  List<Map<String, dynamic>> _chapterStats = [];
+
+  bool get _isTeacherOrAdmin =>
+      _authService.isTeacher || _authService.isAdmin;
+
   @override
   void initState() {
     super.initState();
     _loadChapters();
+    if (_isTeacherOrAdmin) {
+      _loadTeacherData();
+    }
   }
 
   Future<void> _loadChapters() async {
@@ -45,6 +60,23 @@ class _QuizPageState extends State<QuizPage> {
     } catch (e) {
       setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _loadTeacherData() async {
+    try {
+      final overview = await _quizDao.getClassQuizOverview();
+      final chPerf = await _quizDao.getChapterQuizPerformance();
+      final recent = await _quizDao.getRecentAllResults(limit: 20);
+      final chStats = await _quizDao.getChapterStats();
+      if (mounted) {
+        setState(() {
+          _classOverview = overview;
+          _chapterPerformance = chPerf;
+          _recentResults = recent;
+          _chapterStats = chStats;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _startQuiz(String chapter) async {
@@ -75,7 +107,6 @@ class _QuizPageState extends State<QuizPage> {
     final currentQuestion = _questions[_currentIndex];
     final isCorrect = _selectedAnswer == currentQuestion.answerIndex;
 
-    // 记录错题
     if (!isCorrect) {
       _recordWrongAnswer(currentQuestion);
     }
@@ -205,12 +236,585 @@ class _QuizPageState extends State<QuizPage> {
       return const Center(child: CircularProgressIndicator());
     }
 
+    // 如果在答题中，显示答题视图（不论角色）
     if (_quizStarted && _questions.isNotEmpty) {
       return _buildQuizView();
     }
 
+    // 教师/管理员 → 教学管理仪表板
+    if (_isTeacherOrAdmin) {
+      return _buildTeacherDashboard();
+    }
+
+    // 学生 → 章节选择
     return _buildChapterSelection();
   }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // 教师仪表板
+  // ══════════════════════════════════════════════════════════════════════════
+
+  Widget _buildTeacherDashboard() {
+    final primary = Theme.of(context).colorScheme.primary;
+    final gradient = AppGradientTheme.of(context);
+
+    final studentCount =
+        (_classOverview['student_count'] as num?)?.toInt() ?? 0;
+    final totalAttempts =
+        (_classOverview['total_attempts'] as num?)?.toInt() ?? 0;
+    final avgScore =
+        (_classOverview['avg_score'] as num?)?.toDouble() ?? 0.0;
+    final passRate =
+        (_classOverview['pass_rate'] as num?)?.toDouble() ?? 0.0;
+
+    // 题库统计
+    int totalQuestions = 0;
+    for (final s in _chapterStats) {
+      totalQuestions += (s['count'] as num?)?.toInt() ?? 0;
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        await _loadChapters();
+        await _loadTeacherData();
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── 渐变头部卡片 ──────────────────────────────────────
+            Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: gradient.linearGradient,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.25),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.quiz,
+                              size: 28, color: Colors.white),
+                        ),
+                        const SizedBox(width: 14),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '测验管理中心',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                '出题 · 成绩统计 · 学情分析',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    // 四个统计数值
+                    Row(
+                      children: [
+                        _buildHeaderStat('题库总量', '$totalQuestions'),
+                        _buildHeaderStat('参加人数', '$studentCount'),
+                        _buildHeaderStat(
+                          '平均分',
+                          avgScore.toStringAsFixed(1),
+                        ),
+                        _buildHeaderStat(
+                          '及格率',
+                          '${passRate.toStringAsFixed(0)}%',
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // ── 快捷操作按钮 ──────────────────────────────────────
+            Row(
+              children: [
+                Expanded(
+                  child: _buildActionButton(
+                    icon: Icons.edit_note,
+                    label: '题库管理',
+                    color: Colors.orange,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const QuestionManagePage()),
+                    ).then((_) => _loadTeacherData()),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildActionButton(
+                    icon: Icons.analytics,
+                    label: '学情分析',
+                    color: Colors.green,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const LearningAnalyticsPage()),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildActionButton(
+                    icon: Icons.play_arrow,
+                    label: '体验测验',
+                    color: primary,
+                    onTap: () {
+                      if (_chapters.isNotEmpty) {
+                        _showChapterPickerForTeacher();
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('暂无测验题目')),
+                        );
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 24),
+
+            // ── 各章节测验情况 ────────────────────────────────────
+            _buildSectionTitle('各章节测验情况', Icons.bar_chart),
+            const SizedBox(height: 8),
+
+            if (_chapterPerformance.isEmpty && _chapterStats.isEmpty)
+              _buildEmptyHint('暂无测验数据')
+            else
+              ..._buildChapterCards(),
+
+            const SizedBox(height: 24),
+
+            // ── 最近测验记录 ──────────────────────────────────────
+            _buildSectionTitle('最近测验记录', Icons.history),
+            const SizedBox(height: 8),
+
+            if (_recentResults.isEmpty)
+              _buildEmptyHint('暂无学生测验记录')
+            else
+              ..._recentResults.take(10).map(_buildRecentResultTile),
+
+            if (_recentResults.length > 10)
+              Center(
+                child: TextButton.icon(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const LearningAnalyticsPage()),
+                  ),
+                  icon: const Icon(Icons.arrow_forward, size: 16),
+                  label: const Text('查看全部'),
+                ),
+              ),
+
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderStat(String label, String value) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: Colors.white70),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: color.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Column(
+            children: [
+              Icon(icon, color: color, size: 28),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title, IconData icon) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 20,
+          decoration: BoxDecoration(
+            color: primary,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Icon(icon, size: 20, color: primary),
+        const SizedBox(width: 6),
+        Text(
+          title,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyHint(String text) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.grey.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.inbox, size: 40, color: Colors.grey[400]),
+          const SizedBox(height: 8),
+          Text(text, style: TextStyle(color: Colors.grey[500])),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildChapterCards() {
+    // 合并题库统计和测验成绩数据
+    // chapterStats: [{source, count}]
+    // chapterPerformance: [{chapter, attempt_count, student_count, avg_score, pass_rate, max_score, min_score}]
+
+    final perfMap = <String, Map<String, dynamic>>{};
+    for (final p in _chapterPerformance) {
+      final ch = p['chapter'] as String? ?? '';
+      if (ch.isNotEmpty) perfMap[ch] = p;
+    }
+
+    // 收集所有章节（题库中有题的 + 有成绩的）
+    final allChapters = <String>{};
+    for (final s in _chapterStats) {
+      final src = s['source'] as String? ?? '';
+      if (src.isNotEmpty) allChapters.add(src);
+    }
+    for (final ch in perfMap.keys) {
+      allChapters.add(ch);
+    }
+
+    final chapterList = allChapters.toList()..sort();
+
+    // 题目数 map
+    final questionCountMap = <String, int>{};
+    for (final s in _chapterStats) {
+      final src = s['source'] as String? ?? '';
+      questionCountMap[src] = (s['count'] as num?)?.toInt() ?? 0;
+    }
+
+    return chapterList.map((chapter) {
+      final qCount = questionCountMap[chapter] ?? 0;
+      final perf = perfMap[chapter];
+      final hasPerf = perf != null;
+      final avgScore =
+          hasPerf ? (perf['avg_score'] as num?)?.toDouble() ?? 0.0 : 0.0;
+      final passRate =
+          hasPerf ? (perf['pass_rate'] as num?)?.toDouble() ?? 0.0 : 0.0;
+      final attempts =
+          hasPerf ? (perf['attempt_count'] as num?)?.toInt() ?? 0 : 0;
+      final students =
+          hasPerf ? (perf['student_count'] as num?)?.toInt() ?? 0 : 0;
+      final maxScore =
+          hasPerf ? (perf['max_score'] as num?)?.toInt() ?? 0 : 0;
+      final minScore =
+          hasPerf ? (perf['min_score'] as num?)?.toInt() ?? 0 : 0;
+
+      // 平均分对应颜色
+      Color scoreColor;
+      if (!hasPerf) {
+        scoreColor = Colors.grey;
+      } else if (avgScore >= 80) {
+        scoreColor = Colors.green;
+      } else if (avgScore >= 60) {
+        scoreColor = Colors.orange;
+      } else {
+        scoreColor = Colors.red;
+      }
+
+      return Card(
+        margin: const EdgeInsets.only(bottom: 10),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 章节名
+              Row(
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color:
+                          Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      chapter,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '$qCount 题',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+              if (hasPerf) ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    _buildMiniStat(
+                        '平均分', avgScore.toStringAsFixed(1), scoreColor),
+                    _buildMiniStat(
+                        '及格率', '${passRate.toStringAsFixed(0)}%',
+                        passRate >= 60 ? Colors.green : Colors.red),
+                    _buildMiniStat('参加', '$students人', Colors.blue),
+                    _buildMiniStat('测验', '$attempts次', Colors.purple),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                // 分数范围条
+                Row(
+                  children: [
+                    Text('最低 $minScore分',
+                        style:
+                            const TextStyle(fontSize: 11, color: Colors.grey)),
+                    const Spacer(),
+                    Text('最高 $maxScore分',
+                        style:
+                            const TextStyle(fontSize: 11, color: Colors.grey)),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(3),
+                  child: LinearProgressIndicator(
+                    value: avgScore / 100,
+                    backgroundColor: Colors.grey[200],
+                    valueColor: AlwaysStoppedAnimation(scoreColor),
+                    minHeight: 6,
+                  ),
+                ),
+              ] else ...[
+                const SizedBox(height: 8),
+                Text(
+                  '暂无学生测验数据',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }).toList();
+  }
+
+  Widget _buildMiniStat(String label, String value, Color color) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentResultTile(Map<String, dynamic> result) {
+    final userId = result['user_id'] as String? ?? '';
+    final realName = result['real_name'] as String?;
+    final displayName = (realName != null && realName.isNotEmpty)
+        ? realName
+        : userId;
+    final score = (result['score'] as num?)?.toInt() ?? 0;
+    final chapter = result['chapter'] as String? ?? '未知章节';
+    final numCorrect = (result['num_correct'] as num?)?.toInt() ?? 0;
+    final numTotal = (result['num_total'] as num?)?.toInt() ?? 0;
+    final timestamp = result['quiz_timestamp'] as String? ??
+        result['completed_at'] as String? ??
+        '';
+
+    // 格式化时间
+    String timeStr = '';
+    if (timestamp.isNotEmpty) {
+      try {
+        final dt = DateTime.parse(timestamp);
+        timeStr =
+            '${dt.month}/${dt.day} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+      } catch (_) {
+        timeStr = timestamp;
+      }
+    }
+
+    Color scoreColor;
+    if (score >= 80) {
+      scoreColor = Colors.green;
+    } else if (score >= 60) {
+      scoreColor = Colors.orange;
+    } else {
+      scoreColor = Colors.red;
+    }
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 6),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: scoreColor.withValues(alpha: 0.15),
+          child: Text(
+            '$score',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: scoreColor,
+              fontSize: 14,
+            ),
+          ),
+        ),
+        title: Text(
+          displayName,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+        ),
+        subtitle: Text(
+          '$chapter · $numCorrect/$numTotal · $timeStr',
+          style: const TextStyle(fontSize: 12),
+        ),
+        dense: true,
+      ),
+    );
+  }
+
+  /// 教师选择章节体验测验
+  void _showChapterPickerForTeacher() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '选择章节体验测验',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              '以教师身份体验学生的测验流程',
+              style: TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+            const SizedBox(height: 12),
+            ..._chapters.map((chapter) => ListTile(
+                  leading: const Icon(Icons.quiz, color: Colors.orange),
+                  title: Text(chapter),
+                  trailing: const Icon(Icons.play_arrow),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _startQuiz(chapter);
+                  },
+                )),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // 学生：章节选择
+  // ══════════════════════════════════════════════════════════════════════════
 
   Widget _buildChapterSelection() {
     if (_chapters.isEmpty) {
@@ -243,17 +847,17 @@ class _QuizPageState extends State<QuizPage> {
         ),
         const SizedBox(height: 16),
         ..._chapters.map((chapter) => Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: ListTile(
-            leading: const CircleAvatar(
-              backgroundColor: Colors.orange,
-              child: Icon(Icons.quiz, color: Colors.white),
-            ),
-            title: Text(chapter),
-            trailing: const Icon(Icons.play_arrow),
-            onTap: () => _startQuiz(chapter),
-          ),
-        )),
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: Colors.orange,
+                  child: Icon(Icons.quiz, color: Colors.white),
+                ),
+                title: Text(chapter),
+                trailing: const Icon(Icons.play_arrow),
+                onTap: () => _startQuiz(chapter),
+              ),
+            )),
         const SizedBox(height: 24),
         // 错题本按钮
         Card(
@@ -278,6 +882,10 @@ class _QuizPageState extends State<QuizPage> {
     );
   }
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // 共用：答题视图
+  // ══════════════════════════════════════════════════════════════════════════
+
   Widget _buildQuizView() {
     final question = _questions[_currentIndex];
 
@@ -287,7 +895,8 @@ class _QuizPageState extends State<QuizPage> {
         LinearProgressIndicator(
           value: (_currentIndex + 1) / _questions.length,
           backgroundColor: Colors.grey[200],
-          valueColor: AlwaysStoppedAnimation(Theme.of(context).colorScheme.primary),
+          valueColor:
+              AlwaysStoppedAnimation(Theme.of(context).colorScheme.primary),
         ),
         Expanded(
           child: SingleChildScrollView(
@@ -295,9 +904,27 @@ class _QuizPageState extends State<QuizPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  '第 ${_currentIndex + 1} / ${_questions.length} 题',
-                  style: const TextStyle(color: Colors.grey),
+                Row(
+                  children: [
+                    Text(
+                      '第 ${_currentIndex + 1} / ${_questions.length} 题',
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                    const Spacer(),
+                    if (_isTeacherOrAdmin)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          '教师体验模式',
+                          style: TextStyle(fontSize: 11, color: Colors.blue),
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -325,16 +952,21 @@ class _QuizPageState extends State<QuizPage> {
                       borderColor = Colors.red;
                     }
                   } else if (isSelected) {
-                    bgColor = Theme.of(context).colorScheme.primary.withValues(alpha: 0.3);
+                    bgColor = Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.3);
                     borderColor = Theme.of(context).colorScheme.primary;
                   }
 
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: InkWell(
-                      onTap: _answered ? null : () {
-                        setState(() => _selectedAnswer = index);
-                      },
+                      onTap: _answered
+                          ? null
+                          : () {
+                              setState(() => _selectedAnswer = index);
+                            },
                       child: Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
@@ -342,7 +974,8 @@ class _QuizPageState extends State<QuizPage> {
                           color: bgColor,
                           border: Border.all(
                             color: borderColor ?? Colors.grey[300]!,
-                            width: isSelected || (_answered && isCorrect) ? 2 : 1,
+                            width:
+                                isSelected || (_answered && isCorrect) ? 2 : 1,
                           ),
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -359,7 +992,8 @@ class _QuizPageState extends State<QuizPage> {
                                 color: isSelected ? borderColor : null,
                               ),
                               child: isSelected
-                                  ? const Icon(Icons.check, size: 16, color: Colors.white)
+                                  ? const Icon(Icons.check,
+                                      size: 16, color: Colors.white)
                                   : null,
                             ),
                             const SizedBox(width: 12),
@@ -377,23 +1011,43 @@ class _QuizPageState extends State<QuizPage> {
         // 底部按钮
         Container(
           padding: const EdgeInsets.all(16),
-          child: SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton(
-              onPressed: _answered
-                  ? _nextQuestion
-                  : (_selectedAnswer != null ? _submitAnswer : null),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Colors.white,
+          child: Row(
+            children: [
+              // 返回按钮（退出测验）
+              if (_isTeacherOrAdmin)
+                Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: OutlinedButton(
+                    onPressed: () {
+                      setState(() {
+                        _quizStarted = false;
+                        _questions = [];
+                      });
+                    },
+                    child: const Text('退出'),
+                  ),
+                ),
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: _answered
+                        ? _nextQuestion
+                        : (_selectedAnswer != null ? _submitAnswer : null),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          Theme.of(context).colorScheme.primary,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: Text(_answered
+                        ? (_currentIndex < _questions.length - 1
+                            ? '下一题'
+                            : '完成测验')
+                        : '提交答案'),
+                  ),
+                ),
               ),
-              child: Text(
-                _answered
-                    ? (_currentIndex < _questions.length - 1 ? '下一题' : '完成测验')
-                    : '提交答案'
-              ),
-            ),
+            ],
           ),
         ),
       ],

@@ -121,34 +121,34 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
             children: [
               // ── 欢迎头部 ──────────────────────────────────────────────
               _buildWelcomeHeader(user, gradient),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               // ── 教学概览 ──────────────────────────────────────────────
               const Text(
                 '教学概览',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               _buildOverviewStats(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               // ── 快捷工具 ──────────────────────────────────────────────
               const Text(
                 '快捷工具',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               _buildToolGrid(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               // ── 最近动态 ──────────────────────────────────────────────
               const Text(
                 '最近动态',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               _buildRecentActivities(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
             ],
           ),
         ),
@@ -168,7 +168,7 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: gradient.linearGradient,
@@ -177,15 +177,15 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
           children: [
             // 头像
             Container(
-              width: 64,
-              height: 64,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.25),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.school, size: 36, color: Colors.white),
+              child: const Icon(Icons.school, size: 28, color: Colors.white),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             // 文字信息
             Expanded(
               child: Column(
@@ -313,16 +313,20 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
   // ─────────────────────────────────────────────────────────────────────────
 
   Widget _buildToolGrid() {
+    final isAdmin = _authService.isAdmin;
+
     final tools = [
-      _ToolItem(
-        icon: Icons.people,
-        label: '学生管理',
-        color: Colors.blue,
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const StudentManagePage()),
+      // 管理员专属：学生管理
+      if (isAdmin)
+        _ToolItem(
+          icon: Icons.people,
+          label: '学生管理',
+          color: Colors.blue,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const StudentManagePage()),
+          ),
         ),
-      ),
       _ToolItem(
         icon: Icons.quiz,
         label: '题库管理',
@@ -332,15 +336,17 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
           MaterialPageRoute(builder: (_) => const QuestionManagePage()),
         ),
       ),
-      _ToolItem(
-        icon: Icons.folder_open,
-        label: '资源管理',
-        color: Colors.purple,
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const DataImportPage()),
+      // 管理员专属：资源管理（数据导入）
+      if (isAdmin)
+        _ToolItem(
+          icon: Icons.folder_open,
+          label: '资源管理',
+          color: Colors.purple,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const DataImportPage()),
+          ),
         ),
-      ),
       _ToolItem(
         icon: Icons.assessment,
         label: '成绩统计',

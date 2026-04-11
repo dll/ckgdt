@@ -125,43 +125,43 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
             children: [
               // ── 欢迎头部 ──────────────────────────────────────────────
               _buildWelcomeHeader(user, gradient),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               // ── 学习概览 ──────────────────────────────────────────────
               const Text(
                 '学习概览',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               _buildOverviewStats(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               // ── 成长轨迹 ──────────────────────────────────────────────
               const Text(
                 '成长轨迹',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               _buildGrowthTimeline(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               // ── 学习成就 ──────────────────────────────────────────────
               const Text(
                 '学习成就',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               _buildAchievementBadges(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               // ── 快捷入口 ──────────────────────────────────────────────
               const Text(
                 '快捷入口',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               _buildQuickActions(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
             ],
           ),
         ),
@@ -186,7 +186,7 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: gradient.linearGradient,
@@ -195,15 +195,15 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
           children: [
             // 头像
             Container(
-              width: 64,
-              height: 64,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.25),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.person, size: 36, color: Colors.white),
+              child: const Icon(Icons.person, size: 28, color: Colors.white),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             // 文字信息
             Expanded(
               child: Column(
@@ -335,12 +335,12 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
       return Card(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: const Padding(
-          padding: EdgeInsets.all(32),
+          padding: EdgeInsets.all(20),
           child: Center(
             child: Column(
               children: [
-                Icon(Icons.timeline, size: 48, color: Colors.grey),
-                SizedBox(height: 12),
+                Icon(Icons.timeline, size: 40, color: Colors.grey),
+                SizedBox(height: 8),
                 Text(
                   '暂无学习记录',
                   style: TextStyle(color: Colors.grey),
@@ -597,53 +597,59 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
       ),
     ];
 
-    return Row(
-      children: actions.map((action) {
-        return Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Card(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: InkWell(
-                onTap: action.onTap,
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: action.color.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          action.icon,
-                          color: action.color,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        action.label,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: action.color,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        childAspectRatio: 0.85,
+        crossAxisSpacing: 6,
+        mainAxisSpacing: 6,
+      ),
+      itemCount: actions.length,
+      itemBuilder: (context, index) {
+        final action = actions[index];
+        return Card(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: InkWell(
+            onTap: action.onTap,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: action.color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      action.icon,
+                      color: action.color,
+                      size: 20,
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 6),
+                  Text(
+                    action.label,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: action.color,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
             ),
           ),
         );
-      }).toList(),
+      },
     );
   }
 }

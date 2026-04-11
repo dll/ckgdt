@@ -107,10 +107,10 @@ class DatabaseHelper {
           debugPrint('=== DatabaseHelper [Web]: Reimport failed: $e');
         }
 
-        // 重新打开
+        // 重新打开（版本号必须与主初始化一致）
         final db2 = await openDatabase(
           dbName,
-          version: 9,
+          version: 11,
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
         );
