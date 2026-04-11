@@ -4,6 +4,7 @@ import '../../../main.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/settings_service.dart';
 import '../learning/video_page.dart';
+import '../materials/ai_settings_page.dart';
 import '../quiz/wrong_answers_page.dart';
 import '../graph/favorites_page.dart';
 
@@ -158,6 +159,16 @@ class _SettingsPageState extends State<SettingsPage> {
             title: '清除缓存',
             subtitle: '释放存储空间',
             onTap: () => _showClearCacheDialog(context),
+          ),
+          _buildMenuItem(
+            context,
+            icon: Icons.smart_toy,
+            title: 'AI 配置',
+            subtitle: '配置 AI 服务商、API Key 和模型',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AiSettingsPage()),
+            ),
           ),
 
           const SizedBox(height: 16),
