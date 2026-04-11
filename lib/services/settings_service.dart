@@ -9,6 +9,7 @@ class SettingsService {
   static const String _themeModeKey   = 'theme_mode_index'; // 0=system 1=light 2=dark
   static const String _colorIndexKey  = 'color_index';      // 0=科技蓝 1=清新绿 2=轻奢紫
   static const String _notificationKey = 'notification_enabled';
+  static const String _quickLoginKey = 'quick_login_enabled';
 
   // ═════════════════════════════════════════════════════════════════════════
   // 显示模式  ThemeMode（跟随系统 / 浅色 / 深色）
@@ -73,6 +74,20 @@ class SettingsService {
   static Future<void> setNotificationEnabled(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_notificationKey, enabled);
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // 快速登录开关（管理员设置，默认关闭）
+  // ═════════════════════════════════════════════════════════════════════════
+
+  static Future<bool> isQuickLoginEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_quickLoginKey) ?? false;
+  }
+
+  static Future<void> setQuickLoginEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_quickLoginKey, enabled);
   }
 
   // ═════════════════════════════════════════════════════════════════════════

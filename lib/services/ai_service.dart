@@ -12,7 +12,7 @@ class AiService {
   }) async {
     final config = await _configDao.getConfig();
     if (config.apiKey == null || config.apiKey!.isEmpty) {
-      throw Exception('请先在设置中配置 AI API Key');
+      throw '抱歉，AI 服务暂时不可用。请在「设置  →  AI 配置」中配置 API Key。';
     }
 
     final allMessages = [
@@ -39,8 +39,7 @@ class AiService {
         .timeout(const Duration(seconds: 60));
 
     if (response.statusCode != 200) {
-      throw Exception(
-          'AI API 请求失败 (${response.statusCode}): ${response.body}');
+      throw 'AI 请求失败 (${response.statusCode})，请检查网络连接和 API 配置。';
     }
 
     final json = jsonDecode(utf8.decode(response.bodyBytes));

@@ -80,7 +80,7 @@ class _SlideGeneratorPageState extends State<SlideGeneratorPage> {
       }
     } catch (e) {
       if (!mounted) return;
-      _showError('生成出错：$e');
+      _showError('$e');
     } finally {
       if (mounted) setState(() => _generating = false);
     }
