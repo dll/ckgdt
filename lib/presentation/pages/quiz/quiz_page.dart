@@ -165,6 +165,24 @@ class _QuizPageState extends State<QuizPage> {
             ],
           ),
           actions: [
+            if (_correctCount < _questions.length)
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  setState(() {
+                    _quizStarted = false;
+                    _questions = [];
+                  });
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const WrongAnswersPage(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.error_outline, size: 18),
+                label: const Text('复习错题'),
+              ),
             TextButton(
               onPressed: () {
                 Navigator.pop(context);

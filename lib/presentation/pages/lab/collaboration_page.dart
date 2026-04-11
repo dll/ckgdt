@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import '../../../data/local/collaboration_dao.dart';
 import '../../../services/auth_service.dart';
 
@@ -26,72 +28,14 @@ class _CollaborationPageState extends State<CollaborationPage>
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
 
-  // ── 分工管理数据（Demo 硬编码） ──────────────────────────────
-  final List<Map<String, dynamic>> _taskDivisions = [
-    {
-      'member_name': '张三',
-      'member_id': '202001',
-      'role': 'UI 设计与实现',
-      'progress': 0.75,
-      'status': '进行中',
-    },
-    {
-      'member_name': '李四',
-      'member_id': '202002',
-      'role': '后端接口开发',
-      'progress': 0.60,
-      'status': '进行中',
-    },
-    {
-      'member_name': '王五',
-      'member_id': '202003',
-      'role': '数据库设计',
-      'progress': 1.0,
-      'status': '已完成',
-    },
-    {
-      'member_name': '赵六',
-      'member_id': '202004',
-      'role': '测试与文档',
-      'progress': 0.30,
-      'status': '进行中',
-    },
-  ];
+  // ── 分工管理数据（从 JSON 动态加载） ──────────────────────────────
+  List<Map<String, dynamic>> _taskDivisions = [];
 
   // ── 互评中心数据 ───────────────────────────────────────────
   List<Map<String, dynamic>> _peerReviews = [];
 
-  // 模拟可互评的提交列表（Demo 数据）
-  final List<Map<String, dynamic>> _submissions = [
-    {
-      'submitter_id': '202001',
-      'submitter_name': '张三',
-      'title': 'Flutter 天气应用',
-      'submit_time': '2024-12-15 14:30',
-      'description': '基于 OpenWeather API 的天气查询应用，支持多城市切换',
-    },
-    {
-      'submitter_id': '202002',
-      'submitter_name': '李四',
-      'title': 'Todo 待办清单',
-      'submit_time': '2024-12-14 10:15',
-      'description': '使用 Provider 状态管理的待办事项应用，支持分类和提醒',
-    },
-    {
-      'submitter_id': '202003',
-      'submitter_name': '王五',
-      'title': '课程表应用',
-      'submit_time': '2024-12-13 16:45',
-      'description': '支持周视图和日视图的课程表管理应用',
-    },
-    {
-      'submitter_id': '202004',
-      'submitter_name': '赵六',
-      'title': '记账本应用',
-      'submit_time': '2024-12-12 09:00',
-      'description': '支持收支分类统计和图表分析的个人记账应用',
-    },
-  ];
+  // 可互评的提交列表（从 JSON 动态加载）
+  List<Map<String, dynamic>> _submissions = [];
 
   @override
   void initState() {
@@ -115,7 +59,80 @@ class _CollaborationPageState extends State<CollaborationPage>
     } catch (e) {
       debugPrint('CollaborationPage: 初始化表失败: $e');
     }
+    // 从 JSON 加载真实学生数据填充分工和互评
+    await _loadStudentDemoData();
     await _loadAllData();
+  }
+
+  /// 从 student_group_data.json 加载真实学生，填充分工管理和互评数据
+  Future<void> _loadStudentDemoData() async {
+    try {
+      final jsonStr =
+          await rootBundle.loadString('assets/student_group_data.json');
+      final List<dynamic> decoded = jsonDecode(jsonStr);
+      final allStudents =
+          decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+      if (allStudents.isEmpty) return;
+
+      // 找当前用户所在 repo 的同学，否则取第一个 repo
+      final userId = _authService.getCurrentUserId();
+      String? myRepo;
+      if (userId != null) {
+        final me = allStudents.firstWhere(
+          (s) => s['userId'] == userId,
+          orElse: () => <String, dynamic>{},
+        );
+        myRepo = me['repo'] as String?;
+      }
+      myRepo ??= allStudents.first['repo'] as String?;
+
+      final repoMembers = allStudents
+          .where((s) => s['repo'] == myRepo)
+          .toList();
+      if (repoMembers.isEmpty) return;
+
+      // 分工角色列表
+      const roles = [
+        'UI 设计与实现',
+        '后端接口开发',
+        '数据库设计',
+        '测试与文档',
+        '前端开发',
+        'API 接口设计',
+      ];
+      final divisions = <Map<String, dynamic>>[];
+      for (int i = 0; i < repoMembers.length; i++) {
+        final m = repoMembers[i];
+        divisions.add({
+          'member_name': m['name'] as String? ?? '',
+          'member_id': m['userId'] as String? ?? '',
+          'role': m['coreDuty'] as String? ?? roles[i % roles.length],
+          'progress': (i == 0) ? 0.75 : (i == 1) ? 0.60 : (i == 2) ? 1.0 : 0.30 + (i % 5) * 0.1,
+          'status': i == 2 ? '已完成' : '进行中',
+        });
+      }
+
+      final subs = <Map<String, dynamic>>[];
+      for (int i = 0; i < repoMembers.length; i++) {
+        final m = repoMembers[i];
+        subs.add({
+          'submitter_id': m['userId'] as String? ?? '',
+          'submitter_name': m['name'] as String? ?? '',
+          'title': m['project'] as String? ?? '未命名项目',
+          'submit_time': '2026-04-${(10 - i).toString().padLeft(2, '0')} 14:30',
+          'description': m['features'] as String? ?? '移动应用开发项目',
+        });
+      }
+
+      if (mounted) {
+        setState(() {
+          _taskDivisions = divisions;
+          _submissions = subs;
+        });
+      }
+    } catch (e) {
+      debugPrint('CollaborationPage: 加载学生数据失败: $e');
+    }
   }
 
   Future<void> _loadAllData() async {

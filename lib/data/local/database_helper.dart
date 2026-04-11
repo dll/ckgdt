@@ -1089,6 +1089,30 @@ class DatabaseHelper {
         UNIQUE(batch_id, student_id)
       )
     ''');
+
+    // ── 贡献度评分表 ──────────────────────────────────────────
+    // 支持自评/组员互评/教师评分，从个人/小组/项目三个维度评估
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS contribution_scores(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        target_user_id TEXT NOT NULL,
+        target_user_name TEXT,
+        scorer_user_id TEXT NOT NULL,
+        scorer_user_name TEXT,
+        scorer_type TEXT NOT NULL DEFAULT 'peer',
+        repo TEXT,
+        dimension TEXT NOT NULL DEFAULT 'individual',
+        code_contribution INTEGER DEFAULT 0,
+        doc_contribution INTEGER DEFAULT 0,
+        teamwork_score INTEGER DEFAULT 0,
+        initiative_score INTEGER DEFAULT 0,
+        quality_score INTEGER DEFAULT 0,
+        overall_score INTEGER DEFAULT 0,
+        comment TEXT,
+        scored_at TEXT,
+        UNIQUE(target_user_id, scorer_user_id, dimension)
+      )
+    ''');
   }
 
   Future<void> _createNewTablesV3(Database db) async {

@@ -163,6 +163,18 @@ class _WrongAnswersPageState extends State<WrongAnswersPage> {
                                     mainAxisAlignment: MainAxisAlignment.end,
                                     children: [
                                       TextButton.icon(
+                                        onPressed: () {
+                                          // 返回首页并切换到知识图谱 Tab
+                                          Navigator.pop(context, 'go_learn');
+                                        },
+                                        icon: const Icon(Icons.menu_book,
+                                            size: 18,
+                                            color: Color(0xFF667eea)),
+                                        label: const Text('去学习',
+                                            style: TextStyle(
+                                                color: Color(0xFF667eea))),
+                                      ),
+                                      TextButton.icon(
                                         onPressed: () => _removeWrongAnswer(wrong['id']),
                                         icon: const Icon(Icons.remove_circle_outline),
                                         label: const Text('移除'),

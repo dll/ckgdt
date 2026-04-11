@@ -5,7 +5,9 @@ import '../../../core/constants/mask_shapes.dart';
 import '../../../core/constants/tech_logo_painter.dart';
 import '../../../data/local/knowledge_graph_dao.dart';
 import '../../../data/local/learning_path_dao.dart';
+import '../../../data/local/learning_record_dao.dart';
 import '../../../data/models/learning_path_model.dart';
+import '../../../services/ai_service.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/knowledge_seed_service.dart';
 import '../learning/learning_chain_page.dart';
@@ -166,7 +168,8 @@ enum _ViewMode {
   global('全局视图', Icons.public),
   chapter('章节视图', Icons.view_module),
   relation('关系视图', Icons.device_hub),
-  mask('蒙版视图', Icons.auto_awesome);
+  mask('蒙版视图', Icons.auto_awesome),
+  achievement('达成度', Icons.emoji_events);
 
   final String label;
   final IconData icon;
@@ -224,6 +227,13 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   final _learningPathDao = LearningPathDao();
   final _authService = AuthService();
 
+  // ── 达成度 ─────────────────────────────────────────────────────────────
+  final _learningRecordDao = LearningRecordDao();
+  Map<int, String> _conceptProgress = {}; // conceptId → status
+  int _progressCompleted = 0;
+  int _progressInProgress = 0;
+  int _progressNotStarted = 0;
+
   // ── 画布参数 ─────────────────────────────────────────────────────────────
   static const double _canvasWidth = 2400;
   static const double _canvasHeight = 2000;
@@ -263,6 +273,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
       await KnowledgeSeedService().seedIfEmpty();
       await _loadData();
       await _loadStats();
+      await _loadConceptProgress();
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -324,6 +335,44 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
     } catch (_) {}
   }
 
+  Future<void> _loadConceptProgress() async {
+    try {
+      final userId = _authService.currentUser?.userId;
+      if (userId == null) return;
+
+      // 把 _nodes 转为 knowledge_concepts 行格式供 autoSync 使用
+      final conceptMaps = _nodes
+          .map((n) => <String, dynamic>{
+                'id': n.id,
+                'concept_name': n.name,
+                'chapter': n.chapter,
+              })
+          .toList();
+
+      _conceptProgress = await _learningRecordDao.autoSyncConceptProgress(
+          userId, conceptMaps);
+
+      // 统计
+      _progressCompleted = 0;
+      _progressInProgress = 0;
+      _progressNotStarted = 0;
+      for (final node in _nodes) {
+        final s = _conceptProgress[node.id] ?? 'not_started';
+        switch (s) {
+          case 'completed':
+            _progressCompleted++;
+            break;
+          case 'in_progress':
+            _progressInProgress++;
+            break;
+          default:
+            _progressNotStarted++;
+        }
+      }
+      if (mounted) setState(() {});
+    } catch (_) {}
+  }
+
   // ══════════════════════════════════════════════════════════════════════════
   // 力导向布局算法
   // ══════════════════════════════════════════════════════════════════════════
@@ -345,6 +394,9 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
         break;
       case _ViewMode.mask:
         _calculateMaskLayout();
+        break;
+      case _ViewMode.achievement:
+        _calculateChapterLayout(_nodes, _edges);
         break;
     }
   }
@@ -1466,6 +1518,45 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                   ),
                 ),
 
+                // ── 达成度标记按钮 ─────────────────────────────────────
+                const SizedBox(height: 12),
+                Builder(builder: (_) {
+                  final curStatus =
+                      _conceptProgress[node.id] ?? 'not_started';
+                  final isCompleted = curStatus == 'completed';
+                  return SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () async {
+                        final userId =
+                            _authService.currentUser?.userId;
+                        if (userId == null) return;
+                        final newStatus =
+                            isCompleted ? 'not_started' : 'completed';
+                        await _learningRecordDao.updateConceptStatus(
+                            userId, node.id, newStatus);
+                        Navigator.pop(ctx);
+                        await _loadConceptProgress();
+                      },
+                      icon: Icon(
+                        isCompleted
+                            ? Icons.check_circle
+                            : Icons.radio_button_unchecked,
+                        size: 18,
+                      ),
+                      label: Text(isCompleted ? '已掌握 ✓（点击撤销）' : '标记为已掌握'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor:
+                            isCompleted ? Colors.grey : const Color(0xFF4CAF50),
+                        padding:
+                            const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  );
+                }),
+
                 // 查看前置链
                 const SizedBox(height: 20),
                 SizedBox(
@@ -2124,6 +2215,9 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
         if (_viewMode == _ViewMode.relation && _focusedNode != null)
           _buildRelationInfoBar(),
 
+        // 达成度信息条
+        if (_viewMode == _ViewMode.achievement) _buildAchievementInfoBar(),
+
         // 图谱画布
         Expanded(child: _buildGraphCanvas()),
 
@@ -2160,6 +2254,9 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                 });
                 _calculateLayout();
                 setState(() {});
+                if (_viewMode == _ViewMode.achievement) {
+                  _loadConceptProgress();
+                }
               },
               style: ButtonStyle(
                 visualDensity: VisualDensity.compact,
@@ -2410,6 +2507,278 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
     );
   }
 
+  // ── 达成度信息条 ────────────────────────────────────────────────────────
+
+  Widget _buildAchievementInfoBar() {
+    final total = _nodes.length;
+    final pct = total > 0 ? (_progressCompleted / total * 100) : 0.0;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF667eea).withValues(alpha: 0.08),
+            const Color(0xFF4CAF50).withValues(alpha: 0.06),
+          ],
+        ),
+        border: Border(
+          bottom: BorderSide(
+            color: const Color(0xFF667eea).withValues(alpha: 0.15),
+          ),
+        ),
+      ),
+      child: Column(
+        children: [
+          // 进度条
+          Row(
+            children: [
+              const Icon(Icons.emoji_events,
+                  size: 16, color: Color(0xFFFF9800)),
+              const SizedBox(width: 6),
+              Text(
+                '达成度 ${pct.toStringAsFixed(1)}%',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF667eea),
+                ),
+              ),
+              const Spacer(),
+              _achievementChip(
+                  '已掌握', _progressCompleted, const Color(0xFF4CAF50)),
+              const SizedBox(width: 6),
+              _achievementChip(
+                  '学习中', _progressInProgress, const Color(0xFFFF9800)),
+              const SizedBox(width: 6),
+              _achievementChip(
+                  '未开始', _progressNotStarted, const Color(0xFFE53935)),
+              const SizedBox(width: 8),
+              // AI 推荐按钮
+              InkWell(
+                onTap: _showAiRecommendation,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF667eea).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFF667eea).withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.auto_awesome,
+                          size: 13, color: Color(0xFF667eea)),
+                      SizedBox(width: 3),
+                      Text('AI推荐',
+                          style: TextStyle(
+                              fontSize: 10,
+                              color: Color(0xFF667eea),
+                              fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          // 进度条视觉
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: SizedBox(
+              height: 6,
+              child: Row(
+                children: [
+                  if (_progressCompleted > 0)
+                    Expanded(
+                      flex: _progressCompleted,
+                      child: Container(color: const Color(0xFF4CAF50)),
+                    ),
+                  if (_progressInProgress > 0)
+                    Expanded(
+                      flex: _progressInProgress,
+                      child: Container(color: const Color(0xFFFF9800)),
+                    ),
+                  if (_progressNotStarted > 0)
+                    Expanded(
+                      flex: _progressNotStarted,
+                      child: Container(color: const Color(0xFFE53935)),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _achievementChip(String label, int count, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 3),
+          Text('$label $count',
+              style: TextStyle(
+                  fontSize: 10, color: color, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
+  // ── AI 学习推荐 ─────────────────────────────────────────────────────────
+
+  Future<void> _showAiRecommendation() async {
+    final userId = _authService.currentUser?.userId;
+    if (userId == null) return;
+
+    // 收集未掌握和学习中的概念
+    final notStarted = <String>[];
+    final inProgress = <String>[];
+    final completed = <String>[];
+    for (final node in _nodes) {
+      final s = _conceptProgress[node.id] ?? 'not_started';
+      if (s == 'not_started') {
+        notStarted.add(node.name);
+      } else if (s == 'in_progress') {
+        inProgress.add(node.name);
+      } else {
+        completed.add(node.name);
+      }
+    }
+
+    // 先弹出加载对话框
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Expanded(child: Text('AI 正在分析你的学习进度...')),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final aiService = AiService();
+      final prompt = '''你是一个移动应用开发课程的智能学习顾问。
+学生当前的知识掌握情况如下：
+- 已掌握 (${completed.length}个): ${completed.take(15).join('、')}${completed.length > 15 ? '...' : ''}
+- 学习中 (${inProgress.length}个): ${inProgress.take(10).join('、')}${inProgress.length > 10 ? '...' : ''}
+- 未开始 (${notStarted.length}个): ${notStarted.take(10).join('、')}${notStarted.length > 10 ? '...' : ''}
+
+请根据以上情况：
+1. 分析学生的学习进度，指出薄弱环节
+2. 推荐接下来应该优先学习的3-5个知识点，并说明理由
+3. 给出一个简短的学习建议
+
+要求：简洁有条理，语气鼓励，用中文回答。''';
+
+      final result = await aiService.chat([
+        {'role': 'user', 'content': prompt}
+      ], systemPrompt: '你是移动应用开发课程的AI学习助手，帮助学生规划学习路径。');
+
+      if (!mounted) return;
+      Navigator.of(context).pop(); // 关闭加载对话框
+
+      // 显示结果
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        builder: (ctx) => DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.3,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollCtrl) => SingleChildScrollView(
+            controller: scrollCtrl,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const Row(
+                  children: [
+                    Icon(Icons.auto_awesome, color: Color(0xFF667eea)),
+                    SizedBox(width: 8),
+                    Text('AI 学习推荐',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '基于你的达成度 ${(_progressCompleted / math.max(_nodes.length, 1) * 100).toStringAsFixed(0)}% 生成',
+                  style: TextStyle(
+                      fontSize: 12, color: Colors.grey.shade500),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: const Color(0xFF667eea)
+                            .withValues(alpha: 0.15)),
+                  ),
+                  child: SelectableText(
+                    result,
+                    style: const TextStyle(
+                        fontSize: 14, height: 1.7, color: Colors.black87),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop(); // 关闭加载对话框
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('AI 推荐失败: $e\n\n提示：请在"学习"Tab → AI助手中配置 API Key'),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
   // ── 图谱画布 ──────────────────────────────────────────────────────────
 
   Widget _buildGraphCanvas() {
@@ -2476,6 +2845,9 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                   userName: _selectedMask == MaskShape.avatar
                       ? (_authService.currentUser?.realName ??
                           _authService.currentUser?.userId)
+                      : null,
+                  progressMap: _viewMode == _ViewMode.achievement
+                      ? _conceptProgress
                       : null,
                 ),
                 size: const Size(_canvasWidth, _canvasHeight),
@@ -2874,6 +3246,47 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // 达成度视图：专用图例
+          if (_viewMode == _ViewMode.achievement)
+            SizedBox(
+              height: 24,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(right: 6),
+                    child: Text('达成度:',
+                        style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                  _legendItem(const Color(0xFF4CAF50), '已掌握',
+                      isCircle: true),
+                  _legendItem(const Color(0xFFFF9800), '学习中',
+                      isCircle: true),
+                  _legendItem(const Color(0xFFE53935), '未开始',
+                      isCircle: true),
+                  const SizedBox(width: 16),
+                  const Padding(
+                    padding: EdgeInsets.only(right: 6),
+                    child: Text('操作:',
+                        style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.only(right: 8),
+                    child: Text('点击节点 → 标记掌握',
+                        style: TextStyle(
+                            fontSize: 9,
+                            color: Color(0xFF667eea))),
+                  ),
+                ],
+              ),
+            )
+          else ...[
           // 概念类型
           SizedBox(
             height: 24,
@@ -2909,6 +3322,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
               ],
             ),
           ),
+          ], // end else
         ],
       ),
     );
@@ -3004,6 +3418,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
   final MaskShape maskShape;
   final Path? maskPath;
   final String? userName;
+  final Map<int, String>? progressMap;
 
   _KnowledgeGraphPainter({
     required this.nodes,
@@ -3017,6 +3432,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
     this.maskShape = MaskShape.none,
     this.maskPath,
     this.userName,
+    this.progressMap,
   });
 
   @override
@@ -3026,7 +3442,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
     final nodeMap = {for (final n in nodes) n.id: n};
 
     // ── 章节视图：绘制章节分组背景 ────────────────────────────────────────
-    if (viewMode == _ViewMode.chapter) {
+    if (viewMode == _ViewMode.chapter || viewMode == _ViewMode.achievement) {
       _drawChapterBackgrounds(canvas, nodeMap);
     } else if (viewMode == _ViewMode.mask && maskPath != null) {
       // 蒙版视图：绘制蒙版轮廓
@@ -3158,7 +3574,24 @@ class _KnowledgeGraphPainter extends CustomPainter {
 
       final radius = node.radius;
       final center = Offset(node.x, node.y);
-      final nodeColor = node.color;
+
+      // 达成度模式：根据进度着色
+      final Color nodeColor;
+      if (progressMap != null) {
+        final status = progressMap![node.id] ?? 'not_started';
+        switch (status) {
+          case 'completed':
+            nodeColor = const Color(0xFF4CAF50); // 绿色
+            break;
+          case 'in_progress':
+            nodeColor = const Color(0xFFFF9800); // 黄/橙色
+            break;
+          default:
+            nodeColor = const Color(0xFFE53935); // 红色
+        }
+      } else {
+        nodeColor = node.color;
+      }
 
       // 判断是否应该减淡（有选中/高亮时，非相关节点减淡）
       final dimmed = (_hasSelection() || _hasHighlight()) &&
@@ -3311,7 +3744,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
       );
 
       // 章节标注（章节视图下不显示，因为有背景标注）
-      if (viewMode != _ViewMode.chapter && node.chapter != null && !dimmed) {
+      if (viewMode != _ViewMode.chapter && viewMode != _ViewMode.achievement && node.chapter != null && !dimmed) {
         final chTp = TextPainter(
           text: TextSpan(
             text: 'Ch${node.chapter}',

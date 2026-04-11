@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:sqflite/sqflite.dart';
 import 'database_helper.dart';
 
@@ -268,119 +269,115 @@ class AssessmentDao {
   //  示例数据初始化（教学演示用）
   // ══════════════════════════════════════════════════════════
 
+  /// 已废弃：不再插入虚拟数据（张三李四等）。
+  /// 改由 [syncGroupsFromStudentData] 从 JSON 同步真实学生数据。
   Future<void> initDemoDataIfEmpty() async {
+    // no-op — 保留方法签名以兼容旧调用点
+  }
+
+  /// 从学生列表同步分组 / 项目 / 答辩数据（替代旧的虚拟数据）。
+  /// 以 `repo` 字段为单位分组，幂等操作。
+  Future<void> syncGroupsFromStudentData(
+      List<Map<String, dynamic>> students) async {
+    if (students.isEmpty) return;
     final db = await DatabaseHelper.instance.database;
-    final count =
-        await db.rawQuery('SELECT COUNT(*) as c FROM assessment_groups');
-    if ((count.first['c'] as int? ?? 0) > 0) return;
 
-    // 插入示例分组
-    final g1 = await addGroup(
-      name: '第1组',
-      leader: '张三',
-      memberNames: ['张三', '李四', '王五', '赵六', '孙七', '周八'],
-      projectName: '智慧校园生活服务平台',
-    );
-    final g2 = await addGroup(
-      name: '第2组',
-      leader: '陈九',
-      memberNames: ['陈九', '吴十', '郑一', '钱二', '冯三', '褚四'],
-      projectName: '在线学习辅助平台',
-    );
-    final g3 = await addGroup(
-      name: '第3组',
-      leader: '卫五',
-      memberNames: ['卫五', '蒋六', '沈七', '韩八', '杨九', '朱十'],
-      projectName: '智能健康运动记录平台',
-    );
-    final g4 = await addGroup(
-      name: '第4组',
-      leader: '秦一',
-      memberNames: ['秦一', '许二', '何三', '吕四', '施五', '张六'],
-      projectName: '二手物品交易平台',
-    );
+    // ── 1. 清理不属于真实 repo 的旧数据 ─────────────────────────
+    final validRepos = students
+        .map((s) => s['repo'] as String?)
+        .where((r) => r != null && r.isNotEmpty)
+        .toSet();
+    final oldGroups = await db.query('assessment_groups');
+    for (final g in oldGroups) {
+      final groupName = g['name'] as String? ?? '';
+      if (!validRepos.contains(groupName)) {
+        final gId = g['id'] as int;
+        // 级联删除关联的答辩、评分、项目
+        await db.delete('defense_records',
+            where: 'group_id = ?', whereArgs: [gId]);
+        final linkedProjects = await db.query('assessment_projects',
+            where: 'group_id = ?', whereArgs: [gId]);
+        for (final p in linkedProjects) {
+          await db.delete('project_scores',
+              where: 'project_id = ?', whereArgs: [p['id'] as int]);
+        }
+        await db.delete('assessment_projects',
+            where: 'group_id = ?', whereArgs: [gId]);
+        await db.delete('assessment_groups',
+            where: 'id = ?', whereArgs: [gId]);
+      }
+    }
 
-    // 插入示例项目
-    final p1 = await addProject(
-        groupId: g1,
-        name: '智慧校园生活服务平台',
-        description: '面向高校师生的跨平台校园服务，整合课表、场馆预约、校园导航等功能',
-        techStack: 'Flutter + Android 原生 + UniApp',
+    // ── 2. 按 repo 分组 ───────────────────────────────────────
+    final Map<String, List<Map<String, dynamic>>> byRepo = {};
+    for (final s in students) {
+      final repo = s['repo'] as String? ?? '';
+      if (repo.isEmpty) continue;
+      byRepo.putIfAbsent(repo, () => []).add(s);
+    }
+
+    // ── 3. 为每个 repo 创建 group + project + defense（幂等）────
+    final rng = Random(42);
+    int defenseIdx = 0;
+    final sortedEntries = byRepo.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+
+    for (final entry in sortedEntries) {
+      final repo = entry.key;
+      final members = entry.value;
+
+      // 已存在则跳过
+      final existing = await db.query('assessment_groups',
+          where: 'name = ?', whereArgs: [repo]);
+      if (existing.isNotEmpty) continue;
+
+      final leader = members.first;
+      final projectName = leader['project'] as String? ?? '未命名项目';
+      final memberNames =
+          members.map((m) => m['name'] as String? ?? '').toList();
+      final memberIds =
+          members.map((m) => m['userId'] as String? ?? '').toList();
+      final techStacks = members
+          .map((m) => m['techStack'] as String? ?? '')
+          .where((s) => s.isNotEmpty)
+          .toSet()
+          .join(' / ');
+
+      // 创建分组
+      final gId = await addGroup(
+        name: repo,
+        leader: leader['name'] as String?,
+        memberIds: memberIds,
+        memberNames: memberNames,
+        projectName: projectName,
+      );
+
+      // 创建项目
+      final pId = await addProject(
+        groupId: gId,
+        name: projectName,
+        description: leader['feature_detail'] as String? ??
+            leader['features'] as String? ??
+            '',
+        techStack: techStacks,
         status: '开发中',
-        progress: 0.65);
-    final p2 = await addProject(
-        groupId: g2,
-        name: '在线学习辅助平台',
-        description: '提供在线学习、笔记管理、学习计划和协作讨论功能',
-        techStack: 'Flutter + React Native + 小程序',
-        status: '开发中',
-        progress: 0.50);
-    final p3 = await addProject(
-        groupId: g3,
-        name: '智能健康运动记录平台',
-        description: '记录运动轨迹、健康数据分析、社交分享健身成果',
-        techStack: 'Flutter + HarmonyOS + iOS',
-        status: '设计阶段',
-        progress: 0.30);
-    final p4 = await addProject(
-        groupId: g4,
-        name: '二手物品交易平台',
-        description: '校园二手商品发布、搜索、即时聊天、交易管理',
-        techStack: 'Flutter + 小程序 + Android',
-        status: '测试阶段',
-        progress: 0.80);
+        progress: 0.3 + rng.nextDouble() * 0.5,
+      );
 
-    // 插入示例评分
-    await addScore(
-        projectId: p1,
-        groupId: g1,
-        scorerId: '206004',
-        functionality: 23,
-        techDepth: 18,
-        integration: 22,
-        quality: 13,
-        documentation: 14,
-        comment: '功能完整，技术栈选型合理，UI 交互流畅');
-    await addScore(
-        projectId: p2,
-        groupId: g2,
-        scorerId: '206004',
-        functionality: 21,
-        techDepth: 17,
-        integration: 20,
-        quality: 13,
-        documentation: 12,
-        comment: '学习功能全面，建议优化笔记同步性能');
-    await addScore(
-        projectId: p3,
-        groupId: g3,
-        scorerId: '206004',
-        functionality: 20,
-        techDepth: 16,
-        integration: 20,
-        quality: 12,
-        documentation: 12,
-        comment: '运动记录功能扎实，HarmonyOS 适配值得肯定');
-    await addScore(
-        projectId: p4,
-        groupId: g4,
-        scorerId: '206004',
-        functionality: 22,
-        techDepth: 18,
-        integration: 21,
-        quality: 14,
-        documentation: 13,
-        comment: '交易流程完善，即时聊天功能亮点突出');
-
-    // 插入示例答辩
-    await addDefenseRecord(
-        groupId: g1, projectId: p1, scheduledTime: '第16周 周一 9:00-9:15');
-    await addDefenseRecord(
-        groupId: g2, projectId: p2, scheduledTime: '第16周 周一 9:15-9:30');
-    await addDefenseRecord(
-        groupId: g3, projectId: p3, scheduledTime: '第16周 周一 9:30-9:45');
-    await addDefenseRecord(
-        groupId: g4, projectId: p4, scheduledTime: '第16周 周一 9:45-10:00');
+      // 创建答辩安排
+      defenseIdx++;
+      final days = ['周一', '周二', '周三', '周四', '周五'];
+      final day = days[(defenseIdx - 1) % 5];
+      final hour = 9 + ((defenseIdx - 1) ~/ 5);
+      final minute = ((defenseIdx - 1) % 4) * 15;
+      final timeStr =
+          '第16周 $day ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+      await addDefenseRecord(
+        groupId: gId,
+        projectId: pId,
+        scheduledTime: timeStr,
+      );
+    }
   }
 
   // ══════════════════════════════════════════════════════════
@@ -422,5 +419,177 @@ class AssessmentDao {
   Future<int> deleteSubmittedReport(int id) async {
     final db = await DatabaseHelper.instance.database;
     return db.delete('student_reports', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // ══════════════════════════════════════════════════════════
+  //  贡献度评分
+  // ══════════════════════════════════════════════════════════
+
+  /// 确保贡献度评分表存在
+  Future<void> _ensureContributionTable() async {
+    final db = await DatabaseHelper.instance.database;
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS contribution_scores(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        target_user_id TEXT NOT NULL,
+        target_user_name TEXT,
+        scorer_user_id TEXT NOT NULL,
+        scorer_user_name TEXT,
+        scorer_type TEXT NOT NULL DEFAULT 'peer',
+        repo TEXT,
+        dimension TEXT NOT NULL DEFAULT 'individual',
+        code_contribution INTEGER DEFAULT 0,
+        doc_contribution INTEGER DEFAULT 0,
+        teamwork_score INTEGER DEFAULT 0,
+        initiative_score INTEGER DEFAULT 0,
+        quality_score INTEGER DEFAULT 0,
+        overall_score INTEGER DEFAULT 0,
+        comment TEXT,
+        scored_at TEXT,
+        UNIQUE(target_user_id, scorer_user_id, dimension)
+      )
+    ''');
+  }
+
+  /// 提交贡献度评分（upsert：已存在则更新）
+  Future<int> submitContributionScore({
+    required String targetUserId,
+    String? targetUserName,
+    required String scorerUserId,
+    String? scorerUserName,
+    required String scorerType, // self / peer / teacher
+    String? repo,
+    required String dimension, // individual / group / project
+    required int codeContribution,
+    required int docContribution,
+    required int teamworkScore,
+    required int initiativeScore,
+    required int qualityScore,
+    String? comment,
+  }) async {
+    await _ensureContributionTable();
+    final db = await DatabaseHelper.instance.database;
+    final overall = codeContribution + docContribution + teamworkScore +
+        initiativeScore + qualityScore;
+
+    // 先查是否已存在
+    final existing = await db.query('contribution_scores',
+        where:
+            'target_user_id = ? AND scorer_user_id = ? AND dimension = ?',
+        whereArgs: [targetUserId, scorerUserId, dimension]);
+
+    if (existing.isNotEmpty) {
+      return db.update(
+          'contribution_scores',
+          {
+            'target_user_name': targetUserName,
+            'scorer_user_name': scorerUserName,
+            'scorer_type': scorerType,
+            'repo': repo,
+            'code_contribution': codeContribution,
+            'doc_contribution': docContribution,
+            'teamwork_score': teamworkScore,
+            'initiative_score': initiativeScore,
+            'quality_score': qualityScore,
+            'overall_score': overall,
+            'comment': comment,
+            'scored_at': DateTime.now().toIso8601String(),
+          },
+          where:
+              'target_user_id = ? AND scorer_user_id = ? AND dimension = ?',
+          whereArgs: [targetUserId, scorerUserId, dimension]);
+    }
+
+    return db.insert('contribution_scores', {
+      'target_user_id': targetUserId,
+      'target_user_name': targetUserName,
+      'scorer_user_id': scorerUserId,
+      'scorer_user_name': scorerUserName,
+      'scorer_type': scorerType,
+      'repo': repo,
+      'dimension': dimension,
+      'code_contribution': codeContribution,
+      'doc_contribution': docContribution,
+      'teamwork_score': teamworkScore,
+      'initiative_score': initiativeScore,
+      'quality_score': qualityScore,
+      'overall_score': overall,
+      'comment': comment,
+      'scored_at': DateTime.now().toIso8601String(),
+    });
+  }
+
+  /// 获取某用户收到的所有评分
+  Future<List<Map<String, dynamic>>> getContributionScoresForUser(
+      String userId) async {
+    await _ensureContributionTable();
+    final db = await DatabaseHelper.instance.database;
+    return db.query('contribution_scores',
+        where: 'target_user_id = ?',
+        whereArgs: [userId],
+        orderBy: 'scored_at DESC');
+  }
+
+  /// 获取某用户给出的所有评分
+  Future<List<Map<String, dynamic>>> getContributionScoresByScorer(
+      String scorerUserId) async {
+    await _ensureContributionTable();
+    final db = await DatabaseHelper.instance.database;
+    return db.query('contribution_scores',
+        where: 'scorer_user_id = ?',
+        whereArgs: [scorerUserId],
+        orderBy: 'scored_at DESC');
+  }
+
+  /// 获取某仓库（项目组）的所有贡献度评分
+  Future<List<Map<String, dynamic>>> getContributionScoresByRepo(
+      String repo) async {
+    await _ensureContributionTable();
+    final db = await DatabaseHelper.instance.database;
+    return db.query('contribution_scores',
+        where: 'repo = ?', whereArgs: [repo], orderBy: 'overall_score DESC');
+  }
+
+  /// 获取某用户某维度的综合得分（平均值）
+  Future<Map<String, double>> getContributionSummary(String userId) async {
+    await _ensureContributionTable();
+    final db = await DatabaseHelper.instance.database;
+    final result = await db.rawQuery('''
+      SELECT
+        AVG(code_contribution) as avg_code,
+        AVG(doc_contribution) as avg_doc,
+        AVG(teamwork_score) as avg_teamwork,
+        AVG(initiative_score) as avg_initiative,
+        AVG(quality_score) as avg_quality,
+        AVG(overall_score) as avg_overall,
+        COUNT(*) as total_reviews
+      FROM contribution_scores
+      WHERE target_user_id = ?
+    ''', [userId]);
+    if (result.isNotEmpty) {
+      final r = result.first;
+      return {
+        'code': (r['avg_code'] as num?)?.toDouble() ?? 0,
+        'doc': (r['avg_doc'] as num?)?.toDouble() ?? 0,
+        'teamwork': (r['avg_teamwork'] as num?)?.toDouble() ?? 0,
+        'initiative': (r['avg_initiative'] as num?)?.toDouble() ?? 0,
+        'quality': (r['avg_quality'] as num?)?.toDouble() ?? 0,
+        'overall': (r['avg_overall'] as num?)?.toDouble() ?? 0,
+        'totalReviews': (r['total_reviews'] as num?)?.toDouble() ?? 0,
+      };
+    }
+    return {'code': 0, 'doc': 0, 'teamwork': 0, 'initiative': 0, 'quality': 0, 'overall': 0, 'totalReviews': 0};
+  }
+
+  /// 检查是否已评分
+  Future<bool> hasScored(
+      String scorerUserId, String targetUserId, String dimension) async {
+    await _ensureContributionTable();
+    final db = await DatabaseHelper.instance.database;
+    final result = await db.query('contribution_scores',
+        where:
+            'scorer_user_id = ? AND target_user_id = ? AND dimension = ?',
+        whereArgs: [scorerUserId, targetUserId, dimension]);
+    return result.isNotEmpty;
   }
 }

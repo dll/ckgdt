@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:open_filex/open_filex.dart';
+import '../../../core/constants/app_theme.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/course_resource_service.dart';
 import '../../../data/local/assessment_dao.dart';
@@ -23,6 +24,8 @@ class _AssessmentPageState extends State<AssessmentPage>
   final _assessmentDao = AssessmentDao();
   bool _initialized = false;
 
+  bool get _isStudent => !_authService.isTeacher && !_authService.isAdmin;
+
   @override
   void initState() {
     super.initState();
@@ -32,7 +35,12 @@ class _AssessmentPageState extends State<AssessmentPage>
 
   Future<void> _initDemoData() async {
     try {
-      await _assessmentDao.initDemoDataIfEmpty();
+      final jsonStr =
+          await rootBundle.loadString('assets/student_group_data.json');
+      final List<dynamic> decoded = jsonDecode(jsonStr);
+      final students =
+          decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+      await _assessmentDao.syncGroupsFromStudentData(students);
     } catch (_) {}
     if (mounted) {
       setState(() => _initialized = true);
@@ -48,6 +56,7 @@ class _AssessmentPageState extends State<AssessmentPage>
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
+    final gradient = AppGradientTheme.of(context);
 
     if (!_initialized) {
       return const Center(child: CircularProgressIndicator());
@@ -55,15 +64,113 @@ class _AssessmentPageState extends State<AssessmentPage>
 
     return Column(
       children: [
-        // Tab 栏
         Container(
-          color: primary.withValues(alpha: 0.05),
+          margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: gradient.linearGradient,
+            boxShadow: [
+              BoxShadow(
+                color: gradient.gradientStart.withValues(alpha: 0.18),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(Icons.assessment,
+                          color: Colors.white, size: 24),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            '课程考核工作台',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _isStudent
+                                ? '聚焦项目、贡献、报告与答辩，完成课程考核闭环。'
+                                : '统一管理分组、评分、答辩、报告与成绩，形成完整考核流程。',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.white.withValues(alpha: 0.88),
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    _buildHeaderRoleBadge(),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: const [
+                    _AssessmentTopStat(
+                        label: '分组', value: '5类', icon: Icons.groups),
+                    _AssessmentTopStat(
+                        label: '项目', value: '多视图', icon: Icons.assignment),
+                    _AssessmentTopStat(
+                        label: '贡献', value: '3维度', icon: Icons.star_rate),
+                    _AssessmentTopStat(
+                        label: '答辩', value: '流程化', icon: Icons.record_voice_over),
+                    _AssessmentTopStat(
+                        label: '报告', value: '4份', icon: Icons.summarize),
+                    _AssessmentTopStat(
+                        label: '成绩', value: '排行', icon: Icons.leaderboard),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        Container(
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: primary.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: primary.withValues(alpha: 0.12)),
+          ),
           child: TabBar(
             controller: _tabController,
             isScrollable: true,
+            dividerColor: Colors.transparent,
             labelColor: primary,
             unselectedLabelColor: Colors.grey,
-            indicatorColor: primary,
+            indicator: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: primary.withValues(alpha: 0.10),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
             tabs: const [
               Tab(icon: Icon(Icons.groups, size: 18), text: '分组'),
               Tab(icon: Icon(Icons.assignment, size: 18), text: '项目'),
@@ -90,6 +197,71 @@ class _AssessmentPageState extends State<AssessmentPage>
       ],
     );
   }
+
+  Widget _buildHeaderRoleBadge() {
+    final label = _authService.isAdmin
+        ? '管理员视角'
+        : _authService.isTeacher
+            ? '教师视角'
+            : '学生视角';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 顶部统计小组件
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _AssessmentTopStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  const _AssessmentTopStat({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: Colors.white.withValues(alpha: 0.85)),
+          const SizedBox(width: 5),
+          Text(
+            '$label $value',
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.white.withValues(alpha: 0.92),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -102,7 +274,8 @@ enum _GroupDimension {
   classGroup('班组', 'classGroup', Icons.class_, Colors.teal),
   project('项目', 'project', Icons.science, Colors.purple),
   role('角色', 'role', Icons.engineering, Colors.orange),
-  techStack('技术栈', 'techStack', Icons.code, Colors.indigo);
+  techStack('技术栈', 'techStack', Icons.code, Colors.indigo),
+  features('特色功能', 'features', Icons.auto_awesome, Colors.deepOrange);
 
   final String label;
   final String jsonKey;
@@ -202,11 +375,27 @@ class _GroupTabState extends State<_GroupTab>
   /// 按指定维度对学生进行分组
   List<_GroupEntry> _computeGroups(_GroupDimension dim) {
     final Map<String, List<Map<String, dynamic>>> grouped = {};
-    for (final s in _allStudents) {
-      final key = (s[dim.jsonKey] as String?)?.trim() ?? '未分配';
-      grouped.putIfAbsent(key, () => []).add(s);
+
+    if (dim == _GroupDimension.features) {
+      // 特色功能维度：按逗号分隔的 features 字段拆分，一人可属多组
+      for (final s in _allStudents) {
+        final featuresStr = (s['features'] as String?)?.trim() ?? '';
+        if (featuresStr.isEmpty) continue;
+        final featureList = featuresStr
+            .split(RegExp(r'[,、，]'))
+            .map((f) => f.trim())
+            .where((f) => f.isNotEmpty);
+        for (final f in featureList) {
+          grouped.putIfAbsent(f, () => []).add(s);
+        }
+      }
+    } else {
+      for (final s in _allStudents) {
+        final key = (s[dim.jsonKey] as String?)?.trim() ?? '未分配';
+        grouped.putIfAbsent(key, () => []).add(s);
+      }
     }
-    // 排序：按分组名称
+
     final sortedKeys = grouped.keys.toList()..sort();
     return sortedKeys.map((key) {
       final members = grouped[key]!;
@@ -253,25 +442,52 @@ class _GroupTabState extends State<_GroupTab>
 
     return Column(
       children: [
-        // 学生：显示个人信息卡片
+        // 学生：显示个人信息卡片（精简版）
         if (_isStudent && _myInfo != null && _myInfo!.isNotEmpty)
           Container(
             margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.blue.withValues(alpha: 0.06),
+              gradient: LinearGradient(
+                colors: [
+                  Colors.blue.withValues(alpha: 0.08),
+                  Colors.purple.withValues(alpha: 0.06),
+                ],
+              ),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: Colors.blue.withValues(alpha: 0.15)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.person, color: Colors.blue, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: Colors.blue.withValues(alpha: 0.2),
                   child: Text(
-                    '${_myInfo!['name']} · ${_myInfo!['repo']} · ${_myInfo!['role']}',
-                    style: const TextStyle(fontSize: 12, color: Colors.blue),
-                    overflow: TextOverflow.ellipsis,
+                    (_myInfo!['name'] as String? ?? '').isNotEmpty
+                        ? (_myInfo!['name'] as String).substring(0, 1)
+                        : '?',
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue[700]),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${_myInfo!['name']} · ${_myInfo!['role']}',
+                        style: const TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                      Text(
+                        '${_myInfo!['repo']} · ${_myInfo!['techStack']}',
+                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -315,11 +531,14 @@ class _GroupTabState extends State<_GroupTab>
                       ]),
                     ),
                   ])
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                    itemCount: groups.length,
-                    itemBuilder: (ctx, i) => _buildGroupCard(groups[i], i),
-                  ),
+                : _currentDim == _GroupDimension.features
+                    ? _buildFeaturesView(groups)
+                    : ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                        itemCount: groups.length,
+                        itemBuilder: (ctx, i) =>
+                            _buildGroupCard(groups[i], i),
+                      ),
           ),
         ),
       ],
@@ -344,15 +563,36 @@ class _GroupTabState extends State<_GroupTab>
   Widget _statCard(String label, String value, IconData icon, Color color) {
     return Expanded(
       child: Card(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            gradient: LinearGradient(
+              colors: [
+                color.withValues(alpha: 0.08),
+                color.withValues(alpha: 0.02),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
           child: Column(
             children: [
-              Icon(icon, color: color, size: 22),
-              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(height: 8),
               Text(value,
                   style: TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold, color: color)),
+                      fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+              const SizedBox(height: 2),
               Text(label,
                   style: TextStyle(fontSize: 11, color: Colors.grey[500])),
             ],
@@ -364,54 +604,418 @@ class _GroupTabState extends State<_GroupTab>
 
   Widget _buildGroupCard(_GroupEntry group, int index) {
     final color = _currentDim.color;
-    // 根据当前维度决定展示的附加信息
     final subtitle = _buildSubtitle(group);
+    final userId = widget.authService.getCurrentUserId();
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ExpansionTile(
-        leading: CircleAvatar(
-          backgroundColor: color.withValues(alpha: 0.12),
-          child: Text('${group.memberCount}',
-              style: TextStyle(
-                  fontWeight: FontWeight.bold, color: color, fontSize: 14)),
-        ),
-        title: Text(group.groupName,
-            style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(subtitle,
-            style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 2,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border(
+              left: BorderSide(color: color, width: 4),
+            ),
+          ),
+          child: ExpansionTile(
+            leading: Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: color.withValues(alpha: 0.2)),
+              ),
+              child: Center(
+                child: Text('${group.memberCount}',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                        fontSize: 15)),
+              ),
+            ),
+            title: Text(group.groupName,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w700, fontSize: 14)),
+            subtitle: Text(subtitle,
+                style: TextStyle(fontSize: 12, color: Colors.grey[500])),
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('成员列表 (${group.memberCount}人)',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 13)),
-                const SizedBox(height: 8),
-                // 成员表格
-                _buildMemberTable(group.members),
-              ],
+            child: _isStudent
+                ? _buildStudentMemberCards(group.members, userId)
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('成员列表 (${group.memberCount}人)',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 13)),
+                      const SizedBox(height: 8),
+                      _buildMemberTable(group.members),
+                    ],
+                  ),
+          ),
+          ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 学生视图：卡片式成员列表（根据维度显示不同重点信息）
+  Widget _buildStudentMemberCards(
+      List<Map<String, dynamic>> members, String? userId) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: members.map((m) {
+        final name = m['name'] as String? ?? '';
+        final isMe = m['userId'] == userId;
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isMe
+                ? Colors.orange.withValues(alpha: 0.06)
+                : Colors.grey.withValues(alpha: 0.03),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isMe
+                  ? Colors.orange.withValues(alpha: 0.25)
+                  : Colors.grey.withValues(alpha: 0.12),
             ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 头部：头像 + 姓名 + 标签
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 14,
+                    backgroundColor: isMe
+                        ? Colors.orange.withValues(alpha: 0.2)
+                        : _currentDim.color.withValues(alpha: 0.15),
+                    child: Text(
+                      name.isNotEmpty ? name.substring(0, 1) : '?',
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: isMe
+                              ? Colors.orange[800]
+                              : _currentDim.color),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(name,
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w600)),
+                  if (isMe) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: Colors.orange,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text('我',
+                          style: TextStyle(
+                              fontSize: 9,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                  const Spacer(),
+                  // 维度相关的标签
+                  _buildDimBadge(m),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // 根据维度显示不同的重点信息（避免重复）
+              ..._buildDimSpecificInfo(m),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  /// 维度标签
+  Widget _buildDimBadge(Map<String, dynamic> m) {
+    String text;
+    Color badgeColor;
+    switch (_currentDim) {
+      case _GroupDimension.repo:
+        text = m['role'] as String? ?? '';
+        badgeColor = Colors.orange;
+      case _GroupDimension.classGroup:
+        text = m['repo'] as String? ?? '';
+        badgeColor = Colors.blue;
+      case _GroupDimension.project:
+        text = m['techStack'] as String? ?? '';
+        badgeColor = Colors.indigo;
+      case _GroupDimension.role:
+        text = m['techStack'] as String? ?? '';
+        badgeColor = Colors.indigo;
+      case _GroupDimension.techStack:
+        text = m['role'] as String? ?? '';
+        badgeColor = Colors.orange;
+      case _GroupDimension.features:
+        text = m['techStack'] as String? ?? '';
+        badgeColor = Colors.indigo;
+    }
+    if (text.isEmpty) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: badgeColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(text,
+          style: TextStyle(
+              fontSize: 10, color: badgeColor, fontWeight: FontWeight.w500),
+          overflow: TextOverflow.ellipsis),
+    );
+  }
+
+  /// 根据维度显示不同的重点信息
+  List<Widget> _buildDimSpecificInfo(Map<String, dynamic> m) {
+    final widgets = <Widget>[];
+    final coreDuty = m['coreDuty'] as String? ?? '';
+    final features = m['features'] as String? ?? '';
+
+    switch (_currentDim) {
+      case _GroupDimension.repo:
+        // 仓库维度：显示核心职责 + 特色功能
+        if (coreDuty.isNotEmpty)
+          widgets.add(_infoLine(Icons.work_outline, '职责', coreDuty));
+        if (features.isNotEmpty)
+          widgets.add(_infoLine(Icons.auto_awesome, '功能', features));
+      case _GroupDimension.classGroup:
+        // 班组维度：显示项目 + 角色
+        widgets.add(_infoLine(
+            Icons.science, '项目', m['project'] as String? ?? ''));
+        widgets.add(
+            _infoLine(Icons.engineering, '角色', m['role'] as String? ?? ''));
+      case _GroupDimension.project:
+        // 项目维度：显示角色 + 核心职责
+        widgets.add(
+            _infoLine(Icons.engineering, '角色', m['role'] as String? ?? ''));
+        if (coreDuty.isNotEmpty)
+          widgets.add(_infoLine(Icons.work_outline, '职责', coreDuty));
+      case _GroupDimension.role:
+        // 角色维度：显示项目 + 核心职责
+        widgets.add(_infoLine(
+            Icons.science, '项目', m['project'] as String? ?? ''));
+        if (coreDuty.isNotEmpty)
+          widgets.add(_infoLine(Icons.work_outline, '职责', coreDuty));
+      case _GroupDimension.techStack:
+        // 技术栈维度：显示项目 + 特色功能
+        widgets.add(_infoLine(
+            Icons.science, '项目', m['project'] as String? ?? ''));
+        if (features.isNotEmpty)
+          widgets.add(_infoLine(Icons.auto_awesome, '功能', features));
+      case _GroupDimension.features:
+        // 特色功能维度：显示项目 + 角色 + 核心职责
+        widgets.add(_infoLine(
+            Icons.science, '项目', m['project'] as String? ?? ''));
+        widgets.add(
+            _infoLine(Icons.engineering, '角色', m['role'] as String? ?? ''));
+        if (coreDuty.isNotEmpty)
+          widgets.add(_infoLine(Icons.work_outline, '职责', coreDuty));
+    }
+    return widgets;
+  }
+
+  Widget _infoLine(IconData icon, String label, String value) {
+    if (value.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 14, color: Colors.grey[400]),
+          const SizedBox(width: 6),
+          Text('$label: ',
+              style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey[500],
+                  fontWeight: FontWeight.w500)),
+          Expanded(
+            child: Text(value, style: const TextStyle(fontSize: 11)),
           ),
         ],
       ),
     );
   }
 
+  /// 特色功能维度：专用视图（功能卡片 + 关联成员）
+  Widget _buildFeaturesView(List<_GroupEntry> groups) {
+    final userId = widget.authService.getCurrentUserId();
+    // 加载功能详解数据
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      itemCount: groups.length,
+      itemBuilder: (ctx, i) {
+        final group = groups[i];
+        final featureName = group.groupName;
+
+        // 从成员的 feature_detail 中提取该功能的详细描述
+        String? detailDesc;
+        for (final m in group.members) {
+          final fd = m['feature_detail'] as String? ?? '';
+          final regex = RegExp('【${RegExp.escape(featureName)}】([^【]*)');
+          final match = regex.firstMatch(fd);
+          if (match != null) {
+            detailDesc = match.group(1)?.trim();
+            break;
+          }
+        }
+
+        // 涉及的项目
+        final projects = group.members
+            .map((m) => m['project'] as String? ?? '')
+            .where((p) => p.isNotEmpty)
+            .toSet()
+            .toList();
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 功能名称
+                Row(
+                  children: [
+                    Icon(Icons.auto_awesome,
+                        size: 18, color: Colors.deepOrange[400]),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(featureName,
+                          style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.deepOrange[700])),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.deepOrange.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text('${group.memberCount}人',
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.deepOrange[600],
+                              fontWeight: FontWeight.w500)),
+                    ),
+                  ],
+                ),
+                // 功能描述
+                if (detailDesc != null && detailDesc.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.deepOrange.withValues(alpha: 0.04),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                          color: Colors.deepOrange.withValues(alpha: 0.12)),
+                    ),
+                    child: Text(detailDesc,
+                        style: const TextStyle(fontSize: 12, height: 1.5)),
+                  ),
+                ],
+                // 涉及项目
+                if (projects.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: projects
+                        .map((p) => Chip(
+                              label: Text(p,
+                                  style: const TextStyle(fontSize: 10)),
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                              visualDensity: VisualDensity.compact,
+                              backgroundColor:
+                                  Colors.purple.withValues(alpha: 0.08),
+                              side: BorderSide(
+                                  color:
+                                      Colors.purple.withValues(alpha: 0.15)),
+                            ))
+                        .toList(),
+                  ),
+                ],
+                // 关联成员
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: group.members.map((m) {
+                    final name = m['name'] as String? ?? '';
+                    final isMe = m['userId'] == userId;
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isMe
+                            ? Colors.orange.withValues(alpha: 0.12)
+                            : Colors.grey.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: isMe
+                              ? Colors.orange.withValues(alpha: 0.3)
+                              : Colors.grey.withValues(alpha: 0.15),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(name,
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight:
+                                      isMe ? FontWeight.bold : FontWeight.normal,
+                                  color: isMe
+                                      ? Colors.orange[800]
+                                      : null)),
+                          if (isMe) ...[
+                            const SizedBox(width: 3),
+                            Icon(Icons.person,
+                                size: 12, color: Colors.orange[700]),
+                          ],
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   String _buildSubtitle(_GroupEntry group) {
     switch (_currentDim) {
       case _GroupDimension.repo:
-        // 展示项目
         final projects = group.members
             .map((m) => m['project'] as String? ?? '')
             .where((p) => p.isNotEmpty)
             .toSet();
         return '${group.memberCount}人 · ${projects.join(', ')}';
       case _GroupDimension.classGroup:
-        // 展示班级下有哪些仓库
         final repos = group.members
             .map((m) => m['repo'] as String? ?? '')
             .where((r) => r.isNotEmpty)
@@ -420,7 +1024,6 @@ class _GroupTabState extends State<_GroupTab>
           ..sort();
         return '${group.memberCount}人 · ${repos.length}个仓库';
       case _GroupDimension.project:
-        // 展示仓库
         final repos = group.members
             .map((m) => m['repo'] as String? ?? '')
             .where((r) => r.isNotEmpty)
@@ -429,19 +1032,24 @@ class _GroupTabState extends State<_GroupTab>
           ..sort();
         return '${group.memberCount}人 · ${repos.join(', ')}';
       case _GroupDimension.role:
-        // 展示角色下的技术栈统计
         final stacks = group.members
             .map((m) => m['techStack'] as String? ?? '')
             .where((s) => s.isNotEmpty)
             .toSet();
         return '${group.memberCount}人 · ${stacks.length}种技术栈';
       case _GroupDimension.techStack:
-        // 展示此技术栈对应的角色
         final roles = group.members
             .map((m) => m['role'] as String? ?? '')
             .where((r) => r.isNotEmpty)
             .toSet();
         return '${group.memberCount}人 · ${roles.join(', ')}';
+      case _GroupDimension.features:
+        // 显示涉及的项目
+        final projects = group.members
+            .map((m) => m['project'] as String? ?? '')
+            .where((p) => p.isNotEmpty)
+            .toSet();
+        return '${group.memberCount}人 · ${projects.length}个项目';
     }
   }
 
@@ -494,7 +1102,6 @@ class _GroupTabState extends State<_GroupTab>
           _ColDef('班组', 'classGroup', 60),
           _ColDef('角色', 'role', 140),
           _ColDef('特色功能', 'features', 350),
-          _ColDef('功能详解', 'feature_detail', 400),
         ];
       case _GroupDimension.classGroup:
         return [
@@ -516,7 +1123,6 @@ class _GroupTabState extends State<_GroupTab>
           _ColDef('仓库', 'repo', 100),
           _ColDef('技术栈', 'techStack', 140),
           _ColDef('特色功能', 'features', 350),
-          _ColDef('功能详解', 'feature_detail', 400),
         ];
       case _GroupDimension.techStack:
         return [
@@ -524,7 +1130,14 @@ class _GroupTabState extends State<_GroupTab>
           _ColDef('仓库', 'repo', 100),
           _ColDef('角色', 'role', 140),
           _ColDef('特色功能', 'features', 350),
-          _ColDef('功能详解', 'feature_detail', 400),
+        ];
+      case _GroupDimension.features:
+        return [
+          ...base,
+          _ColDef('仓库', 'repo', 100),
+          _ColDef('项目', 'project', 160),
+          _ColDef('角色', 'role', 140),
+          _ColDef('技术栈', 'techStack', 140),
         ];
     }
   }
@@ -765,6 +1378,14 @@ class _ProjectTabState extends State<_ProjectTab> {
 
     final canEdit = widget.authService.isTeacher || widget.authService.isAdmin;
 
+    // 学生视图：显示详细的项目信息页
+    if (_isStudent && _jsonProjects.isNotEmpty) {
+      return RefreshIndicator(
+        onRefresh: _loadData,
+        child: _buildStudentProjectDetail(_jsonProjects.first),
+      );
+    }
+
     return Stack(
       children: [
         RefreshIndicator(
@@ -791,7 +1412,7 @@ class _ProjectTabState extends State<_ProjectTab> {
                     // JSON项目数据（来自分组Excel）
                     if (_jsonProjects.isNotEmpty) ...[
                       Text(
-                        _isStudent ? '我的项目' : '项目 (${_jsonProjects.length})',
+                        '项目 (${_jsonProjects.length})',
                         style: const TextStyle(
                             fontSize: 16, fontWeight: FontWeight.bold),
                       ),
@@ -822,6 +1443,322 @@ class _ProjectTabState extends State<_ProjectTab> {
             ),
           ),
       ],
+    );
+  }
+
+  /// 学生视图：完整的项目详情页
+  Widget _buildStudentProjectDetail(Map<String, dynamic> project) {
+    final name = project['name'] as String? ?? '';
+    final repo = project['repo'] as String? ?? '';
+    final techStack = project['tech_stack'] as String? ?? '';
+    final memberCount = project['member_count'] as int? ?? 0;
+    final members = (project['members'] as List<Map<String, dynamic>>?) ?? [];
+    final classGroup = project['classGroup'] as String? ?? '';
+    final featureDetail = project['feature_detail'] as String? ?? '';
+    final userId = widget.authService.getCurrentUserId();
+
+    // 找到当前学生的个人信息
+    final myInfo = members.firstWhere(
+      (m) => m['userId'] == userId,
+      orElse: () => <String, dynamic>{},
+    );
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // ── 项目概览卡片 ──
+        _buildDetailCard(
+          icon: Icons.folder_special,
+          iconColor: Colors.blue,
+          title: '项目概览',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(name,
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              _buildDetailRow('仓库名称', repo, Icons.source),
+              _buildDetailRow('所属班组', classGroup, Icons.class_),
+              _buildDetailRow('技术栈', techStack, Icons.code),
+              _buildDetailRow('团队规模', '$memberCount 人', Icons.groups),
+              _buildDetailRow('项目状态', '开发中', Icons.trending_up),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // ── 项目功能详解 ──
+        if (featureDetail.isNotEmpty) ...[
+          _buildDetailCard(
+            icon: Icons.auto_awesome,
+            iconColor: Colors.purple,
+            title: '项目功能详解',
+            child: _buildFeatureDetailContent(featureDetail),
+          ),
+          const SizedBox(height: 12),
+        ],
+
+        // ── 我的职责（当前学生） ──
+        if (myInfo.isNotEmpty) ...[
+          _buildDetailCard(
+            icon: Icons.person,
+            iconColor: Colors.orange,
+            title: '我的职责',
+            child: _buildMyRoleContent(myInfo),
+          ),
+          const SizedBox(height: 12),
+        ],
+
+        // ── 我的功能详解 ──
+        if (myInfo.isNotEmpty &&
+            (myInfo['feature_detail'] as String? ?? '').isNotEmpty) ...[
+          _buildDetailCard(
+            icon: Icons.extension,
+            iconColor: Colors.teal,
+            title: '我的功能详解',
+            child:
+                _buildFeatureDetailContent(myInfo['feature_detail'] as String),
+          ),
+          const SizedBox(height: 12),
+        ],
+
+        // ── 团队成员 ──
+        _buildDetailCard(
+          icon: Icons.people,
+          iconColor: Colors.indigo,
+          title: '团队成员（$memberCount 人）',
+          child: Column(
+            children: members
+                .map((m) => _buildTeamMemberTile(m, isMe: m['userId'] == userId))
+                .toList(),
+          ),
+        ),
+
+        // ── 备注信息 ──
+        if (myInfo.isNotEmpty &&
+            (myInfo['remark'] as String? ?? '').isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _buildDetailCard(
+            icon: Icons.info_outline,
+            iconColor: Colors.grey,
+            title: '备注',
+            child: Text(myInfo['remark'] as String? ?? '',
+                style: const TextStyle(fontSize: 13, height: 1.5)),
+          ),
+        ],
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  /// 通用详情卡片容器
+  Widget _buildDetailCard({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required Widget child,
+  }) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      elevation: 1,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 20, color: iconColor),
+                const SizedBox(width: 8),
+                Text(title,
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: iconColor)),
+              ],
+            ),
+            const Divider(height: 20),
+            child,
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 功能详解内容：按【】分段显示
+  Widget _buildFeatureDetailContent(String detail) {
+    // 按【】拆分为独立功能块
+    final regex = RegExp(r'【(.+?)】([^【]*)');
+    final matches = regex.allMatches(detail);
+    if (matches.isEmpty) {
+      return Text(detail, style: const TextStyle(fontSize: 13, height: 1.6));
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: matches.map((m) {
+        final featureName = m.group(1) ?? '';
+        final featureDesc = (m.group(2) ?? '').trim();
+        return Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.purple.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.purple.withValues(alpha: 0.15)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.star, size: 14, color: Colors.purple[400]),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(featureName,
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.purple[700])),
+                  ),
+                ],
+              ),
+              if (featureDesc.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(featureDesc,
+                    style: const TextStyle(fontSize: 12, height: 1.5)),
+              ],
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  /// 我的职责内容
+  Widget _buildMyRoleContent(Map<String, dynamic> info) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLabelValue('姓名', info['name'] as String? ?? ''),
+        _buildLabelValue('学号', info['userId'] as String? ?? ''),
+        _buildLabelValue('角色', info['role'] as String? ?? ''),
+        _buildLabelValue('技术栈', info['techStack'] as String? ?? ''),
+        _buildLabelValue('核心职责', info['coreDuty'] as String? ?? ''),
+        _buildLabelValue('特色功能', info['features'] as String? ?? ''),
+      ],
+    );
+  }
+
+  /// 标签-值行
+  Widget _buildLabelValue(String label, String value) {
+    if (value.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 72,
+            child: Text('$label',
+                style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500)),
+          ),
+          Expanded(
+            child: Text(value, style: const TextStyle(fontSize: 13)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 团队成员展开卡片
+  Widget _buildTeamMemberTile(Map<String, dynamic> m, {bool isMe = false}) {
+    final name = m['name'] as String? ?? '';
+    final role = m['role'] as String? ?? '';
+    final techStack = m['techStack'] as String? ?? '';
+    final coreDuty = m['coreDuty'] as String? ?? '';
+    final features = m['features'] as String? ?? '';
+    final featureDetail = m['feature_detail'] as String? ?? '';
+    final userId = m['userId'] as String? ?? '';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: isMe
+            ? Colors.orange.withValues(alpha: 0.06)
+            : Colors.grey.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isMe
+              ? Colors.orange.withValues(alpha: 0.3)
+              : Colors.grey.withValues(alpha: 0.15),
+        ),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+          childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          leading: CircleAvatar(
+            radius: 16,
+            backgroundColor: isMe
+                ? Colors.orange.withValues(alpha: 0.2)
+                : Colors.blue.withValues(alpha: 0.15),
+            child: Text(
+              name.isNotEmpty ? name.substring(0, 1) : '?',
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: isMe ? Colors.orange[800] : Colors.blue[700]),
+            ),
+          ),
+          title: Row(
+            children: [
+              Text(name,
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w600)),
+              if (isMe) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: Colors.orange,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text('我',
+                      style: TextStyle(
+                          fontSize: 9,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ],
+          ),
+          subtitle: Text('$role · $techStack',
+              style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+          children: [
+            if (userId.isNotEmpty)
+              _buildLabelValue('学号', userId),
+            _buildLabelValue('核心职责', coreDuty),
+            _buildLabelValue('特色功能', features),
+            if (featureDetail.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text('功能详解',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.purple[600])),
+              const SizedBox(height: 6),
+              _buildFeatureDetailContent(featureDetail),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
@@ -1254,7 +2191,7 @@ class _ProjectTabState extends State<_ProjectTab> {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// 贡献评分 Tab
+// 贡献评分 Tab — 自评 / 组员互评 / 教师评分，个人/小组/项目三维度
 // ══════════════════════════════════════════════════════════════════════════════
 
 class _ContributionTab extends StatefulWidget {
@@ -1265,250 +2202,1501 @@ class _ContributionTab extends StatefulWidget {
   State<_ContributionTab> createState() => _ContributionTabState();
 }
 
-class _ContributionTabState extends State<_ContributionTab> {
-  Map<String, dynamic>? _remoteAssessment;
+class _ContributionTabState extends State<_ContributionTab>
+    with SingleTickerProviderStateMixin {
+  late TabController _subTabController;
+  final _dao = AssessmentDao();
+  List<Map<String, dynamic>> _allStudents = [];
+  List<Map<String, dynamic>> _teamMembers = [];
+  List<Map<String, dynamic>> _visibleStudents = [];
+  List<Map<String, dynamic>> _visibleScores = [];
+  Map<String, dynamic>? _myInfo;
+  Map<String, double> _mySummary = {};
+  List<Map<String, dynamic>> _myScores = [];
+  List<Map<String, dynamic>> _givenScores = [];
+  List<Map<String, dynamic>> _teamScores = [];
   bool _loading = true;
+
+  bool get _isStudent =>
+      !widget.authService.isTeacher && !widget.authService.isAdmin;
+  bool get _isTeacherView => !_isStudent;
 
   @override
   void initState() {
     super.initState();
-    _loadAssessment();
+    _subTabController =
+        TabController(length: _isStudent ? 4 : 3, vsync: this);
+    _loadData();
   }
 
-  Future<void> _loadAssessment() async {
+  @override
+  void dispose() {
+    _subTabController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadData() async {
     try {
-      final data = await CourseResourceService().getAssessment();
-      if (mounted) {
-        setState(() {
-          _remoteAssessment = data;
-          _loading = false;
-        });
+      final jsonStr =
+          await rootBundle.loadString('assets/student_group_data.json');
+      final List<dynamic> decoded = jsonDecode(jsonStr);
+      _allStudents =
+          decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+
+      final userId = widget.authService.getCurrentUserId();
+
+      if (_isStudent && userId != null) {
+        _myInfo = _allStudents.firstWhere(
+          (s) => s['userId'] == userId,
+          orElse: () => <String, dynamic>{},
+        );
+        if (_myInfo != null && _myInfo!.isNotEmpty) {
+          final myRepo = _myInfo!['repo'] as String? ?? '';
+          _teamMembers = _allStudents.where((s) => s['repo'] == myRepo).toList();
+          _visibleStudents = _teamMembers;
+        }
+
+        _mySummary = await _dao.getContributionSummary(userId);
+        _myScores = await _dao.getContributionScoresForUser(userId);
+        _givenScores = await _dao.getContributionScoresByScorer(userId);
+        if (_myInfo != null && _myInfo!.isNotEmpty) {
+          _teamScores = await _dao.getContributionScoresByRepo(
+              _myInfo!['repo'] as String? ?? '');
+          _visibleScores = _teamScores;
+        }
+      } else {
+        _visibleStudents = _allStudents;
+        _visibleScores = await _loadAllVisibleScores();
+        _givenScores = userId != null
+            ? await _dao.getContributionScoresByScorer(userId)
+            : [];
       }
+
+      if (mounted) setState(() => _loading = false);
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
   }
 
+  Future<List<Map<String, dynamic>>> _loadAllVisibleScores() async {
+    final allScores = <Map<String, dynamic>>[];
+    final seen = <String>{};
+    for (final student in _allStudents) {
+      final uid = student['userId'] as String? ?? '';
+      final scores = await _dao.getContributionScoresForUser(uid);
+      for (final score in scores) {
+        final id = (score['id'] ?? '').toString();
+        if (id.isNotEmpty && seen.add(id)) {
+          allScores.add(score);
+        }
+      }
+    }
+    return allScores;
+  }
+
+  List<Map<String, dynamic>> _scoresForRepo(String repo) {
+    return _visibleScores.where((s) => (s['repo'] as String? ?? '') == repo).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    // 评分维度 — 优先从远程加载，否则使用默认值
-    final dimensions = _buildDimensions();
-    final components = _buildScoreComponents();
-
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    final green = Colors.green;
+    return Column(
       children: [
-        // 数据来源指示器
-        if (_remoteAssessment != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Row(
-              children: [
-                Icon(Icons.cloud_done, size: 14, color: Colors.green[400]),
-                const SizedBox(width: 4),
-                Text('考核方案已从远程同步',
-                    style: TextStyle(fontSize: 11, color: Colors.green[400])),
-              ],
-            ),
+        Container(
+          margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: green.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: green.withValues(alpha: 0.10)),
           ),
-        // 评分标准说明
-        Card(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              gradient: LinearGradient(
-                colors: [
-                  primary.withValues(alpha: 0.08),
-                  primary.withValues(alpha: 0.02)
-                ],
-              ),
-            ),
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.rule, color: primary, size: 20),
-                    const SizedBox(width: 8),
-                    Text('综合评分体系（100分）',
-                        style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: primary)),
-                  ],
+          child: TabBar(
+            controller: _subTabController,
+            isScrollable: true,
+            labelColor: green[700],
+            unselectedLabelColor: Colors.grey,
+            dividerColor: Colors.transparent,
+            indicator: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(11),
+              boxShadow: [
+                BoxShadow(
+                  color: green.withValues(alpha: 0.10),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
-                const SizedBox(height: 12),
-                ...dimensions.map((d) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
-                        children: [
-                          Icon(d['icon'] as IconData,
-                              size: 16, color: Colors.grey[600]),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(d['name'] as String,
-                                style: const TextStyle(fontSize: 13)),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text('${d['max']}分',
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    color: primary,
-                                    fontWeight: FontWeight.bold)),
-                          ),
-                        ],
-                      ),
-                    )),
               ],
             ),
+            tabs: [
+              if (_isStudent)
+                const Tab(icon: Icon(Icons.dashboard, size: 16), text: '我的贡献')
+              else
+                const Tab(icon: Icon(Icons.rate_review, size: 16), text: '评分'),
+              if (_isStudent)
+                const Tab(icon: Icon(Icons.rate_review, size: 16), text: '评分'),
+              const Tab(icon: Icon(Icons.people, size: 16), text: '小组贡献'),
+              const Tab(icon: Icon(Icons.analytics, size: 16), text: '项目贡献'),
+            ],
           ),
         ),
-        const SizedBox(height: 16),
-
-        // 课程总评构成
-        Card(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('课程总评成绩构成',
-                    style:
-                        TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
-                ...components,
-              ],
-            ),
+        Expanded(
+          child: TabBarView(
+            controller: _subTabController,
+            children: [
+              if (_isStudent) _buildMyContribution() else _buildScoringPanel(),
+              if (_isStudent) _buildScoringPanel(),
+              _buildGroupContribution(),
+              _buildProjectContribution(),
+            ],
           ),
         ),
       ],
     );
   }
 
-  /// 构建评分维度：优先远程数据，fallback 硬编码
-  List<Map<String, dynamic>> _buildDimensions() {
-    if (_remoteAssessment != null) {
-      final dims = _remoteAssessment!['scoring_dimensions'];
-      if (dims is List && dims.isNotEmpty) {
-        const iconMap = {
-          '功能完整性': Icons.check_circle,
-          '技术实现深度': Icons.code,
-          '跨框架整合': Icons.integration_instructions,
-          '性能与质量': Icons.speed,
-          '文档与协作': Icons.description,
-        };
-        return dims
-            .map((d) {
-              final name = d['name']?.toString() ?? '';
-              return {
-                'name': name,
-                'max': d['max_score'] ?? d['max'] ?? 20,
-                'icon': iconMap[name] ?? Icons.star,
-              };
-            })
-            .toList()
-            .cast<Map<String, dynamic>>();
-      }
-    }
-    // Fallback 默认维度
-    return const [
-      {'name': '功能完整性', 'max': 25, 'icon': Icons.check_circle},
-      {'name': '技术实现深度', 'max': 20, 'icon': Icons.code},
-      {'name': '跨框架整合', 'max': 25, 'icon': Icons.integration_instructions},
-      {'name': '性能与质量', 'max': 15, 'icon': Icons.speed},
-      {'name': '文档与协作', 'max': 15, 'icon': Icons.description},
-    ];
+  // ── Tab 1: 我的贡献（学生专属） ────────────────────────────────
+  Widget _buildMyContribution() {
+    final totalReviews = (_mySummary['totalReviews'] ?? 0).toInt();
+    final overall = _mySummary['overall'] ?? 0;
+
+    // 按评价来源分组
+    final selfScores =
+        _myScores.where((s) => s['scorer_type'] == 'self').toList();
+    final peerScores =
+        _myScores.where((s) => s['scorer_type'] == 'peer').toList();
+    final teacherScores =
+        _myScores.where((s) => s['scorer_type'] == 'teacher').toList();
+
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = constraints.maxWidth > 700;
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              if (isWide) ...[
+                // 桌面宽屏: 三列分析面板
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(child: _buildOverallScoreCard(overall, totalReviews)),
+                      const SizedBox(width: 12),
+                      Expanded(child: _buildRadarCard()),
+                      const SizedBox(width: 12),
+                      Expanded(child: _buildScoreSourceCard(selfScores, peerScores, teacherScores)),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                // 移动端: 纵向排列
+                _buildOverallScoreCard(overall, totalReviews),
+                const SizedBox(height: 12),
+                _buildRadarCard(),
+                const SizedBox(height: 12),
+                _buildScoreSourceCard(selfScores, peerScores, teacherScores),
+              ],
+              const SizedBox(height: 12),
+
+              // 评价详情列表
+              if (_myScores.isNotEmpty) ...[
+                _sectionHeader('评价详情', Icons.format_list_bulleted),
+                const SizedBox(height: 8),
+                ..._myScores.map(_buildScoreDetailCard),
+              ] else
+                _emptyHint('暂无收到的评价，请等待组员和教师评分'),
+            ],
+          );
+        },
+      ),
+    );
   }
 
-  /// 构建成绩构成组件：优先远程数据，fallback 硬编码
-  List<Widget> _buildScoreComponents() {
-    if (_remoteAssessment != null) {
-      final comps = _remoteAssessment!['components'];
-      if (comps is List && comps.isNotEmpty) {
-        final colorMap = {
-          '理论考核': Colors.blue,
-          '平时成绩': Colors.blue,
-          '实验考核': Colors.green,
-          '综合项目': Colors.orange,
-          '期末考核': Colors.purple,
-        };
-        return comps.map<Widget>((c) {
-          final name = c['name']?.toString() ?? '';
-          final weight = c['weight'] ?? c['percent'] ?? 0;
-          final percent = weight is double
-              ? (weight * 100).toInt()
-              : (weight is int ? weight : 0);
-          final details = c['details'] ?? c['sub_items'];
-          final detailList = details is List
-              ? details.map((d) => d.toString()).toList()
-              : <String>[];
-          final color = colorMap[name] ?? Colors.grey;
-          return _scoreComponent(name, percent, color, detailList);
-        }).toList();
-      }
+  Widget _buildOverallScoreCard(double overall, int totalReviews) {
+    final Color scoreColor;
+    final String level;
+    if (overall >= 90) {
+      scoreColor = Colors.green;
+      level = '优秀';
+    } else if (overall >= 75) {
+      scoreColor = Colors.blue;
+      level = '良好';
+    } else if (overall >= 60) {
+      scoreColor = Colors.orange;
+      level = '合格';
+    } else {
+      scoreColor = Colors.red;
+      level = totalReviews > 0 ? '待提升' : '待评价';
     }
-    // Fallback 默认构成
-    return [
-      _scoreComponent('理论考核', 40, Colors.blue, [
-        '平时成绩 15%（课堂5%+作业5%+小测5%）',
-        '期末考试 25%（选择8%+简答10%+综合7%）',
-      ]),
-      _scoreComponent('实验考核', 35, Colors.green, [
-        '实验1-6 各5%（环境/Android/Flutter/UniApp/小程序/华为）',
-        '实验7 综合实战 5%',
-      ]),
-      _scoreComponent('综合项目', 25, Colors.orange, [
-        '项目设计 8%',
-        '技术实现 10%',
-        '团队协作 4%',
-        '项目答辩 3%',
-      ]),
-    ];
+
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          gradient: LinearGradient(
+            colors: [
+              scoreColor.withValues(alpha: 0.1),
+              scoreColor.withValues(alpha: 0.03),
+            ],
+          ),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            // 分数环
+            SizedBox(
+              width: 80,
+              height: 80,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    width: 80,
+                    height: 80,
+                    child: CircularProgressIndicator(
+                      value: totalReviews > 0 ? overall / 100 : 0,
+                      strokeWidth: 8,
+                      backgroundColor: Colors.grey[200],
+                      valueColor: AlwaysStoppedAnimation(scoreColor),
+                    ),
+                  ),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        totalReviews > 0 ? overall.toStringAsFixed(0) : '--',
+                        style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: scoreColor),
+                      ),
+                      Text(level,
+                          style: TextStyle(fontSize: 10, color: scoreColor)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('综合贡献度',
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: scoreColor)),
+                  const SizedBox(height: 4),
+                  Text('共 $totalReviews 条评价',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                  const SizedBox(height: 8),
+                  if (_myInfo != null) ...[
+                    Text(
+                      '${_myInfo!['project'] ?? ''} · ${_myInfo!['role'] ?? ''}',
+                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
-  Widget _scoreComponent(
-      String title, int percent, Color color, List<String> details) {
+  Widget _buildRadarCard() {
+    final dims = [
+      {'label': '代码贡献', 'value': _mySummary['code'] ?? 0, 'icon': Icons.code, 'color': Colors.blue},
+      {'label': '文档贡献', 'value': _mySummary['doc'] ?? 0, 'icon': Icons.description, 'color': Colors.orange},
+      {'label': '团队协作', 'value': _mySummary['teamwork'] ?? 0, 'icon': Icons.groups, 'color': Colors.green},
+      {'label': '主动性', 'value': _mySummary['initiative'] ?? 0, 'icon': Icons.trending_up, 'color': Colors.purple},
+      {'label': '质量', 'value': _mySummary['quality'] ?? 0, 'icon': Icons.verified, 'color': Colors.teal},
+    ];
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 2,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            colors: [
+              Colors.indigo.withValues(alpha: 0.04),
+              Colors.white,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.indigo.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.radar, size: 16, color: Colors.indigo[400]),
+                ),
+                const SizedBox(width: 8),
+                const Text('五维评估',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const SizedBox(height: 14),
+            ...dims.map((d) {
+              final val = (d['value'] as double);
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  children: [
+                    Icon(d['icon'] as IconData,
+                        size: 16, color: d['color'] as Color),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 60,
+                      child: Text(d['label'] as String,
+                          style: const TextStyle(fontSize: 12)),
+                    ),
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: LinearProgressIndicator(
+                          value: val / 20,
+                          minHeight: 10,
+                          backgroundColor: Colors.grey[200],
+                          valueColor:
+                              AlwaysStoppedAnimation(d['color'] as Color),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 36,
+                      child: Text('${val.toStringAsFixed(0)}/20',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: d['color'] as Color)),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScoreSourceCard(
+    List<Map<String, dynamic>> self,
+    List<Map<String, dynamic>> peer,
+    List<Map<String, dynamic>> teacher,
+  ) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('评价来源',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                _sourceChip('自评', self.length, Colors.blue, Icons.person),
+                const SizedBox(width: 10),
+                _sourceChip('互评', peer.length, Colors.green, Icons.people),
+                const SizedBox(width: 10),
+                _sourceChip(
+                    '师评', teacher.length, Colors.purple, Icons.school),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _sourceChip(String label, int count, Color color, IconData icon) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(height: 4),
+            Text('$count',
+                style: TextStyle(
+                    fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+            Text(label,
+                style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScoreDetailCard(Map<String, dynamic> score) {
+    final scorerName = score['scorer_user_name'] as String? ?? '匿名';
+    final scorerType = score['scorer_type'] as String? ?? '';
+    final dimension = score['dimension'] as String? ?? '';
+    final overall = (score['overall_score'] as num?)?.toInt() ?? 0;
+    final comment = score['comment'] as String? ?? '';
+    final time = score['scored_at'] as String? ?? '';
+
+    final typeLabel = switch (scorerType) {
+      'self' => '自评',
+      'peer' => '互评',
+      'teacher' => '师评',
+      _ => scorerType,
+    };
+    final typeColor = switch (scorerType) {
+      'self' => Colors.blue,
+      'peer' => Colors.green,
+      'teacher' => Colors.purple,
+      _ => Colors.grey,
+    };
+    final dimLabel = switch (dimension) {
+      'individual' => '个人',
+      'group' => '小组',
+      'project' => '项目',
+      _ => dimension,
+    };
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: typeColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(typeLabel,
+                      style: TextStyle(
+                          fontSize: 10,
+                          color: typeColor,
+                          fontWeight: FontWeight.bold)),
+                ),
+                const SizedBox(width: 6),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(dimLabel,
+                      style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                ),
+                const SizedBox(width: 8),
+                Text(scorerName,
+                    style: const TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w500)),
+                const Spacer(),
+                Text('$overall分',
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: typeColor)),
+              ],
+            ),
+            if (comment.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(comment,
+                  style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+            ],
+            if (time.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(time.length > 16 ? time.substring(0, 16) : time,
+                  style: TextStyle(fontSize: 10, color: Colors.grey[400])),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Tab 2: 评分面板 ────────────────────────────────────────
+  Widget _buildScoringPanel() {
+    final userId = widget.authService.getCurrentUserId() ?? '';
+    final scorerType = _isStudent ? 'peer' : 'teacher';
+    final rateTargets = _isStudent
+        ? _teamMembers.where((m) => m['userId'] != userId).toList()
+        : _visibleStudents;
+
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          if (_isTeacherView) ...[
+            _buildTeacherScoringIntro(),
+            const SizedBox(height: 16),
+          ],
+
+          // 自评入口
+          if (_isStudent && _myInfo != null && _myInfo!.isNotEmpty) ...[
+            _sectionHeader('自我评价', Icons.person),
+            const SizedBox(height: 8),
+            _buildRateTargetCard(
+              _myInfo!,
+              scorerType: 'self',
+              isMe: true,
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          if (rateTargets.isNotEmpty) ...[
+            _sectionHeader(
+              _isStudent ? '组员互评 (${rateTargets.length}人)' : '教师评分（全班 ${rateTargets.length} 人）',
+              _isStudent ? Icons.people : Icons.school,
+            ),
+            const SizedBox(height: 8),
+            ...rateTargets.map((m) => _buildRateTargetCard(
+                  m,
+                  scorerType: scorerType,
+                )),
+          ] else
+            _emptyHint(_isStudent ? '暂无可评分的组员' : '暂无可评分的学生'),
+
+          if (_givenScores.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _sectionHeader('已提交的评分 (${_givenScores.length})', Icons.check_circle),
+            const SizedBox(height: 8),
+            ..._givenScores.map(_buildScoreDetailCard),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTeacherScoringIntro() {
+    final totalStudents = _visibleStudents.length;
+    final teacherScores =
+        _visibleScores.where((s) => s['scorer_type'] == 'teacher').length;
+    final scoredStudents = _visibleScores
+        .where((s) => s['scorer_type'] == 'teacher')
+        .map((s) => s['target_user_id'] as String? ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .length;
+
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 2,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            colors: [
+              Colors.green.withValues(alpha: 0.08),
+              Colors.teal.withValues(alpha: 0.03),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.school, color: Colors.green[700], size: 20),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('教师评分工作台',
+                          style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green[800])),
+                      const SizedBox(height: 2),
+                      Text(
+                        '个人/小组/项目三维度评分，进入学生贡献度统计',
+                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.green.withValues(alpha: 0.1)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _miniStat('学生总数', '$totalStudents', Icons.person, Colors.blue),
+                  Container(width: 1, height: 30, color: Colors.grey.withValues(alpha: 0.15)),
+                  _miniStat('已覆盖', '$scoredStudents', Icons.check_circle, Colors.green),
+                  Container(width: 1, height: 30, color: Colors.grey.withValues(alpha: 0.15)),
+                  _miniStat('评分条数', '$teacherScores', Icons.rate_review, Colors.orange),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRateTargetCard(
+    Map<String, dynamic> member, {
+    required String scorerType,
+    bool isMe = false,
+  }) {
+    final name = member['name'] as String? ?? '';
+    final role = member['role'] as String? ?? '';
+    final targetId = member['userId'] as String? ?? '';
+
+    // 检查各维度是否已评
+    final hasIndividual = _givenScores.any((s) =>
+        s['target_user_id'] == targetId && s['dimension'] == 'individual');
+    final hasGroup = _givenScores.any((s) =>
+        s['target_user_id'] == targetId && s['dimension'] == 'group');
+    final hasProject = _givenScores.any((s) =>
+        s['target_user_id'] == targetId && s['dimension'] == 'project');
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: isMe
+                      ? Colors.orange.withValues(alpha: 0.2)
+                      : Colors.blue.withValues(alpha: 0.15),
+                  child: Text(
+                    name.isNotEmpty ? name.substring(0, 1) : '?',
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: isMe ? Colors.orange[800] : Colors.blue[700]),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(name,
+                              style: const TextStyle(
+                                  fontSize: 14, fontWeight: FontWeight.w600)),
+                          if (isMe) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 5, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: Colors.orange,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text('自评',
+                                  style: TextStyle(
+                                      fontSize: 9,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        ],
+                      ),
+                      Text(role,
+                          style:
+                              TextStyle(fontSize: 11, color: Colors.grey[500])),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            // 三个维度评分按钮
+            Row(
+              children: [
+                _dimRateButton(
+                  '个人', Icons.person, Colors.blue, hasIndividual,
+                  () => _showRatingDialog(member, 'individual', scorerType),
+                ),
+                const SizedBox(width: 8),
+                _dimRateButton(
+                  '小组', Icons.group, Colors.green, hasGroup,
+                  () => _showRatingDialog(member, 'group', scorerType),
+                ),
+                const SizedBox(width: 8),
+                _dimRateButton(
+                  '项目', Icons.folder_special, Colors.orange, hasProject,
+                  () => _showRatingDialog(member, 'project', scorerType),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _dimRateButton(
+    String label, IconData icon, Color color, bool done, VoidCallback onTap,
+  ) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: done
+                ? color.withValues(alpha: 0.1)
+                : Colors.grey.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: done
+                  ? color.withValues(alpha: 0.3)
+                  : Colors.grey.withValues(alpha: 0.15),
+            ),
+          ),
+          child: Column(
+            children: [
+              Icon(
+                done ? Icons.check_circle : icon,
+                size: 18,
+                color: done ? color : Colors.grey,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                done ? '$label ✓' : label,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: done ? color : Colors.grey[600],
+                  fontWeight: done ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 评分对话框
+  void _showRatingDialog(
+    Map<String, dynamic> target,
+    String dimension,
+    String scorerType,
+  ) {
+    final targetName = target['name'] as String? ?? '';
+    final targetId = target['userId'] as String? ?? '';
+    final dimLabel = switch (dimension) {
+      'individual' => '个人贡献',
+      'group' => '小组贡献',
+      'project' => '项目贡献',
+      _ => dimension,
+    };
+
+    // 评分维度说明
+    final dimHints = switch (dimension) {
+      'individual' => {
+        'code': '个人代码编写量与质量',
+        'doc': '个人报告、README撰写',
+        'teamwork': '与组员沟通协调能力',
+        'initiative': '主动承担任务、解决问题',
+        'quality': '代码规范、测试覆盖',
+      },
+      'group' => {
+        'code': '对小组代码仓库的贡献',
+        'doc': '小组文档的参与度',
+        'teamwork': '推动小组进展的作用',
+        'initiative': '组内任务分配与执行力',
+        'quality': '整体交付质量贡献',
+      },
+      'project' => {
+        'code': '对项目核心功能的实现',
+        'doc': '项目架构文档与设计',
+        'teamwork': '跨模块协作能力',
+        'initiative': '提出创新方案与改进',
+        'quality': '项目整体质量保障',
+      },
+      _ => <String, String>{},
+    };
+
+    int codeVal = 15, docVal = 15, teamVal = 15, initVal = 15, qualVal = 15;
+    final commentCtrl = TextEditingController();
+
+    // 查看是否已有评分
+    final existing = _givenScores.where((s) =>
+        s['target_user_id'] == targetId && s['dimension'] == dimension);
+    if (existing.isNotEmpty) {
+      final e = existing.first;
+      codeVal = (e['code_contribution'] as num?)?.toInt() ?? 15;
+      docVal = (e['doc_contribution'] as num?)?.toInt() ?? 15;
+      teamVal = (e['teamwork_score'] as num?)?.toInt() ?? 15;
+      initVal = (e['initiative_score'] as num?)?.toInt() ?? 15;
+      qualVal = (e['quality_score'] as num?)?.toInt() ?? 15;
+      commentCtrl.text = e['comment'] as String? ?? '';
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final total = codeVal + docVal + teamVal + initVal + qualVal;
+          return AlertDialog(
+            title: Text('评价 $targetName · $dimLabel',
+                style: const TextStyle(fontSize: 16)),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 总分指示
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('总分: ',
+                            style: TextStyle(
+                                fontSize: 14, color: Colors.grey[600])),
+                        Text('$total',
+                            style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: total >= 75
+                                    ? Colors.green
+                                    : total >= 50
+                                        ? Colors.orange
+                                        : Colors.red)),
+                        Text(' / 100',
+                            style: TextStyle(
+                                fontSize: 14, color: Colors.grey[400])),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // 五个维度滑块
+                  _buildSlider('代码贡献', dimHints['code'] ?? '', codeVal,
+                      Colors.blue, (v) {
+                    setDialogState(() => codeVal = v.round());
+                  }),
+                  _buildSlider('文档贡献', dimHints['doc'] ?? '', docVal,
+                      Colors.orange, (v) {
+                    setDialogState(() => docVal = v.round());
+                  }),
+                  _buildSlider('团队协作', dimHints['teamwork'] ?? '', teamVal,
+                      Colors.green, (v) {
+                    setDialogState(() => teamVal = v.round());
+                  }),
+                  _buildSlider('主动性', dimHints['initiative'] ?? '', initVal,
+                      Colors.purple, (v) {
+                    setDialogState(() => initVal = v.round());
+                  }),
+                  _buildSlider('质量', dimHints['quality'] ?? '', qualVal,
+                      Colors.teal, (v) {
+                    setDialogState(() => qualVal = v.round());
+                  }),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: commentCtrl,
+                    decoration: const InputDecoration(
+                      labelText: '评语（可选）',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    maxLines: 2,
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('取消')),
+              FilledButton.icon(
+                onPressed: () async {
+                  final userId =
+                      widget.authService.getCurrentUserId() ?? '';
+                  final userName = widget.authService.currentUser?.realName ??
+                      _myInfo?['name'] as String? ?? '';
+                  await _dao.submitContributionScore(
+                    targetUserId: targetId,
+                    targetUserName: targetName,
+                    scorerUserId: userId,
+                    scorerUserName: userName,
+                    scorerType: scorerType,
+                    repo: _myInfo?['repo'] as String?,
+                    dimension: dimension,
+                    codeContribution: codeVal,
+                    docContribution: docVal,
+                    teamworkScore: teamVal,
+                    initiativeScore: initVal,
+                    qualityScore: qualVal,
+                    comment: commentCtrl.text.trim().isNotEmpty
+                        ? commentCtrl.text.trim()
+                        : null,
+                  );
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  _loadData();
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                          content: Text('已提交对 $targetName 的 $dimLabel 评价')),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.check, size: 16),
+                label: const Text('提交'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSlider(
+    String label, String hint, int value, Color color, ValueChanged<double> onChanged,
+  ) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              ),
-              const SizedBox(width: 8),
-              Text('$title ($percent%)',
+              Text(label,
+                  style: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w500)),
+              const Spacer(),
+              Text('$value/20',
                   style: TextStyle(
-                      fontWeight: FontWeight.w600, fontSize: 13, color: color)),
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: color)),
             ],
           ),
-          ...details.map((d) => Padding(
-                padding: const EdgeInsets.only(left: 22, top: 3),
-                child: Text(d,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-              )),
+          if (hint.isNotEmpty)
+            Text(hint,
+                style: TextStyle(fontSize: 10, color: Colors.grey[400])),
+          SliderTheme(
+            data: SliderThemeData(
+              activeTrackColor: color,
+              thumbColor: color,
+              inactiveTrackColor: color.withValues(alpha: 0.15),
+              overlayColor: color.withValues(alpha: 0.1),
+              trackHeight: 4,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+            ),
+            child: Slider(
+              value: value.toDouble(),
+              min: 0,
+              max: 20,
+              divisions: 20,
+              onChanged: onChanged,
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  // ── Tab 3: 小组贡献 ────────────────────────────────────────
+  Widget _buildGroupContribution() {
+    final repoGroups = <String, List<Map<String, dynamic>>>{};
+    for (final student in _visibleStudents) {
+      final repo = student['repo'] as String? ?? '未分组项目';
+      repoGroups.putIfAbsent(repo, () => []).add(student);
+    }
+
+    if (repoGroups.isEmpty) {
+      return _emptyHint(_isStudent ? '暂无小组成员数据' : '暂无可统计的小组数据');
+    }
+
+    final userId = widget.authService.getCurrentUserId() ?? '';
+    final entries = repoGroups.entries.toList()
+      ..sort((a, b) => b.value.length.compareTo(a.value.length));
+
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _sectionHeader(_isStudent ? '小组成员贡献度排行' : '各小组贡献概览', Icons.leaderboard),
+          const SizedBox(height: 8),
+          ...entries.map((entry) {
+            final repo = entry.key;
+            final members = entry.value;
+            final repoScores = _scoresForRepo(repo);
+            final rankedMembers = members.map((member) {
+              final uid = member['userId'] as String? ?? '';
+              final scores = repoScores.where((s) => s['target_user_id'] == uid).toList();
+              final avgScore = scores.isEmpty
+                  ? 0.0
+                  : scores.fold<double>(
+                          0,
+                          (sum, s) =>
+                              sum + ((s['overall_score'] as num?)?.toDouble() ?? 0)) /
+                      scores.length;
+              return {
+                ...member,
+                'avg_score': avgScore,
+                'review_count': scores.length,
+              };
+            }).toList()
+              ..sort((a, b) => (b['avg_score'] as double)
+                  .compareTo(a['avg_score'] as double));
+
+            final groupAverage = rankedMembers.isEmpty
+                ? 0.0
+                : rankedMembers.fold<double>(
+                        0, (sum, m) => sum + (m['avg_score'] as double)) /
+                    rankedMembers.length;
+            final topMember = rankedMembers.isNotEmpty
+                ? rankedMembers.first['name'] as String? ?? '-'
+                : '-';
+            final projectName = members.first['project'] as String? ?? '未命名项目';
+
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.group_work, color: Colors.green[700], size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            projectName,
+                            style: const TextStyle(
+                                fontSize: 14, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        Text(
+                          '${groupAverage.toStringAsFixed(0)}分',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: groupAverage >= 75
+                                ? Colors.green
+                                : groupAverage >= 50
+                                    ? Colors.orange
+                                    : Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '仓库：$repo',
+                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
+                      children: [
+                        _miniStat('成员', '${members.length}人', Icons.groups, Colors.blue),
+                        _miniStat('评分', '${repoScores.length}条', Icons.rate_review,
+                            Colors.orange),
+                        _miniStat('最高', topMember, Icons.emoji_events,
+                            Colors.amber[700]!),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    ...rankedMembers.asMap().entries.map((memberEntry) {
+                      final rank = memberEntry.key + 1;
+                      final m = memberEntry.value;
+                      final name = m['name'] as String? ?? '';
+                      final role = m['role'] as String? ?? '';
+                      final avgScore = m['avg_score'] as double;
+                      final reviewCount = m['review_count'] as int;
+                      final isMe = m['userId'] == userId;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 24,
+                              child: Text(
+                                '$rank',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: rank == 1
+                                      ? Colors.amber[800]
+                                      : Colors.grey[600],
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                isMe ? '$name（我） · $role' : '$name · $role',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight:
+                                      isMe ? FontWeight.bold : FontWeight.normal,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              reviewCount > 0
+                                  ? '${avgScore.toStringAsFixed(0)}分'
+                                  : '--',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: reviewCount > 0
+                                    ? (avgScore >= 75
+                                        ? Colors.green
+                                        : avgScore >= 50
+                                            ? Colors.orange
+                                            : Colors.grey)
+                                    : Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  // ── Tab 4: 项目贡献 ────────────────────────────────────────
+  Widget _buildProjectContribution() {
+    final repoGroups = <String, List<Map<String, dynamic>>>{};
+    for (final student in _visibleStudents) {
+      final repo = student['repo'] as String? ?? '未分组项目';
+      repoGroups.putIfAbsent(repo, () => []).add(student);
+    }
+
+    if (repoGroups.isEmpty) {
+      return _emptyHint(_isStudent ? '暂无项目数据' : '暂无可统计的项目数据');
+    }
+
+    final userId = widget.authService.getCurrentUserId() ?? '';
+
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: repoGroups.entries.map((entry) {
+          final repo = entry.key;
+          final members = entry.value;
+          final projectName = members.first['project'] as String? ?? '未命名项目';
+          final projectDimScores = _scoresForRepo(repo)
+              .where((s) => s['dimension'] == 'project')
+              .toList();
+          final groupDimScores = _scoresForRepo(repo)
+              .where((s) => s['dimension'] == 'group')
+              .toList();
+          final teacherScores = _scoresForRepo(repo)
+              .where((s) => s['scorer_type'] == 'teacher')
+              .length;
+          final peerScores = _scoresForRepo(repo)
+              .where((s) => s['scorer_type'] == 'peer')
+              .length;
+          final selfScores = _scoresForRepo(repo)
+              .where((s) => s['scorer_type'] == 'self')
+              .length;
+
+          Map<String, List<Map<String, dynamic>>> byTarget(
+              List<Map<String, dynamic>> scores) {
+            final result = <String, List<Map<String, dynamic>>>{};
+            for (final s in scores) {
+              final tid = s['target_user_id'] as String? ?? '';
+              result.putIfAbsent(tid, () => []).add(s);
+            }
+            return result;
+          }
+
+          final projectByTarget = byTarget(projectDimScores);
+          final groupByTarget = byTarget(groupDimScores);
+          final projectAvg = projectDimScores.isEmpty
+              ? 0.0
+              : projectDimScores.fold<double>(
+                      0,
+                      (sum, s) =>
+                          sum + ((s['overall_score'] as num?)?.toDouble() ?? 0)) /
+                  projectDimScores.length;
+
+          return Card(
+            margin: const EdgeInsets.only(bottom: 14),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.folder_special,
+                          size: 20, color: Colors.orange[700]),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(projectName,
+                            style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange[700])),
+                      ),
+                      Text(
+                        projectAvg > 0 ? '${projectAvg.toStringAsFixed(0)}分' : '--',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: projectAvg >= 75
+                              ? Colors.green
+                              : projectAvg >= 50
+                                  ? Colors.orange
+                                  : Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text('仓库：$repo',
+                      style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    children: [
+                      _miniStat('成员', '${members.length}人', Icons.groups, Colors.blue),
+                      _miniStat('项目评', '${projectDimScores.length}条', Icons.star_rate,
+                          Colors.orange),
+                      _miniStat('小组评', '${groupDimScores.length}条', Icons.group_work,
+                          Colors.green),
+                      _miniStat('师评', '$teacherScores', Icons.school, Colors.purple),
+                      _miniStat('互评', '$peerScores', Icons.people, Colors.teal),
+                      _miniStat('自评', '$selfScores', Icons.person, Colors.indigo),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  _sectionHeader('项目维度贡献', Icons.folder_special),
+                  const SizedBox(height: 8),
+                  if (projectByTarget.isEmpty)
+                    _emptyHint('暂无项目维度评分')
+                  else
+                    ...members.map((m) {
+                      final uid = m['userId'] as String? ?? '';
+                      final name = m['name'] as String? ?? '';
+                      final scores = projectByTarget[uid] ?? [];
+                      final avg = scores.isEmpty
+                          ? 0.0
+                          : scores.fold<double>(
+                                  0,
+                                  (sum, s) =>
+                                      sum +
+                                      ((s['overall_score'] as num?)?.toDouble() ??
+                                          0)) /
+                              scores.length;
+                      return _memberContribBar(
+                          name, avg, scores.length, Colors.orange, uid == userId);
+                    }),
+                  const SizedBox(height: 14),
+                  _sectionHeader('小组维度贡献', Icons.group_work),
+                  const SizedBox(height: 8),
+                  if (groupByTarget.isEmpty)
+                    _emptyHint('暂无小组维度评分')
+                  else
+                    ...members.map((m) {
+                      final uid = m['userId'] as String? ?? '';
+                      final name = m['name'] as String? ?? '';
+                      final scores = groupByTarget[uid] ?? [];
+                      final avg = scores.isEmpty
+                          ? 0.0
+                          : scores.fold<double>(
+                                  0,
+                                  (sum, s) =>
+                                      sum +
+                                      ((s['overall_score'] as num?)?.toDouble() ??
+                                          0)) /
+                              scores.length;
+                      return _memberContribBar(
+                          name, avg, scores.length, Colors.green, uid == userId);
+                    }),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _memberContribBar(
+    String name, double avg, int count, Color color, bool isMe,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 60,
+            child: Row(
+              children: [
+                Text(name,
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: isMe ? FontWeight.bold : FontWeight.normal)),
+                if (isMe) ...[
+                  const SizedBox(width: 2),
+                  Icon(Icons.person, size: 10, color: Colors.orange[700]),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                value: count > 0 ? avg / 100 : 0,
+                minHeight: 14,
+                backgroundColor: Colors.grey[200],
+                valueColor: AlwaysStoppedAnimation(
+                    count > 0 ? color : Colors.grey[300]!),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 44,
+            child: Text(
+              count > 0 ? '${avg.toStringAsFixed(0)}分' : '--',
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: count > 0 ? color : Colors.grey),
+              textAlign: TextAlign.end,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _miniStat(String label, String value, IconData icon, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 4),
+        Text('$label $value',
+            style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+      ],
+    );
+  }
+
+  Widget _sectionHeader(String title, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.grey.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(10),
+        border: Border(
+          left: BorderSide(color: Colors.indigo.withValues(alpha: 0.5), width: 3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 17, color: Colors.indigo[400]),
+          const SizedBox(width: 8),
+          Text(title,
+              style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800])),
+        ],
+      ),
+    );
+  }
+
+  Widget _emptyHint(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 40),
+      child: Center(
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(Icons.inbox_outlined, size: 48, color: Colors.grey[300]),
+            ),
+            const SizedBox(height: 12),
+            Text(text, style: TextStyle(fontSize: 13, color: Colors.grey[400])),
+          ],
+        ),
       ),
     );
   }
@@ -1667,26 +3855,45 @@ class _DefenseTabState extends State<_DefenseTab> {
             children: [
               // 答辩流程说明（硬编码 OK）
               Card(
-                color: Colors.amber.shade50,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
+                    borderRadius: BorderRadius.circular(16)),
+                elevation: 2,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.amber.shade50,
+                        Colors.orange.shade50.withValues(alpha: 0.3),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.info_outline,
-                              color: Colors.amber[800], size: 18),
-                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(Icons.info_outline,
+                                color: Colors.amber[800], size: 18),
+                          ),
+                          const SizedBox(width: 10),
                           Text('答辩流程（15分钟/组）',
                               style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.amber[800])),
+                                  fontSize: 15,
+                                  color: Colors.amber[900])),
                         ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 14),
                       _flowStep('1', '项目演示', '5分钟', Colors.blue),
                       _flowStep('2', '技术讲解', '5分钟', Colors.green),
                       _flowStep('3', '评委提问', '3分钟', Colors.orange),
@@ -1696,20 +3903,46 @@ class _DefenseTabState extends State<_DefenseTab> {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text('答辩安排',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border(
+                    left: BorderSide(color: Colors.indigo.withValues(alpha: 0.5), width: 3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.event_note, size: 17, color: Colors.indigo[400]),
+                    const SizedBox(width: 8),
+                    Text('答辩安排 (${_defenseRecords.length})',
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[800])),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
               if (_defenseRecords.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 32),
                   child: Center(
                     child: Column(
                       children: [
-                        Icon(Icons.event_busy,
-                            size: 48, color: Colors.grey[300]),
-                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withValues(alpha: 0.06),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Icon(Icons.event_busy,
+                              size: 48, color: Colors.grey[300]),
+                        ),
+                        const SizedBox(height: 12),
                         Text('暂无答辩安排',
-                            style: TextStyle(color: Colors.grey[500])),
+                            style: TextStyle(color: Colors.grey[400])),
                       ],
                     ),
                   ),
@@ -1737,22 +3970,52 @@ class _DefenseTabState extends State<_DefenseTab> {
 
   Widget _flowStep(String num, String title, String time, Color color) {
     return Padding(
-      padding: const EdgeInsets.only(top: 6),
-      child: Row(
-        children: [
-          CircleAvatar(
-              radius: 12,
-              backgroundColor: color.withValues(alpha: 0.1),
-              child: Text(num,
+      padding: const EdgeInsets.only(top: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withValues(alpha: 0.12)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 26,
+              height: 26,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Center(
+                child: Text(num,
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: color)),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(title,
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w500)),
+            ),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(time,
                   style: TextStyle(
                       fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: color))),
-          const SizedBox(width: 8),
-          Text(title, style: const TextStyle(fontSize: 13)),
-          const SizedBox(width: 6),
-          Text(time, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-        ],
+                      color: color,
+                      fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1763,61 +4026,134 @@ class _DefenseTabState extends State<_DefenseTab> {
     final scheduledTime = (defense['scheduled_time'] as String?) ?? '';
     final location = (defense['location'] as String?) ?? '待定';
     final status = (defense['status'] as String?) ?? '待答辩';
+    final duration = (defense['duration_minutes'] as int?) ?? 15;
 
     final statusColor = switch (status) {
       '已完成' => Colors.green,
       '进行中' => Colors.blue,
       _ => Colors.amber,
     };
+    final statusIcon = switch (status) {
+      '已完成' => Icons.check_circle,
+      '进行中' => Icons.play_circle_filled,
+      _ => Icons.schedule,
+    };
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: Colors.indigo.withValues(alpha: 0.1),
-          child: const Icon(Icons.record_voice_over,
-              color: Colors.indigo, size: 20),
-        ),
-        title: Text(groupName,
-            style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(projectName,
-                style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-            const SizedBox(height: 3),
-            Row(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 2,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border(
+              left: BorderSide(color: statusColor, width: 4),
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.schedule, size: 12, color: Colors.grey[400]),
-                const SizedBox(width: 4),
-                Flexible(
-                  child: Text(scheduledTime,
-                      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-                      overflow: TextOverflow.ellipsis),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.indigo.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.record_voice_over,
+                          color: Colors.indigo, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(groupName,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w700, fontSize: 15)),
+                          const SizedBox(height: 2),
+                          Text(projectName,
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.grey[600])),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                            color: statusColor.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(statusIcon, size: 13, color: statusColor),
+                          const SizedBox(width: 4),
+                          Text(status,
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  color: statusColor,
+                                  fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Icon(Icons.location_on, size: 12, color: Colors.grey[400]),
-                const SizedBox(width: 4),
-                Text(location,
-                    style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                const SizedBox(height: 12),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.schedule,
+                          size: 14, color: Colors.indigo[300]),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(scheduledTime,
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey[700]),
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                      Container(
+                          width: 1,
+                          height: 16,
+                          color: Colors.grey.withValues(alpha: 0.2)),
+                      const SizedBox(width: 8),
+                      Icon(Icons.location_on,
+                          size: 14, color: Colors.indigo[300]),
+                      const SizedBox(width: 4),
+                      Text(location,
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey[700])),
+                      const SizedBox(width: 8),
+                      Container(
+                          width: 1,
+                          height: 16,
+                          color: Colors.grey.withValues(alpha: 0.2)),
+                      const SizedBox(width: 8),
+                      Icon(Icons.timer_outlined,
+                          size: 14, color: Colors.indigo[300]),
+                      const SizedBox(width: 4),
+                      Text('${duration}min',
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey[700])),
+                    ],
+                  ),
+                ),
               ],
             ),
-          ],
-        ),
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            color: statusColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
           ),
-          child: Text(status,
-              style: TextStyle(
-                  fontSize: 11,
-                  color: statusColor == Colors.amber
-                      ? Colors.amber[800]
-                      : statusColor,
-                  fontWeight: FontWeight.w500)),
         ),
       ),
     );
@@ -1825,7 +4161,7 @@ class _DefenseTabState extends State<_DefenseTab> {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// 报告 Tab — 报告模板中心 + 学生PDF报告提交
+// 报告 Tab — 4周过程性报告 + 4份考核报告 → 整合为考核大作业
 // ══════════════════════════════════════════════════════════════════════════════
 
 class _AssessmentReportTab extends StatefulWidget {
@@ -1836,19 +4172,28 @@ class _AssessmentReportTab extends StatefulWidget {
   State<_AssessmentReportTab> createState() => _AssessmentReportTabState();
 }
 
-class _AssessmentReportTabState extends State<_AssessmentReportTab> {
+class _AssessmentReportTabState extends State<_AssessmentReportTab>
+    with SingleTickerProviderStateMixin {
+  late TabController _subTabController;
   final _dao = AssessmentDao();
   List<Map<String, dynamic>> _submissions = [];
   bool _loading = true;
   String? _currentUserId;
 
-  // 考核大作业（合并4种报告）
-  static const _reportTypes = ['考核大作业'];
+  bool get _isStudent =>
+      !widget.authService.isTeacher && !widget.authService.isAdmin;
 
   @override
   void initState() {
     super.initState();
+    _subTabController = TabController(length: 3, vsync: this);
     _init();
+  }
+
+  @override
+  void dispose() {
+    _subTabController.dispose();
+    super.dispose();
   }
 
   Future<void> _init() async {
@@ -1861,10 +4206,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab> {
 
   Future<void> _loadSubmissions() async {
     try {
-      // 学生只看自己的；教师/管理员看所有人的
-      final isStudent =
-          !widget.authService.isTeacher && !widget.authService.isAdmin;
-      final queryUserId = isStudent ? _currentUserId : null;
+      final queryUserId = _isStudent ? _currentUserId : null;
       final subs = await _dao.getSubmittedReports(userId: queryUserId);
       if (mounted) setState(() => _submissions = subs);
     } catch (_) {}
@@ -1872,296 +4214,809 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab> {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
     if (_loading) return const Center(child: CircularProgressIndicator());
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ─── 报告模板中心 ───
-          _sectionHeader(primary, Icons.file_copy_outlined, '报告模板中心',
-              '选择模板类型，生成考核大作业 Markdown 格式报告框架'),
-          const SizedBox(height: 10),
-          _buildTemplateCards(primary),
-
-          const SizedBox(height: 24),
-
-          // ─── 提交报告 ───
-          _sectionHeader(primary, Icons.upload_file, '提交考核大作业',
-              '仅支持 PDF 格式，请上传包含答辩/个人/小组/项目四部分的完整报告'),
-          const SizedBox(height: 10),
-          _buildUploadArea(primary),
-
-          const SizedBox(height: 24),
-
-          // ─── 已提交列表 ───
-          if (_submissions.isNotEmpty) ...[
-            _sectionHeader(primary, Icons.checklist, '已提交报告',
-                '共 ${_submissions.length} 份'),
-            const SizedBox(height: 10),
-            _buildSubmissionList(primary),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _sectionHeader(
-      Color primary, IconData icon, String title, String sub) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: primary.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: primary.withValues(alpha: 0.15)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: primary, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: primary)),
-                Text(sub,
-                    style: const TextStyle(fontSize: 11, color: Colors.grey)),
+    final indigo = Colors.indigo;
+    return Column(
+      children: [
+        Container(
+          margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: indigo.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: indigo.withValues(alpha: 0.10)),
+          ),
+          child: TabBar(
+            controller: _subTabController,
+            labelColor: indigo[700],
+            unselectedLabelColor: Colors.grey,
+            dividerColor: Colors.transparent,
+            indicator: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(11),
+              boxShadow: [
+                BoxShadow(
+                  color: indigo.withValues(alpha: 0.10),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
               ],
             ),
+            tabs: const [
+              Tab(icon: Icon(Icons.timeline, size: 16), text: '过程报告'),
+              Tab(icon: Icon(Icons.assignment, size: 16), text: '考核报告'),
+              Tab(icon: Icon(Icons.upload_file, size: 16), text: '提交'),
+            ],
           ),
-        ],
-      ),
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _subTabController,
+            children: [
+              _buildProcessReports(),
+              _buildAssessmentReports(),
+              _buildSubmissionPanel(),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
-  // ═══════════ 模板卡片区 ═══════════
-
-  Widget _buildTemplateCards(Color primary) {
-    final templates = [
+  // ══════════════════════════════════════════════════════════
+  //  Tab1: 4周过程性报告（时间线 + 每周要求）
+  // ══════════════════════════════════════════════════════════
+  Widget _buildProcessReports() {
+    final weeks = [
       {
-        'title': '通用模板',
-        'subtitle': '考核大作业 · 简洁版',
-        'icon': Icons.article_outlined,
+        'week': '第一周',
+        'title': '项目启动',
+        'period': '第1-3天',
         'color': Colors.blue,
-        'desc': '包含答辩/个人/小组/项目四部分的完整考核大作业框架，适用于所有技术栈和项目选题。',
-        'type': 'generic',
+        'icon': Icons.rocket_launch,
+        'tasks': [
+          '组建6人团队，确定技术栈分工',
+          '完成项目选题与需求分析',
+          '设计系统架构（前端/后端/数据库）',
+          '搭建各平台开发环境',
+          '建立Git仓库，制定分支策略',
+          '确定编码规范与协作流程',
+        ],
+        'deliverables': [
+          '团队信息表（成员/技术栈/职责）',
+          '需求分析文档（功能需求 + 非功能需求）',
+          '系统架构设计图',
+          '技术选型对比分析',
+          '开发计划与里程碑',
+        ],
+        'focus': '重点: 分工明确、架构合理、环境就绪',
       },
       {
-        'title': '技术栈定制模板',
-        'subtitle': '考核大作业 · 定制版',
-        'icon': Icons.build_outlined,
-        'color': Colors.orange,
-        'desc': '根据你负责的技术栈（Flutter/Android/RN/鸿蒙/小程序/Uniapp）生成针对性的考核大作业模板。',
-        'type': 'techstack',
-      },
-      {
-        'title': '详细参考模板',
-        'subtitle': '考核大作业 · 完整版',
-        'icon': Icons.menu_book_outlined,
+        'week': '第二周',
+        'title': '核心开发',
+        'period': '第4-7天',
         'color': Colors.green,
-        'desc': '包含详细的评分标准、格式要求和参考内容示例的完整考核大作业模板，适合首次撰写。',
-        'type': 'detailed',
+        'icon': Icons.code,
+        'tasks': [
+          '各平台基础功能开发（UI框架搭建）',
+          '实现核心业务逻辑',
+          '完成数据库设计与接口开发',
+          '各平台独立功能测试',
+          'AI功能集成（GLM/DeepSeek/讯飞）',
+          '代码审查与质量控制',
+        ],
+        'deliverables': [
+          '各平台开发进度表（功能数/完成率/代码行数）',
+          '核心功能截图/录屏',
+          '遇到的技术难点与解决方案',
+          '代码质量报告（覆盖率/规范检查）',
+        ],
+        'focus': '重点: 功能实现、代码质量、进度把控',
+      },
+      {
+        'week': '第三周',
+        'title': '系统整合',
+        'period': '第8-12天',
+        'color': Colors.orange,
+        'icon': Icons.merge_type,
+        'tasks': [
+          '跨平台数据同步架构实现',
+          'API统一对接与联调',
+          '性能优化（启动/渲染/网络/内存）',
+          '跨平台UI一致性调整',
+          '集成测试与Bug修复',
+          '用户体验优化',
+        ],
+        'deliverables': [
+          '整合测试报告（同步成功率/API响应/一致性）',
+          '性能测试数据对比表',
+          '已修复Bug列表',
+          '跨平台兼容性矩阵',
+        ],
+        'focus': '重点: 数据同步、性能指标、整合质量',
+      },
+      {
+        'week': '第四周',
+        'title': '测试交付',
+        'period': '第13-15天',
+        'color': Colors.purple,
+        'icon': Icons.verified,
+        'tasks': [
+          '全面功能测试（回归测试矩阵）',
+          '性能验收测试',
+          '安全审计与漏洞修复',
+          '编写部署文档与用户手册',
+          '准备答辩材料（PPT/视频/录音）',
+          '最终版本发布与打包',
+        ],
+        'deliverables': [
+          '功能测试矩阵（通过率/覆盖率）',
+          '性能验收数据',
+          '部署文档与安装包',
+          '答辩PPT/视频演示',
+          '项目总结与反思',
+        ],
+        'focus': '重点: 测试充分、文档完整、答辩准备',
       },
     ];
 
-    return Column(
-      children: templates.map((t) {
-        final color = t['color'] as Color;
-        return Card(
-          margin: const EdgeInsets.only(bottom: 8),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: () =>
-                _onTemplateTap(t['type'] as String, t['title'] as String),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(t['icon'] as IconData, color: color, size: 24),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(children: [
-                          Text(t['title'] as String,
-                              style: const TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.bold)),
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(t['subtitle'] as String,
-                                style: TextStyle(fontSize: 9, color: color)),
-                          ),
-                        ]),
-                        const SizedBox(height: 4),
-                        Text(t['desc'] as String,
-                            style: const TextStyle(
-                                fontSize: 11, color: Colors.grey)),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.chevron_right, color: Colors.grey[400]),
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // 总览卡片
+        Card(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              gradient: LinearGradient(
+                colors: [
+                  Colors.indigo.withValues(alpha: 0.08),
+                  Colors.purple.withValues(alpha: 0.04),
                 ],
               ),
             ),
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.schedule, size: 20, color: Colors.indigo[700]),
+                    const SizedBox(width: 8),
+                    Text('四周考核流程',
+                        style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.indigo[700])),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '15天完成项目开发与考核。每周提交过程性报告，记录进展。四份过程报告整合为最终考核大作业的支撑材料。',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600], height: 1.5),
+                ),
+              ],
+            ),
           ),
-        );
-      }).toList(),
+        ),
+        const SizedBox(height: 12),
+        // 四周时间线
+        ...weeks.asMap().entries.map((entry) {
+          final i = entry.key;
+          final w = entry.value;
+          return _buildWeekCard(w, isLast: i == 3);
+        }),
+      ],
     );
   }
 
-  void _onTemplateTap(String type, String title) {
-    if (type == 'techstack') {
-      _showTechStackPicker();
-    } else {
-      final md = type == 'generic'
-          ? _generateGenericTemplate()
-          : _generateDetailedTemplate();
-      _showTemplateDialog(title, md);
-    }
+  Widget _buildWeekCard(Map<String, dynamic> w, {bool isLast = false}) {
+    final color = w['color'] as Color;
+    final tasks = w['tasks'] as List<String>;
+    final deliverables = w['deliverables'] as List<String>;
+    final focus = w['focus'] as String;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 时间线指示器
+        SizedBox(
+          width: 30,
+          child: Column(
+            children: [
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(w['icon'] as IconData, size: 14, color: Colors.white),
+              ),
+              if (!isLast)
+                Container(
+                  width: 2,
+                  height: 200,
+                  color: color.withValues(alpha: 0.3),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        // 卡片
+        Expanded(
+          child: Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            elevation: 2,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border(
+                    left: BorderSide(color: color, width: 3),
+                  ),
+                ),
+                child: ExpansionTile(
+                  tilePadding: const EdgeInsets.symmetric(horizontal: 14),
+                  childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                  title: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text('${w['week']}',
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: color)),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text('${w['title']}',
+                            style: const TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w600)),
+                      ),
+                    ],
+                  ),
+                  subtitle: Text('${w['period']}',
+                      style: TextStyle(fontSize: 11, color: Colors.grey[400])),
+              children: [
+                // 主要任务
+                _reportSubHeader('主要任务', Icons.checklist, color),
+                const SizedBox(height: 4),
+                ...tasks.map((t) => Padding(
+                      padding: const EdgeInsets.only(bottom: 3),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.check_circle_outline,
+                              size: 14, color: color.withValues(alpha: 0.6)),
+                          const SizedBox(width: 6),
+                          Expanded(
+                              child: Text(t,
+                                  style: const TextStyle(fontSize: 12))),
+                        ],
+                      ),
+                    )),
+                const SizedBox(height: 10),
+                // 交付物
+                _reportSubHeader('交付物', Icons.inventory, Colors.orange),
+                const SizedBox(height: 4),
+                ...deliverables.map((d) => Padding(
+                      padding: const EdgeInsets.only(bottom: 3),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.description,
+                              size: 14, color: Colors.orange.withValues(alpha: 0.6)),
+                          const SizedBox(width: 6),
+                          Expanded(
+                              child: Text(d,
+                                  style: const TextStyle(fontSize: 12))),
+                        ],
+                      ),
+                    )),
+                const SizedBox(height: 8),
+                // 重点提示
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: color.withValues(alpha: 0.2)),
+                  ),
+                  child: Text(focus,
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: color)),
+                ),
+              ],
+            ),
+          ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
-  void _showTechStackPicker() {
-    final stacks = [
-      {'name': 'Flutter (Dart)', 'icon': '🎯'},
-      {'name': 'Android (Kotlin)', 'icon': '🤖'},
-      {'name': 'React Native (JS/TS)', 'icon': '⚛️'},
-      {'name': 'HarmonyOS (ArkTS)', 'icon': '🌐'},
-      {'name': '微信小程序', 'icon': '💬'},
-      {'name': 'Uniapp (Vue.js)', 'icon': '🔧'},
+  Widget _reportSubHeader(String title, IconData icon, Color color) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 4),
+        Text(title,
+            style: TextStyle(
+                fontSize: 12, fontWeight: FontWeight.bold, color: color)),
+      ],
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════
+  //  Tab2: 4份考核报告要求
+  // ══════════════════════════════════════════════════════════
+  Widget _buildAssessmentReports() {
+    final reports = [
+      {
+        'num': '1',
+        'title': '答辩报告',
+        'subtitle': '演示答辩 · 占大作业25%',
+        'color': Colors.red,
+        'icon': Icons.record_voice_over,
+        'requirements': [
+          '回答三个必答题（核心技术20分+架构设计30分+创新点40分）',
+          '回答一个随机题（10分）',
+          '提交视频演示（≤10分钟）',
+          '答辩现场实时录音 + 录音转文本',
+          '提交个人源码压缩包和部署说明',
+        ],
+        'keyContent': [
+          '项目概述与分工说明',
+          '核心技术实现方案（必答题1）',
+          '系统架构设计图与说明（必答题2）',
+          '创新点与技术亮点展示（必答题3）',
+          '现场演示与录音记录',
+        ],
+        'tips': '答辩前3天提交初稿，答辩当天提交最终版。录音和转录文本必须一致。',
+      },
+      {
+        'num': '2',
+        'title': '个人报告',
+        'subtitle': '个人贡献总结 · 占大作业25%',
+        'color': Colors.blue,
+        'icon': Icons.person,
+        'requirements': [
+          '系统核心类图（UML Class Diagram）— 必须',
+          '核心功能顺序图（UML Sequence Diagram）— 必须',
+          '系统架构图（Architecture Diagram）— 必须',
+          '个人代码贡献统计（提交次数/代码行数）',
+          '技术难点与解决方案记录',
+        ],
+        'keyContent': [
+          '个人基本信息与技术栈',
+          '个人负责模块的详细实现',
+          '3种必须的UML/架构图（图表不规范=0分）',
+          '个人代码贡献量化数据',
+          '学习收获与技术成长总结',
+        ],
+        'tips': '图表必须规范（PlantUML/EA/StarUML），必须与个人负责模块相关，图表不规范则此报告0分。',
+      },
+      {
+        'num': '3',
+        'title': '小组报告',
+        'subtitle': '团队协作总结 · 占大作业25%',
+        'color': Colors.green,
+        'icon': Icons.groups,
+        'requirements': [
+          '每位成员独立整合完成（禁止复制他人报告）',
+          '个人贡献度与个人报告保持一致',
+          '团队数据由全体成员共同确认',
+          '包含团队协作流程与沟通记录',
+          '禁止修改他人个人贡献数据',
+        ],
+        'keyContent': [
+          '小组基本信息与成员分工表',
+          '团队协作流程（Git工作流/代码审查/会议）',
+          '成员贡献度矩阵（自评+互评）',
+          '团队问题与解决方案',
+          '团队协作反思与改进',
+        ],
+        'tips': '每人独立提交，内容相同但需独立整合。个人贡献部分必须与个人报告数据一致。',
+      },
+      {
+        'num': '4',
+        'title': '项目报告',
+        'subtitle': '技术文档 · 占大作业25%',
+        'color': Colors.orange,
+        'icon': Icons.folder_special,
+        'requirements': [
+          '每位成员独立整合完成',
+          '技术栈描述与实际开发一致',
+          '包含完整的技术架构文档',
+          '测试报告与性能数据',
+          '部署文档与用户手册',
+        ],
+        'keyContent': [
+          '项目基本信息（名称/类型/周期/版本）',
+          '技术栈详解（≥5种技术栈对比分析）',
+          '系统架构设计（分层/模块/数据流）',
+          '核心功能实现详解',
+          '测试报告（功能测试+性能测试+安全审计）',
+          '项目总结与未来展望',
+        ],
+        'tips': '技术文档必须真实准确，与实际代码一致。推荐包含部署步骤截图。',
+      },
     ];
 
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('选择你负责的技术栈',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            const Text('将根据技术栈生成定制化报告模板',
-                style: TextStyle(fontSize: 12, color: Colors.grey)),
-            const SizedBox(height: 12),
-            ...stacks.map((s) => ListTile(
-                  leading:
-                      Text(s['icon']!, style: const TextStyle(fontSize: 24)),
-                  title: Text(s['name']!),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    final md = _generateTechStackTemplate(s['name']!);
-                    _showTemplateDialog('技术栈定制模板 · ${s['name']}', md);
-                  },
-                )),
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // 警告卡片
+        Card(
+          color: Colors.red.withValues(alpha: 0.06),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: Colors.red.withValues(alpha: 0.3)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.warning_amber, size: 18, color: Colors.red),
+                    const SizedBox(width: 6),
+                    Text('重要提示',
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red[700])),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '• 四份报告必须全部提交，缺一不可\n'
+                  '• 缺少任何一份报告，大作业成绩为0分（占总成绩50%）\n'
+                  '• 迟交任何一份报告，按缺交处理\n'
+                  '• 建议顺序：答辩 → 个人 → 小组 → 项目',
+                  style: TextStyle(fontSize: 12, color: Colors.red[600], height: 1.6),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        // 四份报告
+        ...reports.map((r) => _buildReportRequirementCard(r)),
+      ],
+    );
+  }
+
+  Widget _buildReportRequirementCard(Map<String, dynamic> r) {
+    final color = r['color'] as Color;
+    final requirements = r['requirements'] as List<String>;
+    final keyContent = r['keyContent'] as List<String>;
+    final tips = r['tips'] as String;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      elevation: 2,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border(
+              left: BorderSide(color: color, width: 4),
+            ),
+          ),
+          child: ExpansionTile(
+            tilePadding: const EdgeInsets.symmetric(horizontal: 14),
+            childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+            leading: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: color.withValues(alpha: 0.25)),
+              ),
+              child: Center(
+                child: Text(r['num'] as String,
+                    style: TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.bold, color: color)),
+              ),
+            ),
+            title: Text(r['title'] as String,
+                style: TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.bold, color: color)),
+            subtitle: Text(r['subtitle'] as String,
+                style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+        children: [
+          // 基本要求
+          _reportSubHeader('基本要求', Icons.rule, color),
+          const SizedBox(height: 6),
+          ...requirements.map((req) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.check_box_outlined,
+                        size: 14, color: color.withValues(alpha: 0.6)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                        child: Text(req,
+                            style: const TextStyle(fontSize: 12))),
+                  ],
+                ),
+              )),
+          const SizedBox(height: 10),
+          // 核心内容
+          _reportSubHeader('核心内容（每项都要写）', Icons.edit_note, Colors.indigo),
+          const SizedBox(height: 6),
+          ...keyContent.asMap().entries.map((e) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 18,
+                      height: 18,
+                      margin: const EdgeInsets.only(right: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.indigo.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Center(
+                        child: Text('${e.key + 1}',
+                            style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.indigo[700])),
+                      ),
+                    ),
+                    Expanded(
+                        child: Text(e.value,
+                            style: const TextStyle(fontSize: 12))),
+                  ],
+                ),
+              )),
+          const SizedBox(height: 8),
+          // 提示
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.amber.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.lightbulb, size: 14, color: Colors.amber[700]),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(tips,
+                      style: TextStyle(
+                          fontSize: 11, color: Colors.amber[800], height: 1.4)),
+                ),
+              ],
+            ),
+          ),
           ],
+          ),
         ),
       ),
     );
   }
 
-  void _showTemplateDialog(String title, String content) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            const Icon(Icons.description, size: 20),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(title, style: const TextStyle(fontSize: 15)),
+  // ══════════════════════════════════════════════════════════
+  //  Tab3: 提交面板（上传4份PDF）
+  // ══════════════════════════════════════════════════════════
+  Widget _buildSubmissionPanel() {
+    final reportTypes = [
+      {'key': '答辩报告', 'icon': Icons.record_voice_over, 'color': Colors.red, 'num': '1'},
+      {'key': '个人报告', 'icon': Icons.person, 'color': Colors.blue, 'num': '2'},
+      {'key': '小组报告', 'icon': Icons.groups, 'color': Colors.green, 'num': '3'},
+      {'key': '项目报告', 'icon': Icons.folder_special, 'color': Colors.orange, 'num': '4'},
+    ];
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        await _loadSubmissions();
+      },
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // 提交进度
+          _buildSubmitProgress(reportTypes),
+          const SizedBox(height: 16),
+
+          // 各报告上传卡片
+          ...reportTypes.map((rt) {
+            final key = rt['key'] as String;
+            final submitted = _submissions
+                .where((s) =>
+                    (s['title'] as String?)?.contains(key) == true)
+                .toList();
+            return _buildUploadCard(rt, submitted);
+          }),
+
+          // 已提交的报告列表
+          if (_submissions.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Icon(Icons.history, size: 16, color: Colors.grey[600]),
+                const SizedBox(width: 6),
+                Text('提交记录 (${_submissions.length})',
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[700])),
+              ],
             ),
+            const SizedBox(height: 8),
+            ..._submissions.map((s) => _buildSubmissionItem(s)),
           ],
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          height: 450,
-          child: SingleChildScrollView(
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: SelectableText(
-                content,
-                style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-              ),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('关闭'),
-          ),
-          FilledButton.icon(
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: content));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text('模板已复制到剪贴板'), backgroundColor: Colors.green),
-              );
-              Navigator.pop(ctx);
-            },
-            icon: const Icon(Icons.copy, size: 16),
-            label: const Text('复制模板'),
-          ),
         ],
       ),
     );
   }
 
-  // ═══════════ 上传区域 ═══════════
+  Widget _buildSubmitProgress(List<Map<String, dynamic>> reportTypes) {
+    int submitted = 0;
+    for (final rt in reportTypes) {
+      final key = rt['key'] as String;
+      if (_submissions.any(
+          (s) => (s['title'] as String?)?.contains(key) == true)) {
+        submitted++;
+      }
+    }
 
-  Widget _buildUploadArea(Color primary) {
-    final type = _reportTypes.first; // '考核大作业'
-    final submitted = _submissions
-        .any((s) => s['report_type'] == type && s['status'] != '已删除');
-    final color = submitted ? Colors.green : primary;
-    final icon = submitted ? Icons.check_circle : Icons.upload_file;
+    final progress = submitted / 4;
+    final progressColor = submitted == 4
+        ? Colors.green
+        : submitted >= 2
+            ? Colors.orange
+            : Colors.red;
 
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: () => _pickAndUploadPdf(type),
-        icon: Icon(icon, size: 20, color: color),
-        label: Text(
-          submitted ? '$type 已提交 ✓' : '上传$type（PDF）',
-          style: TextStyle(fontSize: 13, color: color),
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Icon(Icons.assignment_turned_in,
+                    size: 20, color: progressColor),
+                const SizedBox(width: 8),
+                Text('提交进度',
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: progressColor)),
+                const Spacer(),
+                Text('$submitted / 4',
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: progressColor)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 10,
+                backgroundColor: Colors.grey[200],
+                valueColor: AlwaysStoppedAnimation(progressColor),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: reportTypes.map((rt) {
+                final key = rt['key'] as String;
+                final done = _submissions.any(
+                    (s) => (s['title'] as String?)?.contains(key) == true);
+                final color = rt['color'] as Color;
+                return Expanded(
+                  child: Column(
+                    children: [
+                      Icon(
+                        done ? Icons.check_circle : Icons.radio_button_unchecked,
+                        size: 18,
+                        color: done ? color : Colors.grey[300],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(key.replaceAll('报告', ''),
+                          style: TextStyle(
+                              fontSize: 9,
+                              color: done ? color : Colors.grey[400])),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
         ),
-        style: OutlinedButton.styleFrom(
-          side: BorderSide(color: color.withValues(alpha: 0.4)),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  Widget _buildUploadCard(
+      Map<String, dynamic> rt, List<Map<String, dynamic>> submitted) {
+    final key = rt['key'] as String;
+    final color = rt['color'] as Color;
+    final done = submitted.isNotEmpty;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: done
+            ? BorderSide(color: color.withValues(alpha: 0.3))
+            : BorderSide.none,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: done
+                  ? color.withValues(alpha: 0.15)
+                  : Colors.grey.withValues(alpha: 0.1),
+              child: Icon(
+                done ? Icons.check : rt['icon'] as IconData,
+                size: 20,
+                color: done ? color : Colors.grey,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('报告${rt['num']}：$key',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: done ? color : null)),
+                  Text(done
+                      ? '已提交 · ${(submitted.first['submit_time'] as String? ?? '').length > 16 ? (submitted.first['submit_time'] as String).substring(0, 16) : submitted.first['submit_time'] ?? ''}'
+                      : '未提交',
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: done ? Colors.grey[500] : Colors.red[300])),
+                ],
+              ),
+            ),
+            if (_isStudent)
+              FilledButton.icon(
+                onPressed: () => _pickAndUploadPdf(key),
+                style: FilledButton.styleFrom(
+                  backgroundColor: done ? color : null,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                ),
+                icon: Icon(done ? Icons.refresh : Icons.upload_file, size: 16),
+                label: Text(done ? '重新提交' : '上传PDF',
+                    style: const TextStyle(fontSize: 12)),
+              ),
+          ],
         ),
       ),
     );
@@ -2172,996 +5027,83 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab> {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf'],
-        dialogTitle: '选择 $reportType PDF 文件',
       );
-
       if (result == null || result.files.isEmpty) return;
-
       final file = result.files.first;
-      if (file.path == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('无法获取文件路径'), backgroundColor: Colors.red),
-          );
-        }
-        return;
-      }
-
-      // 检查文件扩展名
-      if (!file.name.toLowerCase().endsWith('.pdf')) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('仅支持 PDF 格式文件'), backgroundColor: Colors.red),
-          );
-        }
-        return;
-      }
-
-      final userId = _currentUserId ?? 'unknown';
-      final userName = widget.authService.currentUser?.realName ?? userId;
+      final userId = _currentUserId ?? '';
+      final userName =
+          widget.authService.currentUser?.realName ?? userId;
 
       await _dao.submitReport(
         userId: userId,
         studentName: userName,
         reportType: reportType,
         fileName: file.name,
-        filePath: file.path!,
+        filePath: file.path ?? '',
       );
 
       await _loadSubmissions();
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$reportType 提交成功：${file.name}'),
-            backgroundColor: Colors.green,
-          ),
+          SnackBar(content: Text('$reportType 已提交: ${file.name}')),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('上传失败：$e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('上传失败: $e')),
         );
       }
     }
   }
 
-  // ═══════════ 已提交列表 ═══════════
+  Widget _buildSubmissionItem(Map<String, dynamic> s) {
+    final title = s['title'] as String? ?? '';
+    final time = s['submit_time'] as String? ?? s['created_at'] as String? ?? '';
+    final status = s['status'] as String? ?? '已提交';
+    final content = s['content_json'] as String? ?? '';
 
-  Widget _buildSubmissionList(Color primary) {
-    return Column(
-      children: _submissions.map((s) {
-        final type = s['report_type'] as String? ?? '';
-        final fileName = s['file_name'] as String? ?? '';
-        final status = s['status'] as String? ?? '已提交';
-        final score = s['score'] as int?;
-        final submitTime = s['submit_time'] as String? ?? '';
-        final feedback = s['feedback'] as String?;
-
-        final statusColor = status == '已批阅'
-            ? Colors.green
-            : status == '已提交'
-                ? Colors.blue
-                : Colors.grey;
-        final typeIcon = type == '考核大作业'
-            ? Icons.description
-            : type == '答辩报告'
-                ? Icons.record_voice_over
-                : type == '个人报告'
-                    ? Icons.person
-                    : type == '小组报告'
-                        ? Icons.groups
-                        : Icons.folder_open;
-
-        return Card(
-          margin: const EdgeInsets.only(bottom: 8),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          child: ExpansionTile(
-            leading: CircleAvatar(
-              backgroundColor: statusColor.withValues(alpha: 0.1),
-              radius: 18,
-              child: Icon(typeIcon, color: statusColor, size: 18),
-            ),
-            title: Text(type,
-                style:
-                    const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-            subtitle: Text(
-              '$fileName · ${submitTime.length >= 10 ? submitTime.substring(0, 10) : submitTime}',
-              style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(status,
-                      style: TextStyle(fontSize: 10, color: statusColor)),
+    return Card(
+      margin: const EdgeInsets.only(bottom: 6),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: ListTile(
+        dense: true,
+        leading: Icon(Icons.picture_as_pdf, color: Colors.red[400], size: 24),
+        title: Text(title, style: const TextStyle(fontSize: 12)),
+        subtitle: Text(
+          '${time.length > 16 ? time.substring(0, 16) : time} · $status'
+          '${content.isNotEmpty ? ' · $content' : ''}',
+          style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+        ),
+        trailing: _isStudent
+            ? IconButton(
+                icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                onPressed: () async {
+                  final id = s['id'] as int?;
+                  if (id != null) {
+                    await _dao.deleteSubmittedReport(id);
+                    await _loadSubmissions();
+                  }
+                },
+              )
+            : Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: status == '已批改'
+                      ? Colors.green.withValues(alpha: 0.1)
+                      : Colors.blue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
                 ),
-                if (score != null) ...[
-                  const SizedBox(width: 6),
-                  Text('$score分',
-                      style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: score >= 60 ? Colors.green : Colors.red)),
-                ],
-              ],
-            ),
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.picture_as_pdf,
-                            size: 14, color: Colors.red),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(fileName,
-                              style: const TextStyle(fontSize: 11),
-                              overflow: TextOverflow.ellipsis),
-                        ),
-                      ],
-                    ),
-                    if (feedback != null) ...[
-                      const SizedBox(height: 6),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(Icons.comment,
-                                size: 14, color: Colors.amber),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text('教师反馈：$feedback',
-                                  style: const TextStyle(fontSize: 11)),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton.icon(
-                          onPressed: () => _openPdf(s['file_path'] as String?),
-                          icon: const Icon(Icons.open_in_new, size: 14),
-                          label:
-                              const Text('打开', style: TextStyle(fontSize: 12)),
-                        ),
-                        const SizedBox(width: 4),
-                        TextButton.icon(
-                          onPressed: () => _confirmDelete(s['id'] as int, type),
-                          icon: const Icon(Icons.delete_outline,
-                              size: 14, color: Colors.red),
-                          label: const Text('删除',
-                              style:
-                                  TextStyle(fontSize: 12, color: Colors.red)),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                child: Text(status,
+                    style: TextStyle(
+                        fontSize: 10,
+                        color: status == '已批改' ? Colors.green : Colors.blue)),
               ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Future<void> _openPdf(String? path) async {
-    if (path == null || path.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('文件路径无效')),
-      );
-      return;
-    }
-    try {
-      await OpenFilex.open(path);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('无法打开文件：$e'), backgroundColor: Colors.red),
-        );
-      }
-    }
-  }
-
-  void _confirmDelete(int id, String type) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('确认删除'),
-        content: Text('确定要删除已提交的「$type」吗？'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-          FilledButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await _dao.deleteSubmittedReport(id);
-              await _loadSubmissions();
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('已删除'), backgroundColor: Colors.green),
-                );
-              }
-            },
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('删除'),
-          ),
-        ],
       ),
     );
   }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 模板生成
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  /// 通用模板 — 简洁适用所有同学和项目
-  String _generateGenericTemplate() {
-    return '''# 《移动应用开发》课程考核报告
-
-> **学号**：___________　**姓名**：___________　**班级**：计科22
-> **小组**：第___组　**项目名称**：___________
-> **负责技术栈**：___________　**提交日期**：___________
-
----
-
-## 一、答辩报告（40%）
-
-### 1.1 核心技术实现
-- 技术栈名称与版本：
-- 核心功能模块描述：
-- 关键代码片段说明：
-
-### 1.2 架构设计
-- 整体架构说明（建议附架构图）：
-- 模块划分与职责：
-- 跨平台数据交互方案：
-
-### 1.3 创新点
-- 技术创新（至少1项）：
-- 功能创新：
-- 应用价值分析：
-
-### 1.4 答辩问答记录
-- 问题1：
-  - 回答：
-- 问题2：
-  - 回答：
-
----
-
-## 二、个人报告（20%）
-
-### 2.1 技术图表（必须包含3张UML图）
-
-#### 类图
-> 【在此插入类图或描述主要类及其关系】
-
-#### 时序图
-> 【在此插入时序图或描述关键交互流程】
-
-#### 架构图
-> 【在此插入架构图或描述系统分层】
-
-### 2.2 四阶段工作记录
-
-| 阶段 | 时间 | 主要工作 | 产出 |
-|------|------|----------|------|
-| 项目启动 | 第1-3天 | | |
-| 核心开发 | 第4-7天 | | |
-| 系统整合 | 第8-12天 | | |
-| 测试交付 | 第13-15天 | | |
-
-### 2.3 个人总结与自我评价
-- 技术收获：
-- 遇到的困难及解决方案：
-- 自我评分（满分100）：___分
-
----
-
-## 三、小组报告（20%）
-
-### 3.1 团队概况
-
-| 成员 | 学号 | 负责技术栈 | 主要贡献 | 贡献占比 |
-|------|------|-----------|---------|---------|
-| | | | | % |
-| | | | | % |
-| | | | | % |
-| | | | | % |
-| | | | | % |
-| | | | | % |
-
-### 3.2 四阶段团队协作记录
-- **第一阶段**（项目启动）：
-- **第二阶段**（核心开发）：
-- **第三阶段**（系统整合）：
-- **第四阶段**（测试交付）：
-
-### 3.3 团队总结
-- 协作亮点：
-- 改进建议：
-
-> **全体成员签名确认**：__________ / __________ / __________ / __________ / __________ / __________
-
----
-
-## 四、项目报告（20%）
-
-### 4.1 项目概述
-- 项目名称：
-- 项目目标：
-- 技术选型概要：
-
-### 4.2 技术架构
-- 前端技术栈对比：
-- 后端/数据方案（SQLite + Firebase）：
-- 跨平台数据同步方案：
-
-### 4.3 功能实现
-- 核心功能列表：
-- 各平台实现情况：
-
-### 4.4 测试与部署
-- 测试方法：
-- 测试结果：
-- 部署说明：
-
-### 4.5 项目总结
-- 达成的课程目标：
-- 不足与改进方向：
-
----
-
-*报告模板由知识图谱教学系统生成*
-''';
-  }
-
-  /// 技术栈半定制模板
-  String _generateTechStackTemplate(String techStack) {
-    // 根据技术栈生成定制内容
-    String envSetup = '';
-    String coreImpl = '';
-    String testDeploy = '';
-    String classDigram = '';
-
-    if (techStack.contains('Flutter')) {
-      envSetup =
-          '- Flutter SDK 版本：\n- Dart 版本：\n- 开发IDE：Android Studio / VS Code\n- 模拟器/真机型号：';
-      coreImpl = '''- Widget 树结构设计：
-- 状态管理方案（Provider/Riverpod/Bloc）：
-- 路由管理（GoRouter/Navigator 2.0）：
-- 网络请求封装（http/dio）：
-- 本地存储（sqflite/shared_preferences）：
-- Firebase 集成（auth/firestore/storage）：''';
-      testDeploy =
-          '- flutter test 单元测试：\n- flutter build apk 打包：\n- flutter build ios 打包（如适用）：';
-      classDigram = '> 包含 Widget 类、State 类、Service 类、Model 类及其依赖关系';
-    } else if (techStack.contains('Android')) {
-      envSetup =
-          '- Android Studio 版本：\n- Kotlin 版本：\n- compileSdk / minSdk / targetSdk：\n- 模拟器/真机型号：';
-      coreImpl = '''- Activity/Fragment 架构设计：
-- ViewModel + LiveData/StateFlow 数据绑定：
-- Retrofit + OkHttp 网络请求：
-- Room 数据库本地存储：
-- Firebase SDK 集成：
-- Material Design 3 组件使用：''';
-      testDeploy =
-          '- JUnit 单元测试：\n- Espresso UI 测试：\n- ./gradlew assembleRelease 打包：';
-      classDigram = '> 包含 Activity、ViewModel、Repository、Dao、Entity 及其关系';
-    } else if (techStack.contains('React Native')) {
-      envSetup =
-          '- Node.js 版本：\n- React Native 版本：\n- 开发IDE：VS Code\n- Metro Bundler 配置：';
-      coreImpl = '''- 组件架构（函数式组件 + Hooks）：
-- 状态管理（Redux/Context/Zustand）：
-- React Navigation 路由：
-- Axios/Fetch 网络请求：
-- AsyncStorage 本地存储：
-- Firebase RN SDK 集成：''';
-      testDeploy =
-          '- Jest 单元测试：\n- npx react-native run-android 构建：\n- npx react-native run-ios 构建（如适用）：';
-      classDigram = '> 包含 Screen 组件、Hook、Service、Store 及数据流关系';
-    } else if (techStack.contains('HarmonyOS')) {
-      envSetup =
-          '- DevEco Studio 版本：\n- ArkTS 版本：\n- 目标设备类型（手机/平板/穿戴）：\n- 模拟器/真机型号：';
-      coreImpl = '''- ArkUI 声明式布局设计：
-- 分布式数据管理：
-- 多端自适应布局（手机/平板）：
-- 网络请求（@ohos.net.http）：
-- 首选项/关系型数据库存储：
-- 设备传感器调用：''';
-      testDeploy = '- 单元测试框架使用：\n- HAP 打包：\n- 模拟器多端验证：';
-      classDigram = '> 包含 Ability、Page、Component、Service 及分布式架构';
-    } else if (techStack.contains('微信')) {
-      envSetup = '- 微信开发者工具版本：\n- 基础库版本：\n- AppID（测试号/正式）：';
-      coreImpl = '''- 页面结构（WXML + WXSS + JS）：
-- 数据绑定与事件处理：
-- wx.request 网络请求封装：
-- 本地缓存（wx.setStorageSync）：
-- 云开发/Firebase Web SDK：
-- 小程序分包策略：''';
-      testDeploy = '- 真机预览与调试：\n- 体验版发布：\n- 审核提交（如适用）：';
-      classDigram = '> 包含 App、Page、Component、Service、API 调用关系';
-    } else if (techStack.contains('Uniapp')) {
-      envSetup = '- HBuilderX 版本：\n- Vue.js 版本（2/3）：\n- uni-app 编译目标：';
-      coreImpl = '''- Vue 组件设计（SFC 单文件组件）：
-- Vuex/Pinia 状态管理：
-- uni.request 网络请求：
-- uni 存储 API：
-- 条件编译（#ifdef）多端适配：
-- Firebase Web SDK 集成：''';
-      testDeploy = '- H5 调试：\n- 打包为 Android APK：\n- 打包为微信小程序：';
-      classDigram = '> 包含 Page、Component、Store、Service、API 调用关系';
-    }
-
-    return '''# 《移动应用开发》课程考核报告 · $techStack
-
-> **学号**：___________　**姓名**：___________　**班级**：计科22
-> **小组**：第___组　**项目名称**：___________
-> **技术栈**：$techStack　**提交日期**：___________
-
----
-
-## 一、答辩报告（40%）
-
-### 1.1 开发环境
-$envSetup
-
-### 1.2 核心技术实现
-$coreImpl
-
-### 1.3 架构设计
-- 整体架构图（分层架构）：
-  > 【在此插入 $techStack 项目架构图】
-- 与其他技术栈的 API 接口设计：
-- 跨端数据同步方案（SQLite + Firebase）：
-
-### 1.4 创新点
-- 技术创新点（结合 $techStack 特性）：
-- AI 工具（TRAE）辅助开发记录：
-  - 使用场景1：
-  - 使用场景2：
-
-### 1.5 答辩问答
-- 必答题1（核心技术深度）：
-  - 回答：
-- 必答题2（架构设计合理性）：
-  - 回答：
-- 必答题3（创新点分析）：
-  - 回答：
-- 抽答题：
-  - 回答：
-
-### 1.6 演示材料清单
-- [ ] 演示视频（≤10分钟）
-- [ ] 现场录屏
-- [ ] 演讲文稿
-- [ ] 源代码 ZIP
-- [ ] 部署文档
-
----
-
-## 二、个人报告（20%）
-
-### 2.1 技术图表（必须3张，缺少即0分）
-
-#### 类图
-$classDigram
-```
-【在此绘制或粘贴类图】
-```
-
-#### 时序图
-> 描述 $techStack 中一个核心交互流程（如登录→获取数据→渲染列表）
-```
-【在此绘制或粘贴时序图】
-```
-
-#### 架构图
-> $techStack 的分层架构（UI层→业务层→数据层→网络层）
-```
-【在此绘制或粘贴架构图】
-```
-
-### 2.2 四阶段工作记录
-
-#### 第一阶段：项目启动（第1-3天）
-- 完成的任务：
-- 工时统计：___小时
-- 关键产出：
-
-#### 第二阶段：核心开发（第4-7天）
-- 完成的功能模块：
-- 工时统计：___小时
-- 遇到的问题及解决方案：
-
-#### 第三阶段：系统整合（第8-12天）
-- API 对接情况：
-- 工时统计：___小时
-- 跨端兼容性处理：
-
-#### 第四阶段：测试交付（第13-15天）
-- 测试方法与结果：
-$testDeploy
-- 工时统计：___小时
-
-### 2.3 个人总结
-- $techStack 技术收获：
-- 对比其他技术栈的心得：
-- 自我评分（满分100）：___分
-
----
-
-## 三、小组报告（20%）
-
-### 3.1 团队成员与技术分工
-
-| 成员 | 学号 | 技术栈 | 核心职责 | 贡献占比 |
-|------|------|--------|----------|---------|
-| | | $techStack | （你的职责） | % |
-| | | | | % |
-| | | | | % |
-| | | | | % |
-| | | | | % |
-| | | | | % |
-
-### 3.2 团队协作与集成
-- Git 协作流程：
-- 跨技术栈接口定义（API 规范）：
-- 集成测试与联调记录：
-
-### 3.3 四阶段团队进展
-| 阶段 | 团队目标 | 完成情况 | 问题与解决 |
-|------|----------|---------|-----------|
-| 启动 | | | |
-| 开发 | | | |
-| 整合 | | | |
-| 交付 | | | |
-
-### 3.4 团队总结
-- 协作亮点：
-- 改进建议：
-
-> **全体成员签名确认**
-
----
-
-## 四、项目报告（20%）
-
-### 4.1 项目概述
-- 项目选题：
-- 需求分析：
-- 技术选型对比表：
-
-| 技术栈 | 负责人 | 语言 | 优势 | 劣势 |
-|--------|--------|------|------|------|
-| $techStack | （你） | | | |
-| | | | | |
-| SQLite | 全员共用 | SQL | 离线存储 | 单机 |
-| Firebase | 全员共用 | - | 云同步 | 需网络 |
-
-### 4.2 核心功能与 $techStack 实现
-- 用户注册/登录：
-- 需求发布与匹配：
-- 需求完成与反馈：
-- 个人中心：
-
-### 4.3 部署说明
-- $techStack 构建命令：
-- 安装包位置与大小：
-- 运行环境要求：
-
-### 4.4 项目总结
-- 对应课程目标达成情况：
-- 不足与后续改进方向：
-
----
-
-*报告模板由知识图谱教学系统生成 · $techStack 专版*
-''';
-  }
-
-  /// 详细参考模板 — 完整指导
-  String _generateDetailedTemplate() {
-    return '''# 《移动应用开发》课程考核报告（详细参考版）
-
-> ⚠️ **格式要求**：A4纸 · 正文宋体/Times New Roman 小四 · 标题黑体 · 行距1.5倍
-> 📋 **提交要求**：4份报告必须全部提交，缺任何一份则期末项目得分为0
-> 📄 **最终提交**：转为 PDF 格式上传
-
----
-
-> **学号**：___________　**姓名**：___________　**班级**：计科22
-> **小组**：第___组（共6人）　**项目选题**：[ ] 智慧校园 [ ] 健康运动 [ ] 智能家居 [ ] 新闻资讯
-> **负责技术栈**：___________　**提交日期**：___________
-
----
-
-# 第一部分：答辩报告（占期末50分中的20分 = 40%）
-
-> 📝 **评分维度**：核心技术实现(20分) + 架构设计(30分) + 创新点(40分) + 答辩问答(10分)
-> ⏱️ **答辩流程**：项目演示5分钟 → 技术讲解5分钟 → 评委提问3分钟 → 评分记录2分钟
-
-## 1.1 核心技术实现（20分）
-
-> 💡 **评分标准**
-> - A(18-20)：技术实现完整，代码质量高，展示清晰
-> - B(14-17)：基本完整，有少量不足
-> - C(10-13)：部分实现，存在明显问题
-> - D/E(<10)：实现不完整或无法运行
-
-### 1.1.1 开发环境配置
-- 技术栈名称与版本号：
-- SDK/框架版本：
-- 开发工具：
-- 运行环境（模拟器/真机型号）：
-
-### 1.1.2 核心功能模块
-> 请逐个列出你负责实现的功能模块，每个模块包含：功能描述、实现思路、关键代码片段
-
-**模块1：用户认证**
-- 功能描述：
-- 实现方式：
-- 关键代码（不超过20行）：
-```
-// 在此粘贴核心代码
-```
-
-**模块2：业务数据管理**
-- 功能描述：
-- 实现方式：
-- 关键代码：
-```
-// 在此粘贴核心代码
-```
-
-**模块3：___________**
-- 功能描述：
-- 实现方式：
-- 关键代码：
-
-### 1.1.3 运行效果截图
-> 至少提供3-5张关键页面截图，标注页面名称
-
-| 页面名称 | 截图 | 功能说明 |
-|----------|------|---------|
-| 登录页 | 【截图】 | |
-| 主页/列表页 | 【截图】 | |
-| 详情页 | 【截图】 | |
-| 个人中心 | 【截图】 | |
-
-## 1.2 架构设计（30分）
-
-> 💡 **评分标准**
-> - A(27-30)：架构合理，模块清晰，跨平台设计完善
-> - B(21-26)：架构基本合理
-> - C(15-20)：架构较为简单
-> - D/E(<15)：缺乏架构设计
-
-### 1.2.1 系统整体架构图
-> 【在此插入分层架构图：表现层 → 业务逻辑层 → 数据访问层 → 数据层】
-> 建议使用 PlantUML 绘制或手绘后拍照
-
-### 1.2.2 模块划分
-| 模块名 | 职责 | 对外接口 | 依赖 |
-|--------|------|---------|------|
-| | | | |
-
-### 1.2.3 数据库设计
-| 表名 | 字段 | 类型 | 说明 |
-|------|------|------|------|
-| users | id, name, password | | 用户表 |
-| | | | |
-
-### 1.2.4 跨平台接口设计
-- 统一 API 规范（与其他技术栈成员约定的接口）：
-- 数据同步方案（SQLite 本地 + Firebase 云端）：
-- 数据格式约定（JSON 结构示例）：
-
-## 1.3 创新点（40分）
-
-> 💡 **评分标准**
-> - A(36-40)：原创性强，技术难度高，有实际应用价值
-> - B(28-35)：有一定创新
-> - C(20-27)：创新有限
-> - D/E(<20)：缺乏创新
-
-### 1.3.1 技术创新（至少1项）
-- 创新点描述：
-- 技术实现难度分析：
-- 效果对比（有/无此创新的差异）：
-
-### 1.3.2 功能创新
-- 创新功能描述：
-- 用户价值分析：
-
-### 1.3.3 AI 辅助开发记录
-> 记录使用 TRAE 等 AI 工具的场景和效果
-| AI 使用场景 | 输入提示 | AI 输出 | 人工修改 | 效率提升 |
-|-------------|---------|---------|---------|---------|
-| | | | | |
-
-## 1.4 答辩问答记录（10分）
-
-### 必答题1：核心技术深度（20分基准）
-- **问题**：
-- **回答**：
-
-### 必答题2：架构设计合理性（30分基准）
-- **问题**：
-- **回答**：
-
-### 必答题3：创新点分析（40分基准）
-- **问题**：
-- **回答**：
-
-### 抽答题（10分基准）
-- **问题**：
-- **回答**：
-
-### 演示材料提交清单
-- [ ] 演示视频（MP4，≤10分钟）
-- [ ] 现场答辩录屏
-- [ ] 演讲文稿/PPT
-- [ ] 源代码完整压缩包（ZIP）
-- [ ] 部署/安装文档
-
----
-
-# 第二部分：个人报告（占期末50分中的10分 = 20%）
-
-> ⚠️ **强制要求**：必须包含3张 UML 技术图表（类图 + 时序图 + 架构图），不合规 = 0分
-
-## 2.1 技术图表（30分）
-
-> 💡 **评分标准**
-> - A(27-30)：图表完整规范，准确反映系统设计
-> - B(21-26)：基本完整
-> - C(15-20)：部分缺失
-> - D/E(<15)或缺图：0分
-
-### 2.1.1 类图（Class Diagram）
-> 展示你负责模块的核心类、属性、方法及类间关系
-> 建议工具：PlantUML / draw.io / StarUML
-
-```plantuml
-@startuml
-' 在此编写类图代码，示例：
-class UserService {
-  - db: Database
-  + login(id, pwd): Future<User?>
-  + register(user): Future<bool>
 }
 
-class UserModel {
-  + userId: String
-  + name: String
-  + role: String
-  + toMap(): Map
-}
-
-UserService --> UserModel
-@enduml
-```
-
-### 2.1.2 时序图（Sequence Diagram）
-> 展示一个核心业务流程的对象交互顺序
-
-```plantuml
-@startuml
-' 在此编写时序图代码，示例：
-actor 用户
-participant "登录页" as UI
-participant "AuthService" as Auth
-participant "数据库" as DB
-
-用户 -> UI: 输入学号密码
-UI -> Auth: login(id, pwd)
-Auth -> DB: query("SELECT * FROM users")
-DB --> Auth: 用户记录
-Auth --> UI: 登录结果
-UI --> 用户: 跳转首页/提示错误
-@enduml
-```
-
-### 2.1.3 架构图（Architecture Diagram）
-> 展示系统整体分层或模块划分
-
-```
-【在此绘制或粘贴架构图】
-建议结构：
-┌─────────────────────────┐
-│     表现层 (UI/View)      │
-├─────────────────────────┤
-│   业务逻辑层 (Service)    │
-├─────────────────────────┤
-│   数据访问层 (DAO/Repo)   │
-├─────────────────────────┤
-│   数据层 (SQLite/Firebase)│
-└─────────────────────────┘
-```
-
-## 2.2 四阶段工作记录（25分）
-
-### 第一阶段：项目启动（第1-3天）
-- **个人任务**：
-- **完成情况**：
-- **工时**：___小时
-- **产出清单**：
-  - [ ] 需求文档
-  - [ ] 环境搭建截图
-  - [ ] Hello World 运行截图
-
-### 第二阶段：核心开发（第4-7天）
-- **个人任务**：
-- **完成情况**：
-- **工时**：___小时
-- **遇到的问题**：
-- **解决方案**：
-- **Git 提交记录**（至少列出3条）：
-
-| 日期 | Commit 摘要 | 改动文件数 |
-|------|------------|-----------|
-| | | |
-
-### 第三阶段：系统整合（第8-12天）
-- **个人任务**：
-- **API 对接记录**：
-- **工时**：___小时
-- **跨端兼容性处理**：
-
-### 第四阶段：测试交付（第13-15天）
-- **测试方法**：
-- **测试结果**：
-- **工时**：___小时
-- **总工时统计**：___小时
-
-## 2.3 技术深度与质量（25分）
-- 代码规范遵循情况：
-- 设计模式使用：
-- 性能优化措施：
-- 安全考虑：
-
-## 2.4 个人总结与自我评价（20分）
-- 对移动应用开发技术体系的理解（课程目标1）：
-- 跨平台开发能力提升（课程目标2）：
-- 技术方案评估与选型能力（课程目标3）：
-- 工程实践能力（课程目标4）：
-- 自我评分：___分（满分100）
-- 对课程的建议：
-
----
-
-# 第三部分：小组报告（占期末50分中的10分 = 20%）
-
-> ⚠️ **每人必须独立整理**，不得复制粘贴他人内容，雷同即全额扣分
-
-## 3.1 团队概况（30分）
-
-### 成员信息与技术分工表
-
-| 序号 | 姓名 | 学号 | 技术栈 | 核心职责 | 代码量(行) | 贡献占比 |
-|------|------|------|--------|----------|-----------|---------|
-| 1 | | | | | | % |
-| 2 | | | | | | % |
-| 3 | | | | | | % |
-| 4 | | | | | | % |
-| 5 | | | | | | % |
-| 6 | | | | | | % |
-| **合计** | | | **6种技术栈** | | | **100%** |
-
-## 3.2 贡献准确性（30分）
-> ⚠️ 贡献数据必须与个人报告一致，不一致将被扣分
-
-- Git 仓库地址：
-- 各成员 Commit 统计：
-- 各成员代码行数统计：
-
-## 3.3 四阶段团队协作（25分）
-
-| 阶段 | 时间 | 团队目标 | 完成人员 | 完成情况 | 问题记录 |
-|------|------|---------|---------|---------|---------|
-| 启动 | 第1-3天 | | | | |
-| 开发 | 第4-7天 | | | | |
-| 整合 | 第8-12天 | | | | |
-| 交付 | 第13-15天 | | | | |
-
-## 3.4 团队总结（15分）
-- 协作亮点：
-- 使用的协作工具（Git/微信/腾讯文档等）：
-- 团队反思与改进建议：
-
-> **全体成员签名确认**（电子签名或手写）：
-> 1. __________ 2. __________ 3. __________
-> 4. __________ 5. __________ 6. __________
-
----
-
-# 第四部分：项目报告（占期末50分中的10分 = 20%）
-
-> ⚠️ **每人必须独立编写**，雷同扣分
-
-## 4.1 技术文档（30分）
-
-### 4.1.1 项目基本信息
-- 项目名称：
-- 项目简介（100字以内）：
-- Git 仓库地址：
-
-### 4.1.2 技术栈全览
-
-| 技术栈 | 语言 | 负责人 | 版本 | 用途 |
-|--------|------|--------|------|------|
-| Android | Kotlin | | | 原生开发 |
-| Flutter | Dart | | | 跨平台 |
-| React Native | JS/TS | | | 跨平台 |
-| HarmonyOS | ArkTS | | | 多端适配 |
-| 微信小程序 | WXML+JS | | | 小程序 |
-| Uniapp | Vue.js | | | 多端编译 |
-| SQLite | SQL | 全员 | | 本地存储（**必选**） |
-| Firebase | - | 全员 | | 云同步（**必选**） |
-
-### 4.1.3 系统架构文档
-> 包含整体架构图、模块关系图、数据流图
-
-### 4.1.4 API 接口文档
-| 接口 | 方法 | 路径 | 参数 | 返回 |
-|------|------|------|------|------|
-| | | | | |
-
-## 4.2 功能与部署（25分）
-- 核心功能清单及完成度：
-- 各技术栈运行截图汇总：
-- 安装/部署步骤：
-- 源代码目录结构说明：
-
-## 4.3 创新与可扩展性（25分）
-- 项目创新点总结：
-- 技术难点攻克记录：
-- 后续扩展方向：
-
-## 4.4 成绩汇总与课程目标对标（20分）
-
-| 课程目标 | 权重 | 对标内容 | 自评达成度 |
-|----------|------|---------|-----------|
-| 目标1：技术体系认知 | 15% | | % |
-| 目标2：跨平台开发能力 | 25% | | % |
-| 目标3：技术方案评估 | 30% | | % |
-| 目标4：工程实践能力 | 30% | | % |
-
----
-
-> 📎 **附录建议**：Gitee 仓库结构截图、CI/CD 配置、性能测试报告等
-
----
-
-*详细参考模板由知识图谱教学系统生成 · 请根据实际情况填写并删除提示文字*
-''';
-  }
-}
 
 // ══════════════════════════════════════════════════════════════════════════════
 // 成绩统计 Tab
@@ -3245,41 +5187,78 @@ class _ScoreTabState extends State<_ScoreTab> {
           if (_isStudent) ...[
             Card(
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
+                  borderRadius: BorderRadius.circular(18)),
+              elevation: 4,
               child: Container(
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(18),
                   gradient: LinearGradient(
                     colors: [primary, primary.withValues(alpha: 0.7)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: primary.withValues(alpha: 0.2),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
                 ),
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.all(22),
                 child: Column(
                   children: [
-                    const Text('我的考核成绩',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 12),
-                    if (_myScore != null)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.school,
+                            color: Colors.white.withValues(alpha: 0.8),
+                            size: 20),
+                        const SizedBox(width: 8),
+                        const Text('我的考核成绩',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    if (_myScore != null) ...[
                       Text(
                         '${(_myScore!['total_score'] as num?)?.toInt() ?? 0}',
                         style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 48,
-                            fontWeight: FontWeight.bold),
-                      )
-                    else
-                      const Text('暂无成绩',
-                          style:
-                              TextStyle(color: Colors.white70, fontSize: 18)),
-                    if (_myScore != null)
-                      Text(
-                        '${_myScore!['group_name'] ?? ''} · ${_myScore!['project_name'] ?? ''}',
-                        style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.7),
-                            fontSize: 12),
+                            fontSize: 52,
+                            fontWeight: FontWeight.bold,
+                            height: 1.1),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '${_myScore!['group_name'] ?? ''} · ${_myScore!['project_name'] ?? ''}',
+                          style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ] else
+                      Column(
+                        children: [
+                          Icon(Icons.pending_outlined,
+                              color: Colors.white.withValues(alpha: 0.6),
+                              size: 36),
+                          const SizedBox(height: 8),
+                          const Text('暂无成绩',
+                              style: TextStyle(
+                                  color: Colors.white70, fontSize: 16)),
+                        ],
                       ),
                   ],
                 ),
@@ -3296,22 +5275,32 @@ class _ScoreTabState extends State<_ScoreTab> {
             // 统计概览
             Card(
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
+                  borderRadius: BorderRadius.circular(18)),
+              elevation: 4,
               child: Container(
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(18),
                   gradient: LinearGradient(
                     colors: [primary, primary.withValues(alpha: 0.7)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: primary.withValues(alpha: 0.2),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
                 ),
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.all(20),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     _overviewItem('平均分', avgScore, Icons.analytics),
-                    Container(width: 1, height: 40, color: Colors.white30),
+                    Container(width: 1, height: 44, color: Colors.white24),
                     _overviewItem('最高分', maxScore, Icons.emoji_events),
-                    Container(width: 1, height: 40, color: Colors.white30),
+                    Container(width: 1, height: 44, color: Colors.white24),
                     _overviewItem('及格率', passRate, Icons.check_circle),
                   ],
                 ),
@@ -3320,9 +5309,28 @@ class _ScoreTabState extends State<_ScoreTab> {
             const SizedBox(height: 16),
 
             // 排行榜
-            const Text('成绩排行',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.grey.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(10),
+                border: Border(
+                  left: BorderSide(color: Colors.indigo.withValues(alpha: 0.5), width: 3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.leaderboard, size: 17, color: Colors.indigo[400]),
+                  const SizedBox(width: 8),
+                  Text('成绩排行 (${_ranking.length})',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[800])),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
 
             if (_ranking.isEmpty)
               Padding(
@@ -3330,10 +5338,17 @@ class _ScoreTabState extends State<_ScoreTab> {
                 child: Center(
                   child: Column(
                     children: [
-                      Icon(Icons.leaderboard_outlined,
-                          size: 48, color: Colors.grey[300]),
-                      const SizedBox(height: 8),
-                      Text('暂无成绩数据', style: TextStyle(color: Colors.grey[500])),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Icon(Icons.leaderboard_outlined,
+                            size: 48, color: Colors.grey[300]),
+                      ),
+                      const SizedBox(height: 12),
+                      Text('暂无成绩数据', style: TextStyle(color: Colors.grey[400])),
                     ],
                   ),
                 ),
@@ -3376,16 +5391,41 @@ class _ScoreTabState extends State<_ScoreTab> {
     final documentation = (top['score_documentation'] as num?)?.toInt() ?? 0;
 
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 2,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            colors: [
+              Colors.indigo.withValues(alpha: 0.04),
+              Colors.white,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('评分维度明细（${top['group_name'] ?? '第一名'}）',
-                style:
-                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-            const SizedBox(height: 10),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.indigo.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.bar_chart, size: 16, color: Colors.indigo[400]),
+                ),
+                const SizedBox(width: 8),
+                Text('评分维度明细（${top['group_name'] ?? '第一名'}）',
+                    style:
+                        const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              ],
+            ),
+            const SizedBox(height: 14),
             _dimensionBar('功能完整性', functionality, 25, Colors.blue),
             _dimensionBar('技术实现深度', techDepth, 20, Colors.green),
             _dimensionBar('跨框架整合', integration, 25, Colors.purple),
@@ -3400,16 +5440,24 @@ class _ScoreTabState extends State<_ScoreTab> {
   Widget _overviewItem(String label, String value, IconData icon) {
     return Column(
       children: [
-        Icon(icon, color: Colors.white, size: 22),
-        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: Colors.white, size: 20),
+        ),
+        const SizedBox(height: 8),
         Text(value,
             style: const TextStyle(
                 color: Colors.white,
-                fontSize: 20,
+                fontSize: 22,
                 fontWeight: FontWeight.bold)),
+        const SizedBox(height: 2),
         Text(label,
             style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.7), fontSize: 11)),
+                color: Colors.white.withValues(alpha: 0.75), fontSize: 11)),
       ],
     );
   }
@@ -3418,66 +5466,135 @@ class _ScoreTabState extends State<_ScoreTab> {
     final rank = score['rank'] as int;
     final totalScore = score['score'] as int;
     final rankColor = rank == 1
-        ? Colors.amber
+        ? Colors.amber[700]!
         : rank == 2
-            ? Colors.grey.shade400
+            ? Colors.grey.shade500
             : rank == 3
-                ? Colors.brown.shade300
+                ? Colors.brown.shade400
                 : Colors.grey;
+    final rankIcon = rank <= 3 ? Icons.emoji_events : null;
+
+    final scoreColor = totalScore >= 90
+        ? Colors.green
+        : totalScore >= 80
+            ? Colors.blue
+            : totalScore >= 60
+                ? Colors.orange
+                : Colors.red;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: rankColor.withValues(alpha: 0.15),
-          child: Text('#$rank',
-              style: TextStyle(
-                  fontWeight: FontWeight.bold, color: rankColor, fontSize: 14)),
+      margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      elevation: rank <= 3 ? 3 : 1,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          gradient: rank <= 3
+              ? LinearGradient(
+                  colors: [
+                    rankColor.withValues(alpha: 0.06),
+                    Colors.white,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
         ),
-        title: Text(score['group'] as String,
-            style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(score['project'] as String,
-            style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-        trailing: Text('$totalScore',
-            style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: totalScore >= 90
-                    ? Colors.green
-                    : totalScore >= 80
-                        ? Colors.blue
-                        : totalScore >= 60
-                            ? Colors.orange
-                            : Colors.red)),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            // Rank badge
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: rankColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+                border: rank <= 3
+                    ? Border.all(color: rankColor.withValues(alpha: 0.3))
+                    : null,
+              ),
+              child: Center(
+                child: rankIcon != null
+                    ? Icon(rankIcon, color: rankColor, size: 22)
+                    : Text('#$rank',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: rankColor,
+                            fontSize: 14)),
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(score['group'] as String,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 14)),
+                  const SizedBox(height: 2),
+                  Text(score['project'] as String,
+                      style:
+                          TextStyle(fontSize: 12, color: Colors.grey[500])),
+                ],
+              ),
+            ),
+            // Score
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: scoreColor.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text('$totalScore',
+                  style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: scoreColor)),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _dimensionBar(String name, int score, int max, Color color) {
+    final ratio = max > 0 ? score / max : 0.0;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 90,
-            child: Text(name, style: const TextStyle(fontSize: 12)),
-          ),
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: max > 0 ? score / max : 0,
-                minHeight: 10,
-                backgroundColor: Colors.grey[200],
-                valueColor: AlwaysStoppedAnimation(color),
+          Row(
+            children: [
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                ),
               ),
+              const SizedBox(width: 6),
+              Text(name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+              const Spacer(),
+              Text('$score/$max',
+                  style: TextStyle(
+                      fontSize: 12, color: color, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: ratio,
+              minHeight: 8,
+              backgroundColor: color.withValues(alpha: 0.08),
+              valueColor: AlwaysStoppedAnimation(color),
             ),
           ),
-          const SizedBox(width: 8),
-          Text('$score/$max',
-              style: TextStyle(
-                  fontSize: 12, color: color, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -3492,15 +5609,40 @@ class _ScoreTabState extends State<_ScoreTab> {
     final documentation = (score['score_documentation'] as num?)?.toInt() ?? 0;
 
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 2,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            colors: [
+              Colors.indigo.withValues(alpha: 0.04),
+              Colors.white,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('评分维度明细',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-            const SizedBox(height: 10),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.indigo.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.bar_chart, size: 16, color: Colors.indigo[400]),
+                ),
+                const SizedBox(width: 8),
+                const Text('评分维度明细',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              ],
+            ),
+            const SizedBox(height: 14),
             _dimensionBar('功能完整性', functionality, 25, Colors.blue),
             _dimensionBar('技术实现深度', techDepth, 20, Colors.green),
             _dimensionBar('跨框架整合', integration, 25, Colors.purple),
