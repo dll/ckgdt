@@ -199,6 +199,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   List<_ConceptEdge> _edges = [];
   bool _isLoading = true;
   bool _hasData = false;
+  bool _initialFitDone = false;
   String? _errorMessage;
 
   // ── 视图状态 ─────────────────────────────────────────────────────────────
@@ -326,6 +327,14 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
 
       if (_hasData) {
         _calculateLayout();
+      }
+
+      // 首次加载完成后自动缩放到全图显示
+      if (_hasData && !_initialFitDone) {
+        _initialFitDone = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _fitAll();
+        });
       }
 
       setState(() => _isLoading = false);

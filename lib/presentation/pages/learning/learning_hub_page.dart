@@ -8,8 +8,12 @@ import '../../../services/ai_service.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/file_opener_service.dart';
 import '../../../services/courseware_download_service.dart';
+import '../../../data/local/ai_config_dao.dart';
 import '../materials/courseware_workshop_page.dart';
+import '../materials/ai_settings_page.dart';
 import '../admin/data_import_page.dart';
+import 'video_player_page.dart';
+import 'pdf_viewer_page.dart';
 
 /// 学习中心页面 — 合并原"视频"和"课件"菜单
 /// 4 个 Tab：视频、PPT、PDF、AI助手
@@ -43,6 +47,8 @@ class _LearningHubPageState extends State<LearningHubPage>
   final _inputController = TextEditingController();
   final _scrollController = ScrollController();
   bool _aiLoading = false;
+  String _aiProviderLabel = 'DeepSeek';
+  String _aiModel = 'deepseek-chat';
 
   @override
   void initState() {
@@ -68,6 +74,7 @@ class _LearningHubPageState extends State<LearningHubPage>
       _loadVideos(),
       _loadPPTs(),
       _loadPDFs(),
+      _loadAiConfig(),
     ]);
   }
 
@@ -135,6 +142,17 @@ class _LearningHubPageState extends State<LearningHubPage>
       if (!mounted) return;
       setState(() => _pdfLoading = false);
     }
+  }
+
+  Future<void> _loadAiConfig() async {
+    try {
+      final config = await AiConfigDao().getConfig();
+      if (!mounted) return;
+      setState(() {
+        _aiProviderLabel = config.providerLabel;
+        _aiModel = config.model;
+      });
+    } catch (_) {}
   }
 
   @override
@@ -309,6 +327,12 @@ class _LearningHubPageState extends State<LearningHubPage>
 
     return Column(
       children: [
+        // 工具栏：模型指示器 + 操作按钮
+        _buildAiToolbar(),
+
+        // 快捷提问（消息列表非空时显示为紧凑条）
+        if (_messages.isNotEmpty) _buildQuickPromptBar(),
+
         // 消息列表
         Expanded(
           child: _messages.isEmpty
@@ -316,10 +340,12 @@ class _LearningHubPageState extends State<LearningHubPage>
               : ListView.builder(
                   controller: _scrollController,
                   padding: const EdgeInsets.all(12),
-                  itemCount: _messages.length,
+                  itemCount: _messages.length + (_aiLoading ? 1 : 0),
                   itemBuilder: (context, index) {
-                    final msg = _messages[index];
-                    return _buildMessageBubble(msg);
+                    if (index == _messages.length && _aiLoading) {
+                      return _buildTypingIndicator();
+                    }
+                    return _buildMessageBubble(_messages[index]);
                   },
                 ),
         ),
@@ -378,6 +404,179 @@ class _LearningHubPageState extends State<LearningHubPage>
           ),
         ),
       ],
+    );
+  }
+
+  /// AI 工具栏：模型指示 + 新会话 + 设置
+  Widget _buildAiToolbar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        border: Border(
+          bottom: BorderSide(color: Colors.grey.shade200),
+        ),
+      ),
+      child: Row(
+        children: [
+          // 模型指示器
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.smart_toy, size: 14,
+                    color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 4),
+                Text(
+                  _aiProviderLabel,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            _aiModel,
+            style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+          ),
+
+          const Spacer(),
+
+          // 新会话
+          TextButton.icon(
+            icon: const Icon(Icons.add, size: 16),
+            label: const Text('新会话', style: TextStyle(fontSize: 12)),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: const Size(0, 32),
+            ),
+            onPressed: () {
+              setState(() => _messages.clear());
+            },
+          ),
+
+          // 清空
+          IconButton(
+            icon: const Icon(Icons.delete_outline, size: 18),
+            tooltip: '清空对话',
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            padding: EdgeInsets.zero,
+            onPressed: _messages.isEmpty
+                ? null
+                : () {
+                    setState(() => _messages.clear());
+                  },
+          ),
+
+          // AI 设置
+          IconButton(
+            icon: const Icon(Icons.settings_outlined, size: 18),
+            tooltip: 'AI 设置',
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            padding: EdgeInsets.zero,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AiSettingsPage()),
+              ).then((_) => _loadAiConfig());
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 快捷提问条（对话进行中时显示）
+  Widget _buildQuickPromptBar() {
+    const prompts = [
+      'Android和iOS的区别',
+      'React Native优势',
+      'Flutter特点',
+      '小程序开发要点',
+      '鸿蒙应用架构',
+      '跨平台方案对比',
+    ];
+
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        itemCount: prompts.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 6),
+        itemBuilder: (context, index) {
+          return ActionChip(
+            label: Text(prompts[index], style: const TextStyle(fontSize: 11)),
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            onPressed: () {
+              _inputController.text = prompts[index];
+              _sendMessage();
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  /// "正在思考" 打字指示器
+  Widget _buildTypingIndicator() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 16,
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            child: const Icon(Icons.smart_toy, size: 18, color: Colors.white),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+                bottomRight: Radius.circular(16),
+                bottomLeft: Radius.circular(4),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 16, height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '正在思考...',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 13,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -454,27 +653,38 @@ class _LearningHubPageState extends State<LearningHubPage>
             const SizedBox(width: 8),
           ],
           Flexible(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: isUser
-                    ? Theme.of(context).colorScheme.primary
-                    : Colors.grey.shade100,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
-                  bottomLeft: Radius.circular(isUser ? 16 : 4),
-                  bottomRight: Radius.circular(isUser ? 4 : 16),
+            child: Column(
+              crossAxisAlignment:
+                  isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isUser
+                        ? Theme.of(context).colorScheme.primary
+                        : Colors.grey.shade100,
+                    borderRadius: BorderRadius.only(
+                      topLeft: const Radius.circular(16),
+                      topRight: const Radius.circular(16),
+                      bottomLeft: Radius.circular(isUser ? 16 : 4),
+                      bottomRight: Radius.circular(isUser ? 4 : 16),
+                    ),
+                  ),
+                  child: SelectableText(
+                    msg.text,
+                    style: TextStyle(
+                      color: isUser ? Colors.white : Colors.black87,
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                  ),
                 ),
-              ),
-              child: SelectableText(
-                msg.text,
-                style: TextStyle(
-                  color: isUser ? Colors.white : Colors.black87,
-                  fontSize: 14,
-                  height: 1.5,
+                const SizedBox(height: 2),
+                Text(
+                  msg.timeLabel,
+                  style: TextStyle(fontSize: 10, color: Colors.grey[400]),
                 ),
-              ),
+              ],
             ),
           ),
           if (isUser) ...[
@@ -503,10 +713,22 @@ class _LearningHubPageState extends State<LearningHubPage>
 
     try {
       final aiService = AiService();
+
+      // 构建完整对话历史（最多保留最近 20 轮）
+      final history = <Map<String, String>>[];
+      final startIdx = _messages.length > 40 ? _messages.length - 40 : 0;
+      for (int i = startIdx; i < _messages.length; i++) {
+        history.add({
+          'role': _messages[i].isUser ? 'user' : 'assistant',
+          'content': _messages[i].text,
+        });
+      }
+
       final reply = await aiService.chat(
-        [{'role': 'user', 'content': text}],
+        history,
         systemPrompt: '你是一个移动应用开发课程的AI学习助手，帮助学生解答关于Android、iOS、Flutter、'
-            'React Native、微信小程序、鸿蒙等移动开发技术的问题。请用中文简洁回答。',
+            'React Native、微信小程序、鸿蒙等移动开发技术的问题。请用中文简洁回答。'
+            '回答时可使用 Markdown 格式（标题、列表、代码块等）使内容更清晰。',
       );
       if (!mounted) return;
       setState(() {
@@ -540,6 +762,36 @@ class _LearningHubPageState extends State<LearningHubPage>
 
   // ── 通用工具 ──────────────────────────────────────────────────────────────
 
+  /// 根据文件类型路由到应用内播放器
+  void _openWithInAppViewer(String filePath, String fileName) {
+    final ext = fileName.split('.').last.toLowerCase();
+
+    if (['mp4', 'avi', 'mov', 'wmv', 'mkv', 'flv'].contains(ext)) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => InAppVideoPlayerPage(
+            filePath: filePath,
+            title: fileName,
+          ),
+        ),
+      );
+    } else if (ext == 'pdf') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => InAppPdfViewerPage(
+            filePath: filePath,
+            title: fileName,
+          ),
+        ),
+      );
+    } else {
+      // PPT / PPTX / DOC 等 → 使用系统工具打开
+      FileOpenerService.openExternalFile(context, filePath);
+    }
+  }
+
   void _openFile(Map<String, dynamic> file) async {
     final filePath = file['file_path'] as String? ?? '';
     final fileName = file['file_name'] as String? ?? '${file['chapter']}';
@@ -558,7 +810,7 @@ class _LearningHubPageState extends State<LearningHubPage>
       final localFile = File(filePath);
       if (await localFile.exists()) {
         if (!mounted) return;
-        FileOpenerService.openFile(context, filePath, fileName);
+        _openWithInAppViewer(filePath, fileName);
         return;
       }
     }
@@ -674,7 +926,7 @@ class _LearningHubPageState extends State<LearningHubPage>
 
     if (resultPath != null) {
       if (!mounted) return;
-      FileOpenerService.openFile(context, resultPath, fileName);
+      _openWithInAppViewer(resultPath, fileName);
     } else {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -712,6 +964,14 @@ class _LearningHubPageState extends State<LearningHubPage>
 class _ChatMessage {
   final String text;
   final bool isUser;
+  final DateTime time;
 
-  _ChatMessage({required this.text, required this.isUser});
+  _ChatMessage({required this.text, required this.isUser, DateTime? time})
+      : time = time ?? DateTime.now();
+
+  String get timeLabel {
+    final h = time.hour.toString().padLeft(2, '0');
+    final m = time.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  }
 }
