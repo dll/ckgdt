@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../data/local/graph_dao.dart';
 import '../../../data/local/quiz_dao.dart';
+import '../graph/graph_detail_page.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -242,8 +243,14 @@ class _SearchPageState extends State<SearchPage> {
         subtitle: Text('图谱'),
         trailing: const Icon(Icons.chevron_right),
         onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('打开图谱: ${graph.title}')),
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => GraphDetailPage(
+                graphId: graph.id,
+                graphTitle: graph.title,
+              ),
+            ),
           );
         },
       ),
@@ -266,10 +273,104 @@ class _SearchPageState extends State<SearchPage> {
         subtitle: Text(question.source ?? '测验题'),
         trailing: const Icon(Icons.chevron_right),
         onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('查看题目详情')),
-          );
+          _showQuestionDetail(question);
         },
+      ),
+    );
+  }
+
+  void _showQuestionDetail(dynamic question) {
+    final options = [
+      'A. ${question.optionA}',
+      'B. ${question.optionB}',
+      'C. ${question.optionC}',
+      'D. ${question.optionD}',
+    ];
+    final correctIdx = question.answerIndex as int;
+    final correctLetter = ['A', 'B', 'C', 'D'][correctIdx];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            if (question.source != null)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF667eea).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(question.source!,
+                    style: const TextStyle(
+                        fontSize: 12, color: Color(0xFF667eea))),
+              ),
+            Text(question.question,
+                style: const TextStyle(
+                    fontSize: 15, fontWeight: FontWeight.bold, height: 1.5)),
+            const SizedBox(height: 14),
+            ...List.generate(4, (i) {
+              final isCorrect = i == correctIdx;
+              return Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isCorrect
+                      ? Colors.green.withValues(alpha: 0.08)
+                      : Colors.grey.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isCorrect
+                        ? Colors.green.withValues(alpha: 0.4)
+                        : Colors.grey.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                        child: Text(options[i],
+                            style: TextStyle(
+                                fontSize: 14,
+                                color: isCorrect
+                                    ? Colors.green[800]
+                                    : Colors.black87))),
+                    if (isCorrect)
+                      const Icon(Icons.check_circle,
+                          color: Colors.green, size: 18),
+                  ],
+                ),
+              );
+            }),
+            const SizedBox(height: 8),
+            Text('正确答案: $correctLetter',
+                style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.green[700],
+                    fontWeight: FontWeight.w600)),
+          ],
+        ),
       ),
     );
   }
