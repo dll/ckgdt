@@ -250,14 +250,20 @@ class _HomePageState extends State<HomePage> {
             selectedIcon: Icon(Icons.source),
             label: '仓库',
           ),
-          // 9: 达成（教师/管理员）
+          // 9: 技能（AI 教学技能）
+          const NavigationDestination(
+            icon: Icon(Icons.auto_awesome_outlined),
+            selectedIcon: Icon(Icons.auto_awesome),
+            label: '技能',
+          ),
+          // 10: 达成（教师/管理员）
           if (isTeacher || isAdmin)
             const NavigationDestination(
               icon: Icon(Icons.emoji_events_outlined),
               selectedIcon: Icon(Icons.emoji_events),
               label: '达成',
             ),
-          // 10: 管理（仅管理员）
+          // 11: 管理（仅管理员）
           if (isAdmin)
             const NavigationDestination(
               icon: Icon(Icons.admin_panel_settings_outlined),
@@ -270,16 +276,16 @@ class _HomePageState extends State<HomePage> {
   }
 
   /// Tab 索引映射（动态，取决于角色）:
-  /// 0=首页 1=图谱 2=路径 3=学习(视频/PPT/PDF/AI助手) 4=测验 5=实验 6=考核 7=作品 8=仓库
-  /// 教师/管理员: 9=达成
-  /// 管理员: 10=管理（教师时无此项）
-  /// 学生: 无9/10
+  /// 0=首页 1=图谱 2=路径 3=学习(视频/PPT/PDF/AI助手) 4=测验 5=实验 6=考核 7=作品 8=仓库 9=技能
+  /// 教师/管理员: 10=达成
+  /// 管理员: 11=管理（教师时无此项）
+  /// 学生: 无10/11
   Widget _buildBody() {
     final isAdmin = _authService.isAdmin;
     final isTeacher = _authService.isTeacher;
     final isTeacherOrAdmin = isTeacher || isAdmin;
 
-    // 固定索引 0-8 映射
+    // 固定索引 0-9 映射
     switch (_selectedIndex) {
       case 0:
         return _buildHome();
@@ -302,10 +308,12 @@ class _HomePageState extends State<HomePage> {
         if (isTeacherOrAdmin) return const GitRepoPage();
         return const StudentRepoPage();
       case 9:
-        // 教师/管理员: 达成; 其他角色不会有 index 9
+        return const SkillsHubPage();
+      case 10:
+        // 教师/管理员: 达成; 其他角色不会有 index 10
         if (isTeacherOrAdmin) return const AchievementPage();
         return _buildHome();
-      case 10:
+      case 11:
         // 管理员: 管理
         if (isAdmin) return const _AdminToolsPage();
         return _buildHome();
@@ -477,26 +485,21 @@ class _HomePageState extends State<HomePage> {
                 icon: Icons.auto_awesome,
                 title: 'AI 技能',
                 color: Colors.deepPurple[400]!,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SkillsHubPage()),
-                  );
-                },
+                onTap: () => setState(() => _selectedIndex = 9),
               ),
               if (_authService.isTeacher || _authService.isAdmin)
                 _buildMenuCard(
                   icon: Icons.emoji_events,
                   title: '课程达成',
                   color: Colors.deepOrange,
-                  onTap: () => setState(() => _selectedIndex = 9),
+                  onTap: () => setState(() => _selectedIndex = 10),
                 ),
               if (_authService.isAdmin)
                 _buildMenuCard(
                   icon: Icons.people,
                   title: '学生管理',
                   color: Colors.brown,
-                  onTap: () => setState(() => _selectedIndex = 10),
+                  onTap: () => setState(() => _selectedIndex = 11),
                 ),
               ],
               );
