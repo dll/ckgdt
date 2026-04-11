@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../data/local/favorite_dao.dart';
+import '../../../data/local/graph_dao.dart';
 import '../../../services/auth_service.dart';
+import 'graph_detail_page.dart';
 
 class FavoritesPage extends StatefulWidget {
   const FavoritesPage({super.key});
@@ -102,9 +104,24 @@ class _FavoritesPageState extends State<FavoritesPage> {
                             icon: const Icon(Icons.delete_outline, color: Colors.red),
                             onPressed: () => _removeFavorite(fav['node_id']),
                           ),
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('打开: ${fav['node_title']}')),
+                          onTap: () async {
+                            final nodeId = fav['node_id'] as String?;
+                            if (nodeId == null) return;
+                            // 查找节点所属图谱
+                            final graphDao = GraphDao();
+                            final node = await graphDao.getNode(nodeId);
+                            if (node == null || !context.mounted) return;
+                            final graphId = node.graphId;
+                            final graph = await graphDao.getGraph(graphId);
+                            if (!context.mounted) return;
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => GraphDetailPage(
+                                  graphId: graphId,
+                                  graphTitle: graph?.title ?? '知识图谱',
+                                ),
+                              ),
                             );
                           },
                         ),
