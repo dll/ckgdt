@@ -3,11 +3,7 @@ import '../../../core/constants/app_theme.dart';
 import '../../../main.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/settings_service.dart';
-import '../learning/video_page.dart';
 import '../materials/ai_settings_page.dart';
-import '../quiz/wrong_answers_page.dart';
-import '../graph/favorites_page.dart';
-import '../survey/survey_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -59,25 +55,25 @@ class _SettingsPageState extends State<SettingsPage> {
         children: [
           // 用户信息
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: AppGradientTheme.of(context).verticalGradient,
             ),
             child: Row(
               children: [
                 CircleAvatar(
-                  radius: 30,
+                  radius: 24,
                   backgroundColor: Colors.white,
                   child: Text(
                     (user?.realName ?? user?.userId ?? 'U').substring(0, 1),
                     style: TextStyle(
-                      fontSize: 24,
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -102,51 +98,6 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
               ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // 学习工具
-          _buildSectionHeader(context, '学习工具'),
-          _buildMenuItem(
-            context,
-            icon: Icons.error,
-            title: '错题本',
-            subtitle: '查看和复习错题',
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const WrongAnswersPage()),
-            ),
-          ),
-          _buildMenuItem(
-            context,
-            icon: Icons.star,
-            title: '我的收藏',
-            subtitle: '查看收藏的知识点',
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const FavoritesPage()),
-            ),
-          ),
-          _buildMenuItem(
-            context,
-            icon: Icons.poll,
-            title: '问卷调查',
-            subtitle: '学习习惯与课程满意度调查',
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SurveyPage()),
-            ),
-          ),
-          _buildMenuItem(
-            context,
-            icon: Icons.video_library,
-            title: '视频教程',
-            subtitle: '观看学习视频',
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const VideoListPage()),
             ),
           ),
 
@@ -215,7 +166,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     final preset = AppColors.presets[i];
                     final selected = _colorIndex == i;
                     return Padding(
-                      padding: const EdgeInsets.only(right: 20),
+                      padding: const EdgeInsets.only(right: 12),
                       child: GestureDetector(
                         onTap: () async {
                           await SettingsService.setColorIndex(i);
@@ -317,8 +268,6 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
 
-          const SizedBox(height: 8),
-
           const SizedBox(height: 16),
 
           // 关于
@@ -368,16 +317,19 @@ class _SettingsPageState extends State<SettingsPage> {
   }) {
     final primary = Theme.of(context).colorScheme.primary;
     return ListTile(
+      dense: true,
+      visualDensity: VisualDensity.compact,
       leading: CircleAvatar(
+        radius: 18,
         backgroundColor: primary.withValues(alpha: 0.1),
-        child: Icon(icon, color: primary),
+        child: Icon(icon, color: primary, size: 20),
       ),
-      title: Text(title),
+      title: Text(title, style: const TextStyle(fontSize: 14)),
       subtitle: Text(
         subtitle,
-        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+        style: TextStyle(color: Colors.grey[600], fontSize: 11),
       ),
-      trailing: trailing ?? const Icon(Icons.chevron_right),
+      trailing: trailing ?? const Icon(Icons.chevron_right, size: 20),
       onTap: onTap,
     );
   }
