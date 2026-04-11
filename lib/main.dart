@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:media_kit/media_kit.dart';
 import 'data/local/database_helper.dart';
 import 'services/data_loading_service.dart';
 import 'services/theme_manager.dart';
@@ -16,6 +17,7 @@ import 'platform/platform_init_stub.dart'
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  MediaKit.ensureInitialized();
 
   // 平台相关初始化（数据库工厂、屏幕方向等）
   await platform_init.initPlatform();
