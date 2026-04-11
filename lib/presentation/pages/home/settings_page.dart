@@ -7,6 +7,7 @@ import '../learning/video_page.dart';
 import '../materials/ai_settings_page.dart';
 import '../quiz/wrong_answers_page.dart';
 import '../graph/favorites_page.dart';
+import '../survey/survey_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -19,6 +20,7 @@ class _SettingsPageState extends State<SettingsPage> {
   ThemeMode _themeMode = ThemeMode.system;
   int _colorIndex = 0;
   bool _notificationsEnabled = true;
+  bool _quickLoginEnabled = false;
 
   @override
   void initState() {
@@ -30,11 +32,13 @@ class _SettingsPageState extends State<SettingsPage> {
     final mode = await SettingsService.getThemeMode();
     final index = await SettingsService.getColorIndex();
     final notifEnabled = await SettingsService.isNotificationEnabled();
+    final quickLogin = await SettingsService.isQuickLoginEnabled();
     if (mounted) {
       setState(() {
         _themeMode = mode;
         _colorIndex = index;
         _notificationsEnabled = notifEnabled;
+        _quickLoginEnabled = quickLogin;
       });
     }
   }
@@ -127,6 +131,16 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           _buildMenuItem(
             context,
+            icon: Icons.poll,
+            title: '问卷调查',
+            subtitle: '学习习惯与课程满意度调查',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SurveyPage()),
+            ),
+          ),
+          _buildMenuItem(
+            context,
             icon: Icons.video_library,
             title: '视频教程',
             subtitle: '观看学习视频',
@@ -170,6 +184,20 @@ class _SettingsPageState extends State<SettingsPage> {
               MaterialPageRoute(builder: (_) => const AiSettingsPage()),
             ),
           ),
+          if (user?.isAdmin == true)
+            _buildMenuItem(
+              context,
+              icon: Icons.flash_on,
+              title: '快速登录',
+              subtitle: '登录页显示测试用户快速登录按钮',
+              trailing: Switch(
+                value: _quickLoginEnabled,
+                onChanged: (value) async {
+                  await SettingsService.setQuickLoginEnabled(value);
+                  setState(() => _quickLoginEnabled = value);
+                },
+              ),
+            ),
 
           const SizedBox(height: 16),
 

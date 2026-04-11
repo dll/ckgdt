@@ -171,6 +171,83 @@ class LearningRecordDao {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
+  // 教师视图 — 全体学生达成度聚合
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /// 获取所有学生对每个概念的完成比率
+  /// 返回 Map<conceptId, completionRatio(0.0~1.0)>
+  Future<Map<int, double>> getAllStudentsConceptRatio(
+      List<Map<String, dynamic>> concepts) async {
+    await _ensureConceptProgressTable();
+    final db = await _dbHelper.database;
+
+    // 获取所有学生
+    final studentRows = await db.query(
+      'users',
+      columns: ['user_id'],
+      where: 'role = ?',
+      whereArgs: ['student'],
+    );
+    if (studentRows.isEmpty) return {};
+
+    final studentIds =
+        studentRows.map((r) => r['user_id'] as String).toList();
+    final totalStudents = studentIds.length;
+
+    // 为每个学生同步达成度（确保数据最新）
+    final allProgress = <String, Map<int, String>>{};
+    for (final sid in studentIds) {
+      allProgress[sid] = await autoSyncConceptProgress(sid, concepts);
+    }
+
+    // 聚合：每个概念的完成学生比例
+    final ratioMap = <int, double>{};
+    for (final c in concepts) {
+      final cId = c['id'] as int;
+      int completedCount = 0;
+      int inProgressCount = 0;
+      for (final sid in studentIds) {
+        final status = allProgress[sid]?[cId] ?? 'not_started';
+        if (status == 'completed') {
+          completedCount++;
+        } else if (status == 'in_progress') {
+          inProgressCount++;
+        }
+      }
+      // 完成=1.0权重, 学习中=0.5权重
+      ratioMap[cId] =
+          (completedCount + inProgressCount * 0.5) / totalStudents;
+    }
+    return ratioMap;
+  }
+
+  /// 获取单个学生的达成度统计（教师查看用）
+  Future<Map<String, int>> getStudentProgressStats(
+      String studentId, List<Map<String, dynamic>> concepts) async {
+    final progress = await autoSyncConceptProgress(studentId, concepts);
+    int completed = 0, inProgress = 0, notStarted = 0;
+    for (final c in concepts) {
+      final cId = c['id'] as int;
+      final s = progress[cId] ?? 'not_started';
+      switch (s) {
+        case 'completed':
+          completed++;
+          break;
+        case 'in_progress':
+          inProgress++;
+          break;
+        default:
+          notStarted++;
+      }
+    }
+    return {
+      'completed': completed,
+      'in_progress': inProgress,
+      'not_started': notStarted,
+    };
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
   // 原有学习记录方法
   // ══════════════════════════════════════════════════════════════════════════
 

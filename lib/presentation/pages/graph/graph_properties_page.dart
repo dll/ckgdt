@@ -1236,7 +1236,7 @@ class _AiRecommendDialogState extends State<_AiRecommendDialog> {
     } catch (e) {
       setState(() {
         _isLoading = false;
-        _error = e.toString();
+        _error = '$e';
       });
     }
   }

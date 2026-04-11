@@ -11,6 +11,7 @@ import '../learning/video_page.dart';
 import '../learning/learning_hub_page.dart';
 import '../learning/learning_plan_page.dart';
 import '../assessment/assessment_page.dart';
+import '../survey/survey_page.dart';
 import '../admin/student_manage_page.dart';
 import '../admin/data_import_page.dart';
 import '../admin/teacher_manage_page.dart';
@@ -445,6 +446,17 @@ class _HomePageState extends State<HomePage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const FavoritesPage()),
+                  );
+                },
+              ),
+              _buildMenuCard(
+                icon: Icons.poll,
+                title: '问卷调查',
+                color: Colors.teal[400]!,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SurveyPage()),
                   );
                 },
               ),

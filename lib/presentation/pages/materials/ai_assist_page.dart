@@ -120,7 +120,7 @@ class _AiAssistPageState extends State<AiAssistPage> {
       _lastAiReply = reply;
     } catch (e) {
       if (!mounted) return;
-      _addAiMessage('❌ 请求失败：$e\n\n请检查 AI API Key 配置是否正确。');
+      _addAiMessage('❌ $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -152,7 +152,7 @@ class _AiAssistPageState extends State<AiAssistPage> {
       _lastAiReply = result;
     } catch (e) {
       if (!mounted) return;
-      _addAiMessage('❌ 脚本生成失败：$e');
+      _addAiMessage('❌ $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -181,7 +181,7 @@ class _AiAssistPageState extends State<AiAssistPage> {
       _lastAiReply = result;
     } catch (e) {
       if (!mounted) return;
-      _addAiMessage('❌ UML 生成失败：$e');
+      _addAiMessage('❌ $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }

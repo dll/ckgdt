@@ -10,6 +10,8 @@ import '../../../data/models/learning_path_model.dart';
 import '../../../services/ai_service.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/knowledge_seed_service.dart';
+import '../../../data/local/user_dao.dart';
+import '../../../data/models/user_model.dart';
 import '../learning/learning_chain_page.dart';
 import '../learning/video_page.dart';
 import '../materials/resource_viewer_page.dart';
@@ -234,6 +236,12 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   int _progressInProgress = 0;
   int _progressNotStarted = 0;
 
+  // ── 教师达成度视图 ─────────────────────────────────────────────────────
+  bool _teacherAchievementMode = false; // 是否处于教师查看模式
+  String? _selectedStudentId;           // null = 全体学生
+  List<UserModel> _studentList = [];
+  Map<int, double> _allStudentsRatio = {}; // conceptId → 完成比率 0.0~1.0
+
   // ── 画布参数 ─────────────────────────────────────────────────────────────
   static const double _canvasWidth = 2400;
   static const double _canvasHeight = 2000;
@@ -340,6 +348,9 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
       final userId = _authService.currentUser?.userId;
       if (userId == null) return;
 
+      final isTeacherOrAdmin =
+          _authService.isTeacher || _authService.isAdmin;
+
       // 把 _nodes 转为 knowledge_concepts 行格式供 autoSync 使用
       final conceptMaps = _nodes
           .map((n) => <String, dynamic>{
@@ -349,24 +360,79 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
               })
           .toList();
 
-      _conceptProgress = await _learningRecordDao.autoSyncConceptProgress(
-          userId, conceptMaps);
+      if (isTeacherOrAdmin) {
+        _teacherAchievementMode = true;
 
-      // 统计
-      _progressCompleted = 0;
-      _progressInProgress = 0;
-      _progressNotStarted = 0;
-      for (final node in _nodes) {
-        final s = _conceptProgress[node.id] ?? 'not_started';
-        switch (s) {
-          case 'completed':
-            _progressCompleted++;
-            break;
-          case 'in_progress':
-            _progressInProgress++;
-            break;
-          default:
-            _progressNotStarted++;
+        // 加载学生列表（首次）
+        if (_studentList.isEmpty) {
+          _studentList = await UserDao().getStudents();
+        }
+
+        if (_selectedStudentId == null) {
+          // 全体学生聚合视图
+          _allStudentsRatio = await _learningRecordDao
+              .getAllStudentsConceptRatio(conceptMaps);
+
+          // 从 ratio 推导统计
+          _progressCompleted = 0;
+          _progressInProgress = 0;
+          _progressNotStarted = 0;
+          for (final node in _nodes) {
+            final r = _allStudentsRatio[node.id] ?? 0.0;
+            if (r >= 0.8) {
+              _progressCompleted++;
+            } else if (r > 0.0) {
+              _progressInProgress++;
+            } else {
+              _progressNotStarted++;
+            }
+          }
+          // 清空个人进度（使用 ratio 模式）
+          _conceptProgress = {};
+        } else {
+          // 查看某个学生
+          _conceptProgress = await _learningRecordDao
+              .autoSyncConceptProgress(_selectedStudentId!, conceptMaps);
+          _allStudentsRatio = {};
+
+          _progressCompleted = 0;
+          _progressInProgress = 0;
+          _progressNotStarted = 0;
+          for (final node in _nodes) {
+            final s = _conceptProgress[node.id] ?? 'not_started';
+            switch (s) {
+              case 'completed':
+                _progressCompleted++;
+                break;
+              case 'in_progress':
+                _progressInProgress++;
+                break;
+              default:
+                _progressNotStarted++;
+            }
+          }
+        }
+      } else {
+        _teacherAchievementMode = false;
+        _conceptProgress = await _learningRecordDao.autoSyncConceptProgress(
+            userId, conceptMaps);
+
+        // 统计
+        _progressCompleted = 0;
+        _progressInProgress = 0;
+        _progressNotStarted = 0;
+        for (final node in _nodes) {
+          final s = _conceptProgress[node.id] ?? 'not_started';
+          switch (s) {
+            case 'completed':
+              _progressCompleted++;
+              break;
+            case 'in_progress':
+              _progressInProgress++;
+              break;
+            default:
+              _progressNotStarted++;
+          }
         }
       }
       if (mounted) setState(() {});
@@ -2512,6 +2578,8 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   Widget _buildAchievementInfoBar() {
     final total = _nodes.length;
     final pct = total > 0 ? (_progressCompleted / total * 100) : 0.0;
+    final isAllStudents =
+        _teacherAchievementMode && _selectedStudentId == null;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -2530,6 +2598,35 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
       ),
       child: Column(
         children: [
+          // 教师：学生选择器
+          if (_teacherAchievementMode) ...[
+            Row(
+              children: [
+                const Icon(Icons.people, size: 15, color: Color(0xFF667eea)),
+                const SizedBox(width: 6),
+                const Text('查看：',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF667eea))),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: SizedBox(
+                    height: 32,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _studentChip('全体学生', null),
+                          ..._studentList.map((s) => _studentChip(
+                              s.realName ?? s.userId, s.userId)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+          ],
+
           // 进度条
           Row(
             children: [
@@ -2537,52 +2634,73 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                   size: 16, color: Color(0xFFFF9800)),
               const SizedBox(width: 6),
               Text(
-                '达成度 ${pct.toStringAsFixed(1)}%',
+                isAllStudents
+                    ? '全体达成度 ${pct.toStringAsFixed(1)}%'
+                    : '达成度 ${pct.toStringAsFixed(1)}%',
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF667eea),
                 ),
               ),
+              if (isAllStudents) ...[
+                const SizedBox(width: 6),
+                Text('(${_studentList.length}人)',
+                    style: TextStyle(
+                        fontSize: 11, color: Colors.grey.shade500)),
+              ],
               const Spacer(),
-              _achievementChip(
-                  '已掌握', _progressCompleted, const Color(0xFF4CAF50)),
-              const SizedBox(width: 6),
-              _achievementChip(
-                  '学习中', _progressInProgress, const Color(0xFFFF9800)),
-              const SizedBox(width: 6),
-              _achievementChip(
-                  '未开始', _progressNotStarted, const Color(0xFFE53935)),
-              const SizedBox(width: 8),
-              // AI 推荐按钮
-              InkWell(
-                onTap: _showAiRecommendation,
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF667eea).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color(0xFF667eea).withValues(alpha: 0.3),
+              if (isAllStudents) ...[
+                _achievementChip(
+                    '≥80%', _progressCompleted, const Color(0xFF4CAF50)),
+                const SizedBox(width: 6),
+                _achievementChip(
+                    '部分', _progressInProgress, const Color(0xFFFF9800)),
+                const SizedBox(width: 6),
+                _achievementChip(
+                    '0%', _progressNotStarted, const Color(0xFFE53935)),
+              ] else ...[
+                _achievementChip(
+                    '已掌握', _progressCompleted, const Color(0xFF4CAF50)),
+                const SizedBox(width: 6),
+                _achievementChip(
+                    '学习中', _progressInProgress, const Color(0xFFFF9800)),
+                const SizedBox(width: 6),
+                _achievementChip(
+                    '未开始', _progressNotStarted, const Color(0xFFE53935)),
+              ],
+              if (!_teacherAchievementMode) ...[
+                const SizedBox(width: 8),
+                // AI 推荐按钮
+                InkWell(
+                  onTap: _showAiRecommendation,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF667eea).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFF667eea).withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.auto_awesome,
+                            size: 13, color: Color(0xFF667eea)),
+                        SizedBox(width: 3),
+                        Text('AI推荐',
+                            style: TextStyle(
+                                fontSize: 10,
+                                color: Color(0xFF667eea),
+                                fontWeight: FontWeight.bold)),
+                      ],
                     ),
                   ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.auto_awesome,
-                          size: 13, color: Color(0xFF667eea)),
-                      SizedBox(width: 3),
-                      Text('AI推荐',
-                          style: TextStyle(
-                              fontSize: 10,
-                              color: Color(0xFF667eea),
-                              fontWeight: FontWeight.bold)),
-                    ],
-                  ),
                 ),
-              ),
+              ],
             ],
           ),
           const SizedBox(height: 6),
@@ -2613,6 +2731,40 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _studentChip(String label, String? studentId) {
+    final isSelected = _selectedStudentId == studentId;
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: InkWell(
+        onTap: () {
+          setState(() => _selectedStudentId = studentId);
+          _loadConceptProgress();
+        },
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? const Color(0xFF667eea)
+                : const Color(0xFF667eea).withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: const Color(0xFF667eea).withValues(alpha: 0.3),
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: isSelected ? Colors.white : const Color(0xFF667eea),
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -2772,7 +2924,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
       Navigator.of(context).pop(); // 关闭加载对话框
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('AI 推荐失败: $e\n\n提示：请在"设置" → "AI 配置"中配置 API Key'),
+          content: Text('$e'),
           duration: const Duration(seconds: 4),
         ),
       );
@@ -2848,6 +3000,11 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                       : null,
                   progressMap: _viewMode == _ViewMode.achievement
                       ? _conceptProgress
+                      : null,
+                  progressRatioMap: _viewMode == _ViewMode.achievement &&
+                          _teacherAchievementMode &&
+                          _selectedStudentId == null
+                      ? _allStudentsRatio
                       : null,
                 ),
                 size: const Size(_canvasWidth, _canvasHeight),
@@ -3261,12 +3418,21 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                             color: Colors.grey,
                             fontWeight: FontWeight.w600)),
                   ),
-                  _legendItem(const Color(0xFF4CAF50), '已掌握',
-                      isCircle: true),
-                  _legendItem(const Color(0xFFFF9800), '学习中',
-                      isCircle: true),
-                  _legendItem(const Color(0xFFE53935), '未开始',
-                      isCircle: true),
+                  if (_teacherAchievementMode && _selectedStudentId == null) ...[
+                    _legendItem(const Color(0xFFE53935), '0%',
+                        isCircle: true),
+                    _legendItem(const Color(0xFFFF9800), '50%',
+                        isCircle: true),
+                    _legendItem(const Color(0xFF4CAF50), '100%',
+                        isCircle: true),
+                  ] else ...[
+                    _legendItem(const Color(0xFF4CAF50), '已掌握',
+                        isCircle: true),
+                    _legendItem(const Color(0xFFFF9800), '学习中',
+                        isCircle: true),
+                    _legendItem(const Color(0xFFE53935), '未开始',
+                        isCircle: true),
+                  ],
                   const SizedBox(width: 16),
                   const Padding(
                     padding: EdgeInsets.only(right: 6),
@@ -3419,6 +3585,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
   final Path? maskPath;
   final String? userName;
   final Map<int, String>? progressMap;
+  final Map<int, double>? progressRatioMap;
 
   _KnowledgeGraphPainter({
     required this.nodes,
@@ -3433,6 +3600,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
     this.maskPath,
     this.userName,
     this.progressMap,
+    this.progressRatioMap,
   });
 
   @override
@@ -3577,7 +3745,29 @@ class _KnowledgeGraphPainter extends CustomPainter {
 
       // 达成度模式：根据进度着色
       final Color nodeColor;
-      if (progressMap != null) {
+      if (progressRatioMap != null && progressRatioMap!.containsKey(node.id)) {
+        // 教师全体学生视图：渐变色 红→黄→绿
+        final ratio = (progressRatioMap![node.id] ?? 0.0).clamp(0.0, 1.0);
+        if (ratio <= 0.0) {
+          nodeColor = const Color(0xFFE53935); // 纯红
+        } else if (ratio < 0.5) {
+          // 红→黄渐变
+          nodeColor = Color.lerp(
+            const Color(0xFFE53935),
+            const Color(0xFFFF9800),
+            ratio * 2,
+          )!;
+        } else if (ratio < 1.0) {
+          // 黄→绿渐变
+          nodeColor = Color.lerp(
+            const Color(0xFFFF9800),
+            const Color(0xFF4CAF50),
+            (ratio - 0.5) * 2,
+          )!;
+        } else {
+          nodeColor = const Color(0xFF4CAF50); // 纯绿
+        }
+      } else if (progressMap != null) {
         final status = progressMap![node.id] ?? 'not_started';
         switch (status) {
           case 'completed':

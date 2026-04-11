@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/settings_service.dart';
 import '../home/home_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -18,6 +19,18 @@ class _LoginPageState extends State<LoginPage> {
 
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _quickLoginEnabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadQuickLoginSetting();
+  }
+
+  Future<void> _loadQuickLoginSetting() async {
+    final enabled = await SettingsService.isQuickLoginEnabled();
+    if (mounted) setState(() => _quickLoginEnabled = enabled);
+  }
 
   @override
   void dispose() {
@@ -188,47 +201,49 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    const Text(
-                      '快速登录',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
+                    if (_quickLoginEnabled) ...[
+                      const Text(
+                        '快速登录',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ElevatedButton(
-                          onPressed: () =>
-                              _quickLogin('2023211985', '211985', '学生'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange,
-                            foregroundColor: Colors.white,
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          ElevatedButton(
+                            onPressed: () =>
+                                _quickLogin('2023211985', '211985', '学生'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              foregroundColor: Colors.white,
+                            ),
+                            child: const Text('学生'),
                           ),
-                          child: const Text('学生'),
-                        ),
-                        const SizedBox(width: 16),
-                        ElevatedButton(
-                          onPressed: () =>
-                              _quickLogin('206004', '206004', '刘东良'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white,
+                          const SizedBox(width: 16),
+                          ElevatedButton(
+                            onPressed: () =>
+                                _quickLogin('206004', '206004', '刘东良'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                            ),
+                            child: const Text('教师'),
                           ),
-                          child: const Text('教师'),
-                        ),
-                        const SizedBox(width: 16),
-                        ElevatedButton(
-                          onPressed: () => _quickLogin('419116', '9116', '管理员'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            foregroundColor: Colors.white,
+                          const SizedBox(width: 16),
+                          ElevatedButton(
+                            onPressed: () => _quickLogin('419116', '9116', '管理员'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                            ),
+                            child: const Text('管理员'),
                           ),
-                          child: const Text('管理员'),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     const Text(
                       '提示：密码为账号后6位',
