@@ -5,8 +5,11 @@ import '../../../core/constants/app_theme.dart';
 import '../../../core/constants/chapter_sorter.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../services/ai_service.dart';
+import '../../../services/auth_service.dart';
 import '../../../services/file_opener_service.dart';
 import '../../../services/courseware_download_service.dart';
+import '../materials/courseware_workshop_page.dart';
+import '../admin/data_import_page.dart';
 
 /// 学习中心页面 — 合并原"视频"和"课件"菜单
 /// 4 个 Tab：视频、PPT、PDF、AI助手
@@ -22,6 +25,10 @@ class LearningHubPage extends StatefulWidget {
 class _LearningHubPageState extends State<LearningHubPage>
     with TickerProviderStateMixin {
   late TabController _tabController;
+  final _authService = AuthService();
+
+  bool get _isTeacherOrAdmin =>
+      _authService.isTeacher || _authService.isAdmin;
 
   // 数据
   List<Map<String, dynamic>> _videos = [];
@@ -136,8 +143,27 @@ class _LearningHubPageState extends State<LearningHubPage>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('学习'),
+        title: Text(_isTeacherOrAdmin ? '学习资源管理' : '学习'),
         actions: [
+          if (_isTeacherOrAdmin) ...[
+            IconButton(
+              icon: const Icon(Icons.movie_creation_outlined),
+              tooltip: '课件工坊',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const CoursewareWorkshopPage()),
+              ).then((_) => _loadAllData()),
+            ),
+            IconButton(
+              icon: const Icon(Icons.upload_file),
+              tooltip: '资源管理',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const DataImportPage()),
+              ).then((_) => _loadAllData()),
+            ),
+          ],
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: '刷新',

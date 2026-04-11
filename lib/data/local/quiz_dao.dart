@@ -134,4 +134,62 @@ class QuizDao {
     return db.delete('questions',
         where: 'source = ?', whereArgs: [chapter]);
   }
+
+  // ══════════════════════════════════════════════════════════
+  //  教师分析方法
+  // ══════════════════════════════════════════════════════════
+
+  /// 获取全班测验概览统计
+  Future<Map<String, dynamic>> getClassQuizOverview() async {
+    final db = await _dbHelper.database;
+    final result = await db.rawQuery('''
+      SELECT
+        COUNT(DISTINCT user_id) as student_count,
+        COUNT(*) as total_attempts,
+        AVG(score) as avg_score,
+        CASE WHEN COUNT(*) > 0
+          THEN SUM(CASE WHEN score >= 60 THEN 1 ELSE 0 END) * 100.0 / COUNT(*)
+          ELSE 0 END as pass_rate
+      FROM quiz_results
+    ''');
+    if (result.isNotEmpty) return Map<String, dynamic>.from(result.first);
+    return {
+      'student_count': 0,
+      'total_attempts': 0,
+      'avg_score': 0.0,
+      'pass_rate': 0.0,
+    };
+  }
+
+  /// 获取各章节测验统计（教师用）
+  Future<List<Map<String, dynamic>>> getChapterQuizPerformance() async {
+    final db = await _dbHelper.database;
+    return db.rawQuery('''
+      SELECT chapter,
+             COUNT(*) as attempt_count,
+             COUNT(DISTINCT user_id) as student_count,
+             AVG(score) as avg_score,
+             CASE WHEN COUNT(*) > 0
+               THEN SUM(CASE WHEN score >= 60 THEN 1 ELSE 0 END) * 100.0 / COUNT(*)
+               ELSE 0 END as pass_rate,
+             MAX(score) as max_score,
+             MIN(score) as min_score
+      FROM quiz_results
+      WHERE chapter IS NOT NULL AND chapter != ''
+      GROUP BY chapter
+      ORDER BY chapter
+    ''');
+  }
+
+  /// 获取最近的测验记录（全班，教师用）
+  Future<List<Map<String, dynamic>>> getRecentAllResults({int limit = 20}) async {
+    final db = await _dbHelper.database;
+    return db.rawQuery('''
+      SELECT qr.*, u.real_name
+      FROM quiz_results qr
+      LEFT JOIN users u ON qr.user_id = u.user_id
+      ORDER BY qr.quiz_timestamp DESC
+      LIMIT ?
+    ''', [limit]);
+  }
 }

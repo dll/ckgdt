@@ -106,21 +106,21 @@ class _ProgressPageState extends State<ProgressPage> with SingleTickerProviderSt
                 Expanded(child: _buildStatCard('正确率', totalQuestions > 0 ? '${((totalCorrect / totalQuestions) * 100).toStringAsFixed(1)}%' : '0%', Icons.check_circle, Colors.orange)),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
 
             // 成绩趋势图
             if (_results.isNotEmpty) ...[
-              const Text('成绩趋势', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
+              const Text('成绩趋势', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
               SizedBox(height: 200, child: _buildChart()),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
             ],
 
             // 测验记录
-            const Text('测验记录', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
+            const Text('测验记录', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
             if (_results.isEmpty)
-              const Center(child: Padding(padding: EdgeInsets.all(32), child: Text('暂无测验记录', style: TextStyle(color: Colors.grey))))
+              const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('暂无测验记录', style: TextStyle(color: Colors.grey))))
             else
               ..._results.take(10).map((result) => Card(
                 margin: const EdgeInsets.only(bottom: 8),
@@ -162,10 +162,10 @@ class _ProgressPageState extends State<ProgressPage> with SingleTickerProviderSt
                 Expanded(child: _buildStatCard('本周学习', '$thisWeek', Icons.calendar_today, Colors.orange)),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
 
-            const Text('学习建议', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
+            const Text('学习建议', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -192,13 +192,14 @@ class _ProgressPageState extends State<ProgressPage> with SingleTickerProviderSt
   Widget _buildStatCard(String title, String value, IconData icon, Color color) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         child: Column(
           children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(height: 8),
-            Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
-            Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 6),
+            Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+            const SizedBox(height: 2),
+            Text(title, style: const TextStyle(fontSize: 11, color: Colors.grey)),
           ],
         ),
       ),
