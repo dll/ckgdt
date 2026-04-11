@@ -2772,7 +2772,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
       Navigator.of(context).pop(); // 关闭加载对话框
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('AI 推荐失败: $e\n\n提示：请在"学习"Tab → AI助手中配置 API Key'),
+          content: Text('AI 推荐失败: $e\n\n提示：请在"设置" → "AI 配置"中配置 API Key'),
           duration: const Duration(seconds: 4),
         ),
       );
