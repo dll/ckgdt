@@ -1,11 +1,10 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import '../../../services/file_opener_service.dart';
 
-/// 应用内视频播放器
-/// 使用 video_player 包实现，支持播放/暂停、进度拖动、倍速播放
-/// AppBar 提供"使用系统播放器打开"按钮作为备选
+/// 应用内视频播放器（基于 media_kit，支持 Windows 桌面）
+/// 支持播放/暂停、进度拖动、倍速、快进快退、全屏
 class InAppVideoPlayerPage extends StatefulWidget {
   final String filePath;
   final String title;
@@ -21,70 +20,93 @@ class InAppVideoPlayerPage extends StatefulWidget {
 }
 
 class _InAppVideoPlayerPageState extends State<InAppVideoPlayerPage> {
-  late VideoPlayerController _controller;
+  late final Player _player;
+  late final VideoController _videoController;
   bool _initialized = false;
   String? _error;
   bool _showControls = true;
   double _playbackSpeed = 1.0;
 
+  // 播放状态
+  Duration _position = Duration.zero;
+  Duration _duration = Duration.zero;
+  bool _isPlaying = false;
+  bool _isBuffering = false;
+
   @override
   void initState() {
     super.initState();
+    _player = Player();
+    _videoController = VideoController(_player);
     _initPlayer();
   }
 
   void _initPlayer() {
-    _controller = VideoPlayerController.file(File(widget.filePath))
-      ..initialize().then((_) {
-        if (mounted) {
-          setState(() => _initialized = true);
-          _controller.play();
-        }
-      }).catchError((e) {
-        if (mounted) {
-          setState(() => _error = '视频加载失败: $e');
-        }
-      });
-    _controller.addListener(_onPlayerUpdate);
-  }
+    // 监听各种状态
+    _player.stream.playing.listen((playing) {
+      if (mounted) setState(() => _isPlaying = playing);
+    });
+    _player.stream.position.listen((position) {
+      if (mounted) setState(() => _position = position);
+    });
+    _player.stream.duration.listen((duration) {
+      if (mounted) {
+        setState(() {
+          _duration = duration;
+          _initialized = true;
+        });
+      }
+    });
+    _player.stream.buffering.listen((buffering) {
+      if (mounted) setState(() => _isBuffering = buffering);
+    });
+    _player.stream.error.listen((error) {
+      if (mounted && error.isNotEmpty) {
+        setState(() => _error = error);
+      }
+    });
 
-  void _onPlayerUpdate() {
-    if (mounted) setState(() {});
+    // 打开文件
+    _player.open(Media(widget.filePath)).catchError((e) {
+      if (mounted) {
+        setState(() => _error = '视频加载失败: $e');
+      }
+    });
   }
 
   @override
   void dispose() {
-    _controller.removeListener(_onPlayerUpdate);
-    _controller.dispose();
+    _player.dispose();
     super.dispose();
   }
 
-  String _formatDuration(Duration d) {
+  String _fmt(Duration d) {
     final h = d.inHours;
     final m = (d.inMinutes % 60).toString().padLeft(2, '0');
     final s = (d.inSeconds % 60).toString().padLeft(2, '0');
-    if (h > 0) return '$h:$m:$s';
-    return '$m:$s';
+    return h > 0 ? '$h:$m:$s' : '$m:$s';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: Text(widget.title, style: const TextStyle(fontSize: 15)),
-        backgroundColor: Colors.black87,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.open_in_new),
-            tooltip: '使用系统播放器打开',
-            onPressed: () {
-              FileOpenerService.openExternalFile(context, widget.filePath);
-            },
-          ),
-        ],
-      ),
+      appBar: _showControls
+          ? AppBar(
+              title: Text(widget.title, style: const TextStyle(fontSize: 15)),
+              backgroundColor: Colors.black87,
+              foregroundColor: Colors.white,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.open_in_new),
+                  tooltip: '使用系统播放器打开',
+                  onPressed: () {
+                    FileOpenerService.openExternalFile(context, widget.filePath);
+                  },
+                ),
+              ],
+            )
+          : null,
       body: _buildBody(),
     );
   }
@@ -118,19 +140,6 @@ class _InAppVideoPlayerPageState extends State<InAppVideoPlayerPage> {
       );
     }
 
-    if (!_initialized) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(color: Colors.white),
-            SizedBox(height: 16),
-            Text('加载视频...', style: TextStyle(color: Colors.white70)),
-          ],
-        ),
-      );
-    }
-
     return GestureDetector(
       onTap: () => setState(() => _showControls = !_showControls),
       child: Stack(
@@ -138,29 +147,29 @@ class _InAppVideoPlayerPageState extends State<InAppVideoPlayerPage> {
         children: [
           // 视频画面
           Center(
-            child: AspectRatio(
-              aspectRatio: _controller.value.aspectRatio,
-              child: VideoPlayer(_controller),
+            child: Video(
+              controller: _videoController,
+              controls: NoVideoControls,
             ),
           ),
 
-          // 播放/暂停叠加层（点击中央）
-          if (_showControls)
+          // 缓冲指示器
+          if (_isBuffering)
+            const CircularProgressIndicator(color: Colors.white),
+
+          // 中央播放/暂停按钮
+          if (_showControls && !_isBuffering)
             GestureDetector(
-              onTap: () {
-                _controller.value.isPlaying
-                    ? _controller.pause()
-                    : _controller.play();
-              },
+              onTap: () => _player.playOrPause(),
               child: Container(
                 width: 64,
                 height: 64,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Colors.black54,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  _controller.value.isPlaying ? Icons.pause : Icons.play_arrow,
+                  _isPlaying ? Icons.pause : Icons.play_arrow,
                   color: Colors.white,
                   size: 40,
                 ),
@@ -181,10 +190,8 @@ class _InAppVideoPlayerPageState extends State<InAppVideoPlayerPage> {
   }
 
   Widget _buildControlBar() {
-    final pos = _controller.value.position;
-    final dur = _controller.value.duration;
-    final progress = dur.inMilliseconds > 0
-        ? pos.inMilliseconds / dur.inMilliseconds
+    final progress = _duration.inMilliseconds > 0
+        ? _position.inMilliseconds / _duration.inMilliseconds
         : 0.0;
 
     return Container(
@@ -212,8 +219,8 @@ class _InAppVideoPlayerPageState extends State<InAppVideoPlayerPage> {
             child: Slider(
               value: progress.clamp(0.0, 1.0),
               onChanged: (v) {
-                _controller.seekTo(Duration(
-                  milliseconds: (v * dur.inMilliseconds).round(),
+                _player.seek(Duration(
+                  milliseconds: (v * _duration.inMilliseconds).round(),
                 ));
               },
             ),
@@ -222,12 +229,10 @@ class _InAppVideoPlayerPageState extends State<InAppVideoPlayerPage> {
           // 时间 + 按钮
           Row(
             children: [
-              // 时间显示
               Text(
-                '${_formatDuration(pos)} / ${_formatDuration(dur)}',
+                '${_fmt(_position)} / ${_fmt(_duration)}',
                 style: const TextStyle(color: Colors.white70, fontSize: 12),
               ),
-
               const Spacer(),
 
               // 快退 10s
@@ -236,24 +241,21 @@ class _InAppVideoPlayerPageState extends State<InAppVideoPlayerPage> {
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                 onPressed: () {
-                  _controller.seekTo(pos - const Duration(seconds: 10));
+                  final target = _position - const Duration(seconds: 10);
+                  _player.seek(target < Duration.zero ? Duration.zero : target);
                 },
               ),
 
               // 播放/暂停
               IconButton(
                 icon: Icon(
-                  _controller.value.isPlaying ? Icons.pause : Icons.play_arrow,
+                  _isPlaying ? Icons.pause : Icons.play_arrow,
                   color: Colors.white,
                   size: 30,
                 ),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-                onPressed: () {
-                  _controller.value.isPlaying
-                      ? _controller.pause()
-                      : _controller.play();
-                },
+                onPressed: () => _player.playOrPause(),
               ),
 
               // 快进 10s
@@ -262,7 +264,8 @@ class _InAppVideoPlayerPageState extends State<InAppVideoPlayerPage> {
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                 onPressed: () {
-                  _controller.seekTo(pos + const Duration(seconds: 10));
+                  final target = _position + const Duration(seconds: 10);
+                  _player.seek(target > _duration ? _duration : target);
                 },
               ),
 
@@ -276,7 +279,7 @@ class _InAppVideoPlayerPageState extends State<InAppVideoPlayerPage> {
                 ),
                 onSelected: (speed) {
                   setState(() => _playbackSpeed = speed);
-                  _controller.setPlaybackSpeed(speed);
+                  _player.setRate(speed);
                 },
                 itemBuilder: (_) => [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
                     .map((s) => PopupMenuItem(

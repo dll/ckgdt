@@ -14,6 +14,7 @@ import '../materials/ai_settings_page.dart';
 import '../admin/data_import_page.dart';
 import 'video_player_page.dart';
 import 'pdf_viewer_page.dart';
+import 'ppt_viewer_page.dart';
 
 /// 学习中心页面 — 合并原"视频"和"课件"菜单
 /// 4 个 Tab：视频、PPT、PDF、AI助手
@@ -786,8 +787,18 @@ class _LearningHubPageState extends State<LearningHubPage>
           ),
         ),
       );
+    } else if (['ppt', 'pptx'].contains(ext)) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => InAppPptViewerPage(
+            filePath: filePath,
+            title: fileName,
+          ),
+        ),
+      );
     } else {
-      // PPT / PPTX / DOC 等 → 使用系统工具打开
+      // DOC 等其他格式 → 使用系统工具打开
       FileOpenerService.openExternalFile(context, filePath);
     }
   }
