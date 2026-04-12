@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="knowledge_graph_app"
+        android:label="MADKG"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
