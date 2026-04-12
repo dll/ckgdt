@@ -768,6 +768,11 @@ class _LearningHubPageState extends State<LearningHubPage>
     final ext = fileName.split('.').last.toLowerCase();
 
     if (['mp4', 'avi', 'mov', 'wmv', 'mkv', 'flv'].contains(ext)) {
+      // Android 无 media_kit 原生库，走系统播放器
+      if (Platform.isAndroid || Platform.isIOS) {
+        FileOpenerService.openExternalFile(context, filePath);
+        return;
+      }
       Navigator.push(
         context,
         MaterialPageRoute(
