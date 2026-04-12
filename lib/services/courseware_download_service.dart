@@ -155,12 +155,12 @@ class CoursewareDownloadService {
       final token = await _gitee.getToken();
       final remotePath = _remotePath(fileType, chapter);
 
-      // 使用 Gitee Raw URL 下载（比 Contents API 效率高，无 base64 开销）
+      // 使用 Gitee API Raw 端点下载（私有仓库不支持 web raw URL）
       final encodedPath = Uri.encodeFull(remotePath);
       var url =
-          'https://gitee.com/$_owner/$_repo/raw/$_branch/$encodedPath';
+          'https://gitee.com/api/v5/repos/$_owner/$_repo/raw/$encodedPath?ref=$_branch';
       if (token != null && token.isNotEmpty) {
-        url += '?access_token=$token';
+        url += '&access_token=$token';
       }
 
       debugPrint('CoursewareDownload: GET $url');

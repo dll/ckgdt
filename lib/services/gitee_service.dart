@@ -530,9 +530,10 @@ class GiteeService {
   }) async {
     final token = await getToken();
     final encodedPath = Uri.encodeFull(path);
-    final url = 'https://gitee.com/$owner/$repo/raw/$ref/$encodedPath';
+    // 使用 Gitee API Raw 端点（私有仓库不支持 web raw URL）
+    final url = 'https://gitee.com/api/v5/repos/$owner/$repo/raw/$encodedPath?ref=$ref';
     if (token != null && token.isNotEmpty) {
-      return '$url?access_token=$token';
+      return '$url&access_token=$token';
     }
     return url;
   }
