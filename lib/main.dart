@@ -1,7 +1,5 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:media_kit/media_kit.dart';
 import 'data/local/database_helper.dart';
 import 'services/data_loading_service.dart';
@@ -17,7 +15,15 @@ import 'platform/platform_init_stub.dart'
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  MediaKit.ensureInitialized();
+
+  // MediaKit 仅在桌面端初始化（Android 无原生库，走系统播放器）
+  try {
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      MediaKit.ensureInitialized();
+    }
+  } catch (e) {
+    debugPrint('=== main: MediaKit init skipped: $e');
+  }
 
   // 平台相关初始化（数据库工厂、屏幕方向等）
   await platform_init.initPlatform();
@@ -81,7 +87,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '移动应用开发知识图谱',
+      title: 'MADKG',
       debugShowCheckedModeBanner: false,
       themeMode: _themeMode,
       theme: ThemeManager.light(_colorIndex),
