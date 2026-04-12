@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:archive/archive.dart';
@@ -80,7 +81,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
 
       for (final key in sortedKeys) {
         final entry = slideFiles[key]!;
-        final xmlContent = String.fromCharCodes(entry.content as List<int>);
+        final xmlContent = utf8.decode(entry.content as List<int>);
         final slide = _parseSlideXml(xmlContent, key);
         slides.add(slide);
       }
