@@ -76,7 +76,7 @@ class _ConceptNode {
   final String importance;
   final String? description;
   final String? keywords;
-  double x, y;
+  double x = 0, y = 0;
   double vx = 0, vy = 0;
 
   _ConceptNode({
@@ -210,6 +210,8 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
 
   // ── 搜索 ────────────────────────────────────────────────────────────────
   bool _showSearch = false;
+  // ignore: unused_field
+  String _searchQuery = '';
   final _searchController = TextEditingController();
 
   // ── 关系视图 ─────────────────────────────────────────────────────────────

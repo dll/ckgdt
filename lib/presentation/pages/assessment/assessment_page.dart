@@ -1177,6 +1177,8 @@ class _ProjectTabState extends State<_ProjectTab> {
   final _dao = AssessmentDao();
   List<Map<String, dynamic>> _projects = [];
   List<Map<String, dynamic>> _jsonProjects = []; // 从JSON加载的项目数据
+  // ignore: unused_field
+  Map<String, String> _projectFeatures = {}; // 功能详解数据
   bool _loading = true;
 
   bool get _isStudent =>
