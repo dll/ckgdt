@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../data/local/classroom_dao.dart';
 import '../../../data/local/class_dao.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/sync_service.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../core/constants/role_guard.dart';
 
@@ -23,6 +24,7 @@ class _ClassroomPageState extends State<ClassroomPage>
   final _authService = AuthService();
   final _classroomDao = ClassroomDao();
   final _classDao = ClassDao();
+  final _syncService = SyncService();
 
   int? _selectedClassId;
   List<Map<String, dynamic>> _classes = [];
@@ -97,6 +99,7 @@ class _ClassroomPageState extends State<ClassroomPage>
                 _OnlineStatusTab(
                   classroomDao: _classroomDao,
                   classId: _selectedClassId,
+                  syncService: _syncService,
                 ),
                 _CheckinManageTab(
                   classroomDao: _classroomDao,
@@ -175,6 +178,31 @@ class _ClassroomPageState extends State<ClassroomPage>
               ],
             ),
           ),
+          // 同步按钮
+          ValueListenableBuilder<SyncStatus>(
+            valueListenable: _syncService.status,
+            builder: (_, syncStatus, __) => IconButton(
+              icon: syncStatus == SyncStatus.downloading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.sync, color: Colors.white),
+              tooltip: '同步学生数据',
+              onPressed: syncStatus == SyncStatus.downloading
+                  ? null
+                  : () async {
+                      final result =
+                          await _syncService.downloadAllStudentData();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(result.message)),
+                        );
+                      }
+                    },
+            ),
+          ),
           // 班级选择
           if (_classes.length > 1)
             PopupMenuButton<int>(
@@ -221,10 +249,12 @@ class _ClassroomPageState extends State<ClassroomPage>
 class _OnlineStatusTab extends StatefulWidget {
   final ClassroomDao classroomDao;
   final int? classId;
+  final SyncService syncService;
 
   const _OnlineStatusTab({
     required this.classroomDao,
     this.classId,
+    required this.syncService,
   });
 
   @override
@@ -240,18 +270,28 @@ class _OnlineStatusTabState extends State<_OnlineStatusTab> {
   String _searchQuery = '';
   _SortMode _sortMode = _SortMode.onlineFirst;
   Timer? _refreshTimer;
+  String? _lastSyncedTime;
+  bool _isSyncing = false;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    _loadLastSyncTime();
     _refreshTimer = Timer.periodic(
         const Duration(seconds: 30), (_) => _loadData());
+
+    // 监听同步状态变化，完成后自动刷新
+    widget.syncService.status.addListener(_onSyncStatusChanged);
+
+    // 首次打开时自动触发一次同步
+    _triggerSync();
   }
 
   @override
   void dispose() {
     _refreshTimer?.cancel();
+    widget.syncService.status.removeListener(_onSyncStatusChanged);
     super.dispose();
   }
 
@@ -259,6 +299,44 @@ class _OnlineStatusTabState extends State<_OnlineStatusTab> {
   void didUpdateWidget(covariant _OnlineStatusTab oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.classId != widget.classId) _loadData();
+  }
+
+  // ── 同步集成 ──────────────────────────────────────────────────────────
+
+  void _onSyncStatusChanged() {
+    final s = widget.syncService.status.value;
+    if (mounted) {
+      setState(() => _isSyncing = (s == SyncStatus.downloading));
+    }
+    if (s == SyncStatus.idle) {
+      _loadData();
+      _loadLastSyncTime();
+    }
+  }
+
+  Future<void> _loadLastSyncTime() async {
+    final config = await widget.syncService.getConfig();
+    if (mounted) {
+      setState(() => _lastSyncedTime = config.lastDownload);
+    }
+  }
+
+  Future<void> _triggerSync() async {
+    await widget.syncService.downloadAllStudentData();
+  }
+
+  String _formatTimeAgo(String? isoTime) {
+    if (isoTime == null || isoTime.isEmpty) return '从未同步';
+    try {
+      final dt = DateTime.parse(isoTime);
+      final diff = DateTime.now().difference(dt);
+      if (diff.inMinutes < 1) return '刚刚';
+      if (diff.inMinutes < 60) return '${diff.inMinutes}分钟前';
+      if (diff.inHours < 24) return '${diff.inHours}小时前';
+      return '${diff.inDays}天前';
+    } catch (_) {
+      return '未知';
+    }
   }
 
   Future<void> _loadData() async {
@@ -336,6 +414,42 @@ class _OnlineStatusTabState extends State<_OnlineStatusTab> {
               _statCard('离线', _stats['offline'] ?? 0,
                   Icons.wifi_off, Colors.grey, primary),
             ],
+          ),
+          const SizedBox(height: 12),
+
+          // ── 同步状态栏 ────────────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: primary.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: primary.withValues(alpha: 0.15)),
+            ),
+            child: Row(
+              children: [
+                FilledButton.tonalIcon(
+                  onPressed: _isSyncing ? null : _triggerSync,
+                  icon: _isSyncing
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.sync, size: 16),
+                  label: Text(_isSyncing ? '同步中...' : '同步学生数据',
+                      style: const TextStyle(fontSize: 12)),
+                ),
+                const Spacer(),
+                Icon(Icons.access_time, size: 14,
+                    color: Colors.grey.withValues(alpha: 0.6)),
+                const SizedBox(width: 4),
+                Text(
+                  '上次同步: ${_formatTimeAgo(_lastSyncedTime)}',
+                  style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey.withValues(alpha: 0.8)),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 12),
 

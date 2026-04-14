@@ -125,7 +125,7 @@ class UserDao {
       } else {
         // Try to get real name from students.json
         realName = await _getStudentRealName(userId);
-        realName ??= userId;
+        // realName 为 null 时 UI 层会用 userId 兜底显示
       }
 
       final newUser = UserModel(
