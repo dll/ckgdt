@@ -2,10 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:open_filex/open_filex.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../services/auth_service.dart';
-import '../../../services/course_resource_service.dart';
 import '../../../data/local/assessment_dao.dart';
 
 /// 考核页面 — 参考 Python 版 assessment_tab.py
@@ -1179,7 +1177,6 @@ class _ProjectTabState extends State<_ProjectTab> {
   final _dao = AssessmentDao();
   List<Map<String, dynamic>> _projects = [];
   List<Map<String, dynamic>> _jsonProjects = []; // 从JSON加载的项目数据
-  Map<String, String> _projectFeatures = {}; // 功能详解数据
   bool _loading = true;
 
   bool get _isStudent =>
@@ -1848,7 +1845,6 @@ class _ProjectTabState extends State<_ProjectTab> {
     final techStack = (project['tech_stack'] as String?) ?? '';
     final description = (project['description'] as String?) ?? '';
     final name = (project['name'] as String?) ?? '';
-    final featureDetail = (project['feature_detail'] as String?) ?? '';
 
     final statusColor = switch (status) {
       '测试阶段' => Colors.orange,
@@ -1949,7 +1945,6 @@ class _ProjectTabState extends State<_ProjectTab> {
     final repo = project['repo'] as String? ?? '';
     final techStack = project['tech_stack'] as String? ?? '';
     final description = project['description'] as String? ?? '';
-    final status = project['status'] as String? ?? '';
     final featureDetail = project['feature_detail'] as String? ?? '';
     final members = project['members'] as List<Map<String, dynamic>>? ?? [];
     final classGroup = project['classGroup'] as String? ?? '';

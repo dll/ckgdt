@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_theme.dart';
-import '../../../services/auth_service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 产品化引导检查清单页面
@@ -16,8 +15,6 @@ class ProductizationGuidePage extends StatefulWidget {
 }
 
 class _ProductizationGuidePageState extends State<ProductizationGuidePage> {
-  final _authService = AuthService();
-
   // ── 检查清单数据 ─────────────────────────────────────────────────────────
   late final List<_CheckCategory> _categories;
 
@@ -958,6 +955,5 @@ class _CheckItem {
     required this.title,
     required this.tip,
     this.reference = '',
-    this.isChecked = false,
   });
 }

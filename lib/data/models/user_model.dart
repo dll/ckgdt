@@ -7,6 +7,7 @@ class UserModel {
   final String? lastLogin;
   final bool isActive;
   final String? repositoryUrl; // Gitee 仓库地址
+  final String? lastActive; // 心跳时间戳（在线状态）
 
   UserModel({
     required this.userId,
@@ -17,6 +18,7 @@ class UserModel {
     this.lastLogin,
     this.isActive = true,
     this.repositoryUrl,
+    this.lastActive,
   });
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
@@ -29,6 +31,7 @@ class UserModel {
       lastLogin: map['last_login'],
       isActive: map['is_active'] == 1,
       repositoryUrl: map['repository_url'],
+      lastActive: map['last_active'],
     );
   }
 
@@ -46,6 +49,9 @@ class UserModel {
     if (repositoryUrl != null) {
       map['repository_url'] = repositoryUrl;
     }
+    if (lastActive != null) {
+      map['last_active'] = lastActive;
+    }
     return map;
   }
 
@@ -59,6 +65,7 @@ class UserModel {
     String? lastLogin,
     bool? isActive,
     String? repositoryUrl,
+    String? lastActive,
   }) {
     return UserModel(
       userId: userId ?? this.userId,
@@ -69,6 +76,7 @@ class UserModel {
       lastLogin: lastLogin ?? this.lastLogin,
       isActive: isActive ?? this.isActive,
       repositoryUrl: repositoryUrl ?? this.repositoryUrl,
+      lastActive: lastActive ?? this.lastActive,
     );
   }
 

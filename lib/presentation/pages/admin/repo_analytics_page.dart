@@ -323,8 +323,8 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
             _giteeService.getAllCommits(_owner, repo.name),
           ]);
 
-          final members = results[0] as List<Map<String, dynamic>>;
-          final commits = results[1] as List<Map<String, dynamic>>;
+          final members = results[0];
+          final commits = results[1];
 
           // 每仓库成员数据
           repoMembersList.add(_RepoMembersData(

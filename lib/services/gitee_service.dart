@@ -565,6 +565,146 @@ class GiteeService {
       return [];
     }
   }
+
+  // ── 文件写入 API（数据同步用）─────────────────────────────────────────
+
+  /// 获取文件的 SHA（更新文件时需要）
+  /// 返回 null 表示文件不存在
+  Future<String?> getFileSha(
+    String owner,
+    String repo,
+    String path, {
+    String ref = 'master',
+  }) async {
+    try {
+      final data = await getContents(owner, repo, path, ref: ref);
+      if (data is Map && data.containsKey('sha')) {
+        return data['sha'] as String?;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// 创建文件（POST /repos/{owner}/{repo}/contents/{path}）
+  /// [content] 为原始文本内容，方法内部自动 base64 编码
+  /// 返回 API 响应 Map，失败抛异常
+  Future<Map<String, dynamic>> createFile({
+    required String owner,
+    required String repo,
+    required String path,
+    required String content,
+    required String message,
+    String branch = 'master',
+  }) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      throw GiteeApiException(statusCode: 401, message: '未配置 Gitee Token');
+    }
+
+    final uri = Uri.parse('$_baseUrl/repos/$owner/$repo/contents/$path');
+    final body = {
+      'access_token': token,
+      'content': base64Encode(utf8.encode(content)),
+      'message': message,
+      'branch': branch,
+    };
+
+    debugPrint('GiteeService: POST $uri');
+    final resp = await http
+        .post(uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(body))
+        .timeout(const Duration(seconds: 30));
+
+    if (resp.statusCode == 201 || resp.statusCode == 200) {
+      return Map<String, dynamic>.from(
+          jsonDecode(utf8.decode(resp.bodyBytes)));
+    }
+    throw GiteeApiException(
+      statusCode: resp.statusCode,
+      message: 'createFile($path): ${utf8.decode(resp.bodyBytes)}',
+    );
+  }
+
+  /// 更新文件（PUT /repos/{owner}/{repo}/contents/{path}）
+  /// [sha] 为当前文件的 SHA，可通过 getFileSha() 获取
+  Future<Map<String, dynamic>> updateFile({
+    required String owner,
+    required String repo,
+    required String path,
+    required String content,
+    required String message,
+    required String sha,
+    String branch = 'master',
+  }) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      throw GiteeApiException(statusCode: 401, message: '未配置 Gitee Token');
+    }
+
+    final uri = Uri.parse('$_baseUrl/repos/$owner/$repo/contents/$path');
+    final body = {
+      'access_token': token,
+      'content': base64Encode(utf8.encode(content)),
+      'message': message,
+      'sha': sha,
+      'branch': branch,
+    };
+
+    debugPrint('GiteeService: PUT $uri');
+    final resp = await http
+        .put(uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(body))
+        .timeout(const Duration(seconds: 30));
+
+    if (resp.statusCode == 200) {
+      return Map<String, dynamic>.from(
+          jsonDecode(utf8.decode(resp.bodyBytes)));
+    }
+    throw GiteeApiException(
+      statusCode: resp.statusCode,
+      message: 'updateFile($path): ${utf8.decode(resp.bodyBytes)}',
+    );
+  }
+
+  /// 创建或更新文件（智能判断：不存在则创建，已存在则更新）
+  /// 返回操作结果 Map
+  Future<Map<String, dynamic>> createOrUpdateFile({
+    required String owner,
+    required String repo,
+    required String path,
+    required String content,
+    required String message,
+    String branch = 'master',
+  }) async {
+    // 先尝试获取现有文件的 SHA
+    final sha = await getFileSha(owner, repo, path, ref: branch);
+    if (sha != null) {
+      // 文件已存在，执行更新
+      return updateFile(
+        owner: owner,
+        repo: repo,
+        path: path,
+        content: content,
+        message: message,
+        sha: sha,
+        branch: branch,
+      );
+    } else {
+      // 文件不存在，执行创建
+      return createFile(
+        owner: owner,
+        repo: repo,
+        path: path,
+        content: content,
+        message: message,
+        branch: branch,
+      );
+    }
+  }
 }
 
 /// Gitee API 异常

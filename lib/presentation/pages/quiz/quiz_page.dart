@@ -260,8 +260,6 @@ class _QuizPageState extends State<QuizPage> {
 
     final studentCount =
         (_classOverview['student_count'] as num?)?.toInt() ?? 0;
-    final totalAttempts =
-        (_classOverview['total_attempts'] as num?)?.toInt() ?? 0;
     final avgScore =
         (_classOverview['avg_score'] as num?)?.toDouble() ?? 0.0;
     final passRate =

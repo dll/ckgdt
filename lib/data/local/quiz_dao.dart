@@ -1,4 +1,3 @@
-import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
 import '../models/question_model.dart';
 import '../models/quiz_result_model.dart';

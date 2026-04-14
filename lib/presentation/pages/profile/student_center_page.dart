@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import '../../../services/auth_service.dart';
 import '../../../data/local/quiz_dao.dart';
 import '../../../data/local/learning_record_dao.dart';
-import '../../../data/local/favorite_dao.dart';
-import '../../../data/local/wrong_answer_dao.dart';
 import '../../../core/constants/app_theme.dart';
 import '../quiz/wrong_answers_page.dart';
 import '../graph/favorites_page.dart';
@@ -24,8 +22,6 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
   final _authService = AuthService();
   final _quizDao = QuizDao();
   final _learningRecordDao = LearningRecordDao();
-  final _favoriteDao = FavoriteDao();
-  final _wrongAnswerDao = WrongAnswerDao();
 
   bool _isLoading = true;
 

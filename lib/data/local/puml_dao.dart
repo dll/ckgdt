@@ -51,8 +51,6 @@ class PumlDao {
     final c = await count();
     if (c > 0) return;
 
-    // 确保 chapter 值唯一
-    final existingChapters = <String>{};
     final samples = [
       PumlFileModel(
         title: '知识图谱系统架构图',

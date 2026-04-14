@@ -137,6 +137,7 @@ class UserDao {
       final created = await createUser(newUser);
       if (created) {
         await setCurrentUser(userId, '');
+        await _updateLastLogin(userId);
         debugPrint(
             '=== UserDao: Created new user $userId with role $role, name $realName');
         return true;
@@ -203,6 +204,7 @@ class UserDao {
         (password == userId ||
             password == userId.substring(userId.length - 6))) {
       await setCurrentUser(userId, '');
+      await _updateLastLogin(userId);
       debugPrint(
           '=== UserDao: Teacher login success for $userId, role=${user.role}');
       return true;
@@ -211,6 +213,7 @@ class UserDao {
     // Admin login: userId=419116, password=419116 or last 6 digits (9116)
     if (userId == '419116' && (password == '419116' || password == '9116')) {
       await setCurrentUser(userId, '');
+      await _updateLastLogin(userId);
       debugPrint('=== UserDao: Admin login success, role=${user.role}');
       return true;
     }
@@ -220,6 +223,7 @@ class UserDao {
         userId.length >= 6 ? userId.substring(userId.length - 6) : userId;
     if (password == last6 || password == userId) {
       await setCurrentUser(userId, '');
+      await _updateLastLogin(userId);
       debugPrint('=== UserDao: Login success for $userId, role=${user.role}');
       return true;
     }
@@ -244,5 +248,29 @@ class UserDao {
       debugPrint('=== UserDao: Error loading students.json: $e');
     }
     return null;
+  }
+
+  /// 更新用户 last_login 时间戳
+  Future<void> _updateLastLogin(String userId) async {
+    final db = await _dbHelper.database;
+    await db.update(
+      'users',
+      {'last_login': DateTime.now().toIso8601String()},
+      where: 'user_id = ?',
+      whereArgs: [userId],
+    );
+  }
+
+  /// 更新用户活跃时间（心跳）
+  Future<void> updateLastActive(String userId) async {
+    final db = await _dbHelper.database;
+    try {
+      await db.update(
+        'users',
+        {'last_active': DateTime.now().toIso8601String()},
+        where: 'user_id = ?',
+        whereArgs: [userId],
+      );
+    } catch (_) {}
   }
 }

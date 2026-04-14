@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../data/local/database_helper.dart';
-import '../../../data/local/quiz_dao.dart';
-import '../../../data/local/learning_record_dao.dart';
-import '../../../services/auth_service.dart';
 
 /// 学情分析仪表板 — 教师专用
 /// 提供班级整体学习数据分析、预警学生识别、章节掌握度分析

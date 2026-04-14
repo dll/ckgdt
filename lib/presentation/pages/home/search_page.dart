@@ -44,8 +44,8 @@ class _SearchPageState extends State<SearchPage> {
       ]);
 
       setState(() {
-        _graphResults = results[0] as List<Map<String, dynamic>>;
-        _questionResults = results[1] as List<Map<String, dynamic>>;
+        _graphResults = results[0];
+        _questionResults = results[1];
         _isSearching = false;
       });
     } catch (e) {

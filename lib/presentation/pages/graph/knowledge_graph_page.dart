@@ -87,8 +87,6 @@ class _ConceptNode {
     this.importance = 'important',
     this.description,
     this.keywords,
-    this.x = 0,
-    this.y = 0,
   });
 
   double get radius {
@@ -212,7 +210,6 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
 
   // ── 搜索 ────────────────────────────────────────────────────────────────
   bool _showSearch = false;
-  String _searchQuery = '';
   final _searchController = TextEditingController();
 
   // ── 关系视图 ─────────────────────────────────────────────────────────────
@@ -241,6 +238,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   bool _teacherAchievementMode = false; // 是否处于教师查看模式
   String? _selectedStudentId;           // null = 全体学生
   List<UserModel> _studentList = [];
+  String _studentSearchQuery = '';      // 学生搜索关键词
   Map<int, double> _allStudentsRatio = {}; // conceptId → 完成比率 0.0~1.0
 
   // ── 画布参数 ─────────────────────────────────────────────────────────────
@@ -2607,7 +2605,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
       ),
       child: Column(
         children: [
-          // 教师：学生选择器
+          // 教师：学生选择器（搜索 + Wrap 布局）
           if (_teacherAchievementMode) ...[
             Row(
               children: [
@@ -2616,22 +2614,86 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                 const Text('查看：',
                     style: TextStyle(fontSize: 12, color: Color(0xFF667eea))),
                 const SizedBox(width: 4),
+                // 搜索框
                 Expanded(
                   child: SizedBox(
-                    height: 32,
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          _studentChip('全体学生', null),
-                          ..._studentList.map((s) => _studentChip(
-                              s.realName ?? s.userId, s.userId)),
-                        ],
+                    height: 30,
+                    child: TextField(
+                      style: const TextStyle(fontSize: 12),
+                      decoration: InputDecoration(
+                        hintText: '搜索学生姓名或学号...',
+                        hintStyle: TextStyle(
+                            fontSize: 11, color: Colors.grey.shade400),
+                        prefixIcon: const Icon(Icons.search, size: 16),
+                        prefixIconConstraints:
+                            const BoxConstraints(minWidth: 32),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: BorderSide(
+                            color: const Color(0xFF667eea)
+                                .withValues(alpha: 0.3),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: BorderSide(
+                            color: const Color(0xFF667eea)
+                                .withValues(alpha: 0.2),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF667eea),
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 0),
+                        filled: true,
+                        fillColor: const Color(0xFF667eea)
+                            .withValues(alpha: 0.04),
                       ),
+                      onChanged: (v) =>
+                          setState(() => _studentSearchQuery = v),
                     ),
                   ),
                 ),
+                const SizedBox(width: 8),
+                // 学生总数标签
+                Text(
+                  '${_studentList.length}人',
+                  style: TextStyle(
+                      fontSize: 11, color: Colors.grey.shade500),
+                ),
               ],
+            ),
+            const SizedBox(height: 6),
+            // 学生 Chip（Wrap 布局 + 约束高度 + 滚动条）
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 72),
+              child: Scrollbar(
+                thumbVisibility: true,
+                child: SingleChildScrollView(
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      _studentChip('全体学生', null),
+                      ..._studentList
+                          .where((s) {
+                            if (_studentSearchQuery.isEmpty) return true;
+                            final q = _studentSearchQuery.toLowerCase();
+                            final name =
+                                (s.realName ?? '').toLowerCase();
+                            final id = s.userId.toLowerCase();
+                            return name.contains(q) || id.contains(q);
+                          })
+                          .map((s) => _studentChip(
+                              s.realName ?? s.userId, s.userId)),
+                    ],
+                  ),
+                ),
+              ),
             ),
             const SizedBox(height: 6),
           ],

@@ -25,8 +25,22 @@ enum _WorkDimension {
   const _WorkDimension(this.label, this.dbKey, this.icon, this.color);
 }
 
-/// 匿名展评：所有学生姓名统一显示为此值
-const _kAnon = 'xxx';
+/// 获取学生显示名称：管理员/教师可见真名，学生端匿名
+String _studentDisplayName(Map<String, dynamic> work, bool showReal) {
+  if (showReal) {
+    return work['student_name'] as String? ?? '未知同学';
+  }
+  return '匿名同学';
+}
+
+/// 获取头像首字符
+String _avatarChar(Map<String, dynamic> work, bool showReal) {
+  if (showReal) {
+    final name = work['student_name'] as String? ?? '';
+    return name.isNotEmpty ? name.characters.first : '?';
+  }
+  return '匿';
+}
 
 // ╔══════════════════════════════════════════════════════════════════════════════╗
 // ║  作品展评页面 — 每位同学一个作品 / 多维过滤 / 互评互赞                     ║
@@ -670,6 +684,8 @@ class _GalleryTabState extends State<_GalleryTab> {
     final likeCount = (work['like_count'] as int?) ?? 0;
     final commentCount = (work['comment_count'] as int?) ?? 0;
     final duration = work['video_duration'] as String? ?? '';
+    final isTeacherOrAdmin =
+        widget.authService.isTeacher || widget.authService.isAdmin;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 6),
@@ -726,7 +742,7 @@ class _GalleryTabState extends State<_GalleryTab> {
                       children: [
                         Expanded(
                           child: Text(
-                            _kAnon,
+                            _studentDisplayName(work, isTeacherOrAdmin),
                             style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600),
@@ -920,7 +936,7 @@ class _GalleryTabState extends State<_GalleryTab> {
                     children: [
                       Expanded(
                         child: Text(
-                          _kAnon,
+                          _studentDisplayName(work, isTeacherOrAdmin),
                           style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600),
@@ -1257,7 +1273,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                 radius: 22,
                 backgroundColor: primary.withValues(alpha: 0.15),
                 child: Text(
-                  'x',
+                  _avatarChar(_work, isTeacherOrAdmin),
                   style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -1270,7 +1286,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _kAnon,
+                      _studentDisplayName(_work, isTeacherOrAdmin),
                       style: const TextStyle(
                           fontSize: 18, fontWeight: FontWeight.bold),
                     ),
@@ -1598,6 +1614,14 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
     final isTeacher = role == 'teacher' || role == 'admin';
     final roleColor = isTeacher ? Colors.blue : Colors.green;
     final roleLabel = isTeacher ? '教师' : '同学';
+    final viewerIsAdmin =
+        widget.authService.isTeacher || widget.authService.isAdmin;
+    final commentName = viewerIsAdmin
+        ? (comment['user_name'] as String? ?? '未知')
+        : (isTeacher ? (comment['user_name'] as String? ?? '教师') : '匿名同学');
+    final commentAvatar = commentName.isNotEmpty
+        ? commentName.characters.first
+        : '?';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -1621,7 +1645,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                 radius: 14,
                 backgroundColor: roleColor.withValues(alpha: 0.15),
                 child: Text(
-                  'x',
+                  commentAvatar,
                   style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -1629,7 +1653,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                 ),
               ),
               const SizedBox(width: 8),
-              Text(_kAnon,
+              Text(commentName,
                   style: const TextStyle(
                       fontSize: 13, fontWeight: FontWeight.w600)),
               const SizedBox(width: 6),
@@ -1721,7 +1745,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                       : Colors.red;
           return AlertDialog(
             title: Text(
-                '评分: $_kAnon',
+                '评分: ${_studentDisplayName(_work, widget.authService.isTeacher || widget.authService.isAdmin)}',
                 style: const TextStyle(fontSize: 16)),
             content: SizedBox(
               width: double.maxFinite,
@@ -1982,7 +2006,9 @@ class _RecordsTabState extends State<_RecordsTab> {
     final likeCount = (work['like_count'] as int?) ?? 0;
     final commentCount = (work['comment_count'] as int?) ?? 0;
     final score = work['score'] as int?;
-    final studentName = _kAnon;
+    final showReal =
+        widget.authService.isTeacher || widget.authService.isAdmin;
+    final studentName = _studentDisplayName(work, showReal);
 
     final rankColor = rank == 1
         ? Colors.amber[700]!
@@ -2316,7 +2342,9 @@ class _LeaderboardTabState extends State<_LeaderboardTab> {
   Widget _podiumCard(Map<String, dynamic> entry, int rank,
       Color color, double baseHeight) {
     final metricValue = _getMetricValue(entry);
-    final studentName = _kAnon;
+    final showReal =
+        widget.authService.isTeacher || widget.authService.isAdmin;
+    final studentName = _studentDisplayName(entry, showReal);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -2327,7 +2355,7 @@ class _LeaderboardTabState extends State<_LeaderboardTab> {
           radius: rank == 1 ? 24 : 20,
           backgroundColor: color.withValues(alpha: 0.15),
           child: Text(
-            'x',
+            _avatarChar(entry, showReal),
             style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: color,
@@ -2405,7 +2433,9 @@ class _LeaderboardTabState extends State<_LeaderboardTab> {
     final viewCount = (entry['view_count'] as int?) ?? 0;
     final likeCount = (entry['like_count'] as int?) ?? 0;
     final commentCount = (entry['comment_count'] as int?) ?? 0;
-    final studentName = _kAnon;
+    final showReal =
+        widget.authService.isTeacher || widget.authService.isAdmin;
+    final studentName = _studentDisplayName(entry, showReal);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),

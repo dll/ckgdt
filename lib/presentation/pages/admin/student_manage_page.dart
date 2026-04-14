@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../data/local/user_dao.dart';
 import '../../../data/models/user_model.dart';
 import '../../../services/auth_service.dart';
 import 'student_detail_page.dart';
@@ -12,7 +11,6 @@ class StudentManagePage extends StatefulWidget {
 }
 
 class _StudentManagePageState extends State<StudentManagePage> {
-  final _userDao = UserDao();
   final _authService = AuthService();
 
   List<UserModel> _students = [];

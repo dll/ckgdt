@@ -189,8 +189,6 @@ class SurveyDao {
 
   /// 获取问卷统计数据
   Future<Map<String, dynamic>> getSurveyStats(int surveyId) async {
-    final db = await _dbHelper.database;
-
     final survey = await getSurvey(surveyId);
     final questions = await getQuestions(surveyId);
     final responses = await getResponses(surveyId);

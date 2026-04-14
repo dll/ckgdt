@@ -1,7 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../services/ai_service.dart';
+import '../../../services/plantuml_service.dart';
 import '../../../data/local/skill_dao.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -903,10 +907,8 @@ class _AiSkillPageState extends State<AiSkillPage>
                                       color: _skill.color, width: 4),
                                 ),
                               ),
-                              child: SelectableText(
+                              child: _buildMarkdownContent(
                                 _result ?? '',
-                                style: const TextStyle(
-                                    fontSize: 13, height: 1.7),
                               ),
                             ),
                           ),
@@ -1072,6 +1074,12 @@ class _AiSkillPageState extends State<AiSkillPage>
                               ),
                               const SizedBox(width: 8),
                               _miniButton(
+                                Icons.download,
+                                '下载',
+                                () => _downloadAsFile(title, content),
+                              ),
+                              const SizedBox(width: 8),
+                              _miniButton(
                                 Icons.visibility,
                                 '查看',
                                 () => _showResultDetail(title, content),
@@ -1119,6 +1127,117 @@ class _AiSkillPageState extends State<AiSkillPage>
                 const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
       ],
     );
+  }
+
+  /// 预处理 Markdown：将 PlantUML 代码块转换为 Kroki 图片 URL
+  String _preprocessMarkdown(String content) {
+    final pumlRegex = RegExp(
+      r'```(?:plantuml|puml|uml)\s*\n([\s\S]*?)```',
+      multiLine: true,
+    );
+    final pumlService = PlantUmlService();
+    return content.replaceAllMapped(pumlRegex, (match) {
+      final pumlCode = match.group(1)!.trim();
+      // 确保有 @startuml / @enduml 包裹
+      final wrapped = pumlCode.contains('@startuml')
+          ? pumlCode
+          : '@startuml\n$pumlCode\n@enduml';
+      try {
+        final url = pumlService.getKrokiUrl(wrapped);
+        return '\n![UML 模型图]($url)\n';
+      } catch (_) {
+        return '\n```\n$pumlCode\n```\n';
+      }
+    });
+  }
+
+  /// 构建 Markdown 渲染 Widget（支持 PlantUML 图片）
+  Widget _buildMarkdownContent(String content) {
+    final processed = _preprocessMarkdown(content);
+    return MarkdownBody(
+      data: processed,
+      selectable: true,
+      styleSheet: MarkdownStyleSheet(
+        p: const TextStyle(fontSize: 14, height: 1.7),
+        h1: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, height: 1.5),
+        h2: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, height: 1.5),
+        h3: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, height: 1.4),
+        h4: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, height: 1.4),
+        strong: const TextStyle(fontWeight: FontWeight.bold),
+        em: const TextStyle(fontStyle: FontStyle.italic),
+        code: TextStyle(
+          fontFamily: 'monospace',
+          fontSize: 13,
+          color: Colors.deepPurple[700],
+          backgroundColor: Colors.deepPurple.withValues(alpha: 0.06),
+        ),
+        codeblockPadding: const EdgeInsets.all(14),
+        codeblockDecoration: BoxDecoration(
+          color: Colors.grey.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+        ),
+        blockquoteDecoration: BoxDecoration(
+          color: Colors.blue.withValues(alpha: 0.04),
+          border: const Border(
+            left: BorderSide(color: Color(0xFF667eea), width: 4),
+          ),
+        ),
+        blockquotePadding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+        listBullet: TextStyle(fontSize: 14, color: _skill.color),
+        tableHead: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+        tableBody: const TextStyle(fontSize: 13),
+        tableBorder: TableBorder.all(color: Colors.grey.withValues(alpha: 0.3)),
+        tableCellsPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        horizontalRuleDecoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(color: Colors.grey.withValues(alpha: 0.3), width: 1),
+          ),
+        ),
+        blockSpacing: 10,
+      ),
+    );
+  }
+
+  /// 下载内容为 .md 文件
+  Future<void> _downloadAsFile(String title, String content) async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final safeTitle = title.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+      final fileName = '${safeTitle.length > 60 ? safeTitle.substring(0, 60) : safeTitle}.md';
+      final skillDir = Directory('${dir.path}/skill_exports');
+      if (!await skillDir.exists()) {
+        await skillDir.create(recursive: true);
+      }
+      final file = File('${skillDir.path}/$fileName');
+      await file.writeAsString(content, flush: true);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('已保存到: ${file.path}'),
+            action: SnackBarAction(
+              label: '打开目录',
+              onPressed: () {
+                // 尝试打开文件所在目录
+                try {
+                  if (Platform.isWindows) {
+                    Process.run('explorer', [skillDir.path]);
+                  } else if (Platform.isMacOS) {
+                    Process.run('open', [skillDir.path]);
+                  }
+                } catch (_) {}
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('保存失败: $e')),
+        );
+      }
+    }
   }
 
   Widget _miniButton(IconData icon, String label, VoidCallback onTap,
@@ -1188,6 +1307,11 @@ class _AiSkillPageState extends State<AiSkillPage>
                     tooltip: '复制全文',
                   ),
                   IconButton(
+                    icon: const Icon(Icons.download, size: 20),
+                    onPressed: () => _downloadAsFile(title, content),
+                    tooltip: '下载为文件',
+                  ),
+                  IconButton(
                     icon: const Icon(Icons.close, size: 20),
                     onPressed: () => Navigator.pop(ctx),
                   ),
@@ -1200,10 +1324,7 @@ class _AiSkillPageState extends State<AiSkillPage>
               child: SingleChildScrollView(
                 controller: scrollController,
                 padding: const EdgeInsets.all(16),
-                child: SelectableText(
-                  content,
-                  style: const TextStyle(fontSize: 13, height: 1.7),
-                ),
+                child: _buildMarkdownContent(content),
               ),
             ),
           ],

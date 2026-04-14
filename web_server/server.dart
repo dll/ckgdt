@@ -3,7 +3,6 @@
 // 按 Ctrl+C 停止服务
 
 import 'dart:io';
-import 'dart:isolate';
 
 const int defaultPort = 8080;
 const int maxPortRetry = 20;

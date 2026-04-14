@@ -43,7 +43,6 @@ class _GraphDetailPageState extends State<GraphDetailPage>
   List<PositionedNode> _positionedNodes = [];
 
   // ── 搜索 & 筛选 ──────────────────────────────────────────────────────────
-  String _searchQuery = '';
   bool _showSearch = false;
   Set<String> _highlightedNodeIds = {};
   String? _filterNodeType; // null = 全部

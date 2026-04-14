@@ -1464,10 +1464,7 @@ class _AddMembersDialogState extends State<_AddMembersDialog> {
 
   Future<void> _loadAvailableStudents() async {
     try {
-      // 获取未分配到任何活跃班级的学生
-      final unassigned = await widget.classDao.getUnassignedStudents();
-
-      // 同时获取已在其他班级但不在当前班级的学生
+      // 获取已在其他班级但不在当前班级的学生
       final currentMembers =
           await widget.classDao.getClassMembers(widget.classId);
       final currentMemberIds =
