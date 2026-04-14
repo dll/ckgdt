@@ -83,7 +83,7 @@ class ClassroomDao {
   /// 获取所有学生及其在线状态
   Future<List<Map<String, dynamic>>> getStudentsWithStatus({
     int? classId,
-    int onlineThresholdMinutes = 5,
+    int onlineThresholdMinutes = 10,
   }) async {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
@@ -125,7 +125,7 @@ class ClassroomDao {
   /// 获取在线统计
   Future<Map<String, int>> getOnlineStats({
     int? classId,
-    int onlineThresholdMinutes = 5,
+    int onlineThresholdMinutes = 10,
   }) async {
     final students = await getStudentsWithStatus(
       classId: classId,
