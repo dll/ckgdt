@@ -949,7 +949,7 @@ class _CheckItem {
   final String title;
   final String tip;
   final String reference;
-  bool isChecked;
+  bool isChecked = false;
 
   _CheckItem({
     required this.title,

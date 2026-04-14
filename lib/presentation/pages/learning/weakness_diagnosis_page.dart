@@ -37,6 +37,8 @@ class _WeaknessDiagnosisPageState extends State<WeaknessDiagnosisPage> {
   List<_ChapterAnalysis> _chapterAnalyses = [];
 
   // ── 原始数据（供 AI 诊断使用） ────────────────────────────────────────
+  // ignore: unused_field
+  List<Map<String, dynamic>> _rawWrongAnswers = [];
   Map<String, dynamic> _quizSummary = {};
   Map<String, dynamic> _learningStats = {};
 
