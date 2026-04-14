@@ -2786,6 +2786,8 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
   // 数据
   List<Map<String, dynamic>> _branches = [];
   List<Map<String, dynamic>> _collaborators = [];
+  // ignore: unused_field
+  List<Map<String, dynamic>> _releases = [];
   List<_StudentCommitRow> _commitRows = [];
 
   // 分支筛选

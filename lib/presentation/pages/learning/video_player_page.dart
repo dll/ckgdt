@@ -22,6 +22,8 @@ class InAppVideoPlayerPage extends StatefulWidget {
 class _InAppVideoPlayerPageState extends State<InAppVideoPlayerPage> {
   late final Player _player;
   late final VideoController _videoController;
+  // ignore: unused_field
+  bool _initialized = false;
   String? _error;
   bool _showControls = true;
   double _playbackSpeed = 1.0;
