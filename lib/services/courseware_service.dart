@@ -1221,13 +1221,13 @@ ${context != null ? '上下文说明: $context' : ''}
           RegExp(r'^[-\s]*([A-D])[.)]\s*(.+)$').firstMatch(trimmed);
       if (optMatch != null && currentQ != null) {
         buffer.write('${optMatch.group(1)}. ${optMatch.group(2)}  ');
-        currentQ!['options'] = buffer.toString();
+        currentQ['options'] = buffer.toString();
         continue;
       }
 
       // 答案行
       if (trimmed.contains('答案') && currentQ != null) {
-        currentQ!['answer'] = trimmed;
+        currentQ['answer'] = trimmed;
         continue;
       }
     }

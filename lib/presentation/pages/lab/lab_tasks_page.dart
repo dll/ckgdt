@@ -2213,8 +2213,6 @@ class _TaskManageTabState extends State<_TaskManageTab> {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-
     return Stack(
       children: [
         RefreshIndicator(
@@ -2788,7 +2786,6 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
   // 数据
   List<Map<String, dynamic>> _branches = [];
   List<Map<String, dynamic>> _collaborators = [];
-  List<Map<String, dynamic>> _releases = [];
   List<_StudentCommitRow> _commitRows = [];
 
   // 分支筛选
@@ -3636,8 +3633,8 @@ class _RepoReportTabState extends State<_RepoReportTab>
                 .catchError((_) => <Map<String, dynamic>>[]),
           ]);
 
-          var commits = results[0] as List<Map<String, dynamic>>;
-          var branches = results[1] as List<Map<String, dynamic>>;
+          var commits = results[0];
+          var branches = results[1];
 
           // 用于 getRepoMembers 的 effectiveOwner
           var effectiveOwner = repoOwner;
@@ -3663,8 +3660,8 @@ class _RepoReportTabState extends State<_RepoReportTab>
                     .getBranches(altOwner, repoPath)
                     .catchError((_) => <Map<String, dynamic>>[]),
               ]);
-              commits = retryResults[0] as List<Map<String, dynamic>>;
-              branches = retryResults[1] as List<Map<String, dynamic>>;
+              commits = retryResults[0];
+              branches = retryResults[1];
             }
           }
 

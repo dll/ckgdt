@@ -13,7 +13,6 @@ class TeachingManagePage extends StatefulWidget {
 class _TeachingManagePageState extends State<TeachingManagePage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final _dao = TeachingDao();
 
   @override
   void initState() {

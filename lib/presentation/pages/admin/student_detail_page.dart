@@ -329,7 +329,6 @@ class _StudentDetailPageState extends State<StudentDetailPage> {
     // 统计近 7 天和近 30 天的提交
     final now = DateTime.now();
     int last7 = 0;
-    int last30 = 0;
 
     for (final commit in _commits) {
       final dateStr = commit['commit']?['committer']?['date'] ??
@@ -339,7 +338,6 @@ class _StudentDetailPageState extends State<StudentDetailPage> {
           final date = DateTime.parse(dateStr);
           final diff = now.difference(date).inDays;
           if (diff <= 7) last7++;
-          if (diff <= 30) last30++;
         } catch (_) {}
       }
     }

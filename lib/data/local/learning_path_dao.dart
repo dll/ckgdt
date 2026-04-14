@@ -1,4 +1,3 @@
-import 'package:sqflite/sqflite.dart';
 import '../models/learning_path_model.dart';
 import 'database_helper.dart';
 

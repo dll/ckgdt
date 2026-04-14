@@ -18,6 +18,8 @@ import '../materials/puml_manager_page.dart';
 import '../materials/materials_hub_page.dart';
 import '../admin/repo_analytics_page.dart';
 import '../materials/courseware_workshop_page.dart';
+import '../classroom/classroom_page.dart';
+import '../sync/data_sync_page.dart';
 
 import '../../../core/constants/role_guard.dart';
 
@@ -390,6 +392,24 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const SurveyManagePage()),
+        ),
+      ),
+      _ToolItem(
+        icon: Icons.cast_for_education,
+        label: '课堂管理',
+        color: Colors.lightBlue,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ClassroomPage()),
+        ),
+      ),
+      _ToolItem(
+        icon: Icons.sync,
+        label: '数据同步',
+        color: Colors.teal,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const DataSyncPage()),
         ),
       ),
       _ToolItem(

@@ -1,4 +1,3 @@
-import 'package:sqflite/sqflite.dart';
 import 'database_helper.dart';
 
 /// 教学管理 DAO — 课程大纲 / 教案 / 教学进度

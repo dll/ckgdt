@@ -165,11 +165,11 @@ class _QuestionManagePageState extends State<QuestionManagePage> {
           const SizedBox(height: 8),
 
           // ── 章节筛选 ──────────────────────────────────────────────
-          SizedBox(
-            height: 36,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 6,
               children: ['全部', ..._chapters].map((label) {
                 final selected = _selectedChapter == label;
                 // 获取该章节题目数
@@ -181,25 +181,22 @@ class _QuestionManagePageState extends State<QuestionManagePage> {
                       ? ((stat.first['count'] as int?) ?? 0)
                       : 0;
                 }
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: FilterChip(
-                    label: Text(
-                      label == '全部'
-                          ? '全部 ($totalCount)'
-                          : '$label ($chapterCount)',
-                      style: const TextStyle(fontSize: 11),
-                    ),
-                    selected: selected,
-                    onSelected: (_) {
-                      setState(() => _selectedChapter = label);
-                      _loadData();
-                    },
-                    showCheckmark: false,
-                    selectedColor: primary.withValues(alpha: 0.15),
-                    padding: EdgeInsets.zero,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                return FilterChip(
+                  label: Text(
+                    label == '全部'
+                        ? '全部 ($totalCount)'
+                        : '$label ($chapterCount)',
+                    style: const TextStyle(fontSize: 11),
                   ),
+                  selected: selected,
+                  onSelected: (_) {
+                    setState(() => _selectedChapter = label);
+                    _loadData();
+                  },
+                  showCheckmark: false,
+                  selectedColor: primary.withValues(alpha: 0.15),
+                  padding: EdgeInsets.zero,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 );
               }).toList(),
             ),

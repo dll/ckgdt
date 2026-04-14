@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'auth_service.dart';
 
 // 条件导入：仅在原生平台导入 dart:io 相关功能
