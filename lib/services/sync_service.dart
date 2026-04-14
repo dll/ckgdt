@@ -43,7 +43,7 @@ class SyncService {
 
   Future<bool> isSyncEnabled() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_syncEnabledKey) ?? false;
+    return prefs.getBool(_syncEnabledKey) ?? true;
   }
 
   Future<void> setSyncEnabled(bool enabled) async {
@@ -53,7 +53,7 @@ class SyncService {
 
   Future<int> getSyncInterval() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_syncIntervalKey) ?? 10;
+    return prefs.getInt(_syncIntervalKey) ?? 3;
   }
 
   Future<void> setSyncInterval(int minutes) async {
@@ -140,6 +140,17 @@ class SyncService {
     status.value = SyncStatus.uploading;
 
     try {
+      // 0. 刷新 last_active 确保上传时间戳是最新的
+      final db = await DatabaseHelper.instance.database;
+      try {
+        await db.update(
+          'users',
+          {'last_active': DateTime.now().toIso8601String()},
+          where: 'user_id = ?',
+          whereArgs: [userId],
+        );
+      } catch (_) {}
+
       // 1. 收集本地数据
       final data = await _collectStudentData(userId);
       final jsonStr = const JsonEncoder.withIndent('  ').convert(data);
@@ -541,8 +552,8 @@ class SyncConfig {
   final String? lastDownload;
 
   SyncConfig({
-    this.enabled = false,
-    this.intervalMinutes = 10,
+    this.enabled = true,
+    this.intervalMinutes = 3,
     this.lastUpload,
     this.lastDownload,
   });
