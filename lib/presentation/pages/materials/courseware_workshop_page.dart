@@ -78,12 +78,12 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
 
   static const _chapters = [
     '全部/自定义',
-    '第1章 Android开发基础',
-    '第2章 UI界面设计',
-    '第3章 Activity与生命周期',
-    '第4章 数据存储',
-    '第5章 网络编程',
-    '第6章 综合项目实战',
+    '第1章 移动应用开发技术体系全景',
+    '第2章 Android与iOS原生开发基础',
+    '第3章 Flutter与跨平台开发',
+    '第4章 微信小程序开发',
+    '第5章 HarmonyOS鸿蒙开发',
+    '第6章 综合开发实践',
   ];
 
   @override
@@ -175,7 +175,13 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
             label: const Text('导入 MD 文件'),
             selected: _fromMdImport,
             onSelected: (s) {
-              if (s) setState(() => _fromMdImport = true);
+              if (s) setState(() {
+                _fromMdImport = true;
+                // 清除 AI 流程的旧数据，避免状态污染
+                _pdfPath = null;
+                _pptxPath = null;
+                _mdVideoPath = null;
+              });
             },
           ),
         ],

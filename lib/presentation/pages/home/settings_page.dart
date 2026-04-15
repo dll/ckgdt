@@ -304,7 +304,7 @@ class _SettingsPageState extends State<SettingsPage> {
             context,
             icon: Icons.support_agent,
             title: '系统帮助',
-            subtitle: 'AI 客服解答使用问题',
+            subtitle: 'AI 助手解答使用问题',
             onTap: () => AiHelpDialog.show(context),
           ),
           _buildMenuItem(
