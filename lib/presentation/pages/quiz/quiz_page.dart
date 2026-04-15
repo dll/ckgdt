@@ -234,22 +234,28 @@ class _QuizPageState extends State<QuizPage> {
 
   @override
   Widget build(BuildContext context) {
+    Widget body;
+
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      body = const Center(child: CircularProgressIndicator());
+    } else if (_quizStarted && _questions.isNotEmpty) {
+      // 如果在答题中，显示答题视图（不论角色）
+      body = _buildQuizView();
+    } else if (_isTeacherOrAdmin) {
+      // 教师/管理员 → 教学管理仪表板
+      body = _buildTeacherDashboard();
+    } else {
+      // 学生 → 章节选择
+      body = _buildChapterSelection();
     }
 
-    // 如果在答题中，显示答题视图（不论角色）
-    if (_quizStarted && _questions.isNotEmpty) {
-      return _buildQuizView();
-    }
+    // 嵌入在 Tab 中时直接返回内容，独立页面时包裹 Scaffold
+    if (widget.embedded) return body;
 
-    // 教师/管理员 → 教学管理仪表板
-    if (_isTeacherOrAdmin) {
-      return _buildTeacherDashboard();
-    }
-
-    // 学生 → 章节选择
-    return _buildChapterSelection();
+    return Scaffold(
+      appBar: AppBar(title: const Text('章节测验')),
+      body: body,
+    );
   }
 
   // ══════════════════════════════════════════════════════════════════════════

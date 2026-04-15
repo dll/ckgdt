@@ -41,6 +41,10 @@ class _ClassroomPageState extends State<ClassroomPage>
 
   Future<void> _init() async {
     await _loadClasses();
+    // 自动将所有学生同步到默认班级（解决只显示少数人的问题）
+    if (_selectedClassId != null) {
+      await _classDao.syncAllStudentsToClass(_selectedClassId!);
+    }
   }
 
   Future<void> _loadClasses() async {
@@ -499,7 +503,7 @@ class _OnlineStatusTabState extends State<_OnlineStatusTab> {
           if (_filteredStudents.isEmpty)
             _buildEmptyState('暂无学生数据', Icons.people_outline)
           else
-            ..._filteredStudents.map((s) => _buildStudentCard(s, primary)),
+            ..._filteredStudents.map((s) => _buildDismissibleStudentCard(s, primary)),
         ],
       ),
     );
@@ -652,6 +656,62 @@ class _OnlineStatusTabState extends State<_OnlineStatusTab> {
           ],
         ),
       ),
+    );
+  }
+
+  /// 带滑动删除的学生卡片
+  Widget _buildDismissibleStudentCard(Map<String, dynamic> student, Color primary) {
+    final userId = student['user_id'] as String? ?? '';
+    final name = student['real_name'] as String? ?? userId;
+
+    return Dismissible(
+      key: Key('student_$userId'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.only(right: 20),
+        decoration: BoxDecoration(
+          color: Colors.red.withValues(alpha: 0.9),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.delete_outline, color: Colors.white, size: 22),
+            SizedBox(height: 2),
+            Text('清除记录', style: TextStyle(color: Colors.white, fontSize: 10)),
+          ],
+        ),
+      ),
+      confirmDismiss: (_) async {
+        return await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('确认清除'),
+            content: Text('确定要清除 $name 的在线记录吗？\n此操作不会删除学生账号。'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('取消')),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                child: const Text('清除'),
+              ),
+            ],
+          ),
+        ) ?? false;
+      },
+      onDismissed: (_) async {
+        await widget.classroomDao.clearLastActive(userId);
+        _loadData();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('已清除 $name 的在线记录')),
+          );
+        }
+      },
+      child: _buildStudentCard(student, primary),
     );
   }
 

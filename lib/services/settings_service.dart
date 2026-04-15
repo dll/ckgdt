@@ -12,6 +12,11 @@ class SettingsService {
   static const String _quickLoginKey = 'quick_login_enabled';
   static const String _feedbackEnabledKey = 'feedback_enabled';
 
+  // ── 讯飞语音配置 ────────────────────────────────────────────────────────
+  static const String _xunfeiAppIdKey = 'xunfei_app_id';
+  static const String _xunfeiApiKeyKey = 'xunfei_api_key';
+  static const String _xunfeiApiSecretKey = 'xunfei_api_secret';
+
   // ═════════════════════════════════════════════════════════════════════════
   // 显示模式  ThemeMode（跟随系统 / 浅色 / 深色）
   // ═════════════════════════════════════════════════════════════════════════
@@ -103,6 +108,40 @@ class SettingsService {
   static Future<void> setFeedbackEnabled(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_feedbackEnabledKey, enabled);
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // 讯飞语音配置（AppID / APIKey / APISecret）
+  // ═════════════════════════════════════════════════════════════════════════
+
+  static Future<String> getXunfeiAppId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_xunfeiAppIdKey) ?? '';
+  }
+
+  static Future<void> setXunfeiAppId(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_xunfeiAppIdKey, value);
+  }
+
+  static Future<String> getXunfeiApiKey() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_xunfeiApiKeyKey) ?? '';
+  }
+
+  static Future<void> setXunfeiApiKey(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_xunfeiApiKeyKey, value);
+  }
+
+  static Future<String> getXunfeiApiSecret() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_xunfeiApiSecretKey) ?? '';
+  }
+
+  static Future<void> setXunfeiApiSecret(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_xunfeiApiSecretKey, value);
   }
 
   // ═════════════════════════════════════════════════════════════════════════

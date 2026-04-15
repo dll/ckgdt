@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import '../models/user_model.dart';
@@ -224,6 +225,22 @@ class UserDao {
       debugPrint('=== UserDao: Corrected role for $userId to $expectedRole');
     }
 
+    // ── 如果用户设置了自定义密码，优先用 hash 验证 ──
+    if (user.hasCustomPassword) {
+      // 使用 AuthService 的哈希算法验证
+      final testHash = _hashPassword(password, userId);
+      if (testHash == user.passwordHash) {
+        await setCurrentUser(userId, '');
+        await _updateLastLogin(userId);
+        debugPrint('=== UserDao: Login success (custom password) for $userId');
+        return true;
+      }
+      debugPrint('=== UserDao: Login failed — wrong custom password for $userId');
+      return false;
+    }
+
+    // ── 默认密码验证（后6位或完整userId） ──
+
     // Teacher login: userId=206004 or 203014, password=账号 or 后6位
     if ((userId == '206004' || userId == '203014') &&
         (password == userId ||
@@ -254,6 +271,12 @@ class UserDao {
     }
 
     return false;
+  }
+
+  /// SHA-256 哈希（与 AuthService.hashPassword 保持一致）
+  String _hashPassword(String password, String userId) {
+    final bytes = utf8.encode('$userId:$password');
+    return sha256.convert(bytes).toString();
   }
 
   Future<void> logout() async {
@@ -297,5 +320,39 @@ class UserDao {
         whereArgs: [userId],
       );
     } catch (_) {}
+  }
+
+  // ── 密码管理 ──────────────────────────────────────────────────────────
+
+  /// 更新密码哈希
+  Future<bool> updatePasswordHash(String userId, String hash) async {
+    final db = await _dbHelper.database;
+    try {
+      final count = await db.update(
+        'users',
+        {'password_hash': hash},
+        where: 'user_id = ?',
+        whereArgs: [userId],
+      );
+      return count > 0;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// 重置密码（清除 hash → 恢复默认密码）
+  Future<bool> resetPassword(String userId) async {
+    final db = await _dbHelper.database;
+    try {
+      final count = await db.update(
+        'users',
+        {'password_hash': null},
+        where: 'user_id = ?',
+        whereArgs: [userId],
+      );
+      return count > 0;
+    } catch (_) {
+      return false;
+    }
   }
 }
