@@ -312,6 +312,9 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
     _dx = _dx.clamp(0.0, size.width - 48);
     _dy = _dy.clamp(40.0, size.height - 80);
 
+    // 判断 FAB 在左侧还是右侧
+    final bool isOnRight = _dx + 24 > size.width / 2;
+
     return Stack(
       children: [
         // 展开时的半透明遮罩（点击关闭）
@@ -324,83 +327,47 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
           ),
 
         // 子按钮：帮助（上方）
-        AnimatedBuilder(
-          animation: _expandAnimation,
-          builder: (context, child) {
-            return Positioned(
-              left: _dx - 2,
-              top: _dy - 56 * _expandAnimation.value,
-              child: Opacity(
-                opacity: _expandAnimation.value,
-                child: _buildSubButton(
-                  icon: Icons.support_agent,
-                  label: '帮助',
-                  color: Colors.blue,
-                  onTap: _showHelp,
-                ),
-              ),
-            );
-          },
+        _buildPositionedSubButton(
+          offset: 56,
+          isOnRight: isOnRight,
+          size: size,
+          icon: Icons.support_agent,
+          label: '帮助',
+          color: Colors.blue,
+          onTap: _showHelp,
         ),
 
-        // 子按钮：反馈（上上方）
-        AnimatedBuilder(
-          animation: _expandAnimation,
-          builder: (context, child) {
-            return Positioned(
-              left: _dx - 2,
-              top: _dy - 112 * _expandAnimation.value,
-              child: Opacity(
-                opacity: _expandAnimation.value,
-                child: _buildSubButton(
-                  icon: Icons.feedback_outlined,
-                  label: '反馈',
-                  color: Colors.orange,
-                  onTap: _showFeedback,
-                ),
-              ),
-            );
-          },
+        // 子按钮：反馈
+        _buildPositionedSubButton(
+          offset: 112,
+          isOnRight: isOnRight,
+          size: size,
+          icon: Icons.feedback_outlined,
+          label: '反馈',
+          color: Colors.orange,
+          onTap: _showFeedback,
         ),
 
         // 子按钮：三端互通
-        AnimatedBuilder(
-          animation: _expandAnimation,
-          builder: (context, child) {
-            return Positioned(
-              left: _dx - 2,
-              top: _dy - 168 * _expandAnimation.value,
-              child: Opacity(
-                opacity: _expandAnimation.value,
-                child: _buildSubButton(
-                  icon: Icons.devices,
-                  label: '三端',
-                  color: Colors.deepPurple,
-                  onTap: _showCrossPlatform,
-                ),
-              ),
-            );
-          },
+        _buildPositionedSubButton(
+          offset: 168,
+          isOnRight: isOnRight,
+          size: size,
+          icon: Icons.devices,
+          label: '三端',
+          color: Colors.deepPurple,
+          onTap: _showCrossPlatform,
         ),
 
         // 子按钮：语音导航（最上方）
-        AnimatedBuilder(
-          animation: _expandAnimation,
-          builder: (context, child) {
-            return Positioned(
-              left: _dx - 2,
-              top: _dy - 224 * _expandAnimation.value,
-              child: Opacity(
-                opacity: _expandAnimation.value,
-                child: _buildSubButton(
-                  icon: Icons.mic,
-                  label: '语音',
-                  color: Colors.teal,
-                  onTap: _showVoiceNavigation,
-                ),
-              ),
-            );
-          },
+        _buildPositionedSubButton(
+          offset: 224,
+          isOnRight: isOnRight,
+          size: size,
+          icon: Icons.mic,
+          label: '语音',
+          color: Colors.teal,
+          onTap: _showVoiceNavigation,
         ),
 
         // 主按钮
@@ -460,55 +427,93 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
     );
   }
 
-  Widget _buildSubButton({
+  /// 构建带定位的子按钮（根据 FAB 位置自动调整布局方向）
+  Widget _buildPositionedSubButton({
+    required double offset,
+    required bool isOnRight,
+    required Size size,
     required IconData icon,
     required String label,
     required Color color,
     required VoidCallback onTap,
   }) {
+    return AnimatedBuilder(
+      animation: _expandAnimation,
+      builder: (context, child) {
+        // 让圆形图标与主按钮对齐（主按钮48px，子按钮圆40px，居中偏移4px）
+        final double iconLeft = _dx + 4;
+        final double iconRight = size.width - _dx - 48 + 4;
+
+        return Positioned(
+          // 在右侧时用 right 定位，左侧时用 left 定位
+          left: isOnRight ? null : iconLeft,
+          right: isOnRight ? iconRight : null,
+          top: _dy - offset * _expandAnimation.value,
+          child: Opacity(
+            opacity: _expandAnimation.value,
+            child: _buildSubButton(
+              icon: icon,
+              label: label,
+              color: color,
+              onTap: onTap,
+              labelOnLeft: isOnRight, // 右侧时标签在左，左侧时标签在右
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSubButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+    bool labelOnLeft = true,
+  }) {
+    final labelWidget = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(6),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 4,
+          ),
+        ],
+      ),
+      child: Text(label,
+          style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: color)),
+    );
+
+    final iconWidget = Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Icon(icon, color: Colors.white, size: 20),
+    );
+
     return GestureDetector(
       onTap: onTap,
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: [
-          // 标签
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(6),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 4,
-                ),
-              ],
-            ),
-            child: Text(label,
-                style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: color)),
-          ),
-          const SizedBox(width: 6),
-          // 圆形图标
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Icon(icon, color: Colors.white, size: 20),
-          ),
-        ],
+        children: labelOnLeft
+            ? [labelWidget, const SizedBox(width: 6), iconWidget]
+            : [iconWidget, const SizedBox(width: 6), labelWidget],
       ),
     );
   }

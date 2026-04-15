@@ -168,7 +168,7 @@ class DatabaseHelper {
         // Create empty database
         db = await openDatabase(
           dbPath,
-          version: 9,
+          version: 13,
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
         );
@@ -190,6 +190,8 @@ class DatabaseHelper {
     // CREATE TABLE IF NOT EXISTS 添加新列到已有表）
     await _ensureUsersColumns(db);
     await _ensureResourceFileColumns(db);
+    // 确保 v13 的 notifications 等表存在（已有 v13 数据库可能遗漏）
+    await _migrateToV13(db);
 
     // Verify tables exist
     try {
@@ -397,6 +399,7 @@ class DatabaseHelper {
     await _createNewTablesV10(db);
     await _createNewTablesV11(db);
     await _createNewTablesV12(db);
+    await _migrateToV13(db);
     await _ensureResourceFileColumns(db);
 
     // Add admin user (ignore if already exists from asset DB)
