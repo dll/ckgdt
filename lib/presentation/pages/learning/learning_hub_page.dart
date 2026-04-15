@@ -159,8 +159,6 @@ class _LearningHubPageState extends State<LearningHubPage>
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-
     return Scaffold(
       appBar: AppBar(
         title: Text(_isTeacherOrAdmin ? '教学资源管理' : '学习'),
@@ -199,9 +197,12 @@ class _LearningHubPageState extends State<LearningHubPage>
         ],
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: primary,
-          labelColor: primary,
-          unselectedLabelColor: Colors.grey,
+          indicatorColor: Colors.white,
+          indicatorWeight: 3,
+          labelColor: Colors.white,
+          labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+          unselectedLabelColor: Colors.white60,
+          unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
           tabs: [
             Tab(icon: const Icon(Icons.play_circle_outline), text: '视频 (${_videoLoading ? "..." : _videos.length})'),
             Tab(icon: const Icon(Icons.slideshow_outlined), text: 'PPT (${_pptLoading ? "..." : _pptFiles.length})'),
