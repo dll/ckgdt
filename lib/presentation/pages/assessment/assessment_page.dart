@@ -1402,28 +1402,9 @@ class _ProjectTabState extends State<_ProjectTab> {
                       ..._jsonProjects.map(_buildJsonProjectCard),
                       const SizedBox(height: 16),
                     ],
-                    // DAO项目数据（教师手动添加的）
-                    if (_projects.isNotEmpty && canEdit) ...[
-                      const Text('教师添加的项目',
-                          style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
-                      ..._projects.map((p) => _buildProjectCard(context, p)),
-                    ],
-                    if (canEdit) const SizedBox(height: 72),
                   ],
                 ),
         ),
-        if (canEdit)
-          Positioned(
-            right: 16,
-            bottom: 16,
-            child: FloatingActionButton(
-              heroTag: 'fab_project',
-              onPressed: _showAddProjectDialog,
-              child: const Icon(Icons.add),
-            ),
-          ),
       ],
     );
   }
