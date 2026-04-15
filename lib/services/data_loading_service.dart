@@ -47,7 +47,7 @@ class DataLoadingService {
       const defaultToken = '64a07762f8a3ab4415b8c943651bfb91';
       const oldToken = '17d6948aabc0764e4f18bb7b215fa32c';
       if (existing == null || existing.isEmpty || existing == oldToken) {
-        // 预置 Token（mad-data / mad-fd 仓库的只读访问令牌）
+        // 预置 Token（mad-data / mad-fd 仓库的访问令牌）
         await gitee.saveToken(defaultToken);
         await gitee.saveDefaultOwner('chzuczldl');
         await gitee.saveRepoPrefix('cg1-,cg2-,cg3-');

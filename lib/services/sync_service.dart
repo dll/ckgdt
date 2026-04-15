@@ -7,7 +7,8 @@ import 'gitee_service.dart';
 
 /// 数据同步服务
 ///
-/// 直接使用本项目的 Gitee 仓库 osgisOne/mad-fd，复用已配置的 Token。
+/// 直接使用本项目的 Gitee 仓库 osgisOne/mad-fd。
+/// 同步使用独立的读写 Token（sync_gitee_token），与 GiteeService 的只读 Token 分开。
 /// 学生端：定时将本地学习数据上传到 sync/students/{user_id}.json
 /// 教师端：定时从 sync/students/ 拉取所有学生数据合并到本地 DB
 class SyncService {
@@ -30,6 +31,7 @@ class SyncService {
   static const _syncIntervalKey = 'sync_interval_minutes';
   static const _lastUploadTimeKey = 'sync_last_upload';
   static const _lastDownloadTimeKey = 'sync_last_download';
+  static const _syncTokenKey = 'sync_gitee_token';
 
   // ── 定时器 ──────────────────────────────────────────────────────────
 
@@ -38,6 +40,40 @@ class SyncService {
 
   /// 同步状态（UI 可监听）
   final ValueNotifier<SyncStatus> status = ValueNotifier(SyncStatus.idle);
+
+  // ── 同步专用 Token（读写权限）──────────────────────────────────────────
+
+  /// 预置读写 Token（osgisOne/mad-fd 仓库，具有 projects 读写权限）
+  /// 如果没有配置过同步 Token，自动使用此默认值
+  static const _defaultSyncToken = '64a07762f8a3ab4415b8c943651bfb91';
+
+  /// 确保同步 Token 已配置（首次使用时自动设置）
+  Future<void> _ensureSyncToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    final existing = prefs.getString(_syncTokenKey);
+    if (existing == null || existing.isEmpty) {
+      await prefs.setString(_syncTokenKey, _defaultSyncToken);
+      // 同时确保 GiteeService 也配置了此 Token
+      final giteeToken = await _gitee.getToken();
+      if (giteeToken == null || giteeToken.isEmpty) {
+        await _gitee.saveToken(_defaultSyncToken);
+      }
+    }
+  }
+
+  /// 获取同步专用 Token
+  Future<String?> getSyncToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_syncTokenKey) ?? _defaultSyncToken;
+  }
+
+  /// 设置同步 Token
+  Future<void> setSyncToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_syncTokenKey, token);
+    // 也同步更新 GiteeService 的 Token
+    await _gitee.saveToken(token);
+  }
 
   // ── 配置读写（仅 开关 + 间隔）────────────────────────────────────────
 
@@ -99,6 +135,9 @@ class SyncService {
     final enabled = await isSyncEnabled();
     if (!enabled) return;
 
+    // 确保同步 Token 已配置
+    await _ensureSyncToken();
+
     final interval = await getSyncInterval();
 
     // 立即执行一次
@@ -140,6 +179,8 @@ class SyncService {
     status.value = SyncStatus.uploading;
 
     try {
+      // 确保同步 Token 可用
+      await _ensureSyncToken();
       // 0. 刷新 last_active 确保上传时间戳是最新的
       final db = await DatabaseHelper.instance.database;
       try {
@@ -271,6 +312,8 @@ class SyncService {
     status.value = SyncStatus.downloading;
 
     try {
+      // 确保同步 Token 可用
+      await _ensureSyncToken();
       // 1. 列出 sync/students/ 目录下的所有文件
       List<Map<String, dynamic>> files;
       try {
@@ -365,17 +408,79 @@ class SyncService {
 
     int count = 0;
 
-    // 更新用户的 last_active
+    // ── 确保用户记录存在（INSERT OR UPDATE）────────────────────────────
+    final userName = data['user_name'] as String? ?? '';
     final lastActive = data['last_active'] as String?;
-    if (lastActive != null) {
+    final existingUser = await db.query(
+      'users',
+      where: 'user_id = ?',
+      whereArgs: [userId],
+      limit: 1,
+    );
+    if (existingUser.isEmpty) {
+      // 用户不存在，创建新记录
       try {
-        await db.update(
-          'users',
-          {'last_active': lastActive},
-          where: 'user_id = ?',
-          whereArgs: [userId],
-        );
-      } catch (_) {}
+        await db.insert('users', {
+          'user_id': userId,
+          'real_name': userName.isNotEmpty ? userName : null,
+          'role': 'student',
+          'is_active': 1,
+          'created_at': DateTime.now().toIso8601String(),
+          'last_active': lastActive ?? DateTime.now().toIso8601String(),
+        });
+        debugPrint('SyncService: 创建用户记录 $userId ($userName)');
+      } catch (e) {
+        debugPrint('SyncService: 创建用户失败: $e');
+      }
+    } else {
+      // 用户已存在，更新 last_active 和 real_name
+      final updates = <String, dynamic>{};
+      if (lastActive != null) updates['last_active'] = lastActive;
+      if (userName.isNotEmpty) updates['real_name'] = userName;
+      if (updates.isNotEmpty) {
+        try {
+          await db.update(
+            'users',
+            updates,
+            where: 'user_id = ?',
+            whereArgs: [userId],
+          );
+        } catch (_) {}
+      }
+    }
+
+    // ── 确保班级成员关联（加入默认班级）──────────────────────────────────
+    try {
+      // 检查是否已有班级关联
+      final memberCheck = await db.query(
+        'class_members',
+        where: 'user_id = ?',
+        whereArgs: [userId],
+        limit: 1,
+      );
+      if (memberCheck.isEmpty) {
+        // 查找第一个班级（默认班级）
+        final classes = await db.query('classes', limit: 1, orderBy: 'id');
+        int classId;
+        if (classes.isNotEmpty) {
+          classId = classes.first['id'] as int;
+        } else {
+          // 没有班级则创建一个默认班级
+          classId = await db.insert('classes', {
+            'name': '默认班级',
+            'description': '自动创建的默认班级',
+            'created_at': DateTime.now().toIso8601String(),
+          });
+        }
+        await db.insert('class_members', {
+          'class_id': classId,
+          'user_id': userId,
+          'joined_at': DateTime.now().toIso8601String(),
+        });
+        debugPrint('SyncService: 已将 $userId 加入班级 $classId');
+      }
+    } catch (e) {
+      debugPrint('SyncService: 班级关联失败: $e');
     }
 
     // 导入测验成绩
@@ -505,6 +610,7 @@ class SyncService {
   /// 测试同步仓库连接
   Future<SyncResult> testConnection() async {
     try {
+      await _ensureSyncToken();
       final detail = await _gitee.getRepoDetail(repoOwner, repoName);
       final fullName = detail['full_name'] ?? '$repoOwner/$repoName';
       final isPrivate = detail['private'] == true ? '私有' : '公开';
