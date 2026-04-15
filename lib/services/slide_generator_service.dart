@@ -42,14 +42,20 @@ class SlideGeneratorService {
     try {
       final pdf = pw.Document();
 
-      // 尝试加载中文字体
+      // 尝试加载中文字体（优先微软雅黑，回退 NotoSansSC）
       pw.Font? font;
       try {
         final fontData =
-            await rootBundle.load('assets/fonts/NotoSansSC-Regular.ttf');
+            await rootBundle.load('assets/fonts/msyh.ttc');
         font = pw.Font.ttf(fontData);
       } catch (_) {
-        // 无中文字体则用默认字体（部分中文可能显示为方块）
+        try {
+          final fontData =
+              await rootBundle.load('assets/fonts/NotoSansSC-Regular.ttf');
+          font = pw.Font.ttf(fontData);
+        } catch (_) {
+          // 无中文字体则用默认字体（部分中文可能显示为方块）
+        }
       }
 
       // 有字体时使用自定义主题，否则使用默认主题

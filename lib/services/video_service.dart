@@ -341,4 +341,145 @@ except ImportError:
       return false;
     }
   }
+
+  // ── SRT 字幕生成 ──────────────────────────────────────────────────────────
+
+  /// 从旁白脚本和音频时长列表生成 SRT 字幕文件
+  /// [narrations] 每张幻灯片的旁白文本列表（与 slides 一一对应）
+  /// [audioPaths] 对应的音频路径列表（用于获取精确时长）
+  /// [outputPath] 输出 SRT 文件路径
+  /// [defaultDuration] 无音频时的默认时长
+  Future<String?> generateSrt({
+    required List<String> narrations,
+    required List<String> audioPaths,
+    required String outputPath,
+    double defaultDuration = 5.0,
+    double extraDuration = 1.5,
+  }) async {
+    if (kIsWeb) return null;
+    try {
+      final buf = StringBuffer();
+      double currentTime = 0.0;
+
+      for (var i = 0; i < narrations.length; i++) {
+        final text = narrations[i].trim();
+        if (text.isEmpty) {
+          currentTime += defaultDuration;
+          continue;
+        }
+
+        // 获取音频时长
+        double duration = defaultDuration;
+        if (i < audioPaths.length && File(audioPaths[i]).existsSync()) {
+          final d = await _getAudioDuration(audioPaths[i]);
+          if (d != null) duration = d + extraDuration;
+        }
+
+        final startTime = currentTime;
+        final endTime = currentTime + duration;
+
+        // 将旁白文本按句号/分号分段，每段不超过40字
+        final segments = _splitNarration(text, 40);
+        final segDuration = duration / segments.length;
+
+        for (var j = 0; j < segments.length; j++) {
+          final segStart = startTime + j * segDuration;
+          final segEnd = startTime + (j + 1) * segDuration;
+
+          buf.writeln('${i * 10 + j + 1}');
+          buf.writeln('${_formatSrtTime(segStart)} --> ${_formatSrtTime(segEnd)}');
+          buf.writeln(segments[j]);
+          buf.writeln();
+        }
+
+        currentTime = endTime;
+      }
+
+      final file = File(outputPath);
+      await file.writeAsString(buf.toString(), flush: true);
+      return outputPath;
+    } catch (e) {
+      debugPrint('VideoService: generateSrt error: $e');
+      return null;
+    }
+  }
+
+  /// 将旁白文本按句号/分号/句号分割，每段不超过 maxLen 字
+  List<String> _splitNarration(String text, int maxLen) {
+    // 先按句号、分号、问号分割
+    final sentences = text.split(RegExp(r'[。；！？]'))
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+    if (sentences.isEmpty) return [text];
+
+    // 合并短句，确保每段不超过 maxLen
+    final result = <String>[];
+    var current = '';
+    for (final s in sentences) {
+      if (current.isEmpty) {
+        current = s;
+      } else if (current.length + s.length + 1 <= maxLen) {
+        current = '$current，$s';
+      } else {
+        result.add(current);
+        current = s;
+      }
+    }
+    if (current.isNotEmpty) result.add(current);
+
+    return result.isEmpty ? [text] : result;
+  }
+
+  /// 格式化时间为 SRT 时间戳 (HH:MM:SS,mmm)
+  String _formatSrtTime(double seconds) {
+    final h = (seconds / 3600).floor();
+    final m = ((seconds % 3600) / 60).floor();
+    final s = (seconds % 60).floor();
+    final ms = ((seconds - seconds.floor()) * 1000).round();
+    return '${h.toString().padLeft(2, '0')}:'
+        '${m.toString().padLeft(2, '0')}:'
+        '${s.toString().padLeft(2, '0')},'
+        '${ms.toString().padLeft(3, '0')}';
+  }
+
+  /// 将 SRT 字幕烧录到视频中（可选，需要 FFmpeg）
+  Future<String?> burnSubtitles({
+    required String videoPath,
+    required String srtPath,
+    required String outputPath,
+  }) async {
+    if (kIsWeb) return null;
+    try {
+      final safeVideo = videoPath.replaceAll('\\', '/');
+      final safeSrt = srtPath.replaceAll('\\', '/');
+      final safeOutput = outputPath.replaceAll('\\', '/');
+
+      // 使用 subtitles filter 烧录字幕
+      final result = await Process.run(
+        'ffmpeg',
+        [
+          '-y',
+          '-i', safeVideo,
+          '-vf', "subtitles='$safeSrt':force_style='FontName=Microsoft YaHei,FontSize=22,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,Outline=2,Shadow=1,MarginV=30'",
+          '-c:v', 'libx264',
+          '-preset', 'medium',
+          '-crf', '23',
+          '-c:a', 'copy',
+          '-movflags', '+faststart',
+          safeOutput,
+        ],
+        runInShell: true,
+      ).timeout(const Duration(seconds: 600));
+
+      if (result.exitCode == 0 && File(outputPath).existsSync()) {
+        return outputPath;
+      }
+      debugPrint('VideoService: burnSubtitles stderr: ${result.stderr}');
+      return null;
+    } catch (e) {
+      debugPrint('VideoService: burnSubtitles error: $e');
+      return null;
+    }
+  }
 }

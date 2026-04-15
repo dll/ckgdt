@@ -44,6 +44,7 @@ flutter:
 
   assets:
     - assets/
+    - assets/fonts/
     - assets/graphs/01-课程图谱/
     - assets/graphs/02-技术栈图谱/
     - assets/graphs/03-实验图谱/

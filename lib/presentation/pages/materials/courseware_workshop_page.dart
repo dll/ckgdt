@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
@@ -773,30 +774,69 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
             '旁白 ${audioPaths.length} 条');
 
         if (slideImages.isNotEmpty) {
-          // ── 5/5 合成视频 ──
+          // ── 5/6 合成视频 ──
           setState(() {
-            _mdProgress = 0.75;
-            _mdProgressMsg = '(5/5) 正在合成教学视频...';
+            _mdProgress = 0.72;
+            _mdProgressMsg = '(5/6) 正在合成教学视频...';
           });
 
           final timestamp = DateTime.now().millisecondsSinceEpoch;
           final safeName =
               safeTitle.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
+          final rawVideoPath =
+              '$coursewareDir/${safeName}_raw_$timestamp.mp4';
           videoPath =
               '$coursewareDir/${safeName}_$timestamp.mp4';
 
           await _videoService.generateVideo(
             slides: slideImages,
             audios: audioPaths,
-            outputPath: videoPath,
+            outputPath: rawVideoPath,
             onProgress: (current, total, msg) {
               if (!mounted) return;
               setState(() {
-                _mdProgress = 0.75 + 0.25 * (current / total);
-                _mdProgressMsg = '(5/5) $msg';
+                _mdProgress = 0.72 + 0.15 * (current / total);
+                _mdProgressMsg = '(5/6) $msg';
               });
             },
           );
+
+          // ── 6/6 生成 SRT 字幕并烧录 ──
+          if (File(rawVideoPath).existsSync()) {
+            setState(() {
+              _mdProgress = 0.92;
+              _mdProgressMsg = '(6/6) 正在生成字幕...';
+            });
+
+            final narrations = _buildNarrationTexts(safeTitle)
+                .map((s) => s['narration'] ?? '')
+                .toList();
+            final srtPath = '$coursewareDir/${safeName}_$timestamp.srt';
+            final srtResult = await _videoService.generateSrt(
+              narrations: narrations,
+              audioPaths: audioPaths,
+              outputPath: srtPath,
+            );
+
+            if (srtResult != null) {
+              final burned = await _videoService.burnSubtitles(
+                videoPath: rawVideoPath,
+                srtPath: srtPath,
+                outputPath: videoPath,
+              );
+              if (burned != null) {
+                try { File(rawVideoPath).deleteSync(); } catch (_) {}
+              } else {
+                try { File(rawVideoPath).renameSync(videoPath); } catch (_) {
+                  videoPath = rawVideoPath;
+                }
+              }
+            } else {
+              try { File(rawVideoPath).renameSync(videoPath); } catch (_) {
+                videoPath = rawVideoPath;
+              }
+            }
+          }
 
           // 检查视频文件是否存在
           if (!File(videoPath).existsSync()) {
@@ -961,14 +1001,14 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
   }
 
   /// 为每张幻灯片生成旁白脚本（用于 TTS）
+  /// 原则：精炼、直讲内容、不说"副标题是"/"其次是"等冗余过渡
   List<Map<String, String>> _buildNarrationTexts(String courseTitle) {
     final scripts = <Map<String, String>>[];
 
     // 封面旁白
     scripts.add({
       'slide': '封面',
-      'narration': '同学们好！欢迎来到今天的课程。本节课我们将一起学习${courseTitle}的相关内容。'
-          '请大家做好笔记，跟随课程节奏，我们开始今天的学习。',
+      'narration': '欢迎来到$courseTitle。我们开始今天的学习。',
     });
 
     // 每张幻灯片
@@ -982,18 +1022,12 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
 
       final buf = StringBuffer();
 
-      // 开场过渡语
-      if (i == 0) {
-        buf.write('首先，我们来了解$title。');
-      } else if (i == _parsedSlides.length - 1) {
-        buf.write('最后，我们来看$title。');
-      } else {
-        final transitions = ['接下来', '下面', '现在', '然后'];
-        buf.write('${transitions[i % transitions.length]}，我们来学习$title。');
-      }
+      // 直接引入主题，不用"首先/其次/接下来"
+      buf.write('$title。');
 
+      // 副标题作为补充说明（不说"副标题是"）
       if (subtitle.isNotEmpty) {
-        buf.write('副标题是$subtitle。');
+        buf.write('$subtitle。');
       }
 
       // 提取非表格、非标签的要点
@@ -1001,12 +1035,11 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
       final subSections = <String>[];
       for (final b in bullets) {
         final text = b.toString();
-        if (text.startsWith('|')) continue; // 跳过表格行
+        if (text.startsWith('|')) continue;
         if (text.startsWith('【') && text.endsWith('】')) {
           subSections.add(text.replaceAll('【', '').replaceAll('】', ''));
           continue;
         }
-        // 清理前缀
         final cleaned = text
             .replaceAll(RegExp(r'^  · '), '')
             .replaceAll(RegExp(r'^\d+\.\s*'), '')
@@ -1016,47 +1049,29 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
         }
       }
 
-      // 展开子章节
+      // 子章节概括
       if (subSections.isNotEmpty) {
-        buf.write('本部分主要涵盖${subSections.join("、")}等方面的内容。');
+        buf.write('涵盖${subSections.join("、")}。');
       }
 
-      // 展开要点（取前5个）
-      final pointsToNarrate = mainPoints.take(5).toList();
+      // 要点直接陈述（取前4个），用逗号连接
+      final pointsToNarrate = mainPoints.take(4).toList();
       if (pointsToNarrate.isNotEmpty) {
-        buf.write('具体来说，');
-        for (var j = 0; j < pointsToNarrate.length; j++) {
-          final point = pointsToNarrate[j];
-          if (j == 0) {
-            buf.write('首先是$point');
-          } else if (j == pointsToNarrate.length - 1) {
-            buf.write('，最后是$point');
-          } else {
-            buf.write('，其次是$point');
-          }
-        }
+        buf.write(pointsToNarrate.join('；'));
         buf.write('。');
       }
 
-      // 如果有代码示例，加一句说明
       if (code.isNotEmpty) {
-        buf.write('在这张幻灯片中，我们可以看到具体的代码示例，请大家仔细阅读并理解代码的逻辑。');
+        buf.write('请看代码示例，理解其实现逻辑。');
       }
 
-      // 如果有表格数据，加说明
       final hasTable = bullets.any((b) => b.toString().startsWith('|'));
       if (hasTable) {
-        buf.write('请注意看屏幕上的对比表格，它直观地展示了各技术方案的差异。');
+        buf.write('请参考表格中的对比分析。');
       }
 
-      // 补充备注内容
       if (notes.isNotEmpty && notes.length > 5) {
         buf.write(notes);
-      }
-
-      // 如果旁白太短，追加通用过渡
-      if (buf.length < 60) {
-        buf.write('请大家认真理解这部分内容，这是本节课的重要知识点。');
       }
 
       scripts.add({
@@ -1068,65 +1083,169 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
     // 结束旁白
     scripts.add({
       'slide': '结束',
-      'narration': '好的，今天的课程内容就讲到这里。我们回顾一下本节课的重点内容。'
-          '希望同学们课后能够认真复习，并完成相关的练习。'
-          '如果有任何疑问，可以在课后讨论或答疑时间提出。谢谢大家，下节课再见！',
+      'narration': '本节课内容讲解完毕。请大家课后复习并完成练习。谢谢！',
     });
 
     return scripts;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // AI 生成流程 (原 Stepper 模式)
+  // AI 生成流程 (Stepper 模式 — 增强版)
   // ═══════════════════════════════════════════════════════════════════════════
 
   Widget _buildAiFlow() {
-    return Stepper(
-      currentStep: _currentStep,
-      onStepContinue: _onStepContinue,
-      onStepCancel: _currentStep > 0
-          ? () => setState(() => _currentStep--)
-          : null,
-      onStepTapped: (step) {
-        if (step <= _currentStep || _canGoToStep(step)) {
-          setState(() => _currentStep = step);
-        }
-      },
-      controlsBuilder: (context, details) {
-        return Padding(
-          padding: const EdgeInsets.only(top: 16),
-          child: Row(
-            children: [
-              if (_getStepAction() != null)
-                ElevatedButton.icon(
-                  onPressed: _isStepBusy() ? null : _getStepAction(),
-                  icon: _isStepBusy()
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
-                        )
-                      : Icon(_getStepActionIcon()),
-                  label: Text(_getStepActionLabel()),
+    return Column(
+      children: [
+        // ── 顶部进度可视化 ──
+        _buildProgressBar(),
+        const SizedBox(height: 8),
+        Expanded(
+          child: Stepper(
+            currentStep: _currentStep,
+            onStepContinue: _onStepContinue,
+            onStepCancel: _currentStep > 0
+                ? () => setState(() => _currentStep--)
+                : null,
+            onStepTapped: (step) {
+              if (step <= _currentStep || _canGoToStep(step)) {
+                setState(() => _currentStep = step);
+              }
+            },
+            controlsBuilder: (context, details) {
+              return Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: Row(
+                  children: [
+                    if (_getStepAction() != null)
+                      FilledButton.icon(
+                        onPressed: _isStepBusy() ? null : _getStepAction(),
+                        icon: _isStepBusy()
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white),
+                              )
+                            : Icon(_getStepActionIcon()),
+                        label: Text(_getStepActionLabel()),
+                      ),
+                    const SizedBox(width: 12),
+                    if (_currentStep < 4 && _canGoToStep(_currentStep + 1))
+                      FilledButton.tonalIcon(
+                        onPressed: () => setState(() => _currentStep++),
+                        icon: const Icon(Icons.arrow_forward),
+                        label: const Text('下一步'),
+                      ),
+                    const SizedBox(width: 8),
+                    if (details.onStepCancel != null)
+                      TextButton(
+                        onPressed: details.onStepCancel,
+                        child: const Text('上一步'),
+                      ),
+                  ],
                 ),
-              const SizedBox(width: 12),
-              if (details.onStepCancel != null)
-                TextButton(
-                  onPressed: details.onStepCancel,
-                  child: const Text('上一步'),
-                ),
+              );
+            },
+            steps: [
+              _buildStep1(),
+              _buildStep2(),
+              _buildStep3(),
+              _buildStep4(),
+              _buildStep5(),
             ],
           ),
-        );
-      },
-      steps: [
-        _buildStep1(),
-        _buildStep2(),
-        _buildStep3(),
-        _buildStep4(),
-        _buildStep5(),
+        ),
       ],
+    );
+  }
+
+  /// 顶部进度指示条 — 显示每步完成状态 + 当前位置
+  Widget _buildProgressBar() {
+    final steps = ['教案', '内容', '课件', '语音', '视频'];
+    final completed = [
+      _lessonPlan != null,
+      _markdownContent != null,
+      _pdfPath != null || _pptxPath != null,
+      _audioPaths.isNotEmpty,
+      _videoPath != null,
+    ];
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.deepPurple.shade50, Colors.blue.shade50],
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: List.generate(steps.length * 2 - 1, (i) {
+          if (i.isOdd) {
+            // 连接线
+            final leftDone = completed[i ~/ 2];
+            return Expanded(
+              child: Container(
+                height: 3,
+                color: leftDone ? Colors.green : Colors.grey.shade300,
+              ),
+            );
+          }
+          final idx = i ~/ 2;
+          final isDone = completed[idx];
+          final isCurrent = idx == _currentStep;
+          return GestureDetector(
+            onTap: () {
+              if (idx <= _currentStep || _canGoToStep(idx)) {
+                setState(() => _currentStep = idx);
+              }
+            },
+            child: Column(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isDone
+                        ? Colors.green
+                        : isCurrent
+                            ? Colors.deepPurple
+                            : Colors.grey.shade300,
+                    boxShadow: isCurrent
+                        ? [BoxShadow(
+                            color: Colors.deepPurple.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                          )]
+                        : null,
+                  ),
+                  child: Center(
+                    child: isDone
+                        ? const Icon(Icons.check, color: Colors.white, size: 18)
+                        : Text(
+                            '${idx + 1}',
+                            style: TextStyle(
+                              color: isCurrent ? Colors.white : Colors.grey,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  steps[idx],
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isCurrent ? Colors.deepPurple : Colors.grey,
+                    fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ),
     );
   }
 
@@ -1213,6 +1332,32 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
               prefixIcon: Icon(Icons.note_add),
             ),
             maxLines: 2,
+          ),
+          const SizedBox(height: 16),
+
+          // ── 教案导入 ──
+          Card(
+            color: Colors.blue.shade50,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('或者导入已有教案',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 4),
+                  const Text('支持 JSON / Markdown 格式的教案文件',
+                      style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: _generatingPlan ? null : _importLessonPlan,
+                    icon: const Icon(Icons.upload_file, size: 18),
+                    label: const Text('导入教案文件'),
+                  ),
+                ],
+              ),
+            ),
           ),
 
           // 教案预览
@@ -1407,68 +1552,46 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
             const Text('⚠️ 请先生成内容',
                 style: TextStyle(color: Colors.orange))
           else ...[
-            // PPTX 导出
-            ListTile(
-              leading: Icon(Icons.slideshow,
-                  color: _pptxPath != null
-                      ? Colors.green
-                      : (_hasPythonPptx
-                          ? Colors.deepOrange
-                          : Colors.grey)),
-              title: const Text('PPTX 课件（专业幻灯片）'),
+            // 生成产物预览卡片
+            _buildFileCard(
+              icon: Icons.slideshow,
+              color: Colors.deepOrange,
+              title: 'PPTX 课件（Prezi 风格）',
               subtitle: _pptxPath != null
-                  ? Text(_pptxPath!,
-                      style: const TextStyle(fontSize: 11))
-                  : Text(_hasPythonPptx
-                      ? '使用 python-pptx 生成专业 PPT 课件'
-                      : '需安装: pip install python-pptx'),
-              trailing: _pptxPath != null
-                  ? IconButton(
-                      icon: const Icon(Icons.open_in_new),
-                      onPressed: () => OpenFilex.open(_pptxPath!),
-                    )
-                  : null,
+                  ? _getFileInfo(_pptxPath!)
+                  : (_hasPythonPptx
+                      ? '渐变背景 + 动画入场 + 卡片式布局'
+                      : '需安装: pip install python-pptx lxml'),
+              isReady: _pptxPath != null,
+              onOpen: _pptxPath != null ? () => OpenFilex.open(_pptxPath!) : null,
             ),
-            if (!_hasPythonPptx)
-              Padding(
-                padding: const EdgeInsets.only(left: 16),
-                child: _buildEnvCheck('python-pptx', false,
-                    '运行: pip install python-pptx'),
-              ),
-            const Divider(),
-
-            // PDF 导出
-            ListTile(
-              leading: Icon(Icons.picture_as_pdf,
-                  color: _pdfPath != null ? Colors.green : Colors.red),
-              title: const Text('PDF 课件（含UML图）'),
+            const SizedBox(height: 8),
+            _buildFileCard(
+              icon: Icons.picture_as_pdf,
+              color: Colors.red,
+              title: 'PDF 课件（含 UML 图）',
               subtitle: _pdfPath != null
-                  ? Text(_pdfPath!, style: const TextStyle(fontSize: 11))
-                  : const Text('A4横版，包含封面/教学过程/UML图/实验'),
-              trailing: _pdfPath != null
-                  ? IconButton(
-                      icon: const Icon(Icons.open_in_new),
-                      onPressed: () => OpenFilex.open(_pdfPath!),
-                    )
-                  : null,
+                  ? _getFileInfo(_pdfPath!)
+                  : 'A4横版，封面/教学过程/UML/实验',
+              isReady: _pdfPath != null,
+              onOpen: _pdfPath != null ? () => OpenFilex.open(_pdfPath!) : null,
             ),
-            const Divider(),
-
-            // MD 导出
-            ListTile(
-              leading: Icon(Icons.article,
-                  color: _mdPath != null ? Colors.green : Colors.blue),
-              title: const Text('Markdown 文档'),
+            const SizedBox(height: 8),
+            _buildFileCard(
+              icon: Icons.article,
+              color: Colors.blue,
+              title: 'Markdown 文档',
               subtitle: _mdPath != null
-                  ? Text(_mdPath!, style: const TextStyle(fontSize: 11))
-                  : const Text('完整教案的 Markdown 格式'),
-              trailing: _mdPath != null
-                  ? IconButton(
-                      icon: const Icon(Icons.open_in_new),
-                      onPressed: () => OpenFilex.open(_mdPath!),
-                    )
-                  : null,
+                  ? _getFileInfo(_mdPath!)
+                  : '完整教案的 Markdown 格式',
+              isReady: _mdPath != null,
+              onOpen: _mdPath != null ? () => OpenFilex.open(_mdPath!) : null,
             ),
+            if (!_hasPythonPptx) ...[
+              const SizedBox(height: 8),
+              _buildEnvCheck('python-pptx + lxml', false,
+                  '运行: pip install python-pptx lxml'),
+            ],
           ],
         ],
       ),
@@ -1664,6 +1787,62 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
     );
   }
 
+  /// 文件预览卡片 — 显示生成状态、文件大小、打开按钮
+  Widget _buildFileCard({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+    required bool isReady,
+    VoidCallback? onOpen,
+  }) {
+    return Card(
+      elevation: isReady ? 2 : 0,
+      color: isReady ? Colors.green.shade50 : null,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: isReady ? Colors.green.shade200 : Colors.grey.shade200,
+        ),
+      ),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: isReady ? Colors.green : color.withValues(alpha: 0.15),
+          child: Icon(
+            isReady ? Icons.check : icon,
+            color: isReady ? Colors.white : color,
+            size: 22,
+          ),
+        ),
+        title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+        subtitle: Text(subtitle, style: const TextStyle(fontSize: 11)),
+        trailing: isReady
+            ? FilledButton.tonalIcon(
+                onPressed: onOpen,
+                icon: const Icon(Icons.open_in_new, size: 16),
+                label: const Text('打开', style: TextStyle(fontSize: 12)),
+              )
+            : Icon(Icons.pending, color: Colors.grey.shade400, size: 22),
+      ),
+    );
+  }
+
+  /// 获取文件信息（名称 + 大小）
+  String _getFileInfo(String path) {
+    try {
+      final file = File(path);
+      if (file.existsSync()) {
+        final size = file.lengthSync();
+        final sizeStr = size > 1024 * 1024
+            ? '${(size / 1024 / 1024).toStringAsFixed(1)} MB'
+            : '${(size / 1024).toStringAsFixed(0)} KB';
+        final name = path.split(Platform.pathSeparator).last;
+        return '$name ($sizeStr)';
+      }
+    } catch (_) {}
+    return path.split(Platform.pathSeparator).last;
+  }
+
   Widget _buildNoApiKeyWarning() {
     return Center(
       child: Padding(
@@ -1794,6 +1973,141 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
   // ═══════════════════════════════════════════════════════════════════════════
   // 业务逻辑
   // ═══════════════════════════════════════════════════════════════════════════
+
+  /// 导入已有教案（支持 JSON 或 Markdown 格式）
+  Future<void> _importLessonPlan() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['json', 'md', 'markdown', 'txt'],
+        dialogTitle: '选择教案文件',
+      );
+      if (result == null || result.files.isEmpty) return;
+
+      final filePath = result.files.single.path;
+      if (filePath == null) return;
+
+      final content = await File(filePath).readAsString();
+      Map<String, dynamic>? plan;
+
+      if (filePath.endsWith('.json')) {
+        // JSON 格式教案
+        try {
+          final parsed = await Future(() => _parseJsonPlan(content));
+          plan = parsed;
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('JSON 解析失败: $e')),
+            );
+          }
+          return;
+        }
+      } else {
+        // Markdown 格式 — 解析为 slides 然后构建教案
+        final slides = _coursewareService.parseMarkdownToSlides(content);
+        if (slides.isEmpty) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('无法从文件中解析出幻灯片内容')),
+            );
+          }
+          return;
+        }
+
+        // 从文件名提取标题
+        final fileName = filePath.split(Platform.pathSeparator).last;
+        final title = fileName.replaceAll(RegExp(r'\.(md|markdown|txt)$'), '');
+
+        plan = {
+          'title': title,
+          'chapter': _selectedChapter == '全部/自定义' ? '' : _selectedChapter,
+          'classHours': _classHours,
+          'objectives': ['掌握$title相关核心知识'],
+          'keyPoints': [],
+          'difficulties': [],
+          'sections': slides.map((s) {
+            final bullets = (s['bullets'] as List? ?? []);
+            return {
+              'title': s['title'] ?? '',
+              'duration': '${(_classHours * 45 / slides.length).round()}分钟',
+              'content': bullets.map((b) => b.toString()).join('\n'),
+              'codeExample': s['code'] ?? '',
+              'notes': s['notes'] ?? '',
+            };
+          }).toList(),
+          'experiments': [],
+          'umlDiagrams': [],
+          'homework': '',
+        };
+      }
+
+      if (plan != null) {
+        setState(() {
+          _lessonPlan = plan;
+          _topicCtrl.text = plan!['title']?.toString() ?? '';
+          // 重置后续步骤
+          _markdownContent = null;
+          _pumlResults = [];
+          _umlImages = [];
+          _pdfPath = null;
+          _pptxPath = null;
+          _mdPath = null;
+          _narrationScripts = [];
+          _audioPaths = [];
+          _videoPath = null;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('✅ 教案已导入: ${plan['title']}'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('导入失败: $e')),
+        );
+      }
+    }
+  }
+
+  /// 解析 JSON 格式教案
+  Map<String, dynamic> _parseJsonPlan(String content) {
+    final data = Map<String, dynamic>.from(
+      (content.contains('{'))
+          ? _tryParseJson(content)
+          : {'title': '导入的教案', 'sections': []},
+    );
+    // 确保必要字段存在
+    data['title'] ??= '导入的教案';
+    data['classHours'] ??= _classHours;
+    data['objectives'] ??= [];
+    data['keyPoints'] ??= [];
+    data['difficulties'] ??= [];
+    data['sections'] ??= [];
+    data['experiments'] ??= [];
+    data['umlDiagrams'] ??= [];
+    data['homework'] ??= '';
+    return data;
+  }
+
+  dynamic _tryParseJson(String content) {
+    final start = content.indexOf('{');
+    final end = content.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+      try {
+        return jsonDecode(content.substring(start, end + 1));
+      } catch (_) {
+        return <String, dynamic>{};
+      }
+    }
+    return <String, dynamic>{};
+  }
 
   /// Step 1: AI 生成教案
   Future<void> _doGeneratePlan() async {
