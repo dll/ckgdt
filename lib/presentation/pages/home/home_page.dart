@@ -34,6 +34,8 @@ import '../skill/ai_skill_page.dart';
 import '../classroom/classroom_page.dart';
 import '../sync/data_sync_page.dart';
 import '../feedback/feedback_manage_page.dart';
+import '../practice/deep_practice_page.dart';
+import '../practice/growth_curve_page.dart';
 import 'settings_page.dart';
 import 'search_page.dart';
 
@@ -434,6 +436,20 @@ class _HomePageState extends State<HomePage> {
                     MaterialPageRoute(builder: (_) => const SkillsHubPage())),
                 ),
                 _buildMenuCard(
+                  icon: Icons.biotech,
+                  title: '深度实践',
+                  color: Colors.cyan[700]!,
+                  onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const DeepPracticePage())),
+                ),
+                _buildMenuCard(
+                  icon: Icons.show_chart,
+                  title: '成长曲线',
+                  color: Colors.purple[400]!,
+                  onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const GrowthCurvePage())),
+                ),
+                _buildMenuCard(
                   icon: Icons.sync,
                   title: '数据同步',
                   color: Colors.teal[600]!,
@@ -579,6 +595,8 @@ class _HomePageState extends State<HomePage> {
           MaterialPageRoute(builder: (_) => const LearningPlanPage()))),
       _FlowStep(Icons.menu_book, isTeacherOrAdmin ? '教学' : '学习',
           () => setState(() => _selectedIndex = 2)),
+      _FlowStep(Icons.biotech, '实践', () => Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const DeepPracticePage()))),
       _FlowStep(Icons.quiz, '测验', () => Navigator.push(context,
           MaterialPageRoute(builder: (_) => const QuizPage()))),
     ];
