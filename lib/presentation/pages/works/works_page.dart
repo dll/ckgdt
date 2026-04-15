@@ -106,40 +106,42 @@ class _WorksPageState extends State<WorksPage>
 
     return Column(
       children: [
-        // ── 渐变页头 ───────────────────────────────────────
+        // ── 渐变页头（紧凑）────────────────────────────────
         Container(
           width: double.infinity,
           decoration: BoxDecoration(gradient: gradTheme.linearGradient),
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
                   const Icon(Icons.play_circle_filled,
-                      color: Colors.white, size: 26),
-                  const SizedBox(width: 10),
+                      color: Colors.white, size: 22),
+                  const SizedBox(width: 8),
                   const Expanded(
                     child: Text('作品展评中心',
                         style: TextStyle(
-                            fontSize: 20,
+                            fontSize: 17,
                             fontWeight: FontWeight.bold,
                             color: Colors.white)),
                   ),
                   _buildRoleBadge(isTeacher),
                 ],
               ),
-              const SizedBox(height: 12),
-              if (_initialized) _buildHeaderStats(),
+              if (_initialized) ...[
+                const SizedBox(height: 8),
+                _buildHeaderStats(),
+              ],
             ],
           ),
         ),
         // ── 圆角 TabBar ──────────────────────────────────
         Container(
-          margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          margin: const EdgeInsets.fromLTRB(12, 6, 12, 2),
           decoration: BoxDecoration(
             color: primary.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
           ),
           child: TabBar(
             controller: _tabController,
@@ -238,18 +240,18 @@ class _WorksPageState extends State<WorksPage>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(s['icon'] as IconData,
-                        color: Colors.white.withValues(alpha: 0.8), size: 16),
-                    const SizedBox(width: 4),
+                        color: Colors.white.withValues(alpha: 0.8), size: 14),
+                    const SizedBox(width: 3),
                     Text('${s['value']}',
                         style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
-                            fontSize: 15)),
+                            fontSize: 14)),
                     const SizedBox(width: 2),
                     Text(s['label'] as String,
                         style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.7),
-                            fontSize: 11)),
+                            fontSize: 10)),
                   ],
                 ),
               ))
@@ -441,24 +443,27 @@ class _GalleryTabState extends State<_GalleryTab> {
       children: [
         // ── 搜索栏 ────────────────────────────────────────
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-          child: TextField(
-            controller: _searchCtrl,
-            decoration: InputDecoration(
-              hintText: '搜索姓名、项目、仓库、角色、技术栈...',
-              prefixIcon: const Icon(Icons.search, size: 20),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
+          padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+          child: SizedBox(
+            height: 40,
+            child: TextField(
+              controller: _searchCtrl,
+              decoration: InputDecoration(
+                hintText: '搜索姓名、项目、仓库、角色、技术栈...',
+                prefixIcon: const Icon(Icons.search, size: 20),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: Colors.grey[100],
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
               ),
-              filled: true,
-              fillColor: Colors.grey[100],
-              contentPadding: const EdgeInsets.symmetric(vertical: 0),
+              onChanged: (_) => setState(() {}),
             ),
-            onChanged: (_) => setState(() {}),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         // ── 维度过滤 Chips ─────────────────────────────────
         SizedBox(
           height: 36,

@@ -63,35 +63,35 @@ class _AssessmentPageState extends State<AssessmentPage>
     return Column(
       children: [
         Container(
-          margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
             gradient: gradient.linearGradient,
             boxShadow: [
               BoxShadow(
-                color: gradient.gradientStart.withValues(alpha: 0.18),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
+                color: gradient.gradientStart.withValues(alpha: 0.12),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
           child: Padding(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(Icons.assessment,
-                          color: Colors.white, size: 24),
+                          color: Colors.white, size: 20),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -99,21 +99,21 @@ class _AssessmentPageState extends State<AssessmentPage>
                           const Text(
                             '课程考核工作台',
                             style: TextStyle(
-                              fontSize: 20,
+                              fontSize: 17,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                             ),
                           ),
-                          const SizedBox(height: 4),
                           Text(
                             _isStudent
                                 ? '聚焦项目、贡献、报告与答辩，完成课程考核闭环。'
                                 : '统一管理分组、评分、答辩、报告与成绩，形成完整考核流程。',
                             style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.white.withValues(alpha: 0.88),
-                              height: 1.4,
+                              fontSize: 11,
+                              color: Colors.white.withValues(alpha: 0.85),
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
@@ -121,10 +121,10 @@ class _AssessmentPageState extends State<AssessmentPage>
                     _buildHeaderRoleBadge(),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
                 Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
+                  spacing: 6,
+                  runSpacing: 6,
                   children: const [
                     _AssessmentTopStat(
                         label: '分组', value: '5类', icon: Icons.groups),
@@ -145,11 +145,11 @@ class _AssessmentPageState extends State<AssessmentPage>
           ),
         ),
         Container(
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-          padding: const EdgeInsets.all(6),
+          margin: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+          padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
             color: primary.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(color: primary.withValues(alpha: 0.12)),
           ),
           child: TabBar(
@@ -238,20 +238,20 @@ class _AssessmentTopStat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 15, color: Colors.white.withValues(alpha: 0.85)),
-          const SizedBox(width: 5),
+          Icon(icon, size: 13, color: Colors.white.withValues(alpha: 0.85)),
+          const SizedBox(width: 4),
           Text(
             '$label $value',
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 10,
               color: Colors.white.withValues(alpha: 0.92),
               fontWeight: FontWeight.w500,
             ),
@@ -510,7 +510,7 @@ class _GroupTabState extends State<_GroupTab>
         ),
         // 统计行
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
           child: _buildStatsRow(groups),
         ),
         // 分组列表
@@ -532,7 +532,7 @@ class _GroupTabState extends State<_GroupTab>
                 : _currentDim == _GroupDimension.features
                     ? _buildFeaturesView(groups)
                     : ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                        padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
                         itemCount: groups.length,
                         itemBuilder: (ctx, i) =>
                             _buildGroupCard(groups[i], i),
@@ -550,9 +550,9 @@ class _GroupTabState extends State<_GroupTab>
     return Row(
       children: [
         _statCard('分组数', '$groupCount', Icons.category, _currentDim.color),
-        const SizedBox(width: 10),
+        const SizedBox(width: 8),
         _statCard('总人数', '$totalMembers', Icons.people, Colors.green),
-        const SizedBox(width: 10),
+        const SizedBox(width: 8),
         _statCard('人均', avg.toStringAsFixed(1), Icons.person, Colors.orange),
       ],
     );
@@ -560,41 +560,24 @@ class _GroupTabState extends State<_GroupTab>
 
   Widget _statCard(String label, String value, IconData icon, Color color) {
     return Expanded(
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            gradient: LinearGradient(
-              colors: [
-                color.withValues(alpha: 0.08),
-                color.withValues(alpha: 0.02),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: color, size: 20),
-              ),
-              const SizedBox(height: 8),
-              Text(value,
-                  style: TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold, color: color)),
-              const SizedBox(height: 2),
-              Text(label,
-                  style: TextStyle(fontSize: 11, color: Colors.grey[500])),
-            ],
-          ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: color.withValues(alpha: 0.06),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 18),
+            const SizedBox(width: 6),
+            Text(value,
+                style: TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.bold, color: color)),
+            const SizedBox(width: 4),
+            Text(label,
+                style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+          ],
         ),
       ),
     );
