@@ -144,12 +144,34 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 详情模式
-    if (_selectedPath != null) {
-      return _buildDetailView();
-    }
-    // 列表模式
-    return _buildListView();
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_selectedPath != null ? '路径详情' : '学习路径'),
+        backgroundColor: primary,
+        foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (_selectedPath != null) {
+              _closeDetail();
+            } else {
+              Navigator.of(context).pop();
+            }
+          },
+        ),
+        actions: [
+          if (_selectedPath == null)
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: '刷新',
+              onPressed: _loadPaths,
+            ),
+        ],
+      ),
+      body: _selectedPath != null ? _buildDetailView() : _buildListView(),
+    );
   }
 
   // ── 列表模式 ───────────────────────────────────────────────────────────
@@ -364,19 +386,15 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
 
     return Column(
       children: [
-        // 顶部标题栏
+        // 顶部路径信息条
         Container(
-          padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.05),
             border: Border(bottom: BorderSide(color: color.withValues(alpha: 0.15))),
           ),
           child: Row(
             children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: _closeDetail,
-              ),
               Icon(Icons.route, color: color, size: 20),
               const SizedBox(width: 8),
               Expanded(

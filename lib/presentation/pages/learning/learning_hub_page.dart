@@ -12,6 +12,7 @@ import '../../../data/local/ai_config_dao.dart';
 import '../materials/courseware_workshop_page.dart';
 import '../materials/ai_settings_page.dart';
 import '../admin/data_import_page.dart';
+import '../quiz/quiz_page.dart';
 import 'video_player_page.dart';
 import 'pdf_viewer_page.dart';
 import 'ppt_viewer_page.dart';
@@ -55,7 +56,7 @@ class _LearningHubPageState extends State<LearningHubPage>
   void initState() {
     super.initState();
     _tabController = TabController(
-      length: 4,
+      length: 5,
       vsync: this,
       initialIndex: widget.initialTab,
     );
@@ -162,7 +163,7 @@ class _LearningHubPageState extends State<LearningHubPage>
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isTeacherOrAdmin ? '学习资源管理' : '学习'),
+        title: Text(_isTeacherOrAdmin ? '教学资源管理' : '学习'),
         actions: [
           if (_isTeacherOrAdmin) ...[
             IconButton(
@@ -205,6 +206,7 @@ class _LearningHubPageState extends State<LearningHubPage>
             Tab(icon: const Icon(Icons.play_circle_outline), text: '视频 (${_videoLoading ? "..." : _videos.length})'),
             Tab(icon: const Icon(Icons.slideshow_outlined), text: 'PPT (${_pptLoading ? "..." : _pptFiles.length})'),
             Tab(icon: const Icon(Icons.picture_as_pdf_outlined), text: 'PDF (${_pdfLoading ? "..." : _pdfFiles.length})'),
+            const Tab(icon: Icon(Icons.quiz_outlined), text: '测验'),
             const Tab(icon: Icon(Icons.smart_toy_outlined), text: 'AI助手'),
           ],
         ),
@@ -215,6 +217,7 @@ class _LearningHubPageState extends State<LearningHubPage>
           _buildVideoTab(),
           _buildFileListTab(_pptFiles, _pptLoading, '🖼️', 'PPT', _loadPPTs),
           _buildFileListTab(_pdfFiles, _pdfLoading, '📄', 'PDF', _loadPDFs),
+          const QuizPage(embedded: true),
           _buildAiAssistTab(),
         ],
       ),
