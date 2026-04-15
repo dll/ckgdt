@@ -56,7 +56,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 12,
+      version: 13,
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -110,7 +110,7 @@ class DatabaseHelper {
         // 重新打开（版本号必须与主初始化一致）
         final db2 = await openDatabase(
           dbName,
-          version: 12,
+          version: 13,
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
         );
@@ -180,7 +180,7 @@ class DatabaseHelper {
 
     db = await openDatabase(
       dbPath,
-      version: 12,
+      version: 13,
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -453,6 +453,9 @@ class DatabaseHelper {
     if (oldVersion < 12) {
       await _createNewTablesV12(db);
     }
+    if (oldVersion < 13) {
+      await _migrateToV13(db);
+    }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
   }
@@ -509,6 +512,7 @@ class DatabaseHelper {
     await _createNewTablesV10(db);
     await _createNewTablesV11(db);
     await _createNewTablesV12(db);
+    await _migrateToV13(db);
     await _ensureAchievementColumns(db);
   }
 
@@ -1137,6 +1141,48 @@ class DatabaseHelper {
         created_at TEXT NOT NULL,
         resolved_at TEXT
       )
+    ''');
+  }
+
+  // ── V13 迁移：密码系统 + 通知系统 ──────────────────────────────────────
+  Future<void> _migrateToV13(Database db) async {
+    // 密码支持
+    try {
+      await db.execute('ALTER TABLE users ADD COLUMN password_hash TEXT');
+    } catch (_) {} // 列已存在时忽略
+
+    // 通知表
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS notifications(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        type TEXT NOT NULL DEFAULT 'manual',
+        creator_id TEXT,
+        target_type TEXT NOT NULL DEFAULT 'all',
+        target_id TEXT,
+        related_entity_type TEXT,
+        related_entity_id TEXT,
+        created_at TEXT NOT NULL,
+        expires_at TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS notification_recipients(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        notification_id INTEGER NOT NULL,
+        user_id TEXT NOT NULL,
+        is_read INTEGER NOT NULL DEFAULT 0,
+        read_at TEXT,
+        FOREIGN KEY (notification_id) REFERENCES notifications(id) ON DELETE CASCADE,
+        UNIQUE(notification_id, user_id)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_notif_recip_user
+      ON notification_recipients(user_id, is_read)
     ''');
   }
 

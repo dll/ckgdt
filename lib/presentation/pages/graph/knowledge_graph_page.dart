@@ -1045,28 +1045,38 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        titlePadding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        actionsPadding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
+        title: Row(
           children: [
-            Icon(Icons.analytics, color: Color(0xFF667eea)),
-            SizedBox(width: 8),
-            Text('知识图谱统计'),
+            const Icon(Icons.analytics, color: Color(0xFF667eea), size: 20),
+            const SizedBox(width: 6),
+            const Text('知识图谱统计', style: TextStyle(fontSize: 16)),
+            const Spacer(),
+            IconButton(
+              icon: const Icon(Icons.close, size: 18),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              onPressed: () => Navigator.pop(ctx),
+            ),
           ],
         ),
         content: SizedBox(
-          width: double.maxFinite,
+          width: 280,
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 概要统计卡
+                // 概要统计卡 — 紧凑行
                 Row(
                   children: [
                     _buildStatCard('概念', '$conceptCount', const Color(0xFF667eea)),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     _buildStatCard(
                         '关系', '$relationCount', const Color(0xFF4CAF50)),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     _buildStatCard(
                       '类型',
                       '${typeDistribution.length}',
@@ -1074,66 +1084,64 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 10),
                 const Text('概念类型分布',
                     style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                const SizedBox(height: 8),
+                        TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                const SizedBox(height: 4),
                 ...typeDistribution.entries.map((e) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
+                      padding: const EdgeInsets.only(bottom: 2),
                       child: Row(
                         children: [
                           Container(
-                            width: 12,
-                            height: 12,
+                            width: 8,
+                            height: 8,
                             decoration: BoxDecoration(
                               color: _conceptTypeColors[e.key] ??
                                   Colors.grey,
                               shape: BoxShape.circle,
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                                _conceptTypeLabels[e.key] ?? e.key),
+                                _conceptTypeLabels[e.key] ?? e.key,
+                                style: const TextStyle(fontSize: 13)),
                           ),
                           Text('${e.value}',
                               style: const TextStyle(
-                                  fontWeight: FontWeight.bold)),
+                                  fontWeight: FontWeight.bold, fontSize: 13)),
                         ],
                       ),
                     )),
                 if (chapterDistribution.isNotEmpty) ...[
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 10),
                   const Text('章节分布',
                       style: TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 14)),
-                  const SizedBox(height: 8),
+                          fontWeight: FontWeight.bold, fontSize: 12)),
+                  const SizedBox(height: 4),
                   ...chapterDistribution.entries.map((e) => Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
+                        padding: const EdgeInsets.only(bottom: 2),
                         child: Row(
                           children: [
                             const Icon(Icons.book,
-                                size: 14, color: Colors.grey),
-                            const SizedBox(width: 8),
-                            Expanded(child: Text('第 ${e.key} 章')),
-                            Text('${e.value} 个概念',
+                                size: 12, color: Colors.grey),
+                            const SizedBox(width: 6),
+                            Expanded(child: Text('第 ${e.key} 章',
+                                style: const TextStyle(fontSize: 13))),
+                            Text('${e.value} 个',
                                 style: const TextStyle(
-                                    fontWeight: FontWeight.bold)),
+                                    fontWeight: FontWeight.bold, fontSize: 13)),
                           ],
                         ),
                       )),
                 ],
+                const SizedBox(height: 4),
               ],
             ),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('关闭'),
-          ),
-        ],
+        actions: const [], // 用标题栏的 X 关闭
       ),
     );
   }
@@ -1141,23 +1149,22 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   Widget _buildStatCard(String label, String value, Color color) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 6),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
           children: [
             Text(
               value,
               style: TextStyle(
-                fontSize: 22,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: color,
               ),
             ),
-            const SizedBox(height: 2),
-            Text(label, style: TextStyle(fontSize: 12, color: color)),
+            Text(label, style: TextStyle(fontSize: 11, color: color)),
           ],
         ),
       ),
@@ -2329,6 +2336,10 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                 });
                 _calculateLayout();
                 setState(() {});
+                // 切换视图后自动适配画布
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) _fitAll();
+                });
                 if (_viewMode == _ViewMode.achievement) {
                   _loadConceptProgress();
                 }

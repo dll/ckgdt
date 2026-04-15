@@ -4,6 +4,7 @@ import '../../../main.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/settings_service.dart';
 import '../materials/ai_settings_page.dart';
+import '../settings/voice_settings_page.dart';
 import '../feedback/feedback_manage_page.dart';
 import '../feedback/feedback_dialog.dart';
 import '../feedback/ai_help_dialog.dart';
@@ -139,6 +140,16 @@ class _SettingsPageState extends State<SettingsPage> {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const AiSettingsPage()),
+            ),
+          ),
+          _buildMenuItem(
+            context,
+            icon: Icons.mic,
+            title: '讯飞语音设置',
+            subtitle: '配置讯飞语音听写 AppID/APIKey/APISecret',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const VoiceSettingsPage()),
             ),
           ),
           if (user?.isAdmin == true)

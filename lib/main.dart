@@ -8,6 +8,9 @@ import 'services/settings_service.dart';
 import 'presentation/pages/login/login_page.dart';
 import 'presentation/pages/feedback/feedback_dialog.dart';
 import 'presentation/pages/feedback/ai_help_dialog.dart';
+import 'presentation/pages/cross_platform/cross_platform_hub_page.dart';
+import 'presentation/widgets/voice_input_button.dart';
+import 'services/voice_service.dart';
 
 // 条件导入：Web 端使用 ffi_web，桌面端使用 ffi
 import 'platform/platform_init_stub.dart'
@@ -200,6 +203,102 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
     }
   }
 
+  void _showCrossPlatform() {
+    _collapse();
+    final navContext = widget.navigatorKey.currentContext;
+    if (navContext != null) {
+      Navigator.of(navContext).push(
+        MaterialPageRoute(builder: (_) => const CrossPlatformHubPage()),
+      );
+    }
+  }
+
+  Future<void> _showVoiceNavigation() async {
+    _collapse();
+    final navContext = widget.navigatorKey.currentContext;
+    if (navContext == null) return;
+
+    // 检查语音配置
+    final configured = await VoiceService.isConfigured();
+    if (!configured) {
+      if (navContext.mounted) {
+        ScaffoldMessenger.of(navContext).showSnackBar(
+          const SnackBar(
+            content: Text('请先在系统设置中配置讯飞语音参数'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (!navContext.mounted) return;
+    final result = await showDialog<String>(
+      context: navContext,
+      barrierDismissible: false,
+      builder: (ctx) => const VoiceNavigationDialog(),
+    );
+
+    if (result != null && result.isNotEmpty && navContext.mounted) {
+      _navigateByVoiceText(navContext, result);
+    }
+  }
+
+  /// 根据语音文本进行全局页面导航
+  void _navigateByVoiceText(BuildContext context, String text) {
+    final normalized =
+        text.replaceAll(RegExp(r'[，。！？、\s]'), '').toLowerCase();
+
+    // 导航关键词映射
+    final Map<String, String> keywords = {
+      '首页': '首页', '主页': '首页', '回家': '首页',
+      '图谱': '图谱', '知识图谱': '图谱',
+      '测验': '测验', '考试': '测验', '答题': '测验', '做题': '测验',
+      '视频': '视频', '教程': '视频', '播放': '视频',
+      '资料': '资料', '文档': '资料', '课件': '资料', '素材': '资料',
+      '进度': '进度', '统计': '进度', '成绩': '进度',
+      '计划': '计划', '学习计划': '计划', '路径': '计划',
+      '设置': '设置', '配置': '设置',
+      '错题': '错题', '错题本': '错题',
+      '收藏': '收藏',
+      '搜索': '搜索', '查找': '搜索',
+      '同步': '同步', '数据同步': '同步',
+      '三端': '三端', '互通': '三端', '跨平台': '三端',
+      '课堂': '课堂', '管理': '管理',
+      '通知': '通知', '消息': '通知',
+      '实验': '实验', '作品': '作品',
+      '成就': '成就', '达成': '成就',
+    };
+
+    String? matchedLabel;
+    for (final entry in keywords.entries) {
+      if (normalized.contains(entry.key)) {
+        matchedLabel = entry.value;
+        break;
+      }
+    }
+
+    if (matchedLabel != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('语音导航: "$text" → $matchedLabel'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      // 通过 Navigator 返回首页再导航
+      // 由于全局 FAB 可以在任何页面触发，我们先 popUntil 回到根路由
+      final navigator = Navigator.of(context);
+      navigator.popUntil((route) => route.isFirst);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('未识别到导航指令: "$text"'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -258,6 +357,46 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
                   label: '反馈',
                   color: Colors.orange,
                   onTap: _showFeedback,
+                ),
+              ),
+            );
+          },
+        ),
+
+        // 子按钮：三端互通
+        AnimatedBuilder(
+          animation: _expandAnimation,
+          builder: (context, child) {
+            return Positioned(
+              left: _dx - 2,
+              top: _dy - 168 * _expandAnimation.value,
+              child: Opacity(
+                opacity: _expandAnimation.value,
+                child: _buildSubButton(
+                  icon: Icons.devices,
+                  label: '三端',
+                  color: Colors.deepPurple,
+                  onTap: _showCrossPlatform,
+                ),
+              ),
+            );
+          },
+        ),
+
+        // 子按钮：语音导航（最上方）
+        AnimatedBuilder(
+          animation: _expandAnimation,
+          builder: (context, child) {
+            return Positioned(
+              left: _dx - 2,
+              top: _dy - 224 * _expandAnimation.value,
+              child: Opacity(
+                opacity: _expandAnimation.value,
+                child: _buildSubButton(
+                  icon: Icons.mic,
+                  label: '语音',
+                  color: Colors.teal,
+                  onTap: _showVoiceNavigation,
                 ),
               ),
             );

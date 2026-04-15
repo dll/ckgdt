@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../../data/local/lab_task_dao.dart';
 import '../../../services/auth_service.dart';
 
@@ -283,58 +285,161 @@ class _StudentLabPageState extends State<StudentLabPage> {
 
   Future<void> _showSubmitDialog(
       Map<String, dynamic> task, Map<String, dynamic>? existing) async {
-    final contentCtrl =
-        TextEditingController(text: existing?['content'] as String? ?? '');
+    String? selectedFilePath;
+    String? selectedFileName;
+
+    // 如果已提交过文件，显示已有文件名
+    if (existing != null && existing['file_names'] != null) {
+      selectedFileName = existing['file_names'] as String;
+      selectedFilePath = existing['file_paths'] as String?;
+    }
 
     await showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('提交 - ${task['title']}'),
-        content: SizedBox(
-          width: 380,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: contentCtrl,
-                decoration: const InputDecoration(
-                  labelText: '实验内容',
-                  border: OutlineInputBorder(),
-                  hintText: '描述你的实验过程和结果...',
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text('提交 - ${task['title']}',
+              style: const TextStyle(fontSize: 16)),
+          content: SizedBox(
+            width: 380,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // PDF 选择区域
+                InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () async {
+                    final result = await FilePicker.platform.pickFiles(
+                      type: FileType.custom,
+                      allowedExtensions: ['pdf'],
+                      dialogTitle: '选择 PDF 实验报告',
+                    );
+                    if (result != null && result.files.single.path != null) {
+                      setDialogState(() {
+                        selectedFilePath = result.files.single.path!;
+                        selectedFileName = result.files.single.name;
+                      });
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: selectedFilePath != null
+                          ? const Color(0xFF667eea).withValues(alpha: 0.05)
+                          : Colors.grey.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: selectedFilePath != null
+                            ? const Color(0xFF667eea).withValues(alpha: 0.3)
+                            : Colors.grey.withValues(alpha: 0.3),
+                        style: BorderStyle.solid,
+                      ),
+                    ),
+                    child: selectedFilePath != null
+                        ? Row(
+                            children: [
+                              const Icon(Icons.picture_as_pdf,
+                                  color: Colors.red, size: 32),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      selectedFileName ?? 'PDF文件',
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w500),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    if (selectedFilePath != null)
+                                      FutureBuilder<int>(
+                                        future: File(selectedFilePath!).length(),
+                                        builder: (_, snap) => Text(
+                                          snap.hasData
+                                              ? '${(snap.data! / 1024 / 1024).toStringAsFixed(1)} MB'
+                                              : '',
+                                          style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[500]),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.swap_horiz, size: 20),
+                                tooltip: '重新选择',
+                                onPressed: () async {
+                                  final result =
+                                      await FilePicker.platform.pickFiles(
+                                    type: FileType.custom,
+                                    allowedExtensions: ['pdf'],
+                                  );
+                                  if (result != null &&
+                                      result.files.single.path != null) {
+                                    setDialogState(() {
+                                      selectedFilePath =
+                                          result.files.single.path!;
+                                      selectedFileName =
+                                          result.files.single.name;
+                                    });
+                                  }
+                                },
+                              ),
+                            ],
+                          )
+                        : Column(
+                            children: [
+                              Icon(Icons.upload_file,
+                                  size: 40,
+                                  color: Colors.grey[400]),
+                              const SizedBox(height: 8),
+                              Text(
+                                '点击选择 PDF 实验报告',
+                                style: TextStyle(
+                                    fontSize: 14, color: Colors.grey[600]),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '仅支持 PDF 格式',
+                                style: TextStyle(
+                                    fontSize: 11, color: Colors.grey[400]),
+                              ),
+                            ],
+                          ),
+                  ),
                 ),
-                maxLines: 6,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '提示：可在内容中粘贴代码仓库链接或截图描述',
-                style: TextStyle(fontSize: 11, color: Colors.grey[400]),
-              ),
-            ],
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('取消')),
+            FilledButton(
+              onPressed: selectedFilePath == null
+                  ? null
+                  : () async {
+                      await _dao.submitTask(
+                        taskId: task['id'] as int,
+                        userId: _userId,
+                        content: 'PDF实验报告：$selectedFileName',
+                        filePaths: selectedFilePath,
+                        fileNames: selectedFileName,
+                      );
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('提交成功！')),
+                        );
+                      }
+                      _loadData();
+                    },
+              child: const Text('确认提交'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('取消')),
-          FilledButton(
-            onPressed: () async {
-              if (contentCtrl.text.trim().isEmpty) return;
-              await _dao.submitTask(
-                taskId: task['id'] as int,
-                userId: _userId,
-                content: contentCtrl.text.trim(),
-              );
-              if (ctx.mounted) Navigator.pop(ctx);
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('提交成功！')),
-                );
-              }
-              _loadData();
-            },
-            child: const Text('确认提交'),
-          ),
-        ],
       ),
     );
   }
