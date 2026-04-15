@@ -31,6 +31,7 @@ import '../help/handbook_page.dart';
 import '../skill/ai_skill_page.dart';
 import '../classroom/classroom_page.dart';
 import '../sync/data_sync_page.dart';
+import '../feedback/feedback_manage_page.dart';
 import 'settings_page.dart';
 import 'search_page.dart';
 
@@ -472,6 +473,13 @@ class _HomePageState extends State<HomePage> {
                     color: Colors.pink,
                     onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const SurveyManagePage())),
+                  ),
+                  _buildMenuCard(
+                    icon: Icons.feedback,
+                    title: '反馈管理',
+                    color: Colors.amber[700]!,
+                    onTap: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const FeedbackManagePage())),
                   ),
                 ],
 
