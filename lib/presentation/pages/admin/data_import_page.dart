@@ -355,7 +355,11 @@ class _DataImportPageState extends State<DataImportPage> {
       );
     }
 
-    return SingleChildScrollView(
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('数据导入'),
+      ),
+      body: SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -462,6 +466,7 @@ class _DataImportPageState extends State<DataImportPage> {
           ],
         ],
       ),
+    ),
     );
   }
 
