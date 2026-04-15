@@ -56,7 +56,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 11,
+      version: 12,
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -110,7 +110,7 @@ class DatabaseHelper {
         // 重新打开（版本号必须与主初始化一致）
         final db2 = await openDatabase(
           dbName,
-          version: 11,
+          version: 12,
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
         );
@@ -180,7 +180,7 @@ class DatabaseHelper {
 
     db = await openDatabase(
       dbPath,
-      version: 11,
+      version: 12,
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -396,6 +396,7 @@ class DatabaseHelper {
     await _createNewTablesV9(db);
     await _createNewTablesV10(db);
     await _createNewTablesV11(db);
+    await _createNewTablesV12(db);
     await _ensureResourceFileColumns(db);
 
     // Add admin user (ignore if already exists from asset DB)
@@ -448,6 +449,9 @@ class DatabaseHelper {
     }
     if (oldVersion < 11) {
       await _createNewTablesV11(db);
+    }
+    if (oldVersion < 12) {
+      await _createNewTablesV12(db);
     }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
@@ -504,6 +508,7 @@ class DatabaseHelper {
     await _createNewTablesV9(db);
     await _createNewTablesV10(db);
     await _createNewTablesV11(db);
+    await _createNewTablesV12(db);
     await _ensureAchievementColumns(db);
   }
 
@@ -1111,6 +1116,26 @@ class DatabaseHelper {
         comment TEXT,
         scored_at TEXT,
         UNIQUE(target_user_id, scorer_user_id, dimension)
+      )
+    ''');
+  }
+
+  // V12 新增: 问题反馈表
+  Future<void> _createNewTablesV12(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS feedback(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        user_name TEXT,
+        user_role TEXT,
+        page_name TEXT,
+        content TEXT NOT NULL,
+        suggestion TEXT,
+        screenshot_path TEXT,
+        status TEXT DEFAULT 'pending',
+        admin_reply TEXT,
+        created_at TEXT NOT NULL,
+        resolved_at TEXT
       )
     ''');
   }

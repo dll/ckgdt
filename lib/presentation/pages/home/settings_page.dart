@@ -4,6 +4,8 @@ import '../../../main.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/settings_service.dart';
 import '../materials/ai_settings_page.dart';
+import '../feedback/feedback_manage_page.dart';
+import '../feedback/feedback_dialog.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -17,6 +19,7 @@ class _SettingsPageState extends State<SettingsPage> {
   int _colorIndex = 0;
   bool _notificationsEnabled = true;
   bool _quickLoginEnabled = false;
+  bool _feedbackEnabled = true;
 
   @override
   void initState() {
@@ -29,12 +32,14 @@ class _SettingsPageState extends State<SettingsPage> {
     final index = await SettingsService.getColorIndex();
     final notifEnabled = await SettingsService.isNotificationEnabled();
     final quickLogin = await SettingsService.isQuickLoginEnabled();
+    final feedbackEnabled = await SettingsService.isFeedbackEnabled();
     if (mounted) {
       setState(() {
         _themeMode = mode;
         _colorIndex = index;
         _notificationsEnabled = notifEnabled;
         _quickLoginEnabled = quickLogin;
+        _feedbackEnabled = feedbackEnabled;
       });
     }
   }
@@ -146,6 +151,21 @@ class _SettingsPageState extends State<SettingsPage> {
                 onChanged: (value) async {
                   await SettingsService.setQuickLoginEnabled(value);
                   setState(() => _quickLoginEnabled = value);
+                },
+              ),
+            ),
+          if (user?.isAdmin == true)
+            _buildMenuItem(
+              context,
+              icon: Icons.feedback,
+              title: '问题反馈按钮',
+              subtitle: '所有用户页面显示浮动反馈按钮',
+              trailing: Switch(
+                value: _feedbackEnabled,
+                onChanged: (value) async {
+                  await SettingsService.setFeedbackEnabled(value);
+                  setState(() => _feedbackEnabled = value);
+                  MyApp.refreshFeedback();
                 },
               ),
             ),
@@ -283,9 +303,21 @@ class _SettingsPageState extends State<SettingsPage> {
             context,
             icon: Icons.help,
             title: '帮助与反馈',
-            subtitle: '获取帮助或提交建议',
-            onTap: () => _showTip(context, '帮助与反馈功能开发中'),
+            subtitle: '提交问题或改进建议',
+            onTap: () => FeedbackDialog.show(context),
           ),
+          if (user?.isAdmin == true || user?.isTeacher == true)
+            _buildMenuItem(
+              context,
+              icon: Icons.admin_panel_settings,
+              title: '反馈管理',
+              subtitle: '查看和处理用户反馈',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const FeedbackManagePage()),
+              ),
+            ),
 
           const SizedBox(height: 32),
         ],
@@ -331,12 +363,6 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
       trailing: trailing ?? const Icon(Icons.chevron_right, size: 20),
       onTap: onTap,
-    );
-  }
-
-  void _showTip(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
     );
   }
 

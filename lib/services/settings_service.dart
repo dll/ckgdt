@@ -10,6 +10,7 @@ class SettingsService {
   static const String _colorIndexKey  = 'color_index';      // 0=科技蓝 1=清新绿 2=轻奢紫
   static const String _notificationKey = 'notification_enabled';
   static const String _quickLoginKey = 'quick_login_enabled';
+  static const String _feedbackEnabledKey = 'feedback_enabled';
 
   // ═════════════════════════════════════════════════════════════════════════
   // 显示模式  ThemeMode（跟随系统 / 浅色 / 深色）
@@ -88,6 +89,20 @@ class SettingsService {
   static Future<void> setQuickLoginEnabled(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_quickLoginKey, enabled);
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // 问题反馈浮动按钮（管理员控制，默认开启）
+  // ═════════════════════════════════════════════════════════════════════════
+
+  static Future<bool> isFeedbackEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_feedbackEnabledKey) ?? true;
+  }
+
+  static Future<void> setFeedbackEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_feedbackEnabledKey, enabled);
   }
 
   // ═════════════════════════════════════════════════════════════════════════
