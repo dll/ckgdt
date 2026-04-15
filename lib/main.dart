@@ -6,6 +6,7 @@ import 'services/data_loading_service.dart';
 import 'services/theme_manager.dart';
 import 'services/settings_service.dart';
 import 'presentation/pages/login/login_page.dart';
+import 'presentation/pages/feedback/feedback_dialog.dart';
 
 // 条件导入：Web 端使用 ffi_web，桌面端使用 ffi
 import 'platform/platform_init_stub.dart'
@@ -52,6 +53,9 @@ class MyApp extends StatefulWidget {
   static _MyAppState? _state;
   static void refreshTheme() => _state?._loadTheme();
 
+  /// 供外部通知反馈开关变更
+  static void refreshFeedback() => _state?._loadFeedbackSetting();
+
   @override
   State<MyApp> createState() => _MyAppState();
 }
@@ -59,12 +63,14 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   ThemeMode _themeMode = ThemeMode.system;
   int _colorIndex = 0;
+  bool _feedbackEnabled = true;
 
   @override
   void initState() {
     super.initState();
     MyApp._state = this;
     _loadTheme();
+    _loadFeedbackSetting();
   }
 
   @override
@@ -84,6 +90,11 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
+  Future<void> _loadFeedbackSetting() async {
+    final enabled = await SettingsService.isFeedbackEnabled();
+    if (mounted) setState(() => _feedbackEnabled = enabled);
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -93,6 +104,99 @@ class _MyAppState extends State<MyApp> {
       theme: ThemeManager.light(_colorIndex),
       darkTheme: ThemeManager.dark(_colorIndex),
       home: const LoginPage(),
+      builder: (context, child) {
+        // 用 RepaintBoundary 包裹，供截图用
+        // 用 Stack + Positioned 添加全局反馈浮动按钮
+        return RepaintBoundary(
+          key: feedbackScreenshotKey,
+          child: Stack(
+            children: [
+              child ?? const SizedBox.shrink(),
+              if (_feedbackEnabled)
+                const _FeedbackFab(),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// 全局悬浮反馈按钮
+class _FeedbackFab extends StatefulWidget {
+  const _FeedbackFab();
+
+  @override
+  State<_FeedbackFab> createState() => _FeedbackFabState();
+}
+
+class _FeedbackFabState extends State<_FeedbackFab> {
+  // 按钮位置（默认右下角）
+  double _dx = -1;
+  double _dy = -1;
+  bool _dragging = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    // 初始位置：右下角（距底部 120, 距右 16）
+    if (_dx < 0) _dx = size.width - 60;
+    if (_dy < 0) _dy = size.height - 160;
+
+    // 确保不超出屏幕
+    _dx = _dx.clamp(0, size.width - 48);
+    _dy = _dy.clamp(40, size.height - 80);
+
+    return Positioned(
+      left: _dx,
+      top: _dy,
+      child: GestureDetector(
+        onPanStart: (_) => setState(() => _dragging = true),
+        onPanUpdate: (details) {
+          setState(() {
+            _dx += details.delta.dx;
+            _dy += details.delta.dy;
+          });
+        },
+        onPanEnd: (_) {
+          setState(() {
+            _dragging = false;
+            // 自动吸附到最近的边缘
+            if (_dx + 24 < size.width / 2) {
+              _dx = 4;
+            } else {
+              _dx = size.width - 52;
+            }
+          });
+        },
+        onTap: () {
+          FeedbackDialog.show(context);
+        },
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: _dragging ? 1.0 : 0.7,
+          child: Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.feedback_outlined,
+              color: Colors.white,
+              size: 22,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
