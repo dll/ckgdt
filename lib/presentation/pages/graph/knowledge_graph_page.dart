@@ -2683,6 +2683,10 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                       _studentChip('全体学生', null),
                       ..._studentList
                           .where((s) {
+                            // 过滤掉没有姓名的无效学生记录
+                            if (s.realName == null || s.realName!.isEmpty) {
+                              return false;
+                            }
                             if (_studentSearchQuery.isEmpty) return true;
                             final q = _studentSearchQuery.toLowerCase();
                             final name =

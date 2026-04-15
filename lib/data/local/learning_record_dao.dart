@@ -124,17 +124,15 @@ class LearningRecordDao {
         continue;
       }
 
-      // 章节有测验且平均分 ≥ 80 → completed
-      if (chapter != null && (chapterQuiz[chapter] ?? 0) >= 80) {
-        result[cId] = 'completed';
-        await updateConceptStatus(userId, cId, 'completed');
-        continue;
-      }
-
-      // 章节有测验但分低，或有学习记录 → in_progress
+      // 章节有测验 → 仅标记为 in_progress（测验只覆盖部分知识点，
+      // 不能代表整章所有概念已掌握）
       if (chapter != null && chapterQuiz.containsKey(chapter)) {
-        result[cId] = 'in_progress';
-        await updateConceptStatus(userId, cId, 'in_progress');
+        if (existing[cId] != 'in_progress') {
+          result[cId] = 'in_progress';
+          await updateConceptStatus(userId, cId, 'in_progress');
+        } else {
+          result[cId] = 'in_progress';
+        }
         continue;
       }
 

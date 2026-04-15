@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../services/ai_service.dart';
 import '../../../services/auth_service.dart';
 
-/// AI 客服帮助对话框 — 使用集成的 AI API 回答用户常见问题
+/// AI 助手帮助对话框 — 使用集成的 AI API 回答用户常见问题
 class AiHelpDialog extends StatefulWidget {
   const AiHelpDialog({super.key});
 
@@ -42,7 +42,7 @@ class _AiHelpDialogState extends State<AiHelpDialog> {
     '系统支持哪些功能？',
   ];
 
-  static const _systemPrompt = '''你是"移动应用开发知识图谱教学系统"的 AI 客服助手。
+  static const _systemPrompt = '''你是"移动应用开发知识图谱教学系统"的 AI 助手助手。
 请用简洁友好的中文回答用户关于本系统的使用问题。
 
 本系统的主要功能包括：
@@ -113,7 +113,7 @@ class _AiHelpDialogState extends State<AiHelpDialog> {
       if (mounted) {
         setState(() {
           _messages.add(_HelpMessage(
-            '抱歉，AI 客服暂时无法回复。\n请检查AI配置或稍后再试。\n\n错误信息：$e',
+            '抱歉，AI 助手暂时无法回复。\n请检查AI配置或稍后再试。\n\n错误信息：$e',
             false,
           ));
           _isLoading = false;
@@ -183,7 +183,7 @@ class _AiHelpDialogState extends State<AiHelpDialog> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('AI 客服',
+                              Text('AI 助手',
                                   style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
@@ -309,7 +309,7 @@ class _AiHelpDialogState extends State<AiHelpDialog> {
           ),
           const SizedBox(height: 8),
           Text(
-            '我是系统 AI 客服，可以帮您解答使用问题。\n试试点击下方常见问题，或直接输入提问。',
+            '我是系统 AI 助手，可以帮您解答使用问题。\n试试点击下方常见问题，或直接输入提问。',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14, color: Colors.grey[600]),
           ),

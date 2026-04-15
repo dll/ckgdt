@@ -518,6 +518,12 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
         ],
         bottom: TabBar(
           controller: _tabController,
+          indicatorColor: Colors.white,
+          indicatorWeight: 3,
+          labelColor: Colors.white,
+          labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+          unselectedLabelColor: Colors.white60,
+          unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
           tabs: [
             Tab(
               text: '仓库成员',
