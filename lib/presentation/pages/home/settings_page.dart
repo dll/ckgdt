@@ -6,6 +6,7 @@ import '../../../services/settings_service.dart';
 import '../materials/ai_settings_page.dart';
 import '../feedback/feedback_manage_page.dart';
 import '../feedback/feedback_dialog.dart';
+import '../feedback/ai_help_dialog.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -301,8 +302,15 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           _buildMenuItem(
             context,
-            icon: Icons.help,
-            title: '帮助与反馈',
+            icon: Icons.support_agent,
+            title: '系统帮助',
+            subtitle: 'AI 客服解答使用问题',
+            onTap: () => AiHelpDialog.show(context),
+          ),
+          _buildMenuItem(
+            context,
+            icon: Icons.feedback_outlined,
+            title: '问题反馈',
             subtitle: '提交问题或改进建议',
             onTap: () => FeedbackDialog.show(context),
           ),
