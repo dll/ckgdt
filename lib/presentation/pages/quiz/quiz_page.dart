@@ -10,7 +10,9 @@ import '../analytics/learning_analytics_page.dart';
 import 'wrong_answers_page.dart';
 
 class QuizPage extends StatefulWidget {
-  const QuizPage({super.key});
+  final bool embedded;
+
+  const QuizPage({super.key, this.embedded = false});
 
   @override
   State<QuizPage> createState() => _QuizPageState();
