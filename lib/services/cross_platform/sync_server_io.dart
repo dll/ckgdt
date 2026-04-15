@@ -419,13 +419,13 @@ class SyncServerImpl {
   // ─────────────────────────────────────────────────────────────────────────
 
   Future<void> _handleStatic(HttpRequest request) async {
-    // 尝试在 build/web/ 目录下查找文件
+    // 尝试在多个可能的位置查找 Flutter Web 构建产物
     var filePath = request.uri.path;
     if (filePath == '/') filePath = '/index.html';
 
-    // 获取项目根目录（相对于运行位置）
-    final webDir = Directory('build/web');
-    if (!await webDir.exists()) {
+    // 按优先级搜索 web 构建目录
+    final webDir = await _findWebBuildDir();
+    if (webDir == null) {
       _jsonResponse(request.response, 404, {
         'error': 'Flutter Web 尚未构建',
         'hint': '请先运行 flutter build web',
@@ -448,6 +448,34 @@ class SyncServerImpl {
         _jsonResponse(request.response, 404, {'error': 'Not Found'});
       }
     }
+  }
+
+  /// 在多个路径中查找 Flutter Web 构建目录
+  Future<Directory?> _findWebBuildDir() async {
+    // 1) 相对于当前工作目录（开发模式: flutter run）
+    final cwd = Directory('build/web');
+    if (await cwd.exists()) return cwd;
+
+    // 2) 相对于可执行文件所在目录（发布模式: build/windows/.../Release/web/）
+    final exeDir = File(Platform.resolvedExecutable).parent;
+    final nearExe = Directory('${exeDir.path}/web');
+    if (await nearExe.exists()) return nearExe;
+
+    // 3) 从可执行文件路径向上查找 build/web
+    //    Release exe 路径: <project>/build/windows/x64/runner/Release/
+    //    Web build 路径:   <project>/build/web/
+    var searchDir = exeDir;
+    for (int i = 0; i < 6; i++) {
+      final candidate = Directory('${searchDir.path}/build/web');
+      if (await candidate.exists()) return candidate;
+      final webDirect = Directory('${searchDir.path}/web');
+      if (await webDirect.exists()) return webDirect;
+      final parent = searchDir.parent;
+      if (parent.path == searchDir.path) break; // root
+      searchDir = parent;
+    }
+
+    return null;
   }
 
   // ─────────────────────────────────────────────────────────────────────────

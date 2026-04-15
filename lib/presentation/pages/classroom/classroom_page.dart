@@ -7,7 +7,6 @@ import '../../../data/local/user_dao.dart';
 import '../../../data/models/user_model.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/sync_service.dart';
-import '../../../core/constants/app_theme.dart';
 import '../../../core/constants/role_guard.dart';
 
 // ╔══════════════════════════════════════════════════════════════════════════════╗
@@ -75,12 +74,11 @@ class _ClassroomPageState extends State<ClassroomPage>
     }
 
     final primary = Theme.of(context).colorScheme.primary;
-    final gradient = AppGradientTheme.of(context);
 
     return Column(
       children: [
-        // ── 渐变页头 ──────────────────────────────────────────────
-        _buildHeader(context, gradient),
+        // ── 渐变页头（始终显示，不依赖班级加载状态）─────────────────
+        _buildHeader(context, primary),
         // ── TabBar ────────────────────────────────────────────────
         Container(
           color: primary.withValues(alpha: 0.04),
@@ -130,7 +128,7 @@ class _ClassroomPageState extends State<ClassroomPage>
     );
   }
 
-  Widget _buildHeader(BuildContext context, AppGradientTheme gradient) {
+  Widget _buildHeader(BuildContext context, Color primary) {
     final user = _authService.currentUser;
     final displayName = user?.realName ?? user?.userId ?? '老师';
     final className = _classes.isNotEmpty
@@ -140,6 +138,13 @@ class _ClassroomPageState extends State<ClassroomPage>
           )['name'] as String? ?? '')
         : '';
 
+    // 直接构建渐变，避免 ThemeExtension 可能的延迟
+    final headerGradient = LinearGradient(
+      colors: [primary, primary.withValues(alpha: 0.7)],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.only(
@@ -148,7 +153,7 @@ class _ClassroomPageState extends State<ClassroomPage>
         right: 20,
         bottom: 12,
       ),
-      decoration: BoxDecoration(gradient: gradient.linearGradient),
+      decoration: BoxDecoration(gradient: headerGradient),
       child: Row(
         children: [
           // 图标
