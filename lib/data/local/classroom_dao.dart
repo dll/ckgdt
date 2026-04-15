@@ -66,6 +66,23 @@ class ClassroomDao {
   //  在线状态
   // ══════════════════════════════════════════════════════════════════════════
 
+  /// 清除某个用户的在线记录（将 last_active 设为 NULL）
+  Future<bool> clearLastActive(String userId) async {
+    await _ensureTable();
+    final db = await DatabaseHelper.instance.database;
+    try {
+      final count = await db.update(
+        'users',
+        {'last_active': null},
+        where: 'user_id = ?',
+        whereArgs: [userId],
+      );
+      return count > 0;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// 更新用户心跳时间戳
   Future<void> updateLastActive(String userId) async {
     await _ensureTable();

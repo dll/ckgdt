@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import '../data/local/user_dao.dart';
 import '../data/models/user_model.dart';
 import 'sync_service.dart';
@@ -36,6 +38,18 @@ class AuthService {
     return success;
   }
 
+  /// 仅凭 userId 登录（跳过密码验证，用于扫码登录桌面端自动登录）
+  Future<bool> loginById(String userId) async {
+    final user = await _userDao.getUser(userId);
+    if (user == null) return false;
+    // 写入 session 表
+    await _userDao.setCurrentUser(userId, '');
+    _currentUser = user;
+    startHeartbeat();
+    _startSyncIfEnabled();
+    return true;
+  }
+
   Future<void> logout() async {
     stopHeartbeat();
     _syncService.stopAutoSync();
@@ -61,6 +75,48 @@ class AuthService {
 
   String? getCurrentUserId() {
     return _currentUser?.userId;
+  }
+
+  // ── 密码管理 ──────────────────────────────────────────────────────────
+
+  /// 对密码进行 SHA-256 哈希（加盐 = userId）
+  static String hashPassword(String password, String userId) {
+    final bytes = utf8.encode('$userId:$password');
+    return sha256.convert(bytes).toString();
+  }
+
+  /// 验证密码（支持 hash 和默认密码双模式）
+  bool verifyPassword(String password, UserModel user) {
+    if (user.hasCustomPassword) {
+      return hashPassword(password, user.userId) == user.passwordHash;
+    }
+    // 默认密码：后6位或全userId
+    final last6 = user.defaultPassword;
+    return password == last6 || password == user.userId;
+  }
+
+  /// 修改密码：验证旧密码 → 存储新密码哈希
+  Future<bool> changePassword(
+      String userId, String currentPassword, String newPassword) async {
+    final user = await _userDao.getUser(userId);
+    if (user == null) return false;
+
+    // 验证当前密码
+    if (!verifyPassword(currentPassword, user)) return false;
+
+    // 存储新密码哈希
+    final hash = hashPassword(newPassword, userId);
+    final success = await _userDao.updatePasswordHash(userId, hash);
+    if (success) {
+      // 刷新内存中的用户
+      _currentUser = await _userDao.getUser(userId);
+    }
+    return success;
+  }
+
+  /// 管理员重置学生密码（清除 hash → 恢复默认密码）
+  Future<bool> resetStudentPassword(String userId) async {
+    return await _userDao.resetPassword(userId);
   }
 
   // ── 心跳机制 ──────────────────────────────────────────────────────────

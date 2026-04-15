@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../data/local/class_dao.dart';
 import '../../../data/models/user_model.dart';
 import '../../../services/auth_service.dart';
 import 'student_detail_page.dart';
@@ -12,6 +13,7 @@ class StudentManagePage extends StatefulWidget {
 
 class _StudentManagePageState extends State<StudentManagePage> {
   final _authService = AuthService();
+  final _classDao = ClassDao();
 
   List<UserModel> _students = [];
   bool _isLoading = true;
@@ -36,22 +38,27 @@ class _StudentManagePageState extends State<StudentManagePage> {
   }
 
   Future<void> _addStudent() async {
-    final result = await showDialog<Map<String, String>>(
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (context) => _AddStudentDialog(),
+      builder: (context) => _AddStudentDialog(classDao: _classDao),
     );
 
     if (result != null) {
       final student = UserModel(
-        userId: result['userId']!,
-        realName: result['realName'],
-        repositoryUrl: result['repositoryUrl'],
+        userId: result['userId'] as String,
+        realName: result['realName'] as String?,
+        repositoryUrl: result['repositoryUrl'] as String?,
         role: 'student',
         createdAt: DateTime.now().toIso8601String(),
       );
 
       final success = await _authService.createStudent(student);
       if (success && mounted) {
+        // 如果选择了班级，自动加入 class_members
+        final classId = result['classId'] as int?;
+        if (classId != null) {
+          await _classDao.addMember(classId, student.userId, role: 'student');
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('添加成功')),
         );
@@ -112,6 +119,41 @@ class _StudentManagePageState extends State<StudentManagePage> {
           const SnackBar(content: Text('删除成功')),
         );
         _loadStudents();
+      }
+    }
+  }
+
+  Future<void> _resetPassword(UserModel student) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('重置密码'),
+        content: Text(
+          '确定要重置 ${student.realName ?? student.userId} 的密码吗？\n\n'
+          '密码将恢复为默认密码（学号后6位）。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('重置'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final success =
+          await _authService.resetStudentPassword(student.userId);
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  '已重置 ${student.realName ?? student.userId} 的密码为默认密码')),
+        );
       }
     }
   }
@@ -210,13 +252,45 @@ class _StudentManagePageState extends State<StudentManagePage> {
                                     );
                                   },
                                 ),
-                              IconButton(
-                                icon: const Icon(Icons.edit, color: Colors.blue),
-                                onPressed: () => _editStudent(student),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red),
-                                onPressed: () => _deleteStudent(student),
+                              PopupMenuButton<String>(
+                                icon: const Icon(Icons.more_vert, size: 20),
+                                tooltip: '更多操作',
+                                onSelected: (value) {
+                                  switch (value) {
+                                    case 'edit':
+                                      _editStudent(student);
+                                    case 'reset_password':
+                                      _resetPassword(student);
+                                    case 'delete':
+                                      _deleteStudent(student);
+                                  }
+                                },
+                                itemBuilder: (_) => [
+                                  const PopupMenuItem(
+                                    value: 'edit',
+                                    child: ListTile(
+                                      leading: Icon(Icons.edit, color: Colors.blue, size: 20),
+                                      title: Text('编辑信息', style: TextStyle(fontSize: 14)),
+                                      dense: true,
+                                    ),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'reset_password',
+                                    child: ListTile(
+                                      leading: Icon(Icons.lock_reset, color: Colors.orange, size: 20),
+                                      title: Text('重置密码', style: TextStyle(fontSize: 14)),
+                                      dense: true,
+                                    ),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'delete',
+                                    child: ListTile(
+                                      leading: Icon(Icons.delete, color: Colors.red, size: 20),
+                                      title: Text('删除学生', style: TextStyle(fontSize: 14)),
+                                      dense: true,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -247,6 +321,10 @@ class _StudentManagePageState extends State<StudentManagePage> {
 }
 
 class _AddStudentDialog extends StatefulWidget {
+  final ClassDao classDao;
+
+  const _AddStudentDialog({required this.classDao});
+
   @override
   State<_AddStudentDialog> createState() => _AddStudentDialogState();
 }
@@ -256,6 +334,29 @@ class _AddStudentDialogState extends State<_AddStudentDialog> {
   final _userIdController = TextEditingController();
   final _nameController = TextEditingController();
   final _repoController = TextEditingController();
+
+  List<Map<String, dynamic>> _classes = [];
+  int? _selectedClassId;
+  String? _teacherName;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadClasses();
+  }
+
+  Future<void> _loadClasses() async {
+    final classes = await widget.classDao.getActiveClasses();
+    if (mounted) {
+      setState(() {
+        _classes = classes;
+        if (classes.isNotEmpty) {
+          _selectedClassId = classes.first['id'] as int;
+          _teacherName = classes.first['teacher_name'] as String?;
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -297,6 +398,47 @@ class _AddStudentDialogState extends State<_AddStudentDialog> {
                 ),
               ),
               const SizedBox(height: 16),
+              // 班级下拉框
+              DropdownButtonFormField<int>(
+                value: _selectedClassId,
+                decoration: const InputDecoration(
+                  labelText: '班级',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.class_),
+                ),
+                items: _classes.map((c) {
+                  return DropdownMenuItem<int>(
+                    value: c['id'] as int,
+                    child: Text(c['name'] as String? ?? ''),
+                  );
+                }).toList(),
+                onChanged: (classId) {
+                  setState(() {
+                    _selectedClassId = classId;
+                    final cls = _classes.firstWhere(
+                        (c) => c['id'] == classId,
+                        orElse: () => {});
+                    _teacherName = cls['teacher_name'] as String?;
+                  });
+                },
+                validator: (v) => v == null ? '请选择班级' : null,
+              ),
+              const SizedBox(height: 16),
+              // 教师（只读，根据班级自动填充）
+              TextFormField(
+                readOnly: true,
+                controller: TextEditingController(
+                    text: _teacherName != null
+                        ? '${_teacherName}'
+                        : ''),
+                decoration: const InputDecoration(
+                  labelText: '任课教师',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.person),
+                  hintText: '选择班级后自动填充',
+                ),
+              ),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _repoController,
                 decoration: const InputDecoration(
@@ -322,6 +464,7 @@ class _AddStudentDialogState extends State<_AddStudentDialog> {
                 'userId': _userIdController.text,
                 'realName': _nameController.text,
                 'repositoryUrl': _repoController.text,
+                'classId': _selectedClassId,
               });
             }
           },

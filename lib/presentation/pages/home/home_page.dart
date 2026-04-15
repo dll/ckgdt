@@ -1,6 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/notification_service.dart';
+import '../../../data/local/notification_dao.dart';
+import '../notification/notification_list_page.dart';
 import '../login/login_page.dart';
 import '../graph/knowledge_graph_page.dart';
 import '../graph/favorites_page.dart';
@@ -36,6 +40,7 @@ import '../sync/data_sync_page.dart';
 import '../feedback/feedback_manage_page.dart';
 import '../practice/deep_practice_page.dart';
 import '../practice/growth_curve_page.dart';
+import '../cross_platform/cross_platform_hub_page.dart';
 import 'settings_page.dart';
 import 'search_page.dart';
 
@@ -50,12 +55,41 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final _authService = AuthService();
+  final _notificationDao = NotificationDao();
+  final _notificationService = NotificationService();
   late int _selectedIndex;
+  int _unreadCount = 0;
+  Timer? _notificationTimer;
 
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.initialTabIndex;
+    _refreshUnreadCount();
+    // 每30秒轮询未读通知数
+    _notificationTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _refreshUnreadCount(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _notificationTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refreshUnreadCount() async {
+    try {
+      final userId = _authService.getCurrentUserId();
+      if (userId == null) return;
+      // 顺便检查自动提醒
+      await _notificationService.checkAndCreateReminders();
+      final count = await _notificationDao.getUnreadCount(userId);
+      if (mounted && count != _unreadCount) {
+        setState(() => _unreadCount = count);
+      }
+    } catch (_) {}
   }
 
   @override
@@ -198,8 +232,29 @@ class _HomePageState extends State<HomePage> {
               );
             },
           ),
+          // 通知铃铛图标（带未读数 Badge）
+          IconButton(
+            icon: Badge(
+              isLabelVisible: _unreadCount > 0,
+              label: Text(
+                _unreadCount > 99 ? '99+' : '$_unreadCount',
+                style: const TextStyle(fontSize: 10),
+              ),
+              child: const Icon(Icons.notifications_outlined),
+            ),
+            tooltip: '通知',
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const NotificationListPage()),
+              );
+              // 返回后刷新未读数
+              _refreshUnreadCount();
+            },
+          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.person),
+            tooltip: '显示菜单',
             onSelected: (value) async {
               if (value == 'logout') {
                 final navigator = Navigator.of(context);
@@ -242,6 +297,8 @@ class _HomePageState extends State<HomePage> {
                   MaterialPageRoute(
                       builder: (_) => HandbookPage(role: handRole)),
                 );
+              } else if (value == 'change_password') {
+                _showChangePasswordDialog();
               }
             },
             itemBuilder: (context) => [
@@ -264,13 +321,13 @@ class _HomePageState extends State<HomePage> {
                     title: Text('学习中心'),
                   ),
                 ),
-              // 教师/管理员：教师工作台
+              // 教师/管理员：工作台
               if (isTeacher || isAdmin)
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'teacher_workspace',
                   child: ListTile(
-                    leading: Icon(Icons.dashboard, color: Colors.indigo),
-                    title: Text('教师工作台'),
+                    leading: const Icon(Icons.dashboard, color: Colors.indigo),
+                    title: Text(isAdmin ? '管理员工作台' : '教师工作台'),
                   ),
                 ),
               const PopupMenuItem(
@@ -278,6 +335,13 @@ class _HomePageState extends State<HomePage> {
                 child: ListTile(
                   leading: Icon(Icons.trending_up, color: Colors.green),
                   title: Text('学习进度'),
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'change_password',
+                child: ListTile(
+                  leading: Icon(Icons.lock_outline, color: Colors.orange),
+                  title: Text('修改密码'),
                 ),
               ),
               const PopupMenuItem(
@@ -453,6 +517,13 @@ class _HomePageState extends State<HomePage> {
                   color: Colors.teal[600]!,
                   onTap: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const DataSyncPage())),
+                ),
+                _buildMenuCard(
+                  icon: Icons.devices,
+                  title: '三端互通',
+                  color: Colors.deepPurple,
+                  onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const CrossPlatformHubPage())),
                 ),
 
                 // ── 学生专属功能 ──────────────────────────────────
@@ -675,6 +746,114 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
+  // ── 修改密码对话框 ──────────────────────────────────────────────────────
+  void _showChangePasswordDialog() {
+    final user = _authService.currentUser;
+    if (user == null) return;
+
+    final currentPwdCtrl = TextEditingController();
+    final newPwdCtrl = TextEditingController();
+    final confirmPwdCtrl = TextEditingController();
+    String? errorMsg;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.lock_outline, color: Color(0xFF667eea)),
+              SizedBox(width: 8),
+              Text('修改密码', style: TextStyle(fontSize: 18)),
+            ],
+          ),
+          content: SizedBox(
+            width: 340,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: currentPwdCtrl,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: '当前密码',
+                    prefixIcon: Icon(Icons.lock),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: newPwdCtrl,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: '新密码（至少6位）',
+                    prefixIcon: Icon(Icons.lock_open),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: confirmPwdCtrl,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: '确认新密码',
+                    prefixIcon: Icon(Icons.lock_open),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                if (errorMsg != null) ...[
+                  const SizedBox(height: 8),
+                  Text(errorMsg!, style: const TextStyle(color: Colors.red, fontSize: 13)),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                // 验证
+                if (currentPwdCtrl.text.isEmpty || newPwdCtrl.text.isEmpty) {
+                  setDialogState(() => errorMsg = '请填写所有字段');
+                  return;
+                }
+                if (newPwdCtrl.text.length < 6) {
+                  setDialogState(() => errorMsg = '新密码至少6位');
+                  return;
+                }
+                if (newPwdCtrl.text != confirmPwdCtrl.text) {
+                  setDialogState(() => errorMsg = '两次输入的密码不一致');
+                  return;
+                }
+
+                // 验证当前密码
+                final success = await _authService.changePassword(
+                  user.userId,
+                  currentPwdCtrl.text,
+                  newPwdCtrl.text,
+                );
+                if (success) {
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('密码修改成功！下次登录请使用新密码')),
+                    );
+                  }
+                } else {
+                  setDialogState(() => errorMsg = '当前密码不正确');
+                }
+              },
+              child: const Text('确认修改'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _FlowStep {
@@ -715,6 +894,8 @@ class _AdminToolsPage extends StatelessWidget {
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RepoAnalyticsPage()))),
       _AdminTool(Icons.sync, '数据同步', Colors.teal[600]!,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DataSyncPage()))),
+      _AdminTool(Icons.devices, '三端互通', Colors.deepPurple,
+          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CrossPlatformHubPage()))),
       _AdminTool(Icons.settings, '系统设置', Colors.grey[700]!,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()))),
     ];

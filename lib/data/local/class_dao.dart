@@ -446,4 +446,35 @@ class ClassDao {
     await db.update('classes', {'student_count': count},
         where: 'id = ?', whereArgs: [classId]);
   }
+
+  // ── 批量同步所有学生到指定班级 ──────────────────────────────────────────
+  /// 将 users 表中所有 role='student' 且未在该班级 class_members 中的学生自动添加
+  Future<int> syncAllStudentsToClass(int classId) async {
+    final db = await _dbHelper.database;
+    try {
+      final count = await db.rawInsert('''
+        INSERT OR IGNORE INTO class_members (class_id, user_id, role, joined_at)
+        SELECT ?, user_id, 'student', ?
+        FROM users
+        WHERE role = 'student' AND is_active = 1
+          AND user_id NOT IN (
+            SELECT user_id FROM class_members WHERE class_id = ?
+          )
+      ''', [classId, DateTime.now().toIso8601String(), classId]);
+      if (count > 0) {
+        await _updateStudentCount(classId);
+      }
+      return count;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  /// 按名称查找班级
+  Future<Map<String, dynamic>?> getClassByName(String name) async {
+    final db = await _dbHelper.database;
+    final results = await db.query('classes',
+        where: 'name = ?', whereArgs: [name], limit: 1);
+    return results.isEmpty ? null : results.first;
+  }
 }

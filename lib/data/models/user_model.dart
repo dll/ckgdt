@@ -8,6 +8,7 @@ class UserModel {
   final bool isActive;
   final String? repositoryUrl; // Gitee 仓库地址
   final String? lastActive; // 心跳时间戳（在线状态）
+  final String? passwordHash; // 自定义密码哈希（null=使用默认密码）
 
   UserModel({
     required this.userId,
@@ -19,6 +20,7 @@ class UserModel {
     this.isActive = true,
     this.repositoryUrl,
     this.lastActive,
+    this.passwordHash,
   });
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
@@ -32,6 +34,7 @@ class UserModel {
       isActive: map['is_active'] == 1,
       repositoryUrl: map['repository_url'],
       lastActive: map['last_active'],
+      passwordHash: map['password_hash'],
     );
   }
 
@@ -52,6 +55,9 @@ class UserModel {
     if (lastActive != null) {
       map['last_active'] = lastActive;
     }
+    if (passwordHash != null) {
+      map['password_hash'] = passwordHash;
+    }
     return map;
   }
 
@@ -66,6 +72,7 @@ class UserModel {
     bool? isActive,
     String? repositoryUrl,
     String? lastActive,
+    String? passwordHash,
   }) {
     return UserModel(
       userId: userId ?? this.userId,
@@ -77,10 +84,19 @@ class UserModel {
       isActive: isActive ?? this.isActive,
       repositoryUrl: repositoryUrl ?? this.repositoryUrl,
       lastActive: lastActive ?? this.lastActive,
+      passwordHash: passwordHash ?? this.passwordHash,
     );
   }
 
-  String get password => userId.length >= 6 ? userId.substring(userId.length - 6) : '';
+  /// 默认密码 = userId 后6位
+  String get defaultPassword =>
+      userId.length >= 6 ? userId.substring(userId.length - 6) : userId;
+
+  /// 是否已设置自定义密码
+  bool get hasCustomPassword => passwordHash != null;
+
+  @Deprecated('Use defaultPassword instead')
+  String get password => defaultPassword;
 
   bool get isAdmin => role == 'admin';
   bool get isTeacher => role == 'teacher';
