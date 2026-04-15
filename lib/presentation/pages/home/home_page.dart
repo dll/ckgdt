@@ -13,13 +13,11 @@ import '../assessment/assessment_page.dart';
 import '../survey/survey_page.dart';
 import '../admin/student_manage_page.dart';
 import '../admin/data_import_page.dart';
-import '../admin/teacher_manage_page.dart';
 import '../admin/class_manage_page.dart';
 import '../admin/survey_manage_page.dart';
 import '../admin/question_manage_page.dart';
 import '../admin/data_export_page.dart';
 import '../admin/teaching_manage_page.dart';
-import '../admin/lab_task_manage_page.dart';
 import '../admin/repo_analytics_page.dart';
 import '../analytics/learning_analytics_page.dart';
 import '../works/works_page.dart';
@@ -60,6 +58,78 @@ class _HomePageState extends State<HomePage> {
     final user = _authService.currentUser;
     final isAdmin = _authService.isAdmin;
     final isTeacher = _authService.isTeacher;
+    final isTeacherOrAdmin = isTeacher || isAdmin;
+
+    // 构建角色对应的 Tab 列表
+    final destinations = <NavigationDestination>[];
+    final bodyMap = <int, Widget Function()>{};
+
+    // 0: 首页（所有角色）
+    destinations.add(const NavigationDestination(
+      icon: Icon(Icons.home_outlined),
+      selectedIcon: Icon(Icons.home),
+      label: '首页',
+    ));
+    bodyMap[0] = () => _buildHome();
+
+    // 1: 图谱（所有角色）
+    destinations.add(const NavigationDestination(
+      icon: Icon(Icons.account_tree_outlined),
+      selectedIcon: Icon(Icons.account_tree),
+      label: '图谱',
+    ));
+    bodyMap[1] = () => const KnowledgeGraphPage();
+
+    if (isTeacherOrAdmin) {
+      // 教师/管理员: 2=课堂 3=学习 4=考核
+      destinations.add(const NavigationDestination(
+        icon: Icon(Icons.cast_for_education_outlined),
+        selectedIcon: Icon(Icons.cast_for_education),
+        label: '课堂',
+      ));
+      bodyMap[2] = () => const ClassroomPage();
+
+      destinations.add(const NavigationDestination(
+        icon: Icon(Icons.menu_book_outlined),
+        selectedIcon: Icon(Icons.menu_book),
+        label: '学习',
+      ));
+      bodyMap[3] = () => const LearningHubPage();
+
+      destinations.add(const NavigationDestination(
+        icon: Icon(Icons.assessment_outlined),
+        selectedIcon: Icon(Icons.assessment),
+        label: '考核',
+      ));
+      bodyMap[4] = () => const AssessmentPage();
+    } else {
+      // 学生: 2=学习 3=实验 4=考核
+      destinations.add(const NavigationDestination(
+        icon: Icon(Icons.menu_book_outlined),
+        selectedIcon: Icon(Icons.menu_book),
+        label: '学习',
+      ));
+      bodyMap[2] = () => const LearningHubPage();
+
+      destinations.add(const NavigationDestination(
+        icon: Icon(Icons.science_outlined),
+        selectedIcon: Icon(Icons.science),
+        label: '实验',
+      ));
+      bodyMap[3] = () => const LabTasksPage();
+
+      destinations.add(const NavigationDestination(
+        icon: Icon(Icons.assessment_outlined),
+        selectedIcon: Icon(Icons.assessment),
+        label: '考核',
+      ));
+      bodyMap[4] = () => const AssessmentPage();
+    }
+
+    // 确保 _selectedIndex 不越界
+    if (_selectedIndex >= destinations.length) {
+      _selectedIndex = 0;
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -192,148 +262,15 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      body: _buildBody(),
+      body: bodyMap[_selectedIndex]?.call() ?? _buildHome(),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
           setState(() => _selectedIndex = index);
         },
-        destinations: [
-          // 0: 首页
-          const NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: '首页',
-          ),
-          // 1: 图谱
-          const NavigationDestination(
-            icon: Icon(Icons.account_tree_outlined),
-            selectedIcon: Icon(Icons.account_tree),
-            label: '图谱',
-          ),
-          // 2: 路径
-          const NavigationDestination(
-            icon: Icon(Icons.route_outlined),
-            selectedIcon: Icon(Icons.route),
-            label: '路径',
-          ),
-          // 3: 学习（合并原"视频"+"课件"，含4个Tab：视频/PPT/PDF/AI助手）
-          const NavigationDestination(
-            icon: Icon(Icons.menu_book_outlined),
-            selectedIcon: Icon(Icons.menu_book),
-            label: '学习',
-          ),
-          // 4: 测验
-          const NavigationDestination(
-            icon: Icon(Icons.quiz_outlined),
-            selectedIcon: Icon(Icons.quiz),
-            label: '测验',
-          ),
-          // 5: 实验
-          const NavigationDestination(
-            icon: Icon(Icons.science_outlined),
-            selectedIcon: Icon(Icons.science),
-            label: '实验',
-          ),
-          // 6: 考核
-          const NavigationDestination(
-            icon: Icon(Icons.assessment_outlined),
-            selectedIcon: Icon(Icons.assessment),
-            label: '考核',
-          ),
-          // 7: 作品
-          const NavigationDestination(
-            icon: Icon(Icons.workspace_premium_outlined),
-            selectedIcon: Icon(Icons.workspace_premium),
-            label: '作品',
-          ),
-          // 8: 仓库（Git仓库总览）
-          const NavigationDestination(
-            icon: Icon(Icons.source_outlined),
-            selectedIcon: Icon(Icons.source),
-            label: '仓库',
-          ),
-          // 9: 技能（AI 教学技能）
-          const NavigationDestination(
-            icon: Icon(Icons.auto_awesome_outlined),
-            selectedIcon: Icon(Icons.auto_awesome),
-            label: '技能',
-          ),
-          // 10: 课堂（教师/管理员）
-          if (isTeacher || isAdmin)
-            const NavigationDestination(
-              icon: Icon(Icons.cast_for_education_outlined),
-              selectedIcon: Icon(Icons.cast_for_education),
-              label: '课堂',
-            ),
-          // 11: 达成（教师/管理员）
-          if (isTeacher || isAdmin)
-            const NavigationDestination(
-              icon: Icon(Icons.emoji_events_outlined),
-              selectedIcon: Icon(Icons.emoji_events),
-              label: '达成',
-            ),
-          // 12: 管理（仅管理员）
-          if (isAdmin)
-            const NavigationDestination(
-              icon: Icon(Icons.admin_panel_settings_outlined),
-              selectedIcon: Icon(Icons.admin_panel_settings),
-              label: '管理',
-            ),
-        ],
+        destinations: destinations,
       ),
     );
-  }
-
-  /// Tab 索引映射（动态，取决于角色）:
-  /// 0=首页 1=图谱 2=路径 3=学习(视频/PPT/PDF/AI助手) 4=测验 5=实验 6=考核 7=作品 8=仓库 9=技能
-  /// 教师/管理员: 10=课堂 11=达成
-  /// 管理员: 12=管理
-  /// 学生: 无10/11/12
-  Widget _buildBody() {
-    final isAdmin = _authService.isAdmin;
-    final isTeacher = _authService.isTeacher;
-    final isTeacherOrAdmin = isTeacher || isAdmin;
-
-    // 固定索引 0-9 映射
-    switch (_selectedIndex) {
-      case 0:
-        return _buildHome();
-      case 1:
-        return const KnowledgeGraphPage();
-      case 2:
-        return const LearningPlanPage();
-      case 3:
-        return const LearningHubPage();
-      case 4:
-        return const QuizPage();
-      case 5:
-        return const LabTasksPage();
-      case 6:
-        return const AssessmentPage();
-      case 7:
-        return const WorksPage();
-      case 8:
-        // 教师/管理员 → 完整仓库管理; 学生 → 简化的个人仓库视图
-        if (isTeacherOrAdmin) return const GitRepoPage();
-        return const StudentRepoPage();
-      case 9:
-        return const SkillsHubPage();
-      case 10:
-        // 教师/管理员: 课堂管理; 其他角色不会有 index 10
-        if (isTeacherOrAdmin) return const ClassroomPage();
-        return _buildHome();
-      case 11:
-        // 教师/管理员: 达成; 其他角色不会有 index 11
-        if (isTeacherOrAdmin) return const AchievementPage();
-        return _buildHome();
-      case 12:
-        // 管理员: 管理
-        if (isAdmin) return const _AdminToolsPage();
-        return _buildHome();
-      default:
-        return _buildHome();
-    }
   }
 
   Widget _buildHome() {
@@ -402,7 +339,7 @@ class _HomePageState extends State<HomePage> {
               final isTeacherOrAdmin = isTeacher || isAdmin;
 
               final menuItems = <Widget>[
-                // ── 通用功能（所有角色） ──────────────────────────
+                // ── 核心功能卡片（所有角色）──────────────────────────
                 _buildMenuCard(
                   icon: Icons.account_tree,
                   title: '知识图谱',
@@ -413,49 +350,37 @@ class _HomePageState extends State<HomePage> {
                   icon: Icons.route,
                   title: '学习路径',
                   color: Colors.indigo,
-                  onTap: () => setState(() => _selectedIndex = 2),
-                ),
-                _buildMenuCard(
-                  icon: Icons.menu_book,
-                  title: '学习中心',
-                  color: Colors.teal,
-                  onTap: () => setState(() => _selectedIndex = 3),
+                  onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const LearningPlanPage())),
                 ),
                 _buildMenuCard(
                   icon: Icons.quiz,
                   title: '章节测验',
                   color: Colors.orange,
-                  onTap: () => setState(() => _selectedIndex = 4),
-                ),
-                _buildMenuCard(
-                  icon: Icons.assessment,
-                  title: '课程考核',
-                  color: Colors.purple,
-                  onTap: () => setState(() => _selectedIndex = 6),
+                  onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const QuizPage())),
                 ),
                 _buildMenuCard(
                   icon: Icons.workspace_premium,
                   title: '作品管理',
                   color: Colors.cyan,
-                  onTap: () => setState(() => _selectedIndex = 7),
-                ),
-                _buildMenuCard(
-                  icon: Icons.science,
-                  title: '实验任务',
-                  color: Colors.deepPurple,
-                  onTap: () => setState(() => _selectedIndex = 5),
+                  onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const WorksPage())),
                 ),
                 _buildMenuCard(
                   icon: Icons.source,
                   title: 'Git仓库',
                   color: Colors.blueGrey,
-                  onTap: () => setState(() => _selectedIndex = 8),
+                  onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) =>
+                        isTeacherOrAdmin ? const GitRepoPage() : const StudentRepoPage())),
                 ),
                 _buildMenuCard(
                   icon: Icons.auto_awesome,
                   title: 'AI 技能',
                   color: Colors.deepPurple[400]!,
-                  onTap: () => setState(() => _selectedIndex = 9),
+                  onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const SkillsHubPage())),
                 ),
                 _buildMenuCard(
                   icon: Icons.sync,
@@ -500,10 +425,11 @@ class _HomePageState extends State<HomePage> {
                 // ── 教师/管理员功能 ──────────────────────────────
                 if (isTeacherOrAdmin) ...[
                   _buildMenuCard(
-                    icon: Icons.cast_for_education,
-                    title: '课堂管理',
-                    color: Colors.lightBlue,
-                    onTap: () => setState(() => _selectedIndex = 10),
+                    icon: Icons.science,
+                    title: '实验任务',
+                    color: Colors.deepPurple,
+                    onTap: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const LabTasksPage())),
                   ),
                   _buildMenuCard(
                     icon: Icons.bar_chart,
@@ -511,6 +437,13 @@ class _HomePageState extends State<HomePage> {
                     color: Colors.green,
                     onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const LearningAnalyticsPage())),
+                  ),
+                  _buildMenuCard(
+                    icon: Icons.emoji_events,
+                    title: '课程达成',
+                    color: Colors.deepOrange[400]!,
+                    onTap: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const AchievementPage())),
                   ),
                   _buildMenuCard(
                     icon: Icons.class_,
@@ -540,12 +473,6 @@ class _HomePageState extends State<HomePage> {
                     onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const SurveyManagePage())),
                   ),
-                  _buildMenuCard(
-                    icon: Icons.emoji_events,
-                    title: '课程达成',
-                    color: Colors.deepOrange[400]!,
-                    onTap: () => setState(() => _selectedIndex = 11),
-                  ),
                 ],
 
                 // ── 管理员专属功能 ──────────────────────────────
@@ -554,7 +481,8 @@ class _HomePageState extends State<HomePage> {
                     icon: Icons.people,
                     title: '学生管理',
                     color: Colors.brown,
-                    onTap: () => setState(() => _selectedIndex = 12),
+                    onTap: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const StudentManagePage())),
                   ),
                   _buildMenuCard(
                     icon: Icons.upload,
@@ -625,49 +553,6 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AdminToolsPage extends StatelessWidget {
-  const _AdminToolsPage();
-
-  @override
-  Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 10,
-      child: Scaffold(
-        appBar: TabBar(
-          isScrollable: true,
-          tabs: const [
-            Tab(text: '学生管理', icon: Icon(Icons.people)),
-            Tab(text: '教师管理', icon: Icon(Icons.school)),
-            Tab(text: '班级管理', icon: Icon(Icons.class_)),
-            Tab(text: '题库管理', icon: Icon(Icons.quiz)),
-            Tab(text: '问卷管理', icon: Icon(Icons.poll)),
-            Tab(text: '教学管理', icon: Icon(Icons.menu_book)),
-            Tab(text: '实验管理', icon: Icon(Icons.science)),
-            Tab(text: '数据导入', icon: Icon(Icons.upload)),
-            Tab(text: '数据导出', icon: Icon(Icons.download)),
-            Tab(text: '仓库分析', icon: Icon(Icons.analytics)),
-          ],
-          labelColor: Theme.of(context).colorScheme.primary,
-        ),
-        body: const TabBarView(
-          children: [
-            StudentManagePage(),
-            TeacherManagePage(),
-            ClassManagePage(),
-            QuestionManagePage(),
-            SurveyManagePage(),
-            TeachingManagePage(),
-            LabTaskManagePage(),
-            DataImportPage(),
-            DataExportPage(),
-            RepoAnalyticsPage(),
-          ],
         ),
       ),
     );

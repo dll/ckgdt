@@ -501,23 +501,19 @@ class GiteeService {
   /// 列出目录内容
   /// 返回 [{name, path, type, size, sha, download_url}, ...]
   /// type 为 "file" 或 "dir"
+  /// 404 → 目录不存在，抛出异常由调用方处理
   Future<List<Map<String, dynamic>>> listDir(
     String owner,
     String repo,
     String path, {
     String ref = 'master',
   }) async {
-    try {
-      final data = await getContents(owner, repo, path, ref: ref);
-      if (data is List) {
-        return List<Map<String, dynamic>>.from(
-            data.map((e) => Map<String, dynamic>.from(e)));
-      }
-      return [];
-    } catch (e) {
-      debugPrint('GiteeService: listDir($path) error: $e');
-      return [];
+    final data = await getContents(owner, repo, path, ref: ref);
+    if (data is List) {
+      return List<Map<String, dynamic>>.from(
+          data.map((e) => Map<String, dynamic>.from(e)));
     }
+    return [];
   }
 
   /// 获取文件的 Raw 下载 URL

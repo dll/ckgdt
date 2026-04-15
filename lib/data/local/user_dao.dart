@@ -112,7 +112,7 @@ class UserDao {
     var user = await getUser(userId);
 
     if (user == null) {
-      // Auto-create user account if doesn't exist
+      // 确定角色和姓名
       String role = 'student';
       String? realName;
 
@@ -122,10 +122,25 @@ class UserDao {
       } else if (userId == '206004') {
         role = 'teacher';
         realName = '刘东良';
+      } else if (userId == '203014') {
+        role = 'teacher';
+        realName = '徐志红';
       } else {
-        // Try to get real name from students.json
+        // 必须在 students.json 名单中才允许登录
         realName = await _getStudentRealName(userId);
-        // realName 为 null 时 UI 层会用 userId 兜底显示
+        if (realName == null) {
+          debugPrint('=== UserDao: Login rejected — $userId not in students.json');
+          return false;
+        }
+      }
+
+      // 验证密码（后 6 位 或 完整学号）
+      final last6 = userId.length >= 6
+          ? userId.substring(userId.length - 6)
+          : userId;
+      if (password != last6 && password != userId) {
+        debugPrint('=== UserDao: Login rejected — wrong password for new user $userId');
+        return false;
       }
 
       final newUser = UserModel(
@@ -143,6 +158,16 @@ class UserDao {
         return true;
       }
       return false;
+    }
+
+    // 非名单内的学生也禁止登录（防止旧数据库有脏记录）
+    if (user.role == 'student') {
+      final nameCheck = await _getStudentRealName(userId);
+      if (nameCheck == null &&
+          userId != '419116' && userId != '206004' && userId != '203014') {
+        debugPrint('=== UserDao: Existing user $userId not in students.json, rejecting');
+        return false;
+      }
     }
 
     // Update real name for existing users (including admin and teacher)
