@@ -22,6 +22,15 @@ class CoursewareAgent extends BaseAgent {
         keywords: ['课件', 'PPT', '幻灯片', '教案', 'UML', '脚本', '视频制作', '讲义'],
         capabilities: ['课件生成', '教案设计', 'UML图', '视频脚本'],
         requiresAi: true,
+        usageSteps: [
+          '选择 📑 课件专家',
+          '指定主题和课件类型（教案/PPT/UML/脚本）',
+          '智能体生成结构化课件内容',
+          '可继续调整和完善生成结果',
+        ],
+        classicCases: [
+          AgentCase(title: '生成教案', userInput: '帮我生成 Flutter Widget 体系的教案', agentReply: '## Flutter Widget 体系 教案\n\n**教学目标**：掌握 Widget 分类和常用组件\n**重点**：StatelessWidget vs StatefulWidget\n**难点**：Widget 树的构建和更新机制\n\n**教学过程**：\n1. 导入（5分钟）：展示一个 Flutter 应用截图\n2. 讲授（25分钟）：Widget 分类和生命周期\n3. 实践（15分钟）：编写计数器应用'),
+        ],
       );
 
   @override

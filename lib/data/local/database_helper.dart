@@ -56,7 +56,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 13,
+      version: 14,
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -110,7 +110,7 @@ class DatabaseHelper {
         // 重新打开（版本号必须与主初始化一致）
         final db2 = await openDatabase(
           dbName,
-          version: 13,
+          version: 14,
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
         );
@@ -168,7 +168,7 @@ class DatabaseHelper {
         // Create empty database
         db = await openDatabase(
           dbPath,
-          version: 13,
+          version: 14,
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
         );
@@ -180,7 +180,7 @@ class DatabaseHelper {
 
     db = await openDatabase(
       dbPath,
-      version: 13,
+      version: 14,
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -400,6 +400,7 @@ class DatabaseHelper {
     await _createNewTablesV11(db);
     await _createNewTablesV12(db);
     await _migrateToV13(db);
+    await _migrateToV14(db);
     await _ensureResourceFileColumns(db);
 
     // Add admin user (ignore if already exists from asset DB)
@@ -459,6 +460,9 @@ class DatabaseHelper {
     if (oldVersion < 13) {
       await _migrateToV13(db);
     }
+    if (oldVersion < 14) {
+      await _migrateToV14(db);
+    }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
   }
@@ -516,6 +520,7 @@ class DatabaseHelper {
     await _createNewTablesV11(db);
     await _createNewTablesV12(db);
     await _migrateToV13(db);
+    await _migrateToV14(db);
     await _ensureAchievementColumns(db);
   }
 
@@ -1186,6 +1191,37 @@ class DatabaseHelper {
     await db.execute('''
       CREATE INDEX IF NOT EXISTS idx_notif_recip_user
       ON notification_recipients(user_id, is_read)
+    ''');
+  }
+
+  // ── V14 迁移：AI 配置扩展 + 聊天历史 ──────────────────────────────────────
+  Future<void> _migrateToV14(Database db) async {
+    // 为 ai_configs 表添加新列
+    try {
+      await db.execute(
+          'ALTER TABLE ai_configs ADD COLUMN temperature REAL DEFAULT 0.7');
+    } catch (_) {}
+    try {
+      await db.execute(
+          'ALTER TABLE ai_configs ADD COLUMN max_tokens INTEGER DEFAULT 2048');
+    } catch (_) {}
+    try {
+      await db.execute(
+          'ALTER TABLE ai_configs ADD COLUMN timeout INTEGER DEFAULT 60');
+    } catch (_) {}
+
+    // 创建 AI 聊天历史表
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ai_chat_history(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL,
+        agent_id TEXT,
+        skill_id TEXT,
+        role TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        tokens_used INTEGER DEFAULT 0
+      )
     ''');
   }
 

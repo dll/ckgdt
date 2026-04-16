@@ -8,6 +8,7 @@ import '../../../data/models/user_model.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/sync_service.dart';
 import '../../../core/constants/role_guard.dart';
+import '../../widgets/agent_entry_button.dart';
 
 // ╔══════════════════════════════════════════════════════════════════════════════╗
 // ║  课堂管理页面 — 在线状态 / 课堂签到 / 课堂互动                              ║
@@ -189,6 +190,7 @@ class _ClassroomPageState extends State<ClassroomPage>
             ),
           ),
           // 同步按钮
+          const AgentEntryButton(agentId: 'tutor', color: Colors.white),
           ValueListenableBuilder<SyncStatus>(
             valueListenable: _syncService.status,
             builder: (_, syncStatus, __) => IconButton(

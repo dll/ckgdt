@@ -3,6 +3,19 @@
 /// 参考 OpenMAIC（清华大学开放式多智能体互动课堂）架构理念：
 /// Agent = 配置 + 人设 + 能力，Director 编排分发。
 
+/// 经典案例
+class AgentCase {
+  final String title;      // 案例标题
+  final String userInput;  // 用户输入示例
+  final String agentReply; // 智能体回复示例（摘要）
+
+  const AgentCase({
+    required this.title,
+    required this.userInput,
+    required this.agentReply,
+  });
+}
+
 /// 智能体配置
 class AgentConfig {
   final String id;
@@ -14,6 +27,8 @@ class AgentConfig {
   final List<String> keywords; // 触发关键词
   final List<String> capabilities; // 能力标签
   final bool requiresAi; // 是否需要 AI API
+  final List<String> usageSteps; // 使用步骤
+  final List<AgentCase> classicCases; // 经典案例
 
   const AgentConfig({
     required this.id,
@@ -25,6 +40,8 @@ class AgentConfig {
     this.keywords = const [],
     this.capabilities = const [],
     this.requiresAi = false,
+    this.usageSteps = const [],
+    this.classicCases = const [],
   });
 }
 

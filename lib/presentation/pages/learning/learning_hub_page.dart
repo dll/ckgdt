@@ -11,6 +11,7 @@ import '../../../services/courseware_download_service.dart';
 import '../../../data/local/ai_config_dao.dart';
 import '../materials/courseware_workshop_page.dart';
 import '../materials/ai_settings_page.dart';
+import '../../widgets/agent_entry_button.dart';
 import '../admin/data_import_page.dart';
 import '../quiz/quiz_page.dart';
 import 'video_player_page.dart';
@@ -194,6 +195,7 @@ class _LearningHubPageState extends State<LearningHubPage>
               _loadAllData();
             },
           ),
+          const AgentEntryButton(agentId: 'learning'),
         ],
         bottom: TabBar(
           controller: _tabController,

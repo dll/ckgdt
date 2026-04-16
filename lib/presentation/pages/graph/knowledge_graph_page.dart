@@ -15,6 +15,7 @@ import '../../../data/models/user_model.dart';
 import '../learning/learning_chain_page.dart';
 import '../learning/video_page.dart';
 import '../materials/resource_viewer_page.dart';
+import '../../widgets/agent_entry_button.dart';
 import 'graph_list_page.dart';
 import 'graph_properties_page.dart';
 
@@ -2192,6 +2193,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
             ),
           ],
         ),
+        const AgentEntryButton(agentId: 'graph'),
       ],
     );
   }

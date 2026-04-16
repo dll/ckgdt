@@ -4,6 +4,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import '../../../core/constants/app_theme.dart';
 import '../../../data/local/works_dao.dart';
 import '../../../services/auth_service.dart';
+import '../../widgets/agent_entry_button.dart';
 
 // ╔══════════════════════════════════════════════════════════════════════════════╗
 // ║  作品视角维度（多维过滤，复用考核页的 _GroupDimension 模式）                ║
@@ -126,6 +127,7 @@ class _WorksPageState extends State<WorksPage>
                             fontWeight: FontWeight.bold,
                             color: Colors.white)),
                   ),
+                  const AgentEntryButton(agentId: 'works', color: Colors.white),
                   _buildRoleBadge(isTeacher),
                 ],
               ),

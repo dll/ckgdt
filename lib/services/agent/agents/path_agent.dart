@@ -19,6 +19,15 @@ class PathAgent extends BaseAgent {
         keywords: ['路径', '计划', '怎么学', '从哪开始', '推荐', '学习计划', '规划', '路线'],
         capabilities: ['规划学习路径', '推荐学习顺序', '评估学习进度'],
         requiresAi: true,
+        usageSteps: [
+          '选择 🗺️ 路径规划师',
+          '告诉我你的学习目标或当前水平',
+          '智能体生成个性化学习路径',
+          '按路径推荐顺序逐步学习',
+        ],
+        classicCases: [
+          AgentCase(title: '零基础学习路径', userInput: '我是零基础，想学 Flutter 开发', agentReply: '## Flutter 零基础学习路径\n\n**第1周** Dart 语言基础（变量、函数、类）\n**第2周** Flutter Widget 体系（StatelessWidget、StatefulWidget）\n**第3周** 布局与导航（Row/Column/Stack、Navigator）\n**第4周** 状态管理入门（setState → Provider）'),
+        ],
       );
 
   @override

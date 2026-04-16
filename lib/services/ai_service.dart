@@ -32,11 +32,11 @@ class AiService {
           body: jsonEncode({
             'model': config.model,
             'messages': allMessages,
-            'temperature': 0.7,
-            'max_tokens': 2048,
+            'temperature': config.temperature,
+            'max_tokens': config.maxTokens,
           }),
         )
-        .timeout(const Duration(seconds: 60));
+        .timeout(Duration(seconds: config.timeout));
 
     if (response.statusCode != 200) {
       throw 'AI 请求失败 (${response.statusCode})，请检查网络连接和 API 配置。';

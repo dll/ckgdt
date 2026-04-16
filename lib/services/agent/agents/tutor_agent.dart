@@ -29,6 +29,15 @@ class TutorAgent extends BaseAgent {
         ],
         capabilities: ['课件讲解', '概念解释', '课堂答疑', '复习提纲'],
         requiresAi: true,
+        usageSteps: [
+          '选择 👨‍🏫 课堂助教',
+          '提出课件内容相关的疑问',
+          '智能体用通俗语言解释概念',
+          '可请求举例说明或生成复习提纲',
+        ],
+        classicCases: [
+          AgentCase(title: '概念解释', userInput: '什么是 Hot Reload？', agentReply: '## Hot Reload（热重载）\n\n**通俗解释**：就像你在画画时，不用擦掉重画，直接在原画上修改，立刻看到效果。\n\n**技术原理**：Flutter 将修改的 Dart 代码注入到运行中的 VM，触发 Widget 树重建，但保留应用状态。\n\n**使用场景**：调整 UI 布局、修改样式、添加组件时，按 Ctrl+S 即可看到变化。'),
+        ],
       );
 
   @override

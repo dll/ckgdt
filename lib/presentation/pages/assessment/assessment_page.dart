@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../services/auth_service.dart';
 import '../../../data/local/assessment_dao.dart';
+import '../../widgets/agent_entry_button.dart';
 
 /// 考核页面 — 参考 Python 版 assessment_tab.py
 /// 五大子页: 分组管理 / 项目立项 / 贡献评分 / 答辩安排 / 成绩统计
@@ -118,6 +119,7 @@ class _AssessmentPageState extends State<AssessmentPage>
                         ],
                       ),
                     ),
+                    const AgentEntryButton(agentId: 'assessment', color: Colors.white),
                     _buildHeaderRoleBadge(),
                   ],
                 ),

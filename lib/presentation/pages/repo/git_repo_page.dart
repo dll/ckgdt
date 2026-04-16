@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../services/gitee_service.dart';
 import '../../../services/course_resource_service.dart';
+import '../../widgets/agent_entry_button.dart';
 
 /// Git 仓库总览页面
 /// 功能：
@@ -40,14 +41,21 @@ class _GitRepoPageState extends State<GitRepoPage>
       children: [
         Material(
           color: Theme.of(context).colorScheme.surface,
-          child: TabBar(
-            controller: _tabController,
-            tabs: const [
-              Tab(icon: Icon(Icons.folder_copy, size: 18), text: '仓库列表'),
-              Tab(icon: Icon(Icons.person_search, size: 18), text: '学生详情'),
-              Tab(icon: Icon(Icons.analytics, size: 18), text: '统计概览'),
-              Tab(icon: Icon(Icons.rule_folder, size: 18), text: '提交规范'),
-              Tab(icon: Icon(Icons.settings, size: 18), text: 'Gitee设置'),
+          child: Row(
+            children: [
+              Expanded(
+                child: TabBar(
+                  controller: _tabController,
+                  tabs: const [
+                    Tab(icon: Icon(Icons.folder_copy, size: 18), text: '仓库列表'),
+                    Tab(icon: Icon(Icons.person_search, size: 18), text: '学生详情'),
+                    Tab(icon: Icon(Icons.analytics, size: 18), text: '统计概览'),
+                    Tab(icon: Icon(Icons.rule_folder, size: 18), text: '提交规范'),
+                    Tab(icon: Icon(Icons.settings, size: 18), text: 'Gitee设置'),
+                  ],
+                ),
+              ),
+              const AgentEntryButton(agentId: 'repo'),
             ],
           ),
         ),

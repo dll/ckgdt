@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../services/auth_service.dart';
+import '../../widgets/agent_entry_button.dart';
 import '../../../data/local/learning_path_dao.dart';
 import '../../../data/local/graph_dao.dart';
 import '../../../data/local/knowledge_graph_dao.dart';
@@ -168,6 +169,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
               tooltip: '刷新',
               onPressed: _loadPaths,
             ),
+          const AgentEntryButton(agentId: 'path'),
         ],
       ),
       body: _selectedPath != null ? _buildDetailView() : _buildListView(),

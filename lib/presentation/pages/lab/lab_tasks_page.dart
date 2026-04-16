@@ -6,6 +6,7 @@ import '../../../services/auth_service.dart';
 import '../../../services/gitee_service.dart';
 import '../../../services/course_resource_service.dart';
 import '../../../core/constants/app_theme.dart';
+import '../../widgets/agent_entry_button.dart';
 import '../admin/repo_detail_page.dart';
 
 /// 实验任务页面
@@ -60,28 +61,35 @@ class _LabTasksPageState extends State<LabTasksPage>
 
     return Column(
       children: [
-        // Tab 栏
+        // Tab 栏 + Agent 入口
         Container(
           color: primary.withValues(alpha: 0.05),
-          child: TabBar(
-            controller: _tabController,
-            isScrollable: true,
-            labelColor: primary,
-            unselectedLabelColor: Colors.grey,
-            indicatorColor: primary,
-            tabs: [
-              const Tab(icon: Icon(Icons.science, size: 18), text: '任务列表'),
-              Tab(
-                icon: const Icon(Icons.assignment_turned_in, size: 18),
-                text: _isTeacherOrAdmin ? '提交管理' : '我的提交',
+          child: Row(
+            children: [
+              Expanded(
+                child: TabBar(
+                  controller: _tabController,
+                  isScrollable: true,
+                  labelColor: primary,
+                  unselectedLabelColor: Colors.grey,
+                  indicatorColor: primary,
+                  tabs: [
+                    const Tab(icon: Icon(Icons.science, size: 18), text: '任务列表'),
+                    Tab(
+                      icon: const Icon(Icons.assignment_turned_in, size: 18),
+                      text: _isTeacherOrAdmin ? '提交管理' : '我的提交',
+                    ),
+                    const Tab(icon: Icon(Icons.description, size: 18), text: '实验报告'),
+                    if (!_isTeacherOrAdmin)
+                      const Tab(icon: Icon(Icons.analytics, size: 18), text: '仓库报表'),
+                    if (_isTeacherOrAdmin)
+                      const Tab(icon: Icon(Icons.settings, size: 18), text: '任务管理'),
+                    if (_isTeacherOrAdmin)
+                      const Tab(icon: Icon(Icons.analytics, size: 18), text: '仓库报表'),
+                  ],
+                ),
               ),
-              const Tab(icon: Icon(Icons.description, size: 18), text: '实验报告'),
-              if (!_isTeacherOrAdmin)
-                const Tab(icon: Icon(Icons.analytics, size: 18), text: '仓库报表'),
-              if (_isTeacherOrAdmin)
-                const Tab(icon: Icon(Icons.settings, size: 18), text: '任务管理'),
-              if (_isTeacherOrAdmin)
-                const Tab(icon: Icon(Icons.analytics, size: 18), text: '仓库报表'),
+              const AgentEntryButton(agentId: 'lab'),
             ],
           ),
         ),
