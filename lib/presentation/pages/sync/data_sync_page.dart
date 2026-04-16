@@ -738,9 +738,8 @@ class _DataSyncPageState extends State<DataSyncPage> {
                   Icons.school, '学习 $recordCount', Colors.green),
               _buildStatChip(
                   Icons.error_outline, '错题 $wrongCount', Colors.orange),
-              if (feedbackCount > 0)
-                _buildStatChip(
-                    Icons.feedback, '反馈 $feedbackCount', Colors.purple),
+              _buildStatChip(
+                  Icons.feedback, '反馈 $feedbackCount', Colors.purple),
             ],
           ),
         ],
