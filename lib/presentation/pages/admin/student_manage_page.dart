@@ -37,6 +37,42 @@ class _StudentManagePageState extends State<StudentManagePage> {
     }
   }
 
+  Future<void> _cleanOrphanedData() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('清理孤立数据'),
+        content: const Text(
+          '将删除所有已删除学生残留的关联数据（测验成绩、学习记录、错题、收藏等），'
+          '同时清理远程仓库中的孤立同步文件。\n\n确定要清理吗？',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('清理'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final count = await _authService.cleanOrphanedData();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(count > 0
+                ? '已清理 $count 条孤立数据记录，远程文件将异步清理'
+                : '没有发现孤立数据'),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _addStudent() async {
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
@@ -165,6 +201,11 @@ class _StudentManagePageState extends State<StudentManagePage> {
         title: const Text('学生管理'),
 
         actions: [
+          IconButton(
+            icon: const Icon(Icons.cleaning_services),
+            tooltip: '清理孤立数据',
+            onPressed: _cleanOrphanedData,
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadStudents,
@@ -429,7 +470,7 @@ class _AddStudentDialogState extends State<_AddStudentDialog> {
                 readOnly: true,
                 controller: TextEditingController(
                     text: _teacherName != null
-                        ? '${_teacherName}'
+                        ? '$_teacherName'
                         : ''),
                 decoration: const InputDecoration(
                   labelText: '任课教师',
