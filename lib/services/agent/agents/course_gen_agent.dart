@@ -33,6 +33,15 @@ class CourseGenAgent extends BaseAgent {
         ],
         capabilities: ['课程大纲', '题库生成', '图谱生成', '实验设计'],
         requiresAi: true,
+        usageSteps: [
+          '选择 🎓 课程生成',
+          '指定新课程名称和基本信息',
+          '智能体生成课程大纲和教学内容',
+          '逐步完善各模块（题库、实验、图谱等）',
+        ],
+        classicCases: [
+          AgentCase(title: '生成新课程', userInput: '帮我生成一门《Web 前端开发》课程大纲', agentReply: '## 《Web 前端开发》课程大纲\n\n**学时**：48学时（理论32 + 实验16）\n\n| 章节 | 主题 | 学时 |\n|------|------|------|\n| 第1章 | Web 技术体系全景 | 4 |\n| 第2章 | HTML5 + CSS3 基础 | 8 |\n| 第3章 | JavaScript 核心 | 8 |\n| 第4章 | Vue.js 框架开发 | 8 |\n| 第5章 | React 框架开发 | 8 |\n| 第6章 | 综合项目实践 | 12 |'),
+        ],
       );
 
   @override

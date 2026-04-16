@@ -6,6 +6,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../../../data/local/achievement_dao.dart';
 import '../../../services/auth_service.dart';
+import '../../widgets/agent_entry_button.dart';
 
 /// 课程达成度计算系统 — 参考 Python tkinter 版本
 /// 三大子页: 达成度概览 / 成绩管理 / 报告生成
@@ -42,21 +43,28 @@ class _AchievementPageState extends State<AchievementPage>
       children: [
         Container(
           color: primary.withValues(alpha: 0.05),
-          child: TabBar(
-            controller: _tabController,
-            isScrollable: true,
-            labelColor: primary,
-            unselectedLabelColor: Colors.grey,
-            indicatorColor: primary,
-            tabs: const [
-              Tab(icon: Icon(Icons.analytics_outlined, size: 18), text: '达成度概览'),
-              Tab(icon: Icon(Icons.edit_note, size: 18), text: '成绩管理'),
-              Tab(icon: Icon(Icons.school_outlined, size: 18), text: '平时达成'),
-              Tab(icon: Icon(Icons.science_outlined, size: 18), text: '实验达成'),
-              Tab(icon: Icon(Icons.assignment_outlined, size: 18), text: '考核达成'),
-              Tab(icon: Icon(Icons.calculate_outlined, size: 18), text: '计算过程'),
-              Tab(icon: Icon(Icons.summarize_outlined, size: 18), text: '报告生成'),
-              Tab(icon: Icon(Icons.build_outlined, size: 18), text: '持续改进'),
+          child: Row(
+            children: [
+              Expanded(
+                child: TabBar(
+                  controller: _tabController,
+                  isScrollable: true,
+                  labelColor: primary,
+                  unselectedLabelColor: Colors.grey,
+                  indicatorColor: primary,
+                  tabs: const [
+                    Tab(icon: Icon(Icons.analytics_outlined, size: 18), text: '达成度概览'),
+                    Tab(icon: Icon(Icons.edit_note, size: 18), text: '成绩管理'),
+                    Tab(icon: Icon(Icons.school_outlined, size: 18), text: '平时达成'),
+                    Tab(icon: Icon(Icons.science_outlined, size: 18), text: '实验达成'),
+                    Tab(icon: Icon(Icons.assignment_outlined, size: 18), text: '考核达成'),
+                    Tab(icon: Icon(Icons.calculate_outlined, size: 18), text: '计算过程'),
+                    Tab(icon: Icon(Icons.summarize_outlined, size: 18), text: '报告生成'),
+                    Tab(icon: Icon(Icons.build_outlined, size: 18), text: '持续改进'),
+                  ],
+                ),
+              ),
+              const AgentEntryButton(agentId: 'achievement'),
             ],
           ),
         ),

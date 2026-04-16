@@ -19,6 +19,15 @@ class WorksAgent extends BaseAgent {
         keywords: ['作品', '展示', '评分', '排行', '点赞', '展评', '作品集'],
         capabilities: ['作品查看', '评分标准', '排行榜', '改进建议'],
         requiresAi: true,
+        usageSteps: [
+          '选择 🎨 作品展评官',
+          '了解作品评分标准和提交要求',
+          '获取作品改进建议',
+          '查看排行榜和优秀作品参考',
+        ],
+        classicCases: [
+          AgentCase(title: '作品改进建议', userInput: '我的作品如何提升技术深度分数？', agentReply: '## 提升技术深度建议\n\n1. **引入设计模式**：使用 MVVM 或 Clean Architecture\n2. **添加单元测试**：覆盖核心业务逻辑\n3. **性能优化**：使用 const Widget、懒加载\n4. **跨平台适配**：支持 Android + iOS + Web'),
+        ],
       );
 
   @override

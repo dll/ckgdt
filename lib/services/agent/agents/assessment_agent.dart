@@ -20,6 +20,15 @@ class AssessmentAgent extends BaseAgent {
         keywords: ['考核', '分组', '答辩', '成绩', '评分', '项目', '立项', '贡献'],
         capabilities: ['分组查询', '答辩安排', '成绩统计', '考核指导'],
         requiresAi: true,
+        usageSteps: [
+          '选择 📊 考核助理',
+          '询问分组、答辩或成绩相关问题',
+          '智能体提供考核信息和评分标准',
+          '可查询答辩安排和成绩统计',
+        ],
+        classicCases: [
+          AgentCase(title: '查询评分标准', userInput: '项目答辩的评分标准是什么？', agentReply: '## 项目答辩评分标准\n\n| 维度 | 分值 |\n|------|------|\n| 功能完整性 | 25分 |\n| 技术深度 | 20分 |\n| 跨框架整合 | 25分 |\n| 性能质量 | 15分 |\n| 文档协作 | 15分 |'),
+        ],
       );
 
   @override

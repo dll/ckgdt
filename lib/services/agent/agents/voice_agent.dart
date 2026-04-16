@@ -18,6 +18,16 @@ class VoiceAgent extends BaseAgent {
         priority: 9,
         keywords: ['登录', '退出', '打开', '去', '导航', '你好', '帮我', '跳转', '切换'],
         capabilities: ['语音登录', '退出登录', '页面导航', 'TTS语音回复'],
+        usageSteps: [
+          '点击全局悬浮按钮"助手"或首页"多智能体"',
+          '选择 🎙️ 语音助手（或说出包含"登录""打开"等关键词）',
+          '语音登录：说"登录 206004"（支持中文数字）',
+          '页面导航：说"打开图谱""去测验"等',
+        ],
+        classicCases: [
+          AgentCase(title: '语音登录', userInput: '登录 206004', agentReply: '登录成功！欢迎 刘老师。'),
+          AgentCase(title: '页面导航', userInput: '打开知识图谱', agentReply: '好的，正在打开知识图谱。'),
+        ],
       );
 
   @override

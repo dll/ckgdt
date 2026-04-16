@@ -19,6 +19,16 @@ class GraphAgent extends BaseAgent {
         keywords: ['图谱', '概念', '节点', '关系', '知识点', '知识结构', '脉络', '体系'],
         capabilities: ['生成知识图谱', '扩展概念', '查询节点', '分析关系'],
         requiresAi: true,
+        usageSteps: [
+          '在对话面板中选择 🕸️ 图谱专家',
+          '输入想要生成或查询的知识主题',
+          '智能体返回概念节点和关系结构',
+          '可继续追问扩展或细化图谱内容',
+        ],
+        classicCases: [
+          AgentCase(title: '生成技术图谱', userInput: '帮我生成 Flutter 状态管理的知识图谱', agentReply: '## Flutter 状态管理知识图谱\n\n### 核心概念\n- setState（基础状态管理）\n- Provider（依赖注入）\n- Riverpod（改进版 Provider）\n- Bloc/Cubit（事件驱动）\n\n### 关系\n- setState → Provider（进阶替代）\n- Provider → Riverpod（演进）'),
+          AgentCase(title: '扩展已有图谱', userInput: '在 Android 开发图谱中补充 Jetpack Compose 相关概念', agentReply: '为 Android 图谱补充以下概念：\n- Jetpack Compose（声明式 UI）\n- Composable 函数\n- State hoisting\n- remember/mutableStateOf'),
+        ],
       );
 
   @override

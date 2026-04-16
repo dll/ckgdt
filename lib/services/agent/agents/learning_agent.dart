@@ -20,6 +20,16 @@ class LearningAgent extends BaseAgent {
         keywords: ['学习', '复习', '薄弱', '不懂', '教我', '解释', '什么是', '怎么理解', '讲解'],
         capabilities: ['知识讲解', '薄弱诊断', '学习建议', '进度查询'],
         requiresAi: true,
+        usageSteps: [
+          '选择 📚 学习伙伴',
+          '提出学习问题或请求知识讲解',
+          '智能体结合课程内容给出解答',
+          '可追问薄弱点诊断和复习建议',
+        ],
+        classicCases: [
+          AgentCase(title: '概念讲解', userInput: 'Flutter 中 StatefulWidget 和 StatelessWidget 有什么区别？', agentReply: '## StatefulWidget vs StatelessWidget\n\n**StatelessWidget**：不可变，build() 只依赖构造参数\n**StatefulWidget**：有 State 对象，可通过 setState() 触发重建\n\n**选择原则**：有交互/动态数据用 Stateful，纯展示用 Stateless'),
+          AgentCase(title: '薄弱诊断', userInput: '我哪些知识点比较薄弱？', agentReply: '根据你的测验记录分析：\n- ❌ 第3章 Flutter 布局（正确率 45%）\n- ⚠️ 第2章 Activity 生命周期（正确率 60%）\n- ✅ 第1章 技术体系（正确率 90%）\n\n建议重点复习第3章布局相关内容。'),
+        ],
       );
 
   @override

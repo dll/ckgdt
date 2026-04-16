@@ -20,6 +20,15 @@ class RepoAgent extends BaseAgent {
         keywords: ['仓库', '代码', '提交', 'git', 'gitee', '分支', 'commit', '推送', 'push'],
         capabilities: ['仓库状态', '提交记录', '规范检查', 'Git指导'],
         requiresAi: true,
+        usageSteps: [
+          '选择 📦 仓库管家',
+          '询问 Git 操作或仓库管理问题',
+          '智能体提供 Git 命令和最佳实践',
+          '可查询提交规范和代码审查建议',
+        ],
+        classicCases: [
+          AgentCase(title: 'Git 操作指导', userInput: '如何创建分支并提交代码？', agentReply: '## Git 分支操作\n\n```bash\ngit checkout -b feature/new-feature\ngit add .\ngit commit -m "feat: 添加新功能"\ngit push -u origin feature/new-feature\n```\n\n提交消息格式：`<类型>: <描述>`'),
+        ],
       );
 
   @override

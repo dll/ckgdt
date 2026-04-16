@@ -30,29 +30,32 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
   String? _testResult;
   bool _testSuccess = false;
 
+  // 新增参数
+  double _temperature = 0.7;
+  int _maxTokens = 2048;
+  int _timeout = 60;
+
   final AiConfigDao _configDao = AiConfigDao();
 
-  // ── 快捷模型列表 ──────────────────────────────────────────────────────────
+  // ── 服务商分组 ────────────────────────────────────────────────────────────
 
-  static const _deepseekModels = ['deepseek-chat', 'deepseek-reasoner'];
-  static const _zhipuModels = ['glm-4-flash', 'glm-4', 'glm-4-plus'];
+  static const _domesticIds = [
+    'deepseek', 'zhipu', 'qwen', 'kimi', 'doubao', 'spark', 'hunyuan',
+  ];
+  static const _internationalIds = ['openai', 'claude', 'gemini'];
+  static const _localIds = ['ollama', 'lmstudio', 'custom'];
 
-  List<String> get _quickModels =>
-      _provider == 'zhipu' ? _zhipuModels : _deepseekModels;
+  /// 当前选中的预设
+  ProviderPreset? get _currentPreset {
+    try {
+      return AiConfigModel.providers.firstWhere((p) => p.id == _provider);
+    } catch (_) {
+      return null;
+    }
+  }
 
-  // ── 服务商说明 ────────────────────────────────────────────────────────────
-
-  static const _deepseekInfo = (
-    url: 'https://platform.deepseek.com',
-    desc: 'DeepSeek 开放平台，新用户注册即有免费额度，推荐使用 deepseek-chat 模型。',
-    freeNote: '新用户有免费额度',
-  );
-
-  static const _zhipuInfo = (
-    url: 'https://open.bigmodel.cn',
-    desc: '智谱 AI 开放平台，glm-4-flash 模型对所有用户永久免费，无需充值即可使用。',
-    freeNote: 'glm-4-flash 永久免费',
-  );
+  /// 当前预设的模型列表
+  List<String> get _presetModels => _currentPreset?.models ?? [];
 
   // ── 初始化 ────────────────────────────────────────────────────────────────
 
@@ -79,6 +82,9 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
         _apiKeyController.text = config.apiKey ?? '';
         _modelController.text = config.model;
         _baseUrlController.text = config.baseUrl ?? '';
+        _temperature = config.temperature;
+        _maxTokens = config.maxTokens;
+        _timeout = config.timeout;
         _loading = false;
       });
     } catch (_) {
@@ -89,15 +95,19 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
 
   // ── 切换服务商 ────────────────────────────────────────────────────────────
 
-  void _onProviderChanged(String provider) {
+  void _onProviderChanged(String? provider) {
+    if (provider == null) return;
+    final preset = AiConfigModel.providers.firstWhere(
+      (p) => p.id == provider,
+      orElse: () => AiConfigModel.providers.first,
+    );
     setState(() {
       _provider = provider;
       _testResult = null;
       // 自动填入该服务商默认模型
-      _modelController.text =
-          provider == 'zhipu' ? 'glm-4-flash' : 'deepseek-chat';
-      // 清空自定义地址（使用默认）
-      _baseUrlController.clear();
+      _modelController.text = preset.models.isNotEmpty ? preset.models.first : '';
+      // 自动填入默认地址
+      _baseUrlController.text = preset.baseUrl;
     });
   }
 
@@ -105,7 +115,9 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
 
   Future<void> _testConnection() async {
     final apiKey = _apiKeyController.text.trim();
-    if (apiKey.isEmpty) {
+    // 本地服务商不需要 API Key
+    final isLocal = _localIds.contains(_provider);
+    if (!isLocal && apiKey.isEmpty) {
       _showSnack('请先输入 API Key');
       return;
     }
@@ -124,7 +136,9 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
       setState(() {
         _testing = false;
         _testSuccess = ok;
-        _testResult = ok ? '✅ 连接成功！API Key 有效，模型响应正常。' : '❌ 连接失败，请检查 API Key 和网络。';
+        _testResult = ok
+            ? '✅ 连接成功！API Key 有效，模型响应正常。'
+            : '❌ 连接失败，请检查 API Key 和网络。';
       });
     } catch (e) {
       if (!mounted) return;
@@ -139,17 +153,25 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
   // ── 保存配置 ──────────────────────────────────────────────────────────────
 
   Future<void> _saveInternal({bool silent = false}) async {
+    final preset = _currentPreset;
+    final defaultModel = preset != null && preset.models.isNotEmpty
+        ? preset.models.first
+        : 'deepseek-chat';
+
     final config = AiConfigModel(
       provider: _provider,
       apiKey: _apiKeyController.text.trim().isEmpty
           ? null
           : _apiKeyController.text.trim(),
       model: _modelController.text.trim().isEmpty
-          ? (_provider == 'zhipu' ? 'glm-4-flash' : 'deepseek-chat')
+          ? defaultModel
           : _modelController.text.trim(),
       baseUrl: _baseUrlController.text.trim().isEmpty
           ? null
           : _baseUrlController.text.trim(),
+      temperature: _temperature,
+      maxTokens: _maxTokens,
+      timeout: _timeout,
       updatedAt: DateTime.now().toIso8601String(),
     );
     await _configDao.saveConfig(config);
@@ -187,6 +209,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
     final gradient = AppGradientTheme.of(context).linearGradient;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -214,14 +237,14 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  // ── 顶部说明卡片 ───────────────────────────────────────
-                  _buildInfoCard(primary, gradient),
-                  const SizedBox(height: 20),
-
                   // ── 服务商选择 ─────────────────────────────────────────
                   _sectionTitle('服务商'),
                   const SizedBox(height: 10),
-                  _buildProviderSelector(primary),
+                  _buildProviderDropdown(primary, isDark),
+                  const SizedBox(height: 16),
+
+                  // ── 服务商信息卡片 ─────────────────────────────────────
+                  _buildInfoCard(primary, gradient),
                   const SizedBox(height: 20),
 
                   // ── API Key ────────────────────────────────────────────
@@ -237,11 +260,13 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                   const SizedBox(height: 8),
                   _buildModelField(primary),
                   const SizedBox(height: 10),
-                  _buildModelChips(primary),
-                  const SizedBox(height: 20),
+                  if (_presetModels.isNotEmpty) ...[
+                    _buildModelChips(primary),
+                    const SizedBox(height: 20),
+                  ],
 
                   // ── 高级设置（折叠）────────────────────────────────────
-                  _buildAdvancedSection(primary),
+                  _buildAdvancedSection(primary, isDark),
                   const SizedBox(height: 24),
 
                   // ── 测试连接按钮 ────────────────────────────────────────
@@ -263,10 +288,112 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     );
   }
 
-  // ── 顶部说明卡片 ──────────────────────────────────────────────────────────
+  // ── 服务商下拉选择（分组）──────────────────────────────────────────────────
+
+  Widget _buildProviderDropdown(Color primary, bool isDark) {
+    return DropdownButtonFormField<String>(
+      value: _provider,
+      isExpanded: true,
+      decoration: InputDecoration(
+        prefixIcon: const Icon(Icons.cloud_outlined),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      ),
+      items: [
+        // ── 国内服务商 ──
+        _buildGroupHeader('国内服务商'),
+        ..._buildProviderItems(_domesticIds),
+        // ── 国际服务商 ──
+        _buildGroupHeader('国际服务商'),
+        ..._buildProviderItems(_internationalIds),
+        // ── 本地部署 ──
+        _buildGroupHeader('本地部署'),
+        ..._buildProviderItems(_localIds),
+      ],
+      onChanged: _onProviderChanged,
+      selectedItemBuilder: (context) {
+        // 构建所有项（包括分组头）的选中态显示
+        final allItems = <Widget>[];
+        // 国内
+        allItems.add(const SizedBox.shrink()); // 分组头占位
+        for (final id in _domesticIds) {
+          final preset = AiConfigModel.providers.firstWhere((p) => p.id == id);
+          allItems.add(Text(preset.name));
+        }
+        // 国际
+        allItems.add(const SizedBox.shrink());
+        for (final id in _internationalIds) {
+          final preset = AiConfigModel.providers.firstWhere((p) => p.id == id);
+          allItems.add(Text(preset.name));
+        }
+        // 本地
+        allItems.add(const SizedBox.shrink());
+        for (final id in _localIds) {
+          final preset = AiConfigModel.providers.firstWhere((p) => p.id == id);
+          allItems.add(Text(preset.name));
+        }
+        return allItems;
+      },
+    );
+  }
+
+  DropdownMenuItem<String> _buildGroupHeader(String label) {
+    return DropdownMenuItem<String>(
+      enabled: false,
+      value: null,
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: Colors.grey.shade500,
+        ),
+      ),
+    );
+  }
+
+  List<DropdownMenuItem<String>> _buildProviderItems(List<String> ids) {
+    return ids.map((id) {
+      final preset = AiConfigModel.providers.firstWhere((p) => p.id == id);
+      return DropdownMenuItem<String>(
+        value: id,
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                preset.name,
+                style: const TextStyle(fontSize: 14),
+              ),
+            ),
+            if (preset.freeNote != null)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  preset.freeNote!,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.green.shade700,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    }).toList();
+  }
+
+  // ── 服务商信息卡片 ────────────────────────────────────────────────────────
 
   Widget _buildInfoCard(Color primary, LinearGradient gradient) {
-    final info = _provider == 'zhipu' ? _zhipuInfo : _deepseekInfo;
+    final preset = _currentPreset;
+    if (preset == null) return const SizedBox.shrink();
 
     return Container(
       decoration: BoxDecoration(
@@ -282,82 +409,62 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
               children: [
                 const Icon(Icons.info_outline, color: Colors.white, size: 20),
                 const SizedBox(width: 8),
-                Text(
-                  _provider == 'zhipu' ? '智谱清言 GLM' : 'DeepSeek',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.25),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                Expanded(
                   child: Text(
-                    info.freeNote,
+                    preset.name,
                     style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500),
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
+                if (preset.freeNote != null)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      preset.freeNote!,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500),
+                    ),
+                  ),
               ],
             ),
             const SizedBox(height: 8),
             Text(
-              info.desc,
+              preset.description,
               style: const TextStyle(color: Colors.white, fontSize: 13),
             ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                const Icon(Icons.link, color: Colors.white70, size: 14),
-                const SizedBox(width: 4),
-                Text(
-                  info.url,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                    decoration: TextDecoration.underline,
-                    decorationColor: Colors.white70,
+            if (preset.baseUrl.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  const Icon(Icons.link, color: Colors.white70, size: 14),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      preset.baseUrl,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                        decoration: TextDecoration.underline,
+                        decorationColor: Colors.white70,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
           ],
         ),
-      ),
-    );
-  }
-
-  // ── 服务商 SegmentedButton ────────────────────────────────────────────────
-
-  Widget _buildProviderSelector(Color primary) {
-    return SegmentedButton<String>(
-      segments: const [
-        ButtonSegment(
-          value: 'deepseek',
-          label: Text('DeepSeek'),
-          icon: Icon(Icons.rocket_launch_outlined, size: 18),
-        ),
-        ButtonSegment(
-          value: 'zhipu',
-          label: Text('智谱 GLM'),
-          icon: Icon(Icons.psychology_outlined, size: 18),
-        ),
-      ],
-      selected: {_provider},
-      onSelectionChanged: (selected) {
-        if (selected.isNotEmpty) _onProviderChanged(selected.first);
-      },
-      style: SegmentedButton.styleFrom(
-        selectedBackgroundColor: primary.withValues(alpha: 0.12),
-        selectedForegroundColor: primary,
       ),
     );
   }
@@ -365,7 +472,11 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
   // ── API Key 提示 ──────────────────────────────────────────────────────────
 
   Widget _buildApiKeyHint(Color primary) {
-    final info = _provider == 'zhipu' ? _zhipuInfo : _deepseekInfo;
+    final isLocal = _localIds.contains(_provider);
+    final hintText = isLocal
+        ? '本地部署无需 API Key，可留空'
+        : '前往服务商官网申请 API Key';
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -375,11 +486,15 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
       ),
       child: Row(
         children: [
-          Icon(Icons.open_in_new, size: 14, color: primary),
+          Icon(
+            isLocal ? Icons.info_outline : Icons.open_in_new,
+            size: 14,
+            color: primary,
+          ),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
-              '前往 ${info.url} 申请 API Key',
+              hintText,
               style: TextStyle(
                   fontSize: 12, color: primary, fontWeight: FontWeight.w500),
             ),
@@ -400,7 +515,9 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
         prefixIcon: const Icon(Icons.key_outlined),
         suffixIcon: IconButton(
           icon: Icon(
-            _obscureKey ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+            _obscureKey
+                ? Icons.visibility_off_outlined
+                : Icons.visibility_outlined,
           ),
           tooltip: _obscureKey ? '显示 Key' : '隐藏 Key',
           onPressed: () => setState(() => _obscureKey = !_obscureKey),
@@ -417,10 +534,15 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
   // ── 模型输入框 ────────────────────────────────────────────────────────────
 
   Widget _buildModelField(Color primary) {
+    final preset = _currentPreset;
+    final hintModel = preset != null && preset.models.isNotEmpty
+        ? preset.models.first
+        : 'model-name';
+
     return TextFormField(
       controller: _modelController,
       decoration: InputDecoration(
-        hintText: _provider == 'zhipu' ? 'glm-4-flash' : 'deepseek-chat',
+        hintText: hintModel,
         prefixIcon: const Icon(Icons.memory_outlined),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         contentPadding:
@@ -437,15 +559,17 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     return Wrap(
       spacing: 8,
       runSpacing: 6,
-      children: _quickModels.map((m) {
+      children: _presetModels.map((m) {
         final selected = _modelController.text.trim() == m;
-        final isFree = m == 'glm-4-flash';
+        // 标记免费模型
+        final isFree = m == 'glm-4-flash' ||
+            m == 'hunyuan-lite' ||
+            _localIds.contains(_provider);
         return GestureDetector(
           onTap: () => setState(() => _modelController.text = m),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: selected ? primary : primary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(20),
@@ -462,8 +586,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                   style: TextStyle(
                     fontSize: 13,
                     color: selected ? Colors.white : primary,
-                    fontWeight:
-                        selected ? FontWeight.w600 : FontWeight.normal,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
                   ),
                 ),
                 if (isFree) ...[
@@ -497,7 +620,10 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
 
   // ── 高级设置（折叠）──────────────────────────────────────────────────────
 
-  Widget _buildAdvancedSection(Color primary) {
+  Widget _buildAdvancedSection(Color primary, bool isDark) {
+    final preset = _currentPreset;
+    final defaultUrl = preset?.baseUrl ?? '';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -505,10 +631,9 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
         GestureDetector(
           onTap: () => setState(() => _showAdvanced = !_showAdvanced),
           child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
@@ -523,7 +648,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                   '高级设置',
                   style: TextStyle(
                     fontWeight: FontWeight.w500,
-                    color: Colors.grey.shade700,
+                    color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
                   ),
                 ),
                 const Spacer(),
@@ -548,43 +673,42 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 默认地址提示
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.shade50,
-                          border:
-                              Border.all(color: Colors.amber.shade200),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(Icons.info_outline,
-                                size: 16, color: Colors.amber),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                '默认地址：${_provider == 'zhipu' ? AiConfigModel.zhipuDefaultUrl : AiConfigModel.deepseekDefaultUrl}\n'
-                                '留空则使用默认地址，通常无需修改。',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.amber.shade900,
+                      // ── 接口地址 ──────────────────────────────────────
+                      if (defaultUrl.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade50,
+                            border: Border.all(color: Colors.amber.shade200),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(Icons.info_outline,
+                                  size: 16, color: Colors.amber),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  '默认地址：$defaultUrl\n留空则使用默认地址，通常无需修改。',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.amber.shade900,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
                       const SizedBox(height: 10),
                       _sectionTitle('自定义接口地址（可选）'),
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: _baseUrlController,
                         decoration: InputDecoration(
-                          hintText: _provider == 'zhipu'
-                              ? AiConfigModel.zhipuDefaultUrl
-                              : AiConfigModel.deepseekDefaultUrl,
+                          hintText: defaultUrl.isNotEmpty
+                              ? defaultUrl
+                              : 'https://your-api-url.com/v1',
                           prefixIcon: const Icon(Icons.link_outlined),
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10)),
@@ -596,19 +720,136 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                           suffixIcon: _baseUrlController.text.isNotEmpty
                               ? IconButton(
                                   icon: const Icon(Icons.clear, size: 18),
-                                  onPressed: () =>
-                                      setState(() => _baseUrlController.clear()),
+                                  onPressed: () => setState(
+                                      () => _baseUrlController.clear()),
                                 )
                               : null,
                         ),
                         keyboardType: TextInputType.url,
                         onChanged: (_) => setState(() {}),
                       ),
+
+                      const SizedBox(height: 20),
+
+                      // ── Temperature ───────────────────────────────────
+                      _sectionTitle('Temperature（创造性）'),
+                      const SizedBox(height: 4),
+                      _buildSliderRow(
+                        value: _temperature,
+                        min: 0.0,
+                        max: 2.0,
+                        divisions: 20,
+                        label: _temperature.toStringAsFixed(1),
+                        onChanged: (v) =>
+                            setState(() => _temperature = v),
+                        primary: primary,
+                        hint: '值越高回复越有创造性，越低越稳定',
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // ── Max Tokens ────────────────────────────────────
+                      _sectionTitle('Max Tokens（最大输出长度）'),
+                      const SizedBox(height: 4),
+                      _buildSliderRow(
+                        value: _maxTokens.toDouble(),
+                        min: 256,
+                        max: 8192,
+                        divisions: 31, // (8192-256)/256 ≈ 31
+                        label: '$_maxTokens',
+                        onChanged: (v) =>
+                            setState(() => _maxTokens = v.round()),
+                        primary: primary,
+                        hint: '单次回复的最大 token 数',
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // ── Timeout ───────────────────────────────────────
+                      _sectionTitle('Timeout（超时时间）'),
+                      const SizedBox(height: 4),
+                      _buildSliderRow(
+                        value: _timeout.toDouble(),
+                        min: 15,
+                        max: 120,
+                        divisions: 21, // (120-15)/5 = 21
+                        label: '$_timeout 秒',
+                        onChanged: (v) =>
+                            setState(() => _timeout = v.round()),
+                        primary: primary,
+                        hint: '请求超时时间（秒）',
+                      ),
                     ],
                   ),
                 )
               : const SizedBox.shrink(),
         ),
+      ],
+    );
+  }
+
+  // ── 滑块行 ────────────────────────────────────────────────────────────────
+
+  Widget _buildSliderRow({
+    required double value,
+    required double min,
+    required double max,
+    required int divisions,
+    required String label,
+    required ValueChanged<double> onChanged,
+    required Color primary,
+    String? hint,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: SliderTheme(
+                data: SliderThemeData(
+                  activeTrackColor: primary,
+                  inactiveTrackColor: primary.withValues(alpha: 0.15),
+                  thumbColor: primary,
+                  overlayColor: primary.withValues(alpha: 0.12),
+                  valueIndicatorColor: primary,
+                  valueIndicatorTextStyle: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                  ),
+                ),
+                child: Slider(
+                  value: value,
+                  min: min,
+                  max: max,
+                  divisions: divisions,
+                  label: label,
+                  onChanged: onChanged,
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 64,
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: primary,
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (hint != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 16),
+            child: Text(
+              hint,
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+            ),
+          ),
       ],
     );
   }
@@ -621,8 +862,8 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
           ? SizedBox(
               width: 18,
               height: 18,
-              child: CircularProgressIndicator(
-                  strokeWidth: 2, color: primary),
+              child:
+                  CircularProgressIndicator(strokeWidth: 2, color: primary),
             )
           : const Icon(Icons.network_check_outlined),
       label: Text(_testing ? '测试中…' : '测试连接'),
@@ -630,8 +871,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
         foregroundColor: primary,
         side: BorderSide(color: primary),
         minimumSize: const Size(double.infinity, 50),
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       onPressed: _testing ? null : _testConnection,
     );
@@ -644,13 +884,10 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
       duration: const Duration(milliseconds: 200),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _testSuccess
-            ? Colors.green.shade50
-            : Colors.red.shade50,
+        color: _testSuccess ? Colors.green.shade50 : Colors.red.shade50,
         border: Border.all(
-          color: _testSuccess
-              ? Colors.green.shade300
-              : Colors.red.shade300,
+          color:
+              _testSuccess ? Colors.green.shade300 : Colors.red.shade300,
         ),
         borderRadius: BorderRadius.circular(10),
       ),
@@ -659,7 +896,8 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
         children: [
           Icon(
             _testSuccess ? Icons.check_circle : Icons.error_outline,
-            color: _testSuccess ? Colors.green.shade600 : Colors.red.shade600,
+            color:
+                _testSuccess ? Colors.green.shade600 : Colors.red.shade600,
             size: 20,
           ),
           const SizedBox(width: 10),
@@ -695,8 +933,8 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
             : const Icon(Icons.save_outlined),
         label: Text(
           _saving ? '保存中…' : '保存配置',
-          style: const TextStyle(
-              fontSize: 16, fontWeight: FontWeight.w600),
+          style:
+              const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
         style: FilledButton.styleFrom(
           shape: RoundedRectangleBorder(

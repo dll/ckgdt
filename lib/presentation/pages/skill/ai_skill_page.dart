@@ -7,10 +7,18 @@ import '../../../core/constants/app_theme.dart';
 import '../../../services/ai_service.dart';
 import '../../../services/plantuml_service.dart';
 import '../../../data/local/skill_dao.dart';
+import '../../../data/local/ai_history_dao.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 技能定义
 // ═══════════════════════════════════════════════════════════════════════════════
+
+class _SkillCase {
+  final String title;
+  final String userInput;
+  final String resultSummary;
+  const _SkillCase({required this.title, required this.userInput, required this.resultSummary});
+}
 
 class _SkillDef {
   final String id;
@@ -22,6 +30,8 @@ class _SkillDef {
   final List<String> features;
   final List<String> examples;
   final String systemPrompt;
+  final List<String> usageSteps;
+  final List<_SkillCase> classicCases;
 
   const _SkillDef({
     required this.id,
@@ -33,6 +43,8 @@ class _SkillDef {
     required this.features,
     required this.examples,
     required this.systemPrompt,
+    this.usageSteps = const [],
+    this.classicCases = const [],
   });
 }
 
@@ -60,6 +72,17 @@ const _skills = <_SkillDef>[
         '3. 推荐学习顺序\n'
         '4. 图谱应用建议\n'
         '请用中文回答，结构清晰。',
+    usageSteps: [
+      '进入 AI 技能中心，选择"图谱技能"',
+      '在"使用"页面输入知识主题（如"Flutter 状态管理"）',
+      'AI 自动分析主题，生成概念节点和关系结构',
+      '查看生成结果，可复制或保存为 Markdown 文件',
+      '将图谱方案导入系统知识图谱模块使用',
+    ],
+    classicCases: [
+      _SkillCase(title: 'Flutter 跨平台技术体系', userInput: 'Flutter 跨平台开发技术体系', resultSummary: '生成 12 个核心概念节点（Widget/State/BuildContext 等），建立包含、依赖、关联三类关系 18 条，标注初/中/高级难度。'),
+      _SkillCase(title: 'Android 四大组件', userInput: 'Android 四大组件知识图谱', resultSummary: '生成 Activity/Service/BroadcastReceiver/ContentProvider 四大核心节点及其子概念共 15 个，含生命周期、Intent 通信等关系。'),
+    ],
   ),
   _SkillDef(
     id: 'path',
@@ -84,6 +107,17 @@ const _skills = <_SkillDef>[
         '3. 里程碑检查点（每阶段完成后应达到的能力）\n'
         '4. 学习建议和注意事项\n'
         '请用中文回答，适合大学生水平。',
+    usageSteps: [
+      '进入 AI 技能中心，选择"路径技能"',
+      '输入学习目标和当前水平（如"零基础学 Flutter"）',
+      'AI 分析知识依赖，设计阶梯式学习路径',
+      '查看各阶段目标、时长和推荐资源',
+      '保存路径方案，按计划执行学习',
+    ],
+    classicCases: [
+      _SkillCase(title: '零基础学 Flutter', userInput: '零基础学 Flutter 到独立开发 App', resultSummary: '规划 12 周学习路径，分 4 阶段：Dart 基础(2周)→Flutter 入门(3周)→进阶组件(4周)→实战项目(3周)，每阶段含具体学习目标和练习项目。'),
+      _SkillCase(title: 'Android 转鸿蒙', userInput: 'Android 开发者转型鸿蒙开发', resultSummary: '规划 8 周转型路径，重点对比 Android/HarmonyOS 差异，涵盖 ArkTS 语言、ArkUI 框架、分布式能力等核心模块。'),
+    ],
   ),
   _SkillDef(
     id: 'learning',
@@ -109,6 +143,17 @@ const _skills = <_SkillDef>[
         '4. 常见易错点（3-5个）\n'
         '5. 练习思考题（2-3题）\n'
         '请用中文回答，代码使用 Dart/Flutter。',
+    usageSteps: [
+      '进入 AI 技能中心，选择"学习技能"',
+      '输入要学习的知识点（如"Flutter Widget 生命周期"）',
+      'AI 生成结构化学习笔记，含概念解释和代码示例',
+      '查看对比表格、易错点和练习题',
+      '保存笔记用于课前预习或考前复习',
+    ],
+    classicCases: [
+      _SkillCase(title: 'Widget 生命周期', userInput: 'Flutter Widget 生命周期', resultSummary: '生成 StatelessWidget/StatefulWidget 生命周期对比笔记，含 initState→build→dispose 流程图解、6 个代码示例、5 个易错点。'),
+      _SkillCase(title: 'Dart 异步编程', userInput: 'Dart 异步编程 Future/Stream', resultSummary: '生成 Future/Stream/async-await 对比笔记，含 then 链式调用、StreamBuilder 使用、错误处理等 8 个代码示例。'),
+    ],
   ),
   _SkillDef(
     id: 'quiz',
@@ -133,6 +178,17 @@ const _skills = <_SkillDef>[
         '- 正确答案标记\n'
         '- 简短解析（1-2句话）\n'
         '请生成 5 道题，难度从易到难排列，用中文出题。',
+    usageSteps: [
+      '进入 AI 技能中心，选择"测验技能"',
+      '输入出题范围（如"第3章 Flutter 混合开发"）',
+      'AI 自动生成 5 道四选一选择题',
+      '每题附正确答案和解析说明',
+      '可保存题目，后续导入系统题库',
+    ],
+    classicCases: [
+      _SkillCase(title: 'Flutter 混合开发', userInput: '第3章 Flutter 混合开发', resultSummary: '生成 5 道选择题，覆盖 Hot Reload 原理、Widget 树构建、状态管理选择、路由导航、平台通道等知识点，难度从易到难。'),
+      _SkillCase(title: 'Dart 面向对象', userInput: 'Dart 面向对象编程', resultSummary: '生成 5 道选择题，涵盖类继承、Mixin、抽象类、工厂构造函数、泛型等核心概念，每题含详细解析。'),
+    ],
   ),
   _SkillDef(
     id: 'repo',
@@ -160,6 +216,16 @@ const _skills = <_SkillDef>[
         '5. 安全检查（数据存储、网络请求、权限管理）\n'
         '6. 改进建议（按优先级排序的 Top 5）\n'
         '请用中文回答，专业但易懂。',
+    usageSteps: [
+      '进入 AI 技能中心，选择"仓库技能"',
+      '输入项目描述（技术栈、功能、架构）',
+      'AI 生成代码仓库分析报告',
+      '查看架构评估、代码质量和优化建议',
+      '保存报告用于项目改进或教学评估',
+    ],
+    classicCases: [
+      _SkillCase(title: 'Flutter 知识图谱 App', userInput: 'Flutter 知识图谱 App（sqflite + CustomPainter）', resultSummary: '生成架构评估报告：5 层分层合理，CustomPainter 性能优化建议 3 条，数据库索引优化 2 条，Top 5 改进建议。'),
+    ],
   ),
   _SkillDef(
     id: 'assessment',
@@ -186,6 +252,16 @@ const _skills = <_SkillDef>[
         '4. 评分流程和注意事项\n'
         '5. 与课程目标的达成度映射\n'
         '请用中文回答，适合高校课程使用。',
+    usageSteps: [
+      '进入 AI 技能中心，选择"考核技能"',
+      '输入考核主题和教学目标',
+      'AI 设计多维度考核方案',
+      '查看评分标准、权重分配和等级描述',
+      '保存方案用于课程考核实施',
+    ],
+    classicCases: [
+      _SkillCase(title: '期末项目考核', userInput: '移动应用开发期末项目考核', resultSummary: '设计 6 维考核方案：功能完整性(25%)、代码质量(20%)、UI 设计(15%)、技术难度(15%)、文档规范(15%)、答辩表现(10%)，每维度含 4 级评分标准。'),
+    ],
   ),
   _SkillDef(
     id: 'lab',
@@ -212,6 +288,16 @@ const _skills = <_SkillDef>[
         '5. 验收标准（必做项 + 选做加分项）\n'
         '6. 常见问题 FAQ（3-5个）\n'
         '请用中文回答，代码使用 Dart/Flutter。',
+    usageSteps: [
+      '进入 AI 技能中心，选择"实验技能"',
+      '输入实验主题（如"SQLite 数据库 CRUD 实验"）',
+      'AI 设计完整实验任务方案',
+      '查看实验步骤、代码框架和验收标准',
+      '保存方案用于实验教学',
+    ],
+    classicCases: [
+      _SkillCase(title: 'SQLite CRUD 实验', userInput: 'SQLite 数据库 CRUD 实验', resultSummary: '设计 4 学时实验：含 sqflite 配置、表创建、增删改查 4 步操作指导，每步含关键代码片段，验收标准 5 项 + 加分项 2 项。'),
+    ],
   ),
   _SkillDef(
     id: 'works',
@@ -239,6 +325,16 @@ const _skills = <_SkillDef>[
         '6. 开发计划（4周里程碑）\n'
         '7. 答辩展示建议\n'
         '请用中文回答，面向大学生水平。',
+    usageSteps: [
+      '进入 AI 技能中心，选择"作品技能"',
+      '输入项目创意或方向（如"校园二手交易 App"）',
+      'AI 生成完整项目开发指南',
+      '查看需求分析、技术选型和开发计划',
+      '保存指南，按里程碑推进开发',
+    ],
+    classicCases: [
+      _SkillCase(title: '校园二手交易 App', userInput: '校园二手交易 App', resultSummary: '生成完整开发指南：6 个核心功能模块、Flutter + Firebase 技术选型、5 张数据库表设计、4 周开发里程碑、答辩展示建议。'),
+    ],
   ),
   _SkillDef(
     id: 'achievement',
@@ -266,6 +362,16 @@ const _skills = <_SkillDef>[
         '5. 持续改进措施（CQI，3-5条具体建议）\n'
         '6. 教学优化方案（下一轮教学调整建议）\n'
         '请用中文回答，符合工程教育认证标准。',
+    usageSteps: [
+      '进入 AI 技能中心，选择"达成技能"',
+      '输入课程信息和学生表现数据描述',
+      'AI 生成 OBE 达成度分析报告',
+      '查看各目标达成情况和薄弱环节诊断',
+      '保存报告用于持续改进（CQI）',
+    ],
+    classicCases: [
+      _SkillCase(title: '移动开发课程达成度', userInput: '移动应用开发课程达成度分析', resultSummary: '生成 5 个课程目标的达成度分析：含评价方法矩阵、计算公式模板、3 个薄弱环节诊断、5 条 CQI 改进措施。'),
+    ],
   ),
 ];
 
@@ -467,6 +573,7 @@ class _AiSkillPageState extends State<AiSkillPage>
 
   final _aiService = AiService();
   final _skillDao = SkillDao();
+  final _historyDao = AiHistoryDao();
   final _inputController = TextEditingController();
 
   bool _loading = false;
@@ -517,6 +624,21 @@ class _AiSkillPageState extends State<AiSkillPage>
         systemPrompt: _skill.systemPrompt,
       );
       if (mounted) setState(() => _result = reply);
+
+      // 保存到聊天历史
+      final sessionId = 'skill_${_skill.id}_${DateTime.now().millisecondsSinceEpoch}';
+      _historyDao.saveMessage(
+        sessionId: sessionId,
+        skillId: _skill.id,
+        role: 'user',
+        content: topic,
+      ).catchError((_) => 0);
+      _historyDao.saveMessage(
+        sessionId: sessionId,
+        skillId: _skill.id,
+        role: 'assistant',
+        content: reply,
+      ).catchError((_) => 0);
     } catch (e) {
       if (mounted) {
         setState(() => _result = '❌ 生成失败：$e');
@@ -728,6 +850,130 @@ class _AiSkillPageState extends State<AiSkillPage>
               );
             }).toList(),
           ),
+
+          // 使用步骤
+          if (_skill.usageSteps.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _sectionTitle('使用步骤'),
+            const SizedBox(height: 8),
+            Card(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: _skill.usageSteps.asMap().entries.map((entry) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: _skill.color.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${entry.key + 1}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: _skill.color,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(entry.value, style: const TextStyle(fontSize: 13, height: 1.4)),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          ],
+
+          // 经典案例
+          if (_skill.classicCases.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _sectionTitle('经典案例'),
+            const SizedBox(height: 8),
+            ..._skill.classicCases.map((c) {
+              return Card(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ExpansionTile(
+                  leading: Icon(Icons.lightbulb, color: _skill.color, size: 20),
+                  title: Text(c.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  children: [
+                    // 用户输入
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('输入示例', style: TextStyle(fontSize: 11, color: Colors.grey[500], fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 4),
+                          Text(c.userInput, style: const TextStyle(fontSize: 13)),
+                        ],
+                      ),
+                    ),
+                    // 输出摘要
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('生成结果摘要', style: TextStyle(fontSize: 11, color: Colors.grey[500], fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 4),
+                          Text(c.resultSummary, style: const TextStyle(fontSize: 13, height: 1.4)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // 试一试按钮
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          _inputController.text = c.userInput;
+                          _tabController.animateTo(1);
+                        },
+                        icon: const Icon(Icons.play_arrow, size: 16),
+                        label: const Text('试一试', style: TextStyle(fontSize: 12)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: _skill.color,
+                          side: BorderSide(color: _skill.color.withValues(alpha: 0.5)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+
           const SizedBox(height: 16),
 
           // 快速开始按钮
