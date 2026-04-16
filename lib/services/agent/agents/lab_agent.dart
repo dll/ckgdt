@@ -20,6 +20,15 @@ class LabAgent extends BaseAgent {
         keywords: ['实验', '任务', '提交', '截止', '报告', '实验报告', 'lab'],
         capabilities: ['实验任务', '提交状态', '截止提醒', '实验指导'],
         requiresAi: true,
+        usageSteps: [
+          '选择 🔬 实验助手',
+          '查询实验任务列表或截止日期',
+          '了解实验要求和提交规范',
+          '获取实验指导和常见问题解答',
+        ],
+        classicCases: [
+          AgentCase(title: '查看实验任务', userInput: '最近有哪些实验任务？', agentReply: '## 当前实验任务\n\n1. **实验3：Flutter UI 开发** — 截止 4月20日\n   - 要求：实现一个包含列表和详情页的应用\n2. **实验4：状态管理** — 截止 5月5日\n   - 要求：使用 Provider 管理应用状态'),
+        ],
       );
 
   @override

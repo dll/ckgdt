@@ -5,6 +5,7 @@ import '../../../services/auth_service.dart';
 import '../../../services/settings_service.dart';
 import '../materials/ai_settings_page.dart';
 import '../settings/voice_settings_page.dart';
+import '../settings/ai_data_page.dart';
 import '../feedback/feedback_manage_page.dart';
 import '../feedback/feedback_dialog.dart';
 import '../feedback/ai_help_dialog.dart';
@@ -140,6 +141,16 @@ class _SettingsPageState extends State<SettingsPage> {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const AiSettingsPage()),
+            ),
+          ),
+          _buildMenuItem(
+            context,
+            icon: Icons.analytics,
+            title: 'AI 数据管理',
+            subtitle: '对话历史、使用统计、数据清理',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AiDataPage()),
             ),
           ),
           _buildMenuItem(

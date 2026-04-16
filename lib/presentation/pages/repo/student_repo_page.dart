@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/course_resource_service.dart';
+import '../../widgets/agent_entry_button.dart';
 
 /// 学生仓库页面 — 学生专属视图
 ///
@@ -186,11 +187,18 @@ class _StudentRepoPageState extends State<StudentRepoPage>
       children: [
         Material(
           color: Theme.of(context).colorScheme.surface,
-          child: TabBar(
-            controller: _tabController,
-            tabs: const [
-              Tab(icon: Icon(Icons.folder_special, size: 18), text: '我的项目'),
-              Tab(icon: Icon(Icons.rule_folder, size: 18), text: '提交规范'),
+          child: Row(
+            children: [
+              Expanded(
+                child: TabBar(
+                  controller: _tabController,
+                  tabs: const [
+                    Tab(icon: Icon(Icons.folder_special, size: 18), text: '我的项目'),
+                    Tab(icon: Icon(Icons.rule_folder, size: 18), text: '提交规范'),
+                  ],
+                ),
+              ),
+              const AgentEntryButton(agentId: 'repo'),
             ],
           ),
         ),

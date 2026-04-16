@@ -5,6 +5,7 @@ import '../../../data/local/wrong_answer_dao.dart';
 import '../../../data/models/question_model.dart';
 import '../../../data/models/quiz_result_model.dart';
 import '../../../services/auth_service.dart';
+import '../../widgets/agent_entry_button.dart';
 import '../admin/question_manage_page.dart';
 import '../analytics/learning_analytics_page.dart';
 import 'wrong_answers_page.dart';
@@ -253,7 +254,10 @@ class _QuizPageState extends State<QuizPage> {
     if (widget.embedded) return body;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('章节测验')),
+      appBar: AppBar(
+        title: const Text('章节测验'),
+        actions: const [AgentEntryButton(agentId: 'quiz')],
+      ),
       body: body,
     );
   }

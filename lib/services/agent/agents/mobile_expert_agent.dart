@@ -32,6 +32,15 @@ class MobileExpertAgent extends BaseAgent {
         ],
         capabilities: ['技术解答', '代码示例', '技术对比', '最佳实践'],
         requiresAi: true,
+        usageSteps: [
+          '选择 📱 移动专家',
+          '提出移动开发技术问题',
+          '智能体给出专业解答和代码示例',
+          '可请求不同技术栈的对比分析',
+        ],
+        classicCases: [
+          AgentCase(title: '技术栈对比', userInput: 'Flutter 和 React Native 哪个更适合新项目？', agentReply: '## Flutter vs React Native 对比\n\n| 维度 | Flutter | React Native |\n|------|---------|---------------|\n| 语言 | Dart | JavaScript/TS |\n| 渲染 | 自绘引擎 | 原生组件桥接 |\n| 性能 | 接近原生 | 略低（JS桥接） |\n| 生态 | 快速增长 | 成熟丰富 |\n| 热重载 | ✅ 优秀 | ✅ 良好 |\n\n**建议**：新项目优先 Flutter（性能好、UI 一致性强）'),
+        ],
       );
 
   @override

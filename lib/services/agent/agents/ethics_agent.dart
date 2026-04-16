@@ -32,6 +32,15 @@ class EthicsAgent extends BaseAgent {
         ],
         capabilities: ['思政教育', '法规解读', '伦理讨论', '安全规范'],
         requiresAi: true,
+        usageSteps: [
+          '选择 🏛️ 思政伦理',
+          '提出思政、伦理、法规相关问题',
+          '智能体结合移动开发实际案例解答',
+          '了解相关法律法规和职业道德规范',
+        ],
+        classicCases: [
+          AgentCase(title: '隐私保护法规', userInput: '移动应用开发需要遵守哪些隐私法规？', agentReply: '## 移动应用隐私法规\n\n**国内法规**：\n1. 《个人信息保护法》— 收集个人信息需明示同意\n2. 《数据安全法》— 数据分类分级保护\n3. 《网络安全法》— 实名制、数据本地化\n\n**开发实践**：\n- 权限最小化原则\n- 隐私政策弹窗\n- 数据加密存储\n- 用户数据可删除'),
+        ],
       );
 
   @override

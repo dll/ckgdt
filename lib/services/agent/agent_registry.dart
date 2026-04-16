@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'agent_model.dart';
 import 'base_agent.dart';
+import '../../data/local/ai_history_dao.dart';
 import 'agents/voice_agent.dart';
 import 'agents/graph_agent.dart';
 import 'agents/path_agent.dart';
@@ -28,6 +29,7 @@ class AgentRegistry {
   AgentRegistry._();
 
   final Map<String, BaseAgent> _agents = {};
+  final AiHistoryDao _historyDao = AiHistoryDao();
   AgentSession _session = AgentSession();
   bool _initialized = false;
 
@@ -107,11 +109,17 @@ class AgentRegistry {
       onAgentSwitch?.call(agent.config.id);
     }
 
+    // 保存用户消息到历史
+    _saveToHistory(agent.config.id, 'user', userMessage);
+
     // 智能体处理消息
     try {
       final reply = await agent.handleMessage(userMessage, _session);
       _session.messages.add(reply);
       onMessage?.call(reply);
+
+      // 保存智能体回复到历史
+      _saveToHistory(agent.config.id, 'assistant', reply.content);
 
       // 如果有动作，通知 UI 执行
       if (reply.action != null) {
@@ -195,5 +203,18 @@ class AgentRegistry {
           '比如："帮我出几道测验题"、"打开知识图谱"、"我哪里比较薄弱"...\n\n'
           '也可以点击下方的智能体标签，直接和特定专家对话。',
     );
+  }
+
+  /// 异步保存消息到历史（静默失败）
+  void _saveToHistory(String agentId, String role, String content) {
+    _historyDao.saveMessage(
+      sessionId: _session.id,
+      agentId: agentId,
+      role: role,
+      content: content,
+    ).catchError((e) {
+      debugPrint('AgentRegistry: 保存历史失败: $e');
+      return 0;
+    });
   }
 }
