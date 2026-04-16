@@ -280,6 +280,17 @@ class SyncService {
       whereArgs: [userId],
     );
 
+    // 问题反馈
+    List<Map<String, dynamic>> feedbackList = [];
+    try {
+      feedbackList = await db.query(
+        'feedback',
+        where: 'user_id = ?',
+        whereArgs: [userId],
+        orderBy: 'created_at DESC',
+      );
+    } catch (_) {} // 表可能不存在
+
     return {
       'version': '1.0',
       'user_id': userId,
@@ -297,6 +308,9 @@ class SyncService {
           .map((r) => Map<String, dynamic>.from(r)..remove('id'))
           .toList(),
       'favorites': favorites
+          .map((r) => Map<String, dynamic>.from(r)..remove('id'))
+          .toList(),
+      'feedback': feedbackList
           .map((r) => Map<String, dynamic>.from(r)..remove('id'))
           .toList(),
     };
@@ -555,6 +569,26 @@ class SyncService {
       }
     }
 
+    // 导入问题反馈
+    final feedbackList = data['feedback'] as List?;
+    if (feedbackList != null && feedbackList.isNotEmpty) {
+      try {
+        await db.delete('feedback',
+            where: 'user_id = ?', whereArgs: [userId]);
+        for (final r in feedbackList) {
+          try {
+            final row = Map<String, dynamic>.from(r as Map);
+            row.remove('id');
+            row['user_id'] = userId;
+            await db.insert('feedback', row);
+            count++;
+          } catch (e) {
+            debugPrint('SyncService: 导入 feedback 失败: $e');
+          }
+        }
+      } catch (_) {} // feedback 表可能不存在
+    }
+
     return count;
   }
 
@@ -592,6 +626,7 @@ class SyncService {
             'record_count':
                 (data['learning_records'] as List?)?.length ?? 0,
             'wrong_count': (data['wrong_answers'] as List?)?.length ?? 0,
+            'feedback_count': (data['feedback'] as List?)?.length ?? 0,
           });
         } catch (e) {
           debugPrint('SyncService: 读取 $filePath 概览失败: $e');

@@ -123,10 +123,11 @@ class _DataSyncPageState extends State<DataSyncPage> {
       final dt = DateTime.parse(isoTime);
       final now = DateTime.now();
       final diff = now.difference(dt);
-      if (diff.inMinutes < 1) return '刚刚';
-      if (diff.inMinutes < 60) return '${diff.inMinutes} 分钟前';
-      if (diff.inHours < 24) return '${diff.inHours} 小时前';
-      return '${dt.month}月${dt.day}日 ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+      final exact = '${dt.month}月${dt.day}日 ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+      if (diff.inMinutes < 1) return '刚刚 ($exact)';
+      if (diff.inMinutes < 60) return '${diff.inMinutes} 分钟前 ($exact)';
+      if (diff.inHours < 24) return '${diff.inHours} 小时前 ($exact)';
+      return exact;
     } catch (_) {
       return isoTime;
     }
@@ -665,13 +666,17 @@ class _DataSyncPageState extends State<DataSyncPage> {
     final quizCount = student['quiz_count'] ?? 0;
     final recordCount = student['record_count'] ?? 0;
     final wrongCount = student['wrong_count'] ?? 0;
+    final feedbackCount = student['feedback_count'] ?? 0;
 
     // 判断在线状态（5 分钟内为在线）
     bool isOnline = false;
+    String lastActiveExact = '';
     if (lastActive.isNotEmpty) {
       try {
         final dt = DateTime.parse(lastActive);
         isOnline = DateTime.now().difference(dt).inMinutes < 5;
+        lastActiveExact =
+            '${dt.month}月${dt.day}日 ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
       } catch (_) {}
     }
 
@@ -711,9 +716,13 @@ class _DataSyncPageState extends State<DataSyncPage> {
                     fontWeight: FontWeight.w600, fontSize: 14),
               ),
               const Spacer(),
-              Text(
-                _formatTime(syncedAt),
-                style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+              Tooltip(
+                message: '上传: ${_formatTime(syncedAt)}\n'
+                    '活跃: ${lastActiveExact.isNotEmpty ? lastActiveExact : "未知"}',
+                child: Text(
+                  _formatTime(syncedAt),
+                  style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                ),
               ),
             ],
           ),
@@ -729,6 +738,9 @@ class _DataSyncPageState extends State<DataSyncPage> {
                   Icons.school, '学习 $recordCount', Colors.green),
               _buildStatChip(
                   Icons.error_outline, '错题 $wrongCount', Colors.orange),
+              if (feedbackCount > 0)
+                _buildStatChip(
+                    Icons.feedback, '反馈 $feedbackCount', Colors.purple),
             ],
           ),
         ],

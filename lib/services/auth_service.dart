@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import '../data/local/user_dao.dart';
+import '../data/local/database_helper.dart';
 import '../data/models/user_model.dart';
 import 'sync_service.dart';
+import 'gitee_service.dart';
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
@@ -69,8 +72,124 @@ class AuthService {
     return await _userDao.updateUser(student);
   }
 
+  /// 删除学生 — 级联清理所有关联数据 + 远程同步文件
   Future<bool> deleteStudent(String userId) async {
-    return await _userDao.deleteUser(userId);
+    final db = await DatabaseHelper.instance.database;
+
+    // 1. 删除所有关联表数据
+    final tables = [
+      'quiz_results',
+      'learning_records',
+      'wrong_answers',
+      'favorites',
+      'class_members',
+      'notification_recipients',
+      'feedback',
+      'ai_chat_history',
+    ];
+    for (final table in tables) {
+      try {
+        await db.delete(table, where: 'user_id = ?', whereArgs: [userId]);
+      } catch (_) {} // 表可能不存在
+    }
+
+    // 2. 删除用户记录
+    final deleted = await _userDao.deleteUser(userId);
+
+    // 3. 删除远程 Gitee 同步文件（异步，静默失败）
+    _deleteRemoteSyncFile(userId);
+
+    return deleted;
+  }
+
+  /// 清理孤立数据 — 删除所有 user_id 不在 users 表中的关联记录
+  /// 返回清理的总记录数
+  Future<int> cleanOrphanedData() async {
+    final db = await DatabaseHelper.instance.database;
+    int totalCleaned = 0;
+
+    // 需要清理的表
+    final tables = [
+      'quiz_results',
+      'learning_records',
+      'wrong_answers',
+      'favorites',
+      'class_members',
+      'notification_recipients',
+      'feedback',
+      'ai_chat_history',
+    ];
+
+    for (final table in tables) {
+      try {
+        final count = await db.rawDelete(
+          'DELETE FROM $table WHERE user_id NOT IN (SELECT user_id FROM users)',
+        );
+        if (count > 0) {
+          debugPrint('AuthService: 清理 $table 中 $count 条孤立记录');
+          totalCleaned += count;
+        }
+      } catch (_) {} // 表可能不存在
+    }
+
+    // 同时清理远程同步文件（查找 Gitee 上存在但本地 users 表中不存在的文件）
+    _cleanOrphanedRemoteFiles();
+
+    debugPrint('AuthService: 共清理 $totalCleaned 条孤立记录');
+    return totalCleaned;
+  }
+
+  /// 异步清理远程孤立同步文件
+  void _cleanOrphanedRemoteFiles() async {
+    try {
+      final db = await DatabaseHelper.instance.database;
+      final gitee = GiteeService();
+
+      // 获取远程文件列表
+      List<Map<String, dynamic>> files;
+      try {
+        files = await gitee.listDir(
+          SyncService.repoOwner,
+          SyncService.repoName,
+          'sync/students',
+          ref: SyncService.repoBranch,
+        );
+      } catch (_) {
+        return; // 目录不存在
+      }
+
+      // 获取本地所有学生 user_id
+      final users = await db.query('users', columns: ['user_id']);
+      final localUserIds = users.map((u) => u['user_id'] as String).toSet();
+
+      // 找出远程存在但本地不存在的文件
+      for (final file in files) {
+        final name = file['name']?.toString() ?? '';
+        if (!name.endsWith('.json')) continue;
+        final userId = name.replaceAll('.json', '');
+        if (!localUserIds.contains(userId)) {
+          _deleteRemoteSyncFile(userId);
+        }
+      }
+    } catch (e) {
+      debugPrint('AuthService: 清理远程孤立文件失败: $e');
+    }
+  }
+
+  /// 异步删除远程同步文件
+  void _deleteRemoteSyncFile(String userId) {
+    final gitee = GiteeService();
+    gitee.deleteFile(
+      owner: SyncService.repoOwner,
+      repo: SyncService.repoName,
+      path: 'sync/students/$userId.json',
+      message: '删除学生同步数据: $userId',
+      branch: SyncService.repoBranch,
+    ).then((_) {
+      debugPrint('AuthService: 已删除远程同步文件 $userId.json');
+    }).catchError((e) {
+      debugPrint('AuthService: 删除远程同步文件失败: $e');
+    });
   }
 
   String? getCurrentUserId() {
