@@ -214,7 +214,15 @@ class SyncService {
 
       final recordCount = (data['quiz_results'] as List).length +
           (data['learning_records'] as List).length +
-          (data['wrong_answers'] as List).length;
+          (data['wrong_answers'] as List).length +
+          (data['favorites'] as List).length +
+          (data['feedback'] as List).length +
+          (data['learning_paths'] as List).length +
+          (data['lab_submissions'] as List).length +
+          (data['student_reports'] as List).length +
+          (data['student_works'] as List).length +
+          (data['survey_responses'] as List).length +
+          (data['checkin_records'] as List).length;
 
       debugPrint('SyncService: 上传成功 ($recordCount 条记录)');
       status.value = SyncStatus.idle;
@@ -232,7 +240,7 @@ class SyncService {
     }
   }
 
-  /// 收集学生本地数据
+  /// 收集学生本地数据（全量）
   Future<Map<String, dynamic>> _collectStudentData(String userId) async {
     final db = await DatabaseHelper.instance.database;
 
@@ -250,70 +258,113 @@ class SyncService {
         ? (userRows.first['last_active'] as String?)
         : null;
 
-    // 测验成绩
-    final quizResults = await db.query(
-      'quiz_results',
-      where: 'user_id = ?',
-      whereArgs: [userId],
-      orderBy: 'quiz_timestamp DESC',
-    );
+    // ── 按 user_id 收集的表 ─────────────────────────────────────────
+    // 表名 → 排序字段（null 则不排序）
+    const userIdTables = <String, String?>{
+      'quiz_results': 'quiz_timestamp DESC',
+      'learning_records': 'completed_at DESC',
+      'wrong_answers': null,
+      'favorites': null,
+      'feedback': 'created_at DESC',
+      'learning_paths': 'created_at DESC',
+      'lab_submissions': 'submitted_at DESC',
+      'student_reports': 'updated_at DESC',
+      'student_works': 'created_at DESC',
+      'survey_responses': 'submitted_at DESC',
+      'checkin_records': 'checked_at DESC',
+      'work_comments': 'created_at DESC',
+      'work_likes': null,
+      'peer_reviews': null,
+      'notification_recipients': null,
+    };
 
-    // 学习记录
-    final learningRecords = await db.query(
-      'learning_records',
-      where: 'user_id = ?',
-      whereArgs: [userId],
-      orderBy: 'completed_at DESC',
-    );
-
-    // 错题记录
-    final wrongAnswers = await db.query(
-      'wrong_answers',
-      where: 'user_id = ?',
-      whereArgs: [userId],
-    );
-
-    // 收藏记录
-    final favorites = await db.query(
-      'favorites',
-      where: 'user_id = ?',
-      whereArgs: [userId],
-    );
-
-    // 问题反馈
-    List<Map<String, dynamic>> feedbackList = [];
-    try {
-      feedbackList = await db.query(
-        'feedback',
-        where: 'user_id = ?',
-        whereArgs: [userId],
-        orderBy: 'created_at DESC',
-      );
-    } catch (_) {} // 表可能不存在
-
-    return {
-      'version': '1.0',
+    final result = <String, dynamic>{
+      'version': '2.0',
       'user_id': userId,
       'user_name': userName,
       'role': 'student',
       'synced_at': DateTime.now().toIso8601String(),
       'last_active': lastActive ?? DateTime.now().toIso8601String(),
-      'quiz_results': quizResults
-          .map((r) => Map<String, dynamic>.from(r)..remove('id'))
-          .toList(),
-      'learning_records': learningRecords
-          .map((r) => Map<String, dynamic>.from(r)..remove('id'))
-          .toList(),
-      'wrong_answers': wrongAnswers
-          .map((r) => Map<String, dynamic>.from(r)..remove('id'))
-          .toList(),
-      'favorites': favorites
-          .map((r) => Map<String, dynamic>.from(r)..remove('id'))
-          .toList(),
-      'feedback': feedbackList
-          .map((r) => Map<String, dynamic>.from(r)..remove('id'))
-          .toList(),
     };
+
+    for (final entry in userIdTables.entries) {
+      result[entry.key] = await _safeQuery(
+        db, entry.key,
+        where: 'user_id = ?', whereArgs: [userId],
+        orderBy: entry.value,
+      );
+    }
+
+    // ── 按其他字段收集的表 ────────────────────────────────────────────
+    // peer_reviews 使用 reviewer_id
+    result['peer_reviews'] = await _safeQuery(
+      db, 'peer_reviews',
+      where: 'reviewer_id = ?', whereArgs: [userId],
+    );
+
+    // collaboration_messages 使用 sender_id
+    result['collaboration_messages'] = await _safeQuery(
+      db, 'collaboration_messages',
+      where: 'sender_id = ?', whereArgs: [userId],
+    );
+
+    // contribution_scores — 学生作为评分人或被评人
+    result['contribution_scores'] = await _safeQuery(
+      db, 'contribution_scores',
+      where: 'scorer_user_id = ? OR target_user_id = ?',
+      whereArgs: [userId, userId],
+    );
+
+    // classroom_messages 使用 sender_id
+    result['classroom_messages'] = await _safeQuery(
+      db, 'classroom_messages',
+      where: 'sender_id = ?', whereArgs: [userId],
+    );
+
+    // path_nodes — 通过 learning_paths 的 id 关联
+    final paths = result['learning_paths'] as List;
+    if (paths.isNotEmpty) {
+      final allPathNodes = <Map<String, dynamic>>[];
+      for (final p in paths) {
+        final pathId = (p as Map)['id'];
+        if (pathId != null) {
+          final nodes = await _safeQuery(
+            db, 'path_nodes',
+            where: 'path_id = ?', whereArgs: [pathId],
+            orderBy: 'sort_order',
+          );
+          allPathNodes.addAll(nodes.cast<Map<String, dynamic>>());
+        }
+      }
+      result['path_nodes'] = allPathNodes;
+    } else {
+      result['path_nodes'] = <Map<String, dynamic>>[];
+    }
+
+    return result;
+  }
+
+  /// 安全查询 — 表不存在时返回空列表
+  Future<List<Map<String, dynamic>>> _safeQuery(
+    dynamic db,
+    String table, {
+    String? where,
+    List<Object?>? whereArgs,
+    String? orderBy,
+  }) async {
+    try {
+      final rows = await db.query(
+        table,
+        where: where,
+        whereArgs: whereArgs,
+        orderBy: orderBy,
+      );
+      return (rows as List)
+          .map((r) => Map<String, dynamic>.from(r as Map)..remove('id'))
+          .toList();
+    } catch (_) {
+      return []; // 表可能不存在
+    }
   }
 
   // ── 教师端：下载数据 ──────────────────────────────────────────────────
@@ -432,7 +483,6 @@ class SyncService {
       limit: 1,
     );
     if (existingUser.isEmpty) {
-      // 用户不存在，创建新记录
       try {
         await db.insert('users', {
           'user_id': userId,
@@ -447,25 +497,19 @@ class SyncService {
         debugPrint('SyncService: 创建用户失败: $e');
       }
     } else {
-      // 用户已存在，更新 last_active 和 real_name
       final updates = <String, dynamic>{};
       if (lastActive != null) updates['last_active'] = lastActive;
       if (userName.isNotEmpty) updates['real_name'] = userName;
       if (updates.isNotEmpty) {
         try {
-          await db.update(
-            'users',
-            updates,
-            where: 'user_id = ?',
-            whereArgs: [userId],
-          );
+          await db.update('users', updates,
+              where: 'user_id = ?', whereArgs: [userId]);
         } catch (_) {}
       }
     }
 
     // ── 确保班级成员关联（加入默认班级）──────────────────────────────────
     try {
-      // 检查是否已有班级关联
       final memberCheck = await db.query(
         'class_members',
         where: 'user_id = ?',
@@ -473,13 +517,11 @@ class SyncService {
         limit: 1,
       );
       if (memberCheck.isEmpty) {
-        // 查找第一个班级（默认班级）
         final classes = await db.query('classes', limit: 1, orderBy: 'id');
         int classId;
         if (classes.isNotEmpty) {
           classId = classes.first['id'] as int;
         } else {
-          // 没有班级则创建一个默认班级
           classId = await db.insert('classes', {
             'name': '默认班级',
             'description': '自动创建的默认班级',
@@ -497,98 +539,115 @@ class SyncService {
       debugPrint('SyncService: 班级关联失败: $e');
     }
 
-    // 导入测验成绩
-    final quizResults = data['quiz_results'] as List?;
-    if (quizResults != null && quizResults.isNotEmpty) {
-      await db.delete('quiz_results',
-          where: 'user_id = ?', whereArgs: [userId]);
-      for (final r in quizResults) {
-        try {
-          final row = Map<String, dynamic>.from(r as Map);
-          row.remove('id');
-          row['user_id'] = userId;
-          await db.insert('quiz_results', row);
-          count++;
-        } catch (e) {
-          debugPrint('SyncService: 导入 quiz_result 失败: $e');
-        }
-      }
+    // ── 按 user_id 批量导入所有表（先删后插）─────────────────────────────
+    const userIdTables = [
+      'quiz_results',
+      'learning_records',
+      'wrong_answers',
+      'favorites',
+      'feedback',
+      'learning_paths',
+      'lab_submissions',
+      'student_reports',
+      'student_works',
+      'survey_responses',
+      'checkin_records',
+      'work_comments',
+      'work_likes',
+      'notification_recipients',
+    ];
+
+    for (final table in userIdTables) {
+      count += await _importTable(
+        db, data, table,
+        userIdColumn: 'user_id', userId: userId,
+      );
     }
 
-    // 导入学习记录
-    final learningRecords = data['learning_records'] as List?;
-    if (learningRecords != null && learningRecords.isNotEmpty) {
-      await db.delete('learning_records',
-          where: 'user_id = ?', whereArgs: [userId]);
-      for (final r in learningRecords) {
-        try {
-          final row = Map<String, dynamic>.from(r as Map);
-          row.remove('id');
-          row['user_id'] = userId;
-          await db.insert('learning_records', row);
-          count++;
-        } catch (e) {
-          debugPrint('SyncService: 导入 learning_record 失败: $e');
-        }
-      }
-    }
+    // ── 按其他字段导入的表 ────────────────────────────────────────────
+    count += await _importTable(
+      db, data, 'peer_reviews',
+      userIdColumn: 'reviewer_id', userId: userId,
+    );
+    count += await _importTable(
+      db, data, 'collaboration_messages',
+      userIdColumn: 'sender_id', userId: userId,
+    );
+    count += await _importTable(
+      db, data, 'classroom_messages',
+      userIdColumn: 'sender_id', userId: userId,
+    );
 
-    // 导入错题记录
-    final wrongAnswers = data['wrong_answers'] as List?;
-    if (wrongAnswers != null && wrongAnswers.isNotEmpty) {
-      await db.delete('wrong_answers',
-          where: 'user_id = ?', whereArgs: [userId]);
-      for (final r in wrongAnswers) {
-        try {
-          final row = Map<String, dynamic>.from(r as Map);
-          row.remove('id');
-          row['user_id'] = userId;
-          await db.insert('wrong_answers', row);
-          count++;
-        } catch (e) {
-          debugPrint('SyncService: 导入 wrong_answer 失败: $e');
-        }
-      }
-    }
-
-    // 导入收藏记录
-    final favorites = data['favorites'] as List?;
-    if (favorites != null && favorites.isNotEmpty) {
-      await db.delete('favorites',
-          where: 'user_id = ?', whereArgs: [userId]);
-      for (final r in favorites) {
-        try {
-          final row = Map<String, dynamic>.from(r as Map);
-          row.remove('id');
-          row['user_id'] = userId;
-          await db.insert('favorites', row);
-          count++;
-        } catch (e) {
-          debugPrint('SyncService: 导入 favorite 失败: $e');
-        }
-      }
-    }
-
-    // 导入问题反馈
-    final feedbackList = data['feedback'] as List?;
-    if (feedbackList != null && feedbackList.isNotEmpty) {
+    // contribution_scores — 删除该用户相关的所有记录再导入
+    final contribList = data['contribution_scores'] as List?;
+    if (contribList != null && contribList.isNotEmpty) {
       try {
-        await db.delete('feedback',
-            where: 'user_id = ?', whereArgs: [userId]);
-        for (final r in feedbackList) {
+        await db.delete('contribution_scores',
+            where: 'scorer_user_id = ? OR target_user_id = ?',
+            whereArgs: [userId, userId]);
+        for (final r in contribList) {
           try {
             final row = Map<String, dynamic>.from(r as Map);
             row.remove('id');
-            row['user_id'] = userId;
-            await db.insert('feedback', row);
+            await db.insert('contribution_scores', row);
             count++;
-          } catch (e) {
-            debugPrint('SyncService: 导入 feedback 失败: $e');
-          }
+          } catch (_) {}
         }
-      } catch (_) {} // feedback 表可能不存在
+      } catch (_) {}
     }
 
+    // path_nodes — 先删除该用户所有 path 的节点，再导入
+    final pathNodes = data['path_nodes'] as List?;
+    if (pathNodes != null && pathNodes.isNotEmpty) {
+      try {
+        // 获取该用户的所有 learning_paths id
+        final paths = await db.query('learning_paths',
+            columns: ['id'], where: 'user_id = ?', whereArgs: [userId]);
+        for (final p in paths) {
+          await db.delete('path_nodes',
+              where: 'path_id = ?', whereArgs: [p['id']]);
+        }
+        for (final r in pathNodes) {
+          try {
+            final row = Map<String, dynamic>.from(r as Map);
+            row.remove('id');
+            await db.insert('path_nodes', row);
+            count++;
+          } catch (_) {}
+        }
+      } catch (_) {}
+    }
+
+    return count;
+  }
+
+  /// 通用表导入 — 先删后插
+  Future<int> _importTable(
+    dynamic db,
+    Map<String, dynamic> data,
+    String table, {
+    required String userIdColumn,
+    required String userId,
+  }) async {
+    final list = data[table] as List?;
+    if (list == null || list.isEmpty) return 0;
+
+    int count = 0;
+    try {
+      await db.delete(table,
+          where: '$userIdColumn = ?', whereArgs: [userId]);
+      for (final r in list) {
+        try {
+          final row = Map<String, dynamic>.from(r as Map);
+          row.remove('id');
+          row[userIdColumn] = userId;
+          await db.insert(table, row);
+          count++;
+        } catch (e) {
+          debugPrint('SyncService: 导入 $table 失败: $e');
+        }
+      }
+    } catch (_) {} // 表可能不存在
     return count;
   }
 
@@ -627,6 +686,13 @@ class SyncService {
                 (data['learning_records'] as List?)?.length ?? 0,
             'wrong_count': (data['wrong_answers'] as List?)?.length ?? 0,
             'feedback_count': (data['feedback'] as List?)?.length ?? 0,
+            'favorite_count': (data['favorites'] as List?)?.length ?? 0,
+            'path_count': (data['learning_paths'] as List?)?.length ?? 0,
+            'lab_count': (data['lab_submissions'] as List?)?.length ?? 0,
+            'report_count': (data['student_reports'] as List?)?.length ?? 0,
+            'work_count': (data['student_works'] as List?)?.length ?? 0,
+            'checkin_count': (data['checkin_records'] as List?)?.length ?? 0,
+            'survey_count': (data['survey_responses'] as List?)?.length ?? 0,
           });
         } catch (e) {
           debugPrint('SyncService: 读取 $filePath 概览失败: $e');

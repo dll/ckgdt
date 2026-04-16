@@ -667,6 +667,13 @@ class _DataSyncPageState extends State<DataSyncPage> {
     final recordCount = student['record_count'] ?? 0;
     final wrongCount = student['wrong_count'] ?? 0;
     final feedbackCount = student['feedback_count'] ?? 0;
+    final favoriteCount = student['favorite_count'] ?? 0;
+    final pathCount = student['path_count'] ?? 0;
+    final labCount = student['lab_count'] ?? 0;
+    final reportCount = student['report_count'] ?? 0;
+    final workCount = student['work_count'] ?? 0;
+    final checkinCount = student['checkin_count'] ?? 0;
+    final surveyCount = student['survey_count'] ?? 0;
 
     // 判断在线状态（5 分钟内为在线）
     bool isOnline = false;
@@ -678,6 +685,36 @@ class _DataSyncPageState extends State<DataSyncPage> {
         lastActiveExact =
             '${dt.month}月${dt.day}日 ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
       } catch (_) {}
+    }
+
+    // 构建统计 chips（只显示有数据的或核心的）
+    final chips = <Widget>[
+      _buildStatChip(Icons.quiz, '测验 $quizCount', Colors.blue),
+      _buildStatChip(Icons.school, '学习 $recordCount', Colors.green),
+      _buildStatChip(Icons.error_outline, '错题 $wrongCount', Colors.orange),
+      _buildStatChip(Icons.feedback, '反馈 $feedbackCount', Colors.purple),
+    ];
+    // 以下仅在有数据时显示
+    if (favoriteCount > 0) {
+      chips.add(_buildStatChip(Icons.star, '收藏 $favoriteCount', Colors.amber));
+    }
+    if (pathCount > 0) {
+      chips.add(_buildStatChip(Icons.route, '路径 $pathCount', Colors.teal));
+    }
+    if (labCount > 0) {
+      chips.add(_buildStatChip(Icons.science, '实验 $labCount', Colors.indigo));
+    }
+    if (reportCount > 0) {
+      chips.add(_buildStatChip(Icons.description, '报告 $reportCount', Colors.brown));
+    }
+    if (workCount > 0) {
+      chips.add(_buildStatChip(Icons.work, '作品 $workCount', Colors.pink));
+    }
+    if (checkinCount > 0) {
+      chips.add(_buildStatChip(Icons.check_circle, '签到 $checkinCount', Colors.cyan));
+    }
+    if (surveyCount > 0) {
+      chips.add(_buildStatChip(Icons.poll, '问卷 $surveyCount', Colors.lime));
     }
 
     return Container(
@@ -710,12 +747,15 @@ class _DataSyncPageState extends State<DataSyncPage> {
                 ),
               ),
               const SizedBox(width: 8),
-              Text(
-                userName.isNotEmpty ? '$userName ($userId)' : userId,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w600, fontSize: 14),
+              Expanded(
+                child: Text(
+                  userName.isNotEmpty ? '$userName ($userId)' : userId,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 14),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              const Spacer(),
+              const SizedBox(width: 4),
               Tooltip(
                 message: '上传: ${_formatTime(syncedAt)}\n'
                     '活跃: ${lastActiveExact.isNotEmpty ? lastActiveExact : "未知"}',
@@ -729,18 +769,9 @@ class _DataSyncPageState extends State<DataSyncPage> {
           const SizedBox(height: 8),
           // 第二行：数据统计
           Wrap(
-            spacing: 12,
+            spacing: 10,
             runSpacing: 4,
-            children: [
-              _buildStatChip(
-                  Icons.quiz, '测验 $quizCount', Colors.blue),
-              _buildStatChip(
-                  Icons.school, '学习 $recordCount', Colors.green),
-              _buildStatChip(
-                  Icons.error_outline, '错题 $wrongCount', Colors.orange),
-              _buildStatChip(
-                  Icons.feedback, '反馈 $feedbackCount', Colors.purple),
-            ],
+            children: chips,
           ),
         ],
       ),

@@ -76,8 +76,8 @@ class AuthService {
   Future<bool> deleteStudent(String userId) async {
     final db = await DatabaseHelper.instance.database;
 
-    // 1. 删除所有关联表数据
-    final tables = [
+    // 1. 删除所有关联表数据（user_id 字段）
+    final userIdTables = [
       'quiz_results',
       'learning_records',
       'wrong_answers',
@@ -86,12 +86,50 @@ class AuthService {
       'notification_recipients',
       'feedback',
       'ai_chat_history',
+      'learning_paths',
+      'lab_submissions',
+      'student_reports',
+      'student_works',
+      'survey_responses',
+      'checkin_records',
+      'work_comments',
+      'work_likes',
+      'work_views',
     ];
-    for (final table in tables) {
+    for (final table in userIdTables) {
       try {
         await db.delete(table, where: 'user_id = ?', whereArgs: [userId]);
       } catch (_) {} // 表可能不存在
     }
+
+    // 1b. 特殊字段名的表
+    try {
+      await db.delete('peer_reviews',
+          where: 'reviewer_id = ?', whereArgs: [userId]);
+    } catch (_) {}
+    try {
+      await db.delete('collaboration_messages',
+          where: 'sender_id = ?', whereArgs: [userId]);
+    } catch (_) {}
+    try {
+      await db.delete('classroom_messages',
+          where: 'sender_id = ?', whereArgs: [userId]);
+    } catch (_) {}
+    try {
+      await db.delete('contribution_scores',
+          where: 'scorer_user_id = ? OR target_user_id = ?',
+          whereArgs: [userId, userId]);
+    } catch (_) {}
+
+    // 1c. path_nodes — 通过 learning_paths 关联
+    try {
+      final paths = await db.query('learning_paths',
+          columns: ['id'], where: 'user_id = ?', whereArgs: [userId]);
+      for (final p in paths) {
+        await db.delete('path_nodes',
+            where: 'path_id = ?', whereArgs: [p['id']]);
+      }
+    } catch (_) {}
 
     // 2. 删除用户记录
     final deleted = await _userDao.deleteUser(userId);
@@ -108,8 +146,8 @@ class AuthService {
     final db = await DatabaseHelper.instance.database;
     int totalCleaned = 0;
 
-    // 需要清理的表
-    final tables = [
+    // user_id 字段的表
+    final userIdTables = [
       'quiz_results',
       'learning_records',
       'wrong_answers',
@@ -118,9 +156,18 @@ class AuthService {
       'notification_recipients',
       'feedback',
       'ai_chat_history',
+      'learning_paths',
+      'lab_submissions',
+      'student_reports',
+      'student_works',
+      'survey_responses',
+      'checkin_records',
+      'work_comments',
+      'work_likes',
+      'work_views',
     ];
 
-    for (final table in tables) {
+    for (final table in userIdTables) {
       try {
         final count = await db.rawDelete(
           'DELETE FROM $table WHERE user_id NOT IN (SELECT user_id FROM users)',
@@ -130,6 +177,23 @@ class AuthService {
           totalCleaned += count;
         }
       } catch (_) {} // 表可能不存在
+    }
+
+    // 特殊字段名的表
+    for (final entry in {
+      'peer_reviews': 'reviewer_id',
+      'collaboration_messages': 'sender_id',
+      'classroom_messages': 'sender_id',
+    }.entries) {
+      try {
+        final count = await db.rawDelete(
+          'DELETE FROM ${entry.key} WHERE ${entry.value} NOT IN (SELECT user_id FROM users)',
+        );
+        if (count > 0) {
+          debugPrint('AuthService: 清理 ${entry.key} 中 $count 条孤立记录');
+          totalCleaned += count;
+        }
+      } catch (_) {}
     }
 
     // 同时清理远程同步文件（查找 Gitee 上存在但本地 users 表中不存在的文件）
