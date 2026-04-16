@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/notification_service.dart';
+import '../../../services/navigation_service.dart';
 import '../../../data/local/notification_dao.dart';
 import '../notification/notification_list_page.dart';
+import '../../widgets/agent_chat_overlay.dart';
 import '../login/login_page.dart';
 import '../graph/knowledge_graph_page.dart';
 import '../graph/favorites_page.dart';
@@ -71,11 +73,18 @@ class _HomePageState extends State<HomePage> {
       const Duration(seconds: 30),
       (_) => _refreshUnreadCount(),
     );
+    // 注册全局导航服务回调
+    NavigationService.instance.onSwitchTab = (index) {
+      if (mounted) {
+        setState(() => _selectedIndex = index);
+      }
+    };
   }
 
   @override
   void dispose() {
     _notificationTimer?.cancel();
+    NavigationService.instance.dispose();
     super.dispose();
   }
 
@@ -496,6 +505,12 @@ class _HomePageState extends State<HomePage> {
                   color: Colors.deepPurple[400]!,
                   onTap: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const SkillsHubPage())),
+                ),
+                _buildMenuCard(
+                  icon: Icons.smart_toy,
+                  title: '多智能体',
+                  color: Colors.indigo[400]!,
+                  onTap: () => AgentChatOverlay.show(context),
                 ),
                 _buildMenuCard(
                   icon: Icons.biotech,
