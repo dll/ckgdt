@@ -57,10 +57,6 @@ class _LoginPageState extends State<LoginPage>
           defaultTargetPlatform == TargetPlatform.iOS);
 
   // ── 语音唤醒（"卖得" = MAD）──────────────────────────────────────────────
-  final VoiceService _voiceService = VoiceService();
-  bool _isWakeWordListening = false;
-  String _wakeWordStatus = '';
-
   @override
   void initState() {
     super.initState();
@@ -91,7 +87,6 @@ class _LoginPageState extends State<LoginPage>
     _passwordController.dispose();
     _qrPollTimer?.cancel();
     _syncServer?.stop();
-    if (_isWakeWordListening) _voiceService.stopListening();
     super.dispose();
   }
 
@@ -151,90 +146,13 @@ class _LoginPageState extends State<LoginPage>
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // 语音唤醒登录 — "卖得"（MAD = 移动应用开发）
+  // 语音登录 — 直接弹出语音对话框，说学号自动登录
   // ═══════════════════════════════════════════════════════════════════════════
 
-  Future<void> _startWakeWordListening() async {
-    final configured = await VoiceService.isConfigured();
-    if (!configured) {
-      if (mounted) {
-        _showError('请先在系统设置中配置讯飞语音参数');
-      }
-      return;
-    }
-
-    _voiceService.onResult = (text) {
-      if (!mounted) return;
-      setState(() => _wakeWordStatus = '听到: $text');
-      _checkWakeWord(text);
-    };
-    _voiceService.onComplete = (text) {
-      if (!mounted) return;
-      _checkWakeWord(text);
-      // 识别完成后如果还在唤醒模式，重新开始监听
-      if (_isWakeWordListening && mounted) {
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (_isWakeWordListening && mounted) {
-            _voiceService.startListening();
-          }
-        });
-      }
-    };
-    _voiceService.onError = (error) {
-      if (!mounted) return;
-      setState(() => _wakeWordStatus = '语音错误: $error');
-      // 出错后延迟重试
-      if (_isWakeWordListening) {
-        Future.delayed(const Duration(seconds: 2), () {
-          if (_isWakeWordListening && mounted) {
-            _voiceService.startListening();
-          }
-        });
-      }
-    };
-    _voiceService.onStateChanged = (listening) {
-      // 只更新内部状态
-    };
-
-    setState(() {
-      _isWakeWordListening = true;
-      _wakeWordStatus = '正在聆听唤醒词"卖得"...';
-    });
-    await _voiceService.startListening();
-  }
-
-  void _stopWakeWordListening() {
-    _voiceService.stopListening();
-    setState(() {
-      _isWakeWordListening = false;
-      _wakeWordStatus = '';
-    });
-  }
-
-  /// 检测文本中是否包含唤醒词 "卖得" / "买得" / "MAD" 等变体
-  void _checkWakeWord(String text) {
-    final normalized = text.toLowerCase().replaceAll(RegExp(r'\s'), '');
-    // 讯飞可能返回 "卖得" "买的" "麦的" "mad" 等谐音/拼写
-    final wakeWords = ['卖得', '买得', '买的', '卖的', '麦的', '麦得', 'mad'];
-    bool detected = false;
-    for (final word in wakeWords) {
-      if (normalized.contains(word)) {
-        detected = true;
-        break;
-      }
-    }
-    if (detected) {
-      _stopWakeWordListening();
-      _onWakeWordDetected();
-    }
-  }
-
-  /// 唤醒词检测到后，弹出语音登录对话框
-  void _onWakeWordDetected() {
+  /// 点击语音登录按钮 → 直接弹出语音登录对话框
+  Future<void> _startVoiceLogin() async {
     if (!mounted) return;
-    setState(() => _wakeWordStatus = '唤醒成功！请说出学号...');
 
-    // 显示语音登录对话框
     showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -607,12 +525,10 @@ class _LoginPageState extends State<LoginPage>
                     style: TextStyle(color: Colors.white60, fontSize: 12),
                   ),
 
-                  // ── 语音唤醒登录 ────────────────────────────────────
+                  // ── 语音登录 ────────────────────────────────────
                   const SizedBox(height: 20),
                   GestureDetector(
-                    onTap: _isWakeWordListening
-                        ? _stopWakeWordListening
-                        : _startWakeWordListening,
+                    onTap: _startVoiceLogin,
                     child: Column(
                       children: [
                         Container(
@@ -620,43 +536,26 @@ class _LoginPageState extends State<LoginPage>
                           height: 56,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: _isWakeWordListening
-                                ? Colors.red.withValues(alpha: 0.8)
-                                : Colors.white.withValues(alpha: 0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             border: Border.all(
                               color: Colors.white.withValues(alpha: 0.5),
                               width: 2,
                             ),
                           ),
-                          child: Icon(
-                            _isWakeWordListening
-                                ? Icons.hearing
-                                : Icons.record_voice_over,
+                          child: const Icon(
+                            Icons.record_voice_over,
                             color: Colors.white,
                             size: 28,
                           ),
                         ),
                         const SizedBox(height: 6),
-                        Text(
-                          _isWakeWordListening
-                              ? '聆听中...说"卖得"唤醒'
-                              : '语音唤醒登录',
-                          style: const TextStyle(
+                        const Text(
+                          '语音登录（说出学号）',
+                          style: TextStyle(
                             color: Colors.white70,
                             fontSize: 11,
                           ),
                         ),
-                        if (_wakeWordStatus.isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            _wakeWordStatus,
-                            style: const TextStyle(
-                              color: Colors.yellowAccent,
-                              fontSize: 10,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
                       ],
                     ),
                   ),
@@ -1027,7 +926,7 @@ class _LoginPageState extends State<LoginPage>
   }
 }
 
-/// 语音登录对话框 — 唤醒词检测后弹出，用户说学号自动登录
+/// 语音登录对话框 — 说出学号自动登录，支持手动输入兜底
 class _VoiceLoginDialog extends StatefulWidget {
   final AuthService authService;
   final VoidCallback onLoginSuccess;
@@ -1044,10 +943,13 @@ class _VoiceLoginDialog extends StatefulWidget {
 class _VoiceLoginDialogState extends State<_VoiceLoginDialog>
     with SingleTickerProviderStateMixin {
   final VoiceService _voiceService = VoiceService();
+  final TextEditingController _manualController = TextEditingController();
   String _statusText = '请说出你的学号/工号';
   String _recognizedText = '';
   bool _isListening = false;
   bool _isLoggingIn = false;
+  bool _showManualInput = false;
+  bool _voiceAvailable = true;
   late AnimationController _pulseController;
 
   @override
@@ -1076,6 +978,8 @@ class _VoiceLoginDialogState extends State<_VoiceLoginDialog>
         setState(() {
           _statusText = '语音识别出错: $error';
           _isListening = false;
+          _voiceAvailable = false;
+          _showManualInput = true;
         });
         _pulseController.stop();
       }
@@ -1091,48 +995,123 @@ class _VoiceLoginDialogState extends State<_VoiceLoginDialog>
   @override
   void dispose() {
     _pulseController.dispose();
+    _manualController.dispose();
     if (_isListening) _voiceService.stopListening();
     super.dispose();
   }
 
   Future<void> _startListening() async {
+    // 检查讯飞配置
+    final configured = await VoiceService.isConfigured();
+    if (!configured) {
+      if (mounted) {
+        setState(() {
+          _statusText = '语音服务未配置，请手动输入学号';
+          _voiceAvailable = false;
+          _showManualInput = true;
+        });
+      }
+      return;
+    }
+
     setState(() {
       _statusText = '请说出你的学号/工号';
       _recognizedText = '';
     });
     final ok = await _voiceService.startListening();
-    if (ok) _pulseController.repeat(reverse: true);
+    if (ok) {
+      _pulseController.repeat(reverse: true);
+    } else {
+      if (mounted) {
+        setState(() {
+          _statusText = '无法启动语音，请手动输入学号';
+          _voiceAvailable = false;
+          _showManualInput = true;
+        });
+      }
+    }
+  }
+
+  /// 中文数字转阿拉伯数字
+  static String _chineseToDigits(String text) {
+    const chineseDigits = {
+      '零': '0', '〇': '0', 'O': '0', 'o': '0',
+      '一': '1', '壹': '1',
+      '二': '2', '贰': '2', '两': '2',
+      '三': '3', '叁': '3',
+      '四': '4', '肆': '4',
+      '五': '5', '伍': '5',
+      '六': '6', '陆': '6',
+      '七': '7', '柒': '7',
+      '八': '8', '捌': '8',
+      '九': '9', '玖': '9',
+    };
+
+    var result = text;
+    for (final entry in chineseDigits.entries) {
+      result = result.replaceAll(entry.key, entry.value);
+    }
+    return result;
+  }
+
+  /// 从语音文本中提取学号数字
+  static String _extractDigits(String text) {
+    // 先转换中文数字
+    final converted = _chineseToDigits(text);
+    // 提取所有阿拉伯数字
+    return converted.replaceAll(RegExp(r'[^\d]'), '');
   }
 
   /// 尝试从语音中提取数字并登录
   void _tryVoiceLogin(String text) async {
-    // 提取所有数字字符
-    final digits = text.replaceAll(RegExp(r'[^\d]'), '');
+    final digits = _extractDigits(text);
     if (digits.isEmpty) {
-      setState(() => _statusText = '未识别到学号，请重新说一次');
+      setState(() {
+        _statusText = '未识别到学号数字，请重试或手动输入';
+        _showManualInput = true;
+      });
       return;
     }
 
+    await _doLogin(digits);
+  }
+
+  /// 手动输入登录
+  void _manualLogin() {
+    final text = _manualController.text.trim();
+    if (text.isEmpty) return;
+    _doLogin(text);
+  }
+
+  /// 执行登录
+  Future<void> _doLogin(String userId) async {
     setState(() {
-      _statusText = '正在登录: $digits ...';
+      _statusText = '正在登录: $userId ...';
       _isLoggingIn = true;
     });
 
     try {
       // 使用默认密码（后6位）尝试登录
-      final password = digits.length >= 6
-          ? digits.substring(digits.length - 6)
-          : digits;
-      final success = await widget.authService.login(digits, password);
+      final password = userId.length >= 6
+          ? userId.substring(userId.length - 6)
+          : userId;
+      final success = await widget.authService.login(userId, password);
 
       if (success) {
         widget.onLoginSuccess();
       } else {
-        if (mounted) {
-          setState(() {
-            _statusText = '学号 $digits 登录失败，请重试';
-            _isLoggingIn = false;
-          });
+        // 尝试用完整学号作为密码
+        final success2 = await widget.authService.login(userId, userId);
+        if (success2) {
+          widget.onLoginSuccess();
+        } else {
+          if (mounted) {
+            setState(() {
+              _statusText = '学号 $userId 登录失败，请检查后重试';
+              _isLoggingIn = false;
+              _showManualInput = true;
+            });
+          }
         }
       }
     } catch (e) {
@@ -1140,6 +1119,7 @@ class _VoiceLoginDialogState extends State<_VoiceLoginDialog>
         setState(() {
           _statusText = '登录出错: $e';
           _isLoggingIn = false;
+          _showManualInput = true;
         });
       }
     }
@@ -1159,7 +1139,7 @@ class _VoiceLoginDialogState extends State<_VoiceLoginDialog>
         ],
       ),
       content: SizedBox(
-        width: 300,
+        width: 320,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1173,50 +1153,66 @@ class _VoiceLoginDialogState extends State<_VoiceLoginDialog>
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 20),
-            GestureDetector(
-              onTap: _isLoggingIn
-                  ? null
-                  : (_isListening ? () => _voiceService.stopListening() : _startListening),
-              child: AnimatedBuilder(
-                animation: _pulseController,
-                builder: (context, child) {
-                  final scale =
-                      _isListening ? 1.0 + _pulseController.value * 0.15 : 1.0;
-                  return Transform.scale(
-                    scale: scale,
-                    child: Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _isLoggingIn
-                            ? Colors.grey
-                            : (_isListening ? Colors.red : primary),
-                        boxShadow: _isListening
-                            ? [
-                                BoxShadow(
-                                  color: Colors.red.withValues(alpha: 0.3),
-                                  blurRadius: 20 * _pulseController.value,
-                                  spreadRadius: 5 * _pulseController.value,
-                                ),
-                              ]
-                            : null,
+            const SizedBox(height: 16),
+
+            // ── 语音录制按钮 ──
+            if (_voiceAvailable) ...[
+              GestureDetector(
+                onTap: _isLoggingIn
+                    ? null
+                    : (_isListening
+                        ? () => _voiceService.stopListening()
+                        : _startListening),
+                child: AnimatedBuilder(
+                  animation: _pulseController,
+                  builder: (context, child) {
+                    final scale =
+                        _isListening ? 1.0 + _pulseController.value * 0.15 : 1.0;
+                    return Transform.scale(
+                      scale: scale,
+                      child: Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: _isLoggingIn
+                              ? Colors.grey
+                              : (_isListening ? Colors.red : primary),
+                          boxShadow: _isListening
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.red.withValues(alpha: 0.3),
+                                    blurRadius: 20 * _pulseController.value,
+                                    spreadRadius: 5 * _pulseController.value,
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: _isLoggingIn
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : Icon(
+                                _isListening ? Icons.stop : Icons.mic,
+                                color: Colors.white,
+                                size: 32,
+                              ),
                       ),
-                      child: _isLoggingIn
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : Icon(
-                              _isListening ? Icons.stop : Icons.mic,
-                              color: Colors.white,
-                              size: 32,
-                            ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            if (_recognizedText.isNotEmpty)
+              const SizedBox(height: 8),
+              Text(
+                _isListening ? '正在聆听...' : '点击麦克风开始',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: _isListening ? Colors.red : Colors.grey,
+                ),
+              ),
+            ],
+
+            // ── 识别结果 ──
+            if (_recognizedText.isNotEmpty) ...[
+              const SizedBox(height: 12),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
@@ -1227,12 +1223,83 @@ class _VoiceLoginDialogState extends State<_VoiceLoginDialog>
                       .withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Text(
-                  _recognizedText,
-                  style: const TextStyle(fontSize: 16, height: 1.4),
-                  textAlign: TextAlign.center,
+                child: Column(
+                  children: [
+                    Text(
+                      _recognizedText,
+                      style: const TextStyle(fontSize: 15, height: 1.4),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '提取学号: ${_extractDigits(_recognizedText).isEmpty ? "无" : _extractDigits(_recognizedText)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
+            ],
+
+            // ── 手动输入区域 ──
+            if (_showManualInput) ...[
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 8),
+              const Text(
+                '手动输入学号登录',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _manualController,
+                      decoration: const InputDecoration(
+                        hintText: '输入学号/工号',
+                        prefixIcon: Icon(Icons.person, size: 20),
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        isDense: true,
+                      ),
+                      keyboardType: TextInputType.number,
+                      onSubmitted: (_) => _manualLogin(),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: _isLoggingIn ? null : _manualLogin,
+                    child: _isLoggingIn
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text('登录'),
+                  ),
+                ],
+              ),
+            ],
+
+            // ── 切换手动输入 ──
+            if (!_showManualInput) ...[
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => setState(() => _showManualInput = true),
+                child: const Text(
+                  '手动输入学号',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ),
+            ],
           ],
         ),
       ),

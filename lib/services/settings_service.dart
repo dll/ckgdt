@@ -114,9 +114,14 @@ class SettingsService {
   // 讯飞语音配置（AppID / APIKey / APISecret）
   // ═════════════════════════════════════════════════════════════════════════
 
+  // 讯飞默认配置
+  static const String _defaultXunfeiAppId = 'ae4a0e4a';
+  static const String _defaultXunfeiApiKey = '7385e5cb32d3465474e613dfbfc69310';
+  static const String _defaultXunfeiApiSecret = 'NTI2NzVlOWQ0ZTM5YTgzNGYzZDI5NjQx';
+
   static Future<String> getXunfeiAppId() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_xunfeiAppIdKey) ?? '';
+    return prefs.getString(_xunfeiAppIdKey) ?? _defaultXunfeiAppId;
   }
 
   static Future<void> setXunfeiAppId(String value) async {
@@ -126,7 +131,7 @@ class SettingsService {
 
   static Future<String> getXunfeiApiKey() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_xunfeiApiKeyKey) ?? '';
+    return prefs.getString(_xunfeiApiKeyKey) ?? _defaultXunfeiApiKey;
   }
 
   static Future<void> setXunfeiApiKey(String value) async {
@@ -136,7 +141,7 @@ class SettingsService {
 
   static Future<String> getXunfeiApiSecret() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_xunfeiApiSecretKey) ?? '';
+    return prefs.getString(_xunfeiApiSecretKey) ?? _defaultXunfeiApiSecret;
   }
 
   static Future<void> setXunfeiApiSecret(String value) async {
