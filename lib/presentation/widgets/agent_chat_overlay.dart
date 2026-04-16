@@ -50,6 +50,7 @@ class _AgentChatOverlayState extends State<AgentChatOverlay> {
   bool _isLoading = false;
   bool _ttsEnabled = false;
   bool _isVoiceListening = false;
+  bool _agentPanelExpanded = false;
 
   @override
   void initState() {
@@ -318,39 +319,140 @@ class _AgentChatOverlayState extends State<AgentChatOverlay> {
     );
   }
 
-  /// 智能体快捷切换 Chip 栏
+  /// 智能体快捷切换 — 收起时一行滚动 + 展开按钮，展开时多行网格
   Widget _buildAgentChips(ThemeData theme) {
     final configs = _registry.allConfigs;
     final activeId = _registry.session.activeAgentId;
 
+    if (_agentPanelExpanded) {
+      // ── 展开态：多行 Wrap 网格 ──
+      return Container(
+        constraints: const BoxConstraints(maxHeight: 200),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 标题行 + 收起按钮
+              Row(
+                children: [
+                  Text(
+                    '全部智能体（${configs.length}）',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  InkWell(
+                    onTap: () => setState(() => _agentPanelExpanded = false),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('收起', style: TextStyle(fontSize: 12, color: theme.colorScheme.primary)),
+                          Icon(Icons.keyboard_arrow_up, size: 16, color: theme.colorScheme.primary),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              // 多行 Wrap
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: configs.map((cfg) {
+                  final isActive = cfg.id == activeId;
+                  return FilterChip(
+                    selected: isActive,
+                    label: Text(
+                      '${cfg.emoji} ${cfg.name}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                    onSelected: (_) {
+                      _registry.switchTo(cfg.id);
+                      setState(() => _agentPanelExpanded = false);
+                      _scrollToBottom();
+                    },
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 4),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // ── 收起态：一行横向滚动 + 展开按钮 ──
     return SizedBox(
       height: 44,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        itemCount: configs.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 6),
-        itemBuilder: (context, index) {
-          final cfg = configs[index];
-          final isActive = cfg.id == activeId;
+      child: Row(
+        children: [
+          Expanded(
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              itemCount: configs.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 6),
+              itemBuilder: (context, index) {
+                final cfg = configs[index];
+                final isActive = cfg.id == activeId;
 
-          return FilterChip(
-            selected: isActive,
-            label: Text(
-              '${cfg.emoji} ${cfg.name}',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                return FilterChip(
+                  selected: isActive,
+                  label: Text(
+                    '${cfg.emoji} ${cfg.name}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                  onSelected: (_) {
+                    _registry.switchTo(cfg.id);
+                    _scrollToBottom();
+                  },
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                );
+              },
+            ),
+          ),
+          // 展开按钮
+          InkWell(
+            onTap: () => setState(() => _agentPanelExpanded = true),
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              margin: const EdgeInsets.only(right: 8),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.grid_view, size: 14, color: theme.colorScheme.primary),
+                  const SizedBox(width: 2),
+                  Text(
+                    '${configs.length}',
+                    style: TextStyle(fontSize: 11, color: theme.colorScheme.primary, fontWeight: FontWeight.w600),
+                  ),
+                ],
               ),
             ),
-            onSelected: (_) {
-              _registry.switchTo(cfg.id);
-              _scrollToBottom();
-            },
-            visualDensity: VisualDensity.compact,
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          );
-        },
+          ),
+        ],
       ),
     );
   }
