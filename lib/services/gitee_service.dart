@@ -701,6 +701,48 @@ class GiteeService {
       );
     }
   }
+
+  /// 删除文件（DELETE /repos/{owner}/{repo}/contents/{path}）
+  /// [sha] 为当前文件的 SHA，可通过 getFileSha() 获取
+  Future<bool> deleteFile({
+    required String owner,
+    required String repo,
+    required String path,
+    required String message,
+    String branch = 'master',
+  }) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      throw GiteeApiException(statusCode: 401, message: '未配置 Gitee Token');
+    }
+
+    // 先获取文件 SHA
+    final sha = await getFileSha(owner, repo, path, ref: branch);
+    if (sha == null) return false; // 文件不存在
+
+    final uri = Uri.parse('$_baseUrl/repos/$owner/$repo/contents/$path');
+    final body = {
+      'access_token': token,
+      'message': message,
+      'sha': sha,
+      'branch': branch,
+    };
+
+    debugPrint('GiteeService: DELETE $uri');
+    final resp = await http
+        .delete(uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(body))
+        .timeout(const Duration(seconds: 30));
+
+    if (resp.statusCode == 200 || resp.statusCode == 204) {
+      return true;
+    }
+    throw GiteeApiException(
+      statusCode: resp.statusCode,
+      message: 'deleteFile($path): ${utf8.decode(resp.bodyBytes)}',
+    );
+  }
 }
 
 /// Gitee API 异常
