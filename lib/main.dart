@@ -10,6 +10,7 @@ import 'presentation/pages/feedback/feedback_dialog.dart';
 import 'presentation/pages/feedback/ai_help_dialog.dart';
 import 'presentation/pages/cross_platform/cross_platform_hub_page.dart';
 import 'presentation/widgets/voice_input_button.dart';
+import 'presentation/widgets/agent_chat_overlay.dart';
 import 'services/voice_service.dart';
 
 // 条件导入：Web 端使用 ffi_web，桌面端使用 ffi
@@ -244,6 +245,14 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
     }
   }
 
+  void _showAgentChat() {
+    _collapse();
+    final navContext = widget.navigatorKey.currentContext;
+    if (navContext != null) {
+      AgentChatOverlay.show(navContext);
+    }
+  }
+
   /// 根据语音文本进行全局页面导航
   void _navigateByVoiceText(BuildContext context, String text) {
     final normalized =
@@ -368,6 +377,17 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
           label: '语音',
           color: Colors.teal,
           onTap: _showVoiceNavigation,
+        ),
+
+        // 子按钮：多智能体助手
+        _buildPositionedSubButton(
+          offset: 280,
+          isOnRight: isOnRight,
+          size: size,
+          icon: Icons.smart_toy,
+          label: '助手',
+          color: Colors.indigo,
+          onTap: _showAgentChat,
         ),
 
         // 主按钮
