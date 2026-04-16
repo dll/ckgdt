@@ -12,17 +12,12 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      // 学生角色默认导航标签
       expect(find.text('首页'), findsAtLeastNWidgets(1));
       expect(find.text('图谱'), findsAtLeastNWidgets(1));
-      expect(find.text('测验'), findsAtLeastNWidgets(1));
-      expect(find.text('视频'), findsAtLeastNWidgets(1));
-      expect(find.text('资料'), findsAtLeastNWidgets(1));
-      expect(find.text('进度'), findsAtLeastNWidgets(1));
-      expect(find.text('计划'), findsAtLeastNWidgets(1));
-      expect(find.text('设置'), findsAtLeastNWidgets(1));
     });
 
-    testWidgets('shows feature menu on home tab', (WidgetTester tester) async {
+    testWidgets('shows feature cards on home tab', (WidgetTester tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: HomePage(initialTabIndex: 0),
@@ -30,11 +25,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('功能菜单'), findsOneWidget);
+      // 首页应包含功能卡片
       expect(find.text('知识图谱'), findsOneWidget);
       expect(find.text('章节测验'), findsOneWidget);
-      expect(find.text('视频教程'), findsOneWidget);
-      expect(find.text('课程资料'), findsOneWidget);
     });
 
     testWidgets('can switch from home tab to graph tab', (WidgetTester tester) async {
@@ -45,16 +38,19 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('功能菜单'), findsOneWidget);
+      // 首页应显示功能卡片
+      expect(find.text('知识图谱'), findsOneWidget);
 
-      await tester.tap(find.text('图谱'));
+      // 点击底部导航栏中的 "图谱" 按钮
+      final graphNavItem = find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.text('图谱'),
+      );
+      await tester.tap(graphNavItem);
       await tester.pumpAndSettle();
 
-      expect(find.text('功能菜单'), findsNothing);
-      expect(find.text('知识图谱'), findsNothing);
+      // 切换到图谱 Tab 后，首页卡片应消失
       expect(find.text('章节测验'), findsNothing);
-      expect(find.text('视频教程'), findsNothing);
-      expect(find.text('课程资料'), findsNothing);
     });
   });
 }

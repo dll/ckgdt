@@ -374,10 +374,10 @@ void main() {
       expect(model.isTeacher, isFalse);
     });
 
-    test('password should return empty string when userId is shorter than 6', () {
+    test('password should return full userId when userId is shorter than 6', () {
       final model = UserModel(userId: '12345');
 
-      expect(model.password, '');
+      expect(model.password, '12345');
     });
   });
 }

@@ -539,83 +539,94 @@ class SyncService {
       debugPrint('SyncService: 班级关联失败: $e');
     }
 
-    // ── 按 user_id 批量导入所有表（先删后插）─────────────────────────────
-    const userIdTables = [
-      'quiz_results',
-      'learning_records',
-      'wrong_answers',
-      'favorites',
-      'feedback',
-      'learning_paths',
-      'lab_submissions',
-      'student_reports',
-      'student_works',
-      'survey_responses',
-      'checkin_records',
-      'work_comments',
-      'work_likes',
-      'notification_recipients',
-    ];
+    // ── 使用事务保护批量导入（先删后插）──────────────────────────────────
+    // 所有表的删除+插入在同一事务中完成，防止中途失败导致数据丢失
+    try {
+      count = await db.transaction((txn) async {
+        int txnCount = 0;
 
-    for (final table in userIdTables) {
-      count += await _importTable(
-        db, data, table,
-        userIdColumn: 'user_id', userId: userId,
-      );
-    }
+        // ── 按 user_id 批量导入所有表 ─────────────────────────────────
+        const userIdTables = [
+          'quiz_results',
+          'learning_records',
+          'wrong_answers',
+          'favorites',
+          'feedback',
+          'learning_paths',
+          'lab_submissions',
+          'student_reports',
+          'student_works',
+          'survey_responses',
+          'checkin_records',
+          'work_comments',
+          'work_likes',
+          'notification_recipients',
+        ];
 
-    // ── 按其他字段导入的表 ────────────────────────────────────────────
-    count += await _importTable(
-      db, data, 'peer_reviews',
-      userIdColumn: 'reviewer_id', userId: userId,
-    );
-    count += await _importTable(
-      db, data, 'collaboration_messages',
-      userIdColumn: 'sender_id', userId: userId,
-    );
-    count += await _importTable(
-      db, data, 'classroom_messages',
-      userIdColumn: 'sender_id', userId: userId,
-    );
+        for (final table in userIdTables) {
+          txnCount += await _importTable(
+            txn, data, table,
+            userIdColumn: 'user_id', userId: userId,
+          );
+        }
 
-    // contribution_scores — 删除该用户相关的所有记录再导入
-    final contribList = data['contribution_scores'] as List?;
-    if (contribList != null && contribList.isNotEmpty) {
-      try {
-        await db.delete('contribution_scores',
-            where: 'scorer_user_id = ? OR target_user_id = ?',
-            whereArgs: [userId, userId]);
-        for (final r in contribList) {
+        // ── 按其他字段导入的表 ──────────────────────────────────────
+        txnCount += await _importTable(
+          txn, data, 'peer_reviews',
+          userIdColumn: 'reviewer_id', userId: userId,
+        );
+        txnCount += await _importTable(
+          txn, data, 'collaboration_messages',
+          userIdColumn: 'sender_id', userId: userId,
+        );
+        txnCount += await _importTable(
+          txn, data, 'classroom_messages',
+          userIdColumn: 'sender_id', userId: userId,
+        );
+
+        // contribution_scores — 删除该用户相关的所有记录再导入
+        final contribList = data['contribution_scores'] as List?;
+        if (contribList != null && contribList.isNotEmpty) {
           try {
-            final row = Map<String, dynamic>.from(r as Map);
-            row.remove('id');
-            await db.insert('contribution_scores', row);
-            count++;
+            await txn.delete('contribution_scores',
+                where: 'scorer_user_id = ? OR target_user_id = ?',
+                whereArgs: [userId, userId]);
+            for (final r in contribList) {
+              try {
+                final row = Map<String, dynamic>.from(r as Map);
+                row.remove('id');
+                await txn.insert('contribution_scores', row);
+                txnCount++;
+              } catch (_) {}
+            }
           } catch (_) {}
         }
-      } catch (_) {}
-    }
 
-    // path_nodes — 先删除该用户所有 path 的节点，再导入
-    final pathNodes = data['path_nodes'] as List?;
-    if (pathNodes != null && pathNodes.isNotEmpty) {
-      try {
-        // 获取该用户的所有 learning_paths id
-        final paths = await db.query('learning_paths',
-            columns: ['id'], where: 'user_id = ?', whereArgs: [userId]);
-        for (final p in paths) {
-          await db.delete('path_nodes',
-              where: 'path_id = ?', whereArgs: [p['id']]);
-        }
-        for (final r in pathNodes) {
+        // path_nodes — 先删除该用户所有 path 的节点，再导入
+        final pathNodes = data['path_nodes'] as List?;
+        if (pathNodes != null && pathNodes.isNotEmpty) {
           try {
-            final row = Map<String, dynamic>.from(r as Map);
-            row.remove('id');
-            await db.insert('path_nodes', row);
-            count++;
+            final paths = await txn.query('learning_paths',
+                columns: ['id'], where: 'user_id = ?', whereArgs: [userId]);
+            for (final p in paths) {
+              await txn.delete('path_nodes',
+                  where: 'path_id = ?', whereArgs: [p['id']]);
+            }
+            for (final r in pathNodes) {
+              try {
+                final row = Map<String, dynamic>.from(r as Map);
+                row.remove('id');
+                await txn.insert('path_nodes', row);
+                txnCount++;
+              } catch (_) {}
+            }
           } catch (_) {}
         }
-      } catch (_) {}
+
+        return txnCount;
+      });
+    } catch (e) {
+      debugPrint('SyncService: 事务导入失败，已回滚: $e');
     }
 
     return count;

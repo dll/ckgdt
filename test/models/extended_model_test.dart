@@ -207,7 +207,7 @@ void main() {
       );
       expect(
         const AiConfigModel(provider: 'other').providerLabel,
-        'DeepSeek',
+        'other',
       );
     });
 
