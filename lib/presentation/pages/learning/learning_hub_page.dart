@@ -12,6 +12,7 @@ import '../../../data/local/ai_config_dao.dart';
 import '../materials/courseware_workshop_page.dart';
 import '../materials/ai_settings_page.dart';
 import '../../widgets/agent_entry_button.dart';
+import '../../widgets/markdown_bubble.dart';
 import '../admin/data_import_page.dart';
 import '../quiz/quiz_page.dart';
 import 'video_player_page.dart';
@@ -677,14 +678,22 @@ class _LearningHubPageState extends State<LearningHubPage>
                       bottomRight: Radius.circular(isUser ? 4 : 16),
                     ),
                   ),
-                  child: SelectableText(
-                    msg.text,
-                    style: TextStyle(
-                      color: isUser ? Colors.white : Colors.black87,
-                      fontSize: 14,
-                      height: 1.5,
-                    ),
-                  ),
+                  child: isUser
+                      ? SelectableText(
+                          msg.text,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            height: 1.5,
+                          ),
+                        )
+                      : MarkdownBubble(
+                          content: msg.text,
+                          provider: msg.modelProvider,
+                          model: msg.modelName,
+                          textColor: Colors.black87,
+                          compact: true,
+                        ),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -731,7 +740,7 @@ class _LearningHubPageState extends State<LearningHubPage>
         });
       }
 
-      final reply = await aiService.chat(
+      final result = await aiService.chatWithMeta(
         history,
         systemPrompt: '你是一个移动应用开发课程的AI学习助手，帮助学生解答关于Android、iOS、Flutter、'
             'React Native、微信小程序、鸿蒙等移动开发技术的问题。请用中文简洁回答。'
@@ -739,7 +748,12 @@ class _LearningHubPageState extends State<LearningHubPage>
       );
       if (!mounted) return;
       setState(() {
-        _messages.add(_ChatMessage(text: reply, isUser: false));
+        _messages.add(_ChatMessage(
+          text: result.content,
+          isUser: false,
+          modelProvider: result.provider,
+          modelName: result.model,
+        ));
         _aiLoading = false;
       });
     } catch (e) {
@@ -987,8 +1001,10 @@ class _ChatMessage {
   final String text;
   final bool isUser;
   final DateTime time;
+  final String? modelProvider;
+  final String? modelName;
 
-  _ChatMessage({required this.text, required this.isUser, DateTime? time})
+  _ChatMessage({required this.text, required this.isUser, DateTime? time, this.modelProvider, this.modelName})
       : time = time ?? DateTime.now();
 
   String get timeLabel {

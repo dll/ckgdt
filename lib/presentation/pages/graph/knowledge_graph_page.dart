@@ -16,6 +16,7 @@ import '../learning/learning_chain_page.dart';
 import '../learning/video_page.dart';
 import '../materials/resource_viewer_page.dart';
 import '../../widgets/agent_entry_button.dart';
+import '../../widgets/markdown_bubble.dart';
 import 'graph_list_page.dart';
 import 'graph_properties_page.dart';
 
@@ -2935,7 +2936,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
 
 要求：简洁有条理，语气鼓励，用中文回答。''';
 
-      final result = await aiService.chat([
+      final result = await aiService.chatWithMeta([
         {'role': 'user', 'content': prompt}
       ], systemPrompt: '你是移动应用开发课程的AI学习助手，帮助学生规划学习路径。');
 
@@ -2997,10 +2998,10 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                         color: const Color(0xFF667eea)
                             .withValues(alpha: 0.15)),
                   ),
-                  child: SelectableText(
-                    result,
-                    style: const TextStyle(
-                        fontSize: 14, height: 1.7, color: Colors.black87),
+                  child: MarkdownBubble(
+                    content: result.content,
+                    provider: result.provider,
+                    model: result.model,
                   ),
                 ),
                 const SizedBox(height: 20),
