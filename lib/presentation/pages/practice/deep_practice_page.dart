@@ -3,6 +3,7 @@ import '../../../services/ai_service.dart';
 import '../../../data/local/quiz_dao.dart';
 import '../../../data/local/learning_record_dao.dart';
 import '../../../services/auth_service.dart';
+import '../../widgets/markdown_bubble.dart';
 
 /// 深度实践中心 — 每章提供多层次深入学习内容
 /// 借鉴天天向上"学前-学中-学后"闭环，解决课时不足问题
@@ -504,6 +505,8 @@ class _DeepPracticePageState extends State<DeepPracticePage>
   String? _selectedChapter;
   bool _isAiLoading = false;
   String _aiAnswer = '';
+  String? _aiProvider;
+  String? _aiModel;
   final _aiQuestionController = TextEditingController();
 
   @override
@@ -565,14 +568,20 @@ class _DeepPracticePageState extends State<DeepPracticePage>
   }
 
   Future<void> _askAi(String question) async {
-    setState(() { _isAiLoading = true; _aiAnswer = ''; });
+    setState(() { _isAiLoading = true; _aiAnswer = ''; _aiProvider = null; _aiModel = null; });
     try {
       final ai = AiService();
-      final answer = await ai.chat(
+      final result = await ai.chatWithMeta(
         [{'role': 'user', 'content': question}],
         systemPrompt: '你是移动应用开发课程的AI助教。请用简洁、专业的语言回答问题。',
       );
-      if (mounted) setState(() => _aiAnswer = answer);
+      if (mounted) {
+        setState(() {
+          _aiAnswer = result.content;
+          _aiProvider = result.provider;
+          _aiModel = result.model;
+        });
+      }
     } catch (e) {
       if (mounted) setState(() => _aiAnswer = '抱歉，AI 回答失败：$e');
     } finally {
@@ -875,9 +884,13 @@ class _DeepPracticePageState extends State<DeepPracticePage>
                                       child: CircularProgressIndicator(strokeWidth: 2),
                                     ))
                                   else
-                                    SelectableText(_aiAnswer,
-                                      style: TextStyle(fontSize: 12, height: 1.6,
-                                        color: isDark ? Colors.white70 : Colors.black87)),
+                                    MarkdownBubble(
+                                      content: _aiAnswer,
+                                      provider: _aiProvider,
+                                      model: _aiModel,
+                                      compact: true,
+                                      accentColor: Colors.deepPurple,
+                                    ),
                                 ],
                               ),
                             ),

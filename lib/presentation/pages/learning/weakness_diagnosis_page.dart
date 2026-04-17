@@ -4,6 +4,7 @@ import '../../../data/local/quiz_dao.dart';
 import '../../../data/local/learning_record_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/ai_service.dart';
+import '../../widgets/markdown_bubble.dart';
 
 class WeaknessDiagnosisPage extends StatefulWidget {
   /// 如果为 null，则分析当前登录用户；教师可传入学生 userId
@@ -25,6 +26,8 @@ class _WeaknessDiagnosisPageState extends State<WeaknessDiagnosisPage> {
   bool _isLoading = true;
   bool _isDiagnosing = false;
   String? _diagnosisResult;
+  String? _diagnosisProvider;
+  String? _diagnosisModel;
   bool _diagnosisExpanded = true;
 
   // ── 概览数据 ──────────────────────────────────────────────────────────
@@ -166,13 +169,17 @@ class _WeaknessDiagnosisPageState extends State<WeaknessDiagnosisPage> {
     setState(() {
       _isDiagnosing = true;
       _diagnosisResult = null;
+      _diagnosisProvider = null;
+      _diagnosisModel = null;
     });
 
     try {
       final result = await _tryAiDiagnosis();
       if (!mounted) return;
       setState(() {
-        _diagnosisResult = result;
+        _diagnosisResult = result.content;
+        _diagnosisProvider = result.provider;
+        _diagnosisModel = result.model;
         _diagnosisExpanded = true;
         _isDiagnosing = false;
       });
@@ -182,6 +189,8 @@ class _WeaknessDiagnosisPageState extends State<WeaknessDiagnosisPage> {
       if (!mounted) return;
       setState(() {
         _diagnosisResult = fallback;
+        _diagnosisProvider = null;
+        _diagnosisModel = null;
         _diagnosisExpanded = true;
         _isDiagnosing = false;
       });
@@ -189,7 +198,7 @@ class _WeaknessDiagnosisPageState extends State<WeaknessDiagnosisPage> {
   }
 
   /// 尝试调用 AI 进行诊断；如果 AI 未配置或失败则抛出异常
-  Future<String> _tryAiDiagnosis() async {
+  Future<AiChatResult> _tryAiDiagnosis() async {
     // 构建数据摘要发送给 AI
     final wrongSummary = StringBuffer();
     for (final analysis in _chapterAnalyses) {
@@ -232,7 +241,7 @@ $wrongSummary
 请用中文回答，条理清晰，使用编号列表。
 ''';
 
-    return await _aiService.chat(
+    return await _aiService.chatWithMeta(
       [
         {'role': 'user', 'content': dataPrompt},
       ],
@@ -867,7 +876,11 @@ $wrongSummary
                       : CrossFadeState.showSecond,
                   firstChild: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: _buildDiagnosisContent(_diagnosisResult!),
+                    child: MarkdownBubble(
+                      content: _diagnosisResult!,
+                      provider: _diagnosisProvider,
+                      model: _diagnosisModel,
+                    ),
                   ),
                   secondChild: const SizedBox.shrink(),
                 ),
@@ -879,85 +892,6 @@ $wrongSummary
     );
   }
 
-  /// 将诊断文本渲染为带样式的 Widget 列表
-  Widget _buildDiagnosisContent(String text) {
-    final lines = text.split('\n');
-    final widgets = <Widget>[];
-
-    for (final line in lines) {
-      final trimmed = line.trim();
-      if (trimmed.isEmpty) {
-        widgets.add(const SizedBox(height: 6));
-        continue;
-      }
-
-      // 标题行（以【】包裹 或 以「一、」「二、」等开头）
-      if (trimmed.startsWith('【') ||
-          RegExp(r'^[一二三四五六七八九十]+[、.]').hasMatch(trimmed)) {
-        widgets.add(Padding(
-          padding: const EdgeInsets.only(top: 8, bottom: 4),
-          child: Text(
-            trimmed,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          ),
-        ));
-      }
-      // 列表项（以 - 或 * 或 数字. 开头）
-      else if (trimmed.startsWith('- ') ||
-          trimmed.startsWith('* ') ||
-          RegExp(r'^\d+[.、]').hasMatch(trimmed)) {
-        widgets.add(Padding(
-          padding: const EdgeInsets.only(left: 8, top: 2, bottom: 2),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('  ', style: TextStyle(fontSize: 13)),
-              Expanded(
-                child: Text(
-                  trimmed,
-                  style: const TextStyle(fontSize: 13, height: 1.5),
-                ),
-              ),
-            ],
-          ),
-        ));
-      }
-      // 缩进子项（以空格开头的 * 或 -）
-      else if (line.startsWith('  ') &&
-          (trimmed.startsWith('* ') || trimmed.startsWith('- '))) {
-        widgets.add(Padding(
-          padding: const EdgeInsets.only(left: 24, top: 1, bottom: 1),
-          child: Text(
-            trimmed,
-            style: TextStyle(fontSize: 12, color: Colors.grey[700], height: 1.4),
-          ),
-        ));
-      }
-      // 普通文本
-      else {
-        widgets.add(Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          child: Text(
-            trimmed,
-            style: const TextStyle(fontSize: 13, height: 1.5),
-          ),
-        ));
-      }
-    }
-
-    return SelectableRegion(
-      focusNode: FocusNode(),
-      selectionControls: materialTextSelectionControls,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: widgets,
-      ),
-    );
-  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════

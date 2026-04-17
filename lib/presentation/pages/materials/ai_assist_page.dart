@@ -5,6 +5,7 @@ import '../../../data/local/puml_dao.dart';
 import '../../../data/models/puml_file_model.dart';
 import '../../../services/ai_service.dart';
 import '../../../services/slide_generator_service.dart';
+import '../../widgets/markdown_bubble.dart';
 
 class AiAssistPage extends StatefulWidget {
   final String mode; // 'chat', 'script', 'uml'
@@ -114,10 +115,10 @@ class _AiAssistPageState extends State<AiAssistPage> {
           '你是一位移动应用开发课程助手，擅长解答 Flutter/Dart/Android/iOS 相关问题，'
           '回答清晰简洁，适当使用代码示例。';
 
-      final reply = await _aiService.chat(history, systemPrompt: systemPrompt);
+      final result = await _aiService.chatWithMeta(history, systemPrompt: systemPrompt);
       if (!mounted) return;
-      _addAiMessage(reply);
-      _lastAiReply = reply;
+      _addAiMessage(result.content, modelProvider: result.provider, modelName: result.model);
+      _lastAiReply = result.content;
     } catch (e) {
       if (!mounted) return;
       _addAiMessage('❌ $e');
@@ -247,9 +248,9 @@ class _AiAssistPageState extends State<AiAssistPage> {
     _scrollToBottom();
   }
 
-  void _addAiMessage(String text, {bool isCode = false}) {
+  void _addAiMessage(String text, {bool isCode = false, String? modelProvider, String? modelName}) {
     setState(() {
-      _messages.add(_ChatMessage(role: 'ai', content: text, isCode: isCode));
+      _messages.add(_ChatMessage(role: 'ai', content: text, isCode: isCode, modelProvider: modelProvider, modelName: modelName));
     });
     _scrollToBottom();
   }
@@ -550,18 +551,24 @@ class _AiAssistPageState extends State<AiAssistPage> {
                       ),
                     ],
                   ),
-                  child: msg.isCode
-                      ? _buildCodeContent(msg.content, isUser)
-                      : SelectableText(
+                  child: isUser
+                      ? SelectableText(
                           msg.content,
-                          style: TextStyle(
-                            color: isUser
-                                ? Colors.white
-                                : Theme.of(context).colorScheme.onSurface,
+                          style: const TextStyle(
+                            color: Colors.white,
                             fontSize: 14,
                             height: 1.5,
                           ),
-                        ),
+                        )
+                      : msg.isCode
+                          ? _buildCodeContent(msg.content, isUser)
+                          : MarkdownBubble(
+                              content: msg.content,
+                              provider: msg.modelProvider,
+                              model: msg.modelName,
+                              textColor: Theme.of(context).colorScheme.onSurface,
+                              compact: true,
+                            ),
                 ),
                 if (!isUser && msg.isCode)
                   Padding(
@@ -817,10 +824,14 @@ class _ChatMessage {
   final String role; // 'user' | 'ai'
   final String content;
   final bool isCode;
+  final String? modelProvider;
+  final String? modelName;
 
   const _ChatMessage({
     required this.role,
     required this.content,
     this.isCode = false,
+    this.modelProvider,
+    this.modelName,
   });
 }
