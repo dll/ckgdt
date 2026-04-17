@@ -60,6 +60,12 @@ class AgentMessage {
   final AgentAction? action;
   final bool isLoading;
 
+  /// AI 服务商名称（如 "DeepSeek"、"智谱清言 GLM"）
+  final String? modelProvider;
+
+  /// AI 模型名称（如 "deepseek-chat"、"glm-4-flash"）
+  final String? modelName;
+
   AgentMessage({
     String? id,
     required this.agentId,
@@ -70,6 +76,8 @@ class AgentMessage {
     DateTime? timestamp,
     this.action,
     this.isLoading = false,
+    this.modelProvider,
+    this.modelName,
   })  : id = id ?? '${DateTime.now().microsecondsSinceEpoch}',
         timestamp = timestamp ?? DateTime.now();
 
@@ -84,6 +92,8 @@ class AgentMessage {
       timestamp: timestamp,
       action: action ?? this.action,
       isLoading: isLoading ?? this.isLoading,
+      modelProvider: modelProvider,
+      modelName: modelName,
     );
   }
 }

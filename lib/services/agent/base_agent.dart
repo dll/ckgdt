@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'agent_model.dart';
+import '../ai_service.dart';
 
 /// 智能体抽象基类
 ///
@@ -51,8 +52,13 @@ abstract class BaseAgent {
     return (0.2 + matched * 0.2).clamp(0.0, 0.8);
   }
 
-  /// 构建智能体回复消息
-  AgentMessage buildReply(String content, {AgentAction? action}) {
+  /// 构建智能体回复消息（含模型信息）
+  AgentMessage buildReply(
+    String content, {
+    AgentAction? action,
+    String? modelProvider,
+    String? modelName,
+  }) {
     return AgentMessage(
       agentId: config.id,
       agentName: config.name,
@@ -60,6 +66,8 @@ abstract class BaseAgent {
       role: MessageRole.agent,
       content: content,
       action: action,
+      modelProvider: modelProvider,
+      modelName: modelName,
     );
   }
 
@@ -95,7 +103,26 @@ abstract class BaseAgent {
     return messages;
   }
 
-  /// 安全调用 AI 服务（带错误处理）
+  /// 安全调用 AI 服务（带错误处理），返回含模型元数据的结果
+  Future<AiChatResult> safeAiChatWithMeta(
+    List<Map<String, String>> messages, {
+    String? systemPrompt,
+    required AiService aiService,
+  }) async {
+    try {
+      return await aiService.chatWithMeta(messages,
+          systemPrompt: systemPrompt ?? config.persona);
+    } catch (e) {
+      debugPrint('${config.name}: AI 调用失败: $e');
+      return AiChatResult(
+        content: '抱歉，AI 服务暂时不可用。请检查网络连接和 AI 配置。\n\n错误: $e',
+        provider: '',
+        model: '',
+      );
+    }
+  }
+
+  /// 安全调用 AI 服务（向后兼容，返回纯文本）
   Future<String> safeAiChat(
     List<Map<String, String>> messages, {
     String? systemPrompt,

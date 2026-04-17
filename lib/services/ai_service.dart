@@ -2,11 +2,32 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../data/local/ai_config_dao.dart';
 
+/// AI 对话结果（含模型元数据）
+class AiChatResult {
+  /// AI 回复内容
+  final String content;
+
+  /// 服务商显示名称（如 "DeepSeek"、"智谱清言 GLM"）
+  final String provider;
+
+  /// 实际使用的模型名称（如 "deepseek-chat"、"glm-4-flash"）
+  final String model;
+
+  const AiChatResult({
+    required this.content,
+    required this.provider,
+    required this.model,
+  });
+
+  @override
+  String toString() => content;
+}
+
 class AiService {
   final AiConfigDao _configDao = AiConfigDao();
 
-  // ── 核心：发送 chat completion 请求 ──────────────────────────────────────
-  Future<String> chat(
+  // ── 核心：发送 chat completion 请求（返回含模型信息的结果）─────────────────
+  Future<AiChatResult> chatWithMeta(
     List<Map<String, String>> messages, {
     String? systemPrompt,
   }) async {
@@ -43,7 +64,24 @@ class AiService {
     }
 
     final json = jsonDecode(utf8.decode(response.bodyBytes));
-    return json['choices'][0]['message']['content'] as String;
+    final content = json['choices'][0]['message']['content'] as String;
+    // API 响应中的 model 字段（可能与请求的略有不同）
+    final actualModel = json['model'] as String? ?? config.model;
+
+    return AiChatResult(
+      content: content,
+      provider: config.providerLabel,
+      model: actualModel,
+    );
+  }
+
+  // ── 向后兼容：返回纯文本内容 ─────────────────────────────────────────────
+  Future<String> chat(
+    List<Map<String, String>> messages, {
+    String? systemPrompt,
+  }) async {
+    final result = await chatWithMeta(messages, systemPrompt: systemPrompt);
+    return result.content;
   }
 
   // ── 生成幻灯片内容 ──────────────────────────────────────────────────────
@@ -262,6 +300,16 @@ answer_index 为 0-3（对应 A-D），仅返回 JSON，不要其他文字。
     } catch (_) {
       return false;
     }
+  }
+
+  /// 获取当前配置的服务商和模型标签（用于非 AI 调用场景的显示）
+  Future<AiChatResult> getModelInfo() async {
+    final config = await _configDao.getConfig();
+    return AiChatResult(
+      content: '',
+      provider: config.providerLabel,
+      model: config.model,
+    );
   }
 
   // ── 内部：生成备用幻灯片（AI 失败时） ───────────────────────────────────

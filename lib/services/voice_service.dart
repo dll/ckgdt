@@ -11,6 +11,11 @@ import '../services/settings_service.dart';
 ///
 /// 通过 WebSocket 流式将麦克风音频发送到讯飞云端，实时返回识别文本。
 /// 音频格式：16kHz / 16bit / 单声道 PCM。
+///
+/// 注意：
+/// - Web 平台不支持 `record` 包的流式录音
+/// - Windows 桌面端需要麦克风驱动，新电脑可能缺少
+/// - 所有平台异常均通过 onError 回调通知 UI，不会崩溃
 class VoiceService {
   static final VoiceService _instance = VoiceService._();
   factory VoiceService() => _instance;
@@ -41,12 +46,38 @@ class VoiceService {
   void Function(bool listening)? onStateChanged;
 
   // ═══════════════════════════════════════════════════════════════════════
+  // 平台支持检查
+  // ═══════════════════════════════════════════════════════════════════════
+
+  /// 检查当前平台是否支持语音录制
+  static bool get isPlatformSupported {
+    if (kIsWeb) return false; // Web 不支持流式录音
+    // Windows / Android / iOS / macOS / Linux 均支持 record 包
+    return true;
+  }
+
+  /// 检查讯飞配置是否完整
+  static Future<bool> isConfigured() async {
+    if (!isPlatformSupported) return false;
+    final appId = await SettingsService.getXunfeiAppId();
+    final apiKey = await SettingsService.getXunfeiApiKey();
+    final apiSecret = await SettingsService.getXunfeiApiSecret();
+    return appId.isNotEmpty && apiKey.isNotEmpty && apiSecret.isNotEmpty;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
   // 公开 API
   // ═══════════════════════════════════════════════════════════════════════
 
   /// 开始语音识别
   Future<bool> startListening() async {
     if (_isListening) return true;
+
+    // 平台检查
+    if (kIsWeb) {
+      onError?.call('Web 平台暂不支持语音输入');
+      return false;
+    }
 
     // 读取讯飞配置
     final appId = await SettingsService.getXunfeiAppId();
@@ -76,35 +107,70 @@ class VoiceService {
         },
       );
 
-      // 2) 开始录音
-      _recorder = AudioRecorder();
-      final hasPermission = await _recorder!.hasPermission();
+      // 2) 创建录音器（安全包裹，防止原生层崩溃）
+      try {
+        _recorder = AudioRecorder();
+      } catch (e) {
+        onError?.call('无法初始化录音设备，请检查麦克风驱动是否安装');
+        debugPrint('VoiceService: AudioRecorder 初始化失败: $e');
+        _cleanup();
+        return false;
+      }
+
+      // 3) 检查麦克风权限
+      bool hasPermission = false;
+      try {
+        hasPermission = await _recorder!.hasPermission();
+      } catch (e) {
+        onError?.call('麦克风权限检查失败: $e');
+        debugPrint('VoiceService: 权限检查失败: $e');
+        _cleanup();
+        return false;
+      }
+
       if (!hasPermission) {
         onError?.call('未授予麦克风权限');
         _cleanup();
         return false;
       }
 
-      final stream = await _recorder!.startStream(
-        const RecordConfig(
-          encoder: AudioEncoder.pcm16bits,
-          sampleRate: 16000,
-          numChannels: 1,
-          bitRate: 256000,
-        ),
-      );
+      // 4) 开始流式录音
+      Stream<List<int>> stream;
+      try {
+        stream = await _recorder!.startStream(
+          const RecordConfig(
+            encoder: AudioEncoder.pcm16bits,
+            sampleRate: 16000,
+            numChannels: 1,
+            bitRate: 256000,
+          ),
+        );
+      } catch (e) {
+        onError?.call('启动录音失败，请检查麦克风是否正常连接');
+        debugPrint('VoiceService: startStream 失败: $e');
+        _cleanup();
+        return false;
+      }
 
       _isListening = true;
       onStateChanged?.call(true);
 
-      // 3) 流式发送音频到讯飞
-      _audioSub = stream.listen((audioData) {
-        _sendAudioFrame(audioData, appId);
-      });
+      // 5) 流式发送音频到讯飞
+      _audioSub = stream.listen(
+        (audioData) {
+          _sendAudioFrame(audioData, appId);
+        },
+        onError: (e) {
+          debugPrint('VoiceService: 音频流错误: $e');
+          onError?.call('录音异常: $e');
+          stopListening();
+        },
+      );
 
       return true;
     } catch (e) {
       onError?.call('启动语音识别失败: $e');
+      debugPrint('VoiceService: startListening 异常: $e');
       _cleanup();
       return false;
     }
@@ -119,7 +185,11 @@ class VoiceService {
       // 停止录音
       await _audioSub?.cancel();
       _audioSub = null;
-      await _recorder?.stop();
+      try {
+        await _recorder?.stop();
+      } catch (e) {
+        debugPrint('VoiceService: recorder.stop error: $e');
+      }
 
       // 发送最后一帧
       _sendLastFrame();
@@ -135,14 +205,6 @@ class VoiceService {
     }
 
     onStateChanged?.call(false);
-  }
-
-  /// 检查讯飞配置是否完整
-  static Future<bool> isConfigured() async {
-    final appId = await SettingsService.getXunfeiAppId();
-    final apiKey = await SettingsService.getXunfeiApiKey();
-    final apiSecret = await SettingsService.getXunfeiApiSecret();
-    return appId.isNotEmpty && apiKey.isNotEmpty && apiSecret.isNotEmpty;
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -281,12 +343,12 @@ class VoiceService {
   }
 
   void _cleanup() {
-    _audioSub?.cancel();
+    try { _audioSub?.cancel(); } catch (_) {}
     _audioSub = null;
-    _recorder?.stop();
-    _recorder?.dispose();
+    try { _recorder?.stop(); } catch (_) {}
+    try { _recorder?.dispose(); } catch (_) {}
     _recorder = null;
-    _wsChannel?.sink.close();
+    try { _wsChannel?.sink.close(); } catch (_) {}
     _wsChannel = null;
     _isListening = false;
     _firstFrame = true;
