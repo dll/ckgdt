@@ -1,13 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../services/ai_service.dart';
 import '../../../services/plantuml_service.dart';
 import '../../../data/local/skill_dao.dart';
 import '../../../data/local/ai_history_dao.dart';
+import '../../widgets/markdown_bubble.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 技能定义
@@ -578,6 +578,8 @@ class _AiSkillPageState extends State<AiSkillPage>
 
   bool _loading = false;
   String? _result;
+  String? _modelProvider;
+  String? _modelName;
   List<Map<String, dynamic>> _savedResults = [];
 
   @override
@@ -614,16 +616,24 @@ class _AiSkillPageState extends State<AiSkillPage>
     setState(() {
       _loading = true;
       _result = null;
+      _modelProvider = null;
+      _modelName = null;
     });
 
     try {
-      final reply = await _aiService.chat(
+      final chatResult = await _aiService.chatWithMeta(
         [
           {'role': 'user', 'content': topic}
         ],
         systemPrompt: _skill.systemPrompt,
       );
-      if (mounted) setState(() => _result = reply);
+      if (mounted) {
+        setState(() {
+          _result = chatResult.content;
+          _modelProvider = chatResult.provider;
+          _modelName = chatResult.model;
+        });
+      }
 
       // 保存到聊天历史
       final sessionId = 'skill_${_skill.id}_${DateTime.now().millisecondsSinceEpoch}';
@@ -637,7 +647,7 @@ class _AiSkillPageState extends State<AiSkillPage>
         sessionId: sessionId,
         skillId: _skill.id,
         role: 'assistant',
-        content: reply,
+        content: chatResult.content,
       ).catchError((_) => 0);
     } catch (e) {
       if (mounted) {
@@ -1155,6 +1165,8 @@ class _AiSkillPageState extends State<AiSkillPage>
                               ),
                               child: _buildMarkdownContent(
                                 _result ?? '',
+                                provider: _modelProvider,
+                                model: _modelName,
                               ),
                             ),
                           ),
@@ -1397,51 +1409,20 @@ class _AiSkillPageState extends State<AiSkillPage>
     });
   }
 
-  /// 构建 Markdown 渲染 Widget（支持 PlantUML 图片）
-  Widget _buildMarkdownContent(String content) {
+  /// 构建 Markdown 渲染 Widget（支持 PlantUML 图片 + 模型标签）
+  ///
+  /// 当 [provider] / [model] 非 null 时，底部会显示"由 Provider · model 生成"标签。
+  Widget _buildMarkdownContent(
+    String content, {
+    String? provider,
+    String? model,
+  }) {
     final processed = _preprocessMarkdown(content);
-    return MarkdownBody(
-      data: processed,
-      selectable: true,
-      styleSheet: MarkdownStyleSheet(
-        p: const TextStyle(fontSize: 14, height: 1.7),
-        h1: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, height: 1.5),
-        h2: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, height: 1.5),
-        h3: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, height: 1.4),
-        h4: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, height: 1.4),
-        strong: const TextStyle(fontWeight: FontWeight.bold),
-        em: const TextStyle(fontStyle: FontStyle.italic),
-        code: TextStyle(
-          fontFamily: 'monospace',
-          fontSize: 13,
-          color: Colors.deepPurple[700],
-          backgroundColor: Colors.deepPurple.withValues(alpha: 0.06),
-        ),
-        codeblockPadding: const EdgeInsets.all(14),
-        codeblockDecoration: BoxDecoration(
-          color: Colors.grey.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
-        ),
-        blockquoteDecoration: BoxDecoration(
-          color: Colors.blue.withValues(alpha: 0.04),
-          border: const Border(
-            left: BorderSide(color: Color(0xFF667eea), width: 4),
-          ),
-        ),
-        blockquotePadding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-        listBullet: TextStyle(fontSize: 14, color: _skill.color),
-        tableHead: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-        tableBody: const TextStyle(fontSize: 13),
-        tableBorder: TableBorder.all(color: Colors.grey.withValues(alpha: 0.3)),
-        tableCellsPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        horizontalRuleDecoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(color: Colors.grey.withValues(alpha: 0.3), width: 1),
-          ),
-        ),
-        blockSpacing: 10,
-      ),
+    return MarkdownBubble(
+      content: processed,
+      provider: provider,
+      model: model,
+      accentColor: _skill.color,
     );
   }
 

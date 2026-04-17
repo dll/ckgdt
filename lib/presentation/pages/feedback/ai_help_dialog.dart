@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../services/ai_service.dart';
 import '../../../services/auth_service.dart';
+import '../../widgets/markdown_bubble.dart';
 
 /// AI 助手帮助对话框 — 使用集成的 AI API 回答用户常见问题
 class AiHelpDialog extends StatefulWidget {
@@ -97,14 +98,19 @@ class _AiHelpDialogState extends State<AiHelpDialog> {
               })
           .toList();
 
-      final reply = await _aiService.chat(
+      final result = await _aiService.chatWithMeta(
         contextMessages,
         systemPrompt: _systemPrompt,
       );
 
       if (mounted) {
         setState(() {
-          _messages.add(_HelpMessage(reply, false));
+          _messages.add(_HelpMessage(
+            result.content,
+            false,
+            modelProvider: result.provider,
+            modelName: result.model,
+          ));
           _isLoading = false;
         });
         _scrollToBottom();
@@ -369,14 +375,22 @@ class _AiHelpDialogState extends State<AiHelpDialog> {
             bottomRight: Radius.circular(msg.isUser ? 4 : 16),
           ),
         ),
-        child: SelectableText(
-          msg.text,
-          style: TextStyle(
-            fontSize: 14,
-            color: msg.isUser ? Colors.white : Colors.black87,
-            height: 1.4,
-          ),
-        ),
+        child: msg.isUser
+            ? SelectableText(
+                msg.text,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.white,
+                  height: 1.4,
+                ),
+              )
+            : MarkdownBubble(
+                content: msg.text,
+                provider: msg.modelProvider,
+                model: msg.modelName,
+                textColor: Colors.black87,
+                compact: true,
+              ),
       ),
     );
   }
@@ -417,5 +431,7 @@ class _AiHelpDialogState extends State<AiHelpDialog> {
 class _HelpMessage {
   final String text;
   final bool isUser;
-  const _HelpMessage(this.text, this.isUser);
+  final String? modelProvider;
+  final String? modelName;
+  const _HelpMessage(this.text, this.isUser, {this.modelProvider, this.modelName});
 }

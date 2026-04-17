@@ -5,6 +5,7 @@ import '../../services/agent/agent_registry.dart';
 import '../../services/navigation_service.dart';
 import '../../services/tts_flutter_service.dart';
 import '../../services/voice_service.dart';
+import 'markdown_bubble.dart';
 
 /// 多智能体对话浮层 — 全局 BottomSheet 对话面板
 ///
@@ -916,10 +917,18 @@ class _AgentChatOverlayState extends State<AgentChatOverlay> {
               color: bgColor,
               borderRadius: borderRadius,
             ),
-            child: SelectableText(
-              msg.content,
-              style: TextStyle(fontSize: 14, color: textColor, height: 1.5),
-            ),
+            child: isUser
+                ? SelectableText(
+                    msg.content,
+                    style: TextStyle(fontSize: 14, color: textColor, height: 1.5),
+                  )
+                : MarkdownBubble(
+                    content: msg.content,
+                    provider: msg.modelProvider,
+                    model: msg.modelName,
+                    textColor: textColor,
+                    compact: true,
+                  ),
           ),
         ],
       ),
