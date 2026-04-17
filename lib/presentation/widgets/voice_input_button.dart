@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../services/voice_service.dart';
 import '../pages/settings/voice_settings_page.dart';
@@ -52,6 +53,18 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
   }
 
   Future<void> _showVoiceDialog(BuildContext context) async {
+    // Web 平台不支持语音录制
+    if (kIsWeb) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Web 平台暂不支持语音输入，请使用桌面端或移动端'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     // 检查配置
     final configured = await VoiceService.isConfigured();
     if (!configured) {
@@ -510,6 +523,18 @@ class VoiceNavigationFab extends StatelessWidget {
   }
 
   Future<void> _handleVoiceNavigation(BuildContext context) async {
+    // Web 平台不支持语音录制
+    if (kIsWeb) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Web 平台暂不支持语音导航'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     final configured = await VoiceService.isConfigured();
     if (!configured) {
       if (!context.mounted) return;

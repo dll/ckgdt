@@ -1,4 +1,5 @@
 import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'data/local/database_helper.dart';
@@ -21,6 +22,16 @@ import 'platform/platform_init_stub.dart'
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // ── 全局错误处理：捕获 Flutter 框架异常（含原生插件崩溃）────────────────
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    debugPrint('=== FlutterError: ${details.exception}');
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('=== PlatformError: $error\n$stack');
+    return true; // 已处理，防止应用退出
+  };
 
   // MediaKit 仅在桌面端初始化（Android 无原生库，走系统播放器）
   try {

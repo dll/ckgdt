@@ -39,7 +39,7 @@ class GraphAgent extends BaseAgent {
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
     final messages = buildAiMessages(userMessage, session);
-    final reply = await safeAiChat(messages, aiService: _ai);
-    return buildReply(reply);
+    final result = await safeAiChatWithMeta(messages, aiService: _ai);
+    return buildReply(result.content, modelProvider: result.provider, modelName: result.model);
   }
 }

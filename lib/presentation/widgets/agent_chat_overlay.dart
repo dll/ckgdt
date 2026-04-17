@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../services/agent/agent_model.dart';
 import '../../services/agent/agent_registry.dart';
@@ -104,7 +105,19 @@ class _AgentChatOverlayState extends State<AgentChatOverlay> {
 
       // TTS 朗读回复
       if (_ttsEnabled && !reply.isLoading) {
-        TtsFlutterService.instance.speak(reply.content);
+        final tts = TtsFlutterService.instance;
+        await tts.speak(reply.content);
+        // 如果 TTS 不可用，提示用户并自动关闭 TTS 开关
+        if (!tts.isAvailable && mounted) {
+          setState(() => _ttsEnabled = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(tts.lastError ?? '语音合成不可用'),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
       }
     } catch (e) {
       debugPrint('AgentChatOverlay: 发送失败: $e');
@@ -151,6 +164,19 @@ class _AgentChatOverlayState extends State<AgentChatOverlay> {
   // ═════════════════════════════════════════════════════════════════════════
 
   Future<void> _startVoiceInput() async {
+    // Web 平台不支持语音录制
+    if (kIsWeb) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Web 平台暂不支持语音输入'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
     final configured = await VoiceService.isConfigured();
     if (!configured) {
       if (mounted) {
@@ -579,9 +605,29 @@ class _AgentChatOverlayState extends State<AgentChatOverlay> {
                 ),
                 tooltip: _ttsEnabled ? '关闭语音朗读' : '开启语音朗读',
                 onPressed: () {
+                  final tts = TtsFlutterService.instance;
+                  if (!_ttsEnabled && !tts.isAvailable) {
+                    // 尝试重新初始化 TTS
+                    tts.reinitialize().then((_) {
+                      if (mounted) {
+                        if (tts.isAvailable) {
+                          setState(() => _ttsEnabled = true);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(tts.lastError ?? '语音合成引擎不可用'),
+                              backgroundColor: Colors.orange,
+                              duration: const Duration(seconds: 3),
+                            ),
+                          );
+                        }
+                      }
+                    });
+                    return;
+                  }
                   setState(() => _ttsEnabled = !_ttsEnabled);
                   if (!_ttsEnabled) {
-                    TtsFlutterService.instance.stop();
+                    tts.stop();
                   }
                 },
               ),
