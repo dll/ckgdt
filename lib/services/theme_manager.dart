@@ -22,12 +22,6 @@ class ThemeManager {
         iconTheme: const IconThemeData(color: Colors.white),
         actionsIconTheme: const IconThemeData(color: Colors.white),
       ),
-      cardTheme: CardThemeData(
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-      ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: preset.primary,
         foregroundColor: Colors.white,
@@ -61,13 +55,6 @@ class ThemeManager {
         foregroundColor: Colors.white,
         iconTheme: IconThemeData(color: Colors.white),
         actionsIconTheme: IconThemeData(color: Colors.white),
-      ),
-      cardTheme: CardThemeData(
-        elevation: 2,
-        color: const Color(0xFF1E1E1E),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: preset.primary,
