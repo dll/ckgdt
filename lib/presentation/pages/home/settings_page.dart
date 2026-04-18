@@ -9,6 +9,7 @@ import '../settings/ai_data_page.dart';
 import '../feedback/feedback_manage_page.dart';
 import '../feedback/feedback_dialog.dart';
 import '../feedback/ai_help_dialog.dart';
+import '../settings/course_manage_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -151,6 +152,16 @@ class _SettingsPageState extends State<SettingsPage> {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const AiDataPage()),
+            ),
+          ),
+          _buildMenuItem(
+            context,
+            icon: Icons.school_outlined,
+            title: '课程管理',
+            subtitle: '查看、切换和生成课程',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CourseManagePage()),
             ),
           ),
           _buildMenuItem(

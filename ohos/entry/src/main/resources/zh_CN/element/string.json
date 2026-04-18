@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "移动应用开发知识图谱教学系统"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "移动应用开发知识图谱"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "移动图谱v0.9.0"
+    }
+  ]
+}

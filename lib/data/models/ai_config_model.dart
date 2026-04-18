@@ -17,6 +17,21 @@ class ProviderPreset {
   });
 }
 
+/// 内置默认 API Key 映射（开发版使用，正式发布时移除）
+///
+/// 格式: 'provider:model' => apiKey
+/// 如果只有 'provider' 则适用于该 provider 的所有模型
+const bool kShowApiKeyInput = bool.fromEnvironment(
+  'SHOW_API_KEY_INPUT',
+  defaultValue: false,
+);
+
+const Map<String, String> builtinApiKeys = {
+  'deepseek': 'sk-717ef9146311424daa2fbead8ed4682b',
+  'zhipu': '5dc44da8d9dd4c28bf38cde316950f1e.nNIf7AXWrJXIcSyQ',
+  'zhipu:glm-4.6v': '20322a4a95bf4bd68161b1f705aa6603.yHEHABcNAcOWy8WH',
+};
+
 class AiConfigModel {
   final String provider;
   final String? apiKey;
@@ -54,8 +69,8 @@ class AiConfigModel {
       id: 'zhipu',
       name: '智谱清言 GLM',
       baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
-      models: ['glm-4-flash', 'glm-4', 'glm-4-plus'],
-      description: '智谱 AI 开放平台，glm-4-flash 模型对所有用户永久免费，无需充值即可使用。',
+      models: ['glm-4-flash', 'glm-4', 'glm-4-plus', 'glm-4.6v'],
+      description: '智谱 AI 开放平台，glm-4-flash 模型对所有用户永久免费，无需充值即可使用。glm-4.6v 为视觉多模态模型。',
       freeNote: 'glm-4-flash 永久免费',
     ),
     ProviderPreset(
@@ -161,6 +176,28 @@ class AiConfigModel {
     } catch (_) {
       return null;
     }
+  }
+
+  /// 有效的 API Key：优先用户自定义 → 内置模型特定 Key → 内置通用 Key
+  String? get effectiveApiKey {
+    // 用户已填写则优先使用
+    if (apiKey != null && apiKey!.isNotEmpty) {
+      // 检查是否有模型特定的内置 Key（如 zhipu:glm-4.6v）
+      final modelSpecificKey = builtinApiKeys['$provider:$model'];
+      if (modelSpecificKey != null) {
+        // 如果用户填的就是该 provider 的通用 Key，且当前模型有专用 Key，则用专用 Key
+        final genericKey = builtinApiKeys[provider];
+        if (genericKey != null && apiKey == genericKey) {
+          return modelSpecificKey;
+        }
+      }
+      return apiKey;
+    }
+    // 检查模型特定内置 Key
+    final modelKey = builtinApiKeys['$provider:$model'];
+    if (modelKey != null) return modelKey;
+    // 检查通用内置 Key
+    return builtinApiKeys[provider];
   }
 
   /// 有效的 Base URL：优先用户自定义 → 预设默认 → DeepSeek 兜底
