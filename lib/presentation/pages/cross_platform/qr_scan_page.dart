@@ -90,7 +90,7 @@ class _QrScanPageState extends State<QrScanPage> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.6),
+                    color: Colors.black.withOpacity(0.6),
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: const Text(
@@ -168,7 +168,7 @@ class _ScanOverlayPainter extends CustomPainter {
     final rect = Rect.fromLTWH(left, top, scanSize, scanSize);
 
     // 半透明遮罩
-    final maskPaint = Paint()..color = Colors.black.withValues(alpha: 0.5);
+    final maskPaint = Paint()..color = Colors.black.withOpacity(0.5);
 
     // 上方遮罩
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, top), maskPaint);

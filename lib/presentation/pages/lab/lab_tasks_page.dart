@@ -63,7 +63,7 @@ class _LabTasksPageState extends State<LabTasksPage>
       children: [
         // Tab 栏 + Agent 入口
         Container(
-          color: primary.withValues(alpha: 0.05),
+          color: primary.withOpacity(0.05),
           child: Row(
             children: [
               Expanded(
@@ -219,7 +219,7 @@ class _TaskListTabState extends State<_TaskListTab> {
                   selectedColor: Theme.of(context)
                       .colorScheme
                       .primary
-                      .withValues(alpha: 0.15),
+                      .withOpacity(0.15),
                   padding: EdgeInsets.zero,
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
@@ -351,7 +351,7 @@ class _TaskListTabState extends State<_TaskListTab> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: dueDateColor.withValues(alpha: 0.1),
+                            color: dueDateColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
@@ -443,7 +443,7 @@ class _TaskListTabState extends State<_TaskListTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(difficulty,
@@ -555,10 +555,10 @@ class _TaskListTabState extends State<_TaskListTab> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.05),
+                        color: Colors.green.withOpacity(0.05),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                            color: Colors.green.withValues(alpha: 0.2)),
+                            color: Colors.green.withOpacity(0.2)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -613,7 +613,7 @@ class _TaskListTabState extends State<_TaskListTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
+        color: color.withOpacity(0.08),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -878,7 +878,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                     children: [
                       CircleAvatar(
                         radius: 18,
-                        backgroundColor: statusColor.withValues(alpha: 0.1),
+                        backgroundColor: statusColor.withOpacity(0.1),
                         child: Icon(statusIcon, color: statusColor, size: 20),
                       ),
                       const SizedBox(width: 12),
@@ -905,7 +905,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                               horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
                             color: _scoreColor(score, maxScore)
-                                .withValues(alpha: 0.1),
+                                .withOpacity(0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text('$score/$maxScore',
@@ -919,7 +919,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: statusColor.withValues(alpha: 0.1),
+                            color: statusColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(status,
@@ -969,7 +969,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.04),
+                        color: Colors.green.withOpacity(0.04),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -1178,7 +1178,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: primary.withValues(alpha: 0.1),
+                        color: primary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text('${entry.value.length}人提交',
@@ -1214,7 +1214,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
         child: ListTile(
           leading: CircleAvatar(
             radius: 18,
-            backgroundColor: statusColor.withValues(alpha: 0.1),
+            backgroundColor: statusColor.withOpacity(0.1),
             child: Text(userName.isNotEmpty ? userName.substring(0, 1) : '?',
                 style:
                     TextStyle(fontWeight: FontWeight.bold, color: statusColor)),
@@ -1230,7 +1230,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _scoreColor(score, maxScore).withValues(alpha: 0.1),
+                    color: _scoreColor(score, maxScore).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text('$score分',
@@ -1243,7 +1243,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.1),
+                    color: Colors.orange.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Text('待批改',
@@ -1329,10 +1329,10 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.05),
+                  color: Colors.green.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(12),
                   border:
-                      Border.all(color: Colors.green.withValues(alpha: 0.2)),
+                      Border.all(color: Colors.green.withOpacity(0.2)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1686,7 +1686,7 @@ class _ReportTabState extends State<_ReportTab> {
                 children: [
                   CircleAvatar(
                     radius: 18,
-                    backgroundColor: statusColor.withValues(alpha: 0.1),
+                    backgroundColor: statusColor.withOpacity(0.1),
                     child: Icon(statusIcon, color: statusColor, size: 20),
                   ),
                   const SizedBox(width: 12),
@@ -1733,7 +1733,7 @@ class _ReportTabState extends State<_ReportTab> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.1),
+                      color: statusColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(status,
@@ -1871,7 +1871,7 @@ class _ReportTabState extends State<_ReportTab> {
                     if (i == 0) {
                       return ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: Colors.grey.withValues(alpha: 0.1),
+                          backgroundColor: Colors.grey.withOpacity(0.1),
                           child: const Icon(Icons.article,
                               color: Colors.grey, size: 20),
                         ),
@@ -1889,7 +1889,7 @@ class _ReportTabState extends State<_ReportTab> {
                     final desc = tmpl['description'] as String? ?? '';
                     return ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: primary.withValues(alpha: 0.1),
+                        backgroundColor: primary.withOpacity(0.1),
                         child:
                             Icon(Icons.description, color: primary, size: 20),
                       ),
@@ -2351,7 +2351,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: diffColor.withValues(alpha: 0.1),
+                    color: diffColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(difficulty,
@@ -2371,7 +2371,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.grey.withValues(alpha: 0.1),
+                      color: Colors.grey.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: const Text('已归档',
@@ -2394,7 +2394,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: primary.withValues(alpha: 0.04),
+                color: primary.withOpacity(0.04),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
@@ -3297,7 +3297,7 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.15),
+                            color: Colors.orange.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Text('管理员',
@@ -3369,8 +3369,8 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
                           fontWeight: FontWeight.w500,
                         )),
                     backgroundColor:
-                        isSelected ? color : color.withValues(alpha: 0.1),
-                    side: BorderSide(color: color.withValues(alpha: 0.3)),
+                        isSelected ? color : color.withOpacity(0.1),
+                    side: BorderSide(color: color.withOpacity(0.3)),
                     onPressed: () => _switchBranch(isSelected ? null : name),
                   ),
                 );
@@ -3987,10 +3987,10 @@ class _RepoReportTabState extends State<_RepoReportTab>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.1),
+                        color: Colors.green.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: Colors.green.withValues(alpha: 0.3),
+                          color: Colors.green.withOpacity(0.3),
                         ),
                       ),
                       child: Text(
@@ -4109,7 +4109,7 @@ class _RepoReportTabState extends State<_RepoReportTab>
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.06),
+          color: color.withOpacity(0.06),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -4128,7 +4128,7 @@ class _RepoReportTabState extends State<_RepoReportTab>
               label,
               style: TextStyle(
                 fontSize: 10,
-                color: color.withValues(alpha: 0.7),
+                color: color.withOpacity(0.7),
               ),
             ),
           ],
