@@ -43,6 +43,8 @@ import '../feedback/feedback_manage_page.dart';
 import '../practice/deep_practice_page.dart';
 import '../practice/growth_curve_page.dart';
 import '../cross_platform/cross_platform_hub_page.dart';
+import '../settings/course_manage_page.dart';
+import '../../widgets/course_generator_sheet.dart';
 import 'settings_page.dart';
 import 'search_page.dart';
 
@@ -616,6 +618,26 @@ class _HomePageState extends State<HomePage> {
                     color: Colors.amber[700]!,
                     onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const FeedbackManagePage())),
+                  ),
+                  _buildMenuCard(
+                    icon: Icons.auto_awesome,
+                    title: '一键生课',
+                    color: Colors.deepPurple[300]!,
+                    onTap: () => showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                      ),
+                      builder: (_) => const CourseGeneratorSheet(),
+                    ),
+                  ),
+                  _buildMenuCard(
+                    icon: Icons.school_outlined,
+                    title: '课程管理',
+                    color: Colors.teal[400]!,
+                    onTap: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const CourseManagePage())),
                   ),
                 ],
 

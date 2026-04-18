@@ -32,7 +32,8 @@ class AiService {
     String? systemPrompt,
   }) async {
     final config = await _configDao.getConfig();
-    if (config.apiKey == null || config.apiKey!.isEmpty) {
+    final effectiveKey = config.effectiveApiKey;
+    if (effectiveKey == null || effectiveKey.isEmpty) {
       throw '抱歉，AI 服务暂时不可用。请在「设置  →  AI 配置」中配置 API Key。';
     }
 
@@ -47,7 +48,7 @@ class AiService {
           Uri.parse(url),
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer ${config.apiKey}',
+            'Authorization': 'Bearer $effectiveKey',
             'User-Agent': 'knowledge-graph-app/1.0',
           },
           body: jsonEncode({
