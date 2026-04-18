@@ -56,7 +56,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 14,
+      version: 15,
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -110,7 +110,7 @@ class DatabaseHelper {
         // 重新打开（版本号必须与主初始化一致）
         final db2 = await openDatabase(
           dbName,
-          version: 14,
+          version: 15,
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
         );
@@ -168,7 +168,7 @@ class DatabaseHelper {
         // Create empty database
         db = await openDatabase(
           dbPath,
-          version: 14,
+          version: 15,
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
         );
@@ -180,7 +180,7 @@ class DatabaseHelper {
 
     db = await openDatabase(
       dbPath,
-      version: 14,
+      version: 15,
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -401,6 +401,7 @@ class DatabaseHelper {
     await _createNewTablesV12(db);
     await _migrateToV13(db);
     await _migrateToV14(db);
+    await _migrateToV15(db);
     await _ensureResourceFileColumns(db);
 
     // Add admin user (ignore if already exists from asset DB)
@@ -419,6 +420,19 @@ class DatabaseHelper {
       'role': 'teacher',
       'created_at': DateTime.now().toIso8601String(),
       'is_active': 1,
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
+
+    // 插入默认 AI 配置（DeepSeek），用户无需手动填写 API Key
+    await db.insert('ai_configs', {
+      'id': 1,
+      'provider': 'deepseek',
+      'api_key': 'sk-717ef9146311424daa2fbead8ed4682b',
+      'model': 'deepseek-chat',
+      'base_url': 'https://api.deepseek.com',
+      'temperature': 0.7,
+      'max_tokens': 2048,
+      'timeout': 60,
+      'updated_at': DateTime.now().toIso8601String(),
     }, conflictAlgorithm: ConflictAlgorithm.ignore);
   }
 
@@ -462,6 +476,9 @@ class DatabaseHelper {
     }
     if (oldVersion < 14) {
       await _migrateToV14(db);
+    }
+    if (oldVersion < 15) {
+      await _migrateToV15(db);
     }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
@@ -521,6 +538,7 @@ class DatabaseHelper {
     await _createNewTablesV12(db);
     await _migrateToV13(db);
     await _migrateToV14(db);
+    await _migrateToV15(db);
     await _ensureAchievementColumns(db);
   }
 
@@ -1223,6 +1241,51 @@ class DatabaseHelper {
         tokens_used INTEGER DEFAULT 0
       )
     ''');
+
+    // 如果 ai_configs 为空，插入默认 DeepSeek 配置
+    final existing = await db.query('ai_configs', where: 'id = ?', whereArgs: [1]);
+    if (existing.isEmpty) {
+      await db.insert('ai_configs', {
+        'id': 1,
+        'provider': 'deepseek',
+        'api_key': 'sk-717ef9146311424daa2fbead8ed4682b',
+        'model': 'deepseek-chat',
+        'base_url': 'https://api.deepseek.com',
+        'temperature': 0.7,
+        'max_tokens': 2048,
+        'timeout': 60,
+        'updated_at': DateTime.now().toIso8601String(),
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    }
+  }
+
+  Future<void> _migrateToV15(Database db) async {
+    // 创建课程表
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS courses(
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT,
+        chapter_count INTEGER DEFAULT 6,
+        chapters TEXT,
+        is_active INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    // 插入默认课程（移动应用开发）
+    final existing = await db.query('courses', where: 'id = ?', whereArgs: ['mad']);
+    if (existing.isEmpty) {
+      await db.insert('courses', {
+        'id': 'mad',
+        'name': '移动应用开发',
+        'description': '涵盖 Android、iOS、Flutter、小程序、HarmonyOS 等移动应用开发技术',
+        'chapter_count': 6,
+        'chapters': '["移动应用开发技术体系全景","Android 与 iOS 原生开发基础","Flutter、React Native 等混合开发技术","微信小程序开发流程","华为 HarmonyOS 多端应用开发","综合开发实践"]',
+        'is_active': 1,
+        'created_at': DateTime.now().toIso8601String(),
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    }
   }
 
   Future<void> _createNewTablesV3(Database db) async {

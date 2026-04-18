@@ -23,6 +23,7 @@ class AiConfigDao {
 
   Future<bool> hasApiKey() async {
     final config = await getConfig();
-    return config.apiKey != null && config.apiKey!.isNotEmpty;
+    final effectiveKey = config.effectiveApiKey;
+    return effectiveKey != null && effectiveKey.isNotEmpty;
   }
 }

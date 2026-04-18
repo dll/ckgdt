@@ -117,7 +117,10 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     final apiKey = _apiKeyController.text.trim();
     // 本地服务商不需要 API Key
     final isLocal = _localIds.contains(_provider);
-    if (!isLocal && apiKey.isEmpty) {
+    // 检查是否有内置 Key
+    final hasBuiltinKey = builtinApiKeys.containsKey(_provider) ||
+        builtinApiKeys.containsKey('$_provider:${_modelController.text.trim()}');
+    if (!isLocal && !hasBuiltinKey && apiKey.isEmpty) {
       _showSnack('请先输入 API Key');
       return;
     }
@@ -247,13 +250,18 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                   _buildInfoCard(primary, gradient),
                   const SizedBox(height: 20),
 
-                  // ── API Key ────────────────────────────────────────────
-                  _sectionTitle('API Key'),
-                  const SizedBox(height: 6),
-                  _buildApiKeyHint(primary),
-                  const SizedBox(height: 8),
-                  _buildApiKeyField(),
-                  const SizedBox(height: 20),
+                  // ── API Key（开发版隐藏，正式版显示）─────────────────
+                  if (kShowApiKeyInput) ...[
+                    _sectionTitle('API Key'),
+                    const SizedBox(height: 6),
+                    _buildApiKeyHint(primary),
+                    const SizedBox(height: 8),
+                    _buildApiKeyField(),
+                    const SizedBox(height: 20),
+                  ] else ...[
+                    _buildBuiltinKeyBanner(primary),
+                    const SizedBox(height: 20),
+                  ],
 
                   // ── 模型选择 ───────────────────────────────────────────
                   _sectionTitle('模型'),
@@ -465,6 +473,49 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  // ── 内置 Key 提示横幅 ────────────────────────────────────────────────────
+
+  Widget _buildBuiltinKeyBanner(Color primary) {
+    final hasKey = builtinApiKeys.containsKey(_provider) ||
+        builtinApiKeys.containsKey('$_provider:${_modelController.text.trim()}');
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: hasKey
+            ? Colors.green.withValues(alpha: 0.08)
+            : Colors.orange.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: hasKey
+              ? Colors.green.withValues(alpha: 0.3)
+              : Colors.orange.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            hasKey ? Icons.check_circle_outline : Icons.info_outline,
+            size: 18,
+            color: hasKey ? Colors.green.shade700 : Colors.orange.shade700,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              hasKey
+                  ? '已内置 API Key，无需配置即可使用'
+                  : '该服务商暂无内置 Key，请联系管理员',
+              style: TextStyle(
+                fontSize: 13,
+                color: hasKey ? Colors.green.shade700 : Colors.orange.shade700,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -77,9 +77,11 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
         return;
       }
 
-      final dir = await getTemporaryDirectory();
+      final dir = await getApplicationDocumentsDirectory();
+      final feedbackDir = Directory('${dir.path}/feedback_images');
+      if (!await feedbackDir.exists()) await feedbackDir.create(recursive: true);
       final file = File(
-          '${dir.path}/feedback_screenshot_${DateTime.now().millisecondsSinceEpoch}.png');
+          '${feedbackDir.path}/feedback_screenshot_${DateTime.now().millisecondsSinceEpoch}.png');
       await file.writeAsBytes(byteData.buffer.asUint8List());
 
       if (mounted) {
@@ -104,10 +106,12 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.first;
         if (file.path != null) {
-          // 复制到应用临时目录
-          final dir = await getTemporaryDirectory();
+          // 复制到应用持久化目录
+          final dir = await getApplicationDocumentsDirectory();
+          final feedbackDir = Directory('${dir.path}/feedback_images');
+          if (!await feedbackDir.exists()) await feedbackDir.create(recursive: true);
           final destPath =
-              '${dir.path}/feedback_attach_${DateTime.now().millisecondsSinceEpoch}.${file.extension ?? 'png'}';
+              '${feedbackDir.path}/feedback_attach_${DateTime.now().millisecondsSinceEpoch}.${file.extension ?? 'png'}';
           await File(file.path!).copy(destPath);
           if (mounted) setState(() => _attachmentPath = destPath);
         }

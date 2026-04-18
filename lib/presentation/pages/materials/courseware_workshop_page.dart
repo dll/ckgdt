@@ -4,10 +4,12 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:sqflite/sqflite.dart';
 import '../../../services/courseware_service.dart';
 import '../../../services/tts_service.dart';
 import '../../../services/video_service.dart';
 import '../../../data/local/ai_config_dao.dart';
+import '../../../data/local/database_helper.dart';
 import 'ai_settings_page.dart';
 
 /// 课件工坊 — 教案→MD→PDF→UML→语音→视频 一站式课件生成
@@ -76,6 +78,11 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
   bool _generatingVideo = false;
   double _videoProgress = 0;
   String _videoStatus = '';
+
+  // ── 发布状态 ──
+  bool _published = false;       // AI 流程是否已发布
+  bool _mdPublished = false;     // MD 导入流程是否已发布
+  bool _publishing = false;
 
   static const _chapters = [
     '全部/自定义',
@@ -460,6 +467,30 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                       _buildResultRow(Icons.picture_as_pdf, _pdfPath!, 'PDF'),
                     if (_mdVideoPath != null)
                       _buildResultRow(Icons.videocam, _mdVideoPath!, 'MP4'),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: _mdPublished
+                          ? OutlinedButton.icon(
+                              onPressed: null,
+                              icon: const Icon(Icons.check, color: Colors.green),
+                              label: const Text('已发布为扩展课件',
+                                  style: TextStyle(color: Colors.green)),
+                            )
+                          : FilledButton.icon(
+                              onPressed: _publishing
+                                  ? null
+                                  : () => _doPublish(isMdFlow: true),
+                              icon: _publishing
+                                  ? const SizedBox(
+                                      width: 16, height: 16,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2, color: Colors.white),
+                                    )
+                                  : const Icon(Icons.publish),
+                              label: Text(_publishing ? '正在发布...' : '发布为扩展课件'),
+                            ),
+                    ),
                   ],
                 ),
               ),
@@ -561,6 +592,7 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
       _parsedSlides = [];
       _pptxPath = null;
       _pdfPath = null;
+      _mdPublished = false;
     });
 
     // 解析 MD 文件
@@ -1739,9 +1771,128 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
             Text(_videoStatus,
                 style: const TextStyle(fontSize: 12, color: Colors.grey)),
           ],
+
+          // ── 发布为扩展课件 ──
+          if (_pdfPath != null || _pptxPath != null || _videoPath != null) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: _published
+                  ? OutlinedButton.icon(
+                      onPressed: null,
+                      icon: const Icon(Icons.check, color: Colors.green),
+                      label: const Text('已发布为扩展课件',
+                          style: TextStyle(color: Colors.green)),
+                    )
+                  : FilledButton.icon(
+                      onPressed: _publishing
+                          ? null
+                          : () => _doPublish(isMdFlow: false),
+                      icon: _publishing
+                          ? const SizedBox(
+                              width: 16, height: 16,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.publish),
+                      label: Text(_publishing ? '正在发布...' : '发布为扩展课件'),
+                    ),
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 发布为扩展课件 → 写入 resource_files 表
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// 将已生成的课件发布到 resource_files 表，使其出现在"课程资料"列表中
+  Future<void> _doPublish({required bool isMdFlow}) async {
+    setState(() => _publishing = true);
+
+    try {
+      final db = await DatabaseHelper.instance.database;
+
+      // 确定标题和章节
+      final title = isMdFlow
+          ? (_importedMdPath?.split(Platform.pathSeparator).last ?? '课件')
+              .replaceAll(RegExp(r'\.(md|markdown|txt)$'), '')
+          : (_lessonPlan?['title']?.toString() ?? '课件');
+
+      // 尝试从章节选择中提取章节名
+      final chapter = _selectedChapter == '全部/自定义' ? title : _selectedChapter;
+
+      // 获取当前流程的文件路径
+      final pdfPath = isMdFlow ? _pdfPath : _pdfPath;
+      final pptxPath = isMdFlow ? _pptxPath : _pptxPath;
+      final videoPath = isMdFlow ? _mdVideoPath : _videoPath;
+
+      int publishedCount = 0;
+
+      // 发布 PDF
+      if (pdfPath != null && File(pdfPath).existsSync()) {
+        await db.insert('resource_files', {
+          'file_name': '$title.pdf',
+          'file_path': pdfPath,
+          'file_type': 'pdf',
+          'chapter': chapter,
+          'description': '[AI生成] $title 课件',
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+        publishedCount++;
+      }
+
+      // 发布 PPT/PPTX
+      if (pptxPath != null && File(pptxPath).existsSync()) {
+        await db.insert('resource_files', {
+          'file_name': '$title.pptx',
+          'file_path': pptxPath,
+          'file_type': 'ppt',
+          'chapter': chapter,
+          'description': '[AI生成] $title 课件',
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+        publishedCount++;
+      }
+
+      // 发布视频
+      if (videoPath != null && File(videoPath).existsSync()) {
+        await db.insert('resource_files', {
+          'file_name': '$title.mp4',
+          'file_path': videoPath,
+          'file_type': 'video',
+          'chapter': chapter,
+          'description': '[AI生成] $title 教学视频',
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+        publishedCount++;
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _publishing = false;
+        if (isMdFlow) {
+          _mdPublished = true;
+        } else {
+          _published = true;
+        }
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('已发布 $publishedCount 个课件到课程资料'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      setState(() => _publishing = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('发布失败: $e')),
+        );
+      }
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -2056,6 +2207,7 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
           _narrationScripts = [];
           _audioPaths = [];
           _videoPath = null;
+          _published = false;
         });
 
         if (mounted) {

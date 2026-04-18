@@ -19,6 +19,7 @@ import 'agents/doc_converter_agent.dart';
 import 'agents/mobile_expert_agent.dart';
 import 'agents/ethics_agent.dart';
 import 'agents/course_gen_agent.dart';
+import 'agents/madkg_agent.dart';
 
 /// 智能体注册表 + Director 编排
 ///
@@ -61,6 +62,7 @@ class AgentRegistry {
     _register(MobileExpertAgent());
     _register(EthicsAgent());
     _register(CourseGenAgent());
+    _register(MadkgAgent());
     _register(AssistantAgent()); // 兜底，最后注册
 
     _initialized = true;
