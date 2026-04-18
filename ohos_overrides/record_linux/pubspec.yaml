@@ -1,0 +1,13 @@
+name: record_linux
+description: Stub record_linux for OHOS builds
+version: 0.7.2
+homepage: https://github.com/llfbandit/record
+
+environment:
+  sdk: ^3.3.0
+  flutter: ">=3.16.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  record_platform_interface: ^1.0.2

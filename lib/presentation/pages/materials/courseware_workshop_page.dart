@@ -1246,7 +1246,7 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                             : Colors.grey.shade300,
                     boxShadow: isCurrent
                         ? [BoxShadow(
-                            color: Colors.deepPurple.withValues(alpha: 0.3),
+                            color: Colors.deepPurple.withOpacity(0.3),
                             blurRadius: 8,
                           )]
                         : null,
@@ -1310,7 +1310,7 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
 
           // 章节选择
           DropdownButtonFormField<String>(
-            initialValue: _selectedChapter,
+            value: _selectedChapter,
             decoration: const InputDecoration(
               labelText: '所属章节',
               border: OutlineInputBorder(),
@@ -1652,7 +1652,7 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
 
           // 语音选择
           DropdownButtonFormField<String>(
-            initialValue: _ttsVoice,
+            value: _ttsVoice,
             decoration: const InputDecoration(
               labelText: '语音角色',
               border: OutlineInputBorder(),
@@ -1958,7 +1958,7 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
       ),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: isReady ? Colors.green : color.withValues(alpha: 0.15),
+          backgroundColor: isReady ? Colors.green : color.withOpacity(0.15),
           child: Icon(
             isReady ? Icons.check : icon,
             color: isReady ? Colors.white : color,

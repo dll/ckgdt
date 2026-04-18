@@ -289,7 +289,7 @@ class _RepoListTabState extends State<_RepoListTab>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.15),
+                  color: color.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -392,7 +392,7 @@ class _RepoListTabState extends State<_RepoListTab>
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: color.withValues(alpha: 0.7)),
+        Icon(icon, size: 14, color: color.withOpacity(0.7)),
         const SizedBox(width: 3),
         Text(text, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
       ],
@@ -581,8 +581,8 @@ class _StudentDetailTabState extends State<_StudentDetailTab>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            gradient.gradientStart.withValues(alpha: 0.08),
-            gradient.gradientEnd.withValues(alpha: 0.04),
+            gradient.gradientStart.withOpacity(0.08),
+            gradient.gradientEnd.withOpacity(0.04),
           ],
         ),
       ),
@@ -637,7 +637,7 @@ class _StudentDetailTabState extends State<_StudentDetailTab>
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
+          color: color.withOpacity(0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -760,7 +760,7 @@ class _StudentDetailTabState extends State<_StudentDetailTab>
     return ListTile(
       dense: true,
       selected: isSelected,
-      selectedTileColor: color.withValues(alpha: 0.1),
+      selectedTileColor: color.withOpacity(0.1),
       leading: Icon(isStudent ? Icons.person : Icons.alt_route,
           size: 16, color: isSelected ? color : Colors.grey),
       title: Text(displayName,
@@ -819,7 +819,7 @@ class _StudentDetailTabState extends State<_StudentDetailTab>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: Colors.teal.withValues(alpha: 0.1),
+                  color: Colors.teal.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text('${_commits.length} 提交',
@@ -1246,7 +1246,7 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.12),
+                  color: Colors.blue.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(Icons.account_tree, size: 20, color: Colors.blue),
@@ -1300,9 +1300,9 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: (isDark ? Colors.blue[900] : Colors.blue[50])!
-                    .withValues(alpha: 0.5),
+                    .withOpacity(0.5),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                border: Border.all(color: Colors.blue.withOpacity(0.3)),
               ),
               child: const Text(
                 '数据流向：mad-data（课件配置）→ Gitee API → App 本地缓存\n'
@@ -1327,7 +1327,7 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         border: Border(left: BorderSide(color: color, width: 3)),
-        color: color.withValues(alpha: 0.04),
+        color: color.withOpacity(0.04),
         borderRadius: const BorderRadius.horizontal(right: Radius.circular(8)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1370,7 +1370,7 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.12),
+                  color: Colors.orange.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(Icons.verified_user, size: 20,
@@ -1467,7 +1467,7 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.purple.withValues(alpha: 0.12),
+              color: Colors.purple.withOpacity(0.12),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(Icons.list_alt, size: 20, color: Colors.purple),
@@ -1515,7 +1515,7 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: groupColor.withValues(alpha: 0.15),
+                  color: groupColor.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text('CG${groupNum ?? "?"}',
@@ -1549,7 +1549,7 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
 
   Widget _buildMiniStat(IconData icon, String text, Color color) {
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(icon, size: 13, color: color.withValues(alpha: 0.7)),
+      Icon(icon, size: 13, color: color.withOpacity(0.7)),
       const SizedBox(width: 3),
       Text(text, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
     ]);
@@ -1589,10 +1589,10 @@ class _SubmissionGuidelinesTab extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.orange.withValues(alpha: 0.15), Colors.red.withValues(alpha: 0.08)],
+              colors: [Colors.orange.withOpacity(0.15), Colors.red.withOpacity(0.08)],
             ),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+            border: Border.all(color: Colors.orange.withOpacity(0.3)),
           ),
           child: Row(
             children: [
@@ -1844,7 +1844,7 @@ class _SubmissionGuidelinesTab extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
+                    color: color.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(icon, size: 20, color: color),
@@ -1905,7 +1905,7 @@ class _SubmissionGuidelinesTab extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: Colors.grey.withValues(alpha: 0.08),
+          color: Colors.grey.withOpacity(0.08),
           borderRadius: BorderRadius.circular(6),
         ),
         child: Text(text,
@@ -1943,7 +1943,7 @@ class _SubmissionGuidelinesTab extends StatelessWidget {
             width: 70,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
+              color: color.withOpacity(0.12),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(type,
@@ -2173,11 +2173,11 @@ class _GiteeSettingsTabState extends State<_GiteeSettingsTab> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: (_testSuccess ? Colors.green : Colors.red)
-                    .withValues(alpha: 0.1),
+                    .withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                     color: (_testSuccess ? Colors.green : Colors.red)
-                        .withValues(alpha: 0.3)),
+                        .withOpacity(0.3)),
               ),
               child: Row(
                 children: [

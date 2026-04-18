@@ -170,7 +170,7 @@ class _StudentLabPageState extends State<StudentLabPage> {
           height: 40,
           decoration: BoxDecoration(
             color: (hasSubmitted ? Colors.green : Colors.blue)
-                .withValues(alpha: 0.1),
+                .withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
@@ -190,7 +190,7 @@ class _StudentLabPageState extends State<StudentLabPage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
               decoration: BoxDecoration(
-                color: diffColor.withValues(alpha: 0.1),
+                color: diffColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(difficulty,
@@ -325,13 +325,13 @@ class _StudentLabPageState extends State<StudentLabPage> {
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       color: selectedFilePath != null
-                          ? const Color(0xFF667eea).withValues(alpha: 0.05)
-                          : Colors.grey.withValues(alpha: 0.05),
+                          ? const Color(0xFF667eea).withOpacity(0.05)
+                          : Colors.grey.withOpacity(0.05),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: selectedFilePath != null
-                            ? const Color(0xFF667eea).withValues(alpha: 0.3)
-                            : Colors.grey.withValues(alpha: 0.3),
+                            ? const Color(0xFF667eea).withOpacity(0.3)
+                            : Colors.grey.withOpacity(0.3),
                         style: BorderStyle.solid,
                       ),
                     ),
