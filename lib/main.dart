@@ -436,7 +436,7 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
+                      color: Colors.black.withOpacity(0.2),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -509,7 +509,7 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
         borderRadius: BorderRadius.circular(6),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: Colors.black.withOpacity(0.1),
             blurRadius: 4,
           ),
         ],
@@ -529,7 +529,7 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
+            color: Colors.black.withOpacity(0.15),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),

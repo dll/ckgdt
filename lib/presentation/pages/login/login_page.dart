@@ -536,9 +536,9 @@ class _LoginPageState extends State<LoginPage>
                           height: 56,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Colors.white.withValues(alpha: 0.2),
+                            color: Colors.white.withOpacity(0.2),
                             border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.5),
+                              color: Colors.white.withOpacity(0.5),
                               width: 2,
                             ),
                           ),
@@ -586,7 +586,7 @@ class _LoginPageState extends State<LoginPage>
                 color: Theme.of(context)
                     .colorScheme
                     .primaryContainer
-                    .withValues(alpha: 0.3),
+                    .withOpacity(0.3),
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(16)),
               ),
@@ -774,7 +774,7 @@ class _LoginPageState extends State<LoginPage>
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-                color: theme.colorScheme.outline.withValues(alpha: 0.2)),
+                color: theme.colorScheme.outline.withOpacity(0.2)),
           ),
           child: QrImageView(
             data: _qrData!,
@@ -840,7 +840,7 @@ class _LoginPageState extends State<LoginPage>
                 color: Theme.of(context)
                     .colorScheme
                     .primaryContainer
-                    .withValues(alpha: 0.3),
+                    .withOpacity(0.3),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -1181,7 +1181,7 @@ class _VoiceLoginDialogState extends State<_VoiceLoginDialog>
                           boxShadow: _isListening
                               ? [
                                   BoxShadow(
-                                    color: Colors.red.withValues(alpha: 0.3),
+                                    color: Colors.red.withOpacity(0.3),
                                     blurRadius: 20 * _pulseController.value,
                                     spreadRadius: 5 * _pulseController.value,
                                   ),
@@ -1220,7 +1220,7 @@ class _VoiceLoginDialogState extends State<_VoiceLoginDialog>
                   color: Theme.of(context)
                       .colorScheme
                       .surfaceContainerHighest
-                      .withValues(alpha: 0.3),
+                      .withOpacity(0.3),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
