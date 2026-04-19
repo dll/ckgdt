@@ -148,6 +148,7 @@ class DataLoadingService {
           'file_type': 'video',
           'chapter': chapter,
           'description': '视频教程',
+          'source_type': 'preset',
         });
 
         // PDF
@@ -157,6 +158,7 @@ class DataLoadingService {
           'file_type': 'pdf',
           'chapter': chapter,
           'description': '$chapter 课件',
+          'source_type': 'preset',
         });
 
         // PPT
@@ -166,6 +168,7 @@ class DataLoadingService {
           'file_type': 'ppt',
           'chapter': chapter,
           'description': '$chapter 课件',
+          'source_type': 'preset',
         });
       }
 

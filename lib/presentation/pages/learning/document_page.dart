@@ -1,8 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../core/constants/chapter_sorter.dart';
 import '../../../data/local/database_helper.dart';
+import '../../../data/local/course_dao.dart';
+import '../../../services/ai_service.dart';
 import '../../../services/file_opener_service.dart';
 import '../../../services/courseware_download_service.dart';
 
@@ -21,6 +24,8 @@ class _DocumentListPageState extends State<DocumentListPage>
   List<Map<String, dynamic>> _pdfs = [];
   List<Map<String, dynamic>> _ppts = [];
   bool _isLoading = true;
+  bool _generatingExtended = false;
+  String _resourceMode = 'all'; // 'all', 'preset', 'extended'
 
   @override
   void initState() {
@@ -33,21 +38,21 @@ class _DocumentListPageState extends State<DocumentListPage>
     try {
       final db = await _dbHelper.database;
 
-      final pdfs = await db.query(
-        'resource_files',
-        where: 'file_type = ?',
-        whereArgs: ['pdf'],
-        orderBy: 'chapter',
+      // 构建 source_type 过滤条件
+      String sourceFilter = '';
+      if (_resourceMode == 'preset') {
+        sourceFilter = " AND (source_type = 'preset' OR source_type IS NULL)";
+      } else if (_resourceMode == 'extended') {
+        sourceFilter = " AND source_type = 'extended'";
+      }
+
+      final pdfs = await db.rawQuery(
+        "SELECT * FROM resource_files WHERE file_type = 'pdf'$sourceFilter ORDER BY chapter",
       );
 
-      final ppts = await db.query(
-        'resource_files',
-        where: 'file_type = ?',
-        whereArgs: ['ppt'],
-        orderBy: 'chapter',
+      final ppts = await db.rawQuery(
+        "SELECT * FROM resource_files WHERE file_type = 'ppt'$sourceFilter ORDER BY chapter",
       );
-
-      // 数据由 DataLoadingService 统一初始化，不再在此处硬编码
 
       final sortedPdfs = List<Map<String, dynamic>>.from(pdfs);
       final sortedPpts = List<Map<String, dynamic>>.from(ppts);
@@ -96,17 +101,43 @@ class _DocumentListPageState extends State<DocumentListPage>
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                _buildDocumentList(
-                    _pdfs, Icons.picture_as_pdf, Colors.red, 'PDF'),
-                _buildDocumentList(
-                    _ppts, Icons.slideshow, Colors.orange, 'PPT'),
-              ],
-            ),
+      body: Column(
+        children: [
+          // 预制/扩展 切换栏
+          _buildResourceModeBar(),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildDocumentList(
+                          _pdfs, Icons.picture_as_pdf, Colors.red, 'PDF'),
+                      _buildDocumentList(
+                          _ppts, Icons.slideshow, Colors.orange, 'PPT'),
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResourceModeBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: SegmentedButton<String>(
+        segments: const [
+          ButtonSegment(value: 'all', label: Text('全部')),
+          ButtonSegment(value: 'preset', label: Text('预制')),
+          ButtonSegment(value: 'extended', label: Text('扩展')),
+        ],
+        selected: {_resourceMode},
+        onSelectionChanged: (Set<String> newSelection) {
+          setState(() => _resourceMode = newSelection.first);
+          _loadDocuments();
+        },
+      ),
     );
   }
 
@@ -120,14 +151,38 @@ class _DocumentListPageState extends State<DocumentListPage>
             Icon(icon, size: 80, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
-              '暂无${type}文档',
+              _resourceMode == 'extended'
+                  ? '暂无扩展$type文档'
+                  : '暂无$type文档',
               style: TextStyle(fontSize: 18, color: Colors.grey[600]),
             ),
             const SizedBox(height: 8),
             Text(
-              '文档将从 Gitee 仓库自动获取',
+              _resourceMode == 'extended'
+                  ? '点击下方按钮，让 AI 自动生成扩展课件主题'
+                  : '文档将从 Gitee 仓库自动获取',
               style: TextStyle(fontSize: 13, color: Colors.grey[500]),
             ),
+            if (_resourceMode == 'extended') ...[
+              const SizedBox(height: 20),
+              _generatingExtended
+                  ? const Column(
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 8),
+                        Text('AI 正在生成扩展课件主题...',
+                            style: TextStyle(fontSize: 13, color: Colors.purple)),
+                      ],
+                    )
+                  : FilledButton.icon(
+                      onPressed: _generateExtendedDocuments,
+                      icon: const Icon(Icons.auto_awesome),
+                      label: const Text('AI 生成扩展课件'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.purple,
+                      ),
+                    ),
+            ],
           ],
         ),
       );
@@ -138,21 +193,141 @@ class _DocumentListPageState extends State<DocumentListPage>
       itemCount: documents.length,
       itemBuilder: (context, index) {
         final doc = documents[index];
+        final isExtended = doc['source_type'] == 'extended';
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: color,
-              child: Icon(icon, color: Colors.white),
+              backgroundColor: isExtended ? Colors.purple : color,
+              child: Icon(
+                isExtended ? Icons.auto_awesome : icon,
+                color: Colors.white,
+              ),
             ),
             title: Text(doc['chapter'] ?? '文档'),
-            subtitle: Text(doc['file_name'] ?? ''),
+            subtitle: Row(
+              children: [
+                if (isExtended) ...[
+                  Icon(Icons.auto_awesome,
+                      size: 12, color: Colors.purple[300]),
+                  const SizedBox(width: 4),
+                  Text('AI 生成',
+                      style: TextStyle(
+                          fontSize: 11, color: Colors.purple[300])),
+                  const SizedBox(width: 8),
+                ],
+                Flexible(child: Text(doc['file_name'] ?? '')),
+              ],
+            ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _openDocument(doc),
           ),
         );
       },
     );
+  }
+
+  Future<void> _generateExtendedDocuments() async {
+    setState(() => _generatingExtended = true);
+
+    try {
+      final aiService = AiService();
+      final db = await _dbHelper.database;
+
+      // 获取当前课程信息
+      String courseName = '移动应用开发';
+      String chaptersInfo = '';
+      try {
+        final course = await CourseDao().getActiveCourse();
+        if (course != null) {
+          courseName = course.name;
+          chaptersInfo = course.chapters
+              .asMap()
+              .entries
+              .map((e) => '${e.key + 1}. ${e.value}')
+              .join('\n');
+        }
+      } catch (_) {}
+
+      if (chaptersInfo.isEmpty) {
+        chaptersInfo = '1. 第一章\n2. 第二章\n3. 第三章';
+      }
+
+      final prompt = '''
+基于《$courseName》课程的章节内容，为 PDF 和 PPT 各生成5个扩展学习主题。
+
+课程章节：
+$chaptersInfo
+
+请生成以下JSON格式（直接返回JSON，不要包含其他文字）：
+{
+  "pdf": [
+    {"chapter": "扩展-主题名称", "description": "30字以内的描述"},
+    ...
+  ],
+  "ppt": [
+    {"chapter": "扩展-主题名称", "description": "30字以内的描述"},
+    ...
+  ]
+}
+
+要求：
+- PDF 和 PPT 各5个，合计10个
+- 主题应超越课程预设内容，涵盖进阶/实战/前沿方向
+- chapter字段以"扩展-"开头
+- description字段30字以内
+''';
+
+      final raw = await aiService.chat(
+        [{'role': 'user', 'content': prompt}],
+        systemPrompt: '你是$courseName课程的教学设计专家，请用中文回复，仅返回合法JSON。',
+      );
+
+      final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(raw);
+      if (jsonMatch == null) throw Exception('AI 返回格式不正确');
+
+      final data = jsonDecode(jsonMatch.group(0)!) as Map<String, dynamic>;
+      final batch = db.batch();
+
+      for (final type in ['pdf', 'ppt']) {
+        final items = data[type] as List<dynamic>? ?? [];
+        for (final item in items) {
+          final chapter = item['chapter'] as String? ?? '扩展课件';
+          final desc = item['description'] as String? ?? '';
+          final ext = type == 'ppt' ? 'pptx' : 'pdf';
+          batch.insert('resource_files', {
+            'file_name': '$chapter.$ext',
+            'file_path': '',
+            'file_type': type,
+            'chapter': chapter,
+            'description': desc,
+            'source_type': 'extended',
+          });
+        }
+      }
+
+      await batch.commit(noResult: true);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('扩展课件主题生成成功！'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      setState(() => _generatingExtended = false);
+      _loadDocuments();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _generatingExtended = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('生成失败：$e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _openDocument(Map<String, dynamic> doc) async {

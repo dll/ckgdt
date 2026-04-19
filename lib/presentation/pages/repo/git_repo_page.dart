@@ -37,59 +37,53 @@ class _GitRepoPageState extends State<GitRepoPage>
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Material(
-          color: Theme.of(context).colorScheme.surface,
-          child: Row(
-            children: [
-              Expanded(
-                child: TabBar(
-                  controller: _tabController,
-                  tabs: const [
-                    Tab(icon: Icon(Icons.folder_copy, size: 18), text: '仓库列表'),
-                    Tab(icon: Icon(Icons.person_search, size: 18), text: '学生详情'),
-                    Tab(icon: Icon(Icons.analytics, size: 18), text: '统计概览'),
-                    Tab(icon: Icon(Icons.rule_folder, size: 18), text: '提交规范'),
-                    Tab(icon: Icon(Icons.settings, size: 18), text: 'Gitee设置'),
-                  ],
-                ),
-              ),
-              const AgentEntryButton(agentId: 'repo'),
-            ],
-          ),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Git 仓库'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
         ),
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _RepoListTab(
-                gitee: _gitee,
-                resource: _resource,
-                onRepoSelected: (owner, repo, repoName) {
-                  _tabController.animateTo(1);
-                  // 通过 key 刷新学生详情 Tab
-                  setState(() {
-                    _selectedOwner = owner;
-                    _selectedRepo = repo;
-                    _selectedRepoName = repoName;
-                  });
-                },
-              ),
-              _StudentDetailTab(
-                gitee: _gitee,
-                resource: _resource,
-                owner: _selectedOwner,
-                repo: _selectedRepo,
-                repoName: _selectedRepoName,
-              ),
-              _RepoStatsTab(gitee: _gitee, resource: _resource),
-              const _SubmissionGuidelinesTab(),
-              _GiteeSettingsTab(gitee: _gitee),
-            ],
-          ),
+        actions: const [AgentEntryButton(agentId: 'repo')],
+        bottom: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          tabs: const [
+            Tab(icon: Icon(Icons.folder_copy, size: 18), text: '仓库列表'),
+            Tab(icon: Icon(Icons.person_search, size: 18), text: '学生详情'),
+            Tab(icon: Icon(Icons.analytics, size: 18), text: '统计概览'),
+            Tab(icon: Icon(Icons.rule_folder, size: 18), text: '提交规范'),
+            Tab(icon: Icon(Icons.settings, size: 18), text: 'Gitee设置'),
+          ],
         ),
-      ],
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _RepoListTab(
+            gitee: _gitee,
+            resource: _resource,
+            onRepoSelected: (owner, repo, repoName) {
+              _tabController.animateTo(1);
+              setState(() {
+                _selectedOwner = owner;
+                _selectedRepo = repo;
+                _selectedRepoName = repoName;
+              });
+            },
+          ),
+          _StudentDetailTab(
+            gitee: _gitee,
+            resource: _resource,
+            owner: _selectedOwner,
+            repo: _selectedRepo,
+            repoName: _selectedRepoName,
+          ),
+          _RepoStatsTab(gitee: _gitee, resource: _resource),
+          const _SubmissionGuidelinesTab(),
+          _GiteeSettingsTab(gitee: _gitee),
+        ],
+      ),
     );
   }
 

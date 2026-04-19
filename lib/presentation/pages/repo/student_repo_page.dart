@@ -183,35 +183,29 @@ class _StudentRepoPageState extends State<StudentRepoPage>
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Material(
-          color: Theme.of(context).colorScheme.surface,
-          child: Row(
-            children: [
-              Expanded(
-                child: TabBar(
-                  controller: _tabController,
-                  tabs: const [
-                    Tab(icon: Icon(Icons.folder_special, size: 18), text: '我的项目'),
-                    Tab(icon: Icon(Icons.rule_folder, size: 18), text: '提交规范'),
-                  ],
-                ),
-              ),
-              const AgentEntryButton(agentId: 'repo'),
-            ],
-          ),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('我的仓库'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
         ),
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _buildMyProjectTab(),
-              const _SubmissionGuidelinesTab(),
-            ],
-          ),
+        actions: const [AgentEntryButton(agentId: 'repo')],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(icon: Icon(Icons.folder_special, size: 18), text: '我的项目'),
+            Tab(icon: Icon(Icons.rule_folder, size: 18), text: '提交规范'),
+          ],
         ),
-      ],
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildMyProjectTab(),
+          const _SubmissionGuidelinesTab(),
+        ],
+      ),
     );
   }
 

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -46,6 +47,10 @@ class _LearningHubPageState extends State<LearningHubPage>
   bool _pptLoading = true;
   bool _pdfLoading = true;
 
+  // 预制/扩展 切换
+  String _resourceMode = 'all'; // 'all', 'preset', 'extended'
+  bool _generatingExtended = false;
+
   // AI 助手
   final List<_ChatMessage> _messages = [];
   final _inputController = TextEditingController();
@@ -85,10 +90,17 @@ class _LearningHubPageState extends State<LearningHubPage>
   Future<void> _loadVideos() async {
     try {
       final db = await DatabaseHelper.instance.database;
+      String where = 'file_type = ?';
+      List<Object?> whereArgs = ['video'];
+      if (_resourceMode == 'preset') {
+        where += " AND (source_type = 'preset' OR source_type IS NULL)";
+      } else if (_resourceMode == 'extended') {
+        where += " AND source_type = 'extended'";
+      }
       final result = await db.query(
         'resource_files',
-        where: 'file_type = ?',
-        whereArgs: ['video'],
+        where: where,
+        whereArgs: whereArgs,
         orderBy: 'chapter',
       );
       final sorted = List<Map<String, dynamic>>.from(result);
@@ -107,10 +119,17 @@ class _LearningHubPageState extends State<LearningHubPage>
   Future<void> _loadPPTs() async {
     try {
       final db = await DatabaseHelper.instance.database;
+      String where = 'file_type = ?';
+      List<Object?> whereArgs = ['ppt'];
+      if (_resourceMode == 'preset') {
+        where += " AND (source_type = 'preset' OR source_type IS NULL)";
+      } else if (_resourceMode == 'extended') {
+        where += " AND source_type = 'extended'";
+      }
       final result = await db.query(
         'resource_files',
-        where: 'file_type = ?',
-        whereArgs: ['ppt'],
+        where: where,
+        whereArgs: whereArgs,
         orderBy: 'chapter',
       );
       final sorted = List<Map<String, dynamic>>.from(result);
@@ -129,10 +148,17 @@ class _LearningHubPageState extends State<LearningHubPage>
   Future<void> _loadPDFs() async {
     try {
       final db = await DatabaseHelper.instance.database;
+      String where = 'file_type = ?';
+      List<Object?> whereArgs = ['pdf'];
+      if (_resourceMode == 'preset') {
+        where += " AND (source_type = 'preset' OR source_type IS NULL)";
+      } else if (_resourceMode == 'extended') {
+        where += " AND source_type = 'extended'";
+      }
       final result = await db.query(
         'resource_files',
-        where: 'file_type = ?',
-        whereArgs: ['pdf'],
+        where: where,
+        whereArgs: whereArgs,
         orderBy: 'chapter',
       );
       final sorted = List<Map<String, dynamic>>.from(result);
@@ -215,17 +241,213 @@ class _LearningHubPageState extends State<LearningHubPage>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          _buildVideoTab(),
-          _buildFileListTab(_pptFiles, _pptLoading, '🖼️', 'PPT', _loadPPTs),
-          _buildFileListTab(_pdfFiles, _pdfLoading, '📄', 'PDF', _loadPDFs),
-          const QuizPage(embedded: true),
-          _buildAiAssistTab(),
+          // 预制/扩展 过滤条
+          _buildResourceModeBar(),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildVideoTab(),
+                _buildFileListTab(_pptFiles, _pptLoading, '🖼️', 'PPT', _loadPPTs),
+                _buildFileListTab(_pdfFiles, _pdfLoading, '📄', 'PDF', _loadPDFs),
+                const QuizPage(embedded: true),
+                _buildAiAssistTab(),
+              ],
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  // ── 预制/扩展 过滤条 ─────────────────────────────────────────────────────
+  Widget _buildResourceModeBar() {
+    // 只在视频/PPT/PDF Tab 显示（索引 0-2）
+    return AnimatedBuilder(
+      animation: _tabController,
+      builder: (context, _) {
+        final tabIndex = _tabController.index;
+        if (tabIndex > 2) return const SizedBox.shrink();
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            border: Border(
+              bottom: BorderSide(color: Colors.grey.shade200),
+            ),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.filter_list, size: 16, color: Colors.grey),
+              const SizedBox(width: 8),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'all', label: Text('全部')),
+                  ButtonSegment(value: 'preset', label: Text('预制')),
+                  ButtonSegment(value: 'extended', label: Text('扩展')),
+                ],
+                selected: {_resourceMode},
+                onSelectionChanged: (Set<String> newSelection) {
+                  setState(() {
+                    _resourceMode = newSelection.first;
+                    _videoLoading = true;
+                    _pptLoading = true;
+                    _pdfLoading = true;
+                  });
+                  _loadAllData();
+                },
+                style: ButtonStyle(
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
+                  textStyle: WidgetStateProperty.all(
+                    const TextStyle(fontSize: 12),
+                  ),
+                ),
+              ),
+              const Spacer(),
+              if (_resourceMode == 'extended')
+                _generatingExtended
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : TextButton.icon(
+                        icon: const Icon(Icons.auto_awesome, size: 16),
+                        label: const Text('AI 生成', style: TextStyle(fontSize: 12)),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          minimumSize: const Size(0, 32),
+                        ),
+                        onPressed: _generateExtendedResources,
+                      ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// AI 生成扩展资源
+  Future<void> _generateExtendedResources() async {
+    setState(() => _generatingExtended = true);
+
+    try {
+      final aiService = AiService();
+      final db = await DatabaseHelper.instance.database;
+
+      // 检查是否已有扩展资源
+      final existing = await db.rawQuery(
+        "SELECT COUNT(*) as c FROM resource_files WHERE source_type = 'extended'",
+      );
+      final existCount = existing.first['c'] as int? ?? 0;
+      if (existCount > 0) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('已有 $existCount 条扩展资源，切换到"扩展"模式查看'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        setState(() => _generatingExtended = false);
+        _loadAllData();
+        return;
+      }
+
+      const prompt = '''
+基于《移动应用开发》课程的6章内容，为每种资源类型生成5个扩展学习主题。
+
+课程章节：
+1. 移动应用开发技术体系全景
+2. Android与iOS原生开发基础
+3. Flutter、React Native等混合开发技术
+4. 微信小程序开发流程
+5. 华为HarmonyOS多端应用开发
+6. 综合开发实践
+
+请生成以下JSON格式（直接返回JSON，不要包含其他文字）：
+{
+  "video": [
+    {"chapter": "扩展-Flutter状态管理", "description": "深入讲解Provider/Riverpod/Bloc等状态管理方案"},
+    ...
+  ],
+  "ppt": [
+    {"chapter": "扩展-跨平台架构设计", "description": "跨平台应用的分层架构与最佳实践"},
+    ...
+  ],
+  "pdf": [
+    {"chapter": "扩展-移动安全开发", "description": "移动应用安全防护与加固技术详解"},
+    ...
+  ]
+}
+
+要求：
+- 每种类型各5个，合计15个
+- 主题应超越课程预设内容，涵盖进阶/实战/前沿方向
+- chapter字段以"扩展-"开头
+- description字段30字以内
+''';
+
+      final raw = await aiService.chat(
+        [{'role': 'user', 'content': prompt}],
+        systemPrompt: '你是移动应用开发课程的教学设计专家，请用中文回复，仅返回合法JSON。',
+      );
+
+      // 提取JSON
+      final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(raw);
+      if (jsonMatch == null) throw Exception('AI 返回格式不正确');
+
+      final data = jsonDecode(jsonMatch.group(0)!) as Map<String, dynamic>;
+      final batch = db.batch();
+
+      for (final type in ['video', 'ppt', 'pdf']) {
+        final items = data[type] as List<dynamic>? ?? [];
+        for (final item in items) {
+          final chapter = item['chapter'] as String? ?? '扩展资源';
+          final desc = item['description'] as String? ?? '';
+          final ext = type == 'video' ? 'mp4' : (type == 'ppt' ? 'pptx' : 'pdf');
+          batch.insert('resource_files', {
+            'file_name': '$chapter.$ext',
+            'file_path': '',
+            'file_type': type,
+            'chapter': chapter,
+            'description': desc,
+            'source_type': 'extended',
+          });
+        }
+      }
+
+      await batch.commit(noResult: true);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('扩展资源生成成功！'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      setState(() {
+        _generatingExtended = false;
+        _videoLoading = true;
+        _pptLoading = true;
+        _pdfLoading = true;
+      });
+      _loadAllData();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _generatingExtended = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('扩展资源生成失败：$e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
   }
 
   // ── Tab 0：视频 ─────────────────────────────────────────────────────────────
@@ -244,12 +466,16 @@ class _LearningHubPageState extends State<LearningHubPage>
         itemCount: _videos.length,
         itemBuilder: (context, index) {
           final video = _videos[index];
+          final isExtended = video['source_type'] == 'extended';
           return Card(
             margin: const EdgeInsets.only(bottom: 10),
             child: ListTile(
               leading: CircleAvatar(
-                backgroundColor: Colors.red,
-                child: const Icon(Icons.play_arrow, color: Colors.white),
+                backgroundColor: isExtended ? Colors.purple : Colors.red,
+                child: Icon(
+                  isExtended ? Icons.auto_awesome : Icons.play_arrow,
+                  color: Colors.white,
+                ),
               ),
               title: Text(
                 video['chapter'] ?? '视频',
@@ -295,17 +521,20 @@ class _LearningHubPageState extends State<LearningHubPage>
           final name = file['file_name'] as String? ?? '未命名';
           final chapter = file['chapter'] as String?;
           final desc = file['description'] as String?;
+          final isExtended = file['source_type'] == 'extended';
 
           return ListTile(
             leading: Container(
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+                color: isExtended ? Colors.purple.shade50 : Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Center(
-                child: Text(emoji, style: const TextStyle(fontSize: 24)),
+                child: isExtended
+                    ? const Icon(Icons.auto_awesome, size: 22, color: Colors.purple)
+                    : Text(emoji, style: const TextStyle(fontSize: 24)),
               ),
             ),
             title: Text(
