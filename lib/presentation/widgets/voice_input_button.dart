@@ -215,7 +215,7 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
               ],
             ),
             const SizedBox(height: 8),
-            Text('说出功能名称，如"图谱""测验""设置"',
+            Text('说出你想去的地方，如"打开测验""我要看知识图谱"',
                 style: TextStyle(fontSize: 12, color: Colors.grey[500])),
             const SizedBox(height: 16),
             GestureDetector(

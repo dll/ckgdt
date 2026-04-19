@@ -13,6 +13,8 @@ import 'presentation/pages/cross_platform/cross_platform_hub_page.dart';
 import 'presentation/widgets/voice_input_button.dart';
 import 'presentation/widgets/agent_chat_overlay.dart';
 import 'services/voice_service.dart';
+import 'services/navigation_service.dart';
+import 'services/agent/agent_registry.dart';
 
 // 条件导入：Web 端使用 ffi_web，桌面端使用 ffi
 import 'platform/platform_init_stub.dart'
@@ -265,58 +267,96 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
   }
 
   /// 根据语音文本进行全局页面导航
+  ///
+  /// 优先通过 NavigationService 的 Tab 映射快速导航，
+  /// 若匹配失败则分发给 AI 智能体进行自然语言理解。
   void _navigateByVoiceText(BuildContext context, String text) {
+    final navService = NavigationService.instance;
+
+    // 先 popUntil 回到首页（全局 FAB 可能在任何页面触发）
+    final navigator = Navigator.of(context);
+    navigator.popUntil((route) => route.isFirst);
+
+    // 使用完整的关键词 → Tab 索引映射进行快速导航
     final normalized =
         text.replaceAll(RegExp(r'[，。！？、\s]'), '').toLowerCase();
 
-    // 导航关键词映射
-    final Map<String, String> keywords = {
-      '首页': '首页', '主页': '首页', '回家': '首页',
-      '图谱': '图谱', '知识图谱': '图谱',
-      '测验': '测验', '考试': '测验', '答题': '测验', '做题': '测验',
-      '视频': '视频', '教程': '视频', '播放': '视频',
-      '资料': '资料', '文档': '资料', '课件': '资料', '素材': '资料',
-      '进度': '进度', '统计': '进度', '成绩': '进度',
-      '计划': '计划', '学习计划': '计划', '路径': '计划',
-      '设置': '设置', '配置': '设置',
-      '错题': '错题', '错题本': '错题',
-      '收藏': '收藏',
-      '搜索': '搜索', '查找': '搜索',
-      '同步': '同步', '数据同步': '同步',
-      '三端': '三端', '互通': '三端', '跨平台': '三端',
-      '课堂': '课堂', '管理': '管理',
-      '通知': '通知', '消息': '通知',
-      '实验': '实验', '作品': '作品',
-      '成就': '成就', '达成': '成就',
+    // 扩展关键词映射表（涵盖所有导航目标）
+    final Map<String, int> tabKeywords = {
+      '首页': 0, '主页': 0, '回家': 0,
+      '图谱': 1, '知识图谱': 1,
+      '教学': 2, '学习': 2, '学习中心': 2,
+      '课堂': 3, '课堂管理': 3,
+      '实验': 3, '实验任务': 3, // 学生角色时与课堂同索引区域
+      '考核': 4, '考核管理': 4, '考试': 4,
+      '作品': 5, '作品展评': 5,
+      '达成': 6, '成就': 6, '达成度': 6,
+      '管理': 7, '管理面板': 7,
     };
 
-    String? matchedLabel;
-    for (final entry in keywords.entries) {
+    // 按关键词长度降序匹配（优先匹配更精确的关键词）
+    final sortedEntries = tabKeywords.entries.toList()
+      ..sort((a, b) => b.key.length.compareTo(a.key.length));
+
+    for (final entry in sortedEntries) {
       if (normalized.contains(entry.key)) {
-        matchedLabel = entry.value;
-        break;
+        navService.switchToTab(entry.value);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('语音导航: "$text" → ${entry.key}'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        return;
       }
     }
 
-    if (matchedLabel != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('语音导航: "$text" → $matchedLabel'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-      // 通过 Navigator 返回首页再导航
-      // 由于全局 FAB 可以在任何页面触发，我们先 popUntil 回到根路由
-      final navigator = Navigator.of(context);
-      navigator.popUntil((route) => route.isFirst);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('未识别到导航指令: "$text"'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+    // 检查二级页面导航（通过 Navigator.push）
+    final Map<String, String> secondaryPages = {
+      '测验': 'quiz', '做题': 'quiz', '答题': 'quiz',
+      '视频': 'video', '教程': 'video', '播放': 'video',
+      '资料': 'document', '文档': 'document', '课件': 'courseware',
+      '进度': 'progress', '统计': 'progress', '成绩': 'progress',
+      '计划': 'plan', '学习计划': 'plan', '路径': 'plan',
+      '设置': 'settings', '配置': 'settings',
+      '错题': 'wrong_answers', '错题本': 'wrong_answers',
+      '收藏': 'favorites',
+      '搜索': 'search', '查找': 'search',
+      '同步': 'sync', '数据同步': 'sync',
+      '三端': 'crossplatform', '互通': 'crossplatform', '跨平台': 'crossplatform',
+      '通知': 'notification', '消息': 'notification',
+      '仓库': 'repo', 'git': 'repo',
+    };
+
+    final sortedSecondary = secondaryPages.entries.toList()
+      ..sort((a, b) => b.key.length.compareTo(a.key.length));
+
+    for (final entry in sortedSecondary) {
+      if (normalized.contains(entry.key)) {
+        // 先切换到首页 tab
+        navService.switchToTab(0);
+        // 分发给智能体系统执行导航动作
+        final registry = AgentRegistry.instance;
+        registry.dispatch(text);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('语音导航: "$text" → ${entry.key}'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
     }
+
+    // 都没匹配 → 分发给 AI 智能体进行自然语言理解
+    final registry = AgentRegistry.instance;
+    registry.dispatch(text);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('AI 正在理解: "$text"'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   @override

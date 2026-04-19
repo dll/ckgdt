@@ -672,25 +672,9 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
       final title = fileName.replaceAll(RegExp(r'\.(md|markdown|txt)$'), '');
 
       // 构建教案结构以复用 PDF 生成逻辑
-      final fakePlan = <String, dynamic>{
-        'title': title.isNotEmpty ? title : '课件',
-        'chapter': '',
-        'classHours': 2,
-        'objectives': [],
-        'keyPoints': [],
-        'difficulties': [],
-        'sections': _parsedSlides.map((s) => {
-              'title': s['title'] ?? '',
-              'duration': '',
-              'content':
-                  (s['bullets'] as List? ?? []).join('\n'),
-              'codeExample': s['code'] ?? '',
-              'notes': s['notes'] ?? '',
-            }).toList(),
-        'experiments': [],
-        'umlDiagrams': [],
-        'homework': '',
-      };
+      final fakePlan = _buildFakePlanFromSlides(
+        title.isNotEmpty ? title : '课件',
+      );
 
       final path = await _coursewareService.generateEnhancedPdf(
         lessonPlan: fakePlan,
@@ -759,7 +743,7 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
 
       // ── 3/5 生成 TTS 语音 ──
       List<String> audioPaths = [];
-      if (_hasEdgeTts && pdfPath != null) {
+      if (_hasEdgeTts) {
         setState(() {
           _mdProgress = 0.25;
           _mdProgressMsg = '(3/5) 正在生成 TTS 语音...';
@@ -1713,6 +1697,33 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
             Text('正在合成语音... ${(_ttsProgress * 100).toInt()}%',
                 style: const TextStyle(fontSize: 12, color: Colors.grey)),
           ],
+
+          // 语音完成后显示：下一步去合成视频
+          if (_audioPaths.isNotEmpty && !_generatingTts) ...[
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                const SizedBox(width: 8),
+                Text('语音合成完成（${_audioPaths.length}段）',
+                    style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => setState(() => _currentStep = 4),
+                icon: const Icon(Icons.videocam),
+                label: const Text('下一步：合成视频'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1739,13 +1750,33 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
               '运行: pip install PyMuPDF'),
           const SizedBox(height: 12),
 
-          if (_pdfPath == null)
-            const Text('⚠️ 请先导出 PDF 课件',
+          if (_pdfPath == null && _pptxPath == null)
+            const Text('⚠️ 请先导出 PDF 或 PPTX 课件',
                 style: TextStyle(color: Colors.orange)),
 
           if (_audioPaths.isEmpty)
             const Text('⚠️ 建议先生成语音',
                 style: TextStyle(color: Colors.orange)),
+
+          // ── 合成视频按钮（独立、醒目）──
+          if (_videoPath == null && !_generatingVideo &&
+              (_pdfPath != null || _pptxPath != null)) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _hasFfmpeg ? _doGenerateVideo : null,
+                icon: const Icon(Icons.videocam, size: 24),
+                label: Text(_audioPaths.isNotEmpty
+                    ? '合成视频（含语音旁白）'
+                    : '合成视频（无语音）'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  textStyle: const TextStyle(fontSize: 16),
+                ),
+              ),
+            ),
+          ],
 
           if (_videoPath != null) ...[
             const SizedBox(height: 12),
@@ -2039,7 +2070,7 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
       case 3:
         return _pdfPath != null || _pptxPath != null || _markdownContent != null;
       case 4:
-        return _pdfPath != null;
+        return _markdownContent != null || _pdfPath != null || _pptxPath != null || _audioPaths.isNotEmpty;
       default:
         return false;
     }
@@ -2073,7 +2104,7 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
       case 3:
         return _hasEdgeTts ? _doGenerateTts : null;
       case 4:
-        return _hasFfmpeg && _pdfPath != null ? _doGenerateVideo : null;
+        return _hasFfmpeg && (_pdfPath != null || _pptxPath != null) ? _doGenerateVideo : null;
       default:
         return null;
     }
@@ -2503,7 +2534,7 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
 
   /// Step 5: 合成视频
   Future<void> _doGenerateVideo() async {
-    if (_pdfPath == null || !_hasFfmpeg) return;
+    if ((_pdfPath == null && _pptxPath == null) || !_hasFfmpeg) return;
 
     setState(() {
       _generatingVideo = true;
@@ -2512,18 +2543,36 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
     });
 
     try {
-      // 1. PDF → 图片
+      // 1. 课件 → 图片
       final coursewareDir = await _coursewareService.getCoursewareDir();
       final slidesDir = '$coursewareDir/slides';
-      final slideImages = await _videoService.pdfToImages(
-        pdfPath: _pdfPath!,
-        outputDir: slidesDir,
-      );
+      List<String> slideImages = [];
+
+      if (_pdfPath != null) {
+        // 优先用 PDF → 图片
+        slideImages = await _videoService.pdfToImages(
+          pdfPath: _pdfPath!,
+          outputDir: slidesDir,
+        );
+      }
+
+      // PDF 转图片失败或没有 PDF → 尝试用 PIL 直接渲染幻灯片
+      if (slideImages.isEmpty && _markdownContent != null) {
+        final slides = _coursewareService.parseMarkdownToSlides(_markdownContent!);
+        if (slides.isNotEmpty) {
+          final title = _lessonPlan?['title']?.toString() ?? '教案';
+          slideImages = await _coursewareService.generateSlideImages(
+            title: title,
+            slides: slides,
+            outputDir: slidesDir,
+          );
+        }
+      }
 
       if (slideImages.isEmpty) {
         setState(() {
           _generatingVideo = false;
-          _videoStatus = 'PDF 转图片失败（请安装 PyMuPDF: pip install PyMuPDF）';
+          _videoStatus = '课件转图片失败（请安装 PyMuPDF: pip install PyMuPDF）';
         });
         return;
       }

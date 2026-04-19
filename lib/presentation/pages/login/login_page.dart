@@ -14,6 +14,7 @@ import '../../../services/cross_platform/session_manager.dart';
 import '../cross_platform/qr_scan_page.dart';
 import '../../widgets/voice_input_button.dart';
 import '../home/home_page.dart';
+import '../../../data/local/course_dao.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -32,6 +33,7 @@ class _LoginPageState extends State<LoginPage>
   bool _obscurePassword = true;
   bool _isLoading = false;
   bool _quickLoginEnabled = false;
+  String _platformName = '移动应用开发';
 
   // Tab 控制
   late TabController _tabController;
@@ -63,11 +65,21 @@ class _LoginPageState extends State<LoginPage>
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_onTabChanged);
     _loadQuickLoginSetting();
+    _loadPlatformName();
   }
 
   Future<void> _loadQuickLoginSetting() async {
     final enabled = await SettingsService.isQuickLoginEnabled();
     if (mounted) setState(() => _quickLoginEnabled = enabled);
+  }
+
+  Future<void> _loadPlatformName() async {
+    try {
+      final course = await CourseDao().getActiveCourse();
+      if (mounted && course != null) {
+        setState(() => _platformName = course.name);
+      }
+    } catch (_) {}
   }
 
   void _onTabChanged() {
@@ -460,10 +472,10 @@ class _LoginPageState extends State<LoginPage>
                   // ── Logo + 标题 ────────────────────────────────────
                   const Icon(Icons.school, size: 80, color: Colors.white),
                   const SizedBox(height: 16),
-                  const Text(
-                    '移动应用开发\n知识图谱教学系统',
+                  Text(
+                    '$_platformName\n知识图谱教学平台',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
