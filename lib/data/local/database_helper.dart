@@ -584,6 +584,14 @@ class DatabaseHelper {
         debugPrint('=== DatabaseHelper: Added description column to resource_files');
       } catch (_) {}
     }
+    try {
+      await db.rawQuery('SELECT source_type FROM resource_files LIMIT 1');
+    } catch (_) {
+      try {
+        await db.execute("ALTER TABLE resource_files ADD COLUMN source_type TEXT DEFAULT 'preset'");
+        debugPrint('=== DatabaseHelper: Added source_type column to resource_files');
+      } catch (_) {}
+    }
   }
 
   /// V4 新增: 考核管理 + 作品管理 表

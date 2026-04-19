@@ -10,6 +10,7 @@ import '../feedback/feedback_manage_page.dart';
 import '../feedback/feedback_dialog.dart';
 import '../feedback/ai_help_dialog.dart';
 import '../settings/course_manage_page.dart';
+import '../../../data/local/course_dao.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -432,7 +433,14 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  void _showAboutDialog(BuildContext context) {
+  void _showAboutDialog(BuildContext context) async {
+    String platformName = '移动应用开发';
+    try {
+      final course = await CourseDao().getActiveCourse();
+      if (course != null) platformName = course.name;
+    } catch (_) {}
+
+    if (!context.mounted) return;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -440,22 +448,23 @@ class _SettingsPageState extends State<SettingsPage> {
           children: [
             Icon(Icons.school, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 12),
-            const Text('移动应用开发知识图谱'),
+            Text('$platformName知识图谱'),
           ],
         ),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('版本：1.0.0'),
-            SizedBox(height: 8),
-            Text('一款面向移动应用开发学习者的知识图谱与测验系统。'),
-            SizedBox(height: 16),
-            Text('功能特点：', style: TextStyle(fontWeight: FontWeight.bold)),
-            Text('• 知识图谱可视化学习'),
-            Text('• 章节测验与错题复习'),
-            Text('• 学习进度追踪'),
-            Text('• 视频教程播放'),
+            const Text('版本：1.0.0'),
+            const SizedBox(height: 8),
+            Text('面向$platformName学习者的知识图谱教学平台。'),
+            const SizedBox(height: 16),
+            const Text('功能特点：', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('• 知识图谱可视化学习'),
+            const Text('• 章节测验与错题复习'),
+            const Text('• 学习进度追踪'),
+            const Text('• AI 智能教学助手'),
+            const Text('• 一键生课平台化'),
           ],
         ),
         actions: [

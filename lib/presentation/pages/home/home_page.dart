@@ -45,6 +45,8 @@ import '../practice/growth_curve_page.dart';
 import '../cross_platform/cross_platform_hub_page.dart';
 import '../settings/course_manage_page.dart';
 import '../../widgets/course_generator_sheet.dart';
+import '../../../data/local/course_dao.dart';
+import '../../../data/models/course_model.dart';
 import 'settings_page.dart';
 import 'search_page.dart';
 
@@ -61,15 +63,18 @@ class _HomePageState extends State<HomePage> {
   final _authService = AuthService();
   final _notificationDao = NotificationDao();
   final _notificationService = NotificationService();
+  final _courseDao = CourseDao();
   late int _selectedIndex;
   int _unreadCount = 0;
   Timer? _notificationTimer;
+  CourseModel? _activeCourse;
 
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.initialTabIndex;
     _refreshUnreadCount();
+    _loadActiveCourse();
     // 每30秒轮询未读通知数
     _notificationTimer = Timer.periodic(
       const Duration(seconds: 30),
@@ -101,6 +106,21 @@ class _HomePageState extends State<HomePage> {
         setState(() => _unreadCount = count);
       }
     } catch (_) {}
+  }
+
+  Future<void> _loadActiveCourse() async {
+    try {
+      final course = await _courseDao.getActiveCourse();
+      if (mounted && course != null) {
+        setState(() => _activeCourse = course);
+      }
+    } catch (_) {}
+  }
+
+  /// 当前平台显示名称：基于激活课程动态生成
+  String get _platformTitle {
+    final name = _activeCourse?.name ?? '移动应用开发';
+    return '$name知识图谱';
   }
 
   @override
@@ -229,9 +249,16 @@ class _HomePageState extends State<HomePage> {
       _selectedIndex = 0;
     }
 
+    // 注册 Tab 关键词映射，供语音导航 / 智能体使用
+    final tabMapping = <String, int>{};
+    for (var i = 0; i < destinations.length; i++) {
+      tabMapping[destinations[i].label] = i;
+    }
+    NavigationService.instance.registerTabMapping(tabMapping);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('移动应用开发知识图谱'),
+        title: Text(_platformTitle),
 
         actions: [
           IconButton(
@@ -623,21 +650,32 @@ class _HomePageState extends State<HomePage> {
                     icon: Icons.auto_awesome,
                     title: '一键生课',
                     color: Colors.deepPurple[300]!,
-                    onTap: () => showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                      ),
-                      builder: (_) => const CourseGeneratorSheet(),
-                    ),
+                    onTap: () async {
+                      final result = await showModalBottomSheet<CourseModel>(
+                        context: context,
+                        isScrollControlled: true,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                        ),
+                        builder: (_) => const CourseGeneratorSheet(),
+                      );
+                      if (result != null) {
+                        // 自动激活新课程并刷新平台标题
+                        await _courseDao.setActiveCourse(result.id);
+                        _loadActiveCourse();
+                      }
+                    },
                   ),
                   _buildMenuCard(
                     icon: Icons.school_outlined,
                     title: '课程管理',
                     color: Colors.teal[400]!,
-                    onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const CourseManagePage())),
+                    onTap: () async {
+                      await Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const CourseManagePage()));
+                      // 返回后刷新平台标题（可能切换了课程）
+                      _loadActiveCourse();
+                    },
                   ),
                 ],
 

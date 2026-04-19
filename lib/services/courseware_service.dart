@@ -433,7 +433,17 @@ ${context != null ? '上下文说明: $context' : ''}
       for (var i = 0; i < sections.length; i++) {
         final s = sections[i] as Map<String, dynamic>;
         final items = <String>[];
-        if (s['content'] != null) items.add(s['content'].toString());
+        if (s['content'] != null) {
+          // 按行拆分内容，每行作为独立条目
+          final contentStr = s['content'].toString().trim();
+          if (contentStr.isNotEmpty) {
+            final lines = contentStr.split('\n')
+                .map((l) => l.trim())
+                .where((l) => l.isNotEmpty)
+                .toList();
+            items.addAll(lines);
+          }
+        }
         if (s['activities'] != null) {
           items.add('教学活动: ${s['activities']}');
         }
@@ -586,8 +596,9 @@ ${context != null ? '上下文说明: $context' : ''}
       await _materialDao.insert(material);
 
       return filePath;
-    } catch (e) {
+    } catch (e, st) {
       debugPrint('CoursewareService: generateEnhancedPdf error: $e');
+      debugPrint('CoursewareService: stackTrace: $st');
       return null;
     }
   }
@@ -914,6 +925,11 @@ ${context != null ? '上下文说明: $context' : ''}
     String? notes,
     int slideNum = 1,
   }) {
+    // 限制每页内容量，避免 Column 溢出
+    // A4 landscape 可用高度约 500pt，标题/副标题约 80pt，备注约 50pt
+    // 每个 content item 约 30pt，安全上限约 12 个条目
+    final safeItems = items.length > 12 ? items.sublist(0, 12) : items;
+
     return pw.Page(
       pageFormat: PdfPageFormat.a4.landscape,
       theme: theme,
@@ -961,8 +977,14 @@ ${context != null ? '上下文说明: $context' : ''}
                       color: PdfColors.grey700)),
             ],
             pw.SizedBox(height: 20),
-            // 内容（智能样式渲染）
-            ...items.map((item) => _buildContentItem(item, font)),
+            // 内容（智能样式渲染），限制条目数防溢出
+            ...safeItems.map((item) {
+              // 截断过长文本（单个条目限制 500 字）
+              final truncated = item.length > 500
+                  ? '${item.substring(0, 500)}...'
+                  : item;
+              return _buildContentItem(truncated, font);
+            }),
             pw.SizedBox(height: 8),
             // 额外信息
             if (extras != null) ...[
