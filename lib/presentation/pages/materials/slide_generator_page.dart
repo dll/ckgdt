@@ -312,7 +312,7 @@ class _SlideGeneratorPageState extends State<SlideGeneratorPage> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
-                          color: primary.withOpacity(0.12),
+                          color: primary.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -472,8 +472,8 @@ class _SlideGeneratorPageState extends State<SlideGeneratorPage> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: primary.withOpacity(0.04),
-            border: Border.all(color: primary.withOpacity(0.15)),
+            color: primary.withValues(alpha: 0.04),
+            border: Border.all(color: primary.withValues(alpha: 0.15)),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -488,7 +488,7 @@ class _SlideGeneratorPageState extends State<SlideGeneratorPage> {
                       width: 22,
                       height: 22,
                       decoration: BoxDecoration(
-                        color: primary.withOpacity(0.15),
+                        color: primary.withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                       ),
                       child: Center(

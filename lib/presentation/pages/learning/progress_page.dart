@@ -45,6 +45,7 @@ class _ProgressPageState extends State<ProgressPage> with SingleTickerProviderSt
         final results = await _quizDao.getQuizResults(user.userId);
         final quizSummary = await _quizDao.getQuizSummary(user.userId);
         final learningStats = await _learningRecordDao.getStatistics(user.userId);
+        if (!mounted) return;
         setState(() {
           _results = results;
           _quizSummary = quizSummary;
@@ -53,6 +54,7 @@ class _ProgressPageState extends State<ProgressPage> with SingleTickerProviderSt
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
     }
   }
@@ -232,7 +234,7 @@ class _ProgressPageState extends State<ProgressPage> with SingleTickerProviderSt
             color: Theme.of(context).colorScheme.primary,
             barWidth: 3,
             dotData: const FlDotData(show: true),
-            belowBarData: BarAreaData(show: true, color: Theme.of(context).colorScheme.primary.withOpacity(0.1)),
+            belowBarData: BarAreaData(show: true, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)),
           ),
         ],
       ),

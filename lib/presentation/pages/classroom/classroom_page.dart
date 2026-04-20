@@ -82,7 +82,7 @@ class _ClassroomPageState extends State<ClassroomPage>
         _buildHeader(context, primary),
         // ── TabBar ────────────────────────────────────────────────
         Container(
-          color: primary.withOpacity(0.04),
+          color: primary.withValues(alpha: 0.04),
           child: TabBar(
             controller: _tabController,
             labelColor: primary,
@@ -141,7 +141,7 @@ class _ClassroomPageState extends State<ClassroomPage>
 
     // 直接构建渐变，避免 ThemeExtension 可能的延迟
     final headerGradient = LinearGradient(
-      colors: [primary, primary.withOpacity(0.7)],
+      colors: [primary, primary.withValues(alpha: 0.7)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     );
@@ -162,7 +162,7 @@ class _ClassroomPageState extends State<ClassroomPage>
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.cast_for_education,
@@ -184,7 +184,7 @@ class _ClassroomPageState extends State<ClassroomPage>
                   '$displayName${className.isNotEmpty ? ' · $className' : ''}',
                   style: TextStyle(
                       fontSize: 13,
-                      color: Colors.white.withOpacity(0.85)),
+                      color: Colors.white.withValues(alpha: 0.85)),
                 ),
               ],
             ),
@@ -433,9 +433,9 @@ class _OnlineStatusTabState extends State<_OnlineStatusTab> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: primary.withOpacity(0.06),
+              color: primary.withValues(alpha: 0.06),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: primary.withOpacity(0.15)),
+              border: Border.all(color: primary.withValues(alpha: 0.15)),
             ),
             child: Row(
               children: [
@@ -452,13 +452,13 @@ class _OnlineStatusTabState extends State<_OnlineStatusTab> {
                 ),
                 const Spacer(),
                 Icon(Icons.access_time, size: 14,
-                    color: Colors.grey.withOpacity(0.6)),
+                    color: Colors.grey.withValues(alpha: 0.6)),
                 const SizedBox(width: 4),
                 Text(
                   '上次同步: ${_formatTimeAgo(_lastSyncedTime)}',
                   style: TextStyle(
                       fontSize: 11,
-                      color: Colors.grey.withOpacity(0.8)),
+                      color: Colors.grey.withValues(alpha: 0.8)),
                 ),
               ],
             ),
@@ -529,7 +529,7 @@ class _OnlineStatusTabState extends State<_OnlineStatusTab> {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.12),
+                  color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(icon, size: 18, color: color),
@@ -571,7 +571,7 @@ class _OnlineStatusTabState extends State<_OnlineStatusTab> {
           borderRadius: BorderRadius.circular(10),
           border: Border(
             left: BorderSide(
-                color: statusColor.withOpacity(0.6), width: 3),
+                color: statusColor.withValues(alpha: 0.6), width: 3),
           ),
         ),
         padding: const EdgeInsets.all(12),
@@ -586,7 +586,7 @@ class _OnlineStatusTabState extends State<_OnlineStatusTab> {
                 shape: BoxShape.circle,
                 boxShadow: isOnline
                     ? [BoxShadow(
-                        color: Colors.green.withOpacity(0.4),
+                        color: Colors.green.withValues(alpha: 0.4),
                         blurRadius: 6)]
                     : null,
               ),
@@ -595,7 +595,7 @@ class _OnlineStatusTabState extends State<_OnlineStatusTab> {
             // 头像
             CircleAvatar(
               radius: 18,
-              backgroundColor: primary.withOpacity(0.1),
+              backgroundColor: primary.withValues(alpha: 0.1),
               child: Text(
                 name.isNotEmpty ? name.characters.first : '?',
                 style: TextStyle(
@@ -641,7 +641,7 @@ class _OnlineStatusTabState extends State<_OnlineStatusTab> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
+                    color: statusColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
@@ -679,7 +679,7 @@ class _OnlineStatusTabState extends State<_OnlineStatusTab> {
         margin: const EdgeInsets.only(bottom: 6),
         padding: const EdgeInsets.only(right: 20),
         decoration: BoxDecoration(
-          color: Colors.red.withOpacity(0.9),
+          color: Colors.red.withValues(alpha: 0.9),
           borderRadius: BorderRadius.circular(10),
         ),
         child: const Column(
@@ -1017,7 +1017,7 @@ class _CheckinManageTabState extends State<_CheckinManageTab> {
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: primary.withOpacity(0.05),
+      color: primary.withValues(alpha: 0.05),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -1038,7 +1038,7 @@ class _CheckinManageTabState extends State<_CheckinManageTab> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.15),
+                    color: Colors.green.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Text('进行中',
@@ -1094,7 +1094,7 @@ class _CheckinManageTabState extends State<_CheckinManageTab> {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: primary.withOpacity(0.1),
+                  color: primary.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(Icons.add_task, size: 28, color: primary),
@@ -1209,7 +1209,7 @@ class _CheckinManageTabState extends State<_CheckinManageTab> {
             borderRadius: BorderRadius.circular(8),
             border: Border(
               left: BorderSide(
-                  color: statusConfig.color.withOpacity(0.6),
+                  color: statusConfig.color.withValues(alpha: 0.6),
                   width: 3),
             ),
           ),
@@ -1238,7 +1238,7 @@ class _CheckinManageTabState extends State<_CheckinManageTab> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: statusConfig.color.withOpacity(0.12),
+                      color: statusConfig.color.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(statusConfig.label,
@@ -1578,7 +1578,7 @@ class _ClassroomInteractionTabState
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -1622,7 +1622,7 @@ class _ClassroomInteractionTabState
             borderRadius: BorderRadius.circular(10),
             border: Border(
               left: BorderSide(
-                  color: typeConfig.color.withOpacity(0.5),
+                  color: typeConfig.color.withValues(alpha: 0.5),
                   width: 3),
             ),
           ),
@@ -1648,7 +1648,7 @@ class _ClassroomInteractionTabState
                             horizontal: 5, vertical: 1),
                         decoration: BoxDecoration(
                           color: (isTeacherMsg ? Colors.blue : Colors.green)
-                              .withOpacity(0.1),
+                              .withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
@@ -1687,7 +1687,7 @@ class _ClassroomInteractionTabState
         color: Theme.of(context).cardColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -1705,7 +1705,7 @@ class _ClassroomInteractionTabState
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 decoration: BoxDecoration(
-                  color: primary.withOpacity(0.08),
+                  color: primary.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -1752,7 +1752,7 @@ class _ClassroomInteractionTabState
               onPressed: _sendMessage,
               icon: Icon(Icons.send, color: primary),
               style: IconButton.styleFrom(
-                backgroundColor: primary.withOpacity(0.1),
+                backgroundColor: primary.withValues(alpha: 0.1),
               ),
             ),
           ],
@@ -2021,11 +2021,11 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                   height: 120,
                   decoration: BoxDecoration(
                     color: _isRolling
-                        ? Colors.orange.withOpacity(0.1)
+                        ? Colors.orange.withValues(alpha: 0.1)
                         : (isDark ? Colors.grey[850] : Colors.grey[50]),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: _isRolling ? Colors.orange : Colors.grey.withOpacity(0.2),
+                      color: _isRolling ? Colors.orange : Colors.grey.withValues(alpha: 0.2),
                       width: _isRolling ? 2 : 1,
                     ),
                   ),
@@ -2109,7 +2109,7 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(icon, color: color, size: 20),
@@ -2153,7 +2153,7 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                 width: 24, height: 24,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
+                  color: Colors.blue.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Text('${String.fromCharCode(65 + i)}',
@@ -2225,7 +2225,7 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                  border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
@@ -2240,9 +2240,9 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                             child: LinearProgressIndicator(
                               value: pct,
                               minHeight: 6,
-                              backgroundColor: Colors.grey.withOpacity(0.1),
+                              backgroundColor: Colors.grey.withValues(alpha: 0.1),
                               valueColor: AlwaysStoppedAnimation(
-                                Colors.blue.withOpacity(0.7)),
+                                Colors.blue.withValues(alpha: 0.7)),
                             ),
                           ),
                         ],
@@ -2307,8 +2307,8 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
           decoration: BoxDecoration(
             color: _timerRunning
                 ? (_remainingSeconds <= 30
-                    ? Colors.red.withOpacity(0.1)
-                    : Colors.blue.withOpacity(0.05))
+                    ? Colors.red.withValues(alpha: 0.1)
+                    : Colors.blue.withValues(alpha: 0.05))
                 : (isDark ? Colors.grey[850] : Colors.grey[50]),
             borderRadius: BorderRadius.circular(12),
           ),

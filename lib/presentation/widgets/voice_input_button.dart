@@ -236,7 +236,7 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
                         boxShadow: _isListening
                             ? [
                                 BoxShadow(
-                                  color: Colors.red.withOpacity(0.3),
+                                  color: Colors.red.withValues(alpha: 0.3),
                                   blurRadius: 20 * _pulseController.value,
                                   spreadRadius: 5 * _pulseController.value,
                                 ),
@@ -267,12 +267,12 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: theme.colorScheme.surfaceContainerHighest
-                    .withOpacity(0.3),
+                    .withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: _recognizedText.isNotEmpty
-                      ? primary.withOpacity(0.3)
-                      : Colors.grey.withOpacity(0.2),
+                      ? primary.withValues(alpha: 0.3)
+                      : Colors.grey.withValues(alpha: 0.2),
                 ),
               ),
               child: _recognizedText.isNotEmpty
@@ -429,7 +429,7 @@ class _VoiceRecordDialogState extends State<_VoiceRecordDialog>
                         boxShadow: _isListening
                             ? [
                                 BoxShadow(
-                                  color: Colors.red.withOpacity(0.3),
+                                  color: Colors.red.withValues(alpha: 0.3),
                                   blurRadius: 20 * _pulseController.value,
                                   spreadRadius: 5 * _pulseController.value,
                                 ),
@@ -463,12 +463,12 @@ class _VoiceRecordDialogState extends State<_VoiceRecordDialog>
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: theme.colorScheme.surfaceContainerHighest
-                    .withOpacity(0.3),
+                    .withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: _recognizedText.isNotEmpty
-                      ? primary.withOpacity(0.3)
-                      : Colors.grey.withOpacity(0.2),
+                      ? primary.withValues(alpha: 0.3)
+                      : Colors.grey.withValues(alpha: 0.2),
                 ),
               ),
               child: _recognizedText.isNotEmpty

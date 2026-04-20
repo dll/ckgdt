@@ -263,7 +263,7 @@ class _StudentRepoPageState extends State<StudentRepoPage>
                   color: Theme.of(context)
                       .colorScheme
                       .primary
-                      .withOpacity(0.1),
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
@@ -301,9 +301,9 @@ class _StudentRepoPageState extends State<StudentRepoPage>
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.green.withOpacity(0.08),
+          color: Colors.green.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.green.withOpacity(0.25)),
+          border: Border.all(color: Colors.green.withValues(alpha: 0.25)),
         ),
         child: Row(
           children: [
@@ -333,9 +333,9 @@ class _StudentRepoPageState extends State<StudentRepoPage>
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.orange.withOpacity(0.08),
+          color: Colors.orange.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.orange.withOpacity(0.25)),
+          border: Border.all(color: Colors.orange.withValues(alpha: 0.25)),
         ),
         child: Row(
           children: [
@@ -365,9 +365,9 @@ class _StudentRepoPageState extends State<StudentRepoPage>
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.blue.withOpacity(0.08),
+          color: Colors.blue.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.blue.withOpacity(0.25)),
+          border: Border.all(color: Colors.blue.withValues(alpha: 0.25)),
         ),
         child: Row(
           children: [
@@ -403,7 +403,7 @@ class _StudentRepoPageState extends State<StudentRepoPage>
           children: [
             CircleAvatar(
               radius: 28,
-              backgroundColor: Colors.white.withOpacity(0.3),
+              backgroundColor: Colors.white.withValues(alpha: 0.3),
               child: Text(
                 (user?.realName ?? '?').substring(0, 1),
                 style: const TextStyle(
@@ -428,12 +428,12 @@ class _StudentRepoPageState extends State<StudentRepoPage>
                   Text(
                     '学号: ${user?.userId ?? '-'}',
                     style:
-                        TextStyle(color: Colors.white.withOpacity(0.9)),
+                        TextStyle(color: Colors.white.withValues(alpha: 0.9)),
                   ),
                   Text(
                     '角色: 学生',
                     style:
-                        TextStyle(color: Colors.white.withOpacity(0.8)),
+                        TextStyle(color: Colors.white.withValues(alpha: 0.8)),
                   ),
                 ],
               ),
@@ -451,7 +451,7 @@ class _StudentRepoPageState extends State<StudentRepoPage>
                 Text(
                   '提交数',
                   style:
-                      TextStyle(color: Colors.white.withOpacity(0.8)),
+                      TextStyle(color: Colors.white.withValues(alpha: 0.8)),
                 ),
               ],
             ),

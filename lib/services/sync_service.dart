@@ -304,7 +304,6 @@ class SyncService {
       'checkin_records': 'checked_at DESC',
       'work_comments': 'created_at DESC',
       'work_likes': null,
-      'peer_reviews': null,
       'notification_recipients': null,
     };
 

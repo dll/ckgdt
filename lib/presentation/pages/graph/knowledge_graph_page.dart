@@ -1153,7 +1153,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 6),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -1200,7 +1200,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                   label: Text(labels[i]),
                   selected: isSelected,
                   selectedColor:
-                      const Color(0xFF667eea).withOpacity(0.2),
+                      const Color(0xFF667eea).withValues(alpha: 0.2),
                   onSelected: (_) {
                     Navigator.pop(ctx);
                     _setChapterFilter(chapters[i]);
@@ -1287,7 +1287,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: node.color.withOpacity(0.3),
+                            color: node.color.withValues(alpha: 0.3),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -1388,11 +1388,11 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                             horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: const Color(0xFF667eea)
-                              .withOpacity(0.08),
+                              .withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: const Color(0xFF667eea)
-                                .withOpacity(0.2),
+                                .withValues(alpha: 0.2),
                           ),
                         ),
                         child: Text(
@@ -1695,7 +1695,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
@@ -2055,7 +2055,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
     required VoidCallback onTap,
   }) {
     return Material(
-      color: color.withOpacity(0.08),
+      color: color.withValues(alpha: 0.08),
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
@@ -2369,10 +2369,10 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.deepPurple.withOpacity(0.05),
+        color: Colors.deepPurple.withValues(alpha: 0.05),
         border: Border(
           bottom: BorderSide(
-            color: Colors.deepPurple.withOpacity(0.12),
+            color: Colors.deepPurple.withValues(alpha: 0.12),
             width: 1,
           ),
         ),
@@ -2421,7 +2421,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
             '${allShapes.indexOf(_selectedMask) + 1}/${allShapes.length}',
             style: TextStyle(
               fontSize: 11,
-              color: Colors.deepPurple.withOpacity(0.6),
+              color: Colors.deepPurple.withValues(alpha: 0.6),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -2452,7 +2452,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
         width: 28,
         height: 28,
         decoration: BoxDecoration(
-          color: Colors.deepPurple.withOpacity(0.08),
+          color: Colors.deepPurple.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Icon(icon, size: 18, color: Colors.deepPurple),
@@ -2465,7 +2465,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   Widget _buildSearchResultBar() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      color: const Color(0xFF667eea).withOpacity(0.1),
+      color: const Color(0xFF667eea).withValues(alpha: 0.1),
       child: Row(
         children: [
           const Icon(Icons.search, size: 16, color: Color(0xFF667eea)),
@@ -2496,7 +2496,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   Widget _buildFilterBar() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      color: const Color(0xFFFF9800).withOpacity(0.08),
+      color: const Color(0xFFFF9800).withValues(alpha: 0.08),
       child: Row(
         children: [
           const Icon(Icons.filter_list, size: 16, color: Color(0xFFFF9800)),
@@ -2523,7 +2523,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   Widget _buildRelationInfoBar() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      color: const Color(0xFF9C27B0).withOpacity(0.08),
+      color: const Color(0xFF9C27B0).withValues(alpha: 0.08),
       child: Row(
         children: [
           const Icon(Icons.device_hub, size: 16, color: Color(0xFF9C27B0)),
@@ -2609,13 +2609,13 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFF667eea).withOpacity(0.08),
-            const Color(0xFF4CAF50).withOpacity(0.06),
+            const Color(0xFF667eea).withValues(alpha: 0.08),
+            const Color(0xFF4CAF50).withValues(alpha: 0.06),
           ],
         ),
         border: Border(
           bottom: BorderSide(
-            color: const Color(0xFF667eea).withOpacity(0.15),
+            color: const Color(0xFF667eea).withValues(alpha: 0.15),
           ),
         ),
       ),
@@ -2647,14 +2647,14 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                           borderRadius: BorderRadius.circular(15),
                           borderSide: BorderSide(
                             color: const Color(0xFF667eea)
-                                .withOpacity(0.3),
+                                .withValues(alpha: 0.3),
                           ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(15),
                           borderSide: BorderSide(
                             color: const Color(0xFF667eea)
-                                .withOpacity(0.2),
+                                .withValues(alpha: 0.2),
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
@@ -2667,7 +2667,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                             horizontal: 8, vertical: 0),
                         filled: true,
                         fillColor: const Color(0xFF667eea)
-                            .withOpacity(0.04),
+                            .withValues(alpha: 0.04),
                       ),
                       onChanged: (v) =>
                           setState(() => _studentSearchQuery = v),
@@ -2770,10 +2770,10 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF667eea).withOpacity(0.1),
+                      color: const Color(0xFF667eea).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: const Color(0xFF667eea).withOpacity(0.3),
+                        color: const Color(0xFF667eea).withValues(alpha: 0.3),
                       ),
                     ),
                     child: const Row(
@@ -2841,10 +2841,10 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
           decoration: BoxDecoration(
             color: isSelected
                 ? const Color(0xFF667eea)
-                : const Color(0xFF667eea).withOpacity(0.08),
+                : const Color(0xFF667eea).withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: const Color(0xFF667eea).withOpacity(0.3),
+              color: const Color(0xFF667eea).withValues(alpha: 0.3),
             ),
           ),
           child: Text(
@@ -2864,7 +2864,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -2996,7 +2996,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                         color: const Color(0xFF667eea)
-                            .withOpacity(0.15)),
+                            .withValues(alpha: 0.15)),
                   ),
                   child: MarkdownBubble(
                     content: result.content,
@@ -3295,7 +3295,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.12),
+                color: Colors.black.withValues(alpha: 0.12),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -3445,12 +3445,12 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
             width: mapW,
             height: mapH,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.92),
+              color: Colors.white.withValues(alpha: 0.92),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: Colors.grey.shade300),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
+                  color: Colors.black.withValues(alpha: 0.15),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
@@ -3485,7 +3485,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.15),
+            color: Colors.grey.withValues(alpha: 0.15),
             blurRadius: 4,
             offset: const Offset(0, -1),
           ),
@@ -3733,10 +3733,10 @@ class _KnowledgeGraphPainter extends CustomPainter {
         edgeWidth = 2.0;
       } else if (selectedNode != null || highlightedNodeIds.isNotEmpty) {
         // 有选中或高亮时，非相关边减淡
-        edgeColor = rStyle.color.withOpacity(0.15);
+        edgeColor = rStyle.color.withValues(alpha: 0.15);
         edgeWidth = 1.0;
       } else {
-        edgeColor = rStyle.color.withOpacity(0.5);
+        edgeColor = rStyle.color.withValues(alpha: 0.5);
         edgeWidth = 1.5;
       }
 
@@ -3794,13 +3794,13 @@ class _KnowledgeGraphPainter extends CustomPainter {
         final labelText = edge.label ?? rStyle.label;
         if (labelText.isNotEmpty) {
           final labelBg = Paint()
-            ..color = Colors.white.withOpacity(0.85);
+            ..color = Colors.white.withValues(alpha: 0.85);
           final tp = TextPainter(
             text: TextSpan(
               text: labelText,
               style: TextStyle(
                 fontSize: 9,
-                color: edgeColor.withOpacity(0.9),
+                color: edgeColor.withValues(alpha: 0.9),
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -3884,7 +3884,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
       // 搜索高亮光晕（黄色）
       if (isHighlighted && !isSelected) {
         final glowPaint = Paint()
-          ..color = const Color(0xFFFFF176).withOpacity(0.6)
+          ..color = const Color(0xFFFFF176).withValues(alpha: 0.6)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14);
         canvas.drawCircle(center, radius + 12, glowPaint);
       }
@@ -3892,7 +3892,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
       // 邻居高亮光晕
       if (isAdjacent && !isSelected) {
         final adjGlow = Paint()
-          ..color = nodeColor.withOpacity(0.2)
+          ..color = nodeColor.withValues(alpha: 0.2)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
         canvas.drawCircle(center, radius + 8, adjGlow);
       }
@@ -3900,7 +3900,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
       // 选中光晕
       if (isSelected) {
         final selGlow = Paint()
-          ..color = const Color(0xFF667eea).withOpacity(0.3)
+          ..color = const Color(0xFF667eea).withValues(alpha: 0.3)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16);
         canvas.drawCircle(center, radius + 14, selGlow);
       }
@@ -3908,7 +3908,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
       // 焦点中心标记
       if (isFocusCenter) {
         final focusGlow = Paint()
-          ..color = const Color(0xFF667eea).withOpacity(0.15)
+          ..color = const Color(0xFF667eea).withValues(alpha: 0.15)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
         canvas.drawCircle(center, radius + 20, focusGlow);
 
@@ -3926,7 +3926,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
       // 阴影
       if (!dimmed) {
         final shadowPaint = Paint()
-          ..color = Colors.black.withOpacity(0.12)
+          ..color = Colors.black.withValues(alpha: 0.12)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
         canvas.drawCircle(
             Offset(center.dx + 1.5, center.dy + 2.5), radius, shadowPaint);
@@ -3934,7 +3934,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
 
       // 节点圆
       final fillColor =
-          dimmed ? nodeColor.withOpacity(0.2) : nodeColor;
+          dimmed ? nodeColor.withValues(alpha: 0.2) : nodeColor;
       final nodePaint = Paint()
         ..color = fillColor
         ..style = PaintingStyle.fill;
@@ -4083,13 +4083,13 @@ class _KnowledgeGraphPainter extends CustomPainter {
       // 背景
       canvas.drawRRect(
         bgRect,
-        Paint()..color = color.withOpacity(0.05),
+        Paint()..color = color.withValues(alpha: 0.05),
       );
       // 边框
       canvas.drawRRect(
         bgRect,
         Paint()
-          ..color = color.withOpacity(0.2)
+          ..color = color.withValues(alpha: 0.2)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.5,
       );
@@ -4108,7 +4108,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.bold,
-            color: color.withOpacity(0.7),
+            color: color.withValues(alpha: 0.7),
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -4161,7 +4161,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
           style: TextStyle(
             fontSize: fontSize,
             fontWeight: FontWeight.w900,
-            color: color.withOpacity(0.06),
+            color: color.withValues(alpha: 0.06),
             letterSpacing: 2,
           ),
         ),
@@ -4185,7 +4185,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
             fontSize: 120,
             fontFamily: iconData.fontFamily,
             package: iconData.fontPackage,
-            color: color.withOpacity(0.04),
+            color: color.withValues(alpha: 0.04),
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -4250,7 +4250,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
             style: TextStyle(
               fontSize: fontSize,
               fontWeight: FontWeight.w900,
-              color: color.withOpacity(0.05),
+              color: color.withValues(alpha: 0.05),
               letterSpacing: 2,
             ),
           ),
@@ -4362,7 +4362,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
     canvas.drawPath(
       maskPath!,
       Paint()
-        ..color = Colors.deepPurple.withOpacity(0.04)
+        ..color = Colors.deepPurple.withValues(alpha: 0.04)
         ..style = PaintingStyle.fill,
     );
 
@@ -4370,7 +4370,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
     canvas.drawPath(
       maskPath!,
       Paint()
-        ..color = Colors.deepPurple.withOpacity(0.25)
+        ..color = Colors.deepPurple.withValues(alpha: 0.25)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.5,
     );
@@ -4387,7 +4387,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
         style: TextStyle(
           fontSize: labelFontSize,
           fontWeight: FontWeight.w900,
-          color: Colors.deepPurple.withOpacity(0.05),
+          color: Colors.deepPurple.withValues(alpha: 0.05),
           letterSpacing: 8,
         ),
       ),
@@ -4453,7 +4453,7 @@ class _MinimapPainter extends CustomPainter {
       canvas.drawPath(
         scaledMask,
         Paint()
-          ..color = Colors.deepPurple.withOpacity(0.1)
+          ..color = Colors.deepPurple.withValues(alpha: 0.1)
           ..style = PaintingStyle.fill,
       );
     }
@@ -4468,7 +4468,7 @@ class _MinimapPainter extends CustomPainter {
         Offset(src.x * sx, src.y * sy),
         Offset(tgt.x * sx, tgt.y * sy),
         Paint()
-          ..color = Colors.grey.withOpacity(0.25)
+          ..color = Colors.grey.withValues(alpha: 0.25)
           ..strokeWidth = 0.5,
       );
     }
@@ -4480,7 +4480,7 @@ class _MinimapPainter extends CustomPainter {
       canvas.drawCircle(
         center,
         r,
-        Paint()..color = node.color.withOpacity(0.8),
+        Paint()..color = node.color.withValues(alpha: 0.8),
       );
     }
 
@@ -4488,7 +4488,7 @@ class _MinimapPainter extends CustomPainter {
     canvas.drawRect(
       viewportRect,
       Paint()
-        ..color = const Color(0xFF667eea).withOpacity(0.3)
+        ..color = const Color(0xFF667eea).withValues(alpha: 0.3)
         ..style = PaintingStyle.fill,
     );
     canvas.drawRect(
@@ -4548,7 +4548,7 @@ class _MaskDropdownButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.deepPurple.withOpacity(0.30),
+              color: Colors.deepPurple.withValues(alpha: 0.30),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -4740,7 +4740,7 @@ class _MaskGridPanel extends StatelessWidget {
                                 ? [
                                     BoxShadow(
                                       color: Colors.deepPurple
-                                          .withOpacity(0.25),
+                                          .withValues(alpha: 0.25),
                                       blurRadius: 6,
                                       offset: const Offset(0, 2),
                                     ),

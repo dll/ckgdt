@@ -32,7 +32,7 @@ class NavigationService {
   bool navigateByKeyword(String keyword) {
     final normalized = keyword.toLowerCase();
 
-    // 先在 Tab 映射中查找
+    // 先在动态 Tab 映射中精确查找（角色感知）
     for (final entry in _tabMapping.entries) {
       if (normalized.contains(entry.key)) {
         switchToTab(entry.value);
@@ -40,16 +40,30 @@ class NavigationService {
       }
     }
 
-    // 通用关键词映射（不依赖角色的固定映射）
-    final generalMap = <String, int>{
-      '首页': 0, '主页': 0, '回家': 0,
-      '图谱': 1, '知识图谱': 1,
+    // 别名 → 标准 Tab 名映射（解析后查动态映射）
+    const aliasMap = <String, String>{
+      '首页': '首页', '主页': '首页', '回家': '首页',
+      '知识图谱': '图谱',
+      '学习中心': '学习',
+      '课堂管理': '课堂',
+      '实验任务': '实验',
+      '考核管理': '考核', '考试': '考核',
+      '作品展评': '作品',
+      '成就': '达成', '达成度': '达成',
+      '管理面板': '管理',
     };
 
-    for (final entry in generalMap.entries) {
-      if (normalized.contains(entry.key)) {
-        switchToTab(entry.value);
-        return true;
+    // 按别名长度降序匹配（优先匹配更精确的词）
+    final sortedAliases = aliasMap.entries.toList()
+      ..sort((a, b) => b.key.length.compareTo(a.key.length));
+
+    for (final alias in sortedAliases) {
+      if (normalized.contains(alias.key)) {
+        final targetLabel = alias.value;
+        if (_tabMapping.containsKey(targetLabel)) {
+          switchToTab(_tabMapping[targetLabel]!);
+          return true;
+        }
       }
     }
 

@@ -91,6 +91,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
     try {
       final nodes = await _graphDao.getNodes(widget.graphId);
       final edges = await _graphDao.getEdges(widget.graphId);
+      if (!mounted) return;
       _nodes = nodes;
       _edges = edges;
       _availableNodeTypes = nodes
@@ -100,6 +101,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
       _calculatePositions();
       setState(() => _isLoading = false);
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
     }
   }
@@ -560,7 +562,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
   Widget _statCard(String label, String value, Color color) {
     return Expanded(
       child: Card(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Column(
@@ -960,7 +962,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
   Widget _buildSearchResultBar(Color primary) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      color: primary.withOpacity(0.1),
+      color: primary.withValues(alpha: 0.1),
       child: Row(
         children: [
           Icon(Icons.search, size: 16, color: primary),
@@ -999,7 +1001,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
             decoration: BoxDecoration(
-              color: primary.withOpacity(0.1),
+              color: primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(_currentLayout.label,
@@ -1010,7 +1012,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
+                color: Colors.orange.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -1036,7 +1038,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
+                color: Colors.green.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -1100,7 +1102,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      color: color.withOpacity(0.08),
+      color: color.withValues(alpha: 0.08),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1143,7 +1145,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
                     if (i > 0)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 2),
-                        child: Icon(Icons.chevron_right, size: 14, color: color.withOpacity(0.5)),
+                        child: Icon(Icons.chevron_right, size: 14, color: color.withValues(alpha: 0.5)),
                       ),
                     InkWell(
                       onTap: () => _scrollToNode(_ancestorPath[i].id),
@@ -1151,8 +1153,8 @@ class _GraphDetailPageState extends State<GraphDetailPage>
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: i == _ancestorPath.length - 1
-                              ? color.withOpacity(0.2)
-                              : color.withOpacity(0.08),
+                              ? color.withValues(alpha: 0.2)
+                              : color.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(6),
                           border: i == _ancestorPath.length - 1
                               ? Border.all(color: color, width: 1)
@@ -1184,7 +1186,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  Icon(Icons.eco, size: 12, color: Colors.teal.withOpacity(0.6)),
+                  Icon(Icons.eco, size: 12, color: Colors.teal.withValues(alpha: 0.6)),
                   const SizedBox(width: 4),
                   for (int i = 0; i < _descendantLeaves.length && i < 8; i++) ...[
                     if (i > 0) const SizedBox(width: 4),
@@ -1193,7 +1195,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                         decoration: BoxDecoration(
-                          color: Colors.teal.withOpacity(0.08),
+                          color: Colors.teal.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
@@ -1459,7 +1461,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.3),
+            color: Colors.grey.withValues(alpha: 0.3),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -1626,7 +1628,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
       margin: const EdgeInsets.only(right: 6),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(text, style: TextStyle(fontSize: 11, color: color)),
@@ -1782,7 +1784,7 @@ class GraphPainter extends CustomPainter {
           ..strokeCap = StrokeCap.round;
 
         final ancestorGlow = Paint()
-          ..color = const Color(0xFFFF8F00).withOpacity(0.15)
+          ..color = const Color(0xFFFF8F00).withValues(alpha: 0.15)
           ..strokeWidth = 16.0
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round;
@@ -1856,7 +1858,7 @@ class GraphPainter extends CustomPainter {
           Offset(pNode.x, pNode.y),
           38,
           Paint()
-            ..color = const Color(0xFFFF8F00).withOpacity(0.2)
+            ..color = const Color(0xFFFF8F00).withValues(alpha: 0.2)
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
         );
       }
@@ -1871,7 +1873,7 @@ class GraphPainter extends CustomPainter {
         ..strokeCap = StrokeCap.round;
 
       final pathGlowPaint = Paint()
-        ..color = const Color(0xFF4CAF50).withOpacity(0.15)
+        ..color = const Color(0xFF4CAF50).withValues(alpha: 0.15)
         ..strokeWidth = 14.0
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round;
@@ -1976,7 +1978,7 @@ class GraphPainter extends CustomPainter {
       // 上溯/下钻路径光晕（琥珀色）
       if (isDrillNode && !isSelected) {
         final drillGlow = Paint()
-          ..color = const Color(0xFFFF8F00).withOpacity(0.25)
+          ..color = const Color(0xFFFF8F00).withValues(alpha: 0.25)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
         canvas.drawCircle(center, radius + 8, drillGlow);
         // 琥珀色边框
@@ -1992,7 +1994,7 @@ class GraphPainter extends CustomPainter {
       // 搜索高亮光晕（黄色）
       if (isHighlighted) {
         final glowPaint = Paint()
-          ..color = Colors.yellow.withOpacity(0.3)
+          ..color = Colors.yellow.withValues(alpha: 0.3)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
         canvas.drawCircle(center, radius + 10, glowPaint);
       }
@@ -2000,7 +2002,7 @@ class GraphPainter extends CustomPainter {
       // 邻居高亮光晕（红色/橙色）
       if (isAdjacent && !isSelected) {
         final adjGlow = Paint()
-          ..color = Colors.red.withOpacity(0.2)
+          ..color = Colors.red.withValues(alpha: 0.2)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
         canvas.drawCircle(center, radius + 8, adjGlow);
         // 邻居虚线边框
@@ -2013,7 +2015,7 @@ class GraphPainter extends CustomPainter {
 
       // 阴影
       final shadowPaint = Paint()
-        ..color = Colors.black.withOpacity(0.15)
+        ..color = Colors.black.withValues(alpha: 0.15)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
       canvas.drawCircle(Offset(center.dx + 2, center.dy + 3), radius, shadowPaint);
 
@@ -2101,7 +2103,7 @@ class GraphPainter extends CustomPainter {
             center,
             radius - 4,
             Paint()
-              ..color = Colors.white.withOpacity(0.3)
+              ..color = Colors.white.withValues(alpha: 0.3)
               ..style = PaintingStyle.stroke
               ..strokeWidth = 2);
         break;

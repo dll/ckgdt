@@ -457,7 +457,7 @@ $wrongSummary
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: color, size: 24),
@@ -563,7 +563,7 @@ $wrongSummary
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: errorColor.withOpacity(0.1),
+            color: errorColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Center(
@@ -653,10 +653,10 @@ $wrongSummary
                       child: Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.04),
+                          color: Colors.red.withValues(alpha: 0.04),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: Colors.red.withOpacity(0.12),
+                            color: Colors.red.withValues(alpha: 0.12),
                           ),
                         ),
                         child: Column(
@@ -680,7 +680,7 @@ $wrongSummary
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Colors.red.withOpacity(0.1),
+                                    color: Colors.red.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Text(
@@ -770,7 +770,7 @@ $wrongSummary
                     height: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                     ),
                   )
                 : const Icon(Icons.auto_awesome),
@@ -833,8 +833,8 @@ $wrongSummary
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        primary.withOpacity(0.1),
-                        primary.withOpacity(0.05),
+                        primary.withValues(alpha: 0.1),
+                        primary.withValues(alpha: 0.05),
                       ],
                     ),
                   ),

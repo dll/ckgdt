@@ -153,7 +153,7 @@ class _WorksPageState extends State<WorksPage>
         Container(
           margin: const EdgeInsets.fromLTRB(12, 6, 12, 2),
           decoration: BoxDecoration(
-            color: primary.withOpacity(0.06),
+            color: primary.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(10),
           ),
           child: TabBar(
@@ -211,9 +211,9 @@ class _WorksPageState extends State<WorksPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.3)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
       ),
       child: Text(
         isTeacher ? '教师端' : '学生端',
@@ -253,7 +253,7 @@ class _WorksPageState extends State<WorksPage>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(s['icon'] as IconData,
-                        color: Colors.white.withOpacity(0.8), size: 14),
+                        color: Colors.white.withValues(alpha: 0.8), size: 14),
                     const SizedBox(width: 3),
                     Text('${s['value']}',
                         style: const TextStyle(
@@ -263,7 +263,7 @@ class _WorksPageState extends State<WorksPage>
                     const SizedBox(width: 2),
                     Text(s['label'] as String,
                         style: TextStyle(
-                            color: Colors.white.withOpacity(0.7),
+                            color: Colors.white.withValues(alpha: 0.7),
                             fontSize: 10)),
                   ],
                 ),
@@ -330,7 +330,7 @@ Widget _statChip(IconData icon, String value, String label, Color color) {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
     decoration: BoxDecoration(
-      color: color.withOpacity(0.08),
+      color: color.withValues(alpha: 0.08),
       borderRadius: BorderRadius.circular(8),
     ),
     child: Row(
@@ -499,7 +499,7 @@ class _GalleryTabState extends State<_GalleryTab> {
                           setState(() => _currentDim = dim);
                         },
                         showCheckmark: false,
-                        selectedColor: dim.color.withOpacity(0.15),
+                        selectedColor: dim.color.withValues(alpha: 0.15),
                         padding: EdgeInsets.zero,
                         materialTapTargetSize:
                             MaterialTapTargetSize.shrinkWrap,
@@ -588,7 +588,7 @@ class _GalleryTabState extends State<_GalleryTab> {
         _loadWorks();
       },
       showCheckmark: false,
-      selectedColor: primary.withOpacity(0.15),
+      selectedColor: primary.withValues(alpha: 0.15),
       padding: EdgeInsets.zero,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
@@ -658,7 +658,7 @@ class _GalleryTabState extends State<_GalleryTab> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: _currentDim.color.withOpacity(0.06),
+        color: _currentDim.color.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(10),
         border: Border(
             left: BorderSide(color: _currentDim.color, width: 3)),
@@ -678,7 +678,7 @@ class _GalleryTabState extends State<_GalleryTab> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
-              color: _currentDim.color.withOpacity(0.12),
+              color: _currentDim.color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text('$count人',
@@ -721,14 +721,14 @@ class _GalleryTabState extends State<_GalleryTab> {
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: primary.withOpacity(0.08),
+                  color: primary.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
                     Icon(Icons.play_circle_fill,
-                        color: primary.withOpacity(0.6), size: 26),
+                        color: primary.withValues(alpha: 0.6), size: 26),
                     if (duration.isNotEmpty)
                       Positioned(
                         bottom: 2,
@@ -737,7 +737,7 @@ class _GalleryTabState extends State<_GalleryTab> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 3, vertical: 1),
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.5),
+                            color: Colors.black.withValues(alpha: 0.5),
                             borderRadius: BorderRadius.circular(3),
                           ),
                           child: Text(duration,
@@ -774,7 +774,7 @@ class _GalleryTabState extends State<_GalleryTab> {
                                 horizontal: 6, vertical: 1),
                             decoration: BoxDecoration(
                               color:
-                                  Colors.orange.withOpacity(0.1),
+                                  Colors.orange.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
@@ -856,8 +856,8 @@ class _GalleryTabState extends State<_GalleryTab> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          primary.withOpacity(0.15),
-                          primary.withOpacity(0.05),
+                          primary.withValues(alpha: 0.15),
+                          primary.withValues(alpha: 0.05),
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -866,7 +866,7 @@ class _GalleryTabState extends State<_GalleryTab> {
                     child: Center(
                       child: Icon(Icons.play_circle_outline,
                           size: 52,
-                          color: primary.withOpacity(0.3)),
+                          color: primary.withValues(alpha: 0.3)),
                     ),
                   ),
                   Center(
@@ -874,7 +874,7 @@ class _GalleryTabState extends State<_GalleryTab> {
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.5),
+                        color: Colors.black.withValues(alpha: 0.5),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(Icons.play_arrow,
@@ -889,7 +889,7 @@ class _GalleryTabState extends State<_GalleryTab> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.7),
+                          color: Colors.black.withValues(alpha: 0.7),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(duration,
@@ -986,7 +986,7 @@ class _GalleryTabState extends State<_GalleryTab> {
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color:
-                                Colors.orange.withOpacity(0.1),
+                                Colors.orange.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -1027,7 +1027,7 @@ class _GalleryTabState extends State<_GalleryTab> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: primary.withOpacity(0.08),
+                            color: primary.withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -1252,8 +1252,8 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
               borderRadius: BorderRadius.circular(14),
               gradient: LinearGradient(
                 colors: [
-                  primary.withOpacity(0.12),
-                  primary.withOpacity(0.04),
+                  primary.withValues(alpha: 0.12),
+                  primary.withValues(alpha: 0.04),
                 ],
               ),
             ),
@@ -1261,12 +1261,12 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
               alignment: Alignment.center,
               children: [
                 Icon(Icons.videocam,
-                    size: 64, color: primary.withOpacity(0.2)),
+                    size: 64, color: primary.withValues(alpha: 0.2)),
                 Container(
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: primary.withOpacity(0.8),
+                    color: primary.withValues(alpha: 0.8),
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
@@ -1299,7 +1299,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.6),
+                        color: Colors.black.withValues(alpha: 0.6),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(_work['video_duration'] as String,
@@ -1319,7 +1319,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
               // 头像
               CircleAvatar(
                 radius: 22,
-                backgroundColor: primary.withOpacity(0.15),
+                backgroundColor: primary.withValues(alpha: 0.15),
                 child: Text(
                   _avatarChar(_work, isTeacherOrAdmin),
                   style: TextStyle(
@@ -1347,7 +1347,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: Colors.orange
-                                  .withOpacity(0.1),
+                                  .withValues(alpha: 0.1),
                               borderRadius:
                                   BorderRadius.circular(4),
                             ),
@@ -1365,7 +1365,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: Colors.blue
-                                  .withOpacity(0.1),
+                                  .withValues(alpha: 0.1),
                               borderRadius:
                                   BorderRadius.circular(4),
                             ),
@@ -1478,7 +1478,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: primary.withOpacity(0.08),
+                          color: primary.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(t.toString(),
@@ -1522,7 +1522,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                   onPressed: _submitComment,
                   icon: Icon(Icons.send, color: primary),
                   style: IconButton.styleFrom(
-                    backgroundColor: primary.withOpacity(0.1),
+                    backgroundColor: primary.withValues(alpha: 0.1),
                   ),
                 ),
               ],
@@ -1567,7 +1567,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: scoreColor.withOpacity(0.04),
+        color: scoreColor.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(12),
         border:
             Border(left: BorderSide(color: scoreColor, width: 3)),
@@ -1677,12 +1677,12 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isTeacher
-            ? Colors.blue.withOpacity(0.03)
+            ? Colors.blue.withValues(alpha: 0.03)
             : Colors.grey[50],
         borderRadius: BorderRadius.circular(10),
         border: Border(
           left: BorderSide(
-              color: roleColor.withOpacity(0.4), width: 3),
+              color: roleColor.withValues(alpha: 0.4), width: 3),
         ),
       ),
       child: Column(
@@ -1692,7 +1692,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
             children: [
               CircleAvatar(
                 radius: 14,
-                backgroundColor: roleColor.withOpacity(0.15),
+                backgroundColor: roleColor.withValues(alpha: 0.15),
                 child: Text(
                   commentAvatar,
                   style: TextStyle(
@@ -1710,7 +1710,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(
-                  color: roleColor.withOpacity(0.1),
+                  color: roleColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(roleLabel,
@@ -2090,12 +2090,12 @@ class _RecordsTabState extends State<_RecordsTab> {
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
             color: selected
-                ? primary.withOpacity(0.12)
+                ? primary.withValues(alpha: 0.12)
                 : Colors.grey[100],
             borderRadius: BorderRadius.circular(10),
             border: selected
                 ? Border.all(
-                    color: primary.withOpacity(0.3))
+                    color: primary.withValues(alpha: 0.3))
                 : null,
           ),
           child: Column(
@@ -2400,7 +2400,7 @@ class _LeaderboardTabState extends State<_LeaderboardTab> {
         _loadData();
       },
       showCheckmark: false,
-      selectedColor: primary.withOpacity(0.15),
+      selectedColor: primary.withValues(alpha: 0.15),
       padding: EdgeInsets.zero,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
@@ -2419,7 +2419,7 @@ class _LeaderboardTabState extends State<_LeaderboardTab> {
                 fontWeight: FontWeight.bold)),
         Text(label,
             style: TextStyle(
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
                 fontSize: 11)),
       ],
     );
@@ -2474,7 +2474,7 @@ class _LeaderboardTabState extends State<_LeaderboardTab> {
               color: Colors.amber, size: 32),
         CircleAvatar(
           radius: rank == 1 ? 24 : 20,
-          backgroundColor: color.withOpacity(0.15),
+          backgroundColor: color.withValues(alpha: 0.15),
           child: Text(
             _avatarChar(entry, showReal),
             style: TextStyle(
@@ -2503,8 +2503,8 @@ class _LeaderboardTabState extends State<_LeaderboardTab> {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                color.withOpacity(0.3),
-                color.withOpacity(0.1),
+                color.withValues(alpha: 0.3),
+                color.withValues(alpha: 0.1),
               ],
             ),
             borderRadius: const BorderRadius.vertical(

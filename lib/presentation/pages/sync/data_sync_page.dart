@@ -221,8 +221,8 @@ class _DataSyncPageState extends State<DataSyncPage> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isDark
-            ? Colors.blue.withOpacity(0.15)
-            : Colors.blue.withOpacity(0.06),
+            ? Colors.blue.withValues(alpha: 0.15)
+            : Colors.blue.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(12),
         border: Border(
           left: BorderSide(
@@ -256,7 +256,7 @@ class _DataSyncPageState extends State<DataSyncPage> {
                       : '从课程仓库拉取所有学生的学习数据（测验成绩、学习记录、错题等）到本地查看。',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.textTheme.bodySmall?.color
-                        ?.withOpacity(0.7),
+                        ?.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -275,13 +275,13 @@ class _DataSyncPageState extends State<DataSyncPage> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: isSuccess
-            ? Colors.green.withOpacity(0.1)
-            : Colors.red.withOpacity(0.1),
+            ? Colors.green.withValues(alpha: 0.1)
+            : Colors.red.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: isSuccess
-              ? Colors.green.withOpacity(0.3)
-              : Colors.red.withOpacity(0.3),
+              ? Colors.green.withValues(alpha: 0.3)
+              : Colors.red.withValues(alpha: 0.3),
         ),
       ),
       child: Row(
@@ -397,7 +397,7 @@ class _DataSyncPageState extends State<DataSyncPage> {
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, size: 16, color: color),
@@ -565,7 +565,7 @@ class _DataSyncPageState extends State<DataSyncPage> {
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, size: 16, color: color),
@@ -722,8 +722,8 @@ class _DataSyncPageState extends State<DataSyncPage> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isDark
-            ? Colors.white.withOpacity(0.05)
-            : Colors.grey.withOpacity(0.05),
+            ? Colors.white.withValues(alpha: 0.05)
+            : Colors.grey.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(10),
         border: Border(
           left: BorderSide(

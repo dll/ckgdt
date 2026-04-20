@@ -423,7 +423,7 @@ stop
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.play_circle_outline,
-                    size: 48, color: primary.withOpacity(0.5)),
+                    size: 48, color: primary.withValues(alpha: 0.5)),
                 const SizedBox(height: 10),
                 Text(
                   '点击右上角 ▶ 按钮渲染预览',
@@ -433,10 +433,10 @@ stop
                 Text(
                   '或点击此处快速渲染',
                   style: TextStyle(
-                    color: primary.withOpacity(0.7),
+                    color: primary.withValues(alpha: 0.7),
                     fontSize: 13,
                     decoration: TextDecoration.underline,
-                    decorationColor: primary.withOpacity(0.7),
+                    decorationColor: primary.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -665,9 +665,9 @@ stop
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: primary.withOpacity(0.10),
+          color: primary.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: primary.withOpacity(0.3)),
+          border: Border.all(color: primary.withValues(alpha: 0.3)),
         ),
         child: Text(
           label,
@@ -766,8 +766,8 @@ stop
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: primary.withOpacity(0.05),
-                border: Border.all(color: primary.withOpacity(0.2)),
+                color: primary.withValues(alpha: 0.05),
+                border: Border.all(color: primary.withValues(alpha: 0.2)),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(

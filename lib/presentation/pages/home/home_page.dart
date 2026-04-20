@@ -764,7 +764,7 @@ class _HomePageState extends State<HomePage> {
                         width: 42,
                         height: 42,
                         decoration: BoxDecoration(
-                          color: primary.withOpacity(0.1),
+                          color: primary.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(steps[i].icon, color: primary, size: 22),
@@ -780,7 +780,7 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               if (i < steps.length - 1)
-                Icon(Icons.arrow_forward_ios, size: 14, color: primary.withOpacity(0.4)),
+                Icon(Icons.arrow_forward_ios, size: 14, color: primary.withValues(alpha: 0.4)),
             ],
           ],
         ),
@@ -988,7 +988,7 @@ class _AdminToolsPage extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(14),
                 gradient: LinearGradient(
-                  colors: [primary, primary.withOpacity(0.7)],
+                  colors: [primary, primary.withValues(alpha: 0.7)],
                 ),
               ),
               child: Row(

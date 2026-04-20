@@ -257,7 +257,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                     ? [
                                         BoxShadow(
                                           color: preset.primary
-                                              .withOpacity(0.4),
+                                              .withValues(alpha: 0.4),
                                           blurRadius: 8,
                                           spreadRadius: 1,
                                         )
@@ -406,7 +406,7 @@ class _SettingsPageState extends State<SettingsPage> {
       visualDensity: VisualDensity.compact,
       leading: CircleAvatar(
         radius: 18,
-        backgroundColor: primary.withOpacity(0.1),
+        backgroundColor: primary.withValues(alpha: 0.1),
         child: Icon(icon, color: primary, size: 20),
       ),
       title: Text(title, style: const TextStyle(fontSize: 14)),

@@ -130,11 +130,13 @@ class VideoService {
   /// [slides] 幻灯片图片路径列表
   /// [audios] 对应的音频路径列表（可以比 slides 少，缺少的用静音代替）
   /// [outputPath] 最终输出视频路径
+  /// [clipDirPath] 可选的片段临时目录（会话隔离），不传则使用系统临时目录
   /// [onProgress] 进度回调 (current, total)
   Future<bool> generateVideo({
     required List<String> slides,
     required List<String> audios,
     required String outputPath,
+    String? clipDirPath,
     double defaultDuration = 5.0,
     void Function(int current, int total, String message)? onProgress,
   }) async {
@@ -144,8 +146,15 @@ class VideoService {
         '${slides.length} slides, ${audios.length} audios');
 
     final total = slides.length + 1; // +1 for concatenation step
-    final dir = await getTemporaryDirectory();
-    final clipDir = Directory('${dir.path}/video_clips');
+
+    // 使用传入的会话目录或回退到系统临时目录
+    final Directory clipDir;
+    if (clipDirPath != null) {
+      clipDir = Directory(clipDirPath);
+    } else {
+      final dir = await getTemporaryDirectory();
+      clipDir = Directory('${dir.path}/video_clips');
+    }
     if (clipDir.existsSync()) {
       clipDir.deleteSync(recursive: true);
     }

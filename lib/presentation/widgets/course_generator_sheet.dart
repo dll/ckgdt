@@ -53,7 +53,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.onSurface.withOpacity(0.3),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -72,7 +72,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
             Text(
               'AI 自动生成完整课程体系：大纲、章节、题库、资源',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
               textAlign: TextAlign.center,
             ),
@@ -250,7 +250,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                             child: Text(
                               _logs[_logs.length - 1 - i],
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                                 fontSize: 11,
                               ),
                             ),

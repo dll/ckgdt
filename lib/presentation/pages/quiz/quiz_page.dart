@@ -56,11 +56,13 @@ class _QuizPageState extends State<QuizPage> {
     setState(() => _isLoading = true);
     try {
       final chapters = await _quizDao.getChapters();
+      if (!mounted) return;
       setState(() {
         _chapters = chapters;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
     }
   }
@@ -90,6 +92,7 @@ class _QuizPageState extends State<QuizPage> {
 
     try {
       final questions = await _quizDao.getQuestionsByChapter(chapter);
+      if (!mounted) return;
       setState(() {
         _questions = questions;
         _quizStarted = true;
@@ -100,6 +103,7 @@ class _QuizPageState extends State<QuizPage> {
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
     }
   }
@@ -316,7 +320,7 @@ class _QuizPageState extends State<QuizPage> {
                           width: 48,
                           height: 48,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.25),
+                            color: Colors.white.withValues(alpha: 0.25),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(Icons.quiz,
@@ -490,7 +494,7 @@ class _QuizPageState extends State<QuizPage> {
     required VoidCallback onTap,
   }) {
     return Material(
-      color: color.withOpacity(0.1),
+      color: color.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
@@ -544,7 +548,7 @@ class _QuizPageState extends State<QuizPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.grey.withOpacity(0.06),
+        color: Colors.grey.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -634,7 +638,7 @@ class _QuizPageState extends State<QuizPage> {
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color:
-                          Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                          Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -760,7 +764,7 @@ class _QuizPageState extends State<QuizPage> {
       margin: const EdgeInsets.only(bottom: 6),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: scoreColor.withOpacity(0.15),
+          backgroundColor: scoreColor.withValues(alpha: 0.15),
           child: Text(
             '$score',
             style: TextStyle(
@@ -926,7 +930,7 @@ class _QuizPageState extends State<QuizPage> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.1),
+                          color: Colors.blue.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Text(
@@ -965,7 +969,7 @@ class _QuizPageState extends State<QuizPage> {
                     bgColor = Theme.of(context)
                         .colorScheme
                         .primary
-                        .withOpacity(0.3);
+                        .withValues(alpha: 0.3);
                     borderColor = Theme.of(context).colorScheme.primary;
                   }
 
