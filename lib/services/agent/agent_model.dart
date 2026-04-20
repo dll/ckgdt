@@ -30,6 +30,12 @@ class AgentConfig {
   final List<String> usageSteps; // 使用步骤
   final List<AgentCase> classicCases; // 经典案例
 
+  /// 允许使用此智能体的用户角色列表
+  ///
+  /// 空列表 = 所有角色可用（默认）。
+  /// 例如 `['teacher', 'admin']` 表示仅教师和管理员可见。
+  final List<String> allowedRoles;
+
   const AgentConfig({
     required this.id,
     required this.name,
@@ -42,7 +48,14 @@ class AgentConfig {
     this.requiresAi = false,
     this.usageSteps = const [],
     this.classicCases = const [],
+    this.allowedRoles = const [],
   });
+
+  /// 检查给定角色是否可以使用此智能体
+  bool isAllowedFor(String role) {
+    if (allowedRoles.isEmpty) return true; // 空 = 不限制
+    return allowedRoles.contains(role);
+  }
 }
 
 /// 消息角色

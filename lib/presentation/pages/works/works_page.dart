@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../data/local/works_dao.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/file_opener_service.dart';
+import '../../../services/agent/agents/works_grading_agent.dart';
 import '../../widgets/agent_entry_button.dart';
 
 // ╔══════════════════════════════════════════════════════════════════════════════╗
@@ -71,6 +74,14 @@ class _WorksPageState extends State<WorksPage>
   }
 
   Future<void> _initData() async {
+    // 一次性清理旧版虚假互动数据
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (!(prefs.getBool('works_fake_data_cleaned') ?? false)) {
+        await _worksDao.cleanupFakeData();
+        await prefs.setBool('works_fake_data_cleaned', true);
+      }
+    } catch (_) {}
     // 1. 从 JSON 加载学生数据
     try {
       final jsonStr =
@@ -928,6 +939,24 @@ class _GalleryTabState extends State<_GalleryTab> {
                                 fontWeight: FontWeight.bold)),
                       ),
                     ),
+                  if (score == null && !needsScore && status == '待提交')
+                    Positioned(
+                      left: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.grey,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text('待提交',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold)),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -1185,6 +1214,9 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
         : [];
     final isTeacherOrAdmin =
         widget.authService.isTeacher || widget.authService.isAdmin;
+    final workStatus = _work['status'] as String? ?? '待提交';
+    final isSubmitted = workStatus == '已提交';
+    final canInteract = isTeacherOrAdmin || isSubmitted;
     final viewCount = (_work['view_count'] as int?) ?? 0;
     final likeCount = (_work['like_count'] as int?) ?? 0;
     final commentCount = (_work['comment_count'] as int?) ?? 0;
@@ -1241,11 +1273,20 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                     icon: const Icon(Icons.play_arrow,
                         color: Colors.white, size: 32),
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                              '播放: ${_work['video_url'] ?? '视频文件未配置'}'),
-                        ),
+                      final videoUrl = _work['video_url'] as String? ?? '';
+                      if (videoUrl.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('该作品尚未上传演示视频'),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                        return;
+                      }
+                      FileOpenerService.openFile(
+                        context,
+                        videoUrl,
+                        '${_work['title'] ?? '作品'}-演示视频',
                       );
                     },
                   ),
@@ -1352,7 +1393,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                   Colors.grey[600]!),
               const SizedBox(width: 8),
               InkWell(
-                onTap: _toggleLike,
+                onTap: canInteract ? _toggleLike : null,
                 borderRadius: BorderRadius.circular(8),
                 child: _statChip(
                   _isLiked ? Icons.favorite : Icons.favorite_border,
@@ -1458,32 +1499,33 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
           // ── 评论区 ──────────────────────────────────────
           const SizedBox(height: 16),
           _sectionHeader('评论区 ($commentCount)', icon: Icons.forum),
-          // 发表评论
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _commentCtrl,
-                  decoration: InputDecoration(
-                    hintText: '发表评论...',
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
-                    isDense: true,
+          // 发表评论（仅已提交的作品允许评论）
+          if (canInteract)
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _commentCtrl,
+                    decoration: InputDecoration(
+                      hintText: '发表评论...',
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      isDense: true,
+                    ),
+                    style: const TextStyle(fontSize: 13),
                   ),
-                  style: const TextStyle(fontSize: 13),
                 ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: _submitComment,
-                icon: Icon(Icons.send, color: primary),
-                style: IconButton.styleFrom(
-                  backgroundColor: primary.withOpacity(0.1),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: _submitComment,
+                  icon: Icon(Icons.send, color: primary),
+                  style: IconButton.styleFrom(
+                    backgroundColor: primary.withOpacity(0.1),
+                  ),
                 ),
-              ),
-            ],
+              ],
           ),
           const SizedBox(height: 12),
           if (_loadingComments)
@@ -1733,6 +1775,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
         (_work['score_documentation'] as int?)?.toDouble() ?? 9;
     final commentCtrl = TextEditingController(
         text: _work['score_comment'] as String? ?? '');
+    bool isAiGrading = false;
 
     showDialog(
       context: context,
@@ -1796,6 +1839,61 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
               ),
             ),
             actions: [
+              // AI 批阅按钮
+              OutlinedButton.icon(
+                onPressed: isAiGrading
+                    ? null
+                    : () async {
+                        setDialogState(() => isAiGrading = true);
+                        try {
+                          final agent = WorksGradingAgent();
+                          final result = await agent.gradeWork(
+                            title: _work['title'] as String? ?? '',
+                            description: _work['description'] as String?,
+                            techStack: _work['tech_stack'] as String?,
+                            studentName: _work['student_name'] as String? ??
+                                _work['leader_name'] as String?,
+                            groupName: _work['group_name'] as String?,
+                          );
+                          final parsed = _tryParseGradingJson(result);
+                          if (parsed != null) {
+                            final scores = parsed['scores'] as Map<String, dynamic>?;
+                            setDialogState(() {
+                              if (scores != null) {
+                                functionality = ((scores['functionality'] as Map?)?['score'] as num?)?.toDouble() ?? functionality;
+                                techDepth = ((scores['tech_depth'] as Map?)?['score'] as num?)?.toDouble() ?? techDepth;
+                                integration = ((scores['integration'] as Map?)?['score'] as num?)?.toDouble() ?? integration;
+                                quality = ((scores['quality'] as Map?)?['score'] as num?)?.toDouble() ?? quality;
+                                documentation = ((scores['documentation'] as Map?)?['score'] as num?)?.toDouble() ?? documentation;
+                              }
+                              commentCtrl.text = parsed['feedback'] as String? ?? '';
+                            });
+                          } else {
+                            setDialogState(() {
+                              commentCtrl.text = result;
+                            });
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('AI批阅失败: $e')),
+                            );
+                          }
+                        } finally {
+                          if (ctx.mounted) {
+                            setDialogState(() => isAiGrading = false);
+                          }
+                        }
+                      },
+                icon: isAiGrading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.auto_awesome, size: 16),
+                label: Text(isAiGrading ? 'AI批阅中...' : 'AI批阅'),
+              ),
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
                 child: const Text('取消'),
@@ -1845,6 +1943,22 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
         },
       ),
     );
+  }
+
+  /// 尝试从 AI 批阅结果中解析 JSON
+  Map<String, dynamic>? _tryParseGradingJson(String text) {
+    try {
+      final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(text);
+      if (jsonMatch == null) return null;
+      final jsonStr = jsonMatch.group(0)!;
+      final map = jsonDecode(jsonStr) as Map<String, dynamic>;
+      if (map.containsKey('scores') || map.containsKey('feedback') || map.containsKey('total_score')) {
+        return map;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
   }
 
   Widget _scoreSlider(String name, double value, int max,

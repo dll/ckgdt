@@ -56,7 +56,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 15,
+      version: 16,
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -110,7 +110,7 @@ class DatabaseHelper {
         // 重新打开（版本号必须与主初始化一致）
         final db2 = await openDatabase(
           dbName,
-          version: 15,
+          version: 16,
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
         );
@@ -168,7 +168,7 @@ class DatabaseHelper {
         // Create empty database
         db = await openDatabase(
           dbPath,
-          version: 15,
+          version: 16,
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
         );
@@ -180,7 +180,7 @@ class DatabaseHelper {
 
     db = await openDatabase(
       dbPath,
-      version: 15,
+      version: 16,
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -479,6 +479,9 @@ class DatabaseHelper {
     }
     if (oldVersion < 15) {
       await _migrateToV15(db);
+    }
+    if (oldVersion < 16) {
+      await _migrateToV16(db);
     }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
@@ -1246,7 +1249,9 @@ class DatabaseHelper {
         role TEXT NOT NULL,
         content TEXT NOT NULL,
         created_at TEXT NOT NULL,
-        tokens_used INTEGER DEFAULT 0
+        tokens_used INTEGER DEFAULT 0,
+        starred INTEGER DEFAULT 0,
+        title TEXT
       )
     ''');
 
@@ -1294,6 +1299,20 @@ class DatabaseHelper {
         'created_at': DateTime.now().toIso8601String(),
       }, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
+  }
+
+  /// V16: ai_chat_history 新增 starred / title 列
+  Future<void> _migrateToV16(Database db) async {
+    try {
+      await db.execute(
+        'ALTER TABLE ai_chat_history ADD COLUMN starred INTEGER DEFAULT 0',
+      );
+    } catch (_) {} // 列已存在
+    try {
+      await db.execute(
+        'ALTER TABLE ai_chat_history ADD COLUMN title TEXT',
+      );
+    } catch (_) {}
   }
 
   Future<void> _createNewTablesV3(Database db) async {

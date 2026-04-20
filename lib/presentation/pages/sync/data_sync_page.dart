@@ -48,7 +48,7 @@ class _DataSyncPageState extends State<DataSyncPage> {
     try {
       final config = await _syncService.getConfig();
       _autoSync = config.enabled;
-      _intervalMinutes = config.intervalMinutes;
+      _intervalMinutes = config.intervalMinutes.clamp(5, 60);
       _lastUpload = config.lastUpload;
       _lastDownload = config.lastDownload;
     } catch (_) {}

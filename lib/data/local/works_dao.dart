@@ -1,6 +1,7 @@
 import 'dart:convert';
-import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'database_helper.dart';
+import '../../services/notification_service.dart';
 
 /// 作品管理 DAO — 每位同学一个作品（视频演示）/ 视频互动 / 多维排行
 class WorksDao {
@@ -200,10 +201,24 @@ class WorksDao {
   }
 
   Future<int> submitWork(int id) async {
-    return updateWork(id, {
+    final result = updateWork(id, {
       'status': '已提交',
       'submit_time': DateTime.now().toIso8601String(),
     });
+    // 通知教师
+    try {
+      final work = await getWork(id);
+      if (work != null) {
+        NotificationService().notifyWorkSubmission(
+          studentId: work['user_id'] as String? ?? '',
+          studentName: work['student_name'] as String? ?? work['leader_name'] as String? ?? '',
+          workTitle: work['title'] as String? ?? '未命名作品',
+        );
+      }
+    } catch (e) {
+      debugPrint('WorksDao: 发送作品提交通知失败 — $e');
+    }
+    return result;
   }
 
   Future<int> deleteWork(int id) async {
@@ -535,13 +550,11 @@ class WorksDao {
   // ══════════════════════════════════════════════════════════
 
   /// 从学生列表同步作品。每位同学一个作品，以 user_id 为键幂等。
-  /// 首次同步时自动生成演示互动数据（评论、评分）。
   /// 会主动清理不属于真实学生的旧虚拟数据。
   Future<void> syncStudentWorks(
       List<Map<String, dynamic>> students) async {
     await _ensureWorksTable();
     final db = await DatabaseHelper.instance.database;
-    final rng = Random(42); // 固定种子保证一致性
 
     // ── 清理旧虚拟数据：删除不属于真实学生的作品 ──────────────
     final validUserIds = students
@@ -568,9 +581,6 @@ class WorksDao {
       }
     }
 
-    int newCount = 0;
-    final newWorkIds = <int>[];
-
     for (final s in students) {
       final sUserId = s['userId'] as String?;
       if (sUserId == null || sUserId.isEmpty) continue;
@@ -579,12 +589,6 @@ class WorksDao {
       final existing = await db.query('student_works',
           where: 'user_id = ?', whereArgs: [sUserId]);
       if (existing.isNotEmpty) continue;
-
-      // 生成演示用视频时长 02:15 ~ 06:59
-      final mins = 2 + rng.nextInt(5);
-      final secs = rng.nextInt(60);
-      final duration =
-          '${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
 
       // 从技术栈拆出标签
       final tags = <String>[];
@@ -596,7 +600,7 @@ class WorksDao {
             .where((t) => t.isNotEmpty));
       }
 
-      final wId = await addWork(
+      await addWork(
         title: s['project'] as String? ?? '未命名项目',
         description: s['feature_detail'] as String? ??
             s['features'] as String? ??
@@ -606,141 +610,40 @@ class WorksDao {
         groupName: s['repo'] as String?,
         leaderName: s['name'] as String?,
         userId: sUserId,
-        status: '已提交',
+        status: '待提交',
         tags: tags.isNotEmpty ? tags : null,
-        videoUrl: 'assets/videos/demo_$sUserId.mp4',
-        videoDuration: duration,
-        viewCount: 20 + rng.nextInt(200),
-        likeCount: 3 + rng.nextInt(50),
-        commentCount: 0, // 后面通过 addComment 自增
         repo: s['repo'] as String?,
         classGroup: s['classGroup'] as String?,
         project: s['project'] as String?,
         studentRole: s['role'] as String?,
         studentName: s['name'] as String?,
       );
-      newWorkIds.add(wId);
-      newCount++;
-    }
-
-    // 首次同步时生成演示互动数据
-    if (newCount > 0) {
-      await _generateDemoInteractions(students, newWorkIds, rng);
     }
   }
 
-  /// 生成演示互动数据（评论 + 部分评分）
-  Future<void> _generateDemoInteractions(
-    List<Map<String, dynamic>> students,
-    List<int> workIds,
-    Random rng,
-  ) async {
-    if (workIds.isEmpty || students.isEmpty) return;
+  /// 清除旧版虚假互动数据（评分、评论、虚假播放/点赞计数）
+  /// 调用一次后，将所有作品还原为"待提交"状态（无视频、无分数、无互动）
+  Future<void> cleanupFakeData() async {
+    await _ensureWorksTable();
     final db = await DatabaseHelper.instance.database;
 
-    // 获取刚创建的作品
-    final works = <Map<String, dynamic>>[];
-    for (final wId in workIds) {
-      final w = await db.query('student_works',
-          where: 'id = ?', whereArgs: [wId]);
-      if (w.isNotEmpty) works.add(w.first);
-    }
-    if (works.isEmpty) return;
+    // 删除所有评分、评论、点赞、浏览记录
+    await db.delete('work_scores');
+    await db.delete('work_comments');
+    await db.delete('work_likes');
+    await db.delete('work_views');
 
-    // ── 教师评论：~30% 的作品 ───────────────────────────────
-    const teacherComments = [
-      '技术实现完整，UI交互流畅，值得肯定。',
-      '功能完成度高，建议进一步优化性能。',
-      '代码结构清晰，文档规范，整体不错。',
-      '跨平台适配做得不错，AI功能有亮点。',
-      '整体完成度良好，建议加强异常处理和测试覆盖。',
-      '功能丰富，技术栈运用熟练，继续保持。',
-      '界面设计美观，交互逻辑清晰，值得推广。',
-      '架构设计合理，代码质量较高。',
-      '创新点突出，实用性强，期待进一步完善。',
-      '基础功能扎实，建议增加更多差异化特色。',
-    ];
-
-    for (final w in works) {
-      if (rng.nextDouble() < 0.30) {
-        await addComment(
-          workId: w['id'] as int,
-          userId: '419116',
-          userName: '刘东良',
-          userRole: 'teacher',
-          content: teacherComments[rng.nextInt(teacherComments.length)],
-        );
-      }
-    }
-
-    // ── 同学互评：每个作品 0-3 条 ────────────────────────────
-    const peerComments = [
-      '学习了，很有启发！',
-      '功能做得很完整，佩服。',
-      'UI设计很好看，交互流畅。',
-      '技术栈选择很合理。',
-      '值得学习的项目！',
-      '期待后续迭代更新。',
-      '代码写得很规范，值得参考。',
-      'AI功能很实用，创意不错。',
-      '界面交互很流畅，用户体验很好。',
-      '这个功能设计得很巧妙。',
-      '演示视频做得很清晰。',
-      '跨平台适配做得不错。',
-      '项目完成度很高，赞！',
-      '文档写得很详细。',
-    ];
-
-    for (final w in works) {
-      final numComments = rng.nextInt(4); // 0-3
-      final workUserId = w['user_id'] as String?;
-      for (int i = 0; i < numComments; i++) {
-        final commenter = students[rng.nextInt(students.length)];
-        final commenterId = commenter['userId'] as String?;
-        // 不评论自己的作品
-        if (commenterId == workUserId) continue;
-        await addComment(
-          workId: w['id'] as int,
-          userId: commenterId ?? '',
-          userName: commenter['name'] as String?,
-          userRole: 'student',
-          content: peerComments[rng.nextInt(peerComments.length)],
-        );
-      }
-    }
-
-    // ── 教师评分：~25% 的作品 ────────────────────────────────
-    const scoreComments = [
-      '功能完整，技术栈选型合理，UI 交互流畅。',
-      '学习功能全面，建议优化数据同步性能。',
-      '技术实现扎实，跨平台适配值得肯定。',
-      '交互设计完善，核心功能亮点突出。',
-      '整体表现良好，文档和代码规范。',
-      '创新性强，AI 功能集成出色。',
-      '基础功能完整，建议加强性能优化。',
-      '项目结构清晰，团队协作成果明显。',
-    ];
-
-    for (final w in works) {
-      if (rng.nextDouble() < 0.25) {
-        final func = 16 + rng.nextInt(10); // 16-25
-        final tech = 12 + rng.nextInt(9); // 12-20
-        final integ = 16 + rng.nextInt(10); // 16-25
-        final qual = 8 + rng.nextInt(8); // 8-15
-        final doc = 8 + rng.nextInt(8); // 8-15
-        await scoreWork(
-          workId: w['id'] as int,
-          scorerId: '419116',
-          scorerName: '刘东良',
-          functionality: func,
-          techDepth: tech,
-          integration: integ,
-          quality: qual,
-          documentation: doc,
-          comment: scoreComments[rng.nextInt(scoreComments.length)],
-        );
-      }
-    }
+    // 重置所有作品的状态和虚假计数
+    await db.update('student_works', {
+      'status': '待提交',
+      'video_url': null,
+      'video_duration': null,
+      'view_count': 0,
+      'like_count': 0,
+      'comment_count': 0,
+      'submit_time': null,
+    });
+    debugPrint('WorksDao: 已清除旧版虚假互动数据');
   }
 
   // ══════════════════════════════════════════════════════════

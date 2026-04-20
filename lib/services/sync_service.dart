@@ -196,7 +196,7 @@ class SyncService {
       final data = await _collectStudentData(userId);
       final jsonStr = const JsonEncoder.withIndent('  ').convert(data);
 
-      // 2. 上传到 Gitee
+      // 2. 上传到课程共享仓库 (mad-fd)
       final path = '$_syncDir/$userId.json';
       await _gitee.createOrUpdateFile(
         owner: repoOwner,
@@ -206,6 +206,36 @@ class SyncService {
         message: '同步学生数据: $userId (${DateTime.now().toIso8601String()})',
         branch: repoBranch,
       );
+
+      // 2.5 同时备份到学生个人仓库（静默失败，不影响主流程）
+      try {
+        final userInfo = await db.query(
+          'users',
+          columns: ['repository_url'],
+          where: 'user_id = ?',
+          whereArgs: [userId],
+          limit: 1,
+        );
+        final repoUrl = userInfo.isNotEmpty
+            ? (userInfo.first['repository_url'] as String?)
+            : null;
+        if (repoUrl != null && repoUrl.isNotEmpty) {
+          final parsed = GiteeService.parseRepoUrl(repoUrl);
+          if (parsed != null) {
+            await _gitee.createOrUpdateFile(
+              owner: parsed.owner,
+              repo: parsed.repo,
+              path: 'sync/learning_data.json',
+              content: jsonStr,
+              message: '备份学习数据: $userId (${DateTime.now().toIso8601String()})',
+              branch: 'master',
+            );
+            debugPrint('SyncService: 已备份到个人仓库 ${parsed.owner}/${parsed.repo}');
+          }
+        }
+      } catch (e) {
+        debugPrint('SyncService: 个人仓库备份失败（不影响主同步）: $e');
+      }
 
       // 3. 记录同步时间
       final prefs = await SharedPreferences.getInstance();
@@ -267,7 +297,7 @@ class SyncService {
       'favorites': null,
       'feedback': 'created_at DESC',
       'learning_paths': 'created_at DESC',
-      'lab_submissions': 'submitted_at DESC',
+      'lab_submissions': 'submit_time DESC',
       'student_reports': 'updated_at DESC',
       'student_works': 'created_at DESC',
       'survey_responses': 'submitted_at DESC',
@@ -444,6 +474,48 @@ class SyncService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(
           _lastDownloadTimeKey, DateTime.now().toIso8601String());
+
+      // 3.5 备份到教师个人仓库（静默失败）
+      try {
+        final session = await db.query('current_session', limit: 1);
+        if (session.isNotEmpty) {
+          final teacherId = session.first['user_id'] as String?;
+          if (teacherId != null) {
+            final teacherInfo = await db.query(
+              'users',
+              columns: ['repository_url'],
+              where: 'user_id = ?',
+              whereArgs: [teacherId],
+              limit: 1,
+            );
+            final repoUrl = teacherInfo.isNotEmpty
+                ? (teacherInfo.first['repository_url'] as String?)
+                : null;
+            if (repoUrl != null && repoUrl.isNotEmpty) {
+              final parsed = GiteeService.parseRepoUrl(repoUrl);
+              if (parsed != null) {
+                final backupData = {
+                  'synced_at': DateTime.now().toIso8601String(),
+                  'student_count': studentCount,
+                  'total_records': totalRecords,
+                  'teacher_id': teacherId,
+                };
+                await _gitee.createOrUpdateFile(
+                  owner: parsed.owner,
+                  repo: parsed.repo,
+                  path: 'sync/teacher_sync_log.json',
+                  content: const JsonEncoder.withIndent('  ').convert(backupData),
+                  message: '教师同步备份 ($studentCount 学生, $totalRecords 条记录)',
+                  branch: 'master',
+                );
+                debugPrint('SyncService: 已备份到教师仓库 ${parsed.owner}/${parsed.repo}');
+              }
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('SyncService: 教师仓库备份失败（不影响主同步）: $e');
+      }
 
       debugPrint('SyncService: 下载完成 ($studentCount 学生, $totalRecords 条记录)');
       status.value = SyncStatus.idle;

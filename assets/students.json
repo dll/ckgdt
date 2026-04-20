@@ -3,534 +3,623 @@
     "user_id": "2023210640",
     "real_name": "徐宗申",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210584",
     "real_name": "程天乐",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210641",
     "real_name": "杨义风",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210607",
     "real_name": "刘海静",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210605",
     "real_name": "李韶涵",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210604",
     "real_name": "李冉",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210585",
     "real_name": "崔浩宇",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210624",
     "real_name": "汪明昊",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "203139",
     "real_name": "叶李灶",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": null
   },
   {
     "user_id": "2023210625",
     "real_name": "汪蓉",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210588",
     "real_name": "方景堂",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "203127",
     "real_name": "杨罗坤",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": null
   },
   {
     "user_id": "2023210654",
     "real_name": "朱思维",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210653",
     "real_name": "周芝燕",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210652",
     "real_name": "周丽棉",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210651",
     "real_name": "周乐",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210650",
     "real_name": "周俊峰",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210649",
     "real_name": "赵翔",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210648",
     "real_name": "张政",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210647",
     "real_name": "张玉满",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210646",
     "real_name": "张宇",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210645",
     "real_name": "张天慈",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210643",
     "real_name": "张海天",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210642",
     "real_name": "叶庭东",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210639",
     "real_name": "邢兆丰",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210638",
     "real_name": "谢宇翰",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210637",
     "real_name": "席永杰",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210636",
     "real_name": "邬凯伦",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210634",
     "real_name": "王智宇",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210632",
     "real_name": "王义琳",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210631",
     "real_name": "王秀妹",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210630",
     "real_name": "王天慧",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210629",
     "real_name": "王思宇",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210628",
     "real_name": "王全洋",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210627",
     "real_name": "王培杨",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210626",
     "real_name": "王建",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210623",
     "real_name": "唐锦",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210622",
     "real_name": "宋延安",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210620",
     "real_name": "邵宇震",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210619",
     "real_name": "钱子明",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210618",
     "real_name": "钱家澍",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210617",
     "real_name": "钱皓",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210616",
     "real_name": "彭绍洋",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210615",
     "real_name": "彭娜",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210614",
     "real_name": "庞勇涛",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210613",
     "real_name": "倪俊杰",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210612",
     "real_name": "倪晨鸣",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210611",
     "real_name": "梅羽童",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210609",
     "real_name": "刘志浩",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210608",
     "real_name": "刘宇乐",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210603",
     "real_name": "李俊杰",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210602",
     "real_name": "匡林",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210601",
     "real_name": "金正轩",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210600",
     "real_name": "金翔宇",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210599",
     "real_name": "姜少威",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210598",
     "real_name": "姬鹏炜",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210597",
     "real_name": "虎康",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210596",
     "real_name": "胡文启",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210595",
     "real_name": "胡康",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210594",
     "real_name": "赫宇豪",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210593",
     "real_name": "何妍婷",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210592",
     "real_name": "龚成磊",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210591",
     "real_name": "费韵",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210590",
     "real_name": "方政",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210589",
     "real_name": "方勋",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210587",
     "real_name": "方阿美",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210586",
     "real_name": "丁陆",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210583",
     "real_name": "程乐",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210582",
     "real_name": "程浩宇",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210581",
     "real_name": "陈子建",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210580",
     "real_name": "陈琪琪",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210579",
     "real_name": "陈浩",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210578",
     "real_name": "车蕊",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210576",
     "real_name": "蔡迦南",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210575",
     "real_name": "安豪",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210644",
     "real_name": "张靖婷",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210577",
     "real_name": "常烁",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210610",
     "real_name": "马建钰",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210635",
     "real_name": "魏志宏",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2023210633",
     "real_name": "王永喜",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2023210621",
     "real_name": "史东振",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2022210623",
     "real_name": "张爽",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2022210552",
     "real_name": "曹万千",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2020213080",
     "real_name": "倪洋",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2020211613",
     "real_name": "张顺",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件231"
   },
   {
     "user_id": "2020211596",
     "real_name": "李世程",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "2020210158",
     "real_name": "苏洲",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": "软件232"
   },
   {
     "user_id": "203130",
     "real_name": "刘赛赛",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": null
   },
   {
     "user_id": "2023211985",
     "real_name": "测试学生",
     "role": "student",
-    "is_active": 1
+    "is_active": 1,
+    "class_name": null
   }
 ]

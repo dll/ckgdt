@@ -329,28 +329,86 @@ ${context != null ? '上下文说明: $context' : ''}
       final title = lessonPlan['title']?.toString() ?? '教学课件';
       final chapter = lessonPlan['chapter']?.toString();
 
-      // 加载中文字体（微软雅黑常规 + 粗体，ttc 取第一个字体面）
+      // 加载中文字体 — pdf 包只支持 .ttf，不支持 .ttc
       pw.Font? font;
       pw.Font? boldFont;
-      try {
-        final fontData =
-            await rootBundle.load('assets/fonts/msyh.ttc');
-        font = pw.Font.ttf(fontData);
-      } catch (_) {
-        // 回退到 NotoSansSC
+
+      // 尝试多个字体源（按优先级）
+      final fontCandidates = <String>[
+        // Windows 系统字体（优先选择纯 .ttf 格式）
+        if (Platform.isWindows) ...[
+          'C:\\Windows\\Fonts\\simhei.ttf',   // 黑体（纯 TTF，兼容性最好）
+          'C:\\Windows\\Fonts\\msyh.ttf',     // 微软雅黑（部分系统有 ttf 版）
+        ],
+        if (Platform.isMacOS) ...[
+          '/System/Library/Fonts/PingFang.ttc',
+        ],
+        if (Platform.isLinux) ...[
+          '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
+          '/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf',
+        ],
+      ];
+
+      // 尝试从系统字体加载
+      for (final fontPath in fontCandidates) {
+        if (font != null) break;
+        try {
+          final file = File(fontPath);
+          if (file.existsSync()) {
+            final bytes = file.readAsBytesSync();
+            font = pw.Font.ttf(bytes.buffer.asByteData());
+            debugPrint('CoursewareService: PDF font loaded from $fontPath');
+          }
+        } catch (e) {
+          debugPrint('CoursewareService: font $fontPath failed: $e');
+        }
+      }
+
+      // 回退到 assets 字体（NotoSansSC 是纯 TTF）
+      if (font == null) {
         try {
           final fontData =
               await rootBundle.load('assets/fonts/NotoSansSC-Regular.ttf');
           font = pw.Font.ttf(fontData);
-        } catch (_) {}
+          debugPrint('CoursewareService: PDF font loaded from NotoSansSC asset');
+        } catch (e) {
+          debugPrint('CoursewareService: NotoSansSC asset failed: $e');
+        }
       }
-      try {
-        final boldFontData =
-            await rootBundle.load('assets/fonts/msyhbd.ttc');
-        boldFont = pw.Font.ttf(boldFontData);
-      } catch (_) {
-        // 粗体字体不可用时回退到常规字体
-        boldFont = font;
+
+      // 最后尝试 assets 中的 ttc（可能在某些平台/pdf版本中可用）
+      if (font == null) {
+        try {
+          final fontData =
+              await rootBundle.load('assets/fonts/msyh.ttc');
+          font = pw.Font.ttf(fontData);
+          debugPrint('CoursewareService: PDF font loaded from msyh.ttc asset');
+        } catch (e) {
+          debugPrint('CoursewareService: msyh.ttc asset failed: $e');
+        }
+      }
+
+      // 加载粗体字体
+      if (Platform.isWindows) {
+        for (final boldPath in [
+          'C:\\Windows\\Fonts\\simhei.ttf',  // 黑体可同时作粗体
+          'C:\\Windows\\Fonts\\msyhbd.ttf',  // 微软雅黑粗体（可能不存在）
+        ]) {
+          if (boldFont != null) break;
+          try {
+            final file = File(boldPath);
+            if (file.existsSync()) {
+              final bytes = file.readAsBytesSync();
+              boldFont = pw.Font.ttf(bytes.buffer.asByteData());
+            }
+          } catch (_) {}
+        }
+      }
+      boldFont ??= font;
+
+      if (font == null) {
+        debugPrint('CoursewareService: WARNING — no Chinese font available, '
+            'PDF will use Helvetica (Chinese text will not render)');
       }
 
       final theme = font != null
@@ -1065,6 +1123,171 @@ ${context != null ? '上下文说明: $context' : ''}
       'homework': '复习$topic相关内容',
       'references': [],
     };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 教案 → 幻灯片（直接转换，不经过 Markdown 中间格式）
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// 将结构化教案直接转换为高质量幻灯片数据
+  ///
+  /// 生成的幻灯片包含：封面信息 + 教学目标 + 重难点 + 每个教学环节 +
+  /// 实验项目 + UML图表说明 + 课后作业 + 参考资料 + 总结
+  List<Map<String, dynamic>> lessonPlanToSlides(
+      Map<String, dynamic> lessonPlan) {
+    final slides = <Map<String, dynamic>>[];
+    final title = lessonPlan['title']?.toString() ?? '教学课件';
+    final chapter = lessonPlan['chapter']?.toString() ?? '';
+    final classHours = lessonPlan['classHours'] ?? 2;
+
+    // ── 1. 课程概览 ──────────────────────────────────────────────────
+    final objectives = lessonPlan['objectives'] as List? ?? [];
+    final keyPoints = lessonPlan['keyPoints'] as List? ?? [];
+    slides.add({
+      'title': '课程概览',
+      'subtitle': '$title | $chapter | ${classHours}课时',
+      'bullets': [
+        '【教学目标】',
+        ...objectives.map((o) => '• $o'),
+        if (keyPoints.isNotEmpty) '【教学重点】',
+        ...keyPoints.map((k) => '• $k'),
+      ],
+    });
+
+    // ── 2. 重点与难点 ────────────────────────────────────────────────
+    final difficulties = lessonPlan['difficulties'] as List? ?? [];
+    if (keyPoints.isNotEmpty || difficulties.isNotEmpty) {
+      slides.add({
+        'title': '重点与难点',
+        'bullets': [
+          if (keyPoints.isNotEmpty) '【教学重点】',
+          ...keyPoints.map((k) => '• $k'),
+          if (difficulties.isNotEmpty) '【教学难点】',
+          ...difficulties.map((d) => '• $d'),
+        ],
+      });
+    }
+
+    // ── 3. 教学过程 — 每个环节一张幻灯片 ──────────────────────────────
+    final sections = lessonPlan['sections'] as List? ?? [];
+    for (var i = 0; i < sections.length; i++) {
+      final s = sections[i] as Map<String, dynamic>;
+      final sTitle = s['title']?.toString() ?? '环节${i + 1}';
+      final duration = s['duration']?.toString() ?? '';
+      final content = s['content']?.toString() ?? '';
+      final activities = s['activities']?.toString() ?? '';
+      final codeExample = s['codeExample']?.toString() ?? '';
+      final notes = s['notes']?.toString() ?? '';
+
+      final bullets = <String>[];
+      if (duration.isNotEmpty) bullets.add('⏱ 时间：$duration');
+      if (activities.isNotEmpty) bullets.add('🎯 教学活动：$activities');
+
+      // 解析 content 为要点列表
+      final contentLines = content.split('\n');
+      for (final line in contentLines) {
+        final trimmed = line.trim();
+        if (trimmed.isEmpty) continue;
+        if (trimmed.startsWith('- ') || trimmed.startsWith('• ')) {
+          bullets.add('• ${trimmed.substring(2)}');
+        } else if (RegExp(r'^\d+[.、]').hasMatch(trimmed)) {
+          bullets.add('• ${trimmed.replaceFirst(RegExp(r'^\d+[.、]\s*'), '')}');
+        } else {
+          bullets.add('• $trimmed');
+        }
+      }
+
+      final slide = <String, dynamic>{
+        'title': sTitle,
+        'subtitle': duration.isNotEmpty ? '时间：$duration' : null,
+        'bullets': bullets.take(8).toList(), // 每页最多8个要点
+      };
+
+      if (codeExample.isNotEmpty) {
+        slide['code'] = codeExample;
+        slide['codeLanguage'] = 'java';
+      }
+      if (notes.isNotEmpty) {
+        slide['notes'] = notes;
+      }
+
+      slides.add(slide);
+
+      // 如果要点超过8个，创建续页
+      if (bullets.length > 8) {
+        slides.add({
+          'title': '$sTitle（续）',
+          'bullets': bullets.skip(8).toList(),
+        });
+      }
+    }
+
+    // ── 4. 实验项目 ──────────────────────────────────────────────────
+    final experiments = lessonPlan['experiments'] as List? ?? [];
+    for (var i = 0; i < experiments.length; i++) {
+      final e = experiments[i] as Map<String, dynamic>;
+      final eName = e['name']?.toString() ?? '实验${i + 1}';
+      final eObj = e['objective']?.toString() ?? '';
+      final eSteps = e['steps'] as List? ?? [];
+      final eDeliverables = e['deliverables']?.toString() ?? '';
+
+      slides.add({
+        'title': '实验：$eName',
+        'bullets': [
+          if (eObj.isNotEmpty) '🎯 目标：$eObj',
+          if (eSteps.isNotEmpty) '【实验步骤】',
+          ...eSteps
+              .asMap()
+              .entries
+              .map((entry) => '${entry.key + 1}. ${entry.value}'),
+          if (eDeliverables.isNotEmpty) '📋 提交物：$eDeliverables',
+        ],
+      });
+    }
+
+    // ── 5. UML 图表说明 ──────────────────────────────────────────────
+    final umlDiagrams = lessonPlan['umlDiagrams'] as List? ?? [];
+    if (umlDiagrams.isNotEmpty) {
+      final umlBullets = <String>[];
+      for (final uml in umlDiagrams) {
+        final u = uml as Map<String, dynamic>;
+        umlBullets.add(
+            '• ${u['title'] ?? 'UML图'}（${u['type'] ?? 'class'}）：${u['description'] ?? ''}');
+      }
+      slides.add({
+        'title': 'UML 图表',
+        'bullets': umlBullets,
+      });
+    }
+
+    // ── 6. 课后作业 ──────────────────────────────────────────────────
+    final homework = lessonPlan['homework']?.toString() ?? '';
+    final references = lessonPlan['references'] as List? ?? [];
+    if (homework.isNotEmpty || references.isNotEmpty) {
+      slides.add({
+        'title': '课后作业与参考资料',
+        'bullets': [
+          if (homework.isNotEmpty) '【课后作业】',
+          if (homework.isNotEmpty) '• $homework',
+          if (references.isNotEmpty) '【参考资料】',
+          ...references.map((r) => '• $r'),
+        ],
+      });
+    }
+
+    // ── 7. 课程总结 ──────────────────────────────────────────────────
+    slides.add({
+      'title': '课程总结',
+      'bullets': [
+        '【本节要点回顾】',
+        ...objectives.take(4).map((o) => '✅ $o'),
+        if (keyPoints.isNotEmpty) '',
+        '【下节预告】',
+        '• 请完成课后作业，预习下一节内容',
+      ],
+    });
+
+    return slides;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

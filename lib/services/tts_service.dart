@@ -98,7 +98,7 @@ class TtsService {
   }
 
   /// 批量生成语音（按段落）
-  /// 返回生成的 MP3 文件路径列表
+  /// 返回生成的 MP3 文件路径列表（与 scripts 一一对应，空旁白返回空字符串占位）
   Future<List<String>> generateBatchAudio({
     required List<Map<String, String>> scripts,
     required String outputDir,
@@ -113,7 +113,12 @@ class TtsService {
     for (var i = 0; i < scripts.length; i++) {
       final script = scripts[i];
       final narration = script['narration'] ?? '';
-      if (narration.trim().isEmpty) continue;
+      if (narration.trim().isEmpty) {
+        // 空旁白保留占位，保证索引与幻灯片对齐
+        results.add('');
+        onProgress?.call(i + 1, scripts.length);
+        continue;
+      }
 
       final fileName = 'audio_${(i + 1).toString().padLeft(2, '0')}.mp3';
       final outputPath = '${dir.path}/$fileName';
@@ -135,6 +140,9 @@ class TtsService {
 
       if (success) {
         results.add(outputPath);
+      } else {
+        // 生成失败也保留占位
+        results.add('');
       }
       onProgress?.call(i + 1, scripts.length);
     }
