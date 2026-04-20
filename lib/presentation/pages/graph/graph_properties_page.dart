@@ -594,7 +594,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
                 )
               : null,
           filled: true,
-          fillColor: _primaryColor.withOpacity(0.06),
+          fillColor: _primaryColor.withValues(alpha: 0.06),
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           border: OutlineInputBorder(
@@ -614,7 +614,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
@@ -1265,7 +1265,7 @@ class _AiRecommendDialogState extends State<_AiRecommendDialog> {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
       decoration: BoxDecoration(
-        color: _primaryColor.withOpacity(0.06),
+        color: _primaryColor.withValues(alpha: 0.06),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
       ),
       child: Row(
@@ -1451,7 +1451,7 @@ class _AiRecommendDialogState extends State<_AiRecommendDialog> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: BoxDecoration(
-            color: _aiGold.withOpacity(0.15),
+            color: _aiGold.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Text(
@@ -1489,7 +1489,7 @@ class _AiRecommendDialogState extends State<_AiRecommendDialog> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: checked
-            ? BorderSide(color: _primaryColor.withOpacity(0.3), width: 1)
+            ? BorderSide(color: _primaryColor.withValues(alpha: 0.3), width: 1)
             : BorderSide.none,
       ),
       elevation: checked ? 2 : 0.5,
@@ -1528,7 +1528,7 @@ class _AiRecommendDialogState extends State<_AiRecommendDialog> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: badgeColor.withOpacity(0.12),
+                            color: badgeColor.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(

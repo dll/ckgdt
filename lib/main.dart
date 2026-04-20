@@ -281,34 +281,15 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
     final normalized =
         text.replaceAll(RegExp(r'[，。！？、\s]'), '').toLowerCase();
 
-    // 扩展关键词映射表（涵盖所有导航目标）
-    final Map<String, int> tabKeywords = {
-      '首页': 0, '主页': 0, '回家': 0,
-      '图谱': 1, '知识图谱': 1,
-      '教学': 2, '学习': 2, '学习中心': 2,
-      '课堂': 3, '课堂管理': 3,
-      '实验': 3, '实验任务': 3, // 学生角色时与课堂同索引区域
-      '考核': 4, '考核管理': 4, '考试': 4,
-      '作品': 5, '作品展评': 5,
-      '达成': 6, '成就': 6, '达成度': 6,
-      '管理': 7, '管理面板': 7,
-    };
-
-    // 按关键词长度降序匹配（优先匹配更精确的关键词）
-    final sortedEntries = tabKeywords.entries.toList()
-      ..sort((a, b) => b.key.length.compareTo(a.key.length));
-
-    for (final entry in sortedEntries) {
-      if (normalized.contains(entry.key)) {
-        navService.switchToTab(entry.value);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('语音导航: "$text" → ${entry.key}'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-        return;
-      }
+    // 使用 NavigationService 动态 Tab 映射（角色感知，索引始终正确）
+    if (navService.navigateByKeyword(normalized)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('语音导航: "$text"'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
     }
 
     // 检查二级页面导航（通过 Navigator.push）
@@ -476,7 +457,7 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
+                      color: Colors.black.withValues(alpha: 0.2),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -549,7 +530,7 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
         borderRadius: BorderRadius.circular(6),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 4,
           ),
         ],
@@ -569,7 +550,7 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: Colors.black.withValues(alpha: 0.15),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),

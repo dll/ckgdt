@@ -135,7 +135,7 @@ class _ProductizationGuidePageState extends State<ProductizationGuidePage> {
         gradient: gradient.linearGradient,
         boxShadow: [
           BoxShadow(
-            color: gradient.gradientStart.withOpacity(0.3),
+            color: gradient.gradientStart.withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -181,7 +181,7 @@ class _ProductizationGuidePageState extends State<ProductizationGuidePage> {
                     CircularProgressIndicator(
                       value: percent,
                       strokeWidth: 5,
-                      backgroundColor: Colors.white.withOpacity(0.2),
+                      backgroundColor: Colors.white.withValues(alpha: 0.2),
                       valueColor:
                           const AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
@@ -205,7 +205,7 @@ class _ProductizationGuidePageState extends State<ProductizationGuidePage> {
             child: LinearProgressIndicator(
               value: percent,
               minHeight: 8,
-              backgroundColor: Colors.white.withOpacity(0.2),
+              backgroundColor: Colors.white.withValues(alpha: 0.2),
               valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
             ),
           ),
@@ -213,7 +213,7 @@ class _ProductizationGuidePageState extends State<ProductizationGuidePage> {
           Text(
             '已完成 $_checkedItems / $_totalItems 项',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.85),
+              color: Colors.white.withValues(alpha: 0.85),
               fontSize: 12,
             ),
           ),
@@ -241,7 +241,7 @@ class _ProductizationGuidePageState extends State<ProductizationGuidePage> {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: category.color.withOpacity(0.1),
+            color: category.color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(category.icon, color: category.color, size: 22),
@@ -262,7 +262,7 @@ class _ProductizationGuidePageState extends State<ProductizationGuidePage> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
+                  color: Colors.green.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Text(
@@ -292,7 +292,7 @@ class _ProductizationGuidePageState extends State<ProductizationGuidePage> {
             child: LinearProgressIndicator(
               value: categoryPercent,
               minHeight: 4,
-              backgroundColor: Colors.grey.withOpacity(0.15),
+              backgroundColor: Colors.grey.withValues(alpha: 0.15),
               valueColor: AlwaysStoppedAnimation<Color>(pColor),
             ),
           ),
@@ -366,17 +366,17 @@ class _ProductizationGuidePageState extends State<ProductizationGuidePage> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: primary.withOpacity(0.05),
+                color: primary.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: primary.withOpacity(0.15),
+                  color: primary.withValues(alpha: 0.15),
                 ),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Icon(Icons.info_outline,
-                      size: 18, color: primary.withOpacity(0.7)),
+                      size: 18, color: primary.withValues(alpha: 0.7)),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -472,7 +472,7 @@ class _ProductizationGuidePageState extends State<ProductizationGuidePage> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: pColor.withOpacity(0.08),
+                color: pColor.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
@@ -532,7 +532,7 @@ class _ProductizationGuidePageState extends State<ProductizationGuidePage> {
                           value: cPercent,
                           minHeight: 6,
                           backgroundColor:
-                              Colors.grey.withOpacity(0.15),
+                              Colors.grey.withValues(alpha: 0.15),
                           valueColor: AlwaysStoppedAnimation<Color>(cColor),
                         ),
                       ),

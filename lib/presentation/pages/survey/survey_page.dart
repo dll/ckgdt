@@ -81,12 +81,12 @@ class _SurveyPageState extends State<SurveyPage> {
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(colors: [
-                            primary.withOpacity(0.08),
-                            primary.withOpacity(0.03),
+                            primary.withValues(alpha: 0.08),
+                            primary.withValues(alpha: 0.03),
                           ]),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: primary.withOpacity(0.15),
+                            color: primary.withValues(alpha: 0.15),
                           ),
                         ),
                         child: Row(
@@ -139,7 +139,7 @@ class _SurveyPageState extends State<SurveyPage> {
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Center(
@@ -200,8 +200,8 @@ class _SurveyPageState extends State<SurveyPage> {
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: isCompleted
-                          ? Colors.green.withOpacity(0.1)
-                          : Colors.orange.withOpacity(0.1),
+                          ? Colors.green.withValues(alpha: 0.1)
+                          : Colors.orange.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -425,7 +425,7 @@ class _SurveyFillPageState extends State<_SurveyFillPage> {
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
-                    color: primary.withOpacity(0.05),
+                    color: primary.withValues(alpha: 0.05),
                     child: Text(desc,
                         style: TextStyle(
                             fontSize: 14, color: Colors.grey.shade700)),
@@ -448,7 +448,7 @@ class _SurveyFillPageState extends State<_SurveyFillPage> {
                     color: Theme.of(context).scaffoldBackgroundColor,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.05),
                         blurRadius: 8,
                         offset: const Offset(0, -2),
                       ),
@@ -510,7 +510,7 @@ class _SurveyFillPageState extends State<_SurveyFillPage> {
                     color: Theme.of(context)
                         .colorScheme
                         .primary
-                        .withOpacity(0.1),
+                        .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Center(
@@ -590,16 +590,16 @@ class _SurveyFillPageState extends State<_SurveyFillPage> {
                     ? Theme.of(context)
                         .colorScheme
                         .primary
-                        .withOpacity(0.08)
-                    : Colors.grey.withOpacity(0.04),
+                        .withValues(alpha: 0.08)
+                    : Colors.grey.withValues(alpha: 0.04),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: isSelected
                       ? Theme.of(context)
                           .colorScheme
                           .primary
-                          .withOpacity(0.4)
-                      : Colors.grey.withOpacity(0.2),
+                          .withValues(alpha: 0.4)
+                      : Colors.grey.withValues(alpha: 0.2),
                 ),
               ),
               child: Row(
@@ -658,16 +658,16 @@ class _SurveyFillPageState extends State<_SurveyFillPage> {
                     ? Theme.of(context)
                         .colorScheme
                         .primary
-                        .withOpacity(0.08)
-                    : Colors.grey.withOpacity(0.04),
+                        .withValues(alpha: 0.08)
+                    : Colors.grey.withValues(alpha: 0.04),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: isSelected
                       ? Theme.of(context)
                           .colorScheme
                           .primary
-                          .withOpacity(0.4)
-                      : Colors.grey.withOpacity(0.2),
+                          .withValues(alpha: 0.4)
+                      : Colors.grey.withValues(alpha: 0.2),
                 ),
               ),
               child: Row(

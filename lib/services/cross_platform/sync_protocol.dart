@@ -162,15 +162,20 @@ class SyncProtocol {
       final rows = entry.value as List<dynamic>? ?? [];
       if (rows.isEmpty) continue;
 
+      // 安全校验：只允许已知表名，防止 SQL 注入
+      if (!_syncTables.contains(tableName) &&
+          !_sharedTables.contains(tableName)) {
+        debugPrint('SyncProtocol: skip unknown table: $tableName');
+        continue;
+      }
+
       int count = 0;
       try {
         final batch = db.batch();
         for (final row in rows) {
           if (row is! Map<String, dynamic>) continue;
-          batch.rawInsert(
-            _buildUpsertSql(tableName, row),
-            row.values.toList(),
-          );
+          final (sql, values) = _buildSafeUpsert(tableName, row);
+          batch.rawInsert(sql, values);
           count++;
         }
         await batch.commit(noResult: true);
@@ -181,10 +186,8 @@ class SyncProtocol {
         for (final row in rows) {
           if (row is! Map<String, dynamic>) continue;
           try {
-            await db.rawInsert(
-              _buildUpsertSql(tableName, row),
-              row.values.toList(),
-            );
+            final (sql, values) = _buildSafeUpsert(tableName, row);
+            await db.rawInsert(sql, values);
             count++;
           } catch (_) {}
         }
@@ -223,12 +226,22 @@ class SyncProtocol {
   // 私有方法
   // ─────────────────────────────────────────────────────────────────────────
 
-  /// 构建 INSERT OR REPLACE SQL
-  static String _buildUpsertSql(
+  /// 构建安全的 INSERT OR REPLACE SQL 和对应的值列表
+  /// 过滤非法列名，防止 SQL 注入
+  static (String sql, List<dynamic> values) _buildSafeUpsert(
       String table, Map<String, dynamic> row) {
-    final cols = row.keys.join(', ');
-    final placeholders = List.filled(row.length, '?').join(', ');
-    return 'INSERT OR REPLACE INTO $table ($cols) VALUES ($placeholders)';
+    final colNamePattern = RegExp(r'^[a-zA-Z_][a-zA-Z0-9_]*$');
+    final safeCols = <String>[];
+    final safeValues = <dynamic>[];
+    for (final entry in row.entries) {
+      if (colNamePattern.hasMatch(entry.key)) {
+        safeCols.add(entry.key);
+        safeValues.add(entry.value);
+      }
+    }
+    final cols = safeCols.join(', ');
+    final placeholders = List.filled(safeCols.length, '?').join(', ');
+    return ('INSERT OR REPLACE INTO $table ($cols) VALUES ($placeholders)', safeValues);
   }
 
   /// 需要同步的所有表（全量模式）

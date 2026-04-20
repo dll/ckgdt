@@ -90,6 +90,9 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
   double _videoProgress = 0;
   String _videoStatus = '';
 
+  // ── 会话隔离目录（Step 4/5 共享） ──
+  String? _sessionDir;
+
   // ── 发布状态 ──
   bool _published = false;       // AI 流程是否已发布
   bool _mdPublished = false;     // MD 导入流程是否已发布
@@ -887,10 +890,10 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
     });
 
     try {
-      final aiService = (await _configDao.getConfig()) != null
-          ? _coursewareService
-          : null;
+      await _configDao.getConfig(); // 确保配置已加载
+      final aiService = _coursewareService;
 
+      // ignore: unnecessary_null_comparison
       if (aiService == null) {
         setState(() {
           _aiReviewing = false;
@@ -1220,6 +1223,7 @@ class Example {
 
       // ── 3/5 生成 TTS 语音 ──
       List<String> audioPaths = [];
+      final sessionDir = await _coursewareService.createSessionDir();
       if (_hasEdgeTts) {
         setState(() {
           _mdProgress = 0.25;
@@ -1228,8 +1232,7 @@ class Example {
 
         // 为每张幻灯片生成简短旁白文本
         final narrationTexts = _buildNarrationTexts(safeTitle);
-        final coursewareDir = await _coursewareService.getCoursewareDir();
-        final audioDir = '$coursewareDir/audio';
+        final audioDir = '$sessionDir/audio';
 
         audioPaths = await _ttsService.generateBatchAudio(
           scripts: narrationTexts,
@@ -1254,8 +1257,7 @@ class Example {
           _mdProgressMsg = '(4/5) 正在渲染幻灯片图片...';
         });
 
-        final coursewareDir = await _coursewareService.getCoursewareDir();
-        final slidesDir = '$coursewareDir/slides';
+        final slidesDir = '$sessionDir/slides';
 
         final slideImages = await _coursewareService.generateSlideImages(
           title: safeTitle,
@@ -1276,6 +1278,7 @@ class Example {
           final timestamp = DateTime.now().millisecondsSinceEpoch;
           final safeName =
               safeTitle.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
+          final coursewareDir = await _coursewareService.getCoursewareDir();
           final rawVideoPath =
               '$coursewareDir/${safeName}_raw_$timestamp.mp4';
           videoPath =
@@ -1285,6 +1288,7 @@ class Example {
             slides: slideImages,
             audios: audioPaths,
             outputPath: rawVideoPath,
+            clipDirPath: '$sessionDir/video_clips',
             onProgress: (current, total, msg) {
               if (!mounted) return;
               setState(() {
@@ -1391,12 +1395,13 @@ class Example {
       final safeTitle =
           fileName.replaceAll(RegExp(r'\.(md|markdown|txt)$'), '');
       final coursewareDir = await _coursewareService.getCoursewareDir();
+      final sessionDir = await _coursewareService.createSessionDir();
 
       // TTS 语音
       List<String> audioPaths = _mdAudioPaths;
       if (audioPaths.isEmpty && _hasEdgeTts) {
         final narrationTexts = _buildNarrationTexts(safeTitle);
-        final audioDir = '$coursewareDir/audio';
+        final audioDir = '$sessionDir/audio';
         audioPaths = await _ttsService.generateBatchAudio(
           scripts: narrationTexts,
           outputDir: audioDir,
@@ -1406,7 +1411,7 @@ class Example {
       }
 
       // PDF → 图片
-      final slidesDir = '$coursewareDir/slides';
+      final slidesDir = '$sessionDir/slides';
       final slideImages = await _videoService.pdfToImages(
         pdfPath: _pdfPath!,
         outputDir: slidesDir,
@@ -1433,6 +1438,7 @@ class Example {
         slides: slideImages,
         audios: audioPaths,
         outputPath: videoPath,
+        clipDirPath: '$sessionDir/video_clips',
       );
 
       setState(() {
@@ -1719,7 +1725,7 @@ class Example {
                             : Colors.grey.shade300,
                     boxShadow: isCurrent
                         ? [BoxShadow(
-                            color: Colors.deepPurple.withOpacity(0.3),
+                            color: Colors.deepPurple.withValues(alpha: 0.3),
                             blurRadius: 8,
                           )]
                         : null,
@@ -2669,7 +2675,7 @@ class Example {
       ),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: isReady ? Colors.green : color.withOpacity(0.15),
+          backgroundColor: isReady ? Colors.green : color.withValues(alpha: 0.15),
           child: Icon(
             isReady ? Icons.check : icon,
             color: isReady ? Colors.white : color,
@@ -2905,9 +2911,10 @@ class Example {
       }
 
       if (plan != null) {
+        final safePlan = plan;
         setState(() {
-          _lessonPlan = plan;
-          _topicCtrl.text = plan!['title']?.toString() ?? '';
+          _lessonPlan = safePlan;
+          _topicCtrl.text = safePlan['title']?.toString() ?? '';
           // 重置后续步骤
           _markdownContent = null;
           _pumlResults = [];
@@ -2918,6 +2925,7 @@ class Example {
           _narrationScripts = [];
           _audioPaths = [];
           _videoPath = null;
+          _sessionDir = null;
           _published = false;
         });
 
@@ -3005,6 +3013,7 @@ class Example {
         _narrationScripts = [];
         _audioPaths = [];
         _videoPath = null;
+        _sessionDir = null;
         _planReviewResult = null;
         _planReviewScore = null;
       });
@@ -3309,8 +3318,8 @@ class Example {
       }
 
       // 2. TTS 合成
-      final coursewareDir = await _coursewareService.getCoursewareDir();
-      final audioDir = '$coursewareDir/audio';
+      _sessionDir ??= await _coursewareService.createSessionDir();
+      final audioDir = '$_sessionDir/audio';
 
       final paths = await _ttsService.generateBatchAudio(
         scripts: _narrationScripts,
@@ -3356,8 +3365,9 @@ class Example {
 
     try {
       // 1. 课件 → 图片
+      _sessionDir ??= await _coursewareService.createSessionDir();
       final coursewareDir = await _coursewareService.getCoursewareDir();
-      final slidesDir = '$coursewareDir/slides';
+      final slidesDir = '$_sessionDir/slides';
       List<String> slideImages = [];
 
       if (_pdfPath != null) {
@@ -3406,6 +3416,7 @@ class Example {
         slides: slideImages,
         audios: _audioPaths,
         outputPath: outputPath,
+        clipDirPath: '$_sessionDir/video_clips',
         onProgress: (current, total, msg) {
           setState(() {
             _videoProgress = 0.1 + 0.9 * (current / total);

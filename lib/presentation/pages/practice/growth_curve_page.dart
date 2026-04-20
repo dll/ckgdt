@@ -68,7 +68,7 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
     try {
       // 获取学习记录，按日期统计
       final records = await _learningRecordDao.getRecords(userId);
-      final quizResults = await _quizDao.getQuizResults(userId);
+      await _quizDao.getQuizResults(userId);
 
       // 统计每天的学习积累
       final dayMap = <int, double>{}; // 天数偏移→累计能力值
@@ -190,7 +190,7 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
         children: [
           // 说明卡片
           Card(
-            color: isDark ? Colors.indigo.withOpacity(0.2) : Colors.indigo[50],
+            color: isDark ? Colors.indigo.withValues(alpha: 0.2) : Colors.indigo[50],
             child: Padding(
               padding: const EdgeInsets.all(14),
               child: Column(
@@ -278,7 +278,7 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
 
           // 启发文字
           Card(
-            color: isDark ? Colors.amber.withOpacity(0.15) : Colors.amber[50],
+            color: isDark ? Colors.amber.withValues(alpha: 0.15) : Colors.amber[50],
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
@@ -331,7 +331,7 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
         dotData: const FlDotData(show: false),
         belowBarData: BarAreaData(
           show: true,
-          color: mode.color.withOpacity(0.05),
+          color: mode.color.withValues(alpha: 0.05),
         ),
       ));
     }
@@ -389,7 +389,7 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
           rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
         borderData: FlBorderData(show: true,
-          border: Border.all(color: Colors.grey.withOpacity(0.3))),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.3))),
         lineTouchData: LineTouchData(
           touchTooltipData: LineTouchTooltipData(
             getTooltipItems: (spots) => spots.map((s) {
@@ -570,8 +570,8 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: customVal >= standardVal
-                          ? Colors.green.withOpacity(0.1)
-                          : Colors.red.withOpacity(0.1),
+                          ? Colors.green.withValues(alpha: 0.1)
+                          : Colors.red.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -608,7 +608,7 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
         LineChartBarData(
           spots: customSpots, isCurved: true, color: Colors.teal,
           barWidth: 3, dotData: const FlDotData(show: false),
-          belowBarData: BarAreaData(show: true, color: Colors.teal.withOpacity(0.1)),
+          belowBarData: BarAreaData(show: true, color: Colors.teal.withValues(alpha: 0.1)),
         ),
         LineChartBarData(
           spots: standardSpots, isCurved: true, color: Colors.blue,
@@ -632,7 +632,7 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
         topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
       ),
-      borderData: FlBorderData(show: true, border: Border.all(color: Colors.grey.withOpacity(0.3))),
+      borderData: FlBorderData(show: true, border: Border.all(color: Colors.grey.withValues(alpha: 0.3))),
     ));
   }
 
@@ -640,7 +640,7 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
@@ -717,7 +717,7 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           gradient: LinearGradient(
-            colors: [Colors.indigo, Colors.indigo.withOpacity(0.7)],
+            colors: [Colors.indigo, Colors.indigo.withValues(alpha: 0.7)],
           ),
         ),
         child: Column(
@@ -765,7 +765,7 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
         LineChartBarData(
           spots: _actualData, isCurved: true, color: Colors.amber,
           barWidth: 3, dotData: const FlDotData(show: false),
-          belowBarData: BarAreaData(show: true, color: Colors.amber.withOpacity(0.15)),
+          belowBarData: BarAreaData(show: true, color: Colors.amber.withValues(alpha: 0.15)),
         ),
         // 对比标准线
         LineChartBarData(
@@ -776,7 +776,7 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
               return FlSpot(d, _calcAbility(_modes[1], d.toInt()));
             },
           ),
-          isCurved: true, color: Colors.blue.withOpacity(0.4),
+          isCurved: true, color: Colors.blue.withValues(alpha: 0.4),
           barWidth: 1.5, dotData: const FlDotData(show: false),
           dashArray: [4, 4],
         ),
@@ -793,7 +793,7 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
         topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
       ),
-      borderData: FlBorderData(show: true, border: Border.all(color: Colors.grey.withOpacity(0.3))),
+      borderData: FlBorderData(show: true, border: Border.all(color: Colors.grey.withValues(alpha: 0.3))),
     ));
   }
 
@@ -887,11 +887,11 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: unlocked
-                        ? Colors.amber.withOpacity(0.15)
+                        ? Colors.amber.withValues(alpha: 0.15)
                         : (isDark ? Colors.grey[800] : Colors.grey[100]),
                     borderRadius: BorderRadius.circular(10),
                     border: unlocked
-                        ? Border.all(color: Colors.amber.withOpacity(0.5))
+                        ? Border.all(color: Colors.amber.withValues(alpha: 0.5))
                         : null,
                   ),
                   child: Column(

@@ -638,7 +638,7 @@ class _DeepPracticePageState extends State<DeepPracticePage>
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
               gradient: LinearGradient(
-                colors: [chapter.color, chapter.color.withOpacity(0.7)],
+                colors: [chapter.color, chapter.color.withValues(alpha: 0.7)],
               ),
             ),
             child: Column(
@@ -711,7 +711,7 @@ class _DeepPracticePageState extends State<DeepPracticePage>
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
                 side: isCompleted
-                    ? BorderSide(color: Colors.green.withOpacity(0.5), width: 1.5)
+                    ? BorderSide(color: Colors.green.withValues(alpha: 0.5), width: 1.5)
                     : BorderSide.none,
               ),
               child: Column(
@@ -722,8 +722,8 @@ class _DeepPracticePageState extends State<DeepPracticePage>
                       width: 36, height: 36,
                       decoration: BoxDecoration(
                         color: isCompleted
-                            ? Colors.green.withOpacity(0.15)
-                            : chapter.color.withOpacity(0.1),
+                            ? Colors.green.withValues(alpha: 0.15)
+                            : chapter.color.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -772,7 +772,7 @@ class _DeepPracticePageState extends State<DeepPracticePage>
                             decoration: BoxDecoration(
                               color: isDark ? Colors.grey[850] : Colors.grey[50],
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: chapter.color.withOpacity(0.2)),
+                              border: Border.all(color: chapter.color.withValues(alpha: 0.2)),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -810,7 +810,7 @@ class _DeepPracticePageState extends State<DeepPracticePage>
                             margin: const EdgeInsets.only(bottom: 6),
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: isDark ? Colors.indigo.withOpacity(0.15) : Colors.indigo.withOpacity(0.05),
+                              color: isDark ? Colors.indigo.withValues(alpha: 0.15) : Colors.indigo.withValues(alpha: 0.05),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
@@ -820,7 +820,7 @@ class _DeepPracticePageState extends State<DeepPracticePage>
                                   width: 20, height: 20,
                                   alignment: Alignment.center,
                                   decoration: BoxDecoration(
-                                    color: chapter.color.withOpacity(0.15),
+                                    color: chapter.color.withValues(alpha: 0.15),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Text('${e.key + 1}',
@@ -837,7 +837,7 @@ class _DeepPracticePageState extends State<DeepPracticePage>
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: Colors.deepPurple.withOpacity(0.1),
+                                      color: Colors.deepPurple.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Row(
@@ -861,9 +861,9 @@ class _DeepPracticePageState extends State<DeepPracticePage>
                               margin: const EdgeInsets.only(top: 8),
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: isDark ? Colors.deepPurple.withOpacity(0.15) : Colors.deepPurple.withOpacity(0.05),
+                                color: isDark ? Colors.deepPurple.withValues(alpha: 0.15) : Colors.deepPurple.withValues(alpha: 0.05),
                                 borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: Colors.deepPurple.withOpacity(0.2)),
+                                border: Border.all(color: Colors.deepPurple.withValues(alpha: 0.2)),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -943,7 +943,7 @@ class _DeepPracticePageState extends State<DeepPracticePage>
                                 Chip(
                                   avatar: const Icon(Icons.check_circle, color: Colors.green, size: 16),
                                   label: const Text('已完成', style: TextStyle(fontSize: 12)),
-                                  backgroundColor: Colors.green.withOpacity(0.1),
+                                  backgroundColor: Colors.green.withValues(alpha: 0.1),
                                 ),
                             ],
                           ),

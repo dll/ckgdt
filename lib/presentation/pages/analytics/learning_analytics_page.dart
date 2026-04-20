@@ -335,7 +335,7 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 gradient: LinearGradient(
-                  colors: [primary, primary.withOpacity(0.7)],
+                  colors: [primary, primary.withValues(alpha: 0.7)],
                 ),
               ),
               padding: const EdgeInsets.all(20),
@@ -377,7 +377,7 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
                                 : 0,
                             minHeight: 8,
                             backgroundColor:
-                                Colors.white.withOpacity(0.2),
+                                Colors.white.withValues(alpha: 0.2),
                             valueColor: const AlwaysStoppedAnimation(
                                 Colors.white),
                           ),
@@ -464,7 +464,7 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
                 fontWeight: FontWeight.bold)),
         Text(label,
             style: TextStyle(
-                color: color.withOpacity(0.7), fontSize: 11)),
+                color: color.withValues(alpha: 0.7), fontSize: 11)),
       ],
     );
   }
@@ -536,7 +536,7 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
           drawVerticalLine: false,
           horizontalInterval: 5,
           getDrawingHorizontalLine: (value) => FlLine(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(alpha: 0.2),
             strokeWidth: 1,
           ),
         ),
@@ -600,7 +600,7 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
               color: Theme.of(context)
                   .colorScheme
                   .primary
-                  .withOpacity(0.1),
+                  .withValues(alpha: 0.1),
             ),
           ),
         ],
@@ -732,7 +732,7 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
           drawVerticalLine: false,
           horizontalInterval: 1,
           getDrawingHorizontalLine: (value) => FlLine(
-            color: Colors.grey.withOpacity(0.15),
+            color: Colors.grey.withValues(alpha: 0.15),
             strokeWidth: 1,
           ),
         ),
@@ -941,7 +941,7 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: color.withOpacity(0.15),
+          backgroundColor: color.withValues(alpha: 0.15),
           child: Icon(
             level == 'high'
                 ? Icons.error
@@ -964,7 +964,7 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
               padding: const EdgeInsets.symmetric(
                   horizontal: 6, vertical: 1),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(levelText,
@@ -1071,7 +1071,7 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
           const Icon(Icons.emoji_events, color: Colors.amber, size: 28),
         CircleAvatar(
           radius: rank == 1 ? 22 : 18,
-          backgroundColor: color.withOpacity(0.15),
+          backgroundColor: color.withValues(alpha: 0.15),
           child: Text('#$rank',
               style: TextStyle(
                   fontWeight: FontWeight.bold,
@@ -1090,7 +1090,7 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
           width: 70,
           height: h,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.2),
+            color: color.withValues(alpha: 0.2),
             borderRadius:
                 const BorderRadius.vertical(top: Radius.circular(6)),
           ),
@@ -1124,7 +1124,7 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
         dense: true,
         leading: CircleAvatar(
           radius: 16,
-          backgroundColor: rankColor.withOpacity(0.15),
+          backgroundColor: rankColor.withValues(alpha: 0.15),
           child: Text('$rank',
               style: TextStyle(
                   fontWeight: FontWeight.bold,

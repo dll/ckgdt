@@ -243,7 +243,7 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.06),
+                      color: primaryColor.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Row(

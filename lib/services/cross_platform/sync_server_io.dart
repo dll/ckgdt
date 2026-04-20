@@ -216,7 +216,7 @@ class SyncServerImpl {
 
     final authHeader = request.headers.value('Authorization');
     final token = authHeader?.replaceFirst('Bearer ', '');
-    final device = token != null ? _sessionManager.validateToken(token) : null;
+    _sessionManager.validateToken(token ?? '');
 
     // GET /api/devices
     if (path == '/api/devices' && method == 'GET') {

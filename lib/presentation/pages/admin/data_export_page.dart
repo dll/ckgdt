@@ -772,7 +772,7 @@ class _DataExportPageState extends State<DataExportPage> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.4),
+                  color: Colors.grey.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -968,13 +968,13 @@ class _DataExportPageState extends State<DataExportPage> {
             end: Alignment.bottomRight,
             colors: [
               color,
-              color.withOpacity(0.7),
+              color.withValues(alpha: 0.7),
             ],
           ),
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.3),
+              color: color.withValues(alpha: 0.3),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -996,7 +996,7 @@ class _DataExportPageState extends State<DataExportPage> {
             Text(
               label,
               style: TextStyle(
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 fontSize: 11,
               ),
               maxLines: 1,
@@ -1029,7 +1029,7 @@ class _DataExportPageState extends State<DataExportPage> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: template.color.withOpacity(0.12),
+                  color: template.color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -1080,7 +1080,7 @@ class _DataExportPageState extends State<DataExportPage> {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: template.color,
                         side: BorderSide(
-                          color: template.color.withOpacity(0.5),
+                          color: template.color.withValues(alpha: 0.5),
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),

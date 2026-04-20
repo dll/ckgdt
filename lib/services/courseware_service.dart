@@ -804,6 +804,27 @@ ${context != null ? '上下文说明: $context' : ''}
     return coursewareDir.path;
   }
 
+  /// 创建会话隔离目录，每次生成使用独立的中间文件路径
+  /// 返回 courseware/sessions/yyyyMMdd_HHmmss_xxxx/ 路径
+  /// 内含 audio/、slides/、video_clips/ 三个子目录
+  Future<String> createSessionDir() async {
+    final coursewareDir = await getCoursewareDir();
+    final now = DateTime.now();
+    final tag = '${now.year}'
+        '${now.month.toString().padLeft(2, '0')}'
+        '${now.day.toString().padLeft(2, '0')}_'
+        '${now.hour.toString().padLeft(2, '0')}'
+        '${now.minute.toString().padLeft(2, '0')}'
+        '${now.second.toString().padLeft(2, '0')}_'
+        '${now.millisecondsSinceEpoch % 10000}';
+    final sessionDir = Directory('$coursewareDir/sessions/$tag');
+    sessionDir.createSync(recursive: true);
+    Directory('${sessionDir.path}/audio').createSync();
+    Directory('${sessionDir.path}/slides').createSync();
+    Directory('${sessionDir.path}/video_clips').createSync();
+    return sessionDir.path;
+  }
+
   // ─── 内部 ──────────────────────────────────────────────────────────────────
 
   /// 构建单个内容项的 widget（根据内容类型智能选择样式）

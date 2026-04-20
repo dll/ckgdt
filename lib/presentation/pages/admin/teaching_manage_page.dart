@@ -165,7 +165,7 @@ class _SyllabusTabState extends State<_SyllabusTab>
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
@@ -190,7 +190,7 @@ class _SyllabusTabState extends State<_SyllabusTab>
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ExpansionTile(
         leading: CircleAvatar(
-          backgroundColor: Colors.blue.withOpacity(0.1),
+          backgroundColor: Colors.blue.withValues(alpha: 0.1),
           child: Text(
             '${item['chapter_number']}',
             style: const TextStyle(
@@ -206,7 +206,7 @@ class _SyllabusTabState extends State<_SyllabusTab>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: statusInfo.color.withOpacity(0.1),
+                color: statusInfo.color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -247,7 +247,7 @@ class _SyllabusTabState extends State<_SyllabusTab>
                         label: Text('切换状态',
                             style: TextStyle(fontSize: 12, color: Colors.blue[700])),
                         avatar: Icon(Icons.swap_horiz, size: 16, color: Colors.blue[700]),
-                        backgroundColor: Colors.blue.withOpacity(0.08),
+                        backgroundColor: Colors.blue.withValues(alpha: 0.08),
                       ),
                       onSelected: (newStatus) async {
                         await _dao.updateSyllabusStatus(
@@ -600,7 +600,7 @@ class _LessonPlanTabState extends State<_LessonPlanTab>
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -629,7 +629,7 @@ class _LessonPlanTabState extends State<_LessonPlanTab>
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ExpansionTile(
         leading: CircleAvatar(
-          backgroundColor: Colors.indigo.withOpacity(0.1),
+          backgroundColor: Colors.indigo.withValues(alpha: 0.1),
           child: Text(
             '${plan['chapter']}',
             style: const TextStyle(
@@ -651,7 +651,7 @@ class _LessonPlanTabState extends State<_LessonPlanTab>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(
-                  color: Colors.purple.withOpacity(0.1),
+                  color: Colors.purple.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: const Text('AI',
@@ -664,7 +664,7 @@ class _LessonPlanTabState extends State<_LessonPlanTab>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.1),
+                color: statusColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -715,7 +715,7 @@ class _LessonPlanTabState extends State<_LessonPlanTab>
                                 fontSize: 12, color: Colors.blue[700])),
                         avatar: Icon(Icons.swap_horiz,
                             size: 16, color: Colors.blue[700]),
-                        backgroundColor: Colors.blue.withOpacity(0.08),
+                        backgroundColor: Colors.blue.withValues(alpha: 0.08),
                       ),
                       onSelected: (s) async {
                         await _dao.updateLessonPlanStatus(
@@ -1101,7 +1101,7 @@ class _ProgressTabState extends State<_ProgressTab>
             child: LinearProgressIndicator(
               value: rate,
               minHeight: 8,
-              backgroundColor: Colors.white.withOpacity(0.3),
+              backgroundColor: Colors.white.withValues(alpha: 0.3),
               valueColor: const AlwaysStoppedAnimation(Colors.white),
             ),
           ),
@@ -1199,7 +1199,7 @@ class _ProgressTabState extends State<_ProgressTab>
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 1),
                           decoration: BoxDecoration(
-                            color: statusColor.withOpacity(0.1),
+                            color: statusColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(statusLabel,

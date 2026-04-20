@@ -194,7 +194,7 @@ class _QuestionManagePageState extends State<QuestionManagePage> {
                     _loadData();
                   },
                   showCheckmark: false,
-                  selectedColor: primary.withOpacity(0.15),
+                  selectedColor: primary.withValues(alpha: 0.15),
                   padding: EdgeInsets.zero,
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 );
@@ -243,7 +243,7 @@ class _QuestionManagePageState extends State<QuestionManagePage> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
@@ -298,7 +298,7 @@ class _QuestionManagePageState extends State<QuestionManagePage> {
                     backgroundColor: Theme.of(context)
                         .colorScheme
                         .primary
-                        .withOpacity(0.1),
+                        .withValues(alpha: 0.1),
                     child: Text('$index',
                         style: TextStyle(
                             fontSize: 11,
@@ -355,7 +355,7 @@ class _QuestionManagePageState extends State<QuestionManagePage> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.teal.withOpacity(0.1),
+                      color: Colors.teal.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(q.source ?? '未分类',
@@ -367,7 +367,7 @@ class _QuestionManagePageState extends State<QuestionManagePage> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
+                      color: Colors.green.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text('正确答案: $correctLabel',
@@ -420,7 +420,7 @@ class _QuestionManagePageState extends State<QuestionManagePage> {
               padding:
                   const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.teal.withOpacity(0.1),
+                color: Colors.teal.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(q.source ?? '未分类',
@@ -444,12 +444,12 @@ class _QuestionManagePageState extends State<QuestionManagePage> {
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
                   color: isCorrect
-                      ? Colors.green.withOpacity(0.1)
+                      ? Colors.green.withValues(alpha: 0.1)
                       : Colors.grey[50],
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
                     color: isCorrect
-                        ? Colors.green.withOpacity(0.4)
+                        ? Colors.green.withValues(alpha: 0.4)
                         : Colors.grey[200]!,
                   ),
                 ),

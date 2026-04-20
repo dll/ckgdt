@@ -30,12 +30,14 @@ class _FavoritesPageState extends State<FavoritesPage> {
       final user = _authService.currentUser;
       if (user != null) {
         final favorites = await _favoriteDao.getFavorites(user.userId);
+        if (!mounted) return;
         setState(() {
           _favorites = favorites;
           _isLoading = false;
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
     }
   }

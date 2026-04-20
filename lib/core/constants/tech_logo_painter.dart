@@ -331,7 +331,7 @@ class _TechLogoPainter extends CustomPainter {
         ..lineTo(w * 0.68,  h * 0.52)
         ..lineTo(w * 0.30,  h * 0.52)
         ..close(),
-      Paint()..color = const Color(0xFF1565C0).withOpacity(0.50),
+      Paint()..color = const Color(0xFF1565C0).withValues(alpha: 0.50),
     );
 
     // ── Lower chevron — dark blue #0175C2 ─────────────────────────────
@@ -436,7 +436,7 @@ class _TechLogoPainter extends CustomPainter {
         width:  smallRx * 2,
         height: smallRy * 2,
       ),
-      Paint()..color = const Color(0xFF07C160).withOpacity(0.85),
+      Paint()..color = const Color(0xFF07C160).withValues(alpha: 0.85),
     );
 
     // White dot eyes
@@ -840,7 +840,7 @@ class _TechLogoPainter extends CustomPainter {
 
     // Steam — 3 wavy strokes
     final steamPaint = Paint()
-      ..color = const Color(0xFFE76F00).withOpacity(0.60)
+      ..color = const Color(0xFFE76F00).withValues(alpha: 0.60)
       ..style = PaintingStyle.stroke
       ..strokeWidth = w * 0.05
       ..strokeCap = StrokeCap.round;
@@ -954,7 +954,7 @@ class _TechLogoPainter extends CustomPainter {
 
     // Water waves
     final wavePaint = Paint()
-      ..color = const Color(0xFF2496ED).withOpacity(0.40)
+      ..color = const Color(0xFF2496ED).withValues(alpha: 0.40)
       ..style = PaintingStyle.stroke
       ..strokeWidth = h * 0.025
       ..strokeCap = StrokeCap.round;
@@ -1264,7 +1264,7 @@ class _TechLogoPainter extends CustomPainter {
       Offset(cx, cy + h * 0.28),
       Paint()
         ..color = (selected ? const Color(0xFFFF6B9D) : Colors.white)
-            .withOpacity(0.6)
+            .withValues(alpha: 0.6)
         ..strokeWidth = w * 0.04
         ..strokeCap = StrokeCap.round,
     );
