@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'agent_model.dart';
 import '../ai_service.dart';
+import '../rag_service.dart';
 
 /// 智能体抽象基类
 ///
@@ -135,5 +137,169 @@ abstract class BaseAgent {
       debugPrint('${config.name}: AI 调用失败: $e');
       return '抱歉，AI 服务暂时不可用。请检查网络连接和 AI 配置。\n\n错误: $e';
     }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // RAG 增强
+  // ═══════════════════════════════════════════════════════════════════════
+
+  final RagService _ragService = RagService();
+
+  /// 构建 RAG 增强的系统提示词
+  ///
+  /// 如果 [config.useRag] 为 true，先检索相关课程知识，
+  /// 将结果拼接到 persona 末尾作为参考资料。
+  Future<String> buildRagPrompt(String userMessage) async {
+    if (!config.useRag) return config.persona;
+
+    try {
+      final context = await _ragService.retrieveContext(
+        userMessage,
+        maxConcepts: 6,
+        includeRelations: true,
+        includeResources: true,
+      );
+
+      if (context.isEmpty) return config.persona;
+
+      return '${config.persona}\n\n$context\n\n'
+          '请基于以上课程知识库的参考资料回答用户问题，'
+          '引用具体概念或资料时标注来源。'
+          '如果参考资料与问题无关，可忽略。';
+    } catch (e) {
+      debugPrint('${config.name}: RAG 检索失败: $e');
+      return config.persona;
+    }
+  }
+
+  /// RAG 增强版 AI 调用（自动检索上下文）
+  Future<AiChatResult> safeAiChatWithRag(
+    String userMessage,
+    List<Map<String, String>> messages, {
+    required AiService aiService,
+  }) async {
+    final prompt = await buildRagPrompt(userMessage);
+    return safeAiChatWithMeta(messages,
+        systemPrompt: prompt, aiService: aiService);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // 工具调用
+  // ═══════════════════════════════════════════════════════════════════════
+
+  /// 生成工具声明文本，嵌入系统提示词
+  String buildToolsPromptSection() {
+    if (config.tools.isEmpty) return '';
+
+    final buf = StringBuffer('\n\n## 可用工具\n\n');
+    buf.writeln('你可以调用以下工具获取实时数据。'
+        '需要调用工具时，在回复中**单独一行**输出 JSON：');
+    buf.writeln('```');
+    buf.writeln('{"tool": "工具名", "params": {"参数名": "值"}}');
+    buf.writeln('```');
+    buf.writeln();
+    for (final tool in config.tools) {
+      buf.writeln(tool.toPromptDeclaration());
+    }
+    buf.writeln();
+    buf.writeln('工具执行结果会自动注入上下文，你再据此给出最终回答。');
+    buf.writeln('如果不需要工具，直接回答用户即可。');
+    return buf.toString();
+  }
+
+  /// 解析 AI 回复中的工具调用指令
+  ///
+  /// 返回 `null` 表示回复中没有工具调用。
+  Map<String, dynamic>? parseToolCall(String aiReply) {
+    // 匹配 JSON 块：{"tool": "...", "params": {...}}
+    final pattern = RegExp(
+      r'\{\s*"tool"\s*:\s*"([^"]+)"\s*,\s*"params"\s*:\s*(\{[^}]*\})\s*\}',
+    );
+    final match = pattern.firstMatch(aiReply);
+    if (match == null) return null;
+
+    try {
+      final toolName = match.group(1)!;
+      final params = jsonDecode(match.group(2)!) as Map<String, dynamic>;
+      return {'tool': toolName, 'params': params};
+    } catch (e) {
+      debugPrint('${config.name}: 工具调用解析失败: $e');
+      return null;
+    }
+  }
+
+  /// 执行工具调用并返回结果
+  Future<String?> executeToolCall(Map<String, dynamic> toolCall) async {
+    final toolName = toolCall['tool'] as String;
+    final params = toolCall['params'] as Map<String, dynamic>? ?? {};
+
+    final tool = config.tools.where((t) => t.name == toolName).firstOrNull;
+    if (tool == null) {
+      return '⚠️ 未知工具: $toolName';
+    }
+
+    try {
+      return await tool.execute(params);
+    } catch (e) {
+      debugPrint('${config.name}: 工具执行失败 ($toolName): $e');
+      return '⚠️ 工具执行出错: $e';
+    }
+  }
+
+  /// 带工具调用循环的 AI 对话（最多执行 1 轮工具调用）
+  ///
+  /// 流程：
+  /// 1. 发送用户消息 → 获取 AI 回复
+  /// 2. 如果回复中包含工具调用 → 执行工具 → 将结果注入上下文 → 再次调用 AI
+  /// 3. 返回最终回复
+  Future<AiChatResult> safeAiChatWithTools(
+    String userMessage,
+    List<Map<String, String>> messages, {
+    required AiService aiService,
+  }) async {
+    // 准备系统提示词（RAG + 工具声明）
+    String prompt = config.useRag
+        ? await buildRagPrompt(userMessage)
+        : config.persona;
+
+    if (config.tools.isNotEmpty) {
+      prompt += buildToolsPromptSection();
+    }
+
+    // 第一轮调用
+    final firstResult = await safeAiChatWithMeta(
+      messages,
+      systemPrompt: prompt,
+      aiService: aiService,
+    );
+
+    // 检查是否有工具调用
+    if (config.tools.isEmpty) return firstResult;
+
+    final toolCall = parseToolCall(firstResult.content);
+    if (toolCall == null) return firstResult;
+
+    // 执行工具
+    final toolResult = await executeToolCall(toolCall);
+    if (toolResult == null) return firstResult;
+
+    // 构建第二轮消息：注入工具结果
+    final followUp = List<Map<String, String>>.from(messages);
+    followUp.add({
+      'role': 'assistant',
+      'content': firstResult.content,
+    });
+    followUp.add({
+      'role': 'user',
+      'content': '工具 "${toolCall['tool']}" 的执行结果：\n$toolResult\n\n'
+          '请根据以上工具返回的数据，给出完整的回答。',
+    });
+
+    // 第二轮调用（不再包含工具声明，防止无限循环）
+    return safeAiChatWithMeta(
+      followUp,
+      systemPrompt: config.persona,
+      aiService: aiService,
+    );
   }
 }

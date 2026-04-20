@@ -1,3 +1,5 @@
+import '../../../data/local/knowledge_graph_dao.dart';
+import '../../../data/local/graph_dao.dart';
 import '../../ai_service.dart';
 import '../agent_model.dart';
 import '../base_agent.dart';
@@ -7,7 +9,7 @@ class GraphAgent extends BaseAgent {
   final AiService _ai = AiService();
 
   @override
-  AgentConfig get config => const AgentConfig(
+  AgentConfig get config => AgentConfig(
         id: 'graph',
         name: '图谱专家',
         emoji: '🕸️',
@@ -57,6 +59,70 @@ class GraphAgent extends BaseAgent {
         keywords: ['图谱', '概念', '节点', '关系', '知识点', '知识结构', '脉络', '体系'],
         capabilities: ['生成知识图谱', '扩展概念', '查询节点', '分析关系'],
         requiresAi: true,
+        useRag: true,
+        tools: [
+          AgentTool(
+            name: 'search_concepts',
+            description: '搜索课程知识概念库',
+            parameters: {'keyword': '搜索关键词'},
+            execute: (params) async {
+              final kw = params['keyword'] as String? ?? '';
+              if (kw.isEmpty) return '请提供搜索关键词';
+              final dao = KnowledgeGraphDao();
+              final results = await dao.searchConcepts(kw);
+              if (results.isEmpty) return '未找到与"$kw"相关的概念';
+              return results
+                  .take(10)
+                  .map((c) =>
+                      '- ${c['concept_name']}（${c['concept_type']}）'
+                      '[第${c['chapter']}章] ${c['description'] ?? ''}')
+                  .join('\n');
+            },
+          ),
+          AgentTool(
+            name: 'get_graph_list',
+            description: '获取所有知识图谱列表',
+            parameters: {},
+            execute: (params) async {
+              final dao = GraphDao();
+              final graphs = await dao.getAllGraphs();
+              if (graphs.isEmpty) return '暂无知识图谱';
+              return graphs
+                  .map((g) => '- ${g.title}（${g.graphType ?? "通用"}）')
+                  .join('\n');
+            },
+          ),
+          AgentTool(
+            name: 'get_concept_relations',
+            description: '获取某个概念的所有关联关系',
+            parameters: {'concept_id': '概念 ID（数字）'},
+            execute: (params) async {
+              final id = int.tryParse('${params['concept_id']}');
+              if (id == null) return '请提供有效的概念 ID';
+              final dao = KnowledgeGraphDao();
+              final concept = await dao.getConceptById(id);
+              if (concept == null) return '概念 #$id 不存在';
+              final rels = await dao.getRelationsForConcept(id);
+              if (rels.isEmpty) return '"${concept['concept_name']}" 暂无关联关系';
+              // 获取关联概念的名称
+              final buf = StringBuffer('"${concept['concept_name']}" 的关系：\n');
+              for (final r in rels) {
+                final srcId = r['source_concept_id'] as int;
+                final tgtId = r['target_concept_id'] as int;
+                final otherId = srcId == id ? tgtId : srcId;
+                final other = await dao.getConceptById(otherId);
+                final otherName = other?['concept_name'] ?? '#$otherId';
+                final relType = r['relation_type'] ?? 'related_to';
+                if (srcId == id) {
+                  buf.writeln('- ${concept['concept_name']} --[$relType]--> $otherName');
+                } else {
+                  buf.writeln('- $otherName --[$relType]--> ${concept['concept_name']}');
+                }
+              }
+              return buf.toString();
+            },
+          ),
+        ],
         usageSteps: [
           '在对话面板中选择 🕸️ 图谱专家',
           '输入想要生成或查询的知识主题',
@@ -71,13 +137,18 @@ class GraphAgent extends BaseAgent {
 
   @override
   List<String> get quickCommands =>
-      ['生成Flutter图谱', '分析概念关系', '扩展知识点', '图谱统计'];
+      ['生成Flutter图谱', '搜索概念', '分析概念关系', '图谱统计'];
 
   @override
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
     final messages = buildAiMessages(userMessage, session);
-    final result = await safeAiChatWithMeta(messages, aiService: _ai);
-    return buildReply(result.content, modelProvider: result.provider, modelName: result.model);
+    final result = await safeAiChatWithTools(
+      userMessage,
+      messages,
+      aiService: _ai,
+    );
+    return buildReply(result.content,
+        modelProvider: result.provider, modelName: result.model);
   }
 }

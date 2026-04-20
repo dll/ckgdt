@@ -73,6 +73,7 @@ class MobileExpertAgent extends BaseAgent {
         ],
         capabilities: ['技术解答', '代码示例', '技术对比', '最佳实践'],
         requiresAi: true,
+        useRag: true,
         usageSteps: [
           '选择 📱 移动专家',
           '提出移动开发技术问题',
@@ -92,7 +93,7 @@ class MobileExpertAgent extends BaseAgent {
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
     final messages = buildAiMessages(userMessage, session);
-    final result = await safeAiChatWithMeta(messages, aiService: _ai);
+    final result = await safeAiChatWithRag(userMessage, messages, aiService: _ai);
     return buildReply(result.content, modelProvider: result.provider, modelName: result.model);
   }
 }

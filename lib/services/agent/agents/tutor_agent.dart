@@ -70,6 +70,7 @@ class TutorAgent extends BaseAgent {
         ],
         capabilities: ['课件讲解', '概念解释', '课堂答疑', '复习提纲'],
         requiresAi: true,
+        useRag: true,
         usageSteps: [
           '选择 👨‍🏫 课堂助教',
           '提出课件内容相关的疑问',
@@ -89,7 +90,7 @@ class TutorAgent extends BaseAgent {
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
     final messages = buildAiMessages(userMessage, session);
-    final result = await safeAiChatWithMeta(messages, aiService: _ai);
+    final result = await safeAiChatWithRag(userMessage, messages, aiService: _ai);
     return buildReply(result.content, modelProvider: result.provider, modelName: result.model);
   }
 }

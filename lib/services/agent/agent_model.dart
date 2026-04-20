@@ -3,6 +3,37 @@
 /// 参考 OpenMAIC（清华大学开放式多智能体互动课堂）架构理念：
 /// Agent = 配置 + 人设 + 能力，Director 编排分发。
 
+/// 智能体工具 — 允许智能体调用本地能力（数据库查询、文件操作等）
+///
+/// AI 在回复中输出 `{"tool": "name", "params": {...}}` 格式的 JSON，
+/// 由 [BaseAgent] 解析并执行对应的 [execute] 函数，
+/// 将结果注入上下文后继续对话。
+class AgentTool {
+  final String name;
+  final String description;
+  final Map<String, String> parameters; // 参数名 → 说明
+  final Future<String> Function(Map<String, dynamic> params) execute;
+
+  const AgentTool({
+    required this.name,
+    required this.description,
+    this.parameters = const {},
+    required this.execute,
+  });
+
+  /// 生成工具声明文本（嵌入 Prompt）
+  String toPromptDeclaration() {
+    final buf = StringBuffer('- **$name**: $description');
+    if (parameters.isNotEmpty) {
+      buf.write('\n  参数: ');
+      buf.write(parameters.entries
+          .map((e) => '`${e.key}` (${e.value})')
+          .join(', '));
+    }
+    return buf.toString();
+  }
+}
+
 /// 经典案例
 class AgentCase {
   final String title;      // 案例标题
@@ -27,6 +58,8 @@ class AgentConfig {
   final List<String> keywords; // 触发关键词
   final List<String> capabilities; // 能力标签
   final bool requiresAi; // 是否需要 AI API
+  final bool useRag; // 是否启用 RAG（检索增强生成）
+  final List<AgentTool> tools; // 可调用的工具列表
   final List<String> usageSteps; // 使用步骤
   final List<AgentCase> classicCases; // 经典案例
 
@@ -46,6 +79,8 @@ class AgentConfig {
     this.keywords = const [],
     this.capabilities = const [],
     this.requiresAi = false,
+    this.useRag = false,
+    this.tools = const [],
     this.usageSteps = const [],
     this.classicCases = const [],
     this.allowedRoles = const [],

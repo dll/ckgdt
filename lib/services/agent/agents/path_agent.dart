@@ -64,6 +64,7 @@ class PathAgent extends BaseAgent {
         keywords: ['路径', '计划', '怎么学', '从哪开始', '推荐', '学习计划', '规划', '路线'],
         capabilities: ['规划学习路径', '推荐学习顺序', '评估学习进度'],
         requiresAi: true,
+        useRag: true,
         usageSteps: [
           '选择 🗺️ 路径规划师',
           '告诉我你的学习目标或当前水平',
@@ -83,7 +84,7 @@ class PathAgent extends BaseAgent {
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
     final messages = buildAiMessages(userMessage, session);
-    final result = await safeAiChatWithMeta(messages, aiService: _ai);
+    final result = await safeAiChatWithRag(userMessage, messages, aiService: _ai);
     return buildReply(result.content, modelProvider: result.provider, modelName: result.model);
   }
 }
