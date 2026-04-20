@@ -3,8 +3,8 @@
   "user_id": "2023210598",
   "user_name": "姬鹏炜",
   "role": "student",
-  "synced_at": "2026-04-20T16:04:07.908904",
-  "last_active": "2026-04-20T16:04:07.899877",
+  "synced_at": "2026-04-20T19:37:53.723122",
+  "last_active": "2026-04-20T19:37:53.723186",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
@@ -27,8 +27,8 @@
       "status": "已提交",
       "submit_time": null,
       "tags": "[\"Vue.js\",\"CSS\"]",
-      "created_at": "2026-04-18T16:18:03.715758",
-      "updated_at": "2026-04-18T16:18:03.715758",
+      "created_at": "2026-04-13T09:54:44.492366",
+      "updated_at": "2026-04-13T09:54:44.492424",
       "project_id": null,
       "group_id": null,
       "video_url": "assets/videos/demo_2023210598.mp4",
@@ -54,7 +54,7 @@
       "user_role": "student",
       "content": "UI设计很好看，交互流畅。",
       "parent_id": null,
-      "created_at": "2026-04-18T16:18:06.207009"
+      "created_at": "2026-04-13T09:54:46.062331"
     },
     {
       "work_id": 11,
@@ -63,7 +63,7 @@
       "user_role": "student",
       "content": "值得学习的项目！",
       "parent_id": null,
-      "created_at": "2026-04-18T16:18:04.824181"
+      "created_at": "2026-04-13T09:54:45.422798"
     }
   ],
   "work_likes": [],
