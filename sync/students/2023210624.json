@@ -3,130 +3,11 @@
   "user_id": "2023210624",
   "user_name": "汪明昊",
   "role": "student",
-  "synced_at": "2026-04-20T17:27:05.686868",
-  "last_active": "2026-04-20T17:27:05.686894",
-  "quiz_results": [
-    {
-      "user_id": "2023210624",
-      "quiz_timestamp": "2026-04-20T17:25:55.143399",
-      "score": 80,
-      "num_correct": 4,
-      "num_total": 5,
-      "chapter": "第三章 混合开发技术1",
-      "quiz_type": null,
-      "completed_at": "2026-04-20T17:25:55.143416"
-    },
-    {
-      "user_id": "2023210624",
-      "quiz_timestamp": "2026-04-20T17:23:01.445246",
-      "score": 20,
-      "num_correct": 1,
-      "num_total": 5,
-      "chapter": "第一章 移动应用开发技术体系2",
-      "quiz_type": null,
-      "completed_at": "2026-04-20T17:23:01.445263"
-    },
-    {
-      "user_id": "2023210624",
-      "quiz_timestamp": "2026-04-20T17:20:02.189377",
-      "score": 100,
-      "num_correct": 5,
-      "num_total": 5,
-      "chapter": "第一章 移动应用开发技术体系1",
-      "quiz_type": null,
-      "completed_at": "2026-04-20T17:20:02.189393"
-    },
-    {
-      "user_id": "2023210624",
-      "quiz_timestamp": "2026-04-20T17:19:44.248871",
-      "score": 60,
-      "num_correct": 3,
-      "num_total": 5,
-      "chapter": "第一章 移动应用开发技术体系1",
-      "quiz_type": null,
-      "completed_at": "2026-04-20T17:19:44.248887"
-    }
-  ],
+  "synced_at": "2026-04-20T17:40:46.027462",
+  "last_active": "2026-04-20T17:40:46.027471",
+  "quiz_results": [],
   "learning_records": [],
-  "wrong_answers": [
-    {
-      "user_id": "2023210624",
-      "question_id": 2284,
-      "question": "以下哪个是移动应用开发中\"原生应用\"的主要特征？",
-      "user_answer": "使用HTML、CSS、JavaScript开发",
-      "correct_answer": "使用平台特定的编程语言和SDK开发",
-      "chapter": "第一章 移动应用开发技术体系1",
-      "times": 1,
-      "wrong_time": "2026-04-20T17:19:22.018373",
-      "last_wrong_time": "2026-04-20T17:19:22.018399"
-    },
-    {
-      "user_id": "2023210624",
-      "question_id": 2285,
-      "question": "以下哪个框架主要用于混合应用开发？",
-      "user_answer": "微信开发者工具",
-      "correct_answer": "React Native",
-      "chapter": "第一章 移动应用开发技术体系1",
-      "times": 1,
-      "wrong_time": "2026-04-20T17:19:31.922831",
-      "last_wrong_time": "2026-04-20T17:19:31.922846"
-    },
-    {
-      "user_id": "2023210624",
-      "question_id": 2260,
-      "question": "AI编程工具GitHub Copilot在移动开发中的主要作用是什么？",
-      "user_answer": "项目管理和团队协作",
-      "correct_answer": "代码自动生成和智能补全",
-      "chapter": "第一章 移动应用开发技术体系2",
-      "times": 1,
-      "wrong_time": "2026-04-20T17:22:40.309840",
-      "last_wrong_time": "2026-04-20T17:22:40.309855"
-    },
-    {
-      "user_id": "2023210624",
-      "question_id": 2268,
-      "question": "Flutter混合开发框架使用的编程语言是什么？",
-      "user_answer": "JavaScript",
-      "correct_answer": "Dart",
-      "chapter": "第一章 移动应用开发技术体系2",
-      "times": 1,
-      "wrong_time": "2026-04-20T17:22:45.783492",
-      "last_wrong_time": "2026-04-20T17:22:45.783506"
-    },
-    {
-      "user_id": "2023210624",
-      "question_id": 2296,
-      "question": "在混合开发技术路线中，哪种方式的性能表现最接近原生应用？",
-      "user_answer": "原生渲染桥接模式（如React Native）",
-      "correct_answer": "自绘引擎模式（如Flutter）",
-      "chapter": "第一章 移动应用开发技术体系2",
-      "times": 1,
-      "wrong_time": "2026-04-20T17:22:56.332906",
-      "last_wrong_time": "2026-04-20T17:22:56.332921"
-    },
-    {
-      "user_id": "2023210624",
-      "question_id": 2309,
-      "question": "根据2025年移动平台市场数据，全球Android平台的市场份额约为多少？",
-      "user_answer": "50.8%",
-      "correct_answer": "70.8%",
-      "chapter": "第一章 移动应用开发技术体系2",
-      "times": 1,
-      "wrong_time": "2026-04-20T17:23:00.765745",
-      "last_wrong_time": "2026-04-20T17:23:00.765760"
-    },
-    {
-      "user_id": "2023210624",
-      "question_id": 2280,
-      "question": "下列关于混合开发性能优化的描述，哪个是正确的？",
-      "user_answer": "混合应用的性能永远无法达到原生水平",
-      "correct_answer": "Flutter和React Native都有各自的性能优化策略",
-      "chapter": "第三章 混合开发技术1",
-      "times": 1,
-      "wrong_time": "2026-04-20T17:25:47.647192",
-      "last_wrong_time": "2026-04-20T17:25:47.647205"
-    }
-  ],
+  "wrong_answers": [],
   "favorites": [],
   "feedback": [],
   "learning_paths": [],
@@ -146,8 +27,8 @@
       "status": "已提交",
       "submit_time": null,
       "tags": "[\"JS\",\"WeChat\",\"MiniProg\"]",
-      "created_at": "2026-04-20T17:25:57.637131",
-      "updated_at": "2026-04-20T17:25:57.637141",
+      "created_at": "2026-04-20T16:50:00.988836",
+      "updated_at": "2026-04-20T16:50:00.988837",
       "project_id": null,
       "group_id": null,
       "video_url": "assets/videos/demo_2023210624.mp4",
@@ -173,7 +54,7 @@
       "user_role": "student",
       "content": "UI设计很好看，交互流畅。",
       "parent_id": null,
-      "created_at": "2026-04-20T17:25:57.789193"
+      "created_at": "2026-04-20T16:50:01.099883"
     }
   ],
   "work_likes": [],
