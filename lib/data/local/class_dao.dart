@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import '../models/user_model.dart';
 import 'database_helper.dart';
 
@@ -267,47 +269,79 @@ class ClassDao {
   // 示例数据
   // ─────────────────────────────────────────────────────────────────────────
 
-  /// 生成示例班级数据（计科22 已归档 + 软件23 当前学期）
+  /// 生成班级数据 — 根据 students.json 中的 class_name 字段自动分班
+  ///
+  /// 读取 students.json，按 class_name（如 软件231、软件232）创建独立班级，
+  /// 并将学生分配到对应班级。无 class_name 的学生归入"未分班"。
   Future<void> generateDemoData() async {
     final db = await _dbHelper.database;
     final count = await db.rawQuery('SELECT COUNT(*) as c FROM classes');
     if (((count.first['c'] as int?) ?? 0) > 0) return; // 已有数据则跳过
 
-    // ── 计科22：已结课归档（上一学年） ──────────────────────────────────
-    final classIdJK22 = await createClass(
-      name: '计科22 移动应用开发',
-      semester: '2024-2025学年第一学期',
-      teacherId: '206004',
-      teacherName: '刘东良',
-      description: '计算机科学与技术2022级，86名学生，3个班组，9个实验项目。'
-          '每组6人，实验中每人选择一个技术栈独立完成对应实验任务。',
-    );
-    await archiveClass(classIdJK22);
-
-    // ── 软件23：当前活跃学期 ──────────────────────────────────────────
-    final classIdRJ23 = await createClass(
-      name: '软件23 移动应用开发',
-      semester: '2025-2026学年第一学期',
-      teacherId: '206004',
-      teacherName: '刘东良',
-      description: '软件工程2023级，项目分组待定（占位模拟中）。'
-          '每组6人协作探究模式，每人负责一个技术栈。',
-    );
-
-    // 将所有在册学生分配到软件23（计科22已归档，无需分配）
-    final students = await db.query('users',
-        where: 'role = ? AND is_active = 1',
-        whereArgs: ['student'],
-        orderBy: 'user_id');
-
-    for (final s in students) {
-      final uid = s['user_id'] as String;
-      await addMember(classIdRJ23, uid);
+    // ── 读取 students.json 获取学生的班级信息 ─────────────────────────
+    Map<String, List<String>> classStudents = {}; // className -> [userId]
+    try {
+      final jsonStr =
+          await rootBundle.loadString('assets/students.json');
+      final students = json.decode(jsonStr) as List;
+      for (final s in students) {
+        final uid = s['user_id'] as String?;
+        final className = s['class_name'] as String?;
+        if (uid == null) continue;
+        final key = (className != null && className.isNotEmpty)
+            ? className
+            : '未分班';
+        classStudents.putIfAbsent(key, () => []).add(uid);
+      }
+    } catch (e) {
+      debugPrint('ClassDao.generateDemoData: 读取 students.json 失败: $e');
     }
 
-    debugPrint('ClassDao: 示例数据生成完成 — '
-        '计科22(id=$classIdJK22, archived), '
-        '软件23(id=$classIdRJ23, active, ${students.length}名学生)');
+    // 如果没有读到任何学生信息，回退到旧逻辑：所有学生归入一个班级
+    if (classStudents.isEmpty) {
+      final classId = await createClass(
+        name: '默认班级',
+        semester: '2025-2026学年第一学期',
+        teacherId: '206004',
+        teacherName: '刘东良',
+      );
+      final allStudents = await db.query('users',
+          where: 'role = ? AND is_active = 1',
+          whereArgs: ['student'],
+          orderBy: 'user_id');
+      for (final s in allStudents) {
+        await addMember(classId, s['user_id'] as String);
+      }
+      debugPrint('ClassDao: 回退模式 — 所有 ${allStudents.length} 名学生归入默认班级');
+      return;
+    }
+
+    // ── 按 class_name 创建班级并分配学生 ──────────────────────────────
+    // 排序确保显示顺序一致
+    final sortedClassNames = classStudents.keys.toList()..sort();
+
+    for (final className in sortedClassNames) {
+      final studentIds = classStudents[className]!;
+
+      final classId = await createClass(
+        name: className,
+        semester: '2025-2026学年第一学期',
+        teacherId: '206004',
+        teacherName: '刘东良',
+        description: '$className — ${studentIds.length}名学生',
+      );
+
+      for (final uid in studentIds) {
+        await addMember(classId, uid);
+      }
+
+      debugPrint('ClassDao: 创建班级 $className (id=$classId, '
+          '${studentIds.length}名学生)');
+    }
+
+    debugPrint('ClassDao: 自动分班完成 — '
+        '共 ${sortedClassNames.length} 个班级, '
+        '${classStudents.values.fold<int>(0, (sum, list) => sum + list.length)} 名学生');
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -476,5 +510,17 @@ class ClassDao {
     final results = await db.query('classes',
         where: 'name = ?', whereArgs: [name], limit: 1);
     return results.isEmpty ? null : results.first;
+  }
+
+  /// 重新分班 — 清除现有班级数据，根据 students.json 中的 class_name 重新生成
+  ///
+  /// 用于已有数据库但班级分配不正确时的修复操作。
+  Future<void> reclassifyStudents() async {
+    final db = await _dbHelper.database;
+    // 清除所有班级和成员数据
+    await db.delete('class_members');
+    await db.delete('classes');
+    // 重新生成
+    await generateDemoData();
   }
 }

@@ -1,10 +1,16 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../data/local/ai_history_dao.dart';
+import '../../data/local/knowledge_graph_dao.dart';
 import '../../services/agent/agent_model.dart';
 import '../../services/agent/agent_registry.dart';
+import '../../services/ai_service.dart';
+import '../../services/auth_service.dart';
 import '../../services/navigation_service.dart';
 import '../../services/tts_flutter_service.dart';
 import '../../services/voice_service.dart';
+import '../pages/profile/chat_history_page.dart';
 import 'markdown_bubble.dart';
 
 /// 多智能体对话浮层 — 全局 BottomSheet 对话面板
@@ -87,6 +93,10 @@ class _AgentChatOverlayState extends State<AgentChatOverlay> {
     _registry.onMessage = null;
     _registry.onAction = null;
     _registry.onAgentSwitch = null;
+    // 离开页面时停止语音播报
+    if (_ttsEnabled) {
+      TtsFlutterService.instance.stop();
+    }
     super.dispose();
   }
 
@@ -223,6 +233,348 @@ class _AgentChatOverlayState extends State<AgentChatOverlay> {
   void _stopVoiceInput() {
     VoiceService().stopListening();
     if (mounted) setState(() => _isVoiceListening = false);
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // 菜单操作
+  // ═════════════════════════════════════════════════════════════════════════
+
+  void _handleMenuAction(String action) {
+    switch (action) {
+      case 'star':
+        _starCurrentSession();
+        break;
+      case 'history':
+        Navigator.of(context).pop(); // 先关闭对话面板
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ChatHistoryPage()),
+        );
+        break;
+      case 'clear':
+        _clearConversation();
+        break;
+      case 'save_kb':
+        _saveToKnowledgeBase();
+        break;
+      case 'gen_graph':
+        _generateQaGraph();
+        break;
+    }
+  }
+
+  Future<void> _starCurrentSession() async {
+    final sessionId = _registry.session.id;
+    final dao = AiHistoryDao();
+    await dao.toggleStar(sessionId);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('已收藏当前对话'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Future<void> _clearConversation() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('清空对话'),
+        content: const Text('确定清空当前对话内容吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('清空'),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true && mounted) {
+      _registry.session.messages.clear();
+      // 添加新的欢迎消息
+      final welcome = _registry.getWelcomeMessage();
+      _registry.session.messages.add(welcome);
+      setState(() {});
+    }
+  }
+
+  /// 将当前对话存入知识库（knowledge_concepts 表）
+  Future<void> _saveToKnowledgeBase() async {
+    final messages = _registry.session.messages
+        .where((m) => m.role != MessageRole.system)
+        .toList();
+    if (messages.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('当前对话为空，无法存入知识库')),
+        );
+      }
+      return;
+    }
+
+    // 构建对话摘要
+    final qaPairs = <String>[];
+    for (int i = 0; i < messages.length; i++) {
+      final m = messages[i];
+      final prefix = m.role == MessageRole.user ? 'Q' : 'A';
+      qaPairs.add('$prefix: ${m.content}');
+    }
+    final dialogText = qaPairs.join('\n');
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('正在通过 AI 提取知识点...')),
+    );
+
+    try {
+      final aiService = AiService();
+      final response = await aiService.chat(
+        [
+          {
+            'role': 'user',
+            'content': '''请从以下对话中提取关键知识点，输出 JSON 数组，每个元素格式为：
+{"name": "概念名称", "description": "概念描述", "keywords": "关键词1,关键词2"}
+
+对话内容：
+$dialogText
+
+要求：
+1. 提取 3-8 个核心知识点
+2. name 简洁（2-8字）
+3. description 一句话概括
+4. keywords 用逗号分隔
+
+只输出 JSON 数组，不要其他文字。''',
+          },
+        ],
+      );
+
+      // 解析 AI 返回的 JSON
+      final jsonStr = response.replaceAll(RegExp(r'```json?\s*'), '').replaceAll('```', '').trim();
+      final List<dynamic> concepts = _tryParseJsonArray(jsonStr);
+
+      if (concepts.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('未能从对话中提取知识点'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
+      final kgDao = KnowledgeGraphDao();
+      int saved = 0;
+      for (final c in concepts) {
+        if (c is Map<String, dynamic>) {
+          await kgDao.addConcept({
+            'concept_name': c['name'] ?? '',
+            'concept_type': 'qa_extracted',
+            'description': c['description'] ?? '',
+            'keywords': c['keywords'] ?? '',
+            'importance': 'important',
+          });
+          saved++;
+        }
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('已提取 $saved 个知识点存入知识库'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('存入知识库失败: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// 从对话生成问答图谱
+  Future<void> _generateQaGraph() async {
+    final messages = _registry.session.messages
+        .where((m) => m.role != MessageRole.system)
+        .toList();
+    if (messages.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('当前对话为空，无法生成图谱')),
+        );
+      }
+      return;
+    }
+
+    final qaPairs = <String>[];
+    for (final m in messages) {
+      final prefix = m.role == MessageRole.user ? 'Q' : 'A';
+      qaPairs.add('$prefix: ${m.content}');
+    }
+    final dialogText = qaPairs.join('\n');
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('正在通过 AI 生成问答图谱...')),
+    );
+
+    try {
+      final aiService = AiService();
+      final response = await aiService.chat(
+        [
+          {
+            'role': 'user',
+            'content': '''请从以下问答对话中提取知识概念和它们之间的关系，输出 JSON，格式为：
+{
+  "concepts": [
+    {"name": "概念名", "description": "描述", "keywords": "关键词"}
+  ],
+  "relations": [
+    {"source": "概念A名", "target": "概念B名", "type": "关系类型", "label": "关系标签"}
+  ]
+}
+
+关系类型可选：prerequisite（前置）, extends（扩展）, related（相关）, part_of（组成）, example_of（示例）
+
+对话内容：
+$dialogText
+
+要求：
+1. 提取 3-10 个核心概念
+2. 建立概念间有意义的关系
+3. 只输出 JSON，不要其他文字''',
+          },
+        ],
+      );
+
+      final jsonStr = response.replaceAll(RegExp(r'```json?\s*'), '').replaceAll('```', '').trim();
+      Map<String, dynamic>? parsed;
+      try {
+        parsed = _tryParseJsonMap(jsonStr);
+      } catch (_) {}
+
+      if (parsed == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('AI 返回格式异常，无法解析图谱'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
+      final kgDao = KnowledgeGraphDao();
+      final conceptList = (parsed['concepts'] as List?) ?? [];
+      final relationList = (parsed['relations'] as List?) ?? [];
+
+      // 存储概念并记录 name → id 映射
+      final nameToId = <String, int>{};
+      for (final c in conceptList) {
+        if (c is Map<String, dynamic>) {
+          final name = c['name'] as String? ?? '';
+          if (name.isEmpty) continue;
+          final id = await kgDao.addConcept({
+            'concept_name': name,
+            'concept_type': 'qa_graph',
+            'description': c['description'] ?? '',
+            'keywords': c['keywords'] ?? '',
+            'importance': 'important',
+          });
+          nameToId[name] = id;
+        }
+      }
+
+      // 存储关系
+      int relCount = 0;
+      for (final r in relationList) {
+        if (r is Map<String, dynamic>) {
+          final sourceName = r['source'] as String? ?? '';
+          final targetName = r['target'] as String? ?? '';
+          final sourceId = nameToId[sourceName];
+          final targetId = nameToId[targetName];
+          if (sourceId != null && targetId != null) {
+            await kgDao.addRelation({
+              'source_concept_id': sourceId,
+              'target_concept_id': targetId,
+              'relation_type': r['type'] ?? 'related',
+              'relation_label': r['label'] ?? '',
+              'ai_generated': 1,
+            });
+            relCount++;
+          }
+        }
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                '图谱生成完成：${nameToId.length} 个概念，$relCount 条关系'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('生成图谱失败: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// 尝试解析 JSON 数组
+  List<dynamic> _tryParseJsonArray(String text) {
+    try {
+      // 找到第一个 [ 和最后一个 ]
+      final start = text.indexOf('[');
+      final end = text.lastIndexOf(']');
+      if (start >= 0 && end > start) {
+        final jsonStr = text.substring(start, end + 1);
+        final result = _jsonDecode(jsonStr);
+        if (result is List) return result;
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  /// 尝试解析 JSON 对象
+  Map<String, dynamic>? _tryParseJsonMap(String text) {
+    try {
+      final start = text.indexOf('{');
+      final end = text.lastIndexOf('}');
+      if (start >= 0 && end > start) {
+        final jsonStr = text.substring(start, end + 1);
+        final result = _jsonDecode(jsonStr);
+        if (result is Map<String, dynamic>) return result;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  dynamic _jsonDecode(String text) {
+    return jsonDecode(text);
   }
 
   // ═════════════════════════════════════════════════════════════════════════
@@ -632,6 +984,63 @@ class _AgentChatOverlayState extends State<AgentChatOverlay> {
                   }
                 },
               ),
+              // 更多操作菜单
+              PopupMenuButton<String>(
+                icon: Icon(Icons.more_vert, size: 20, color: Colors.grey[600]),
+                onSelected: _handleMenuAction,
+                itemBuilder: (_) => [
+                  const PopupMenuItem(
+                    value: 'star',
+                    child: Row(
+                      children: [
+                        Icon(Icons.star_border, size: 18, color: Colors.amber),
+                        SizedBox(width: 8),
+                        Text('收藏对话'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'history',
+                    child: Row(
+                      children: [
+                        Icon(Icons.history, size: 18),
+                        SizedBox(width: 8),
+                        Text('对话历史'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'save_kb',
+                    child: Row(
+                      children: [
+                        Icon(Icons.save_alt, size: 18, color: Colors.green),
+                        SizedBox(width: 8),
+                        Text('存入知识库'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'gen_graph',
+                    child: Row(
+                      children: [
+                        Icon(Icons.account_tree, size: 18, color: Colors.purple),
+                        SizedBox(width: 8),
+                        Text('生成问答图谱'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'clear',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text('清空对话', style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
               // 关闭按钮
               IconButton(
                 icon: const Icon(Icons.close, size: 20),
@@ -647,7 +1056,8 @@ class _AgentChatOverlayState extends State<AgentChatOverlay> {
 
   /// 智能体快捷切换 — 收起时一行滚动 + 展开按钮，展开时多行网格
   Widget _buildAgentChips(ThemeData theme) {
-    final configs = _registry.allConfigs;
+    final userRole = AuthService().currentUser?.role ?? 'student';
+    final configs = _registry.configsForRole(userRole);
     final activeId = _registry.session.activeAgentId;
 
     if (_agentPanelExpanded) {

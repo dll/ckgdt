@@ -4,7 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/notification_service.dart';
 import '../../../data/local/assessment_dao.dart';
+import '../../../data/local/database_helper.dart';
+import '../../../services/agent/agents/assessment_grading_agent.dart';
 import '../../widgets/agent_entry_button.dart';
 
 /// 考核页面 — 参考 Python 版 assessment_tab.py
@@ -3152,6 +3155,13 @@ class _ContributionTabState extends State<_ContributionTab>
                         ? commentCtrl.text.trim()
                         : null,
                   );
+                  // 通知教师
+                  NotificationService().notifyContributionScore(
+                    scorerId: userId,
+                    scorerName: userName,
+                    targetName: targetName,
+                    dimension: dimLabel,
+                  );
                   if (ctx.mounted) Navigator.pop(ctx);
                   _loadData();
                   if (mounted) {
@@ -5005,6 +5015,13 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
         filePath: file.path ?? '',
       );
 
+      // 通知教师
+      NotificationService().notifyAssessmentSubmission(
+        studentId: userId,
+        studentName: userName,
+        reportType: reportType,
+      );
+
       await _loadSubmissions();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -5062,8 +5079,256 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                         fontSize: 10,
                         color: status == '已批改' ? Colors.green : Colors.blue)),
               ),
+        onTap: _isStudent
+            ? null
+            : () => _showReportGradeDialog(s),
       ),
     );
+  }
+
+  /// 教师批改考核报告对话框（含 AI 批阅）
+  void _showReportGradeDialog(Map<String, dynamic> submission) {
+    final reportId = submission['id'] as int?;
+    final title = submission['title'] as String? ?? '考核报告';
+    final content = submission['content_json'] as String? ?? '';
+    final userId = submission['user_id'] as String? ?? '';
+    final status = submission['status'] as String? ?? '已提交';
+    final existingScore = submission['score'] as int?;
+    final existingFeedback = submission['feedback'] as String?;
+
+    double scoreValue = (existingScore ?? 80).toDouble();
+    final feedbackCtrl = TextEditingController(text: existingFeedback ?? '');
+    bool isGrading = false;
+    bool isAiGrading = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final scoreColor = scoreValue >= 90
+              ? Colors.green
+              : scoreValue >= 80
+                  ? Colors.blue
+                  : scoreValue >= 60
+                      ? Colors.orange
+                      : Colors.red;
+          return AlertDialog(
+            title: Row(
+              children: [
+                const Icon(Icons.grading, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('批改 - $title',
+                      style: const TextStyle(fontSize: 16),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 学生信息
+                    Text('学生：$userId',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                    if (content.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text('提交文件：$content',
+                          style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                    ],
+                    Text('状态：$status',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                    const SizedBox(height: 16),
+                    // 评分
+                    Row(
+                      children: [
+                        const Text('评分',
+                            style: TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.bold)),
+                        const Spacer(),
+                        Text('${scoreValue.round()} / 100',
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: scoreColor)),
+                      ],
+                    ),
+                    Slider(
+                      value: scoreValue,
+                      min: 0,
+                      max: 100,
+                      divisions: 100,
+                      label: '${scoreValue.round()}',
+                      onChanged: (v) => setDialogState(() => scoreValue = v),
+                    ),
+                    Wrap(
+                      spacing: 8,
+                      children: [60, 70, 80, 85, 90, 95, 100].map((v) {
+                        final isSelected = scoreValue.round() == v;
+                        return ActionChip(
+                          label: Text('$v',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: isSelected ? Colors.white : null)),
+                          backgroundColor: isSelected
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
+                          onPressed: () =>
+                              setDialogState(() => scoreValue = v.toDouble()),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: feedbackCtrl,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: '教师反馈',
+                        hintText: '请输入批改意见和建议...',
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              // AI 批阅按钮
+              OutlinedButton.icon(
+                onPressed: isAiGrading
+                    ? null
+                    : () async {
+                        setDialogState(() => isAiGrading = true);
+                        try {
+                          final agent = AssessmentGradingAgent();
+                          final result = await agent.gradeReport(
+                            reportType: title,
+                            studentName: userId,
+                            content: content.isNotEmpty ? content : '（学生提交了PDF文件：$title）',
+                          );
+                          final parsed = _tryParseGradingJson(result);
+                          if (parsed != null) {
+                            setDialogState(() {
+                              scoreValue = (parsed['total_score'] as num?)
+                                      ?.toDouble() ??
+                                  (parsed['score'] as num?)?.toDouble() ??
+                                  scoreValue;
+                              if (scoreValue > 100) scoreValue = 100;
+                              feedbackCtrl.text =
+                                  parsed['feedback'] as String? ?? '';
+                            });
+                          } else {
+                            setDialogState(() {
+                              feedbackCtrl.text = result;
+                            });
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('AI批阅失败: $e')),
+                            );
+                          }
+                        } finally {
+                          if (ctx.mounted) {
+                            setDialogState(() => isAiGrading = false);
+                          }
+                        }
+                      },
+                icon: isAiGrading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.auto_awesome, size: 16),
+                label: Text(isAiGrading ? 'AI批阅中...' : 'AI批阅'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('取消'),
+              ),
+              ElevatedButton.icon(
+                onPressed: isGrading
+                    ? null
+                    : () async {
+                        setDialogState(() => isGrading = true);
+                        try {
+                          if (reportId != null) {
+                            final db = await DatabaseHelper.instance.database;
+                            await db.update(
+                              'student_reports',
+                              {
+                                'score': scoreValue.round(),
+                                'feedback': feedbackCtrl.text.trim().isNotEmpty
+                                    ? feedbackCtrl.text.trim()
+                                    : null,
+                                'status': '已批改',
+                              },
+                              where: 'id = ?',
+                              whereArgs: [reportId],
+                            );
+                          }
+                          if (context.mounted) {
+                            Navigator.pop(ctx);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('批改成功！'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                            _loadSubmissions();
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('批改失败: $e')),
+                            );
+                          }
+                        } finally {
+                          if (ctx.mounted) {
+                            setDialogState(() => isGrading = false);
+                          }
+                        }
+                      },
+                icon: isGrading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.check),
+                label: Text(isGrading ? '提交中...' : '提交批改'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Map<String, dynamic>? _tryParseGradingJson(String text) {
+    try {
+      final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(text);
+      if (jsonMatch == null) return null;
+      final jsonStr = jsonMatch.group(0)!;
+      final map = jsonDecode(jsonStr) as Map<String, dynamic>;
+      if (map.containsKey('total_score') ||
+          map.containsKey('score') ||
+          map.containsKey('feedback')) {
+        return map;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
   }
 }
 

@@ -20,6 +20,10 @@ import 'agents/mobile_expert_agent.dart';
 import 'agents/ethics_agent.dart';
 import 'agents/course_gen_agent.dart';
 import 'agents/madkg_agent.dart';
+import 'agents/lab_grading_agent.dart';
+import 'agents/assessment_grading_agent.dart';
+import 'agents/works_grading_agent.dart';
+import 'agents/safety_agent.dart';
 
 /// 智能体注册表 + Director 编排
 ///
@@ -63,6 +67,12 @@ class AgentRegistry {
     _register(EthicsAgent());
     _register(CourseGenAgent());
     _register(MadkgAgent());
+    // 批阅智能体（教师/管理员专用）
+    _register(LabGradingAgent());
+    _register(AssessmentGradingAgent());
+    _register(WorksGradingAgent());
+    // 安全监控智能体（管理员专用）
+    _register(SafetyAgent());
     _register(AssistantAgent()); // 兜底，最后注册
 
     _initialized = true;
@@ -76,6 +86,17 @@ class AgentRegistry {
   /// 获取所有智能体配置（供 UI 显示标签栏）
   List<AgentConfig> get allConfigs =>
       _agents.values.map((a) => a.config).toList();
+
+  /// 获取指定角色可用的智能体配置
+  ///
+  /// [role] 用户角色：'student' / 'teacher' / 'admin'
+  /// admin 可见所有智能体；其他角色按 allowedRoles 过滤。
+  List<AgentConfig> configsForRole(String role) {
+    return _agents.values
+        .map((a) => a.config)
+        .where((c) => c.isAllowedFor(role))
+        .toList();
+  }
 
   /// 获取指定智能体
   BaseAgent? getAgent(String id) => _agents[id];

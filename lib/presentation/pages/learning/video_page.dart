@@ -1,11 +1,10 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../core/constants/chapter_sorter.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../data/local/course_dao.dart';
-import '../../../services/ai_service.dart';
+import '../../../services/courseware_service.dart';
 import '../../../services/file_opener_service.dart';
 import '../../../services/courseware_download_service.dart';
 
@@ -22,7 +21,6 @@ class _VideoListPageState extends State<VideoListPage> {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
   List<Map<String, dynamic>> _videos = [];
   bool _isLoading = true;
-  bool _generatingExtended = false;
   String _resourceMode = 'all'; // 'all', 'preset', 'extended'
 
   @override
@@ -189,120 +187,200 @@ class _VideoListPageState extends State<VideoListPage> {
           ),
           if (_resourceMode == 'extended') ...[
             const SizedBox(height: 20),
-            _generatingExtended
-                ? const Column(
-                    children: [
-                      CircularProgressIndicator(),
-                      SizedBox(height: 8),
-                      Text('AI 正在生成扩展视频主题...',
-                          style: TextStyle(fontSize: 13, color: Colors.purple)),
-                    ],
-                  )
-                : FilledButton.icon(
-                    onPressed: _generateExtendedVideos,
-                    icon: const Icon(Icons.auto_awesome),
-                    label: const Text('AI 生成扩展视频'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.purple,
-                    ),
-                  ),
+            FilledButton.icon(
+              onPressed: _showExtendedVideoDialog,
+              icon: const Icon(Icons.add_circle_outline),
+              label: const Text('生成扩展视频课件'),
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.purple,
+              ),
+            ),
           ],
         ],
       ),
     );
   }
 
-  Future<void> _generateExtendedVideos() async {
-    setState(() => _generatingExtended = true);
+  /// 显示扩展视频生成对话框（实际生成 PDF 课件脚本）
+  Future<void> _showExtendedVideoDialog() async {
+    final topicCtrl = TextEditingController();
 
+    // 获取课程信息
+    String courseName = '移动应用开发';
     try {
-      final aiService = AiService();
-      final db = await _dbHelper.database;
+      final course = await CourseDao().getActiveCourse();
+      if (course != null) courseName = course.name;
+    } catch (_) {}
 
-      // 获取当前课程信息
-      String courseName = '移动应用开发';
-      String chaptersInfo = '';
-      try {
-        final course = await CourseDao().getActiveCourse();
-        if (course != null) {
-          courseName = course.name;
-          chaptersInfo = course.chapters
-              .asMap()
-              .entries
-              .map((e) => '${e.key + 1}. ${e.value}')
-              .join('\n');
-        }
-      } catch (_) {}
+    if (!mounted) return;
 
-      if (chaptersInfo.isEmpty) {
-        chaptersInfo = '1. 第一章\n2. 第二章\n3. 第三章';
-      }
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        bool generating = false;
+        String progress = '';
 
-      final prompt = '''
-基于《$courseName》课程的章节内容，生成5个扩展学习视频主题。
+        return StatefulBuilder(builder: (ctx, setSheetState) {
+          final bottomPadding = MediaQuery.of(ctx).viewInsets.bottom;
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 20, right: 20, top: 16, bottom: bottomPadding + 20,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40, height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[400],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('生成扩展视频课件',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center),
+                  const SizedBox(height: 8),
+                  Text('AI 将生成视频教学脚本 PDF，可通过课件工坊合成视频',
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                      textAlign: TextAlign.center),
+                  const SizedBox(height: 24),
+                  TextField(
+                    controller: topicCtrl,
+                    enabled: !generating,
+                    decoration: InputDecoration(
+                      labelText: '视频主题 *',
+                      hintText: '例如：Flutter 动画系统详解',
+                      prefixIcon: const Icon(Icons.topic),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (progress.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Row(
+                        children: [
+                          if (generating)
+                            const SizedBox(
+                              width: 16, height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          if (generating) const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(progress,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: generating ? Colors.purple : Colors.green,
+                                )),
+                          ),
+                        ],
+                      ),
+                    ),
+                  FilledButton.icon(
+                    icon: generating
+                        ? const SizedBox(
+                            width: 18, height: 18,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.auto_awesome),
+                    label: Text(generating ? '生成中...' : '开始生成'),
+                    onPressed: generating
+                        ? null
+                        : () async {
+                            final topic = topicCtrl.text.trim();
+                            if (topic.isEmpty) {
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                const SnackBar(content: Text('请输入视频主题')),
+                              );
+                              return;
+                            }
 
-课程章节：
-$chaptersInfo
+                            setSheetState(() {
+                              generating = true;
+                              progress = '正在生成教案...';
+                            });
 
-请生成以下JSON格式（直接返回JSON，不要包含其他文字）：
-[
-  {"chapter": "扩展-主题名称", "description": "30字以内的描述"},
-  ...
-]
+                            try {
+                              final coursewareService = CoursewareService();
+                              final db = await _dbHelper.database;
 
-要求：
-- 共5个视频主题
-- 主题应超越课程预设内容，涵盖进阶/实战/前沿方向
-- chapter字段以"扩展-"开头
-- description字段30字以内
-''';
+                              // Step 1: 生成教案
+                              final lessonPlan =
+                                  await coursewareService.generateLessonPlan(
+                                topic: topic,
+                                additionalRequirements:
+                                    '课程：$courseName。请生成适合视频教学的内容，包含演示步骤和代码示例。',
+                              );
+                              setSheetState(() =>
+                                  progress = '正在生成 PDF 讲义...');
 
-      final raw = await aiService.chat(
-        [{'role': 'user', 'content': prompt}],
-        systemPrompt: '你是$courseName课程的教学设计专家，请用中文回复，仅返回合法JSON。',
-      );
+                              // Step 2: 生成 PDF 讲义
+                              final pdfPath =
+                                  await coursewareService.generateEnhancedPdf(
+                                lessonPlan: lessonPlan,
+                              );
 
-      // 提取JSON数组
-      final jsonMatch = RegExp(r'\[[\s\S]*\]').firstMatch(raw);
-      if (jsonMatch == null) throw Exception('AI 返回格式不正确');
+                              if (pdfPath == null) {
+                                throw Exception('PDF 生成失败');
+                              }
 
-      final items = jsonDecode(jsonMatch.group(0)!) as List<dynamic>;
-      final batch = db.batch();
+                              setSheetState(() => progress = '正在保存...');
 
-      for (final item in items) {
-        final chapter = item['chapter'] as String? ?? '扩展视频';
-        final desc = item['description'] as String? ?? '';
-        batch.insert('resource_files', {
-          'file_name': '$chapter.mp4',
-          'file_path': '',
-          'file_type': 'video',
-          'chapter': chapter,
-          'description': desc,
-          'source_type': 'extended',
+                              // Step 3: 保存到 resource_files
+                              final safeName = topic.replaceAll(
+                                  RegExp(r'[/\\:*?"<>|]'), '_');
+                              await db.insert('resource_files', {
+                                'file_name': '扩展-$safeName.mp4',
+                                'file_path': pdfPath,
+                                'file_type': 'video',
+                                'chapter': '扩展-$topic',
+                                'description':
+                                    '${lessonPlan['title'] ?? topic} - 视频讲义',
+                                'source_type': 'extended',
+                              });
+
+                              setSheetState(() {
+                                generating = false;
+                                progress = '视频讲义「$topic」生成完成！';
+                              });
+
+                              await Future.delayed(
+                                  const Duration(milliseconds: 800));
+                              if (ctx.mounted) Navigator.pop(ctx, true);
+                            } catch (e) {
+                              setSheetState(() {
+                                generating = false;
+                                progress = '生成失败：$e';
+                              });
+                            }
+                          },
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
         });
-      }
+      },
+    );
 
-      await batch.commit(noResult: true);
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('扩展视频主题生成成功！'),
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      setState(() => _generatingExtended = false);
+    if (result == true) {
       _loadVideos();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _generatingExtended = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('生成失败：$e'),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
 
@@ -312,11 +390,21 @@ $chaptersInfo
         video['file_name'] as String? ?? '${video['chapter']}.mp4';
     final fileType = video['file_type'] as String? ?? 'video';
     final chapter = video['chapter'] as String? ?? '';
+    final isExtended = video['source_type'] == 'extended';
 
     if (filePath.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('文件路径未设置')),
-      );
+      if (isExtended) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('该扩展视频尚未生成文件，请点击"生成扩展视频课件"按钮创建'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('文件路径未设置')),
+        );
+      }
       return;
     }
 

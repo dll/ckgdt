@@ -47,7 +47,23 @@ class UserDao {
       whereArgs: ['teacher', 'admin'],
       orderBy: 'real_name',
     );
-    return maps.map((map) => UserModel.fromMap(map)).toList();
+    final all = maps.map((map) => UserModel.fromMap(map)).toList();
+
+    // 去重：如果同一 real_name 对应多条记录（如 teacher_206004 和 206004），
+    // 优先保留不带 teacher_ 前缀的记录
+    final seen = <String, UserModel>{};
+    for (final t in all) {
+      final key = t.realName ?? t.userId;
+      if (seen.containsKey(key)) {
+        // 保留不带 teacher_ 前缀的那个
+        if (seen[key]!.userId.startsWith('teacher_')) {
+          seen[key] = t;
+        }
+      } else {
+        seen[key] = t;
+      }
+    }
+    return seen.values.toList();
   }
 
   Future<bool> createUser(UserModel user) async {

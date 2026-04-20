@@ -83,6 +83,52 @@ class _ClassManagePageState extends State<ClassManagePage>
   }
 
   // ─────────────────────────────────────────────────────────────────────────
+  // Reclassify Students
+  // ─────────────────────────────────────────────────────────────────────────
+
+  Future<void> _showReclassifyDialog() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('重新分班'),
+        content: const Text(
+          '将清除当前所有班级数据，根据学生名单中的班级字段重新自动分班。\n\n'
+          '此操作不可撤销，确定继续吗？',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('确定重新分班'),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      setState(() => _isLoading = true);
+      try {
+        await _classDao.reclassifyStudents();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('重新分班完成')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('分班失败: $e')),
+          );
+        }
+      }
+      await _loadData();
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
   // Build
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -93,6 +139,11 @@ class _ClassManagePageState extends State<ClassManagePage>
       appBar: AppBar(
         title: const Text('班级管理'),
         actions: [
+          TextButton.icon(
+            icon: const Icon(Icons.auto_fix_high, size: 18),
+            label: const Text('重新分班'),
+            onPressed: _showReclassifyDialog,
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: '刷新',
@@ -695,7 +746,7 @@ class _ClassManagePageState extends State<ClassManagePage>
   // ─────────────────────────────────────────────────────────────────────────
 
   Future<void> _showCreateClassDialog() async {
-    final result = await showDialog<Map<String, String>>(
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (ctx) => const _ClassFormDialog(title: '新建班级'),
     );
@@ -703,11 +754,11 @@ class _ClassManagePageState extends State<ClassManagePage>
     if (result != null) {
       try {
         await _classDao.createClass(
-          name: result['name']!,
-          semester: result['semester'],
-          teacherId: result['teacherId'],
-          teacherName: result['teacherName'],
-          description: result['description'],
+          name: result['name'] as String,
+          semester: result['semester'] as String?,
+          teacherId: result['teacherId'] as String?,
+          teacherName: result['teacherName'] as String?,
+          description: result['description'] as String?,
         );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -733,7 +784,7 @@ class _ClassManagePageState extends State<ClassManagePage>
     final cls = await _classDao.getClass(classId);
     if (cls == null || !mounted) return;
 
-    final result = await showDialog<Map<String, String>>(
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (ctx) => _ClassFormDialog(
         title: '编辑班级',

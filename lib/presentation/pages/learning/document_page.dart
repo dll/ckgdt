@@ -1,11 +1,10 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../core/constants/chapter_sorter.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../data/local/course_dao.dart';
-import '../../../services/ai_service.dart';
+import '../../../services/courseware_service.dart';
 import '../../../services/file_opener_service.dart';
 import '../../../services/courseware_download_service.dart';
 
@@ -24,7 +23,6 @@ class _DocumentListPageState extends State<DocumentListPage>
   List<Map<String, dynamic>> _pdfs = [];
   List<Map<String, dynamic>> _ppts = [];
   bool _isLoading = true;
-  bool _generatingExtended = false;
   String _resourceMode = 'all'; // 'all', 'preset', 'extended'
 
   @override
@@ -165,23 +163,14 @@ class _DocumentListPageState extends State<DocumentListPage>
             ),
             if (_resourceMode == 'extended') ...[
               const SizedBox(height: 20),
-              _generatingExtended
-                  ? const Column(
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 8),
-                        Text('AI 正在生成扩展课件主题...',
-                            style: TextStyle(fontSize: 13, color: Colors.purple)),
-                      ],
-                    )
-                  : FilledButton.icon(
-                      onPressed: _generateExtendedDocuments,
-                      icon: const Icon(Icons.auto_awesome),
-                      label: const Text('AI 生成扩展课件'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.purple,
-                      ),
-                    ),
+              FilledButton.icon(
+                onPressed: () => _showExtendedGenerateDialog(type),
+                icon: const Icon(Icons.add_circle_outline),
+                label: const Text('生成扩展课件'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.purple,
+                ),
+              ),
             ],
           ],
         ),
@@ -227,106 +216,217 @@ class _DocumentListPageState extends State<DocumentListPage>
     );
   }
 
-  Future<void> _generateExtendedDocuments() async {
-    setState(() => _generatingExtended = true);
+  /// 显示扩展课件生成对话框
+  Future<void> _showExtendedGenerateDialog(String docType) async {
+    final topicCtrl = TextEditingController();
+    final extraCtrl = TextEditingController();
 
+    // 获取课程信息
+    String courseName = '移动应用开发';
     try {
-      final aiService = AiService();
-      final db = await _dbHelper.database;
-
-      // 获取当前课程信息
-      String courseName = '移动应用开发';
-      String chaptersInfo = '';
-      try {
-        final course = await CourseDao().getActiveCourse();
-        if (course != null) {
-          courseName = course.name;
-          chaptersInfo = course.chapters
-              .asMap()
-              .entries
-              .map((e) => '${e.key + 1}. ${e.value}')
-              .join('\n');
-        }
-      } catch (_) {}
-
-      if (chaptersInfo.isEmpty) {
-        chaptersInfo = '1. 第一章\n2. 第二章\n3. 第三章';
+      final course = await CourseDao().getActiveCourse();
+      if (course != null) {
+        courseName = course.name;
       }
+    } catch (_) {}
 
-      final prompt = '''
-基于《$courseName》课程的章节内容，为 PDF 和 PPT 各生成5个扩展学习主题。
+    if (!mounted) return;
 
-课程章节：
-$chaptersInfo
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        bool generating = false;
+        String progress = '';
 
-请生成以下JSON格式（直接返回JSON，不要包含其他文字）：
-{
-  "pdf": [
-    {"chapter": "扩展-主题名称", "description": "30字以内的描述"},
-    ...
-  ],
-  "ppt": [
-    {"chapter": "扩展-主题名称", "description": "30字以内的描述"},
-    ...
-  ]
-}
+        return StatefulBuilder(builder: (ctx, setSheetState) {
+          final bottomPadding = MediaQuery.of(ctx).viewInsets.bottom;
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 20, right: 20, top: 16, bottom: bottomPadding + 20,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40, height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[400],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text('生成扩展${docType == 'PDF' ? 'PDF' : 'PPT'}课件',
+                      style: const TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center),
+                  const SizedBox(height: 8),
+                  Text('AI 将根据您的需求生成实际的课件文件',
+                      style: TextStyle(
+                          fontSize: 13, color: Colors.grey[600]),
+                      textAlign: TextAlign.center),
+                  const SizedBox(height: 24),
+                  TextField(
+                    controller: topicCtrl,
+                    enabled: !generating,
+                    decoration: InputDecoration(
+                      labelText: '课件主题 *',
+                      hintText: '例如：Flutter 状态管理最佳实践',
+                      prefixIcon: const Icon(Icons.topic),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: extraCtrl,
+                    maxLines: 3,
+                    enabled: !generating,
+                    decoration: InputDecoration(
+                      labelText: '额外要求（可选）',
+                      hintText: '例如：侧重实战案例，包含代码示例...',
+                      prefixIcon: const Padding(
+                        padding: EdgeInsets.only(bottom: 40),
+                        child: Icon(Icons.edit_note),
+                      ),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (progress.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Row(
+                        children: [
+                          if (generating)
+                            const SizedBox(
+                              width: 16, height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          if (generating) const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(progress,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: generating
+                                      ? Colors.purple
+                                      : Colors.green,
+                                )),
+                          ),
+                        ],
+                      ),
+                    ),
+                  FilledButton.icon(
+                    icon: generating
+                        ? const SizedBox(
+                            width: 18, height: 18,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.auto_awesome),
+                    label: Text(generating ? '生成中...' : '开始生成'),
+                    onPressed: generating
+                        ? null
+                        : () async {
+                            final topic = topicCtrl.text.trim();
+                            if (topic.isEmpty) {
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                const SnackBar(
+                                    content: Text('请输入课件主题')),
+                              );
+                              return;
+                            }
 
-要求：
-- PDF 和 PPT 各5个，合计10个
-- 主题应超越课程预设内容，涵盖进阶/实战/前沿方向
-- chapter字段以"扩展-"开头
-- description字段30字以内
-''';
+                            setSheetState(() {
+                              generating = true;
+                              progress = '正在生成教案...';
+                            });
 
-      final raw = await aiService.chat(
-        [{'role': 'user', 'content': prompt}],
-        systemPrompt: '你是$courseName课程的教学设计专家，请用中文回复，仅返回合法JSON。',
-      );
+                            try {
+                              final extra = extraCtrl.text.trim();
+                              final coursewareService = CoursewareService();
+                              final db = await _dbHelper.database;
 
-      final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(raw);
-      if (jsonMatch == null) throw Exception('AI 返回格式不正确');
+                              // Step 1: 生成教案
+                              final lessonPlan =
+                                  await coursewareService.generateLessonPlan(
+                                topic: topic,
+                                additionalRequirements: extra.isNotEmpty
+                                    ? '课程：$courseName。$extra'
+                                    : '课程：$courseName。请确保内容专业、实用。',
+                              );
+                              setSheetState(() =>
+                                  progress = '正在生成 PDF 课件...');
 
-      final data = jsonDecode(jsonMatch.group(0)!) as Map<String, dynamic>;
-      final batch = db.batch();
+                              // Step 2: 生成 PDF
+                              final pdfPath =
+                                  await coursewareService.generateEnhancedPdf(
+                                lessonPlan: lessonPlan,
+                              );
 
-      for (final type in ['pdf', 'ppt']) {
-        final items = data[type] as List<dynamic>? ?? [];
-        for (final item in items) {
-          final chapter = item['chapter'] as String? ?? '扩展课件';
-          final desc = item['description'] as String? ?? '';
-          final ext = type == 'ppt' ? 'pptx' : 'pdf';
-          batch.insert('resource_files', {
-            'file_name': '$chapter.$ext',
-            'file_path': '',
-            'file_type': type,
-            'chapter': chapter,
-            'description': desc,
-            'source_type': 'extended',
-          });
-        }
-      }
+                              if (pdfPath == null) {
+                                throw Exception('PDF 生成失败');
+                              }
 
-      await batch.commit(noResult: true);
+                              setSheetState(() =>
+                                  progress = '正在保存到资源库...');
 
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('扩展课件主题生成成功！'),
-          backgroundColor: Colors.green,
-        ),
-      );
+                              // Step 3: 保存到 resource_files
+                              final safeName = topic.replaceAll(
+                                  RegExp(r'[/\\:*?"<>|]'), '_');
+                              final fileType =
+                                  docType == 'PPT' ? 'ppt' : 'pdf';
+                              final ext =
+                                  docType == 'PPT' ? 'pptx' : 'pdf';
+                              await db.insert('resource_files', {
+                                'file_name': '扩展-$safeName.$ext',
+                                'file_path': pdfPath,
+                                'file_type': fileType,
+                                'chapter': '扩展-$topic',
+                                'description':
+                                    '${lessonPlan['objectives']?.take(2).join('；') ?? topic}',
+                                'source_type': 'extended',
+                              });
 
-      setState(() => _generatingExtended = false);
+                              setSheetState(() {
+                                generating = false;
+                                progress = '课件「$topic」生成完成！';
+                              });
+
+                              await Future.delayed(
+                                  const Duration(milliseconds: 800));
+                              if (ctx.mounted) Navigator.pop(ctx, true);
+                            } catch (e) {
+                              setSheetState(() {
+                                generating = false;
+                                progress = '生成失败：$e';
+                              });
+                            }
+                          },
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        });
+      },
+    );
+
+    if (result == true) {
       _loadDocuments();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _generatingExtended = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('生成失败：$e'),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
 
@@ -335,11 +435,21 @@ $chaptersInfo
     final fileName = doc['file_name'] as String? ?? '';
     final fileType = doc['file_type'] as String? ?? '';
     final chapter = doc['chapter'] as String? ?? '';
+    final isExtended = doc['source_type'] == 'extended';
 
     if (filePath.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('文件路径未设置')),
-      );
+      if (isExtended) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('该扩展课件尚未生成文件，请点击"生成扩展课件"按钮创建'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('文件路径未设置')),
+        );
+      }
       return;
     }
 

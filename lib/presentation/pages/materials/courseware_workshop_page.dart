@@ -4,8 +4,10 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import '../../../services/courseware_service.dart';
+import '../../../services/ai_service.dart';
 import '../../../services/tts_service.dart';
 import '../../../services/video_service.dart';
 import '../../../data/local/ai_config_dao.dart';
@@ -40,6 +42,10 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
   int _classHours = 2;
   bool _generatingPlan = false;
   Map<String, dynamic>? _lessonPlan;
+  bool _reviewingPlan = false;         // 教案审核中
+  String? _planReviewResult;           // 教案审核结果
+  int? _planReviewScore;               // 教案审核分数
+  bool _applyingFix = false;           // AI 自动修改中
 
   // ── Step 2: 内容 ──
   String? _markdownContent;
@@ -49,6 +55,11 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
 
   // ── MD 导入 ──
   String? _importedMdPath;
+  String? _rawMdContent;              // 原始 MD 文本（可编辑）
+  final _mdEditCtrl = TextEditingController();
+  bool _mdEditing = false;            // 是否处于编辑模式
+  bool _aiReviewing = false;          // AI 审核中
+  String? _aiReviewResult;            // AI 审核建议
   List<Map<String, dynamic>> _parsedSlides = [];
   bool _fromMdImport = false; // 标记是否从 MD 导入模式
 
@@ -104,6 +115,7 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
   void dispose() {
     _topicCtrl.dispose();
     _extraReqCtrl.dispose();
+    _mdEditCtrl.dispose();
     super.dispose();
   }
 
@@ -207,7 +219,7 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── 文件选择 ──
+          // ── 文件选择 + 模板下载 ──
           Card(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
@@ -227,6 +239,12 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                         onPressed: _mdGeneratingAll ? null : _doPickMdFile,
                         icon: const Icon(Icons.folder_open),
                         label: const Text('选择 MD 文件'),
+                      ),
+                      const SizedBox(width: 12),
+                      OutlinedButton.icon(
+                        onPressed: _mdGeneratingAll ? null : _doDownloadTemplate,
+                        icon: const Icon(Icons.download, size: 18),
+                        label: const Text('下载模板'),
                       ),
                       const SizedBox(width: 12),
                       if (_importedMdPath != null)
@@ -251,6 +269,214 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
             ),
           ),
           const SizedBox(height: 16),
+
+          // ── MD 内容预览/编辑 ──
+          if (_rawMdContent != null) ...[
+            Card(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.edit_document, color: Colors.indigo[700]),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text('MD 内容预览与编辑',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        ),
+                        // 编辑/预览切换
+                        TextButton.icon(
+                          onPressed: _mdGeneratingAll ? null : () {
+                            if (_mdEditing) {
+                              // 保存编辑
+                              setState(() {
+                                _rawMdContent = _mdEditCtrl.text;
+                                _mdEditing = false;
+                              });
+                              _reparseCurrentMd();
+                            } else {
+                              setState(() {
+                                _mdEditCtrl.text = _rawMdContent!;
+                                _mdEditing = true;
+                              });
+                            }
+                          },
+                          icon: Icon(_mdEditing ? Icons.check : Icons.edit, size: 18),
+                          label: Text(_mdEditing ? '保存' : '编辑'),
+                        ),
+                        // AI 审核按钮
+                        TextButton.icon(
+                          onPressed: (_mdGeneratingAll || _aiReviewing)
+                              ? null
+                              : _doAiReview,
+                          icon: _aiReviewing
+                              ? const SizedBox(
+                                  width: 16, height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.rate_review, size: 18),
+                          label: Text(_aiReviewing ? '审核中...' : 'AI 审核'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      constraints: const BoxConstraints(maxHeight: 400),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(8),
+                        color: _mdEditing ? Colors.white : Colors.grey.shade50,
+                      ),
+                      child: _mdEditing
+                          ? TextField(
+                              controller: _mdEditCtrl,
+                              maxLines: null,
+                              style: const TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 13,
+                                height: 1.5,
+                              ),
+                              decoration: const InputDecoration(
+                                contentPadding: EdgeInsets.all(12),
+                                border: InputBorder.none,
+                                hintText: '在此编辑 Markdown 内容...',
+                              ),
+                            )
+                          : SingleChildScrollView(
+                              padding: const EdgeInsets.all(12),
+                              child: SelectableText(
+                                _rawMdContent!,
+                                style: const TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontSize: 13,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ),
+                    ),
+                    if (_mdEditing) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        '${_mdEditCtrl.text.length} 字  |  编辑后点击"保存"重新解析幻灯片',
+                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // ── AI 审核结果 ──
+          if (_aiReviewResult != null) ...[
+            Builder(builder: (_) {
+              // 解析分数
+              final scoreMatch =
+                  RegExp(r'评分[：:]\s*(\d+)\s*/\s*100').firstMatch(_aiReviewResult!);
+              final score =
+                  scoreMatch != null ? int.tryParse(scoreMatch.group(1)!) : null;
+              final scoreColor = score != null
+                  ? (score >= 90
+                      ? Colors.green
+                      : score >= 80
+                          ? Colors.orange
+                          : Colors.red)
+                  : Colors.amber;
+
+              return Card(
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                color: score != null && score >= 90
+                    ? Colors.green.shade50
+                    : Colors.amber.shade50,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.lightbulb, color: scoreColor),
+                          const SizedBox(width: 8),
+                          const Text('AI 审核',
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold)),
+                          if (score != null) ...[
+                            const SizedBox(width: 12),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: scoreColor.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                    color: scoreColor.withValues(alpha: 0.3)),
+                              ),
+                              child: Text(
+                                '$score 分',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: scoreColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                          const Spacer(),
+                          IconButton(
+                            icon: const Icon(Icons.close, size: 18),
+                            onPressed: () =>
+                                setState(() => _aiReviewResult = null),
+                          ),
+                        ],
+                      ),
+                      const Divider(),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 200),
+                        child: SingleChildScrollView(
+                          child: SelectableText(
+                            _aiReviewResult!,
+                            style:
+                                const TextStyle(fontSize: 13, height: 1.6),
+                          ),
+                        ),
+                      ),
+                      if (score == null || score < 90) ...[
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: _aiReviewing
+                                  ? null
+                                  : () => _doAiAutoFixMd(),
+                              icon: const Icon(Icons.auto_fix_high, size: 18),
+                              label: const Text('AI 自动修改'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            OutlinedButton.icon(
+                              onPressed:
+                                  _aiReviewing ? null : () => _doAiReview(),
+                              icon: const Icon(Icons.refresh, size: 18),
+                              label: const Text('重新审核'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            }),
+            const SizedBox(height: 16),
+          ],
 
           // ── 解析结果预览 ──
           if (_parsedSlides.isNotEmpty) ...[
@@ -593,24 +819,51 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
       _pptxPath = null;
       _pdfPath = null;
       _mdPublished = false;
+      _rawMdContent = null;
+      _aiReviewResult = null;
+      _mdEditing = false;
     });
 
-    // 解析 MD 文件
+    // 读取原始内容
     try {
-      final slides = await _coursewareService.parseMdFile(path);
+      final rawContent = await File(path).readAsString();
+      setState(() {
+        _rawMdContent = rawContent;
+        _mdEditCtrl.text = rawContent;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('读取文件失败: $e')),
+        );
+      }
+      return;
+    }
+
+    // 解析 MD 文件
+    await _reparseCurrentMd();
+  }
+
+  /// 重新解析当前 MD 内容（编辑后或首次导入时）
+  Future<void> _reparseCurrentMd() async {
+    final content = _rawMdContent;
+    if (content == null || content.trim().isEmpty) return;
+
+    try {
+      final slides = _coursewareService.parseMarkdownToSlides(content);
       if (!mounted) return;
       setState(() => _parsedSlides = slides);
 
       if (slides.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('⚠️ 未解析到幻灯片内容，请检查 MD 格式'),
+              content: Text('未解析到幻灯片内容，请检查 MD 格式'),
               backgroundColor: Colors.orange),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('✅ 成功解析 ${slides.length} 张幻灯片'),
+              content: Text('成功解析 ${slides.length} 张幻灯片'),
               backgroundColor: Colors.green),
         );
       }
@@ -620,6 +873,230 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
           SnackBar(content: Text('解析失败: $e')),
         );
       }
+    }
+  }
+
+  /// AI 审核 MD 内容
+  Future<void> _doAiReview() async {
+    final content = _rawMdContent;
+    if (content == null || content.trim().isEmpty) return;
+
+    setState(() {
+      _aiReviewing = true;
+      _aiReviewResult = null;
+    });
+
+    try {
+      final aiService = (await _configDao.getConfig()) != null
+          ? _coursewareService
+          : null;
+
+      if (aiService == null) {
+        setState(() {
+          _aiReviewing = false;
+          _aiReviewResult = '未配置 AI 服务，无法审核';
+        });
+        return;
+      }
+
+      // 使用 AiService 进行审核
+      final AiService ai = AiService();
+      final review = await ai.chat(
+        [{'role': 'user', 'content': content}],
+        systemPrompt: '''你是一位课件质量审核专家。请对以下 Markdown 课件内容进行评审，从以下维度给出具体修改建议：
+
+1. **结构完整性**：是否包含封面、目录、各章节、总结等必要部分
+2. **内容质量**：知识点是否准确、是否有遗漏、深度是否足够
+3. **教学设计**：是否符合教学规律（导入→讲授→练习→总结）
+4. **格式规范**：标题层级是否正确、代码块是否标注语言、列表是否统一
+5. **幻灯片拆分**：是否按 "### 幻灯片N：标题" 格式正确拆分，每页内容量是否合适（建议每页 4-6 个要点）
+
+请用中文回复，给出评分（满分100）和具体修改建议。格式：
+## 评分：XX/100
+## 优点
+- ...
+## 需改进
+- ...
+## 具体修改建议
+1. ...''',
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _aiReviewing = false;
+        _aiReviewResult = review;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _aiReviewing = false;
+        _aiReviewResult = '审核失败: $e';
+      });
+    }
+  }
+
+  /// AI 根据审核建议自动修改 MD 内容
+  Future<void> _doAiAutoFixMd() async {
+    final content = _rawMdContent;
+    if (content == null || _aiReviewResult == null) return;
+
+    setState(() => _aiReviewing = true);
+
+    try {
+      final ai = AiService();
+      final fixed = await ai.chat(
+        [
+          {
+            'role': 'user',
+            'content': '原始课件 MD:\n$content\n\n审核建议:\n$_aiReviewResult',
+          },
+        ],
+        systemPrompt: '''你是一位课件制作专家。根据审核建议修改 Markdown 课件内容。
+
+要求：
+1. 严格按照审核建议逐条修改
+2. 保持 "### 幻灯片N：标题" 的格式不变
+3. 每张幻灯片保持 4-6 个要点
+4. 保留代码块和表格等已有内容
+5. 修改后直接返回完整的 Markdown 内容，不要包含任何解释''',
+      );
+
+      if (!mounted) return;
+
+      // 更新 MD 内容
+      setState(() {
+        _rawMdContent = fixed;
+        _mdEditCtrl.text = fixed;
+        _aiReviewing = false;
+        _aiReviewResult = null;
+      });
+
+      // 重新解析幻灯片
+      _reparseCurrentMd();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('✅ MD 内容已修改，请检查后重新审核'),
+              backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _aiReviewing = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('自动修改失败: $e')),
+        );
+      }
+    }
+  }
+
+  /// 下载 MD 课件模板
+  Future<void> _doDownloadTemplate() async {
+    const template = '''# 课程名称
+> 授课教师：XXX | 适用对象：XX专业本科生
+
+### 幻灯片1：课程导入
+- 本节课的学习目标
+- 预备知识回顾
+- 本节内容概览
+
+> 备注：用 1-2 分钟引入话题，激发学习兴趣
+
+### 幻灯片2：核心概念
+**副标题：基本定义与原理**
+- 概念定义：XXX 是指...
+- 核心原理：...
+- 与相关概念的区别
+
+> 备注：重点讲解，配合板书或演示
+
+### 幻灯片3：技术架构
+**副标题：系统组成与工作流程**
+- 【模块一】功能描述
+- 【模块二】功能描述
+- 模块间的协作关系
+
+| 组件 | 职责 | 技术选型 |
+|------|------|---------|
+| 前端 | UI展示 | Flutter |
+| 后端 | 业务逻辑 | Spring Boot |
+
+### 幻灯片4：代码演示
+**副标题：实战代码讲解**
+- 代码功能说明
+- 关键实现要点
+
+```dart
+// 示例代码
+class Example {
+  void run() {
+    print('Hello, World!');
+  }
+}
+```
+
+> 备注：逐行讲解代码逻辑，强调最佳实践
+
+### 幻灯片5：对比分析
+**副标题：方案优劣比较**
+- 方案 A 的优势与不足
+- 方案 B 的优势与不足
+- 推荐选择依据
+
+| 维度 | 方案A | 方案B |
+|------|-------|-------|
+| 性能 | 高 | 中 |
+| 易用性 | 中 | 高 |
+| 生态 | 丰富 | 一般 |
+
+### 幻灯片6：实验环节
+**副标题：动手实践**
+- 实验目标：...
+- 实验步骤：
+  1. 环境准备
+  2. 代码编写
+  3. 运行测试
+- 预期结果：...
+
+> 备注：给学生 10-15 分钟完成实验
+
+### 幻灯片7：课程总结
+- 本节重点回顾
+- 常见问题解答
+- 课后作业布置
+- 下节课预告
+
+> 备注：总结时强调核心考点
+''';
+
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final templateDir = Directory('${dir.path}/courseware/templates');
+      if (!templateDir.existsSync()) {
+        templateDir.createSync(recursive: true);
+      }
+      final filePath = '${templateDir.path}/课件模板.md';
+      await File(filePath).writeAsString(template);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('模板已保存: $filePath'),
+          backgroundColor: Colors.green,
+          action: SnackBarAction(
+            label: '打开',
+            textColor: Colors.white,
+            onPressed: () => OpenFilex.open(filePath),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('模板保存失败: $e')),
+      );
     }
   }
 
@@ -1017,7 +1494,8 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
   }
 
   /// 为每张幻灯片生成旁白脚本（用于 TTS）
-  /// 原则：精炼、直讲内容、不说"副标题是"/"其次是"等冗余过渡
+  /// 原则：忠实于 MD 原文内容，优先使用 notes 备注作为讲解词，
+  /// 无 notes 时从要点内容组织自然语言旁白
   List<Map<String, String>> _buildNarrationTexts(String courseTitle) {
     final scripts = <Map<String, String>>[];
 
@@ -1038,43 +1516,58 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
 
       final buf = StringBuffer();
 
-      // 直接引入主题，不用"首先/其次/接下来"
-      buf.write('$title。');
-
-      // 副标题作为补充说明（不说"副标题是"）
-      if (subtitle.isNotEmpty) {
-        buf.write('$subtitle。');
-      }
-
-      // 提取非表格、非标签的要点
-      final mainPoints = <String>[];
-      final subSections = <String>[];
-      for (final b in bullets) {
-        final text = b.toString();
-        if (text.startsWith('|')) continue;
-        if (text.startsWith('【') && text.endsWith('】')) {
-          subSections.add(text.replaceAll('【', '').replaceAll('】', ''));
-          continue;
+      // 如果有备注（notes），优先用备注作为讲解词（教师手动写的讲稿）
+      if (notes.isNotEmpty && notes.length > 10) {
+        buf.write('$title。');
+        if (subtitle.isNotEmpty) buf.write('$subtitle。');
+        buf.write(notes);
+        if (!notes.endsWith('。') && !notes.endsWith('！') && !notes.endsWith('？')) {
+          buf.write('。');
         }
-        final cleaned = text
-            .replaceAll(RegExp(r'^  · '), '')
-            .replaceAll(RegExp(r'^\d+\.\s*'), '')
-            .replaceAll(RegExp(r'^• '), '');
-        if (cleaned.length > 2) {
-          mainPoints.add(cleaned);
+      } else {
+        // 无备注时从幻灯片内容组织旁白
+        buf.write('$title。');
+        if (subtitle.isNotEmpty) {
+          buf.write('$subtitle。');
         }
-      }
 
-      // 子章节概括
-      if (subSections.isNotEmpty) {
-        buf.write('涵盖${subSections.join("、")}。');
-      }
+        // 收集所有文字要点（跳过表格行）
+        final mainPoints = <String>[];
+        final subSections = <String>[];
+        for (final b in bullets) {
+          final text = b.toString();
+          if (text.startsWith('|')) continue; // 跳过表格
+          if (text.startsWith('【') && text.endsWith('】')) {
+            subSections.add(text.replaceAll('【', '').replaceAll('】', ''));
+            continue;
+          }
+          final cleaned = text
+              .replaceAll(RegExp(r'^  · '), '')
+              .replaceAll(RegExp(r'^\d+\.\s*'), '')
+              .replaceAll(RegExp(r'^[•\-]\s*'), '')
+              .replaceAll(RegExp(r'^\*\*(.+?)\*\*'), r'$1')
+              .trim();
+          if (cleaned.length > 2) {
+            mainPoints.add(cleaned);
+          }
+        }
 
-      // 要点直接陈述（取前4个），用逗号连接
-      final pointsToNarrate = mainPoints.take(4).toList();
-      if (pointsToNarrate.isNotEmpty) {
-        buf.write(pointsToNarrate.join('；'));
-        buf.write('。');
+        // 子章节概括
+        if (subSections.isNotEmpty) {
+          buf.write('涵盖${subSections.join("、")}。');
+        }
+
+        // 所有要点自然串联（限制总长度不超过300字，避免单页旁白过长）
+        if (mainPoints.isNotEmpty) {
+          final joined = mainPoints.join('；');
+          if (joined.length <= 300) {
+            buf.write(joined);
+          } else {
+            // 超长时取前部分并截断
+            buf.write(joined.substring(0, 300));
+          }
+          if (!joined.endsWith('。')) buf.write('。');
+        }
       }
 
       if (code.isNotEmpty) {
@@ -1084,10 +1577,6 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
       final hasTable = bullets.any((b) => b.toString().startsWith('|'));
       if (hasTable) {
         buf.write('请参考表格中的对比分析。');
-      }
-
-      if (notes.isNotEmpty && notes.length > 5) {
-        buf.write(notes);
       }
 
       scripts.add({
@@ -1380,6 +1869,8 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
           if (_lessonPlan != null) ...[
             const SizedBox(height: 16),
             _buildLessonPlanPreview(),
+            const SizedBox(height: 12),
+            _buildPlanReviewSection(),
           ],
         ],
       ),
@@ -1441,6 +1932,195 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                   child: Text('• ${(e as Map)['name']}',
                       style: const TextStyle(fontSize: 13)),
                 ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 教案 AI 审核区域
+  Widget _buildPlanReviewSection() {
+    // 审核中
+    if (_reviewingPlan) {
+      return Card(
+        color: Colors.blue.shade50,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: const Padding(
+          padding: EdgeInsets.all(16),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              SizedBox(width: 12),
+              Text('AI 正在审核教案质量...'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // 修改中
+    if (_applyingFix) {
+      return Card(
+        color: Colors.orange.shade50,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: const Padding(
+          padding: EdgeInsets.all(16),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              SizedBox(width: 12),
+              Text('AI 正在根据建议修改教案...'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // 无审核结果
+    if (_planReviewResult == null) {
+      return OutlinedButton.icon(
+        onPressed: _doReviewPlan,
+        icon: const Icon(Icons.rate_review, size: 18),
+        label: const Text('AI 审核教案'),
+      );
+    }
+
+    // 显示审核结果
+    final score = _planReviewScore;
+    final Color scoreColor;
+    final String scoreLabel;
+    if (score != null) {
+      if (score >= 90) {
+        scoreColor = Colors.green;
+        scoreLabel = '优秀';
+      } else if (score >= 80) {
+        scoreColor = Colors.orange;
+        scoreLabel = '良好（建议修改）';
+      } else if (score >= 60) {
+        scoreColor = Colors.deepOrange;
+        scoreLabel = '一般（需要修改）';
+      } else {
+        scoreColor = Colors.red;
+        scoreLabel = '较差（建议重新生成）';
+      }
+    } else {
+      scoreColor = Colors.grey;
+      scoreLabel = '';
+    }
+
+    return Card(
+      color: score != null && score >= 90
+          ? Colors.green.shade50
+          : Colors.amber.shade50,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 标题 + 分数
+            Row(
+              children: [
+                Icon(
+                  score != null && score >= 90
+                      ? Icons.check_circle
+                      : Icons.lightbulb,
+                  color: scoreColor,
+                ),
+                const SizedBox(width: 8),
+                const Text('AI 审核',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                if (score != null) ...[
+                  const SizedBox(width: 12),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: scoreColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: scoreColor.withValues(alpha: 0.3)),
+                    ),
+                    child: Text(
+                      '$score 分 · $scoreLabel',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: scoreColor,
+                      ),
+                    ),
+                  ),
+                ],
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 18),
+                  onPressed: () => setState(() {
+                    _planReviewResult = null;
+                    _planReviewScore = null;
+                  }),
+                ),
+              ],
+            ),
+            const Divider(),
+
+            // 审核内容（可折叠）
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 200),
+              child: SingleChildScrollView(
+                child: SelectableText(
+                  _planReviewResult!,
+                  style: const TextStyle(fontSize: 13, height: 1.6),
+                ),
+              ),
+            ),
+
+            // 操作按钮（分数不满分时显示）
+            if (score == null || score < 90) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _applyingFix ? null : _doApplyReviewFix,
+                      icon: const Icon(Icons.auto_fix_high, size: 18),
+                      label: const Text('AI 自动修改'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _generatingPlan ? null : _doGeneratePlan,
+                      icon: const Icon(Icons.refresh, size: 18),
+                      label: const Text('重新生成教案'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
+            // 满分直接提示
+            if (score != null && score >= 90) ...[
+              const SizedBox(height: 8),
+              Text(
+                '教案质量优秀，可以点击"下一步"继续生成内容。',
+                style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.green.shade700,
+                    fontWeight: FontWeight.w500),
+              ),
             ],
           ],
         ),
@@ -2325,20 +3005,152 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
         _narrationScripts = [];
         _audioPaths = [];
         _videoPath = null;
+        _planReviewResult = null;
+        _planReviewScore = null;
       });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('✅ 教案生成成功'),
+              content: Text('✅ 教案生成成功，正在进行AI审核...'),
               backgroundColor: Colors.green),
         );
       }
+
+      // 自动审核教案
+      await _doReviewPlan();
     } catch (e) {
       setState(() => _generatingPlan = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('教案生成失败: $e')),
+        );
+      }
+    }
+  }
+
+  /// 审核教案质量
+  Future<void> _doReviewPlan() async {
+    if (_lessonPlan == null) return;
+    setState(() {
+      _reviewingPlan = true;
+      _planReviewResult = null;
+      _planReviewScore = null;
+    });
+
+    try {
+      final ai = AiService();
+      final planJson = jsonEncode(_lessonPlan);
+      final review = await ai.chat(
+        [{'role': 'user', 'content': planJson}],
+        systemPrompt: '''你是一位课程设计审核专家。请对以下教案 JSON 进行评审，从以下维度给出分数和建议：
+
+1. **教学目标**：是否明确、可衡量、符合布鲁姆认知层次
+2. **教学内容**：知识点是否全面、准确、深度适当
+3. **教学设计**：环节衔接是否流畅（导入→讲授→练习→总结）
+4. **时间分配**：各环节时间是否合理
+5. **实验设计**：实验步骤是否可操作、目标是否明确
+
+请严格按以下格式回复（不要修改格式）：
+## 评分：XX/100
+## 优点
+- ...
+## 需改进
+- ...
+## 具体修改建议
+1. ...''',
+      );
+
+      // 解析分数
+      int? score;
+      final scoreMatch = RegExp(r'评分[：:]\s*(\d+)\s*/\s*100').firstMatch(review);
+      if (scoreMatch != null) {
+        score = int.tryParse(scoreMatch.group(1)!);
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _reviewingPlan = false;
+        _planReviewResult = review;
+        _planReviewScore = score;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _reviewingPlan = false;
+        _planReviewResult = '审核失败: $e';
+      });
+    }
+  }
+
+  /// AI 根据审核建议自动修改教案
+  Future<void> _doApplyReviewFix() async {
+    if (_lessonPlan == null || _planReviewResult == null) return;
+
+    setState(() => _applyingFix = true);
+
+    try {
+      final ai = AiService();
+      final response = await ai.chat(
+        [
+          {
+            'role': 'user',
+            'content': '原始教案:\n${jsonEncode(_lessonPlan)}\n\n审核建议:\n$_planReviewResult'
+          },
+        ],
+        systemPrompt: '''你是一位课程设计专家。根据审核建议修改教案。
+
+要求：
+1. 严格按照审核建议逐条修改
+2. 保持原有教案的 JSON 结构不变
+3. 只修改需要改进的部分，保留优秀的内容
+4. 必须返回完整的修改后教案 JSON
+
+请直接返回修改后的完整 JSON，不要包含任何解释文字，不要使用 markdown 代码块。''',
+      );
+
+      // 解析修改后的教案
+      final fixedPlan = _tryParseJson(response);
+      if (fixedPlan != null && fixedPlan is Map<String, dynamic>) {
+        setState(() {
+          _lessonPlan = fixedPlan;
+          _applyingFix = false;
+          // 清除旧的审核结果
+          _planReviewResult = null;
+          _planReviewScore = null;
+          // 重置后续步骤
+          _markdownContent = null;
+          _pumlResults = [];
+          _umlImages = [];
+          _pdfPath = null;
+          _pptxPath = null;
+          _mdPath = null;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('✅ 教案已根据建议修改，正在重新审核...'),
+                backgroundColor: Colors.green),
+          );
+        }
+        // 重新审核
+        await _doReviewPlan();
+      } else {
+        setState(() => _applyingFix = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('⚠️ AI 返回的修改结果格式异常，请重试'),
+                backgroundColor: Colors.orange),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() => _applyingFix = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('修改失败: $e')),
         );
       }
     }
@@ -2421,9 +3233,9 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
       String? pptxPath;
       if (_hasPythonPptx) {
         try {
-          // 从 Markdown 解析幻灯片
+          // 直接从教案生成幻灯片数据（不经过 Markdown 解析）
           final slides =
-              _coursewareService.parseMarkdownToSlides(_markdownContent!);
+              _coursewareService.lessonPlanToSlides(_lessonPlan!);
           if (slides.isNotEmpty) {
             pptxPath = await _coursewareService.generatePptx(
               title: _lessonPlan!['title']?.toString() ?? '教案',

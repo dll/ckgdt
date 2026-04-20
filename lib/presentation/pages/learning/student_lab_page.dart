@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../data/local/lab_task_dao.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/notification_service.dart';
 
 /// 学生实验中心 — 查看实验任务、提交作业、查看成绩
 class StudentLabPage extends StatefulWidget {
@@ -427,6 +428,13 @@ class _StudentLabPageState extends State<StudentLabPage> {
                         content: 'PDF实验报告：$selectedFileName',
                         filePaths: selectedFilePath,
                         fileNames: selectedFileName,
+                      );
+                      // 通知教师
+                      NotificationService().notifyLabSubmission(
+                        studentId: _userId,
+                        studentName: _authService.currentUser?.realName ?? _userId,
+                        taskTitle: task['title'] as String? ?? '实验任务',
+                        taskId: task['id'] as int,
                       );
                       if (ctx.mounted) Navigator.pop(ctx);
                       if (mounted) {

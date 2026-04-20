@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../data/local/lab_task_dao.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/notification_service.dart';
+import '../../../services/agent/agents/lab_grading_agent.dart';
 import '../../../services/gitee_service.dart';
 import '../../../services/course_resource_service.dart';
 import '../../../core/constants/app_theme.dart';
@@ -713,6 +715,13 @@ class _TaskListTabState extends State<_TaskListTab> {
                           userId: userId!,
                           content: contentCtrl.text.trim(),
                         );
+                        // 通知教师
+                        NotificationService().notifyLabSubmission(
+                          studentId: userId,
+                          studentName: widget.authService.currentUser?.realName ?? userId,
+                          taskTitle: task['title'] as String? ?? '实验任务',
+                          taskId: taskId,
+                        );
                         if (context.mounted) {
                           Navigator.pop(ctx);
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -1364,10 +1373,12 @@ class _SubmissionTabState extends State<_SubmissionTab> {
     final maxScore = submission['max_score'] as int? ?? 100;
     final existingScore = submission['score'] as int?;
     final existingFeedback = submission['feedback'] as String?;
+    final taskTitle = submission['task_title'] as String? ?? '实验任务';
 
     double scoreValue = (existingScore ?? 80).toDouble();
     final feedbackCtrl = TextEditingController(text: existingFeedback ?? '');
     bool isGrading = false;
+    bool isAiGrading = false;
 
     showDialog(
       context: context,
@@ -1470,6 +1481,65 @@ class _SubmissionTabState extends State<_SubmissionTab> {
             ),
           ),
           actions: [
+            // AI 批阅按钮
+            OutlinedButton.icon(
+              onPressed: isAiGrading
+                  ? null
+                  : () async {
+                      if (content.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('学生未提交内容，无法AI批阅')),
+                        );
+                        return;
+                      }
+                      setDialogState(() => isAiGrading = true);
+                      try {
+                        final agent = LabGradingAgent();
+                        final result = await agent.gradeSubmission(
+                          taskTitle: taskTitle,
+                          content: content,
+                          maxScore: maxScore,
+                        );
+                        // 尝试解析 JSON 结果
+                        final parsed = _tryParseGradingJson(result);
+                        if (parsed != null) {
+                          setDialogState(() {
+                            scoreValue = (parsed['score'] as num?)
+                                    ?.toDouble() ??
+                                scoreValue;
+                            if (scoreValue > maxScore) {
+                              scoreValue = maxScore.toDouble();
+                            }
+                            feedbackCtrl.text =
+                                parsed['feedback'] as String? ?? '';
+                          });
+                        } else {
+                          // 无法解析 JSON，直接放入反馈
+                          setDialogState(() {
+                            feedbackCtrl.text = result;
+                          });
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('AI批阅失败: $e')),
+                          );
+                        }
+                      } finally {
+                        if (ctx.mounted) {
+                          setDialogState(() => isAiGrading = false);
+                        }
+                      }
+                    },
+              icon: isAiGrading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.auto_awesome, size: 16),
+              label: Text(isAiGrading ? 'AI批阅中...' : 'AI批阅'),
+            ),
             TextButton(
               onPressed: () => Navigator.pop(ctx),
               child: const Text('取消'),
@@ -1524,6 +1594,24 @@ class _SubmissionTabState extends State<_SubmissionTab> {
         ),
       ),
     );
+  }
+
+  /// 尝试从 AI 批阅结果中解析 JSON
+  Map<String, dynamic>? _tryParseGradingJson(String text) {
+    try {
+      // 提取 JSON 块（可能被 ```json ... ``` 包裹）
+      final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(text);
+      if (jsonMatch == null) return null;
+      final jsonStr = jsonMatch.group(0)!;
+      final map = jsonDecode(jsonStr) as Map<String, dynamic>;
+      // 至少要有 score 或 feedback
+      if (map.containsKey('score') || map.containsKey('feedback')) {
+        return map;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
   }
 
   Color _scoreColor(int score, int maxScore) {
@@ -3768,6 +3856,7 @@ class _RepoReportTabState extends State<_RepoReportTab>
       // 按提交数降序排列
       items.sort((a, b) => b.commitCount.compareTo(a.commitCount));
 
+      if (!mounted) return;
       setState(() {
         _repoItems = items;
         _totalStudents = totalStudents;
@@ -3775,6 +3864,7 @@ class _RepoReportTabState extends State<_RepoReportTab>
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
         _errorMessage = '加载仓库报表失败: $e';

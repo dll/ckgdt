@@ -11,6 +11,7 @@ import '../feedback/feedback_dialog.dart';
 import '../feedback/ai_help_dialog.dart';
 import '../settings/course_manage_page.dart';
 import '../../../data/local/course_dao.dart';
+import '../profile/chat_history_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -143,6 +144,16 @@ class _SettingsPageState extends State<SettingsPage> {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const AiSettingsPage()),
+            ),
+          ),
+          _buildMenuItem(
+            context,
+            icon: Icons.chat_outlined,
+            title: '对话历史',
+            subtitle: '查看和管理智能体对话记录、收藏对话',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ChatHistoryPage()),
             ),
           ),
           _buildMenuItem(

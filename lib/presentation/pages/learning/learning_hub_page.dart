@@ -5,8 +5,11 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../core/constants/chapter_sorter.dart';
 import '../../../data/local/database_helper.dart';
+import '../../../data/local/course_dao.dart';
 import '../../../services/ai_service.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/courseware_service.dart';
+import '../../../services/slide_generator_service.dart';
 import '../../../services/file_opener_service.dart';
 import '../../../services/courseware_download_service.dart';
 import '../../../data/local/ai_config_dao.dart';
@@ -49,7 +52,6 @@ class _LearningHubPageState extends State<LearningHubPage>
 
   // 预制/扩展 切换
   String _resourceMode = 'all'; // 'all', 'preset', 'extended'
-  bool _generatingExtended = false;
 
   // AI 助手
   final List<_ChatMessage> _messages = [];
@@ -308,22 +310,27 @@ class _LearningHubPageState extends State<LearningHubPage>
                 ),
               ),
               const Spacer(),
-              if (_resourceMode == 'extended')
-                _generatingExtended
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : TextButton.icon(
-                        icon: const Icon(Icons.auto_awesome, size: 16),
-                        label: const Text('AI 生成', style: TextStyle(fontSize: 12)),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          minimumSize: const Size(0, 32),
-                        ),
-                        onPressed: _generateExtendedResources,
-                      ),
+              if (_resourceMode == 'extended') ...[
+                TextButton.icon(
+                  icon: const Icon(Icons.add_circle_outline, size: 16),
+                  label: const Text('生成课件', style: TextStyle(fontSize: 12)),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    minimumSize: const Size(0, 32),
+                  ),
+                  onPressed: _generateExtendedResources,
+                ),
+                TextButton.icon(
+                  icon: const Icon(Icons.cleaning_services, size: 14),
+                  label: const Text('清理', style: TextStyle(fontSize: 11)),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    minimumSize: const Size(0, 32),
+                    foregroundColor: Colors.grey,
+                  ),
+                  onPressed: _cleanupEmptyExtended,
+                ),
+              ],
             ],
           ),
         );
@@ -331,123 +338,90 @@ class _LearningHubPageState extends State<LearningHubPage>
     );
   }
 
-  /// AI 生成扩展资源
-  Future<void> _generateExtendedResources() async {
-    setState(() => _generatingExtended = true);
+  /// 清理空路径的扩展资源条目
+  Future<void> _cleanupEmptyExtended() async {
+    final db = await DatabaseHelper.instance.database;
+    final count = await db.rawQuery(
+      "SELECT COUNT(*) as c FROM resource_files WHERE source_type = 'extended' AND (file_path IS NULL OR file_path = '')",
+    );
+    final emptyCount = count.first['c'] as int? ?? 0;
 
-    try {
-      final aiService = AiService();
-      final db = await DatabaseHelper.instance.database;
-
-      // 检查是否已有扩展资源
-      final existing = await db.rawQuery(
-        "SELECT COUNT(*) as c FROM resource_files WHERE source_type = 'extended'",
-      );
-      final existCount = existing.first['c'] as int? ?? 0;
-      if (existCount > 0) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('已有 $existCount 条扩展资源，切换到"扩展"模式查看'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        setState(() => _generatingExtended = false);
-        _loadAllData();
-        return;
-      }
-
-      const prompt = '''
-基于《移动应用开发》课程的6章内容，为每种资源类型生成5个扩展学习主题。
-
-课程章节：
-1. 移动应用开发技术体系全景
-2. Android与iOS原生开发基础
-3. Flutter、React Native等混合开发技术
-4. 微信小程序开发流程
-5. 华为HarmonyOS多端应用开发
-6. 综合开发实践
-
-请生成以下JSON格式（直接返回JSON，不要包含其他文字）：
-{
-  "video": [
-    {"chapter": "扩展-Flutter状态管理", "description": "深入讲解Provider/Riverpod/Bloc等状态管理方案"},
-    ...
-  ],
-  "ppt": [
-    {"chapter": "扩展-跨平台架构设计", "description": "跨平台应用的分层架构与最佳实践"},
-    ...
-  ],
-  "pdf": [
-    {"chapter": "扩展-移动安全开发", "description": "移动应用安全防护与加固技术详解"},
-    ...
-  ]
-}
-
-要求：
-- 每种类型各5个，合计15个
-- 主题应超越课程预设内容，涵盖进阶/实战/前沿方向
-- chapter字段以"扩展-"开头
-- description字段30字以内
-''';
-
-      final raw = await aiService.chat(
-        [{'role': 'user', 'content': prompt}],
-        systemPrompt: '你是移动应用开发课程的教学设计专家，请用中文回复，仅返回合法JSON。',
-      );
-
-      // 提取JSON
-      final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(raw);
-      if (jsonMatch == null) throw Exception('AI 返回格式不正确');
-
-      final data = jsonDecode(jsonMatch.group(0)!) as Map<String, dynamic>;
-      final batch = db.batch();
-
-      for (final type in ['video', 'ppt', 'pdf']) {
-        final items = data[type] as List<dynamic>? ?? [];
-        for (final item in items) {
-          final chapter = item['chapter'] as String? ?? '扩展资源';
-          final desc = item['description'] as String? ?? '';
-          final ext = type == 'video' ? 'mp4' : (type == 'ppt' ? 'pptx' : 'pdf');
-          batch.insert('resource_files', {
-            'file_name': '$chapter.$ext',
-            'file_path': '',
-            'file_type': type,
-            'chapter': chapter,
-            'description': desc,
-            'source_type': 'extended',
-          });
-        }
-      }
-
-      await batch.commit(noResult: true);
-
+    if (emptyCount == 0) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('扩展资源生成成功！'),
-          backgroundColor: Colors.green,
-        ),
+        const SnackBar(content: Text('没有需要清理的空条目')),
       );
-
-      setState(() {
-        _generatingExtended = false;
-        _videoLoading = true;
-        _pptLoading = true;
-        _pdfLoading = true;
-      });
-      _loadAllData();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _generatingExtended = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('扩展资源生成失败：$e'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 4),
-        ),
-      );
+      return;
     }
+
+    if (!mounted) return;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('清理空条目'),
+        content: Text('发现 $emptyCount 条未生成文件的扩展资源条目。\n\n删除后不影响已生成的课件文件。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    await db.delete(
+      'resource_files',
+      where: "source_type = 'extended' AND (file_path IS NULL OR file_path = '')",
+    );
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('已清理 $emptyCount 条空条目'),
+        backgroundColor: Colors.green,
+      ),
+    );
+
+    setState(() {
+      _videoLoading = true;
+      _pptLoading = true;
+      _pdfLoading = true;
+    });
+    _loadAllData();
+  }
+
+  /// 打开扩展课件生成对话框（用户自定义输入）
+  void _generateExtendedResources() {
+    // 根据当前 Tab 决定默认类型
+    String defaultType = 'pdf';
+    if (_tabController.index == 0) defaultType = 'video';
+    if (_tabController.index == 1) defaultType = 'ppt';
+    if (_tabController.index == 2) defaultType = 'pdf';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _ExtendedCoursewareSheet(
+        defaultType: defaultType,
+        onGenerated: () {
+          setState(() {
+            _videoLoading = true;
+            _pptLoading = true;
+            _pdfLoading = true;
+          });
+          _loadAllData();
+        },
+      ),
+    );
   }
 
   // ── Tab 0：视频 ─────────────────────────────────────────────────────────────
@@ -1062,11 +1036,17 @@ class _LearningHubPageState extends State<LearningHubPage>
     final fileName = file['file_name'] as String? ?? '${file['chapter']}';
     final fileType = file['file_type'] as String? ?? '';
     final chapter = file['chapter'] as String? ?? '';
+    final isExtended = file['source_type'] == 'extended';
 
     if (filePath.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('文件路径未设置')),
-      );
+      if (isExtended) {
+        // 扩展资源无文件 → 提供生成选项
+        _showGenerateForExtendedItem(file);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('文件路径未设置')),
+        );
+      }
       return;
     }
 
@@ -1204,6 +1184,162 @@ class _LearningHubPageState extends State<LearningHubPage>
     }
   }
 
+  /// 点击空路径扩展资源时 → 提供即时生成
+  void _showGenerateForExtendedItem(Map<String, dynamic> file) {
+    final chapter = file['chapter'] as String? ?? '扩展课件';
+    final fileType = file['file_type'] as String? ?? 'pdf';
+    final fileId = file['id'];
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.auto_awesome, color: Colors.purple),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(chapter,
+                  style: const TextStyle(fontSize: 16),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
+            ),
+          ],
+        ),
+        content: Text(
+          fileType == 'video'
+              ? '该扩展视频尚未生成实际文件。\n\n建议前往「课件工坊」生成包含该主题的教学视频，或删除此占位条目。'
+              : '该扩展课件尚未生成实际文件。\n\n点击「生成课件」将基于该主题，使用 AI 自动生成 PDF 课件。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
+          if (fileId != null)
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                final db = await DatabaseHelper.instance.database;
+                await db.delete('resource_files',
+                    where: 'id = ?', whereArgs: [fileId]);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('已删除占位条目')),
+                );
+                setState(() {
+                  _videoLoading = true;
+                  _pptLoading = true;
+                  _pdfLoading = true;
+                });
+                _loadAllData();
+              },
+              child: const Text('删除条目', style: TextStyle(color: Colors.red)),
+            ),
+          if (fileType != 'video')
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _generateCoursewareForItem(file);
+              },
+              child: const Text('生成课件'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// 为已有的扩展条目即时生成 PDF 课件
+  Future<void> _generateCoursewareForItem(Map<String, dynamic> file) async {
+    final chapter = file['chapter'] as String? ?? '扩展课件';
+    final fileId = file['id'];
+
+    // 显示生成进度
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text('正在为「$chapter」生成课件...',
+                style: const TextStyle(fontSize: 14)),
+            const SizedBox(height: 8),
+            const Text('AI 正在生成内容，请稍候',
+                style: TextStyle(fontSize: 12, color: Colors.grey)),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final aiService = AiService();
+      final slideGen = SlideGeneratorService();
+
+      // 获取当前课程名称
+      String courseName = '移动应用开发';
+      try {
+        final course = await CourseDao().getActiveCourse();
+        if (course != null) courseName = course.name;
+      } catch (_) {}
+
+      // 使用 SlideGeneratorService 生成 PDF
+      final material = await slideGen.generateFromAI(
+        aiService: aiService,
+        topic: '$courseName - $chapter',
+        chapter: chapter,
+        slideCount: 10,
+      );
+
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop(); // 关闭进度对话框
+
+      if (material != null && material.filePath != null) {
+        // 更新 resource_files 记录的 file_path
+        if (fileId != null) {
+          final db = await DatabaseHelper.instance.database;
+          await db.update(
+            'resource_files',
+            {'file_path': material.filePath},
+            where: 'id = ?',
+            whereArgs: [fileId],
+          );
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('课件「$chapter」生成成功！'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // 刷新并打开文件
+        setState(() {
+          _pptLoading = true;
+          _pdfLoading = true;
+        });
+        _loadAllData();
+        _openWithInAppViewer(material.filePath!, '$chapter.pdf');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('课件生成失败，请检查 AI 配置'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('生成失败：$e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   Widget _buildEmptyState(IconData icon, String text) {
     return Center(
       child: Column(
@@ -1240,5 +1376,503 @@ class _ChatMessage {
     final h = time.hour.toString().padLeft(2, '0');
     final m = time.minute.toString().padLeft(2, '0');
     return '$h:$m';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 扩展课件生成表单 — 用户自定义输入，AI 动态生成实际 PDF 课件
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _ExtendedCoursewareSheet extends StatefulWidget {
+  final String defaultType;
+  final VoidCallback onGenerated;
+
+  const _ExtendedCoursewareSheet({
+    required this.defaultType,
+    required this.onGenerated,
+  });
+
+  @override
+  State<_ExtendedCoursewareSheet> createState() =>
+      _ExtendedCoursewareSheetState();
+}
+
+class _ExtendedCoursewareSheetState extends State<_ExtendedCoursewareSheet> {
+  final _topicCtrl = TextEditingController();
+  final _extraCtrl = TextEditingController();
+  late String _selectedType;
+  String? _selectedChapter;
+  int _slideCount = 10;
+  bool _isGenerating = false;
+  String _progress = '';
+  final List<String> _logs = [];
+
+  // 当前课程信息
+  String _courseName = '';
+  List<String> _chapters = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedType = widget.defaultType;
+    _loadCourseInfo();
+  }
+
+  @override
+  void dispose() {
+    _topicCtrl.dispose();
+    _extraCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadCourseInfo() async {
+    try {
+      final course = await CourseDao().getActiveCourse();
+      if (course != null && mounted) {
+        setState(() {
+          _courseName = course.name;
+          _chapters = course.chapters;
+        });
+      }
+    } catch (_) {}
+  }
+
+  void _log(String msg) {
+    if (!mounted) return;
+    setState(() {
+      _logs.add(msg);
+      _progress = msg;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20, right: 20, top: 16,
+        bottom: bottomPadding + 20,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // 拖拽手柄
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // 标题
+            Text('生成扩展课件',
+                style: theme.textTheme.headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center),
+            const SizedBox(height: 8),
+            Text(
+              '根据您的需求，AI 将生成实际的 PDF 课件文件',
+              style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+
+            // 课件主题（必填）
+            TextField(
+              controller: _topicCtrl,
+              decoration: InputDecoration(
+                labelText: '课件主题 *',
+                hintText: '例如：Flutter 状态管理最佳实践',
+                prefixIcon: const Icon(Icons.topic),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              enabled: !_isGenerating,
+            ),
+            const SizedBox(height: 16),
+
+            // 所属章节（可选）
+            DropdownButtonFormField<String>(
+              initialValue: _selectedChapter,
+              decoration: InputDecoration(
+                labelText: '关联章节（可选）',
+                prefixIcon: const Icon(Icons.bookmark),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              items: [
+                const DropdownMenuItem(value: null, child: Text('不关联章节')),
+                ..._chapters.map((ch) => DropdownMenuItem(
+                      value: ch,
+                      child: Text(ch,
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                    )),
+              ],
+              onChanged:
+                  _isGenerating ? null : (v) => setState(() => _selectedChapter = v),
+            ),
+            const SizedBox(height: 16),
+
+            // 资源类型
+            Row(
+              children: [
+                const Icon(Icons.category, size: 20),
+                const SizedBox(width: 8),
+                const Text('课件类型：'),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: 'pdf', label: Text('PDF')),
+                      ButtonSegment(value: 'ppt', label: Text('PPT')),
+                    ],
+                    selected: {_selectedType},
+                    onSelectionChanged: _isGenerating
+                        ? null
+                        : (s) => setState(() => _selectedType = s.first),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // 幻灯片数量
+            Row(
+              children: [
+                const Icon(Icons.format_list_numbered, size: 20),
+                const SizedBox(width: 8),
+                Text('页数：', style: theme.textTheme.bodyMedium),
+                Expanded(
+                  child: Slider(
+                    value: _slideCount.toDouble(),
+                    min: 6,
+                    max: 20,
+                    divisions: 14,
+                    label: '$_slideCount 页',
+                    onChanged: _isGenerating
+                        ? null
+                        : (v) => setState(() => _slideCount = v.toInt()),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text('$_slideCount',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onPrimaryContainer,
+                      )),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // 额外要求（可选）
+            TextField(
+              controller: _extraCtrl,
+              maxLines: 3,
+              decoration: InputDecoration(
+                labelText: '额外要求（可选）',
+                hintText: '例如：侧重实战案例，包含代码示例，难度为进阶级...',
+                prefixIcon: const Padding(
+                  padding: EdgeInsets.only(bottom: 40),
+                  child: Icon(Icons.edit_note),
+                ),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              enabled: !_isGenerating,
+            ),
+            const SizedBox(height: 24),
+
+            // 生成进度
+            if (_isGenerating || _logs.isNotEmpty) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                constraints: const BoxConstraints(maxHeight: 150),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_isGenerating)
+                      Row(children: [
+                        SizedBox(
+                          width: 16, height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(_progress,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.w500,
+                              )),
+                        ),
+                      ]),
+                    if (_logs.isNotEmpty) ...[
+                      if (_isGenerating) const SizedBox(height: 8),
+                      Flexible(
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          reverse: true,
+                          itemCount: _logs.length,
+                          itemBuilder: (_, i) => Padding(
+                            padding: const EdgeInsets.only(bottom: 2),
+                            child: Text(
+                              _logs[_logs.length - 1 - i],
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurface
+                                    .withValues(alpha: 0.6),
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // 生成按钮
+            FilledButton.icon(
+              icon: _isGenerating
+                  ? const SizedBox(
+                      width: 18, height: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.auto_awesome),
+              label: Text(_isGenerating ? '生成中...' : '开始生成课件'),
+              onPressed: _isGenerating ? null : _doGenerate,
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _doGenerate() async {
+    final topic = _topicCtrl.text.trim();
+    if (topic.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请输入课件主题')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isGenerating = true;
+      _logs.clear();
+    });
+
+    try {
+      final aiService = AiService();
+      final db = await DatabaseHelper.instance.database;
+      final courseName =
+          _courseName.isNotEmpty ? _courseName : '移动应用开发';
+      final chapter = _selectedChapter ?? topic;
+      final extra = _extraCtrl.text.trim();
+
+      if (_selectedType == 'pdf') {
+        await _generatePdf(
+          aiService: aiService,
+          db: db,
+          topic: topic,
+          courseName: courseName,
+          chapter: chapter,
+          extra: extra,
+        );
+      } else {
+        await _generatePptPdf(
+          aiService: aiService,
+          db: db,
+          topic: topic,
+          courseName: courseName,
+          chapter: chapter,
+          extra: extra,
+        );
+      }
+
+      widget.onGenerated();
+
+      if (mounted) {
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (mounted) Navigator.pop(context);
+      }
+    } catch (e) {
+      _log('生成失败：$e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('生成失败：$e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isGenerating = false);
+    }
+  }
+
+  /// 使用 CoursewareService 生成增强版 PDF（教案驱动）
+  Future<void> _generatePdf({
+    required AiService aiService,
+    required dynamic db,
+    required String topic,
+    required String courseName,
+    required String chapter,
+    required String extra,
+  }) async {
+    final coursewareService = CoursewareService();
+
+    // Step 1: 生成教案
+    _log('正在生成教案...');
+    final lessonPlan = await coursewareService.generateLessonPlan(
+      topic: topic,
+      chapter: _selectedChapter,
+      classHours: (_slideCount / 5).ceil().clamp(1, 4),
+      additionalRequirements: extra.isNotEmpty
+          ? '课程：$courseName。$extra'
+          : '课程：$courseName。请确保内容专业、实用、包含代码示例和实践案例。',
+    );
+    _log('教案生成完成：${lessonPlan['title'] ?? topic}');
+
+    // Step 2: 生成 PDF
+    _log('正在生成 PDF 课件...');
+    final pdfPath = await coursewareService.generateEnhancedPdf(
+      lessonPlan: lessonPlan,
+    );
+
+    if (pdfPath == null) throw Exception('PDF 生成失败');
+    _log('PDF 生成成功');
+
+    // Step 3: 写入 resource_files 表
+    _log('正在保存到资源库...');
+    final safeName = topic.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
+    await db.insert('resource_files', {
+      'file_name': '扩展-$safeName.pdf',
+      'file_path': pdfPath,
+      'file_type': 'pdf',
+      'chapter': '扩展-$topic',
+      'description': '${lessonPlan['objectives']?.take(2).join('；') ?? topic}',
+      'source_type': 'extended',
+    });
+    _log('课件「$topic」生成完成！');
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('扩展课件「$topic」(PDF) 生成成功！'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  /// PPT 类型：使用 SlideGeneratorService 生成 PDF 格式课件
+  Future<void> _generatePptPdf({
+    required AiService aiService,
+    required dynamic db,
+    required String topic,
+    required String courseName,
+    required String chapter,
+    required String extra,
+  }) async {
+    final slideGen = SlideGeneratorService();
+
+    // Step 1: AI 生成幻灯片内容
+    _log('正在生成幻灯片内容（$_slideCount 页）...');
+
+    final systemPrompt = '''你是一位资深的${courseName}课程讲师，擅长制作清晰、结构化的教学课件。
+请用中文回复，回复必须是合法的 JSON 数组。
+${extra.isNotEmpty ? '额外要求：$extra' : ''}''';
+
+    final slidePrompt = '''
+请为「$topic」${_selectedChapter != null ? '（$_selectedChapter）' : ''}生成 $_slideCount 张幻灯片的内容。
+
+课程：$courseName
+
+要求：
+- 返回 JSON 数组，每项格式：{"title":"标题","bullets":["要点1","要点2","要点3"],"notes":"讲师备注"}
+- 每张幻灯片 3-5 个要点，要点简洁（<=30字）
+- 内容覆盖：背景介绍、核心概念、技术细节、代码示例说明、实践要点、总结
+- 内容应专业深入，超越基础知识，体现"扩展"价值
+- 仅返回 JSON，不要包含其他文字''';
+
+    final raw = await aiService.chat(
+      [{'role': 'user', 'content': slidePrompt}],
+      systemPrompt: systemPrompt,
+    );
+
+    // 解析 JSON 数组
+    final jsonMatch = RegExp(r'\[[\s\S]*\]').firstMatch(raw);
+    if (jsonMatch == null) throw Exception('AI 返回格式不正确');
+
+    final slides =
+        (jsonDecode(jsonMatch.group(0)!) as List<dynamic>)
+            .cast<Map<String, dynamic>>();
+    _log('幻灯片内容生成完成：${slides.length} 页');
+
+    // Step 2: 生成 PDF
+    _log('正在渲染 PDF...');
+    final material = await slideGen.generatePdf(
+      title: '$courseName - $topic',
+      slides: slides,
+      chapter: _selectedChapter ?? topic,
+    );
+
+    if (material == null || material.filePath == null) {
+      throw Exception('PDF 渲染失败');
+    }
+    _log('PDF 渲染成功');
+
+    // Step 3: 写入 resource_files 表
+    _log('正在保存到资源库...');
+    final safeName = topic.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
+    await db.insert('resource_files', {
+      'file_name': '扩展-$safeName.pptx',
+      'file_path': material.filePath,
+      'file_type': 'ppt',
+      'chapter': '扩展-$topic',
+      'description': slides.isNotEmpty
+          ? (slides.first['title'] as String? ?? topic)
+          : topic,
+      'source_type': 'extended',
+    });
+    _log('课件「$topic」生成完成！');
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('扩展课件「$topic」(PPT) 生成成功！'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 }

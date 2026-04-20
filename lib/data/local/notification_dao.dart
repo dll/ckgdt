@@ -15,6 +15,7 @@ class NotificationDao {
   ///   - 'all'        → 所有活跃学生
   ///   - 'class'      → 指定班级的成员（通过 class_members 表）
   ///   - 'individual' → 单个用户
+  ///   - 'teachers'   → 所有教师和管理员
   Future<int> createNotification({
     required String title,
     required String content,
@@ -72,6 +73,15 @@ class NotificationDao {
               {'user_id': targetId}
             ];
           }
+          break;
+
+        case 'teachers':
+          // 查询所有教师和管理员
+          recipients = await txn.query(
+            'users',
+            columns: ['user_id'],
+            where: "role IN ('teacher', 'admin') AND is_active = 1",
+          );
           break;
       }
 
