@@ -61,6 +61,7 @@ class LearningAgent extends BaseAgent {
         keywords: ['学习', '复习', '薄弱', '不懂', '教我', '解释', '什么是', '怎么理解', '讲解'],
         capabilities: ['知识讲解', '薄弱诊断', '学习建议', '进度查询'],
         requiresAi: true,
+        useRag: true,
         usageSteps: [
           '选择 📚 学习伙伴',
           '提出学习问题或请求知识讲解',
@@ -81,7 +82,7 @@ class LearningAgent extends BaseAgent {
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
     final messages = buildAiMessages(userMessage, session);
-    final result = await safeAiChatWithMeta(messages, aiService: _ai);
+    final result = await safeAiChatWithRag(userMessage, messages, aiService: _ai);
     return buildReply(result.content, modelProvider: result.provider, modelName: result.model);
   }
 }

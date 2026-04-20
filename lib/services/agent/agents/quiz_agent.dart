@@ -72,6 +72,7 @@ D. Text
         keywords: ['测验', '出题', '做题', '答题', '错题', '考试', '练习', '题目'],
         capabilities: ['出题', '批改', '错题分析', '章节推荐'],
         requiresAi: true,
+        useRag: true,
         usageSteps: [
           '选择 📝 测验教练',
           '指定章节或主题，如"第3章出5道题"',
@@ -92,7 +93,7 @@ D. Text
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
     final messages = buildAiMessages(userMessage, session);
-    final result = await safeAiChatWithMeta(messages, aiService: _ai);
+    final result = await safeAiChatWithRag(userMessage, messages, aiService: _ai);
     return buildReply(result.content, modelProvider: result.provider, modelName: result.model);
   }
 }
