@@ -52,6 +52,7 @@ class AssistantAgent extends BaseAgent {
         keywords: [], // 无特定关键词
         capabilities: ['通用问答', '功能介绍', '智能体推荐'],
         requiresAi: true,
+        useRag: true,
         usageSteps: [
           '通过首页"多智能体"或全局悬浮按钮"助手"打开',
           '直接输入任何问题，系统自动匹配最佳智能体',
@@ -79,7 +80,7 @@ class AssistantAgent extends BaseAgent {
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
     final messages = buildAiMessages(userMessage, session);
-    final result = await safeAiChatWithMeta(messages, aiService: _ai);
+    final result = await safeAiChatWithRag(userMessage, messages, aiService: _ai);
     return buildReply(result.content, modelProvider: result.provider, modelName: result.model);
   }
 }
