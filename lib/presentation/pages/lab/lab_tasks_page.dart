@@ -28,6 +28,41 @@ class LabTasksPage extends StatefulWidget {
   State<LabTasksPage> createState() => _LabTasksPageState();
 }
 
+/// 解析PDF文件路径：优先使用原始路径，若不存在则尝试在常见目录查找同名文件
+String? _resolveFilePath(String filePath, String fileNames) {
+  // 1. 直接路径存在
+  if (filePath.isNotEmpty && File(filePath).existsSync()) {
+    return filePath;
+  }
+  // 2. 尝试按文件名在常见目录查找
+  final fileName = fileNames.isNotEmpty
+      ? fileNames
+      : filePath.split('/').last.split('\\').last;
+  if (fileName.isEmpty) return null;
+
+  // 检查下载目录和应用文档目录
+  final searchDirs = <String>[
+    // 当前路径的目录（可能同设备换了盘符）
+    if (filePath.isNotEmpty) File(filePath).parent.path,
+  ];
+  // 添加平台常见目录
+  if (Platform.isWindows) {
+    final userHome = Platform.environment['USERPROFILE'] ?? '';
+    if (userHome.isNotEmpty) {
+      searchDirs.addAll([
+        '$userHome\\Downloads',
+        '$userHome\\Documents',
+        '$userHome\\Desktop',
+      ]);
+    }
+  }
+  for (final dir in searchDirs) {
+    final candidate = File('$dir${Platform.pathSeparator}$fileName');
+    if (candidate.existsSync()) return candidate.path;
+  }
+  return null;
+}
+
 class _LabTasksPageState extends State<LabTasksPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
@@ -1459,10 +1494,13 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                           icon: const Icon(Icons.visibility, size: 16),
                           label: const Text('预览PDF', style: TextStyle(fontSize: 12)),
                           onPressed: () {
-                            final file = File(filePaths);
-                            if (!file.existsSync()) {
+                            final resolvedPath = _resolveFilePath(filePaths, fileNames);
+                            if (resolvedPath == null) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('PDF 文件不存在: $filePaths')),
+                                SnackBar(content: Text(
+                                  '该PDF文件在学生本机提交，尚未同步到当前设备。\n'
+                                  '文件名：${fileNames.isNotEmpty ? fileNames : filePaths.split(Platform.pathSeparator).last}',
+                                )),
                               );
                               return;
                             }
@@ -1470,7 +1508,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                               context,
                               MaterialPageRoute(
                                 builder: (_) => InAppPdfViewerPage(
-                                  filePath: filePaths,
+                                  filePath: resolvedPath,
                                   title: '$userName - $taskTitle',
                                 ),
                               ),
@@ -2500,10 +2538,13 @@ class _ReportTabState extends State<_ReportTab> {
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
                               onPressed: () {
-                                final file = File(filePaths);
-                                if (!file.existsSync()) {
+                                final resolvedPath = _resolveFilePath(filePaths, fileNames);
+                                if (resolvedPath == null) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('PDF 文件不存在: $filePaths')),
+                                    SnackBar(content: Text(
+                                      '该PDF文件在学生本机提交，尚未同步到当前设备。\n'
+                                      '文件名：${fileNames.isNotEmpty ? fileNames : filePaths.split(Platform.pathSeparator).last}',
+                                    )),
                                   );
                                   return;
                                 }
@@ -2511,7 +2552,7 @@ class _ReportTabState extends State<_ReportTab> {
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) => InAppPdfViewerPage(
-                                      filePath: filePaths,
+                                      filePath: resolvedPath,
                                       title: '$userId - $title',
                                     ),
                                   ),
