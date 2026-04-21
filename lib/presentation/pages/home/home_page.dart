@@ -35,6 +35,8 @@ import '../repo/student_repo_page.dart';
 import '../achievement/achievement_page.dart';
 import '../profile/student_center_page.dart';
 import '../profile/teacher_workspace_page.dart';
+import '../profile/virtual_twin_page.dart';
+import '../../widgets/mad_mascot_button.dart';
 import '../help/handbook_page.dart';
 import '../skill/ai_skill_page.dart';
 import '../classroom/classroom_page.dart';
@@ -120,7 +122,7 @@ class _HomePageState extends State<HomePage> {
   /// 当前平台显示名称：基于激活课程动态生成
   String get _platformTitle {
     final name = _activeCourse?.name ?? '移动应用开发';
-    return '$name知识图谱';
+    return '$name知识图谱与数字孪生平台';
   }
 
   @override
@@ -257,6 +259,7 @@ class _HomePageState extends State<HomePage> {
     NavigationService.instance.registerTabMapping(tabMapping);
 
     return Scaffold(
+      floatingActionButton: const MadMascotButton(),
       appBar: AppBar(
         title: Text(_platformTitle),
 
@@ -573,6 +576,13 @@ class _HomePageState extends State<HomePage> {
                 // ── 学生专属功能 ──────────────────────────────────
                 if (!isTeacherOrAdmin) ...[
                   _buildMenuCard(
+                    icon: Icons.face,
+                    title: '虚拟学生',
+                    color: Colors.cyan,
+                    onTap: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const VirtualTwinPage())),
+                  ),
+                  _buildMenuCard(
                     icon: Icons.trending_up,
                     title: '学习进度',
                     color: Colors.green,
@@ -604,6 +614,13 @@ class _HomePageState extends State<HomePage> {
 
                 // ── 教师/管理员功能 ──────────────────────────────
                 if (isTeacherOrAdmin) ...[
+                  _buildMenuCard(
+                    icon: Icons.school,
+                    title: '虚拟教师',
+                    color: Colors.indigo,
+                    onTap: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const VirtualTwinPage())),
+                  ),
                   _buildMenuCard(
                     icon: Icons.bar_chart,
                     title: '成绩统计',
