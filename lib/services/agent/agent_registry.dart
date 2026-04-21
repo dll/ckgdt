@@ -24,6 +24,8 @@ import 'agents/lab_grading_agent.dart';
 import 'agents/assessment_grading_agent.dart';
 import 'agents/works_grading_agent.dart';
 import 'agents/safety_agent.dart';
+import 'agents/virtual_student_agent.dart';
+import 'agents/virtual_teacher_agent.dart';
 
 /// 智能体注册表 + Director 编排
 ///
@@ -73,6 +75,9 @@ class AgentRegistry {
     _register(WorksGradingAgent());
     // 安全监控智能体（管理员专用）
     _register(SafetyAgent());
+    // 数字孪生智能体
+    _register(VirtualStudentAgent());
+    _register(VirtualTeacherAgent());
     _register(AssistantAgent()); // 兜底，最后注册
 
     _initialized = true;

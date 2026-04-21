@@ -1,14 +1,17 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/notification_service.dart';
+import '../../../services/sync_service.dart';
 import '../../../data/local/assessment_dao.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../services/agent/agents/assessment_grading_agent.dart';
 import '../../widgets/agent_entry_button.dart';
+import '../learning/pdf_viewer_page.dart';
 
 /// 考核页面 — 参考 Python 版 assessment_tab.py
 /// 五大子页: 分组管理 / 项目立项 / 贡献评分 / 答辩安排 / 成绩统计
@@ -36,6 +39,13 @@ class _AssessmentPageState extends State<AssessmentPage>
   }
 
   Future<void> _initDemoData() async {
+    // 学生端：先拉取自己的最新同步数据（含教师评分）
+    if (_isStudent) {
+      try {
+        final userId = _authService.getCurrentUserId();
+        if (userId != null) await SyncService().downloadOwnData(userId);
+      } catch (_) {}
+    }
     try {
       final jsonStr =
           await rootBundle.loadString('assets/student_group_data.json');
@@ -4154,6 +4164,57 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
   bool get _isStudent =>
       !widget.authService.isTeacher && !widget.authService.isAdmin;
 
+  /// 验证考核报告文件名：必须为 学号+姓名+报告类型.pdf
+  String? _validateReportFileName(String fileName, String reportType) {
+    final userId = _currentUserId ?? '';
+    final realName = widget.authService.currentUser?.realName ?? '';
+    if (userId.isEmpty || realName.isEmpty) {
+      return '提交失败：无法获取当前用户信息，请重新登录';
+    }
+
+    // 去掉扩展名
+    final baseName = fileName.endsWith('.pdf')
+        ? fileName.substring(0, fileName.length - 4)
+        : fileName;
+
+    // 检查非法后缀：(1) (2) 1 2 new copy 副本 - 复制 等
+    if (RegExp(r'[\(\（]\d+[\)\）]$').hasMatch(baseName) ||
+        RegExp(r'[_\-\s]?\d+$').hasMatch(baseName) &&
+            !baseName.endsWith(reportType) ||
+        RegExp(r'(new|copy|副本|复制|备份)', caseSensitive: false)
+            .hasMatch(baseName)) {
+      return '提交失败：文件名不规范，不允许包含(1)、new、copy、副本等后缀\n'
+          '正确格式：$userId$realName$reportType.pdf';
+    }
+
+    // 检查学号是否匹配当前登录用户
+    if (!baseName.startsWith(userId)) {
+      return '提交失败：文件名中的学号与当前登录用户不匹配\n'
+          '正确格式：$userId$realName$reportType.pdf';
+    }
+
+    // 检查是否包含姓名
+    if (!baseName.contains(realName)) {
+      return '提交失败：文件名中未包含姓名"$realName"\n'
+          '正确格式：$userId$realName$reportType.pdf';
+    }
+
+    // 检查是否包含报告类型
+    if (!baseName.contains(reportType)) {
+      return '提交失败：文件名中未包含报告类型"$reportType"\n'
+          '正确格式：$userId$realName$reportType.pdf';
+    }
+
+    // 严格匹配：学号+姓名+报告类型
+    final expected = '$userId$realName$reportType';
+    if (baseName != expected) {
+      return '提交失败：文件命名不规范\n'
+          '正确格式：$userId$realName$reportType.pdf';
+    }
+
+    return null; // 验证通过
+  }
+
   @override
   void initState() {
     super.initState();
@@ -5005,6 +5066,23 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
       final userName =
           widget.authService.currentUser?.realName ?? userId;
 
+      // 学生提交时验证文件名规范
+      if (_isStudent) {
+        final error = _validateReportFileName(file.name, reportType);
+        if (error != null) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(error),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
+          return;
+        }
+      }
+
       await _dao.submitReport(
         userId: userId,
         studentName: userName,
@@ -5040,6 +5118,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
     final time = s['submit_time'] as String? ?? s['created_at'] as String? ?? '';
     final status = s['status'] as String? ?? '已提交';
     final content = s['content_json'] as String? ?? '';
+    final filePath = s['file_path'] as String? ?? '';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 6),
@@ -5053,8 +5132,18 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
           '${content.isNotEmpty ? ' · $content' : ''}',
           style: TextStyle(fontSize: 10, color: Colors.grey[500]),
         ),
-        trailing: _isStudent
-            ? IconButton(
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // PDF 预览按钮
+            if (filePath.isNotEmpty)
+              IconButton(
+                icon: Icon(Icons.visibility, size: 18, color: Colors.blue[400]),
+                tooltip: '预览 PDF',
+                onPressed: () => _openPdfPreview(filePath, title),
+              ),
+            if (_isStudent)
+              IconButton(
                 icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
                 onPressed: () async {
                   final id = s['id'] as int?;
@@ -5064,7 +5153,8 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                   }
                 },
               )
-            : Container(
+            else
+              Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: status == '已批改'
@@ -5077,9 +5167,30 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                         fontSize: 10,
                         color: status == '已批改' ? Colors.green : Colors.blue)),
               ),
+          ],
+        ),
         onTap: _isStudent
             ? null
             : () => _showReportGradeDialog(s),
+      ),
+    );
+  }
+
+  void _openPdfPreview(String filePath, String title) {
+    final file = File(filePath);
+    if (!file.existsSync()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('PDF 文件不存在: $filePath')),
+      );
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => InAppPdfViewerPage(
+          filePath: filePath,
+          title: title,
+        ),
       ),
     );
   }
@@ -5089,6 +5200,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
     final reportId = submission['id'] as int?;
     final title = submission['title'] as String? ?? '考核报告';
     final content = submission['content_json'] as String? ?? '';
+    final filePath = submission['file_path'] as String? ?? '';
     final userId = submission['user_id'] as String? ?? '';
     final status = submission['status'] as String? ?? '已提交';
     final existingScore = submission['score'] as int?;
@@ -5137,6 +5249,19 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                       const SizedBox(height: 8),
                       Text('提交文件：$content',
                           style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                    ],
+                    // PDF 预览按钮
+                    if (filePath.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        onPressed: () => _openPdfPreview(filePath, title),
+                        icon: const Icon(Icons.visibility, size: 16),
+                        label: const Text('预览 PDF', style: TextStyle(fontSize: 12)),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          minimumSize: Size.zero,
+                        ),
+                      ),
                     ],
                     Text('状态：$status',
                         style: TextStyle(fontSize: 12, color: Colors.grey[600])),

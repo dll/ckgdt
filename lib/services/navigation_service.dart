@@ -1,6 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-/// 全局导航服务 — 跨页面 Tab 切换 + 页面跳转
+import '../presentation/pages/quiz/quiz_page.dart';
+import '../presentation/pages/quiz/wrong_answers_page.dart';
+import '../presentation/pages/learning/video_page.dart';
+import '../presentation/pages/learning/document_page.dart';
+import '../presentation/pages/learning/progress_page.dart';
+import '../presentation/pages/learning/learning_plan_page.dart';
+import '../presentation/pages/learning/weakness_diagnosis_page.dart';
+import '../presentation/pages/materials/ai_settings_page.dart';
+import '../presentation/pages/materials/courseware_workshop_page.dart';
+import '../presentation/pages/home/settings_page.dart';
+import '../presentation/pages/home/search_page.dart';
+import '../presentation/pages/graph/favorites_page.dart';
+import '../presentation/pages/practice/deep_practice_page.dart';
+import '../presentation/pages/practice/growth_curve_page.dart';
+import '../presentation/pages/notification/notification_list_page.dart';
+import '../presentation/pages/sync/data_sync_page.dart';
+import '../presentation/pages/cross_platform/cross_platform_hub_page.dart';
+import '../presentation/pages/help/handbook_page.dart';
+import '../presentation/pages/profile/student_center_page.dart';
+import '../presentation/pages/profile/teacher_workspace_page.dart';
+import '../presentation/pages/profile/chat_history_page.dart';
+import '../presentation/pages/skill/ai_skill_page.dart';
+import '../presentation/pages/feedback/feedback_manage_page.dart';
+import '../presentation/pages/settings/voice_settings_page.dart';
+import '../presentation/pages/settings/course_manage_page.dart';
+import '../services/auth_service.dart';
+
+/// 全局导航服务 — 跨页面 Tab 切换 + 子页面跳转 + 返回
 ///
 /// 单例模式，由 HomePage 注册回调，供智能体等模块触发导航。
 class NavigationService {
@@ -70,6 +98,22 @@ class NavigationService {
     return false;
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // 返回 / 前进 导航
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// 返回上一页（如果可以返回）
+  /// 返回 true 表示成功返回，false 表示已在根路由
+  bool goBack() {
+    final nav = navigatorKey?.currentState;
+    if (nav == null) return false;
+    if (nav.canPop()) {
+      nav.pop();
+      return true;
+    }
+    return false;
+  }
+
   /// 推送新页面
   Future<T?> pushPage<T>(Widget page) async {
     final nav = navigatorKey?.currentState;
@@ -92,6 +136,165 @@ class NavigationService {
       MaterialPageRoute(builder: (_) => loginPage),
       (route) => false,
     );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 子页面语音导航
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// 子页面关键词 → 路由 ID 映射
+  ///
+  /// 涵盖所有可通过 Navigator.push 访问的二级/三级页面。
+  /// key: 语音关键词（支持多个同义词）
+  /// value: 内部路由标识符
+  static const subPageKeywords = <String, String>{
+    // ── 测验相关 ──
+    '测验': 'quiz', '做题': 'quiz', '答题': 'quiz', '考试': 'quiz',
+    '错题': 'wrong_answers', '错题本': 'wrong_answers',
+
+    // ── 视频 / 资料 ──
+    '视频': 'video', '教程': 'video', '播放': 'video',
+    '资料': 'document', '文档': 'document',
+    '课件': 'courseware', '课件工坊': 'courseware',
+
+    // ── 学习 ──
+    '进度': 'progress', '统计': 'progress', '成绩': 'progress',
+    '计划': 'plan', '学习计划': 'plan',
+    '学习链': 'learning_chain',
+    '薄弱': 'weakness', '薄弱诊断': 'weakness',
+
+    // ── 设置 ──
+    '设置': 'settings', '配置': 'settings',
+    'ai设置': 'ai_settings', 'ai配置': 'ai_settings',
+    '语音设置': 'voice_settings',
+    '课程管理': 'course_manage',
+
+    // ── 工具 ──
+    '搜索': 'search', '查找': 'search',
+    '收藏': 'favorites', '我的收藏': 'favorites',
+    '同步': 'sync', '数据同步': 'sync',
+    '三端': 'crossplatform', '互通': 'crossplatform', '跨平台': 'crossplatform',
+    '通知': 'notification', '消息': 'notification',
+    '仓库': 'repo', 'git': 'repo',
+    '反馈': 'feedback',
+    '帮助': 'handbook', '使用手册': 'handbook',
+    '实践': 'practice', '深度实践': 'practice',
+    '成长曲线': 'growth_curve',
+
+    // ── 个人中心 ──
+    '个人中心': 'student_center', '学生中心': 'student_center',
+    '教师工作台': 'teacher_workspace', '工作台': 'teacher_workspace',
+    '聊天记录': 'chat_history', '对话记录': 'chat_history',
+    'ai技能': 'ai_skill', '技能': 'ai_skill',
+
+    // ── 管理 ──
+    '学生管理': 'student_manage',
+    '教师管理': 'teacher_manage',
+    '班级管理': 'class_manage',
+    '题目管理': 'question_manage',
+    '数据导出': 'data_export',
+    '数据导入': 'data_import',
+    '问卷管理': 'survey_manage',
+    '教学管理': 'teaching_manage',
+  };
+
+  /// 尝试通过关键词匹配子页面并导航
+  /// 返回匹配的路由 ID（null 表示未匹配）
+  String? matchSubPage(String keyword) {
+    final normalized = keyword.toLowerCase();
+
+    // 按关键词长度降序匹配（优先匹配更具体的词）
+    final sorted = subPageKeywords.entries.toList()
+      ..sort((a, b) => b.key.length.compareTo(a.key.length));
+
+    for (final entry in sorted) {
+      if (normalized.contains(entry.key)) {
+        return entry.value;
+      }
+    }
+    return null;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 子页面路由解析（keyword → Widget）
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// 根据路由 ID 创建对应的子页面 Widget
+  /// 返回 null 表示路由 ID 无对应页面
+  Widget? resolveSubPage(String routeId) {
+    switch (routeId) {
+      case 'quiz':
+        return const QuizPage();
+      case 'wrong_answers':
+        return const WrongAnswersPage();
+      case 'video':
+        return const VideoListPage();
+      case 'document':
+        return const DocumentListPage();
+      case 'courseware':
+        return const CoursewareWorkshopPage();
+      case 'progress':
+        return const ProgressPage();
+      case 'plan':
+        return const LearningPlanPage();
+      case 'weakness':
+        return const WeaknessDiagnosisPage();
+      case 'settings':
+        return const SettingsPage();
+      case 'ai_settings':
+        return const AiSettingsPage();
+      case 'voice_settings':
+        return const VoiceSettingsPage();
+      case 'course_manage':
+        return const CourseManagePage();
+      case 'search':
+        return const SearchPage();
+      case 'favorites':
+        return const FavoritesPage();
+      case 'sync':
+        return const DataSyncPage();
+      case 'crossplatform':
+        return const CrossPlatformHubPage();
+      case 'notification':
+        return const NotificationListPage();
+      case 'handbook':
+        final role = AuthService().currentUser?.role ?? 'student';
+        return HandbookPage(role: role);
+      case 'practice':
+        return const DeepPracticePage();
+      case 'growth_curve':
+        return const GrowthCurvePage();
+      case 'student_center':
+        return const StudentCenterPage();
+      case 'teacher_workspace':
+        return const TeacherWorkspacePage();
+      case 'chat_history':
+        return const ChatHistoryPage();
+      case 'ai_skill':
+        return const AiSkillPage(skillId: 'tutor');
+      case 'feedback':
+        return const FeedbackManagePage();
+      default:
+        return null;
+    }
+  }
+
+  /// 根据关键词匹配子页面并通过 Navigator.push 导航
+  /// 返回 true 表示成功匹配并导航
+  bool navigateToSubPage(String keyword) {
+    final routeId = matchSubPage(keyword);
+    if (routeId == null) return false;
+
+    final page = resolveSubPage(routeId);
+    if (page == null) return false;
+
+    pushPage(page);
+    return true;
+  }
+
+  /// 退出应用程序
+  void exitApp() {
+    SystemNavigator.pop();
   }
 
   /// 清理回调（HomePage dispose 时调用）

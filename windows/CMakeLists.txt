@@ -4,7 +4,7 @@ project(knowledge_graph_app LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
-set(BINARY_NAME "MADKG")
+set(BINARY_NAME "移动图谱与数字孪生v0.9.10")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.

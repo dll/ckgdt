@@ -15,6 +15,7 @@ import '../../../data/models/user_model.dart';
 import '../learning/learning_chain_page.dart';
 import '../learning/video_page.dart';
 import '../materials/resource_viewer_page.dart';
+import '../quiz/quiz_page.dart';
 import '../../widgets/agent_entry_button.dart';
 import '../../widgets/markdown_bubble.dart';
 import 'graph_list_page.dart';
@@ -1543,6 +1544,23 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                                   fileType: 'pdf',
                                   filterChapter: _chapterName(node.chapter!),
                                 ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _resourceButton(
+                          icon: Icons.quiz,
+                          label: '测验',
+                          color: Colors.green,
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const QuizPage(),
                               ),
                             );
                           },

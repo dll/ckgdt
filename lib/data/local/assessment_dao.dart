@@ -408,6 +408,7 @@ class AssessmentDao {
       'user_id': userId,
       'title': reportType ?? '考核报告',
       'content_json': fileName ?? '',
+      'file_path': filePath ?? '',
       'status': '已提交',
       'task_id': groupId != null ? int.tryParse(groupId) : null,
       'submit_time': DateTime.now().toIso8601String(),

@@ -5,7 +5,7 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
-        android:label="移动图谱v0.9.0"
+        android:label="移动图谱与数字孪生v0.9.10"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

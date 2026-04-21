@@ -7,6 +7,8 @@ import 'package:archive/archive.dart';
 import 'package:xml/xml.dart';
 import '../../../services/file_opener_service.dart';
 import '../../../services/ppt_export_service.dart';
+import '../../../services/tts_flutter_service.dart';
+import '../../pages/quiz/quiz_page.dart';
 
 /// 应用内 PPTX 放映器 — 接近 PowerPoint / WPS 演示效果
 ///
@@ -21,11 +23,13 @@ import '../../../services/ppt_export_service.dart';
 class InAppPptViewerPage extends StatefulWidget {
   final String filePath;
   final String title;
+  final String? chapter;
 
   const InAppPptViewerPage({
     super.key,
     required this.filePath,
     required this.title,
+    this.chapter,
   });
 
   @override
@@ -41,6 +45,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
   bool _loading = true;
   String? _error;
   String _loadingMsg = '正在解析 PPT...';
+  bool _completionShown = false;
 
   // ── 放映模式 ──────────────────────────────────────────────────────────
   bool _isFullScreen = true;
@@ -72,6 +77,36 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
     super.initState();
     _parsePptx();
     _scheduleHide();
+  }
+
+  void _showQuizPrompt() {
+    TtsFlutterService.instance.speak('课件学习完成，是否立即进入章节测验检验学习效果？');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('课件学完'),
+        content: const Text('PPT 已浏览完毕！\n建议立即测验，巩固所学知识。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('稍后再说'),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const QuizPage(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.quiz, size: 18),
+            label: const Text('立即测验'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -337,7 +372,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
 
       return _SlideData(
         slideNumber: slideNum,
-        title: title ?? '幻灯片 $slideNum',
+        title: title ?? '',
         subtitle: subtitle,
         paragraphs: body,
         images: images,
@@ -348,7 +383,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
     } catch (e) {
       return _SlideData(
         slideNumber: slideNum,
-        title: '幻灯片 $slideNum',
+        title: '',
         paragraphs: [_ParagraphData(text: '(解析失败)')],
       );
     }
@@ -785,6 +820,13 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
           onPageChanged: (i) {
             setState(() => _currentIndex = i);
             _resetHide();
+            // 到达最后一页时提示测验
+            if (i == _slides.length - 1 && !_completionShown) {
+              _completionShown = true;
+              Future.delayed(const Duration(seconds: 2), () {
+                if (mounted) _showQuizPrompt();
+              });
+            }
           },
           itemBuilder: (_, i) => GestureDetector(
             onTapUp: _onSlideTap,

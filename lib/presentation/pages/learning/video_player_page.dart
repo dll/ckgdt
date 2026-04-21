@@ -2,17 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import '../../../services/file_opener_service.dart';
+import '../../../services/tts_flutter_service.dart';
+import '../../pages/quiz/quiz_page.dart';
 
 /// 应用内视频播放器（基于 media_kit，支持 Windows 桌面）
 /// 支持播放/暂停、进度拖动、倍速、快进快退、全屏
 class InAppVideoPlayerPage extends StatefulWidget {
   final String filePath;
   final String title;
+  final String? chapter;
 
   const InAppVideoPlayerPage({
     super.key,
     required this.filePath,
     required this.title,
+    this.chapter,
   });
 
   @override
@@ -22,8 +26,8 @@ class InAppVideoPlayerPage extends StatefulWidget {
 class _InAppVideoPlayerPageState extends State<InAppVideoPlayerPage> {
   late final Player _player;
   late final VideoController _videoController;
-  // ignore: unused_field
   bool _initialized = false;
+  bool _completionShown = false;
   String? _error;
   bool _showControls = true;
   double _playbackSpeed = 1.0;
@@ -67,12 +71,50 @@ class _InAppVideoPlayerPageState extends State<InAppVideoPlayerPage> {
       }
     });
 
+    // 视频播放完成 → 提示跳转测验
+    _player.stream.completed.listen((completed) {
+      if (completed && mounted && !_completionShown) {
+        _completionShown = true;
+        _showQuizPrompt();
+      }
+    });
+
     // 打开文件
     _player.open(Media(widget.filePath)).catchError((e) {
       if (mounted) {
         setState(() => _error = '视频加载失败: $e');
       }
     });
+  }
+
+  void _showQuizPrompt() {
+    TtsFlutterService.instance.speak('视频学习完成，是否立即进入章节测验检验学习效果？');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('学习完成'),
+        content: const Text('视频观看完毕！\n建议立即测验，巩固所学知识。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('稍后再说'),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const QuizPage(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.quiz, size: 18),
+            label: const Text('立即测验'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

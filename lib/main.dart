@@ -268,20 +268,56 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
 
   /// 根据语音文本进行全局页面导航
   ///
-  /// 优先通过 NavigationService 的 Tab 映射快速导航，
-  /// 若匹配失败则分发给 AI 智能体进行自然语言理解。
+  /// 四级路由：快速通道（返回/退出）→ Tab 映射 → 子页面匹配 → AI 智能体
   void _navigateByVoiceText(BuildContext context, String text) {
     final navService = NavigationService.instance;
-
-    // 先 popUntil 回到首页（全局 FAB 可能在任何页面触发）
-    final navigator = Navigator.of(context);
-    navigator.popUntil((route) => route.isFirst);
-
-    // 使用完整的关键词 → Tab 索引映射进行快速导航
     final normalized =
         text.replaceAll(RegExp(r'[，。！？、\s]'), '').toLowerCase();
 
-    // 使用 NavigationService 动态 Tab 映射（角色感知，索引始终正确）
+    // ── 快速通道：返回操作 ──
+    if (normalized == '返回' ||
+        normalized == '回去' ||
+        normalized == '上一页' ||
+        normalized == '后退' ||
+        normalized.contains('返回上一页') ||
+        normalized.contains('回到上一页')) {
+      if (normalized.contains('首页') || normalized.contains('主页')) {
+        final navigator = Navigator.of(context);
+        navigator.popUntil((route) => route.isFirst);
+        navService.switchToTab(0);
+      } else {
+        navService.goBack();
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('语音导航: "$text" → 返回'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    // ── 快速通道：退出系统 ──
+    if ((normalized.contains('退出') && normalized.contains('系统')) ||
+        (normalized.contains('退出') && normalized.contains('程序')) ||
+        (normalized.contains('关闭') && normalized.contains('应用')) ||
+        (normalized.contains('关闭') && normalized.contains('系统')) ||
+        (normalized.contains('关闭') && normalized.contains('程序'))) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('正在退出系统…'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+      navService.exitApp();
+      return;
+    }
+
+    // ── 先 popUntil 回到首页（全局 FAB 可能在任何页面触发） ──
+    final navigator = Navigator.of(context);
+    navigator.popUntil((route) => route.isFirst);
+
+    // ── Tab 映射（角色感知，动态注册） ──
     if (navService.navigateByKeyword(normalized)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -292,44 +328,18 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
       return;
     }
 
-    // 检查二级页面导航（通过 Navigator.push）
-    final Map<String, String> secondaryPages = {
-      '测验': 'quiz', '做题': 'quiz', '答题': 'quiz',
-      '视频': 'video', '教程': 'video', '播放': 'video',
-      '资料': 'document', '文档': 'document', '课件': 'courseware',
-      '进度': 'progress', '统计': 'progress', '成绩': 'progress',
-      '计划': 'plan', '学习计划': 'plan', '路径': 'plan',
-      '设置': 'settings', '配置': 'settings',
-      '错题': 'wrong_answers', '错题本': 'wrong_answers',
-      '收藏': 'favorites',
-      '搜索': 'search', '查找': 'search',
-      '同步': 'sync', '数据同步': 'sync',
-      '三端': 'crossplatform', '互通': 'crossplatform', '跨平台': 'crossplatform',
-      '通知': 'notification', '消息': 'notification',
-      '仓库': 'repo', 'git': 'repo',
-    };
-
-    final sortedSecondary = secondaryPages.entries.toList()
-      ..sort((a, b) => b.key.length.compareTo(a.key.length));
-
-    for (final entry in sortedSecondary) {
-      if (normalized.contains(entry.key)) {
-        // 先切换到首页 tab
-        navService.switchToTab(0);
-        // 分发给智能体系统执行导航动作
-        final registry = AgentRegistry.instance;
-        registry.dispatch(text);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('语音导航: "$text" → ${entry.key}'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-        return;
-      }
+    // ── 子页面匹配（统一使用 NavigationService） ──
+    if (navService.navigateToSubPage(normalized)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('语音导航: "$text"'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
     }
 
-    // 都没匹配 → 分发给 AI 智能体进行自然语言理解
+    // ── 都没匹配 → 分发给 AI 智能体 ──
     final registry = AgentRegistry.instance;
     registry.dispatch(text);
     ScaffoldMessenger.of(context).showSnackBar(

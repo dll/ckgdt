@@ -1431,19 +1431,55 @@ class Example {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final safeName =
           safeTitle.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
+      final rawVideoPath =
+          '$coursewareDir/${safeName}_raw_$timestamp.mp4';
       final videoPath =
           '$coursewareDir/${safeName}_$timestamp.mp4';
 
       final success = await _videoService.generateVideo(
         slides: slideImages,
         audios: audioPaths,
-        outputPath: videoPath,
+        outputPath: rawVideoPath,
         clipDirPath: '$sessionDir/video_clips',
       );
 
+      // ── 生成 SRT 字幕并烧录 ──
+      String finalVideoPath = rawVideoPath;
+      if (success && File(rawVideoPath).existsSync()) {
+        final narrations = _buildNarrationTexts(safeTitle)
+            .map((s) => s['narration'] ?? '')
+            .toList();
+        final srtPath = '$coursewareDir/${safeName}_$timestamp.srt';
+        final srtResult = await _videoService.generateSrt(
+          narrations: narrations,
+          audioPaths: audioPaths,
+          outputPath: srtPath,
+        );
+
+        if (srtResult != null) {
+          final burned = await _videoService.burnSubtitles(
+            videoPath: rawVideoPath,
+            srtPath: srtPath,
+            outputPath: videoPath,
+          );
+          if (burned != null) {
+            try { File(rawVideoPath).deleteSync(); } catch (_) {}
+            finalVideoPath = videoPath;
+          } else {
+            try { File(rawVideoPath).renameSync(videoPath); } catch (_) {
+              finalVideoPath = rawVideoPath;
+            }
+          }
+        } else {
+          try { File(rawVideoPath).renameSync(videoPath); } catch (_) {
+            finalVideoPath = rawVideoPath;
+          }
+        }
+      }
+
       setState(() {
         _exporting = false;
-        _mdVideoPath = success ? videoPath : null;
+        _mdVideoPath = success ? finalVideoPath : null;
       });
 
       if (mounted) {
@@ -3409,25 +3445,70 @@ class Example {
       final title = _lessonPlan?['title']?.toString() ?? '教案';
       final safeTitle =
           title.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
+      final rawOutputPath =
+          '$coursewareDir/${safeTitle}_raw_$timestamp.mp4';
       final outputPath =
           '$coursewareDir/${safeTitle}_$timestamp.mp4';
 
       final success = await _videoService.generateVideo(
         slides: slideImages,
         audios: _audioPaths,
-        outputPath: outputPath,
+        outputPath: rawOutputPath,
         clipDirPath: '$_sessionDir/video_clips',
         onProgress: (current, total, msg) {
           setState(() {
-            _videoProgress = 0.1 + 0.9 * (current / total);
+            _videoProgress = 0.1 + 0.7 * (current / total);
             _videoStatus = msg;
           });
         },
       );
 
+      // 3. 生成 SRT 字幕并烧录
+      String finalVideoPath = rawOutputPath;
+      if (success && File(rawOutputPath).existsSync()) {
+        setState(() {
+          _videoProgress = 0.85;
+          _videoStatus = '正在生成字幕...';
+        });
+
+        final narrations = _narrationScripts
+            .map((s) => s['narration'] ?? '')
+            .toList();
+        final srtPath = '$coursewareDir/${safeTitle}_$timestamp.srt';
+        final srtResult = await _videoService.generateSrt(
+          narrations: narrations,
+          audioPaths: _audioPaths,
+          outputPath: srtPath,
+        );
+
+        if (srtResult != null) {
+          setState(() {
+            _videoProgress = 0.92;
+            _videoStatus = '正在烧录字幕...';
+          });
+          final burned = await _videoService.burnSubtitles(
+            videoPath: rawOutputPath,
+            srtPath: srtPath,
+            outputPath: outputPath,
+          );
+          if (burned != null) {
+            try { File(rawOutputPath).deleteSync(); } catch (_) {}
+            finalVideoPath = outputPath;
+          } else {
+            try { File(rawOutputPath).renameSync(outputPath); } catch (_) {
+              finalVideoPath = rawOutputPath;
+            }
+          }
+        } else {
+          try { File(rawOutputPath).renameSync(outputPath); } catch (_) {
+            finalVideoPath = rawOutputPath;
+          }
+        }
+      }
+
       setState(() {
         _generatingVideo = false;
-        _videoPath = success ? outputPath : null;
+        _videoPath = success ? finalVideoPath : null;
         _videoStatus = success ? '视频生成完成！' : '视频合成失败';
       });
 

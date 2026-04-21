@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../data/local/wrong_answer_dao.dart';
+import '../../../services/ai_service.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/tts_flutter_service.dart';
 
 class WrongAnswersPage extends StatefulWidget {
   const WrongAnswersPage({super.key});
@@ -35,6 +37,40 @@ class _WrongAnswersPageState extends State<WrongAnswersPage> {
       }
     } catch (e) {
       setState(() => _isLoading = false);
+    }
+  }
+
+  /// 手动触发 AI 解释生成
+  Future<void> _generateExplanation(Map<String, dynamic> wrong) async {
+    try {
+      final aiService = AiService();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('正在生成 AI 解析...')),
+        );
+      }
+
+      final prompt =
+          '题目：${wrong['question']}\n学生答案：${wrong['user_answer']}\n正确答案：${wrong['correct_answer']}\n\n'
+          '请用 2-3 句话简明解释为什么正确答案是对的，以及学生答案错在哪里。';
+
+      final explanation = await aiService.chat(
+        [{'role': 'user', 'content': prompt}],
+        systemPrompt: '你是移动应用开发课程的教学助手，专门为学生解释测验错题。回答简洁精准。',
+      );
+
+      if (explanation.isNotEmpty) {
+        await _wrongAnswerDao.updateExplanation(
+            wrong['id'] as int, explanation);
+        _loadData();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('生成失败：$e')),
+        );
+      }
     }
   }
 
@@ -158,6 +194,80 @@ class _WrongAnswersPageState extends State<WrongAnswersPage> {
                                     '正确答案：${wrong['correct_answer']}',
                                     style: TextStyle(color: Colors.green[700]),
                                   ),
+                                  // AI 解释区域
+                                  if (wrong['explanation'] != null &&
+                                      (wrong['explanation'] as String).isNotEmpty) ...[
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF667eea)
+                                            .withValues(alpha: 0.06),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: const Color(0xFF667eea)
+                                              .withValues(alpha: 0.15),
+                                        ),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Icon(Icons.auto_awesome,
+                                                  size: 16,
+                                                  color: Colors.amber[700]),
+                                              const SizedBox(width: 6),
+                                              const Text(
+                                                'AI 解析',
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Color(0xFF667eea),
+                                                ),
+                                              ),
+                                              const Spacer(),
+                                              InkWell(
+                                                onTap: () {
+                                                  TtsFlutterService.instance
+                                                      .speak(wrong[
+                                                              'explanation']
+                                                          as String);
+                                                },
+                                                child: Icon(Icons.volume_up,
+                                                    size: 18,
+                                                    color: Colors.grey[500]),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            wrong['explanation'] as String,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: Colors.grey[800],
+                                              height: 1.5,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ] else ...[
+                                    const SizedBox(height: 8),
+                                    OutlinedButton.icon(
+                                      onPressed: () =>
+                                          _generateExplanation(wrong),
+                                      icon: const Icon(Icons.auto_awesome,
+                                          size: 16),
+                                      label: const Text('生成 AI 解析'),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor:
+                                            const Color(0xFF667eea),
+                                      ),
+                                    ),
+                                  ],
                                   const SizedBox(height: 12),
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.end,
