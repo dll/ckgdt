@@ -56,7 +56,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 16,
+      version: 18,
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -110,7 +110,7 @@ class DatabaseHelper {
         // 重新打开（版本号必须与主初始化一致）
         final db2 = await openDatabase(
           dbName,
-          version: 16,
+          version: 17,
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
         );
@@ -168,7 +168,7 @@ class DatabaseHelper {
         // Create empty database
         db = await openDatabase(
           dbPath,
-          version: 16,
+          version: 17,
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
         );
@@ -180,7 +180,7 @@ class DatabaseHelper {
 
     db = await openDatabase(
       dbPath,
-      version: 16,
+      version: 18,
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -363,7 +363,8 @@ class DatabaseHelper {
         chapter TEXT,
         times INTEGER DEFAULT 1,
         wrong_time TEXT,
-        last_wrong_time TEXT
+        last_wrong_time TEXT,
+        explanation TEXT
       )
     ''');
 
@@ -483,6 +484,12 @@ class DatabaseHelper {
     if (oldVersion < 16) {
       await _migrateToV16(db);
     }
+    if (oldVersion < 17) {
+      await _migrateToV17(db);
+    }
+    if (oldVersion < 18) {
+      await _migrateToV18(db);
+    }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
   }
@@ -500,7 +507,8 @@ class DatabaseHelper {
         chapter TEXT,
         times INTEGER DEFAULT 1,
         wrong_time TEXT,
-        last_wrong_time TEXT
+        last_wrong_time TEXT,
+        explanation TEXT
       )
     ''');
 
@@ -910,6 +918,7 @@ class DatabaseHelper {
         user_id TEXT NOT NULL,
         title TEXT NOT NULL,
         content_json TEXT,
+        file_path TEXT,
         status TEXT DEFAULT '草稿',
         submit_time TEXT,
         score INTEGER,
@@ -1313,6 +1322,24 @@ class DatabaseHelper {
         'ALTER TABLE ai_chat_history ADD COLUMN title TEXT',
       );
     } catch (_) {}
+  }
+
+  Future<void> _migrateToV17(Database db) async {
+    // 错题 AI 解释字段
+    try {
+      await db.execute(
+        'ALTER TABLE wrong_answers ADD COLUMN explanation TEXT',
+      );
+    } catch (_) {} // 列已存在
+  }
+
+  Future<void> _migrateToV18(Database db) async {
+    // student_reports 增加 file_path 列（考核报告 PDF 路径）
+    try {
+      await db.execute(
+        'ALTER TABLE student_reports ADD COLUMN file_path TEXT',
+      );
+    } catch (_) {} // 列已存在
   }
 
   Future<void> _createNewTablesV3(Database db) async {

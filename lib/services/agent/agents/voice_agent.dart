@@ -9,8 +9,12 @@ import '../base_agent.dart';
 
 /// 🎙️ 语音智能体 — AI 驱动的自然语言导航 + 语音登录/退出
 ///
-/// 登录/退出走本地快速通道（无需 AI）；
-/// 其余所有交互由 AI 理解意图，返回结构化 JSON 指令。
+/// 覆盖完整用户旅程：
+/// - **登录/退出**：语音报学号登录、退出登录、退出系统
+/// - **主菜单导航**：切换底部 Tab（首页/图谱/学习/实验/考核/作品…）
+/// - **子页面操作**：打开二级页面（测验/视频/错题/设置/收藏…）
+/// - **返回操作**：返回上一页、回到首页
+/// - **系统操作**：退出系统/关闭应用
 class VoiceAgent extends BaseAgent {
   final AuthService _auth = AuthService();
   final AiService _aiService = AiService();
@@ -41,10 +45,46 @@ class VoiceAgent extends BaseAgent {
     '课件工坊': 'courseware',
   };
 
+  /// 子页面导航清单（供 AI prompt 引用）
+  static const _subPages = <String, String>{
+    '测验/做题': 'quiz',
+    '错题本': 'wrong_answers',
+    '视频教程': 'video',
+    '课程资料/文档': 'document',
+    '课件工坊': 'courseware',
+    '学习进度/成绩': 'progress',
+    '学习计划': 'plan',
+    '薄弱诊断': 'weakness',
+    '设置': 'settings',
+    'AI设置': 'ai_settings',
+    '语音设置': 'voice_settings',
+    '搜索': 'search',
+    '收藏': 'favorites',
+    '数据同步': 'sync',
+    '通知/消息': 'notification',
+    'Git仓库': 'repo',
+    '帮助/手册': 'handbook',
+    '实践': 'practice',
+    '个人中心': 'student_center',
+    '教师工作台': 'teacher_workspace',
+    'AI技能': 'ai_skill',
+    '反馈': 'feedback',
+    '成长曲线': 'growth_curve',
+  };
+
   /// 构建可用页面列表文本（嵌入 AI prompt）
   static String get _pageListForPrompt {
     final buf = StringBuffer();
     _navPages.forEach((label, keyword) {
+      buf.writeln('- $label（keyword: $keyword）');
+    });
+    return buf.toString();
+  }
+
+  /// 构建子页面列表文本（嵌入 AI prompt）
+  static String get _subPageListForPrompt {
+    final buf = StringBuffer();
+    _subPages.forEach((label, keyword) {
       buf.writeln('- $label（keyword: $keyword）');
     });
     return buf.toString();
@@ -56,51 +96,72 @@ class VoiceAgent extends BaseAgent {
         name: '语音助手',
         emoji: '🎙️',
         description: '智能语音交互，自然语言导航、登录退出、多轮对话。',
-        persona: '''你是"小知"，移动图谱教学系统的语音导航助手。
-你的职责是理解用户的自然语言指令，执行导航、查询状态等操作。
+        persona: '''你是"小知"，移动图谱与数字孪生教学系统的语音导航助手。
+你的职责是理解用户的自然语言指令，执行导航、返回、退出等操作。
 
 ## 核心能力
 1. **页面导航**：理解用户想去哪个页面，即使表述不精确。
-2. **多轮澄清**：意图模糊时主动追问，如"你想打开哪个页面？"
-3. **上下文理解**：根据对话历史理解代词和省略，如上文提到测验，用户说"第三章的"即指第三章测验。
-4. **状态感知**：知道用户当前是否已登录。
+2. **子页面操作**：理解用户想进入哪个子功能页面。
+3. **返回操作**：用户说"返回""回去""上一页"时执行返回。
+4. **退出系统**：用户说"退出系统""关闭应用""退出程序"时退出。
+5. **多轮澄清**：意图模糊时主动追问，如"你想打开哪个页面？"
+6. **上下文理解**：根据对话历史理解代词和省略。
 
-## 可导航页面
+## 可导航主页面（底部Tab）
 $_pageListForPrompt
+
+## 可导航子页面（二级页面）
+$_subPageListForPrompt
 
 ## 输出格式
 你必须返回 **严格 JSON**（不包含 markdown 代码块标记），格式如下：
 
-导航意图：
+主页面导航：
 {"intent":"navigate","keyword":"graph","label":"知识图谱","reply":"好的，正在打开知识图谱。"}
 
+子页面导航：
+{"intent":"sub_page","keyword":"wrong_answers","label":"错题本","reply":"好的，正在打开错题本。"}
+
+返回上一页：
+{"intent":"back","reply":"好的，正在返回上一页。"}
+
+回到首页：
+{"intent":"navigate","keyword":"home","label":"首页","reply":"好的，回到首页。"}
+
+退出系统：
+{"intent":"exit_app","reply":"好的，正在退出系统。"}
+
 需要澄清：
-{"intent":"clarify","reply":"你想打开哪个页面呢？比如知识图谱、章节测验、视频教程等。"}
+{"intent":"clarify","reply":"你想打开哪个页面呢？"}
 
 闲聊/问候/帮助：
-{"intent":"chat","reply":"你好！我是小知，可以帮你快速导航到任意页面。试试说'打开图谱'或'去测验'。"}
-
-状态查询：
-{"intent":"status","reply":"你想查询什么状态？"}
+{"intent":"chat","reply":"你好！我是小知，可以帮你导航。试试说"打开图谱"或"返回"。"}
 
 ## 规则
 - reply 字段必须简短（≤40字），适合语音朗读。
 - keyword 必须是上述页面列表中的 keyword 值之一。
 - 只返回 JSON，不要返回任何其他文字。
-- 如果用户提到章节号（如"第三章"），在 JSON 中额外添加 "chapter": 3。''',
+- 如果用户提到章节号（如"第三章"），在 JSON 中额外添加 "chapter": 3。
+- "返回""回去""上一页""后退" → intent: back
+- "退出系统""关闭应用""退出程序""关闭系统" → intent: exit_app
+- "退出登录""注销""登出" → 不要用此prompt处理，会在代码中快速通道处理。''',
         priority: 9,
         requiresAi: true,
         keywords: [
           '登录', '退出', '打开', '去', '导航', '你好', '帮我',
           '跳转', '切换', '看看', '进入', '回到', '显示',
+          '返回', '回去', '上一页', '后退', '关闭',
         ],
-        capabilities: ['自然语言导航', '语音登录', '退出登录', '多轮对话', '上下文理解'],
+        capabilities: ['自然语言导航', '子页面操作', '返回导航', '语音登录', '退出登录', '退出系统', '多轮对话'],
         usageSteps: [
           '点击全局悬浮按钮"助手"或首页"多智能体"',
           '选择 🎙️ 语音助手（或直接语音输入）',
           '语音登录：说"登录 206004"（支持中文数字）',
-          '自然语言导航：说"我想看知识图谱""帮我打开测验""去视频教程"等',
-          '多轮对话：说"打开测验" → 系统追问 → 说"第三章"',
+          '主菜单导航：说"打开图谱""去学习中心""切换到考核"',
+          '子页面操作：说"打开错题本""去设置""看视频"',
+          '返回操作：说"返回""回去""上一页""回到首页"',
+          '退出系统：说"退出系统""关闭应用"',
+          '退出登录：说"退出登录""注销"',
         ],
         classicCases: [
           const AgentCase(
@@ -109,26 +170,31 @@ $_pageListForPrompt
             agentReply: '登录成功！欢迎 刘老师。',
           ),
           const AgentCase(
-            title: '自然语言导航',
+            title: '主菜单导航',
             userInput: '我想看一下知识图谱',
             agentReply: '好的，正在打开知识图谱。',
           ),
           const AgentCase(
-            title: '模糊导航',
-            userInput: '帮我打开那个做题的页面',
-            agentReply: '好的，正在打开章节测验。',
+            title: '子页面操作',
+            userInput: '帮我打开错题本',
+            agentReply: '好的，正在打开错题本。',
           ),
           const AgentCase(
-            title: '上下文导航',
-            userInput: '第三章的',
-            agentReply: '好的，正在打开第三章的测验。',
+            title: '返回上一页',
+            userInput: '返回',
+            agentReply: '好的，正在返回上一页。',
+          ),
+          const AgentCase(
+            title: '退出系统',
+            userInput: '退出系统',
+            agentReply: '好的，正在退出系统，再见！',
           ),
         ],
       );
 
   @override
   List<String> get quickCommands =>
-      ['登录', '退出登录', '打开图谱', '打开测验', '去视频教程', '学习进度'];
+      ['登录', '退出登录', '打开图谱', '打开测验', '打开错题本', '返回', '退出系统'];
 
   /// 中文数字转阿拉伯数字
   static String chineseToDigits(String text) {
@@ -152,7 +218,7 @@ $_pageListForPrompt
         userMessage.toLowerCase().replaceAll(RegExp(r'\s+'), '');
 
     // ══════════════════════════════════════════════════════════════════════
-    // 快速通道：登录 / 退出（不经过 AI，保证离线也能用）
+    // 快速通道（不经过 AI，保证离线也能用）
     // ══════════════════════════════════════════════════════════════════════
 
     // ── 退出登录 ──
@@ -163,6 +229,16 @@ $_pageListForPrompt
     // ── 登录 ──
     if (_isLogin(normalized)) {
       return _handleLogin(userMessage);
+    }
+
+    // ── 返回上一页 ──
+    if (_isBack(normalized)) {
+      return _handleBack(normalized);
+    }
+
+    // ── 退出系统 ──
+    if (_isExitApp(normalized)) {
+      return _handleExitApp();
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -190,7 +266,7 @@ $_pageListForPrompt
   }
 
   // ═══════════════════════════════════════════════════════════════════════
-  // 内部方法
+  // 快速通道匹配
   // ═══════════════════════════════════════════════════════════════════════
 
   bool _isLogout(String normalized) {
@@ -202,6 +278,27 @@ $_pageListForPrompt
   bool _isLogin(String normalized) {
     return normalized.contains('登录') || normalized.contains('登陆');
   }
+
+  bool _isBack(String normalized) {
+    return normalized == '返回' ||
+        normalized == '回去' ||
+        normalized == '上一页' ||
+        normalized == '后退' ||
+        normalized.contains('返回上一页') ||
+        normalized.contains('回到上一页');
+  }
+
+  bool _isExitApp(String normalized) {
+    return (normalized.contains('退出') && normalized.contains('系统')) ||
+        (normalized.contains('退出') && normalized.contains('程序')) ||
+        (normalized.contains('关闭') && normalized.contains('应用')) ||
+        (normalized.contains('关闭') && normalized.contains('系统')) ||
+        (normalized.contains('关闭') && normalized.contains('程序'));
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // 快速通道处理
+  // ═══════════════════════════════════════════════════════════════════════
 
   Future<AgentMessage> _handleLogout() async {
     if (_auth.isLoggedIn) {
@@ -240,6 +337,41 @@ $_pageListForPrompt
     return buildReply('请告诉我你的学号，比如"登录 206004"。');
   }
 
+  AgentMessage _handleBack(String normalized) {
+    // "回到首页" 是特殊的返回操作
+    if (normalized.contains('首页') || normalized.contains('主页')) {
+      return buildReply(
+        '好的，回到首页。',
+        action: const AgentAction(
+          type: 'pop_to_root',
+          description: '返回到首页',
+        ),
+      );
+    }
+
+    return buildReply(
+      '好的，正在返回上一页。',
+      action: const AgentAction(
+        type: 'go_back',
+        description: '返回上一页',
+      ),
+    );
+  }
+
+  AgentMessage _handleExitApp() {
+    return buildReply(
+      '好的，正在退出系统，再见！',
+      action: const AgentAction(
+        type: 'exit_app',
+        description: '退出应用程序',
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // AI 响应解析
+  // ═══════════════════════════════════════════════════════════════════════
+
   /// 解析 AI 返回的 JSON 意图
   AgentMessage _parseAiResponse(AiChatResult result) {
     try {
@@ -264,6 +396,42 @@ $_pageListForPrompt
               type: 'navigate_tab',
               params: params,
               description: '导航到$label',
+            ),
+            modelProvider: result.provider,
+            modelName: result.model,
+          );
+
+        case 'sub_page':
+          final keyword = json['keyword'] as String? ?? '';
+          final label = json['label'] as String? ?? keyword;
+          return buildReply(
+            reply,
+            action: AgentAction(
+              type: 'navigate_sub_page',
+              params: {'keyword': keyword},
+              description: '打开子页面$label',
+            ),
+            modelProvider: result.provider,
+            modelName: result.model,
+          );
+
+        case 'back':
+          return buildReply(
+            reply,
+            action: const AgentAction(
+              type: 'go_back',
+              description: '返回上一页',
+            ),
+            modelProvider: result.provider,
+            modelName: result.model,
+          );
+
+        case 'exit_app':
+          return buildReply(
+            reply,
+            action: const AgentAction(
+              type: 'exit_app',
+              description: '退出应用程序',
             ),
             modelProvider: result.provider,
             modelName: result.model,

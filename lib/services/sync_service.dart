@@ -89,7 +89,7 @@ class SyncService {
 
   Future<int> getSyncInterval() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_syncIntervalKey) ?? 3;
+    return (prefs.getInt(_syncIntervalKey) ?? 10).clamp(5, 60);
   }
 
   Future<void> setSyncInterval(int minutes) async {
@@ -160,6 +160,8 @@ class SyncService {
     if (_isSyncing) return;
     try {
       if (role == 'student') {
+        // 先下载自己在其他设备上传的数据（跨设备同步）
+        await downloadOwnData(userId);
         await uploadStudentData(userId);
       } else {
         await downloadAllStudentData();
@@ -270,6 +272,67 @@ class SyncService {
     }
   }
 
+  // ── 学生端：下载自己在其他设备上传的数据 ──────────────────────────────
+
+  /// 从 Gitee 下载当前学生自己的同步数据（跨设备同步）
+  Future<SyncResult> downloadOwnData(String userId) async {
+    if (_isSyncing) return SyncResult(success: false, message: '同步正在进行中');
+
+    _isSyncing = true;
+    status.value = SyncStatus.downloading;
+
+    try {
+      await _ensureSyncToken();
+
+      final path = '$_syncDir/$userId.json';
+      String? content;
+      try {
+        content = await _gitee.getFileContent(
+          repoOwner, repoName, path,
+          ref: repoBranch,
+        );
+      } catch (e) {
+        // 文件不存在 → 该学生从未在其他设备同步过
+        debugPrint('SyncService: 学生 $userId 无云端同步数据: $e');
+        status.value = SyncStatus.idle;
+        _isSyncing = false;
+        return SyncResult(
+          success: true,
+          message: '无云端数据',
+          recordCount: 0,
+        );
+      }
+
+      if (content == null || content.isEmpty) {
+        status.value = SyncStatus.idle;
+        _isSyncing = false;
+        return SyncResult(
+          success: true,
+          message: '云端数据为空',
+          recordCount: 0,
+        );
+      }
+
+      final data = jsonDecode(content) as Map<String, dynamic>;
+      final db = await DatabaseHelper.instance.database;
+      final count = await _importStudentSyncData(db, data);
+
+      debugPrint('SyncService: 学生 $userId 跨设备同步完成，$count 条记录');
+      status.value = SyncStatus.idle;
+      _isSyncing = false;
+      return SyncResult(
+        success: true,
+        message: '跨设备同步完成，$count 条记录',
+        recordCount: count,
+      );
+    } catch (e) {
+      debugPrint('SyncService: 学生跨设备同步失败: $e');
+      status.value = SyncStatus.error;
+      _isSyncing = false;
+      return SyncResult(success: false, message: '同步失败: $e');
+    }
+  }
+
   /// 收集学生本地数据（全量）
   Future<Map<String, dynamic>> _collectStudentData(String userId) async {
     final db = await DatabaseHelper.instance.database;
@@ -305,6 +368,7 @@ class SyncService {
       'work_comments': 'created_at DESC',
       'work_likes': null,
       'notification_recipients': null,
+      'work_views': 'viewed_at DESC',
     };
 
     final result = <String, dynamic>{
@@ -343,6 +407,41 @@ class SyncService {
       where: 'scorer_user_id = ? OR target_user_id = ?',
       whereArgs: [userId, userId],
     );
+
+    // work_scores — 学生作为评分人（同学互评）
+    result['work_scores'] = await _safeQuery(
+      db, 'work_scores',
+      where: 'scorer_id = ?', whereArgs: [userId],
+      orderBy: 'scored_at DESC',
+    );
+
+    // project_scores — 学生作为评分人（项目互评）
+    result['project_scores'] = await _safeQuery(
+      db, 'project_scores',
+      where: 'scorer_id = ?', whereArgs: [userId],
+      orderBy: 'scored_at DESC',
+    );
+
+    // lab_tasks — 全量携带（非 user_id 表，但需要对齐 task_id）
+    // 保留 id 以便教师端按 title 匹配后重映射 task_id
+    try {
+      final tasks = await db.query('lab_tasks', orderBy: 'id');
+      result['lab_tasks'] = (tasks as List)
+          .map((r) => Map<String, dynamic>.from(r as Map))
+          .toList();
+    } catch (_) {
+      result['lab_tasks'] = <Map<String, dynamic>>[];
+    }
+
+    // report_templates — 同上
+    try {
+      final templates = await db.query('report_templates', orderBy: 'id');
+      result['report_templates'] = (templates as List)
+          .map((r) => Map<String, dynamic>.from(r as Map))
+          .toList();
+    } catch (_) {
+      result['report_templates'] = <Map<String, dynamic>>[];
+    }
 
     // classroom_messages 使用 sender_id
     result['classroom_messages'] = await _safeQuery(
@@ -610,6 +709,72 @@ class SyncService {
       debugPrint('SyncService: 班级关联失败: $e');
     }
 
+    // ── 同步 lab_tasks：按 title 匹配，构建 task_id 映射 ─────────────
+    // 学生端和教师端各自独立生成 lab_tasks（auto-increment ID），
+    // 同一实验任务在不同设备上 ID 可能不同。
+    // 解决方案：以 title 为自然键匹配，建立"学生端ID → 教师端ID"映射表。
+    final taskIdRemap = <int, int>{}; // studentTaskId → localTaskId
+    try {
+      final remoteTasks = data['lab_tasks'] as List?;
+      if (remoteTasks != null && remoteTasks.isNotEmpty) {
+        for (final rt in remoteTasks) {
+          final remoteTask = Map<String, dynamic>.from(rt as Map);
+          final remoteId = remoteTask['id'] as int?;
+          final title = remoteTask['title'] as String? ?? '';
+          if (remoteId == null || title.isEmpty) continue;
+
+          // 按 title 查找本地是否已有该任务
+          final localMatch = await db.query('lab_tasks',
+              where: 'title = ?', whereArgs: [title], limit: 1);
+
+          int localId;
+          if (localMatch.isNotEmpty) {
+            localId = localMatch.first['id'] as int;
+          } else {
+            // 本地没有 → 插入（教师端自动获得该实验任务定义）
+            remoteTask.remove('id');
+            localId = await db.insert('lab_tasks', remoteTask);
+            debugPrint('SyncService: 新建 lab_task "$title" → id=$localId');
+          }
+          taskIdRemap[remoteId] = localId;
+        }
+        debugPrint('SyncService: task_id 映射表: $taskIdRemap');
+      }
+    } catch (e) {
+      debugPrint('SyncService: lab_tasks 同步失败: $e');
+    }
+
+    // ── 同步 report_templates：按 name+category 匹配 ──────────────────
+    final templateIdRemap = <int, int>{};
+    try {
+      final remoteTemplates = data['report_templates'] as List?;
+      if (remoteTemplates != null && remoteTemplates.isNotEmpty) {
+        for (final rt in remoteTemplates) {
+          final remoteTpl = Map<String, dynamic>.from(rt as Map);
+          final remoteId = remoteTpl['id'] as int?;
+          final name = remoteTpl['name'] as String? ?? '';
+          final category = remoteTpl['category'] as String? ?? '';
+          if (remoteId == null || name.isEmpty) continue;
+
+          final localMatch = await db.query('report_templates',
+              where: 'name = ? AND category = ?',
+              whereArgs: [name, category],
+              limit: 1);
+
+          int localId;
+          if (localMatch.isNotEmpty) {
+            localId = localMatch.first['id'] as int;
+          } else {
+            remoteTpl.remove('id');
+            localId = await db.insert('report_templates', remoteTpl);
+          }
+          templateIdRemap[remoteId] = localId;
+        }
+      }
+    } catch (e) {
+      debugPrint('SyncService: report_templates 同步失败: $e');
+    }
+
     // ── 使用事务保护批量导入（先删后插）──────────────────────────────────
     // 所有表的删除+插入在同一事务中完成，防止中途失败导致数据丢失
     try {
@@ -617,6 +782,7 @@ class SyncService {
         int txnCount = 0;
 
         // ── 按 user_id 批量导入所有表 ─────────────────────────────────
+        // 注意：lab_submissions、student_reports、student_works 需要特殊处理，不在通用列表中
         const userIdTables = [
           'quiz_results',
           'learning_records',
@@ -624,14 +790,12 @@ class SyncService {
           'favorites',
           'feedback',
           'learning_paths',
-          'lab_submissions',
-          'student_reports',
-          'student_works',
           'survey_responses',
           'checkin_records',
           'work_comments',
           'work_likes',
           'notification_recipients',
+          'work_views',
         ];
 
         for (final table in userIdTables) {
@@ -640,6 +804,19 @@ class SyncService {
             userIdColumn: 'user_id', userId: userId,
           );
         }
+
+        // ── lab_submissions 特殊处理 ─────────────────────────────────
+        // 1) task_id 重映射（学生端ID → 教师端ID）
+        // 2) 保护教师已批改的评分数据不被覆盖
+        txnCount += await _importLabSubmissions(
+          txn, data, userId, taskIdRemap,
+        );
+
+        // ── student_reports 特殊处理 ─────────────────────────────────
+        // task_id / template_id 重映射
+        txnCount += await _importStudentReports(
+          txn, data, userId, taskIdRemap, templateIdRemap,
+        );
 
         // ── 按其他字段导入的表 ──────────────────────────────────────
         txnCount += await _importTable(
@@ -654,6 +831,17 @@ class SyncService {
           txn, data, 'classroom_messages',
           userIdColumn: 'sender_id', userId: userId,
         );
+
+        // ── student_works 特殊处理 ──────────────────────────────────
+        // 保护已评分的作品不被覆盖
+        txnCount += await _importStudentWorks(txn, data, userId);
+
+        // ── work_scores — 学生互评（按 scorer_id 导入）────────────────
+        // 保护教师评分不被覆盖
+        txnCount += await _importWorkScores(txn, data, userId);
+
+        // ── project_scores — 项目互评（按 scorer_id 导入）─────────────
+        txnCount += await _importProjectScores(txn, data, userId);
 
         // contribution_scores — 删除该用户相关的所有记录再导入
         final contribList = data['contribution_scores'] as List?;
@@ -730,6 +918,301 @@ class SyncService {
         }
       }
     } catch (_) {} // 表可能不存在
+    return count;
+  }
+
+  /// lab_submissions 特殊导入：
+  /// - task_id 重映射（学生端 → 教师端）
+  /// - 保护教师已批改的评分数据（score/feedback/scorer_id/scored_at）
+  Future<int> _importLabSubmissions(
+    dynamic db,
+    Map<String, dynamic> data,
+    String userId,
+    Map<int, int> taskIdRemap,
+  ) async {
+    final list = data['lab_submissions'] as List?;
+    if (list == null || list.isEmpty) return 0;
+
+    int count = 0;
+    try {
+      // 先查出教师端已有的、已批改的提交（需要保护评分数据）
+      final existingGraded = <String, Map<String, dynamic>>{};
+      try {
+        final graded = await db.query('lab_submissions',
+            where: 'user_id = ? AND score IS NOT NULL',
+            whereArgs: [userId]);
+        for (final g in graded) {
+          // 以 task_id 为 key（已是教师端 ID）
+          final taskId = g['task_id'] as int?;
+          if (taskId != null) {
+            existingGraded['$taskId'] = Map<String, dynamic>.from(g as Map);
+          }
+        }
+      } catch (_) {}
+
+      // 删除该学生的所有未批改提交（已批改的保留）
+      await db.delete('lab_submissions',
+          where: 'user_id = ? AND score IS NULL', whereArgs: [userId]);
+
+      for (final r in list) {
+        try {
+          final row = Map<String, dynamic>.from(r as Map);
+          row.remove('id');
+          row['user_id'] = userId;
+
+          // 重映射 task_id
+          final originalTaskId = row['task_id'] as int?;
+          if (originalTaskId != null && taskIdRemap.containsKey(originalTaskId)) {
+            row['task_id'] = taskIdRemap[originalTaskId];
+          }
+
+          final localTaskId = row['task_id'] as int?;
+
+          // 检查教师端是否已有该任务的已批改提交
+          if (localTaskId != null && existingGraded.containsKey('$localTaskId')) {
+            // 已批改 → 只更新学生端字段（content/file_paths 等），保留评分
+            final graded = existingGraded['$localTaskId']!;
+            row['score'] = graded['score'];
+            row['feedback'] = graded['feedback'];
+            row['scorer_id'] = graded['scorer_id'];
+            row['scored_at'] = graded['scored_at'];
+            row['status'] = graded['status']; // 保持"已批改"状态
+
+            // 更新而非插入
+            await db.update('lab_submissions', row,
+                where: 'id = ?', whereArgs: [graded['id']]);
+            count++;
+          } else {
+            // 未批改 → 直接插入
+            await db.insert('lab_submissions', row);
+            count++;
+          }
+        } catch (e) {
+          debugPrint('SyncService: 导入 lab_submissions 失败: $e');
+        }
+      }
+    } catch (_) {}
+    return count;
+  }
+
+  /// student_reports 特殊导入：
+  /// - task_id / template_id 重映射
+  /// - 保护教师已评分的报告
+  Future<int> _importStudentReports(
+    dynamic db,
+    Map<String, dynamic> data,
+    String userId,
+    Map<int, int> taskIdRemap,
+    Map<int, int> templateIdRemap,
+  ) async {
+    final list = data['student_reports'] as List?;
+    if (list == null || list.isEmpty) return 0;
+
+    int count = 0;
+    try {
+      // 查出已评分的报告（保护评分数据）
+      final existingScored = <String, Map<String, dynamic>>{};
+      try {
+        final scored = await db.query('student_reports',
+            where: 'user_id = ? AND score IS NOT NULL',
+            whereArgs: [userId]);
+        for (final s in scored) {
+          final title = s['title'] as String? ?? '';
+          final taskId = s['task_id']?.toString() ?? '';
+          existingScored['$title|$taskId'] = Map<String, dynamic>.from(s as Map);
+        }
+      } catch (_) {}
+
+      // 删除该学生的未评分报告
+      await db.delete('student_reports',
+          where: 'user_id = ? AND score IS NULL', whereArgs: [userId]);
+
+      for (final r in list) {
+        try {
+          final row = Map<String, dynamic>.from(r as Map);
+          row.remove('id');
+          row['user_id'] = userId;
+
+          // 重映射 task_id
+          final originalTaskId = row['task_id'] as int?;
+          if (originalTaskId != null && taskIdRemap.containsKey(originalTaskId)) {
+            row['task_id'] = taskIdRemap[originalTaskId];
+          }
+
+          // 重映射 template_id
+          final originalTemplateId = row['template_id'] as int?;
+          if (originalTemplateId != null && templateIdRemap.containsKey(originalTemplateId)) {
+            row['template_id'] = templateIdRemap[originalTemplateId];
+          }
+
+          final title = row['title'] as String? ?? '';
+          final taskId = row['task_id']?.toString() ?? '';
+          final key = '$title|$taskId';
+
+          if (existingScored.containsKey(key)) {
+            // 已评分 → 保留评分，更新内容
+            final scored = existingScored[key]!;
+            row['score'] = scored['score'];
+            row['feedback'] = scored['feedback'];
+            await db.update('student_reports', row,
+                where: 'id = ?', whereArgs: [scored['id']]);
+            count++;
+          } else {
+            await db.insert('student_reports', row);
+            count++;
+          }
+        } catch (e) {
+          debugPrint('SyncService: 导入 student_reports 失败: $e');
+        }
+      }
+    } catch (_) {}
+    return count;
+  }
+
+  /// student_works 特殊导入：
+  /// - 保护已有评分（work_scores 关联）的作品不被覆盖
+  Future<int> _importStudentWorks(
+    dynamic db,
+    Map<String, dynamic> data,
+    String userId,
+  ) async {
+    final list = data['student_works'] as List?;
+    if (list == null || list.isEmpty) return 0;
+
+    int count = 0;
+    try {
+      // 查出已有评分的作品 ID（需要保护）
+      final scoredWorkIds = <int>{};
+      try {
+        final scored = await db.rawQuery('''
+          SELECT DISTINCT w.id FROM student_works w
+          INNER JOIN work_scores ws ON ws.work_id = w.id
+          WHERE w.user_id = ?
+        ''', [userId]);
+        for (final r in scored) {
+          final id = r['id'] as int?;
+          if (id != null) scoredWorkIds.add(id);
+        }
+      } catch (_) {}
+
+      // 构建已有作品的 title → id 映射（用于匹配跨设备数据）
+      final existingByTitle = <String, Map<String, dynamic>>{};
+      try {
+        final existing = await db.query('student_works',
+            where: 'user_id = ?', whereArgs: [userId]);
+        for (final r in existing) {
+          final title = r['title'] as String? ?? '';
+          existingByTitle[title] = Map<String, dynamic>.from(r as Map);
+        }
+      } catch (_) {}
+
+      // 删除未评分的作品（已评分的保留）
+      if (scoredWorkIds.isEmpty) {
+        await db.delete('student_works',
+            where: 'user_id = ?', whereArgs: [userId]);
+      } else {
+        final placeholders = scoredWorkIds.map((_) => '?').join(',');
+        await db.delete('student_works',
+            where: 'user_id = ? AND id NOT IN ($placeholders)',
+            whereArgs: [userId, ...scoredWorkIds]);
+      }
+
+      for (final r in list) {
+        try {
+          final row = Map<String, dynamic>.from(r as Map);
+          row.remove('id');
+          row['user_id'] = userId;
+
+          final title = row['title'] as String? ?? '';
+          final existing = existingByTitle[title];
+
+          if (existing != null && scoredWorkIds.contains(existing['id'])) {
+            // 已评分 → 更新内容字段，保留 id 不变（work_scores 外键依赖）
+            await db.update('student_works', row,
+                where: 'id = ?', whereArgs: [existing['id']]);
+            count++;
+          } else {
+            await db.insert('student_works', row);
+            count++;
+          }
+        } catch (e) {
+          debugPrint('SyncService: 导入 student_works 失败: $e');
+        }
+      }
+    } catch (_) {}
+    return count;
+  }
+
+  /// work_scores 导入：
+  /// - 仅导入该学生作为评分人（scorer_id）的互评记录
+  /// - 不删除/覆盖其他评分人（教师或其他同学）的评分
+  Future<int> _importWorkScores(
+    dynamic db,
+    Map<String, dynamic> data,
+    String userId,
+  ) async {
+    final list = data['work_scores'] as List?;
+    if (list == null || list.isEmpty) return 0;
+
+    int count = 0;
+    try {
+      // 删除该学生作为评分人的旧评分（重新导入）
+      await db.delete('work_scores',
+          where: 'scorer_id = ?', whereArgs: [userId]);
+
+      for (final r in list) {
+        try {
+          final row = Map<String, dynamic>.from(r as Map);
+          row.remove('id');
+          row['scorer_id'] = userId; // 确保 scorer_id 一致
+
+          // work_id 需要匹配本地的 student_works.id
+          // 通过 work_id 对应的作品标题来重映射
+          final remoteWorkId = row['work_id'];
+          if (remoteWorkId == null) continue;
+
+          // 尝试直接插入（如果 work_id 在本地存在）
+          // ON DELETE CASCADE 保证外键完整性
+          await db.insert('work_scores', row);
+          count++;
+        } catch (e) {
+          debugPrint('SyncService: 导入 work_scores 失败: $e');
+        }
+      }
+    } catch (_) {}
+    return count;
+  }
+
+  /// project_scores 导入：
+  /// - 仅导入该学生作为评分人（scorer_id）的互评记录
+  /// - 不删除/覆盖其他评分人的评分
+  Future<int> _importProjectScores(
+    dynamic db,
+    Map<String, dynamic> data,
+    String userId,
+  ) async {
+    final list = data['project_scores'] as List?;
+    if (list == null || list.isEmpty) return 0;
+
+    int count = 0;
+    try {
+      // 删除该学生作为评分人的旧评分（重新导入）
+      await db.delete('project_scores',
+          where: 'scorer_id = ?', whereArgs: [userId]);
+
+      for (final r in list) {
+        try {
+          final row = Map<String, dynamic>.from(r as Map);
+          row.remove('id');
+          row['scorer_id'] = userId;
+
+          await db.insert('project_scores', row);
+          count++;
+        } catch (e) {
+          debugPrint('SyncService: 导入 project_scores 失败: $e');
+        }
+      }
+    } catch (_) {}
     return count;
   }
 

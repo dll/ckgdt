@@ -89,13 +89,29 @@ class WorksDao {
   }) async {
     await _ensureWorksTable();
     final db = await DatabaseHelper.instance.database;
+    // 教师评分优先展示；同时计算同学互评均分
     String sql = '''
-      SELECT w.*, ws.total_score as score, ws.comment as score_comment,
-             ws.scorer_name, ws.scored_at,
-             ws.score_functionality, ws.score_tech_depth,
-             ws.score_integration, ws.score_quality, ws.score_documentation
+      SELECT w.*,
+             ts.total_score as score, ts.comment as score_comment,
+             ts.scorer_name, ts.scored_at,
+             ts.score_functionality, ts.score_tech_depth,
+             ts.score_integration, ts.score_quality, ts.score_documentation,
+             peer.peer_avg, peer.peer_count
       FROM student_works w
-      LEFT JOIN work_scores ws ON ws.work_id = w.id
+      LEFT JOIN (
+        SELECT ws.* FROM work_scores ws
+        INNER JOIN users u ON u.user_id = ws.scorer_id AND u.role IN ('teacher','admin')
+        WHERE 1=1
+      ) ts ON ts.work_id = w.id
+      LEFT JOIN (
+        SELECT work_id,
+               ROUND(AVG(total_score), 1) as peer_avg,
+               COUNT(*) as peer_count
+        FROM work_scores ws2
+        LEFT JOIN users u2 ON u2.user_id = ws2.scorer_id
+        WHERE u2.role IS NULL OR u2.role = 'student'
+        GROUP BY work_id
+      ) peer ON peer.work_id = w.id
       WHERE 1=1
     ''';
     final args = <dynamic>[];
@@ -111,7 +127,7 @@ class WorksDao {
       'most_viewed' => 'w.view_count DESC',
       'most_liked' => 'w.like_count DESC',
       'hottest' => '(w.like_count + w.comment_count) DESC',
-      'score' => 'COALESCE(ws.total_score, 0) DESC',
+      'score' => 'COALESCE(ts.total_score, 0) DESC',
       _ => 'w.created_at DESC',
     };
     sql += ' ORDER BY $orderBy';
@@ -122,12 +138,26 @@ class WorksDao {
     await _ensureWorksTable();
     final db = await DatabaseHelper.instance.database;
     final list = await db.rawQuery('''
-      SELECT w.*, ws.total_score as score, ws.comment as score_comment,
-             ws.scorer_name, ws.scored_at,
-             ws.score_functionality, ws.score_tech_depth,
-             ws.score_integration, ws.score_quality, ws.score_documentation
+      SELECT w.*,
+             ts.total_score as score, ts.comment as score_comment,
+             ts.scorer_name, ts.scored_at,
+             ts.score_functionality, ts.score_tech_depth,
+             ts.score_integration, ts.score_quality, ts.score_documentation,
+             peer.peer_avg, peer.peer_count
       FROM student_works w
-      LEFT JOIN work_scores ws ON ws.work_id = w.id
+      LEFT JOIN (
+        SELECT ws.* FROM work_scores ws
+        INNER JOIN users u ON u.user_id = ws.scorer_id AND u.role IN ('teacher','admin')
+      ) ts ON ts.work_id = w.id
+      LEFT JOIN (
+        SELECT work_id,
+               ROUND(AVG(total_score), 1) as peer_avg,
+               COUNT(*) as peer_count
+        FROM work_scores ws2
+        LEFT JOIN users u2 ON u2.user_id = ws2.scorer_id
+        WHERE u2.role IS NULL OR u2.role = 'student'
+        GROUP BY work_id
+      ) peer ON peer.work_id = w.id
       WHERE w.id = ?
     ''', [id]);
     return list.isNotEmpty ? list.first : null;
@@ -356,15 +386,14 @@ class WorksDao {
         functionality + techDepth + integration + quality + documentation;
     final db = await DatabaseHelper.instance.database;
 
-    // 先检查是否已评分
+    // 先检查该评分人是否已为此作品评分
     final existing = await db.query('work_scores',
-        where: 'work_id = ?', whereArgs: [workId]);
+        where: 'work_id = ? AND scorer_id = ?', whereArgs: [workId, scorerId]);
     if (existing.isNotEmpty) {
-      // 更新评分
+      // 更新该评分人的评分
       await db.update(
           'work_scores',
           {
-            'scorer_id': scorerId,
             'scorer_name': scorerName,
             'score_functionality': functionality,
             'score_tech_depth': techDepth,
@@ -375,13 +404,13 @@ class WorksDao {
             'comment': comment,
             'scored_at': DateTime.now().toIso8601String(),
           },
-          where: 'work_id = ?',
-          whereArgs: [workId]);
+          where: 'work_id = ? AND scorer_id = ?',
+          whereArgs: [workId, scorerId]);
       await updateWork(workId, {'status': '已评分'});
       return existing.first['id'] as int;
     }
 
-    // 新增评分
+    // 新增评分（该评分人首次评此作品）
     final result = await db.insert('work_scores', {
       'work_id': workId,
       'scorer_id': scorerId,
@@ -410,6 +439,27 @@ class WorksDao {
     ''');
   }
 
+  /// 获取某个作品的所有评分记录（教师 + 同学互评）
+  Future<List<Map<String, dynamic>>> getWorkScores(int workId) async {
+    final db = await DatabaseHelper.instance.database;
+    return db.rawQuery('''
+      SELECT ws.*, COALESCE(u.role, 'student') as scorer_role
+      FROM work_scores ws
+      LEFT JOIN users u ON u.user_id = ws.scorer_id
+      WHERE ws.work_id = ?
+      ORDER BY ws.scored_at DESC
+    ''', [workId]);
+  }
+
+  /// 检查某评分人是否已为指定作品评分
+  Future<bool> hasScored(int workId, String scorerId) async {
+    final db = await DatabaseHelper.instance.database;
+    final result = await db.query('work_scores',
+        where: 'work_id = ? AND scorer_id = ?',
+        whereArgs: [workId, scorerId]);
+    return result.isNotEmpty;
+  }
+
   // ══════════════════════════════════════════════════════════
   //  多维排行榜
   // ══════════════════════════════════════════════════════════
@@ -424,20 +474,28 @@ class WorksDao {
 
     if (dimension == 'score') {
       return db.rawQuery('''
-        SELECT sw.*, ws.total_score as score, ws.comment,
-               ws.scorer_name, sw.view_count, sw.like_count, sw.comment_count
+        SELECT sw.*,
+               ts.total_score as score, ts.comment,
+               ts.scorer_name, sw.view_count, sw.like_count, sw.comment_count
         FROM student_works sw
-        JOIN work_scores ws ON ws.work_id = sw.id
-        ORDER BY ws.total_score DESC
+        JOIN (
+          SELECT ws.* FROM work_scores ws
+          INNER JOIN users u ON u.user_id = ws.scorer_id AND u.role IN ('teacher','admin')
+        ) ts ON ts.work_id = sw.id
+        ORDER BY ts.total_score DESC
       ''');
     }
 
     if (dimension == 'views') {
       return db.rawQuery('''
-        SELECT sw.*, ws.total_score as score, ws.comment,
-               ws.scorer_name, sw.view_count, sw.like_count, sw.comment_count
+        SELECT sw.*,
+               ts.total_score as score, ts.comment,
+               ts.scorer_name, sw.view_count, sw.like_count, sw.comment_count
         FROM student_works sw
-        LEFT JOIN work_scores ws ON ws.work_id = sw.id
+        LEFT JOIN (
+          SELECT ws.* FROM work_scores ws
+          INNER JOIN users u ON u.user_id = ws.scorer_id AND u.role IN ('teacher','admin')
+        ) ts ON ts.work_id = sw.id
         WHERE sw.status IN ('已提交', '已评分')
         ORDER BY sw.view_count DESC
       ''');
@@ -445,10 +503,14 @@ class WorksDao {
 
     if (dimension == 'likes') {
       return db.rawQuery('''
-        SELECT sw.*, ws.total_score as score, ws.comment,
-               ws.scorer_name, sw.view_count, sw.like_count, sw.comment_count
+        SELECT sw.*,
+               ts.total_score as score, ts.comment,
+               ts.scorer_name, sw.view_count, sw.like_count, sw.comment_count
         FROM student_works sw
-        LEFT JOIN work_scores ws ON ws.work_id = sw.id
+        LEFT JOIN (
+          SELECT ws.* FROM work_scores ws
+          INNER JOIN users u ON u.user_id = ws.scorer_id AND u.role IN ('teacher','admin')
+        ) ts ON ts.work_id = sw.id
         WHERE sw.status IN ('已提交', '已评分')
         ORDER BY sw.like_count DESC
       ''');
@@ -456,10 +518,14 @@ class WorksDao {
 
     if (dimension == 'comments') {
       return db.rawQuery('''
-        SELECT sw.*, ws.total_score as score, ws.comment,
-               ws.scorer_name, sw.view_count, sw.like_count, sw.comment_count
+        SELECT sw.*,
+               ts.total_score as score, ts.comment,
+               ts.scorer_name, sw.view_count, sw.like_count, sw.comment_count
         FROM student_works sw
-        LEFT JOIN work_scores ws ON ws.work_id = sw.id
+        LEFT JOIN (
+          SELECT ws.* FROM work_scores ws
+          INNER JOIN users u ON u.user_id = ws.scorer_id AND u.role IN ('teacher','admin')
+        ) ts ON ts.work_id = sw.id
         WHERE sw.status IN ('已提交', '已评分')
         ORDER BY sw.comment_count DESC
       ''');
@@ -468,10 +534,14 @@ class WorksDao {
     // comprehensive: 加权综合排行
     // score×0.4 + normalized(views)×0.3 + normalized(likes)×0.2 + normalized(comments)×0.1
     final allWorks = await db.rawQuery('''
-      SELECT sw.*, ws.total_score as score, ws.comment,
-             ws.scorer_name, sw.view_count, sw.like_count, sw.comment_count
+      SELECT sw.*,
+             ts.total_score as score, ts.comment,
+             ts.scorer_name, sw.view_count, sw.like_count, sw.comment_count
       FROM student_works sw
-      LEFT JOIN work_scores ws ON ws.work_id = sw.id
+      LEFT JOIN (
+        SELECT ws.* FROM work_scores ws
+        INNER JOIN users u ON u.user_id = ws.scorer_id AND u.role IN ('teacher','admin')
+      ) ts ON ts.work_id = sw.id
       WHERE sw.status IN ('已提交', '已评分')
     ''');
 

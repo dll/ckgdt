@@ -1,7 +1,7 @@
 name: knowledge_graph_app
-description: 移动应用开发知识图谱教学系统
+description: 移动图谱与数字孪生教学系统
 publish_to: "none"
-version: 0.9.0+9
+version: 0.9.10+10
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -58,3 +58,7 @@ flutter:
     - assets/graphs/04-项目图谱/
     - assets/graphs/05-教学图谱/
     - assets/graphs/06-学习图谱/
+    - data/实验/实验教程/
+    - data/实验/移动技术栈/
+    - data/实验/实验指导/
+    - data/实验/报告模板/

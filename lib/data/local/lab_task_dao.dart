@@ -80,7 +80,7 @@ class LabTaskDao {
     String sql = '''
       SELECT s.*, t.title as task_title, t.chapter, t.max_score, t.difficulty
       FROM lab_submissions s
-      JOIN lab_tasks t ON t.id = s.task_id
+      LEFT JOIN lab_tasks t ON t.id = s.task_id
       WHERE 1=1
     ''';
     final args = <dynamic>[];
@@ -314,6 +314,25 @@ class LabTaskDao {
   Future<int> deleteReport(int id) async {
     final db = await _dbHelper.database;
     return db.delete('student_reports', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> gradeReport({
+    required int id,
+    required int score,
+    required String feedback,
+  }) async {
+    final db = await _dbHelper.database;
+    return db.update(
+      'student_reports',
+      {
+        'score': score,
+        'feedback': feedback,
+        'status': '已批改',
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
   // ═══════════ 互评 ═══════════

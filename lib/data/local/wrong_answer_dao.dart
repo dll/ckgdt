@@ -85,4 +85,26 @@ class WrongAnswerDao {
       whereArgs: [userId],
     );
   }
+
+  /// 更新错题的 AI 解释
+  Future<void> updateExplanation(int id, String explanation) async {
+    final db = await _dbHelper.database;
+    await db.update(
+      'wrong_answers',
+      {'explanation': explanation},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// 获取没有解释的错题列表
+  Future<List<Map<String, dynamic>>> getWrongAnswersWithoutExplanation(
+      String userId) async {
+    final db = await _dbHelper.database;
+    return await db.query(
+      'wrong_answers',
+      where: 'user_id = ? AND (explanation IS NULL OR explanation = ?)',
+      whereArgs: [userId, ''],
+    );
+  }
 }

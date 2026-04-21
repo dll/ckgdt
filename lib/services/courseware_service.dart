@@ -1959,7 +1959,7 @@ def main():
         add_solid_bg(slide, LIGHT)
         add_slide_transition(slide, ['fade', 'push', 'wipe'][idx % 3])
 
-        s_title = s.get('title', f'\u5e7b\u706f\u7247 {idx+1}')
+        s_title = s.get('title', '')
         subtitle = s.get('subtitle', '')
         bullets = s.get('bullets', [])
         code = s.get('code', '')
@@ -2402,7 +2402,7 @@ def main():
         img = Image.new('RGB', (W, H), WHITE)
         draw = ImageDraw.Draw(img)
 
-        s_title  = s.get('title', f'Slide {si+1}')
+        s_title  = s.get('title', '')
         subtitle = s.get('subtitle', '')
         bullets  = s.get('bullets', [])
         code     = s.get('code', '')

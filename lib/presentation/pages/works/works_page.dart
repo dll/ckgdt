@@ -6,6 +6,7 @@ import '../../../core/constants/app_theme.dart';
 import '../../../data/local/works_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/file_opener_service.dart';
+import '../../../services/sync_service.dart';
 import '../../../services/agent/agents/works_grading_agent.dart';
 import '../../widgets/agent_entry_button.dart';
 
@@ -74,6 +75,13 @@ class _WorksPageState extends State<WorksPage>
   }
 
   Future<void> _initData() async {
+    // 学生端：先拉取自己的最新同步数据（含教师评分、同学互评）
+    if (!_authService.isTeacher && !_authService.isAdmin) {
+      try {
+        final userId = _authService.getCurrentUserId();
+        if (userId != null) await SyncService().downloadOwnData(userId);
+      } catch (_) {}
+    }
     // 一次性清理旧版虚假互动数据
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -807,6 +815,15 @@ class _GalleryTabState extends State<_GalleryTab> {
                                   color: score >= 80
                                       ? Colors.green
                                       : Colors.orange)),
+                        if ((work['peer_count'] as int?) != null &&
+                            (work['peer_count'] as int) > 0) ...[
+                          const SizedBox(width: 6),
+                          Text(
+                              '互评${(work['peer_avg'] as num?)?.toStringAsFixed(0) ?? '0'}',
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.orange[600])),
+                        ],
                       ],
                     ),
                   ],
@@ -933,6 +950,26 @@ class _GalleryTabState extends State<_GalleryTab> {
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text('$score分',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  if ((work['peer_count'] as int?) != null &&
+                      (work['peer_count'] as int) > 0)
+                    Positioned(
+                      left: 8,
+                      top: score != null ? 32 : 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.orange[700],
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                            '互评${(work['peer_avg'] as num?)?.toStringAsFixed(0) ?? '0'}',
                             style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 10,
@@ -1417,6 +1454,21 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                     textStyle: const TextStyle(fontSize: 12),
                   ),
                 ),
+              if (!isTeacherOrAdmin &&
+                  (isSubmitted || workStatus == '已评分') &&
+                  _work['user_id'] != widget.authService.getCurrentUserId())
+                ElevatedButton.icon(
+                  onPressed: () => _showScoreDialog(context, isPeer: true),
+                  icon: const Icon(Icons.people, size: 16),
+                  label: const Text('同学互评'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
+                    textStyle: const TextStyle(fontSize: 12),
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
             ],
           ),
           const Divider(height: 28),
@@ -1492,8 +1544,19 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
           // ── 评分详情 ────────────────────────────────────
           if (score != null) ...[
             const SizedBox(height: 16),
-            _sectionHeader('评分详情', icon: Icons.star),
+            _sectionHeader('教师评分', icon: Icons.star),
             _buildScoreDetail(),
+          ],
+
+          // ── 同学互评 ────────────────────────────────────
+          if ((_work['peer_avg'] as num?) != null &&
+              (_work['peer_count'] as int?) != null &&
+              (_work['peer_count'] as int) > 0) ...[
+            const SizedBox(height: 16),
+            _sectionHeader(
+                '同学互评 (${_work['peer_count']}人)',
+                icon: Icons.people),
+            _buildPeerScoreDetail(),
           ],
 
           // ── 评论区 ──────────────────────────────────────
@@ -1658,6 +1721,52 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
     );
   }
 
+  Widget _buildPeerScoreDetail() {
+    final peerAvg = (_work['peer_avg'] as num?)?.toDouble() ?? 0;
+    final peerCount = (_work['peer_count'] as int?) ?? 0;
+    final scoreColor = peerAvg >= 90
+        ? Colors.green
+        : peerAvg >= 80
+            ? Colors.blue
+            : Colors.orange;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(12),
+        border: const Border(
+            left: BorderSide(color: Colors.orange, width: 3)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.people, color: Colors.orange[700], size: 28),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text('${peerAvg.toStringAsFixed(1)}',
+                      style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: scoreColor)),
+                  Text(' / 100',
+                      style: TextStyle(
+                          fontSize: 14, color: Colors.grey[500])),
+                ],
+              ),
+              Text('$peerCount 位同学参与互评',
+                  style: TextStyle(
+                      fontSize: 12, color: Colors.grey[600])),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCommentItem(Map<String, dynamic> comment) {
     final role = comment['user_role'] as String? ?? 'student';
     final isTeacher = role == 'teacher' || role == 'admin';
@@ -1762,7 +1871,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
 
   // ── 评分对话框 ──────────────────────────────────────────
 
-  void _showScoreDialog(BuildContext context) {
+  void _showScoreDialog(BuildContext context, {bool isPeer = false}) {
     double functionality =
         (_work['score_functionality'] as int?)?.toDouble() ?? 15;
     double techDepth =
@@ -1795,7 +1904,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                       : Colors.red;
           return AlertDialog(
             title: Text(
-                '评分: ${_studentDisplayName(_work, widget.authService.isTeacher || widget.authService.isAdmin)}',
+                '${isPeer ? "同学互评" : "评分"}: ${_studentDisplayName(_work, widget.authService.isTeacher || widget.authService.isAdmin)}',
                 style: const TextStyle(fontSize: 16)),
             content: SizedBox(
               width: double.maxFinite,
@@ -1824,7 +1933,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                       controller: commentCtrl,
                       maxLines: 2,
                       decoration: InputDecoration(
-                        labelText: '教师评语',
+                        labelText: isPeer ? '互评评语' : '教师评语',
                         hintText: '请输入评语...',
                         border: OutlineInputBorder(
                             borderRadius:
@@ -1839,7 +1948,8 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
               ),
             ),
             actions: [
-              // AI 批阅按钮
+              // AI 批阅按钮（仅教师可用）
+              if (!isPeer)
               OutlinedButton.icon(
                 onPressed: isAiGrading
                     ? null
@@ -1906,7 +2016,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                       workId: _work['id'] as int,
                       scorerId:
                           widget.authService.getCurrentUserId(),
-                      scorerName: user?.realName ?? '教师',
+                      scorerName: user?.realName ?? (isPeer ? '同学' : '教师'),
                       functionality: functionality.round(),
                       techDepth: techDepth.round(),
                       integration: integration.round(),
@@ -1920,8 +2030,8 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                     if (context.mounted) {
                       Navigator.pop(ctx);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('评分成功！'),
+                        SnackBar(
+                          content: Text(isPeer ? '互评提交成功！' : '评分成功！'),
                           backgroundColor: Colors.green,
                         ),
                       );
@@ -2238,6 +2348,13 @@ class _RecordsTabState extends State<_RecordsTab> {
                               : score >= 80
                                   ? Colors.blue
                                   : Colors.orange)),
+                ],
+                if ((work['peer_count'] as int?) != null &&
+                    (work['peer_count'] as int) > 0) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                      '互评${(work['peer_avg'] as num?)?.toStringAsFixed(0) ?? '0'}分',
+                      style: TextStyle(fontSize: 10, color: Colors.orange[600])),
                 ],
               ],
             ),

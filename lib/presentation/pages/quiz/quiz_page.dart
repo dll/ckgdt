@@ -4,10 +4,14 @@ import '../../../data/local/quiz_dao.dart';
 import '../../../data/local/wrong_answer_dao.dart';
 import '../../../data/models/question_model.dart';
 import '../../../data/models/quiz_result_model.dart';
+import '../../../services/ai_service.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/tts_flutter_service.dart';
 import '../../widgets/agent_entry_button.dart';
 import '../admin/question_manage_page.dart';
 import '../analytics/learning_analytics_page.dart';
+import '../learning/video_page.dart';
+import '../practice/deep_practice_page.dart';
 import 'wrong_answers_page.dart';
 
 class QuizPage extends StatefulWidget {
@@ -129,19 +133,59 @@ class _QuizPageState extends State<QuizPage> {
       final user = _authService.currentUser;
       if (user != null) {
         final options = question.options;
-        await _wrongAnswerDao.addWrongAnswer(
+        final userAnswerText =
+            _selectedAnswer != null && _selectedAnswer! < options.length
+                ? options[_selectedAnswer!]
+                : '';
+        final correctAnswerText = question.correctAnswer;
+        final recordId = await _wrongAnswerDao.addWrongAnswer(
           userId: user.userId,
           questionId: question.id ?? 0,
           question: question.question,
-          userAnswer: _selectedAnswer != null && _selectedAnswer! < options.length
-              ? options[_selectedAnswer!]
-              : '',
-          correctAnswer: question.correctAnswer,
+          userAnswer: userAnswerText,
+          correctAnswer: correctAnswerText,
+          chapter: _selectedChapter ?? '',
+        );
+        // 异步生成 AI 解释（不阻塞答题流程）
+        _generateExplanation(
+          recordId: recordId,
+          questionText: question.question,
+          userAnswer: userAnswerText,
+          correctAnswer: correctAnswerText,
           chapter: _selectedChapter ?? '',
         );
       }
     } catch (e) {
       // 忽略错误
+    }
+  }
+
+  /// 后台异步生成错题 AI 解释
+  Future<void> _generateExplanation({
+    required int recordId,
+    required String questionText,
+    required String userAnswer,
+    required String correctAnswer,
+    required String chapter,
+  }) async {
+    try {
+      final aiService = AiService();
+
+      final prompt =
+          '题目：$questionText\n学生答案：$userAnswer\n正确答案：$correctAnswer\n章节：$chapter\n\n'
+          '请用 2-3 句话简明解释为什么正确答案是对的，以及学生答案错在哪里。'
+          '语言要通俗易懂，适合大学生阅读。不要重复题目内容。';
+
+      final explanation = await aiService.chat(
+        [{'role': 'user', 'content': prompt}],
+        systemPrompt: '你是一位移动应用开发课程的教学助手，专门为学生解释测验错题。回答要简洁精准。',
+      );
+
+      if (explanation.isNotEmpty) {
+        await _wrongAnswerDao.updateExplanation(recordId, explanation);
+      }
+    } catch (_) {
+      // AI 解释是增值功能，失败不影响主流程
     }
   }
 
@@ -173,6 +217,14 @@ class _QuizPageState extends State<QuizPage> {
 
     await _quizDao.saveQuizResult(result);
 
+    // 语音播报测验结果
+    final wrongCount = _questions.length - _correctCount;
+    final voiceText = wrongCount == 0
+        ? '恭喜你，全部答对！得分${result.score}分。'
+        : '测验完成，得分${result.score}分，答对${_correctCount}题，答错${wrongCount}题。'
+            '错题已自动收录到错题本并生成解析。';
+    TtsFlutterService.instance.speak(voiceText);
+
     if (mounted) {
       showDialog(
         context: context,
@@ -200,8 +252,24 @@ class _QuizPageState extends State<QuizPage> {
                 ),
               ),
               Text('正确: $_correctCount / ${_questions.length}'),
+              if (wrongCount > 0) ...[
+                const SizedBox(height: 8),
+                Text(
+                  '错题已收录并生成 AI 解析',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+              ],
+              const SizedBox(height: 16),
+              const Text(
+                '继续学习',
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black54),
+              ),
             ],
           ),
+          actionsAlignment: MainAxisAlignment.center,
           actions: [
             if (_correctCount < _questions.length)
               TextButton.icon(
@@ -221,6 +289,44 @@ class _QuizPageState extends State<QuizPage> {
                 icon: const Icon(Icons.error_outline, size: 18),
                 label: const Text('复习错题'),
               ),
+            TextButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                setState(() {
+                  _quizStarted = false;
+                  _questions = [];
+                });
+                TtsFlutterService.instance.speak('正在进入深度实践，巩固所学知识');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const DeepPracticePage(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.fitness_center, size: 18),
+              label: const Text('深入实践'),
+            ),
+            TextButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                setState(() {
+                  _quizStarted = false;
+                  _questions = [];
+                });
+                TtsFlutterService.instance.speak('正在打开扩展视频，拓宽知识面');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => VideoListPage(
+                      filterChapter: _selectedChapter,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.play_circle_outline, size: 18),
+              label: const Text('扩展视频'),
+            ),
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
@@ -229,7 +335,7 @@ class _QuizPageState extends State<QuizPage> {
                   _questions = [];
                 });
               },
-              child: const Text('确定'),
+              child: const Text('返回'),
             ),
           ],
         ),

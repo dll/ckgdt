@@ -3,18 +3,22 @@ import 'package:flutter/material.dart';
 import 'package:printing/printing.dart';
 import 'package:pdf/pdf.dart';
 import '../../../services/file_opener_service.dart';
+import '../../../services/tts_flutter_service.dart';
+import '../../pages/quiz/quiz_page.dart';
 
 /// 应用内 PDF 查看器
 /// 使用 printing 包的 PdfPreview 组件渲染 PDF 页面
-/// AppBar 提供"使用系统工具打开"和"打印"按钮
+/// AppBar 提供"使用系统工具打开"、"打印"和"章节测验"按钮
 class InAppPdfViewerPage extends StatefulWidget {
   final String filePath;
   final String title;
+  final String? chapter;
 
   const InAppPdfViewerPage({
     super.key,
     required this.filePath,
     required this.title,
+    this.chapter,
   });
 
   @override
@@ -67,6 +71,25 @@ class _InAppPdfViewerPageState extends State<InAppPdfViewerPage> {
               }
             },
           ),
+          // 学完即测按钮
+          FilledButton.icon(
+            onPressed: () {
+              TtsFlutterService.instance.speak('正在跳转到章节测验');
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const QuizPage(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.quiz, size: 16),
+            label: const Text('去测验'),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              minimumSize: const Size(0, 32),
+            ),
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: FutureBuilder<File>(

@@ -138,20 +138,45 @@ class _AgentChatOverlayState extends State<AgentChatOverlay> {
   }
 
   void _handleAction(AgentAction action) {
+    final navService = NavigationService.instance;
+
     switch (action.type) {
       case 'navigate_tab':
         final keyword = action.params['keyword'] as String?;
         if (keyword != null) {
-          NavigationService.instance.navigateByKeyword(keyword);
+          navService.navigateByKeyword(keyword);
           if (mounted) Navigator.of(context).pop(); // 关闭面板
         }
         break;
       case 'navigate_home':
-        NavigationService.instance.switchToTab(0);
+        navService.switchToTab(0);
         if (mounted) Navigator.of(context).pop();
         break;
       case 'navigate_login':
         if (mounted) Navigator.of(context).pop();
+        break;
+      case 'navigate_sub_page':
+        final keyword = action.params['keyword'] as String?;
+        if (keyword != null) {
+          final page = navService.resolveSubPage(keyword);
+          if (page != null) {
+            if (mounted) Navigator.of(context).pop(); // 先关闭面板
+            navService.pushPage(page);
+          }
+        }
+        break;
+      case 'go_back':
+        if (mounted) Navigator.of(context).pop(); // 先关闭面板
+        navService.goBack();
+        break;
+      case 'pop_to_root':
+        if (mounted) Navigator.of(context).pop(); // 先关闭面板
+        navService.popToRoot();
+        navService.switchToTab(0);
+        break;
+      case 'exit_app':
+        if (mounted) Navigator.of(context).pop(); // 先关闭面板
+        navService.exitApp();
         break;
       default:
         break;

@@ -1,19 +1,26 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 import '../../../data/local/lab_task_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/notification_service.dart';
+import '../../../services/sync_service.dart';
 import '../../../services/agent/agents/lab_grading_agent.dart';
 import '../../../services/gitee_service.dart';
 import '../../../services/course_resource_service.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../widgets/agent_entry_button.dart';
 import '../admin/repo_detail_page.dart';
+import 'lab_material_preview_page.dart';
+import '../learning/pdf_viewer_page.dart';
 
 /// 实验任务页面
-/// 学生: 4 Tab（任务列表 / 我的提交 / 实验报告 / 仓库报表）
-/// 教师/管理员: 5 Tab（任务列表 / 提交管理 / 实验报告 / 任务管理 / 仓库报表）
+/// 学生: 5 Tab（任务列表 / 我的提交 / 实验报告 / 实验材料 / 仓库报表）
+/// 教师/管理员: 6 Tab（任务列表 / 提交管理 / 实验报告 / 实验材料 / 任务管理 / 仓库报表）
 class LabTasksPage extends StatefulWidget {
   const LabTasksPage({super.key});
 
@@ -33,7 +40,7 @@ class _LabTasksPageState extends State<LabTasksPage>
   @override
   void initState() {
     super.initState();
-    final tabCount = _isTeacherOrAdmin ? 5 : 4;
+    final tabCount = _isTeacherOrAdmin ? 6 : 5;
     _tabController = TabController(length: tabCount, vsync: this);
     _initData();
   }
@@ -82,6 +89,7 @@ class _LabTasksPageState extends State<LabTasksPage>
                       text: _isTeacherOrAdmin ? '提交管理' : '我的提交',
                     ),
                     const Tab(icon: Icon(Icons.description, size: 18), text: '实验报告'),
+                    const Tab(icon: Icon(Icons.menu_book, size: 18), text: '实验材料'),
                     if (!_isTeacherOrAdmin)
                       const Tab(icon: Icon(Icons.analytics, size: 18), text: '仓库报表'),
                     if (_isTeacherOrAdmin)
@@ -103,6 +111,7 @@ class _LabTasksPageState extends State<LabTasksPage>
               _SubmissionTab(
                   authService: _authService, labTaskDao: _labTaskDao),
               _ReportTab(authService: _authService, labTaskDao: _labTaskDao),
+              _MaterialsTab(authService: _authService),
               if (!_isTeacherOrAdmin)
                 _StudentRepoTab(authService: _authService),
               if (_isTeacherOrAdmin)
@@ -722,6 +731,8 @@ class _TaskListTabState extends State<_TaskListTab> {
                           taskTitle: task['title'] as String? ?? '实验任务',
                           taskId: taskId,
                         );
+                        // 立即触发同步上传
+                        unawaited(SyncService().uploadStudentData(userId));
                         if (context.mounted) {
                           Navigator.pop(ctx);
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -790,6 +801,12 @@ class _SubmissionTabState extends State<_SubmissionTab> {
   Future<void> _loadSubmissions() async {
     setState(() => _isLoading = true);
     try {
+      // 教师打开提交管理时自动拉取最新学生数据
+      if (_isTeacherOrAdmin) {
+        try {
+          await SyncService().downloadAllStudentData();
+        } catch (_) {}
+      }
       List<Map<String, dynamic>> submissions;
       if (_isTeacherOrAdmin) {
         submissions = await widget.labTaskDao.getSubmissions();
@@ -1374,6 +1391,8 @@ class _SubmissionTabState extends State<_SubmissionTab> {
     final existingScore = submission['score'] as int?;
     final existingFeedback = submission['feedback'] as String?;
     final taskTitle = submission['task_title'] as String? ?? '实验任务';
+    final filePaths = submission['file_paths'] as String? ?? '';
+    final fileNames = submission['file_names'] as String? ?? '';
 
     double scoreValue = (existingScore ?? 80).toDouble();
     final feedbackCtrl = TextEditingController(text: existingFeedback ?? '');
@@ -1422,6 +1441,45 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                           overflow: TextOverflow.ellipsis),
                     ),
                     const SizedBox(height: 16),
+                  ],
+                  if (filePaths.isNotEmpty) ...[
+                    Row(
+                      children: [
+                        const Icon(Icons.picture_as_pdf, color: Colors.red, size: 18),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            fileNames.isNotEmpty ? fileNames : '实验报告.pdf',
+                            style: const TextStyle(fontSize: 12),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        TextButton.icon(
+                          icon: const Icon(Icons.visibility, size: 16),
+                          label: const Text('预览PDF', style: TextStyle(fontSize: 12)),
+                          onPressed: () {
+                            final file = File(filePaths);
+                            if (!file.existsSync()) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('PDF 文件不存在: $filePaths')),
+                              );
+                              return;
+                            }
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => InAppPdfViewerPage(
+                                  filePath: filePaths,
+                                  title: '$userName - $taskTitle',
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
                   ],
                   Row(
                     children: [
@@ -1653,15 +1711,55 @@ class _ReportTabState extends State<_ReportTab> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
+      // 教师打开实验报告时自动拉取最新学生数据
+      if (_isTeacherOrAdmin) {
+        try {
+          await SyncService().downloadAllStudentData();
+        } catch (_) {}
+      } else {
+        // 学生打开时从云端同步自己在其他设备提交的数据
+        final userId = widget.authService.getCurrentUserId();
+        if (userId != null && userId.isNotEmpty) {
+          try {
+            await SyncService().downloadOwnData(userId);
+          } catch (_) {}
+        }
+      }
+
       final userId = widget.authService.getCurrentUserId();
       debugPrint(
           '=== _ReportTab: Loading reports for userId=$userId, isTeacherOrAdmin=$_isTeacherOrAdmin');
 
       List<Map<String, dynamic>> reports;
       if (_isTeacherOrAdmin) {
-        reports = await widget.labTaskDao.getStudentReports();
+        reports = List<Map<String, dynamic>>.from(
+            await widget.labTaskDao.getStudentReports());
+        // 同时加载 lab_submissions 中的提交（学生通过 submitTask 提交的）
+        // 将其转换为与 student_reports 兼容的格式合并显示
+        final submissions = await widget.labTaskDao.getSubmissions();
+        for (final sub in submissions) {
+          // 检查是否已有对应的 student_reports 记录（避免重复显示）
+          final subUserId = sub['user_id'] as String? ?? '';
+          final subTaskId = sub['task_id'] as int?;
+          final alreadyHasReport = reports.any((r) =>
+              r['user_id'] == subUserId && r['task_id'] == subTaskId);
+          if (!alreadyHasReport) {
+            reports.add({
+              ...sub,
+              'title': sub['task_title'] as String? ??
+                  sub['content'] as String? ??
+                  '实验提交',
+              'status': sub['status'] as String? ?? '已提交',
+              'updated_at': sub['submit_time'] as String? ??
+                  sub['created_at'] as String? ??
+                  '',
+              'template_name': '',
+              '_from_submissions': true, // 标记来源
+            });
+          }
+        }
         debugPrint(
-            '=== _ReportTab: Teacher/Admin - loading all student reports');
+            '=== _ReportTab: Teacher/Admin - ${reports.length} reports (incl. submissions)');
       } else if (userId != null && userId.isNotEmpty) {
         reports = await widget.labTaskDao.getStudentReports(userId: userId);
       } else {
@@ -1755,16 +1853,33 @@ class _ReportTabState extends State<_ReportTab> {
     final taskTitle = report['task_title'] as String?;
     final updatedAt = report['updated_at'] as String? ?? '';
     final userId = report['user_id'] as String? ?? '';
+    final isFromSubmissions = report['_from_submissions'] == true;
 
-    final statusColor = status == '已提交' ? Colors.green : Colors.orange;
-    final statusIcon = status == '已提交' ? Icons.check_circle : Icons.edit_note;
+    final statusColor = status == '已批改'
+        ? Colors.blue
+        : status == '已提交' || status == '待批改'
+            ? Colors.green
+            : Colors.orange;
+    final statusIcon = status == '已批改'
+        ? Icons.check_circle
+        : status == '已提交' || status == '待批改'
+            ? Icons.hourglass_bottom
+            : Icons.edit_note;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => _showReportEditor(report: report),
+        onTap: () {
+          if (isFromSubmissions && _isTeacherOrAdmin) {
+            _showSubmissionGradeDialog(report);
+          } else if (_isTeacherOrAdmin) {
+            _showReportPreview(report);
+          } else {
+            _showReportEditor(report: report);
+          }
+        },
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
@@ -1838,30 +1953,62 @@ class _ReportTabState extends State<_ReportTab> {
                         _showReportEditor(report: report);
                       } else if (value == 'delete') {
                         _confirmDeleteReport(report);
+                      } else if (value == 'preview') {
+                        _showReportPreview(report);
+                      } else if (value == 'grade') {
+                        if (isFromSubmissions) {
+                          _showSubmissionGradeDialog(report);
+                        } else {
+                          _showReportGradeDialog(report);
+                        }
                       }
                     },
-                    itemBuilder: (ctx) => [
-                      const PopupMenuItem(
-                        value: 'edit',
-                        child: Row(
-                          children: [
-                            Icon(Icons.edit, size: 18),
-                            SizedBox(width: 8),
-                            Text('编辑'),
+                    itemBuilder: (ctx) => _isTeacherOrAdmin
+                        ? [
+                            const PopupMenuItem(
+                              value: 'preview',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.visibility, size: 18),
+                                  SizedBox(width: 8),
+                                  Text('预览报告'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'grade',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.grading, size: 18),
+                                  SizedBox(width: 8),
+                                  Text('批阅'),
+                                ],
+                              ),
+                            ),
+                          ]
+                        : [
+                            if (status != '已批改')
+                              const PopupMenuItem(
+                                value: 'edit',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.edit, size: 18),
+                                    SizedBox(width: 8),
+                                    Text('编辑'),
+                                  ],
+                                ),
+                              ),
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.delete, size: 18, color: Colors.red),
+                                  SizedBox(width: 8),
+                                  Text('删除', style: TextStyle(color: Colors.red)),
+                                ],
+                              ),
+                            ),
                           ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete, size: 18, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text('删除', style: TextStyle(color: Colors.red)),
-                          ],
-                        ),
-                      ),
-                    ],
                   ),
                 ],
               ),
@@ -1883,6 +2030,354 @@ class _ReportTabState extends State<_ReportTab> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// 教师预览学生报告内容（只读）
+  void _showReportPreview(Map<String, dynamic> report) {
+    final title = report['title'] as String? ?? '未命名报告';
+    final userId = report['user_id'] as String? ?? '';
+    final status = report['status'] as String? ?? '草稿';
+    final updatedAt = report['updated_at'] as String? ?? '';
+    final score = report['score'] as int?;
+    final feedback = report['feedback'] as String?;
+
+    // 解析报告内容
+    Map<String, String> contentMap = {};
+    final contentRaw = report['content_json'] as String?;
+    if (contentRaw != null && contentRaw.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(contentRaw) as Map;
+        contentMap =
+            decoded.map((k, v) => MapEntry(k.toString(), v.toString()));
+      } catch (_) {}
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.article_outlined, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(title,
+                  style: const TextStyle(fontSize: 16),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 学生信息
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.person, size: 16, color: Colors.grey[600]),
+                      const SizedBox(width: 6),
+                      Text('学生：$userId',
+                          style:
+                              TextStyle(fontSize: 13, color: Colors.grey[700])),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: status == '已批改'
+                              ? Colors.blue.withValues(alpha: 0.1)
+                              : Colors.green.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(status,
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: status == '已批改'
+                                    ? Colors.blue
+                                    : Colors.green)),
+                      ),
+                    ],
+                  ),
+                ),
+                if (updatedAt.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text('提交时间：$updatedAt',
+                      style:
+                          TextStyle(fontSize: 11, color: Colors.grey[500])),
+                ],
+                const Divider(height: 24),
+                // 报告内容
+                if (contentMap.isNotEmpty)
+                  ...contentMap.entries.map((entry) {
+                    final sectionTitle = entry.key == 'content'
+                        ? '报告内容'
+                        : entry.key;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(sectionTitle,
+                              style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 6),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[50],
+                              borderRadius: BorderRadius.circular(8),
+                              border:
+                                  Border.all(color: Colors.grey[200]!),
+                            ),
+                            child: SelectableText(
+                              entry.value.isEmpty ? '（未填写）' : entry.value,
+                              style: TextStyle(
+                                fontSize: 13,
+                                height: 1.6,
+                                color: entry.value.isEmpty
+                                    ? Colors.grey[400]
+                                    : null,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  })
+                else
+                  Center(
+                    child: Text('报告内容为空',
+                        style: TextStyle(color: Colors.grey[400])),
+                  ),
+                // 已有批改结果
+                if (score != null) ...[
+                  const Divider(height: 24),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                          color: Colors.blue.withValues(alpha: 0.2)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.grading,
+                                size: 16, color: Colors.blue),
+                            const SizedBox(width: 6),
+                            const Text('批阅结果',
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue)),
+                            const Spacer(),
+                            Text('$score 分',
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: score >= 90
+                                        ? Colors.green
+                                        : score >= 60
+                                            ? Colors.blue
+                                            : Colors.red)),
+                          ],
+                        ),
+                        if (feedback != null &&
+                            feedback.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(feedback,
+                              style: const TextStyle(
+                                  fontSize: 12, height: 1.5)),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('关闭'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _showReportGradeDialog(report);
+            },
+            icon: const Icon(Icons.grading, size: 18),
+            label: const Text('批阅'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 教师批阅学生报告（student_reports 来源）
+  void _showReportGradeDialog(Map<String, dynamic> report) {
+    final reportId = report['id'] as int?;
+    final title = report['title'] as String? ?? '未命名报告';
+    final userId = report['user_id'] as String? ?? '';
+    final existingScore = report['score'] as int?;
+    final existingFeedback = report['feedback'] as String?;
+
+    double scoreValue = (existingScore ?? 80).toDouble();
+    final feedbackCtrl = TextEditingController(text: existingFeedback ?? '');
+    bool isGrading = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final scoreColor = scoreValue >= 90
+              ? Colors.green
+              : scoreValue >= 80
+                  ? Colors.blue
+                  : scoreValue >= 60
+                      ? Colors.orange
+                      : Colors.red;
+          return AlertDialog(
+            title: Row(
+              children: [
+                const Icon(Icons.grading, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('批阅 - $title',
+                      style: const TextStyle(fontSize: 16),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('学生：$userId',
+                        style:
+                            TextStyle(fontSize: 12, color: Colors.grey[600])),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        const Text('评分',
+                            style: TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.bold)),
+                        const Spacer(),
+                        Text('${scoreValue.round()} / 100',
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: scoreColor)),
+                      ],
+                    ),
+                    Slider(
+                      value: scoreValue,
+                      min: 0,
+                      max: 100,
+                      divisions: 100,
+                      label: '${scoreValue.round()}',
+                      onChanged: (v) =>
+                          setDialogState(() => scoreValue = v),
+                    ),
+                    Wrap(
+                      spacing: 8,
+                      children: [60, 70, 80, 85, 90, 95, 100].map((v) {
+                        final isSelected = scoreValue.round() == v;
+                        return ActionChip(
+                          label: Text('$v',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color:
+                                      isSelected ? Colors.white : null)),
+                          backgroundColor: isSelected
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
+                          onPressed: () => setDialogState(
+                              () => scoreValue = v.toDouble()),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: feedbackCtrl,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: '教师反馈',
+                        hintText: '请输入批改意见和建议...',
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('取消'),
+              ),
+              ElevatedButton(
+                onPressed: isGrading
+                    ? null
+                    : () async {
+                        if (reportId == null) return;
+                        setDialogState(() => isGrading = true);
+                        try {
+                          await widget.labTaskDao.gradeReport(
+                            id: reportId,
+                            score: scoreValue.round(),
+                            feedback: feedbackCtrl.text.trim(),
+                          );
+                          if (ctx.mounted) {
+                            Navigator.pop(ctx);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('批阅成功'),
+                                  backgroundColor: Colors.green),
+                            );
+                            _loadData();
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content: Text('批阅失败: $e'),
+                                  backgroundColor: Colors.red),
+                            );
+                          }
+                        } finally {
+                          setDialogState(() => isGrading = false);
+                        }
+                      },
+                child: const Text('提交批阅'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -1925,6 +2420,260 @@ class _ReportTabState extends State<_ReportTab> {
             child: const Text('删除', style: TextStyle(color: Colors.white)),
           ),
         ],
+      ),
+    );
+  }
+
+  /// 教师批改来自 lab_submissions 的提交（含 AI 批阅）
+  void _showSubmissionGradeDialog(Map<String, dynamic> submission) {
+    final subId = submission['id'] as int?;
+    final title = submission['title'] as String? ?? '实验提交';
+    final content = submission['content'] as String? ?? '';
+    final fileNames = submission['file_names'] as String? ?? '';
+    final filePaths = submission['file_paths'] as String? ?? '';
+    final userId = submission['user_id'] as String? ?? '';
+    final existingScore = submission['score'] as int?;
+    final existingFeedback = submission['feedback'] as String?;
+
+    double scoreValue = (existingScore ?? 80).toDouble();
+    final feedbackCtrl = TextEditingController(text: existingFeedback ?? '');
+    bool isGrading = false;
+    bool isAiGrading = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final scoreColor = scoreValue >= 90
+              ? Colors.green
+              : scoreValue >= 80
+                  ? Colors.blue
+                  : scoreValue >= 60
+                      ? Colors.orange
+                      : Colors.red;
+          return AlertDialog(
+            title: Row(
+              children: [
+                const Icon(Icons.grading, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('批改 - $title',
+                      style: const TextStyle(fontSize: 16),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('学生：$userId',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                    if (content.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text('提交内容：$content',
+                          style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                    ],
+                    if (fileNames.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.picture_as_pdf, color: Colors.red, size: 16),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text('附件：$fileNames',
+                                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis),
+                          ),
+                          if (filePaths.isNotEmpty)
+                            TextButton.icon(
+                              icon: const Icon(Icons.visibility, size: 14),
+                              label: const Text('预览', style: TextStyle(fontSize: 11)),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              onPressed: () {
+                                final file = File(filePaths);
+                                if (!file.existsSync()) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('PDF 文件不存在: $filePaths')),
+                                  );
+                                  return;
+                                }
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => InAppPdfViewerPage(
+                                      filePath: filePaths,
+                                      title: '$userId - $title',
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 16),
+                    // 评分
+                    Row(
+                      children: [
+                        const Text('评分',
+                            style: TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.bold)),
+                        const Spacer(),
+                        Text('${scoreValue.round()} / 100',
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: scoreColor)),
+                      ],
+                    ),
+                    Slider(
+                      value: scoreValue,
+                      min: 0,
+                      max: 100,
+                      divisions: 100,
+                      label: '${scoreValue.round()}',
+                      onChanged: (v) => setDialogState(() => scoreValue = v),
+                    ),
+                    Wrap(
+                      spacing: 8,
+                      children: [60, 70, 80, 85, 90, 95, 100].map((v) {
+                        final isSelected = scoreValue.round() == v;
+                        return ActionChip(
+                          label: Text('$v',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: isSelected ? Colors.white : null)),
+                          backgroundColor: isSelected
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
+                          onPressed: () =>
+                              setDialogState(() => scoreValue = v.toDouble()),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: feedbackCtrl,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: '教师反馈',
+                        hintText: '请输入批改意见和建议...',
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              // AI 批阅按钮
+              OutlinedButton.icon(
+                onPressed: isAiGrading
+                    ? null
+                    : () async {
+                        setDialogState(() => isAiGrading = true);
+                        try {
+                          final agent = LabGradingAgent();
+                          final result = await agent.gradeSubmission(
+                            taskTitle: title,
+                            content: content.isNotEmpty ? content : '（学生提交了实验报告文件：$fileNames）',
+                          );
+                          // 尝试解析 JSON 格式评分
+                          try {
+                            final parsed = jsonDecode(result) as Map<String, dynamic>;
+                            setDialogState(() {
+                              scoreValue = (parsed['total_score'] as num?)
+                                      ?.toDouble() ??
+                                  (parsed['score'] as num?)?.toDouble() ??
+                                  scoreValue;
+                              if (scoreValue > 100) scoreValue = 100;
+                              feedbackCtrl.text =
+                                  parsed['feedback'] as String? ?? result;
+                            });
+                          } catch (_) {
+                            setDialogState(() {
+                              feedbackCtrl.text = result;
+                            });
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('AI批阅失败: $e')),
+                            );
+                          }
+                        } finally {
+                          if (ctx.mounted) {
+                            setDialogState(() => isAiGrading = false);
+                          }
+                        }
+                      },
+                icon: isAiGrading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.auto_awesome, size: 16),
+                label: Text(isAiGrading ? 'AI批阅中...' : 'AI批阅'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('取消'),
+              ),
+              ElevatedButton.icon(
+                onPressed: isGrading
+                    ? null
+                    : () async {
+                        setDialogState(() => isGrading = true);
+                        try {
+                          if (subId != null) {
+                            await widget.labTaskDao.gradeSubmission(
+                              subId,
+                              score: scoreValue.round(),
+                              feedback: feedbackCtrl.text.trim().isNotEmpty
+                                  ? feedbackCtrl.text.trim()
+                                  : null,
+                              scorerId: widget.authService.getCurrentUserId(),
+                            );
+                          }
+                          if (context.mounted) {
+                            Navigator.pop(ctx);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('批改成功')),
+                            );
+                          }
+                          _loadData();
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('批改失败: $e')),
+                            );
+                          }
+                        } finally {
+                          if (ctx.mounted) {
+                            setDialogState(() => isGrading = false);
+                          }
+                        }
+                      },
+                icon: const Icon(Icons.check, size: 18),
+                label: const Text('提交批改'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -2238,6 +2987,11 @@ class _ReportTabState extends State<_ReportTab> {
       );
 
       debugPrint('=== _ReportTab: Save result - rows affected=$result');
+
+      // 提交报告后立即触发同步上传
+      if (status == '已提交') {
+        unawaited(SyncService().uploadStudentData(userId));
+      }
 
       if (ctx.mounted) {
         Navigator.pop(ctx);
@@ -3669,6 +4423,7 @@ class _RepoReportTabState extends State<_RepoReportTab>
   }
 
   Future<void> _loadRepoReport() async {
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -4257,5 +5012,450 @@ class _RepoReportItem {
     this.description,
     this.htmlUrl,
     this.error,
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Tab: 实验材料（4 类材料浏览 + 下载 + 预览 + AI 智能体）
+// ══════════════════════════════════════════════════════════════════════════════
+
+/// 实验材料的 4 个分类及其 asset 路径
+class _MaterialCategory {
+  final String title;
+  final IconData icon;
+  final Color color;
+  final String assetDir;
+  final String description;
+  final bool teacherCanAdd;
+
+  const _MaterialCategory({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.assetDir,
+    required this.description,
+    this.teacherCanAdd = false,
+  });
+}
+
+class _MaterialsTab extends StatefulWidget {
+  final AuthService authService;
+  const _MaterialsTab({required this.authService});
+
+  @override
+  State<_MaterialsTab> createState() => _MaterialsTabState();
+}
+
+class _MaterialsTabState extends State<_MaterialsTab> {
+  static const _categories = [
+    _MaterialCategory(
+      title: '实验教程',
+      icon: Icons.school,
+      color: Color(0xFF667eea),
+      assetDir: 'data/实验/实验教程/',
+      description: '6 个实验的详细步骤教程，包含核心任务、操作指南和成功标准',
+    ),
+    _MaterialCategory(
+      title: '移动技术栈',
+      icon: Icons.layers,
+      color: Color(0xFF764ba2),
+      assetDir: 'data/实验/移动技术栈/',
+      description: '覆盖 Kotlin/Swift/Flutter/ArkUI/Uniapp/MAUI 等主流技术的完整手册',
+    ),
+    _MaterialCategory(
+      title: '实验指导',
+      icon: Icons.menu_book,
+      color: Colors.teal,
+      assetDir: 'data/实验/实验指导/',
+      description: '实验指导书及 UML 设计文档参考',
+      teacherCanAdd: true,
+    ),
+    _MaterialCategory(
+      title: '报告模板',
+      icon: Icons.assignment,
+      color: Colors.orange,
+      assetDir: 'data/实验/报告模板/',
+      description: '每个实验对应的报告模板，按格式填写后提交',
+    ),
+  ];
+
+  /// 每个分类下发现的文件列表
+  final Map<int, List<_MaterialFile>> _files = {};
+  /// 教师新增的指导文件（存储在本地）
+  List<_MaterialFile> _localGuides = [];
+  bool _isLoading = true;
+
+  bool get _isTeacherOrAdmin =>
+      widget.authService.isTeacher || widget.authService.isAdmin;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMaterials();
+  }
+
+  Future<void> _loadMaterials() async {
+    setState(() => _isLoading = true);
+    try {
+      // 从 AssetManifest 发现所有 asset 文件
+      final manifestContent =
+          await rootBundle.loadString('AssetManifest.json');
+      final Map<String, dynamic> manifest = json.decode(manifestContent);
+
+      for (int i = 0; i < _categories.length; i++) {
+        final dir = _categories[i].assetDir;
+        final files = manifest.keys
+            .where((k) => k.startsWith(dir) && k.endsWith('.md'))
+            .map((assetPath) {
+          // 提取文件名并清理
+          final fileName = Uri.decodeFull(assetPath.split('/').last);
+          final displayName =
+              fileName.replaceAll('_new.md', '').replaceAll('.md', '');
+          return _MaterialFile(
+            assetPath: assetPath,
+            fileName: fileName,
+            displayName: displayName,
+          );
+        }).toList();
+        // 按文件名排序
+        files.sort((a, b) => a.displayName.compareTo(b.displayName));
+        _files[i] = files;
+      }
+
+      // 加载教师新增的本地指导文件
+      await _loadLocalGuides();
+    } catch (e) {
+      debugPrint('加载实验材料失败: $e');
+    }
+    if (mounted) setState(() => _isLoading = false);
+  }
+
+  Future<void> _loadLocalGuides() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final guidesDir = Directory('${dir.path}/lab_guides');
+      if (await guidesDir.exists()) {
+        final files = await guidesDir
+            .list()
+            .where((f) => f.path.endsWith('.md'))
+            .toList();
+        _localGuides = files
+            .map((f) => _MaterialFile(
+                  filePath: f.path,
+                  fileName: f.path.split(Platform.pathSeparator).last,
+                  displayName: f.path
+                      .split(Platform.pathSeparator)
+                      .last
+                      .replaceAll('.md', ''),
+                  isLocal: true,
+                ))
+            .toList();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _addNewGuide() async {
+    final titleController = TextEditingController();
+    final contentController = TextEditingController();
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('新增实验指导'),
+        content: SizedBox(
+          width: 500,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(
+                  labelText: '标题',
+                  hintText: '例如：Flutter 状态管理进阶指导',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: contentController,
+                maxLines: 12,
+                decoration: const InputDecoration(
+                  labelText: '内容（Markdown 格式）',
+                  hintText: '# 标题\n\n## 第一步\n...',
+                  border: OutlineInputBorder(),
+                  alignLabelWithHint: true,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('取消')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true &&
+        titleController.text.isNotEmpty &&
+        contentController.text.isNotEmpty) {
+      try {
+        final dir = await getApplicationDocumentsDirectory();
+        final guidesDir = Directory('${dir.path}/lab_guides');
+        if (!await guidesDir.exists()) {
+          await guidesDir.create(recursive: true);
+        }
+        final fileName =
+            titleController.text.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+        final file = File('${guidesDir.path}/$fileName.md');
+        await file.writeAsString(contentController.text);
+        await _loadLocalGuides();
+        if (mounted) {
+          setState(() {});
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('实验指导已保存')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('保存失败: $e'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
+    titleController.dispose();
+    contentController.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadMaterials,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(12),
+        itemCount: _categories.length,
+        itemBuilder: (context, catIdx) {
+          final cat = _categories[catIdx];
+          final files = _files[catIdx] ?? [];
+
+          // 实验指导分类合并本地文件
+          final allFiles = catIdx == 2
+              ? [...files, ..._localGuides]
+              : files;
+
+          return Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+            clipBehavior: Clip.antiAlias,
+            child: ExpansionTile(
+              leading: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: cat.color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(cat.icon, color: cat.color, size: 22),
+              ),
+              title: Row(
+                children: [
+                  Text(cat.title,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 15)),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: cat.color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text('${allFiles.length}',
+                        style: TextStyle(fontSize: 11, color: cat.color)),
+                  ),
+                ],
+              ),
+              subtitle: Text(cat.description,
+                  style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis),
+              initiallyExpanded: catIdx == 0,
+              children: [
+                ...allFiles.map((file) => _buildFileItem(file, cat)),
+                // 教师在"实验指导"分类可新增
+                if (cat.teacherCanAdd && _isTeacherOrAdmin)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                    child: OutlinedButton.icon(
+                      onPressed: _addNewGuide,
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('新增实验指导'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.teal,
+                      ),
+                    ),
+                  ),
+                if (allFiles.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Text('暂无材料',
+                        style: TextStyle(color: Colors.grey[400])),
+                  ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFileItem(_MaterialFile file, _MaterialCategory cat) {
+    final agentId = _isTeacherOrAdmin ? 'lab_grading' : 'lab';
+
+    return ListTile(
+      dense: true,
+      leading: Icon(
+        file.isLocal ? Icons.note_add : Icons.article,
+        color: file.isLocal ? Colors.teal : cat.color,
+        size: 20,
+      ),
+      title: Text(
+        file.displayName,
+        style: const TextStyle(fontSize: 13),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: file.isLocal
+          ? const Text('教师自建',
+              style: TextStyle(fontSize: 10, color: Colors.teal))
+          : null,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 预览按钮
+          IconButton(
+            icon: Icon(Icons.visibility, size: 18, color: cat.color),
+            tooltip: '在线预览',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => LabMaterialPreviewPage(
+                    assetPath: file.assetPath,
+                    filePath: file.filePath,
+                    title: file.displayName,
+                    agentId: agentId,
+                  ),
+                ),
+              );
+            },
+          ),
+          // 下载按钮
+          IconButton(
+            icon: const Icon(Icons.download, size: 18, color: Colors.grey),
+            tooltip: '下载到本地',
+            onPressed: () => _downloadFile(file),
+          ),
+          // 教师可删除自建指导
+          if (file.isLocal && _isTeacherOrAdmin)
+            IconButton(
+              icon: const Icon(Icons.delete_outline,
+                  size: 18, color: Colors.red),
+              tooltip: '删除',
+              onPressed: () => _deleteLocalGuide(file),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _downloadFile(_MaterialFile file) async {
+    try {
+      String content;
+      if (file.assetPath != null) {
+        content = await rootBundle.loadString(file.assetPath!);
+      } else {
+        content = await File(file.filePath!).readAsString();
+      }
+
+      final dir = await getApplicationDocumentsDirectory();
+      final labDir = Directory('${dir.path}/lab_materials');
+      if (!await labDir.exists()) {
+        await labDir.create(recursive: true);
+      }
+
+      final saveName =
+          file.displayName.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+      final saveFile = File('${labDir.path}/$saveName.md');
+      await saveFile.writeAsString(content);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已下载: ${saveFile.path}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('下载失败: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteLocalGuide(_MaterialFile file) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('确认删除'),
+        content: Text('确定删除"${file.displayName}"？'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('删除', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true && file.filePath != null) {
+      await File(file.filePath!).delete();
+      await _loadLocalGuides();
+      if (mounted) {
+        setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('已删除')),
+        );
+      }
+    }
+  }
+}
+
+class _MaterialFile {
+  final String? assetPath;
+  final String? filePath;
+  final String fileName;
+  final String displayName;
+  final bool isLocal;
+
+  const _MaterialFile({
+    this.assetPath,
+    this.filePath,
+    required this.fileName,
+    required this.displayName,
+    this.isLocal = false,
   });
 }
