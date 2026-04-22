@@ -1,4 +1,5 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
@@ -13,7 +14,8 @@ class ReportTab extends StatefulWidget {
   final AuthService authService;
   final AchievementDao achievementDao;
 
-  const ReportTab({super.key,
+  const ReportTab({
+    super.key,
     required this.authService,
     required this.achievementDao,
   });
@@ -1502,19 +1504,18 @@ class _ReportTabState extends State<ReportTab> {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Tab 3 — 平时达成（课堂表现→目标1, 期间测验→目标2, 课外学习→目标4）
+// 报告预览对话框
 // ══════════════════════════════════════════════════════════════════════════════
-
 
 class ReportPreviewDialog extends StatefulWidget {
   final String reportText;
-  const ReportPreviewDialog({required this.reportText});
+  const ReportPreviewDialog({super.key, required this.reportText});
 
   @override
-  State<ReportPreviewDialog> createState() => ReportPreviewDialogState();
+  State<ReportPreviewDialog> createState() => _ReportPreviewDialogState();
 }
 
-class ReportPreviewDialogState extends State<ReportPreviewDialog> {
+class _ReportPreviewDialogState extends State<ReportPreviewDialog> {
   bool _showSource = false;
 
   @override
