@@ -17,7 +17,6 @@ import 'services/navigation_service.dart';
 import 'services/auth_service.dart';
 import 'services/agent/agent_registry.dart';
 import 'presentation/pages/profile/virtual_twin_page.dart';
-import 'presentation/pages/admin/teacher_application_page.dart';
 
 // 条件导入：Web 端使用 ffi_web，桌面端使用 ffi
 import 'platform/platform_init_stub.dart'
@@ -284,16 +283,6 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
     }
   }
 
-  void _showTeacherApplication() {
-    _collapse();
-    final navContext = widget.navigatorKey.currentContext;
-    if (navContext != null) {
-      Navigator.of(navContext).push(
-        MaterialPageRoute(builder: (_) => const TeacherApplicationPage()),
-      );
-    }
-  }
-
   /// 根据语音文本进行全局页面导航
   ///
   /// 四级路由：快速通道（返回/退出）→ Tab 映射 → 子页面匹配 → AI 智能体
@@ -470,18 +459,6 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
           color: _isTeacher ? Colors.indigo : Colors.cyan,
           onTap: _showVirtualTwin,
         ),
-
-        // 子按钮：申请教师（仅学生可见）
-        if (!_isTeacher)
-          _buildPositionedSubButton(
-            offset: 392,
-            isOnRight: isOnRight,
-            size: size,
-            icon: Icons.how_to_reg,
-            label: '申请教师',
-            color: Colors.teal,
-            onTap: _showTeacherApplication,
-          ),
 
         // 主按钮
         Positioned(

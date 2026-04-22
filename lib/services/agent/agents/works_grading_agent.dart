@@ -114,6 +114,12 @@ class WorksGradingAgent extends BaseAgent {
       prompt.writeln('## 作品描述：');
       prompt.writeln(description);
     }
+    prompt.writeln();
+    prompt.writeln('## 硬规则（必须严格遵守）');
+    prompt.writeln('1. 若作品描述少于50字或内容空洞 → 分数必须低于60');
+    prompt.writeln('2. 若疑似 AI 生成（无个性化痕迹、格式过于标准）→ 设置 "ai_flag": true 并扣 20 分');
+    prompt.writeln('3. 必须引用评分维度（功能/技术/集成/质量/文档）作为评分依据');
+    prompt.writeln('4. 分数只允许为以下值之一：{0, 60, 70, 80, 90, 100}');
 
     final messages = [
       {'role': 'user', 'content': prompt.toString()},

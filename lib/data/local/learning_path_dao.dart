@@ -4,6 +4,70 @@ import 'database_helper.dart';
 class LearningPathDao {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
 
+  /// 基于最近错题反向推导薄弱节点，生成"补强路径"
+  /// 返回新建路径的 id，若无错题则返回 -1
+  Future<int> generateRemediationPath(String userId) async {
+    final db = await _dbHelper.database;
+
+    // 1. 查错题 → 按章节聚合
+    final wrongRows = await db.rawQuery('''
+      SELECT w.chapter, COUNT(*) as cnt
+      FROM wrong_answers w
+      WHERE w.user_id = ?
+      GROUP BY w.chapter
+      ORDER BY cnt DESC
+      LIMIT 5
+    ''', [userId]);
+
+    if (wrongRows.isEmpty) return -1;
+
+    // 2. 收集薄弱章节关联的节点
+    final nodeIds = <String>[];
+    for (final r in wrongRows) {
+      final chapter = r['chapter'] as String? ?? '';
+      if (chapter.isEmpty) continue;
+      final nodes = await db.rawQuery('''
+        SELECT CAST(id AS TEXT) as nid FROM nodes
+        WHERE graph_id IN (
+          SELECT id FROM graphs WHERE title LIKE ?
+        )
+        LIMIT 10
+      ''', ['%$chapter%']);
+      for (final n in nodes) {
+        final nid = n['nid'] as String? ?? '';
+        if (nid.isNotEmpty && !nodeIds.contains(nid)) nodeIds.add(nid);
+      }
+    }
+
+    if (nodeIds.isEmpty) return -1;
+
+    // 3. 创建补强路径
+    final now = DateTime.now().toIso8601String();
+    final pathId = await db.insert('learning_paths', {
+      'user_id': userId,
+      'title': '错题补强 ${DateTime.now().toString().substring(0, 10)}',
+      'description': '基于错题本自动生成的薄弱知识补强路径',
+      'node_ids': nodeIds.join(','),
+      'progress': 0,
+      'status': 'active',
+      'created_at': now,
+      'updated_at': now,
+    });
+
+    // 4. 写入 path_nodes
+    for (int i = 0; i < nodeIds.length; i++) {
+      await db.insert('path_nodes', {
+        'path_id': pathId,
+        'node_id': nodeIds[i],
+        'node_title': '薄弱节点 ${i + 1}',
+        'sequence': i,
+        'is_completed': 0,
+      });
+    }
+
+    return pathId;
+  }
+
   Future<List<LearningPathModel>> getPathsByUser(String userId) async {
     final db = await _dbHelper.database;
     final maps = await db.query(

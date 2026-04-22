@@ -13,6 +13,7 @@ class TeacherApplicationPage extends StatefulWidget {
 
 class _TeacherApplicationPageState extends State<TeacherApplicationPage> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _workIdController = TextEditingController();
   final _schoolController = TextEditingController();
   final _reasonController = TextEditingController();
@@ -36,6 +37,7 @@ class _TeacherApplicationPageState extends State<TeacherApplicationPage> {
 
   @override
   void dispose() {
+    _nameController.dispose();
     _workIdController.dispose();
     _schoolController.dispose();
     _reasonController.dispose();
@@ -51,7 +53,7 @@ class _TeacherApplicationPageState extends State<TeacherApplicationPage> {
     try {
       await _dao.submitApplication(
         applicantId: user.userId,
-        applicantName: user.realName ?? user.userId,
+        applicantName: _nameController.text.trim(),
         workId: _workIdController.text.trim(),
         school: _schoolController.text.trim(),
         reason: _reasonController.text.trim(),
@@ -62,7 +64,7 @@ class _TeacherApplicationPageState extends State<TeacherApplicationPage> {
         final notifDao = NotificationDao();
         await notifDao.createNotification(
           title: '新教师申请',
-          content: '${user.realName ?? user.userId} 申请成为教师（工号：${_workIdController.text.trim()}），请审核。',
+          content: '${_nameController.text.trim()} 申请成为教师（工号：${_workIdController.text.trim()}），请审核。',
           type: 'teacher_application',
           creatorId: user.userId,
           targetType: 'teachers',
@@ -142,6 +144,18 @@ class _TeacherApplicationPageState extends State<TeacherApplicationPage> {
                 key: _formKey,
                 child: Column(
                   children: [
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: '姓名 *',
+                        hintText: '请输入您的真实姓名',
+                        prefixIcon: Icon(Icons.person),
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (v) =>
+                          (v == null || v.trim().isEmpty) ? '请输入姓名' : null,
+                    ),
+                    const SizedBox(height: 12),
                     TextFormField(
                       controller: _workIdController,
                       decoration: const InputDecoration(

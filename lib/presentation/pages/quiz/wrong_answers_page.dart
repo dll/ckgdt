@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../data/local/wrong_answer_dao.dart';
+import '../../../data/local/learning_path_dao.dart';
 import '../../../services/ai_service.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/tts_flutter_service.dart';
@@ -85,6 +86,30 @@ class _WrongAnswersPageState extends State<WrongAnswersPage> {
     }
   }
 
+  Future<void> _generateRemediationPath() async {
+    final user = _authService.currentUser;
+    if (user == null) return;
+    try {
+      final pathId = await LearningPathDao().generateRemediationPath(user.userId);
+      if (!mounted) return;
+      if (pathId > 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('已生成补强路径，可在学习路径中查看'), backgroundColor: Colors.green),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('暂无可关联的薄弱节点')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('生成失败：$e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   Future<void> _clearAll() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -125,6 +150,12 @@ class _WrongAnswersPageState extends State<WrongAnswersPage> {
         title: const Text('错题本'),
 
         actions: [
+          if (_wrongAnswers.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.route),
+              tooltip: '生成补强路径',
+              onPressed: _generateRemediationPath,
+            ),
           if (_wrongAnswers.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.delete_sweep),
