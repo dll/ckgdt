@@ -25,6 +25,7 @@ import '../admin/survey_manage_page.dart';
 import '../admin/question_manage_page.dart';
 import '../admin/data_export_page.dart';
 import '../admin/teaching_manage_page.dart';
+import '../admin/lab_task_manage_page.dart';
 import '../admin/repo_analytics_page.dart';
 import '../admin/teacher_manage_page.dart';
 import '../admin/teacher_application_manage_page.dart';
@@ -933,6 +934,8 @@ class _AdminToolsPage extends StatelessWidget {
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ClassManagePage()))),
       _AdminTool(Icons.school, '教学管理', Colors.deepOrange,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TeachingManagePage()))),
+      _AdminTool(Icons.science, '实验管理', Colors.blue[700]!,
+          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LabTaskManagePage()))),
       _AdminTool(Icons.quiz_outlined, '题库管理', Colors.orange[700]!,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuestionManagePage()))),
       _AdminTool(Icons.poll, '问卷管理', Colors.pink,
