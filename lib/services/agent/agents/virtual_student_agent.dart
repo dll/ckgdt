@@ -1,4 +1,7 @@
+import 'dart:convert';
 import '../../ai_service.dart';
+import '../../twin_service.dart';
+import '../../auth_service.dart';
 import '../agent_model.dart';
 import '../base_agent.dart';
 
@@ -177,8 +180,23 @@ class VirtualStudentAgent extends BaseAgent {
   @override
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
+    // 注入真实画像数据到 system prompt
+    String enhancedPersona = config.persona;
+    try {
+      final userId = AuthService().currentUser?.userId;
+      if (userId != null) {
+        final profile = await TwinService().buildStudentProfile(userId);
+        enhancedPersona = '''${config.persona}
+
+## 该学生的真实画像数据（请基于此数据作答，不要编造）
+${jsonEncode(profile.toJson())}
+''';
+      }
+    } catch (_) {}
+
     final messages = buildAiMessages(userMessage, session);
-    final result = await safeAiChatWithMeta(messages, aiService: _ai);
+    final result = await safeAiChatWithMeta(messages,
+        aiService: _ai, systemPrompt: enhancedPersona);
     return buildReply(result.content,
         modelProvider: result.provider, modelName: result.model);
   }

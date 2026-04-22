@@ -1,4 +1,6 @@
+import 'dart:convert';
 import '../../ai_service.dart';
+import '../../plagiarism_service.dart';
 import '../agent_model.dart';
 import '../base_agent.dart';
 
@@ -162,6 +164,34 @@ YYYY-MM-DD HH:MM
   @override
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
+    // 检查是否请求工具操作
+    final lower = userMessage.toLowerCase();
+
+    // 可疑提交列表
+    if (lower.contains('可疑') || lower.contains('ai检测') || lower.contains('疑似')) {
+      try {
+        final suspicious = await PlagiarismService().listSuspicious(threshold: 0.7);
+        if (suspicious.isEmpty) {
+          return buildReply('当前没有发现 AI 可疑提交（阈值 > 70%）。');
+        }
+        final sb = StringBuffer('## 🚨 AI 可疑提交列表\n\n');
+        sb.writeln('| 类型 | ID | 用户 | 可疑度 | 证据 |');
+        sb.writeln('|------|-----|------|--------|------|');
+        for (final r in suspicious) {
+          sb.writeln('| ${r['source_type']} | ${r['id']} | ${r['user_id']} | ${((r['ai_suspicion'] as num?) ?? 0 * 100).toStringAsFixed(0)}% | ${r['ai_evidence'] ?? '-'} |');
+        }
+        return buildReply(sb.toString());
+      } catch (e) {
+        return buildReply('扫描出错：$e');
+      }
+    }
+
+    // 全量扫描
+    if (lower.contains('扫描') || lower.contains('全量检测')) {
+      return buildReply('全量扫描功能已集成到提交流程中。每次学生提交实验/作品时会自动进行 Jaccard 相似度 + AI 特征检测。\n\n如需查看可疑列表，请说"列出可疑提交"。');
+    }
+
+    // 常规 AI 对话
     final messages = buildAiMessages(userMessage, session);
     final result = await safeAiChatWithMeta(messages, aiService: _ai);
     return buildReply(result.content,

@@ -56,7 +56,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 19,
+      version: 20,
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -180,7 +180,7 @@ class DatabaseHelper {
 
     db = await openDatabase(
       dbPath,
-      version: 19,
+      version: 20,
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -492,6 +492,9 @@ class DatabaseHelper {
     }
     if (oldVersion < 19) {
       await _migrateToV19(db);
+    }
+    if (oldVersion < 20) {
+      await _migrateToV20(db);
     }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
@@ -1360,6 +1363,78 @@ class DatabaseHelper {
         review_comment TEXT,
         reviewed_at TEXT,
         created_at TEXT NOT NULL
+      )
+    ''');
+  }
+
+  Future<void> _migrateToV20(Database db) async {
+    // ── 字段扩展（try/catch 防重复 ALTER）──
+    final alters = [
+      'ALTER TABLE lab_tasks ADD COLUMN related_node_ids TEXT',
+      'ALTER TABLE lab_submissions ADD COLUMN ai_suspicion REAL DEFAULT 0',
+      'ALTER TABLE lab_submissions ADD COLUMN ai_evidence TEXT',
+      'ALTER TABLE lab_submissions ADD COLUMN teacher_confirmed INTEGER DEFAULT 0',
+      'ALTER TABLE student_works ADD COLUMN related_node_ids TEXT',
+      'ALTER TABLE student_works ADD COLUMN ai_suspicion REAL DEFAULT 0',
+      'ALTER TABLE student_works ADD COLUMN teacher_confirmed INTEGER DEFAULT 0',
+      'ALTER TABLE project_scores ADD COLUMN teacher_confirmed INTEGER DEFAULT 0',
+      'ALTER TABLE questions ADD COLUMN node_id INTEGER',
+    ];
+    for (final sql in alters) {
+      try {
+        await db.execute(sql);
+      } catch (_) {} // 列已存在
+    }
+
+    // ── 新表：数字孪生快照 ──
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS twin_snapshots(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        role TEXT NOT NULL,
+        snapshot_json TEXT NOT NULL,
+        generated_at TEXT NOT NULL,
+        UNIQUE(user_id)
+      )
+    ''');
+
+    // ── 新表：作品同行评审 ──
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS work_peer_reviews(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        work_id INTEGER NOT NULL,
+        reviewer_id TEXT NOT NULL,
+        score INTEGER NOT NULL,
+        comment TEXT,
+        created_at TEXT NOT NULL,
+        UNIQUE(work_id, reviewer_id)
+      )
+    ''');
+
+    // ── 新表：抄袭/AI 特征检测记录 ──
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS plagiarism_records(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        source_type TEXT NOT NULL,
+        source_id INTEGER NOT NULL,
+        similarity_max REAL,
+        similar_with TEXT,
+        ai_likelihood REAL,
+        detected_at TEXT NOT NULL
+      )
+    ''');
+
+    // ── 新表：节点级达成度（物化聚合）──
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS node_achievement(
+        user_id TEXT NOT NULL,
+        node_id INTEGER NOT NULL,
+        quiz_score REAL,
+        lab_score REAL,
+        work_score REAL,
+        overall REAL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY(user_id, node_id)
       )
     ''');
   }
