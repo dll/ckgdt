@@ -3,8 +3,8 @@
   "user_id": "2023211985",
   "user_name": "测试学生",
   "role": "student",
-  "synced_at": "2026-04-22T21:05:29.243036",
-  "last_active": "2026-04-22T21:05:29.222178",
+  "synced_at": "2026-04-22T21:19:05.522402",
+  "last_active": "2026-04-22T21:19:05.510556",
   "quiz_results": [
     {
       "user_id": "2023211985",
@@ -219,7 +219,18 @@
   "work_comments": [],
   "work_likes": [],
   "notification_recipients": [],
-  "work_views": [],
+  "work_views": [
+    {
+      "work_id": 67,
+      "user_id": "2023211985",
+      "viewed_at": "2026-04-22T21:15:09.632364"
+    },
+    {
+      "work_id": 77,
+      "user_id": "2023211985",
+      "viewed_at": "2026-04-22T21:14:46.967691"
+    }
+  ],
   "peer_reviews": [],
   "collaboration_messages": [],
   "contribution_scores": [],
