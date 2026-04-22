@@ -702,6 +702,78 @@ class GiteeService {
     }
   }
 
+  /// 上传二进制文件（如 PDF）到 Gitee 仓库
+  /// [bytes] 为文件原始字节，自动 base64 编码
+  Future<void> createOrUpdateBinaryFile({
+    required String owner,
+    required String repo,
+    required String path,
+    required List<int> bytes,
+    required String message,
+    String branch = 'master',
+  }) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      throw GiteeApiException(statusCode: 401, message: '未配置 Gitee Token');
+    }
+
+    final b64 = base64Encode(bytes);
+    final sha = await getFileSha(owner, repo, path, ref: branch);
+    final uri = Uri.parse('$_baseUrl/repos/$owner/$repo/contents/$path');
+
+    final body = <String, dynamic>{
+      'access_token': token,
+      'content': b64,
+      'message': message,
+      'branch': branch,
+    };
+    if (sha != null) body['sha'] = sha;
+
+    final method = sha != null ? 'PUT' : 'POST';
+    debugPrint('GiteeService: $method binary $path (${bytes.length} bytes)');
+
+    final request = http.Request(method, uri)
+      ..headers['Content-Type'] = 'application/json'
+      ..body = jsonEncode(body);
+
+    final streamed = await request.send().timeout(const Duration(seconds: 60));
+    final resp = await http.Response.fromStream(streamed);
+
+    if (resp.statusCode != 200 && resp.statusCode != 201) {
+      throw GiteeApiException(
+        statusCode: resp.statusCode,
+        message: 'uploadBinary($path): ${utf8.decode(resp.bodyBytes)}',
+      );
+    }
+  }
+
+  /// 下载 Gitee 仓库中的文件原始内容（base64 解码为字节）
+  /// 返回 null 表示文件不存在
+  Future<List<int>?> downloadBinaryFile({
+    required String owner,
+    required String repo,
+    required String path,
+    String branch = 'master',
+  }) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) return null;
+
+    final uri = Uri.parse(
+        '$_baseUrl/repos/$owner/$repo/contents/$path?ref=$branch&access_token=$token');
+    try {
+      final resp = await http.get(uri).timeout(const Duration(seconds: 30));
+      if (resp.statusCode != 200) return null;
+      final data = jsonDecode(utf8.decode(resp.bodyBytes));
+      final content = data['content'] as String?;
+      if (content == null) return null;
+      // Gitee 返回的 base64 可能包含换行符
+      return base64Decode(content.replaceAll('\n', ''));
+    } catch (e) {
+      debugPrint('GiteeService: downloadBinary($path) 失败: $e');
+      return null;
+    }
+  }
+
   /// 删除文件（DELETE /repos/{owner}/{repo}/contents/{path}）
   /// [sha] 为当前文件的 SHA，可通过 getFileSha() 获取
   Future<bool> deleteFile({

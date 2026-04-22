@@ -23,4 +23,14 @@ plugins {
     id("org.jetbrains.kotlin.android") version "2.1.0" apply false
 }
 
+// OHOS mirror (FLUTTER_STORAGE_BASE_URL) 不包含 Android engine artifacts，
+// 添加 Google 官方 Flutter Maven 仓库作为兜底
+dependencyResolutionManagement {
+    repositories {
+        maven {
+            url = uri("https://storage.googleapis.com/download.flutter.io")
+        }
+    }
+}
+
 include(":app")
