@@ -40,6 +40,8 @@ import '../help/handbook_page.dart';
 import '../skill/ai_skill_page.dart';
 import '../classroom/classroom_page.dart';
 import '../sync/data_sync_page.dart';
+import 'teaching_hub_page.dart';
+import 'evaluation_hub_page.dart';
 import '../feedback/feedback_manage_page.dart';
 import '../practice/deep_practice_page.dart';
 import '../practice/growth_curve_page.dart';
@@ -149,48 +151,24 @@ class _HomePageState extends State<HomePage> {
     bodyMap[1] = () => const KnowledgeGraphPage();
 
     if (isTeacherOrAdmin) {
-      // ── 教师/管理员导航 ──────────────────────────────────────────
-      // 2: 教学（教师/管理员用"教学"替代学生的"学习"）
+      // ── 教师/管理员导航（精简 6 Tab）────────────────────────────
+      // 2: 教学中心（教学 + 课堂聚合）
       destinations.add(const NavigationDestination(
         icon: Icon(Icons.menu_book_outlined),
         selectedIcon: Icon(Icons.menu_book),
         label: '教学',
       ));
-      bodyMap[destinations.length - 1] = () => const LearningHubPage();
+      bodyMap[destinations.length - 1] = () => const TeachingHubPage();
 
-      // 3: 课堂
+      // 3: 评价中心（实验 + 考核 + 作品聚合）
       destinations.add(const NavigationDestination(
-        icon: Icon(Icons.cast_for_education_outlined),
-        selectedIcon: Icon(Icons.cast_for_education),
-        label: '课堂',
+        icon: Icon(Icons.rate_review_outlined),
+        selectedIcon: Icon(Icons.rate_review),
+        label: '评价',
       ));
-      bodyMap[destinations.length - 1] = () => const ClassroomPage();
+      bodyMap[destinations.length - 1] = () => const EvaluationHubPage();
 
-      // 4: 实验
-      destinations.add(const NavigationDestination(
-        icon: Icon(Icons.science_outlined),
-        selectedIcon: Icon(Icons.science),
-        label: '实验',
-      ));
-      bodyMap[destinations.length - 1] = () => const LabTasksPage();
-
-      // 5: 考核
-      destinations.add(const NavigationDestination(
-        icon: Icon(Icons.assessment_outlined),
-        selectedIcon: Icon(Icons.assessment),
-        label: '考核',
-      ));
-      bodyMap[destinations.length - 1] = () => const AssessmentPage();
-
-      // 6: 作品
-      destinations.add(const NavigationDestination(
-        icon: Icon(Icons.workspace_premium_outlined),
-        selectedIcon: Icon(Icons.workspace_premium),
-        label: '作品',
-      ));
-      bodyMap[destinations.length - 1] = () => const WorksPage();
-
-      // 7: 达成
+      // 4: 达成
       destinations.add(const NavigationDestination(
         icon: Icon(Icons.emoji_events_outlined),
         selectedIcon: Icon(Icons.emoji_events),
@@ -198,7 +176,7 @@ class _HomePageState extends State<HomePage> {
       ));
       bodyMap[destinations.length - 1] = () => const AchievementPage();
 
-      // 8: 管理（仅管理员）
+      // 5: 管理（仅管理员）
       if (isAdmin) {
         destinations.add(const NavigationDestination(
           icon: Icon(Icons.admin_panel_settings_outlined),
