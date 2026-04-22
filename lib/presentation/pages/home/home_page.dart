@@ -119,11 +119,8 @@ class _HomePageState extends State<HomePage> {
     } catch (_) {}
   }
 
-  /// 当前平台显示名称：基于激活课程动态生成
-  String get _platformTitle {
-    final name = _activeCourse?.name ?? '移动应用开发';
-    return '$name知识图谱与数字孪生平台';
-  }
+  /// 当前平台显示名称：AppBar 内部标题（简短 + 版本号）
+  String get _platformTitle => '移动图谱与数字孪生v0.9.10';
 
   @override
   Widget build(BuildContext context) {
@@ -576,13 +573,6 @@ class _HomePageState extends State<HomePage> {
                 // ── 学生专属功能 ──────────────────────────────────
                 if (!isTeacherOrAdmin) ...[
                   _buildMenuCard(
-                    icon: Icons.face,
-                    title: '虚拟学生',
-                    color: Colors.cyan,
-                    onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const VirtualTwinPage())),
-                  ),
-                  _buildMenuCard(
                     icon: Icons.trending_up,
                     title: '学习进度',
                     color: Colors.green,
@@ -614,13 +604,6 @@ class _HomePageState extends State<HomePage> {
 
                 // ── 教师/管理员功能 ──────────────────────────────
                 if (isTeacherOrAdmin) ...[
-                  _buildMenuCard(
-                    icon: Icons.school,
-                    title: '虚拟教师',
-                    color: Colors.indigo,
-                    onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const VirtualTwinPage())),
-                  ),
                   _buildMenuCard(
                     icon: Icons.bar_chart,
                     title: '成绩统计',
