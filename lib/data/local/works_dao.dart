@@ -9,6 +9,12 @@ class WorksDao {
   //  表结构保障（懒迁移，不修改 database_helper）
   // ══════════════════════════════════════════════════════════
 
+  /// 暴露数据库实例（供视频上传等直接更新使用）
+  Future<dynamic> getDatabase() async {
+    await _ensureWorksTable();
+    return DatabaseHelper.instance.database;
+  }
+
   bool _tableEnsured = false;
 
   Future<void> _ensureWorksTable() async {
