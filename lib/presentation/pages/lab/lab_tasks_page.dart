@@ -28,6 +28,72 @@ class LabTasksPage extends StatefulWidget {
   State<LabTasksPage> createState() => _LabTasksPageState();
 }
 
+/// 尝试从 AI 批阅结果中解析 JSON（顶层函数，多处复用）
+Map<String, dynamic>? tryParseGradingJson(String text) {
+  try {
+    final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(text);
+    if (jsonMatch == null) return null;
+    final jsonStr = jsonMatch.group(0)!;
+    final map = jsonDecode(jsonStr) as Map<String, dynamic>;
+    if (map.containsKey('score') || map.containsKey('feedback')) {
+      return map;
+    }
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
+/// 将 AI 批阅的 JSON 结果转为人类可读的反馈文本（顶层函数，多处复用）
+String formatGradingFeedback(Map<String, dynamic> parsed) {
+  final sb = StringBuffer();
+
+  final summary = parsed['summary'] as String?;
+  if (summary != null && summary.isNotEmpty) {
+    sb.writeln('【总评】$summary');
+    sb.writeln();
+  }
+
+  final dims = parsed['dimensions'] as Map<String, dynamic>?;
+  if (dims != null) {
+    sb.writeln('【各维度评分】');
+    for (final entry in dims.entries) {
+      final d = entry.value;
+      if (d is Map<String, dynamic>) {
+        sb.writeln('  ${entry.key}: ${d['score'] ?? ''}/${d['max'] ?? ''} — ${d['comment'] ?? ''}');
+      }
+    }
+    sb.writeln();
+  }
+
+  final strengths = parsed['strengths'] as List?;
+  if (strengths != null && strengths.isNotEmpty) {
+    sb.writeln('【优点】');
+    for (final s in strengths) {
+      sb.writeln('  - $s');
+    }
+    sb.writeln();
+  }
+
+  final improvements = parsed['improvements'] as List?;
+  if (improvements != null && improvements.isNotEmpty) {
+    sb.writeln('【改进建议】');
+    for (final s in improvements) {
+      sb.writeln('  - $s');
+    }
+    sb.writeln();
+  }
+
+  final feedback = parsed['feedback'] as String?;
+  if (feedback != null && feedback.isNotEmpty) {
+    sb.writeln('【详细反馈】');
+    sb.writeln(feedback);
+  }
+
+  final result = sb.toString().trim();
+  return result.isNotEmpty ? result : (parsed['feedback'] as String? ?? '');
+}
+
 /// 解析PDF文件路径：优先使用原始路径，若不存在则尝试在常见目录查找同名文件
 String? _resolveFilePath(String filePath, String fileNames) {
   // 1. 直接路径存在
@@ -61,21 +127,44 @@ String? _resolveFilePath(String filePath, String fileNames) {
     if (candidate.existsSync()) return candidate.path;
   }
 
-  // 3. 在同步下载目录递归搜索（sync_files/{userId}/files/）
-  if (Platform.isWindows) {
-    final userHome = Platform.environment['USERPROFILE'] ?? '';
-    final docDir = '$userHome\\Documents';
-    final syncRoot = Directory(docDir);
-    if (syncRoot.existsSync()) {
-      try {
+  // 3. 在同步下载目录递归搜索（sync_files/{userId}/）
+  try {
+    final appDocDir = Platform.isWindows
+        ? '${Platform.environment['USERPROFILE'] ?? ''}\\Documents'
+        : '';
+    if (appDocDir.isNotEmpty) {
+      final syncRoot = Directory(appDocDir);
+      if (syncRoot.existsSync()) {
         for (final entity in syncRoot.listSync(recursive: true)) {
           if (entity is File && entity.path.endsWith(fileName)) {
             return entity.path;
           }
         }
-      } catch (_) {}
+      }
     }
-  }
+  } catch (_) {}
+
+  // 4. 搜索应用数据目录的 sync_files
+  try {
+    final appDataPaths = <String>[
+      if (Platform.isWindows)
+        '${Platform.environment['LOCALAPPDATA'] ?? ''}\\com.edu.knowledge_graph_app',
+      if (Platform.isWindows)
+        '${Platform.environment['APPDATA'] ?? ''}\\com.edu.knowledge_graph_app',
+    ];
+    for (final appPath in appDataPaths) {
+      if (appPath.isEmpty) continue;
+      final syncDir = Directory('$appPath\\sync_files');
+      if (syncDir.existsSync()) {
+        for (final entity in syncDir.listSync(recursive: true)) {
+          if (entity is File && entity.path.endsWith(fileName)) {
+            return entity.path;
+          }
+        }
+      }
+    }
+  } catch (_) {}
+
   return null;
 }
 
@@ -1623,7 +1712,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                               scoreValue = maxScore.toDouble();
                             }
                             feedbackCtrl.text =
-                                parsed['feedback'] as String? ?? '';
+                                _formatGradingFeedback(parsed);
                           });
                         } else {
                           // 无法解析 JSON，直接放入反馈
@@ -1708,23 +1797,13 @@ class _SubmissionTabState extends State<_SubmissionTab> {
     );
   }
 
-  /// 尝试从 AI 批阅结果中解析 JSON
-  Map<String, dynamic>? _tryParseGradingJson(String text) {
-    try {
-      // 提取 JSON 块（可能被 ```json ... ``` 包裹）
-      final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(text);
-      if (jsonMatch == null) return null;
-      final jsonStr = jsonMatch.group(0)!;
-      final map = jsonDecode(jsonStr) as Map<String, dynamic>;
-      // 至少要有 score 或 feedback
-      if (map.containsKey('score') || map.containsKey('feedback')) {
-        return map;
-      }
-      return null;
-    } catch (_) {
-      return null;
-    }
-  }
+  /// 尝试从 AI 批阅结果中解析 JSON（委托顶层函数）
+  Map<String, dynamic>? _tryParseGradingJson(String text) =>
+      tryParseGradingJson(text);
+
+  /// 将 AI 批阅的 JSON 结果转为人类可读的反馈文本（委托顶层函数）
+  String _formatGradingFeedback(Map<String, dynamic> parsed) =>
+      formatGradingFeedback(parsed);
 
   Color _scoreColor(int score, int maxScore) {
     final ratio = maxScore > 0 ? score / maxScore : 0.0;
@@ -2649,8 +2728,8 @@ class _ReportTabState extends State<_ReportTab> {
                             content: content.isNotEmpty ? content : '（学生提交了实验报告文件：$fileNames）',
                           );
                           // 尝试解析 JSON 格式评分
-                          try {
-                            final parsed = jsonDecode(result) as Map<String, dynamic>;
+                          final parsed = tryParseGradingJson(result);
+                          if (parsed != null) {
                             setDialogState(() {
                               scoreValue = (parsed['total_score'] as num?)
                                       ?.toDouble() ??
@@ -2658,9 +2737,9 @@ class _ReportTabState extends State<_ReportTab> {
                                   scoreValue;
                               if (scoreValue > 100) scoreValue = 100;
                               feedbackCtrl.text =
-                                  parsed['feedback'] as String? ?? result;
+                                  formatGradingFeedback(parsed);
                             });
-                          } catch (_) {
+                          } else {
                             setDialogState(() {
                               feedbackCtrl.text = result;
                             });
@@ -5162,7 +5241,7 @@ class _MaterialsTabState extends State<_MaterialsTab> {
       for (int i = 0; i < _categories.length; i++) {
         final dir = _categories[i].assetDir;
         final files = manifest.keys
-            .where((k) => k.startsWith(dir) && k.endsWith('.md'))
+            .where((k) => k.startsWith(dir) && (k.endsWith('.md') || k.endsWith('.puml')))
             .map((assetPath) {
           // 提取文件名并清理
           final fileName = Uri.decodeFull(assetPath.split('/').last);
