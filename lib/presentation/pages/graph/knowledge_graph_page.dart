@@ -276,6 +276,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   // ══════════════════════════════════════════════════════════════════════════
 
   Future<void> _initData() async {
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -287,10 +288,16 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
       await _loadStats();
       await _loadConceptProgress();
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _errorMessage = '加载失败: $e';
-      });
+      debugPrint('KnowledgeGraphPage._initData error: $e');
+      if (mounted) {
+        setState(() {
+          _errorMessage = '加载失败: $e';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
