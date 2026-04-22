@@ -60,6 +60,22 @@ String? _resolveFilePath(String filePath, String fileNames) {
     final candidate = File('$dir${Platform.pathSeparator}$fileName');
     if (candidate.existsSync()) return candidate.path;
   }
+
+  // 3. 在同步下载目录递归搜索（sync_files/{userId}/files/）
+  if (Platform.isWindows) {
+    final userHome = Platform.environment['USERPROFILE'] ?? '';
+    final docDir = '$userHome\\Documents';
+    final syncRoot = Directory(docDir);
+    if (syncRoot.existsSync()) {
+      try {
+        for (final entity in syncRoot.listSync(recursive: true)) {
+          if (entity is File && entity.path.endsWith(fileName)) {
+            return entity.path;
+          }
+        }
+      } catch (_) {}
+    }
+  }
   return null;
 }
 

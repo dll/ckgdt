@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/local/database_helper.dart';
 import 'gitee_service.dart';
@@ -209,6 +211,13 @@ class SyncService {
         branch: repoBranch,
       );
 
+      // 2.2 上传实验提交的 PDF 文件到仓库（静默失败，不影响主流程）
+      try {
+        await _uploadSubmissionFiles(userId, data);
+      } catch (e) {
+        debugPrint('SyncService: PDF 文件上传失败（不影响主同步）: $e');
+      }
+
       // 2.5 同时备份到学生个人仓库（静默失败，不影响主流程）
       try {
         final userInfo = await db.query(
@@ -330,6 +339,46 @@ class SyncService {
       status.value = SyncStatus.error;
       _isSyncing = false;
       return SyncResult(success: false, message: '同步失败: $e');
+    }
+  }
+
+  /// 上传实验提交中引用的 PDF 文件到 Gitee 仓库
+  Future<void> _uploadSubmissionFiles(
+      String userId, Map<String, dynamic> data) async {
+    final submissions = data['lab_submissions'] as List? ?? [];
+    for (final sub in submissions) {
+      final filePaths = (sub['file_paths'] as String?) ?? '';
+      final fileNames = (sub['file_names'] as String?) ?? '';
+      if (filePaths.isEmpty) continue;
+
+      final file = File(filePaths);
+      if (!file.existsSync()) continue;
+
+      // 上传到 sync/students/{userId}/files/{fileName}
+      final fileName = fileNames.isNotEmpty
+          ? fileNames
+          : filePaths.split('/').last.split('\\').last;
+      final remotePath = '$_syncDir/$userId/files/$fileName';
+
+      try {
+        final bytes = await file.readAsBytes();
+        // Gitee 单文件上限约 1MB，超大文件跳过
+        if (bytes.length > 1024 * 1024) {
+          debugPrint('SyncService: 跳过超大文件 $fileName (${bytes.length} bytes)');
+          continue;
+        }
+        await _gitee.createOrUpdateBinaryFile(
+          owner: repoOwner,
+          repo: repoName,
+          path: remotePath,
+          bytes: bytes,
+          message: '上传实验文件: $fileName ($userId)',
+          branch: repoBranch,
+        );
+        debugPrint('SyncService: PDF 已上传 $remotePath');
+      } catch (e) {
+        debugPrint('SyncService: 上传 $fileName 失败: $e');
+      }
     }
   }
 
@@ -978,11 +1027,17 @@ class SyncService {
             row['scored_at'] = graded['scored_at'];
             row['status'] = graded['status']; // 保持"已批改"状态
 
+            // 尝试下载 PDF 文件到本地
+            await _downloadSubmissionFile(row, userId);
+
             // 更新而非插入
             await db.update('lab_submissions', row,
                 where: 'id = ?', whereArgs: [graded['id']]);
             count++;
           } else {
+            // 尝试下载 PDF 文件到本地
+            await _downloadSubmissionFile(row, userId);
+
             // 未批改 → 直接插入
             await db.insert('lab_submissions', row);
             count++;
@@ -993,6 +1048,44 @@ class SyncService {
       }
     } catch (_) {}
     return count;
+  }
+
+  /// 从 Gitee 仓库下载实验提交的 PDF 文件到本地
+  Future<void> _downloadSubmissionFile(
+      Map<String, dynamic> row, String userId) async {
+    try {
+      final fileNames = (row['file_names'] as String?) ?? '';
+      if (fileNames.isEmpty) return;
+
+      // 本地已存在则跳过
+      final filePaths = (row['file_paths'] as String?) ?? '';
+      if (filePaths.isNotEmpty && File(filePaths).existsSync()) return;
+
+      // 从仓库下载
+      final remotePath = '$_syncDir/$userId/files/$fileNames';
+      final bytes = await _gitee.downloadBinaryFile(
+        owner: repoOwner,
+        repo: repoName,
+        path: remotePath,
+        branch: repoBranch,
+      );
+      if (bytes == null || bytes.isEmpty) return;
+
+      // 保存到本地应用文档目录
+      final appDir = await getApplicationDocumentsDirectory();
+      final syncFilesDir = Directory('${appDir.path}/sync_files/$userId');
+      if (!syncFilesDir.existsSync()) {
+        syncFilesDir.createSync(recursive: true);
+      }
+      final localFile = File('${syncFilesDir.path}/$fileNames');
+      await localFile.writeAsBytes(bytes);
+
+      // 更新 file_paths 为本地路径
+      row['file_paths'] = localFile.path;
+      debugPrint('SyncService: 已下载 $fileNames -> ${localFile.path}');
+    } catch (e) {
+      debugPrint('SyncService: 下载 PDF 失败: $e');
+    }
   }
 
   /// student_reports 特殊导入：
