@@ -5238,51 +5238,52 @@ class _MaterialsTabState extends State<_MaterialsTab> {
   Future<void> _loadMaterials() async {
     setState(() => _isLoading = true);
     try {
-      // 优先从 Gitee 远程仓库加载
+      // 用 getTree 一次性获取整个仓库文件树（contents API 对中文路径返回空）
       final gitee = GiteeService();
       bool loadedFromGitee = false;
 
-      for (int i = 0; i < _categories.length; i++) {
-        final dir = _categories[i].assetDir; // 如 'data/实验/实验教程/'
-        // Gitee 仓库路径去掉 'data/' 前缀
-        final giteeDir = dir.startsWith('data/') ? dir.substring(5) : dir;
-        final giteeDirTrimmed = giteeDir.endsWith('/')
-            ? giteeDir.substring(0, giteeDir.length - 1)
-            : giteeDir;
-        try {
-          final entries = await gitee.listDir(
-            _dataRepoOwner,
-            _dataRepoName,
-            giteeDirTrimmed,
-            ref: _dataRepoBranch,
-          );
+      try {
+        final tree = await gitee.getTree(
+          _dataRepoOwner,
+          _dataRepoName,
+          sha: _dataRepoBranch,
+          recursive: true,
+        );
 
-          final files = entries
-              .where((e) =>
-                  e['type'] == 'file' &&
-                  ((e['name'] as String).endsWith('.md') ||
-                   (e['name'] as String).endsWith('.puml')))
+        for (int i = 0; i < _categories.length; i++) {
+          final dir = _categories[i].assetDir;
+          // Gitee 仓库路径去掉 'data/' 前缀
+          final giteePrefix = dir.startsWith('data/') ? dir.substring(5) : dir;
+
+          final files = tree
+              .where((e) {
+                final path = e['path'] as String? ?? '';
+                final type = e['type'] as String? ?? '';
+                return type == 'blob' &&
+                    path.startsWith(giteePrefix) &&
+                    (path.endsWith('.md') || path.endsWith('.puml'));
+              })
               .map((e) {
-            final name = e['name'] as String;
-            final path = e['path'] as String;
-            final displayName = name
-                .replaceAll('_new.md', '')
-                .replaceAll('.md', '')
-                .replaceAll('.puml', '');
-            return _MaterialFile(
-              giteePath: path,
-              fileName: name,
-              displayName: displayName,
-            );
-          }).toList();
+                final path = e['path'] as String;
+                final name = path.split('/').last;
+                final displayName = name
+                    .replaceAll('_new.md', '')
+                    .replaceAll('.md', '')
+                    .replaceAll('.puml', '');
+                return _MaterialFile(
+                  giteePath: path,
+                  fileName: name,
+                  displayName: displayName,
+                );
+              })
+              .toList();
 
           files.sort((a, b) => a.displayName.compareTo(b.displayName));
           _files[i] = files;
           if (files.isNotEmpty) loadedFromGitee = true;
-        } catch (e) {
-          debugPrint('从 Gitee 加载 $dir 失败: $e');
-          _files[i] = [];
         }
+      } catch (e) {
+        debugPrint('从 Gitee getTree 加载失败: $e');
       }
 
       // Gitee 全部失败时回退到本地 asset
