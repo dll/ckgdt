@@ -116,6 +116,12 @@ class LabGradingAgent extends BaseAgent {
     prompt.writeln('## 满分：$maxScore 分');
     prompt.writeln('## 学生提交内容：');
     prompt.writeln(content);
+    prompt.writeln();
+    prompt.writeln('## 硬规则（必须严格遵守）');
+    prompt.writeln('1. 若提交内容与任务要求无关或字数少于50字 → 分数必须低于60');
+    prompt.writeln('2. 若内容疑似 AI 生成（上下文过于统一、无个性化痕迹、格式过于标准）→ 在 JSON 中设置 "ai_flag": true 并扣 20 分');
+    prompt.writeln('3. 输出必须引用任务要求的具体条目作为评分依据');
+    prompt.writeln('4. 分数只允许为以下值之一：{0, 60, 70, 80, 90, 100}');
 
     final messages = [
       {'role': 'user', 'content': prompt.toString()},
