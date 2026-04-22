@@ -5230,23 +5230,81 @@ class _MaterialsTabState extends State<_MaterialsTab> {
     _loadMaterials();
   }
 
+  /// Gitee 资料仓库配置
+  static const _dataRepoOwner = 'osgisOne';
+  static const _dataRepoName = 'mad-data';
+  static const _dataRepoBranch = 'master';
+
   Future<void> _loadMaterials() async {
     setState(() => _isLoading = true);
     try {
-      // 尝试从 AssetManifest 发现 asset 文件
+      // 优先从 Gitee 远程仓库加载
+      final gitee = GiteeService();
+      bool loadedFromGitee = false;
+
+      for (int i = 0; i < _categories.length; i++) {
+        final dir = _categories[i].assetDir; // 如 'data/实验/实验教程/'
+        try {
+          final entries = await gitee.listDir(
+            _dataRepoOwner,
+            _dataRepoName,
+            dir.endsWith('/') ? dir.substring(0, dir.length - 1) : dir,
+            ref: _dataRepoBranch,
+          );
+
+          final files = entries
+              .where((e) =>
+                  e['type'] == 'file' &&
+                  ((e['name'] as String).endsWith('.md') ||
+                   (e['name'] as String).endsWith('.puml')))
+              .map((e) {
+            final name = e['name'] as String;
+            final path = e['path'] as String;
+            final displayName = name
+                .replaceAll('_new.md', '')
+                .replaceAll('.md', '')
+                .replaceAll('.puml', '');
+            return _MaterialFile(
+              giteePath: path,
+              fileName: name,
+              displayName: displayName,
+            );
+          }).toList();
+
+          files.sort((a, b) => a.displayName.compareTo(b.displayName));
+          _files[i] = files;
+          if (files.isNotEmpty) loadedFromGitee = true;
+        } catch (e) {
+          debugPrint('从 Gitee 加载 $dir 失败: $e');
+          _files[i] = [];
+        }
+      }
+
+      // Gitee 全部失败时回退到本地 asset
+      if (!loadedFromGitee) {
+        debugPrint('Gitee 加载失败，回退到本地 asset');
+        await _loadMaterialsFromAssets();
+      }
+
+      // 加载教师新增的本地指导文件
+      await _loadLocalGuides();
+    } catch (e) {
+      debugPrint('加载实验材料失败: $e');
+    }
+    if (mounted) setState(() => _isLoading = false);
+  }
+
+  /// 从 Flutter assets 加载（离线 fallback）
+  Future<void> _loadMaterialsFromAssets() async {
+    try {
       Map<String, dynamic> manifest = {};
       try {
-        final manifestContent =
-            await rootBundle.loadString('AssetManifest.json');
-        manifest = json.decode(manifestContent) as Map<String, dynamic>;
-      } catch (_) {
-        debugPrint('AssetManifest.json 不可用，使用硬编码列表');
-      }
+        final content = await rootBundle.loadString('AssetManifest.json');
+        manifest = json.decode(content) as Map<String, dynamic>;
+      } catch (_) {}
 
       for (int i = 0; i < _categories.length; i++) {
         final dir = _categories[i].assetDir;
-
-        // 从 manifest 匹配（兼容 URL 编码的中文路径）
         var files = manifest.keys.where((k) {
           final decoded = Uri.decodeFull(k);
           return (decoded.startsWith(dir) || k.startsWith(dir)) &&
@@ -5264,7 +5322,6 @@ class _MaterialsTabState extends State<_MaterialsTab> {
           );
         }).toList();
 
-        // manifest 为空时使用硬编码 fallback
         if (files.isEmpty) {
           files = await _tryLoadKnownAssets(dir);
         }
@@ -5272,13 +5329,9 @@ class _MaterialsTabState extends State<_MaterialsTab> {
         files.sort((a, b) => a.displayName.compareTo(b.displayName));
         _files[i] = files;
       }
-
-      // 加载教师新增的本地指导文件
-      await _loadLocalGuides();
     } catch (e) {
-      debugPrint('加载实验材料失败: $e');
+      debugPrint('本地 asset 加载失败: $e');
     }
-    if (mounted) setState(() => _isLoading = false);
   }
 
   Future<void> _loadLocalGuides() async {
@@ -5570,6 +5623,7 @@ class _MaterialsTabState extends State<_MaterialsTab> {
                   builder: (_) => LabMaterialPreviewPage(
                     assetPath: file.assetPath,
                     filePath: file.filePath,
+                    giteePath: file.giteePath,
                     title: file.displayName,
                     agentId: agentId,
                   ),
@@ -5663,6 +5717,8 @@ class _MaterialsTabState extends State<_MaterialsTab> {
 class _MaterialFile {
   final String? assetPath;
   final String? filePath;
+  /// Gitee 远程仓库中的路径（如 'data/实验/实验教程/xxx.md'）
+  final String? giteePath;
   final String fileName;
   final String displayName;
   final bool isLocal;
@@ -5670,6 +5726,7 @@ class _MaterialFile {
   const _MaterialFile({
     this.assetPath,
     this.filePath,
+    this.giteePath,
     required this.fileName,
     required this.displayName,
     this.isLocal = false,
