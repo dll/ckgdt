@@ -5244,11 +5244,16 @@ class _MaterialsTabState extends State<_MaterialsTab> {
 
       for (int i = 0; i < _categories.length; i++) {
         final dir = _categories[i].assetDir; // 如 'data/实验/实验教程/'
+        // Gitee 仓库路径去掉 'data/' 前缀
+        final giteeDir = dir.startsWith('data/') ? dir.substring(5) : dir;
+        final giteeDirTrimmed = giteeDir.endsWith('/')
+            ? giteeDir.substring(0, giteeDir.length - 1)
+            : giteeDir;
         try {
           final entries = await gitee.listDir(
             _dataRepoOwner,
             _dataRepoName,
-            dir.endsWith('/') ? dir.substring(0, dir.length - 1) : dir,
+            giteeDirTrimmed,
             ref: _dataRepoBranch,
           );
 
