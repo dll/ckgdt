@@ -723,6 +723,9 @@ class _GalleryTabState extends State<_GalleryTab> {
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: InkWell(
         onTap: () => _showWorkDetail(context, work),
+        onLongPress: isTeacherOrAdmin
+            ? () => _confirmDeleteWork(context, work)
+            : null,
         borderRadius: BorderRadius.circular(10),
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -864,6 +867,9 @@ class _GalleryTabState extends State<_GalleryTab> {
       elevation: 2,
       child: InkWell(
         onTap: () => _showWorkDetail(context, work),
+        onLongPress: (widget.authService.isTeacher || widget.authService.isAdmin)
+            ? () => _confirmDeleteWork(context, work)
+            : null,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1103,6 +1109,52 @@ class _GalleryTabState extends State<_GalleryTab> {
                 fontWeight: FontWeight.w500)),
       ],
     );
+  }
+
+  // ── 作品删除（管理员/教师长按）──────────────────────────
+
+  Future<void> _confirmDeleteWork(
+      BuildContext ctx, Map<String, dynamic> work) async {
+    final workId = work['id'] as int;
+    final title = work['title'] as String? ?? '未命名作品';
+    final userName = work['student_name'] ?? work['user_id'] ?? '';
+
+    final confirmed = await showDialog<bool>(
+      context: ctx,
+      builder: (c) => AlertDialog(
+        title: const Text('删除作品'),
+        content: Text('确定要删除「$userName」的作品「$title」吗？\n\n此操作将同时删除评分、评论、点赞记录，不可撤销。'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(c, false),
+              child: const Text('取消')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(c, true),
+            child: const Text('确认删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await _worksDao.deleteWork(workId);
+      if (ctx.mounted) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          const SnackBar(
+              content: Text('已删除'), backgroundColor: Colors.green),
+        );
+        _loadWorks();
+      }
+    } catch (e) {
+      if (ctx.mounted) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          SnackBar(
+              content: Text('删除失败: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   // ── 作品详情 BottomSheet ─────────────────────────────────
