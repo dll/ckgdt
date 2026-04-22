@@ -849,22 +849,33 @@ class _StudentMaterialsPageState extends State<_StudentMaterialsPage> {
                                 Icon(Icons.article, color: color, size: 20),
                             title: Text(file['displayName']!,
                                 style: const TextStyle(fontSize: 13)),
-                            trailing: IconButton(
-                              icon: Icon(Icons.visibility,
-                                  size: 18, color: color),
-                              tooltip: '在线预览',
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => LabMaterialPreviewPage(
-                                      giteePath: file['giteePath'],
-                                      title: file['displayName']!,
-                                      agentId: 'lab',
-                                    ),
-                                  ),
-                                );
-                              },
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: Icon(Icons.visibility,
+                                      size: 18, color: color),
+                                  tooltip: '在线预览',
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => LabMaterialPreviewPage(
+                                          giteePath: file['giteePath'],
+                                          title: file['displayName']!,
+                                          agentId: 'lab',
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.download,
+                                      size: 18, color: Colors.grey),
+                                  tooltip: '下载到本地',
+                                  onPressed: () => _downloadFile(file),
+                                ),
+                              ],
                             ),
                           )),
                       if (files.isEmpty)
@@ -879,5 +890,44 @@ class _StudentMaterialsPageState extends State<_StudentMaterialsPage> {
               },
             ),
     );
+  }
+
+  Future<void> _downloadFile(Map<String, String> file) async {
+    try {
+      final gitee = GiteeService();
+      final content = await gitee.getFileContent(
+            _dataRepoOwner, _dataRepoName, file['giteePath']!,
+            ref: _dataRepoBranch,
+          ) ?? '';
+      if (content.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('文件内容为空'), backgroundColor: Colors.orange),
+          );
+        }
+        return;
+      }
+
+      final dir = await getApplicationDocumentsDirectory();
+      final labDir = Directory('${dir.path}/lab_materials');
+      if (!await labDir.exists()) {
+        await labDir.create(recursive: true);
+      }
+      final saveName = file['displayName']!.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+      final ext = (file['fileName'] ?? '').endsWith('.puml') ? '.puml' : '.md';
+      final saveFile = File('${labDir.path}/$saveName$ext');
+      await saveFile.writeAsString(content);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已下载到: ${saveFile.path}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('下载失败: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 }
