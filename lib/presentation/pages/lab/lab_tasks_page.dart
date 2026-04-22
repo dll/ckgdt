@@ -5233,27 +5233,42 @@ class _MaterialsTabState extends State<_MaterialsTab> {
   Future<void> _loadMaterials() async {
     setState(() => _isLoading = true);
     try {
-      // 从 AssetManifest 发现所有 asset 文件
-      final manifestContent =
-          await rootBundle.loadString('AssetManifest.json');
-      final Map<String, dynamic> manifest = json.decode(manifestContent);
+      // 尝试从 AssetManifest 发现 asset 文件
+      Map<String, dynamic> manifest = {};
+      try {
+        final manifestContent =
+            await rootBundle.loadString('AssetManifest.json');
+        manifest = json.decode(manifestContent) as Map<String, dynamic>;
+      } catch (_) {
+        debugPrint('AssetManifest.json 不可用，使用硬编码列表');
+      }
 
       for (int i = 0; i < _categories.length; i++) {
         final dir = _categories[i].assetDir;
-        final files = manifest.keys
-            .where((k) => k.startsWith(dir) && (k.endsWith('.md') || k.endsWith('.puml')))
-            .map((assetPath) {
-          // 提取文件名并清理
+
+        // 从 manifest 匹配（兼容 URL 编码的中文路径）
+        var files = manifest.keys.where((k) {
+          final decoded = Uri.decodeFull(k);
+          return (decoded.startsWith(dir) || k.startsWith(dir)) &&
+              (k.endsWith('.md') || k.endsWith('.puml'));
+        }).map((assetPath) {
           final fileName = Uri.decodeFull(assetPath.split('/').last);
-          final displayName =
-              fileName.replaceAll('_new.md', '').replaceAll('.md', '');
+          final displayName = fileName
+              .replaceAll('_new.md', '')
+              .replaceAll('.md', '')
+              .replaceAll('.puml', '');
           return _MaterialFile(
             assetPath: assetPath,
             fileName: fileName,
             displayName: displayName,
           );
         }).toList();
-        // 按文件名排序
+
+        // manifest 为空时使用硬编码 fallback
+        if (files.isEmpty) {
+          files = await _tryLoadKnownAssets(dir);
+        }
+
         files.sort((a, b) => a.displayName.compareTo(b.displayName));
         _files[i] = files;
       }
@@ -5288,6 +5303,71 @@ class _MaterialsTabState extends State<_MaterialsTab> {
             .toList();
       }
     } catch (_) {}
+  }
+
+  /// 当 AssetManifest 匹配失败时，尝试直接加载已知的 asset 文件
+  Future<List<_MaterialFile>> _tryLoadKnownAssets(String dir) async {
+    // 硬编码的已知文件列表（与 data/实验/ 目录一致）
+    const knownFiles = <String, List<String>>{
+      'data/实验/实验教程/': [
+        '实验一 开发环境搭建_new.md',
+        '实验二 原生应用开发_new.md',
+        '实验三 跨平台应用开发_new.md',
+        '实验四 微信小程序开发_new.md',
+        '实验五 鸿蒙多端应用开发_new.md',
+        '实验六 跨平台综合项目实战_new.md',
+      ],
+      'data/实验/移动技术栈/': [
+        'ArkUI开发鸿蒙多端应用技术栈手册.md',
+        'Cordova开发混合应用技术栈手册.md',
+        'Flutter开发跨平台应用技术栈手册.md',
+        'Java开发Android应用技术栈手册.md',
+        'Kotlin开发Android应用技术栈手册.md',
+        'MAUI开发跨平台应用技术栈手册.md',
+        'Swift开发iOS应用技术栈手册.md',
+        'Uniapp开发跨平台应用技术栈手册.md',
+        '嵌入式C-C++开发技术栈手册.md',
+      ],
+      'data/实验/实验指导/': [
+        '移动应用开发实验指导书_new.md',
+        'MVVM模型图_StarUML.puml',
+        '交互顺序图_StarUML.puml',
+        '组件模型图_StarUML.puml',
+        '部署模型图_StarUML.puml',
+      ],
+      'data/实验/报告模板/': [
+        '实验一 开发环境搭建报告模板.md',
+        '实验二 原生应用开发报告模板.md',
+        '实验三 跨平台应用开发报告模板.md',
+        '实验四 微信小程序开发报告模板.md',
+        '实验五 鸿蒙多端应用开发报告模板.md',
+        '实验六 跨平台综合项目实战报告模板.md',
+      ],
+    };
+
+    final fileNames = knownFiles[dir];
+    if (fileNames == null) return [];
+
+    final result = <_MaterialFile>[];
+    for (final fn in fileNames) {
+      final assetPath = '$dir$fn';
+      // 验证 asset 确实存在
+      try {
+        await rootBundle.loadString(assetPath);
+        final displayName = fn
+            .replaceAll('_new.md', '')
+            .replaceAll('.md', '')
+            .replaceAll('.puml', '');
+        result.add(_MaterialFile(
+          assetPath: assetPath,
+          fileName: fn,
+          displayName: displayName,
+        ));
+      } catch (_) {
+        // asset 不存在，跳过
+      }
+    }
+    return result;
   }
 
   Future<void> _addNewGuide() async {
