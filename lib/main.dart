@@ -14,7 +14,10 @@ import 'presentation/widgets/voice_input_button.dart';
 import 'presentation/widgets/agent_chat_overlay.dart';
 import 'services/voice_service.dart';
 import 'services/navigation_service.dart';
+import 'services/auth_service.dart';
 import 'services/agent/agent_registry.dart';
+import 'presentation/pages/profile/virtual_twin_page.dart';
+import 'presentation/pages/admin/teacher_application_page.dart';
 
 // 条件导入：Web 端使用 ffi_web，桌面端使用 ffi
 import 'platform/platform_init_stub.dart'
@@ -266,6 +269,31 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
     }
   }
 
+  bool get _isTeacher {
+    final auth = AuthService();
+    return auth.isTeacher || auth.isAdmin;
+  }
+
+  void _showVirtualTwin() {
+    _collapse();
+    final navContext = widget.navigatorKey.currentContext;
+    if (navContext != null) {
+      Navigator.of(navContext).push(
+        MaterialPageRoute(builder: (_) => const VirtualTwinPage()),
+      );
+    }
+  }
+
+  void _showTeacherApplication() {
+    _collapse();
+    final navContext = widget.navigatorKey.currentContext;
+    if (navContext != null) {
+      Navigator.of(navContext).push(
+        MaterialPageRoute(builder: (_) => const TeacherApplicationPage()),
+      );
+    }
+  }
+
   /// 根据语音文本进行全局页面导航
   ///
   /// 四级路由：快速通道（返回/退出）→ Tab 映射 → 子页面匹配 → AI 智能体
@@ -344,7 +372,7 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
     registry.dispatch(text);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('AI 正在理解: "$text"'),
+        content: Text('正在理解: "$text"'),
         duration: const Duration(seconds: 2),
       ),
     );
@@ -426,11 +454,34 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
           offset: 280,
           isOnRight: isOnRight,
           size: size,
-          icon: Icons.smart_toy,
+          icon: Icons.chat_bubble_outline,
           label: '助手',
           color: Colors.indigo,
           onTap: _showAgentChat,
         ),
+
+        // 子按钮：数字孪生
+        _buildPositionedSubButton(
+          offset: 336,
+          isOnRight: isOnRight,
+          size: size,
+          icon: _isTeacher ? Icons.school : Icons.face,
+          label: _isTeacher ? '虚拟教师' : '虚拟学生',
+          color: _isTeacher ? Colors.indigo : Colors.cyan,
+          onTap: _showVirtualTwin,
+        ),
+
+        // 子按钮：申请教师（仅学生可见）
+        if (!_isTeacher)
+          _buildPositionedSubButton(
+            offset: 392,
+            isOnRight: isOnRight,
+            size: size,
+            icon: Icons.how_to_reg,
+            label: '申请教师',
+            color: Colors.teal,
+            onTap: _showTeacherApplication,
+          ),
 
         // 主按钮
         Positioned(

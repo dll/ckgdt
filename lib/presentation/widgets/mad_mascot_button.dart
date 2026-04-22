@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../services/auth_service.dart';
 import 'agent_chat_overlay.dart';
 import '../pages/profile/virtual_twin_page.dart';
+import '../pages/admin/teacher_application_page.dart';
 
 /// MAD 精灵悬浮菜单 — 展开式 FAB，集成智能体对话 + 数字孪生入口
 ///
@@ -64,6 +65,22 @@ class _MadMascotButtonState extends State<MadMascotButton>
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
+        // ── 子按钮：教师申请（仅学生可见） ──
+        if (!isTeacher)
+          _buildSubButton(
+            heroTag: 'mad_apply',
+            icon: Icons.how_to_reg,
+            label: '申请教师',
+            color: Colors.teal,
+            onPressed: () {
+              _collapse();
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const TeacherApplicationPage()),
+              );
+            },
+          ),
+        if (!isTeacher) const SizedBox(height: 8),
         // ── 子按钮：数字孪生 ──
         _buildSubButton(
           heroTag: 'mad_twin',

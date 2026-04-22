@@ -27,6 +27,7 @@ import '../admin/data_export_page.dart';
 import '../admin/teaching_manage_page.dart';
 import '../admin/repo_analytics_page.dart';
 import '../admin/teacher_manage_page.dart';
+import '../admin/teacher_application_manage_page.dart';
 import '../analytics/learning_analytics_page.dart';
 import '../works/works_page.dart';
 import '../lab/lab_tasks_page.dart';
@@ -35,8 +36,6 @@ import '../repo/student_repo_page.dart';
 import '../achievement/achievement_page.dart';
 import '../profile/student_center_page.dart';
 import '../profile/teacher_workspace_page.dart';
-import '../profile/virtual_twin_page.dart';
-import '../../widgets/mad_mascot_button.dart';
 import '../help/handbook_page.dart';
 import '../skill/ai_skill_page.dart';
 import '../classroom/classroom_page.dart';
@@ -256,7 +255,6 @@ class _HomePageState extends State<HomePage> {
     NavigationService.instance.registerTabMapping(tabMapping);
 
     return Scaffold(
-      floatingActionButton: const MadMascotButton(),
       appBar: AppBar(
         title: Text(_platformTitle),
 
@@ -529,15 +527,15 @@ class _HomePageState extends State<HomePage> {
                         isTeacherOrAdmin ? const GitRepoPage() : const StudentRepoPage())),
                 ),
                 _buildMenuCard(
-                  icon: Icons.auto_awesome,
-                  title: 'AI 技能',
+                  icon: Icons.tips_and_updates,
+                  title: '技能工具',
                   color: Colors.deepPurple[400]!,
                   onTap: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const SkillsHubPage())),
                 ),
                 _buildMenuCard(
-                  icon: Icons.smart_toy,
-                  title: '多智能体',
+                  icon: Icons.chat_bubble_outline,
+                  title: '智慧问答',
                   color: Colors.indigo[400]!,
                   onTap: () => AgentChatOverlay.show(context),
                 ),
@@ -647,7 +645,7 @@ class _HomePageState extends State<HomePage> {
                       MaterialPageRoute(builder: (_) => const FeedbackManagePage())),
                   ),
                   _buildMenuCard(
-                    icon: Icons.auto_awesome,
+                    icon: Icons.add_box_outlined,
                     title: '一键生课',
                     color: Colors.deepPurple[300]!,
                     onTap: () async {
@@ -951,6 +949,8 @@ class _AdminToolsPage extends StatelessWidget {
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StudentManagePage()))),
       _AdminTool(Icons.person_add, '教师管理', Colors.indigo,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherManagePage()))),
+      _AdminTool(Icons.how_to_reg, '申请审核', Colors.teal,
+          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherApplicationManagePage()))),
       _AdminTool(Icons.class_, '班级管理', Colors.cyan[700]!,
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ClassManagePage()))),
       _AdminTool(Icons.school, '教学管理', Colors.deepOrange,

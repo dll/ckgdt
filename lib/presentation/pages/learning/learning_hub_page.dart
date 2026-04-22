@@ -239,7 +239,7 @@ class _LearningHubPageState extends State<LearningHubPage>
             Tab(icon: const Icon(Icons.slideshow_outlined), text: 'PPT (${_pptLoading ? "..." : _pptFiles.length})'),
             Tab(icon: const Icon(Icons.picture_as_pdf_outlined), text: 'PDF (${_pdfLoading ? "..." : _pdfFiles.length})'),
             const Tab(icon: Icon(Icons.quiz_outlined), text: '测验'),
-            const Tab(icon: Icon(Icons.smart_toy_outlined), text: 'AI助手'),
+            const Tab(icon: Icon(Icons.assistant_outlined), text: '助手'),
           ],
         ),
       ),
