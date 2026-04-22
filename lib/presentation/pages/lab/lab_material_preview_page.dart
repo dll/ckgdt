@@ -4,11 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:path_provider/path_provider.dart';
+import '../../../services/gitee_service.dart';
 import '../../widgets/agent_entry_button.dart';
 
 /// 实验材料 Markdown 在线预览页面
 ///
-/// 支持从 assets 或设备文件系统加载 .md 文件，
+/// 支持从 assets、设备文件系统 或 Gitee 远程仓库加载 .md 文件，
 /// 使用 flutter_markdown 渲染，提供下载到本地功能。
 class LabMaterialPreviewPage extends StatefulWidget {
   /// asset 路径（如 'data/实验/实验教程/实验一 开发环境搭建_new.md'）
@@ -16,6 +17,9 @@ class LabMaterialPreviewPage extends StatefulWidget {
 
   /// 设备文件路径（教师新增的材料存储在本地）
   final String? filePath;
+
+  /// Gitee 远程仓库中的路径（如 'data/实验/实验教程/xxx.md'）
+  final String? giteePath;
 
   /// 显示标题
   final String title;
@@ -27,9 +31,10 @@ class LabMaterialPreviewPage extends StatefulWidget {
     super.key,
     this.assetPath,
     this.filePath,
+    this.giteePath,
     required this.title,
     this.agentId = 'lab',
-  }) : assert(assetPath != null || filePath != null);
+  });
 
   @override
   State<LabMaterialPreviewPage> createState() => _LabMaterialPreviewPageState();
@@ -49,7 +54,17 @@ class _LabMaterialPreviewPageState extends State<LabMaterialPreviewPage> {
   Future<void> _loadContent() async {
     try {
       String content;
-      if (widget.assetPath != null) {
+      if (widget.giteePath != null) {
+        // 从 Gitee 远程仓库加载
+        final gitee = GiteeService();
+        content = await gitee.getFileContent(
+              'osgisOne',
+              'mad-data',
+              widget.giteePath!,
+              ref: 'master',
+            ) ??
+            '加载失败：文件内容为空';
+      } else if (widget.assetPath != null) {
         content = await rootBundle.loadString(widget.assetPath!);
       } else {
         content = await File(widget.filePath!).readAsString();
