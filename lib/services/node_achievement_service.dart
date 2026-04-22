@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:sqflite/sqflite.dart';
 import '../data/local/database_helper.dart';
 
 /// 节点级达成度服务 — 聚合 quiz/lab/work 分数到图谱节点

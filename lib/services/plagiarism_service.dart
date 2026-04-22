@@ -100,18 +100,16 @@ class PlagiarismService {
 
     try {
       final aiService = AiService();
-      final response = await aiService.chat(
-        messages: [
-          {
-            'role': 'user',
-            'content': '''分析以下文本是否疑似 AI 生成。
+      final response = await aiService.chat([
+        {
+          'role': 'user',
+          'content': '''分析以下文本是否疑似 AI 生成。
 仅回复一个 JSON：{"ai_likelihood": 0.0到1.0的数值, "evidence": ["原因1", "原因2"]}
 
 文本：
 ${content.substring(0, min(content.length, 800))}''',
-          }
-        ],
-      );
+        }
+      ]);
 
       final json = jsonDecode(
           response.replaceAll(RegExp(r'```json\s*'), '').replaceAll('```', ''));
