@@ -9,6 +9,7 @@ import '../../../data/local/lab_task_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../services/sync_service.dart';
+import '../../../services/gitee_service.dart';
 import '../lab/lab_material_preview_page.dart';
 import '../../widgets/agent_entry_button.dart';
 
@@ -705,7 +706,7 @@ class _StudentLabPageState extends State<StudentLabPage> {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// 学生实验材料浏览页面
+// 学生实验材料浏览页面（从 Gitee mad-data 仓库加载）
 // ══════════════════════════════════════════════════════════════════════════════
 
 class _StudentMaterialsPage extends StatefulWidget {
@@ -717,18 +718,22 @@ class _StudentMaterialsPage extends StatefulWidget {
 }
 
 class _StudentMaterialsPageState extends State<_StudentMaterialsPage> {
+  static const _dataRepoOwner = 'osgisOne';
+  static const _dataRepoName = 'mad-data';
+  static const _dataRepoBranch = 'master';
+
   static const _categories = [
     {'title': '实验教程', 'icon': Icons.school, 'color': Color(0xFF667eea),
-     'dir': 'data/实验/实验教程/',
+     'giteeDir': '实验/实验教程/',
      'desc': '6 个实验的详细步骤教程'},
     {'title': '移动技术栈', 'icon': Icons.layers, 'color': Color(0xFF764ba2),
-     'dir': 'data/实验/移动技术栈/',
+     'giteeDir': '实验/移动技术栈/',
      'desc': '覆盖 Kotlin/Swift/Flutter/ArkUI 等主流技术手册'},
     {'title': '实验指导', 'icon': Icons.menu_book, 'color': Colors.teal,
-     'dir': 'data/实验/实验指导/',
+     'giteeDir': '实验/实验指导/',
      'desc': '实验指导书及 UML 设计文档参考'},
     {'title': '报告模板', 'icon': Icons.assignment, 'color': Colors.orange,
-     'dir': 'data/实验/报告模板/',
+     'giteeDir': '实验/报告模板/',
      'desc': '每个实验对应的报告模板'},
   ];
 
@@ -743,22 +748,32 @@ class _StudentMaterialsPageState extends State<_StudentMaterialsPage> {
 
   Future<void> _loadMaterials() async {
     try {
-      final manifestContent =
-          await rootBundle.loadString('AssetManifest.json');
-      final Map<String, dynamic> manifest = json.decode(manifestContent);
+      final gitee = GiteeService();
+      final tree = await gitee.getTree(
+        _dataRepoOwner, _dataRepoName,
+        sha: _dataRepoBranch, recursive: true,
+      );
 
       for (int i = 0; i < _categories.length; i++) {
-        final dir = _categories[i]['dir'] as String;
-        final files = manifest.keys
-            .where((k) => k.startsWith(dir) && k.endsWith('.md'))
-            .map((assetPath) {
-          final fileName = Uri.decodeFull(assetPath.split('/').last);
-          final displayName =
-              fileName.replaceAll('_new.md', '').replaceAll('.md', '');
-          return {'assetPath': assetPath, 'displayName': displayName};
-        }).toList();
-        files.sort(
-            (a, b) => a['displayName']!.compareTo(b['displayName']!));
+        final prefix = _categories[i]['giteeDir'] as String;
+        final files = tree
+            .where((e) {
+              final path = e['path'] as String? ?? '';
+              final type = e['type'] as String? ?? '';
+              return type == 'blob' && path.startsWith(prefix) &&
+                  (path.endsWith('.md') || path.endsWith('.puml'));
+            })
+            .map((e) {
+              final path = e['path'] as String;
+              final name = path.split('/').last;
+              final displayName = name
+                  .replaceAll('_new.md', '')
+                  .replaceAll('.md', '')
+                  .replaceAll('.puml', '');
+              return {'giteePath': path, 'displayName': displayName, 'fileName': name};
+            })
+            .toList();
+        files.sort((a, b) => a['displayName']!.compareTo(b['displayName']!));
         _files[i] = files;
       }
     } catch (e) {
@@ -834,35 +849,22 @@ class _StudentMaterialsPageState extends State<_StudentMaterialsPage> {
                                 Icon(Icons.article, color: color, size: 20),
                             title: Text(file['displayName']!,
                                 style: const TextStyle(fontSize: 13)),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: Icon(Icons.visibility,
-                                      size: 18, color: color),
-                                  tooltip: '在线预览',
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            LabMaterialPreviewPage(
-                                          assetPath: file['assetPath'],
-                                          title: file['displayName']!,
-                                          agentId: 'lab',
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.download,
-                                      size: 18, color: Colors.grey),
-                                  tooltip: '下载到本地',
-                                  onPressed: () =>
-                                      _downloadFile(file),
-                                ),
-                              ],
+                            trailing: IconButton(
+                              icon: Icon(Icons.visibility,
+                                  size: 18, color: color),
+                              tooltip: '在线预览',
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => LabMaterialPreviewPage(
+                                      giteePath: file['giteePath'],
+                                      title: file['displayName']!,
+                                      agentId: 'lab',
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           )),
                       if (files.isEmpty)
@@ -877,31 +879,5 @@ class _StudentMaterialsPageState extends State<_StudentMaterialsPage> {
               },
             ),
     );
-  }
-
-  Future<void> _downloadFile(Map<String, String> file) async {
-    try {
-      final content = await rootBundle.loadString(file['assetPath']!);
-      final dir = await getApplicationDocumentsDirectory();
-      final labDir = Directory('${dir.path}/lab_materials');
-      if (!await labDir.exists()) {
-        await labDir.create(recursive: true);
-      }
-      final saveName =
-          file['displayName']!.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
-      final saveFile = File('${labDir.path}/$saveName.md');
-      await saveFile.writeAsString(content);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('已下载: ${saveFile.path}')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('下载失败: $e'), backgroundColor: Colors.red),
-        );
-      }
-    }
   }
 }

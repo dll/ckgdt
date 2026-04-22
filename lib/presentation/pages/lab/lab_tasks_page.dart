@@ -5568,16 +5568,16 @@ class _MaterialsTabState extends State<_MaterialsTab> {
               initiallyExpanded: catIdx == 0,
               children: [
                 ...allFiles.map((file) => _buildFileItem(file, cat)),
-                // 教师在"实验指导"分类可新增
-                if (cat.teacherCanAdd && _isTeacherOrAdmin)
+                // 教师/管理员可上传新材料到任意分类
+                if (_isTeacherOrAdmin)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
                     child: OutlinedButton.icon(
-                      onPressed: _addNewGuide,
-                      icon: const Icon(Icons.add, size: 18),
-                      label: const Text('新增实验指导'),
+                      onPressed: () => _uploadMaterial(catIdx),
+                      icon: const Icon(Icons.upload_file, size: 18),
+                      label: Text('上传${cat.title}'),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.teal,
+                        foregroundColor: cat.color,
                       ),
                     ),
                   ),
@@ -5643,23 +5643,255 @@ class _MaterialsTabState extends State<_MaterialsTab> {
             tooltip: '下载到本地',
             onPressed: () => _downloadFile(file),
           ),
-          // 教师可删除自建指导
-          if (file.isLocal && _isTeacherOrAdmin)
+          // 教师：编辑 Gitee 文件
+          if (_isTeacherOrAdmin && file.giteePath != null)
+            IconButton(
+              icon: Icon(Icons.edit, size: 18, color: cat.color),
+              tooltip: '编辑',
+              onPressed: () => _editGiteeFile(file),
+            ),
+          // 教师：删除 Gitee 文件或本地文件
+          if (_isTeacherOrAdmin && (file.giteePath != null || file.isLocal))
             IconButton(
               icon: const Icon(Icons.delete_outline,
                   size: 18, color: Colors.red),
               tooltip: '删除',
-              onPressed: () => _deleteLocalGuide(file),
+              onPressed: () {
+                if (file.isLocal) {
+                  _deleteLocalGuide(file);
+                } else {
+                  _deleteGiteeFile(file);
+                }
+              },
             ),
         ],
       ),
     );
   }
 
+  /// 上传新材料到 Gitee 仓库
+  Future<void> _uploadMaterial(int categoryIndex) async {
+    final cat = _categories[categoryIndex];
+    final giteeDir = (cat.assetDir.startsWith('data/')
+            ? cat.assetDir.substring(5)
+            : cat.assetDir)
+        .replaceAll(RegExp(r'/$'), '');
+
+    final titleCtrl = TextEditingController();
+    final contentCtrl = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('上传材料到「${cat.title}」'),
+        content: SizedBox(
+          width: 500,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleCtrl,
+                decoration: const InputDecoration(
+                  labelText: '文件名 *',
+                  hintText: '例如：实验补充指南',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: contentCtrl,
+                maxLines: 10,
+                decoration: const InputDecoration(
+                  labelText: 'Markdown 内容 *',
+                  hintText: '支持 Markdown 格式...',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('上传'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+    final title = titleCtrl.text.trim();
+    final content = contentCtrl.text.trim();
+    if (title.isEmpty || content.isEmpty) return;
+
+    try {
+      final gitee = GiteeService();
+      final fileName = '$title.md';
+      final remotePath = '$giteeDir/$fileName';
+
+      await gitee.createOrUpdateFile(
+        owner: _dataRepoOwner,
+        repo: _dataRepoName,
+        path: remotePath,
+        content: content,
+        message: '上传实验材料: $fileName',
+        branch: _dataRepoBranch,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('上传成功'), backgroundColor: Colors.green),
+        );
+        _loadMaterials(); // 刷新
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('上传失败: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  /// 编辑 Gitee 文件内容
+  Future<void> _editGiteeFile(_MaterialFile file) async {
+    if (file.giteePath == null) return;
+
+    // 先加载现有内容
+    String? currentContent;
+    try {
+      final gitee = GiteeService();
+      currentContent = await gitee.getFileContent(
+        _dataRepoOwner, _dataRepoName, file.giteePath!,
+        ref: _dataRepoBranch,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('加载失败: $e'), backgroundColor: Colors.red),
+        );
+      }
+      return;
+    }
+
+    if (!mounted) return;
+    final contentCtrl = TextEditingController(text: currentContent ?? '');
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('编辑: ${file.displayName}'),
+        content: SizedBox(
+          width: 600,
+          height: 400,
+          child: TextField(
+            controller: contentCtrl,
+            maxLines: null,
+            expands: true,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              hintText: 'Markdown 内容',
+            ),
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+    final newContent = contentCtrl.text;
+
+    try {
+      final gitee = GiteeService();
+      await gitee.createOrUpdateFile(
+        owner: _dataRepoOwner,
+        repo: _dataRepoName,
+        path: file.giteePath!,
+        content: newContent,
+        message: '编辑实验材料: ${file.fileName}',
+        branch: _dataRepoBranch,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('保存成功'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('保存失败: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  /// 删除 Gitee 文件
+  Future<void> _deleteGiteeFile(_MaterialFile file) async {
+    if (file.giteePath == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('确认删除'),
+        content: Text('确定要删除「${file.displayName}」吗？此操作不可撤销。'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final gitee = GiteeService();
+      await gitee.deleteFile(
+        owner: _dataRepoOwner,
+        repo: _dataRepoName,
+        path: file.giteePath!,
+        message: '删除实验材料: ${file.fileName}',
+        branch: _dataRepoBranch,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('已删除'), backgroundColor: Colors.green),
+        );
+        _loadMaterials(); // 刷新
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('删除失败: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   Future<void> _downloadFile(_MaterialFile file) async {
     try {
       String content;
-      if (file.assetPath != null) {
+      if (file.giteePath != null) {
+        final gitee = GiteeService();
+        content = await gitee.getFileContent(
+              _dataRepoOwner, _dataRepoName, file.giteePath!,
+              ref: _dataRepoBranch,
+            ) ??
+            '';
+      } else if (file.assetPath != null) {
         content = await rootBundle.loadString(file.assetPath!);
       } else {
         content = await File(file.filePath!).readAsString();
