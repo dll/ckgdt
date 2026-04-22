@@ -110,7 +110,7 @@ class DatabaseHelper {
         // 重新打开（版本号必须与主初始化一致）
         final db2 = await openDatabase(
           dbName,
-          version: 17,
+          version: 20,
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
         );
@@ -168,7 +168,7 @@ class DatabaseHelper {
         // Create empty database
         db = await openDatabase(
           dbPath,
-          version: 17,
+          version: 20,
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
         );
@@ -190,8 +190,15 @@ class DatabaseHelper {
     // CREATE TABLE IF NOT EXISTS 添加新列到已有表）
     await _ensureUsersColumns(db);
     await _ensureResourceFileColumns(db);
-    // 确保 v13 的 notifications 等表存在（已有 v13 数据库可能遗漏）
+    // 确保 v13-v20 的表和列存在
     await _migrateToV13(db);
+    await _migrateToV14(db);
+    await _migrateToV15(db);
+    await _migrateToV16(db);
+    await _migrateToV17(db);
+    await _migrateToV18(db);
+    await _migrateToV19(db);
+    await _migrateToV20(db);
 
     // Verify tables exist
     try {
@@ -403,6 +410,11 @@ class DatabaseHelper {
     await _migrateToV13(db);
     await _migrateToV14(db);
     await _migrateToV15(db);
+    await _migrateToV16(db);
+    await _migrateToV17(db);
+    await _migrateToV18(db);
+    await _migrateToV19(db);
+    await _migrateToV20(db);
     await _ensureResourceFileColumns(db);
 
     // Add admin user (ignore if already exists from asset DB)
@@ -556,6 +568,11 @@ class DatabaseHelper {
     await _migrateToV13(db);
     await _migrateToV14(db);
     await _migrateToV15(db);
+    await _migrateToV16(db);
+    await _migrateToV17(db);
+    await _migrateToV18(db);
+    await _migrateToV19(db);
+    await _migrateToV20(db);
     await _ensureAchievementColumns(db);
   }
 
