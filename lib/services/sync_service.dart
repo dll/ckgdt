@@ -343,42 +343,74 @@ class SyncService {
   }
 
   /// 上传实验提交中引用的 PDF 文件到 Gitee 仓库
+  ///
+  /// 目录规范：
+  ///   sync/students/{userId}/实验/{fileName}  — 实验报告
+  ///   sync/students/{userId}/考核/{fileName}  — 项目考核
+  ///   sync/students/{userId}/作品/{fileName}  — 学生作品
   Future<void> _uploadSubmissionFiles(
       String userId, Map<String, dynamic> data) async {
+    // 实验报告
     final submissions = data['lab_submissions'] as List? ?? [];
     for (final sub in submissions) {
-      final filePaths = (sub['file_paths'] as String?) ?? '';
-      final fileNames = (sub['file_names'] as String?) ?? '';
-      if (filePaths.isEmpty) continue;
+      await _uploadSingleFile(userId, sub, '实验');
+    }
+    // 实验报告（student_reports 表）
+    final reports = data['student_reports'] as List? ?? [];
+    for (final report in reports) {
+      await _uploadSingleFile(userId, report, '实验');
+    }
+    // 项目考核
+    final projectScores = data['project_scores'] as List? ?? [];
+    for (final score in projectScores) {
+      await _uploadSingleFile(userId, score, '考核');
+    }
+    // 学生作品
+    final works = data['student_works'] as List? ?? [];
+    for (final work in works) {
+      await _uploadSingleFile(userId, work, '作品');
+    }
+  }
 
-      final file = File(filePaths);
-      if (!file.existsSync()) continue;
+  /// 上传单个文件到指定分类目录
+  Future<void> _uploadSingleFile(
+      String userId, Map<String, dynamic> row, String category) async {
+    final filePaths = (row['file_paths'] as String?) ??
+        (row['file_path'] as String?) ??
+        (row['attachment_url'] as String?) ??
+        '';
+    final fileNames = (row['file_names'] as String?) ??
+        (row['file_name'] as String?) ??
+        '';
+    if (filePaths.isEmpty) return;
 
-      // 上传到 sync/students/{userId}/files/{fileName}
-      final fileName = fileNames.isNotEmpty
-          ? fileNames
-          : filePaths.split('/').last.split('\\').last;
-      final remotePath = '$_syncDir/$userId/files/$fileName';
+    final file = File(filePaths);
+    if (!file.existsSync()) return;
 
-      try {
-        final bytes = await file.readAsBytes();
-        // Gitee 单文件上限约 1MB，超大文件跳过
-        if (bytes.length > 1024 * 1024) {
-          debugPrint('SyncService: 跳过超大文件 $fileName (${bytes.length} bytes)');
-          continue;
-        }
-        await _gitee.createOrUpdateBinaryFile(
-          owner: repoOwner,
-          repo: repoName,
-          path: remotePath,
-          bytes: bytes,
-          message: '上传实验文件: $fileName ($userId)',
-          branch: repoBranch,
-        );
-        debugPrint('SyncService: PDF 已上传 $remotePath');
-      } catch (e) {
-        debugPrint('SyncService: 上传 $fileName 失败: $e');
+    final fileName = fileNames.isNotEmpty
+        ? fileNames
+        : filePaths.split('/').last.split('\\').last;
+    final remotePath = '$_syncDir/$userId/$category/$fileName';
+
+    try {
+      final bytes = await file.readAsBytes();
+      // Gitee 单文件上限约 1MB，超大文件跳过
+      if (bytes.length > 1024 * 1024) {
+        debugPrint(
+            'SyncService: 跳过超大文件 $fileName (${bytes.length} bytes)');
+        return;
       }
+      await _gitee.createOrUpdateBinaryFile(
+        owner: repoOwner,
+        repo: repoName,
+        path: remotePath,
+        bytes: bytes,
+        message: '上传$category文件: $fileName ($userId)',
+        branch: repoBranch,
+      );
+      debugPrint('SyncService: PDF 已上传 $remotePath');
+    } catch (e) {
+      debugPrint('SyncService: 上传 $fileName 失败: $e');
     }
   }
 
@@ -1051,24 +1083,37 @@ class SyncService {
   }
 
   /// 从 Gitee 仓库下载实验提交的 PDF 文件到本地
+  ///
+  /// 按新目录规范依次尝试：实验/ → files/（兼容旧数据）
   Future<void> _downloadSubmissionFile(
-      Map<String, dynamic> row, String userId) async {
+      Map<String, dynamic> row, String userId,
+      {String category = '实验'}) async {
     try {
-      final fileNames = (row['file_names'] as String?) ?? '';
+      final fileNames = (row['file_names'] as String?) ??
+          (row['file_name'] as String?) ??
+          '';
       if (fileNames.isEmpty) return;
 
       // 本地已存在则跳过
-      final filePaths = (row['file_paths'] as String?) ?? '';
+      final filePaths = (row['file_paths'] as String?) ??
+          (row['file_path'] as String?) ??
+          '';
       if (filePaths.isNotEmpty && File(filePaths).existsSync()) return;
 
-      // 从仓库下载
-      final remotePath = '$_syncDir/$userId/files/$fileNames';
-      final bytes = await _gitee.downloadBinaryFile(
-        owner: repoOwner,
-        repo: repoName,
-        path: remotePath,
-        branch: repoBranch,
-      );
+      // 按新目录规范下载，失败则回退旧路径
+      List<int>? bytes;
+      for (final subDir in [category, 'files']) {
+        final remotePath = '$_syncDir/$userId/$subDir/$fileNames';
+        try {
+          bytes = await _gitee.downloadBinaryFile(
+            owner: repoOwner,
+            repo: repoName,
+            path: remotePath,
+            branch: repoBranch,
+          );
+          if (bytes != null && bytes.isNotEmpty) break;
+        } catch (_) {}
+      }
       if (bytes == null || bytes.isEmpty) return;
 
       // 保存到本地应用文档目录

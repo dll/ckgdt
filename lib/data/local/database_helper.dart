@@ -56,7 +56,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 18,
+      version: 19,
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -180,7 +180,7 @@ class DatabaseHelper {
 
     db = await openDatabase(
       dbPath,
-      version: 18,
+      version: 19,
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -489,6 +489,9 @@ class DatabaseHelper {
     }
     if (oldVersion < 18) {
       await _migrateToV18(db);
+    }
+    if (oldVersion < 19) {
+      await _migrateToV19(db);
     }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
@@ -1340,6 +1343,25 @@ class DatabaseHelper {
         'ALTER TABLE student_reports ADD COLUMN file_path TEXT',
       );
     } catch (_) {} // 列已存在
+  }
+
+  Future<void> _migrateToV19(Database db) async {
+    // 教师申请审核表
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS teacher_applications(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        applicant_id TEXT NOT NULL,
+        applicant_name TEXT,
+        work_id TEXT NOT NULL,
+        school TEXT,
+        reason TEXT,
+        status TEXT NOT NULL DEFAULT 'pending',
+        reviewer_id TEXT,
+        review_comment TEXT,
+        reviewed_at TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
   }
 
   Future<void> _createNewTablesV3(Database db) async {

@@ -24,9 +24,12 @@ plugins {
 }
 
 // OHOS mirror (FLUTTER_STORAGE_BASE_URL) 不包含 Android engine artifacts，
-// 添加 Google 官方 Flutter Maven 仓库作为兜底
+// 添加 Google 官方 Flutter Maven 仓库作为兜底；PREFER_SETTINGS 避免与 project 冲突
 dependencyResolutionManagement {
+    repositoriesMode = RepositoriesMode.PREFER_SETTINGS
     repositories {
+        google()
+        mavenCentral()
         maven {
             url = uri("https://storage.googleapis.com/download.flutter.io")
         }
