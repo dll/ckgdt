@@ -1,12 +1,16 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../data/local/works_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/file_opener_service.dart';
 import '../../../services/sync_service.dart';
+import '../../../services/gitee_service.dart';
 import '../../../services/agent/agents/works_grading_agent.dart';
 import '../../widgets/agent_entry_button.dart';
 
@@ -1171,6 +1175,14 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
   bool _isLiked = false;
   final _commentCtrl = TextEditingController();
   bool _loadingComments = true;
+  bool _isUploading = false;
+
+  bool get _isOwnerOrTeacher {
+    final auth = widget.authService;
+    if (auth.isTeacher || auth.isAdmin) return true;
+    final userId = auth.getCurrentUserId();
+    return userId != null && _work['user_id'] == userId;
+  }
 
   @override
   void initState() {
@@ -1196,6 +1208,114 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
       }
     } catch (_) {
       if (mounted) setState(() => _loadingComments = false);
+    }
+  }
+
+  /// 上传演示视频（MP4）
+  Future<void> _uploadVideo() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['mp4', 'mov', 'avi', 'mkv'],
+        withData: false,
+      );
+      if (result == null || result.files.isEmpty) return;
+
+      final file = result.files.first;
+      final filePath = file.path;
+      if (filePath == null) return;
+
+      final fileSize = file.size;
+      // 限制 100MB
+      if (fileSize > 100 * 1024 * 1024) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('视频文件不能超过 100MB'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      setState(() => _isUploading = true);
+
+      final workId = _work['id'] as int;
+      final userId = _work['user_id'] as String? ?? '';
+      final fileName = file.name;
+
+      // 复制到应用文档目录（持久化）
+      String savedPath = filePath;
+      try {
+        final appDir = await getApplicationDocumentsDirectory();
+        final videoDir = Directory('${appDir.path}/works_videos/$userId');
+        if (!videoDir.existsSync()) videoDir.createSync(recursive: true);
+        final destFile = File('${videoDir.path}/$fileName');
+        if (destFile.path != filePath) {
+          await File(filePath).copy(destFile.path);
+          savedPath = destFile.path;
+        }
+      } catch (_) {}
+
+      // 同步上传到 Gitee 仓库（通过 SyncService 的文件上传）
+      try {
+        final gitee = GiteeService();
+        final remotePath = '作品/$userId/$fileName';
+        // Gitee 文件限制 1MB base64，大文件只存本地路径
+        if (fileSize <= 1 * 1024 * 1024) {
+          final bytes = await File(savedPath).readAsBytes();
+          await gitee.createFile(
+            owner: 'osgisOne',
+            repo: 'mad-data',
+            path: remotePath,
+            content: base64Encode(bytes),
+            message: '上传作品视频: $fileName',
+            branch: 'master',
+          );
+        }
+      } catch (e) {
+        debugPrint('视频上传到 Gitee 失败（文件可能过大）: $e');
+      }
+
+      // 更新数据库
+      final db = await widget.worksDao.getDatabase();
+      await db.update(
+        'student_works',
+        {
+          'video_url': savedPath,
+          'file_path': savedPath,
+          'file_size': '${(fileSize / 1024 / 1024).toStringAsFixed(1)}MB',
+        },
+        where: 'id = ?',
+        whereArgs: [workId],
+      );
+
+      // 刷新
+      final refreshed = await widget.worksDao.getWork(workId);
+      if (mounted) {
+        setState(() {
+          if (refreshed != null) _work = refreshed;
+          _isUploading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('视频上传成功'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        widget.onChanged?.call();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isUploading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('上传失败: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -1299,6 +1419,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
               children: [
                 Icon(Icons.videocam,
                     size: 64, color: primary.withValues(alpha: 0.2)),
+                // 播放按钮
                 Container(
                   width: 56,
                   height: 56,
@@ -1320,14 +1441,62 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                         );
                         return;
                       }
-                      FileOpenerService.openFile(
-                        context,
-                        videoUrl,
-                        '${_work['title'] ?? '作品'}-演示视频',
-                      );
+                      // 如果是本地文件路径，直接打开
+                      if (File(videoUrl).existsSync()) {
+                        FileOpenerService.openFile(
+                          context,
+                          videoUrl,
+                          '${_work['title'] ?? '作品'}-演示视频',
+                        );
+                      } else {
+                        // Gitee URL 或远程路径
+                        FileOpenerService.openFile(
+                          context,
+                          videoUrl,
+                          '${_work['title'] ?? '作品'}-演示视频',
+                        );
+                      }
                     },
                   ),
                 ),
+                // 上传按钮（仅作品所有者或教师可见）
+                if (_isOwnerOrTeacher)
+                  Positioned(
+                    right: 12,
+                    top: 12,
+                    child: Material(
+                      color: Colors.black.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(20),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: _isUploading ? null : _uploadVideo,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (_isUploading)
+                                const SizedBox(
+                                  width: 14, height: 14,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white),
+                                )
+                              else
+                                const Icon(Icons.upload, size: 16,
+                                    color: Colors.white),
+                              const SizedBox(width: 4),
+                              Text(
+                                _isUploading ? '上传中...' : '上传视频',
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 if (_work['video_duration'] != null)
                   Positioned(
                     right: 12,
