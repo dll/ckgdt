@@ -95,7 +95,7 @@ class MarkdownBubble extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(
-          Icons.auto_awesome,
+          Icons.lightbulb_outline,
           size: 11,
           color: isDark ? Colors.grey[500] : Colors.grey[400],
         ),

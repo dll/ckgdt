@@ -26,6 +26,8 @@ import '../presentation/pages/skill/ai_skill_page.dart';
 import '../presentation/pages/feedback/feedback_manage_page.dart';
 import '../presentation/pages/settings/voice_settings_page.dart';
 import '../presentation/pages/settings/course_manage_page.dart';
+import '../presentation/pages/admin/teacher_application_page.dart';
+import '../presentation/pages/admin/teacher_application_manage_page.dart';
 import '../services/auth_service.dart';
 
 /// 全局导航服务 — 跨页面 Tab 切换 + 子页面跳转 + 返回
@@ -196,6 +198,8 @@ class NavigationService {
     '数据导入': 'data_import',
     '问卷管理': 'survey_manage',
     '教学管理': 'teaching_manage',
+    '教师申请': 'teacher_application',
+    '申请审核': 'teacher_application_manage',
   };
 
   /// 尝试通过关键词匹配子页面并导航
@@ -274,6 +278,10 @@ class NavigationService {
         return const AiSkillPage(skillId: 'tutor');
       case 'feedback':
         return const FeedbackManagePage();
+      case 'teacher_application':
+        return const TeacherApplicationPage();
+      case 'teacher_application_manage':
+        return const TeacherApplicationManagePage();
       default:
         return null;
     }

@@ -129,6 +129,43 @@ class _StudentLabPageState extends State<StudentLabPage> {
           children: [
             // 统计卡片
             _buildStatsCard(),
+            const SizedBox(height: 12),
+            // PDF 存储规范提示
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.blue[50]!, Colors.indigo[50]!],
+                ),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.blue[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.folder_special, color: Colors.blue[700], size: 18),
+                      const SizedBox(width: 6),
+                      Text('PDF 提交规范', style: TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.bold,
+                        color: Colors.blue[800],
+                      )),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '文件名格式：学号+姓名+任务名称.pdf\n'
+                    '提交后自动同步到仓库目录：\n'
+                    '  实验 → sync/students/$_userId/实验/\n'
+                    '  考核 → sync/students/$_userId/考核/\n'
+                    '  作品 → sync/students/$_userId/作品/',
+                    style: TextStyle(fontSize: 11, color: Colors.blue[900], height: 1.5),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 16),
             // 实验材料快捷入口
             _buildMaterialsCard(),
@@ -459,6 +496,31 @@ class _StudentLabPageState extends State<StudentLabPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // 仓库存储规范提示
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.amber[300]!),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.info, color: Colors.amber[700], size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '提交的PDF将同步到仓库：\nsync/students/$_userId/实验/文件名.pdf\n\n文件名格式：学号+姓名+任务名称.pdf',
+                          style: TextStyle(
+                              fontSize: 11, color: Colors.amber[900]),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 // PDF 选择区域
                 InkWell(
                   borderRadius: BorderRadius.circular(12),

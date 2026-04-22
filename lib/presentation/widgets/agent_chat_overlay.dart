@@ -355,7 +355,7 @@ class _AgentChatOverlayState extends State<AgentChatOverlay> {
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('正在通过 AI 提取知识点...')),
+      const SnackBar(content: Text('正在提取知识点...')),
     );
 
     try {
@@ -455,7 +455,7 @@ $dialogText
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('正在通过 AI 生成问答图谱...')),
+      const SnackBar(content: Text('正在生成问答图谱...')),
     );
 
     try {
@@ -497,7 +497,7 @@ $dialogText
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('AI 返回格式异常，无法解析图谱'),
+              content: Text('返回格式异常，无法解析图谱'),
               backgroundColor: Colors.orange,
             ),
           );
@@ -950,7 +950,7 @@ $dialogText
                         children: [
                           Flexible(
                             child: Text(
-                              '$name · AI 助手',
+                              '$name · 助手',
                               style: theme.textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
@@ -1098,7 +1098,7 @@ $dialogText
               Row(
                 children: [
                   Text(
-                    '全部智能体（${configs.length}）',
+                    '全部助手（${configs.length}）',
                     style: theme.textTheme.labelMedium?.copyWith(
                       color: Colors.grey[600],
                       fontWeight: FontWeight.w600,
@@ -1236,7 +1236,7 @@ $dialogText
             ),
             const SizedBox(height: 8),
             Text(
-              '你的 AI 学习助手，有什么可以帮你的？',
+              '你的学习助手，有什么可以帮你的？',
               style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey),
               textAlign: TextAlign.center,
             ),
@@ -1246,7 +1246,7 @@ $dialogText
               runSpacing: 8,
               alignment: WrapAlignment.center,
               children: [
-                _quickChip('有哪些智能体', theme),
+                _quickChip('有哪些助手', theme),
                 _quickChip('帮我出几道题', theme),
                 _quickChip('打开知识图谱', theme),
                 _quickChip('学习进度如何', theme),

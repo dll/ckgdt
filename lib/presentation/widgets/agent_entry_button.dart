@@ -29,7 +29,7 @@ class AgentEntryButton extends StatelessWidget {
     super.key,
     required this.agentId,
     this.tooltip,
-    this.icon = Icons.smart_toy,
+    this.icon = Icons.help_outline,
     this.color,
   });
 
@@ -40,7 +40,7 @@ class AgentEntryButton extends StatelessWidget {
     return IconButton(
       icon: Icon(icon, size: 20),
       color: effectiveColor,
-      tooltip: tooltip ?? 'AI 助手',
+      tooltip: tooltip ?? '智慧助手',
       onPressed: () => AgentChatOverlay.show(context, agentId: agentId),
     );
   }
