@@ -3,8 +3,8 @@
   "user_id": "2023210603",
   "user_name": "李俊杰",
   "role": "student",
-  "synced_at": "2026-04-21T11:59:56.956486",
-  "last_active": "2026-04-21T11:59:56.956512",
+  "synced_at": "2026-04-23T09:55:08.374105",
+  "last_active": "2026-04-23T09:55:08.374121",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
@@ -44,7 +44,14 @@
       "student_name": "李俊杰"
     }
   ],
-  "survey_responses": [],
+  "survey_responses": [
+    {
+      "survey_id": 1,
+      "user_id": "2023210603",
+      "answers_json": "{\"1\":\"非常满意\",\"2\":[\"Android原生\"],\"3\":\"5\"}",
+      "submitted_at": "2026-04-21T12:00:20.716755"
+    }
+  ],
   "checkin_records": [],
   "work_comments": [
     {
