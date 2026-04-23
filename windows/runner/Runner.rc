@@ -90,12 +90,12 @@ BEGIN
         BLOCK "080404b0"
         BEGIN
             VALUE "CompanyName", "com.edu\0"
-            VALUE "FileDescription", "MADKG v0.9.10\0"
+            VALUE "FileDescription", "KGDT-MAD v0.10.0\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "MADKG\0"
+            VALUE "InternalName", "KGDT-MAD\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.edu. All rights reserved.\0"
-            VALUE "OriginalFilename", "MADKG.exe\0"
-            VALUE "ProductName", "MADKG v0.9.10\0"
+            VALUE "OriginalFilename", "KGDT-MAD.exe\0"
+            VALUE "ProductName", "KGDT-MAD v0.10.0\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

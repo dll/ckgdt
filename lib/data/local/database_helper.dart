@@ -240,8 +240,8 @@ class DatabaseHelper {
               {
                 'user_id': s['user_id'],
                 'real_name': s['real_name'],
-                'role': 'student',
-                'is_active': 1,
+                'role': s['role'] ?? 'student',
+                'is_active': s['is_active'] ?? 1,
                 'created_at': DateTime.now().toIso8601String(),
               },
               conflictAlgorithm: ConflictAlgorithm.ignore);
@@ -420,20 +420,24 @@ class DatabaseHelper {
     // Add admin user (ignore if already exists from asset DB)
     await db.insert('users', {
       'user_id': '419116',
-      'real_name': '管理员',
+      'real_name': '刘老师',
       'role': 'admin',
       'created_at': DateTime.now().toIso8601String(),
       'is_active': 1,
     }, conflictAlgorithm: ConflictAlgorithm.ignore);
 
-    // Add teacher user - 刘老师 (ignore if already exists)
-    await db.insert('users', {
-      'user_id': '206004',
-      'real_name': '刘老师',
-      'role': 'teacher',
-      'created_at': DateTime.now().toIso8601String(),
-      'is_active': 1,
-    }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    // Add teacher users (ignore if already exists)
+    for (final t in [
+      {'user_id': '206004', 'real_name': '刘东良', 'role': 'teacher'},
+      {'user_id': '203014', 'real_name': '徐志红', 'role': 'teacher'},
+      {'user_id': '203045', 'real_name': '黄晓玲', 'role': 'teacher'},
+    ]) {
+      await db.insert('users', {
+        ...t,
+        'created_at': DateTime.now().toIso8601String(),
+        'is_active': 1,
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    }
 
     // 插入默认 AI 配置（DeepSeek），用户无需手动填写 API Key
     await db.insert('ai_configs', {
@@ -1403,17 +1407,23 @@ class DatabaseHelper {
       } catch (_) {} // 列已存在
     }
 
-    // ── 新表：数字孪生快照 ──
+    // ── 新表：数字孪生快照（保留历史用于趋势对比）──
     await db.execute('''
       CREATE TABLE IF NOT EXISTS twin_snapshots(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id TEXT NOT NULL,
         role TEXT NOT NULL,
         snapshot_json TEXT NOT NULL,
-        generated_at TEXT NOT NULL,
-        UNIQUE(user_id)
+        generated_at TEXT NOT NULL
       )
     ''');
+    // 迁移：若旧表有 UNIQUE(user_id) 约束则无需删除，改为追加模式
+    // 为查询性能添加索引
+    try {
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_twin_snap_user ON twin_snapshots(user_id, generated_at DESC)'
+      );
+    } catch (_) {}
 
     // ── 新表：作品同行评审 ──
     await db.execute('''

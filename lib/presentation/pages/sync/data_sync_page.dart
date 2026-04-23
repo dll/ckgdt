@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../data/local/database_helper.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/sync_service.dart';
 import '../../../core/constants/app_theme.dart';
@@ -32,6 +33,7 @@ class _DataSyncPageState extends State<DataSyncPage> {
 
   // 教师：已同步的学生列表
   List<Map<String, dynamic>> _syncedStudents = [];
+  List<Map<String, dynamic>> _unsyncedStudents = [];
   bool _isLoadingStudents = false;
 
   bool get _isTeacherOrAdmin =>
@@ -104,6 +106,19 @@ class _DataSyncPageState extends State<DataSyncPage> {
     setState(() => _isLoadingStudents = true);
     try {
       _syncedStudents = await _syncService.listSyncedStudents();
+
+      // 计算未同步学生：所有活跃学生 - 已同步学生
+      final db = await DatabaseHelper.instance.database;
+      final allStudents = await db.query('users',
+          columns: ['user_id', 'real_name'],
+          where: "role = 'student' AND is_active = 1",
+          orderBy: 'user_id');
+      final syncedIds = _syncedStudents
+          .map((s) => s['userId'] as String? ?? '')
+          .toSet();
+      _unsyncedStudents = allStudents
+          .where((s) => !syncedIds.contains(s['user_id'] as String))
+          .toList();
     } catch (e) {
       debugPrint('加载已同步学生失败: $e');
     }
@@ -201,6 +216,10 @@ class _DataSyncPageState extends State<DataSyncPage> {
                   if (_isTeacherOrAdmin) ...[
                     const SizedBox(height: 16),
                     _buildSyncedStudentsSection(theme, isDark),
+                    if (_unsyncedStudents.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      _buildUnsyncedStudentsSection(theme, isDark),
+                    ],
                   ],
 
                   const SizedBox(height: 32),
@@ -596,7 +615,7 @@ class _DataSyncPageState extends State<DataSyncPage> {
                 Icon(Icons.people,
                     size: 20, color: theme.colorScheme.primary),
                 const SizedBox(width: 8),
-                Text('已同步学生 (${_syncedStudents.length})',
+                Text('已同步学生 (${_syncedStudents.length}/${_syncedStudents.length + _unsyncedStudents.length})',
                     style: theme.textTheme.titleSmall
                         ?.copyWith(fontWeight: FontWeight.bold)),
                 const Spacer(),
@@ -651,6 +670,52 @@ class _DataSyncPageState extends State<DataSyncPage> {
                 return _buildStudentTile(s, theme, isDark);
               }),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── 未同步学生列表 ─────────────────────────────────────────────────
+
+  Widget _buildUnsyncedStudentsSection(ThemeData theme, bool isDark) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.person_off, size: 20, color: Colors.red[400]),
+                const SizedBox(width: 8),
+                Text('未同步学生 (${_unsyncedStudents.length})',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red[400])),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: _unsyncedStudents.map((s) {
+                final name = s['real_name'] as String? ??
+                    s['user_id'] as String? ?? '';
+                return Chip(
+                  avatar: Icon(Icons.person_outline, size: 14,
+                      color: Colors.red[300]),
+                  label: Text(name, style: const TextStyle(fontSize: 12)),
+                  backgroundColor: Colors.red.withValues(alpha: 0.05),
+                  side: BorderSide(color: Colors.red.withValues(alpha: 0.2)),
+                  padding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                );
+              }).toList(),
+            ),
           ],
         ),
       ),
