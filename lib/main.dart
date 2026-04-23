@@ -455,7 +455,7 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
           isOnRight: isOnRight,
           size: size,
           icon: _isTeacher ? Icons.school : Icons.face,
-          label: _isTeacher ? '虚拟教师' : '虚拟学生',
+          label: '美德',
           color: _isTeacher ? Colors.indigo : Colors.cyan,
           onTap: _showVirtualTwin,
         ),

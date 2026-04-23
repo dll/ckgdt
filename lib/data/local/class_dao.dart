@@ -273,6 +273,7 @@ class ClassDao {
   ///
   /// 读取 students.json，按 class_name（如 软件231、软件232）创建独立班级，
   /// 并将学生分配到对应班级。无 class_name 的学生归入"未分班"。
+  /// is_active=0 的学生所在班级自动标记为归档。
   Future<void> generateDemoData() async {
     final db = await _dbHelper.database;
     final count = await db.rawQuery('SELECT COUNT(*) as c FROM classes');
@@ -280,6 +281,7 @@ class ClassDao {
 
     // ── 读取 students.json 获取学生的班级信息 ─────────────────────────
     Map<String, List<String>> classStudents = {}; // className -> [userId]
+    Map<String, bool> classArchived = {}; // className -> 是否全部 is_active=0
     try {
       final jsonStr =
           await rootBundle.loadString('assets/students.json');
@@ -287,11 +289,18 @@ class ClassDao {
       for (final s in students) {
         final uid = s['user_id'] as String?;
         final className = s['class_name'] as String?;
+        final isActive = (s['is_active'] as int?) ?? 1;
         if (uid == null) continue;
         final key = (className != null && className.isNotEmpty)
             ? className
             : '未分班';
         classStudents.putIfAbsent(key, () => []).add(uid);
+        // 只要有一个 is_active=1 的学生，班级就不归档
+        if (isActive == 1) {
+          classArchived[key] = false;
+        } else {
+          classArchived.putIfAbsent(key, () => true);
+        }
       }
     } catch (e) {
       debugPrint('ClassDao.generateDemoData: 读取 students.json 失败: $e');
@@ -301,7 +310,7 @@ class ClassDao {
     if (classStudents.isEmpty) {
       final classId = await createClass(
         name: '默认班级',
-        semester: '2025-2026学年第一学期',
+        semester: '2025-2026学年第二学期',
         teacherId: '206004',
         teacherName: '刘东良',
       );
@@ -322,10 +331,16 @@ class ClassDao {
 
     for (final className in sortedClassNames) {
       final studentIds = classStudents[className]!;
+      final shouldArchive = classArchived[className] ?? false;
+
+      // 根据班级名推断学期
+      final semester = shouldArchive
+          ? '2024-2025学年第二学期'
+          : '2025-2026学年第二学期';
 
       final classId = await createClass(
         name: className,
-        semester: '2025-2026学年第一学期',
+        semester: semester,
         teacherId: '206004',
         teacherName: '刘东良',
         description: '$className — ${studentIds.length}名学生',
@@ -335,8 +350,15 @@ class ClassDao {
         await addMember(classId, uid);
       }
 
-      debugPrint('ClassDao: 创建班级 $className (id=$classId, '
-          '${studentIds.length}名学生)');
+      // 归档往届班级
+      if (shouldArchive) {
+        await archiveClass(classId);
+        debugPrint('ClassDao: 创建并归档班级 $className (id=$classId, '
+            '${studentIds.length}名学生)');
+      } else {
+        debugPrint('ClassDao: 创建班级 $className (id=$classId, '
+            '${studentIds.length}名学生)');
+      }
     }
 
     debugPrint('ClassDao: 自动分班完成 — '

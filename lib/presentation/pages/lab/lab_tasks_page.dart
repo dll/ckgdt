@@ -285,6 +285,7 @@ class _TaskListTabState extends State<_TaskListTab> {
   Map<int, Map<String, dynamic>> _statsCache = {};
   bool _isLoading = true;
   String _selectedChapter = '全部';
+  int _totalStudents = 0;
 
   bool get _isTeacherOrAdmin =>
       widget.authService.isTeacher || widget.authService.isAdmin;
@@ -303,6 +304,10 @@ class _TaskListTabState extends State<_TaskListTab> {
 
       final subCache = <int, Map<String, dynamic>?>{};
       final statsCache = <int, Map<String, dynamic>>{};
+      int totalStudents = 0;
+      if (_isTeacherOrAdmin) {
+        totalStudents = await widget.labTaskDao.getActiveStudentCount();
+      }
       for (final task in tasks) {
         final taskId = task['id'] as int;
         if (_isTeacherOrAdmin) {
@@ -318,6 +323,7 @@ class _TaskListTabState extends State<_TaskListTab> {
           _tasks = tasks;
           _submissionCache = subCache;
           _statsCache = statsCache;
+          _totalStudents = totalStudents;
           _isLoading = false;
         });
       }
@@ -561,12 +567,18 @@ class _TaskListTabState extends State<_TaskListTab> {
     final total = (stats['total_submissions'] as int?) ?? 0;
     final graded = (stats['graded_count'] as int?) ?? 0;
     final avg = (stats['avg_score'] as num?)?.toDouble() ?? 0.0;
+    final unsubmitted = _totalStudents > 0 ? _totalStudents - total : 0;
     return Row(
       children: [
         Icon(Icons.people, size: 14, color: Colors.grey[400]),
         const SizedBox(width: 4),
-        Text('$total人提交',
+        Text(_totalStudents > 0 ? '$total/$_totalStudents人提交' : '$total人提交',
             style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+        if (unsubmitted > 0) ...[
+          const SizedBox(width: 8),
+          Text('$unsubmitted人未交',
+              style: TextStyle(fontSize: 12, color: Colors.red[400])),
+        ],
         const SizedBox(width: 12),
         Icon(Icons.grading, size: 14, color: Colors.grey[400]),
         const SizedBox(width: 4),
@@ -927,6 +939,7 @@ class _SubmissionTab extends StatefulWidget {
 
 class _SubmissionTabState extends State<_SubmissionTab> {
   List<Map<String, dynamic>> _submissions = [];
+  Map<int, List<Map<String, dynamic>>> _unsubmittedByTask = {};
   bool _isLoading = true;
 
   bool get _isTeacherOrAdmin =>
@@ -957,8 +970,18 @@ class _SubmissionTabState extends State<_SubmissionTab> {
             : [];
       }
       if (mounted) {
+        // 教师端：加载每个任务的未提交学生
+        final unsub = <int, List<Map<String, dynamic>>>{};
+        if (_isTeacherOrAdmin) {
+          final tasks = await widget.labTaskDao.getTasks(status: 'active');
+          for (final t in tasks) {
+            final tid = t['id'] as int;
+            unsub[tid] = await widget.labTaskDao.getUnsubmittedStudents(tid);
+          }
+        }
         setState(() {
           _submissions = submissions;
+          _unsubmittedByTask = unsub;
           _isLoading = false;
         });
       }
@@ -1295,10 +1318,24 @@ class _SubmissionTabState extends State<_SubmissionTab> {
   }
 
   Widget _buildTeacherSubmissionList(Color primary) {
+    // 按任务分组，同时保留 task_id
     final grouped = <String, List<Map<String, dynamic>>>{};
+    final taskIdByTitle = <String, int>{};
     for (final sub in _submissions) {
       final key = sub['task_title'] as String? ?? '未知任务';
       grouped.putIfAbsent(key, () => []).add(sub);
+      if (sub['task_id'] != null) {
+        taskIdByTitle[key] = sub['task_id'] as int;
+      }
+    }
+
+    // 找出有未提交学生但无已提交记录的任务（纯未提交）
+    for (final entry in _unsubmittedByTask.entries) {
+      // 通过 task_id 反查 title（如果已有则跳过）
+      if (!taskIdByTitle.containsValue(entry.key) && entry.value.isNotEmpty) {
+        // 需要获取任务标题
+        // 此处不需要处理，因为下面按 _unsubmittedByTask 补充即可
+      }
     }
 
     return ListView(
@@ -1324,6 +1361,12 @@ class _SubmissionTabState extends State<_SubmissionTab> {
         ),
         const SizedBox(height: 12),
         ...grouped.entries.map((entry) {
+          final taskId = taskIdByTitle[entry.key];
+          final unsubmitted = taskId != null
+              ? (_unsubmittedByTask[taskId] ?? [])
+              : <Map<String, dynamic>>[];
+          final totalStudents = entry.value.length + unsubmitted.length;
+
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1347,17 +1390,63 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                         color: primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Text('${entry.value.length}人提交',
+                      child: Text(
+                          '${entry.value.length}/$totalStudents人提交',
                           style: TextStyle(fontSize: 11, color: primary)),
                     ),
+                    if (unsubmitted.isNotEmpty) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text('${unsubmitted.length}人未交',
+                            style: const TextStyle(
+                                fontSize: 11, color: Colors.red)),
+                      ),
+                    ],
                   ],
                 ),
               ),
               ...entry.value.map((sub) => _buildTeacherSubmissionCard(sub)),
+              // 未提交学生折叠列表
+              if (unsubmitted.isNotEmpty)
+                _buildUnsubmittedSection(unsubmitted),
               const SizedBox(height: 8),
             ],
           );
         }),
+      ],
+    );
+  }
+
+  Widget _buildUnsubmittedSection(List<Map<String, dynamic>> students) {
+    return ExpansionTile(
+      tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+      childrenPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      leading: Icon(Icons.person_off, size: 18, color: Colors.red[300]),
+      title: Text('未提交 (${students.length}人)',
+          style: TextStyle(fontSize: 13, color: Colors.red[400])),
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          children: students.map((s) {
+            final name = s['real_name'] as String? ?? s['user_id'] as String;
+            return Chip(
+              avatar: Icon(Icons.person_outline, size: 14,
+                  color: Colors.red[300]),
+              label: Text(name, style: const TextStyle(fontSize: 12)),
+              backgroundColor: Colors.red.withValues(alpha: 0.05),
+              side: BorderSide(color: Colors.red.withValues(alpha: 0.2)),
+              padding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+            );
+          }).toList(),
+        ),
       ],
     );
   }
@@ -1391,33 +1480,45 @@ class _SubmissionTabState extends State<_SubmissionTab> {
           subtitle: Text(
               '提交于 ${submitTime.isNotEmpty ? submitTime.substring(0, 10) : "未知"}',
               style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-          trailing: isGraded && score != null
-              ? Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _scoreColor(score, maxScore).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isGraded && score != null)
+                Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _scoreColor(score, maxScore).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text('$score分',
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: _scoreColor(score, maxScore))),
+                  )
+              else
+                Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text('待批改',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.orange,
+                            fontWeight: FontWeight.w500)),
                   ),
-                  child: Text('$score分',
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: _scoreColor(score, maxScore))),
-                )
-              : Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Text('待批改',
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.orange,
-                          fontWeight: FontWeight.w500)),
+              if (widget.authService.isAdmin)
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                  tooltip: '删除提交',
+                  onPressed: () => _confirmDeleteSubmission(sub),
                 ),
+            ],
+          ),
         ),
       ),
     );
@@ -1741,6 +1842,14 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                   : const Icon(Icons.auto_awesome, size: 16),
               label: Text(isAiGrading ? 'AI批阅中...' : 'AI批阅'),
             ),
+            if (widget.authService.isAdmin)
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _confirmDeleteSubmission(submission);
+                },
+                child: const Text('删除', style: TextStyle(color: Colors.red)),
+              ),
             TextButton(
               onPressed: () => Navigator.pop(ctx),
               child: const Text('取消'),
@@ -2086,6 +2195,12 @@ class _ReportTabState extends State<_ReportTab> {
                         _showReportEditor(report: report);
                       } else if (value == 'delete') {
                         _confirmDeleteReport(report);
+                      } else if (value == 'delete') {
+                        if (isFromSubmissions) {
+                          _confirmDeleteSubmission(report);
+                        } else {
+                          _confirmDeleteReport(report);
+                        }
                       } else if (value == 'preview') {
                         _showReportPreview(report);
                       } else if (value == 'grade') {
@@ -2118,6 +2233,17 @@ class _ReportTabState extends State<_ReportTab> {
                                 ],
                               ),
                             ),
+                            if (widget.authService.isAdmin)
+                              const PopupMenuItem(
+                                value: 'delete',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.delete, size: 18, color: Colors.red),
+                                    SizedBox(width: 8),
+                                    Text('删除', style: TextStyle(color: Colors.red)),
+                                  ],
+                                ),
+                              ),
                           ]
                         : [
                             if (status != '已批改')
@@ -2557,6 +2683,50 @@ class _ReportTabState extends State<_ReportTab> {
     );
   }
 
+  /// 确认删除提交（管理员）
+  void _confirmDeleteSubmission(Map<String, dynamic> sub) {
+    final subId = sub['id'] as int?;
+    final userId = sub['user_id'] as String? ?? '';
+    final title = sub['title'] as String? ?? sub['task_title'] as String? ?? '';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('确认删除'),
+        content: Text('确定删除 $userId 的提交${title.isNotEmpty ? "「$title」" : ""}？\n此操作不可恢复。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              if (subId == null) return;
+              Navigator.pop(ctx);
+              try {
+                await widget.labTaskDao.deleteSubmission(subId);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('已删除提交')),
+                  );
+                  _loadData();
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('删除失败: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('删除', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// 教师批改来自 lab_submissions 的提交（含 AI 批阅）
   void _showSubmissionGradeDialog(Map<String, dynamic> submission) {
     final subId = submission['id'] as int?;
@@ -2765,6 +2935,14 @@ class _ReportTabState extends State<_ReportTab> {
                     : const Icon(Icons.auto_awesome, size: 16),
                 label: Text(isAiGrading ? 'AI批阅中...' : 'AI批阅'),
               ),
+              if (widget.authService.isAdmin)
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _confirmDeleteSubmission(submission);
+                  },
+                  child: const Text('删除', style: TextStyle(color: Colors.red)),
+                ),
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
                 child: const Text('取消'),

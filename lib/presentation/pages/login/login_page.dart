@@ -473,12 +473,22 @@ class _LoginPageState extends State<LoginPage>
                   const Icon(Icons.school, size: 80, color: Colors.white),
                   const SizedBox(height: 16),
                   Text(
-                    '$_platformName\n知识图谱教学平台',
+                    '$_platformName\n知识图谱与数字孪生平台',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Knowledge Graph and Digital Twin Platform\nfor Mobile Application Development (KGDT-MAD)',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.white70,
+                      letterSpacing: 0.5,
                     ),
                   ),
                   const SizedBox(height: 32),

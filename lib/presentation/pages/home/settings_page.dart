@@ -466,9 +466,9 @@ class _SettingsPageState extends State<SettingsPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('版本：1.0.0'),
+            const Text('版本：0.10.0'),
             const SizedBox(height: 8),
-            Text('面向$platformName学习者的知识图谱教学平台。'),
+            Text('面向$platformName学习者的知识图谱与数字孪生教学平台（KGDT-MAD）。'),
             const SizedBox(height: 16),
             const Text('功能特点：', style: TextStyle(fontWeight: FontWeight.bold)),
             const Text('• 知识图谱可视化学习'),

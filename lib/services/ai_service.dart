@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../data/local/ai_config_dao.dart';
+import '../data/models/ai_config_model.dart';
 
 /// AI 对话结果（含模型元数据）
 class AiChatResult {
@@ -30,8 +31,9 @@ class AiService {
   Future<AiChatResult> chatWithMeta(
     List<Map<String, String>> messages, {
     String? systemPrompt,
+    AiConfigModel? configOverride,
   }) async {
-    final config = await _configDao.getConfig();
+    final config = configOverride ?? await _configDao.getConfig();
     final effectiveKey = config.effectiveApiKey;
     if (effectiveKey == null || effectiveKey.isEmpty) {
       throw '抱歉，AI 服务暂时不可用。请在「设置  →  AI 配置」中配置 API Key。';
@@ -43,6 +45,9 @@ class AiService {
     ];
 
     final url = '${config.effectiveBaseUrl}/chat/completions';
+    final maxTokens = configOverride != null
+        ? (config.maxTokens < 4096 ? 4096 : config.maxTokens)
+        : config.maxTokens;
     final response = await http
         .post(
           Uri.parse(url),
@@ -55,10 +60,10 @@ class AiService {
             'model': config.model,
             'messages': allMessages,
             'temperature': config.temperature,
-            'max_tokens': config.maxTokens,
+            'max_tokens': maxTokens,
           }),
         )
-        .timeout(Duration(seconds: config.timeout));
+        .timeout(Duration(seconds: config.timeout < 120 ? 120 : config.timeout));
 
     if (response.statusCode != 200) {
       throw 'AI 请求失败 (${response.statusCode})，请检查网络连接和 API 配置。';
@@ -80,8 +85,10 @@ class AiService {
   Future<String> chat(
     List<Map<String, String>> messages, {
     String? systemPrompt,
+    AiConfigModel? configOverride,
   }) async {
-    final result = await chatWithMeta(messages, systemPrompt: systemPrompt);
+    final result = await chatWithMeta(messages, systemPrompt: systemPrompt,
+        configOverride: configOverride);
     return result.content;
   }
 
@@ -189,7 +196,7 @@ answer_index 为 0-3（对应 A-D），仅返回 JSON，不要其他文字。
 
   // ── 生成 PlantUML 代码 ──────────────────────────────────────────────────
   Future<String> generatePuml(String topic,
-      {String diagramType = 'class'}) async {
+      {String diagramType = 'class', AiConfigModel? configOverride}) async {
     const system =
         '你是 UML 专家，擅长编写 PlantUML 代码。只返回 @startuml ... @enduml 代码块，不要其他内容。';
     final typeDesc = {
@@ -207,6 +214,7 @@ answer_index 为 0-3（对应 A-D），仅返回 JSON，不要其他文字。
         {'role': 'user', 'content': prompt}
       ],
       systemPrompt: system,
+      configOverride: configOverride,
     );
     // 提取 @startuml ... @enduml
     final match = RegExp(r'@startuml[\s\S]*?@enduml').firstMatch(raw);

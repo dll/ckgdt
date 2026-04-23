@@ -59,7 +59,7 @@ class _MadMascotButtonState extends State<MadMascotButton>
     final authService = AuthService();
     final isTeacher = authService.isTeacher || authService.isAdmin;
     final agentId = isTeacher ? 'virtual_teacher' : 'virtual_student';
-    final twinLabel = isTeacher ? '虚拟教师' : '虚拟学生';
+    final twinLabel = '美德';
 
     return Column(
       mainAxisSize: MainAxisSize.min,

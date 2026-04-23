@@ -1,8 +1,6 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../services/auth_service.dart';
-import '../../../services/notification_service.dart';
 import '../../../services/navigation_service.dart';
 import '../../../data/local/notification_dao.dart';
 import '../notification/notification_list_page.dart';
@@ -66,11 +64,9 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final _authService = AuthService();
   final _notificationDao = NotificationDao();
-  final _notificationService = NotificationService();
   final _courseDao = CourseDao();
   late int _selectedIndex;
   int _unreadCount = 0;
-  Timer? _notificationTimer;
   CourseModel? _activeCourse;
 
   @override
@@ -79,11 +75,6 @@ class _HomePageState extends State<HomePage> {
     _selectedIndex = widget.initialTabIndex;
     _refreshUnreadCount();
     _loadActiveCourse();
-    // 每30秒轮询未读通知数
-    _notificationTimer = Timer.periodic(
-      const Duration(seconds: 30),
-      (_) => _refreshUnreadCount(),
-    );
     // 注册全局导航服务回调
     NavigationService.instance.onSwitchTab = (index) {
       if (mounted) {
@@ -94,17 +85,15 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
-    _notificationTimer?.cancel();
     NavigationService.instance.dispose();
     super.dispose();
   }
 
+  /// 刷新未读计数
   Future<void> _refreshUnreadCount() async {
     try {
       final userId = _authService.getCurrentUserId();
       if (userId == null) return;
-      // 顺便检查自动提醒
-      await _notificationService.checkAndCreateReminders();
       final count = await _notificationDao.getUnreadCount(userId);
       if (mounted && count != _unreadCount) {
         setState(() => _unreadCount = count);

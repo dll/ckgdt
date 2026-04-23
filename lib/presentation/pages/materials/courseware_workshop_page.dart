@@ -12,7 +12,36 @@ import '../../../services/tts_service.dart';
 import '../../../services/video_service.dart';
 import '../../../data/local/ai_config_dao.dart';
 import '../../../data/local/database_helper.dart';
+import '../../../data/models/ai_config_model.dart';
 import 'ai_settings_page.dart';
+
+/// 可选的 AI 模型选项
+class _ModelOption {
+  final String label;        // 显示名称（如 "DeepSeek - deepseek-chat"）
+  final String providerId;   // provider id
+  final String modelId;      // model id
+  final String baseUrl;      // base url
+  final String? apiKey;      // 如果是当前全局配置的 provider，带上 key
+  final bool isDefault;      // 是否为当前全局配置
+
+  const _ModelOption({
+    required this.label,
+    required this.providerId,
+    required this.modelId,
+    required this.baseUrl,
+    this.apiKey,
+    this.isDefault = false,
+  });
+
+  AiConfigModel toConfig() => AiConfigModel(
+    provider: providerId,
+    model: modelId,
+    baseUrl: baseUrl,
+    apiKey: apiKey,
+    maxTokens: 4096,
+    timeout: 120,
+  );
+}
 
 /// 课件工坊 — 教案→MD→PDF→UML→语音→视频 一站式课件生成
 class CoursewareWorkshopPage extends StatefulWidget {
@@ -98,6 +127,11 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
   bool _mdPublished = false;     // MD 导入流程是否已发布
   bool _publishing = false;
 
+  // ── AI 模型选择 ──
+  AiConfigModel? _selectedModelConfig;   // null = 使用全局默认配置
+  String _selectedModelLabel = '默认';   // 当前模型显示名称
+  List<_ModelOption> _availableModels = [];  // 可选模型列表
+
   static const _chapters = [
     '全部/自定义',
     '第1章 移动应用开发技术体系全景',
@@ -127,6 +161,52 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
     final hasFfmpeg = await _videoService.isFfmpegInstalled();
     final hasTts = await _ttsService.isEdgeTtsInstalled();
     final hasPptx = await _coursewareService.isPythonPptxInstalled();
+
+    // 构建可选模型列表
+    final currentConfig = await _configDao.getConfig();
+    final models = <_ModelOption>[];
+
+    // 当前全局配置作为默认选项
+    final currentPreset = currentConfig.providerPreset;
+    models.add(_ModelOption(
+      label: '${currentPreset?.name ?? currentConfig.provider} - ${currentConfig.model}（当前默认）',
+      providerId: currentConfig.provider,
+      modelId: currentConfig.model,
+      baseUrl: currentConfig.effectiveBaseUrl,
+      apiKey: currentConfig.effectiveApiKey,
+      isDefault: true,
+    ));
+
+    // 遍历所有有内置 API Key 的 provider，添加其可用模型
+    for (final preset in AiConfigModel.providers) {
+      for (final modelId in preset.models) {
+        // 检查是否有可用的 API Key
+        final testConfig = AiConfigModel(provider: preset.id, model: modelId);
+        final key = testConfig.effectiveApiKey;
+        if (key == null || key.isEmpty) continue;
+        // 跳过与全局配置完全相同的
+        if (preset.id == currentConfig.provider && modelId == currentConfig.model) continue;
+        models.add(_ModelOption(
+          label: '${preset.name} - $modelId',
+          providerId: preset.id,
+          modelId: modelId,
+          baseUrl: preset.baseUrl,
+          apiKey: key,
+        ));
+      }
+    }
+
+    // 添加 OpenRouter 占位（即使没有 key，也显示以引导用户配置）
+    final hasOpenRouter = models.any((m) => m.providerId == 'openrouter');
+    if (!hasOpenRouter) {
+      models.add(_ModelOption(
+        label: 'OpenRouter - Claude Opus 4.6（需配置 API Key）',
+        providerId: 'openrouter',
+        modelId: 'anthropic/claude-opus-4-6',
+        baseUrl: 'https://openrouter.ai/api/v1',
+      ));
+    }
+
     if (!mounted) return;
     setState(() {
       _hasApiKey = hasKey;
@@ -134,6 +214,7 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
       _hasEdgeTts = hasTts;
       _hasPythonPptx = hasPptx;
       _checkingEnv = false;
+      _availableModels = models;
     });
   }
 
@@ -141,7 +222,17 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('课件工坊'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('课件工坊'),
+            if (_selectedModelLabel != '默认')
+              Text(
+                'AI: $_selectedModelLabel',
+                style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.8)),
+              ),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
@@ -165,6 +256,8 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
       children: [
         // ── 模式切换栏 ──
         _buildModeSelector(),
+        // ── AI 模型选择器 ──
+        _buildModelSelector(),
         const Divider(height: 1),
         // ── 内容 ──
         Expanded(
@@ -206,6 +299,102 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                 _mdVideoPath = null;
               });
             },
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// AI 模型选择器：显示可用模型列表
+  Widget _buildModelSelector() {
+    if (_availableModels.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      color: Colors.grey.shade50,
+      child: Row(
+        children: [
+          Icon(Icons.smart_toy, size: 18, color: Colors.deepPurple.shade400),
+          const SizedBox(width: 8),
+          const Text('AI 模型：', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<int>(
+                value: _availableModels.indexWhere((m) =>
+                  _selectedModelConfig == null ? m.isDefault
+                    : m.providerId == _selectedModelConfig!.provider &&
+                      m.modelId == _selectedModelConfig!.model),
+                isExpanded: true,
+                isDense: true,
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
+                icon: Icon(Icons.expand_more, size: 20, color: Colors.deepPurple.shade400),
+                items: _availableModels.asMap().entries.map((entry) {
+                  final i = entry.key;
+                  final m = entry.value;
+                  final hasKey = m.apiKey != null && m.apiKey!.isNotEmpty;
+                  return DropdownMenuItem(
+                    value: i,
+                    child: Row(
+                      children: [
+                        Icon(
+                          m.isDefault ? Icons.check_circle : (hasKey ? Icons.circle : Icons.circle_outlined),
+                          size: 14,
+                          color: m.isDefault ? Colors.green : (hasKey ? Colors.blue : Colors.grey),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            m.label,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: hasKey ? Colors.black87 : Colors.grey,
+                            ),
+                          ),
+                        ),
+                        if (m.providerId == 'openrouter' || m.modelId.contains('claude'))
+                          Container(
+                            margin: const EdgeInsets.only(left: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: Colors.deepPurple.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text('高质量', style: TextStyle(fontSize: 10, color: Colors.deepPurple.shade700)),
+                          ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                onChanged: (idx) {
+                  if (idx == null) return;
+                  final m = _availableModels[idx];
+                  if (m.apiKey == null || m.apiKey!.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('请先在「AI 设置」中配置 ${m.label} 的 API Key'),
+                        action: SnackBarAction(label: '去设置', onPressed: () async {
+                          await Navigator.push(context,
+                              MaterialPageRoute(builder: (_) => const AiSettingsPage()));
+                          _checkEnvironment();
+                        }),
+                      ),
+                    );
+                    return;
+                  }
+                  setState(() {
+                    if (m.isDefault) {
+                      _selectedModelConfig = null;
+                      _selectedModelLabel = '默认';
+                    } else {
+                      _selectedModelConfig = m.toConfig();
+                      _selectedModelLabel = m.label;
+                    }
+                  });
+                },
+              ),
+            ),
           ),
         ],
       ),
@@ -922,6 +1111,7 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
 - ...
 ## 具体修改建议
 1. ...''',
+        configOverride: _selectedModelConfig,
       );
 
       if (!mounted) return;
@@ -962,6 +1152,7 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
 3. 每张幻灯片保持 4-6 个要点
 4. 保留代码块和表格等已有内容
 5. 修改后直接返回完整的 Markdown 内容，不要包含任何解释''',
+        configOverride: _selectedModelConfig,
       );
 
       if (!mounted) return;
@@ -3034,6 +3225,7 @@ class Example {
         additionalRequirements: _extraReqCtrl.text.trim().isEmpty
             ? null
             : _extraReqCtrl.text.trim(),
+        configOverride: _selectedModelConfig,
       );
 
       setState(() {
@@ -3104,6 +3296,7 @@ class Example {
 - ...
 ## 具体修改建议
 1. ...''',
+        configOverride: _selectedModelConfig,
       );
 
       // 解析分数
@@ -3152,6 +3345,7 @@ class Example {
 4. 必须返回完整的修改后教案 JSON
 
 请直接返回修改后的完整 JSON，不要包含任何解释文字，不要使用 markdown 代码块。''',
+        configOverride: _selectedModelConfig,
       );
 
       // 解析修改后的教案
@@ -3213,7 +3407,8 @@ class Example {
 
       // 生成 UML 图表
       final pumlResults =
-          await _coursewareService.generateAllPuml(_lessonPlan!);
+          await _coursewareService.generateAllPuml(_lessonPlan!,
+              configOverride: _selectedModelConfig);
 
       // 渲染 UML 图片
       final images = <Uint8List>[];
@@ -3339,7 +3534,8 @@ class Example {
       // 1. AI 生成旁白脚本
       if (_narrationScripts.isEmpty) {
         final scripts =
-            await _coursewareService.generateNarrationScripts(_lessonPlan!);
+            await _coursewareService.generateNarrationScripts(_lessonPlan!,
+                configOverride: _selectedModelConfig);
         setState(() => _narrationScripts = scripts);
       }
 
