@@ -457,6 +457,18 @@ class _StudentLabPageState extends State<StudentLabPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
+                    // 管理员/教师可删除学生提交
+                    if (hasSubmitted && (_authService.isTeacher || _authService.isAdmin))
+                      TextButton.icon(
+                        onPressed: () => _confirmDeleteSubmission(
+                            mySub.first, task['title'] as String? ?? ''),
+                        icon: const Icon(Icons.delete_outline,
+                            size: 16, color: Colors.red),
+                        label: const Text('删除提交',
+                            style: TextStyle(color: Colors.red, fontSize: 13)),
+                      ),
+                    if (hasSubmitted && (_authService.isTeacher || _authService.isAdmin))
+                      const SizedBox(width: 8),
                     FilledButton.icon(
                       onPressed: () =>
                           _showSubmitDialog(task, hasSubmitted ? mySub.first : null),
@@ -473,6 +485,49 @@ class _StudentLabPageState extends State<StudentLabPage> {
         ],
       ),
     );
+  }
+
+  /// 管理员/教师删除学生提交
+  Future<void> _confirmDeleteSubmission(
+      Map<String, dynamic> submission, String taskTitle) async {
+    final subId = submission['id'] as int;
+    final userId = submission['user_id'] as String? ?? '';
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除提交'),
+        content: Text('确定要删除学生「$userId」在「$taskTitle」的提交记录吗？\n\n此操作不可撤销。'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('取消')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('确认删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await _dao.deleteSubmission(subId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('已删除提交'), backgroundColor: Colors.green),
+        );
+        _loadData();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('删除失败: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   Future<void> _showSubmitDialog(
