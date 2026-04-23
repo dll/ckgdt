@@ -195,28 +195,37 @@ class NotificationDao {
   // 删除通知（级联删除 notification_recipients）
   // ─────────────────────────────────────────────────────────────────────────
 
-  /// 删除通知（ON DELETE CASCADE 自动清理收件人表）
+  /// 删除单条通知及其收件人记录
   Future<void> deleteNotification(int id) async {
     final db = await _dbHelper.database;
+    await db.delete('notification_recipients',
+        where: 'notification_id = ?', whereArgs: [id]);
     await db.delete('notifications', where: 'id = ?', whereArgs: [id]);
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // 自动提醒去重
-  // ─────────────────────────────────────────────────────────────────────────
-
-  /// 检查是否已为某实体创建过自动提醒
-  ///
-  /// 用于 NotificationService.checkAndCreateReminders() 去重
-  Future<bool> reminderExists(String entityType, String entityId) async {
+  /// 批量删除通知
+  Future<void> deleteNotifications(List<int> ids) async {
+    if (ids.isEmpty) return;
     final db = await _dbHelper.database;
-    final result = await db.rawQuery(
-      "SELECT COUNT(*) AS c FROM notifications "
-      "WHERE type = 'auto_reminder' "
-      "AND related_entity_type = ? AND related_entity_id = ?",
-      [entityType, entityId],
+    final placeholders = List.filled(ids.length, '?').join(',');
+    await db.delete(
+      'notifications',
+      where: 'id IN ($placeholders)',
+      whereArgs: ids,
     );
-    return ((result.first['c'] as int?) ?? 0) > 0;
+    // 清理孤儿收件人记录（sqflite 未启用外键 CASCADE）
+    await db.rawDelete(
+      'DELETE FROM notification_recipients '
+      'WHERE notification_id IN ($placeholders)',
+      ids,
+    );
+  }
+
+  /// 清空所有通知
+  Future<void> deleteAllNotifications() async {
+    final db = await _dbHelper.database;
+    await db.delete('notification_recipients');
+    await db.delete('notifications');
   }
 
   // ─────────────────────────────────────────────────────────────────────────

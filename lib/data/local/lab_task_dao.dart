@@ -689,4 +689,28 @@ class LabTaskDao {
       'updated_at': now,
     });
   }
+
+  // ═══════════ 未提交学生查询 ═══════════
+
+  /// 获取活跃学生总数
+  Future<int> getActiveStudentCount() async {
+    final db = await _dbHelper.database;
+    final r = await db.rawQuery(
+        "SELECT COUNT(*) as c FROM users WHERE role='student' AND is_active=1");
+    return (r.first['c'] as int?) ?? 0;
+  }
+
+  /// 获取某任务的未提交学生列表
+  Future<List<Map<String, dynamic>>> getUnsubmittedStudents(int taskId) async {
+    final db = await _dbHelper.database;
+    return db.rawQuery('''
+      SELECT u.user_id, u.real_name
+      FROM users u
+      WHERE u.role = 'student' AND u.is_active = 1
+        AND u.user_id NOT IN (
+          SELECT s.user_id FROM lab_submissions s WHERE s.task_id = ?
+        )
+      ORDER BY u.user_id
+    ''', [taskId]);
+  }
 }

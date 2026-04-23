@@ -457,8 +457,8 @@ class _StudentLabPageState extends State<StudentLabPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    // 管理员/教师可删除学生提交
-                    if (hasSubmitted && (_authService.isTeacher || _authService.isAdmin))
+                    // 学生可删除自己的提交，管理员/教师也可删除
+                    if (hasSubmitted)
                       TextButton.icon(
                         onPressed: () => _confirmDeleteSubmission(
                             mySub.first, task['title'] as String? ?? ''),
@@ -467,7 +467,7 @@ class _StudentLabPageState extends State<StudentLabPage> {
                         label: const Text('删除提交',
                             style: TextStyle(color: Colors.red, fontSize: 13)),
                       ),
-                    if (hasSubmitted && (_authService.isTeacher || _authService.isAdmin))
+                    if (hasSubmitted)
                       const SizedBox(width: 8),
                     FilledButton.icon(
                       onPressed: () =>
@@ -487,17 +487,20 @@ class _StudentLabPageState extends State<StudentLabPage> {
     );
   }
 
-  /// 管理员/教师删除学生提交
+  /// 删除提交（学生删除自己的 / 管理员教师删除任意）
   Future<void> _confirmDeleteSubmission(
       Map<String, dynamic> submission, String taskTitle) async {
     final subId = submission['id'] as int;
-    final userId = submission['user_id'] as String? ?? '';
+    final isOwnSubmission = submission['user_id'] == _userId;
+    final prompt = isOwnSubmission
+        ? '确定要删除「$taskTitle」的提交记录吗？\n\n此操作不可撤销。'
+        : '确定要删除学生「${submission['user_id']}」在「$taskTitle」的提交记录吗？\n\n此操作不可撤销。';
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('删除提交'),
-        content: Text('确定要删除学生「$userId」在「$taskTitle」的提交记录吗？\n\n此操作不可撤销。'),
+        content: Text(prompt),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),

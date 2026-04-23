@@ -4158,6 +4158,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
   late TabController _subTabController;
   final _dao = AssessmentDao();
   List<Map<String, dynamic>> _submissions = [];
+  List<Map<String, dynamic>> _allStudents = [];
   bool _loading = true;
   String? _currentUserId;
 
@@ -4240,7 +4241,21 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
     try {
       final queryUserId = _isStudent ? _currentUserId : null;
       final subs = await _dao.getSubmittedReports(userId: queryUserId);
-      if (mounted) setState(() => _submissions = subs);
+      // 教师端加载全部活跃学生，用于计算未提交
+      List<Map<String, dynamic>> students = [];
+      if (!_isStudent) {
+        final db = await DatabaseHelper.instance.database;
+        students = await db.query('users',
+            columns: ['user_id', 'real_name'],
+            where: "role = 'student' AND is_active = 1",
+            orderBy: 'user_id');
+      }
+      if (mounted) {
+        setState(() {
+          _submissions = subs;
+          _allStudents = students;
+        });
+      }
     } catch (_) {}
   }
 
@@ -4901,6 +4916,12 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
             const SizedBox(height: 8),
             ..._submissions.map((s) => _buildSubmissionItem(s)),
           ],
+
+          // 教师端：未提交学生列表（按报告类型分组）
+          if (!_isStudent && _allStudents.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _buildUnsubmittedReportSection(),
+          ],
         ],
       ),
     );
@@ -5172,6 +5193,90 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
         onTap: _isStudent
             ? null
             : () => _showReportGradeDialog(s),
+      ),
+    );
+  }
+
+  Widget _buildUnsubmittedReportSection() {
+    final reportTypes = ['答辩报告', '个人报告', '小组报告', '项目报告'];
+
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.person_off, size: 18, color: Colors.red[400]),
+                const SizedBox(width: 6),
+                Text('未提交学生',
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red[400])),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...reportTypes.map((type) {
+              // 找出提交了该类型报告的学生 user_id
+              final submittedIds = _submissions
+                  .where((s) =>
+                      (s['title'] as String?)?.contains(type) == true)
+                  .map((s) => s['user_id'] as String? ?? '')
+                  .toSet();
+              final unsubmitted = _allStudents
+                  .where((s) => !submittedIds.contains(s['user_id']))
+                  .toList();
+
+              return ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: const EdgeInsets.only(bottom: 8),
+                leading: Icon(Icons.assignment_late,
+                    size: 16, color: Colors.red[300]),
+                title: Text(
+                    '$type — ${submittedIds.length}/${_allStudents.length}人提交'
+                    '${unsubmitted.isNotEmpty ? '，${unsubmitted.length}人未交' : ''}',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: unsubmitted.isEmpty
+                            ? Colors.green
+                            : Colors.red[400])),
+                children: [
+                  if (unsubmitted.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Text('全部已提交',
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.green)),
+                    )
+                  else
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: unsubmitted.map((s) {
+                        final name = s['real_name'] as String? ??
+                            s['user_id'] as String;
+                        return Chip(
+                          avatar: Icon(Icons.person_outline,
+                              size: 14, color: Colors.red[300]),
+                          label: Text(name,
+                              style: const TextStyle(fontSize: 11)),
+                          backgroundColor:
+                              Colors.red.withValues(alpha: 0.05),
+                          side: BorderSide(
+                              color: Colors.red.withValues(alpha: 0.2)),
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                        );
+                      }).toList(),
+                    ),
+                ],
+              );
+            }),
+          ],
+        ),
       ),
     );
   }

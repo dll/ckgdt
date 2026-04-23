@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../data/local/notification_dao.dart';
 import '../../../services/auth_service.dart';
-import '../../../services/notification_service.dart';
 import 'compose_notification_page.dart';
 
 /// 通知列表页面 — 展示用户的通知消息
@@ -21,12 +20,15 @@ class NotificationListPage extends StatefulWidget {
 
 class _NotificationListPageState extends State<NotificationListPage> {
   final NotificationDao _notificationDao = NotificationDao();
-  final NotificationService _notificationService = NotificationService();
   final AuthService _authService = AuthService();
 
   List<Map<String, dynamic>> _notifications = [];
   int _unreadCount = 0;
   bool _isLoading = true;
+
+  // 批量选择
+  bool _isSelectionMode = false;
+  final Set<int> _selectedIds = {};
 
   @override
   void initState() {
@@ -40,9 +42,6 @@ class _NotificationListPageState extends State<NotificationListPage> {
     if (userId == null) return;
 
     try {
-      // 先检查自动提醒
-      await _notificationService.checkAndCreateReminders();
-
       final notifications =
           await _notificationDao.getNotificationsForUser(userId);
       final unreadCount = await _notificationDao.getUnreadCount(userId);
@@ -88,6 +87,115 @@ class _NotificationListPageState extends State<NotificationListPage> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('已全部标记为已读')),
+      );
+    }
+  }
+
+  /// 进入/退出选择模式
+  void _toggleSelectionMode() {
+    setState(() {
+      _isSelectionMode = !_isSelectionMode;
+      _selectedIds.clear();
+    });
+  }
+
+  /// 切换单条选中状态
+  void _toggleSelection(int id) {
+    setState(() {
+      if (_selectedIds.contains(id)) {
+        _selectedIds.remove(id);
+      } else {
+        _selectedIds.add(id);
+      }
+      // 取消所有选中时自动退出选择模式
+      if (_selectedIds.isEmpty) {
+        _isSelectionMode = false;
+      }
+    });
+  }
+
+  /// 全选 / 取消全选
+  void _toggleSelectAll() {
+    setState(() {
+      if (_selectedIds.length == _notifications.length) {
+        _selectedIds.clear();
+        _isSelectionMode = false;
+      } else {
+        _selectedIds.addAll(
+          _notifications.map((n) => n['id'] as int),
+        );
+      }
+    });
+  }
+
+  /// 批量删除选中通知
+  Future<void> _deleteSelected() async {
+    if (_selectedIds.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('确认删除'),
+        content: Text('确定删除选中的 ${_selectedIds.length} 条通知？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    await _notificationDao.deleteNotifications(_selectedIds.toList());
+    _selectedIds.clear();
+    _isSelectionMode = false;
+    await _loadNotifications();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('已删除选中通知')),
+      );
+    }
+  }
+
+  /// 清空所有通知
+  Future<void> _deleteAll() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('清空通知'),
+        content: const Text('确定删除所有通知？此操作不可恢复。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('全部删除'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    await _notificationDao.deleteAllNotifications();
+    _selectedIds.clear();
+    _isSelectionMode = false;
+    await _loadNotifications();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('已清空所有通知')),
       );
     }
   }
@@ -318,21 +426,77 @@ class _NotificationListPageState extends State<NotificationListPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('通知'),
-        actions: [
-          // 「全部已读」按钮（有未读时显示）
-          if (_unreadCount > 0)
-            TextButton(
-              onPressed: _markAllAsRead,
-              child: Text(
-                '全部已读',
-                style: TextStyle(color: theme.colorScheme.primary),
-              ),
-            ),
-        ],
+        leading: _isSelectionMode
+            ? IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: _toggleSelectionMode,
+              )
+            : null,
+        title: _isSelectionMode
+            ? Text('已选 ${_selectedIds.length} 项')
+            : const Text('通知'),
+        actions: _isSelectionMode
+            ? [
+                // 全选 / 取消全选
+                IconButton(
+                  icon: Icon(
+                    _selectedIds.length == _notifications.length
+                        ? Icons.deselect
+                        : Icons.select_all,
+                  ),
+                  tooltip: _selectedIds.length == _notifications.length
+                      ? '取消全选'
+                      : '全选',
+                  onPressed: _toggleSelectAll,
+                ),
+                // 删除选中
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  tooltip: '删除选中',
+                  onPressed: _selectedIds.isEmpty ? null : _deleteSelected,
+                ),
+              ]
+            : [
+                if (_unreadCount > 0)
+                  TextButton(
+                    onPressed: _markAllAsRead,
+                    child: Text(
+                      '全部已读',
+                      style: TextStyle(color: theme.colorScheme.primary),
+                    ),
+                  ),
+                if (_notifications.isNotEmpty)
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert),
+                    onSelected: (value) {
+                      if (value == 'select') _toggleSelectionMode();
+                      if (value == 'clear') _deleteAll();
+                    },
+                    itemBuilder: (_) => [
+                      const PopupMenuItem(
+                        value: 'select',
+                        child: ListTile(
+                          leading: Icon(Icons.checklist),
+                          title: Text('批量管理'),
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'clear',
+                        child: ListTile(
+                          leading: Icon(Icons.delete_sweep, color: Colors.red),
+                          title: Text('清空所有', style: TextStyle(color: Colors.red)),
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
       ),
-      // 教师/管理员：悬浮按钮 → 发布通知
-      floatingActionButton: isAdminOrTeacher
+      // 教师/管理员：悬浮按钮 → 发布通知（选择模式下隐藏）
+      floatingActionButton: isAdminOrTeacher && !_isSelectionMode
           ? FloatingActionButton(
               onPressed: () async {
                 final result = await Navigator.push<bool>(
@@ -408,6 +572,7 @@ class _NotificationListPageState extends State<NotificationListPage> {
   /// 通知卡片
   Widget _buildNotificationCard(
       Map<String, dynamic> notification, ThemeData theme) {
+    final notifId = notification['id'] as int;
     final isRead = (notification['is_read'] as int?) == 1;
     final title = notification['title'] as String? ?? '';
     final content = notification['content'] as String? ?? '';
@@ -416,29 +581,55 @@ class _NotificationListPageState extends State<NotificationListPage> {
     final notifType = notification['type'] as String? ?? 'manual';
     final readCount = notification['read_count'];
     final totalRecipients = notification['total_recipients'];
+    final isSelected = _selectedIds.contains(notifId);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       elevation: isRead ? 0 : 1,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: isRead
-            ? BorderSide.none
-            : BorderSide(
-                color: theme.colorScheme.primary.withValues(alpha: 0.2),
-                width: 1,
-              ),
+        side: isSelected
+            ? BorderSide(color: theme.colorScheme.primary, width: 1.5)
+            : isRead
+                ? BorderSide.none
+                : BorderSide(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                    width: 1,
+                  ),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => _onNotificationTap(notification),
+        onTap: _isSelectionMode
+            ? () => _toggleSelection(notifId)
+            : () => _onNotificationTap(notification),
+        onLongPress: _isSelectionMode
+            ? null
+            : () {
+                setState(() {
+                  _isSelectionMode = true;
+                  _selectedIds.add(notifId);
+                });
+              },
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 未读蓝点 / 已读灰色图标
-              Padding(
+              // 选择模式：Checkbox；普通模式：未读蓝点/已读灰色图标
+              if (_isSelectionMode)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2, right: 8),
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: Checkbox(
+                      value: isSelected,
+                      onChanged: (_) => _toggleSelection(notifId),
+                    ),
+                  ),
+                )
+              else
+                Padding(
                 padding: const EdgeInsets.only(top: 2, right: 12),
                 child: isRead
                     ? Icon(

@@ -6,6 +6,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:flutter/services.dart';
 import '../data/local/material_dao.dart';
+import '../data/models/ai_config_model.dart';
 import '../data/models/material_model.dart';
 import 'ai_service.dart';
 import 'plantuml_service.dart';
@@ -29,8 +30,20 @@ class CoursewareService {
     String? chapter,
     int classHours = 2,
     String? additionalRequirements,
+    AiConfigModel? configOverride,
   }) async {
-    const system = '''你是一位资深的移动应用开发课程教师，擅长制定教学教案。
+    final isEnhanced = configOverride != null;
+    final system = isEnhanced
+        ? '''你是一位拥有15年教学经验的资深移动应用开发课程教授，精通 ADDIE 教学设计模型和布鲁姆认知层次理论。
+请用中文回复，回复必须是合法的 JSON 对象。
+你的教案应：
+- 教学目标按布鲁姆认知层次（记忆→理解→应用→分析→评价→创造）递进
+- 每个教学环节的 content 字段需包含至少 200 字的详细内容描述，含关键概念解释、示例说明
+- 代码示例必须完整可运行，含注释
+- 实验步骤须精确到每个操作，含预期结果
+- 至少包含 2 个 UML 图表（类图 + 时序图/活动图）
+- 重点难点要有突破策略说明'''
+        : '''你是一位资深的移动应用开发课程教师，擅长制定教学教案。
 请用中文回复，回复必须是合法的 JSON 对象。
 你的教案应结构清晰、内容专业、可操作性强。''';
 
@@ -80,6 +93,7 @@ ${additionalRequirements != null ? '额外要求: $additionalRequirements' : ''}
     final raw = await _aiService.chat(
       [{'role': 'user', 'content': prompt}],
       systemPrompt: system,
+      configOverride: configOverride,
     );
 
     // 提取 JSON 对象
@@ -229,6 +243,7 @@ ${additionalRequirements != null ? '额外要求: $additionalRequirements' : ''}
     required String diagramType, // class, sequence, activity
     String? language,
     String? context,
+    AiConfigModel? configOverride,
   }) async {
     const system = '''你是一位资深软件架构师和 UML 专家。
 根据提供的源代码，分析其结构并生成对应的 PlantUML 代码。
@@ -263,6 +278,7 @@ ${context != null ? '上下文说明: $context' : ''}
     final raw = await _aiService.chat(
       [{'role': 'user', 'content': prompt}],
       systemPrompt: system,
+      configOverride: configOverride,
     );
     final match = RegExp(r'@startuml[\s\S]*?@enduml').firstMatch(raw);
     return match?.group(0) ?? raw;
@@ -270,8 +286,9 @@ ${context != null ? '上下文说明: $context' : ''}
 
   /// 生成教案中所有 UML 图的 PUML 代码
   Future<List<Map<String, String>>> generateAllPuml(
-    Map<String, dynamic> lessonPlan,
-  ) async {
+    Map<String, dynamic> lessonPlan, {
+    AiConfigModel? configOverride,
+  }) async {
     final umlDiagrams = lessonPlan['umlDiagrams'] as List? ?? [];
     final results = <Map<String, String>>[];
 
@@ -285,6 +302,7 @@ ${context != null ? '上下文说明: $context' : ''}
         final puml = await _aiService.generatePuml(
           '$title - $desc',
           diagramType: type,
+          configOverride: configOverride,
         );
         results.add({
           'title': title,
@@ -712,9 +730,19 @@ ${context != null ? '上下文说明: $context' : ''}
 
   /// 从教案生成 TTS 朗读脚本（分段，每段对应一张幻灯片）
   Future<List<Map<String, String>>> generateNarrationScripts(
-    Map<String, dynamic> lessonPlan,
-  ) async {
-    const system = '''你是一位专业的移动应用开发课程讲师，正在录制教学视频。
+    Map<String, dynamic> lessonPlan, {
+    AiConfigModel? configOverride,
+  }) async {
+    final isEnhanced = configOverride != null;
+    final system = isEnhanced
+        ? '''你是一位极具感染力的移动应用开发课程讲师，正在录制高品质教学视频。
+请用中文、口语化、清晰的语言生成教学视频旁白脚本。回复必须是合法的 JSON 数组。
+要求：
+- 语言自然生动，像与学生面对面交流
+- 适当使用过渡句（"接下来让我们看看…"、"这里要特别注意…"）
+- 关键概念要用通俗易懂的比喻解释
+- 每段旁白 150-250 字，节奏适中'''
+        : '''你是一位专业的移动应用开发课程讲师，正在录制教学视频。
 请用中文、口语化、清晰的语言生成教学视频旁白脚本。
 回复必须是合法的 JSON 数组。''';
 
@@ -744,6 +772,7 @@ ${context != null ? '上下文说明: $context' : ''}
     final raw = await _aiService.chat(
       [{'role': 'user', 'content': prompt}],
       systemPrompt: system,
+      configOverride: configOverride,
     );
 
     final match = RegExp(r'\[[\s\S]*\]').firstMatch(raw);

@@ -122,6 +122,21 @@ class AiConfigModel {
       description: 'OpenAI GPT 系列模型，全球领先的大语言模型，需要海外网络环境。',
     ),
     ProviderPreset(
+      id: 'openrouter',
+      name: 'OpenRouter',
+      baseUrl: 'https://openrouter.ai/api/v1',
+      models: [
+        'anthropic/claude-opus-4-6',
+        'anthropic/claude-sonnet-4-6',
+        'anthropic/claude-3.5-sonnet',
+        'google/gemini-2.0-flash-001',
+        'openai/gpt-4o',
+        'deepseek/deepseek-chat',
+      ],
+      description: 'OpenRouter 聚合代理，一个 API Key 访问所有主流大模型（Claude/GPT/Gemini/DeepSeek等），推荐课件工坊使用 Claude Opus 生成高质量内容。',
+      freeNote: '部分模型有免费额度',
+    ),
+    ProviderPreset(
       id: 'claude',
       name: 'Anthropic Claude',
       baseUrl: 'https://api.anthropic.com/v1',

@@ -134,6 +134,29 @@ class VirtualTeacherAgent extends BaseAgent {
 [基于反思的教学调整计划]
 ```
 
+## 智能诊断能力
+
+### 学生风险预警处置
+根据 alerts 列表给出干预建议：
+- **inactive**（超7天未学习）：建议主动联系学生了解情况
+- **low_score**（测验低于60分）：安排补测或答疑辅导
+- **no_submission**（实验未提交）：设置截止提醒或一对一督促
+
+### 班级分布诊断
+根据 classDistribution（excellent/good/average/atRisk）：
+- 正态分布：教学节奏正常
+- 双峰分布：考虑分层教学
+- 左偏（atRisk 偏多）：降低难度或增加基础练习
+
+### 趋势解读
+根据 trend 数据给出教学调整建议：
+- 班级成绩下滑：分析具体薄弱章节，调整教学策略
+- 参与度下降：设计互动环节，激发兴趣
+- 批阅积压：优化批阅流程或调整任务节奏
+
+### 教学效能综合评估
+综合 classEngagement、gradingTimeliness、teachingProgress、deadlineWarnings 给出教学健康度评估和具体改进行动。
+
 ## 工作原则
 - **数据驱动**：所有分析基于系统中的真实数据，不主观臆断
 - **建设性反馈**：反思是为了改进，不是批评
@@ -141,7 +164,8 @@ class VirtualTeacherAgent extends BaseAgent {
 - **图谱关联**：教学建议与知识图谱节点紧密关联
 - **尊重专业**：你是辅助工具，最终教学决策由教师做出
 - **隐私保护**：学生个体数据汇总呈现，不点名批评
-- **持续改进**：每次反思都与前次对比，形成改进闭环''',
+- **持续改进**：每次反思都与前次对比，形成改进闭环
+- **精准干预**：基于 alerts 和 classDistribution 推动个性化教学''',
         priority: 6,
         keywords: [
           '虚拟教师', '数字孪生', '教学状态', '教学反思', '教学画像',
@@ -210,6 +234,23 @@ class VirtualTeacherAgent extends BaseAgent {
         enhancedPersona = '''${config.persona}
 
 ## 该教师的真实教学画像数据（请基于此数据作答，不要编造）
+
+### 数据字段说明
+- classSize / classAvg：班级规模与平均成绩
+- nodeCoverage：各章节知识图谱节点覆盖率
+- weakSpots：班级薄弱知识点（nodeTitle + avgScore）
+- pendingGrading：待批阅数量
+- classDistribution：成绩段分布（excellent≥85, good≥70, average≥60, atRisk<60）
+- teachingProgress：教学大纲执行率（0-100）
+- classEngagement：近7天班级参与度（有学习记录的学生占比）
+- gradingTimeliness：批阅及时性（3天内批完的比率）
+- deadlineWarnings：距截止不足3天且有未提交的实验数
+- alerts：学生风险预警列表
+  - alertType: inactive（超7天未学习）/ low_score（测验<60）/ no_submission（实验未提交）
+  - userId / realName / message
+- trend：本周 vs 上周趋势（delta 正=提升，负=下降）
+- radar：教学能力雷达数据
+
 ${jsonEncode(profile.toJson())}
 ''';
       }
