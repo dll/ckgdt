@@ -3,10 +3,44 @@
   "user_id": "2023210626",
   "user_name": "王建",
   "role": "student",
-  "synced_at": "2026-04-23T21:27:43.393",
-  "last_active": "2026-04-23T21:27:43.393",
+  "synced_at": "2026-04-23T21:28:53.343991",
+  "last_active": "2026-04-23T21:28:53.343997",
   "quiz_results": [],
   "learning_records": [],
-  "wrong_answers": [],
+  "wrong_answers": [
+    {
+      "user_id": "2023210626",
+      "question_id": 2284,
+      "question": "以下哪个是移动应用开发中\"原生应用\"的主要特征？",
+      "user_answer": "使用HTML、CSS、JavaScript开发",
+      "correct_answer": "使用平台特定的编程语言和SDK开发",
+      "chapter": "第一章 移动应用开发技术体系1",
+      "times": 1,
+      "wrong_time": "2026-04-16T21:06:13.223217",
+      "last_wrong_time": "2026-04-16T21:06:13.223232"
+    },
+    {
+      "user_id": "2023210626",
+      "question_id": 2285,
+      "question": "以下哪个框架主要用于混合应用开发？",
+      "user_answer": "Android Studio",
+      "correct_answer": "React Native",
+      "chapter": "第一章 移动应用开发技术体系1",
+      "times": 1,
+      "wrong_time": "2026-04-16T21:06:14.468032",
+      "last_wrong_time": "2026-04-16T21:06:14.468049"
+    },
+    {
+      "user_id": "2023210626",
+      "question_id": 2292,
+      "question": "华为鸿蒙系统主要体现了移动应用发展的哪个趋势？",
+      "user_answer": "单一平台专精化",
+      "correct_answer": "多端统一生态",
+      "chapter": "第一章 移动应用开发技术体系1",
+      "times": 1,
+      "wrong_time": "2026-04-16T21:06:16.311047",
+      "last_wrong_time": "2026-04-16T21:06:16.311066"
+    }
+  ],
   "favorites": []
 }
