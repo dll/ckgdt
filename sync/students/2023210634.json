@@ -3,15 +3,34 @@
   "user_id": "2023210634",
   "user_name": "王智宇",
   "role": "student",
-  "synced_at": "2026-04-24T10:03:43.146292",
-  "last_active": "2026-04-24T10:03:43.139286",
+  "synced_at": "2026-04-24T10:06:33.594737",
+  "last_active": "2026-04-24T10:06:33.571672",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
   "favorites": [],
   "feedback": [],
   "learning_paths": [],
-  "lab_submissions": [],
+  "lab_submissions": [
+    {
+      "task_id": 3,
+      "user_id": "2023210634",
+      "content": "PDF实验报告：2023210634王智宇实验三 跨平台应用开发.pdf",
+      "file_paths": "D:\\2023210634王智宇实验三 跨平台应用开发.pdf",
+      "file_names": "2023210634王智宇实验三 跨平台应用开发.pdf",
+      "submit_time": "2026-04-24T10:06:33.555295",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-04-24T10:06:33.555295",
+      "updated_at": "2026-04-24T10:06:33.555295",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    }
+  ],
   "student_reports": [],
   "student_works": [
     {
