@@ -3,8 +3,8 @@
   "user_id": "2023210643",
   "user_name": "张海天",
   "role": "student",
-  "synced_at": "2026-04-24T09:32:46.794154",
-  "last_active": "2026-04-24T09:32:46.790153",
+  "synced_at": "2026-04-24T09:37:27.469891",
+  "last_active": "2026-04-24T09:37:27.469898",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
@@ -141,7 +141,7 @@
       "task_id": 1,
       "user_id": "2023210643",
       "content": "PDF实验报告：2023210643张海天实验一 开发环境搭建.pdf",
-      "file_paths": "E:\\Download\\2023210643张海天实验一 开发环境搭建.pdf",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2023210643/2023210643张海天实验一 开发环境搭建.pdf",
       "file_names": "2023210643张海天实验一 开发环境搭建.pdf",
       "submit_time": "2026-04-24T09:27:35.252001",
       "status": "已提交",
@@ -173,9 +173,6 @@
       "tags": "[\"C#\",\".NET\",\"MAUI\"]",
       "created_at": "2026-04-18T16:18:04.047216",
       "updated_at": "2026-04-18T16:18:06.966235",
-      "related_node_ids": null,
-      "ai_suspicion": 0.0,
-      "teacher_confirmed": 0,
       "project_id": null,
       "group_id": null,
       "video_url": "assets/videos/demo_2023210643.mp4",
@@ -188,7 +185,10 @@
       "class_group": "cg2",
       "project": "二手物品交易平台开发与整合",
       "student_role": "MAUI开发工程师",
-      "student_name": "张海天"
+      "student_name": "张海天",
+      "related_node_ids": null,
+      "ai_suspicion": 0.0,
+      "teacher_confirmed": 0
     }
   ],
   "survey_responses": [],
@@ -205,7 +205,20 @@
     }
   ],
   "work_likes": [],
-  "notification_recipients": [],
+  "notification_recipients": [
+    {
+      "notification_id": 1,
+      "user_id": "2023210643",
+      "is_read": 0,
+      "read_at": null
+    },
+    {
+      "notification_id": 2,
+      "user_id": "2023210643",
+      "is_read": 0,
+      "read_at": null
+    }
+  ],
   "work_views": [],
   "peer_reviews": [],
   "collaboration_messages": [],
