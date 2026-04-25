@@ -3,15 +3,34 @@
   "user_id": "2023210633",
   "user_name": "王永喜",
   "role": "student",
-  "synced_at": "2026-04-25T16:01:33.764526",
-  "last_active": "2026-04-25T16:01:33.762",
+  "synced_at": "2026-04-25T16:03:09.766061",
+  "last_active": "2026-04-25T16:03:09.758750",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
   "favorites": [],
   "feedback": [],
   "learning_paths": [],
-  "lab_submissions": [],
+  "lab_submissions": [
+    {
+      "task_id": 1,
+      "user_id": "2023210633",
+      "content": "PDF实验报告：2023210633王永喜实验一 开发环境搭建.pdf",
+      "file_paths": "F:\\EHLAS\\2023210633王永喜实验一 开发环境搭建.pdf",
+      "file_names": "2023210633王永喜实验一 开发环境搭建.pdf",
+      "submit_time": "2026-04-25T16:03:09.751477",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-04-25T16:03:09.751477",
+      "updated_at": "2026-04-25T16:03:09.751477",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    }
+  ],
   "student_reports": [],
   "student_works": [
     {
