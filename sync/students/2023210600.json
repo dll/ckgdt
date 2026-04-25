@@ -3,8 +3,8 @@
   "user_id": "2023210600",
   "user_name": "金翔宇",
   "role": "student",
-  "synced_at": "2026-04-23T13:01:38.320774",
-  "last_active": "2026-04-23T13:01:38.317546",
+  "synced_at": "2026-04-25T09:23:24.652828",
+  "last_active": "2026-04-25T09:23:24.652832",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
@@ -27,8 +27,8 @@
       "status": "已评分",
       "submit_time": null,
       "tags": "[\"Dart\",\"Flutter\"]",
-      "created_at": "2026-04-18T16:18:03.758862",
-      "updated_at": "2026-04-18T16:18:06.689493",
+      "created_at": "2026-04-23T12:31:05.697817",
+      "updated_at": "2026-04-23T12:31:07.438513",
       "project_id": null,
       "group_id": null,
       "video_url": "assets/videos/demo_2023210600.mp4",
@@ -54,7 +54,7 @@
       "user_role": "student",
       "content": "UI设计很好看，交互流畅。",
       "parent_id": null,
-      "created_at": "2026-04-18T16:18:05.312429"
+      "created_at": "2026-04-23T12:31:07.309218"
     },
     {
       "work_id": 11,
@@ -63,7 +63,7 @@
       "user_role": "student",
       "content": "功能做得很完整，佩服。",
       "parent_id": null,
-      "created_at": "2026-04-18T16:18:04.836644"
+      "created_at": "2026-04-23T12:31:06.965954"
     },
     {
       "work_id": 6,
@@ -72,7 +72,7 @@
       "user_role": "student",
       "content": "功能做得很完整，佩服。",
       "parent_id": null,
-      "created_at": "2026-04-18T16:18:04.769328"
+      "created_at": "2026-04-23T12:31:06.908613"
     }
   ],
   "work_likes": [],
