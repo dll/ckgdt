@@ -7,6 +7,7 @@ import '../../../services/auth_service.dart';
 import '../../../services/sync_service.dart';
 import '../../../core/constants/role_guard.dart';
 import '../../widgets/agent_entry_button.dart';
+import 'classroom_question_tab.dart';
 
 // ╔══════════════════════════════════════════════════════════════════════════════╗
 // ║  课堂管理页面 — 在线状态 / 课堂签到 / 课堂互动                              ║
@@ -33,7 +34,7 @@ class _ClassroomPageState extends State<ClassroomPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _init();
   }
 
@@ -92,6 +93,7 @@ class _ClassroomPageState extends State<ClassroomPage>
               Tab(icon: Icon(Icons.fact_check, size: 18), text: '课堂签到'),
               Tab(icon: Icon(Icons.forum, size: 18), text: '课堂互动'),
               Tab(icon: Icon(Icons.build_circle, size: 18), text: '课堂工具'),
+              Tab(icon: Icon(Icons.quiz, size: 18), text: '课堂提问'),
             ],
           ),
         ),
@@ -116,6 +118,11 @@ class _ClassroomPageState extends State<ClassroomPage>
                 authService: _authService,
               ),
               _ClassroomToolsTab(
+                classroomDao: _classroomDao,
+                classId: _selectedClassId,
+                authService: _authService,
+              ),
+              ClassroomQuestionTab(
                 classroomDao: _classroomDao,
                 classId: _selectedClassId,
                 authService: _authService,
