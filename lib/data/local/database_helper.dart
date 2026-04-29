@@ -439,12 +439,21 @@ class DatabaseHelper {
       }, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
 
+    // 测试学生账号（ignore if already exists）
+    await db.insert('users', {
+      'user_id': '2023211985',
+      'real_name': '测试学生',
+      'role': 'student',
+      'created_at': DateTime.now().toIso8601String(),
+      'is_active': 1,
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
+
     // 插入默认 AI 配置（DeepSeek），用户无需手动填写 API Key
     await db.insert('ai_configs', {
       'id': 1,
       'provider': 'deepseek',
       'api_key': 'sk-717ef9146311424daa2fbead8ed4682b',
-      'model': 'deepseek-chat',
+      'model': 'deepseek-v4-pro',
       'base_url': 'https://api.deepseek.com',
       'temperature': 0.7,
       'max_tokens': 2048,
@@ -1298,7 +1307,7 @@ class DatabaseHelper {
         'id': 1,
         'provider': 'deepseek',
         'api_key': 'sk-717ef9146311424daa2fbead8ed4682b',
-        'model': 'deepseek-chat',
+        'model': 'deepseek-v4-pro',
         'base_url': 'https://api.deepseek.com',
         'temperature': 0.7,
         'max_tokens': 2048,
@@ -1539,7 +1548,7 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY CHECK(id=1),
         provider TEXT DEFAULT 'deepseek',
         api_key TEXT,
-        model TEXT DEFAULT 'deepseek-chat',
+        model TEXT DEFAULT 'deepseek-v4-pro',
         base_url TEXT,
         updated_at TEXT
       )

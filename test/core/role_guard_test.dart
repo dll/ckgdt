@@ -71,8 +71,8 @@ void main() {
       expect(RoleGuard.canImportData('admin'), isTrue);
     });
 
-    test('teacher cannot import data', () {
-      expect(RoleGuard.canImportData('teacher'), isFalse);
+    test('teacher can import data', () {
+      expect(RoleGuard.canImportData('teacher'), isTrue);
     });
 
     test('student cannot import data', () {
@@ -149,7 +149,7 @@ void main() {
       expect(RoleGuard.canManageStudents(role), isFalse); // admin only
       expect(RoleGuard.canScoreWorks(role), isTrue);
       expect(RoleGuard.canManageAssessment(role), isTrue);
-      expect(RoleGuard.canImportData(role), isFalse); // admin only
+      expect(RoleGuard.canImportData(role), isTrue);
       expect(RoleGuard.canConfigGitee(role), isTrue);
       expect(RoleGuard.canViewAllRepos(role), isTrue);
       expect(RoleGuard.isTeacherOrAdmin(role), isTrue);

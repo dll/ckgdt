@@ -17,10 +17,11 @@ import '../../widgets/agent_entry_button.dart';
 import '../admin/repo_detail_page.dart';
 import 'lab_material_preview_page.dart';
 import '../learning/pdf_viewer_page.dart';
+import 'ai_grading_tab.dart';
 
 /// 实验任务页面
 /// 学生: 5 Tab（任务列表 / 我的提交 / 实验报告 / 实验材料 / 仓库报表）
-/// 教师/管理员: 6 Tab（任务列表 / 提交管理 / 实验报告 / 实验材料 / 任务管理 / 仓库报表）
+/// 教师/管理员: 7 Tab（任务列表 / 提交管理 / 实验报告 / 实验材料 / 任务管理 / AI批阅 / 仓库报表）
 class LabTasksPage extends StatefulWidget {
   const LabTasksPage({super.key});
 
@@ -180,7 +181,7 @@ class _LabTasksPageState extends State<LabTasksPage>
   @override
   void initState() {
     super.initState();
-    final tabCount = _isTeacherOrAdmin ? 6 : 5;
+    final tabCount = _isTeacherOrAdmin ? 7 : 5;
     _tabController = TabController(length: tabCount, vsync: this);
     _initData();
   }
@@ -235,6 +236,8 @@ class _LabTasksPageState extends State<LabTasksPage>
                     if (_isTeacherOrAdmin)
                       const Tab(icon: Icon(Icons.settings, size: 18), text: '任务管理'),
                     if (_isTeacherOrAdmin)
+                      const Tab(icon: Icon(Icons.auto_awesome, size: 18), text: 'AI批阅'),
+                    if (_isTeacherOrAdmin)
                       const Tab(icon: Icon(Icons.analytics, size: 18), text: '仓库报表'),
                   ],
                 ),
@@ -256,6 +259,9 @@ class _LabTasksPageState extends State<LabTasksPage>
                 _StudentRepoTab(authService: _authService),
               if (_isTeacherOrAdmin)
                 _TaskManageTab(
+                    authService: _authService, labTaskDao: _labTaskDao),
+              if (_isTeacherOrAdmin)
+                LabAiGradingTab(
                     authService: _authService, labTaskDao: _labTaskDao),
               if (_isTeacherOrAdmin) const _RepoReportTab(),
             ],

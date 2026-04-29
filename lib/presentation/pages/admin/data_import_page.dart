@@ -343,14 +343,17 @@ class _DataImportPageState extends State<DataImportPage> {
     // 权限守卫：仅管理员可访问
     final role = AuthService().currentUser?.role ?? 'student';
     if (!RoleGuard.canImportData(role)) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.lock, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
-            Text('无权限访问', style: TextStyle(fontSize: 18, color: Colors.grey)),
-          ],
+      return Scaffold(
+        appBar: AppBar(title: const Text('资源管理')),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.lock, size: 64, color: Colors.grey),
+              SizedBox(height: 16),
+              Text('无权限访问', style: TextStyle(fontSize: 18, color: Colors.grey)),
+            ],
+          ),
         ),
       );
     }

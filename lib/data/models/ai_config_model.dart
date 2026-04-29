@@ -45,7 +45,7 @@ class AiConfigModel {
   const AiConfigModel({
     this.provider = 'deepseek',
     this.apiKey,
-    this.model = 'deepseek-chat',
+    this.model = 'deepseek-v4-pro',
     this.baseUrl,
     this.updatedAt,
     this.temperature = 0.7,
@@ -61,8 +61,8 @@ class AiConfigModel {
       id: 'deepseek',
       name: 'DeepSeek',
       baseUrl: 'https://api.deepseek.com',
-      models: ['deepseek-chat', 'deepseek-reasoner'],
-      description: 'DeepSeek 开放平台，新用户注册即有免费额度，推荐使用 deepseek-chat 模型。',
+      models: ['deepseek-v4-pro', 'deepseek-chat', 'deepseek-reasoner'],
+      description: 'DeepSeek 开放平台，新用户注册即有免费额度，推荐使用 deepseek-v4-pro 高性能旗舰版。',
       freeNote: '新用户有免费额度',
     ),
     ProviderPreset(
@@ -131,7 +131,7 @@ class AiConfigModel {
         'anthropic/claude-3.5-sonnet',
         'google/gemini-2.0-flash-001',
         'openai/gpt-4o',
-        'deepseek/deepseek-chat',
+        'deepseek/deepseek-v4-pro',
       ],
       description: 'OpenRouter 聚合代理，一个 API Key 访问所有主流大模型（Claude/GPT/Gemini/DeepSeek等），推荐课件工坊使用 Claude Opus 生成高质量内容。',
       freeNote: '部分模型有免费额度',
@@ -234,7 +234,7 @@ class AiConfigModel {
   factory AiConfigModel.fromMap(Map<String, dynamic> map) => AiConfigModel(
         provider: map['provider'] as String? ?? 'deepseek',
         apiKey: map['api_key'] as String?,
-        model: map['model'] as String? ?? 'deepseek-chat',
+        model: map['model'] as String? ?? 'deepseek-v4-pro',
         baseUrl: map['base_url'] as String?,
         updatedAt: map['updated_at'] as String?,
         temperature: (map['temperature'] as num?)?.toDouble() ?? 0.7,

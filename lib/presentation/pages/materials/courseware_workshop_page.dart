@@ -131,6 +131,7 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
   AiConfigModel? _selectedModelConfig;   // null = 使用全局默认配置
   String _selectedModelLabel = '默认';   // 当前模型显示名称
   List<_ModelOption> _availableModels = [];  // 可选模型列表
+  String? _balanceText;                  // 账户余额显示文本
 
   static const _chapters = [
     '全部/自定义',
@@ -216,6 +217,22 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
       _checkingEnv = false;
       _availableModels = models;
     });
+
+    // 异步查询账户余额（不阻塞 UI）
+    _fetchBalance();
+  }
+
+  Future<void> _fetchBalance() async {
+    try {
+      final result = await AiService().queryBalance(
+        configOverride: _selectedModelConfig,
+      );
+      if (result != null && mounted) {
+        setState(() {
+          _balanceText = '¥${result['available']}';
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -305,96 +322,163 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
     );
   }
 
-  /// AI 模型选择器：显示可用模型列表
+  /// AI 模型选择器：显示可用模型列表 + 版本号 + 余额
   Widget _buildModelSelector() {
     if (_availableModels.isEmpty) return const SizedBox.shrink();
 
+    // 当前生效的配置
+    final active = _selectedModelConfig;
+    final activeModel = _availableModels.firstWhere(
+      (m) => active == null ? m.isDefault : m.providerId == active.provider && m.modelId == active.model,
+      orElse: () => _availableModels.first,
+    );
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       color: Colors.grey.shade50,
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.smart_toy, size: 18, color: Colors.deepPurple.shade400),
-          const SizedBox(width: 8),
-          const Text('AI 模型：', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<int>(
-                value: _availableModels.indexWhere((m) =>
-                  _selectedModelConfig == null ? m.isDefault
-                    : m.providerId == _selectedModelConfig!.provider &&
-                      m.modelId == _selectedModelConfig!.model),
-                isExpanded: true,
-                isDense: true,
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
-                icon: Icon(Icons.expand_more, size: 20, color: Colors.deepPurple.shade400),
-                items: _availableModels.asMap().entries.map((entry) {
-                  final i = entry.key;
-                  final m = entry.value;
-                  final hasKey = m.apiKey != null && m.apiKey!.isNotEmpty;
-                  return DropdownMenuItem(
-                    value: i,
-                    child: Row(
-                      children: [
-                        Icon(
-                          m.isDefault ? Icons.check_circle : (hasKey ? Icons.circle : Icons.circle_outlined),
-                          size: 14,
-                          color: m.isDefault ? Colors.green : (hasKey ? Colors.blue : Colors.grey),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            m.label,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: hasKey ? Colors.black87 : Colors.grey,
+          // ── 第一行：模型下拉选择器 ──
+          Row(
+            children: [
+              Icon(Icons.smart_toy, size: 18, color: Colors.deepPurple.shade400),
+              const SizedBox(width: 8),
+              const Text('AI 模型：', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<int>(
+                    value: _availableModels.indexOf(activeModel),
+                    isExpanded: true,
+                    isDense: true,
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
+                    icon: Icon(Icons.expand_more, size: 20, color: Colors.deepPurple.shade400),
+                    items: _availableModels.asMap().entries.map((entry) {
+                      final i = entry.key;
+                      final m = entry.value;
+                      final hasKey = m.apiKey != null && m.apiKey!.isNotEmpty;
+                      return DropdownMenuItem(
+                        value: i,
+                        child: Row(
+                          children: [
+                            Icon(
+                              m.isDefault ? Icons.check_circle : (hasKey ? Icons.circle : Icons.circle_outlined),
+                              size: 14,
+                              color: m.isDefault ? Colors.green : (hasKey ? Colors.blue : Colors.grey),
                             ),
-                          ),
-                        ),
-                        if (m.providerId == 'openrouter' || m.modelId.contains('claude'))
-                          Container(
-                            margin: const EdgeInsets.only(left: 4),
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: Colors.deepPurple.shade50,
-                              borderRadius: BorderRadius.circular(8),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                m.label,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: hasKey ? Colors.black87 : Colors.grey,
+                                ),
+                              ),
                             ),
-                            child: Text('高质量', style: TextStyle(fontSize: 10, color: Colors.deepPurple.shade700)),
+                            if (m.providerId == 'openrouter' || m.modelId.contains('claude'))
+                              Container(
+                                margin: const EdgeInsets.only(left: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: Colors.deepPurple.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text('高质量', style: TextStyle(fontSize: 10, color: Colors.deepPurple.shade700)),
+                              ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (idx) {
+                      if (idx == null) return;
+                      final m = _availableModels[idx];
+                      if (m.apiKey == null || m.apiKey!.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('请先在「AI 设置」中配置 ${m.label} 的 API Key'),
+                            action: SnackBarAction(label: '去设置', onPressed: () async {
+                              await Navigator.push(context,
+                                  MaterialPageRoute(builder: (_) => const AiSettingsPage()));
+                              _checkEnvironment();
+                            }),
                           ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-                onChanged: (idx) {
-                  if (idx == null) return;
-                  final m = _availableModels[idx];
-                  if (m.apiKey == null || m.apiKey!.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('请先在「AI 设置」中配置 ${m.label} 的 API Key'),
-                        action: SnackBarAction(label: '去设置', onPressed: () async {
-                          await Navigator.push(context,
-                              MaterialPageRoute(builder: (_) => const AiSettingsPage()));
-                          _checkEnvironment();
-                        }),
-                      ),
-                    );
-                    return;
-                  }
-                  setState(() {
-                    if (m.isDefault) {
-                      _selectedModelConfig = null;
-                      _selectedModelLabel = '默认';
-                    } else {
-                      _selectedModelConfig = m.toConfig();
-                      _selectedModelLabel = m.label;
-                    }
-                  });
-                },
+                        );
+                        return;
+                      }
+                      setState(() {
+                        if (m.isDefault) {
+                          _selectedModelConfig = null;
+                          _selectedModelLabel = '默认';
+                        } else {
+                          _selectedModelConfig = m.toConfig();
+                          _selectedModelLabel = m.label;
+                        }
+                        _balanceText = null; // 切换模型时重新查询余额
+                      });
+                      _fetchBalance();
+                    },
+                  ),
+                ),
               ),
-            ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          // ── 第二行：服务商 + 模型版本 + 余额 ──
+          Row(
+            children: [
+              const SizedBox(width: 26), // 对齐图标
+              Icon(Icons.info_outline, size: 14, color: Colors.grey.shade500),
+              const SizedBox(width: 4),
+              Text(
+                '${activeModel.providerId.toUpperCase()} / ${activeModel.modelId}',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
+              if (activeModel.isDefault)
+                Container(
+                  margin: const EdgeInsets.only(left: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text('默认', style: TextStyle(fontSize: 10, color: Colors.green.shade700)),
+                ),
+              const Spacer(),
+              if (_balanceText != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.account_balance_wallet, size: 13, color: Colors.orange.shade700),
+                      const SizedBox(width: 4),
+                      Text(
+                        '余额 $_balanceText',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.orange.shade800),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                InkWell(
+                  onTap: _fetchBalance,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.refresh, size: 13, color: Colors.grey.shade500),
+                      const SizedBox(width: 2),
+                      Text('查询余额', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                    ],
+                  ),
+                ),
+            ],
           ),
         ],
       ),

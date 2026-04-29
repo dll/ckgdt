@@ -936,5 +936,15 @@
     "role": "student",
     "is_active": 1,
     "class_name": "软件232"
+  },
+  {
+    "user_id": "2023211985",
+    "real_name": "测试学生",
+    "department": "计算机与信息工程学院（大学计算机教学部）",
+    "major": "软件工程",
+    "class_name": "软件232",
+    "enrollment_date": "2026-01-27",
+    "grade": "2023",
+    "is_active": 1
   }
 ]

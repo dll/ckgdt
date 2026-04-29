@@ -13,6 +13,7 @@ import '../../../services/sync_service.dart';
 import '../../../services/gitee_service.dart';
 import '../../../services/agent/agents/works_grading_agent.dart';
 import '../../widgets/agent_entry_button.dart';
+import 'ai_grading_tab.dart';
 
 // ╔══════════════════════════════════════════════════════════════════════════════╗
 // ║  作品视角维度（多维过滤，复用考核页的 _GroupDimension 模式）                ║
@@ -71,10 +72,16 @@ class _WorksPageState extends State<WorksPage>
   List<Map<String, dynamic>> _allStudents = [];
   bool _initialized = false;
 
+  bool get _isTeacherOrAdmin =>
+      _authService.isTeacher || _authService.isAdmin;
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(
+      length: _isTeacherOrAdmin ? 4 : 3,
+      vsync: this,
+    );
     _initData();
   }
 
@@ -181,10 +188,12 @@ class _WorksPageState extends State<WorksPage>
             splashBorderRadius: BorderRadius.circular(10),
             labelStyle:
                 const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-            tabs: const [
-              Tab(text: '作品展示'),
-              Tab(text: '作品记录'),
-              Tab(text: '排行榜'),
+            tabs: [
+              const Tab(text: '作品展示'),
+              const Tab(text: '作品记录'),
+              const Tab(text: '排行榜'),
+              if (_isTeacherOrAdmin)
+                const Tab(icon: Icon(Icons.auto_awesome, size: 18), text: 'AI批阅'),
             ],
           ),
         ),
@@ -201,6 +210,8 @@ class _WorksPageState extends State<WorksPage>
                     ),
                     _RecordsTab(authService: _authService),
                     _LeaderboardTab(authService: _authService),
+                    if (_isTeacherOrAdmin)
+                      WorksAiGradingTab(authService: _authService),
                   ],
                 )
               : const Center(

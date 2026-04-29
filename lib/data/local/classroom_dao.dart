@@ -59,6 +59,32 @@ class ClassroomDao {
       )
     ''');
 
+    // 5) 分层点名会话表
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS roll_call_sessions(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        class_id INTEGER,
+        created_by TEXT,
+        created_at TEXT
+      )
+    ''');
+
+    // 6) 分层点名记录表
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS roll_call_records(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id INTEGER NOT NULL,
+        user_id TEXT NOT NULL,
+        user_name TEXT,
+        difficulty TEXT NOT NULL,
+        tier TEXT NOT NULL,
+        is_correct INTEGER DEFAULT 0,
+        score_delta REAL DEFAULT 0,
+        created_at TEXT,
+        FOREIGN KEY (session_id) REFERENCES roll_call_sessions(id)
+      )
+    ''');
+
     _tableEnsured = true;
   }
 
@@ -384,4 +410,148 @@ class ClassroomDao {
     };
   }
 
+  // ══════════════════════════════════════════════════════════════════════════
+  //  分层点名
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /// 创建点名会话
+  Future<int> createRollCallSession({int? classId, required String createdBy}) async {
+    await _ensureTable();
+    final db = await DatabaseHelper.instance.database;
+    return await db.insert('roll_call_sessions', {
+      'class_id': classId,
+      'created_by': createdBy,
+      'created_at': DateTime.now().toIso8601String(),
+    });
+  }
+
+  /// 记录一次点名结果
+  Future<int> addRollCallRecord({
+    required int sessionId,
+    required String userId,
+    required String userName,
+    required String difficulty,
+    required String tier,
+    required bool isCorrect,
+    required double scoreDelta,
+  }) async {
+    await _ensureTable();
+    final db = await DatabaseHelper.instance.database;
+    return await db.insert('roll_call_records', {
+      'session_id': sessionId,
+      'user_id': userId,
+      'user_name': userName,
+      'difficulty': difficulty,
+      'tier': tier,
+      'is_correct': isCorrect ? 1 : 0,
+      'score_delta': scoreDelta,
+      'created_at': DateTime.now().toIso8601String(),
+    });
+  }
+
+  /// 获取某班级的点名历史（按会话）
+  Future<List<Map<String, dynamic>>> getRollCallSessions({int? classId, int limit = 20}) async {
+    await _ensureTable();
+    final db = await DatabaseHelper.instance.database;
+    final classWhere = classId != null ? 'WHERE class_id = ?' : '';
+    final args = classId != null ? [classId] : <dynamic>[];
+    return await db.rawQuery('''
+      SELECT s.*,
+        (SELECT COUNT(*) FROM roll_call_records WHERE session_id = s.id) as record_count,
+        (SELECT SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) FROM roll_call_records WHERE session_id = s.id) as correct_count
+      FROM roll_call_sessions s
+      $classWhere
+      ORDER BY s.created_at DESC
+      LIMIT ?
+    ''', [...args, limit]);
+  }
+
+  /// 获取某次会话的所有点名记录
+  Future<List<Map<String, dynamic>>> getRollCallRecords(int sessionId) async {
+    await _ensureTable();
+    final db = await DatabaseHelper.instance.database;
+    return await db.query('roll_call_records',
+        where: 'session_id = ?', whereArgs: [sessionId],
+        orderBy: 'created_at ASC');
+  }
+
+  /// 获取学生的点名累计得分排行
+  Future<List<Map<String, dynamic>>> getRollCallScoreboard({int? classId}) async {
+    await _ensureTable();
+    final db = await DatabaseHelper.instance.database;
+    final classWhere = classId != null
+        ? 'WHERE r.session_id IN (SELECT id FROM roll_call_sessions WHERE class_id = ?)'
+        : '';
+    final args = classId != null ? [classId] : <dynamic>[];
+    return await db.rawQuery('''
+      SELECT r.user_id, r.user_name,
+        SUM(r.score_delta) as total_score,
+        COUNT(*) as call_count,
+        SUM(CASE WHEN r.is_correct = 1 THEN 1 ELSE 0 END) as correct_count
+      FROM roll_call_records r
+      $classWhere
+      GROUP BY r.user_id
+      ORDER BY total_score DESC
+    ''', args);
+  }
+
+  /// 根据测验成绩对学生分层（优/中/差）
+  Future<Map<String, List<Map<String, dynamic>>>> classifyStudentsByPerformance({
+    int? classId,
+  }) async {
+    await _ensureTable();
+    final db = await DatabaseHelper.instance.database;
+
+    // 获取班级学生
+    String studentQuery;
+    List<dynamic> args;
+    if (classId != null) {
+      studentQuery = '''
+        SELECT u.user_id, u.real_name
+        FROM users u
+        INNER JOIN class_members cm ON cm.user_id = u.user_id AND cm.role = 'student'
+        WHERE cm.class_id = ? AND u.is_active = 1
+        ORDER BY u.user_id
+      ''';
+      args = [classId];
+    } else {
+      studentQuery = '''
+        SELECT user_id, real_name FROM users
+        WHERE role = 'student' AND is_active = 1
+        ORDER BY user_id
+      ''';
+      args = [];
+    }
+    final students = await db.rawQuery(studentQuery, args);
+    if (students.isEmpty) return {'high': [], 'mid': [], 'low': []};
+
+    // 获取每个学生的平均测验分
+    final scored = <Map<String, dynamic>>[];
+    for (final s in students) {
+      final uid = s['user_id'] as String;
+      final name = s['real_name'] as String? ?? uid;
+      final result = await db.rawQuery('''
+        SELECT AVG(score) as avg_score, COUNT(*) as quiz_count
+        FROM quiz_results WHERE user_id = ?
+      ''', [uid]);
+      final avgScore = (result.first['avg_score'] as num?)?.toDouble() ?? 0;
+      final quizCount = (result.first['quiz_count'] as int?) ?? 0;
+      scored.add({
+        'user_id': uid,
+        'real_name': name,
+        'avg_score': avgScore,
+        'quiz_count': quizCount,
+      });
+    }
+
+    // 按平均分排序后三等分
+    scored.sort((a, b) => (b['avg_score'] as double).compareTo(a['avg_score'] as double));
+    final total = scored.length;
+    final third = (total / 3).ceil();
+    final high = scored.take(third).toList();
+    final low = scored.skip(total - third).toList();
+    final mid = scored.skip(third).take(total - 2 * third).toList();
+
+    return {'high': high, 'mid': mid, 'low': low};
+  }
 }

@@ -92,6 +92,44 @@ class AiService {
     return result.content;
   }
 
+  // ── 查询账户余额 ─────────────────────────────────────────────────────────
+  /// 返回 {'available': '12.34', 'currency': 'CNY'} 或 null（不支持/失败）
+  /// 目前支持 DeepSeek（/user/balance）
+  Future<Map<String, String>?> queryBalance({AiConfigModel? configOverride}) async {
+    final config = configOverride ?? await _configDao.getConfig();
+    final effectiveKey = config.effectiveApiKey;
+    if (effectiveKey == null || effectiveKey.isEmpty) return null;
+
+    final baseUrl = config.effectiveBaseUrl;
+
+    // DeepSeek: GET /user/balance
+    if (config.provider == 'deepseek' || baseUrl.contains('deepseek')) {
+      try {
+        final resp = await http.get(
+          Uri.parse('$baseUrl/user/balance'),
+          headers: {
+            'Authorization': 'Bearer $effectiveKey',
+            'Accept': 'application/json',
+          },
+        ).timeout(const Duration(seconds: 10));
+        if (resp.statusCode == 200) {
+          final json = jsonDecode(utf8.decode(resp.bodyBytes));
+          // DeepSeek 返回 {"balance_infos": [{"currency":"CNY","total_balance":"...","granted_balance":"...","topped_up_balance":"..."}]}
+          final infos = json['balance_infos'] as List?;
+          if (infos != null && infos.isNotEmpty) {
+            final info = infos[0] as Map<String, dynamic>;
+            return {
+              'available': info['total_balance']?.toString() ?? '0',
+              'currency': info['currency']?.toString() ?? 'CNY',
+            };
+          }
+        }
+      } catch (_) {}
+    }
+
+    return null;
+  }
+
   // ── 生成幻灯片内容 ──────────────────────────────────────────────────────
   /// 返回 List<Map>，每项含 title、bullets（List<String>）、notes
   Future<List<Map<String, dynamic>>> generateSlides(

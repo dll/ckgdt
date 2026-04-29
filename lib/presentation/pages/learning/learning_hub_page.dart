@@ -59,7 +59,7 @@ class _LearningHubPageState extends State<LearningHubPage>
   final _scrollController = ScrollController();
   bool _aiLoading = false;
   String _aiProviderLabel = 'DeepSeek';
-  String _aiModel = 'deepseek-chat';
+  String _aiModel = 'deepseek-v4-pro';
 
   @override
   void initState() {
@@ -1016,15 +1016,9 @@ class _LearningHubPageState extends State<LearningHubPage>
         ),
       );
     } else if (['ppt', 'pptx'].contains(ext)) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => InAppPptViewerPage(
-            filePath: filePath,
-            title: fileName,
-          ),
-        ),
-      );
+      // PPT/PPTX → 使用系统默认应用（PowerPoint/WPS/手机Office）打开
+      // 自定义 XML 解析器无法忠实还原原始 PPT 排版
+      FileOpenerService.openExternalFile(context, filePath);
     } else {
       // DOC 等其他格式 → 使用系统工具打开
       FileOpenerService.openExternalFile(context, filePath);

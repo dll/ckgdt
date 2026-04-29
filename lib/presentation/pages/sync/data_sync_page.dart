@@ -107,17 +107,30 @@ class _DataSyncPageState extends State<DataSyncPage> {
     try {
       _syncedStudents = await _syncService.listSyncedStudents();
 
-      // 计算未同步学生：所有活跃学生 - 已同步学生
+      // 计算未同步学生：仅限当前活跃班级的学生 - 已同步学生
       final db = await DatabaseHelper.instance.database;
-      final allStudents = await db.query('users',
-          columns: ['user_id', 'real_name'],
-          where: "role = 'student' AND is_active = 1",
-          orderBy: 'user_id');
+      // 通过 class_members + classes 过滤，只取未归档班级的学生
+      final allStudents = await db.rawQuery('''
+        SELECT DISTINCT u.user_id, u.real_name
+        FROM users u
+        INNER JOIN class_members cm ON cm.user_id = u.user_id AND cm.role = 'student'
+        INNER JOIN classes c ON c.id = cm.class_id AND c.is_archived = 0
+        WHERE u.role = 'student' AND u.is_active = 1
+        ORDER BY u.user_id
+      ''');
       final syncedIds = _syncedStudents
-          .map((s) => s['userId'] as String? ?? '')
+          .map((s) => s['user_id'] as String? ?? '')
           .toSet();
       _unsyncedStudents = allStudents
           .where((s) => !syncedIds.contains(s['user_id'] as String))
+          .toList();
+
+      // 已同步列表也只保留当前班级的学生
+      final activeStudentIds = allStudents
+          .map((s) => s['user_id'] as String)
+          .toSet();
+      _syncedStudents = _syncedStudents
+          .where((s) => activeStudentIds.contains(s['user_id'] as String? ?? ''))
           .toList();
     } catch (e) {
       debugPrint('加载已同步学生失败: $e');

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Platform;
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
@@ -77,6 +78,24 @@ class VoiceService {
     if (kIsWeb) {
       onError?.call('Web 平台暂不支持语音输入');
       return false;
+    }
+
+    // Windows 桌面端预检：尝试创建录音器并检测输入设备
+    // record 包在 Windows 缺少麦克风时可能导致原生层崩溃
+    if (!kIsWeb && Platform.isWindows) {
+      try {
+        final testRecorder = AudioRecorder();
+        final devices = await testRecorder.listInputDevices();
+        await testRecorder.dispose();
+        if (devices.isEmpty) {
+          onError?.call('未检测到麦克风设备，请连接麦克风后重试');
+          return false;
+        }
+      } catch (e) {
+        debugPrint('VoiceService: Windows 麦克风预检失败: $e');
+        onError?.call('麦克风初始化失败，请检查音频驱动是否正常安装');
+        return false;
+      }
     }
 
     // 读取讯飞配置
