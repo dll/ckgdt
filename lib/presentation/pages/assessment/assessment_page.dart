@@ -12,6 +12,7 @@ import '../../../data/local/database_helper.dart';
 import '../../../services/agent/agents/assessment_grading_agent.dart';
 import '../../widgets/agent_entry_button.dart';
 import '../learning/pdf_viewer_page.dart';
+import 'ai_grading_tab.dart';
 
 /// 考核页面 — 参考 Python 版 assessment_tab.py
 /// 五大子页: 分组管理 / 项目立项 / 贡献评分 / 答辩安排 / 成绩统计
@@ -34,7 +35,7 @@ class _AssessmentPageState extends State<AssessmentPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController = TabController(length: _isStudent ? 6 : 7, vsync: this);
     _initDemoData();
   }
 
@@ -184,13 +185,15 @@ class _AssessmentPageState extends State<AssessmentPage>
                 ),
               ],
             ),
-            tabs: const [
-              Tab(icon: Icon(Icons.groups, size: 18), text: '分组'),
-              Tab(icon: Icon(Icons.assignment, size: 18), text: '项目'),
-              Tab(icon: Icon(Icons.star_rate, size: 18), text: '贡献'),
-              Tab(icon: Icon(Icons.record_voice_over, size: 18), text: '答辩'),
-              Tab(icon: Icon(Icons.summarize, size: 18), text: '报告'),
-              Tab(icon: Icon(Icons.leaderboard, size: 18), text: '成绩'),
+            tabs: [
+              const Tab(icon: Icon(Icons.groups, size: 18), text: '分组'),
+              const Tab(icon: Icon(Icons.assignment, size: 18), text: '项目'),
+              const Tab(icon: Icon(Icons.star_rate, size: 18), text: '贡献'),
+              const Tab(icon: Icon(Icons.record_voice_over, size: 18), text: '答辩'),
+              const Tab(icon: Icon(Icons.summarize, size: 18), text: '报告'),
+              const Tab(icon: Icon(Icons.leaderboard, size: 18), text: '成绩'),
+              if (!_isStudent)
+                const Tab(icon: Icon(Icons.auto_awesome, size: 18), text: 'AI批阅'),
             ],
           ),
         ),
@@ -204,6 +207,8 @@ class _AssessmentPageState extends State<AssessmentPage>
               _DefenseTab(authService: _authService),
               _AssessmentReportTab(authService: _authService),
               _ScoreTab(authService: _authService),
+              if (!_isStudent)
+                AssessmentAiGradingTab(authService: _authService),
             ],
           ),
         ),

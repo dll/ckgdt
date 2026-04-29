@@ -159,7 +159,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     final preset = _currentPreset;
     final defaultModel = preset != null && preset.models.isNotEmpty
         ? preset.models.first
-        : 'deepseek-chat';
+        : 'deepseek-v4-pro';
 
     final config = AiConfigModel(
       provider: _provider,

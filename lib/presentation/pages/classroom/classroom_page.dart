@@ -3,8 +3,6 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../data/local/classroom_dao.dart';
 import '../../../data/local/class_dao.dart';
-import '../../../data/local/user_dao.dart';
-import '../../../data/models/user_model.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/sync_service.dart';
 import '../../../core/constants/role_guard.dart';
@@ -1838,14 +1836,21 @@ class _ClassroomToolsTab extends StatefulWidget {
 }
 
 class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
-  final _userDao = UserDao();
+  final _classroomDao = ClassroomDao();
 
-  // ── 随机点名 ──
-  List<UserModel> _students = [];
-  String? _selectedStudent;
+  // ── 分层点名 ──
+  List<Map<String, dynamic>> _highStudents = [];
+  List<Map<String, dynamic>> _midStudents = [];
+  List<Map<String, dynamic>> _lowStudents = [];
+  String _selectedDifficulty = 'medium'; // hard / medium / easy
+  Map<String, dynamic>? _pickedStudent;
   bool _isRolling = false;
   Timer? _rollTimer;
   int _rollCount = 0;
+  int? _currentSessionId;
+  bool _showResult = false; // 是否已选中学生待评判
+  List<Map<String, dynamic>> _scoreboard = [];
+  bool _studentsLoaded = false;
 
   // ── 快速投票 ──
   final _pollQuestionCtrl = TextEditingController();
@@ -1876,40 +1881,150 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
 
   Future<void> _loadStudents() async {
     try {
-      final students = await _userDao.getStudents();
-      if (mounted) setState(() => _students = students);
+      final tiers = await _classroomDao.classifyStudentsByPerformance(
+        classId: widget.classId,
+      );
+      final scores = await _classroomDao.getRollCallScoreboard(
+        classId: widget.classId,
+      );
+      if (mounted) {
+        setState(() {
+          _highStudents = tiers['high'] ?? [];
+          _midStudents = tiers['mid'] ?? [];
+          _lowStudents = tiers['low'] ?? [];
+          _scoreboard = scores;
+          _studentsLoaded = true;
+        });
+      }
     } catch (_) {}
   }
 
-  // ── 随机点名逻辑 ──
+  // ── 分层点名逻辑 ──
+
+  /// 得分规则
+  static const _scoreRules = {
+    'hard':   {'correct': 5.0, 'wrong': -1.0},
+    'medium': {'correct': 3.0, 'wrong': -2.0},
+    'easy':   {'correct': 1.0, 'wrong': -3.0},
+  };
+
+  /// 难度对应的学生池
+  List<Map<String, dynamic>> get _targetPool {
+    switch (_selectedDifficulty) {
+      case 'hard':   return _highStudents;
+      case 'easy':   return _lowStudents;
+      default:       return _midStudents;
+    }
+  }
+
+  /// 所有学生（用于滚动动画）
+  List<Map<String, dynamic>> get _allStudents => [
+    ..._highStudents, ..._midStudents, ..._lowStudents,
+  ];
+
+  String _difficultyLabel(String d) {
+    switch (d) {
+      case 'hard':   return '难';
+      case 'easy':   return '易';
+      default:       return '中';
+    }
+  }
+
+  Color _difficultyColor(String d) {
+    switch (d) {
+      case 'hard':   return Colors.red;
+      case 'easy':   return Colors.green;
+      default:       return Colors.orange;
+    }
+  }
 
   void _startRoll() {
-    if (_students.isEmpty) {
+    final pool = _targetPool;
+    if (pool.isEmpty && _allStudents.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('没有学生数据')),
       );
       return;
     }
 
+    // 如果对应层级为空，从全部学生中随机选
+    final effectivePool = pool.isNotEmpty ? pool : _allStudents;
+
     setState(() {
       _isRolling = true;
       _rollCount = 0;
-      _selectedStudent = null;
+      _pickedStudent = null;
+      _showResult = false;
     });
 
     final random = Random();
     _rollTimer = Timer.periodic(const Duration(milliseconds: 80), (timer) {
       _rollCount++;
-      final idx = random.nextInt(_students.length);
-      final s = _students[idx];
-      setState(() => _selectedStudent = s.realName ?? s.userId);
+      final all = _allStudents;
+      if (all.isEmpty) { timer.cancel(); return; }
+      final idx = random.nextInt(all.length);
+      setState(() => _pickedStudent = all[idx]);
 
-      // 逐渐减速后停止
       if (_rollCount > 20 + random.nextInt(15)) {
         timer.cancel();
-        setState(() => _isRolling = false);
+        // 最终选定的学生从目标池中随机选
+        final finalIdx = random.nextInt(effectivePool.length);
+        setState(() {
+          _pickedStudent = effectivePool[finalIdx];
+          _isRolling = false;
+          _showResult = true;
+        });
       }
     });
+  }
+
+  /// 评判回答结果
+  Future<void> _judgeAnswer(bool isCorrect) async {
+    if (_pickedStudent == null) return;
+
+    final userId = _pickedStudent!['user_id'] as String;
+    final userName = _pickedStudent!['real_name'] as String? ?? userId;
+    final rules = _scoreRules[_selectedDifficulty]!;
+    final delta = isCorrect ? rules['correct']! : rules['wrong']!;
+
+    // 确定学生所属层级
+    String tier = 'mid';
+    if (_highStudents.any((s) => s['user_id'] == userId)) tier = 'high';
+    else if (_lowStudents.any((s) => s['user_id'] == userId)) tier = 'low';
+
+    // 确保有会话
+    _currentSessionId ??= await _classroomDao.createRollCallSession(
+      classId: widget.classId,
+      createdBy: widget.authService.getCurrentUserId() ?? '',
+    );
+
+    await _classroomDao.addRollCallRecord(
+      sessionId: _currentSessionId!,
+      userId: userId,
+      userName: userName,
+      difficulty: _selectedDifficulty,
+      tier: tier,
+      isCorrect: isCorrect,
+      scoreDelta: delta,
+    );
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isCorrect
+              ? '$userName 回答正确！+${delta.toStringAsFixed(0)} 分'
+              : '$userName 回答错误，${delta.toStringAsFixed(0)} 分',
+          ),
+          backgroundColor: isCorrect ? Colors.green : Colors.red[400],
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      setState(() => _showResult = false);
+      // 刷新排行
+      final scores = await _classroomDao.getRollCallScoreboard(classId: widget.classId);
+      if (mounted) setState(() { _scoreboard = scores; });
+    }
   }
 
   // ── 投票逻辑 ──
@@ -2007,65 +2122,204 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── 1. 随机点名 ──
+          // ── 1. 分层点名 ──
           _buildToolCard(
-            title: '随机点名',
+            title: '分层点名',
             icon: Icons.person_search,
             color: Colors.orange,
             isDark: isDark,
             child: Column(
               children: [
+                // 难度选择
+                Row(
+                  children: [
+                    const Text('题目难度：', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                    const SizedBox(width: 8),
+                    ...['hard', 'medium', 'easy'].map((d) => Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: ChoiceChip(
+                        label: Text(_difficultyLabel(d), style: const TextStyle(fontSize: 12)),
+                        selected: _selectedDifficulty == d,
+                        selectedColor: _difficultyColor(d).withValues(alpha: 0.2),
+                        onSelected: _isRolling || _showResult ? null : (v) {
+                          if (v) setState(() => _selectedDifficulty = d);
+                        },
+                      ),
+                    )),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                // 得分规则提示
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _difficultyColor(_selectedDifficulty).withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${_difficultyLabel(_selectedDifficulty)}题 → '
+                    '${_selectedDifficulty == "hard" ? "优等生" : _selectedDifficulty == "easy" ? "待提升" : "中等生"}  |  '
+                    '答对 +${_scoreRules[_selectedDifficulty]!["correct"]!.toStringAsFixed(0)}  '
+                    '答错 ${_scoreRules[_selectedDifficulty]!["wrong"]!.toStringAsFixed(0)}',
+                    style: TextStyle(fontSize: 11, color: _difficultyColor(_selectedDifficulty)),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                // 学生层级人数
+                if (_studentsLoaded)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildTierChip('优', _highStudents.length, Colors.red),
+                      _buildTierChip('中', _midStudents.length, Colors.orange),
+                      _buildTierChip('差', _lowStudents.length, Colors.green),
+                    ],
+                  ),
+                const SizedBox(height: 10),
                 // 显示区域
                 Container(
                   width: double.infinity,
-                  height: 120,
+                  height: 100,
                   decoration: BoxDecoration(
                     color: _isRolling
                         ? Colors.orange.withValues(alpha: 0.1)
-                        : (isDark ? Colors.grey[850] : Colors.grey[50]),
+                        : _showResult
+                          ? _difficultyColor(_selectedDifficulty).withValues(alpha: 0.08)
+                          : (isDark ? Colors.grey[850] : Colors.grey[50]),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: _isRolling ? Colors.orange : Colors.grey.withValues(alpha: 0.2),
-                      width: _isRolling ? 2 : 1,
+                      color: _isRolling
+                          ? Colors.orange
+                          : _showResult
+                            ? _difficultyColor(_selectedDifficulty)
+                            : Colors.grey.withValues(alpha: 0.2),
+                      width: _isRolling || _showResult ? 2 : 1,
                     ),
                   ),
                   alignment: Alignment.center,
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 100),
-                    child: Text(
-                      _selectedStudent ?? '点击开始',
-                      key: ValueKey(_selectedStudent),
-                      style: TextStyle(
-                        fontSize: _isRolling ? 28 : 24,
-                        fontWeight: FontWeight.bold,
-                        color: _selectedStudent != null && !_isRolling
-                            ? Colors.orange[700]
-                            : (isDark ? Colors.white60 : Colors.black54),
-                      ),
-                    ),
+                    child: _pickedStudent != null
+                        ? Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                _pickedStudent!['real_name'] as String? ?? '',
+                                key: ValueKey(_pickedStudent!['user_id']),
+                                style: TextStyle(
+                                  fontSize: _isRolling ? 28 : 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: !_isRolling
+                                      ? _difficultyColor(_selectedDifficulty)
+                                      : (isDark ? Colors.white60 : Colors.black54),
+                                ),
+                              ),
+                              if (_showResult) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${_pickedStudent!["user_id"]}  |  '
+                                  '均分 ${(_pickedStudent!["avg_score"] as double).toStringAsFixed(1)}',
+                                  style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                                ),
+                              ],
+                            ],
+                          )
+                        : Text('点击开始',
+                            style: TextStyle(fontSize: 20, color: isDark ? Colors.white60 : Colors.black38)),
                   ),
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    FilledButton.icon(
-                      onPressed: _isRolling ? null : _startRoll,
-                      icon: Icon(_isRolling ? Icons.hourglass_top : Icons.shuffle, size: 18),
-                      label: Text(_isRolling ? '选择中...' : '开始点名'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.orange,
+                const SizedBox(height: 10),
+                // 操作按钮
+                if (_showResult)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      FilledButton.icon(
+                        onPressed: () => _judgeAnswer(true),
+                        icon: const Icon(Icons.check, size: 18),
+                        label: Text('正确 +${_scoreRules[_selectedDifficulty]!["correct"]!.toStringAsFixed(0)}'),
+                        style: FilledButton.styleFrom(backgroundColor: Colors.green),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text('共 ${_students.length} 名学生',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                  ],
-                ),
+                      const SizedBox(width: 12),
+                      FilledButton.icon(
+                        onPressed: () => _judgeAnswer(false),
+                        icon: const Icon(Icons.close, size: 18),
+                        label: Text('错误 ${_scoreRules[_selectedDifficulty]!["wrong"]!.toStringAsFixed(0)}'),
+                        style: FilledButton.styleFrom(backgroundColor: Colors.red[400]),
+                      ),
+                      const SizedBox(width: 12),
+                      OutlinedButton(
+                        onPressed: () => setState(() => _showResult = false),
+                        child: const Text('跳过', style: TextStyle(fontSize: 13)),
+                      ),
+                    ],
+                  )
+                else
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      FilledButton.icon(
+                        onPressed: _isRolling ? null : _startRoll,
+                        icon: Icon(_isRolling ? Icons.hourglass_top : Icons.shuffle, size: 18),
+                        label: Text(_isRolling ? '选择中...' : '开始点名'),
+                        style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        '目标池 ${_targetPool.length} 人 / 共 ${_allStudents.length} 人',
+                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),
           const SizedBox(height: 16),
+
+          // ── 1.5 点名排行榜 ──
+          if (_scoreboard.isNotEmpty)
+            _buildToolCard(
+              title: '点名得分排行',
+              icon: Icons.leaderboard,
+              color: Colors.purple,
+              isDark: isDark,
+              child: Column(
+                children: [
+                  ..._scoreboard.take(10).toList().asMap().entries.map((e) {
+                    final i = e.key;
+                    final s = e.value;
+                    final score = (s['total_score'] as num?)?.toDouble() ?? 0;
+                    final calls = (s['call_count'] as int?) ?? 0;
+                    final correct = (s['correct_count'] as int?) ?? 0;
+                    return ListTile(
+                      dense: true,
+                      visualDensity: VisualDensity.compact,
+                      leading: CircleAvatar(
+                        radius: 14,
+                        backgroundColor: i < 3
+                            ? [Colors.amber, Colors.grey[400]!, Colors.brown[300]!][i]
+                            : Colors.grey[200],
+                        child: Text('${i + 1}', style: TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.bold,
+                          color: i < 3 ? Colors.white : Colors.black54)),
+                      ),
+                      title: Text(s['user_name'] as String? ?? '', style: const TextStyle(fontSize: 13)),
+                      subtitle: Text('$calls 次点名, $correct 次正确', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                      trailing: Text(
+                        '${score >= 0 ? "+" : ""}${score.toStringAsFixed(1)}',
+                        style: TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.bold,
+                          color: score >= 0 ? Colors.green : Colors.red,
+                        ),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          if (_scoreboard.isNotEmpty) const SizedBox(height: 16),
 
           // ── 2. 快速投票 ──
           _buildToolCard(
@@ -2087,6 +2341,19 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildTierChip(String label, int count, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Text('$label $count人',
+        style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w500)),
     );
   }
 

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../data/local/feedback_dao.dart';
 
@@ -346,6 +347,14 @@ class _FeedbackManagePageState extends State<FeedbackManagePage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
+                if (isPending && !kIsWeb)
+                  TextButton.icon(
+                    onPressed: () => _handleAiFix(fb),
+                    icon: Icon(Icons.auto_fix_high,
+                        size: 16, color: Colors.purple[400]),
+                    label: Text('AI修复',
+                        style: TextStyle(fontSize: 12, color: Colors.purple[400])),
+                  ),
                 if (isPending)
                   TextButton.icon(
                     onPressed: () => _showReplyDialog(fb),
@@ -365,6 +374,235 @@ class _FeedbackManagePageState extends State<FeedbackManagePage> {
         ),
       ),
     );
+  }
+
+  /// AI 自动修复 — 调用 Claude Code CLI 读取问题、修改代码、构建应用
+  Future<void> _handleAiFix(Map<String, dynamic> fb) async {
+    final content = fb['content'] as String? ?? '';
+    final suggestion = fb['suggestion'] as String? ?? '';
+    if (content.isEmpty) return;
+
+    // 确认对话框
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.auto_fix_high, color: Colors.purple, size: 22),
+            SizedBox(width: 8),
+            Text('AI 自动修复'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('将调用 Claude Code 自动分析并修复此问题：',
+                style: TextStyle(fontSize: 13)),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.grey.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(content,
+                  style: const TextStyle(fontSize: 12),
+                  maxLines: 4,
+                  overflow: TextOverflow.ellipsis),
+            ),
+            const SizedBox(height: 12),
+            Text('修复完成后将自动重新构建应用。',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('取消')),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.play_arrow, size: 18),
+            label: const Text('开始修复'),
+            style: FilledButton.styleFrom(backgroundColor: Colors.purple),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    // 构造修复 prompt
+    final prompt = StringBuffer();
+    prompt.writeln('用户反馈了以下问题，请阅读代码修复它：');
+    prompt.writeln('');
+    prompt.writeln('【问题描述】$content');
+    if (suggestion.isNotEmpty) {
+      prompt.writeln('【改进建议】$suggestion');
+    }
+    prompt.writeln('');
+    prompt.writeln('请：1) 分析问题根因  2) 修改相关代码  3) 执行 flutter build windows --release 重新构建应用');
+
+    // 显示进度对话框
+    await _showAiFixProgress(fb, prompt.toString());
+  }
+
+  /// 显示 AI 修复进度对话框并执行
+  Future<void> _showAiFixProgress(Map<String, dynamic> fb, String prompt) async {
+    final outputLines = <String>[];
+    var isRunning = true;
+    Process? process;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            // 首次启动时执行 claude 命令
+            if (process == null) {
+              _runClaudeFixProcess(
+                prompt: prompt,
+                onOutput: (line) {
+                  if (context.mounted) {
+                    setDialogState(() => outputLines.add(line));
+                  }
+                },
+                onDone: (exitCode) {
+                  if (context.mounted) {
+                    setDialogState(() {
+                      isRunning = false;
+                      outputLines.add(exitCode == 0
+                          ? '\n===  AI 修复完成 ==='
+                          : '\n===  AI 修复异常退出 (code=$exitCode) ===');
+                    });
+                  }
+                  // 标记反馈为已处理
+                  _feedbackDao.updateStatus(
+                    fb['id'] as int,
+                    'resolved',
+                    reply: '[AI 自动修复] ${exitCode == 0 ? "已完成修复并重新构建" : "修复过程异常退出"}',
+                  );
+                  _loadData();
+                },
+              ).then((p) => process = p);
+            }
+
+            return AlertDialog(
+              title: Row(
+                children: [
+                  if (isRunning)
+                    const SizedBox(
+                      width: 18, height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  else
+                    const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                  const SizedBox(width: 10),
+                  Text(isRunning ? 'AI 正在修复...' : '修复完成',
+                      style: const TextStyle(fontSize: 16)),
+                ],
+              ),
+              content: SizedBox(
+                width: 500,
+                height: 350,
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E1E1E),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: ListView.builder(
+                    reverse: true,
+                    itemCount: outputLines.length,
+                    itemBuilder: (_, i) {
+                      final line = outputLines[outputLines.length - 1 - i];
+                      final isErr = line.startsWith('===') || line.contains('error') || line.contains('Error');
+                      return Text(
+                        line,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontFamily: 'monospace',
+                          color: isErr ? Colors.redAccent : Colors.greenAccent,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              actions: [
+                if (!isRunning)
+                  FilledButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    child: const Text('关闭'),
+                  ),
+                if (isRunning)
+                  TextButton(
+                    onPressed: () {
+                      process?.kill();
+                      Navigator.pop(dialogContext);
+                    },
+                    child: const Text('取消', style: TextStyle(color: Colors.red)),
+                  ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// 启动 Claude CLI 进程
+  Future<Process> _runClaudeFixProcess({
+    required String prompt,
+    required void Function(String line) onOutput,
+    required void Function(int exitCode) onDone,
+  }) async {
+    // 获取项目根目录（向上查找 pubspec.yaml）
+    var projectDir = Directory.current.path;
+    // 在 release 模式下 cwd 可能不是项目目录，硬编码已知路径作为兜底
+    if (!File('$projectDir/pubspec.yaml').existsSync()) {
+      projectDir = r'D:\FlutterProjects\knowledge_graph_app';
+    }
+
+    onOutput('[工作目录] $projectDir');
+    onOutput('[启动 Claude Code ...]');
+    onOutput('');
+
+    final process = await Process.start(
+      'claude',
+      ['-p', '--output-format', 'text', prompt],
+      workingDirectory: projectDir,
+      runInShell: true,
+    );
+
+    // 读取 stdout
+    process.stdout
+        .transform(const SystemEncoding().decoder)
+        .listen(
+          (chunk) {
+            for (final line in chunk.split('\n')) {
+              if (line.trim().isNotEmpty) onOutput(line);
+            }
+          },
+          onDone: () {},
+        );
+
+    // 读取 stderr
+    process.stderr
+        .transform(const SystemEncoding().decoder)
+        .listen(
+          (chunk) {
+            for (final line in chunk.split('\n')) {
+              if (line.trim().isNotEmpty) onOutput('[stderr] $line');
+            }
+          },
+        );
+
+    // 等待完成
+    process.exitCode.then(onDone);
+
+    return process;
   }
 
   /// 回复并标记为已处理

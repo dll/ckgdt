@@ -22,7 +22,8 @@ class RoleGuard {
       role == 'admin' || role == 'teacher';
 
   /// 是否可以导入/导出系统数据
-  static bool canImportData(String role) => role == 'admin';
+  static bool canImportData(String role) =>
+      role == 'admin' || role == 'teacher';
 
   /// 是否可以配置 Gitee 令牌
   static bool canConfigGitee(String role) =>
