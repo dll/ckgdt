@@ -200,20 +200,77 @@ class DatabaseHelper {
     await _migrateToV19(db);
     await _migrateToV20(db);
 
-    // Verify tables exist
+    // Verify tables exist and check for empty critical data
     try {
       final tables = await db
           .rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
-      debugPrint(
-          '=== DatabaseHelper: Tables in database: ${tables.map((t) => t['name']).toList()}');
+      final tableNames = tables.map((t) => t['name']).toList();
+      debugPrint('=== DatabaseHelper: Tables in database: $tableNames');
 
-      // Verify data
-      final graphCount =
-          await db.rawQuery('SELECT COUNT(*) as count FROM graphs');
-      debugPrint('=== DatabaseHelper: Graphs count: ${graphCount.first}');
-      final questionCount =
-          await db.rawQuery('SELECT COUNT(*) as count FROM questions');
-      debugPrint('=== DatabaseHelper: Questions count: ${questionCount.first}');
+      bool needsDataImport = false;
+
+      // 检查 graphs 表
+      if (tableNames.contains('graphs')) {
+        final graphCount =
+            await db.rawQuery('SELECT COUNT(*) as c FROM graphs');
+        final gCount = (graphCount.first['c'] as int?) ?? 0;
+        debugPrint('=== DatabaseHelper: Graphs count: $gCount');
+        if (gCount == 0) needsDataImport = true;
+      } else {
+        needsDataImport = true;
+      }
+
+      // 检查 questions 表
+      if (tableNames.contains('questions')) {
+        final questionCount =
+            await db.rawQuery('SELECT COUNT(*) as c FROM questions');
+        final qCount = (questionCount.first['c'] as int?) ?? 0;
+        debugPrint('=== DatabaseHelper: Questions count: $qCount');
+        if (qCount == 0) needsDataImport = true;
+      } else {
+        needsDataImport = true;
+      }
+
+      // 关键数据为空时，从 assets 重新导入（与 Web 路径一致的自修复逻辑）
+      if (needsDataImport) {
+        debugPrint(
+            '=== DatabaseHelper [Native]: Data is empty, trying to reimport from assets...');
+        await db.close();
+        await databaseFactory.deleteDatabase(dbPath);
+
+        try {
+          final data = await rootBundle.load('assets/learning_data.db');
+          final bytes =
+              data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+          await databaseFactory.writeDatabaseBytes(dbPath, bytes);
+          debugPrint(
+              '=== DatabaseHelper [Native]: Reimported from assets (${bytes.length} bytes)');
+        } catch (e) {
+          debugPrint('=== DatabaseHelper [Native]: Reimport failed: $e');
+        }
+
+        final db2 = await openDatabase(
+          dbPath,
+          version: 20,
+          onCreate: _createTables,
+          onUpgrade: _onUpgrade,
+        );
+
+        // 确保新表存在
+        await _ensureAllTables(db2);
+        await _importStudents(db2);
+
+        // 最终验证
+        try {
+          final gc = await db2.rawQuery('SELECT COUNT(*) as c FROM graphs');
+          final qc = await db2.rawQuery('SELECT COUNT(*) as c FROM questions');
+          debugPrint(
+              '=== DatabaseHelper [Native]: After reimport - Graphs: ${gc.first['c']}, Questions: ${qc.first['c']}');
+        } catch (_) {}
+
+        _database = db2;
+        return db2;
+      }
     } catch (e) {
       debugPrint('=== DatabaseHelper: Verification warning: $e');
     }

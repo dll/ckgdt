@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -571,14 +572,19 @@ class _FeedbackManagePageState extends State<FeedbackManagePage> {
 
     final process = await Process.start(
       'claude',
-      ['-p', '--output-format', 'text', prompt],
+      ['-p', '--output-format', 'text'],
       workingDirectory: projectDir,
       runInShell: true,
     );
 
-    // 读取 stdout
+    // 通过 stdin 传递 prompt（UTF-8 编码，避免 cmd.exe GBK 编码导致乱码）
+    process.stdin.encoding = utf8;
+    process.stdin.write(prompt);
+    await process.stdin.close();
+
+    // 读取 stdout（Claude Code 输出 UTF-8）
     process.stdout
-        .transform(const SystemEncoding().decoder)
+        .transform(utf8.decoder)
         .listen(
           (chunk) {
             for (final line in chunk.split('\n')) {
@@ -590,7 +596,7 @@ class _FeedbackManagePageState extends State<FeedbackManagePage> {
 
     // 读取 stderr
     process.stderr
-        .transform(const SystemEncoding().decoder)
+        .transform(utf8.decoder)
         .listen(
           (chunk) {
             for (final line in chunk.split('\n')) {
