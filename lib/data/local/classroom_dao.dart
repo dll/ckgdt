@@ -85,6 +85,29 @@ class ClassroomDao {
       )
     ''');
 
+    // 7) 课堂提问题库
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS classroom_questions(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        source_type TEXT NOT NULL DEFAULT 'quiz',
+        source_id INTEGER,
+        chapter TEXT,
+        difficulty TEXT DEFAULT 'medium',
+        question TEXT NOT NULL,
+        option_a TEXT,
+        option_b TEXT,
+        option_c TEXT,
+        option_d TEXT,
+        answer_index INTEGER DEFAULT -1,
+        reference_answer TEXT,
+        question_type TEXT DEFAULT 'choice',
+        created_by TEXT,
+        created_at TEXT,
+        asked_at TEXT,
+        class_id INTEGER
+      )
+    ''');
+
     _tableEnsured = true;
   }
 
@@ -553,5 +576,302 @@ class ClassroomDao {
     final mid = scored.skip(third).take(total - 2 * third).toList();
 
     return {'high': high, 'mid': mid, 'low': low};
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  //  课堂提问（题库管理）
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /// 从测验题库批量导入
+  Future<int> importFromQuizBank() async {
+    await _ensureTable();
+    final db = await DatabaseHelper.instance.database;
+
+    final existing = await db.query('classroom_questions',
+        columns: ['source_id'],
+        where: "source_type = 'quiz'");
+    final existingIds = existing.map((e) => e['source_id'] as int?).toSet();
+
+    final questions = await db.query('questions');
+    int imported = 0;
+    final batch = db.batch();
+    for (final q in questions) {
+      final qId = q['id'] as int?;
+      if (existingIds.contains(qId)) continue;
+
+      final answerIndex = (q['answer_index'] as int?) ?? 0;
+      final options = [
+        q['option_a'] as String? ?? '',
+        q['option_b'] as String? ?? '',
+        q['option_c'] as String? ?? '',
+        q['option_d'] as String? ?? '',
+      ];
+      final letter = String.fromCharCode(65 + answerIndex.clamp(0, 3));
+      final refAnswer = '$letter. ${options[answerIndex.clamp(0, 3)]}';
+
+      batch.insert('classroom_questions', {
+        'source_type': 'quiz',
+        'source_id': qId,
+        'chapter': q['source'],
+        'difficulty': 'medium',
+        'question': q['question'],
+        'option_a': q['option_a'],
+        'option_b': q['option_b'],
+        'option_c': q['option_c'],
+        'option_d': q['option_d'],
+        'answer_index': answerIndex,
+        'reference_answer': refAnswer,
+        'question_type': 'choice',
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      imported++;
+    }
+    await batch.commit(noResult: true);
+    return imported;
+  }
+
+  /// 从实验任务导入
+  Future<int> importFromLabTasks() async {
+    await _ensureTable();
+    final db = await DatabaseHelper.instance.database;
+
+    final existing = await db.query('classroom_questions',
+        columns: ['source_id'],
+        where: "source_type = 'lab'");
+    final existingIds = existing.map((e) => e['source_id'] as int?).toSet();
+
+    List<Map<String, dynamic>> tasks;
+    try {
+      tasks = await db.query('lab_tasks');
+    } catch (_) {
+      return 0;
+    }
+
+    int imported = 0;
+    final batch = db.batch();
+    for (final t in tasks) {
+      final tId = t['id'] as int?;
+      if (existingIds.contains(tId)) continue;
+
+      final title = t['title'] as String? ?? '';
+      final desc = t['description'] as String? ?? '';
+      final chapter = t['chapter'] as String? ?? '';
+      final rawDiff = t['difficulty'] as String? ?? '';
+      String diffLevel;
+      switch (rawDiff) {
+        case '简单':
+          diffLevel = 'easy';
+          break;
+        case '较难':
+          diffLevel = 'hard';
+          break;
+        default:
+          diffLevel = 'medium';
+      }
+
+      batch.insert('classroom_questions', {
+        'source_type': 'lab',
+        'source_id': tId,
+        'chapter': chapter,
+        'difficulty': diffLevel,
+        'question': '【实验】$title\n$desc',
+        'reference_answer': desc,
+        'question_type': 'open',
+        'answer_index': -1,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      imported++;
+    }
+    await batch.commit(noResult: true);
+    return imported;
+  }
+
+  /// 从考核项目导入
+  Future<int> importFromAssessment() async {
+    await _ensureTable();
+    final db = await DatabaseHelper.instance.database;
+
+    final existing = await db.query('classroom_questions',
+        columns: ['source_id'],
+        where: "source_type = 'assessment'");
+    final existingIds = existing.map((e) => e['source_id'] as int?).toSet();
+
+    List<Map<String, dynamic>> projects;
+    try {
+      projects = await db.query('assessment_projects');
+    } catch (_) {
+      return 0;
+    }
+
+    int imported = 0;
+    final batch = db.batch();
+    for (final p in projects) {
+      final pId = p['id'] as int?;
+      if (existingIds.contains(pId)) continue;
+
+      final title = p['title'] as String? ?? '';
+      final desc = p['description'] as String? ?? '';
+      final requirements = p['requirements'] as String? ?? desc;
+
+      batch.insert('classroom_questions', {
+        'source_type': 'assessment',
+        'source_id': pId,
+        'difficulty': 'hard',
+        'question': '【考核】$title\n$desc',
+        'reference_answer': requirements,
+        'question_type': 'open',
+        'answer_index': -1,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      imported++;
+    }
+    await batch.commit(noResult: true);
+    return imported;
+  }
+
+  /// 获取课堂提问列表（带筛选）
+  Future<List<Map<String, dynamic>>> getClassroomQuestions({
+    String? sourceType,
+    String? chapter,
+    String? difficulty,
+    bool? isAsked,
+    int limit = 200,
+  }) async {
+    await _ensureTable();
+    final db = await DatabaseHelper.instance.database;
+
+    final conditions = <String>[];
+    final args = <dynamic>[];
+    if (sourceType != null && sourceType.isNotEmpty) {
+      conditions.add('source_type = ?');
+      args.add(sourceType);
+    }
+    if (chapter != null && chapter.isNotEmpty) {
+      conditions.add('chapter = ?');
+      args.add(chapter);
+    }
+    if (difficulty != null && difficulty.isNotEmpty) {
+      conditions.add('difficulty = ?');
+      args.add(difficulty);
+    }
+    if (isAsked != null) {
+      conditions.add(isAsked ? 'asked_at IS NOT NULL' : 'asked_at IS NULL');
+    }
+
+    final where = conditions.isNotEmpty ? conditions.join(' AND ') : null;
+    return await db.query('classroom_questions',
+        where: where,
+        whereArgs: args.isNotEmpty ? args : null,
+        orderBy: 'asked_at DESC, created_at DESC',
+        limit: limit);
+  }
+
+  /// 获取去重章节列表
+  Future<List<String>> getQuestionChapters() async {
+    await _ensureTable();
+    final db = await DatabaseHelper.instance.database;
+    final result = await db.rawQuery(
+        'SELECT DISTINCT chapter FROM classroom_questions '
+        'WHERE chapter IS NOT NULL AND chapter != "" ORDER BY chapter');
+    return result.map((r) => r['chapter'] as String).toList();
+  }
+
+  /// 按来源统计题目数
+  Future<Map<String, int>> getQuestionSourceStats() async {
+    await _ensureTable();
+    final db = await DatabaseHelper.instance.database;
+    final result = await db.rawQuery('''
+      SELECT source_type, COUNT(*) as count
+      FROM classroom_questions GROUP BY source_type
+    ''');
+    return {
+      for (var r in result)
+        r['source_type'] as String: (r['count'] as int?) ?? 0
+    };
+  }
+
+  /// 题库总数
+  Future<int> getClassroomQuestionCount() async {
+    await _ensureTable();
+    final db = await DatabaseHelper.instance.database;
+    final r = await db
+        .rawQuery('SELECT COUNT(*) as c FROM classroom_questions');
+    return (r.first['c'] as int?) ?? 0;
+  }
+
+  /// 新增课堂提问
+  Future<int> addClassroomQuestion({
+    required String sourceType,
+    String? chapter,
+    String difficulty = 'medium',
+    required String question,
+    String? optionA,
+    String? optionB,
+    String? optionC,
+    String? optionD,
+    int answerIndex = -1,
+    String? referenceAnswer,
+    String questionType = 'open',
+    String? createdBy,
+  }) async {
+    await _ensureTable();
+    final db = await DatabaseHelper.instance.database;
+    return await db.insert('classroom_questions', {
+      'source_type': sourceType,
+      'chapter': chapter,
+      'difficulty': difficulty,
+      'question': question,
+      'option_a': optionA,
+      'option_b': optionB,
+      'option_c': optionC,
+      'option_d': optionD,
+      'answer_index': answerIndex,
+      'reference_answer': referenceAnswer,
+      'question_type': questionType,
+      'created_by': createdBy,
+      'created_at': DateTime.now().toIso8601String(),
+    });
+  }
+
+  /// 更新课堂提问
+  Future<void> updateClassroomQuestion(
+      int id, Map<String, dynamic> data) async {
+    await _ensureTable();
+    final db = await DatabaseHelper.instance.database;
+    await db.update('classroom_questions', data,
+        where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// 删除课堂提问
+  Future<void> deleteClassroomQuestion(int id) async {
+    await _ensureTable();
+    final db = await DatabaseHelper.instance.database;
+    await db.delete('classroom_questions',
+        where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// 标记已提问
+  Future<void> markQuestionAsked(int id, {int? classId}) async {
+    await _ensureTable();
+    final db = await DatabaseHelper.instance.database;
+    await db.update(
+        'classroom_questions',
+        {
+          'asked_at': DateTime.now().toIso8601String(),
+          'class_id': classId,
+        },
+        where: 'id = ?',
+        whereArgs: [id]);
+  }
+
+  /// 取消提问标记
+  Future<void> unmarkQuestionAsked(int id) async {
+    await _ensureTable();
+    final db = await DatabaseHelper.instance.database;
+    await db.update(
+        'classroom_questions',
+        {'asked_at': null, 'class_id': null},
+        where: 'id = ?',
+        whereArgs: [id]);
   }
 }
