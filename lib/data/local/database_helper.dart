@@ -140,44 +140,34 @@ class DatabaseHelper {
 
   /// 原生平台数据库初始化（Android/iOS/Windows/macOS/Linux）
   Future<Database> _initDBNative() async {
-    // 延迟导入 dart:io（仅在原生平台使用）
     final dbFolder = await getDatabasesPath();
     final dbPath = p.join(dbFolder, 'knowledge_graph.db');
 
-    debugPrint('=== DatabaseHelper: Checking path: $dbPath');
+    debugPrint('=== DatabaseHelper: DB path: $dbPath');
 
-    // 使用 databaseFactory 检查文件是否存在
     final exists = await databaseFactory.databaseExists(dbPath);
     debugPrint('=== DatabaseHelper: Database exists = $exists');
 
-    Database db;
-
+    // ── 第一步：如果 DB 不存在，从 assets 复制种子 DB ──
+    // 种子 DB 的 user_version 已设为 20，匹配 openDatabase version 参数，
+    // 这样 sqflite 不会触发 onCreate/onUpgrade，数据原封不动保留。
     if (!exists) {
-      // Try to copy from assets first
       try {
         debugPrint(
-            '=== DatabaseHelper: Trying to copy database from assets...');
+            '=== DatabaseHelper: Copying seed DB from assets...');
         final data = await rootBundle.load('assets/learning_data.db');
         final bytes =
             data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-        // 使用 writeDatabaseBytes 代替 File 操作，保持平台兼容性
         await databaseFactory.writeDatabaseBytes(dbPath, bytes);
-        debugPrint('=== DatabaseHelper: Copied database from assets');
+        debugPrint(
+            '=== DatabaseHelper: Seed DB copied (${bytes.length} bytes)');
       } catch (e) {
-        debugPrint('=== DatabaseHelper: Failed to copy from assets: $e');
-        // Create empty database
-        db = await openDatabase(
-          dbPath,
-          version: 20,
-          onCreate: _createTables,
-          onUpgrade: _onUpgrade,
-        );
-        _database = db;
-        debugPrint('=== DatabaseHelper: Created new empty database');
-        return db;
+        debugPrint('=== DatabaseHelper: Failed to copy seed DB: $e');
       }
     }
 
+    // ── 第二步：打开数据库 ──
+    Database db;
     db = await openDatabase(
       dbPath,
       version: 20,
@@ -186,99 +176,131 @@ class DatabaseHelper {
     );
     debugPrint('=== DatabaseHelper: Database opened successfully');
 
-    // 补齐 seed DB 可能缺少的列（seed 版本为 0 时 onCreate 无法通过
-    // CREATE TABLE IF NOT EXISTS 添加新列到已有表）
+    // ── 第三步：补齐种子 DB 中缺少的表和列 ──
     await _ensureUsersColumns(db);
     await _ensureResourceFileColumns(db);
-    // 确保 v13-v20 的表和列存在
-    await _migrateToV13(db);
-    await _migrateToV14(db);
-    await _migrateToV15(db);
-    await _migrateToV16(db);
-    await _migrateToV17(db);
-    await _migrateToV18(db);
-    await _migrateToV19(db);
-    await _migrateToV20(db);
+    await _ensureAllTables(db);
 
-    // Verify tables exist and check for empty critical data
-    try {
-      final tables = await db
-          .rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
-      final tableNames = tables.map((t) => t['name']).toList();
-      debugPrint('=== DatabaseHelper: Tables in database: $tableNames');
-
-      bool needsDataImport = false;
-
-      // 检查 graphs 表
-      if (tableNames.contains('graphs')) {
-        final graphCount =
-            await db.rawQuery('SELECT COUNT(*) as c FROM graphs');
-        final gCount = (graphCount.first['c'] as int?) ?? 0;
-        debugPrint('=== DatabaseHelper: Graphs count: $gCount');
-        if (gCount == 0) needsDataImport = true;
-      } else {
-        needsDataImport = true;
-      }
-
-      // 检查 questions 表
-      if (tableNames.contains('questions')) {
-        final questionCount =
-            await db.rawQuery('SELECT COUNT(*) as c FROM questions');
-        final qCount = (questionCount.first['c'] as int?) ?? 0;
-        debugPrint('=== DatabaseHelper: Questions count: $qCount');
-        if (qCount == 0) needsDataImport = true;
-      } else {
-        needsDataImport = true;
-      }
-
-      // 关键数据为空时，从 assets 重新导入（与 Web 路径一致的自修复逻辑）
-      if (needsDataImport) {
-        debugPrint(
-            '=== DatabaseHelper [Native]: Data is empty, trying to reimport from assets...');
-        await db.close();
-        await databaseFactory.deleteDatabase(dbPath);
-
-        try {
-          final data = await rootBundle.load('assets/learning_data.db');
-          final bytes =
-              data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-          await databaseFactory.writeDatabaseBytes(dbPath, bytes);
-          debugPrint(
-              '=== DatabaseHelper [Native]: Reimported from assets (${bytes.length} bytes)');
-        } catch (e) {
-          debugPrint('=== DatabaseHelper [Native]: Reimport failed: $e');
-        }
-
-        final db2 = await openDatabase(
-          dbPath,
-          version: 20,
-          onCreate: _createTables,
-          onUpgrade: _onUpgrade,
-        );
-
-        // 确保新表存在
-        await _ensureAllTables(db2);
-        await _importStudents(db2);
-
-        // 最终验证
-        try {
-          final gc = await db2.rawQuery('SELECT COUNT(*) as c FROM graphs');
-          final qc = await db2.rawQuery('SELECT COUNT(*) as c FROM questions');
-          debugPrint(
-              '=== DatabaseHelper [Native]: After reimport - Graphs: ${gc.first['c']}, Questions: ${qc.first['c']}');
-        } catch (_) {}
-
-        _database = db2;
-        return db2;
-      }
-    } catch (e) {
-      debugPrint('=== DatabaseHelper: Verification warning: $e');
-    }
+    // ── 第四步：验证关键数据 + 自动修复 ──
+    await _verifyAndRepairSeedData(db);
 
     // Import students if needed
     await _importStudents(db);
 
     return db;
+  }
+
+  /// 验证关键种子数据（questions/graphs/nodes/edges）是否存在，
+  /// 如果为空则尝试从 asset DB 导入。
+  Future<void> _verifyAndRepairSeedData(Database db) async {
+    try {
+      final qc = await db.rawQuery('SELECT COUNT(*) as c FROM questions');
+      final gc = await db.rawQuery('SELECT COUNT(*) as c FROM graphs');
+      final qCount = (qc.first['c'] as int?) ?? 0;
+      final gCount = (gc.first['c'] as int?) ?? 0;
+      debugPrint(
+          '=== DatabaseHelper: Seed check — Questions: $qCount, Graphs: $gCount');
+
+      if (qCount > 0 && gCount > 0) return; // 数据完整，无需修复
+
+      debugPrint(
+          '=== DatabaseHelper: Seed data missing! Importing via SQL...');
+      await _importSeedDataViaSql(db);
+
+      // 最终验证
+      final qc2 = await db.rawQuery('SELECT COUNT(*) as c FROM questions');
+      final gc2 = await db.rawQuery('SELECT COUNT(*) as c FROM graphs');
+      debugPrint(
+          '=== DatabaseHelper: After repair — Questions: ${qc2.first['c']}, Graphs: ${gc2.first['c']}');
+    } catch (e) {
+      debugPrint('=== DatabaseHelper: Seed verify/repair error: $e');
+    }
+  }
+
+  /// SQL 级别从 asset DB 导入种子数据（graphs/nodes/edges/questions/resource_files）
+  /// 当 writeDatabaseBytes 整体复制失败时，作为健壮的回退方案：
+  /// 先将 asset 写入临时文件，打开为只读连接，再逐表 INSERT 到主库。
+  Future<void> _importSeedDataViaSql(Database db) async {
+    try {
+      debugPrint('=== DatabaseHelper [Native]: SQL-level seed import starting...');
+      final data = await rootBundle.load('assets/learning_data.db');
+      final bytes =
+          data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+
+      // 写入临时路径（目录已由 openDatabase 创建，不会再因目录缺失而失败）
+      final dbFolder = await getDatabasesPath();
+      final tempPath = p.join(dbFolder, '_seed_import_temp.db');
+
+      try {
+        await databaseFactory.writeDatabaseBytes(tempPath, bytes);
+      } catch (e) {
+        debugPrint(
+            '=== DatabaseHelper [Native]: Temp seed write failed: $e');
+        return;
+      }
+
+      final seedDb = await openReadOnlyDatabase(tempPath);
+
+      // ── 导入 questions（schema 完全匹配，直接 insert）──
+      await _importTableSafe(seedDb, db, 'questions');
+
+      // ── 导入 graphs ──
+      await _importTableSafe(seedDb, db, 'graphs');
+
+      // ── 导入 nodes ──
+      await _importTableSafe(seedDb, db, 'nodes');
+
+      // ── 导入 edges ──
+      await _importTableSafe(seedDb, db, 'edges');
+
+      // ── 导入 resource_files（schema 可能不同，只导入匹配的列）──
+      await _importTableSafe(seedDb, db, 'resource_files');
+
+      await seedDb.close();
+
+      // 清理临时文件
+      try {
+        await databaseFactory.deleteDatabase(tempPath);
+      } catch (_) {}
+
+      debugPrint('=== DatabaseHelper [Native]: SQL-level seed import completed');
+    } catch (e) {
+      debugPrint('=== DatabaseHelper [Native]: SQL-level seed import failed: $e');
+    }
+  }
+
+  /// 安全导入单张表：自动处理列名不匹配的情况
+  Future<void> _importTableSafe(
+      Database seedDb, Database targetDb, String table) async {
+    try {
+      final rows = await seedDb.query(table);
+      if (rows.isEmpty) return;
+
+      // 获取目标表的列名
+      final targetCols = await targetDb.rawQuery('PRAGMA table_info($table)');
+      final targetColNames =
+          targetCols.map((c) => c['name'] as String).toSet();
+
+      final batch = targetDb.batch();
+      for (final row in rows) {
+        // 只保留目标表中存在的列
+        final filtered = <String, Object?>{};
+        for (final entry in row.entries) {
+          if (targetColNames.contains(entry.key)) {
+            filtered[entry.key] = entry.value;
+          }
+        }
+        if (filtered.isNotEmpty) {
+          batch.insert(table, filtered,
+              conflictAlgorithm: ConflictAlgorithm.ignore);
+        }
+      }
+      await batch.commit(noResult: true);
+      debugPrint(
+          '=== DatabaseHelper [Native]: Imported ${rows.length} $table');
+    } catch (e) {
+      debugPrint('=== DatabaseHelper [Native]: $table import error: $e');
+    }
   }
 
   Future<void> _importStudents(Database db) async {
