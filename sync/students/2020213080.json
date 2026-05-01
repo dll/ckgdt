@@ -3,8 +3,8 @@
   "user_id": "2020213080",
   "user_name": "倪洋",
   "role": "student",
-  "synced_at": "2026-05-01T23:09:13.139063",
-  "last_active": "2026-05-01T23:09:13.139068",
+  "synced_at": "2026-05-01T23:15:24.987720",
+  "last_active": "2026-05-01T23:15:24.987724",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
@@ -59,7 +59,14 @@
   ],
   "work_likes": [],
   "peer_reviews": [],
-  "notification_recipients": [],
+  "notification_recipients": [
+    {
+      "notification_id": 1,
+      "user_id": "2020213080",
+      "is_read": 0,
+      "read_at": null
+    }
+  ],
   "collaboration_messages": [],
   "contribution_scores": [],
   "classroom_messages": [],
