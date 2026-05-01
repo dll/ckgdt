@@ -3,8 +3,8 @@
   "user_id": "2023210631",
   "user_name": "王秀妹",
   "role": "student",
-  "synced_at": "2026-04-30T13:34:39.912988",
-  "last_active": "2026-04-30T13:34:39.902702",
+  "synced_at": "2026-05-01T20:15:48.179697",
+  "last_active": "2026-05-01T20:15:48.174430",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
@@ -59,7 +59,14 @@
   ],
   "work_likes": [],
   "peer_reviews": [],
-  "notification_recipients": [],
+  "notification_recipients": [
+    {
+      "notification_id": 1,
+      "user_id": "2023210631",
+      "is_read": 0,
+      "read_at": null
+    }
+  ],
   "collaboration_messages": [],
   "contribution_scores": [],
   "classroom_messages": [],
