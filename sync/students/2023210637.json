@@ -3,15 +3,34 @@
   "user_id": "2023210637",
   "user_name": "席永杰",
   "role": "student",
-  "synced_at": "2026-05-01T11:57:02.412693",
-  "last_active": "2026-05-01T11:57:02.408248",
+  "synced_at": "2026-05-01T12:02:22.505037",
+  "last_active": "2026-05-01T12:02:22.489096",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
   "favorites": [],
   "feedback": [],
   "learning_paths": [],
-  "lab_submissions": [],
+  "lab_submissions": [
+    {
+      "task_id": 1,
+      "user_id": "2023210637",
+      "content": "PDF实验报告：2023210637席永杰实验一 开发环境搭建.pdf",
+      "file_paths": "C:\\Users\\xyj12\\Desktop\\2023210637席永杰实验一 开发环境搭建.pdf",
+      "file_names": "2023210637席永杰实验一 开发环境搭建.pdf",
+      "submit_time": "2026-05-01T12:02:22.485030",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-05-01T12:02:22.485030",
+      "updated_at": "2026-05-01T12:02:22.485030",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    }
+  ],
   "student_reports": [],
   "student_works": [
     {
