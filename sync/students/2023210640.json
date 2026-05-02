@@ -3,8 +3,8 @@
   "user_id": "2023210640",
   "user_name": "徐宗申",
   "role": "student",
-  "synced_at": "2026-04-24T04:41:00.483910",
-  "last_active": "2026-04-24T04:41:00.483910",
+  "synced_at": "2026-05-02T15:55:59.435235",
+  "last_active": "2026-05-02T15:55:59.435235",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
@@ -13,45 +13,18 @@
   "learning_paths": [],
   "lab_submissions": [],
   "student_reports": [],
-  "student_works": [
-    {
-      "title": "线上购物平台开发与整合",
-      "description": "【商品收藏】实现商品收藏功能，支持按分类整理收藏夹、价格变动提醒和收藏商品的批量管理。【历史订单】提供完整的历史订单列表，支持按时间和状态筛选，查看订单详情、物流轨迹和再次购买功能。【AI视觉搜索】调用AI大模型实现拍照搜商品功能，用户拍摄或上传商品照片后自动识别并搜索同款或相似商品。",
-      "tech_stack": "JS+WeChat MiniProg",
-      "work_type": "综合项目",
-      "group_name": "cg2-ospdi",
-      "leader_name": "徐宗申",
-      "user_id": "2023210640",
-      "file_path": null,
-      "file_size": null,
-      "status": "待提交",
-      "submit_time": null,
-      "tags": "[\"JS\",\"WeChat\",\"MiniProg\"]",
-      "created_at": "2026-04-21T18:55:44.559898",
-      "updated_at": "2026-04-21T18:55:44.559898",
-      "project_id": null,
-      "group_id": null,
-      "video_url": null,
-      "thumbnail_url": null,
-      "video_duration": null,
-      "view_count": 0,
-      "like_count": 0,
-      "comment_count": 0,
-      "repo": "cg2-ospdi",
-      "class_group": "cg2",
-      "project": "线上购物平台开发与整合",
-      "student_role": "小程序开发工程师",
-      "student_name": "徐宗申"
-    }
-  ],
+  "student_works": [],
   "survey_responses": [],
   "checkin_records": [],
   "work_comments": [],
   "work_likes": [],
   "notification_recipients": [],
+  "work_views": [],
   "peer_reviews": [],
   "collaboration_messages": [],
   "contribution_scores": [],
+  "work_scores": [],
+  "project_scores": [],
   "lab_tasks": [
     {
       "id": 1,
@@ -66,7 +39,8 @@
       "status": "active",
       "creator_id": "206004",
       "created_at": "2026-04-21T18:55:11.522761",
-      "updated_at": "2026-04-21T18:55:11.522761"
+      "updated_at": "2026-04-21T18:55:11.522761",
+      "related_node_ids": null
     },
     {
       "id": 2,
@@ -81,7 +55,8 @@
       "status": "active",
       "creator_id": "206004",
       "created_at": "2026-04-21T18:55:11.522761",
-      "updated_at": "2026-04-21T18:55:11.522761"
+      "updated_at": "2026-04-21T18:55:11.522761",
+      "related_node_ids": null
     },
     {
       "id": 3,
@@ -96,7 +71,8 @@
       "status": "active",
       "creator_id": "206004",
       "created_at": "2026-04-21T18:55:11.522761",
-      "updated_at": "2026-04-21T18:55:11.522761"
+      "updated_at": "2026-04-21T18:55:11.522761",
+      "related_node_ids": null
     },
     {
       "id": 4,
@@ -111,7 +87,8 @@
       "status": "active",
       "creator_id": "206004",
       "created_at": "2026-04-21T18:55:11.522761",
-      "updated_at": "2026-04-21T18:55:11.522761"
+      "updated_at": "2026-04-21T18:55:11.522761",
+      "related_node_ids": null
     },
     {
       "id": 5,
@@ -126,7 +103,8 @@
       "status": "active",
       "creator_id": "206004",
       "created_at": "2026-04-21T18:55:11.522761",
-      "updated_at": "2026-04-21T18:55:11.522761"
+      "updated_at": "2026-04-21T18:55:11.522761",
+      "related_node_ids": null
     },
     {
       "id": 6,
@@ -141,7 +119,8 @@
       "status": "active",
       "creator_id": "206004",
       "created_at": "2026-04-21T18:55:11.522761",
-      "updated_at": "2026-04-21T18:55:11.522761"
+      "updated_at": "2026-04-21T18:55:11.522761",
+      "related_node_ids": null
     }
   ],
   "report_templates": [
