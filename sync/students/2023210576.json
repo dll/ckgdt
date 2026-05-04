@@ -3,11 +3,83 @@
   "user_id": "2023210576",
   "user_name": "蔡迦南",
   "role": "student",
-  "synced_at": "2026-05-03T22:23:13.097871",
-  "last_active": "2026-05-03T22:23:13.097871",
-  "quiz_results": [],
+  "synced_at": "2026-05-04T08:38:40.526821",
+  "last_active": "2026-05-04T08:38:40.526835",
+  "quiz_results": [
+    {
+      "user_id": "2023210576",
+      "quiz_timestamp": "2026-04-29T23:49:01.235519",
+      "score": 100,
+      "num_correct": 5,
+      "num_total": 5,
+      "chapter": "第四章 小程序开发2",
+      "quiz_type": null,
+      "completed_at": "2026-04-29T23:49:01.235536"
+    }
+  ],
   "learning_records": [],
-  "wrong_answers": [],
+  "wrong_answers": [
+    {
+      "user_id": "2023210576",
+      "question_id": 2294,
+      "question": "在小程序页面生命周期中，页面初次渲染完成时触发的函数是？",
+      "user_answer": "onLoad()",
+      "correct_answer": "onReady()",
+      "chapter": "第四章 小程序开发1",
+      "times": 1,
+      "wrong_time": "2026-04-29T23:45:44.764466",
+      "last_wrong_time": "2026-04-29T23:45:44.764499",
+      "explanation": "页面初次渲染完成代表所有元素都加载到界面上可以交互了，这个时刻触发的是 `onReady`。`onLoad` 在页面开始加载时触发，此时页面还没渲染出来，只适合做初始数据准备，所以你把两者弄混啦。"
+    },
+    {
+      "user_id": "2023210576",
+      "question_id": 2302,
+      "question": "小程序中响应式像素单位rpx的设计基准是什么？",
+      "user_answer": "以iPhone6的375px为基准",
+      "correct_answer": "以屏幕宽度750rpx为基准",
+      "chapter": "第四章 小程序开发1",
+      "times": 1,
+      "wrong_time": "2026-04-29T23:46:52.020636",
+      "last_wrong_time": "2026-04-29T23:46:52.020657",
+      "explanation": "rpx 会把任何屏幕的宽度都固定划分为 750 份，所以设计基准是“屏幕宽度 = 750rpx”，而不是 iPhone6 的 375px 物理像素。你写的 375px 只是 iPhone6 的 CSS 像素宽度，rpx 正是通过 1rpx = 屏幕宽度/750 这个比例来适配不同手机的，记住这个就能避免混淆。"
+    },
+    {
+      "user_id": "2023210576",
+      "question_id": 2304,
+      "question": "小程序性能优化的关键策略不包括？",
+      "user_answer": "实现图片懒加载",
+      "correct_answer": "增加动画效果",
+      "chapter": "第四章 小程序开发2",
+      "times": 1,
+      "wrong_time": "2026-04-29T23:47:35.827586",
+      "last_wrong_time": "2026-04-29T23:47:35.827614",
+      "explanation": "增加动画效果通常会消耗更多渲染资源，反而可能拖慢性能，因此不属于优化策略。而图片懒加载能减少首屏加载的数据量和请求数，是常见的性能优化手段，所以你的答案实际上是正确的优化方法。"
+    },
+    {
+      "user_id": "2023210576",
+      "question_id": 2308,
+      "question": "支付宝小程序的页面结构文件使用什么扩展名？",
+      "user_answer": ".wxml",
+      "correct_answer": ".axml",
+      "chapter": "第四章 小程序开发2",
+      "times": 1,
+      "wrong_time": "2026-04-29T23:47:55.222077",
+      "last_wrong_time": "2026-04-29T23:47:55.222093",
+      "explanation": "支付宝小程序基于自己的框架设计，页面结构文件扩展名是 `.axml`，而不是微信的 `.wxml`。你答的 `.wxml` 其实是微信小程序的模板文件后缀，把两个平台的命名记混了。"
+    },
+    {
+      "user_id": "2023210576",
+      "question_id": 2310,
+      "question": "跨平台小程序开发的主要挑战是什么？",
+      "user_answer": "开发工具不兼容",
+      "correct_answer": "API差异和平台特性不同",
+      "chapter": "第四章 小程序开发2",
+      "times": 2,
+      "wrong_time": "2026-04-29T23:48:23.250232",
+      "last_wrong_time": "2026-04-29T23:48:40.777831",
+      "explanation": "跨平台开发真正的难点在于不同系统提供的接口和底层能力各不相同，需要额外处理这些差异；而开发工具虽然可能不通用，但通常有官方或第三方方案覆盖，不是核心障碍。所以学生答案局限于工具层面，忽略了更本质的API与平台特性不一致问题。"
+    }
+  ],
   "favorites": [],
   "feedback": [],
   "learning_paths": [],
