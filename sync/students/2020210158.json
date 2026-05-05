@@ -3,8 +3,8 @@
   "user_id": "2020210158",
   "user_name": "苏洲",
   "role": "student",
-  "synced_at": "2026-05-05T22:58:59.495999",
-  "last_active": "2026-05-05T22:58:59.495999",
+  "synced_at": "2026-05-05T23:05:31.343187",
+  "last_active": "2026-05-05T23:05:31.343194",
   "quiz_results": [
     {
       "user_id": "2020210158",
@@ -86,7 +86,7 @@
       "task_id": 3,
       "user_id": "2020210158",
       "content": "PDF实验报告：2020210158苏洲实验三 跨平台应用开发.pdf",
-      "file_paths": "E:\\文档/sync_files/2020210158/2020210158苏洲实验三 跨平台应用开发.pdf",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2020210158/2020210158苏洲实验三 跨平台应用开发.pdf",
       "file_names": "2020210158苏洲实验三 跨平台应用开发.pdf",
       "submit_time": "2026-04-24T10:48:02.561611",
       "status": "已提交",
