@@ -3,9 +3,30 @@
   "user_id": "2023210648",
   "user_name": "张政",
   "role": "student",
-  "synced_at": "2026-04-30T08:52:05.647623",
-  "last_active": "2026-04-30T08:52:05.647634",
-  "quiz_results": [],
+  "synced_at": "2026-05-06T21:29:00.900979",
+  "last_active": "2026-05-06T21:29:00.900991",
+  "quiz_results": [
+    {
+      "user_id": "2023210648",
+      "quiz_timestamp": "2026-04-30T08:56:35.655495",
+      "score": 100,
+      "num_correct": 5,
+      "num_total": 5,
+      "chapter": "第四章 小程序开发2",
+      "quiz_type": null,
+      "completed_at": "2026-04-30T08:56:35.655508"
+    },
+    {
+      "user_id": "2023210648",
+      "quiz_timestamp": "2026-04-30T08:54:36.846502",
+      "score": 100,
+      "num_correct": 5,
+      "num_total": 5,
+      "chapter": "第四章 小程序开发1",
+      "quiz_type": null,
+      "completed_at": "2026-04-30T08:54:36.846540"
+    }
+  ],
   "learning_records": [],
   "wrong_answers": [],
   "favorites": [],
@@ -52,7 +73,7 @@
       "task_id": 2,
       "user_id": "2023210648",
       "content": "PDF实验报告：2023210648张政实验二 原生应用开发.pdf",
-      "file_paths": "/data/user/0/cn.edu.chzu.madkg/cache/file_picker/1777110017666/2023210648张政实验二 原生应用开发.pdf",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2023210648/2023210648张政实验二 原生应用开发.pdf",
       "file_names": "2023210648张政实验二 原生应用开发.pdf",
       "submit_time": "2026-04-25T17:40:18.785666",
       "status": "已提交",
