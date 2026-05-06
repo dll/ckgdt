@@ -3,10 +3,66 @@
   "user_id": "2023210621",
   "user_name": "史东振",
   "role": "student",
-  "synced_at": "2026-04-30T08:49:18.899930",
-  "last_active": "2026-04-30T08:49:18.899951",
-  "quiz_results": [],
-  "learning_records": [],
+  "synced_at": "2026-05-06T08:26:50.038153",
+  "last_active": "2026-05-06T08:26:50.038170",
+  "quiz_results": [
+    {
+      "user_id": "2023210621",
+      "quiz_timestamp": "2026-04-30T08:53:41.565485",
+      "score": 100,
+      "num_correct": 5,
+      "num_total": 5,
+      "chapter": "第四章 小程序开发2",
+      "quiz_type": null,
+      "completed_at": "2026-04-30T08:53:41.565614"
+    },
+    {
+      "user_id": "2023210621",
+      "quiz_timestamp": "2026-04-30T08:52:38.032163",
+      "score": 100,
+      "num_correct": 5,
+      "num_total": 5,
+      "chapter": "第四章 小程序开发1",
+      "quiz_type": null,
+      "completed_at": "2026-04-30T08:52:38.032294"
+    },
+    {
+      "user_id": "2023210621",
+      "quiz_timestamp": "2026-04-30T08:50:19.067423",
+      "score": 100,
+      "num_correct": 5,
+      "num_total": 5,
+      "chapter": "第一章 移动应用开发技术体系1",
+      "quiz_type": null,
+      "completed_at": "2026-04-30T08:50:19.067446"
+    }
+  ],
+  "learning_records": [
+    {
+      "user_id": "2023210621",
+      "node_id": "deep-第1章-3",
+      "node_title": "深度-第1章-3",
+      "study_time": "30",
+      "completed_at": "2026-04-30T08:54:11.185077",
+      "created_at": "2026-04-30 00:54:11"
+    },
+    {
+      "user_id": "2023210621",
+      "node_id": "deep-第1章-1",
+      "node_title": "深度-第1章-1",
+      "study_time": "30",
+      "completed_at": "2026-04-30T08:54:03.045153",
+      "created_at": "2026-04-30 00:54:03"
+    },
+    {
+      "user_id": "2023210621",
+      "node_id": "deep-第1章-0",
+      "node_title": "深度-第1章-0",
+      "study_time": "30",
+      "completed_at": "2026-04-30T08:54:01.408871",
+      "created_at": "2026-04-30 00:54:01"
+    }
+  ],
   "wrong_answers": [],
   "favorites": [],
   "feedback": [],
@@ -138,7 +194,13 @@
       "read_at": null
     }
   ],
-  "work_views": [],
+  "work_views": [
+    {
+      "work_id": 86,
+      "user_id": "2023210621",
+      "viewed_at": "2026-04-30T08:54:36.530972"
+    }
+  ],
   "peer_reviews": [],
   "collaboration_messages": [],
   "contribution_scores": [],
