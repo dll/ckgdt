@@ -3,9 +3,20 @@
   "user_id": "2023210584",
   "user_name": "程天乐",
   "role": "student",
-  "synced_at": "2026-05-04T04:50:58.360260",
-  "last_active": "2026-05-04T04:50:58.360260",
-  "quiz_results": [],
+  "synced_at": "2026-05-07T08:11:50.420829",
+  "last_active": "2026-05-07T08:11:50.420848",
+  "quiz_results": [
+    {
+      "user_id": "2023210584",
+      "quiz_timestamp": "2026-05-01T19:51:35.275366",
+      "score": 100,
+      "num_correct": 5,
+      "num_total": 5,
+      "chapter": "第四章 小程序开发1",
+      "quiz_type": null,
+      "completed_at": "2026-05-01T19:51:35.275398"
+    }
+  ],
   "learning_records": [],
   "wrong_answers": [],
   "favorites": [],
@@ -16,7 +27,7 @@
       "task_id": 1,
       "user_id": "2023210584",
       "content": "PDF实验报告：2023210584程天乐实验一 开发环境搭建.pdf",
-      "file_paths": "D:\\work\\2023210584程天乐实验一 开发环境搭建.pdf",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2023210584/2023210584程天乐实验一 开发环境搭建.pdf",
       "file_names": "2023210584程天乐实验一 开发环境搭建.pdf",
       "submit_time": "2026-05-04T04:50:58.351562",
       "status": "已提交",
@@ -32,62 +43,10 @@
     }
   ],
   "student_reports": [],
-  "student_works": [
-    {
-      "title": "智慧校园生活服务平台开发与整合",
-      "description": "【高级组件应用】使用MAUI的高级UI组件开发社区服务界面，包含CollectionView、SwipeView和TabBar等复杂交互组件。【地图集成】集成地图SDK展示社区平面图和周边设施分布，支持室内导航和兴趣点标注。【AI位置服务】调用AI大模型结合用户位置信息，智能推荐附近的社区服务设施和最优出行路线。",
-      "tech_stack": "Java + Android SDK",
-      "work_type": "综合项目",
-      "group_name": "cg2-sclspi",
-      "leader_name": "程天乐",
-      "user_id": "2023210584",
-      "file_path": null,
-      "file_size": null,
-      "status": "已提交",
-      "submit_time": null,
-      "tags": "[\"Java\",\"Android\",\"SDK\"]",
-      "created_at": "2026-04-18T16:18:03.982478",
-      "updated_at": "2026-04-18T16:18:03.982478",
-      "related_node_ids": null,
-      "ai_suspicion": 0.0,
-      "teacher_confirmed": 0,
-      "project_id": null,
-      "group_id": null,
-      "video_url": "assets/videos/demo_2023210584.mp4",
-      "thumbnail_url": null,
-      "video_duration": "03:18",
-      "view_count": 24,
-      "like_count": 35,
-      "comment_count": 0,
-      "repo": "cg2-sclspi",
-      "class_group": "cg2",
-      "project": "智慧校园生活服务平台开发与整合",
-      "student_role": "MAUI开发工程师",
-      "student_name": "程天乐"
-    }
-  ],
+  "student_works": [],
   "survey_responses": [],
   "checkin_records": [],
-  "work_comments": [
-    {
-      "work_id": 80,
-      "user_id": "2023210584",
-      "user_name": "程天乐",
-      "user_role": "student",
-      "content": "值得学习的项目！",
-      "parent_id": null,
-      "created_at": "2026-04-18T16:18:06.390831"
-    },
-    {
-      "work_id": 32,
-      "user_id": "2023210584",
-      "user_name": "程天乐",
-      "user_role": "student",
-      "content": "AI功能很实用，创意不错。",
-      "parent_id": null,
-      "created_at": "2026-04-18T16:18:05.464079"
-    }
-  ],
+  "work_comments": [],
   "work_likes": [],
   "notification_recipients": [
     {
