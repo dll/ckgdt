@@ -3,8 +3,8 @@
   "user_id": "2023210638",
   "user_name": "谢宇翰",
   "role": "student",
-  "synced_at": "2026-05-08T09:00:38.037177",
-  "last_active": "2026-05-08T09:00:38.037177",
+  "synced_at": "2026-05-08T09:01:02.755483",
+  "last_active": "2026-05-08T09:01:02.755483",
   "quiz_results": [
     {
       "user_id": "2023210638",
@@ -33,6 +33,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 2,
+      "user_id": "2023210638",
+      "content": "PDF实验报告：2023210638谢宇翰实验二 原生应用开发.pdf",
+      "file_paths": "D:\\Project\\CommunityLogin\\原生应用开发\\docs\\2023210638谢宇翰实验二 原生应用开发.pdf",
+      "file_names": "2023210638谢宇翰实验二 原生应用开发.pdf",
+      "submit_time": "2026-05-08T09:01:02.749360",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-05-08T09:01:02.749360",
+      "updated_at": "2026-05-08T09:01:02.749360",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 1,
       "user_id": "2023210638",
