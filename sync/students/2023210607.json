@@ -3,11 +3,35 @@
   "user_id": "2023210607",
   "user_name": "刘海静",
   "role": "student",
-  "synced_at": "2026-05-09T10:18:49.482085",
-  "last_active": "2026-05-09T10:18:49.482085",
-  "quiz_results": [],
+  "synced_at": "2026-05-09T10:44:44.348135",
+  "last_active": "2026-05-09T10:44:44.348154",
+  "quiz_results": [
+    {
+      "user_id": "2023210607",
+      "quiz_timestamp": "2026-04-29T16:20:06.917158",
+      "score": 80,
+      "num_correct": 4,
+      "num_total": 5,
+      "chapter": "第四章 小程序开发1",
+      "quiz_type": null,
+      "completed_at": "2026-04-29T16:20:06.917205"
+    }
+  ],
   "learning_records": [],
-  "wrong_answers": [],
+  "wrong_answers": [
+    {
+      "user_id": "2023210607",
+      "question_id": 2305,
+      "question": "小程序的WXML语法中，用于列表渲染的指令是什么？",
+      "user_answer": "wx:list",
+      "correct_answer": "wx:for",
+      "chapter": "第四章 小程序开发1",
+      "times": 1,
+      "wrong_time": "2026-04-29T16:19:54.339026",
+      "last_wrong_time": "2026-04-29T16:19:54.339049",
+      "explanation": "正确答案是 `wx:for`，因为微信小程序中列表渲染的指令固定为 `wx:for`，用于循环生成多个相同结构的视图。学生写的 `wx:list` 是错误拼写，小程序里并没有这个指令，注意 `for` 才是表示“遍历”的关键词。"
+    }
+  ],
   "favorites": [],
   "feedback": [],
   "learning_paths": [],
@@ -52,7 +76,7 @@
       "task_id": 2,
       "user_id": "2023210607",
       "content": "PDF实验报告：2023210607刘海静实验二 原生应用开发.pdf",
-      "file_paths": "C:\\Users\\liumomo\\Documents/sync_files/2023210607/2023210607刘海静实验二 原生应用开发.pdf",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2023210607/2023210607刘海静实验二 原生应用开发.pdf",
       "file_names": "2023210607刘海静实验二 原生应用开发.pdf",
       "submit_time": "2026-04-24T13:05:35.063483",
       "status": "已提交",
