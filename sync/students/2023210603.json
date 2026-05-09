@@ -3,8 +3,8 @@
   "user_id": "2023210603",
   "user_name": "李俊杰",
   "role": "student",
-  "synced_at": "2026-05-07T12:59:47.376242",
-  "last_active": "2026-05-07T12:59:47.376267",
+  "synced_at": "2026-05-09T11:50:35.607358",
+  "last_active": "2026-05-09T11:50:35.607393",
   "quiz_results": [
     {
       "user_id": "2023210603",
@@ -27,7 +27,7 @@
       "task_id": 5,
       "user_id": "2023210603",
       "content": "PDF实验报告：2023210603李俊杰实验五 鸿蒙多端应用开发.pdf",
-      "file_paths": "/data/user/0/cn.edu.chzu.madkg/cache/file_picker/1778129985927/2023210603李俊杰实验五 鸿蒙多端应用开发.pdf",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2023210603/2023210603李俊杰实验五 鸿蒙多端应用开发.pdf",
       "file_names": "2023210603李俊杰实验五 鸿蒙多端应用开发.pdf",
       "submit_time": "2026-05-07T12:59:47.348585",
       "status": "已提交",
