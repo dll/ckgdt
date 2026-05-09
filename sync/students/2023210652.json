@@ -3,9 +3,19 @@
   "user_id": "2023210652",
   "user_name": "周丽棉",
   "role": "student",
-  "synced_at": "2026-05-10T05:33:44.401340",
-  "last_active": "2026-05-10T05:33:44.401458",
+  "synced_at": "2026-05-09T21:36:44.108297",
+  "last_active": "2026-05-09T21:36:44.108405",
   "quiz_results": [
+    {
+      "user_id": "2023210652",
+      "quiz_timestamp": "2026-05-09T21:36:37.262924",
+      "score": 100,
+      "num_correct": 5,
+      "num_total": 5,
+      "chapter": "第五章 华为多端应用开发1",
+      "quiz_type": null,
+      "completed_at": "2026-05-09T21:36:37.263061"
+    },
     {
       "user_id": "2023210652",
       "quiz_timestamp": "2026-04-29T20:38:04.796292",
