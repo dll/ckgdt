@@ -3,9 +3,30 @@
   "user_id": "2020213080",
   "user_name": "倪洋",
   "role": "student",
-  "synced_at": "2026-05-10T13:28:42.925595",
-  "last_active": "2026-05-10T13:28:42.925616",
-  "quiz_results": [],
+  "synced_at": "2026-05-10T13:31:42.923997",
+  "last_active": "2026-05-10T13:31:42.924007",
+  "quiz_results": [
+    {
+      "user_id": "2020213080",
+      "quiz_timestamp": "2026-05-10T13:31:06.625258",
+      "score": 100,
+      "num_correct": 3,
+      "num_total": 3,
+      "chapter": "第五章 华为多端应用开发2",
+      "quiz_type": null,
+      "completed_at": "2026-05-10T13:31:06.625305"
+    },
+    {
+      "user_id": "2020213080",
+      "quiz_timestamp": "2026-05-10T13:29:10.172386",
+      "score": 100,
+      "num_correct": 5,
+      "num_total": 5,
+      "chapter": "第五章 华为多端应用开发1",
+      "quiz_type": null,
+      "completed_at": "2026-05-10T13:29:10.172419"
+    }
+  ],
   "learning_records": [],
   "wrong_answers": [],
   "favorites": [],
