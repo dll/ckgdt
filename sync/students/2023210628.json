@@ -3,9 +3,20 @@
   "user_id": "2023210628",
   "user_name": "王全洋",
   "role": "student",
-  "synced_at": "2026-05-05T19:59:13.573776",
-  "last_active": "2026-05-05T19:59:13.573776",
-  "quiz_results": [],
+  "synced_at": "2026-05-10T16:37:18.107309",
+  "last_active": "2026-05-10T16:37:18.107327",
+  "quiz_results": [
+    {
+      "user_id": "2023210628",
+      "quiz_timestamp": "2026-05-02T11:25:14.304390",
+      "score": 100,
+      "num_correct": 5,
+      "num_total": 5,
+      "chapter": "第四章 小程序开发1",
+      "quiz_type": null,
+      "completed_at": "2026-05-02T11:25:14.304408"
+    }
+  ],
   "learning_records": [],
   "wrong_answers": [],
   "favorites": [],
@@ -34,7 +45,7 @@
       "task_id": 4,
       "user_id": "2023210628",
       "content": "PDF实验报告：2023210628王全洋实验四 微信小程序开发.pdf",
-      "file_paths": "C:\\Users\\31025\\Documents/sync_files/2023210628/2023210628王全洋实验四 微信小程序开发.pdf",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2023210628/2023210628王全洋实验四 微信小程序开发.pdf",
       "file_names": "2023210628王全洋实验四 微信小程序开发.pdf",
       "submit_time": "2026-04-24T11:59:57.156154",
       "status": "已提交",
