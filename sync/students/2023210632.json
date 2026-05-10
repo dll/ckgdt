@@ -3,55 +3,11 @@
   "user_id": "2023210632",
   "user_name": "王义琳",
   "role": "student",
-  "synced_at": "2026-05-10T20:11:42.329947",
-  "last_active": "2026-05-10T20:11:42.329961",
-  "quiz_results": [
-    {
-      "user_id": "2023210632",
-      "quiz_timestamp": "2026-05-01T21:48:22.522942",
-      "score": 100,
-      "num_correct": 5,
-      "num_total": 5,
-      "chapter": "第四章 小程序开发2",
-      "quiz_type": null,
-      "completed_at": "2026-05-01T21:48:22.523002"
-    },
-    {
-      "user_id": "2023210632",
-      "quiz_timestamp": "2026-05-01T21:45:40.170795",
-      "score": 100,
-      "num_correct": 5,
-      "num_total": 5,
-      "chapter": "第四章 小程序开发1",
-      "quiz_type": null,
-      "completed_at": "2026-05-01T21:45:40.170830"
-    }
-  ],
+  "synced_at": "2026-05-10T20:16:29.002981",
+  "last_active": "2026-05-10T20:16:29.002993",
+  "quiz_results": [],
   "learning_records": [],
-  "wrong_answers": [
-    {
-      "user_id": "2023210632",
-      "question_id": 2308,
-      "question": "支付宝小程序的页面结构文件使用什么扩展名？",
-      "user_answer": ".wxml",
-      "correct_answer": ".axml",
-      "chapter": "第四章 小程序开发2",
-      "times": 1,
-      "wrong_time": "2026-05-01T21:47:10.092434",
-      "last_wrong_time": "2026-05-01T21:47:10.092469"
-    },
-    {
-      "user_id": "2023210632",
-      "question_id": 2310,
-      "question": "跨平台小程序开发的主要挑战是什么？",
-      "user_answer": "性能差异巨大",
-      "correct_answer": "API差异和平台特性不同",
-      "chapter": "第四章 小程序开发2",
-      "times": 2,
-      "wrong_time": "2026-05-01T21:47:43.144768",
-      "last_wrong_time": "2026-05-01T21:48:05.346316"
-    }
-  ],
+  "wrong_answers": [],
   "favorites": [],
   "feedback": [],
   "learning_paths": [],
