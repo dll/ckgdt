@@ -3,9 +3,20 @@
   "user_id": "2023210608",
   "user_name": "刘宇乐",
   "role": "student",
-  "synced_at": "2026-05-05T12:52:45.383681",
-  "last_active": "2026-05-05T12:52:45.383681",
-  "quiz_results": [],
+  "synced_at": "2026-05-10T22:41:41.913006",
+  "last_active": "2026-05-10T22:41:41.913012",
+  "quiz_results": [
+    {
+      "user_id": "2023210608",
+      "quiz_timestamp": "2026-05-02T18:29:43.649577",
+      "score": 100,
+      "num_correct": 5,
+      "num_total": 5,
+      "chapter": "第四章 小程序开发1",
+      "quiz_type": null,
+      "completed_at": "2026-05-02T18:29:43.650603"
+    }
+  ],
   "learning_records": [],
   "wrong_answers": [],
   "favorites": [],
@@ -16,7 +27,7 @@
       "task_id": 1,
       "user_id": "2023210608",
       "content": "PDF实验报告：2023210608刘宇乐实验一 开发环境搭建.pdf",
-      "file_paths": "D:\\miccrosoft\\2023210608刘宇乐实验一 开发环境搭建.pdf",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2023210608/2023210608刘宇乐实验一 开发环境搭建.pdf",
       "file_names": "2023210608刘宇乐实验一 开发环境搭建.pdf",
       "submit_time": "2026-05-05T12:08:29.198813",
       "status": "已提交",
