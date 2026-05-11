@@ -3,8 +3,8 @@
   "user_id": "2020211596",
   "user_name": "李世程",
   "role": "student",
-  "synced_at": "2026-05-04T23:06:11.140953",
-  "last_active": "2026-05-04T23:06:11.140961",
+  "synced_at": "2026-05-11T16:45:50.798636",
+  "last_active": "2026-05-11T16:45:50.798654",
   "quiz_results": [
     {
       "user_id": "2020211596",
@@ -28,7 +28,20 @@
     }
   ],
   "learning_records": [],
-  "wrong_answers": [],
+  "wrong_answers": [
+    {
+      "user_id": "2020211596",
+      "question_id": 2311,
+      "question": "鸿蒙应用开发主要使用什么编程语言？",
+      "user_answer": "Java/Kotlin",
+      "correct_answer": "ArkTS/JavaScript",
+      "chapter": "第五章 华为多端应用开发1",
+      "times": 1,
+      "wrong_time": "2026-05-08T23:18:57.893688",
+      "last_wrong_time": "2026-05-08T23:18:57.893704",
+      "explanation": "鸿蒙应用开发主要使用华为自研的 ArkTS 语言（基于 TypeScript）及 JavaScript，这是 HarmonyOS 原生推荐的开发语言体系。你选的 Java/Kotlin 是安卓开发的主流语言，鸿蒙虽然兼容部分安卓语法，但已不再把 Java/Kotlin 作为首要开发方案。"
+    }
+  ],
   "favorites": [],
   "feedback": [],
   "learning_paths": [],
