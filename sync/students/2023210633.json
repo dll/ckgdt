@@ -3,8 +3,8 @@
   "user_id": "2023210633",
   "user_name": "王永喜",
   "role": "student",
-  "synced_at": "2026-05-12T18:37:15.870859",
-  "last_active": "2026-05-12T18:37:15.863759",
+  "synced_at": "2026-05-12T18:38:45.695834",
+  "last_active": "2026-05-12T18:38:45.695845",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
@@ -27,8 +27,8 @@
       "status": "已评分",
       "submit_time": null,
       "tags": "[\"HTML\",\"CSS\",\"JavaScript\"]",
-      "created_at": "2026-04-18T16:18:04.201477",
-      "updated_at": "2026-04-18T16:18:07.045713",
+      "created_at": "2026-05-12T18:17:05.068674",
+      "updated_at": "2026-05-12T18:17:05.507409",
       "project_id": null,
       "group_id": null,
       "video_url": "assets/videos/demo_2023210633.mp4",
@@ -54,7 +54,7 @@
       "user_role": "student",
       "content": "UI设计很好看，交互流畅。",
       "parent_id": null,
-      "created_at": "2026-04-18T16:18:05.960419"
+      "created_at": "2026-05-12T18:17:05.361621"
     },
     {
       "work_id": 25,
@@ -63,7 +63,7 @@
       "user_role": "student",
       "content": "文档写得很详细。",
       "parent_id": null,
-      "created_at": "2026-04-18T16:18:05.200201"
+      "created_at": "2026-05-12T18:17:05.281786"
     }
   ],
   "work_likes": [],
