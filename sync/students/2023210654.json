@@ -3,8 +3,8 @@
   "user_id": "2023210654",
   "user_name": "朱思维",
   "role": "student",
-  "synced_at": "2026-05-12T11:06:43.935449",
-  "last_active": "2026-05-12T11:06:43.935481",
+  "synced_at": "2026-05-12T18:40:44.266318",
+  "last_active": "2026-05-12T18:40:44.266355",
   "quiz_results": [
     {
       "user_id": "2023210654",
@@ -105,7 +105,14 @@
       "student_name": "朱思维"
     }
   ],
-  "survey_responses": [],
+  "survey_responses": [
+    {
+      "survey_id": 1,
+      "user_id": "2023210654",
+      "answers_json": "{\"1\":\"非常满意\",\"2\":[\"HarmonyOS\",\"Flutter开发\",\"Android原生\",\"小程序开发\",\"综合实践\"],\"3\":\"5\",\"4\":\"非常好，但开发的软件每次进入都需要登录\"}",
+      "submitted_at": "2026-05-12T11:08:46.357740"
+    }
+  ],
   "checkin_records": [],
   "work_comments": [],
   "work_likes": [],
@@ -123,7 +130,13 @@
       "read_at": null
     }
   ],
-  "work_views": [],
+  "work_views": [
+    {
+      "work_id": 67,
+      "user_id": "2023210654",
+      "viewed_at": "2026-05-12T11:06:54.195880"
+    }
+  ],
   "peer_reviews": [],
   "collaboration_messages": [],
   "contribution_scores": [],
