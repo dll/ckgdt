@@ -3,8 +3,8 @@
   "user_id": "2023211985",
   "user_name": "测试学生",
   "role": "student",
-  "synced_at": "2026-05-12T10:57:04.656565",
-  "last_active": "2026-05-12T10:57:04.644601",
+  "synced_at": "2026-05-12T11:04:47.178711",
+  "last_active": "2026-05-12T11:04:47.163711",
   "quiz_results": [
     {
       "user_id": "2023211985",
@@ -184,7 +184,7 @@
       "task_id": 1,
       "user_id": "2023211985",
       "content": "PDF实验报告：软件工程.pdf",
-      "file_paths": "E:\\mad-se23\\g9-tcgis\\docs\\软件工程.pdf",
+      "file_paths": "C:\\Users\\ldl\\Documents/sync_files/2023211985/软件工程.pdf",
       "file_names": "软件工程.pdf",
       "submit_time": "2026-04-21T11:57:18.637947",
       "status": "已提交",
