@@ -3,8 +3,8 @@
   "user_id": "2023210608",
   "user_name": "刘宇乐",
   "role": "student",
-  "synced_at": "2026-05-10T22:41:41.913006",
-  "last_active": "2026-05-10T22:41:41.913012",
+  "synced_at": "2026-05-12T11:39:06.447188",
+  "last_active": "2026-05-12T11:39:06.447196",
   "quiz_results": [
     {
       "user_id": "2023210608",
@@ -18,7 +18,20 @@
     }
   ],
   "learning_records": [],
-  "wrong_answers": [],
+  "wrong_answers": [
+    {
+      "user_id": "2023210608",
+      "question_id": 2266,
+      "question": "Flutter框架使用的编程语言是？",
+      "user_answer": "JavaScript",
+      "correct_answer": "Dart",
+      "chapter": "第三章 混合开发技术3",
+      "times": 1,
+      "wrong_time": "2026-05-10T22:46:08.607938",
+      "last_wrong_time": "2026-05-10T22:46:08.607953",
+      "explanation": "Flutter是谷歌开发的移动UI框架，它专门使用Dart语言编写，因为Dart可以同时编译为原生代码和JavaScript，性能更好。JavaScript主要用于React Native或Web开发，与Flutter不兼容。所以你的答案混淆了不同框架的语言选择。"
+    }
+  ],
   "favorites": [],
   "feedback": [],
   "learning_paths": [],
@@ -43,7 +56,40 @@
     }
   ],
   "student_reports": [],
-  "student_works": [],
+  "student_works": [
+    {
+      "title": "在线学习辅助平台开发与整合",
+      "description": "【学习计划管理】提供学习计划的创建、编辑和进度追踪功能，支持按课程设置每日学习目标和截止日期。【AI知识图谱】调用AI大模型自动构建课程知识点的关联图谱，以可视化的节点和连线展示知识点间的依赖和递进关系。【学习进度展示】以进度条、完成度百分比和趋势图等形式展示各科目的学习进度，支持与学习计划的达成率对比。",
+      "tech_stack": "C# + .NET + MAUI",
+      "work_type": "综合项目",
+      "group_name": "cg3-olapdi",
+      "leader_name": "刘宇乐",
+      "user_id": "2023210608",
+      "file_path": null,
+      "file_size": null,
+      "status": "待提交",
+      "submit_time": null,
+      "tags": "[\"C#\",\".NET\",\"MAUI\"]",
+      "created_at": "2026-05-10T22:41:45.844179",
+      "updated_at": "2026-05-10T22:41:45.844184",
+      "related_node_ids": null,
+      "ai_suspicion": 0.0,
+      "teacher_confirmed": 0,
+      "project_id": null,
+      "group_id": null,
+      "video_url": null,
+      "thumbnail_url": null,
+      "video_duration": null,
+      "view_count": 0,
+      "like_count": 0,
+      "comment_count": 0,
+      "repo": "cg3-olapdi",
+      "class_group": "cg3",
+      "project": "在线学习辅助平台开发与整合",
+      "student_role": "MAUI开发工程师",
+      "student_name": "刘宇乐"
+    }
+  ],
   "survey_responses": [],
   "checkin_records": [],
   "work_comments": [],
