@@ -3,8 +3,8 @@
   "user_id": "2023210575",
   "user_name": "安豪",
   "role": "student",
-  "synced_at": "2026-05-14T16:54:52.026987",
-  "last_active": "2026-05-14T16:54:52.015582",
+  "synced_at": "2026-05-14T16:56:33.497952",
+  "last_active": "2026-05-14T16:56:33.437469",
   "quiz_results": [
     {
       "user_id": "2023210575",
@@ -33,6 +33,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 3,
+      "user_id": "2023210575",
+      "content": "PDF实验报告：2023210575安豪实验三 跨平台应用开发.pdf",
+      "file_paths": "E:\\浏览器下载\\2023210575安豪实验三 跨平台应用开发.pdf",
+      "file_names": "2023210575安豪实验三 跨平台应用开发.pdf",
+      "submit_time": "2026-05-14T16:56:33.426444",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-05-14T16:56:33.426444",
+      "updated_at": "2026-05-14T16:56:33.426444",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 1,
       "user_id": "2023210575",
