@@ -5,7 +5,7 @@
 **移动图谱与数字孪生教学系统（MAD-KG）** 是面向《移动应用开发》课程的 Flutter 全平台教学平台。系统围绕"教—学—练—评—管"五个维度构建：知识图谱浏览、章节测验、视频教程、课程资料、实验管理、作品展示、成绩达成、AI 多智能体辅助。支持教师端和学生端差异化导航，通过 Gitee 仓库实现师生数据双向同步。
 
 - **仓库**：https://gitee.com/osgisOne/mad-fd
-- **当前版本**：`0.9.10`（`pubspec.yaml` → `version: 0.9.10+10`）
+- **当前版本**：`0.10.0`（`pubspec.yaml` → `version: 0.10.0+11`）
 - **Flutter SDK**：`>=3.0.0 <4.0.0`
 - **主题色**：`#667eea`（紫蓝渐变 `[0xFF667eea, 0xFF764ba2]`）
 - **用户角色**：学生 / 教师 / 管理员
@@ -20,7 +20,7 @@
 | UI 框架 | Flutter 3 + Material Design 3 |
 | 本地数据库 | sqflite + 自定义 DAO（59 张表） |
 | AI 服务 | DeepSeek / 智谱 GLM-4（多 provider） |
-| 多智能体 | 22 个专业 Agent + RAG 检索增强 |
+| 多智能体 | 24 个专业 Agent + RAG 检索增强 |
 | 语音交互 | 讯飞 WebSocket STT + AI 意图识别 |
 | 数据同步 | Gitee 仓库 JSON 双向同步 |
 | 图谱绘制 | CustomPainter + InteractiveViewer |
@@ -90,7 +90,7 @@
 lib/
 ├── main.dart                              # 入口：DB 初始化、主题、竖屏锁定、语音导航
 ├── data/
-│   ├── models/                            # 纯数据类（11 个），无 Flutter 依赖
+│   ├── models/                            # 纯数据类（12 个），无 Flutter 依赖
 │   │   ├── ai_config_model.dart           # AI 配置（provider/model/key）
 │   │   ├── course_model.dart              # 课程定义
 │   │   ├── learning_path_model.dart       # 学习路径
@@ -127,6 +127,8 @@ lib/
 │   ├── tts_service.dart / tts_flutter_service.dart  # TTS 语音合成
 │   ├── auth_service.dart                  # 登录/登出/角色判断
 │   ├── courseware_service.dart             # 课件管理
+│   ├── courseware_download_service.dart    # 课件下载（本地优先 + Gitee mad-data 仓库远程兜底）
+│   ├── output_path_service.dart            # 输出目录（桌面 → exe/out/，移动端 → 文档目录）
 │   ├── file_upload_service.dart           # 文件上传
 │   ├── graph_layout_service.dart          # 图谱布局算法
 │   ├── knowledge_extract_service.dart     # 知识抽取
@@ -140,7 +142,7 @@ lib/
 │       ├── agent_model.dart               # AgentConfig（persona/tools/cases）
 │       ├── agent_registry.dart            # 智能体注册表
 │       ├── base_agent.dart                # 基类（会话管理/AI 调用/工具执行）
-│       └── agents/                        # 22 个专业智能体
+│       └── agents/                        # 24 个专业智能体
 │           ├── voice_agent.dart           # 语音导航（AI 意图识别）
 │           ├── graph_agent.dart           # 图谱专家（含工具调用）
 │           ├── tutor_agent.dart           # 智能辅导
@@ -152,15 +154,17 @@ lib/
 │           ├── safety_agent.dart           # 安全审查
 │           ├── courseware_agent.dart       # 课件生成
 │           ├── course_gen_agent.dart       # 一键生课
+│           ├── virtual_student_agent.dart  # 数字孪生-学生
+│           ├── virtual_teacher_agent.dart  # 数字孪生-教师
 │           └── ... (assistant/learning/path/mobile_expert/ethics/...)
 └── presentation/
-    ├── widgets/                            # 可复用组件（5 个）
+    ├── widgets/                            # 可复用组件（6 个）
     │   ├── agent_chat_overlay.dart         # 智能体对话浮层（支持 7 种导航动作）
     │   ├── agent_entry_button.dart         # 智能体入口按钮
     │   ├── voice_input_button.dart         # 语音输入按钮
     │   ├── markdown_bubble.dart            # Markdown 气泡渲染
     │   └── course_generator_sheet.dart     # 一键生课表单
-    └── pages/                              # 71 个页面
+    └── pages/                              # 88 个页面
         ├── home/                           # 首页/搜索/设置
         ├── graph/                          # 图谱列表/详情/收藏/属性/知识图谱
         ├── quiz/                           # 测验/错题本
@@ -192,6 +196,22 @@ lib/
 ## 数据库设计（59 张表）
 
 数据库由 `DatabaseHelper`（单例）管理，首次启动从 `assets/learning_data.db` 复制。
+
+### 种子数据库初始化流程（关键）
+
+种子 DB `assets/learning_data.db` 已预置 `user_version = 20`，包含 52 道测验题、7 个图谱等种子数据。初始化流程为三层防御：
+
+```
+1. 复制 seed DB → assets/learning_data.db → knowledge_graph.db（仅首次）
+2. 打开 DB（version: 20）→ 若 seed DB 已设置 user_version=20，则跳过 onCreate/onUpgrade
+3. _ensureAllTables() → 始终执行，确保 59 张表存在
+4. _verifyAndRepairSeedData() → 检查 questions/graphs 是否为空，若空则从 seed DB 重新导入
+```
+
+**关键点**：
+- 种子 DB 的 `user_version = 20` 是核心：匹配 `openDatabase(version: 20)` 时，sqflite 不会触发 `onCreate`/`onUpgrade`，种子数据得以完整保留
+- `_importTableSafe()` 方法会对比目标表列名，只迁移匹配的列（处理 seed DB 与应用 DB 的 schema 差异）
+- 三层防御确保：正常复制 → 版本匹配跳过迁移 → 异常时自动修复空数据
 
 ### 核心表
 
@@ -267,7 +287,7 @@ AgentRegistry (单例)
   │   ├── AgentConfig (persona/tools/cases/usageSteps)
   │   ├── AgentSession (多轮对话上下文)
   │   └── handleMessage() → AI 推理 + 工具调用
-  └── 22 个专业 Agent
+  └── 24 个专业 Agent
 ```
 
 ### 智能体列表
@@ -295,6 +315,9 @@ AgentRegistry (单例)
 | `repo` | Git 仓库分析 | gitee_service |
 | `madkg` | 系统使用指南 | — |
 | `works` | 作品展示指导 | — |
+| `assessment` | 考核管理（分组/答辩/成绩查询） | assessment_dao |
+| `virtual_student` | 数字孪生-学生人格模拟 | — |
+| `virtual_teacher` | 数字孪生-教师督导辅助 | — |
 
 ### 对话入口
 
@@ -414,7 +437,7 @@ flutter clean                                # 清理缓存
 
 ## 构建产物命名规范
 
-**统一名称格式**：`移动图谱v{版本号}`（如 `移动图谱v0.9.10`）
+**统一名称格式**：`移动图谱v{版本号}`（如 `移动图谱v0.10.0`）
 
 升版时需同步修改以下文件（将 `X.Y.Z` 替换为新版本号）：
 
@@ -441,7 +464,6 @@ flutter clean                                # 清理缓存
 5. **不要提交中间产物**：`docs/video/**/audio/`、`slides/`、`sent/`、`temp/`、`crops/` 已 gitignore
 6. **LEFT JOIN**：`lab_task_dao.getSubmissions()` 必须用 LEFT JOIN（非 INNER JOIN），否则跨设备 task_id 不匹配时提交不可见
 7. **DAO 中的 CREATE TABLE IF NOT EXISTS**：部分表在 `database_helper.dart` 和对应 DAO 中都有建表语句，靠 `IF NOT EXISTS` 防冲突
-8. **`main.dart` 重复 import**：存在重复的 `theme_manager.dart` 和 `settings_service.dart` import
 
 ---
 
