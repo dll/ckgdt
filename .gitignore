@@ -72,4 +72,17 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# ── 敏感文件（签名/密钥/环境变量） ──
+.env
+.env.*
+*.jks
+*.keystore
+*.key
+*.pem
+*.p12
+key.properties
+google-services.json
+GoogleService-Info.plist
+
 docs/分层架构HelloWorldAndroid版AI问答系统/

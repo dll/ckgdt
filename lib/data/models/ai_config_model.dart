@@ -17,20 +17,27 @@ class ProviderPreset {
   });
 }
 
-/// 内置默认 API Key 映射（开发版使用，正式发布时移除）
+/// 内置默认 API Key 映射
 ///
-/// 格式: 'provider:model' => apiKey
-/// 如果只有 'provider' 则适用于该 provider 的所有模型
+/// 通过 --dart-define 编译参数注入，不再硬编码到源码中。
+/// 编译示例：
+///   flutter run --dart-define=DEEPSEEK_KEY=sk-xxx \
+///               --dart-define=ZHIPU_KEY=xxx \
+///               --dart-define=ZHIPU_GLM4V_KEY=xxx
 const bool kShowApiKeyInput = bool.fromEnvironment(
   'SHOW_API_KEY_INPUT',
   defaultValue: false,
 );
 
-const Map<String, String> builtinApiKeys = {
-  'deepseek': 'sk-717ef9146311424daa2fbead8ed4682b',
-  'zhipu': '5dc44da8d9dd4c28bf38cde316950f1e.nNIf7AXWrJXIcSyQ',
-  'zhipu:glm-4.6v': '20322a4a95bf4bd68161b1f705aa6603.yHEHABcNAcOWy8WH',
-};
+const String _envDeepseekKey = String.fromEnvironment('DEEPSEEK_KEY');
+const String _envZhipuKey = String.fromEnvironment('ZHIPU_KEY');
+const String _envZhipuGlm4vKey = String.fromEnvironment('ZHIPU_GLM4V_KEY');
+
+Map<String, String> get builtinApiKeys => {
+      if (_envDeepseekKey.isNotEmpty) 'deepseek': _envDeepseekKey,
+      if (_envZhipuKey.isNotEmpty) 'zhipu': _envZhipuKey,
+      if (_envZhipuGlm4vKey.isNotEmpty) 'zhipu:glm-4.6v': _envZhipuGlm4vKey,
+    };
 
 class AiConfigModel {
   final String provider;
