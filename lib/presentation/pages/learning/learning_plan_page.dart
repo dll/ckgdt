@@ -5,6 +5,7 @@ import '../../widgets/agent_entry_button.dart';
 import '../../../data/local/learning_path_dao.dart';
 import '../../../data/local/graph_dao.dart';
 import '../../../data/local/knowledge_graph_dao.dart';
+import '../../../data/local/wrong_answer_dao.dart';
 import '../../../data/models/learning_path_model.dart';
 import '../../../data/models/node_model.dart';
 import '../learning/video_page.dart';
@@ -126,6 +127,37 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
     }
   }
 
+  Future<void> _generateRemediationPath() async {
+    final userId = _authService.getCurrentUserId();
+    if (userId == null) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final pathId = await _learningPathDao.generateRemediationPath(userId);
+      if (pathId != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('已根据错题自动生成补强学习路径'),
+            backgroundColor: Color(0xFF43A047),
+          ),
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('暂无错题，无需生成补强路径')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('生成失败: $e')),
+        );
+      }
+    }
+
+    _loadPaths();
+  }
+
   // ── 路径颜色 ───────────────────────────────────────────────────────────
   Color _pathColor(LearningPathModel path) {
     const colors = [
@@ -173,6 +205,15 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
         ],
       ),
       body: _selectedPath != null ? _buildDetailView() : _buildListView(),
+      floatingActionButton: _selectedPath == null
+          ? FloatingActionButton.extended(
+              onPressed: _generateRemediationPath,
+              icon: const Icon(Icons.auto_fix_high),
+              label: const Text('AI 生成补强路径'),
+              backgroundColor: const Color(0xFF667eea),
+              foregroundColor: Colors.white,
+            )
+          : null,
     );
   }
 

@@ -705,28 +705,116 @@ class _CollaborationPageState extends State<CollaborationPage>
   }
 
   void _showEditDivisionDialog() {
+    final roles = [
+      'UI 设计与实现',
+      '后端接口开发',
+      '数据库设计',
+      '测试与文档',
+      '前端开发',
+      'API 接口设计',
+    ];
+    final controllers = <TextEditingController>[];
+    final roleValues = <String>[];
+
+    for (final div in _taskDivisions) {
+      controllers.add(
+        TextEditingController(text: div['role'] as String? ?? ''),
+      );
+      roleValues.add(div['role'] as String? ?? '');
+    }
+
     showDialog(
       context: context,
       builder: (ctx) {
-        return AlertDialog(
-          title: const Text('编辑分工'),
-          content: const SizedBox(
-            width: 300,
-            child: Text(
-              '教师可在此修改每位成员的角色分工和进度。\n\n'
-              '（此功能将在后续版本中完善数据持久化）',
-              style: TextStyle(fontSize: 14, height: 1.5),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('知道了'),
-            ),
-          ],
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return AlertDialog(
+              title: const Text('编辑分工'),
+              content: SizedBox(
+                width: 360,
+                child: _taskDivisions.isEmpty
+                    ? const Text('暂无分工数据')
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _taskDivisions.length,
+                        itemBuilder: (_, i) {
+                          final div = _taskDivisions[i];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  flex: 2,
+                                  child: Text(
+                                    div['member_name'] as String? ?? '',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  flex: 3,
+                                  child: DropdownButtonFormField<String>(
+                                    value: roleValues[i].isNotEmpty &&
+                                            roles.contains(roleValues[i])
+                                        ? roleValues[i]
+                                        : roles.first,
+                                    items: roles
+                                        .map((r) => DropdownMenuItem(
+                                              value: r,
+                                              child: Text(r,
+                                                  style:
+                                                      const TextStyle(
+                                                          fontSize: 13)),
+                                            ))
+                                        .toList(),
+                                    onChanged: (val) {
+                                      setDialogState(() {
+                                        roleValues[i] = val ?? roles.first;
+                                      });
+                                    },
+                                    decoration: const InputDecoration(
+                                      isDense: true,
+                                      contentPadding: EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 8),
+                                      border: OutlineInputBorder(),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('取消'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    for (int i = 0; i < _taskDivisions.length; i++) {
+                      _taskDivisions[i]['role'] = roleValues[i];
+                    }
+                    setState(() {});
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('分工已更新')),
+                    );
+                  },
+                  child: const Text('保存'),
+                ),
+              ],
+            );
+          },
         );
       },
-    );
+    ).then((_) {
+      for (final c in controllers) {
+        c.dispose();
+      }
+    });
   }
 
   // ══════════════════════════════════════════════════════════════════════════
