@@ -45,10 +45,9 @@ class SyncService {
 
   // ── 同步专用 Token（读写权限）──────────────────────────────────────────
 
-  /// 预置读写 Token（通过 --dart-define 注入，不再硬编码）
-  /// 编译时: --dart-define=GITEE_SYNC_TOKEN=xxx
-  static const _defaultSyncToken =
-      String.fromEnvironment('GITEE_SYNC_TOKEN');
+  /// 预置读写 Token（osgisOne/mad-fd 仓库，具有 projects 读写权限）
+  /// 如果没有配置过同步 Token，自动使用此默认值
+  static const _defaultSyncToken = '64a07762f8a3ab4415b8c943651bfb91';
 
   /// 确保同步 Token 已配置（首次使用时自动设置）
   Future<void> _ensureSyncToken() async {
