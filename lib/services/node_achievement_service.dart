@@ -7,50 +7,108 @@ import '../data/local/database_helper.dart';
 class NodeAchievementService {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
 
+  /// 检查表是否存在
+  Future<bool> _tableExists(Database db, String tableName) async {
+    final result = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+      [tableName],
+    );
+    return result.isNotEmpty;
+  }
+
+  /// 检查表中是否存在指定列
+  Future<bool> _columnExists(Database db, String tableName, String columnName) async {
+    try {
+      await db.rawQuery('SELECT $columnName FROM $tableName LIMIT 0');
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// 确保 node_achievement 表存在
+  Future<void> _ensureNodeAchievementTable(Database db) async {
+    if (!await _tableExists(db, 'node_achievement')) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS node_achievement (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          node_id INTEGER NOT NULL,
+          quiz_score REAL DEFAULT 0,
+          lab_score REAL DEFAULT 0,
+          work_score REAL DEFAULT 0,
+          overall REAL DEFAULT 0,
+          updated_at TEXT,
+          UNIQUE(user_id, node_id)
+        )
+      ''');
+    }
+  }
+
   /// 重算某用户指定节点的综合达成度
   /// 权重：quiz 30% + lab 40% + work 30%
   Future<void> recompute(String userId, List<int> nodeIds) async {
     if (nodeIds.isEmpty) return;
     final db = await _dbHelper.database;
+    await _ensureNodeAchievementTable(db);
+
+    final hasQuestions = await _tableExists(db, 'questions');
+    final hasQuizResults = await _tableExists(db, 'quiz_results');
+    final hasLabSubmissions = await _tableExists(db, 'lab_submissions');
+    final hasLabTasks = await _tableExists(db, 'lab_tasks');
+    final hasWorkScores = await _tableExists(db, 'work_scores');
+    final hasStudentWorks = await _tableExists(db, 'student_works');
 
     for (final nodeId in nodeIds) {
       double quizScore = 0;
       double labScore = 0;
       double workScore = 0;
 
-      // quiz_results 中关联该节点的平均分
-      try {
-        final qr = await db.rawQuery('''
-          SELECT AVG(qr.score) as avg_score
-          FROM quiz_results qr
-          JOIN questions q ON qr.chapter = q.source
-          WHERE qr.user_id = ? AND q.node_id = ?
-        ''', [userId, nodeId]);
-        quizScore = (qr.first['avg_score'] as num?)?.toDouble() ?? 0;
-      } catch (_) {}
+      if (hasQuizResults && hasQuestions) {
+        try {
+          final hasNodeId = await _columnExists(db, 'questions', 'node_id');
+          if (hasNodeId) {
+            final qr = await db.rawQuery('''
+              SELECT AVG(qr.score) as avg_score
+              FROM quiz_results qr
+              JOIN questions q ON qr.chapter = q.source
+              WHERE qr.user_id = ? AND q.node_id = ?
+            ''', [userId, nodeId]);
+            quizScore = (qr.first['avg_score'] as num?)?.toDouble() ?? 0;
+          }
+        } catch (_) {}
+      }
 
-      // lab_submissions 关联该节点的平均分
-      try {
-        final lr = await db.rawQuery('''
-          SELECT AVG(ls.score) as avg_score
-          FROM lab_submissions ls
-          JOIN lab_tasks lt ON ls.task_id = lt.id
-          WHERE ls.user_id = ? AND ls.score IS NOT NULL
-            AND lt.related_node_ids LIKE ?
-        ''', [userId, '%$nodeId%']);
-        labScore = (lr.first['avg_score'] as num?)?.toDouble() ?? 0;
-      } catch (_) {}
+      if (hasLabSubmissions && hasLabTasks) {
+        try {
+          final hasRelatedNodeIds = await _columnExists(db, 'lab_tasks', 'related_node_ids');
+          if (hasRelatedNodeIds) {
+            final lr = await db.rawQuery('''
+              SELECT AVG(ls.score) as avg_score
+              FROM lab_submissions ls
+              JOIN lab_tasks lt ON ls.task_id = lt.id
+              WHERE ls.user_id = ? AND ls.score IS NOT NULL
+                AND lt.related_node_ids LIKE ?
+            ''', [userId, '%$nodeId%']);
+            labScore = (lr.first['avg_score'] as num?)?.toDouble() ?? 0;
+          }
+        } catch (_) {}
+      }
 
-      // student_works 关联该节点的平均分
-      try {
-        final wr = await db.rawQuery('''
-          SELECT AVG(ws.total_score) as avg_score
-          FROM work_scores ws
-          JOIN student_works sw ON ws.work_id = sw.id
-          WHERE sw.user_id = ? AND sw.related_node_ids LIKE ?
-        ''', [userId, '%$nodeId%']);
-        workScore = (wr.first['avg_score'] as num?)?.toDouble() ?? 0;
-      } catch (_) {}
+      if (hasWorkScores && hasStudentWorks) {
+        try {
+          final hasRelatedNodeIds = await _columnExists(db, 'student_works', 'related_node_ids');
+          if (hasRelatedNodeIds) {
+            final wr = await db.rawQuery('''
+              SELECT AVG(ws.total_score) as avg_score
+              FROM work_scores ws
+              JOIN student_works sw ON ws.work_id = sw.id
+              WHERE sw.user_id = ? AND sw.related_node_ids LIKE ?
+            ''', [userId, '%$nodeId%']);
+            workScore = (wr.first['avg_score'] as num?)?.toDouble() ?? 0;
+          }
+        } catch (_) {}
+      }
 
       final overall = quizScore * 0.3 + labScore * 0.4 + workScore * 0.3;
 

@@ -327,7 +327,7 @@
 - 长按录音交互（`voice_input_button.dart`）。
 
 ### 14.2 语音合成（`tts_service.dart` + `tts_flutter_service.dart`）
-- 双引擎 TTS：讯飞在线合成 + Flutter 本地合成。
+- 双引擎 TTS：edge-tts（微软语音合成命令行工具）+ Flutter 本地合成（flutter_tts）。
 - 语音设置（`voice_settings_page.dart`）：引擎选择、语速、音量调节。
 
 ### 14.3 语音导航（`voice_agent.dart`）
@@ -492,7 +492,7 @@
 | **AI 服务** | DeepSeek / 智谱 GLM-4 | 多 Provider 切换，API Key 存 DB |
 | **多智能体** | 24 个 Agent + Director 编排 | 关键词匹配 + AI 意图识别 |
 | **RAG 检索** | RagService | 课程内容知识库增强 |
-| **语音交互** | 讯飞 WebSocket STT + TTS | 实时语音识别与合成 |
+| **语音交互** | 讯飞 WebSocket STT + edge-tts / Flutter 本地 TTS | 实时语音识别与合成 |
 | **数据同步** | Gitee 仓库 JSON 双向同步 | 无服务器架构 |
 | **跨平台同步** | WebSocket + QR 扫码 | 局域网实时同步 |
 | **图谱绘制** | CustomPainter + InteractiveViewer | 自定义绘制 + 手势交互 |
@@ -690,7 +690,7 @@
 | 文件 | 状态 | 行数 | 发现 |
 |------|------|------|------|
 | voice_service.dart | ✅ | 376 | 讯飞WebSocket完整实现，HMAC-SHA256鉴权，流式录音，消息解析 |
-| tts_service.dart | ⚠️ | 210 | 使用edge-tts而非讯飞TTS，命令行+Python双通道，批量生成已实现 |
+| tts_service.dart | ⚠️ | 210 | 使用edge-tts而非讯飞TTS，命令行+Python双通道，批量生成已实现（已更新文档描述） |
 | tts_flutter_service.dart | ✅ | 173 | flutter_tts本地TTS，语言检测降级，安全初始化 |
 | voice_agent.dart | ✅ | 476 | 4层路由（退出/登录/返回/AI），意图识别JSON解析，46个导航映射 |
 | voice_input_button.dart | ✅ | 632 | 3个组件（输入按钮/录音弹窗/导航FAB），真实录音+动画+导航 |
@@ -735,15 +735,15 @@
 
 | # | 文件 | 问题描述 | 建议修复方案 |
 |---|------|----------|-------------|
-| 1 | role_guard.dart | 缺少UI层路由守卫和自动拦截机制，依赖各页面手动调用 | 补充 `requireRole(context, role)` 全局路由中间件 |
-| 2 | favorites_page.dart | 缺少搜索功能和独立添加入口 | 添加搜索框（添加收藏在详情页完成，架构合理） |
-| 3 | node_achievement_service.dart | 依赖的数据库表可能不完整，功能可能静默失效 | 完善表结构迁移，添加字段存在性检查 |
-| 4 | graph_dao.dart | 缺少insert/update方法，运行时动态增删改需绕过DAO | 补充 `createGraph`/`insertNode`/`insertEdge`/`updateNode`/`updateEdge` 方法 |
-| 5 | learning_plan_page.dart | 缺少AI生成学习计划入口，DAO层方法未被页面调用 | 添加FAB按钮调用 `generateRemediationPath` 或提供手动创建表单 |
-| 6 | collaboration_page.dart | 分工管理编辑功能为占位提示，缺少实际编辑和持久化逻辑 | 实现分工编辑对话框，调用DAO持久化 |
-| 7 | productization_guide_page.dart | 检查项状态仅存内存，页面关闭后丢失 | 使用SharedPreferences或数据库持久化勾选状态 |
+| 1 | role_guard.dart | 缺少UI层路由守卫和自动拦截机制，依赖各页面手动调用 | ✅ 已补充 `requireRole`/`requireTeacher`/`requireAdmin` 方法和权限拦截对话框 |
+| 2 | favorites_page.dart | 缺少搜索功能和独立添加入口 | ✅ 已添加搜索框，支持按标题和节点ID搜索 |
+| 3 | node_achievement_service.dart | 依赖的数据库表可能不完整，功能可能静默失效 | ✅ 已添加表/列存在性检查和自动建表逻辑 |
+| 4 | graph_dao.dart | 缺少insert/update方法，运行时动态增删改需绕过DAO | ✅ 已补充 `createGraph`/`insertNode`/`insertEdge`/`updateNode`/`updateEdge`/`deleteNode`/`deleteEdge` 等方法 |
+| 5 | learning_plan_page.dart | 缺少AI生成学习计划入口，DAO层方法未被页面调用 | ✅ 已添加FAB按钮调用 `generateRemediationPath` |
+| 6 | collaboration_page.dart | 分工管理编辑功能为占位提示，缺少实际编辑和持久化逻辑 | ✅ 已实现分工编辑对话框（DropdownButtonFormField选择角色） |
+| 7 | productization_guide_page.dart | 检查项状态仅存内存，页面关闭后丢失 | ✅ 已使用SharedPreferences持久化勾选状态 |
 | 8 | rag_service.dart | 基于关键词LIKE匹配，未实现向量嵌入语义检索 | 当前规模下关键词匹配可用，后续可引入embedding模型 |
-| 9 | tts_service.dart | 使用edge-tts而非讯飞TTS，与文档描述不符 | 更新文档说明，或补充讯飞TTS WebSocket实现 |
+| 9 | tts_service.dart | 使用edge-tts而非讯飞TTS，与文档描述不符 | ✅ 已更新文档说明为edge-tts + flutter_tts双引擎 |
 
 ### 26.4 审核结论
 
