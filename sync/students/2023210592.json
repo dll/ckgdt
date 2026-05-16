@@ -3,8 +3,8 @@
   "user_id": "2023210592",
   "user_name": "龚成磊",
   "role": "student",
-  "synced_at": "2026-05-16T15:17:24.348037",
-  "last_active": "2026-05-16T15:17:24.348048",
+  "synced_at": "2026-05-16T15:21:16.074593",
+  "last_active": "2026-05-16T15:21:16.074608",
   "quiz_results": [
     {
       "user_id": "2023210592",
@@ -33,6 +33,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 5,
+      "user_id": "2023210592",
+      "content": "PDF实验报告：2023210592龚成磊实验五 鸿蒙多端应用开发.pdf",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/cache/file_picker/1778916075303/2023210592龚成磊实验五 鸿蒙多端应用开发.pdf",
+      "file_names": "2023210592龚成磊实验五 鸿蒙多端应用开发.pdf",
+      "submit_time": "2026-05-16T15:21:16.053058",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-05-16T15:21:16.053058",
+      "updated_at": "2026-05-16T15:21:16.053058",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 4,
       "user_id": "2023210592",
