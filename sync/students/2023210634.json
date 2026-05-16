@@ -3,9 +3,20 @@
   "user_id": "2023210634",
   "user_name": "王智宇",
   "role": "student",
-  "synced_at": "2026-05-09T19:10:01.630113",
-  "last_active": "2026-05-09T19:10:01.630119",
-  "quiz_results": [],
+  "synced_at": "2026-05-16T21:20:57.250499",
+  "last_active": "2026-05-16T21:20:57.250504",
+  "quiz_results": [
+    {
+      "user_id": "2023210634",
+      "quiz_timestamp": "2026-05-09T19:17:09.197676",
+      "score": 100,
+      "num_correct": 5,
+      "num_total": 5,
+      "chapter": "第五章 华为多端应用开发1",
+      "quiz_type": null,
+      "completed_at": "2026-05-09T19:17:09.198268"
+    }
+  ],
   "learning_records": [],
   "wrong_answers": [],
   "favorites": [],
