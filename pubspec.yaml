@@ -1,7 +1,7 @@
 name: knowledge_graph_app
 description: 移动图谱与数字孪生教学系统
 publish_to: "none"
-version: 0.10.0+11
+version: 0.11.0+12
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
