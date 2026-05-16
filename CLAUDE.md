@@ -163,6 +163,7 @@ lib/
     │   ├── agent_entry_button.dart         # 智能体入口按钮
     │   ├── voice_input_button.dart         # 语音输入按钮
     │   ├── markdown_bubble.dart            # Markdown 气泡渲染
+    │   ├── mad_mascot_button.dart          # 吉祥物悬浮按钮
     │   └── course_generator_sheet.dart     # 一键生课表单
     └── pages/                              # 88 个页面
         ├── home/                           # 首页/搜索/设置
@@ -199,7 +200,7 @@ lib/
 
 ### 种子数据库初始化流程（关键）
 
-种子 DB `assets/learning_data.db` 已预置 `user_version = 20`，包含 52 道测验题、7 个图谱等种子数据。初始化流程为三层防御：
+种子 DB `assets/learning_data.db` 已预置 `user_version = 20`，包含 52 道测验题、23 个图谱等种子数据。初始化流程为三层防御：
 
 ```
 1. 复制 seed DB → assets/learning_data.db → knowledge_graph.db（仅首次）
