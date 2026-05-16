@@ -114,13 +114,10 @@ class SettingsService {
   // 讯飞语音配置（AppID / APIKey / APISecret）
   // ═════════════════════════════════════════════════════════════════════════
 
-  // 讯飞默认配置（通过 --dart-define 注入，不再硬编码）
-  static const String _defaultXunfeiAppId =
-      String.fromEnvironment('XUNFEI_APP_ID');
-  static const String _defaultXunfeiApiKey =
-      String.fromEnvironment('XUNFEI_API_KEY');
-  static const String _defaultXunfeiApiSecret =
-      String.fromEnvironment('XUNFEI_API_SECRET');
+  // 讯飞默认配置
+  static const String _defaultXunfeiAppId = 'ae4a0e4a';
+  static const String _defaultXunfeiApiKey = '7385e5cb32d3465474e613dfbfc69310';
+  static const String _defaultXunfeiApiSecret = 'NTI2NzVlOWQ0ZTM5YTgzNGYzZDI5NjQx';
 
   static Future<String> getXunfeiAppId() async {
     final prefs = await SharedPreferences.getInstance();
