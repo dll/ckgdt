@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/app_theme.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -22,6 +23,32 @@ class _ProductizationGuidePageState extends State<ProductizationGuidePage> {
   void initState() {
     super.initState();
     _categories = _buildCategories();
+    _loadProgress();
+  }
+
+  static const _prefsKey = 'productization_checked';
+
+  Future<void> _loadProgress() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getStringList(_prefsKey) ?? [];
+    setState(() {
+      for (final category in _categories) {
+        for (final item in category.items) {
+          item.isChecked = saved.contains(item.title);
+        }
+      }
+    });
+  }
+
+  Future<void> _saveProgress() async {
+    final prefs = await SharedPreferences.getInstance();
+    final checked = <String>[];
+    for (final category in _categories) {
+      for (final item in category.items) {
+        if (item.isChecked) checked.add(item.title);
+      }
+    }
+    await prefs.setStringList(_prefsKey, checked);
   }
 
   // ── 计算总体进度 ─────────────────────────────────────────────────────────
@@ -76,6 +103,7 @@ class _ProductizationGuidePageState extends State<ProductizationGuidePage> {
             }
           }
         });
+        _saveProgress();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('已重置所有检查项')),
         );
@@ -312,6 +340,7 @@ class _ProductizationGuidePageState extends State<ProductizationGuidePage> {
       value: item.isChecked,
       onChanged: (val) {
         setState(() => item.isChecked = val ?? false);
+        _saveProgress();
       },
       controlAffinity: ListTileControlAffinity.leading,
       activeColor: categoryColor,

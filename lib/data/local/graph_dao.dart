@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:sqflite/sqflite.dart';
 import '../models/graph_model.dart';
 import '../models/node_model.dart';
 import '../models/edge_model.dart';
@@ -107,5 +108,85 @@ class GraphDao {
     await db.delete('edges', where: 'graph_id = ?', whereArgs: [graphId]);
     await db.delete('nodes', where: 'graph_id = ?', whereArgs: [graphId]);
     await db.delete('graphs', where: 'id = ?', whereArgs: [graphId]);
+  }
+
+  // ── 写入方法 ──────────────────────────────────────────────────────────
+
+  /// 创建新图谱，返回插入行 ID
+  Future<int> createGraph(GraphModel graph) async {
+    final db = await _dbHelper.database;
+    return await db.insert('graphs', graph.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  /// 更新图谱元数据（标题、类型、布局）
+  Future<void> updateGraph(GraphModel graph) async {
+    final db = await _dbHelper.database;
+    await db.update('graphs', graph.toMap(),
+        where: 'id = ?', whereArgs: [graph.id]);
+  }
+
+  /// 插入节点
+  Future<void> insertNode(NodeModel node) async {
+    final db = await _dbHelper.database;
+    await db.insert('nodes', node.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  /// 批量插入节点
+  Future<void> insertNodes(List<NodeModel> nodes) async {
+    final db = await _dbHelper.database;
+    final batch = db.batch();
+    for (final node in nodes) {
+      batch.insert('nodes', node.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+  }
+
+  /// 更新节点
+  Future<void> updateNode(NodeModel node) async {
+    final db = await _dbHelper.database;
+    await db.update('nodes', node.toMap(),
+        where: 'id = ?', whereArgs: [node.id]);
+  }
+
+  /// 删除节点
+  Future<void> deleteNode(String nodeId) async {
+    final db = await _dbHelper.database;
+    await db.delete('edges',
+        where: 'source_id = ? OR target_id = ?', whereArgs: [nodeId, nodeId]);
+    await db.delete('nodes', where: 'id = ?', whereArgs: [nodeId]);
+  }
+
+  /// 插入边
+  Future<void> insertEdge(EdgeModel edge) async {
+    final db = await _dbHelper.database;
+    await db.insert('edges', edge.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  /// 批量插入边
+  Future<void> insertEdges(List<EdgeModel> edges) async {
+    final db = await _dbHelper.database;
+    final batch = db.batch();
+    for (final edge in edges) {
+      batch.insert('edges', edge.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+  }
+
+  /// 更新边
+  Future<void> updateEdge(EdgeModel edge) async {
+    final db = await _dbHelper.database;
+    await db.update('edges', edge.toMap(),
+        where: 'id = ?', whereArgs: [edge.id]);
+  }
+
+  /// 删除边
+  Future<void> deleteEdge(String edgeId) async {
+    final db = await _dbHelper.database;
+    await db.delete('edges', where: 'id = ?', whereArgs: [edgeId]);
   }
 }

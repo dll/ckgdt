@@ -16,7 +16,10 @@ class _FavoritesPageState extends State<FavoritesPage> {
   final _authService = AuthService();
 
   List<Map<String, dynamic>> _favorites = [];
+  List<Map<String, dynamic>> _filteredFavorites = [];
   bool _isLoading = true;
+  String _searchQuery = '';
+  final _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -33,12 +36,26 @@ class _FavoritesPageState extends State<FavoritesPage> {
         if (!mounted) return;
         setState(() {
           _favorites = favorites;
+          _applyFilter();
           _isLoading = false;
         });
       }
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
+    }
+  }
+
+  void _applyFilter() {
+    if (_searchQuery.isEmpty) {
+      _filteredFavorites = _favorites;
+    } else {
+      final q = _searchQuery.toLowerCase();
+      _filteredFavorites = _favorites.where((fav) {
+        final title = (fav['node_title'] ?? '').toString().toLowerCase();
+        final nodeId = (fav['node_id'] ?? '').toString().toLowerCase();
+        return title.contains(q) || nodeId.contains(q);
+      }).toList();
     }
   }
 
@@ -60,7 +77,42 @@ class _FavoritesPageState extends State<FavoritesPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('我的收藏'),
-
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: '搜索收藏…',
+                prefixIcon: const Icon(Icons.search, size: 20),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 18),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            _searchQuery = '';
+                            _applyFilter();
+                          });
+                        },
+                      )
+                    : null,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+              ),
+              onChanged: (val) {
+                setState(() {
+                  _searchQuery = val;
+                  _applyFilter();
+                });
+              },
+            ),
+          ),
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -83,13 +135,27 @@ class _FavoritesPageState extends State<FavoritesPage> {
                     ],
                   ),
                 )
+              : _filteredFavorites.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
+                          const SizedBox(height: 16),
+                          Text(
+                            '未找到"$_searchQuery"相关收藏',
+                            style: const TextStyle(fontSize: 16, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    )
               : RefreshIndicator(
                   onRefresh: _loadData,
                   child: ListView.builder(
                     padding: const EdgeInsets.all(16),
-                    itemCount: _favorites.length,
+                    itemCount: _filteredFavorites.length,
                     itemBuilder: (context, index) {
-                      final fav = _favorites[index];
+                      final fav = _filteredFavorites[index];
                       return Card(
                         margin: const EdgeInsets.only(bottom: 12),
                         child: ListTile(
