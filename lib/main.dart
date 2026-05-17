@@ -27,6 +27,9 @@ import 'platform/platform_init_stub.dart'
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  bool dbLocked = false;
+  String? dbError;
+
   // ── 全局错误处理：捕获 Flutter 框架异常（含原生插件崩溃）────────────────
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
@@ -54,20 +57,35 @@ void main() async {
     await DatabaseHelper.instance.database;
   } catch (e) {
     debugPrint('=== main: Database init error: $e');
+    final err = e.toString();
+    if (err.contains('locked') || 
+        err.contains('database is locked') || 
+        err.contains('singleInstance')) {
+      dbLocked = true;
+      dbError = '应用已在运行，请勿同时打开多个实例';
+    } else {
+      dbLocked = true;
+      dbError = '数据库初始化失败: $e';
+    }
   }
 
   // Initialize all preset data (resources, PUML samples, clean empty graphs)
   try {
-    await DataLoadingService.instance.initialize();
+    if (!dbLocked) {
+      await DataLoadingService.instance.initialize();
+    }
   } catch (e) {
     debugPrint('=== main: DataLoadingService init error: $e');
   }
 
-  runApp(const MyApp());
+  runApp(MyApp(dbLocked: dbLocked, dbError: dbError));
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  const MyApp({super.key, this.dbLocked = false, this.dbError});
+
+  final bool dbLocked;
+  final String? dbError;
 
   /// 供 SettingsPage 调用，主题修改后立即刷新整个应用
   static _MyAppState? _state;
@@ -120,6 +138,75 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    // 如果数据库被锁定，显示错误页面
+    if (widget.dbLocked) {
+      return MaterialApp(
+        title: 'MADKG',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeManager.light(_colorIndex),
+        darkTheme: ThemeManager.dark(_colorIndex),
+        themeMode: _themeMode,
+        home: Scaffold(
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFF667eea),
+                  const Color(0xFF764ba2).withValues(alpha: 0.9),
+                ],
+              ),
+            ),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.warning_amber, size: 80, color: Colors.white),
+                    const SizedBox(height: 24),
+                    const Text(
+                      '应用已在运行',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      widget.dbError ?? '请勿同时打开多个实例',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.white70,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 32),
+                    FilledButton.icon(
+                      onPressed: () {},
+                      icon: const Icon(Icons.close),
+                      label: const Text('请关闭其他实例'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: const Color(0xFF667eea),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 16,
+                        ),
+                        textStyle: const TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return MaterialApp(
       title: 'MADKG',
       debugShowCheckedModeBanner: false,
