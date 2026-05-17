@@ -10,6 +10,7 @@ import '../../../services/auth_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../services/sync_service.dart';
 import '../../../services/gitee_service.dart';
+import '../../../services/pdf_text_service.dart';
 import '../lab/lab_material_preview_page.dart';
 import '../../widgets/agent_entry_button.dart';
 
@@ -730,10 +731,22 @@ class _StudentLabPageState extends State<StudentLabPage> {
               onPressed: selectedFilePath == null
                   ? null
                   : () async {
+                      // 提取 PDF 文本，作为 AI 批阅的输入（避开 1MB 同步限制 + 跨设备路径解析问题）
+                      final extractedText =
+                          await PdfTextService.extractFromFile(
+                              selectedFilePath!);
+                      final contentBuf = StringBuffer()
+                        ..writeln('PDF实验报告：$selectedFileName');
+                      if (extractedText != null && extractedText.isNotEmpty) {
+                        contentBuf
+                          ..writeln()
+                          ..writeln('--- 报告正文（自动提取）---')
+                          ..writeln(extractedText);
+                      }
                       await _dao.submitTask(
                         taskId: task['id'] as int,
                         userId: _userId,
-                        content: 'PDF实验报告：$selectedFileName',
+                        content: contentBuf.toString(),
                         filePaths: selectedFilePath,
                         fileNames: selectedFileName,
                       );

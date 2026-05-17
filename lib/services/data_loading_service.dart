@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import '../data/local/database_helper.dart';
@@ -29,7 +30,8 @@ class DataLoadingService {
       await _importMdGraphs();
       await _cleanEmptyGraphs();
       await _initGiteeToken();
-      await _prefetchRemoteConfigs();
+      // 远程配置预取放后台异步执行，避免离线时阻塞启动
+      unawaited(_prefetchRemoteConfigs());
       debugPrint('=== DataLoadingService: Initialization complete');
     } catch (e) {
       debugPrint('=== DataLoadingService: Initialization error: $e');
@@ -60,20 +62,33 @@ class DataLoadingService {
 
   // ── 远程配置预取 ──────────────────────────────────────────────────────
 
-  /// 启动时异步预取远程课程配置到本地缓存（静默失败，不阻塞启动流程）
+  /// 启动时异步预取远程课程配置到本地缓存（静默失败，每个调用 10 秒超时）
   Future<void> _prefetchRemoteConfigs() async {
     try {
       final resource = CourseResourceService();
-      // 并行预取所有配置，缓存到 SharedPreferences
+      const timeout = Duration(seconds: 10);
+      // 并行预取所有配置，缓存到 SharedPreferences；任一失败不影响其他
       await Future.wait([
-        resource.getLabTasks().then((_) =>
-            debugPrint('=== DataLoadingService: Lab tasks config cached')),
-        resource.getChapters().then((_) =>
-            debugPrint('=== DataLoadingService: Chapters config cached')),
-        resource.getAssessment().then((_) =>
-            debugPrint('=== DataLoadingService: Assessment config cached')),
-        resource.getReportTemplates().then((_) =>
-            debugPrint('=== DataLoadingService: Report templates cached')),
+        resource
+            .getLabTasks()
+            .timeout(timeout, onTimeout: () => null)
+            .then((_) => debugPrint(
+                '=== DataLoadingService: Lab tasks config cached')),
+        resource
+            .getChapters()
+            .timeout(timeout, onTimeout: () => null)
+            .then((_) =>
+                debugPrint('=== DataLoadingService: Chapters config cached')),
+        resource
+            .getAssessment()
+            .timeout(timeout, onTimeout: () => null)
+            .then((_) => debugPrint(
+                '=== DataLoadingService: Assessment config cached')),
+        resource
+            .getReportTemplates()
+            .timeout(timeout, onTimeout: () => null)
+            .then((_) =>
+                debugPrint('=== DataLoadingService: Report templates cached')),
       ]);
       debugPrint('=== DataLoadingService: Remote configs pre-fetched');
     } catch (e) {
@@ -255,8 +270,10 @@ class DataLoadingService {
         HAVING COUNT(n.id) = 0
       ''');
       if (emptyGraphs.isNotEmpty) {
-        final ids = emptyGraphs.map((r) => "'${r['id']}'").join(',');
-        final deleted = await db.rawDelete('DELETE FROM graphs WHERE id IN ($ids)');
+        final ids = emptyGraphs.map((r) => r['id']).toList();
+        final placeholders = List.filled(ids.length, '?').join(',');
+        final deleted = await db.rawDelete(
+            'DELETE FROM graphs WHERE id IN ($placeholders)', ids);
         debugPrint('=== DataLoadingService: Cleaned $deleted empty graphs');
       }
 
@@ -266,11 +283,15 @@ class DataLoadingService {
         WHERE g.graph_type != 'md_import' OR g.graph_type IS NULL
       ''');
       if (oldGraphs.isNotEmpty) {
-        final ids = oldGraphs.map((r) => "'${r['id']}'").join(',');
+        final ids = oldGraphs.map((r) => r['id']).toList();
+        final placeholders = List.filled(ids.length, '?').join(',');
         // 先删除关联的节点和边
-        await db.rawDelete('DELETE FROM edges WHERE graph_id IN ($ids)');
-        await db.rawDelete('DELETE FROM nodes WHERE graph_id IN ($ids)');
-        final deleted = await db.rawDelete('DELETE FROM graphs WHERE id IN ($ids)');
+        await db.rawDelete(
+            'DELETE FROM edges WHERE graph_id IN ($placeholders)', ids);
+        await db.rawDelete(
+            'DELETE FROM nodes WHERE graph_id IN ($placeholders)', ids);
+        final deleted = await db.rawDelete(
+            'DELETE FROM graphs WHERE id IN ($placeholders)', ids);
         debugPrint('=== DataLoadingService: Cleaned $deleted old non-md_import graphs');
       }
     } catch (e) {
