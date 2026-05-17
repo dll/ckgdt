@@ -1,7 +1,7 @@
 name: knowledge_graph_app
 description: 移动应用开发知识图谱教学系统
 publish_to: "none"
-version: 0.9.0+9
+version: 0.11.0+12
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -34,6 +34,7 @@ dependencies:
   web_socket_channel: ^2.4.0
   record: ^5.2.1
   flutter_tts: ^4.0.2
+  syncfusion_flutter_pdf: ^24.2.9
   media_kit: ^1.1.10
   media_kit_video: 1.2.4
   media_kit_libs_windows_video: ^1.0.9

@@ -4,6 +4,7 @@ import '../../../services/gitee_service.dart';
 import '../../../services/course_resource_service.dart';
 import '../../widgets/agent_entry_button.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// Git 仓库总览页面
 /// 功能：
 /// 1. 仓库列表 Tab — 显示 cg1-*/cg2-*/cg3-* 学生项目仓库
@@ -333,7 +334,7 @@ class _RepoListTabState extends State<_RepoListTab>
             CourseResourceService.enterprise, repoPath, name),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -348,22 +349,22 @@ class _RepoListTabState extends State<_RepoListTab>
                   ),
                   if (timeAgo.isNotEmpty)
                     Text(timeAgo,
-                        style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                 ],
               ),
               if (humanName.isNotEmpty) ...[
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(humanName,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                    style: TextStyle(fontSize: 13, color: Colors.grey[600])),
               ],
               if (desc.isNotEmpty) ...[
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Text(desc,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                    style: TextStyle(fontSize: 13, color: Colors.grey[500])),
               ],
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Row(
                 children: [
                   _buildMetaBadge(Icons.fork_right, '$forksCount', Colors.blue),

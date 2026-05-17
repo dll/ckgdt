@@ -3,6 +3,7 @@ import '../../../data/local/graph_dao.dart';
 import '../../../data/local/quiz_dao.dart';
 import '../graph/graph_detail_page.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
 

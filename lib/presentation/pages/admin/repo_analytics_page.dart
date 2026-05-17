@@ -97,9 +97,9 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
               children: [
                 const Text(
                   '请配置 Gitee 私人令牌和用户名，用于获取仓库和成员信息。',
-                  style: TextStyle(fontSize: 13, color: Colors.grey),
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 TextField(
                   controller: ownerCtrl,
                   decoration: const InputDecoration(
@@ -109,7 +109,7 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
                     prefixIcon: Icon(Icons.person),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 9),
                 TextField(
                   controller: tokenCtrl,
                   decoration: const InputDecoration(
@@ -120,7 +120,7 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
                   ),
                   obscureText: true,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 9),
                 TextField(
                   controller: prefixCtrl,
                   decoration: const InputDecoration(
@@ -132,7 +132,7 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
                     helperMaxLines: 2,
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 9),
                 if (testResult != null)
                   Container(
                     width: double.infinity,
@@ -146,14 +146,14 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
                     child: Text(
                       testResult!,
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 14,
                         color: testResult!.startsWith('✅')
                             ? Colors.green[700]
                             : Colors.red[700],
                       ),
                     ),
                   ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
@@ -521,9 +521,9 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
           indicatorColor: Colors.white,
           indicatorWeight: 3,
           labelColor: Colors.white,
-          labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+          labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
           unselectedLabelColor: Colors.white60,
-          unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+          unselectedLabelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.normal),
           tabs: [
             Tab(
               text: '仓库成员',
@@ -576,23 +576,23 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
   Widget _buildNotConfiguredView() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.settings_outlined, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             const Text(
               '请先配置 Gitee 账号',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
               '需要 Gitee 私人令牌和用户名才能获取仓库和成员信息',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey[600]),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 18),
             ElevatedButton.icon(
               onPressed: _showConfigDialog,
               icon: const Icon(Icons.settings),
@@ -607,12 +607,12 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
   Widget _buildLoadingView() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircularProgressIndicator(value: _progress > 0 ? _progress : null),
-            const SizedBox(height: 24),
+            const SizedBox(height: 18),
             Text(
               _progressText,
               textAlign: TextAlign.center,
@@ -636,18 +636,18 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
   Widget _buildErrorView() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Text(
               _errorMessage!,
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.red[700], fontSize: 16),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 18),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -680,7 +680,7 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       itemCount: _repoMembersList.length,
       itemBuilder: (context, index) {
         final data = _repoMembersList[index];
@@ -707,7 +707,7 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
         ),
         subtitle: hasError
             ? Text('加载失败: ${data.error}',
-                style: const TextStyle(fontSize: 12, color: Colors.red))
+                style: const TextStyle(fontSize: 13, color: Colors.red))
             : Row(
                 children: [
                   _miniChip(
@@ -720,12 +720,12 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
         children: [
           if (data.members.isEmpty && !hasError)
             const Padding(
-              padding: EdgeInsets.all(16),
+              padding: EdgeInsets.all(12),
               child: Text('暂无成员', style: TextStyle(color: Colors.grey)),
             )
           else
             ...data.members.map(_buildMemberTile),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
         ],
       ),
     );
@@ -754,7 +754,7 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
       leading: _avatar(avatarUrl, login, 18),
       title: Text(name, style: const TextStyle(fontSize: 14)),
       subtitle: Text('@$login',
-          style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+          style: TextStyle(fontSize: 13, color: Colors.grey[500])),
       trailing: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         decoration: BoxDecoration(
@@ -764,7 +764,7 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
         ),
         child: Text(role,
             style: TextStyle(
-                fontSize: 11, color: roleColor, fontWeight: FontWeight.w600)),
+                fontSize: 12, color: roleColor, fontWeight: FontWeight.w600)),
       ),
     );
   }
@@ -782,7 +782,7 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
       children: [
         // 统计头
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           color: Theme.of(context)
               .colorScheme
               .primaryContainer
@@ -810,7 +810,7 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
         // 列表
         Expanded(
           child: ListView.separated(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             itemCount: _allMembers.length,
             separatorBuilder: (_, __) => const Divider(height: 1),
             itemBuilder: (context, index) {
@@ -834,7 +834,7 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
                         ),
                         child: Text('管理员',
                             style: TextStyle(
-                                fontSize: 10, color: Colors.amber[800])),
+                                fontSize: 11, color: Colors.amber[800])),
                       ),
                     ],
                   ],
@@ -844,10 +844,10 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
                   children: [
                     Text('@${member.login}',
                         style:
-                            TextStyle(fontSize: 12, color: Colors.grey[500])),
+                            TextStyle(fontSize: 13, color: Colors.grey[500])),
                     Text(
                       '参与 ${member.repos.length} 个仓库: ${member.repos.join(', ')}',
-                      style: TextStyle(fontSize: 11, color: Colors.blue[600]),
+                      style: TextStyle(fontSize: 12, color: Colors.blue[600]),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -984,7 +984,7 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
       margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(10),
         child: Row(
           children: [
             // 排名
@@ -1036,7 +1036,7 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
                         ),
                         child: Text(activityLevel,
                             style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 12,
                                 color: activityColor,
                                 fontWeight: FontWeight.w600)),
                       ),
@@ -1045,9 +1045,9 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
                   const SizedBox(height: 2),
                   Text(
                     '@${p.login}  |  参与 ${p.repoNames.length} 个仓库',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                    style: TextStyle(fontSize: 13, color: Colors.grey[500]),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   // 统计
                   Row(
                     children: [
@@ -1069,11 +1069,11 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
                     ],
                   ),
                   if (p.lastCommitDate != null) ...[
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Text(
                       '最近: ${DateFormat('yyyy-MM-dd HH:mm').format(p.lastCommitDate!)}  |  仓库: ${p.repoNames.join(', ')}',
                       style:
-                          TextStyle(fontSize: 11, color: Colors.grey[500]),
+                          TextStyle(fontSize: 12, color: Colors.grey[500]),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1094,7 +1094,7 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
           Text(value,
               style: TextStyle(
                   fontSize: 16, fontWeight: FontWeight.bold, color: color)),
-          Text(label, style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+          Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[500])),
         ],
       ),
     );
@@ -1337,7 +1337,7 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
       children: [
         Icon(icon, size: 14, color: color),
         const SizedBox(width: 3),
-        Text(text, style: TextStyle(fontSize: 11, color: color)),
+        Text(text, style: TextStyle(fontSize: 12, color: color)),
       ],
     );
   }
@@ -1347,11 +1347,11 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
     return Column(
       children: [
         Icon(icon, color: color, size: 24),
-        const SizedBox(height: 4),
+        const SizedBox(height: 3),
         Text(value,
             style: TextStyle(
                 fontSize: 18, fontWeight: FontWeight.bold, color: color)),
-        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+        Text(label, style: TextStyle(fontSize: 13, color: Colors.grey[600])),
       ],
     );
   }

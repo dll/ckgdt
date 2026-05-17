@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../data/local/classroom_dao.dart';
 import '../../../services/auth_service.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 // ╔══════════════════════════════════════════════════════════════════════════════╗
 // ║  课堂提问 Tab — 多源题库浏览、编辑、发布提问                                 ║
 // ╚══════════════════════════════════════════════════════════════════════════════╝

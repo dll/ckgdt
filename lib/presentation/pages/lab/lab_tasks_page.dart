@@ -20,6 +20,7 @@ import 'lab_material_preview_page.dart';
 import '../learning/pdf_viewer_page.dart';
 import 'ai_grading_tab.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 实验任务页面
 /// 学生: 5 Tab（任务列表 / 我的提交 / 实验报告 / 实验材料 / 仓库报表）
 /// 教师/管理员: 7 Tab（任务列表 / 提交管理 / 实验报告 / 实验材料 / 任务管理 / AI批阅 / 仓库报表）
@@ -980,7 +981,12 @@ class _SubmissionTab extends StatefulWidget {
 class _SubmissionTabState extends State<_SubmissionTab> {
   List<Map<String, dynamic>> _submissions = [];
   Map<int, List<Map<String, dynamic>>> _unsubmittedByTask = {};
+  Map<String, dynamic> _classOverview = {};
   bool _isLoading = true;
+  // Cached stats (computed once in _loadSubmissions, used in build)
+  double _avgScore = 0;
+  int _excellentCount = 0;
+  int _failCount = 0;
 
   bool get _isTeacherOrAdmin =>
       widget.authService.isTeacher || widget.authService.isAdmin;
@@ -1018,10 +1024,19 @@ class _SubmissionTabState extends State<_SubmissionTab> {
             final tid = t['id'] as int;
             unsub[tid] = await widget.labTaskDao.getUnsubmittedStudents(tid);
           }
+          _classOverview = await widget.labTaskDao.getClassLabOverview();
         }
+        // 计算缓存统计（一次计算，build 中复用）
+        final graded = submissions.where((s) => s['score'] != null).toList();
+        final avg = graded.isEmpty
+            ? 0.0
+            : graded.fold<double>(0, (sum, s) => sum + (s['score'] as int)) / graded.length;
         setState(() {
           _submissions = submissions;
           _unsubmittedByTask = unsub;
+          _avgScore = avg;
+          _excellentCount = graded.where((s) => (s['score'] as int) >= 95).length;
+          _failCount = graded.where((s) => (s['score'] as int) < 60).length;
           _isLoading = false;
         });
       }
@@ -1068,161 +1083,222 @@ class _SubmissionTabState extends State<_SubmissionTab> {
   }
 
   Widget _buildStudentSubmissionList(Color primary) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _submissions.length,
-      itemBuilder: (ctx, i) {
-        final sub = _submissions[i];
-        final status = sub['status'] as String? ?? '已提交';
-        final score = sub['score'] as int?;
-        final taskTitle = sub['task_title'] as String? ?? '';
-        final chapter = sub['chapter'] as String? ?? '';
-        final maxScore = sub['max_score'] as int? ?? 100;
-        final submitTime = sub['submit_time'] as String? ?? '';
+    final graded = _submissions.where((s) => s['score'] != null).toList();
 
-        final statusColor = switch (status) {
-          '已批改' => Colors.green,
-          '已提交' => Colors.blue,
-          _ => Colors.orange,
-        };
-        final statusIcon = switch (status) {
-          '已批改' => Icons.check_circle,
-          '已提交' => Icons.hourglass_top,
-          _ => Icons.pending,
-        };
+    final items = <Widget>[
+      _buildScoreSummaryCard(graded, _avgScore, _excellentCount, _failCount),
+      const SizedBox(height: 12),
+    ];
+    for (final sub in _submissions) {
+      items.add(_buildSubmissionCard(sub));
+    }
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 10),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () => _showSubmissionDetail(sub),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 18,
-                        backgroundColor: statusColor.withValues(alpha: 0.1),
-                        child: Icon(statusIcon, color: statusColor, size: 20),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(taskTitle,
-                                style: const TextStyle(
-                                    fontSize: 14, fontWeight: FontWeight.w600),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis),
-                            const SizedBox(height: 2),
-                            Text(
-                                '$chapter · 提交于 ${submitTime.isNotEmpty ? submitTime.substring(0, 10) : ""}',
-                                style: TextStyle(
-                                    fontSize: 12, color: Colors.grey[500])),
-                          ],
+    return ListView(padding: const EdgeInsets.all(16), children: items);
+  }
+
+  Widget _buildScoreSummaryCard(List<Map<String, dynamic>> graded,
+      double avgScore, int excellentCount, int failCount) {
+    final allGradedCount = graded.length;
+    final theme = Theme.of(context);
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 2,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            colors: [theme.colorScheme.primary.withValues(alpha: 0.04),
+                theme.colorScheme.secondary.withValues(alpha: 0.02)],
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+          ),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Icon(Icons.analytics_outlined, size: 18, color: theme.colorScheme.primary),
+            const SizedBox(width: 8),
+            Text('实验成绩总览',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.primary)),
+            const Spacer(),
+            Text('已批阅 $allGradedCount/${_submissions.length}',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+          ]),
+          const SizedBox(height: 14),
+          Row(children: [
+            _buildStatChip('平均分', avgScore.toStringAsFixed(1), theme.colorScheme.primary),
+            const SizedBox(width: 10),
+            _buildStatChip('达标(≥95)', '$excellentCount',
+                excellentCount == allGradedCount && allGradedCount > 0
+                    ? Colors.green : Colors.orange),
+            const SizedBox(width: 10),
+            _buildStatChip('待提升(<60)', '$failCount',
+                failCount > 0 ? Colors.red : Colors.grey),
+          ]),
+          if (allGradedCount > 0) ...[
+            const SizedBox(height: 14),
+            SizedBox(height: 80, child: Row(crossAxisAlignment: CrossAxisAlignment.end,
+              children: graded.map((s) {
+                final score = (s['score'] as int).toDouble();
+                final maxScore = (s['max_score'] as int? ?? 100).toDouble();
+                final ratio = (score / maxScore).clamp(0.05, 1.0);
+                final color = score >= 95 ? Colors.green
+                    : score >= 60 ? Colors.blue : Colors.red;
+                final title = (s['task_title'] as String? ?? '?');
+                final short = title.length > 6 ? '${title.substring(0, 5)}…' : title;
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: Column(mainAxisAlignment: MainAxisAlignment.end, children: [
+                      Text(score.toStringAsFixed(0),
+                          style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold,
+                              color: color)),
+                      const SizedBox(height: 2),
+                      Flexible(child: Container(
+                        height: 55 * ratio,
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.7),
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
                         ),
-                      ),
-                      if (score != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: _scoreColor(score, maxScore)
-                                .withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text('$score/$maxScore',
-                              style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: _scoreColor(score, maxScore))),
-                        )
-                      else
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: statusColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(status,
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  color: statusColor,
-                                  fontWeight: FontWeight.w500)),
-                        ),
-                      PopupMenuButton<String>(
-                        icon: Icon(Icons.more_vert,
-                            size: 20, color: Colors.grey[500]),
-                        onSelected: (value) {
-                          if (value == 'edit') {
-                            _showEditSubmissionDialog(sub);
-                          } else if (value == 'delete') {
-                            _confirmDeleteSubmission(sub);
-                          }
-                        },
-                        itemBuilder: (ctx) => [
-                          const PopupMenuItem(
-                            value: 'edit',
-                            child: Row(
-                              children: [
-                                Icon(Icons.edit, size: 18),
-                                SizedBox(width: 8),
-                                Text('编辑'),
-                              ],
-                            ),
-                          ),
-                          const PopupMenuItem(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                Icon(Icons.delete, size: 18, color: Colors.red),
-                                SizedBox(width: 8),
-                                Text('删除', style: TextStyle(color: Colors.red)),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                      )),
+                      const SizedBox(height: 3),
+                      Text(short,
+                          style: TextStyle(fontSize: 8, color: Colors.grey[600]),
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ]),
                   ),
-                  if (sub['feedback'] != null) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.04),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.comment,
-                              size: 14, color: Colors.green[700]),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(sub['feedback'] as String,
-                                style: TextStyle(
-                                    fontSize: 12, color: Colors.grey[600]),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                );
+              }).toList(),
+            )),
+          ],
+          if (excellentCount == allGradedCount && allGradedCount > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Row(children: [
+                Icon(Icons.emoji_events, size: 16, color: Colors.amber[700]),
+                const SizedBox(width: 6),
+                Text('全部实验达标！满足答辩条件①',
+                    style: TextStyle(fontSize: 12, color: Colors.amber[800],
+                        fontWeight: FontWeight.w500)),
+              ]),
+            ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildStatChip(String label, String value, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(children: [
+          Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+          const SizedBox(height: 2),
+          Text(label, style: TextStyle(fontSize: 10, color: color.withValues(alpha: 0.8))),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildSubmissionCard(Map<String, dynamic> sub) {
+    final status = sub['status'] as String? ?? '已提交';
+    final score = sub['score'] as int?;
+    final taskTitle = sub['task_title'] as String? ?? '';
+    final chapter = sub['chapter'] as String? ?? '';
+    final maxScore = sub['max_score'] as int? ?? 100;
+    final submitTime = sub['submit_time'] as String? ?? '';
+    final statusColor = switch (status) {
+      '已批改' => Colors.green,
+      '已提交' => Colors.blue,
+      _ => Colors.orange,
+    };
+    final statusIcon = switch (status) {
+      '已批改' => Icons.check_circle,
+      '已提交' => Icons.hourglass_top,
+      _ => Icons.pending,
+    };
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => _showSubmissionDetail(sub),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              CircleAvatar(radius: 18, backgroundColor: statusColor.withValues(alpha: 0.1),
+                  child: Icon(statusIcon, color: statusColor, size: 20)),
+              const SizedBox(width: 12),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(taskTitle,
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 2),
+                Text('$chapter · 提交于 ${submitTime.isNotEmpty ? submitTime.substring(0, 10) : ""}',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+              ])),
+              if (score != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _scoreColor(score, maxScore).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text('$score/$maxScore',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold,
+                          color: _scoreColor(score, maxScore))),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(status,
+                      style: TextStyle(fontSize: 11, color: statusColor,
+                          fontWeight: FontWeight.w500)),
+                ),
+              PopupMenuButton<String>(
+                icon: Icon(Icons.more_vert, size: 20, color: Colors.grey[500]),
+                onSelected: (value) {
+                  if (value == 'edit') _showEditSubmissionDialog(sub);
+                  if (value == 'delete') _confirmDeleteSubmission(sub);
+                },
+                itemBuilder: (ctx) => [
+                  const PopupMenuItem(value: 'edit', child: Row(children: [
+                    Icon(Icons.edit, size: 18), SizedBox(width: 8), Text('编辑')])),
+                  const PopupMenuItem(value: 'delete', child: Row(children: [
+                    Icon(Icons.delete, size: 18, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('删除', style: TextStyle(color: Colors.red))])),
                 ],
               ),
-            ),
-          ),
-        );
-      },
+            ]),
+            if (sub['feedback'] != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity, padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(8)),
+                child: Row(children: [
+                  Icon(Icons.comment, size: 14, color: Colors.green[700]),
+                  const SizedBox(width: 6),
+                  Expanded(child: Text(sub['feedback'] as String,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      maxLines: 2, overflow: TextOverflow.ellipsis)),
+                ]),
+              ),
+            ],
+          ]),
+        ),
+      ),
     );
   }
 
@@ -1357,6 +1433,146 @@ class _SubmissionTabState extends State<_SubmissionTab> {
     );
   }
 
+  Widget _buildTeacherClassOverviewCard(Color primary) {
+    final studentCount = _classOverview['student_count'] ?? 0;
+    final avgScore = (_classOverview['avg_score'] as num?)?.toDouble() ?? 0;
+    final maxScore = _classOverview['max_score'] as int? ?? 0;
+    final minScore = _classOverview['min_score'] as int?;
+    final excellentCount = _classOverview['excellent_count'] as int? ?? 0;
+    final passCount = _classOverview['pass_count'] as int? ?? 0;
+    final failCount = _classOverview['fail_count'] as int? ?? 0;
+    final ungradedCount = _classOverview['ungraded_count'] as int? ?? 0;
+    final totalGraded = _classOverview['total_graded'] as int? ?? 0;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 2,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            colors: [primary.withValues(alpha: 0.05), primary.withValues(alpha: 0.12)],
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+          ),
+        ),
+        padding: const EdgeInsets.all(14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Icon(Icons.analytics_outlined, size: 20, color: primary),
+            const SizedBox(width: 8),
+            Text('班级实验总览',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold,
+                    color: primary)),
+            const Spacer(),
+            Text('$studentCount人 · ${totalGraded}份批改',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+          ]),
+          const SizedBox(height: 12),
+          // 核心统计
+          Row(children: [
+            _buildStatChip('班级均分', avgScore.toStringAsFixed(1), primary),
+            const SizedBox(width: 10),
+            _buildStatChip('最高分', '$maxScore', Colors.green),
+            const SizedBox(width: 10),
+            _buildStatChip('最低分', minScore != null ? '$minScore' : '—', Colors.red),
+          ]),
+          const SizedBox(height: 12),
+          // 分数段分布条
+          if (totalGraded > 0) ...[
+            Row(children: [
+              Text('分数段分布', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+            ]),
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: SizedBox(
+                height: 24,
+                child: Row(children: [
+                  if (excellentCount > 0)
+                    Expanded(
+                      flex: excellentCount,
+                      child: Container(
+                        color: Colors.green,
+                        child: Center(
+                          child: Text(excellentCount > totalGraded * 0.15 ? '≥95: $excellentCount' : '',
+                              style: const TextStyle(fontSize: 10, color: Colors.white)),
+                        ),
+                      ),
+                    ),
+                  if (passCount > 0)
+                    Expanded(
+                      flex: passCount,
+                      child: Container(
+                        color: Colors.blue,
+                        child: Center(
+                          child: Text(passCount > totalGraded * 0.15 ? '60-94: $passCount' : '',
+                              style: const TextStyle(fontSize: 10, color: Colors.white)),
+                        ),
+                      ),
+                    ),
+                  if (failCount > 0)
+                    Expanded(
+                      flex: failCount,
+                      child: Container(
+                        color: Colors.red,
+                        child: Center(
+                          child: Text(failCount > totalGraded * 0.15 ? '<60: $failCount' : '',
+                              style: const TextStyle(fontSize: 10, color: Colors.white)),
+                        ),
+                      ),
+                    ),
+                ]),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Row(children: [
+              _legendDot(Colors.green, '达标≥95 ($excellentCount)'),
+              const SizedBox(width: 12),
+              _legendDot(Colors.blue, '及格60-94 ($passCount)'),
+              const SizedBox(width: 12),
+              _legendDot(Colors.red, '不及格<60 ($failCount)'),
+            ]),
+          ],
+          // 答辩资格提示
+          if (failCount > 0 || ungradedCount > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
+                ),
+                child: Row(children: [
+                  Icon(Icons.warning_amber, size: 16, color: Colors.orange[700]),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      [
+                        if (failCount > 0) '$failCount人实验不及格',
+                        if (ungradedCount > 0) '$ungradedCount份未批改',
+                      ].join('，') + ' — 部分学生不满足答辩条件①',
+                      style: TextStyle(fontSize: 12, color: Colors.orange[800]),
+                    ),
+                  ),
+                ]),
+              ),
+            ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _legendDot(Color color, String label) {
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+      const SizedBox(width: 4),
+      Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+    ]);
+  }
+
   Widget _buildTeacherSubmissionList(Color primary) {
     // 按任务分组，同时保留 task_id
     final grouped = <String, List<Map<String, dynamic>>>{};
@@ -1369,18 +1585,10 @@ class _SubmissionTabState extends State<_SubmissionTab> {
       }
     }
 
-    // 找出有未提交学生但无已提交记录的任务（纯未提交）
-    for (final entry in _unsubmittedByTask.entries) {
-      // 通过 task_id 反查 title（如果已有则跳过）
-      if (!taskIdByTitle.containsValue(entry.key) && entry.value.isNotEmpty) {
-        // 需要获取任务标题
-        // 此处不需要处理，因为下面按 _unsubmittedByTask 补充即可
-      }
-    }
-
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        if (_classOverview.isNotEmpty) _buildTeacherClassOverviewCard(primary),
         Card(
           color: Colors.amber.shade50,
           shape:

@@ -11,6 +11,7 @@ import '../learning/weakness_diagnosis_page.dart';
 import '../learning/student_lab_page.dart';
 import '../lab/productization_guide_page.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 class StudentCenterPage extends StatefulWidget {
   const StudentCenterPage({super.key});
 

@@ -9,6 +9,7 @@ import '../../../core/constants/role_guard.dart';
 import '../../widgets/agent_entry_button.dart';
 import 'classroom_question_tab.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 // ╔══════════════════════════════════════════════════════════════════════════════╗
 // ║  课堂管理页面 — 在线状态 / 课堂签到 / 课堂互动                              ║
 // ╚══════════════════════════════════════════════════════════════════════════════╝

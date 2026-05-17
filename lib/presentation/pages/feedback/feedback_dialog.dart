@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../../data/local/feedback_dao.dart';
 import '../../../services/auth_service.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 全局截图 Key — 在 main.dart 中用 RepaintBoundary 包裹应用内容
 final GlobalKey feedbackScreenshotKey = GlobalKey();
 

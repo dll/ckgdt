@@ -5,6 +5,7 @@ import '../../../data/local/works_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/agent/agents/works_grading_agent.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 作品 AI 智能批阅 Tab — 仅教师/管理员可见
 ///
 /// 四区结构（与实验/考核 AI 批阅保持一致风格）：

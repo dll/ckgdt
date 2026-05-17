@@ -264,6 +264,110 @@ class AssessmentDao {
     return db.delete('defense_records', where: 'id = ?', whereArgs: [id]);
   }
 
+  List<String> _parseMemberIds(String? raw) {
+    if (raw == null || raw.isEmpty) return [];
+    try {
+      return (jsonDecode(raw) as List).cast<String>();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════
+  //  答辩资格检查
+  // ══════════════════════════════════════════════════════════
+
+  Future<Map<String, dynamic>> checkDefenseEligibility(String userId) async {
+    final db = await DatabaseHelper.instance.database;
+    final reasons = <String>[];
+    final unmetConditions = <int>[];
+
+    // 条件1：所有实验得分 ≥ 95
+    final labRows = await db.rawQuery('''
+      SELECT s.task_id, t.title AS task_title, s.score, t.max_score
+      FROM lab_submissions s
+      LEFT JOIN lab_tasks t ON t.id = s.task_id
+      WHERE s.user_id = ?
+    ''', [userId]);
+
+    final labScores = <Map<String, dynamic>>[];
+    var allLabsAbove95 = true;
+    for (final r in labRows) {
+      final score = r['score'];
+      labScores.add(r);
+      if (score == null || (score as int) < 95) {
+        allLabsAbove95 = false;
+      }
+    }
+    if (labRows.isEmpty) {
+      reasons.add('无实验提交记录');
+      unmetConditions.add(1);
+    } else if (!allLabsAbove95) {
+      final below95 = labScores
+          .where((s) => s['score'] == null || (s['score'] as int) < 95)
+          .map((s) => s['task_title'] ?? '未知实验')
+          .join('、');
+      reasons.add('实验「$below95」未达到95分');
+      unmetConditions.add(1);
+    }
+
+    // 条件2：过程报告 + 最终报告均 ≥ 95
+    final reportRows = await db.query('student_reports',
+        where: 'user_id = ?', whereArgs: [userId]);
+    final reportScores = <String, dynamic>{};
+    for (final t in ['过程报告', '最终报告']) {
+      final match = reportRows.where((r) => r['title'] == t).toList();
+      if (match.isEmpty) {
+        reasons.add('未提交「$t」');
+        reportScores[t] = null;
+        unmetConditions.add(2);
+      } else {
+        final score = match.first['score'];
+        reportScores[t] = score;
+        if (score == null || (score as int) < 95) {
+          reasons.add('「$t」得分${score ?? "未评分"}，未达到95分');
+          unmetConditions.add(2);
+        }
+      }
+    }
+
+    return {
+      'eligible': reasons.isEmpty,
+      'reasons': reasons,
+      'labScores': labScores,
+      'reportScores': reportScores,
+      'unmetConditions': unmetConditions,
+    };
+  }
+
+  Future<Map<String, dynamic>> checkGroupDefenseEligibility(int groupId) async {
+    final group = await getGroup(groupId);
+    if (group == null) {
+      return {'eligible': false, 'reasons': ['小组不存在'], 'members': []};
+    }
+
+    List<String> memberIds = _parseMemberIds(group['member_ids'] as String?);
+
+    final memberResults = <Map<String, dynamic>>[];
+    var allEligible = true;
+
+    final results = await Future.wait(
+      memberIds.map((uid) => checkDefenseEligibility(uid)),
+    );
+    for (int i = 0; i < memberIds.length; i++) {
+      final eligibility = results[i];
+      memberResults.add({'userId': memberIds[i], ...eligibility});
+      if (eligibility['eligible'] != true) allEligible = false;
+    }
+
+    return {
+      'eligible': allEligible,
+      'reasons': allEligible ? [] : ['部分成员未达标'],
+      'members': memberResults,
+      'groupName': group['name'] ?? '',
+    };
+  }
+
   // ══════════════════════════════════════════════════════════
   //  示例数据初始化（教学演示用）
   // ══════════════════════════════════════════════════════════
@@ -591,5 +695,29 @@ class AssessmentDao {
             'scorer_user_id = ? AND target_user_id = ? AND dimension = ?',
         whereArgs: [scorerUserId, targetUserId, dimension]);
     return result.isNotEmpty;
+  }
+
+  /// 获取学生所属小组的技术栈和特色功能信息
+  /// 返回 {techStack, features, groupId} 或 null
+  Future<Map<String, String?>?> getStudentGroupTechInfo(String userId) async {
+    final db = await DatabaseHelper.instance.database;
+    // 通过 member_ids JSON 数组查找包含该 userId 的小组
+    final groups = await db.query('assessment_groups');
+    for (final g in groups) {
+      final ids = _parseMemberIds(g['member_ids'] as String?);
+      if (ids.isEmpty || !ids.contains(userId)) continue;
+      final groupId = g['id'] as int;
+      final projects = await db.query('assessment_projects',
+          where: 'group_id = ?', whereArgs: [groupId]);
+      if (projects.isNotEmpty) {
+        final p = projects.first;
+        return {
+          'techStack': p['tech_stack'] as String?,
+          'features': p['description'] as String?,
+          'groupId': groupId.toString(),
+        };
+      }
+    }
+    return null;
   }
 }

@@ -3,6 +3,7 @@ import '../../../../data/local/achievement_dao.dart';
 import '../../../../services/auth_service.dart';
 import '../achievement_shared.dart';
 
+import '../../../../core/constants/color_ohos_compat.dart';
 // ══════════════════════════════════════════════════════════════════════════════
 // Tab 1 — 达成度概览
 // ══════════════════════════════════════════════════════════════════════════════

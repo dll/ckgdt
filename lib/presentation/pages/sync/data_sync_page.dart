@@ -4,6 +4,7 @@ import '../../../services/auth_service.dart';
 import '../../../services/sync_service.dart';
 import '../../../core/constants/app_theme.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 数据同步管理页面
 ///
 /// 直接使用本项目 Gitee 仓库 osgisOne/mad-fd，无需额外配置。

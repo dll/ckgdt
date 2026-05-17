@@ -15,6 +15,7 @@ import '../../../services/agent/agents/works_grading_agent.dart';
 import '../../widgets/agent_entry_button.dart';
 import 'ai_grading_tab.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 // ╔══════════════════════════════════════════════════════════════════════════════╗
 // ║  作品视角维度（多维过滤，复用考核页的 _GroupDimension 模式）                ║
 // ╚══════════════════════════════════════════════════════════════════════════════╝

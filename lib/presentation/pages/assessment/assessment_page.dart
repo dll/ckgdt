@@ -14,6 +14,8 @@ import '../../widgets/agent_entry_button.dart';
 import '../learning/pdf_viewer_page.dart';
 import 'ai_grading_tab.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
+import '../../../services/pdf_text_service.dart';
 /// 考核页面 — 参考 Python 版 assessment_tab.py
 /// 五大子页: 分组管理 / 项目立项 / 贡献评分 / 答辩安排 / 成绩统计
 class AssessmentPage extends StatefulWidget {
@@ -3703,6 +3705,7 @@ class _DefenseTab extends StatefulWidget {
 class _DefenseTabState extends State<_DefenseTab> {
   final _dao = AssessmentDao();
   List<Map<String, dynamic>> _defenseRecords = [];
+  Map<int, Map<String, dynamic>> _groupEligibility = {};
   bool _loading = true;
 
   bool get _isStudent =>
@@ -3718,7 +3721,6 @@ class _DefenseTabState extends State<_DefenseTab> {
     try {
       var records = await _dao.getDefenseRecords();
 
-      // 学生：只显示自己所在组的答辩
       if (_isStudent) {
         final userId = widget.authService.getCurrentUserId();
         if (userId != null) {
@@ -3729,9 +3731,21 @@ class _DefenseTabState extends State<_DefenseTab> {
         }
       }
 
+      // 加载各组的答辩资格
+      final eligibility = <int, Map<String, dynamic>>{};
+      for (final r in records) {
+        final gid = r['group_id'] as int?;
+        if (gid != null && !eligibility.containsKey(gid)) {
+          try {
+            eligibility[gid] = await _dao.checkGroupDefenseEligibility(gid);
+          } catch (_) {}
+        }
+      }
+
       if (mounted) {
         setState(() {
           _defenseRecords = records;
+          _groupEligibility = eligibility;
           _loading = false;
         });
       }
@@ -3889,6 +3903,62 @@ class _DefenseTabState extends State<_DefenseTab> {
                 ),
               ),
               const SizedBox(height: 16),
+              // 答辩资格条件说明
+              Card(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 1,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: LinearGradient(
+                      colors: [Colors.indigo.shade50, Colors.blue.shade50.withValues(alpha: 0.3)],
+                      begin: Alignment.topLeft, end: Alignment.bottomRight,
+                    ),
+                  ),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      Icon(Icons.shield_outlined, size: 18, color: Colors.indigo[700]),
+                      const SizedBox(width: 8),
+                      Text('答辩资格条件',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold,
+                              color: Colors.indigo[800])),
+                    ]),
+                    const SizedBox(height: 10),
+                    _buildEligibilityCondition('①', '所有实验成绩 ≥ 95分', Colors.blue),
+                    _buildEligibilityCondition('②', '过程报告 + 最终报告得分 ≥ 95分', Colors.teal),
+                    _buildEligibilityCondition('③', '报告内容匹配小组技术栈和特色功能', Colors.deepOrange),
+                    const SizedBox(height: 8),
+                    // 各小组答辩资格状态
+                    if (_groupEligibility.isNotEmpty) ...[
+                      const Divider(height: 16),
+                      ..._groupEligibility.entries.map((e) {
+                        final gid = e.key;
+                        final info = e.value;
+                        final eligible = info['eligible'] == true;
+                        final groupName = info['groupName'] ?? '小组#$gid';
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Row(children: [
+                            Icon(eligible ? Icons.check_circle : Icons.cancel,
+                                size: 16, color: eligible ? Colors.green : Colors.red),
+                            const SizedBox(width: 6),
+                            Text(groupName,
+                                style: TextStyle(fontSize: 13,
+                                    color: eligible ? Colors.green[800] : Colors.red[800],
+                                    fontWeight: FontWeight.w500)),
+                            const Spacer(),
+                            Text(eligible ? '已达标' : '未达标',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold,
+                                    color: eligible ? Colors.green : Colors.red)),
+                          ]),
+                        );
+                      }),
+                    ],
+                  ]),
+                ),
+              ),
+              const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
@@ -4003,6 +4073,21 @@ class _DefenseTabState extends State<_DefenseTab> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildEligibilityCondition(String num, String desc, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(children: [
+        Container(
+          width: 22, height: 22,
+          decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
+          child: Center(child: Text(num, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color))),
+        ),
+        const SizedBox(width: 8),
+        Text(desc, style: TextStyle(fontSize: 12, color: Colors.grey[700])),
+      ]),
     );
   }
 
@@ -4297,7 +4382,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
             ),
             tabs: const [
               Tab(icon: Icon(Icons.timeline, size: 16), text: '过程报告'),
-              Tab(icon: Icon(Icons.assignment, size: 16), text: '考核报告'),
+              Tab(icon: Icon(Icons.assignment, size: 16), text: '最终报告'),
               Tab(icon: Icon(Icons.upload_file, size: 16), text: '提交'),
             ],
           ),
@@ -4613,7 +4698,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
   }
 
   // ══════════════════════════════════════════════════════════
-  //  Tab2: 4份考核报告要求
+  //  Tab2: 4份最终报告要求
   // ══════════════════════════════════════════════════════════
   Widget _buildAssessmentReports() {
     final reports = [
@@ -5109,6 +5194,41 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
         }
       }
 
+      // AI 检查：报告内容是否匹配小组技术栈和特色功能
+      if (_isStudent && file.path != null) {
+        final techInfo = await _dao.getStudentGroupTechInfo(userId);
+        if (techInfo != null &&
+            (techInfo['techStack']?.isNotEmpty == true ||
+             techInfo['features']?.isNotEmpty == true)) {
+          final pdfText = await PdfTextService.extractFromFile(
+            file.path!,
+            maxChars: 2000,
+          );
+          if (pdfText != null && pdfText.isNotEmpty) {
+            // ignore: use_build_context_synchronously
+            final reason = await AssessmentGradingAgent()
+                .checkReportTechStackAlignment(
+              reportContent: pdfText,
+              groupTechStack: techInfo['techStack'] ?? '',
+              groupFeatures: techInfo['features'] ?? '',
+            );
+            if (reason != null && mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    '提交失败：报告内容未体现小组技术栈和特色功能 — $reason',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  backgroundColor: Colors.red[700],
+                  duration: const Duration(seconds: 6),
+                ),
+              );
+              return;
+            }
+          }
+        }
+      }
+
       await _dao.submitReport(
         userId: userId,
         studentName: userName,
@@ -5308,7 +5428,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
   /// 教师批改考核报告对话框（含 AI 批阅）
   void _showReportGradeDialog(Map<String, dynamic> submission) {
     final reportId = submission['id'] as int?;
-    final title = submission['title'] as String? ?? '考核报告';
+    final title = submission['title'] as String? ?? '最终报告';
     final content = submission['content_json'] as String? ?? '';
     final filePath = submission['file_path'] as String? ?? '';
     final userId = submission['user_id'] as String? ?? '';

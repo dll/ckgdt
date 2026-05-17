@@ -7,6 +7,10 @@ import '../data/local/knowledge_graph_dao.dart';
 /// 从本地数据库中检索与用户查询相关的知识内容，
 /// 用于增强智能体的系统提示词，提供课程特定的上下文。
 ///
+/// 检索策略：
+/// - 优先使用 TF-IDF 向量嵌入做语义检索（余弦相似度）
+/// - 索引为空时自动退化为关键词 LIKE 匹配
+///
 /// 数据源：
 /// - `knowledge_concepts` / `concept_relations` — 语义知识图谱
 /// - `nodes` — 图谱节点（标题、内容）
@@ -15,13 +19,48 @@ import '../data/local/knowledge_graph_dao.dart';
 class RagService {
   final KnowledgeGraphDao _kgDao = KnowledgeGraphDao();
 
+  // ── TF-IDF 索引数据结构 ──────────────────────────────────────────────
+
+  /// term → termId
+  final Map<String, int> _vocabulary = {};
+
+  /// termId → 出现该词的文档数
+  final Map<int, int> _docFrequency = {};
+
+  /// docKey → {termId: tf}
+  /// docKey 格式: "concept:{id}", "node:{graphId}:{nodeId}", "resource:{id}"
+  final Map<String, Map<int, double>> _docVectors = {};
+
+  /// docKey → 原始行数据
+  final Map<String, Map<String, dynamic>> _docMeta = {};
+
+  /// 文档总数
+  int _docCount = 0;
+
+  /// 索引是否已构建
+  bool _indexBuilt = false;
+
+  // ── 中文停用词 ──────────────────────────────────────────────────────
+
+  static const _stopWords = {
+    '的', '了', '吗', '呢', '啊', '吧', '是', '在', '有', '和', '与',
+    '或', '对', '从', '到', '把', '被', '让', '给', '用', '以',
+    '什么', '怎么', '如何', '为什么', '哪些', '哪个', '多少',
+    '能', '可以', '请', '帮', '我', '你', '他', '她', '它', '们',
+    '这', '那', '些', '个', '一', '不', '也', '都', '还', '就',
+    '想', '要', '知道', '了解', '学习', '看看', '介绍', '说说',
+    '一个', '一种', '这个', '那个', '我们', '他们', '自己',
+    '其中', '通过', '以及', '使用', '进行', '基于', '需要',
+    '包括', '主要', '不同', '之间', '相关', '用于', '提供',
+    '实现', '开发', '应用', '技术', '移动', '系统', '设计',
+    '方式', '方法', '过程', '内容', '功能', '特点', '作用',
+    '什么是', '是指', '称为', '属于', '具有', '能够', '必须',
+    '因此', '所以', '但是', '虽然', '如果', '因为', '并且',
+  };
+
+  // ── 公共 API ───────────────────────────────────────────────────────
+
   /// 根据用户查询检索相关内容，返回增强上下文文本。
-  ///
-  /// [query] 用户输入的问题/主题
-  /// [maxConcepts] 最多返回的概念数（默认 8）
-  /// [includeRelations] 是否包含概念间的关系（默认 true）
-  /// [includeResources] 是否包含课程资料信息（默认 true）
-  /// [includeQuestions] 是否包含相关测验题（默认 false）
   Future<String> retrieveContext(
     String query, {
     int maxConcepts = 8,
@@ -31,17 +70,22 @@ class RagService {
   }) async {
     if (query.trim().isEmpty) return '';
 
+    // 首次调用时构建索引
+    if (!_indexBuilt) await _buildIndex();
+
     final sections = <String>[];
 
-    // 提取搜索关键词（按空格/逗号/顿号拆分）
-    final keywords = _extractKeywords(query);
+    List<Map<String, dynamic>> concepts;
+    if (_docCount > 0) {
+      concepts = _searchConceptsSemantic(query, maxConcepts);
+    } else {
+      final keywords = _extractKeywords(query);
+      concepts = await _searchConceptsKeyword(keywords, maxConcepts);
+    }
 
-    // 1. 搜索语义知识概念
-    final concepts = await _searchConcepts(keywords, maxConcepts);
     if (concepts.isNotEmpty) {
       sections.add(_formatConcepts(concepts));
 
-      // 2. 检索概念间的关系
       if (includeRelations) {
         final relations = await _getRelationsForConcepts(concepts);
         if (relations.isNotEmpty) {
@@ -50,75 +94,317 @@ class RagService {
       }
     }
 
-    // 3. 搜索图谱节点（补充概念未覆盖的内容）
-    final nodes = await _searchNodes(keywords, maxConcepts);
+    List<Map<String, dynamic>> nodes;
+    if (_docCount > 0) {
+      nodes = _searchNodesSemantic(query, maxConcepts);
+    } else {
+      final keywords = _extractKeywords(query);
+      nodes = await _searchNodesKeyword(keywords, maxConcepts);
+    }
     if (nodes.isNotEmpty) {
       sections.add(_formatNodes(nodes));
     }
 
-    // 4. 搜索课程资料
     if (includeResources) {
-      final resources = await _searchResources(keywords);
+      List<Map<String, dynamic>> resources;
+      if (_docCount > 0) {
+        resources = _searchResourcesSemantic(query);
+      } else {
+        final keywords = _extractKeywords(query);
+        resources = await _searchResourcesKeyword(keywords);
+      }
       if (resources.isNotEmpty) {
         sections.add(_formatResources(resources));
       }
     }
 
-    // 5. 搜索相关测验题
     if (includeQuestions) {
-      final questions = await _searchQuestions(keywords);
+      final keywords = _extractKeywords(query);
+      final questions = await _searchQuestionsKeyword(keywords);
       if (questions.isNotEmpty) {
         sections.add(_formatQuestions(questions));
       }
     }
 
     if (sections.isEmpty) return '';
-
     return '## 课程知识库参考\n\n${sections.join('\n\n')}';
   }
 
-  /// 从用户查询中提取搜索关键词
-  List<String> _extractKeywords(String query) {
-    // 去掉常见停用词和问句助词
-    const stopWords = {
-      '的', '了', '吗', '呢', '啊', '吧', '是', '在', '有', '和', '与',
-      '或', '对', '从', '到', '把', '被', '让', '给', '用', '以',
-      '什么', '怎么', '如何', '为什么', '哪些', '哪个', '多少',
-      '能', '可以', '请', '帮', '我', '你', '他', '她', '它', '们',
-      '这', '那', '些', '个', '一', '不', '也', '都', '还', '就',
-      '想', '要', '知道', '了解', '学习', '看看', '介绍', '说说',
-    };
-
-    final words = query
-        .replaceAll(RegExp(r'[，。！？、；：""''（）\[\]{}【】]'), ' ')
-        .split(RegExp(r'\s+'))
-        .where((w) => w.length >= 2 && !stopWords.contains(w))
-        .toList();
-
-    // 如果分词后太少，用原始查询
-    if (words.isEmpty) return [query.trim()];
-    return words.take(5).toList(); // 最多 5 个关键词
+  /// 强制重建索引（数据更新后调用）
+  Future<void> rebuildIndex() async {
+    _vocabulary.clear();
+    _docFrequency.clear();
+    _docVectors.clear();
+    _docMeta.clear();
+    _docCount = 0;
+    _indexBuilt = false;
+    await _buildIndex();
   }
 
-  /// 搜索语义知识概念
-  Future<List<Map<String, dynamic>>> _searchConcepts(
-      List<String> keywords, int limit) async {
-    final seen = <int>{};
-    final results = <Map<String, dynamic>>[];
+  // ── 索引构建 ──────────────────────────────────────────────────────
 
-    for (final kw in keywords) {
-      try {
-        final hits = await _kgDao.searchConcepts(kw);
-        for (final hit in hits) {
-          final id = hit['id'] as int;
-          if (!seen.contains(id)) {
-            seen.add(id);
-            results.add(hit);
+  Future<void> _buildIndex() async {
+    try {
+      final db = await DatabaseHelper.instance.database;
+
+      // 1. 索引 knowledge_concepts
+      final concepts = await db.query('knowledge_concepts');
+      for (final c in concepts) {
+        final id = c['id'];
+        if (id == null) continue;
+        final text = [
+          c['concept_name'] ?? '',
+          c['description'] ?? '',
+          c['keywords'] ?? '',
+        ].join(' ');
+        if (text.trim().isEmpty) continue;
+        final docKey = 'concept:$id';
+        _addDocument(docKey, text, c);
+      }
+
+      // 2. 索引 nodes 表
+      final nodes = await db.query('nodes');
+      for (final n in nodes) {
+        final gid = n['graph_id'] ?? '0';
+        final nid = n['id'] ?? '';
+        final text = [
+          n['title'] ?? '',
+          n['content'] ?? '',
+          n['node_type'] ?? '',
+        ].join(' ');
+        if (text.trim().isEmpty) continue;
+        final docKey = 'node:$gid:$nid';
+        _addDocument(docKey, text, n);
+      }
+
+      // 3. 索引 resource_files
+      final resources = await db.query('resource_files');
+      for (final r in resources) {
+        final id = r['id'];
+        if (id == null) continue;
+        final text = [
+          r['file_name'] ?? '',
+          r['description'] ?? '',
+          r['file_type'] ?? '',
+        ].join(' ');
+        if (text.trim().isEmpty) continue;
+        final docKey = 'resource:$id';
+        _addDocument(docKey, text, r);
+      }
+
+      _indexBuilt = true;
+      debugPrint('RagService: index built — $_docCount docs, '
+          '${_vocabulary.length} terms');
+    } catch (e) {
+      debugPrint('RagService: _buildIndex failed: $e');
+      _docCount = 0;
+      _indexBuilt = true; // 标记为已尝试，避免反复重试
+    }
+  }
+
+  void _addDocument(String docKey, String text, Map<String, dynamic> meta) {
+    final tokens = _tokenize(text);
+    if (tokens.isEmpty) return;
+
+    final tf = <int, double>{};
+    for (final t in tokens) {
+      final termId = _vocabulary.putIfAbsent(t, () {
+        final id = _vocabulary.length;
+        _docFrequency[id] = 0;
+        return id;
+      });
+      tf[termId] = (tf[termId] ?? 0.0) + 1.0;
+    }
+
+    // 归一化 TF
+    final norm = tf.values.fold(0.0, (a, b) => a + b);
+    if (norm > 0) {
+      tf.forEach((k, v) => tf[k] = v / norm);
+    }
+
+    // 更新 DF
+    for (final termId in tf.keys) {
+      _docFrequency[termId] = (_docFrequency[termId] ?? 0) + 1;
+    }
+
+    _docVectors[docKey] = tf;
+    _docMeta[docKey] = meta;
+    _docCount++;
+  }
+
+  // ── 分词 ──────────────────────────────────────────────────────────
+
+  /// 中文 uni-gram + bi-gram + 英文单词分词
+  List<String> _tokenize(String text) {
+    final tokens = <String>[];
+    final chars = text.split('');
+    final letters = RegExp(r'[a-zA-Z]');
+    final digits = RegExp(r'[0-9]');
+
+    // 英文/数字块提取
+    int i = 0;
+    while (i < chars.length) {
+      final ch = chars[i];
+      if (letters.hasMatch(ch)) {
+        final buf = StringBuffer();
+        while (i < chars.length && letters.hasMatch(chars[i])) {
+          buf.write(chars[i]);
+          i++;
+        }
+        final word = buf.toString().toLowerCase();
+        if (word.length >= 2 && !_stopWords.contains(word)) {
+          tokens.add(word);
+        }
+      } else if (digits.hasMatch(ch)) {
+        final buf = StringBuffer();
+        while (i < chars.length && digits.hasMatch(chars[i])) {
+          buf.write(chars[i]);
+          i++;
+        }
+        tokens.add(buf.toString());
+      } else if (ch.trim().isNotEmpty &&
+          !RegExp(r'[，。！？、；：""''（）[\]{}【】,.!?;:()-]')
+              .hasMatch(ch)) {
+        // 中文字符：uni-gram
+        final uni = ch.toLowerCase();
+        if (!_stopWords.contains(uni)) {
+          tokens.add(uni);
+        }
+        // bi-gram（与前一个中文字符组合）
+        if (i > 0) {
+          final prev = chars[i - 1];
+          if (prev.trim().isNotEmpty &&
+              !RegExp(r'[a-zA-Z0-9，。！？、；：""''（）[\]{}【】,.!?;:()-]')
+                  .hasMatch(prev)) {
+            final bi = '${prev.toLowerCase()}$uni';
+            tokens.add(bi);
           }
         }
-      } catch (e) {
-        debugPrint('RagService: searchConcepts error for "$kw": $e');
+        i++;
+      } else {
+        i++;
       }
+    }
+
+    // 去停用词 + 去重保留词频统计用原始列表
+    return tokens.where((t) => t.isNotEmpty).toList();
+  }
+
+  // ── TF-IDF 计算 ───────────────────────────────────────────────────
+
+  /// 逆文档频率（加 1 平滑）
+  double _idf(int termId) {
+    final df = _docFrequency[termId] ?? 0;
+    return _log2((_docCount + 1) / (df + 1)) + 1.0;
+  }
+
+  double _log2(double x) {
+    if (x <= 0) return 0;
+    return _natLog(x) / _natLog(2.0);
+  }
+
+  static double _natLog(double x) {
+    // Taylor series approximation for ln(x) around x=1
+    if (x <= 0) return double.negativeInfinity;
+    double result = 0;
+    double term = (x - 1) / (x + 1);
+    double termSquared = term * term;
+    double current = term;
+    for (int n = 1; n < 20; n += 2) {
+      result += current / n;
+      current *= termSquared;
+    }
+    return 2 * result;
+  }
+
+  /// 查询文本 → TF-IDF 向量
+  Map<int, double> _queryVector(String query) {
+    final tokens = _tokenize(query);
+    if (tokens.isEmpty) return {};
+
+    final tf = <int, double>{};
+    for (final t in tokens) {
+      final termId = _vocabulary[t];
+      if (termId != null) {
+        tf[termId] = (tf[termId] ?? 0.0) + 1.0;
+      }
+    }
+
+    // TF-IDF 加权
+    final result = <int, double>{};
+    tf.forEach((termId, freq) {
+      result[termId] = freq * _idf(termId);
+    });
+
+    // L2 归一化
+    final norm = _l2Norm(result);
+    if (norm > 0) {
+      result.forEach((k, v) => result[k] = v / norm);
+    }
+    return result;
+  }
+
+  double _l2Norm(Map<int, double> vec) {
+    double sum = 0;
+    for (final v in vec.values) {
+      sum += v * v;
+    }
+    return sum > 0 ? _sqrt(sum) : 0;
+  }
+
+  double _sqrt(double x) {
+    if (x <= 0) return 0;
+    double guess = x;
+    for (int i = 0; i < 10; i++) {
+      guess = (guess + x / guess) / 2;
+    }
+    return guess;
+  }
+
+  /// 余弦相似度：queryVec · docVec（docVec 中 term 的值是归一化 TF）
+  double _cosineSimilarity(Map<int, double> queryVec, Map<int, double> docVec) {
+    double dot = 0;
+    queryVec.forEach((termId, qWeight) {
+      final dWeight = docVec[termId];
+      if (dWeight != null) {
+        dot += qWeight * dWeight * _idf(termId);
+      }
+    });
+
+    final qNorm = _l2Norm(queryVec);
+    // docVec IDF-weighted L2 norm
+    double dSum = 0;
+    docVec.forEach((termId, tfNorm) {
+      final w = tfNorm * _idf(termId);
+      dSum += w * w;
+    });
+    final dNorm = dSum > 0 ? _sqrt(dSum) : 0;
+
+    if (qNorm == 0 || dNorm == 0) return 0;
+    return dot / (qNorm * dNorm);
+  }
+
+  // ── 语义搜索（TF-IDF） ────────────────────────────────────────────
+
+  List<Map<String, dynamic>> _searchConceptsSemantic(
+      String query, int limit) {
+    final qVec = _queryVector(query);
+    if (qVec.isEmpty) return [];
+
+    final scored = <_DocScore>[];
+    for (final entry in _docVectors.entries) {
+      if (!entry.key.startsWith('concept:')) continue;
+      final sim = _cosineSimilarity(qVec, entry.value);
+      if (sim > 0.05) {
+        scored.add(_DocScore(entry.key, sim));
+      }
+    }
+
+    scored.sort((a, b) => b.score.compareTo(a.score));
+    final results = <Map<String, dynamic>>[];
+    for (final s in scored.take(limit)) {
+      final meta = _docMeta[s.docKey];
+      if (meta != null) results.add(meta);
     }
 
     // 按重要性排序：core > important > supplementary
@@ -129,10 +415,95 @@ class RagService {
       return ai.compareTo(bi);
     });
 
+    return results;
+  }
+
+  List<Map<String, dynamic>> _searchNodesSemantic(String query, int limit) {
+    final qVec = _queryVector(query);
+    if (qVec.isEmpty) return [];
+
+    final scored = <_DocScore>[];
+    for (final entry in _docVectors.entries) {
+      if (!entry.key.startsWith('node:')) continue;
+      final sim = _cosineSimilarity(qVec, entry.value);
+      if (sim > 0.05) {
+        scored.add(_DocScore(entry.key, sim));
+      }
+    }
+
+    scored.sort((a, b) => b.score.compareTo(a.score));
+    final results = <Map<String, dynamic>>[];
+    final seen = <String>{};
+    for (final s in scored) {
+      final meta = _docMeta[s.docKey];
+      if (meta != null) {
+        final id = meta['id']?.toString() ?? '';
+        if (id.isNotEmpty && seen.add(id)) {
+          results.add(meta);
+        }
+      }
+    }
     return results.take(limit).toList();
   }
 
-  /// 获取概念间的关系
+  List<Map<String, dynamic>> _searchResourcesSemantic(String query) {
+    final qVec = _queryVector(query);
+    if (qVec.isEmpty) return [];
+
+    final scored = <_DocScore>[];
+    for (final entry in _docVectors.entries) {
+      if (!entry.key.startsWith('resource:')) continue;
+      final sim = _cosineSimilarity(qVec, entry.value);
+      if (sim > 0.05) {
+        scored.add(_DocScore(entry.key, sim));
+      }
+    }
+
+    scored.sort((a, b) => b.score.compareTo(a.score));
+    return scored.take(8).map((s) => _docMeta[s.docKey]!).toList();
+  }
+
+  // ── 关键词搜索（fallback） ────────────────────────────────────────
+
+  /// 从用户查询中提取搜索关键词
+  List<String> _extractKeywords(String query) {
+    final words = query
+        .replaceAll(RegExp(r'[，。！？、；：""''（）[\]{}【】]'), ' ')
+        .split(RegExp(r'\s+'))
+        .where((w) => w.length >= 2 && !_stopWords.contains(w))
+        .toList();
+
+    if (words.isEmpty) return [query.trim()];
+    return words.take(5).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> _searchConceptsKeyword(
+      List<String> keywords, int limit) async {
+    final seen = <int>{};
+    final results = <Map<String, dynamic>>[];
+
+    for (final kw in keywords) {
+      try {
+        final hits = await _kgDao.searchConcepts(kw);
+        for (final hit in hits) {
+          final id = hit['id'] as int;
+          if (seen.add(id)) results.add(hit);
+        }
+      } catch (e) {
+        debugPrint('RagService: searchConcepts error for "$kw": $e');
+      }
+    }
+
+    results.sort((a, b) {
+      const order = {'core': 0, 'important': 1, 'supplementary': 2};
+      final ai = order[a['importance'] ?? 'supplementary'] ?? 2;
+      final bi = order[b['importance'] ?? 'supplementary'] ?? 2;
+      return ai.compareTo(bi);
+    });
+
+    return results.take(limit).toList();
+  }
+
   Future<List<Map<String, dynamic>>> _getRelationsForConcepts(
       List<Map<String, dynamic>> concepts) async {
     final conceptIds = concepts.map((c) => c['id'] as int).toSet();
@@ -142,7 +513,6 @@ class RagService {
       try {
         final rels = await _kgDao.getRelationsForConcept(id);
         for (final rel in rels) {
-          // 只保留两端都在已检索概念中的关系
           final srcId = rel['source_concept_id'] as int?;
           final tgtId = rel['target_concept_id'] as int?;
           if (srcId != null &&
@@ -157,13 +527,11 @@ class RagService {
       }
     }
 
-    // 去重（按 id）
     final seen = <int>{};
     return allRelations.where((r) => seen.add(r['id'] as int)).toList();
   }
 
-  /// 搜索图谱节点
-  Future<List<Map<String, dynamic>>> _searchNodes(
+  Future<List<Map<String, dynamic>>> _searchNodesKeyword(
       List<String> keywords, int limit) async {
     final db = await DatabaseHelper.instance.database;
     final seen = <String>{};
@@ -179,10 +547,7 @@ class RagService {
         );
         for (final hit in hits) {
           final id = hit['id'] as String? ?? '';
-          if (id.isNotEmpty && !seen.contains(id)) {
-            seen.add(id);
-            results.add(hit);
-          }
+          if (id.isNotEmpty && seen.add(id)) results.add(hit);
         }
       } catch (e) {
         debugPrint('RagService: searchNodes error for "$kw": $e');
@@ -192,8 +557,7 @@ class RagService {
     return results.take(limit).toList();
   }
 
-  /// 搜索课程资料
-  Future<List<Map<String, dynamic>>> _searchResources(
+  Future<List<Map<String, dynamic>>> _searchResourcesKeyword(
       List<String> keywords) async {
     final db = await DatabaseHelper.instance.database;
     final seen = <int>{};
@@ -209,10 +573,7 @@ class RagService {
         );
         for (final hit in hits) {
           final id = hit['id'] as int? ?? 0;
-          if (id > 0 && !seen.contains(id)) {
-            seen.add(id);
-            results.add(hit);
-          }
+          if (id > 0 && seen.add(id)) results.add(hit);
         }
       } catch (e) {
         debugPrint('RagService: searchResources error for "$kw": $e');
@@ -222,8 +583,7 @@ class RagService {
     return results.take(8).toList();
   }
 
-  /// 搜索相关测验题
-  Future<List<Map<String, dynamic>>> _searchQuestions(
+  Future<List<Map<String, dynamic>>> _searchQuestionsKeyword(
       List<String> keywords) async {
     final db = await DatabaseHelper.instance.database;
     final seen = <int>{};
@@ -239,10 +599,7 @@ class RagService {
         );
         for (final hit in hits) {
           final id = hit['id'] as int? ?? 0;
-          if (id > 0 && !seen.contains(id)) {
-            seen.add(id);
-            results.add(hit);
-          }
+          if (id > 0 && seen.add(id)) results.add(hit);
         }
       } catch (e) {
         debugPrint('RagService: searchQuestions error for "$kw": $e');
@@ -252,9 +609,7 @@ class RagService {
     return results.take(5).toList();
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // 格式化输出
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── 格式化输出 ────────────────────────────────────────────────────
 
   String _formatConcepts(List<Map<String, dynamic>> concepts) {
     final buf = StringBuffer('### 相关知识概念\n\n');
@@ -268,7 +623,7 @@ class RagService {
 
       buf.write('- **$name**');
       if (type.isNotEmpty) buf.write('（$type）');
-      if (chapter != null) buf.write(' [第${chapter}章]');
+      if (chapter != null) buf.write(' [第$chapter章]');
       if (importance.isNotEmpty) buf.write(' [$importance]');
       buf.writeln();
       if (desc.isNotEmpty) buf.writeln('  $desc');
@@ -279,7 +634,6 @@ class RagService {
 
   String _formatRelations(List<Map<String, dynamic>> relations,
       List<Map<String, dynamic>> concepts) {
-    // 建立 ID → 名称映射
     final nameMap = <int, String>{};
     for (final c in concepts) {
       nameMap[c['id'] as int] = c['concept_name'] as String? ?? '?';
@@ -312,10 +666,8 @@ class RagService {
       if (nodeType.isNotEmpty) buf.write('（$nodeType）');
       buf.writeln();
       if (content.isNotEmpty) {
-        // 截断过长的内容
-        final truncated = content.length > 100
-            ? '${content.substring(0, 100)}...'
-            : content;
+        final truncated =
+            content.length > 100 ? '${content.substring(0, 100)}...' : content;
         buf.writeln('  $truncated');
       }
     }
@@ -330,7 +682,7 @@ class RagService {
       final chapter = r['chapter'];
       final desc = r['description'] ?? '';
       buf.write('- 📄 $name ($type)');
-      if (chapter != null) buf.write(' [第${chapter}章]');
+      if (chapter != null) buf.write(' [第$chapter章]');
       buf.writeln();
       if (desc.isNotEmpty) buf.writeln('  $desc');
     }
@@ -346,4 +698,11 @@ class RagService {
     }
     return buf.toString();
   }
+}
+
+/// 文档得分辅助类
+class _DocScore {
+  final String docKey;
+  final double score;
+  _DocScore(this.docKey, this.score);
 }

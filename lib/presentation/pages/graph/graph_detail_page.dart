@@ -11,6 +11,7 @@ import '../../../data/models/learning_path_model.dart';
 import '../../../services/graph_layout_service.dart';
 import '../../../services/auth_service.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 class GraphDetailPage extends StatefulWidget {
   final String graphId;
   final String graphTitle;

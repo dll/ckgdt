@@ -3,6 +3,7 @@ import '../../../core/constants/chapter_sorter.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../services/file_opener_service.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 资源查看页面 — 按章节过滤显示 PDF/PPT 课件
 ///
 /// 支持两种模式：

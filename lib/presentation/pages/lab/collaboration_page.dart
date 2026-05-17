@@ -4,6 +4,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import '../../../data/local/collaboration_dao.dart';
 import '../../../services/auth_service.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 协作讨论页面 — 讨论区 / 分工管理 / 互评中心（3 Tab）
 class CollaborationPage extends StatefulWidget {
   final int? taskId;

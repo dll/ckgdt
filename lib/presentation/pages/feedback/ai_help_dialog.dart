@@ -3,6 +3,7 @@ import '../../../services/ai_service.dart';
 import '../../../services/auth_service.dart';
 import '../../widgets/markdown_bubble.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// AI 助手帮助对话框 — 使用集成的 AI API 回答用户常见问题
 class AiHelpDialog extends StatefulWidget {
   const AiHelpDialog({super.key});

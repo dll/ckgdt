@@ -4,6 +4,7 @@ import 'agent_chat_overlay.dart';
 import '../pages/profile/virtual_twin_page.dart';
 import '../pages/admin/teacher_application_page.dart';
 
+import '../../core/constants/color_ohos_compat.dart';
 /// MAD 精灵悬浮菜单 — 展开式 FAB，集成智能体对话 + 数字孪生入口
 ///
 /// 点击展开两个子按钮：

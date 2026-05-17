@@ -3,6 +3,7 @@ import '../../../data/local/user_dao.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/local/class_dao.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 教师管理页面 — 管理员面板
 ///
 /// 功能：教师/管理员列表、搜索筛选、增删改、班级关联查看、统计概览。

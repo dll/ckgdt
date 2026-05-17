@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../../services/gitee_service.dart';
 import '../../widgets/agent_entry_button.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 实验材料 Markdown 在线预览页面
 ///
 /// 支持从 assets、设备文件系统 或 Gitee 远程仓库加载 .md 文件，

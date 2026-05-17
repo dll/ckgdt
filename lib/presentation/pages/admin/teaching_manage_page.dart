@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../data/local/teaching_dao.dart';
 import '../../../services/auth_service.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 教学管理中心 — 大纲管理 / 教案管理 / 教学进度
 class TeachingManagePage extends StatefulWidget {
   const TeachingManagePage({super.key});

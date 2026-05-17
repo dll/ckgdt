@@ -23,6 +23,7 @@ import '../sync/data_sync_page.dart';
 
 import '../../../core/constants/role_guard.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 class TeacherWorkspacePage extends StatefulWidget {
   const TeacherWorkspacePage({super.key});
 

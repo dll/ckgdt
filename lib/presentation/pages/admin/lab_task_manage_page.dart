@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../data/local/lab_task_dao.dart';
 import '../../../services/auth_service.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 实验任务管理页面 — 教师发布/管理实验任务，查看提交情况
 class LabTaskManagePage extends StatefulWidget {
   const LabTaskManagePage({super.key});

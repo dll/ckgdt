@@ -215,6 +215,75 @@ class LabTaskDao {
     return result.isNotEmpty ? result.first : {};
   }
 
+  /// 获取所有学生所有实验任务的得分详情（教师总览用）
+  Future<List<Map<String, dynamic>>> getAllStudentLabScores() async {
+    final db = await _dbHelper.database;
+    return db.rawQuery('''
+      SELECT
+        s.user_id,
+        u.real_name,
+        s.task_id,
+        t.title AS task_title,
+        t.chapter,
+        t.max_score,
+        s.score,
+        s.status,
+        s.submit_time
+      FROM lab_submissions s
+      LEFT JOIN users u ON u.user_id = s.user_id
+      LEFT JOIN lab_tasks t ON t.id = s.task_id
+      WHERE u.role = 'student' AND u.is_active = 1
+      ORDER BY u.user_id, t.chapter, t.id
+    ''');
+  }
+
+  /// 获取单个学生所有实验任务得分详情
+  Future<List<Map<String, dynamic>>> getStudentLabScoreDetail(String userId) async {
+    final db = await _dbHelper.database;
+    return db.rawQuery('''
+      SELECT
+        s.task_id,
+        t.title AS task_title,
+        t.chapter,
+        t.max_score,
+        s.score,
+        s.status,
+        s.feedback,
+        s.submit_time,
+        s.scored_at
+      FROM lab_submissions s
+      LEFT JOIN lab_tasks t ON t.id = s.task_id
+      WHERE s.user_id = ?
+      ORDER BY t.chapter, t.id
+    ''', [userId]);
+  }
+
+  /// 班级实验总览统计（教师用）
+  Future<Map<String, dynamic>> getClassLabOverview() async {
+    final db = await _dbHelper.database;
+    final result = await db.rawQuery('''
+      SELECT
+        COUNT(DISTINCT s.user_id) as student_count,
+        COUNT(DISTINCT s.task_id) as task_count,
+        AVG(s.score) as avg_score,
+        MAX(s.score) as max_score,
+        MIN(CASE WHEN s.score IS NOT NULL THEN s.score END) as min_score,
+        SUM(CASE WHEN s.score >= 95 THEN 1 ELSE 0 END) as excellent_count,
+        SUM(CASE WHEN s.score >= 60 AND s.score < 95 THEN 1 ELSE 0 END) as pass_count,
+        SUM(CASE WHEN s.score < 60 THEN 1 ELSE 0 END) as fail_count,
+        SUM(CASE WHEN s.score IS NULL THEN 1 ELSE 0 END) as ungraded_count
+      FROM lab_submissions s
+      INNER JOIN users u ON u.user_id = s.user_id
+      WHERE u.role = 'student' AND u.is_active = 1
+    ''');
+    final row = result.isNotEmpty ? result.first : {};
+    final total = (row['excellent_count'] ?? 0) + (row['pass_count'] ?? 0) + (row['fail_count'] ?? 0);
+    return {
+      ...row,
+      'total_graded': total,
+    };
+  }
+
   // ═══════════ 报告模板 ═══════════
 
   Future<List<Map<String, dynamic>>> getReportTemplates(

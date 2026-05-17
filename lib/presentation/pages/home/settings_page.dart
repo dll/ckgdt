@@ -13,6 +13,7 @@ import '../settings/course_manage_page.dart';
 import '../../../data/local/course_dao.dart';
 import '../profile/chat_history_page.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
 

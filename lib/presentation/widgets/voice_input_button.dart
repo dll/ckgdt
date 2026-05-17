@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../services/voice_service.dart';
 import '../pages/settings/voice_settings_page.dart';
 
+import '../../core/constants/color_ohos_compat.dart';
 /// 通用语音输入按钮
 ///
 /// 放在 TextField 旁边，点击后弹出录音弹窗，将识别文本填入指定 controller。

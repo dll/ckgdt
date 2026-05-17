@@ -5,6 +5,7 @@ import '../../../data/local/class_dao.dart';
 import '../../../services/auth_service.dart';
 import 'survey_stats_page.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 问卷管理页面 — 教师/管理员专用
 /// 功能：问卷列表、创建/编辑/删除问卷、题目管理、发布/关闭、查看统计
 class SurveyManagePage extends StatefulWidget {

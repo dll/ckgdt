@@ -6,6 +6,7 @@ import '../../../services/auth_service.dart';
 import '../../../services/ai_service.dart';
 import '../../widgets/markdown_bubble.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 class WeaknessDiagnosisPage extends StatefulWidget {
   /// 如果为 null，则分析当前登录用户；教师可传入学生 userId
   final String? targetUserId;

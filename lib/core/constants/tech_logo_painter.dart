@@ -7,6 +7,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'mask_shapes.dart';
 
+import '../../core/constants/color_ohos_compat.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 // Public widget
 // ─────────────────────────────────────────────────────────────────────────────

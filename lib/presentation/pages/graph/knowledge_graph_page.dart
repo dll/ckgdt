@@ -21,6 +21,7 @@ import '../../widgets/markdown_bubble.dart';
 import 'graph_list_page.dart';
 import 'graph_properties_page.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 // ══════════════════════════════════════════════════════════════════════════════
 // 概念类型颜色映射
 // ══════════════════════════════════════════════════════════════════════════════

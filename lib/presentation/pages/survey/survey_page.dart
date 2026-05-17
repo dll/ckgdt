@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../data/local/survey_dao.dart';
 import '../../../services/auth_service.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 学生问卷调查页面 — 展示已发布的问卷，支持填写和提交
 class SurveyPage extends StatefulWidget {
   const SurveyPage({super.key});

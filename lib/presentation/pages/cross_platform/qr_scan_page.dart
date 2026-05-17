@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// QR 码扫描页面 — 移动端扫码连接桌面端
 ///
 /// 扫描成功后将 QR 码内容（JSON 字符串）通过 Navigator.pop 返回。

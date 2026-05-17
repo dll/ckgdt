@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../services/gitee_service.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 仓库详情页（参照 毕设进度管家 /student/:id 页面）
 /// 显示：仓库基本信息 / 4个统计卡片 / 分支列表 / 发布版本 / 提交记录表格
 class RepoDetailPage extends StatefulWidget {
@@ -945,10 +946,10 @@ class _RepoDetailPageState extends State<RepoDetailPage> {
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: DataTable(
-                columnSpacing: 16,
-                headingRowHeight: 40,
-                dataRowMinHeight: 36,
-                dataRowMaxHeight: 52,
+                columnSpacing: 12,
+                headingRowHeight: 32,
+                dataRowMinHeight: 28,
+                dataRowMaxHeight: 38,
                 columns: const [
                   DataColumn(label: Text('提交哈希',
                       style: TextStyle(fontWeight: FontWeight.bold))),
@@ -993,7 +994,7 @@ class _RepoDetailPageState extends State<RepoDetailPage> {
                         child: Text(
                           shortSha,
                           style: const TextStyle(
-                            fontSize: 12,
+                            fontSize: 13,
                             color: Colors.blue,
                             fontFamily: 'monospace',
                             decoration: TextDecoration.underline,
@@ -1002,15 +1003,15 @@ class _RepoDetailPageState extends State<RepoDetailPage> {
                       ),
                     ),
                     DataCell(Text(dateStr,
-                        style: const TextStyle(fontSize: 12))),
+                        style: const TextStyle(fontSize: 13))),
                     DataCell(Text(c.authorName,
-                        style: const TextStyle(fontSize: 12))),
+                        style: const TextStyle(fontSize: 13))),
                     DataCell(
                       ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 300),
                         child: Text(
                           c.message,
-                          style: const TextStyle(fontSize: 12),
+                          style: const TextStyle(fontSize: 13),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -1020,27 +1021,27 @@ class _RepoDetailPageState extends State<RepoDetailPage> {
                           ? Text(
                               '+${c.additions}',
                               style: const TextStyle(
-                                  fontSize: 12, color: Colors.green),
+                                  fontSize: 13, color: Colors.green),
                             )
                           : const Text('-',
                               style: TextStyle(
-                                  fontSize: 12, color: Colors.grey)),
+                                  fontSize: 13, color: Colors.grey)),
                     ),
                     DataCell(
                       c.deletions != null
                           ? Text(
                               '-${c.deletions}',
                               style: const TextStyle(
-                                  fontSize: 12, color: Colors.red),
+                                  fontSize: 13, color: Colors.red),
                             )
                           : const Text('-',
                               style: TextStyle(
-                                  fontSize: 12, color: Colors.grey)),
+                                  fontSize: 13, color: Colors.grey)),
                     ),
                     DataCell(
                       Text(
                         c.filesChanged != null ? '${c.filesChanged}' : '-',
-                        style: const TextStyle(fontSize: 12),
+                        style: const TextStyle(fontSize: 13),
                       ),
                     ),
                   ]);

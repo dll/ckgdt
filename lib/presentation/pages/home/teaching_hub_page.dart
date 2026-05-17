@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../learning/learning_hub_page.dart';
 import '../classroom/classroom_page.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 教学中心 — 聚合教学与课堂两个模块（教师端 Tab 精简）
 class TeachingHubPage extends StatefulWidget {
   const TeachingHubPage({super.key});

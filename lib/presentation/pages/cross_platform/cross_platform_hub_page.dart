@@ -11,6 +11,7 @@ import '../../../services/cross_platform/sync_protocol.dart';
 import '../../../services/cross_platform/session_manager.dart';
 import 'qr_scan_page.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 三端互通 Hub 页面
 ///
 /// 根据平台角色自动展示不同功能区：

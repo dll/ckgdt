@@ -15,6 +15,7 @@ import '../../../data/local/database_helper.dart';
 import '../../../data/models/ai_config_model.dart';
 import 'ai_settings_page.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 可选的 AI 模型选项
 class _ModelOption {
   final String label;        // 显示名称（如 "DeepSeek - deepseek-chat"）
