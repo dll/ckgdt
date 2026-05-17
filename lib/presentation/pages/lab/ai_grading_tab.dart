@@ -3,7 +3,8 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../../data/local/lab_task_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/agent/agents/lab_grading_agent.dart';
-import 'lab_tasks_page.dart' show tryParseGradingJson, formatGradingFeedback;
+import 'lab_tasks_page.dart'
+    show tryParseGradingJson, formatGradingFeedback, prepareGradingContent;
 
 /// 实验 AI 智能批阅 Tab — 仅教师/管理员可见
 ///
@@ -136,6 +137,8 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
       final sub = ungradedSubs[i];
       final sid = sub['id'] as int;
       final content = (sub['content'] as String?) ?? '';
+      final filePaths = (sub['file_paths'] as String?) ?? '';
+      final fileNames = (sub['file_names'] as String?) ?? '';
       final taskTitle =
           (sub['task_title'] as String?) ?? _selectedTask?['title'] ?? '';
       final requirements = _selectedTask?['requirements'] as String?;
@@ -147,9 +150,28 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
       });
 
       try {
+        // 兜底：从 PDF 提取正文（旧提交只存了文件名）
+        final prepared = await prepareGradingContent(
+          rawContent: content,
+          filePaths: filePaths,
+          fileNames: fileNames,
+        );
+        if (!prepared.hasBody) {
+          _gradingResults[sid] = _GradingResult(
+            score: 0,
+            feedback: '无法读取报告正文：PDF 文件未同步到本机或损坏，需手动批改',
+            dimensions: null,
+            strengths: [],
+            improvements: [],
+            aiFlag: false,
+            raw: null,
+          );
+          if (mounted) setState(() {});
+          continue;
+        }
         final result = await _gradingAgent.gradeSubmission(
           taskTitle: taskTitle,
-          content: content,
+          content: prepared.content,
           maxScore: (sub['max_score'] as int?) ?? 100,
           requirements: requirements,
         );

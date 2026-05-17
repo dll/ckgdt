@@ -145,6 +145,7 @@ class _CollaborationPageState extends State<CollaborationPage>
     } catch (e) {
       debugPrint('CollaborationPage: 加载数据失败: $e');
     }
+    if (!mounted) return;
     setState(() => _isLoading = false);
   }
 

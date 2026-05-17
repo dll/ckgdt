@@ -77,8 +77,8 @@ class _ProductizationGuidePageState extends State<ProductizationGuidePage> {
   }
 
   // ── 重置进度 ─────────────────────────────────────────────────────────────
-  void _resetProgress() {
-    showDialog<bool>(
+  Future<void> _resetProgress() async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('重置进度'),
@@ -94,21 +94,21 @@ class _ProductizationGuidePageState extends State<ProductizationGuidePage> {
           ),
         ],
       ),
-    ).then((confirmed) {
-      if (confirmed == true) {
-        setState(() {
-          for (final category in _categories) {
-            for (final item in category.items) {
-              item.isChecked = false;
-            }
+    );
+    if (!mounted) return;
+    if (confirmed == true) {
+      setState(() {
+        for (final category in _categories) {
+          for (final item in category.items) {
+            item.isChecked = false;
           }
-        });
-        _saveProgress();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('已重置所有检查项')),
-        );
-      }
-    });
+        }
+      });
+      _saveProgress();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('已重置所有检查项')),
+      );
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════════════
