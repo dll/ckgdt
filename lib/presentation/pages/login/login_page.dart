@@ -137,10 +137,21 @@ class _LoginPageState extends State<LoginPage>
     } catch (e) {
       debugPrint('=== LoginPage: Login error: $e');
       if (mounted) {
+        final errorMsg = e.toString();
+        String userMsg = '登录出错: $e';
+        
+        if (errorMsg.contains('locked') || 
+            errorMsg.contains('database is locked') ||
+            errorMsg.contains('SQLiteException') ||
+            errorMsg.contains('singleInstance')) {
+          userMsg = '应用已在运行，请勿同时打开多个实例';
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('登录出错: $e'),
+            content: Text(userMsg),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
