@@ -12,6 +12,7 @@ import '../../../services/sync_service.dart';
 import '../../../services/agent/agents/lab_grading_agent.dart';
 import '../../../services/gitee_service.dart';
 import '../../../services/course_resource_service.dart';
+import '../../../services/pdf_text_service.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../widgets/agent_entry_button.dart';
 import '../admin/repo_detail_page.dart';
@@ -95,6 +96,41 @@ String formatGradingFeedback(Map<String, dynamic> parsed) {
   return result.isNotEmpty ? result : (parsed['feedback'] as String? ?? '');
 }
 
+/// 准备 AI 批阅内容：若提交内容仅含文件名占位（旧数据），尝试从 PDF 重新提取文本。
+///
+/// 返回 (content, hasBody)：
+/// - hasBody=false 表示仍未拿到正文，UI 应提示教师 "PDF 同步中或损坏，需手动批改"
+String? _gradingContentBodyMarker = '--- 报告正文（自动提取）---';
+
+Future<({String content, bool hasBody})> prepareGradingContent({
+  required String rawContent,
+  required String filePaths,
+  required String fileNames,
+}) async {
+  // 已有正文标记 → 直接返回
+  if (rawContent.contains(_gradingContentBodyMarker!) &&
+      rawContent.length > 200) {
+    return (content: rawContent, hasBody: true);
+  }
+  // 旧数据（仅 "PDF实验报告：xxx.pdf"）→ 尝试从本地 PDF 提取
+  final resolved = _resolveFilePath(filePaths, fileNames);
+  if (resolved != null) {
+    final extracted = await PdfTextService.extractFromFile(resolved);
+    if (extracted != null && extracted.isNotEmpty) {
+      final buf = StringBuffer()
+        ..writeln(rawContent.isEmpty
+            ? 'PDF实验报告：$fileNames'
+            : rawContent.trim())
+        ..writeln()
+        ..writeln(_gradingContentBodyMarker)
+        ..writeln(extracted);
+      return (content: buf.toString(), hasBody: true);
+    }
+  }
+  // 仍无正文：返回原内容供 UI 决策
+  return (content: rawContent, hasBody: false);
+}
+
 /// 解析PDF文件路径：优先使用原始路径，若不存在则尝试在常见目录查找同名文件
 String? _resolveFilePath(String filePath, String fileNames) {
   // 1. 直接路径存在
@@ -128,41 +164,39 @@ String? _resolveFilePath(String filePath, String fileNames) {
     if (candidate.existsSync()) return candidate.path;
   }
 
-  // 3. 在同步下载目录递归搜索（sync_files/{userId}/）
-  try {
-    final appDocDir = Platform.isWindows
-        ? '${Platform.environment['USERPROFILE'] ?? ''}\\Documents'
-        : '';
-    if (appDocDir.isNotEmpty) {
-      final syncRoot = Directory(appDocDir);
-      if (syncRoot.existsSync()) {
-        for (final entity in syncRoot.listSync(recursive: true)) {
-          if (entity is File && entity.path.endsWith(fileName)) {
-            return entity.path;
-          }
-        }
-      }
-    }
-  } catch (_) {}
-
-  // 4. 搜索应用数据目录的 sync_files
+  // 3. 在同步下载目录浅层搜索（仅 sync_files/{userId}/，最多 2 层）
   try {
     final appDataPaths = <String>[
       if (Platform.isWindows)
         '${Platform.environment['LOCALAPPDATA'] ?? ''}\\com.edu.knowledge_graph_app',
       if (Platform.isWindows)
         '${Platform.environment['APPDATA'] ?? ''}\\com.edu.knowledge_graph_app',
+      if (Platform.isWindows)
+        '${Platform.environment['USERPROFILE'] ?? ''}\\Documents\\sync_files',
     ];
     for (final appPath in appDataPaths) {
       if (appPath.isEmpty) continue;
-      final syncDir = Directory('$appPath\\sync_files');
-      if (syncDir.existsSync()) {
-        for (final entity in syncDir.listSync(recursive: true)) {
-          if (entity is File && entity.path.endsWith(fileName)) {
-            return entity.path;
+      final syncDir = Directory(
+          appPath.endsWith('sync_files') ? appPath : '$appPath\\sync_files');
+      if (!syncDir.existsSync()) continue;
+      // 仅扫描第一层（用户目录）和第二层（实验/考核/作品 子目录）
+      try {
+        for (final userDir in syncDir.listSync()) {
+          if (userDir is! Directory) continue;
+          for (final entity in userDir.listSync(recursive: false)) {
+            if (entity is File && entity.path.endsWith(fileName)) {
+              return entity.path;
+            }
+            if (entity is Directory) {
+              for (final inner in entity.listSync(recursive: false)) {
+                if (inner is File && inner.path.endsWith(fileName)) {
+                  return inner.path;
+                }
+              }
+            }
           }
         }
-      }
+      } catch (_) {}
     }
   } catch (_) {}
 
@@ -1794,7 +1828,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
               onPressed: isAiGrading
                   ? null
                   : () async {
-                      if (content.isEmpty) {
+                      if (content.isEmpty && filePaths.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('学生未提交内容，无法AI批阅')),
                         );
@@ -1802,10 +1836,29 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                       }
                       setDialogState(() => isAiGrading = true);
                       try {
+                        // 兜底：旧提交可能只有文件名占位，需要从 PDF 重新提取
+                        final prepared = await prepareGradingContent(
+                          rawContent: content,
+                          filePaths: filePaths,
+                          fileNames: fileNames,
+                        );
+                        if (!prepared.hasBody) {
+                          if (ctx.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                    '无法读取报告正文：PDF 文件未同步到本机或损坏，请使用手动批改'),
+                                duration: Duration(seconds: 4),
+                              ),
+                            );
+                            setDialogState(() => isAiGrading = false);
+                          }
+                          return;
+                        }
                         final agent = LabGradingAgent();
                         final result = await agent.gradeSubmission(
                           taskTitle: taskTitle,
-                          content: content,
+                          content: prepared.content,
                           maxScore: maxScore,
                         );
                         // 尝试解析 JSON 结果
@@ -2898,10 +2951,28 @@ class _ReportTabState extends State<_ReportTab> {
                     : () async {
                         setDialogState(() => isAiGrading = true);
                         try {
+                          final prepared = await prepareGradingContent(
+                            rawContent: content,
+                            filePaths: filePaths,
+                            fileNames: fileNames,
+                          );
+                          if (!prepared.hasBody) {
+                            if (ctx.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      '无法读取报告正文：PDF 文件未同步到本机或损坏，请使用手动批改'),
+                                  duration: Duration(seconds: 4),
+                                ),
+                              );
+                              setDialogState(() => isAiGrading = false);
+                            }
+                            return;
+                          }
                           final agent = LabGradingAgent();
                           final result = await agent.gradeSubmission(
                             taskTitle: title,
-                            content: content.isNotEmpty ? content : '（学生提交了实验报告文件：$fileNames）',
+                            content: prepared.content,
                           );
                           // 尝试解析 JSON 格式评分
                           final parsed = tryParseGradingJson(result);

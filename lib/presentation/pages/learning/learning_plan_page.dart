@@ -47,14 +47,17 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
       final userId = _authService.getCurrentUserId();
       if (userId != null) {
         final paths = await _learningPathDao.getPathsByUser(userId);
+        if (!mounted) return;
         setState(() {
           _paths = paths;
           _isLoading = false;
         });
       } else {
+        if (!mounted) return;
         setState(() => _isLoading = false);
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
     }
   }
@@ -84,11 +87,13 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
           }
         }
       }
+      if (!mounted) return;
       setState(() {
         _pathNodes = nodes;
         _loadingDetail = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _loadingDetail = false);
     }
   }
@@ -155,6 +160,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
       }
     }
 
+    if (!mounted) return;
     _loadPaths();
   }
 
