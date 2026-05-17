@@ -6,6 +6,7 @@ import '../../../data/local/database_helper.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/agent/agents/assessment_grading_agent.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 考核 AI 智能批阅 Tab — 仅教师/管理员可见
 ///
 /// 四区结构：

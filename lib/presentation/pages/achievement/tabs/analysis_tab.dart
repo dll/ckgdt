@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../data/local/achievement_dao.dart';
 import '../achievement_shared.dart';
 
+import '../../../../core/constants/color_ohos_compat.dart';
 // ══════════════════════════════════════════════════════════════════════════════
 // Tab 4 — 计算过程（大纲目标 + 考核结构 + 公式 + 班级概览 + 学生表 + 分布图）
 // ══════════════════════════════════════════════════════════════════════════════

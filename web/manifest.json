@@ -1,6 +1,6 @@
 {
-    "name": "移动图谱与数字孪生v0.10.0",
-    "short_name": "移动图谱与数字孪生",
+    "name": "移动图谱v0.11.0",
+    "short_name": "移动图谱",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

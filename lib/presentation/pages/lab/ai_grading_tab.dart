@@ -3,8 +3,8 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../../data/local/lab_task_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/agent/agents/lab_grading_agent.dart';
-import 'lab_tasks_page.dart'
-    show tryParseGradingJson, formatGradingFeedback, prepareGradingContent;
+import 'lab_tasks_page.dart';
+import '../../../core/constants/color_ohos_compat.dart';
 
 /// 实验 AI 智能批阅 Tab — 仅教师/管理员可见
 ///

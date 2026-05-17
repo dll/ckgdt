@@ -5,6 +5,7 @@ import '../../../services/ai_service.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/tts_flutter_service.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 class WrongAnswersPage extends StatefulWidget {
   const WrongAnswersPage({super.key});
 

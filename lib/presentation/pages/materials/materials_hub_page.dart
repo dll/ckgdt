@@ -13,6 +13,7 @@ import 'puml_manager_page.dart';
 import 'slide_generator_page.dart';
 import 'courseware_workshop_page.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 class MaterialsHubPage extends StatefulWidget {
   const MaterialsHubPage({super.key});
 

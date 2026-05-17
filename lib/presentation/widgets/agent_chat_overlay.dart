@@ -13,6 +13,7 @@ import '../../services/voice_service.dart';
 import '../pages/profile/chat_history_page.dart';
 import 'markdown_bubble.dart';
 
+import '../../core/constants/color_ohos_compat.dart';
 /// 多智能体对话浮层 — 全局 BottomSheet 对话面板
 ///
 /// 布局结构：

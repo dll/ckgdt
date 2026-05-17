@@ -7,6 +7,7 @@ import '../quiz/quiz_page.dart';
 import 'video_page.dart';
 import '../materials/resource_viewer_page.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 学习链路页面 — 从知识概念出发，打通 概念理解→视频→课件→测验 的完整学习闭环
 class LearningChainPage extends StatefulWidget {
   final int conceptId;

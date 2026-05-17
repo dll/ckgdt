@@ -4,6 +4,7 @@ import '../../../services/auth_service.dart';
 import '../../../services/course_resource_service.dart';
 import '../../widgets/agent_entry_button.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 学生仓库页面 — 学生专属视图
 ///
 /// 功能：
@@ -240,15 +241,15 @@ class _StudentRepoPageState extends State<StudentRepoPage>
     return RefreshIndicator(
       onRefresh: () => _loadMyRepos(forceRefresh: true),
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         children: [
           // 用户信息卡片
           _buildUserInfoCard(),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
           // 过滤状态提示
           _buildFilterStatusBar(),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
           // 仓库列表
           Row(
@@ -269,7 +270,7 @@ class _StudentRepoPageState extends State<StudentRepoPage>
                 child: Text(
                   '${_myRepos.length}',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.primary,
                   ),
@@ -323,7 +324,7 @@ class _StudentRepoPageState extends State<StudentRepoPage>
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              child: const Text('查看全部', style: TextStyle(fontSize: 12)),
+              child: const Text('查看全部', style: TextStyle(fontSize: 13)),
             ),
           ],
         ),
@@ -355,7 +356,7 @@ class _StudentRepoPageState extends State<StudentRepoPage>
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              child: const Text('只看我的', style: TextStyle(fontSize: 12)),
+              child: const Text('只看我的', style: TextStyle(fontSize: 13)),
             ),
           ],
         ),
@@ -491,7 +492,7 @@ class _StudentRepoPageState extends State<StudentRepoPage>
           child: Text(groupLabel,
               style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: FontWeight.bold)),
         ),
         title: Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -588,7 +589,7 @@ class _StudentRepoPageState extends State<StudentRepoPage>
         title: Text(name, style: const TextStyle(fontFamily: 'monospace')),
         trailing: isProtected
             ? const Chip(
-                label: Text('保护', style: TextStyle(fontSize: 10)),
+                label: Text('保护', style: TextStyle(fontSize: 11)),
                 padding: EdgeInsets.zero,
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               )
@@ -661,16 +662,16 @@ class _StudentRepoPageState extends State<StudentRepoPage>
                       Text(shortSha,
                           style: TextStyle(
                               fontFamily: 'monospace',
-                              fontSize: 12,
+                              fontSize: 13,
                               color: Theme.of(context).colorScheme.primary)),
                       const SizedBox(width: 12),
                       Text(authorName,
                           style: const TextStyle(
-                              fontSize: 12, color: Colors.grey)),
+                              fontSize: 13, color: Colors.grey)),
                       const Spacer(),
                       Text(timeAgo,
                           style: const TextStyle(
-                              fontSize: 12, color: Colors.grey)),
+                              fontSize: 13, color: Colors.grey)),
                     ],
                   ),
                 ],

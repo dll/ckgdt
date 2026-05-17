@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../services/settings_service.dart';
 import '../../../services/voice_service.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 讯飞语音配置页面
 ///
 /// 配置讯飞开放平台的 AppID、APIKey、APISecret，

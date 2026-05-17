@@ -5,6 +5,7 @@ import '../../../data/local/puml_dao.dart';
 import '../../../data/models/puml_file_model.dart';
 import '../../../services/plantuml_service.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 class PumlManagerPage extends StatefulWidget {
   final PumlFileModel? pumlFile;
 

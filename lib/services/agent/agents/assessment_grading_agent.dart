@@ -123,4 +123,34 @@ class AssessmentGradingAgent extends BaseAgent {
 
     return await safeAiChat(messages, aiService: _ai);
   }
+
+  /// 检查报告内容是否匹配小组技术栈和特色功能
+  /// 返回 null = 通过，返回 String = 不通过原因
+  Future<String?> checkReportTechStackAlignment({
+    required String reportContent,
+    required String groupTechStack,
+    required String groupFeatures,
+  }) async {
+    if (groupTechStack.isEmpty && groupFeatures.isEmpty) return null;
+
+    final prompt = StringBuffer();
+    prompt.writeln('技术文档审核：检查报告是否覆盖小组技术栈和特色功能。\n');
+    prompt.writeln('要求的技术栈：$groupTechStack');
+    prompt.writeln('要求的特色功能：$groupFeatures\n');
+    prompt.writeln('报告内容（前2000字）：');
+    prompt.writeln(reportContent.length > 2000 ? reportContent.substring(0, 2000) : reportContent);
+    prompt.writeln('\n回答：若报告覆盖了技术栈和特色功能，只回复"PASS"。否则用中文说明缺少什么（50字内）。');
+
+    try {
+      final messages = [{'role': 'user', 'content': prompt.toString()}];
+      final response = await safeAiChat(messages, aiService: _ai);
+      if (response == null) return null;
+      final clean = response.trim();
+      if (clean.toUpperCase().startsWith('PASS') || clean.startsWith('通过')) return null;
+      final reason = response.length > 100 ? '${response.substring(0, 100)}…' : response;
+      return reason;
+    } catch (_) {
+      return null; // AI 不可用时放行
+    }
+  }
 }

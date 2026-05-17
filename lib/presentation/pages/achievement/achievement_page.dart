@@ -7,6 +7,7 @@ import 'tabs/scores_tab.dart';
 import 'tabs/report_tab.dart';
 import 'tabs/analysis_tab.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 课程达成度计算系统 — 8 Tab 壳页面
 ///
 /// 各 Tab 实现已拆分至 tabs/ 子目录：

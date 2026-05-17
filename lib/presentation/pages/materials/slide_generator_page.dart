@@ -6,6 +6,7 @@ import '../../../services/slide_generator_service.dart';
 import '../../../data/models/material_model.dart';
 import 'ai_settings_page.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 class SlideGeneratorPage extends StatefulWidget {
   const SlideGeneratorPage({super.key});
 

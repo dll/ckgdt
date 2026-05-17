@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../../data/local/ai_history_dao.dart';
 import '../../../services/agent/agent_registry.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// AI 数据管理页面
 ///
 /// 功能：使用统计、对话历史浏览、数据清理、导出

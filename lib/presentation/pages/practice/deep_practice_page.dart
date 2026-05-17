@@ -5,6 +5,7 @@ import '../../../data/local/learning_record_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../widgets/markdown_bubble.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 深度实践中心 — 每章提供多层次深入学习内容
 /// 借鉴天天向上"学前-学中-学后"闭环，解决课时不足问题
 class DeepPracticePage extends StatefulWidget {

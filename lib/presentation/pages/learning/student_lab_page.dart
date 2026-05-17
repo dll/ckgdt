@@ -14,6 +14,7 @@ import '../../../services/pdf_text_service.dart';
 import '../lab/lab_material_preview_page.dart';
 import '../../widgets/agent_entry_button.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 学生实验中心 — 查看实验任务、提交作业、查看成绩
 class StudentLabPage extends StatefulWidget {
   const StudentLabPage({super.key});

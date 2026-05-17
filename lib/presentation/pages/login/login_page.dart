@@ -16,6 +16,7 @@ import '../../widgets/voice_input_button.dart';
 import '../home/home_page.dart';
 import '../../../data/local/course_dao.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 

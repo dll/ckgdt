@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../../data/models/user_model.dart';
 import '../../../services/gitee_service.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 学生详情页 — 展示学生 Gitee 仓库信息、提交记录等
 class StudentDetailPage extends StatefulWidget {
   final UserModel student;

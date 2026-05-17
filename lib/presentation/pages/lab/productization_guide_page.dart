@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/app_theme.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 // 产品化引导检查清单页面
 // 帮助学生将实验项目转化为完整产品，提供分类检查项与实用建议

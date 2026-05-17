@@ -18,6 +18,7 @@ import 'services/auth_service.dart';
 import 'services/agent/agent_registry.dart';
 import 'presentation/pages/profile/virtual_twin_page.dart';
 
+import 'core/constants/color_ohos_compat.dart';
 // 条件导入：Web 端使用 ffi_web，桌面端使用 ffi
 import 'platform/platform_init_stub.dart'
     if (dart.library.io) 'platform/platform_init_native.dart'

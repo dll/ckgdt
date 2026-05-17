@@ -10,6 +10,7 @@ import '../../../services/ppt_export_service.dart';
 import '../../../services/tts_flutter_service.dart';
 import '../../pages/quiz/quiz_page.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 应用内 PPTX 放映器 — 接近 PowerPoint / WPS 演示效果
 ///
 /// 功能：

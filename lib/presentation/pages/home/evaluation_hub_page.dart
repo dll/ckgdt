@@ -3,6 +3,7 @@ import '../lab/lab_tasks_page.dart';
 import '../assessment/assessment_page.dart';
 import '../works/works_page.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 评价中心 — 聚合实验、考核、作品三个模块（教师端 Tab 精简）
 class EvaluationHubPage extends StatefulWidget {
   const EvaluationHubPage({super.key});

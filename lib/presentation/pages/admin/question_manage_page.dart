@@ -4,6 +4,7 @@ import '../../../data/models/question_model.dart';
 import '../../../services/auth_service.dart';
 import '../../../core/constants/role_guard.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 题库管理页面 — 教师/管理员专用
 /// 功能：题目列表、按章节筛选、添加/编辑/删除题目、章节统计
 class QuestionManagePage extends StatefulWidget {

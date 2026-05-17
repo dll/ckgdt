@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../data/local/feedback_dao.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 管理员 — 问题反馈管理页面
 class FeedbackManagePage extends StatefulWidget {
   const FeedbackManagePage({super.key});

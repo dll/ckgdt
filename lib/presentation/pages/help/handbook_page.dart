@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 用户手册页面 — 根据角色显示对应的操作指南
 /// 支持：学生手册 / 教师手册 / 管理员手册
 class HandbookPage extends StatelessWidget {

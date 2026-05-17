@@ -57,6 +57,7 @@ class DatabaseHelper {
     final db = await openDatabase(
       dbName,
       version: 20,
+      singleInstance: true, // 启用单例模式
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -111,6 +112,7 @@ class DatabaseHelper {
         final db2 = await openDatabase(
           dbName,
           version: 20,
+          singleInstance: true, // 启用单例模式
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
         );
@@ -171,6 +173,7 @@ class DatabaseHelper {
     db = await openDatabase(
       dbPath,
       version: 20,
+      singleInstance: true, // 启用单例模式，防止多实例同时访问
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );

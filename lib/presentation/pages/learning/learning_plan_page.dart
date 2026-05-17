@@ -11,6 +11,7 @@ import '../../../data/models/node_model.dart';
 import '../learning/video_page.dart';
 import '../materials/resource_viewer_page.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 学习路径页面 — 替代原"学习计划"
 /// 列表模式: 显示所有路径卡片
 /// 详情模式: 上半部路径图形，下半部节点属性列表

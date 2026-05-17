@@ -7,6 +7,7 @@ import '../../../services/ai_service.dart';
 import '../../../services/slide_generator_service.dart';
 import '../../widgets/markdown_bubble.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 class AiAssistPage extends StatefulWidget {
   final String mode; // 'chat', 'script', 'uml'
   const AiAssistPage({super.key, this.mode = 'chat'});

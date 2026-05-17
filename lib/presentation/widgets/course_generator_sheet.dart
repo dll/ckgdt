@@ -7,6 +7,7 @@ import '../../data/local/database_helper.dart';
 import '../../data/models/course_model.dart';
 import '../../services/ai_service.dart';
 
+import '../../core/constants/color_ohos_compat.dart';
 /// 一键生课 — 底部弹出表单
 class CourseGeneratorSheet extends StatefulWidget {
   const CourseGeneratorSheet({super.key});

@@ -52,6 +52,7 @@ import '../../../data/models/course_model.dart';
 import 'settings_page.dart';
 import 'search_page.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 class HomePage extends StatefulWidget {
   final int initialTabIndex;
 
@@ -111,7 +112,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   /// 当前平台显示名称：AppBar 内部标题（简短 + 版本号）
-  String get _platformTitle => '移动图谱与数字孪生v0.9.10';
+  String get _platformTitle => '移动图谱v0.11.0';
 
   @override
   Widget build(BuildContext context) {

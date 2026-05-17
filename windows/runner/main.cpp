@@ -27,7 +27,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   FlutterWindow window(project);
   Win32Window::Point origin(10, 10);
   Win32Window::Size size(1280, 720);
-  if (!window.Create(L"\x79FB\x52A8\x5E94\x7528\x5F00\x53D1\x77E5\x8BC6\x56FE\x8C31\x4E0E\x6570\x5B57\x5B6A\x751F\x5E73\x53F0", origin, size)) {
+  if (!window.Create(L"\x79FB\x52A8\x56FE\x8C31v0.11.0", origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);

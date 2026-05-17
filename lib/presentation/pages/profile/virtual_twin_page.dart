@@ -7,6 +7,7 @@ import '../../../data/models/twin_profile_model.dart';
 import '../../widgets/agent_chat_overlay.dart';
 import '../../widgets/markdown_bubble.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 数字孪生仪表盘 — 教育教学数字镜像
 ///
 /// 高保真、实时动态映射师生教学全过程。

@@ -3,6 +3,7 @@ import '../../../data/local/class_dao.dart';
 import '../../../data/local/user_dao.dart';
 import '../../../data/models/user_model.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 /// 班级管理页面 — 支持班级 CRUD、归档/取消归档、成员管理
 class ClassManagePage extends StatefulWidget {
   const ClassManagePage({super.key});

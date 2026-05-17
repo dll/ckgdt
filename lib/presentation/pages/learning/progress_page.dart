@@ -6,6 +6,7 @@ import '../../widgets/agent_entry_button.dart';
 import '../../../data/models/quiz_result_model.dart';
 import '../../../services/auth_service.dart';
 
+import '../../../core/constants/color_ohos_compat.dart';
 class ProgressPage extends StatefulWidget {
   const ProgressPage({super.key});
 
