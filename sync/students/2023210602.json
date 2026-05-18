@@ -3,8 +3,8 @@
   "user_id": "2023210602",
   "user_name": "匡林",
   "role": "student",
-  "synced_at": "2026-05-09T20:20:03.072945",
-  "last_active": "2026-05-09T20:20:03.072957",
+  "synced_at": "2026-05-18T16:06:25.366007",
+  "last_active": "2026-05-18T16:06:25.366027",
   "quiz_results": [
     {
       "user_id": "2023210602",
@@ -28,7 +28,20 @@
     }
   ],
   "learning_records": [],
-  "wrong_answers": [],
+  "wrong_answers": [
+    {
+      "user_id": "2023210602",
+      "question_id": 2281,
+      "question": "什么是鸿蒙系统的\"原子化服务\"？",
+      "user_answer": "一种微服务架构模式",
+      "correct_answer": "免安装的轻量化应用",
+      "chapter": "第五章 华为多端应用开发1",
+      "times": 1,
+      "wrong_time": "2026-05-09T20:20:20.823249",
+      "last_wrong_time": "2026-05-09T20:20:20.823263",
+      "explanation": "原子化服务是鸿蒙独有的轻量应用形态，无需下载安装，点击即可使用，就像小程序一样便捷。而微服务架构是后端软件设计方法，用于拆分大型系统，两者是完全不同的概念。你把鸿蒙的免安装应用误解为技术架构的分类，忽略了用户不需要安装这个核心特征。"
+    }
+  ],
   "favorites": [],
   "feedback": [],
   "learning_paths": [],
