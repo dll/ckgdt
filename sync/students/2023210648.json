@@ -3,8 +3,8 @@
   "user_id": "2023210648",
   "user_name": "张政",
   "role": "student",
-  "synced_at": "2026-05-19T11:01:04.256097",
-  "last_active": "2026-05-19T11:01:04.256106",
+  "synced_at": "2026-05-19T11:01:31.502951",
+  "last_active": "2026-05-19T11:01:31.502969",
   "quiz_results": [
     {
       "user_id": "2023210648",
@@ -33,6 +33,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 6,
+      "user_id": "2023210648",
+      "content": "PDF实验报告：2023210648张政实验六 跨平台综合项目实战.pdf",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/cache/file_picker/1779159690739/2023210648张政实验六 跨平台综合项目实战.pdf",
+      "file_names": "2023210648张政实验六 跨平台综合项目实战.pdf",
+      "submit_time": "2026-05-19T11:01:31.483922",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-05-19T11:01:31.483922",
+      "updated_at": "2026-05-19T11:01:31.483922",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 5,
       "user_id": "2023210648",
@@ -164,18 +182,6 @@
   "work_comments": [],
   "work_likes": [],
   "notification_recipients": [
-    {
-      "notification_id": 1,
-      "user_id": "2023210648",
-      "is_read": 0,
-      "read_at": null
-    },
-    {
-      "notification_id": 2,
-      "user_id": "2023210648",
-      "is_read": 0,
-      "read_at": null
-    },
     {
       "notification_id": 75,
       "user_id": "2023210648",
@@ -331,6 +337,18 @@
       "user_id": "2023210648",
       "is_read": 0,
       "read_at": null
+    },
+    {
+      "notification_id": 1,
+      "user_id": "2023210648",
+      "is_read": 1,
+      "read_at": "2026-05-19T11:01:12.645502"
+    },
+    {
+      "notification_id": 2,
+      "user_id": "2023210648",
+      "is_read": 1,
+      "read_at": "2026-05-19T11:01:10.212053"
     }
   ],
   "work_views": [
