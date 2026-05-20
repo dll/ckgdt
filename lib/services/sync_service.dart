@@ -448,7 +448,8 @@ class SyncService {
       'checkin_records': 'checked_at DESC',
       'work_comments': 'created_at DESC',
       'work_likes': null,
-      'notification_recipients': null,
+      // notification_recipients 不同步：notification_id 是本地自增主键，
+      // 跨设备导入会导致孤儿行（引用不存在的通知），造成 badge 计数与列表不一致
       'work_views': 'viewed_at DESC',
     };
 
@@ -875,7 +876,7 @@ class SyncService {
           'checkin_records',
           'work_comments',
           'work_likes',
-          'notification_recipients',
+          // notification_recipients 不同步：notification_id 跨设备不匹配，导入会产生孤儿行
           'work_views',
         ];
 

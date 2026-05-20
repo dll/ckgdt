@@ -5,7 +5,7 @@
 **移动图谱与数字孪生教学系统（MAD-KG）** 是面向《移动应用开发》课程的 Flutter 全平台教学平台。系统围绕"教—学—练—评—管"五个维度构建：知识图谱浏览、章节测验、视频教程、课程资料、实验管理、作品展示、成绩达成、AI 多智能体辅助。支持教师端和学生端差异化导航，通过 Gitee 仓库实现师生数据双向同步。
 
 - **仓库**：https://gitee.com/osgisOne/mad-fd
-- **当前版本**：`0.10.0`（`pubspec.yaml` → `version: 0.10.0+11`）
+- **当前版本**：`0.11.0`（`pubspec.yaml` → `version: 0.11.0+0`）
 - **Flutter SDK**：`>=3.0.0 <4.0.0`
 - **主题色**：`#667eea`（紫蓝渐变 `[0xFF667eea, 0xFF764ba2]`）
 - **用户角色**：学生 / 教师 / 管理员
@@ -438,21 +438,39 @@ flutter clean                                # 清理缓存
 
 ## 构建产物命名规范
 
-**统一名称格式**：`移动图谱v{版本号}`（如 `移动图谱v0.10.0`）
+### 双层命名体系
 
-升版时需同步修改以下文件（将 `X.Y.Z` 替换为新版本号）：
+系统使用**双层命名**：窗体标题（简称 + 版本号）与窗体内标题（完整名称）。
+
+| 位置 | 名称 | 格式 |
+|------|------|------|
+| **窗体标题**（窗口边框、浏览器标签、任务栏） | 移动图谱与数字孪生v{版本号} | 简称 + v主.次.构建 |
+| **窗体内标题**（登录页居中 Logo 下方） | 移动应用开发知识图谱与数字孪生平台 | 完整名称，不带版本号 |
+
+### 版本号规则
+
+**格式**：`主版本.次版本.构建`（如 `0.11.0`）
+
+- **主版本**（major）：重大架构变更
+- **次版本**（minor）：功能迭代
+- **构建号**（build）：每次 `flutter build` 自动 +1（`pubspec.yaml` 中 `+N` 号）
+- **构建号归零**：升次版本或主版本时，构建号从 0 开始（如 `0.11.0+0` → 下次构建 `0.11.0+1`）
+
+### 升版时需同步修改的文件
+
+升版（如 0.11.0 → 0.12.0）时，将 `X.Y.Z` 替换为新版本号：
 
 | 平台 | 文件 | 字段 |
 |------|------|------|
-| 全局 | `pubspec.yaml` | `version: X.Y.Z+N` |
-| Android | `android/app/src/main/AndroidManifest.xml` | `android:label="移动图谱vX.Y.Z"` |
-| Windows | `windows/CMakeLists.txt` | `set(BINARY_NAME "移动图谱vX.Y.Z")` |
-| Windows | `windows/runner/main.cpp` | `window.Create(L"移动图谱vX.Y.Z", ...)` |
-| Windows | `windows/runner/Runner.rc` | `FileDescription` / `InternalName` / `OriginalFilename` / `ProductName` |
+| 全局 | `pubspec.yaml` | `version: X.Y.Z+N`（N 归零） |
+| Android | `android/app/src/main/res/values/strings.xml` | `app_name` |
+| Windows | `windows/CMakeLists.txt` | `BINARY_OUTPUT_NAME` |
+| Windows | `windows/runner/main.cpp` | `window.Create(L"…", ...)` |
+| Windows | `windows/runner/Runner.rc` | 4 处：`FileDescription` / `InternalName` / `OriginalFilename` / `ProductName` |
 | Web | `web/index.html` | `<title>` 和 `apple-mobile-web-app-title` |
 | Web | `web/manifest.json` | `"name"` |
 
-> **注意**：`windows/runner/Runner.rc` 中有 4 处 `移动图谱vX.Y.Z`，需全部替换。`short_name` 保持 `移动图谱` 不带版本号。
+> **注意**：`windows/runner/Runner.rc` 中有 4 处版本号，需全部替换。`InternalName` 不带版本号（如 `移动图谱与数字孪生`）。`short_name` 不带版本号（如 `移动图谱与数字孪生`）。窗体内完整名称 `移动应用开发知识图谱与数字孪生平台` 固定不变，不需要随版本修改。
 
 ---
 

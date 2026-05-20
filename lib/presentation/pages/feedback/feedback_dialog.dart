@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -6,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../data/local/feedback_dao.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/notification_service.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
 /// 全局截图 Key — 在 main.dart 中用 RepaintBoundary 包裹应用内容
@@ -39,6 +42,7 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
   final _authService = AuthService();
 
   String? _screenshotPath;
+  String? _screenshotBase64;
   String? _attachmentPath;
   bool _isSubmitting = false;
   bool _isCapturing = false;
@@ -63,37 +67,58 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
   Future<void> _captureScreenshot() async {
     setState(() => _isCapturing = true);
     try {
+      // 等待两帧确保渲染完成（Windows 桌面端渲染管线可能需要额外时间）
+      await WidgetsBinding.instance.endOfFrame;
+      await Future.delayed(const Duration(milliseconds: 100));
+
       final boundary = feedbackScreenshotKey.currentContext
           ?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) {
         debugPrint('FeedbackDialog: RepaintBoundary not found');
-        setState(() => _isCapturing = false);
+        if (mounted) {
+          setState(() => _isCapturing = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('自动截图失败：未找到渲染边界，请手动添加图片')),
+          );
+        }
         return;
       }
 
       final image = await boundary.toImage(pixelRatio: 1.5);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) {
-        setState(() => _isCapturing = false);
+        if (mounted) setState(() => _isCapturing = false);
         return;
       }
 
+      final bytes = byteData.buffer.asUint8List();
+
+      // 保存到本地文件
       final dir = await getApplicationDocumentsDirectory();
       final feedbackDir = Directory('${dir.path}/feedback_images');
       if (!await feedbackDir.exists()) await feedbackDir.create(recursive: true);
       final file = File(
           '${feedbackDir.path}/feedback_screenshot_${DateTime.now().millisecondsSinceEpoch}.png');
-      await file.writeAsBytes(byteData.buffer.asUint8List());
+      await file.writeAsBytes(bytes);
+
+      // 同时保存 base64 编码，确保跨设备同步后截图不丢失
+      final base64Data = base64Encode(bytes);
 
       if (mounted) {
         setState(() {
           _screenshotPath = file.path;
+          _screenshotBase64 = base64Data;
           _isCapturing = false;
         });
       }
     } catch (e) {
       debugPrint('FeedbackDialog: Screenshot error: $e');
-      if (mounted) setState(() => _isCapturing = false);
+      if (mounted) {
+        setState(() => _isCapturing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('自动截图失败: $e，请手动添加图片')),
+        );
+      }
     }
   }
 
@@ -152,7 +177,15 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
             ? _suggestionController.text.trim()
             : null,
         screenshotPath: screenshotStr,
+        screenshotData: _screenshotBase64,
       );
+
+      // 通知教师/管理员有新反馈
+      unawaited(NotificationService().notifyFeedbackSubmission(
+        userId: user?.userId ?? 'unknown',
+        userName: user?.realName ?? user?.userId ?? 'unknown',
+        content: content,
+      ));
 
       if (mounted) {
         Navigator.pop(context);

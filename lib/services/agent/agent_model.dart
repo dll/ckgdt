@@ -114,6 +114,15 @@ class AgentMessage {
   /// AI 模型名称（如 "deepseek-chat"、"glm-4-flash"）
   final String? modelName;
 
+  /// 输入 Token 数
+  final int promptTokens;
+
+  /// 输出 Token 数
+  final int completionTokens;
+
+  /// 总 Token 数
+  final int totalTokens;
+
   AgentMessage({
     String? id,
     required this.agentId,
@@ -126,6 +135,9 @@ class AgentMessage {
     this.isLoading = false,
     this.modelProvider,
     this.modelName,
+    this.promptTokens = 0,
+    this.completionTokens = 0,
+    this.totalTokens = 0,
   })  : id = id ?? '${DateTime.now().microsecondsSinceEpoch}',
         timestamp = timestamp ?? DateTime.now();
 
@@ -142,6 +154,9 @@ class AgentMessage {
       isLoading: isLoading ?? this.isLoading,
       modelProvider: modelProvider,
       modelName: modelName,
+      promptTokens: promptTokens,
+      completionTokens: completionTokens,
+      totalTokens: totalTokens,
     );
   }
 }

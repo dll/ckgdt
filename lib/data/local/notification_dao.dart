@@ -198,9 +198,11 @@ class NotificationDao {
   /// 删除单条通知及其收件人记录
   Future<void> deleteNotification(int id) async {
     final db = await _dbHelper.database;
-    await db.delete('notification_recipients',
-        where: 'notification_id = ?', whereArgs: [id]);
-    await db.delete('notifications', where: 'id = ?', whereArgs: [id]);
+    await db.transaction((txn) async {
+      await txn.delete('notification_recipients',
+          where: 'notification_id = ?', whereArgs: [id]);
+      await txn.delete('notifications', where: 'id = ?', whereArgs: [id]);
+    });
   }
 
   /// 批量删除通知
@@ -208,17 +210,16 @@ class NotificationDao {
     if (ids.isEmpty) return;
     final db = await _dbHelper.database;
     final placeholders = List.filled(ids.length, '?').join(',');
-    await db.delete(
-      'notifications',
-      where: 'id IN ($placeholders)',
-      whereArgs: ids,
-    );
-    // 清理孤儿收件人记录（sqflite 未启用外键 CASCADE）
-    await db.rawDelete(
-      'DELETE FROM notification_recipients '
-      'WHERE notification_id IN ($placeholders)',
-      ids,
-    );
+    await db.transaction((txn) async {
+      await txn.delete('notification_recipients',
+          where: 'notification_id IN ($placeholders)',
+          whereArgs: ids);
+      await txn.delete(
+        'notifications',
+        where: 'id IN ($placeholders)',
+        whereArgs: ids,
+      );
+    });
   }
 
   /// 清空所有通知
@@ -226,6 +227,23 @@ class NotificationDao {
     final db = await _dbHelper.database;
     await db.delete('notification_recipients');
     await db.delete('notifications');
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 数据修复
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// 清理孤儿收件人记录（notification_id 在 notifications 中已不存在）
+  Future<int> cleanOrphanedRecipients() async {
+    final db = await _dbHelper.database;
+    final result = await db.rawDelete('''
+      DELETE FROM notification_recipients
+      WHERE notification_id NOT IN (SELECT id FROM notifications)
+    ''');
+    if (result > 0) {
+      debugPrint('NotificationDao: 清理了 $result 条孤儿收件人记录');
+    }
+    return result;
   }
 
   // ─────────────────────────────────────────────────────────────────────────

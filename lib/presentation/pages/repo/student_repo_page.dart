@@ -194,9 +194,10 @@ class _StudentRepoPageState extends State<StudentRepoPage>
         actions: const [AgentEntryButton(agentId: 'repo')],
         bottom: TabBar(
           controller: _tabController,
+          labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
           tabs: const [
-            Tab(icon: Icon(Icons.folder_special, size: 18), text: '我的项目'),
-            Tab(icon: Icon(Icons.rule_folder, size: 18), text: '提交规范'),
+            Tab(icon: Icon(Icons.folder_special, size: 20), text: '我的项目'),
+            Tab(icon: Icon(Icons.rule_folder, size: 20), text: '提交规范'),
           ],
         ),
       ),

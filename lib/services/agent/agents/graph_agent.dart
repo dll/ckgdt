@@ -148,7 +148,6 @@ class GraphAgent extends BaseAgent {
       messages,
       aiService: _ai,
     );
-    return buildReply(result.content,
-        modelProvider: result.provider, modelName: result.model);
+    return buildReplyFromResult(result);
   }
 }

@@ -30,6 +30,8 @@ class SyncServerImpl {
   final SessionManager _sessionManager = SessionManager();
   final List<WebSocket> _wsClients = [];
 
+  Directory? _cachedWebDir;
+
   bool get isRunning => _server != null;
   String? _host;
   String? get host => _host;
@@ -73,6 +75,7 @@ class SyncServerImpl {
     }
 
     debugPrint('SyncServer: 启动于 http://$_host:$_port');
+    _cachedWebDir = await _findWebBuildDir();
     _server!.listen(_handleRequest, onError: (e) {
       debugPrint('SyncServer: 连接错误 $e');
     });
@@ -87,6 +90,7 @@ class SyncServerImpl {
     _wsClients.clear();
     await _server?.close(force: true);
     _server = null;
+    _cachedWebDir = null;
     debugPrint('SyncServer: 已停止');
   }
 
@@ -423,8 +427,7 @@ class SyncServerImpl {
     var filePath = request.uri.path;
     if (filePath == '/') filePath = '/index.html';
 
-    // 按优先级搜索 web 构建目录
-    final webDir = await _findWebBuildDir();
+    final webDir = _cachedWebDir;
     if (webDir == null) {
       _jsonResponse(request.response, 404, {
         'error': 'Flutter Web 尚未构建',
@@ -438,15 +441,25 @@ class SyncServerImpl {
       final ext = filePath.split('.').last.toLowerCase();
       request.response.headers.contentType = _mimeType(ext);
       await file.openRead().pipe(request.response);
+      return;
+    }
+
+    // SPA fallback → index.html（仅对无扩展名的路由，不对静态资源）
+    // 静态资源 404 直接返回 404，避免 .js/.css/.wasm 被返回 HTML
+    final dot = filePath.lastIndexOf('.');
+    final slash = filePath.lastIndexOf('/');
+    final isAsset = dot > slash && dot > 0;
+    if (isAsset) {
+      _jsonResponse(request.response, 404, {'error': 'Not Found'});
+      return;
+    }
+
+    final index = File('${webDir.path}/index.html');
+    if (await index.exists()) {
+      request.response.headers.contentType = ContentType.html;
+      await index.openRead().pipe(request.response);
     } else {
-      // SPA fallback → index.html
-      final index = File('${webDir.path}/index.html');
-      if (await index.exists()) {
-        request.response.headers.contentType = ContentType.html;
-        await index.openRead().pipe(request.response);
-      } else {
-        _jsonResponse(request.response, 404, {'error': 'Not Found'});
-      }
+      _jsonResponse(request.response, 404, {'error': 'Not Found'});
     }
   }
 
@@ -461,17 +474,15 @@ class SyncServerImpl {
     final nearExe = Directory('${exeDir.path}/web');
     if (await nearExe.exists()) return nearExe;
 
-    // 3) 从可执行文件路径向上查找 build/web
-    //    Release exe 路径: <project>/build/windows/x64/runner/Release/
-    //    Web build 路径:   <project>/build/web/
+    // 3) 从可执行文件路径向上查找 build/web / web_server/web / web
     var searchDir = exeDir;
-    for (int i = 0; i < 6; i++) {
-      final candidate = Directory('${searchDir.path}/build/web');
-      if (await candidate.exists()) return candidate;
-      final webDirect = Directory('${searchDir.path}/web');
-      if (await webDirect.exists()) return webDirect;
+    for (int i = 0; i < 8; i++) {
+      for (final sub in ['build/web', 'web_server/web', 'web']) {
+        final candidate = Directory('${searchDir.path}/$sub');
+        if (await candidate.exists()) return candidate;
+      }
       final parent = searchDir.parent;
-      if (parent.path == searchDir.path) break; // root
+      if (parent.path == searchDir.path) break;
       searchDir = parent;
     }
 
@@ -486,7 +497,8 @@ class SyncServerImpl {
     try {
       final body = await utf8.decoder.bind(request).join();
       return jsonDecode(body) as Map<String, dynamic>;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('SyncServer: Failed to parse JSON body: $e');
       return null;
     }
   }

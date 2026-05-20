@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import '../../ai_service.dart';
+import '../../auth_service.dart';
+import '../../../data/local/ai_history_dao.dart';
 import '../agent_model.dart';
 import '../base_agent.dart';
 
@@ -92,8 +96,7 @@ class AssessmentGradingAgent extends BaseAgent {
       String userMessage, AgentSession session) async {
     final messages = buildAiMessages(userMessage, session);
     final result = await safeAiChatWithMeta(messages, aiService: _ai);
-    return buildReply(result.content,
-        modelProvider: result.provider, modelName: result.model);
+    return buildReplyFromResult(result);
   }
 
   /// 直接批改考核报告（供 UI 层调用）
@@ -121,7 +124,20 @@ class AssessmentGradingAgent extends BaseAgent {
       {'role': 'user', 'content': prompt.toString()},
     ];
 
-    return await safeAiChat(messages, aiService: _ai);
+    final result = await safeAiChatWithMeta(messages, aiService: _ai, temperature: 0.2);
+    unawaited(AiHistoryDao().saveMessage(
+      sessionId: 'direct_${DateTime.now().millisecondsSinceEpoch}',
+      agentId: config.id,
+      role: 'assistant',
+      content: result.content,
+      promptTokens: result.promptTokens,
+      completionTokens: result.completionTokens,
+      tokensUsed: result.totalTokens,
+      provider: result.provider,
+      model: result.model,
+      userId: AuthService().currentUser?.userId,
+    ));
+    return result.content;
   }
 
   /// 检查报告内容是否匹配小组技术栈和特色功能
@@ -143,11 +159,21 @@ class AssessmentGradingAgent extends BaseAgent {
 
     try {
       final messages = [{'role': 'user', 'content': prompt.toString()}];
-      final response = await safeAiChat(messages, aiService: _ai);
-      if (response == null) return null;
-      final clean = response.trim();
+      final result = await safeAiChatWithMeta(messages, aiService: _ai);
+      unawaited(AiHistoryDao().saveMessage(
+        sessionId: 'direct_${DateTime.now().millisecondsSinceEpoch}',
+        agentId: config.id,
+        role: 'assistant',
+        content: result.content,
+        promptTokens: result.promptTokens,
+        completionTokens: result.completionTokens,
+        tokensUsed: result.totalTokens,
+        provider: result.provider,
+        model: result.model,
+      ));
+      final clean = result.content.trim();
       if (clean.toUpperCase().startsWith('PASS') || clean.startsWith('通过')) return null;
-      final reason = response.length > 100 ? '${response.substring(0, 100)}…' : response;
+      final reason = clean.length > 100 ? '${clean.substring(0, 100)}…' : clean;
       return reason;
     } catch (_) {
       return null; // AI 不可用时放行

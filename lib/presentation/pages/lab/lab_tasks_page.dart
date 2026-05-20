@@ -257,23 +257,24 @@ class _LabTasksPageState extends State<LabTasksPage>
                   isScrollable: true,
                   labelColor: primary,
                   unselectedLabelColor: Colors.grey,
+                  labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                   indicatorColor: primary,
                   tabs: [
-                    const Tab(icon: Icon(Icons.science, size: 18), text: '任务列表'),
+                    const Tab(icon: Icon(Icons.science, size: 20), text: '任务列表'),
                     Tab(
-                      icon: const Icon(Icons.assignment_turned_in, size: 18),
+                      icon: const Icon(Icons.assignment_turned_in, size: 20),
                       text: _isTeacherOrAdmin ? '提交管理' : '我的提交',
                     ),
-                    const Tab(icon: Icon(Icons.description, size: 18), text: '实验报告'),
-                    const Tab(icon: Icon(Icons.menu_book, size: 18), text: '实验材料'),
+                    const Tab(icon: Icon(Icons.description, size: 20), text: '实验报告'),
+                    const Tab(icon: Icon(Icons.menu_book, size: 20), text: '实验材料'),
                     if (!_isTeacherOrAdmin)
-                      const Tab(icon: Icon(Icons.analytics, size: 18), text: '仓库报表'),
+                      const Tab(icon: Icon(Icons.analytics, size: 20), text: '仓库报表'),
                     if (_isTeacherOrAdmin)
-                      const Tab(icon: Icon(Icons.settings, size: 18), text: '任务管理'),
+                      const Tab(icon: Icon(Icons.settings, size: 20), text: '任务管理'),
                     if (_isTeacherOrAdmin)
-                      const Tab(icon: Icon(Icons.auto_awesome, size: 18), text: 'AI批阅'),
+                      const Tab(icon: Icon(Icons.auto_awesome, size: 20), text: 'AI批阅'),
                     if (_isTeacherOrAdmin)
-                      const Tab(icon: Icon(Icons.analytics, size: 18), text: '仓库报表'),
+                      const Tab(icon: Icon(Icons.analytics, size: 20), text: '仓库报表'),
                   ],
                 ),
               ),

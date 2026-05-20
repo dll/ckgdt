@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'dart:convert';
 import '../../../data/local/lab_task_dao.dart';
+import '../../../data/local/grading_result_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/agent/agents/lab_grading_agent.dart';
 import 'lab_tasks_page.dart';
@@ -29,6 +31,7 @@ class LabAiGradingTab extends StatefulWidget {
 
 class _LabAiGradingTabState extends State<LabAiGradingTab> {
   final _gradingAgent = LabGradingAgent();
+  final _gradingDao = GradingResultDao();
 
   // ── 任务数据 ──
   List<Map<String, dynamic>> _tasks = [];
@@ -78,7 +81,6 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
       final sid = s['id'] as int;
       if (s['score'] != null && s['status'] == '已批改') {
         _approvedIds.add(sid);
-        // 如果有已批改的，填充到结果中
         _gradingResults[sid] = _GradingResult(
           score: (s['score'] as num).toInt(),
           feedback: (s['feedback'] as String?) ?? '',
@@ -90,6 +92,30 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
         );
       }
     }
+    // 从 grading_results 恢复待审核的 AI 批阅结果
+    try {
+      final pending = await _gradingDao.getPendingResults('lab');
+      for (final p in pending) {
+        final tid = p['target_id'] as int;
+        if (!_approvedIds.contains(tid) && !_gradingResults.containsKey(tid)) {
+          Map<String, dynamic>? dims;
+          try { dims = jsonDecode(p['dimensions'] as String? ?? ''); } catch (_) {}
+          List<String> strengths = [];
+          try { strengths = (jsonDecode(p['strengths'] as String? ?? '[]') as List).cast<String>(); } catch (_) {}
+          List<String> improvements = [];
+          try { improvements = (jsonDecode(p['improvements'] as String? ?? '[]') as List).cast<String>(); } catch (_) {}
+          _gradingResults[tid] = _GradingResult(
+            score: (p['score'] as num?)?.toInt() ?? 0,
+            feedback: (p['feedback'] as String?) ?? '',
+            dimensions: dims,
+            strengths: strengths,
+            improvements: improvements,
+            aiFlag: (p['ai_flag'] as int?) == 1,
+            raw: null,
+          );
+        }
+      }
+    } catch (_) {}
     if (mounted) setState(() => _submissions = subs);
   }
 
@@ -228,6 +254,25 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
       if (mounted) setState(() {});
     }
 
+    // 持久化所有批阅结果
+    for (final e in _gradingResults.entries) {
+      if (_approvedIds.contains(e.key)) continue;
+      final r = e.value;
+      await _gradingDao.deletePendingForTarget('lab', e.key);
+      await _gradingDao.saveResult(
+        domain: 'lab',
+        targetId: e.key,
+        scorerId: widget.authService.getCurrentUserId() ?? '',
+        rawJson: r.raw != null ? jsonEncode(r.raw) : null,
+        score: r.score.toDouble(),
+        feedback: r.feedback,
+        dimensions: r.dimensions,
+        strengths: r.strengths,
+        improvements: r.improvements,
+        aiFlag: r.aiFlag,
+      );
+    }
+
     if (mounted) {
       setState(() {
         _isBatchGrading = false;
@@ -249,6 +294,14 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
       feedback: result.feedback,
       scorerId: widget.authService.getCurrentUserId(),
     );
+
+    // 更新 grading_results 状态
+    try {
+      final pending = await _gradingDao.getPendingResults('lab', targetId: submissionId);
+      for (final p in pending) {
+        await _gradingDao.approveResult(p['id'] as int, widget.authService.getCurrentUserId() ?? '');
+      }
+    } catch (_) {}
 
     setState(() {
       _approvedIds.add(submissionId);
@@ -1552,12 +1605,6 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                                   achieved ? Colors.green : Colors.orange,
                               minHeight: 8,
                               borderRadius: BorderRadius.circular(4),
-                            ),
-                            // 目标线
-                            Positioned(
-                              left: null,
-                              right: null,
-                              child: Container(),
                             ),
                           ],
                         ),

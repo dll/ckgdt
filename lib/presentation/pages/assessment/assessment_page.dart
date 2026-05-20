@@ -126,7 +126,7 @@ class _AssessmentPageState extends State<AssessmentPage>
                                 ? '聚焦项目、贡献、报告与答辩，完成课程考核闭环。'
                                 : '统一管理分组、评分、答辩、报告与成绩，形成完整考核流程。',
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 12,
                               color: Colors.white.withValues(alpha: 0.85),
                             ),
                             maxLines: 1,
@@ -139,10 +139,10 @@ class _AssessmentPageState extends State<AssessmentPage>
                     _buildHeaderRoleBadge(),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
+                  spacing: 4,
+                  runSpacing: 4,
                   children: const [
                     _AssessmentTopStat(
                         label: '分组', value: '5类', icon: Icons.groups),
@@ -187,15 +187,17 @@ class _AssessmentPageState extends State<AssessmentPage>
                 ),
               ],
             ),
+            labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            unselectedLabelStyle: const TextStyle(fontSize: 12),
             tabs: [
-              const Tab(icon: Icon(Icons.groups, size: 18), text: '分组'),
-              const Tab(icon: Icon(Icons.assignment, size: 18), text: '项目'),
-              const Tab(icon: Icon(Icons.star_rate, size: 18), text: '贡献'),
-              const Tab(icon: Icon(Icons.record_voice_over, size: 18), text: '答辩'),
-              const Tab(icon: Icon(Icons.summarize, size: 18), text: '报告'),
-              const Tab(icon: Icon(Icons.leaderboard, size: 18), text: '成绩'),
+              const Tab(icon: Icon(Icons.groups, size: 20), text: '分组'),
+              const Tab(icon: Icon(Icons.assignment, size: 20), text: '项目'),
+              const Tab(icon: Icon(Icons.star_rate, size: 20), text: '贡献'),
+              const Tab(icon: Icon(Icons.record_voice_over, size: 20), text: '答辩'),
+              const Tab(icon: Icon(Icons.summarize, size: 20), text: '报告'),
+              const Tab(icon: Icon(Icons.leaderboard, size: 20), text: '成绩'),
               if (!_isStudent)
-                const Tab(icon: Icon(Icons.auto_awesome, size: 18), text: 'AI批阅'),
+                const Tab(icon: Icon(Icons.auto_awesome, size: 20), text: 'AI批阅'),
             ],
           ),
         ),
@@ -260,7 +262,7 @@ class _AssessmentTopStat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(8),
@@ -268,12 +270,12 @@ class _AssessmentTopStat extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: Colors.white.withValues(alpha: 0.85)),
+          Icon(icon, size: 15, color: Colors.white.withValues(alpha: 0.85)),
           const SizedBox(width: 4),
           Text(
             '$label $value',
             style: TextStyle(
-              fontSize: 10,
+              fontSize: 12,
               color: Colors.white.withValues(alpha: 0.92),
               fontWeight: FontWeight.w500,
             ),
@@ -465,8 +467,8 @@ class _GroupTabState extends State<_GroupTab>
         // 学生：显示个人信息卡片（精简版）
         if (_isStudent && _myInfo != null && _myInfo!.isNotEmpty)
           Container(
-            margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
@@ -487,7 +489,7 @@ class _GroupTabState extends State<_GroupTab>
                         ? (_myInfo!['name'] as String).substring(0, 1)
                         : '?',
                     style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: Colors.blue[700]),
                   ),
@@ -500,11 +502,11 @@ class _GroupTabState extends State<_GroupTab>
                       Text(
                         '${_myInfo!['name']} · ${_myInfo!['role']}',
                         style: const TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.w600),
+                            fontSize: 14, fontWeight: FontWeight.w600),
                       ),
                       Text(
                         '${_myInfo!['repo']} · ${_myInfo!['techStack']}',
-                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
@@ -522,9 +524,10 @@ class _GroupTabState extends State<_GroupTab>
             labelColor: _currentDim.color,
             unselectedLabelColor: Colors.grey,
             indicatorColor: _currentDim.color,
+            labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             tabs: _GroupDimension.values
                 .map((d) => Tab(
-                      icon: Icon(d.icon, size: 16),
+                      icon: Icon(d.icon, size: 18),
                       text: d.label,
                     ))
                 .toList(),
@@ -572,9 +575,9 @@ class _GroupTabState extends State<_GroupTab>
     return Row(
       children: [
         _statCard('分组数', '$groupCount', Icons.category, _currentDim.color),
-        const SizedBox(width: 8),
+        const SizedBox(width: 6),
         _statCard('总人数', '$totalMembers', Icons.people, Colors.green),
-        const SizedBox(width: 8),
+        const SizedBox(width: 6),
         _statCard('人均', avg.toStringAsFixed(1), Icons.person, Colors.orange),
       ],
     );
@@ -595,10 +598,10 @@ class _GroupTabState extends State<_GroupTab>
             const SizedBox(width: 6),
             Text(value,
                 style: TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.bold, color: color)),
+                    fontSize: 18, fontWeight: FontWeight.bold, color: color)),
             const SizedBox(width: 4),
             Text(label,
-                style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                style: TextStyle(fontSize: 12, color: Colors.grey[500])),
           ],
         ),
       ),
@@ -611,7 +614,7 @@ class _GroupTabState extends State<_GroupTab>
     final userId = widget.authService.getCurrentUserId();
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 2,
       child: ClipRRect(
@@ -641,7 +644,7 @@ class _GroupTabState extends State<_GroupTab>
             ),
             title: Text(group.groupName,
                 style: const TextStyle(
-                    fontWeight: FontWeight.w700, fontSize: 14)),
+                    fontWeight: FontWeight.w700, fontSize: 15)),
             subtitle: Text(subtitle,
                 style: TextStyle(fontSize: 12, color: Colors.grey[500])),
         children: [
@@ -654,8 +657,8 @@ class _GroupTabState extends State<_GroupTab>
                     children: [
                       Text('成员列表 (${group.memberCount}人)',
                           style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 13)),
-                      const SizedBox(height: 8),
+                              fontWeight: FontWeight.bold, fontSize: 14)),
+                      const SizedBox(height: 6),
                       _buildMemberTable(group.members),
                     ],
                   ),
@@ -676,8 +679,8 @@ class _GroupTabState extends State<_GroupTab>
         final name = m['name'] as String? ?? '';
         final isMe = m['userId'] == userId;
         return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(12),
+          margin: const EdgeInsets.only(bottom: 6),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: isMe
                 ? Colors.orange.withValues(alpha: 0.06)
@@ -2313,15 +2316,17 @@ class _ContributionTabState extends State<_ContributionTab>
                 ),
               ],
             ),
+            labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            unselectedLabelStyle: const TextStyle(fontSize: 11),
             tabs: [
               if (_isStudent)
-                const Tab(icon: Icon(Icons.dashboard, size: 16), text: '我的贡献')
+                const Tab(icon: Icon(Icons.dashboard, size: 18), text: '我的贡献')
               else
-                const Tab(icon: Icon(Icons.rate_review, size: 16), text: '评分'),
+                const Tab(icon: Icon(Icons.rate_review, size: 18), text: '评分'),
               if (_isStudent)
-                const Tab(icon: Icon(Icons.rate_review, size: 16), text: '评分'),
-              const Tab(icon: Icon(Icons.people, size: 16), text: '小组贡献'),
-              const Tab(icon: Icon(Icons.analytics, size: 16), text: '项目贡献'),
+                const Tab(icon: Icon(Icons.rate_review, size: 18), text: '评分'),
+              const Tab(icon: Icon(Icons.people, size: 18), text: '小组贡献'),
+              const Tab(icon: Icon(Icons.analytics, size: 18), text: '项目贡献'),
             ],
           ),
         ),
@@ -4357,7 +4362,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
     return Column(
       children: [
         Container(
-          margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          margin: const EdgeInsets.fromLTRB(12, 6, 12, 4),
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
             color: indigo.withValues(alpha: 0.06),
@@ -4368,6 +4373,8 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
             controller: _subTabController,
             labelColor: indigo[700],
             unselectedLabelColor: Colors.grey,
+            labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            unselectedLabelStyle: const TextStyle(fontSize: 11),
             dividerColor: Colors.transparent,
             indicator: BoxDecoration(
               color: Colors.white,
@@ -4381,9 +4388,9 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
               ],
             ),
             tabs: const [
-              Tab(icon: Icon(Icons.timeline, size: 16), text: '过程报告'),
-              Tab(icon: Icon(Icons.assignment, size: 16), text: '最终报告'),
-              Tab(icon: Icon(Icons.upload_file, size: 16), text: '提交'),
+              Tab(icon: Icon(Icons.timeline, size: 18), text: '过程报告'),
+              Tab(icon: Icon(Icons.assignment, size: 18), text: '最终报告'),
+              Tab(icon: Icon(Icons.upload_file, size: 18), text: '提交'),
             ],
           ),
         ),

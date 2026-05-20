@@ -43,6 +43,8 @@ class _NotificationListPageState extends State<NotificationListPage> {
     if (userId == null) return;
 
     try {
+      // 修复历史遗留的孤儿收件人记录（同步导入等导致）
+      await _notificationDao.cleanOrphanedRecipients();
       final notifications =
           await _notificationDao.getNotificationsForUser(userId);
       final unreadCount = await _notificationDao.getUnreadCount(userId);

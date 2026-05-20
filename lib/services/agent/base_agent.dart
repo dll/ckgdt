@@ -54,12 +54,15 @@ abstract class BaseAgent {
     return (0.2 + matched * 0.2).clamp(0.0, 0.8);
   }
 
-  /// 构建智能体回复消息（含模型信息）
+  /// 构建智能体回复消息（含模型信息 + Token 用量）
   AgentMessage buildReply(
     String content, {
     AgentAction? action,
     String? modelProvider,
     String? modelName,
+    int promptTokens = 0,
+    int completionTokens = 0,
+    int totalTokens = 0,
   }) {
     return AgentMessage(
       agentId: config.id,
@@ -70,6 +73,22 @@ abstract class BaseAgent {
       action: action,
       modelProvider: modelProvider,
       modelName: modelName,
+      promptTokens: promptTokens,
+      completionTokens: completionTokens,
+      totalTokens: totalTokens,
+    );
+  }
+
+  /// 从 AiChatResult 构建回复消息（自动提取 Token 用量）
+  AgentMessage buildReplyFromResult(AiChatResult result, {AgentAction? action}) {
+    return buildReply(
+      result.content,
+      action: action,
+      modelProvider: result.provider,
+      modelName: result.model,
+      promptTokens: result.promptTokens,
+      completionTokens: result.completionTokens,
+      totalTokens: result.totalTokens,
     );
   }
 
@@ -110,10 +129,12 @@ abstract class BaseAgent {
     List<Map<String, String>> messages, {
     String? systemPrompt,
     required AiService aiService,
+    double? temperature,
   }) async {
     try {
       return await aiService.chatWithMeta(messages,
-          systemPrompt: systemPrompt ?? config.persona);
+          systemPrompt: systemPrompt ?? config.persona,
+          temperature: temperature);
     } catch (e) {
       debugPrint('${config.name}: AI 调用失败: $e');
       return AiChatResult(
@@ -128,7 +149,7 @@ abstract class BaseAgent {
   Future<String> safeAiChat(
     List<Map<String, String>> messages, {
     String? systemPrompt,
-    required dynamic aiService,
+    required AiService aiService,
   }) async {
     try {
       return await aiService.chat(messages,
