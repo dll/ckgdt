@@ -142,7 +142,7 @@ class _MyAppState extends State<MyApp> {
     // 如果数据库被锁定，显示错误页面
     if (widget.dbLocked) {
       return MaterialApp(
-        title: 'MADKG',
+        title: '移动图谱与数字孪生v0.11.0',
         debugShowCheckedModeBanner: false,
         theme: ThemeManager.light(_colorIndex),
         darkTheme: ThemeManager.dark(_colorIndex),
@@ -209,7 +209,7 @@ class _MyAppState extends State<MyApp> {
     }
 
     return MaterialApp(
-      title: 'MADKG',
+      title: '移动图谱与数字孪生v0.11.0',
       debugShowCheckedModeBanner: false,
       themeMode: _themeMode,
       theme: ThemeManager.light(_colorIndex),

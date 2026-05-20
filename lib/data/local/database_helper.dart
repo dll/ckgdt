@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:sqflite/sqflite.dart';
@@ -56,7 +57,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 20,
+      version: 23,
       singleInstance: true, // 启用单例模式
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
@@ -111,7 +112,7 @@ class DatabaseHelper {
         // 重新打开（版本号必须与主初始化一致）
         final db2 = await openDatabase(
           dbName,
-          version: 20,
+          version: 23,
           singleInstance: true, // 启用单例模式
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
@@ -134,7 +135,8 @@ class DatabaseHelper {
       debugPrint('=== DatabaseHelper [Web]: Verification warning: $e');
     }
 
-    // 导入学生数据
+    // 补齐缺失的表和列（防御：正常路径未经过 _ensureAllTables）
+    await _ensureAllTables(db);
     await _importStudents(db);
 
     return db;
@@ -160,7 +162,21 @@ class DatabaseHelper {
         final data = await rootBundle.load('assets/learning_data.db');
         final bytes =
             data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-        await databaseFactory.writeDatabaseBytes(dbPath, bytes);
+
+        // 确保目标目录存在（Windows FFI 不会自动创建）
+        final dir = Directory(dbFolder);
+        if (!await dir.exists()) {
+          await dir.create(recursive: true);
+        }
+
+        try {
+          await databaseFactory.writeDatabaseBytes(dbPath, bytes);
+        } catch (writeErr) {
+          debugPrint(
+              '=== DatabaseHelper: writeDatabaseBytes failed, trying direct file copy: $writeErr');
+          // FFI 写入失败时回退到直接文件复制
+          await File(dbPath).writeAsBytes(bytes);
+        }
         debugPrint(
             '=== DatabaseHelper: Seed DB copied (${bytes.length} bytes)');
       } catch (e) {
@@ -172,7 +188,7 @@ class DatabaseHelper {
     Database db;
     db = await openDatabase(
       dbPath,
-      version: 20,
+      version: 23,
       singleInstance: true, // 启用单例模式，防止多实例同时访问
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
@@ -238,11 +254,25 @@ class DatabaseHelper {
         await databaseFactory.writeDatabaseBytes(tempPath, bytes);
       } catch (e) {
         debugPrint(
-            '=== DatabaseHelper [Native]: Temp seed write failed: $e');
-        return;
+            '=== DatabaseHelper [Native]: writeDatabaseBytes failed, trying direct write: $e');
+        try {
+          await File(tempPath).writeAsBytes(bytes);
+        } catch (e2) {
+          debugPrint(
+              '=== DatabaseHelper [Native]: Temp seed write also failed: $e2');
+          return;
+        }
       }
 
-      final seedDb = await openReadOnlyDatabase(tempPath);
+      Database seedDb;
+      try {
+        seedDb = await openReadOnlyDatabase(tempPath);
+      } catch (e) {
+        debugPrint(
+            '=== DatabaseHelper [Native]: openReadOnlyDatabase failed, trying openDatabase: $e');
+        // FFI 后端可能不支持 openReadOnlyDatabase，回退到普通 open
+        seedDb = await openDatabase(tempPath, readOnly: true);
+      }
 
       // ── 导入 questions（schema 完全匹配，直接 insert）──
       await _importTableSafe(seedDb, db, 'questions');
@@ -497,6 +527,9 @@ class DatabaseHelper {
     await _migrateToV18(db);
     await _migrateToV19(db);
     await _migrateToV20(db);
+    await _migrateToV21(db);
+    await _migrateToV22(db);
+    await _migrateToV23(db);
     await _ensureResourceFileColumns(db);
 
     // Add admin user (ignore if already exists from asset DB)
@@ -603,6 +636,15 @@ class DatabaseHelper {
     if (oldVersion < 20) {
       await _migrateToV20(db);
     }
+    if (oldVersion < 21) {
+      await _migrateToV21(db);
+    }
+    if (oldVersion < 22) {
+      await _migrateToV22(db);
+    }
+    if (oldVersion < 23) {
+      await _migrateToV23(db);
+    }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
   }
@@ -668,6 +710,9 @@ class DatabaseHelper {
     await _migrateToV18(db);
     await _migrateToV19(db);
     await _migrateToV20(db);
+    await _migrateToV21(db);
+    await _migrateToV22(db);
+    await _migrateToV23(db);
     await _ensureAchievementColumns(db);
   }
 
@@ -1397,6 +1442,10 @@ class DatabaseHelper {
         'updated_at': DateTime.now().toIso8601String(),
       }, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
+
+    // 确保 V22 Token 列存在（防御：_ensureAllTables 可能跳过 _onUpgrade）
+    await _migrateToV22(db);
+    await _migrateToV23(db);
   }
 
   Future<void> _migrateToV15(Database db) async {
@@ -1553,6 +1602,154 @@ class DatabaseHelper {
         overall REAL,
         updated_at TEXT NOT NULL,
         PRIMARY KEY(user_id, node_id)
+      )
+    ''');
+  }
+
+  Future<void> _migrateToV21(Database db) async {
+    // ── 热门视频 ──
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS hot_videos(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        platform TEXT NOT NULL,
+        video_url TEXT NOT NULL,
+        title TEXT NOT NULL,
+        thumbnail_url TEXT,
+        description TEXT,
+        view_count TEXT,
+        duration TEXT,
+        source TEXT,
+        publish_date TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT
+      )
+    ''');
+
+    // ── 热门视频收藏（用户维度）──
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS hot_video_favorites(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        video_id INTEGER NOT NULL,
+        favorite_time TEXT NOT NULL,
+        FOREIGN KEY (video_id) REFERENCES hot_videos(id) ON DELETE CASCADE,
+        UNIQUE(user_id, video_id)
+      )
+    ''');
+    try {
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_hot_videos_platform ON hot_videos(platform)'
+      );
+    } catch (_) {}
+    try {
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_hot_video_fav_user ON hot_video_favorites(user_id)'
+      );
+    } catch (_) {}
+
+    // 预置推荐视频种子数据（替换旧的系统种子，确保URL始终为最新验证版本）
+    await db.delete('hot_videos', where: "user_id = ?", whereArgs: ['system']);
+    {
+      final now = DateTime.now().toIso8601String();
+      final seeds = [
+        ['system', 'bilibili', 'https://www.bilibili.com/video/BV1BFCsBrEy7',
+          '【2025重置版】一小时从零基础到精通Flutter基础入门教程', '技术UP主',
+          '54集系统教程：Dart语法→Widget→路由→动画→项目实战，2025年全新录制',
+          '25万', '10:00:00'],
+        ['system', 'bilibili', 'https://www.bilibili.com/video/BV1Qb421Y7SV',
+          '《2025 Flutter实战开发》从环境搭建到打包发布', 'Flutter实战派',
+          '33集完整实战：Dio网络请求、Provider状态管理、路由封装、登录注册、WebView',
+          '18万', '8:00:00'],
+        ['system', 'bilibili', 'https://www.bilibili.com/video/BV1Cyx7ziE3v',
+          'Jetpack Compose 构建Android应用（2025最新版）', 'Android开发者',
+          'Kotlin+Jetpack Compose声明式UI开发，从零构建完整Android应用',
+          '12万', '6:00:00'],
+        ['system', 'bilibili', 'https://www.bilibili.com/video/BV1Sa4y1Z7B1',
+          '黑马程序员HarmonyOS4+NEXT星河版入门到企业级实战教程', '黑马程序员',
+          '50节课覆盖ArkTS语法、ArkUI组件、状态管理、动画、网络、数据库、实战案例',
+          '42万', '20:00:00'],
+        ['system', 'bilibili', 'https://www.bilibili.com/video/BV12gYxz7Ews',
+          '【提供真实接口】2026 React Native + Expo 零基础到项目实战教程', '长乐未央',
+          '68+集全栈教程：Expo Router、登录认证、视频播放器、iOS 26适配、打包上架',
+          '8万', '15:00:00'],
+        ['system', 'bilibili', 'https://www.bilibili.com/video/BV1834y1676P',
+          '黑马程序员微信小程序从基础到发布全流程（含uni-app多端部署）', '黑马程序员',
+          '422万播放：小程序基础→组件→API→云开发→企业级商城实战→uni-app多端部署',
+          '422万', '30:00:00'],
+        ['system', 'bilibili', 'https://www.bilibili.com/video/BV1Bp4y1379L',
+          '黑马程序员uniapp小兔鲜儿微信小程序项目（Vue3+TS+Pinia+uni-app）', '黑马程序员',
+          '最新技术栈：Vue3+TypeScript+Pinia+uni-app开发电商全流程',
+          '15万', '12:00:00'],
+        ['system', 'bilibili', 'https://www.bilibili.com/video/BV1S4411E7LY',
+          'Flutter从入门到精通全套（Dart+Flutter 3.x+GetX+仿小米商城）', 'IT营大地老师',
+          '全网最全Flutter教程之一：Dart基础+Widget+GetX状态管理+真实API项目实战',
+          '35万', '40:00:00'],
+        ['system', 'bilibili', 'https://www.bilibili.com/video/BV1er421G7TV',
+          '鸿蒙NEXT教程：ArkTS/ArkUI全套 零基础入门到项目实战', '鸿蒙开发讲师',
+          'ArkTS基础+ArkUI组件+3个实战项目，零基础也能学会鸿蒙开发',
+          '20万', '16:00:00'],
+        ['system', 'bilibili', 'https://www.bilibili.com/video/BV1CG4tzAEc6',
+          'Flutter从零开始开发旅游APP（135集实战）', 'Flutter旅游实战',
+          '135集大体量：Dart语法→网络请求→混合开发→AI语音搜索→打包发布',
+          '22万', '30:00:00'],
+      ];
+      for (final s in seeds) {
+        await db.insert('hot_videos', {
+          'user_id': s[0],
+          'platform': s[1],
+          'video_url': s[2],
+          'title': s[3],
+          'source': s[4],
+          'description': s[5],
+          'view_count': s[6],
+          'duration': s[7],
+          'created_at': now,
+        });
+      }
+    }
+  }
+
+  /// V22: ai_chat_history 新增 prompt_tokens / completion_tokens / provider / model 列
+  Future<void> _migrateToV22(Database db) async {
+    try {
+      await db.execute('ALTER TABLE ai_chat_history ADD COLUMN prompt_tokens INTEGER DEFAULT 0');
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE ai_chat_history ADD COLUMN completion_tokens INTEGER DEFAULT 0');
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE ai_chat_history ADD COLUMN provider TEXT');
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE ai_chat_history ADD COLUMN model TEXT');
+    } catch (_) {}
+  }
+
+  /// V23: ai_chat_history 新增 user_id 列 + grading_results 表
+  Future<void> _migrateToV23(Database db) async {
+    try {
+      await db.execute('ALTER TABLE ai_chat_history ADD COLUMN user_id TEXT DEFAULT \'\'');
+    } catch (_) {}
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS grading_results(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        domain TEXT NOT NULL,
+        target_id INTEGER NOT NULL,
+        scorer_id TEXT NOT NULL,
+        model_provider TEXT,
+        model_name TEXT,
+        raw_json TEXT,
+        score REAL,
+        feedback TEXT,
+        dimensions TEXT,
+        strengths TEXT,
+        improvements TEXT,
+        ai_flag INTEGER DEFAULT 0,
+        status TEXT DEFAULT 'pending',
+        created_at TEXT,
+        approved_at TEXT,
+        approved_by TEXT
       )
     ''');
   }

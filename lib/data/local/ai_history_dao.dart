@@ -15,6 +15,11 @@ class AiHistoryDao {
     required String role,
     required String content,
     int tokensUsed = 0,
+    int promptTokens = 0,
+    int completionTokens = 0,
+    String? provider,
+    String? model,
+    String? userId,
   }) async {
     final db = await _db;
     return db.insert('ai_chat_history', {
@@ -25,7 +30,163 @@ class AiHistoryDao {
       'content': content,
       'created_at': DateTime.now().toIso8601String(),
       'tokens_used': tokensUsed,
+      'prompt_tokens': promptTokens,
+      'completion_tokens': completionTokens,
+      'provider': provider,
+      'model': model,
+      'user_id': userId ?? '',
     });
+  }
+
+  /// 获取 Token 统计：按天汇总
+  Future<List<Map<String, dynamic>>> getDailyTokenStats({int days = 30}) async {
+    final db = await _db;
+    final since = DateTime.now().subtract(Duration(days: days)).toIso8601String();
+    return db.rawQuery('''
+      SELECT DATE(created_at) as date,
+             SUM(prompt_tokens) as prompt_tokens,
+             SUM(completion_tokens) as completion_tokens,
+             SUM(tokens_used) as total_tokens,
+             COUNT(*) as request_count
+      FROM ai_chat_history
+      WHERE role = 'assistant' AND created_at >= ?
+      GROUP BY DATE(created_at)
+      ORDER BY date ASC
+    ''', [since]);
+  }
+
+  /// 获取 Token 统计：按模型汇总
+  Future<List<Map<String, dynamic>>> getModelTokenStats() async {
+    final db = await _db;
+    return db.rawQuery('''
+      SELECT COALESCE(model, '未知模型') as model,
+             COALESCE(provider, '未知服务商') as provider,
+             SUM(prompt_tokens) as prompt_tokens,
+             SUM(completion_tokens) as completion_tokens,
+             SUM(tokens_used) as total_tokens,
+             COUNT(*) as request_count
+      FROM ai_chat_history
+      WHERE role = 'assistant'
+      GROUP BY model, provider
+      ORDER BY total_tokens DESC
+    ''');
+  }
+
+  /// 获取 Token 统计：按服务商汇总
+  Future<List<Map<String, dynamic>>> getProviderTokenStats() async {
+    final db = await _db;
+    return db.rawQuery('''
+      SELECT COALESCE(provider, '未知服务商') as provider,
+             SUM(prompt_tokens) as prompt_tokens,
+             SUM(completion_tokens) as completion_tokens,
+             SUM(tokens_used) as total_tokens,
+             COUNT(*) as request_count
+      FROM ai_chat_history
+      WHERE role = 'assistant'
+      GROUP BY provider
+      ORDER BY total_tokens DESC
+    ''');
+  }
+
+  /// 获取 Token 总计（可选按用户过滤）
+  Future<Map<String, int>> getTokenTotals({String? userId}) async {
+    final db = await _db;
+    String where = "role = 'assistant'";
+    final args = <dynamic>[];
+    if (userId != null && userId.isNotEmpty) {
+      where += ' AND user_id = ?';
+      args.add(userId);
+    }
+    final result = await db.rawQuery('''
+      SELECT COALESCE(SUM(prompt_tokens), 0) as prompt_total,
+             COALESCE(SUM(completion_tokens), 0) as completion_total,
+             COALESCE(SUM(tokens_used), 0) as grand_total,
+             COUNT(DISTINCT DATE(created_at)) as active_days
+      FROM ai_chat_history
+      WHERE $where
+    ''', args);
+    final row = result.first;
+    return {
+      'promptTotal': (row['prompt_total'] as int?) ?? 0,
+      'completionTotal': (row['completion_total'] as int?) ?? 0,
+      'grandTotal': (row['grand_total'] as int?) ?? 0,
+      'activeDays': (row['active_days'] as int?) ?? 0,
+    };
+  }
+
+  /// 获取按用户分组的 Token 统计（教师/管理员查看）
+  Future<List<Map<String, dynamic>>> getTokenTotalsByUser({String? classId}) async {
+    final db = await _db;
+    if (classId != null && classId.isNotEmpty) {
+      return db.rawQuery('''
+        SELECT h.user_id,
+               u.real_name,
+               COALESCE(SUM(h.prompt_tokens), 0) as prompt_tokens,
+               COALESCE(SUM(h.completion_tokens), 0) as completion_tokens,
+               COALESCE(SUM(h.tokens_used), 0) as total_tokens,
+               COUNT(*) as request_count,
+               COUNT(DISTINCT DATE(h.created_at)) as active_days,
+               MAX(h.created_at) as last_active
+        FROM ai_chat_history h
+        LEFT JOIN users u ON h.user_id = u.user_id
+        WHERE h.role = 'assistant' AND h.user_id != ''
+          AND h.user_id IN (SELECT user_id FROM class_members WHERE class_id = ?)
+        GROUP BY h.user_id
+        ORDER BY total_tokens DESC
+      ''', [classId]);
+    }
+    return db.rawQuery('''
+      SELECT h.user_id,
+             u.real_name,
+             COALESCE(SUM(h.prompt_tokens), 0) as prompt_tokens,
+             COALESCE(SUM(h.completion_tokens), 0) as completion_tokens,
+             COALESCE(SUM(h.tokens_used), 0) as total_tokens,
+             COUNT(*) as request_count,
+             COUNT(DISTINCT DATE(h.created_at)) as active_days,
+             MAX(h.created_at) as last_active
+      FROM ai_chat_history h
+      LEFT JOIN users u ON h.user_id = u.user_id
+      WHERE h.role = 'assistant' AND h.user_id != ''
+      GROUP BY h.user_id
+      ORDER BY total_tokens DESC
+    ''');
+  }
+
+  /// 获取按班级分组的 Token 统计
+  Future<List<Map<String, dynamic>>> getTokenTotalsByClass() async {
+    final db = await _db;
+    return db.rawQuery('''
+      SELECT c.id as class_id,
+             c.name as class_name,
+             COUNT(DISTINCT h.user_id) as student_count,
+             COALESCE(SUM(h.prompt_tokens), 0) as prompt_tokens,
+             COALESCE(SUM(h.completion_tokens), 0) as completion_tokens,
+             COALESCE(SUM(h.tokens_used), 0) as total_tokens,
+             COUNT(*) as request_count
+      FROM classes c
+      LEFT JOIN class_members cm ON c.id = cm.class_id
+      LEFT JOIN ai_chat_history h ON cm.user_id = h.user_id AND h.role = 'assistant'
+      WHERE c.is_archived = 0
+      GROUP BY c.id
+      ORDER BY total_tokens DESC
+    ''');
+  }
+
+  /// 获取指定用户的每日 Token 趋势
+  Future<List<Map<String, dynamic>>> getDailyTokenStatsByUser(String userId, {int days = 30}) async {
+    final db = await _db;
+    final since = DateTime.now().subtract(Duration(days: days)).toIso8601String();
+    return db.rawQuery('''
+      SELECT DATE(created_at) as date,
+             SUM(prompt_tokens) as prompt_tokens,
+             SUM(completion_tokens) as completion_tokens,
+             SUM(tokens_used) as total_tokens,
+             COUNT(*) as request_count
+      FROM ai_chat_history
+      WHERE role = 'assistant' AND user_id = ? AND created_at >= ?
+      GROUP BY DATE(created_at)
+      ORDER BY date ASC
+    ''', [userId, since]);
   }
 
   /// 获取某个会话的所有消息
@@ -78,49 +239,45 @@ class AiHistoryDao {
   Future<Map<String, dynamic>> getStats() async {
     final db = await _db;
 
-    // 总会话数
-    final sessionCount = await db.rawQuery(
-      'SELECT COUNT(DISTINCT session_id) as cnt FROM ai_chat_history',
-    );
-    final totalSessions = (sessionCount.first['cnt'] as int?) ?? 0;
-
-    // 总消息数
-    final msgCount = await db.rawQuery(
-      'SELECT COUNT(*) as cnt FROM ai_chat_history',
-    );
-    final totalMessages = (msgCount.first['cnt'] as int?) ?? 0;
-
-    // 各智能体使用次数（按会话数）
-    final agentStats = await db.rawQuery('''
-      SELECT agent_id, COUNT(DISTINCT session_id) as cnt
-      FROM ai_chat_history
-      WHERE agent_id IS NOT NULL AND agent_id != ''
-      GROUP BY agent_id
-      ORDER BY cnt DESC
-    ''');
-
-    // 各技能使用次数
-    final skillStats = await db.rawQuery('''
-      SELECT skill_id, COUNT(DISTINCT session_id) as cnt
-      FROM ai_chat_history
-      WHERE skill_id IS NOT NULL AND skill_id != ''
-      GROUP BY skill_id
-      ORDER BY cnt DESC
-    ''');
-
-    // 本周使用次数
     final now = DateTime.now();
     final weekStart = now.subtract(Duration(days: now.weekday - 1));
     final weekStartStr =
         DateTime(weekStart.year, weekStart.month, weekStart.day)
             .toIso8601String();
-    final weekCount = await db.rawQuery(
-      'SELECT COUNT(DISTINCT session_id) as cnt FROM ai_chat_history WHERE created_at >= ?',
-      [weekStartStr],
-    );
-    final weekSessions = (weekCount.first['cnt'] as int?) ?? 0;
 
-    // 最活跃智能体
+    final results = await Future.wait([
+      db.rawQuery(
+        'SELECT COUNT(DISTINCT session_id) as cnt FROM ai_chat_history',
+      ),
+      db.rawQuery(
+        'SELECT COUNT(*) as cnt FROM ai_chat_history',
+      ),
+      db.rawQuery('''
+        SELECT agent_id, COUNT(DISTINCT session_id) as cnt
+        FROM ai_chat_history
+        WHERE agent_id IS NOT NULL AND agent_id != ''
+        GROUP BY agent_id
+        ORDER BY cnt DESC
+      '''),
+      db.rawQuery('''
+        SELECT skill_id, COUNT(DISTINCT session_id) as cnt
+        FROM ai_chat_history
+        WHERE skill_id IS NOT NULL AND skill_id != ''
+        GROUP BY skill_id
+        ORDER BY cnt DESC
+      '''),
+      db.rawQuery(
+        'SELECT COUNT(DISTINCT session_id) as cnt FROM ai_chat_history WHERE created_at >= ?',
+        [weekStartStr],
+      ),
+    ]);
+
+    final totalSessions = (results[0].first['cnt'] as int?) ?? 0;
+    final totalMessages = (results[1].first['cnt'] as int?) ?? 0;
+    final agentStats = results[2] as List<Map<String, dynamic>>;
+    final skillStats = results[3] as List<Map<String, dynamic>>;
+    final weekSessions = (results[4].first['cnt'] as int?) ?? 0;
+
     String? topAgentId;
     int topAgentCount = 0;
     if (agentStats.isNotEmpty) {

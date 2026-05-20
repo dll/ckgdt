@@ -5,7 +5,7 @@ project(knowledge_graph_app LANGUAGES CXX)
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
 set(BINARY_NAME "knowledge_graph_app")
-set(BINARY_OUTPUT_NAME "移动图谱v0.11.0")
+set(BINARY_OUTPUT_NAME "移动图谱与数字孪生v0.11.0")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.
@@ -42,6 +42,7 @@ function(APPLY_STANDARD_SETTINGS TARGET)
   target_compile_features(${TARGET} PUBLIC cxx_std_17)
   target_compile_options(${TARGET} PRIVATE /W4 /WX /wd"4100")
   target_compile_options(${TARGET} PRIVATE /EHsc)
+  target_compile_options(${TARGET} PRIVATE /utf-8)
   target_compile_definitions(${TARGET} PRIVATE "_HAS_EXCEPTIONS=0")
   target_compile_definitions(${TARGET} PRIVATE "$<$<CONFIG:Debug>:_DEBUG>")
 endfunction()

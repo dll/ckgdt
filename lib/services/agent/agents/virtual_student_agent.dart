@@ -243,7 +243,6 @@ ${jsonEncode(profile.toJson())}
     final messages = buildAiMessages(userMessage, session);
     final result = await safeAiChatWithMeta(messages,
         aiService: _ai, systemPrompt: enhancedPersona);
-    return buildReply(result.content,
-        modelProvider: result.provider, modelName: result.model);
+    return buildReplyFromResult(result);
   }
 }

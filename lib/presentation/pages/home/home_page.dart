@@ -28,6 +28,7 @@ import '../admin/repo_analytics_page.dart';
 import '../admin/teacher_manage_page.dart';
 import '../admin/teacher_application_manage_page.dart';
 import '../analytics/learning_analytics_page.dart';
+import '../analytics/token_stats_page.dart';
 import '../works/works_page.dart';
 import '../lab/lab_tasks_page.dart';
 import '../repo/git_repo_page.dart';
@@ -112,7 +113,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   /// 当前平台显示名称：AppBar 内部标题（简短 + 版本号）
-  String get _platformTitle => '移动图谱v0.11.0';
+  String get _platformTitle => '移动图谱与数字孪生v0.11.0';
 
   @override
   Widget build(BuildContext context) {
@@ -521,6 +522,13 @@ class _HomePageState extends State<HomePage> {
                   color: Colors.purple[400]!,
                   onTap: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const GrowthCurvePage())),
+                ),
+                _buildMenuCard(
+                  icon: Icons.token,
+                  title: 'Token统计',
+                  color: Colors.deepPurple,
+                  onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const TokenStatsPage())),
                 ),
                 _buildMenuCard(
                   icon: Icons.sync,

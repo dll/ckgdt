@@ -170,6 +170,17 @@ class _FeedbackManagePageState extends State<FeedbackManagePage> {
     final createdAt = fb['created_at'] as String? ?? '';
     final timeStr = createdAt.length >= 16 ? createdAt.substring(0, 16) : createdAt;
     final screenshots = (fb['screenshot_path'] as String?)?.split('|') ?? [];
+    final screenshotBase64 = fb['screenshot_data'] as String?;
+    // 构建图片源列表：优先使用 base64 数据（跨设备同步不丢失），回退到本地文件路径
+    final List<ImageProvider> imageProviders = [];
+    if (screenshotBase64 != null && screenshotBase64.isNotEmpty) {
+      imageProviders.add(MemoryImage(base64Decode(screenshotBase64)));
+    }
+    for (final path in screenshots) {
+      if (path.isNotEmpty) {
+        imageProviders.add(FileImage(File(path)));
+      }
+    }
     final roleStr = fb['user_role'] == 'admin'
         ? '管理员'
         : fb['user_role'] == 'teacher'
@@ -281,23 +292,21 @@ class _FeedbackManagePageState extends State<FeedbackManagePage> {
             ],
 
             // 截图预览
-            if (screenshots.isNotEmpty &&
-                screenshots.first.isNotEmpty) ...[
+            if (imageProviders.isNotEmpty) ...[
               const SizedBox(height: 8),
               SizedBox(
                 height: 80,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
-                  itemCount: screenshots.length,
+                  itemCount: imageProviders.length,
                   separatorBuilder: (_, __) => const SizedBox(width: 6),
                   itemBuilder: (context, i) {
-                    final path = screenshots[i];
                     return GestureDetector(
-                      onTap: () => _showFullScreenImage(path),
+                      onTap: () => _showFullScreenImageProvider(imageProviders[i]),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.file(
-                          File(path),
+                        child: Image(
+                          image: imageProviders[i],
                           width: 100,
                           height: 80,
                           fit: BoxFit.cover,
@@ -701,7 +710,7 @@ class _FeedbackManagePageState extends State<FeedbackManagePage> {
   }
 
   /// 全屏查看图片
-  void _showFullScreenImage(String path) {
+  void _showFullScreenImageProvider(ImageProvider provider) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -714,8 +723,8 @@ class _FeedbackManagePageState extends State<FeedbackManagePage> {
           ),
           body: Center(
             child: InteractiveViewer(
-              child: Image.file(
-                File(path),
+              child: Image(
+                image: provider,
                 errorBuilder: (_, __, ___) => const Center(
                   child: Icon(Icons.broken_image,
                       size: 64, color: Colors.white54),

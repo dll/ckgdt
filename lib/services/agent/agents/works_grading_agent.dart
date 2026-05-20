@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import '../../ai_service.dart';
+import '../../auth_service.dart';
+import '../../../data/local/ai_history_dao.dart';
 import '../agent_model.dart';
 import '../base_agent.dart';
 
@@ -92,8 +96,7 @@ class WorksGradingAgent extends BaseAgent {
       String userMessage, AgentSession session) async {
     final messages = buildAiMessages(userMessage, session);
     final result = await safeAiChatWithMeta(messages, aiService: _ai);
-    return buildReply(result.content,
-        modelProvider: result.provider, modelName: result.model);
+    return buildReplyFromResult(result);
   }
 
   /// 直接批改作品（供 UI 层调用）
@@ -125,6 +128,19 @@ class WorksGradingAgent extends BaseAgent {
       {'role': 'user', 'content': prompt.toString()},
     ];
 
-    return await safeAiChat(messages, aiService: _ai);
+    final result = await safeAiChatWithMeta(messages, aiService: _ai, temperature: 0.2);
+    unawaited(AiHistoryDao().saveMessage(
+      sessionId: 'direct_${DateTime.now().millisecondsSinceEpoch}',
+      agentId: config.id,
+      role: 'assistant',
+      content: result.content,
+      promptTokens: result.promptTokens,
+      completionTokens: result.completionTokens,
+      tokensUsed: result.totalTokens,
+      provider: result.provider,
+      model: result.model,
+      userId: AuthService().currentUser?.userId,
+    ));
+    return result.content;
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'agent_model.dart';
 import 'base_agent.dart';
 import '../../data/local/ai_history_dao.dart';
+import '../auth_service.dart';
 import 'agents/voice_agent.dart';
 import 'agents/graph_agent.dart';
 import 'agents/path_agent.dart';
@@ -146,8 +147,13 @@ class AgentRegistry {
       _session.messages.add(reply);
       onMessage?.call(reply);
 
-      // 保存智能体回复到历史
-      _saveToHistory(agent.config.id, 'assistant', reply.content);
+      // 保存智能体回复到历史（含 Token 用量）
+      _saveToHistory(agent.config.id, 'assistant', reply.content,
+          promptTokens: reply.promptTokens,
+          completionTokens: reply.completionTokens,
+          totalTokens: reply.totalTokens,
+          provider: reply.modelProvider,
+          model: reply.modelName);
 
       // 如果有动作，通知 UI 执行
       if (reply.action != null) {
@@ -233,13 +239,22 @@ class AgentRegistry {
     );
   }
 
-  /// 异步保存消息到历史（静默失败）
-  void _saveToHistory(String agentId, String role, String content) {
+  /// 异步保存消息到历史（静默失败，含 Token 用量）
+  void _saveToHistory(String agentId, String role, String content,
+      {int promptTokens = 0, int completionTokens = 0, int totalTokens = 0,
+       String? provider, String? model}) {
+    final userId = AuthService().currentUser?.userId;
     _historyDao.saveMessage(
       sessionId: _session.id,
       agentId: agentId,
       role: role,
       content: content,
+      promptTokens: promptTokens,
+      completionTokens: completionTokens,
+      tokensUsed: totalTokens,
+      provider: provider,
+      model: model,
+      userId: userId,
     ).catchError((e) {
       debugPrint('AgentRegistry: 保存历史失败: $e');
       return 0;
