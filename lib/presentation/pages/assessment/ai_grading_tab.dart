@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../data/local/assessment_dao.dart';
 import '../../../data/local/database_helper.dart';
+import '../../../data/local/grading_result_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/agent/agents/assessment_grading_agent.dart';
 
@@ -26,6 +27,7 @@ class AssessmentAiGradingTab extends StatefulWidget {
 class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
   final _gradingAgent = AssessmentGradingAgent();
   final _assessmentDao = AssessmentDao();
+  final _gradingDao = GradingResultDao();
 
   // ── 报告数据 ──
   List<Map<String, dynamic>> _reports = [];
@@ -66,6 +68,28 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
         );
       }
     }
+    // 从 grading_results 恢复待审核的 AI 批阅结果
+    try {
+      final pending = await _gradingDao.getPendingResults('assessment');
+      for (final p in pending) {
+        final tid = p['target_id'] as int;
+        if (!_approvedIds.contains(tid) && !_gradingResults.containsKey(tid)) {
+          Map<String, dynamic>? dims;
+          try { dims = jsonDecode(p['dimensions'] as String? ?? ''); } catch (_) {}
+          List<String> strengths = [];
+          try { strengths = (jsonDecode(p['strengths'] as String? ?? '[]') as List).cast<String>(); } catch (_) {}
+          List<String> improvements = [];
+          try { improvements = (jsonDecode(p['improvements'] as String? ?? '[]') as List).cast<String>(); } catch (_) {}
+          _gradingResults[tid] = _GradingResult(
+            score: (p['score'] as num?)?.toInt() ?? 0,
+            feedback: (p['feedback'] as String?) ?? '',
+            dimensions: dims,
+            strengths: strengths,
+            improvements: improvements,
+          );
+        }
+      }
+    } catch (_) {}
     if (mounted) setState(() => _reports = reports);
   }
 
@@ -168,6 +192,25 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
       if (mounted) setState(() {});
     }
 
+    // 持久化所有批阅结果
+    for (final e in _gradingResults.entries) {
+      if (_approvedIds.contains(e.key)) continue;
+      final r = e.value;
+      await _gradingDao.deletePendingForTarget('assessment', e.key);
+      await _gradingDao.saveResult(
+        domain: 'assessment',
+        targetId: e.key,
+        scorerId: widget.authService.getCurrentUserId() ?? '',
+        rawJson: null,
+        score: r.score.toDouble(),
+        feedback: r.feedback,
+        dimensions: r.dimensions,
+        strengths: r.strengths,
+        improvements: r.improvements,
+        aiFlag: false,
+      );
+    }
+
     if (mounted) {
       setState(() {
         _isBatchGrading = false;
@@ -247,6 +290,14 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
       where: 'id = ?',
       whereArgs: [reportId],
     );
+
+    // 更新 grading_results 状态
+    try {
+      final pending = await _gradingDao.getPendingResults('assessment', targetId: reportId);
+      for (final p in pending) {
+        await _gradingDao.approveResult(p['id'] as int, widget.authService.getCurrentUserId() ?? '');
+      }
+    } catch (_) {}
 
     setState(() {
       _approvedIds.add(reportId);

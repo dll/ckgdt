@@ -99,6 +99,29 @@ class NotificationService {
     }
   }
 
+  /// 学生/用户提交问题反馈时通知所有教师和管理员
+  Future<void> notifyFeedbackSubmission({
+    required String userId,
+    required String userName,
+    required String content,
+  }) async {
+    try {
+      final preview = content.length > 80 ? '${content.substring(0, 80)}...' : content;
+      await _notificationDao.createNotification(
+        title: '用户反馈：$userName',
+        content: '$userName 提交了问题反馈：$preview',
+        creatorId: userId,
+        targetType: 'teachers',
+        type: 'feedback',
+        relatedEntityType: 'feedback',
+        relatedEntityId: 'feedback_$userId',
+      );
+      debugPrint('NotificationService: 反馈提交通知 — $userName');
+    } catch (e) {
+      debugPrint('NotificationService: 发送反馈提交通知失败 — $e');
+    }
+  }
+
   /// 学生提交/上传作品时通知所有教师
   Future<void> notifyWorkSubmission({
     required String studentId,

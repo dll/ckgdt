@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../data/local/works_dao.dart';
+import '../../../data/local/grading_result_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/agent/agents/works_grading_agent.dart';
 
@@ -25,6 +26,7 @@ class WorksAiGradingTab extends StatefulWidget {
 class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
   final _gradingAgent = WorksGradingAgent();
   final _worksDao = WorksDao();
+  final _gradingDao = GradingResultDao();
 
   // ── 作品数据 ──
   List<Map<String, dynamic>> _works = [];
@@ -66,6 +68,28 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
         );
       }
     }
+    // 从 grading_results 恢复待审核的 AI 批阅结果
+    try {
+      final pending = await _gradingDao.getPendingResults('works');
+      for (final p in pending) {
+        final tid = p['target_id'] as int;
+        if (!_approvedIds.contains(tid) && !_gradingResults.containsKey(tid)) {
+          Map<String, dynamic>? dims;
+          try { dims = jsonDecode(p['dimensions'] as String? ?? ''); } catch (_) {}
+          List<String> strengths = [];
+          try { strengths = (jsonDecode(p['strengths'] as String? ?? '[]') as List).cast<String>(); } catch (_) {}
+          List<String> improvements = [];
+          try { improvements = (jsonDecode(p['improvements'] as String? ?? '[]') as List).cast<String>(); } catch (_) {}
+          _gradingResults[tid] = _GradingResult(
+            score: (p['score'] as num?)?.toInt() ?? 0,
+            feedback: (p['feedback'] as String?) ?? '',
+            dimensions: dims,
+            strengths: strengths,
+            improvements: improvements,
+          );
+        }
+      }
+    } catch (_) {}
     if (mounted) setState(() => _works = submitted);
   }
 
@@ -164,6 +188,25 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
       }
 
       if (mounted) setState(() {});
+    }
+
+    // 持久化所有批阅结果
+    for (final e in _gradingResults.entries) {
+      if (_approvedIds.contains(e.key)) continue;
+      final r = e.value;
+      await _gradingDao.deletePendingForTarget('works', e.key);
+      await _gradingDao.saveResult(
+        domain: 'works',
+        targetId: e.key,
+        scorerId: widget.authService.getCurrentUserId() ?? '',
+        rawJson: null,
+        score: r.score.toDouble(),
+        feedback: r.feedback,
+        dimensions: r.dimensions,
+        strengths: r.strengths,
+        improvements: r.improvements,
+        aiFlag: false,
+      );
     }
 
     if (mounted) {
@@ -277,6 +320,14 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
       documentation: doc,
       comment: result.feedback,
     );
+
+    // 更新 grading_results 状态
+    try {
+      final pending = await _gradingDao.getPendingResults('works', targetId: workId);
+      for (final p in pending) {
+        await _gradingDao.approveResult(p['id'] as int, widget.authService.getCurrentUserId() ?? '');
+      }
+    } catch (_) {}
 
     setState(() {
       _approvedIds.add(workId);

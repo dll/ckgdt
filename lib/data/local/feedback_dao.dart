@@ -20,12 +20,17 @@ class FeedbackDao {
         content TEXT NOT NULL,
         suggestion TEXT,
         screenshot_path TEXT,
+        screenshot_data TEXT,
         status TEXT DEFAULT 'pending',
         admin_reply TEXT,
         created_at TEXT NOT NULL,
         resolved_at TEXT
       )
     ''');
+    // 确保 screenshot_data 列存在（兼容旧表）
+    try {
+      await db.execute('ALTER TABLE feedback ADD COLUMN screenshot_data TEXT');
+    } catch (_) {}
     _tableEnsured = true;
   }
 
@@ -38,6 +43,7 @@ class FeedbackDao {
     required String content,
     String? suggestion,
     String? screenshotPath,
+    String? screenshotData,
   }) async {
     await _ensureTable();
     final db = await _dbHelper.database;
@@ -49,6 +55,7 @@ class FeedbackDao {
       'content': content,
       'suggestion': suggestion,
       'screenshot_path': screenshotPath,
+      'screenshot_data': screenshotData,
       'status': 'pending',
       'created_at': DateTime.now().toIso8601String(),
     });

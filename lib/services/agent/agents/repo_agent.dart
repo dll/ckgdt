@@ -64,6 +64,6 @@ class RepoAgent extends BaseAgent {
       String userMessage, AgentSession session) async {
     final messages = buildAiMessages(userMessage, session);
     final result = await safeAiChatWithMeta(messages, aiService: _ai);
-    return buildReply(result.content, modelProvider: result.provider, modelName: result.model);
+    return buildReplyFromResult(result);
   }
 }

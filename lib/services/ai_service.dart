@@ -1,9 +1,12 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../data/local/ai_config_dao.dart';
+import '../data/local/ai_history_dao.dart';
 import '../data/models/ai_config_model.dart';
+import 'auth_service.dart';
 
-/// AI 对话结果（含模型元数据）
+/// AI 对话结果（含模型元数据 + Token 用量）
 class AiChatResult {
   /// AI 回复内容
   final String content;
@@ -14,10 +17,22 @@ class AiChatResult {
   /// 实际使用的模型名称（如 "deepseek-chat"、"glm-4-flash"）
   final String model;
 
+  /// 输入 Token 数
+  final int promptTokens;
+
+  /// 输出 Token 数
+  final int completionTokens;
+
+  /// 总 Token 数
+  final int totalTokens;
+
   const AiChatResult({
     required this.content,
     required this.provider,
     required this.model,
+    this.promptTokens = 0,
+    this.completionTokens = 0,
+    this.totalTokens = 0,
   });
 
   @override
@@ -32,6 +47,7 @@ class AiService {
     List<Map<String, String>> messages, {
     String? systemPrompt,
     AiConfigModel? configOverride,
+    double? temperature,
   }) async {
     final config = configOverride ?? await _configDao.getConfig();
     final effectiveKey = config.effectiveApiKey;
@@ -59,7 +75,7 @@ class AiService {
           body: jsonEncode({
             'model': config.model,
             'messages': allMessages,
-            'temperature': config.temperature,
+            'temperature': temperature ?? config.temperature,
             'max_tokens': maxTokens,
           }),
         )
@@ -74,22 +90,58 @@ class AiService {
     // API 响应中的 model 字段（可能与请求的略有不同）
     final actualModel = json['model'] as String? ?? config.model;
 
+    // 解析 Token 用量（所有 OpenAI 兼容 API 都返回 usage）
+    final usage = json['usage'] as Map<String, dynamic>?;
+    final promptTokens = (usage?['prompt_tokens'] as int?) ?? 0;
+    final completionTokens = (usage?['completion_tokens'] as int?) ?? 0;
+    final totalTokens = (usage?['total_tokens'] as int?) ?? 0;
+
     return AiChatResult(
       content: content,
       provider: config.providerLabel,
       model: actualModel,
+      promptTokens: promptTokens,
+      completionTokens: completionTokens,
+      totalTokens: totalTokens,
     );
   }
 
-  // ── 向后兼容：返回纯文本内容 ─────────────────────────────────────────────
+  // ── 向后兼容：返回纯文本内容（自动保存 Token 历史）─────────────────────
   Future<String> chat(
     List<Map<String, String>> messages, {
     String? systemPrompt,
     AiConfigModel? configOverride,
+    double? temperature,
   }) async {
     final result = await chatWithMeta(messages, systemPrompt: systemPrompt,
-        configOverride: configOverride);
+        configOverride: configOverride, temperature: temperature);
+    _autoSaveTokenHistory(result);
     return result.content;
+  }
+
+  /// 自动保存 Token 历史（静默失败，不阻塞主流程）
+  void _autoSaveTokenHistory(AiChatResult result) {
+    try {
+      final userId = AuthService().currentUser?.userId;
+      AiHistoryDao().saveMessage(
+        sessionId: 'auto_${DateTime.now().millisecondsSinceEpoch}',
+        role: 'assistant',
+        content: result.content.length > 200
+            ? '${result.content.substring(0, 200)}...'
+            : result.content,
+        promptTokens: result.promptTokens,
+        completionTokens: result.completionTokens,
+        tokensUsed: result.totalTokens,
+        provider: result.provider,
+        model: result.model,
+        userId: userId,
+      ).catchError((e) {
+        debugPrint('Token history save failed: $e');
+        return 0;
+      });
+    } catch (e) {
+      debugPrint('Token history save failed: $e');
+    }
   }
 
   // ── 查询账户余额 ─────────────────────────────────────────────────────────

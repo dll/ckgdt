@@ -15,6 +15,8 @@ import '../../../services/courseware_download_service.dart';
 import '../../../data/local/ai_config_dao.dart';
 import '../materials/courseware_workshop_page.dart';
 import '../materials/ai_settings_page.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../data/local/hot_video_dao.dart';
 import '../../widgets/agent_entry_button.dart';
 import '../../widgets/markdown_bubble.dart';
 import '../admin/data_import_page.dart';
@@ -51,8 +53,13 @@ class _LearningHubPageState extends State<LearningHubPage>
   bool _pptLoading = true;
   bool _pdfLoading = true;
 
-  // 预制/扩展 切换
-  String _resourceMode = 'all'; // 'all', 'preset', 'extended'
+  // 资源模式：全部 / 预制 / 扩展 / 推荐
+  String _resourceMode = 'all'; // 'all', 'preset', 'extended', 'recommend'
+
+  // AI 推荐视频
+  bool _recommendLoading = false;
+  List<Map<String, dynamic>> _recommendedVideos = [];
+  String? _recommendError;
 
   // AI 助手
   final List<_ChatMessage> _messages = [];
@@ -188,6 +195,190 @@ class _LearningHubPageState extends State<LearningHubPage>
     } catch (_) {}
   }
 
+  /// 加载推荐视频（DB 已有 + AI 推荐）
+  Future<void> _loadRecommendedVideos() async {
+    setState(() => _recommendLoading = true);
+    try {
+      final dao = HotVideoDao();
+      final videos = await dao.getVideos(sortBy: 'latest', limit: 30);
+      if (!mounted) return;
+      setState(() {
+        _recommendedVideos = videos.map((v) => v.toMap()).toList();
+        _recommendLoading = false;
+        _recommendError = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _recommendLoading = false;
+        _recommendError = '加载推荐视频失败';
+      });
+    }
+  }
+
+  /// AI 智能推荐视频 — 从现有视频池中筛选最相关的推荐
+  Future<void> _aiRecommendVideos() async {
+    setState(() {
+      _recommendLoading = true;
+      _recommendError = null;
+    });
+
+    try {
+      // 1. 加载视频池
+      final dao = HotVideoDao();
+      final allVideos = await dao.getVideos(sortBy: 'latest', limit: 50);
+      if (allVideos.isEmpty) {
+        if (mounted) setState(() { _recommendLoading = false; _recommendError = '视频池为空，请先添加视频'; });
+        return;
+      }
+
+      // 2. 构建视频列表给AI选择
+      final buffer = StringBuffer();
+      for (var i = 0; i < allVideos.length; i++) {
+        final v = allVideos[i];
+        buffer.writeln('[$i] ${v.title} — ${v.source}');
+        if (v.description != null && v.description!.isNotEmpty) {
+          buffer.writeln('   简介：${v.description}');
+        }
+        buffer.writeln('   平台：${v.platform}');
+      }
+
+      // 3. AI从视频池中筛选最相关的移动应用开发视频
+      final aiService = AiService();
+      final result = await aiService.chat(
+        [
+          {
+            'role': 'user',
+            'content': '以下是视频池中的所有视频。请从中选出与"移动应用开发"最相关的8个高质量教学视频，'
+                '返回所选视频的索引号JSON数组（仅返回数组，不要其他文字）：\n\n${buffer.toString()}'
+          },
+        ],
+        systemPrompt: '你是移动应用开发课程的教学助手。请从视频池中选择最相关的教学视频。只返回JSON数组，如[0,3,5,7,2,9,1,4]。',
+      );
+
+      // 4. 解析AI返回的索引
+      final match = RegExp(r'\[[\d,\s]*\]').firstMatch(result);
+      if (match == null) {
+        if (mounted) setState(() { _recommendLoading = false; _recommendError = 'AI 未返回有效筛选结果'; });
+        return;
+      }
+
+      final List<dynamic> indices = jsonDecode(match.group(0)!) as List<dynamic>;
+      final allMaps = allVideos.map((v) => v.toMap()).toList();
+      final filtered = <Map<String, dynamic>>[];
+      for (final idx in indices) {
+        final i = (idx as num).toInt();
+        if (i >= 0 && i < allMaps.length) {
+          filtered.add({...allMaps[i], 'is_ai_recommended': true});
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _recommendedVideos = filtered.isNotEmpty ? filtered : allMaps;
+        _recommendLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _recommendLoading = false;
+        _recommendError = 'AI 推荐失败，请检查API配置后重试';
+      });
+    }
+  }
+
+  /// 推荐模式下的视频网格
+  Widget _buildRecommendGrid() {
+    if (_recommendLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_recommendError != null) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline, size: 48, color: Colors.grey.shade400),
+            const SizedBox(height: 8),
+            Text(_recommendError!, style: TextStyle(color: Colors.grey.shade500)),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: _loadRecommendedVideos,
+              icon: const Icon(Icons.refresh, size: 18),
+              label: const Text('重试'),
+            ),
+          ],
+        ),
+      );
+    }
+    if (_recommendedVideos.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.video_library_outlined, size: 48, color: Colors.grey.shade400),
+            const SizedBox(height: 8),
+            Text('还没有推荐视频', style: TextStyle(fontSize: 14, color: Colors.grey.shade500)),
+            const SizedBox(height: 4),
+            Text('点击右下角按钮让 AI 为你推荐', style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
+          ],
+        ),
+      );
+    }
+
+    final colorScheme = Theme.of(context).colorScheme;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount = constraints.maxWidth > 900 ? 4 : (constraints.maxWidth > 600 ? 3 : 2);
+        final cardWidth = (constraints.maxWidth - (crossAxisCount + 1) * 12) / crossAxisCount;
+        final cardHeight = cardWidth * 0.85 + 56;
+
+        return Column(
+          children: [
+            // AI 推荐按钮
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                children: [
+                  Icon(Icons.auto_awesome, size: 16, color: Colors.purple.shade400),
+                  const SizedBox(width: 6),
+                  Text('推荐视频', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
+                  const Spacer(),
+                  TextButton.icon(
+                    icon: const Icon(Icons.auto_awesome, size: 14),
+                    label: const Text('AI 智能推荐', style: TextStyle(fontSize: 12)),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    onPressed: _aiRecommendVideos,
+                  ),
+                ],
+              ),
+            ),
+            // 视频网格
+            Expanded(
+              child: GridView.builder(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: cardWidth / cardHeight,
+                ),
+                itemCount: _recommendedVideos.length,
+                itemBuilder: (context, index) {
+                  final v = _recommendedVideos[index];
+                  return _RecommendVideoCard(video: v);
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -248,18 +439,21 @@ class _LearningHubPageState extends State<LearningHubPage>
         children: [
           // 预制/扩展 过滤条
           _buildResourceModeBar(),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildVideoTab(),
-                _buildFileListTab(_pptFiles, _pptLoading, '🖼️', 'PPT', _loadPPTs),
-                _buildFileListTab(_pdfFiles, _pdfLoading, '📄', 'PDF', _loadPDFs),
-                const QuizPage(embedded: true),
-                _buildAiAssistTab(),
-              ],
+          if (_resourceMode == 'recommend')
+            Expanded(child: _buildRecommendGrid())
+          else
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildVideoTab(),
+                  _buildFileListTab(_pptFiles, _pptLoading, '🖼️', 'PPT', _loadPPTs),
+                  _buildFileListTab(_pdfFiles, _pdfLoading, '📄', 'PDF', _loadPDFs),
+                  const QuizPage(embedded: true),
+                  _buildAiAssistTab(),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -291,16 +485,25 @@ class _LearningHubPageState extends State<LearningHubPage>
                   ButtonSegment(value: 'all', label: Text('全部')),
                   ButtonSegment(value: 'preset', label: Text('预制')),
                   ButtonSegment(value: 'extended', label: Text('扩展')),
+                  ButtonSegment(value: 'recommend', label: Text('推荐')),
                 ],
                 selected: {_resourceMode},
                 onSelectionChanged: (Set<String> newSelection) {
+                  final mode = newSelection.first;
                   setState(() {
-                    _resourceMode = newSelection.first;
-                    _videoLoading = true;
-                    _pptLoading = true;
-                    _pdfLoading = true;
+                    _resourceMode = mode;
+                    if (mode != 'recommend') {
+                      _videoLoading = true;
+                      _pptLoading = true;
+                      _pdfLoading = true;
+                    }
                   });
-                  _loadAllData();
+                  if (mode == 'recommend') {
+                    _tabController.animateTo(0); // 切换到视频 Tab
+                    _loadRecommendedVideos();
+                  } else {
+                    _loadAllData();
+                  }
                 },
                 style: ButtonStyle(
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -1869,5 +2072,116 @@ ${extra.isNotEmpty ? '额外要求：$extra' : ''}''';
         ),
       );
     }
+  }
+}
+
+// ── 推荐视频卡片（内联使用）────────────────────────────────────────────────
+
+class _RecommendVideoCard extends StatelessWidget {
+  final Map<String, dynamic> video;
+  const _RecommendVideoCard({required this.video});
+
+  static const _platformColors = {
+    'bilibili': Color(0xFFFB7299),
+    'youtube': Color(0xFFFF0000),
+    'douyin': Color(0xFF000000),
+    'twitter': Color(0xFF1DA1F2),
+  };
+
+  static const _platformNames = {
+    'bilibili': 'B站',
+    'youtube': 'YouTube',
+    'douyin': '抖音',
+    'twitter': '推特',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final platform = video['platform'] ?? 'bilibili';
+    final accent = _platformColors[platform] ?? Colors.grey;
+    final platformName = _platformNames[platform] ?? platform;
+    final isAi = video['is_ai_recommended'] == true;
+    final url = video['video_url'] ?? '';
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () async {
+          if (url.isNotEmpty) {
+            try {
+              await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+            } catch (_) {}
+          }
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 缩略图占位
+            Expanded(
+              child: Container(
+                color: accent.withValues(alpha: 0.15),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.play_circle_fill, size: 32, color: accent.withValues(alpha: 0.6)),
+                      if (isAi) ...[
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.purple.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text('AI推荐', style: TextStyle(fontSize: 9, color: Colors.purple)),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // 底部信息
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    video['title'] ?? '',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colorScheme.onSurface),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: accent.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                        child: Text(platformName, style: TextStyle(fontSize: 9, color: accent)),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          video['source'] ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

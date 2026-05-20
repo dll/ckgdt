@@ -399,6 +399,9 @@ $_subPageListForPrompt
             ),
             modelProvider: result.provider,
             modelName: result.model,
+            promptTokens: result.promptTokens,
+            completionTokens: result.completionTokens,
+            totalTokens: result.totalTokens,
           );
 
         case 'sub_page':
@@ -413,6 +416,9 @@ $_subPageListForPrompt
             ),
             modelProvider: result.provider,
             modelName: result.model,
+            promptTokens: result.promptTokens,
+            completionTokens: result.completionTokens,
+            totalTokens: result.totalTokens,
           );
 
         case 'back':
@@ -424,6 +430,9 @@ $_subPageListForPrompt
             ),
             modelProvider: result.provider,
             modelName: result.model,
+            promptTokens: result.promptTokens,
+            completionTokens: result.completionTokens,
+            totalTokens: result.totalTokens,
           );
 
         case 'exit_app':
@@ -435,6 +444,9 @@ $_subPageListForPrompt
             ),
             modelProvider: result.provider,
             modelName: result.model,
+            promptTokens: result.promptTokens,
+            completionTokens: result.completionTokens,
+            totalTokens: result.totalTokens,
           );
 
         case 'clarify':
@@ -445,6 +457,9 @@ $_subPageListForPrompt
             reply,
             modelProvider: result.provider,
             modelName: result.model,
+            promptTokens: result.promptTokens,
+            completionTokens: result.completionTokens,
+            totalTokens: result.totalTokens,
           );
       }
     } catch (e) {
@@ -454,6 +469,9 @@ $_subPageListForPrompt
         result.content,
         modelProvider: result.provider,
         modelName: result.model,
+        promptTokens: result.promptTokens,
+        completionTokens: result.completionTokens,
+        totalTokens: result.totalTokens,
       );
     }
   }

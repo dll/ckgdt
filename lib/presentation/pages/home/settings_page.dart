@@ -12,6 +12,7 @@ import '../feedback/ai_help_dialog.dart';
 import '../settings/course_manage_page.dart';
 import '../../../data/local/course_dao.dart';
 import '../profile/chat_history_page.dart';
+import '../analytics/token_stats_page.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
 class SettingsPage extends StatefulWidget {
@@ -165,6 +166,16 @@ class _SettingsPageState extends State<SettingsPage> {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const AiDataPage()),
+            ),
+          ),
+          _buildMenuItem(
+            context,
+            icon: Icons.token,
+            title: 'Token 用量统计',
+            subtitle: '查看各模型/服务商的 Token 消耗趋势',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const TokenStatsPage()),
             ),
           ),
           _buildMenuItem(
@@ -467,7 +478,7 @@ class _SettingsPageState extends State<SettingsPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('版本：0.10.0'),
+            const Text('版本：0.11.0'),
             const SizedBox(height: 8),
             Text('面向$platformName学习者的知识图谱与数字孪生教学平台（KGDT-MAD）。'),
             const SizedBox(height: 16),
