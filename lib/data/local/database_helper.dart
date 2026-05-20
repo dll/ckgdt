@@ -57,7 +57,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 23,
+      version: 24,
       singleInstance: true, // 启用单例模式
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
@@ -112,7 +112,7 @@ class DatabaseHelper {
         // 重新打开（版本号必须与主初始化一致）
         final db2 = await openDatabase(
           dbName,
-          version: 23,
+          version: 24,
           singleInstance: true, // 启用单例模式
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
@@ -188,7 +188,7 @@ class DatabaseHelper {
     Database db;
     db = await openDatabase(
       dbPath,
-      version: 23,
+      version: 24,
       singleInstance: true, // 启用单例模式，防止多实例同时访问
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
@@ -645,6 +645,9 @@ class DatabaseHelper {
     if (oldVersion < 23) {
       await _migrateToV23(db);
     }
+    if (oldVersion < 24) {
+      await _migrateToV24(db);
+    }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
   }
@@ -713,6 +716,7 @@ class DatabaseHelper {
     await _migrateToV21(db);
     await _migrateToV22(db);
     await _migrateToV23(db);
+    await _migrateToV24(db);
     await _ensureAchievementColumns(db);
   }
 
@@ -1723,6 +1727,16 @@ class DatabaseHelper {
     } catch (_) {}
     try {
       await db.execute('ALTER TABLE ai_chat_history ADD COLUMN model TEXT');
+    } catch (_) {}
+  }
+
+  /// V24: ai_chat_history 性能索引（Token 统计查询用）
+  Future<void> _migrateToV24(Database db) async {
+    try {
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_ai_chat_role_date ON ai_chat_history(role, created_at DESC)');
+    } catch (_) {}
+    try {
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_ai_chat_role_user ON ai_chat_history(role, user_id)');
     } catch (_) {}
   }
 
