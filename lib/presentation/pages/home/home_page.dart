@@ -112,8 +112,8 @@ class _HomePageState extends State<HomePage> {
     } catch (_) {}
   }
 
-  /// 当前平台显示名称：AppBar 内部标题（简短 + 版本号）
-  String get _platformTitle => '移动图谱与数字孪生v0.11.0';
+  /// 当前平台显示名称：AppBar 内部居中标题（完整名称，无版本号）
+  String get _platformTitle => '移动应用开发知识图谱与数字孪生平台';
 
   @override
   Widget build(BuildContext context) {
