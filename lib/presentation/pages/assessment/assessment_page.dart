@@ -4761,6 +4761,8 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                   onPressed: () => _openPdfPreview(
                     matched.first['file_path'] as String,
                     reportType,
+                    userId: matched.first['user_id'] as String?,
+                    fileName: matched.first['content_json'] as String?,
                   ),
                 ),
             ],
@@ -5210,21 +5212,63 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
     }
   }
 
-  void _openPdfPreview(String filePath, String title) {
-    final file = File(filePath);
-    if (!file.existsSync()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('PDF 文件不存在: $filePath')),
+  void _openPdfPreview(String filePath, String title,
+      {String? userId, String? fileName}) {
+    final file = filePath.isNotEmpty ? File(filePath) : null;
+    if (file != null && file.existsSync()) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => InAppPdfViewerPage(filePath: filePath, title: title),
+        ),
       );
       return;
     }
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => InAppPdfViewerPage(
-          filePath: filePath,
-          title: title,
+
+    final shownName = fileName?.isNotEmpty == true
+        ? fileName!
+        : (filePath.isNotEmpty
+            ? filePath.split(Platform.pathSeparator).last
+            : '附件');
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 6),
+        content: Text(
+          '该 PDF 在学生本机提交，尚未同步到当前设备。\n文件名：$shownName',
+          style: const TextStyle(height: 1.4),
         ),
+        action: (userId == null || userId.isEmpty)
+            ? null
+            : SnackBarAction(
+                label: '立即同步',
+                onPressed: () async {
+                  messenger.hideCurrentSnackBar();
+                  messenger.showSnackBar(SnackBar(
+                    content: Text('正在从云端拉取 $userId 的提交…'),
+                    duration: const Duration(seconds: 2),
+                  ));
+                  try {
+                    final r = await SyncService().downloadOwnData(userId);
+                    if (!mounted) return;
+                    messenger.hideCurrentSnackBar();
+                    messenger.showSnackBar(SnackBar(
+                      content: Text(
+                          r.success ? '同步完成：${r.message}' : '同步失败：${r.message}'),
+                      backgroundColor: r.success ? null : Colors.red,
+                    ));
+                    if (r.success) await _loadSubmissions();
+                  } catch (e) {
+                    if (!mounted) return;
+                    messenger.hideCurrentSnackBar();
+                    messenger.showSnackBar(SnackBar(
+                      content: Text('同步出错：$e'),
+                      backgroundColor: Colors.red,
+                    ));
+                  }
+                },
+              ),
       ),
     );
   }
@@ -5288,7 +5332,12 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                     if (filePath.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       OutlinedButton.icon(
-                        onPressed: () => _openPdfPreview(filePath, title),
+                        onPressed: () => _openPdfPreview(
+                          filePath,
+                          title,
+                          userId: userId,
+                          fileName: content,
+                        ),
                         icon: const Icon(Icons.visibility, size: 16),
                         label: const Text('预览 PDF', style: TextStyle(fontSize: 12)),
                         style: OutlinedButton.styleFrom(
