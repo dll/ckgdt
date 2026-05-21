@@ -384,6 +384,47 @@ class AiHistoryDao {
     ''');
   }
 
+  /// 获取请求明细日志（分页，仅 assistant 消息）
+  Future<List<Map<String, dynamic>>> getRequestLogs({
+    int limit = 50,
+    int offset = 0,
+    String? userId,
+  }) async {
+    final db = await _db;
+    String where = "role = 'assistant'";
+    final args = <dynamic>[];
+    if (userId != null && userId.isNotEmpty) {
+      where += ' AND user_id = ?';
+      args.add(userId);
+    }
+    args.addAll([limit, offset]);
+    return db.rawQuery('''
+      SELECT id, created_at, model, provider,
+             prompt_tokens, completion_tokens, tokens_used,
+             agent_id, skill_id, session_id, user_id
+      FROM ai_chat_history
+      WHERE $where
+      ORDER BY created_at DESC
+      LIMIT ? OFFSET ?
+    ''', args);
+  }
+
+  /// 获取请求总数（用于分页）
+  Future<int> getRequestCount({String? userId}) async {
+    final db = await _db;
+    String where = "role = 'assistant'";
+    final args = <dynamic>[];
+    if (userId != null && userId.isNotEmpty) {
+      where += ' AND user_id = ?';
+      args.add(userId);
+    }
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as cnt FROM ai_chat_history WHERE $where',
+      args,
+    );
+    return (result.first['cnt'] as int?) ?? 0;
+  }
+
   /// 导出历史为 JSON 格式的 List
   Future<List<Map<String, dynamic>>> exportHistory() async {
     final db = await _db;
