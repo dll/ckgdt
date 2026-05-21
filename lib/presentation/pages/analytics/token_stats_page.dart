@@ -4,6 +4,7 @@ import '../../../data/local/ai_history_dao.dart';
 import '../../../services/auth_service.dart';
 import 'student_token_page.dart';
 import 'class_token_page.dart';
+import 'request_detail_tab.dart';
 
 class TokenStatsPage extends StatefulWidget {
   const TokenStatsPage({super.key});
@@ -172,19 +173,7 @@ class _TokenStatsPageState extends State<TokenStatsPage>
   }
 
   Widget _buildDetailLogTab() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.history, size: 48, color: Colors.grey),
-          SizedBox(height: 12),
-          Text('请求明细（开发中）', style: TextStyle(color: Colors.grey)),
-          SizedBox(height: 4),
-          Text('每个 AI API 请求的详细信息即将在此展示',
-              style: TextStyle(fontSize: 12, color: Colors.grey)),
-        ],
-      ),
-    );
+    return const RequestDetailTab();
   }
 
   Widget _buildSummaryCards(Color primary) {
