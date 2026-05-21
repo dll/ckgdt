@@ -720,4 +720,65 @@ class AssessmentDao {
     }
     return null;
   }
+
+  /// 一次性获取学生考核报告封面所需的所有信息（班级 / 小组 / 项目 / 4 项评分与反馈）
+  ///
+  /// 返回字段（key 全为 String）：
+  ///   className, groupName, projectName, advisorName,
+  ///   scores:    Map<String, int>     键为 '答辩报告' / '个人报告' / '小组报告' / '项目报告'
+  ///   feedbacks: Map<String, String>  同上 key → 教师/AI 反馈文本
+  Future<Map<String, dynamic>> getCoverData(String userId) async {
+    final db = await DatabaseHelper.instance.database;
+
+    String? className;
+    final cls = await db.rawQuery(
+      'SELECT c.name FROM classes c '
+      'JOIN class_members m ON c.id = m.class_id '
+      'WHERE m.user_id = ? LIMIT 1',
+      [userId],
+    );
+    if (cls.isNotEmpty) {
+      className = cls.first['name'] as String?;
+    }
+
+    String? groupName;
+    String? projectName;
+    final groups = await db.query('assessment_groups');
+    for (final g in groups) {
+      final ids = _parseMemberIds(g['member_ids'] as String?);
+      if (!ids.contains(userId)) continue;
+      groupName = g['name'] as String?;
+      final projects = await db.query('assessment_projects',
+          where: 'group_id = ?', whereArgs: [g['id']]);
+      if (projects.isNotEmpty) {
+        projectName = projects.first['name'] as String?;
+      }
+      break;
+    }
+
+    final reports = await db.query('student_reports',
+        where: 'user_id = ?', whereArgs: [userId]);
+    final scores = <String, int>{};
+    final feedbacks = <String, String>{};
+    for (final r in reports) {
+      final title = r['title'] as String? ?? '';
+      for (final key in const ['答辩报告', '个人报告', '小组报告', '项目报告']) {
+        if (title.contains(key)) {
+          final s = r['score'] as int?;
+          if (s != null) scores[key] = s;
+          final fb = r['feedback'] as String?;
+          if (fb != null && fb.isNotEmpty) feedbacks[key] = fb;
+          break;
+        }
+      }
+    }
+
+    return {
+      'className': className ?? '',
+      'groupName': groupName ?? '',
+      'projectName': projectName ?? '',
+      'scores': scores,
+      'feedbacks': feedbacks,
+    };
+  }
 }

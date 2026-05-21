@@ -17,6 +17,14 @@ class SettingsService {
   static const String _xunfeiApiKeyKey = 'xunfei_api_key';
   static const String _xunfeiApiSecretKey = 'xunfei_api_secret';
 
+  // ── 考核报告封面默认值 ──────────────────────────────────────────────────
+  static const String _advisorNameKey = 'assessment_advisor_name';
+  static const String _collegeNameKey = 'assessment_college_name';
+  static const String _courseNameKey  = 'assessment_course_name';
+  static const String _defaultAdvisorName = '刘东良';
+  static const String _defaultCollegeName = '计算机与信息工程学院';
+  static const String _defaultCourseName  = '移动应用开发';
+
   // ═════════════════════════════════════════════════════════════════════════
   // 显示模式  ThemeMode（跟随系统 / 浅色 / 深色）
   // ═════════════════════════════════════════════════════════════════════════
@@ -147,6 +155,40 @@ class SettingsService {
   static Future<void> setXunfeiApiSecret(String value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_xunfeiApiSecretKey, value);
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // 考核报告封面默认值
+  // ═════════════════════════════════════════════════════════════════════════
+
+  static Future<String> getAdvisorName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_advisorNameKey) ?? _defaultAdvisorName;
+  }
+
+  static Future<void> setAdvisorName(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_advisorNameKey, value);
+  }
+
+  static Future<String> getCollegeName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_collegeNameKey) ?? _defaultCollegeName;
+  }
+
+  static Future<void> setCollegeName(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_collegeNameKey, value);
+  }
+
+  static Future<String> getCourseName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_courseNameKey) ?? _defaultCourseName;
+  }
+
+  static Future<void> setCourseName(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_courseNameKey, value);
   }
 
   // ═════════════════════════════════════════════════════════════════════════

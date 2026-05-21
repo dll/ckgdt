@@ -13,6 +13,8 @@ import '../../../services/agent/agents/assessment_grading_agent.dart';
 import '../../widgets/agent_entry_button.dart';
 import '../learning/pdf_viewer_page.dart';
 import 'ai_grading_tab.dart';
+import 'assessment_materials_tab.dart';
+import 'audit_print_panel.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
 import '../../../services/pdf_text_service.dart';
@@ -37,7 +39,7 @@ class _AssessmentPageState extends State<AssessmentPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _isStudent ? 6 : 7, vsync: this);
+    _tabController = TabController(length: _isStudent ? 7 : 8, vsync: this);
     _initDemoData();
   }
 
@@ -193,6 +195,7 @@ class _AssessmentPageState extends State<AssessmentPage>
               const Tab(icon: Icon(Icons.groups, size: 20), text: '分组'),
               const Tab(icon: Icon(Icons.assignment, size: 20), text: '项目'),
               const Tab(icon: Icon(Icons.star_rate, size: 20), text: '贡献'),
+              const Tab(icon: Icon(Icons.menu_book, size: 20), text: '材料'),
               const Tab(icon: Icon(Icons.record_voice_over, size: 20), text: '答辩'),
               const Tab(icon: Icon(Icons.summarize, size: 20), text: '报告'),
               const Tab(icon: Icon(Icons.leaderboard, size: 20), text: '成绩'),
@@ -208,6 +211,7 @@ class _AssessmentPageState extends State<AssessmentPage>
               _GroupTab(authService: _authService),
               _ProjectTab(authService: _authService),
               _ContributionTab(authService: _authService),
+              const AssessmentMaterialsTab(),
               _DefenseTab(authService: _authService),
               _AssessmentReportTab(authService: _authService),
               _ScoreTab(authService: _authService),
@@ -4253,7 +4257,6 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
   late TabController _subTabController;
   final _dao = AssessmentDao();
   List<Map<String, dynamic>> _submissions = [];
-  List<Map<String, dynamic>> _allStudents = [];
   bool _loading = true;
   String? _currentUserId;
 
@@ -4336,19 +4339,9 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
     try {
       final queryUserId = _isStudent ? _currentUserId : null;
       final subs = await _dao.getSubmittedReports(userId: queryUserId);
-      // 教师端加载全部活跃学生，用于计算未提交
-      List<Map<String, dynamic>> students = [];
-      if (!_isStudent) {
-        final db = await DatabaseHelper.instance.database;
-        students = await db.query('users',
-            columns: ['user_id', 'real_name'],
-            where: "role = 'student' AND is_active = 1",
-            orderBy: 'user_id');
-      }
       if (mounted) {
         setState(() {
           _submissions = subs;
-          _allStudents = students;
         });
       }
     } catch (_) {}
@@ -4390,7 +4383,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
             tabs: const [
               Tab(icon: Icon(Icons.timeline, size: 18), text: '过程报告'),
               Tab(icon: Icon(Icons.assignment, size: 18), text: '最终报告'),
-              Tab(icon: Icon(Icons.upload_file, size: 18), text: '提交'),
+              Tab(icon: Icon(Icons.print, size: 18), text: '审核打印'),
             ],
           ),
         ),
@@ -4682,6 +4675,12 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                           fontWeight: FontWeight.w600,
                           color: color)),
                 ),
+                const SizedBox(height: 10),
+                // 上传/批阅 操作行
+                _buildReportActions(
+                  reportType: '${w['week']}报告',
+                  color: color,
+                ),
               ],
             ),
           ),
@@ -4701,6 +4700,133 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
             style: TextStyle(
                 fontSize: 12, fontWeight: FontWeight.bold, color: color)),
       ],
+    );
+  }
+
+  /// 报告操作行：学生上传/重新上传 + 教师批阅 + AI批阅入口
+  ///
+  /// 在过程报告卡片和最终报告卡片底部统一展示。匹配规则：
+  /// 通过 [reportType]（如"第一周报告"/"答辩报告"）查找已提交记录。
+  Widget _buildReportActions({
+    required String reportType,
+    required Color color,
+  }) {
+    final matched = _submissions
+        .where((s) => (s['title'] as String?)?.contains(reportType) == true)
+        .toList();
+    final hasSubmitted = matched.isNotEmpty;
+    final score = hasSubmitted ? matched.first['score'] as int? : null;
+    final status = hasSubmitted
+        ? (matched.first['status'] as String? ?? '已提交')
+        : '未提交';
+
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.grey.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                hasSubmitted ? Icons.check_circle : Icons.radio_button_unchecked,
+                size: 14,
+                color: hasSubmitted ? color : Colors.grey,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  hasSubmitted
+                      ? '$status${score != null ? "  ·  $score 分" : ""}'
+                      : '尚未上传',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color:
+                        hasSubmitted ? Colors.grey[700] : Colors.grey[400],
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              if (hasSubmitted &&
+                  (matched.first['file_path'] as String? ?? '').isNotEmpty)
+                IconButton(
+                  icon: Icon(Icons.visibility, size: 16, color: color),
+                  tooltip: '预览',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: () => _openPdfPreview(
+                    matched.first['file_path'] as String,
+                    reportType,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              if (_isStudent)
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _pickAndUploadPdf(reportType),
+                    icon: Icon(
+                      hasSubmitted ? Icons.refresh : Icons.upload_file,
+                      size: 14,
+                    ),
+                    label: Text(
+                      hasSubmitted ? '重新上传' : '上传报告',
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: color,
+                      minimumSize: Size.zero,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                    ),
+                  ),
+                )
+              else ...[
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: hasSubmitted
+                        ? () => _showReportGradeDialog(matched.first)
+                        : null,
+                    icon: const Icon(Icons.grading, size: 14),
+                    label: const Text('教师批阅',
+                        style: TextStyle(fontSize: 11)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.indigo,
+                      minimumSize: Size.zero,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 6),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: hasSubmitted
+                        ? () => _showReportGradeDialog(matched.first)
+                        : null,
+                    icon: const Icon(Icons.auto_awesome, size: 14),
+                    label: const Text('AI 批阅',
+                        style: TextStyle(fontSize: 11)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.deepPurple,
+                      minimumSize: Size.zero,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 6),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -4957,6 +5083,12 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
               ],
             ),
           ),
+          const SizedBox(height: 10),
+          // 上传/批阅 操作行
+          _buildReportActions(
+            reportType: r['title'] as String,
+            color: color,
+          ),
           ],
           ),
         ),
@@ -4965,210 +5097,22 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
   }
 
   // ══════════════════════════════════════════════════════════
-  //  Tab3: 提交面板（上传4份PDF）
+  //  Tab3: 审核打印面板（步骤一审核 → 步骤二打印 PDF）
   // ══════════════════════════════════════════════════════════
   Widget _buildSubmissionPanel() {
-    final reportTypes = [
-      {'key': '答辩报告', 'icon': Icons.record_voice_over, 'color': Colors.red, 'num': '1'},
-      {'key': '个人报告', 'icon': Icons.person, 'color': Colors.blue, 'num': '2'},
-      {'key': '小组报告', 'icon': Icons.groups, 'color': Colors.green, 'num': '3'},
-      {'key': '项目报告', 'icon': Icons.folder_special, 'color': Colors.orange, 'num': '4'},
-    ];
-
-    return RefreshIndicator(
-      onRefresh: () async {
+    return AuditPrintPanel(
+      isStudent: _isStudent,
+      currentUserId: _currentUserId,
+      authService: widget.authService,
+      submissions: _submissions,
+      onPickAndUploadPdf: _pickAndUploadPdf,
+      onShowGradeDialog: _showReportGradeDialog,
+      onOpenPdfPreview: _openPdfPreview,
+      onDeleteSubmission: (id) async {
+        await _dao.deleteSubmittedReport(id);
         await _loadSubmissions();
       },
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // 提交进度
-          _buildSubmitProgress(reportTypes),
-          const SizedBox(height: 16),
-
-          // 各报告上传卡片
-          ...reportTypes.map((rt) {
-            final key = rt['key'] as String;
-            final submitted = _submissions
-                .where((s) =>
-                    (s['title'] as String?)?.contains(key) == true)
-                .toList();
-            return _buildUploadCard(rt, submitted);
-          }),
-
-          // 已提交的报告列表
-          if (_submissions.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Icon(Icons.history, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 6),
-                Text('提交记录 (${_submissions.length})',
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[700])),
-              ],
-            ),
-            const SizedBox(height: 8),
-            ..._submissions.map((s) => _buildSubmissionItem(s)),
-          ],
-
-          // 教师端：未提交学生列表（按报告类型分组）
-          if (!_isStudent && _allStudents.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            _buildUnsubmittedReportSection(),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSubmitProgress(List<Map<String, dynamic>> reportTypes) {
-    int submitted = 0;
-    for (final rt in reportTypes) {
-      final key = rt['key'] as String;
-      if (_submissions.any(
-          (s) => (s['title'] as String?)?.contains(key) == true)) {
-        submitted++;
-      }
-    }
-
-    final progress = submitted / 4;
-    final progressColor = submitted == 4
-        ? Colors.green
-        : submitted >= 2
-            ? Colors.orange
-            : Colors.red;
-
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Icon(Icons.assignment_turned_in,
-                    size: 20, color: progressColor),
-                const SizedBox(width: 8),
-                Text('提交进度',
-                    style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: progressColor)),
-                const Spacer(),
-                Text('$submitted / 4',
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: progressColor)),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 10,
-                backgroundColor: Colors.grey[200],
-                valueColor: AlwaysStoppedAnimation(progressColor),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: reportTypes.map((rt) {
-                final key = rt['key'] as String;
-                final done = _submissions.any(
-                    (s) => (s['title'] as String?)?.contains(key) == true);
-                final color = rt['color'] as Color;
-                return Expanded(
-                  child: Column(
-                    children: [
-                      Icon(
-                        done ? Icons.check_circle : Icons.radio_button_unchecked,
-                        size: 18,
-                        color: done ? color : Colors.grey[300],
-                      ),
-                      const SizedBox(height: 2),
-                      Text(key.replaceAll('报告', ''),
-                          style: TextStyle(
-                              fontSize: 9,
-                              color: done ? color : Colors.grey[400])),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUploadCard(
-      Map<String, dynamic> rt, List<Map<String, dynamic>> submitted) {
-    final key = rt['key'] as String;
-    final color = rt['color'] as Color;
-    final done = submitted.isNotEmpty;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: done
-            ? BorderSide(color: color.withValues(alpha: 0.3))
-            : BorderSide.none,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: done
-                  ? color.withValues(alpha: 0.15)
-                  : Colors.grey.withValues(alpha: 0.1),
-              child: Icon(
-                done ? Icons.check : rt['icon'] as IconData,
-                size: 20,
-                color: done ? color : Colors.grey,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('报告${rt['num']}：$key',
-                      style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: done ? color : null)),
-                  Text(done
-                      ? '已提交 · ${(submitted.first['submit_time'] as String? ?? '').length > 16 ? (submitted.first['submit_time'] as String).substring(0, 16) : submitted.first['submit_time'] ?? ''}'
-                      : '未提交',
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: done ? Colors.grey[500] : Colors.red[300])),
-                ],
-              ),
-            ),
-            if (_isStudent)
-              FilledButton.icon(
-                onPressed: () => _pickAndUploadPdf(key),
-                style: FilledButton.styleFrom(
-                  backgroundColor: done ? color : null,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                ),
-                icon: Icon(done ? Icons.refresh : Icons.upload_file, size: 16),
-                label: Text(done ? '重新提交' : '上传PDF',
-                    style: const TextStyle(fontSize: 12)),
-              ),
-          ],
-        ),
-      ),
+      onReload: _loadSubmissions,
     );
   }
 
@@ -5264,153 +5208,6 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
         );
       }
     }
-  }
-
-  Widget _buildSubmissionItem(Map<String, dynamic> s) {
-    final title = s['title'] as String? ?? '';
-    final time = s['submit_time'] as String? ?? s['created_at'] as String? ?? '';
-    final status = s['status'] as String? ?? '已提交';
-    final content = s['content_json'] as String? ?? '';
-    final filePath = s['file_path'] as String? ?? '';
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 6),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      child: ListTile(
-        dense: true,
-        leading: Icon(Icons.picture_as_pdf, color: Colors.red[400], size: 24),
-        title: Text(title, style: const TextStyle(fontSize: 12)),
-        subtitle: Text(
-          '${time.length > 16 ? time.substring(0, 16) : time} · $status'
-          '${content.isNotEmpty ? ' · $content' : ''}',
-          style: TextStyle(fontSize: 10, color: Colors.grey[500]),
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // PDF 预览按钮
-            if (filePath.isNotEmpty)
-              IconButton(
-                icon: Icon(Icons.visibility, size: 18, color: Colors.blue[400]),
-                tooltip: '预览 PDF',
-                onPressed: () => _openPdfPreview(filePath, title),
-              ),
-            if (_isStudent)
-              IconButton(
-                icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                onPressed: () async {
-                  final id = s['id'] as int?;
-                  if (id != null) {
-                    await _dao.deleteSubmittedReport(id);
-                    await _loadSubmissions();
-                  }
-                },
-              )
-            else
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: status == '已批改'
-                      ? Colors.green.withValues(alpha: 0.1)
-                      : Colors.blue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(status,
-                    style: TextStyle(
-                        fontSize: 10,
-                        color: status == '已批改' ? Colors.green : Colors.blue)),
-              ),
-          ],
-        ),
-        onTap: _isStudent
-            ? null
-            : () => _showReportGradeDialog(s),
-      ),
-    );
-  }
-
-  Widget _buildUnsubmittedReportSection() {
-    final reportTypes = ['答辩报告', '个人报告', '小组报告', '项目报告'];
-
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.person_off, size: 18, color: Colors.red[400]),
-                const SizedBox(width: 6),
-                Text('未提交学生',
-                    style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.red[400])),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ...reportTypes.map((type) {
-              // 找出提交了该类型报告的学生 user_id
-              final submittedIds = _submissions
-                  .where((s) =>
-                      (s['title'] as String?)?.contains(type) == true)
-                  .map((s) => s['user_id'] as String? ?? '')
-                  .toSet();
-              final unsubmitted = _allStudents
-                  .where((s) => !submittedIds.contains(s['user_id']))
-                  .toList();
-
-              return ExpansionTile(
-                tilePadding: EdgeInsets.zero,
-                childrenPadding: const EdgeInsets.only(bottom: 8),
-                leading: Icon(Icons.assignment_late,
-                    size: 16, color: Colors.red[300]),
-                title: Text(
-                    '$type — ${submittedIds.length}/${_allStudents.length}人提交'
-                    '${unsubmitted.isNotEmpty ? '，${unsubmitted.length}人未交' : ''}',
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: unsubmitted.isEmpty
-                            ? Colors.green
-                            : Colors.red[400])),
-                children: [
-                  if (unsubmitted.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.all(8),
-                      child: Text('全部已提交',
-                          style: TextStyle(
-                              fontSize: 12, color: Colors.green)),
-                    )
-                  else
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      children: unsubmitted.map((s) {
-                        final name = s['real_name'] as String? ??
-                            s['user_id'] as String;
-                        return Chip(
-                          avatar: Icon(Icons.person_outline,
-                              size: 14, color: Colors.red[300]),
-                          label: Text(name,
-                              style: const TextStyle(fontSize: 11)),
-                          backgroundColor:
-                              Colors.red.withValues(alpha: 0.05),
-                          side: BorderSide(
-                              color: Colors.red.withValues(alpha: 0.2)),
-                          padding: EdgeInsets.zero,
-                          visualDensity: VisualDensity.compact,
-                        );
-                      }).toList(),
-                    ),
-                ],
-              );
-            }),
-          ],
-        ),
-      ),
-    );
   }
 
   void _openPdfPreview(String filePath, String title) {
