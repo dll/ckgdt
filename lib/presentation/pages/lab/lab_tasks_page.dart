@@ -204,6 +204,71 @@ String? _resolveFilePath(String filePath, String fileNames) {
   return null;
 }
 
+/// 教师端 PDF 预览统一入口：本地存在 → 直接打开；缺失 → 提示并提供"立即同步"动作
+Future<void> previewOrPromptSync(
+  BuildContext context, {
+  required String filePaths,
+  required String fileNames,
+  required String userId,
+  required String title,
+  VoidCallback? onSyncFinished,
+}) async {
+  final resolved = _resolveFilePath(filePaths, fileNames);
+  if (resolved != null) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => InAppPdfViewerPage(filePath: resolved, title: title),
+      ),
+    );
+    return;
+  }
+
+  final fileName = fileNames.isNotEmpty
+      ? fileNames
+      : (filePaths.isNotEmpty
+          ? filePaths.split(Platform.pathSeparator).last
+          : '附件');
+  final messenger = ScaffoldMessenger.of(context);
+  messenger.hideCurrentSnackBar();
+  messenger.showSnackBar(
+    SnackBar(
+      duration: const Duration(seconds: 6),
+      content: Text(
+        '该 PDF 在学生本机提交，尚未同步到当前设备。\n文件名：$fileName',
+        style: const TextStyle(height: 1.4),
+      ),
+      action: userId.isEmpty
+          ? null
+          : SnackBarAction(
+              label: '立即同步',
+              onPressed: () async {
+                messenger.hideCurrentSnackBar();
+                messenger.showSnackBar(SnackBar(
+                  content: Text('正在从云端拉取 $userId 的提交…'),
+                  duration: const Duration(seconds: 2),
+                ));
+                try {
+                  final r = await SyncService().downloadOwnData(userId);
+                  messenger.hideCurrentSnackBar();
+                  messenger.showSnackBar(SnackBar(
+                    content: Text(r.success ? '同步完成：${r.message}' : '同步失败：${r.message}'),
+                    backgroundColor: r.success ? null : Colors.red,
+                  ));
+                  if (r.success) onSyncFinished?.call();
+                } catch (e) {
+                  messenger.hideCurrentSnackBar();
+                  messenger.showSnackBar(SnackBar(
+                    content: Text('同步出错：$e'),
+                    backgroundColor: Colors.red,
+                  ));
+                }
+              },
+            ),
+    ),
+  );
+}
+
 class _LabTasksPageState extends State<LabTasksPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
@@ -1948,27 +2013,14 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                         TextButton.icon(
                           icon: const Icon(Icons.visibility, size: 16),
                           label: const Text('预览PDF', style: TextStyle(fontSize: 12)),
-                          onPressed: () {
-                            final resolvedPath = _resolveFilePath(filePaths, fileNames);
-                            if (resolvedPath == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(
-                                  '该PDF文件在学生本机提交，尚未同步到当前设备。\n'
-                                  '文件名：${fileNames.isNotEmpty ? fileNames : filePaths.split(Platform.pathSeparator).last}',
-                                )),
-                              );
-                              return;
-                            }
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => InAppPdfViewerPage(
-                                  filePath: resolvedPath,
-                                  title: '$userName - $taskTitle',
-                                ),
-                              ),
-                            );
-                          },
+                          onPressed: () => previewOrPromptSync(
+                            context,
+                            filePaths: filePaths,
+                            fileNames: fileNames,
+                            userId: submission['user_id'] as String? ?? '',
+                            title: '$userName - $taskTitle',
+                            onSyncFinished: _loadSubmissions,
+                          ),
                         ),
                       ],
                     ),
@@ -2209,6 +2261,9 @@ class _ReportTabState extends State<_ReportTab> {
   List<Map<String, dynamic>> _templates = [];
   bool _isLoading = true;
 
+  /// 教师视图下报告分组方式：byStudent（学号）/ byTask（实验任务）
+  String _groupBy = 'byStudent';
+
   @override
   void initState() {
     super.initState();
@@ -2333,12 +2388,14 @@ class _ReportTabState extends State<_ReportTab> {
                         ),
                       ],
                     )
-                  : ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
-                      itemCount: _reports.length,
-                      itemBuilder: (ctx, i) =>
-                          _buildReportCard(context, _reports[i]),
-                    ),
+                  : _isTeacherOrAdmin
+                      ? _buildGroupedReportsList()
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+                          itemCount: _reports.length,
+                          itemBuilder: (ctx, i) =>
+                              _buildReportCard(context, _reports[i]),
+                        ),
         ),
         if (!_isTeacherOrAdmin)
           Positioned(
@@ -2351,6 +2408,116 @@ class _ReportTabState extends State<_ReportTab> {
               label: const Text('新建报告'),
             ),
           ),
+      ],
+    );
+  }
+
+  /// 教师视图：按学号或实验任务分组的列表
+  Widget _buildGroupedReportsList() {
+    final groups = <String, List<Map<String, dynamic>>>{};
+    for (final r in _reports) {
+      final key = _groupBy == 'byTask'
+          ? ((r['task_title'] as String?)?.trim().isNotEmpty == true
+              ? r['task_title'] as String
+              : (r['title'] as String? ?? '未知任务'))
+          : ((r['user_id'] as String?)?.trim().isNotEmpty == true
+              ? r['user_id'] as String
+              : '未知学生');
+      (groups[key] ??= []).add(r);
+    }
+
+    final keys = groups.keys.toList()..sort();
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
+      children: [
+        // 分组切换 + 总数
+        Card(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: [
+                const Icon(Icons.filter_list, size: 16, color: Colors.indigo),
+                const SizedBox(width: 6),
+                const Text('分组方式',
+                    style: TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w600)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(
+                          value: 'byStudent',
+                          icon: Icon(Icons.person, size: 14),
+                          label: Text('按学号', style: TextStyle(fontSize: 11))),
+                      ButtonSegment(
+                          value: 'byTask',
+                          icon: Icon(Icons.assignment, size: 14),
+                          label: Text('按实验', style: TextStyle(fontSize: 11))),
+                    ],
+                    selected: {_groupBy},
+                    onSelectionChanged: (s) =>
+                        setState(() => _groupBy = s.first),
+                    style: SegmentedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text('共 ${_reports.length}',
+                    style: TextStyle(
+                        fontSize: 11, color: Colors.grey[600])),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        for (final k in keys) ...[
+          Container(
+            margin: const EdgeInsets.fromLTRB(4, 8, 4, 4),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(6),
+              border: Border(
+                left: BorderSide(color: primary, width: 3),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  _groupBy == 'byTask' ? Icons.assignment : Icons.person,
+                  size: 14,
+                  color: primary,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(k,
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: primary)),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: primary,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text('${groups[k]!.length}',
+                      style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ),
+          for (final r in groups[k]!) _buildReportCard(context, r),
+        ],
       ],
     );
   }
@@ -2570,7 +2737,12 @@ class _ReportTabState extends State<_ReportTab> {
     final score = report['score'] as int?;
     final feedback = report['feedback'] as String?;
 
-    // 解析报告内容
+    // PDF 附件信息（lab_submissions 来源主要走这里）
+    final filePaths = report['file_paths'] as String? ?? '';
+    final fileNames = report['file_names'] as String? ?? '';
+    final plainContent = report['content'] as String? ?? '';
+
+    // 解析报告内容（student_reports 的结构化字段）
     Map<String, String> contentMap = {};
     final contentRaw = report['content_json'] as String?;
     if (contentRaw != null && contentRaw.isNotEmpty) {
@@ -2580,6 +2752,10 @@ class _ReportTabState extends State<_ReportTab> {
             decoded.map((k, v) => MapEntry(k.toString(), v.toString()));
       } catch (_) {}
     }
+
+    final hasAnyContent = contentMap.isNotEmpty ||
+        plainContent.isNotEmpty ||
+        filePaths.isNotEmpty;
 
     showDialog(
       context: context,
@@ -2644,7 +2820,87 @@ class _ReportTabState extends State<_ReportTab> {
                           TextStyle(fontSize: 11, color: Colors.grey[500])),
                 ],
                 const Divider(height: 24),
-                // 报告内容
+                // PDF 附件块（lab_submissions 主要数据源）
+                if (filePaths.isNotEmpty || fileNames.isNotEmpty) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.04),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                          color: Colors.red.withValues(alpha: 0.2)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.picture_as_pdf,
+                            color: Colors.red, size: 22),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('PDF 附件',
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 2),
+                              Text(
+                                fileNames.isNotEmpty
+                                    ? fileNames
+                                    : filePaths.split('/').last.split('\\').last,
+                                style: TextStyle(
+                                    fontSize: 11, color: Colors.grey[700]),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton.icon(
+                          icon: const Icon(Icons.visibility, size: 14),
+                          label: const Text('打开 PDF',
+                              style: TextStyle(fontSize: 11)),
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            minimumSize: Size.zero,
+                          ),
+                          onPressed: () => previewOrPromptSync(
+                            context,
+                            filePaths: filePaths,
+                            fileNames: fileNames,
+                            userId: userId,
+                            title: '$userId - $title',
+                            onSyncFinished: _loadData,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                // 简单文本提交（lab_submissions.content）
+                if (plainContent.isNotEmpty && contentMap.isEmpty) ...[
+                  const Text('提交说明',
+                      style: TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey[200]!),
+                    ),
+                    child: SelectableText(plainContent,
+                        style: const TextStyle(fontSize: 13, height: 1.6)),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                // 结构化报告内容（student_reports.content_json）
                 if (contentMap.isNotEmpty)
                   ...contentMap.entries.map((entry) {
                     final sectionTitle = entry.key == 'content'
@@ -2684,7 +2940,7 @@ class _ReportTabState extends State<_ReportTab> {
                       ),
                     );
                   })
-                else
+                else if (!hasAnyContent)
                   Center(
                     child: Text('报告内容为空',
                         style: TextStyle(color: Colors.grey[400])),
@@ -3070,27 +3326,14 @@ class _ReportTabState extends State<_ReportTab> {
                                 minimumSize: Size.zero,
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
-                              onPressed: () {
-                                final resolvedPath = _resolveFilePath(filePaths, fileNames);
-                                if (resolvedPath == null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text(
-                                      '该PDF文件在学生本机提交，尚未同步到当前设备。\n'
-                                      '文件名：${fileNames.isNotEmpty ? fileNames : filePaths.split(Platform.pathSeparator).last}',
-                                    )),
-                                  );
-                                  return;
-                                }
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => InAppPdfViewerPage(
-                                      filePath: resolvedPath,
-                                      title: '$userId - $title',
-                                    ),
-                                  ),
-                                );
-                              },
+                              onPressed: () => previewOrPromptSync(
+                                context,
+                                filePaths: filePaths,
+                                fileNames: fileNames,
+                                userId: userId,
+                                title: '$userId - $title',
+                                onSyncFinished: _loadData,
+                              ),
                             ),
                         ],
                       ),

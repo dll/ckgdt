@@ -20,7 +20,8 @@ class AuditPrintPanel extends StatefulWidget {
   final List<Map<String, dynamic>> submissions;
   final Future<void> Function(String reportType) onPickAndUploadPdf;
   final void Function(Map<String, dynamic> submission) onShowGradeDialog;
-  final void Function(String filePath, String title) onOpenPdfPreview;
+  final void Function(String filePath, String title,
+      {String? userId, String? fileName}) onOpenPdfPreview;
   final Future<void> Function(int id) onDeleteSubmission;
   final Future<void> Function() onReload;
 
@@ -358,7 +359,11 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
               onPressed: () => widget.onOpenPdfPreview(
-                  submitted.first['file_path'] as String? ?? '', key),
+                submitted.first['file_path'] as String? ?? '',
+                key,
+                userId: submitted.first['user_id'] as String?,
+                fileName: submitted.first['content_json'] as String?,
+              ),
             ),
           const SizedBox(width: 8),
           OutlinedButton.icon(
