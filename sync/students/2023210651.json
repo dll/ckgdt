@@ -3,8 +3,8 @@
   "user_id": "2023210651",
   "user_name": "周乐",
   "role": "student",
-  "synced_at": "2026-05-22T08:35:56.235821",
-  "last_active": "2026-05-22T08:35:56.175706",
+  "synced_at": "2026-05-22T08:40:57.444206",
+  "last_active": "2026-05-22T08:40:57.415580",
   "quiz_results": [
     {
       "user_id": "2023210651",
@@ -22,7 +22,26 @@
   "favorites": [],
   "feedback": [],
   "learning_paths": [],
-  "lab_submissions": [],
+  "lab_submissions": [
+    {
+      "task_id": 1,
+      "user_id": "2023210651",
+      "content": "PDF实验报告：2023210651周乐实验一 开发环境搭建.pdf\n\n--- 报告正文（自动提取）---\n实验一：开发环境搭建\n实验基本信息\n●\n实验名称\n：开发环境搭建\n●\n实验编号\n：\nd20301035101\n、\nd20301009201\n●\n学号\n：\n2023210651\n●\n姓名\n：周乐\n●\n实验时间\n：\n2026\n年\n3\n月\n13\n-\n14\n日\n●\n技术栈\n：\nVisual Studio + MAUI\n开发\n+ C#\n●\n实验主题\n：多端温控系统\n一、实验目的\n1.\n掌握移动应用开发环境的搭建方法\n2.\n熟悉\nVisual Studio 2022\n的安装与配置\n3.\n学习\nMAUI\n跨平台开发技术\n4.\n实现多端温控系统的登录界面\n5.\n体验\nAI\n辅助编码工具的使用\n6.\n掌握\nGit\n版本控制的基本操作\n二、技术栈介绍\n技术组件\n版本\n用途\nVisual Studio\n2022 Community\n集成开发环境\n.NET MAUI\n.NET 9.0\n跨平台移动应用开发框架\nC#\n12.0\n开发语言\nGit\n2.40+\n版本控制工具\nGitHub Copilot\n最新版\nAI\n辅助编码工具\n三、环境搭建过程\n3.1 Visual Studio 2022\n安装\n1.\n下载安装包\n：从微软官网下载\nVisual Studio 2022 Community\n版\n2.\n选择工作负载\n：勾选\n\".NET Multi\n-\nplatform App UI\n开发\n\"\n工作负载\n3.\n安装完成\n：等待安装程序完成所有组件的安装\n4.\n验证安装\n：启动\nVisual Studio 2022\n，确认能够正常运行\n3.2 MAUI\n项目创建\n1.\n创建新项目\n：在\nVisual Studio\n中选择\n\".NET MAUI App\"\n模板\n2.\n项目配置\n：\n○\n项目名称：\nhelloworld\n○\n位置：\nE:\n\\\n刘东良实验\n\\\ncg2mtcs\n○\n框架：\n.NET 9.0\n3.\n项目结构\n：生成包含多平台支持的\nMAUI\n项目结构\n3.3\nGit\n版本控制配置\n1.\n初始化仓库\n：在项目根目录初始化\nGit\n仓库\n2.\n创建分支\n：从远程\nfeature\n分支创建\nfeat\n-\nzl\n分支\n3.\n配置用户信息\n：设置\nGit\n用户名和邮箱\n四、多端温控系统登录界面实现\n4.1\n界面设计\n采用现代化的卡片式布局，主要包含以下元素：\n●\n系统\nLogo\n和标题\n●\n用户名和密码输入框\n●\n记住密码选项\n●\n登录按钮\n●\n忘记密码和注册账号链接\n●\n系统版本信息\n4.2 XAML\n代码实现\n<?xml version=\"1.0\" encoding=\"utf\n-\n8\" ?>\n<ContentPage xmlns=\"http://schemas.microsoft.com/dotnet/2021/maui\"\nxmlns:x=\"http://schemas.microsoft.com/winfx/2009/xaml\"\nx:Class=\"helloworld.MainPage\"\nTitle=\"\n温控系统登录\n\"\nBackgroundColor=\"#F0F4F8\">\n<ScrollView>\n<VerticalStackLayout Padding=\"40\" Spacing=\"20\"\nVerticalOptions=\"Center\">\n<!\n--\n系统\nLogo\n--\n>\n<Image Source=\"thermosta\nt_icon.png\"\nHeightRequest=\"120\"\nWidthRequest=\"120\"\nHorizontalOptions=\"Center\"\nSemanticProperties.Description=\"\n温控系统图标\n\" />\n<!\n--\n系统标题\n--\n>\n<Label Text=\"\n智能温控系统\n\"\nFontSize=\"28\"\nFontAttributes=\"Bold\"\nHorizontalOptions=\"Center\"\nTextColor=\"#\n2C3E50\" />\n<Label Text=\"Smart Temperature Control System\"\nFontSize=\"14\"\nHorizontalOptions=\"Center\"\nTextColor=\"#7F8C8D\" />\n<!\n--\n登录表单\n--\n>\n<Frame BackgroundColor=\"White\"\nCornerRadius=\"10\"\nPadding=\"20\"\nMargin=\"0,20,0,0\"\nHasShadow=\"True\">\n<VerticalStackLayout Spacing=\"15\">\n<!\n--\n用户名输入\n--\n>\n<VerticalStackLayout Spacing=\"5\">\n<Label Text=\"\n用户名\n\"\nFontSize=\"14\"\nTextColor=\"#34495E\" />\n<Entry Placeholder=\"\n请输入用户名\n\"\nKeyboard=\"Text\"\nBackgroundColor=\"#F8F9FA\"\nTextColor=\"#2C3E50\" />\n</VerticalStackLayout>\n<!\n--\n密码输入\n--\n>\n<VerticalStackLayout Spacing=\"5\">\n<Label Text=\"\n密码\n\"\nFontSize=\"14\"\nTextColor=\"#34495E\" />\n<Entry Placeholder=\"\n请\n输入密码\n\"\nIsPassword=\"True\"\nBackgroundColor=\"#F8F9FA\"\nTextColor=\"#2C3E50\" />\n</VerticalStackLayout>\n<!\n--\n记住密码\n--\n>\n<HorizontalStackLayout Spacing=\"10\">\n<CheckBox Color=\"#3498DB\" />\n<Label Text=\"\n记住密码\n\"\nVerticalOptions=\"Center\"\nTextColor=\"#34495E\" />\n</HorizontalStackLayout>\n<!\n--\n登录按钮\n--\n>\n<Button Text=\"\n登\n录\n\"\nBackgroundColor=\"#3498DB\"\nTextColor=\"White\"\nFontAttributes=\"Bold\"\nCornerRa\ndius=\"5\"\nHeightRequest=\"45\"\nClicked=\"OnLoginClicked\" />\n<!\n--\n辅助链接\n--\n>\n<HorizontalStackLayout\nHorizo\nntalOptions=\"Center\" Spacing=\"20\">\n<Label Text=\"\n忘记密码\n?\"\nTextColor=\"#3498DB\"\nFontSize=\"12\">\n<Label.GestureRecog\nnizers>\n<TapGestureRecognizer\nTapped=\"OnForgotPasswordTapped\" />\n</Label.GestureRecognizers>\n</Label>\n<Label Text=\"\n注\n册账号\n\"\nTextColor=\"#3498DB\"\nFontSize=\"12\">\n<Label.GestureRecognizers>\n<TapGestureRecognizer\nTapped=\"OnRe\ngisterTapped\" />\n</Label.GestureRecognizers>\n</Label>\n</HorizontalStackLayout>\n</VerticalStackLayout>\n</Frame>\n<!\n--\n系统状态信息\n--\n>\n<Label Text=\"\n系统版本\n: v1.0.0 |\n支持平台\n:\nAndroid/iOS/Windows\"\nFontSize=\"10\"\nHorizontalOptions=\"Center\"\nTextColor=\"#95A5A6\"\nMargin=\"0,20,0,0\" />\n</VerticalStackLayout>\n</ScrollView>\n</ContentPage>\n4.3 C#\n代码实现\nnamespace helloworld;\npublic partial class MainPage : ContentPage\n{\npublic MainPage()\n{\nInitializeComponent();\n}\n//\n登录按钮点击事件\nprivate async v\noid OnLoginClicked(object sender, EventArgs e)\n{\n//\n显示登录提示\nawait DisplayAlert(\"\n登录\n\", \"\n正在登录温控系统\n...\", \"\n确定\n\");\n//\n这里可以添加实际的登录逻辑\n//\n例如：验证用户名密码、调用\nAPI\n等\n}\n//\n忘记密码点击事件\nprivate async void OnForgotPasswordTapped(object sender,\nEventArgs e)\n{\nawait DisplayAlert(\"\n忘记密码\n\", \"\n请联系管理员重置密码\n\", \"\n确定\n\");\n}\n//\n注册账号点击事件\nprivate\nasync void OnRegisterTapped(object sender, EventArgs e)\n{\nawait DisplayAlert(\"\n注册账号\n\", \"\n请联系管理员申请账号\n\", \"\n确定\n\");\n}\n}\n五、实验结果与分析\n5.1\n环境搭建结果\n项目\n状态\n备注\nVisual Studio 2022\n安装\n✅\n成功\n已安装\n.NET MAUI\n工作负载\nMAUI\n项目创建\n✅\n成功\n生成了完整的多平台项目结构\nGit\n配置\n✅\n成功\n已创建\nfeat\n-\nzl\n分支并配置用户信息\n代码提交\n✅\n成功\n已推送到远程\nfeat\n-\nzl\n分支\n5.2\n功能验证\n1.\n界面显示\n：登录界面布局美观，响应式设计适配不同屏幕尺寸\n2\n.\n多端支持\n：通过\nMAUI\n框架支持\nAndroid\n、\niOS\n、\nWindows\n等多平台\n3\n.\nAI\n辅助\n：使用\nGitHub Copilot\n辅助生成代码，提高开发效率\n5.3\n技术分析\n●\nMAUI\n优势\n：单代码库支持多平台，减少开发维护成本\n●\nC#\n语言\n：类型安全，开发效率高\n●\nVisual Studio\n：提供丰富的开发工具和调试功能\n●\nGit\n版本控制\n：便于团队协作和代码管理\n六、总结与体会\n6.1\n实验总结\n本次实验成功完成了以下任务：\n1.\n搭建了完整的\nMAUI\n开发环境\n2.\n实现了多端温控系统的登录界面\n3.\n掌握了\nGit\n版本控制的基本操作\n4.\n体验了\nAI\n辅助编码工具的使用\n6.2\n技术体会\n1.\n跨平台开发\n：\nMAUI\n框架确实能够实现\n\"\n一次编码，多端运行\n\"\n的目标，大大提高了\n开发效率\n2.\n环境配置\n：正确配置开发环境是成功的关键，特别是\nMAUI\n工\n作负载的安装\n3.\n版本控制\n：\nGit\n的分支管理功能对于团队协作非常重要\n4.\nAI\n辅助\n：\nGitHub Copilot\n等\nAI\n工具可以显著提高代码编写效率\n6.3\n改进方向\n1.\n功能扩展\n：后续可以实现温控系统的核心功能，如温度监控、设备控制等\n2.\n性能优化\n：针对不同平台进行性能调优\n3.\nUI\n美化\n：进一步提升界面的视觉效果和用户体验\n4.\n安全性\n：加强登录验证和数据传输的安全性\n七、附录\n7.1\n项目结构\nhelloworld/\n├── Platforms/\n│   ├── Android/\n│   ├── iOS/\n│   ├── Windows/\n│   └── MacCatalyst/\n├── Resources/\n│   ├── Images/\n│   ├── Fonts/\n│   └── Styles/\n├── MainPage.xaml\n├── MainP\nage.xaml.cs\n└── helloworld.csproj\n7.2\n关键命令\n●\n创建分支\n：\ngit checkout\n-\nb feat\n-\nzl origin/feature\n●\n提交代码\n：\ngit commit\n-\nm \"Update login interface for\ntemperature control system\"\n●\n推送代码\n：\ngit push origin feat\n-\nzl\n7.3\n参考资料\n1. Microsoft Docs. (2026). .NE\nT MAUI Documentation.\n2. Visual Studio 2022\n官方文档\n3. Git\n官方文档\n4. GitHub Copilot\n使用指南\n实验报告完成日期\n：\n2026\n年\n3\n月\n14\n日\n",
+      "file_paths": "E:\\刘东良\\2023210651周乐实验一 开发环境搭建.pdf",
+      "file_names": "2023210651周乐实验一 开发环境搭建.pdf",
+      "submit_time": "2026-05-22T08:40:57.407506",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-05-22T08:40:57.407506",
+      "updated_at": "2026-05-22T08:40:57.407506",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    }
+  ],
   "student_reports": [],
   "student_works": [
     {
