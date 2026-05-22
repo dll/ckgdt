@@ -3,8 +3,8 @@
   "user_id": "2023210639",
   "user_name": "邢兆丰",
   "role": "student",
-  "synced_at": "2026-05-22T09:02:34.031473",
-  "last_active": "2026-05-22T09:02:34.017375",
+  "synced_at": "2026-05-22T09:06:40.140421",
+  "last_active": "2026-05-22T09:06:40.122170",
   "quiz_results": [
     {
       "user_id": "2023210639",
@@ -23,6 +23,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 5,
+      "user_id": "2023210639",
+      "content": "PDF实验报告：2023210639邢兆丰实验五 鸿蒙多端应用开发.pdf\n\n--- 报告正文（自动提取）---\n移动应用开发实验报告\n封面信息\n项目\n内容\n实验名称\n鸿蒙多端应用开发\n实验编号\nd20301035105\n、\nd20301009205\n学号\n2023210639\n姓名\n邢兆丰\n班级\n软件\n231\n日期\n2026-04-29\n组别\n第\n2\n组\n项目名称\n智慧天气查看应用\n技术栈\nHarmonyOS\n(ArkTS)\n实验目的\n1.\n掌握\nArkUI\n声明式开发范式，熟练运用\n@State\n、\n@Builder\n等装饰器进行状态管理\n与\nUI\n构建\n2.\n学会多端响应式布局设计，理解断点系统与自适应布局的实现原理\n3.\n了解传感器数据采集与模拟机制，掌握陀螺仪与光线传感器的工作原理及应用场景\n4.\n理解分布式数据同步的基本原理，掌握本地缓存、离线存储与在线同步的实现方式\n实验环境\n工具\n版本\n用途\nDevEco\nStudio\n5.0+\n鸿蒙应用开发\nHarmonyOS\nSDK\n5.0+\n鸿蒙开发工具包\n模拟器\n最新版\n多设备模拟测试\n工具\n版本\n用途\nAI\n辅助工具\nTRAE\n代码生成与调试\n实验步骤\n1.\n需求分析\n1.1\n功能需求\n●\n天气展示（城市名称、温度、天气状况、空气质量）\n●\n多端适配（手机竖屏、平板横屏）\n●\n传感器集成（光线传感器、陀螺仪）\n●\n分布式数据同步\n2.\n创建鸿蒙项目\n2.1\n新建项目\n●\n打开\nDevEco\nStudio\n●\n新建\nEmpty\nAbility\n项目\n●\n选择\nArkTS\n语言\n●\n命名为\nWeatherApp\n3.\n天气应用开发\n3.1\n天气首页实现\n//\nets/pages/index/Index.ets\n@Entry\n@Component\nstruct\nIndex\n{\n@State\ncityName:\nstring\n=\n'\n合肥\n';\n@State\ntemperature:\nnumber\n=\n22;\n@State\nweather:\nstring\n=\n'\n晴\n';\n@State\naqi:\nnumber\n=\n45;\nbuild()\n{\nColumn()\n{\n//\n城市名称\nText(this.cityName)\n.fontSize(24)\n.fontWeight(FontWeight.Bold)\n.margin({\ntop:\n50\n})\n//\n天气图标\nText(this.weather\n===\n'\n晴\n'\n?\n'\n'\n:\n'\n⛅\n')\n.fontSize(80)\n.margin({\ntop:\n20\n})\n//\n温度\nText(`${this.temperature}\n°\nC`)\n.fontSize(60)\n.fontWeight(FontWeight.Lighter)\n.margin({\ntop:\n20\n})\n//\n天气状况\nText(this.weather)\n.fontSize(20)\n.margin({\ntop:\n10\n})\n//\n空气质量\nRow()\n{\nText('\n空气质量\n:\n')\nText(`${this.aqi}\n-\n优\n`)\n.fontColor(this.aqi\n<=\n50\n?\n'#00ff00'\n:\n'#ff9900')\n}\n.margin({\ntop:\n30\n})\n//\n传感器数据展示\nRow()\n{\nText('\n光线传感器\n:\n')\nText(this.lightValue.toString())\n.id('lightValue')\n}\n.margin({\ntop:\n20\n})\n}\n.width('100%')\n.height('100%')\n.backgroundColor('#f5f5f5')\n}\n@State\nlightValue:\nnumber\n=\n0;\n}\n4.\n多端适配布局\n4.1\n响应式布局实现\n//\n断点系统适配\n@State\ncurrentBreakpoint:\nstring\n=\n'md';\naboutToAppear()\n{\nlet\ndeviceInfo\n=\numpInfo.getDeviceInfo();\nlet\nwindowWidth\n=\nwindow.getWindow().getWindowProperties().windowWidth;\nif\n(windowWidth\n<\n600)\n{\nthis.currentBreakpoint\n=\n'sm';\n//\n手机\n}\nelse\nif\n(windowWidth\n<\n840)\n{\nthis.currentBreakpoint\n=\n'md';\n//\n平板竖屏\n}\nelse\n{\nthis.currentBreakpoint\n=\n'lg';\n//\n平板横屏\n}\n}\nbuild()\n{\nif\n(this.currentBreakpoint\n===\n'sm')\n{\nColumn()\n{\nthis.phoneLayout()\n}\n}\nelse\n{\nRow()\n{\nthis.tabletLayout()\n}\n}\n}\n@Builder\nphoneLayout()\n{\nColumn()\n{\nText(this.cityName).fontSize(24)\nText(`${this.temperature}\n°\nC`).fontSize(60)\n}\n}\n@Builder\ntabletLayout()\n{\nColumn()\n{\nText(this.cityName).fontSize(32)\nText(`${this.temperature}\n°\nC`).fontSize(80)\n}\n.width('40%')\n}\n5.\n传感器集成\n5.1\n光线传感器开发\nimport\nsensor\nfrom\n'@ohos.sensor';\n@State\nlightIntensity:\nnumber\n=\n0;\naboutToAppear()\n{\nsensor.on(sensor.SensorType.SENSOR_TYPE_ID_LIGHT,\n(data)\n=>\n{\nthis.lightIntensity\n=\ndata.light;\n});\n}\naboutToDisappear()\n{\nsensor.off(sensor.SensorType.SENSOR_TYPE_ID_LIGHT);\n}\n//\nUI\n展示\nText(`\n环境光线\n:\n${this.lightIntensity}\nlux`)\n.fontSize(16)\n.margin({\ntop:\n10\n})\n5.2\n陀螺仪传感器开发\n@State\nrotateX:\nnumber\n=\n0;\n@State\nrotateY:\nnumber\n=\n0;\n@State\nrotateZ:\nnumber\n=\n0;\naboutToAppear()\n{\nsensor.on(sensor.SensorType.SENSOR_TYPE_ID_GYROSCOPE,\n(data)\n=>\n{\nthis.rotateX\n=\ndata.x;\nthis.rotateY\n=\ndata.y;\nthis.rotateZ\n=\ndata.z;\n});\n}\n//\nUI\n展示\nRow()\n{\nColumn()\n{\nText(`X\n轴\n:\n${this.rotateX.toFixed(2)}`)\n}\nColumn()\n{\nText(`Y\n轴\n:\n${this.rotateY.toFixed(2)}`)\n}\nColumn()\n{\nText(`Z\n轴\n:\n${this.rotateZ.toFixed(2)}`)\n}\n}\n.spacing(20)\n6.\n分布式数据同步\n6.1\n分布式数据管理\nimport\ndistributedData\nfrom\n'@ohos.data.distributedData';\nconst\nKVManager\n=\ndistributedData.createKVManager({\nbundleName:\n'com.example.weather',\nkvStoreType:\ndistributedData.KVStoreType.SINGLE_VERSION\n});\nasync\nfunction\nsaveData(key:\nstring,\nvalue:\nstring)\n{\nconst\nkvStore\n=\nawait\nKVManager.getKVStore('weatherStore');\nawait\nkvStore.put(key,\nvalue);\n}\nasync\nfunction\ngetData(key:\nstring)\n{\nconst\nkvStore\n=\nawait\nKVManager.getKVStore('weatherStore');\nreturn\nawait\nkvStore.get(key);\n}\n7.\n测试验证\n7.1\n多设备模拟器测试\n●\n启动手机模拟器\n●\n启动平板模拟器\n●\n测试界面适配效果\n●\n观察传感器数据\n实验结果\n验证结果\n功能\n状态\n备注\n天气信息展示\n[x]\n成功\n支持\n8\n城市切换，\n12\n项天气指标完整\n展示\n多端适配\n[x]\n成功\n手机\n/\n平板界面自适应良好\n光线传感器\n[x]\n成功\n光照强度实时变化，自动切换日\n/\n夜模\n式\n陀螺仪传感器\n[x]\n成功\n三轴角度实时更新，可视化指示器正\n常\n分布式数据同步\n[x]\n成功\n设置同步、离线缓存、强制同步均正\n常\n截图记录\n手机端界面\n图\n1\n手机端界面\n平板\n端界面\n图\n2\n平板端界面\n传感器数据展示\n图\n3\n传感器数据展示\n技术分析报告\n多端适配分析\n●\n手机布局特点：垂直排列，紧凑布局，使用\nColumn\n容器配合\nlayoutWeight\n实现弹\n性分配\n●\n平板布局特点：横向排列，更宽敞的空间利用，支持多列网格布局\n●\n断点系统实现：基于屏幕宽度的响应式设计，支持\nsm/md/lg\n三档断点\n传感器集成分析\n●\n光线传感器应用场景：自动亮度调节、环境光感知、智能场景联动（如自动切换日\n/\n夜间\nUI\n）\n●\n陀螺仪应用场景：设备姿态检测（如地图自动旋转、游戏控制）、屏幕旋转检测、\n运动追踪\n●\n数据采集准确性：采用平滑插值算法和高斯噪声模拟，实时性好，精度满足一般应\n用需求\n分布式能力分析\n●\n分布式数据管理原理：基于\nKV\n存储的跨设备数据同步，采用\n\"\n本地优先、在线同步\n\"\n策略\n●\n跨设备同步实现：通过本地存储\n+\n待同步队列\n+\n广播通知的三层架构实现\n●\n离线缓存机制：天气数据缓存\n30\n分钟，用户设置即时持久化\n问题与解决\n问题描述\n解决方案\n解决结果\nArkTS\n不支持对象展开运算\n符（\n...\n）\n编写\ncloneConfig/mergeConfig\n等手动\n属性复制方法替代展开语法\n✅\n成功解决\nArkTS\n禁止使\n用\nany/unknown\n类型\n为所有变量和参数指定具体类型，使\n用联合类型替代\nany\n✅\n成功解决\nDEVECO_SDK_HOME\n环境\n变量未配置\n在系统环境变量中正确配置\nSDK\n路径\n和\nJAVA_HOME\n✅\n成功解决\n实验总结\n实验收获\n●\n深入理解了\nArkTS\n语言的严格类型约束，强制开发者编写类型安全的代码\n●\n掌握了传感器数据模拟的设计方法，通过平滑插值算法实现高度逼真的数据模拟\n●\n理解了分布式数据同步的核心挑战，包括离线缓存、冲突检测、时序一致性等问题\n●\n实践了模块化架构设计，将应用划分为模型层、服务层、视图层，实现关注点分离\n技术要点\n●\n单例模式在服务层的应用，确保全局状态一致性\n●\n观察者模式实现松耦合通信，\nUI\n组件通过订阅数据变更实现响应式更新\n●\n缓存策略优化性能，内存缓存与持久化缓存的分层设计\n●\n状态驱动的\nUI\n更新，通过\n@State\n装饰器实现响应式状态变量\n考核指标\n考核项\n评分标准\n得分\n功能完整性\n天气应用功能完整，多端适配正常\n25\n分\n代码质量\n代码结构清晰，注释完整\n20\n分\n多端适配\n手机\n/\n平板界面自适应良好\n15\n分\n传感器集成\n传感器数据采集正常\n15\n分\n分布式能力\n分布式数据同步功能实现\n15\n分\n实验报告\n报告结构完整，内容详实\n10\n分\n教师评价\n项目\n评价\n实验完成情况\n<br\n/>\n技术掌握程度\n<br\n/>\n创新点\n<br\n/>\n综合评价\n<br\n/>\n成绩\n<br\n/>\n教师签名：\n___________________\n日期：\n___________________\n",
+      "file_paths": "C:\\Users\\32236\\OneDrive\\Desktop\\作业报告\\2023210639邢兆丰实验五 鸿蒙多端应用开发.pdf",
+      "file_names": "2023210639邢兆丰实验五 鸿蒙多端应用开发.pdf",
+      "submit_time": "2026-05-22T09:06:40.089549",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-05-22T09:06:40.089549",
+      "updated_at": "2026-05-22T09:06:40.089549",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 4,
       "user_id": "2023210639",
