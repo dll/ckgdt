@@ -8,6 +8,7 @@ class SettingsService {
   static const String _legacyThemeKey = 'theme_mode';       // 旧 bool 键（兼容）
   static const String _themeModeKey   = 'theme_mode_index'; // 0=system 1=light 2=dark
   static const String _colorIndexKey  = 'color_index';      // 0=科技蓝 1=清新绿 2=轻奢紫
+  static const String _localeKey      = 'app_locale';       // 'zh' / 'en' / null=系统
   static const String _notificationKey = 'notification_enabled';
   static const String _quickLoginKey = 'quick_login_enabled';
   static const String _feedbackEnabledKey = 'feedback_enabled';
@@ -74,6 +75,28 @@ class SettingsService {
   static Future<void> setColorIndex(int index) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_colorIndexKey, index.clamp(0, 2));
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // 应用语言（i18n）
+  // ═════════════════════════════════════════════════════════════════════════
+
+  /// 当前语言；返回 null 表示跟随系统。
+  static Future<Locale?> getLocale() async {
+    final prefs = await SharedPreferences.getInstance();
+    final code = prefs.getString(_localeKey);
+    if (code == null || code.isEmpty) return null;
+    return Locale(code);
+  }
+
+  /// 设置语言；传 null 表示跟随系统。
+  static Future<void> setLocale(Locale? locale) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (locale == null) {
+      await prefs.remove(_localeKey);
+    } else {
+      await prefs.setString(_localeKey, locale.languageCode);
+    }
   }
 
   // ═════════════════════════════════════════════════════════════════════════

@@ -1467,6 +1467,24 @@ class DatabaseHelper {
       CREATE INDEX IF NOT EXISTS idx_class_qa_replies_qa
       ON class_qa_replies(qa_id, created_at ASC)
     ''');
+
+    // ── rag_embeddings：向量化 RAG（纯 Dart 余弦相似度版） ───────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS rag_embeddings(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        doc_id TEXT NOT NULL,
+        chunk_id TEXT NOT NULL,
+        content TEXT NOT NULL,
+        embedding BLOB NOT NULL,
+        dim INTEGER NOT NULL,
+        meta TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_rag_embeddings_doc
+      ON rag_embeddings(doc_id, dim)
+    ''');
   }
 
   // ── V14 迁移：AI 配置扩展 + 聊天历史 ──────────────────────────────────────

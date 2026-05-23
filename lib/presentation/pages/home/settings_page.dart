@@ -366,6 +366,54 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
 
+          const SizedBox(height: 8),
+
+          // 语言（i18n）
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('语言 / Language',
+                    style: TextStyle(fontSize: 14)),
+                const SizedBox(height: 12),
+                FutureBuilder<Locale?>(
+                  future: SettingsService.getLocale(),
+                  builder: (ctx, snap) {
+                    final cur = snap.data?.languageCode ?? 'system';
+                    return SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(
+                          value: 'system',
+                          label: Text('跟随系统 / Auto'),
+                          icon: Icon(Icons.language),
+                        ),
+                        ButtonSegment(
+                          value: 'zh',
+                          label: Text('中文'),
+                        ),
+                        ButtonSegment(
+                          value: 'en',
+                          label: Text('English'),
+                        ),
+                      ],
+                      selected: {cur},
+                      onSelectionChanged: (s) async {
+                        final v = s.first;
+                        await SettingsService.setLocale(
+                            v == 'system' ? null : Locale(v));
+                        if (mounted) {
+                          MyApp.refreshTheme();
+                          setState(() {});
+                        }
+                      },
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+
           const SizedBox(height: 16),
 
           // 关于
