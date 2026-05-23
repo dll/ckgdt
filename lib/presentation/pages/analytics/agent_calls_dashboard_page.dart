@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../../core/constants/role_guard.dart';
 import '../../../data/local/agent_call_log_dao.dart';
+import '../../../services/auth_service.dart';
 
 /// AI 调用统计仪表板（教师 / 管理员）。
 ///
@@ -52,6 +54,26 @@ class _AgentCallsDashboardPageState extends State<AgentCallsDashboardPage>
 
   @override
   Widget build(BuildContext context) {
+    // 角色守卫 — 学生侧无入口，但若手输路由仍可能进入；这里兜底拦截
+    final role = AuthService().currentUser?.role ?? 'student';
+    if (!RoleGuard.isTeacherOrAdmin(role)) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('AI 调用统计')),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.lock, size: 64, color: Colors.grey),
+              SizedBox(height: 16),
+              Text('无权限访问', style: TextStyle(fontSize: 18, color: Colors.grey)),
+              SizedBox(height: 8),
+              Text('AI 调用统计仅教师 / 管理员可见',
+                  style: TextStyle(color: Colors.grey)),
+            ],
+          ),
+        ),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         title: const Text('AI 调用统计'),
