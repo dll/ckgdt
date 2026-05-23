@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
+import '../../core/error_handler.dart';
 import 'database_helper.dart';
 
 /// RAG 向量索引 DAO（rag_embeddings 表）。
@@ -34,8 +35,8 @@ class RagEmbeddingDao {
         'meta': meta,
         'created_at': DateTime.now().toIso8601String(),
       });
-    } catch (e) {
-      debugPrint('RagEmbeddingDao.insert failed: $e');
+    } catch (e, st) {
+      report(e, tag: 'RagEmbeddingDao.insert', stack: st);
       return -1;
     }
   }
@@ -77,8 +78,8 @@ class RagEmbeddingDao {
       }
       scored.sort((a, b) => b.score.compareTo(a.score));
       return scored.take(topK).toList();
-    } catch (e) {
-      debugPrint('RagEmbeddingDao.search failed: $e');
+    } catch (e, st) {
+      report(e, tag: 'RagEmbeddingDao.search', stack: st);
       return [];
     }
   }
@@ -89,7 +90,8 @@ class RagEmbeddingDao {
       final db = await _dbHelper.database;
       return await db
           .delete('rag_embeddings', where: 'doc_id = ?', whereArgs: [docId]);
-    } catch (_) {
+    } catch (e) {
+      swallowDebug(e, tag: 'RagEmbeddingDao.deleteByDoc');
       return 0;
     }
   }
@@ -100,7 +102,8 @@ class RagEmbeddingDao {
       final r =
           await db.rawQuery('SELECT COUNT(*) as c FROM rag_embeddings');
       return (r.first['c'] as int?) ?? 0;
-    } catch (_) {
+    } catch (e) {
+      swallowDebug(e, tag: 'RagEmbeddingDao.count');
       return 0;
     }
   }
