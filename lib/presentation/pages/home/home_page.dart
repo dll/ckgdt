@@ -3,7 +3,7 @@ import '../../../core/design/noir_tokens.dart';
 import '../../../core/design/noir_components.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/navigation_service.dart';
-import '../../../data/local/notification_dao.dart';
+import '../../../services/unread_count_service.dart';
 import '../notification/notification_list_page.dart';
 import '../../widgets/agent_chat_overlay.dart';
 import '../login/login_page.dart';
@@ -65,10 +65,8 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final _authService = AuthService();
-  final _notificationDao = NotificationDao();
   final _courseDao = CourseDao();
   late int _selectedIndex;
-  int _unreadCount = 0;
   CourseModel? _activeCourse;
 
   @override
@@ -91,16 +89,10 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  /// 刷新未读计数
+  /// 刷新未读计数（委托到全局 service，不再触发本页 setState）
   Future<void> _refreshUnreadCount() async {
-    try {
-      final userId = _authService.getCurrentUserId();
-      if (userId == null) return;
-      final count = await _notificationDao.getUnreadCount(userId);
-      if (mounted && count != _unreadCount) {
-        setState(() => _unreadCount = count);
-      }
-    } catch (_) {}
+    final userId = _authService.getCurrentUserId();
+    await UnreadCountService.instance.refresh(userId);
   }
 
   Future<void> _loadActiveCourse() async {
@@ -238,25 +230,29 @@ class _HomePageState extends State<HomePage> {
               );
             },
           ),
-          // 通知铃铛图标（带未读数 Badge）
-          IconButton(
-            icon: Badge(
-              isLabelVisible: _unreadCount > 0,
-              label: Text(
-                _unreadCount > 99 ? '99+' : '$_unreadCount',
-                style: const TextStyle(fontSize: 10),
+          // 通知铃铛图标（带未读数 Badge）— Badge 独立订阅 UnreadCountService.count，
+          // 不再触发整页重建
+          ValueListenableBuilder<int>(
+            valueListenable: UnreadCountService.instance.count,
+            builder: (context, unread, _) => IconButton(
+              icon: Badge(
+                isLabelVisible: unread > 0,
+                label: Text(
+                  unread > 99 ? '99+' : '$unread',
+                  style: const TextStyle(fontSize: 10),
+                ),
+                child: const Icon(Icons.notifications_outlined),
               ),
-              child: const Icon(Icons.notifications_outlined),
+              tooltip: '通知',
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const NotificationListPage()),
+                );
+                _refreshUnreadCount();
+              },
             ),
-            tooltip: '通知',
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const NotificationListPage()),
-              );
-              // 返回后刷新未读数
-              _refreshUnreadCount();
-            },
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.person),
