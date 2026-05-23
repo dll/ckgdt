@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:excel/excel.dart' as xl;
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 import 'dart:io';
 import 'package:intl/intl.dart';
 import '../../../services/gitee_service.dart';
+import '../../../services/clipboard_helper.dart';
 
 /// 仓库成员分析 & 学生进度排行
 /// 直接从教师 Gitee 账号拉取仓库，仓库协作者 = 学生
@@ -1263,7 +1263,7 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
     }
   }
 
-  void _copyRankingText() {
+  Future<void> _copyRankingText() async {
     final buf = StringBuffer();
     buf.writeln('═══════════════════════════════════════════');
     buf.writeln('       学生仓库进度排行榜 ($_owner)');
@@ -1284,11 +1284,12 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
       buf.writeln();
     }
 
-    Clipboard.setData(ClipboardData(text: buf.toString()));
-    if (mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('排行榜已复制到剪贴板')));
-    }
+    if (!mounted) return;
+    await ClipboardHelper.copyWithToast(
+      context,
+      buf.toString(),
+      message: '排行榜已复制到剪贴板',
+    );
   }
 
   void _showError(String msg) {

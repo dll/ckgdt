@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../core/constants/app_theme.dart';
+import '../../../core/design/noir_tokens.dart';
+import '../../../core/design/noir_components.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/navigation_service.dart';
 import '../../../data/local/notification_dao.dart';
@@ -53,7 +54,6 @@ import '../../../data/models/course_model.dart';
 import 'settings_page.dart';
 import 'search_page.dart';
 
-import '../../../core/constants/color_ohos_compat.dart';
 class HomePage extends StatefulWidget {
   final int initialTabIndex;
 
@@ -399,61 +399,98 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildHome() {
     final user = _authService.currentUser;
+    final roleLabel = user?.role == 'admin'
+        ? 'ADMINISTRATOR'
+        : user?.role == 'teacher'
+            ? 'INSTRUCTOR'
+            : 'STUDENT';
+    final greetName = user?.realName ?? user?.userId ?? '同学';
+    final accent = Theme.of(context).colorScheme.primary;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 欢迎卡片
-          Card(
-            elevation: 4,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                gradient: AppGradientTheme.of(context).linearGradient,
+          // ── 编辑级 Hero：黑底纸感字 + 琥珀编号 + 顶部 1px 琥珀线 ────
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(24, 26, 24, 24),
+            decoration: BoxDecoration(
+              color: NoirTokens.ink,
+              borderRadius: BorderRadius.circular(NoirTokens.radius),
+              border: Border(
+                top: BorderSide(color: accent, width: 2),
+                left: const BorderSide(color: NoirTokens.ink),
+                right: const BorderSide(color: NoirTokens.ink),
+                bottom: const BorderSide(color: NoirTokens.ink),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '欢迎回来，${user?.realName ?? user?.userId ?? '同学'}！',
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+              boxShadow: NoirTokens.smallShadow,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text('№ 001 / DASHBOARD',
+                        style: NoirTokens.serial(color: accent)),
+                    const Spacer(),
+                    Text(roleLabel,
+                        style: NoirTokens.caps(color: accent)),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Container(width: 36, height: 2, color: accent),
+                const SizedBox(height: 12),
+                Text(
+                  '欢迎回来，$greetName',
+                  style: const TextStyle(
+                    color: NoirTokens.paper,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.3,
+                    height: 1.2,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    user?.role == 'admin' ? '管理员账号' :
-                    user?.role == 'teacher' ? '教师账号' : '学生账号',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                    ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  user?.role == 'admin'
+                      ? '系统级权限 · 管理员视角 · 全局可视'
+                      : user?.role == 'teacher'
+                          ? '教学视角 · 班级 / 实验 / 考核 / 达成'
+                          : '学习视角 · 图谱 / 路径 / 实验 / 测验',
+                  style: TextStyle(
+                    color: NoirTokens.paper.withValues(alpha: 0.7),
+                    fontSize: 12,
+                    letterSpacing: 1.6,
+                    fontWeight: FontWeight.w500,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 22),
 
-          // ── 学习流程导航条（图谱→路径→学习→测验）────────────────────
+          // ── 学习流程导航条 ──────────────────────────────────────────
           _buildLearningFlowBar(),
-          const SizedBox(height: 16),
+          const SizedBox(height: 26),
 
-          // 功能菜单
-          Text(
-            _authService.isAdmin ? '管理功能' :
-            _authService.isTeacher ? '教学功能' : '学习功能',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
+          // ── 章节标题 ────────────────────────────────────────────────
+          NoirSectionTitle(
+            eyebrow: '№ 002',
+            title: _authService.isAdmin
+                ? '管理功能'
+                : _authService.isTeacher
+                    ? '教学功能'
+                    : '学习功能',
+            subtitle: _authService.isAdmin
+                ? 'Administration suite'
+                : _authService.isTeacher
+                    ? 'Teaching toolkit'
+                    : 'Learning toolkit',
+            margin: EdgeInsets.zero,
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: NoirTokens.spaceMd),
           LayoutBuilder(
             builder: (context, constraints) {
               final cols = constraints.maxWidth > 900
@@ -471,27 +508,23 @@ class _HomePageState extends State<HomePage> {
                 _buildMenuCard(
                   icon: Icons.account_tree,
                   title: '知识图谱',
-                  color: Colors.blue,
                   onTap: () => setState(() => _selectedIndex = 1),
                 ),
                 _buildMenuCard(
                   icon: Icons.route,
                   title: '学习路径',
-                  color: Colors.indigo,
                   onTap: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const LearningPlanPage())),
                 ),
                 _buildMenuCard(
                   icon: Icons.quiz,
                   title: '章节测验',
-                  color: Colors.orange,
                   onTap: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const QuizPage())),
                 ),
                 _buildMenuCard(
                   icon: Icons.source,
                   title: 'Git仓库',
-                  color: Colors.blueGrey,
                   onTap: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) =>
                         isTeacherOrAdmin ? const GitRepoPage() : const StudentRepoPage())),
@@ -499,48 +532,41 @@ class _HomePageState extends State<HomePage> {
                 _buildMenuCard(
                   icon: Icons.tips_and_updates,
                   title: '技能工具',
-                  color: Colors.deepPurple[400]!,
                   onTap: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const SkillsHubPage())),
                 ),
                 _buildMenuCard(
                   icon: Icons.chat_bubble_outline,
                   title: '智慧问答',
-                  color: Colors.indigo[400]!,
                   onTap: () => AgentChatOverlay.show(context),
                 ),
                 _buildMenuCard(
                   icon: Icons.biotech,
                   title: '深度实践',
-                  color: Colors.cyan[700]!,
                   onTap: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const DeepPracticePage())),
                 ),
                 _buildMenuCard(
                   icon: Icons.show_chart,
                   title: '成长曲线',
-                  color: Colors.purple[400]!,
                   onTap: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const GrowthCurvePage())),
                 ),
                 _buildMenuCard(
                   icon: Icons.token,
                   title: 'Token统计',
-                  color: Colors.deepPurple,
                   onTap: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const TokenStatsPage())),
                 ),
                 _buildMenuCard(
                   icon: Icons.sync,
                   title: '数据同步',
-                  color: Colors.teal[600]!,
                   onTap: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const DataSyncPage())),
                 ),
                 _buildMenuCard(
                   icon: Icons.devices,
                   title: '三端互通',
-                  color: Colors.deepPurple,
                   onTap: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const CrossPlatformHubPage())),
                 ),
@@ -550,28 +576,24 @@ class _HomePageState extends State<HomePage> {
                   _buildMenuCard(
                     icon: Icons.trending_up,
                     title: '学习进度',
-                    color: Colors.green,
                     onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const ProgressPage())),
                   ),
                   _buildMenuCard(
                     icon: Icons.error,
                     title: '错题本',
-                    color: Colors.red[400]!,
                     onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const WrongAnswersPage())),
                   ),
                   _buildMenuCard(
                     icon: Icons.star,
                     title: '我的收藏',
-                    color: Colors.amber,
                     onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const FavoritesPage())),
                   ),
                   _buildMenuCard(
                     icon: Icons.poll,
                     title: '问卷调查',
-                    color: Colors.teal[400]!,
                     onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const SurveyPage())),
                   ),
@@ -582,60 +604,52 @@ class _HomePageState extends State<HomePage> {
                   _buildMenuCard(
                     icon: Icons.bar_chart,
                     title: '成绩统计',
-                    color: Colors.green,
                     onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const LearningAnalyticsPage())),
                   ),
                   _buildMenuCard(
                     icon: Icons.class_,
                     title: '班级管理',
-                    color: Colors.cyan[700]!,
                     onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const ClassManagePage())),
                   ),
                   _buildMenuCard(
                     icon: Icons.school,
                     title: '教学管理',
-                    color: Colors.deepOrange,
                     onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const TeachingManagePage())),
                   ),
                   _buildMenuCard(
                     icon: Icons.quiz_outlined,
                     title: '题库管理',
-                    color: Colors.orange[700]!,
                     onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const QuestionManagePage())),
                   ),
                   _buildMenuCard(
                     icon: Icons.poll,
                     title: '问卷管理',
-                    color: Colors.pink,
                     onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const SurveyManagePage())),
                   ),
                   _buildMenuCard(
                     icon: Icons.feedback,
                     title: '反馈管理',
-                    color: Colors.amber[700]!,
                     onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const FeedbackManagePage())),
                   ),
                   _buildMenuCard(
                     icon: Icons.add_box_outlined,
                     title: '一键生课',
-                    color: Colors.deepPurple[300]!,
                     onTap: () async {
                       final result = await showModalBottomSheet<CourseModel>(
                         context: context,
                         isScrollControlled: true,
                         shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(2)),
                         ),
                         builder: (_) => const CourseGeneratorSheet(),
                       );
                       if (result != null) {
-                        // 自动激活新课程并刷新平台标题
                         await _courseDao.setActiveCourse(result.id);
                         _loadActiveCourse();
                       }
@@ -644,11 +658,9 @@ class _HomePageState extends State<HomePage> {
                   _buildMenuCard(
                     icon: Icons.school_outlined,
                     title: '课程管理',
-                    color: Colors.teal[400]!,
                     onTap: () async {
                       await Navigator.push(context,
                         MaterialPageRoute(builder: (_) => const CourseManagePage()));
-                      // 返回后刷新平台标题（可能切换了课程）
                       _loadActiveCourse();
                     },
                   ),
@@ -659,42 +671,44 @@ class _HomePageState extends State<HomePage> {
                   _buildMenuCard(
                     icon: Icons.people,
                     title: '学生管理',
-                    color: Colors.brown,
                     onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const StudentManagePage())),
                   ),
                   _buildMenuCard(
                     icon: Icons.upload,
                     title: '数据导入',
-                    color: Colors.indigo[400]!,
                     onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const DataImportPage())),
                   ),
                   _buildMenuCard(
                     icon: Icons.download,
                     title: '数据导出',
-                    color: Colors.indigo[600]!,
                     onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const DataExportPage())),
                   ),
                   _buildMenuCard(
                     icon: Icons.analytics,
                     title: '仓库分析',
-                    color: Colors.blueGrey[700]!,
                     onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const RepoAnalyticsPage())),
                   ),
                 ],
               ];
 
+              // 给每个卡片传入序号（编辑感）
+              final indexedItems = <Widget>[];
+              for (var i = 0; i < menuItems.length; i++) {
+                indexedItems.add(menuItems[i]);
+              }
+
               return GridView.count(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisCount: cols,
-                childAspectRatio: 1.1,
-                mainAxisSpacing: 8,
-                crossAxisSpacing: 8,
-                children: menuItems,
+                childAspectRatio: 1.05,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                children: indexedItems,
               );
             },
           ),
@@ -703,62 +717,76 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// 学习流程导航条: 图谱 → 路径 → 学习 → 测验
+  /// 学习流程导航条: 图谱 → 路径 → 学习 → 实践 → 测验
   Widget _buildLearningFlowBar() {
-    final primary = Theme.of(context).colorScheme.primary;
     final isTeacherOrAdmin = _authService.isTeacher || _authService.isAdmin;
+    final accent = Theme.of(context).colorScheme.primary;
 
     final steps = [
-      _FlowStep(Icons.account_tree, '图谱', () => setState(() => _selectedIndex = 1)),
-      _FlowStep(Icons.route, '路径', () => Navigator.push(context,
+      _FlowStep(Icons.account_tree, '图谱', '01',
+          () => setState(() => _selectedIndex = 1)),
+      _FlowStep(Icons.route, '路径', '02', () => Navigator.push(context,
           MaterialPageRoute(builder: (_) => const LearningPlanPage()))),
-      _FlowStep(Icons.menu_book, isTeacherOrAdmin ? '教学' : '学习',
+      _FlowStep(Icons.menu_book, isTeacherOrAdmin ? '教学' : '学习', '03',
           () => setState(() => _selectedIndex = 2)),
-      _FlowStep(Icons.biotech, '实践', () => Navigator.push(context,
+      _FlowStep(Icons.biotech, '实践', '04', () => Navigator.push(context,
           MaterialPageRoute(builder: (_) => const DeepPracticePage()))),
-      _FlowStep(Icons.quiz, '测验', () => Navigator.push(context,
+      _FlowStep(Icons.quiz, '测验', '05', () => Navigator.push(context,
           MaterialPageRoute(builder: (_) => const QuizPage()))),
     ];
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        child: Row(
-          children: [
-            for (int i = 0; i < steps.length; i++) ...[
-              Expanded(
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(10),
-                  onTap: steps[i].onTap,
+    return NoirCard(
+      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          for (int i = 0; i < steps.length; i++) ...[
+            Expanded(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(NoirTokens.radius),
+                onTap: steps[i].onTap,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      Text(steps[i].serial,
+                          style: NoirTokens.serial(color: accent)),
+                      const SizedBox(height: 6),
                       Container(
-                        width: 42,
-                        height: 42,
+                        width: 36,
+                        height: 36,
                         decoration: BoxDecoration(
-                          color: primary.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
+                          color: NoirTokens.ink,
+                          borderRadius: BorderRadius.circular(NoirTokens.radius),
                         ),
-                        child: Icon(steps[i].icon, color: primary, size: 22),
+                        child: Icon(steps[i].icon,
+                            color: NoirTokens.paper, size: 18),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 8),
                       Text(steps[i].label,
-                          style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: primary)),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.6,
+                            color: NoirTokens.ink,
+                          )),
                     ],
                   ),
                 ),
               ),
-              if (i < steps.length - 1)
-                Icon(Icons.arrow_forward_ios, size: 14, color: primary.withValues(alpha: 0.4)),
-            ],
+            ),
+            if (i < steps.length - 1)
+              Padding(
+                padding: const EdgeInsets.only(top: 24),
+                child: Container(
+                  width: 18,
+                  height: 1,
+                  color: NoirTokens.inkAlpha(0.25),
+                ),
+              ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -766,33 +794,54 @@ class _HomePageState extends State<HomePage> {
   Widget _buildMenuCard({
     required IconData icon,
     required String title,
-    required Color color,
     required VoidCallback onTap,
   }) {
-    return Card(
-      elevation: 1,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 30, color: color),
-              const SizedBox(height: 6),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: color,
-                ),
-                overflow: TextOverflow.ellipsis,
+    final accent = Theme.of(context).colorScheme.primary;
+    return NoirCard(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      onTap: onTap,
+      child: Stack(
+        children: [
+          // 顶部右上 ink 圆角方块图标
+          Align(
+            alignment: Alignment.topRight,
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: NoirTokens.ink,
+                borderRadius: BorderRadius.circular(NoirTokens.radius),
               ),
-            ],
+              child: Icon(icon, size: 18, color: NoirTokens.paper),
+            ),
           ),
-        ),
+          // 左下：主题色短线 + 标题
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(width: 22, height: 2, color: accent),
+                const SizedBox(height: 8),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.4,
+                    color: NoirTokens.ink,
+                    height: 1.1,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -909,8 +958,9 @@ class _HomePageState extends State<HomePage> {
 class _FlowStep {
   final IconData icon;
   final String label;
+  final String serial;
   final VoidCallback onTap;
-  const _FlowStep(this.icon, this.label, this.onTap);
+  const _FlowStep(this.icon, this.label, this.serial, this.onTap);
 }
 
 /// 管理员工具面板 — 以网格方式集中管理功能入口
@@ -919,74 +969,116 @@ class _AdminToolsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-
+    final accent = Theme.of(context).colorScheme.primary;
     final tools = <_AdminTool>[
-      _AdminTool(Icons.people, '学生管理', Colors.brown,
+      _AdminTool(Icons.people, '学生管理',
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StudentManagePage()))),
-      _AdminTool(Icons.person_add, '教师管理', Colors.indigo,
+      _AdminTool(Icons.person_add, '教师管理',
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherManagePage()))),
-      _AdminTool(Icons.how_to_reg, '申请审核', Colors.teal,
+      _AdminTool(Icons.how_to_reg, '申请审核',
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherApplicationManagePage()))),
-      _AdminTool(Icons.class_, '班级管理', Colors.cyan[700]!,
+      _AdminTool(Icons.class_, '班级管理',
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ClassManagePage()))),
-      _AdminTool(Icons.school, '教学管理', Colors.deepOrange,
+      _AdminTool(Icons.school, '教学管理',
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TeachingManagePage()))),
-      _AdminTool(Icons.science, '实验管理', Colors.blue[700]!,
+      _AdminTool(Icons.science, '实验管理',
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LabTaskManagePage()))),
-      _AdminTool(Icons.quiz_outlined, '题库管理', Colors.orange[700]!,
+      _AdminTool(Icons.quiz_outlined, '题库管理',
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuestionManagePage()))),
-      _AdminTool(Icons.poll, '问卷管理', Colors.pink,
+      _AdminTool(Icons.poll, '问卷管理',
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SurveyManagePage()))),
-      _AdminTool(Icons.feedback, '反馈管理', Colors.amber[700]!,
+      _AdminTool(Icons.feedback, '反馈管理',
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FeedbackManagePage()))),
-      _AdminTool(Icons.upload, '数据导入', Colors.indigo[400]!,
+      _AdminTool(Icons.upload, '数据导入',
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DataImportPage()))),
-      _AdminTool(Icons.download, '数据导出', Colors.indigo[600]!,
+      _AdminTool(Icons.download, '数据导出',
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DataExportPage()))),
-      _AdminTool(Icons.analytics, '仓库分析', Colors.blueGrey[700]!,
+      _AdminTool(Icons.analytics, '仓库分析',
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RepoAnalyticsPage()))),
-      _AdminTool(Icons.sync, '数据同步', Colors.teal[600]!,
+      _AdminTool(Icons.sync, '数据同步',
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DataSyncPage()))),
-      _AdminTool(Icons.devices, '三端互通', Colors.deepPurple,
+      _AdminTool(Icons.devices, '三端互通',
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CrossPlatformHubPage()))),
-      _AdminTool(Icons.settings, '系统设置', Colors.grey[700]!,
+      _AdminTool(Icons.settings, '系统设置',
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()))),
     ];
 
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(20, 22, 20, 28),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 管理员头部
+            // ── 管理员 Hero：黑底纸感字 + 琥珀编号 ──────────────────
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(24, 26, 24, 24),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                gradient: LinearGradient(
-                  colors: [primary, primary.withValues(alpha: 0.7)],
+                color: NoirTokens.ink,
+                borderRadius: BorderRadius.circular(NoirTokens.radius),
+                border: Border(
+                  top: BorderSide(color: accent, width: 2),
+                  left: const BorderSide(color: NoirTokens.ink),
+                  right: const BorderSide(color: NoirTokens.ink),
+                  bottom: const BorderSide(color: NoirTokens.ink),
                 ),
+                boxShadow: NoirTokens.smallShadow,
               ),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Icon(Icons.admin_panel_settings, color: Colors.white, size: 32),
-                  const SizedBox(width: 12),
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('系统管理', style: TextStyle(
-                          color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                      Text('管理系统各项功能和数据', style: TextStyle(
-                          color: Colors.white70, fontSize: 13)),
-                    ],
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: accent,
+                      borderRadius: BorderRadius.circular(NoirTokens.radius),
+                    ),
+                    child: const Icon(Icons.admin_panel_settings,
+                        color: NoirTokens.paper, size: 26),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('№ ADMIN / SYSTEM',
+                            style: NoirTokens.serial(color: accent)),
+                        const SizedBox(height: 6),
+                        const Text(
+                          '系统管理',
+                          style: TextStyle(
+                            color: NoirTokens.paper,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.3,
+                            height: 1.15,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '系统级权限 · 管理各项功能与数据',
+                          style: TextStyle(
+                            color: NoirTokens.paper.withValues(alpha: 0.65),
+                            fontSize: 12,
+                            letterSpacing: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 22),
+            const NoirSectionTitle(
+              eyebrow: '№ TOOLS',
+              title: '管理工具',
+              subtitle: 'Administration toolkit · 15 modules',
+              margin: EdgeInsets.zero,
+            ),
+            const SizedBox(height: NoirTokens.spaceMd),
             LayoutBuilder(
               builder: (context, constraints) {
                 final cols = constraints.maxWidth > 900
@@ -998,28 +1090,52 @@ class _AdminToolsPage extends StatelessWidget {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   crossAxisCount: cols,
-                  childAspectRatio: 1.1,
-                  mainAxisSpacing: 8,
-                  crossAxisSpacing: 8,
-                  children: tools.map((t) => Card(
-                    elevation: 1,
-                    child: InkWell(
-                      onTap: t.onTap,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(t.icon, size: 30, color: t.color),
-                            const SizedBox(height: 6),
-                            Text(t.title,
-                                style: TextStyle(fontSize: 13,
-                                    fontWeight: FontWeight.w500, color: t.color),
-                                overflow: TextOverflow.ellipsis),
-                          ],
+                  childAspectRatio: 1.05,
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                  children: tools.map((t) => NoirCard(
+                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                    onTap: t.onTap,
+                    child: Stack(
+                      children: [
+                        Align(
+                          alignment: Alignment.topRight,
+                          child: Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: NoirTokens.ink,
+                              borderRadius:
+                                  BorderRadius.circular(NoirTokens.radius),
+                            ),
+                            child: Icon(t.icon,
+                                size: 18, color: NoirTokens.paper),
+                          ),
                         ),
-                      ),
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(width: 22, height: 2, color: accent),
+                              const SizedBox(height: 8),
+                              Text(t.title,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.4,
+                                    color: NoirTokens.ink,
+                                    height: 1.1,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   )).toList(),
                 );
@@ -1035,7 +1151,6 @@ class _AdminToolsPage extends StatelessWidget {
 class _AdminTool {
   final IconData icon;
   final String title;
-  final Color color;
   final VoidCallback onTap;
-  const _AdminTool(this.icon, this.title, this.color, this.onTap);
+  const _AdminTool(this.icon, this.title, this.onTap);
 }

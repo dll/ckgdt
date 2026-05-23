@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:path_provider/path_provider.dart';
+import '../../../services/clipboard_helper.dart';
 import '../../../services/gitee_service.dart';
 import '../../widgets/agent_entry_button.dart';
 
@@ -154,12 +155,7 @@ class _LabMaterialPreviewPageState extends State<LabMaterialPreviewPage> {
             tooltip: '复制内容',
             onPressed: _isLoading
                 ? null
-                : () {
-                    Clipboard.setData(ClipboardData(text: _content));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('已复制到剪贴板')),
-                    );
-                  },
+                : () => ClipboardHelper.copyWithToast(context, _content),
           ),
           AgentEntryButton(agentId: widget.agentId),
           const SizedBox(width: 4),

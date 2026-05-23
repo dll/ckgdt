@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../../data/local/graph_dao.dart';
 import '../../../data/local/learning_record_dao.dart';
 import '../../../data/local/favorite_dao.dart';
@@ -10,6 +9,7 @@ import '../../../data/models/edge_model.dart';
 import '../../../data/models/learning_path_model.dart';
 import '../../../services/graph_layout_service.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/clipboard_helper.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
 class GraphDetailPage extends StatefulWidget {
@@ -544,10 +544,11 @@ class _GraphDetailPageState extends State<GraphDetailPage>
             icon: const Icon(Icons.copy, size: 16),
             label: const Text('复制报告'),
             onPressed: () {
-              Clipboard.setData(ClipboardData(text: reportStr));
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('报告已复制到剪贴板')),
+              ClipboardHelper.copyWithToast(
+                context,
+                reportStr,
+                message: '报告已复制到剪贴板',
               );
             },
           ),
@@ -630,9 +631,10 @@ class _GraphDetailPageState extends State<GraphDetailPage>
       buf.writeln('- $srcName → $tgtName ${e.label != null ? "(${e.label})" : ""}');
     }
 
-    Clipboard.setData(ClipboardData(text: buf.toString()));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Markdown 已复制到剪贴板')),
+    ClipboardHelper.copyWithToast(
+      context,
+      buf.toString(),
+      message: 'Markdown 已复制到剪贴板',
     );
   }
 
