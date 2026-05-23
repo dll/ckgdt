@@ -3,8 +3,8 @@
   "user_id": "2020213080",
   "user_name": "倪洋",
   "role": "student",
-  "synced_at": "2026-05-23T14:35:57.226513",
-  "last_active": "2026-05-23T14:35:57.226521",
+  "synced_at": "2026-05-23T14:47:39.378450",
+  "last_active": "2026-05-23T14:47:39.378455",
   "quiz_results": [
     {
       "user_id": "2020213080",
@@ -112,53 +112,10 @@
     }
   ],
   "student_reports": [],
-  "student_works": [
-    {
-      "title": "智能温控监控系统的开发与整合",
-      "description": "【多设备温控展示】在Uniapp跨平台界面中统一展示多路温控设备的实时数据，使用卡片式布局显示每个设备的当前温度、目标温度和运行状态。【阈值自定义设置】提供可视化的温度阈值设置界面，用户可为每个设备分别设定上限和下限报警温度，保存后立即生效。【异常温度预警】当任一设备温度超出设定阈值时，立即弹出醒目的预警弹窗并震动提醒，支持一键远程关停设备。",
-      "tech_stack": "Vue.js + CSS",
-      "work_type": "综合项目",
-      "group_name": "cg1-mtcs",
-      "leader_name": "倪洋",
-      "user_id": "2020213080",
-      "file_path": null,
-      "file_size": null,
-      "status": "已提交",
-      "submit_time": null,
-      "tags": "[\"Vue.js\",\"CSS\"]",
-      "created_at": "2026-04-18T22:56:28.740671",
-      "updated_at": "2026-04-18T22:56:28.740678",
-      "project_id": null,
-      "group_id": null,
-      "video_url": "assets/videos/demo_2020213080.mp4",
-      "thumbnail_url": null,
-      "video_duration": "03:50",
-      "view_count": 86,
-      "like_count": 52,
-      "comment_count": 2,
-      "repo": "cg1-mtcs",
-      "class_group": "cg1",
-      "project": "智能温控监控系统的开发与整合",
-      "student_role": "Uniapp开发工程师",
-      "student_name": "倪洋",
-      "related_node_ids": null,
-      "ai_suspicion": 0.0,
-      "teacher_confirmed": 0
-    }
-  ],
+  "student_works": [],
   "survey_responses": [],
   "checkin_records": [],
-  "work_comments": [
-    {
-      "work_id": 21,
-      "user_id": "2020213080",
-      "user_name": "倪洋",
-      "user_role": "student",
-      "content": "跨平台适配做得不错。",
-      "parent_id": null,
-      "created_at": "2026-04-18T22:56:29.075869"
-    }
-  ],
+  "work_comments": [],
   "work_likes": [],
   "notification_recipients": [
     {
@@ -174,43 +131,7 @@
       "read_at": "2026-05-08T23:54:12.713734"
     }
   ],
-  "work_views": [
-    {
-      "work_id": 86,
-      "user_id": "2020213080",
-      "viewed_at": "2026-05-18T08:48:19.661874"
-    },
-    {
-      "work_id": 86,
-      "user_id": "2020213080",
-      "viewed_at": "2026-05-18T08:48:14.010295"
-    },
-    {
-      "work_id": 83,
-      "user_id": "2020213080",
-      "viewed_at": "2026-04-20T08:03:46.730804"
-    },
-    {
-      "work_id": 86,
-      "user_id": "2020213080",
-      "viewed_at": "2026-04-20T08:03:37.869209"
-    },
-    {
-      "work_id": 86,
-      "user_id": "2020213080",
-      "viewed_at": "2026-04-18T22:56:55.780026"
-    },
-    {
-      "work_id": 82,
-      "user_id": "2020213080",
-      "viewed_at": "2026-04-18T22:56:44.492948"
-    },
-    {
-      "work_id": 86,
-      "user_id": "2020213080",
-      "viewed_at": "2026-04-18T22:56:32.255279"
-    }
-  ],
+  "work_views": [],
   "peer_reviews": [],
   "collaboration_messages": [],
   "contribution_scores": [],
