@@ -59,30 +59,24 @@ class ThemeManager {
         space: 24,
       ),
 
-      // ── AppBar：居中标题 + 黑底 paper 字 + 1px 主题色底线 ─────────
+      // ── AppBar：主题色填充 + 白字 + 居中 ─────────────────────────
       appBarTheme: AppBarTheme(
         centerTitle: true,
         elevation: 0,
         scrolledUnderElevation: 0,
-        backgroundColor: NoirTokens.ink,
-        foregroundColor: NoirTokens.paper,
+        backgroundColor: accent,
+        foregroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
-        iconTheme: const IconThemeData(color: NoirTokens.paper, size: 22),
+        iconTheme: const IconThemeData(color: Colors.white, size: 22),
         actionsIconTheme:
-            const IconThemeData(color: NoirTokens.paper, size: 22),
+            const IconThemeData(color: Colors.white, size: 22),
         titleTextStyle: const TextStyle(
-          color: NoirTokens.paper,
+          color: Colors.white,
           fontSize: 17,
           fontWeight: FontWeight.w800,
           letterSpacing: 1.5,
         ),
         toolbarHeight: 56,
-        shape: Border(
-          bottom: BorderSide(
-            color: accent.withValues(alpha: 0.7),
-            width: 1.5,
-          ),
-        ),
       ),
 
       // ── 卡片：1px hairline + 极小圆角 + 0 elevation ────────────────────
@@ -97,11 +91,11 @@ class ThemeManager {
         ),
       ),
 
-      // ── 主按钮：黑底 paper 字 ────────────────────────────────────────
+      // ── 主按钮：主题色底 + 白字 ──────────────────────────────────────
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: NoirTokens.ink,
-          foregroundColor: NoirTokens.paper,
+          backgroundColor: accent,
+          foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           textStyle: const TextStyle(
@@ -114,8 +108,8 @@ class ThemeManager {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: NoirTokens.ink,
-          foregroundColor: NoirTokens.paper,
+          backgroundColor: accent,
+          foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           textStyle: const TextStyle(
             fontSize: 13,
@@ -127,8 +121,8 @@ class ThemeManager {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: onCard,
-          side: BorderSide(color: hairline, width: 1),
+          foregroundColor: accent,
+          side: BorderSide(color: accent.withValues(alpha: 0.6), width: 1),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           textStyle: const TextStyle(
             fontSize: 12,
@@ -140,7 +134,7 @@ class ThemeManager {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: onCard,
+          foregroundColor: accent,
           textStyle: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
@@ -151,10 +145,10 @@ class ThemeManager {
         ),
       ),
 
-      // ── 浮动按钮：用户选的主题色（视觉强标识） ───────────────────────
+      // ── 浮动按钮：主题色底 + 白色图标 ────────────────────────────────
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: accent,
-        foregroundColor: NoirTokens.paper,
+        foregroundColor: Colors.white,
         elevation: 4,
         focusElevation: 6,
         hoverElevation: 6,

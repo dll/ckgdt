@@ -53,17 +53,12 @@ class _AchievementPageState extends State<AchievementPage>
 
   @override
   Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
     return Column(
       children: [
-        // ── 编辑级章节条：黑底 paper 字 + 琥珀编号 + 1px 琥珀底线 ──
         Container(
           decoration: BoxDecoration(
-            color: NoirTokens.ink,
-            border: Border(
-              bottom: BorderSide(
-                color: NoirTokens.accent.withValues(alpha: 0.6),
-              ),
-            ),
+            color: accent,
           ),
           child: Row(
             children: [
@@ -72,9 +67,9 @@ class _AchievementPageState extends State<AchievementPage>
                   controller: _tabController,
                   isScrollable: true,
                   tabAlignment: TabAlignment.start,
-                  labelColor: NoirTokens.paper,
-                  unselectedLabelColor: NoirTokens.paper.withValues(alpha: 0.45),
-                  indicatorColor: NoirTokens.accent,
+                  labelColor: Colors.white,
+                  unselectedLabelColor: Colors.white.withValues(alpha: 0.55),
+                  indicatorColor: Colors.white,
                   indicatorWeight: 2,
                   indicatorSize: TabBarIndicatorSize.label,
                   dividerColor: Colors.transparent,
@@ -97,7 +92,7 @@ class _AchievementPageState extends State<AchievementPage>
                           children: [
                             Text(serial,
                                 style: NoirTokens.serial(
-                                    color: NoirTokens.accent)),
+                                    color: Colors.white.withValues(alpha: 0.85))),
                             const SizedBox(width: 8),
                             Icon(icon, size: 16),
                             const SizedBox(width: 6),
@@ -113,7 +108,7 @@ class _AchievementPageState extends State<AchievementPage>
                 child: Theme(
                   // 顶栏入口在黑底上要可见，反转图标颜色
                   data: Theme.of(context).copyWith(
-                    iconTheme: const IconThemeData(color: NoirTokens.paper),
+                    iconTheme: const IconThemeData(color: Colors.white),
                   ),
                   child: const AgentEntryButton(agentId: 'achievement'),
                 ),

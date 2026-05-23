@@ -5,7 +5,7 @@
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "移动图谱与数字孪生 — 移动应用开发课程的知识图谱与数字孪生教学平台",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
