@@ -17,6 +17,7 @@ import '../learning/learning_plan_page.dart';
 import '../learning/student_lab_page.dart';
 import '../assessment/assessment_page.dart';
 import '../survey/survey_page.dart';
+import '../class_qa/class_qa_page.dart';
 import '../admin/student_manage_page.dart';
 import '../admin/data_import_page.dart';
 import '../admin/class_manage_page.dart';
@@ -591,6 +592,12 @@ class _HomePageState extends State<HomePage> {
                     onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const SurveyPage())),
                   ),
+                  _buildMenuCard(
+                    icon: Icons.forum_outlined,
+                    title: '班级问答',
+                    onTap: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const ClassQaPage())),
+                  ),
                 ],
 
                 // ── 教师/管理员功能 ──────────────────────────────
@@ -630,6 +637,12 @@ class _HomePageState extends State<HomePage> {
                     title: '反馈管理',
                     onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const FeedbackManagePage())),
+                  ),
+                  _buildMenuCard(
+                    icon: Icons.forum,
+                    title: '班级问答',
+                    onTap: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const ClassQaPage())),
                   ),
                   _buildMenuCard(
                     icon: Icons.add_box_outlined,

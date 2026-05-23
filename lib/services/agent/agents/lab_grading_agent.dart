@@ -5,6 +5,7 @@ import '../../auth_service.dart';
 import '../../../data/local/ai_history_dao.dart';
 import '../agent_model.dart';
 import '../base_agent.dart';
+import '../orchestrator_agent.dart';
 
 /// 实验批阅智能体 — AI 自动批改学生实验报告
 class LabGradingAgent extends BaseAgent {
@@ -144,5 +145,68 @@ class LabGradingAgent extends BaseAgent {
       userId: AuthService().currentUser?.userId,
     ));
     return result.content;
+  }
+
+  /// 加强版批阅：用 Orchestrator 串联 safety → lab_grading → ethics。
+  /// 返回值是主批阅结果（JSON 评分），ethics 步可在 [extraResult] 中获取。
+  ///
+  /// 触发场景：教师在 AI 批阅页打开"安全增强模式"开关，对疑似 AI 代写 / 涉敏内容
+  /// 的提交做更严格审查。其它场景仍走 [gradeSubmission] 保持低成本。
+  Future<({String gradingJson, String ethicsAdvice, String safetyNote})>
+      gradeSubmissionWithOrchestrator({
+    required String taskTitle,
+    required String content,
+    int maxScore = 100,
+    String? requirements,
+    AgentSession? session,
+  }) async {
+    final input = StringBuffer()
+      ..writeln('请批改以下实验报告：')
+      ..writeln('## 实验任务：$taskTitle');
+    if (requirements != null && requirements.isNotEmpty) {
+      input.writeln('## 实验要求：$requirements');
+    }
+    input
+      ..writeln('## 满分：$maxScore 分')
+      ..writeln('## 学生提交内容：')
+      ..writeln(content);
+
+    final orch = OrchestratorAgent();
+    final session0 = session ?? AgentSession(activeAgentId: config.id);
+    final result = await orch.runChain(
+      userMessage: input.toString(),
+      session: session0,
+      agentChain: OrchestratorChains.labGrading,
+    );
+
+    final safetyStep =
+        result.steps.firstWhere((s) => s.agentId == 'safety',
+            orElse: () => const OrchestratorStep(
+                agentId: '',
+                agentName: '',
+                input: '',
+                output: '',
+                skipped: true));
+    final gradingStep =
+        result.steps.firstWhere((s) => s.agentId == 'lab_grading',
+            orElse: () => const OrchestratorStep(
+                agentId: '',
+                agentName: '',
+                input: '',
+                output: '',
+                skipped: true));
+    final ethicsStep = result.steps.firstWhere((s) => s.agentId == 'ethics',
+        orElse: () => const OrchestratorStep(
+            agentId: '',
+            agentName: '',
+            input: '',
+            output: '',
+            skipped: true));
+
+    return (
+      gradingJson: gradingStep.output ?? '',
+      ethicsAdvice: ethicsStep.output ?? '',
+      safetyNote: safetyStep.output ?? '',
+    );
   }
 }
