@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import '../data/local/database_helper.dart';
 import '../data/local/knowledge_graph_dao.dart';
+import '../data/local/rag_embedding_dao.dart';
+import 'embedding_service.dart';
 
 /// 检索增强生成（RAG）服务
 ///
@@ -697,6 +699,85 @@ class RagService {
       buf.writeln('- [$source] $question');
     }
     return buf.toString();
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  //  向量化 RAG（升级路径）— 用 LLM embedding API + 余弦相似度 top-k
+  // ════════════════════════════════════════════════════════════════════════
+
+  /// 用向量索引检索，返回拼接好的上下文。
+  /// 索引为空 / 调用失败时回退到 TF-IDF 版 [retrieveContext]。
+  Future<String> retrieveContextVector(
+    String userMessage, {
+    int topK = 6,
+    String? docIdFilter,
+  }) async {
+    try {
+      final count = await RagEmbeddingDao.instance.count();
+      if (count == 0) {
+        // 向量索引未建立 → 回退
+        return retrieveContext(userMessage, maxConcepts: topK);
+      }
+      final qEmb = await EmbeddingService.instance.embed(userMessage);
+      final hits = await RagEmbeddingDao.instance.search(
+        qEmb,
+        topK: topK,
+        docIdFilter: docIdFilter,
+      );
+      if (hits.isEmpty) {
+        return retrieveContext(userMessage, maxConcepts: topK);
+      }
+      final buf = StringBuffer('## 课程参考资料（向量检索）\n\n');
+      for (var i = 0; i < hits.length; i++) {
+        final h = hits[i];
+        buf.writeln(
+            '【${i + 1}】 [${h.docId}#${h.chunkId}] (相似度 ${h.score.toStringAsFixed(3)})');
+        buf.writeln(h.content);
+        buf.writeln();
+      }
+      return buf.toString();
+    } catch (e) {
+      debugPrint('RagService: 向量检索失败 → 回退 TF-IDF: $e');
+      return retrieveContext(userMessage, maxConcepts: topK);
+    }
+  }
+
+  /// 把一段文本切片 + embedding + 入库（建索引入口）。
+  ///
+  /// 简单按字符切片（每片 [chunkSize] 字 ± 重叠 [overlap]），适合中文长文档。
+  /// 实际场景可换 markdown / 段落级切片。
+  Future<int> indexDocument({
+    required String docId,
+    required String content,
+    int chunkSize = 500,
+    int overlap = 50,
+    String? meta,
+  }) async {
+    if (content.trim().isEmpty) return 0;
+    // 先清旧片段
+    await RagEmbeddingDao.instance.deleteByDoc(docId);
+
+    final chunks = <String>[];
+    for (var i = 0; i < content.length; i += chunkSize - overlap) {
+      final end =
+          (i + chunkSize).clamp(0, content.length).clamp(0, content.length);
+      chunks.add(content.substring(i, end));
+      if (end >= content.length) break;
+    }
+
+    var inserted = 0;
+    for (var i = 0; i < chunks.length; i++) {
+      final emb = await EmbeddingService.instance.embed(chunks[i]);
+      final id = await RagEmbeddingDao.instance.insert(
+        docId: docId,
+        chunkId: 'c$i',
+        content: chunks[i],
+        embedding: emb,
+        meta: meta,
+      );
+      if (id > 0) inserted++;
+    }
+    return inserted;
   }
 }
 

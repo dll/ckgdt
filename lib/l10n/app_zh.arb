@@ -1,0 +1,81 @@
+{
+  "@@locale": "zh",
+  "appName": "移动图谱与数字孪生",
+  "@appName": {
+    "description": "应用主标题（不含版本号）"
+  },
+  "appNameWithVersion": "移动图谱与数字孪生 v{version}",
+  "@appNameWithVersion": {
+    "description": "带版本号的应用标题",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "0.12.0"
+      }
+    }
+  },
+
+  "navHome": "首页",
+  "navGraph": "图谱",
+  "navLearning": "学习",
+  "navTeaching": "教学",
+  "navClassroom": "课堂",
+  "navLab": "实验",
+  "navAssessment": "考核",
+  "navWorks": "作品",
+  "navAchievement": "达成",
+  "navAdmin": "管理",
+
+  "actionLogin": "进入系统",
+  "actionLogout": "退出登录",
+  "actionSearch": "搜索",
+  "actionNotifications": "通知",
+  "actionSettings": "设置",
+  "actionRefresh": "刷新",
+  "actionSubmit": "提交",
+  "actionCancel": "取消",
+  "actionConfirm": "确定",
+  "actionEdit": "编辑",
+  "actionDelete": "删除",
+  "actionSave": "保存",
+
+  "settingsTitle": "设置",
+  "settingsThemeColor": "主题色",
+  "settingsDisplayMode": "显示模式",
+  "settingsModeSystem": "跟随系统",
+  "settingsModeLight": "浅色",
+  "settingsModeDark": "深色",
+  "settingsLanguage": "语言",
+  "settingsLanguageChinese": "中文",
+  "settingsLanguageEnglish": "English",
+
+  "loginTitle": "登录",
+  "loginUserId": "学号 / 工号",
+  "loginPassword": "密码",
+  "loginQrCode": "扫码登录",
+  "loginPasswordTab": "账号",
+  "loginQrTab": "扫码",
+
+  "homeWelcome": "欢迎回来，{name}",
+  "@homeWelcome": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "homeRoleStudent": "学生",
+  "homeRoleTeacher": "教师",
+  "homeRoleAdmin": "管理员",
+
+  "qaTitle": "班级问答",
+  "qaCompose": "提问",
+  "qaVisibilityClass": "全班可见",
+  "qaVisibilityPrivate": "仅老师可见",
+  "qaStatusOpen": "未回复",
+  "qaStatusAnswered": "已回复",
+  "qaStatusClosed": "已结题",
+
+  "msgEmpty": "暂无数据",
+  "msgLoading": "加载中...",
+  "msgError": "出错了",
+  "msgCopiedToClipboard": "已复制到剪贴板"
+}

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'data/local/database_helper.dart';
+import 'l10n/gen/app_localizations.dart';
 import 'services/data_loading_service.dart';
 import 'services/theme_manager.dart';
 import 'services/settings_service.dart';
@@ -103,6 +104,7 @@ class _MyAppState extends State<MyApp> {
   ThemeMode _themeMode = ThemeMode.system;
   int _colorIndex = 0;
   bool _feedbackEnabled = true;
+  Locale? _locale; // null = follow system
 
   // 全局 Navigator Key — 用于悬浮按钮获取正确 context
   final _navigatorKey = GlobalKey<NavigatorState>();
@@ -124,10 +126,12 @@ class _MyAppState extends State<MyApp> {
   Future<void> _loadTheme() async {
     final mode = await SettingsService.getThemeMode();
     final index = await SettingsService.getColorIndex();
+    final locale = await SettingsService.getLocale();
     if (mounted) {
       setState(() {
         _themeMode = mode;
         _colorIndex = index;
+        _locale = locale;
       });
     }
   }
@@ -215,6 +219,9 @@ class _MyAppState extends State<MyApp> {
       theme: ThemeManager.light(_colorIndex),
       darkTheme: ThemeManager.dark(_colorIndex),
       navigatorKey: _navigatorKey,
+      locale: _locale,
+      supportedLocales: AppL10n.supportedLocales,
+      localizationsDelegates: AppL10n.localizationsDelegates,
       home: const LoginPage(),
       builder: (context, child) {
         // 用 RepaintBoundary 包裹，供截图用

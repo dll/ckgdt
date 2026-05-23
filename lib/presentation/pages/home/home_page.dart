@@ -234,24 +234,28 @@ class _HomePageState extends State<HomePage> {
           // 不再触发整页重建
           ValueListenableBuilder<int>(
             valueListenable: UnreadCountService.instance.count,
-            builder: (context, unread, _) => IconButton(
-              icon: Badge(
-                isLabelVisible: unread > 0,
-                label: Text(
-                  unread > 99 ? '99+' : '$unread',
-                  style: const TextStyle(fontSize: 10),
+            builder: (context, unread, _) => Semantics(
+              label: unread > 0 ? '通知，$unread 条未读' : '通知',
+              button: true,
+              child: IconButton(
+                icon: Badge(
+                  isLabelVisible: unread > 0,
+                  label: Text(
+                    unread > 99 ? '99+' : '$unread',
+                    style: const TextStyle(fontSize: 10),
+                  ),
+                  child: const Icon(Icons.notifications_outlined),
                 ),
-                child: const Icon(Icons.notifications_outlined),
+                tooltip: '通知',
+                onPressed: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const NotificationListPage()),
+                  );
+                  _refreshUnreadCount();
+                },
               ),
-              tooltip: '通知',
-              onPressed: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const NotificationListPage()),
-                );
-                _refreshUnreadCount();
-              },
             ),
           ),
           PopupMenuButton<String>(
@@ -787,49 +791,53 @@ class _HomePageState extends State<HomePage> {
     required VoidCallback onTap,
   }) {
     final accent = Theme.of(context).colorScheme.primary;
-    return NoirCard(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-      onTap: onTap,
-      child: Stack(
-        children: [
-          Align(
-            alignment: Alignment.topRight,
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: accent,
-                borderRadius: BorderRadius.circular(NoirTokens.radius),
-              ),
-              child: Icon(icon, size: 18, color: Colors.white),
-            ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(width: 22, height: 2, color: accent),
-                const SizedBox(height: 8),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.4,
-                    color: NoirTokens.ink,
-                    height: 1.1,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 2,
+    return Semantics(
+      label: '$title 功能入口',
+      button: true,
+      child: NoirCard(
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+        onTap: onTap,
+        child: Stack(
+          children: [
+            Align(
+              alignment: Alignment.topRight,
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: accent,
+                  borderRadius: BorderRadius.circular(NoirTokens.radius),
                 ),
-              ],
+                child: Icon(icon, size: 18, color: Colors.white),
+              ),
             ),
-          ),
-        ],
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(width: 22, height: 2, color: accent),
+                  const SizedBox(height: 8),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.4,
+                      color: NoirTokens.ink,
+                      height: 1.1,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
