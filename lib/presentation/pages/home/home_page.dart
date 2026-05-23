@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import '../../../core/design/noir_tokens.dart';
 import '../../../core/design/noir_components.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/navigation_service.dart';
 import '../../../services/unread_count_service.dart';
+import '../../../dev/demo_seed_service.dart';
 import '../notification/notification_list_page.dart';
 import '../../widgets/agent_chat_overlay.dart';
 import '../login/login_page.dart';
@@ -1010,6 +1012,10 @@ class _AdminToolsPage extends StatelessWidget {
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CrossPlatformHubPage()))),
       _AdminTool(Icons.settings, '系统设置',
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()))),
+      // Demo 录制专用 — 仅 debug 构建可见，生产构建会被 tree-shake
+      if (kDebugMode)
+        _AdminTool(Icons.movie_creation_outlined, 'Demo 数据种子',
+            () => _showDemoSeedSheet(context)),
     ];
 
     return Scaffold(
@@ -1149,6 +1155,79 @@ class _AdminToolsPage extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 展示 Demo 录制的数据种子操作面板（仅 debug build 入口可见）
+Future<void> _showDemoSeedSheet(BuildContext context) async {
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    builder: (ctx) => Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.movie_creation_outlined, color: Colors.purple),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text('Demo 录制 — 数据种子',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+              IconButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.close)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            '一键造数据让 AI 调用统计 / 班级问答页面有可见内容（30 条调用日志 / 3 个问题 / 4 条回复 + 5 条 Orchestrator 链路）。',
+            style: TextStyle(fontSize: 13, height: 1.5),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            '所有数据都标记 [DEMO_SEED]，可一键撤销。仅 debug 构建可见。',
+            style: TextStyle(fontSize: 11, color: Colors.grey),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () async {
+                    final result = await DemoSeedService.instance.seedAll();
+                    if (!ctx.mounted) return;
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                        content: Text('已种入 $result')));
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('一键种入'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    final result =
+                        await DemoSeedService.instance.revertSeed();
+                    if (!ctx.mounted) return;
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                        content: Text('已清除 $result')));
+                  },
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('撤销'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _AdminTool {
