@@ -100,39 +100,33 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
       if (user == null) return;
       final db = await DatabaseHelper.instance.database;
 
-      // 已批阅实验提交（有 score 或 feedback）
-      final graded = await db.rawQuery(
-        "SELECT COUNT(*) as c FROM lab_submissions "
-        "WHERE (score IS NOT NULL OR feedback IS NOT NULL) "
-        "AND (graded_by = ? OR graded_by IS NULL)",
-        [user.userId],
-      );
-
-      // 待批阅
-      final pending = await db.rawQuery(
-        "SELECT COUNT(*) as c FROM lab_submissions "
-        "WHERE score IS NULL AND feedback IS NULL "
-        "AND status = 'submitted'",
-      );
-
-      // 平均批阅耗时（提交到反馈的分钟差）
-      final avgMin = await db.rawQuery(
-        "SELECT AVG((julianday(feedback_at) - julianday(submitted_at)) * 24 * 60) as m "
-        "FROM lab_submissions "
-        "WHERE feedback_at IS NOT NULL AND submitted_at IS NOT NULL",
-      );
-
-      // 平均评分（学生作品 work_scores 的平均，按总分 100）
-      final avgScore = await db.rawQuery(
-        "SELECT AVG(score) as s FROM work_scores",
-      );
+      // 4 个独立查询并行执行
+      final results = await Future.wait([
+        db.rawQuery(
+          "SELECT COUNT(*) as c FROM lab_submissions "
+          "WHERE (score IS NOT NULL OR feedback IS NOT NULL) "
+          "AND (graded_by = ? OR graded_by IS NULL)",
+          [user.userId],
+        ),
+        db.rawQuery(
+          "SELECT COUNT(*) as c FROM lab_submissions "
+          "WHERE score IS NULL AND feedback IS NULL "
+          "AND status = 'submitted'",
+        ),
+        db.rawQuery(
+          "SELECT AVG((julianday(feedback_at) - julianday(submitted_at)) * 24 * 60) as m "
+          "FROM lab_submissions "
+          "WHERE feedback_at IS NOT NULL AND submitted_at IS NOT NULL",
+        ),
+        db.rawQuery("SELECT AVG(score) as s FROM work_scores"),
+      ]);
 
       if (!mounted) return;
       setState(() {
-        _myGradedCount = (graded.first['c'] as int?) ?? 0;
-        _myPendingCount = (pending.first['c'] as int?) ?? 0;
-        _avgGradingMinutes = ((avgMin.first['m'] as num?)?.toInt()) ?? 0;
-        final s = (avgScore.first['s'] as num?)?.toDouble() ?? 0;
+        _myGradedCount = (results[0].first['c'] as int?) ?? 0;
+        _myPendingCount = (results[1].first['c'] as int?) ?? 0;
+        _avgGradingMinutes = ((results[2].first['m'] as num?)?.toInt()) ?? 0;
+        final s = (results[3].first['s'] as num?)?.toDouble() ?? 0;
         _avgScorePercent = s.clamp(0, 100).toInt();
       });
     } catch (_) {

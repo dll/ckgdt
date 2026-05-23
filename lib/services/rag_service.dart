@@ -757,22 +757,24 @@ class RagService {
     // 先清旧片段
     await RagEmbeddingDao.instance.deleteByDoc(docId);
 
+    // 切片
     final chunks = <String>[];
     for (var i = 0; i < content.length; i += chunkSize - overlap) {
-      final end =
-          (i + chunkSize).clamp(0, content.length).clamp(0, content.length);
+      final end = (i + chunkSize) < content.length ? i + chunkSize : content.length;
       chunks.add(content.substring(i, end));
       if (end >= content.length) break;
     }
 
+    // 并行 embed（注意大批量需要分批以免触发 provider 限流）
+    final embeddings = await EmbeddingService.instance.embedBatch(chunks);
+
     var inserted = 0;
     for (var i = 0; i < chunks.length; i++) {
-      final emb = await EmbeddingService.instance.embed(chunks[i]);
       final id = await RagEmbeddingDao.instance.insert(
         docId: docId,
         chunkId: 'c$i',
         content: chunks[i],
-        embedding: emb,
+        embedding: embeddings[i],
         meta: meta,
       );
       if (id > 0) inserted++;

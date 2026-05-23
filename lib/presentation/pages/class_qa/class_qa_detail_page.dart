@@ -60,10 +60,33 @@ class _ClassQaDetailPageState extends State<ClassQaDetailPage> {
     );
     final id = await ClassQaDao.instance.addReply(reply);
     if (!mounted) return;
-    setState(() => _replying = false);
+
     if (id > 0) {
+      // 增量 append：避免整页重建。状态可能改了（教师首次回复 → answered），
+      // 局部刷新 _qa 即可，不必全部重新加载。
       _replyCtl.clear();
-      _load();
+      final updatedQa = await ClassQaDao.instance.get(_qa!.id!);
+      if (!mounted) return;
+      setState(() {
+        _replying = false;
+        _replies = [
+          ..._replies,
+          ClassQaReplyModel(
+            id: id,
+            qaId: reply.qaId,
+            authorId: reply.authorId,
+            authorName: reply.authorName,
+            authorRole: reply.authorRole,
+            body: reply.body,
+            isTeacher: reply.isTeacher,
+            likes: 0,
+            createdAt: reply.createdAt,
+          ),
+        ];
+        if (updatedQa != null) _qa = updatedQa;
+      });
+    } else {
+      setState(() => _replying = false);
     }
   }
 

@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'database_helper.dart';
@@ -138,13 +137,15 @@ class RagEmbeddingDao {
     if (a.length != b.length) return 0;
     var dot = 0.0;
     var bSq = 0.0;
+    // 一次循环同时算 dot 和 b 的范数 — 避免外层 search 还要单独再扫 b
     for (var i = 0; i < a.length; i++) {
-      dot += a[i] * b[i];
-      bSq += b[i] * b[i];
+      final ai = a[i];
+      final bi = b[i];
+      dot += ai * bi;
+      bSq += bi * bi;
     }
-    final bNorm = math.sqrt(bSq);
-    if (bNorm == 0) return 0;
-    return dot / (aNorm * bNorm);
+    if (bSq == 0) return 0;
+    return dot / (aNorm * math.sqrt(bSq));
   }
 }
 
