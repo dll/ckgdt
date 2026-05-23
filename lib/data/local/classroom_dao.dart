@@ -653,7 +653,8 @@ class ClassroomDao {
     try {
       tasks = await db.query('lab_tasks');
     } catch (e) {
-      swallowDebug(e, tag: 'ClassroomDao.importLabTasks');
+      // 表不存在是预期路径（首次启动 / 旧 schema），不需打日志
+      swallow(e, tag: 'ClassroomDao.importLabTasks');
       return 0;
     }
 
@@ -710,7 +711,8 @@ class ClassroomDao {
     try {
       projects = await db.query('assessment_projects');
     } catch (e) {
-      swallowDebug(e, tag: 'ClassroomDao.importAssessment');
+      // 表不存在是预期路径，不需打日志
+      swallow(e, tag: 'ClassroomDao.importAssessment');
       return 0;
     }
 
