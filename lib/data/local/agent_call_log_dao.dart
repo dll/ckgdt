@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import '../../core/error_handler.dart';
 import 'database_helper.dart';
 
 /// agent_call_logs 表的访问层。记录每次 LLM 调用的元数据：
@@ -47,8 +47,8 @@ class AgentCallLogDao {
         'error': error,
         'created_at': DateTime.now().toIso8601String(),
       });
-    } catch (e) {
-      debugPrint('AgentCallLogDao.insert failed: $e');
+    } catch (e, st) {
+      report(e, tag: 'AgentCallLogDao.insert', stack: st);
     }
   }
 
@@ -64,7 +64,8 @@ class AgentCallLogDao {
         orderBy: 'created_at DESC',
         limit: limit,
       );
-    } catch (_) {
+    } catch (e) {
+      swallowDebug(e, tag: 'AgentCallLogDao.listByAgent');
       return [];
     }
   }
@@ -81,7 +82,8 @@ class AgentCallLogDao {
         orderBy: 'created_at DESC',
         limit: limit,
       );
-    } catch (_) {
+    } catch (e) {
+      swallowDebug(e, tag: 'AgentCallLogDao.listByUser');
       return [];
     }
   }
@@ -97,7 +99,8 @@ class AgentCallLogDao {
         whereArgs: [chainId],
         orderBy: 'chain_step ASC, created_at ASC',
       );
-    } catch (_) {
+    } catch (e) {
+      swallowDebug(e, tag: 'AgentCallLogDao.listByChain');
       return [];
     }
   }
@@ -119,7 +122,8 @@ class AgentCallLogDao {
         ORDER BY started_at DESC
         LIMIT ?
       ''', [limit]);
-    } catch (_) {
+    } catch (e) {
+      swallowDebug(e, tag: 'AgentCallLogDao.listRecentChains');
       return [];
     }
   }
@@ -135,7 +139,8 @@ class AgentCallLogDao {
         'AVG(duration_ms) as avg_duration_ms '
         'FROM agent_call_logs GROUP BY agent_id ORDER BY count DESC',
       );
-    } catch (_) {
+    } catch (e) {
+      swallowDebug(e, tag: 'AgentCallLogDao.aggregateByAgent');
       return [];
     }
   }
@@ -148,7 +153,8 @@ class AgentCallLogDao {
           DateTime.now().subtract(Duration(days: days)).toIso8601String();
       return await db
           .delete('agent_call_logs', where: 'created_at < ?', whereArgs: [cutoff]);
-    } catch (_) {
+    } catch (e) {
+      swallowDebug(e, tag: 'AgentCallLogDao.purgeOlderThan');
       return 0;
     }
   }
