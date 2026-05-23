@@ -1,0 +1,61 @@
+name: knowledge_graph_app
+description: 移动图谱与数字孪生教学系统 — HarmonyOS 端构建专用
+publish_to: "none"
+version: 0.13.0+0
+
+# **HarmonyOS 端专用 pubspec**
+#
+# **背景**：flutter_ohos（华为分发的 Flutter）目前锁 Dart SDK 3.4，而
+# syncfusion_flutter_pdf 33.x 要求 Dart 3.7+。本文件用 24.x 兼容版替代，
+# 牺牲少量 PDF API（教学场景够用）换 OHOS 可构建。
+#
+# **使用**：build_ohos.bat 自动 cp pubspec_ohos.yaml → pubspec.yaml；
+# 构建结束后再恢复主 pubspec。
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  sqflite: ^2.3.0
+  sqflite_common_ffi: ^2.3.3
+  sqflite_common_ffi_web: ^0.4.3+1
+  sqlite3_flutter_libs: ^0.5.42
+  path_provider: ^2.1.1
+  path: ^1.9.0
+  fl_chart: ^0.66.0
+  shared_preferences: ^2.2.2
+  http: ^1.2.1
+  pdf: ^3.10.8
+  printing: ^5.13.1
+  cached_network_image: ^3.3.1
+  open_filex: ^4.7.0
+  file_picker: ^10.3.10
+  excel: ^4.0.6
+  intl: any
+  url_launcher: ^6.2.5
+  media_kit: ^1.1.11
+  media_kit_video: ^1.2.5
+  media_kit_libs_windows_video: ^1.0.10
+  archive: ^3.6.1
+  xml: ^6.5.0
+  flutter_markdown: ^0.7.6
+  crypto: ^3.0.3
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^5.1.1
+  network_info_plus: ^5.0.3
+  web_socket_channel: ^2.4.0
+  record: ^6.0.0
+  flutter_tts: ^4.2.0
+  # **OHOS 兼容版本**：24.x 兼容 Dart 3.4
+  # 33.x 系列要求 Dart 3.7+，与 flutter_ohos 当前 SDK 不兼容。
+  # 24.x 缺少的 API：仅在书签 / 表单填充等高级场景，教学 PDF 提取够用。
+  syncfusion_flutter_pdf: ^24.2.10
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1

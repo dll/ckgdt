@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import '../../core/error_handler.dart';
 import 'database_helper.dart';
 import '../models/class_qa_model.dart';
 
@@ -16,8 +16,8 @@ class ClassQaDao {
     try {
       final db = await _dbHelper.database;
       return await db.insert('class_qa', qa.toMap());
-    } catch (e) {
-      debugPrint('ClassQaDao.create failed: $e');
+    } catch (e, st) {
+      report(e, tag: 'ClassQaDao.create', stack: st);
       return -1;
     }
   }
@@ -60,7 +60,7 @@ class ClassQaDao {
       );
       return rows.map(ClassQaModel.fromMap).toList();
     } catch (e) {
-      debugPrint('ClassQaDao.list failed: $e');
+      swallowDebug(e, tag: 'ClassQaDao.list');
       return [];
     }
   }
@@ -73,7 +73,8 @@ class ClassQaDao {
           .query('class_qa', where: 'id = ?', whereArgs: [id], limit: 1);
       if (rows.isEmpty) return null;
       return ClassQaModel.fromMap(rows.first);
-    } catch (_) {
+    } catch (e) {
+      swallowDebug(e, tag: 'ClassQaDao.get');
       return null;
     }
   }
@@ -93,7 +94,8 @@ class ClassQaDao {
       final n = await db.update('class_qa', updates,
           where: 'id = ?', whereArgs: [qaId]);
       return n > 0;
-    } catch (_) {
+    } catch (e) {
+      report(e, tag: 'ClassQaDao.updateStatus');
       return false;
     }
   }
@@ -104,7 +106,8 @@ class ClassQaDao {
       await db.delete('class_qa_replies', where: 'qa_id = ?', whereArgs: [qaId]);
       final n = await db.delete('class_qa', where: 'id = ?', whereArgs: [qaId]);
       return n > 0;
-    } catch (_) {
+    } catch (e) {
+      report(e, tag: 'ClassQaDao.delete');
       return false;
     }
   }
@@ -136,8 +139,8 @@ class ClassQaDao {
         );
       }
       return id;
-    } catch (e) {
-      debugPrint('ClassQaDao.addReply failed: $e');
+    } catch (e, st) {
+      report(e, tag: 'ClassQaDao.addReply', stack: st);
       return -1;
     }
   }
@@ -148,7 +151,8 @@ class ClassQaDao {
       final rows = await db.query('class_qa_replies',
           where: 'qa_id = ?', whereArgs: [qaId], orderBy: 'created_at ASC');
       return rows.map(ClassQaReplyModel.fromMap).toList();
-    } catch (_) {
+    } catch (e) {
+      swallowDebug(e, tag: 'ClassQaDao.listReplies');
       return [];
     }
   }
@@ -160,7 +164,8 @@ class ClassQaDao {
           'UPDATE class_qa_replies SET likes = likes + 1 WHERE id = ?',
           [replyId]);
       return true;
-    } catch (_) {
+    } catch (e) {
+      swallowDebug(e, tag: 'ClassQaDao.incrementLike');
       return false;
     }
   }

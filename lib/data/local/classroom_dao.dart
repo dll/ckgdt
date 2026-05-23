@@ -1,3 +1,4 @@
+import '../../core/error_handler.dart';
 import 'database_helper.dart';
 
 /// 课堂管理 DAO — 在线状态 / 签到管理 / 课堂互动
@@ -15,7 +16,10 @@ class ClassroomDao {
     // 1) users 表补 last_active 列
     try {
       await db.execute('ALTER TABLE users ADD COLUMN last_active TEXT');
-    } catch (_) {}
+    } catch (e) {
+      // 列已存在 → 静默；这是预期行为
+      swallow(e, tag: 'ClassroomDao.migrate.last_active');
+    }
 
     // 2) 签到会话表
     await db.execute('''
@@ -127,7 +131,8 @@ class ClassroomDao {
         whereArgs: [userId],
       );
       return count > 0;
-    } catch (_) {
+    } catch (e) {
+      swallowDebug(e, tag: 'ClassroomDao.checkin');
       return false;
     }
   }
@@ -143,7 +148,9 @@ class ClassroomDao {
         where: 'user_id = ?',
         whereArgs: [userId],
       );
-    } catch (_) {}
+    } catch (e) {
+      swallowDebug(e, tag: 'ClassroomDao.touchActive');
+    }
   }
 
   /// 获取所有学生及其在线状态
@@ -181,7 +188,9 @@ class ClassroomDao {
         try {
           final dt = DateTime.parse(lastActive);
           isOnline = now.difference(dt).inMinutes < onlineThresholdMinutes;
-        } catch (_) {}
+        } catch (e) {
+          swallow(e, tag: 'ClassroomDao.parseLastActive');
+        }
       }
       m['is_online'] = isOnline ? 1 : 0;
       return m;
@@ -643,7 +652,8 @@ class ClassroomDao {
     List<Map<String, dynamic>> tasks;
     try {
       tasks = await db.query('lab_tasks');
-    } catch (_) {
+    } catch (e) {
+      swallowDebug(e, tag: 'ClassroomDao.importLabTasks');
       return 0;
     }
 
@@ -699,7 +709,8 @@ class ClassroomDao {
     List<Map<String, dynamic>> projects;
     try {
       projects = await db.query('assessment_projects');
-    } catch (_) {
+    } catch (e) {
+      swallowDebug(e, tag: 'ClassroomDao.importAssessment');
       return 0;
     }
 
