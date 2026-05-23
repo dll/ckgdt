@@ -8,6 +8,7 @@ import '../data/local/puml_dao.dart';
 import 'graph_import_service.dart';
 import 'gitee_service.dart';
 import 'course_resource_service.dart';
+import 'rag_bootstrap_service.dart';
 
 /// 统一数据加载服务 — 启动时一次性初始化所有预置数据
 class DataLoadingService {
@@ -33,6 +34,8 @@ class DataLoadingService {
       await _initGiteeToken();
       // 远程配置预取放后台异步执行，避免离线时阻塞启动
       unawaited(_prefetchRemoteConfigs());
+      // 向量 RAG 索引后台构建（首次启动 / 版本升级时灌入 concepts/resources/questions）
+      unawaited(RagBootstrapService.instance.ensureIndexed());
       debugPrint('=== DataLoadingService: Initialization complete');
     } catch (e) {
       debugPrint('=== DataLoadingService: Initialization error: $e');

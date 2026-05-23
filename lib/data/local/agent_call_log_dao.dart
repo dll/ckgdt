@@ -17,6 +17,8 @@ class AgentCallLogDao {
     required String agentName,
     String? userId,
     String? sessionId,
+    String? chainId,
+    int? chainStep,
     String? promptSummary,
     String? responseSummary,
     int? durationMs,
@@ -33,6 +35,8 @@ class AgentCallLogDao {
         'agent_name': agentName,
         'user_id': userId,
         'session_id': sessionId,
+        'chain_id': chainId,
+        'chain_step': chainStep,
         'prompt_summary': _truncate(promptSummary, 500),
         'response_summary': _truncate(responseSummary, 1000),
         'duration_ms': durationMs,
@@ -77,6 +81,44 @@ class AgentCallLogDao {
         orderBy: 'created_at DESC',
         limit: limit,
       );
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// 按 chainId 拉一条调用链的所有步骤（按 chain_step 升序）。
+  /// 用于教师看"这次实验批阅 safety→grading→ethics 各花了多久"。
+  Future<List<Map<String, dynamic>>> listByChain(String chainId) async {
+    try {
+      final db = await _dbHelper.database;
+      return await db.query(
+        'agent_call_logs',
+        where: 'chain_id = ?',
+        whereArgs: [chainId],
+        orderBy: 'chain_step ASC, created_at ASC',
+      );
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// 列出最近 [limit] 条不同的 chainId（每 chain 一行汇总：步数 / 总耗时）。
+  Future<List<Map<String, dynamic>>> listRecentChains({int limit = 50}) async {
+    try {
+      final db = await _dbHelper.database;
+      return await db.rawQuery('''
+        SELECT chain_id,
+               COUNT(*) as steps,
+               SUM(duration_ms) as total_duration_ms,
+               MIN(created_at) as started_at,
+               MAX(created_at) as ended_at,
+               GROUP_CONCAT(agent_id) as agent_chain
+        FROM agent_call_logs
+        WHERE chain_id IS NOT NULL AND chain_id != ''
+        GROUP BY chain_id
+        ORDER BY started_at DESC
+        LIMIT ?
+      ''', [limit]);
     } catch (_) {
       return [];
     }

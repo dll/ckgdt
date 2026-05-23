@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'agent_model.dart';
@@ -138,6 +139,9 @@ abstract class BaseAgent {
   /// 安全调用 AI 服务（带错误处理），返回含模型元数据的结果。
   ///
   /// 自动写入 [AgentCallLogDao] 审计日志（异常静默不影响主链路）。
+  ///
+  /// **chainId / chainStep**：当被 [OrchestratorAgent] 调用时通过 zone 注入；
+  /// 直接调用本方法时传 null 即可。日志里以此关联整条 Agent 链。
   Future<AiChatResult> safeAiChatWithMeta(
     List<Map<String, String>> messages, {
     String? systemPrompt,
@@ -171,6 +175,8 @@ abstract class BaseAgent {
       AgentCallLogDao.instance.insert(
         agentId: config.id,
         agentName: config.name,
+        chainId: Zone.current[#agentChainId] as String?,
+        chainStep: Zone.current[#agentChainStep] as int?,
         promptSummary: lastUserMsg.length > 200
             ? '${lastUserMsg.substring(0, 200)}…'
             : lastUserMsg,

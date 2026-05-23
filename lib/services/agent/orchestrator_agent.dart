@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'agent_model.dart';
 import 'agent_registry.dart';
 
@@ -18,6 +19,11 @@ import 'agent_registry.dart';
 ///
 /// 链式输出：每个 Agent 的回复作为下一个 Agent 的输入。最终返回完整对话历史。
 ///
+/// **chainId 串联**：每次 [runChain] 自动生成一个 chainId（基于时间戳），
+/// 通过 Zone 注入到内层 Agent 的 `safeAiChatWithMeta` finally 写日志中，
+/// 这样 `agent_call_logs.chain_id` 把 N 步串成一条可追踪的链路（用 [chainId]
+/// 字段返回，仪表板按 chainId 聚合即可看到"这次实验批阅总耗时 X 秒，3 步分别用时"）。
+///
 /// **设计权衡**：当前是顺序串联。复杂的 DAG / 辩论模式留给将来。
 class OrchestratorAgent {
   /// 顺序串联调用 [agentChain] 中的 Agent，把上一个 Agent 的回复作为下一个的输入。
@@ -28,10 +34,13 @@ class OrchestratorAgent {
     required AgentSession session,
     required List<String> agentChain,
   }) async {
+    final chainId =
+        'chn-${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}';
     final steps = <OrchestratorStep>[];
     String currentInput = userMessage;
 
-    for (final agentId in agentChain) {
+    for (var stepIdx = 0; stepIdx < agentChain.length; stepIdx++) {
+      final agentId = agentChain[stepIdx];
       final agent = AgentRegistry.instance.getAgent(agentId);
       if (agent == null) {
         steps.add(OrchestratorStep(
@@ -46,7 +55,15 @@ class OrchestratorAgent {
       }
 
       try {
-        final reply = await agent.handleMessage(currentInput, session);
+        // 把 chainId 和 step 通过 Zone 注入 — BaseAgent.safeAiChatWithMeta
+        // 在 finally 中读取并写入 agent_call_logs.chain_id / chain_step
+        final reply = await runZoned(
+          () => agent.handleMessage(currentInput, session),
+          zoneValues: {
+            #agentChainId: chainId,
+            #agentChainStep: stepIdx,
+          },
+        );
         steps.add(OrchestratorStep(
           agentId: agent.config.id,
           agentName: agent.config.name,
@@ -68,6 +85,7 @@ class OrchestratorAgent {
     }
 
     return OrchestratorResult(
+      chainId: chainId,
       steps: steps,
       finalOutput: steps.lastWhere(
         (s) => !s.skipped && s.output != null,
@@ -102,13 +120,19 @@ class OrchestratorStep {
 }
 
 class OrchestratorResult {
+  /// 本次链路的唯一 ID（与 agent_call_logs.chain_id 一一对应）
+  final String chainId;
+
   /// 完整调用历史（含被跳过的）
   final List<OrchestratorStep> steps;
 
   /// 最后一个非跳过 Agent 的输出
   final String? finalOutput;
 
-  const OrchestratorResult({required this.steps, required this.finalOutput});
+  const OrchestratorResult(
+      {required this.chainId,
+      required this.steps,
+      required this.finalOutput});
 
   /// 调试用：打印整条链路
   String prettyPrint() {
