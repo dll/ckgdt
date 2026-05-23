@@ -25,8 +25,8 @@ class DemoSeedService {
 
   /// 一键造数据。返回种入的记录数概览。
   ///
-  /// **保护**：仅管理员入口可见（home_page _AdminToolsPage），
-  /// 加上数据带 [seedTag] 标记可一键撤销，allowed in release for demo recording.
+  /// release 构建也允许调用 — 评比演示需要现场种数据；安全靠管理员入口限定，
+  /// 数据带 [seedTag] 标记可一键 [revertSeed]。
   Future<Map<String, int>> seedAll() async {
     final logsCount = await _seedAgentCallLogs();
     final qaCount = await _seedClassQa();
