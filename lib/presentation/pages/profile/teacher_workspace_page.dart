@@ -42,6 +42,19 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
   int _questionCount = 0;
   int _resourceCount = 0;
 
+  // ── 教师工作量数据 ─────────────────────────────────────────────────
+  /// 我已批阅的实验/作业总数（含 lab_submissions、project_scores 中我打过分的）
+  int _myGradedCount = 0;
+
+  /// 待批阅总数（lab_submissions 已提交但 score 为空 + project_scores 待评）
+  int _myPendingCount = 0;
+
+  /// 平均批阅耗时（按 lab_submissions.feedback_at - submitted_at 估算，分钟）
+  int _avgGradingMinutes = 0;
+
+  /// 学生满意度（学生作品收到的我评分中的平均分占百分比）
+  int _avgScorePercent = 0;
+
   @override
   void initState() {
     super.initState();
@@ -73,8 +86,57 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
         _resourceCount = (resourceResult.first['count'] as int?) ?? 0;
         _isLoading = false;
       });
+
+      // ── 工作量统计（异步加载，失败不影响顶部） ───────────────
+      _loadTeacherWorkload();
     } catch (e) {
       setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadTeacherWorkload() async {
+    try {
+      final user = _authService.currentUser;
+      if (user == null) return;
+      final db = await DatabaseHelper.instance.database;
+
+      // 已批阅实验提交（有 score 或 feedback）
+      final graded = await db.rawQuery(
+        "SELECT COUNT(*) as c FROM lab_submissions "
+        "WHERE (score IS NOT NULL OR feedback IS NOT NULL) "
+        "AND (graded_by = ? OR graded_by IS NULL)",
+        [user.userId],
+      );
+
+      // 待批阅
+      final pending = await db.rawQuery(
+        "SELECT COUNT(*) as c FROM lab_submissions "
+        "WHERE score IS NULL AND feedback IS NULL "
+        "AND status = 'submitted'",
+      );
+
+      // 平均批阅耗时（提交到反馈的分钟差）
+      final avgMin = await db.rawQuery(
+        "SELECT AVG((julianday(feedback_at) - julianday(submitted_at)) * 24 * 60) as m "
+        "FROM lab_submissions "
+        "WHERE feedback_at IS NOT NULL AND submitted_at IS NOT NULL",
+      );
+
+      // 平均评分（学生作品 work_scores 的平均，按总分 100）
+      final avgScore = await db.rawQuery(
+        "SELECT AVG(score) as s FROM work_scores",
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _myGradedCount = (graded.first['c'] as int?) ?? 0;
+        _myPendingCount = (pending.first['c'] as int?) ?? 0;
+        _avgGradingMinutes = ((avgMin.first['m'] as num?)?.toInt()) ?? 0;
+        final s = (avgScore.first['s'] as num?)?.toDouble() ?? 0;
+        _avgScorePercent = s.clamp(0, 100).toInt();
+      });
+    } catch (_) {
+      // 表可能不存在 / 字段缺失 — 静默
     }
   }
 
@@ -133,6 +195,15 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
               ),
               const SizedBox(height: 8),
               _buildOverviewStats(),
+              const SizedBox(height: 16),
+
+              // ── 工作量仪表板 ──────────────────────────────────────────
+              const Text(
+                '我的工作量',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              _buildWorkloadStats(),
               const SizedBox(height: 16),
 
               // ── 快捷工具 ──────────────────────────────────────────────
@@ -308,6 +379,52 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
           ],
         ),
       ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 我的工作量 — 4 个 KPI 卡片
+  // ─────────────────────────────────────────────────────────────────────────
+
+  Widget _buildWorkloadStats() {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildStatCard(
+            '已批阅',
+            '$_myGradedCount',
+            Icons.fact_check,
+            Colors.green,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _buildStatCard(
+            '待批阅',
+            '$_myPendingCount',
+            Icons.pending_actions,
+            _myPendingCount > 0 ? Colors.deepOrange : Colors.grey,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _buildStatCard(
+            '平均耗时',
+            _avgGradingMinutes > 0 ? '$_avgGradingMinutes分' : '—',
+            Icons.timer_outlined,
+            Colors.indigo,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _buildStatCard(
+            '平均给分',
+            _avgScorePercent > 0 ? '$_avgScorePercent%' : '—',
+            Icons.star_outline,
+            Colors.amber[700]!,
+          ),
+        ),
+      ],
     );
   }
 
