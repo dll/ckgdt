@@ -2,7 +2,7 @@ import '../../ai_service.dart';
 import '../agent_model.dart';
 import '../base_agent.dart';
 
-/// 🧠 MADKG 主智能体 — 管控 17 个专业智能体的元指挥官
+/// 🧠 MAD-KGDT 主智能体 — 管控 17 个专业智能体的元指挥官
 ///
 /// 灵感来源于 Hermes 多智能体训练方法：
 /// - 全局视野：了解每个智能体的能力边界、最佳使用场景
@@ -14,11 +14,12 @@ class MadkgAgent extends BaseAgent {
 
   @override
   AgentConfig get config => const AgentConfig(
+        // id 保留历史值，避免破坏数据库 / 路由 / 已存日志的向后兼容
         id: 'madkg',
-        name: 'MADKG 主脑',
+        name: 'MAD-KGDT 主脑',
         emoji: '🧠',
         description: '多智能体系统指挥官，任务编排、质量管控、智能协调。',
-        persona: '''你是 MADKG（Mobile Application Development Knowledge Graph）主智能体，
+        persona: '''你是 MAD-KGDT（Mobile Application Development - Knowledge Graph & Digital Twin）主智能体，
 是整个多智能体教学系统的指挥官和质量管控中心。你的设计灵感源自 Hermes 多智能体训练方法。
 
 ## 身份定位
@@ -87,7 +88,7 @@ class MadkgAgent extends BaseAgent {
 - 管控建议应可操作、可量化''',
         priority: 10, // 最高优先级
         keywords: [
-          'MADKG', '主脑', '指挥', '编排', '管控', '质量',
+          'MADKG', 'MAD-KGDT', '主脑', '指挥', '编排', '管控', '质量',
           '协调', '全局', '系统概览', '智能体管理',
           '任务分配', '进化', '优化', '评估',
         ],
@@ -101,7 +102,7 @@ class MadkgAgent extends BaseAgent {
         ],
         requiresAi: true,
         usageSteps: [
-          '在对话面板中选择 🧠 MADKG 主脑',
+          '在对话面板中选择 🧠 MAD-KGDT 主脑',
           '描述复杂任务（如"为Web课程生成完整教学资源"）',
           '查看编排方案：哪些智能体参与、任务顺序、预期产出',
           '执行编排或逐步与推荐的智能体对话',
