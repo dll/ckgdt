@@ -3,19 +3,9 @@
   "user_id": "2023211985",
   "user_name": "测试学生",
   "role": "student",
-  "synced_at": "2026-05-24T07:44:46.235024",
-  "last_active": "2026-05-24T07:44:46.226241",
+  "synced_at": "2026-05-24T07:45:00.841794",
+  "last_active": "2026-05-24T07:45:00.825792",
   "quiz_results": [
-    {
-      "user_id": "2023211985",
-      "quiz_timestamp": "2026-05-24T07:43:38.954245",
-      "score": 67,
-      "num_correct": 2,
-      "num_total": 3,
-      "chapter": "第五章 华为多端应用开发2",
-      "quiz_type": null,
-      "completed_at": "2026-05-24T07:43:38.954266"
-    },
     {
       "user_id": "2023211985",
       "quiz_timestamp": "2026-04-21T21:04:32.669266",
@@ -113,18 +103,6 @@
       "wrong_time": "2026-04-21T21:03:54.259141",
       "last_wrong_time": "2026-04-21T21:03:54.259141",
       "explanation": "分布式软总线是用于连接不同设备的通信框架，主要解决设备间互联互通的问题。学生答案提到的“提升单设备性能”属于设备自身优化，与软总线的跨设备通信功能不符。"
-    },
-    {
-      "user_id": "2023211985",
-      "question_id": 2297,
-      "question": "在移动应用开发中，响应式设计主要解决什么问题？",
-      "user_answer": "增强数据安全性",
-      "correct_answer": "适配不同尺寸的设备屏幕",
-      "chapter": "第五章 华为多端应用开发2",
-      "times": 1,
-      "wrong_time": "2026-05-24T07:43:23.328845",
-      "last_wrong_time": "2026-05-24T07:43:23.328881",
-      "explanation": "响应式设计的核心是让应用界面自动调整布局，以适配手机、平板等不同大小的屏幕，从而提升用户体验。你把数据安全性当成它的功能，这其实是加密、认证等机制的任务，跟屏幕适配无关。"
     }
   ],
   "favorites": [],
@@ -216,7 +194,7 @@
       "task_id": 1,
       "user_id": "2023211985",
       "content": "PDF实验报告：软件工程.pdf",
-      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2023211985/软件工程.pdf",
+      "file_paths": "C:\\Users\\ldl\\Documents/sync_files/2023211985/软件工程.pdf",
       "file_names": "软件工程.pdf",
       "submit_time": "2026-04-21T11:57:18.637947",
       "status": "已提交",
