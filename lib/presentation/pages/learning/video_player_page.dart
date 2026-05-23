@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
@@ -32,11 +33,14 @@ class _InAppVideoPlayerPageState extends State<InAppVideoPlayerPage> {
   bool _showControls = true;
   double _playbackSpeed = 1.0;
 
-  // 播放状态
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
   bool _isPlaying = false;
   bool _isBuffering = false;
+
+  static const _initTimeout = Duration(seconds: 8);
+  final List<StreamSubscription> _subs = [];
+  Timer? _timeoutTimer;
 
   @override
   void initState() {
@@ -47,14 +51,15 @@ class _InAppVideoPlayerPageState extends State<InAppVideoPlayerPage> {
   }
 
   void _initPlayer() {
-    // 监听各种状态
-    _player.stream.playing.listen((playing) {
+    _disposeSubs();
+
+    _watch(_player.stream.playing, (playing) {
       if (mounted) setState(() => _isPlaying = playing);
     });
-    _player.stream.position.listen((position) {
+    _watch(_player.stream.position, (position) {
       if (mounted) setState(() => _position = position);
     });
-    _player.stream.duration.listen((duration) {
+    _watch(_player.stream.duration, (duration) {
       if (mounted) {
         setState(() {
           _duration = duration;
@@ -62,29 +67,77 @@ class _InAppVideoPlayerPageState extends State<InAppVideoPlayerPage> {
         });
       }
     });
-    _player.stream.buffering.listen((buffering) {
+    _watch(_player.stream.buffering, (buffering) {
       if (mounted) setState(() => _isBuffering = buffering);
     });
-    _player.stream.error.listen((error) {
+    _watch(_player.stream.error, (error) {
       if (mounted && error.isNotEmpty) {
-        setState(() => _error = error);
+        setState(() => _error = _humanizeError(error));
       }
     });
-
-    // 视频播放完成 → 提示跳转测验
-    _player.stream.completed.listen((completed) {
+    _watch(_player.stream.completed, (completed) {
       if (completed && mounted && !_completionShown) {
         _completionShown = true;
         _showQuizPrompt();
       }
     });
 
-    // 打开文件
-    _player.open(Media(widget.filePath)).catchError((e) {
-      if (mounted) {
-        setState(() => _error = '视频加载失败: $e');
+    _player.open(Media(widget.filePath)).catchError((Object e) {
+      if (mounted) setState(() => _error = _humanizeError(e.toString()));
+    });
+
+    _timeoutTimer = Timer(_initTimeout, () {
+      if (mounted && !_initialized && _error == null) {
+        setState(() => _error =
+            '视频加载超时（${_initTimeout.inSeconds}秒）。可能原因：\n'
+            '• 文件损坏或格式不支持\n'
+            '• 缺少对应解码器\n'
+            '• 路径权限不足');
       }
     });
+  }
+
+  void _watch<T>(Stream<T> s, void Function(T) f) =>
+      _subs.add(s.listen(f));
+
+  void _disposeSubs() {
+    _timeoutTimer?.cancel();
+    _timeoutTimer = null;
+    for (final s in _subs) {
+      s.cancel();
+    }
+    _subs.clear();
+  }
+
+  /// 把 libmpv 报错文本翻译成中文友好提示。
+  /// 关键字 → 模板的查找表。
+  static const _errorMatchers = <(List<String>, String)>[
+    (['no such file', 'cannot open'], '__FILE_NOT_FOUND__'),
+    (['format', 'demux', 'unsupported'], '__FORMAT__'),
+    (['decode', 'codec'], '__DECODE__'),
+    (['permission', 'denied'], '__PERMISSION__'),
+    (['network', 'timeout'], '__NETWORK__'),
+  ];
+
+  String _humanizeError(String raw) {
+    final r = raw.toLowerCase();
+    for (final (keys, tag) in _errorMatchers) {
+      if (keys.any(r.contains)) {
+        switch (tag) {
+          case '__FILE_NOT_FOUND__':
+            return '视频文件未找到：${widget.filePath}\n请检查文件是否被移动或删除。';
+          case '__FORMAT__':
+            return '视频格式不支持或文件损坏。\n建议使用系统播放器尝试打开。\n\n详情：$raw';
+          case '__DECODE__':
+            return '解码失败 — 可能缺少对应的视频/音频编解码器。\n建议使用系统播放器（VLC / MPC-HC）打开。\n\n详情：$raw';
+          case '__PERMISSION__':
+            return '没有权限读取该视频文件。\n请检查文件权限或换个目录。';
+          case '__NETWORK__':
+            return '网络异常或读取超时。\n\n详情：$raw';
+        }
+      }
+    }
+    return '视频加载失败：$raw';
   }
 
   void _showQuizPrompt() {
@@ -119,6 +172,7 @@ class _InAppVideoPlayerPageState extends State<InAppVideoPlayerPage> {
 
   @override
   void dispose() {
+    _disposeSubs();
     _player.dispose();
     super.dispose();
   }
@@ -162,20 +216,57 @@ class _InAppVideoPlayerPageState extends State<InAppVideoPlayerPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const Icon(Icons.error_outline, size: 64, color: Colors.redAccent),
               const SizedBox(height: 16),
-              Text(
+              const Text(
+                '视频无法播放',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 12),
+              SelectableText(
                 _error!,
-                style: const TextStyle(color: Colors.white70, fontSize: 14),
+                style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.open_in_new),
-                label: const Text('使用系统播放器打开'),
-                onPressed: () {
-                  FileOpenerService.openExternalFile(context, widget.filePath);
-                },
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: [
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: const Text('重试'),
+                    onPressed: () {
+                      setState(() {
+                        _error = null;
+                        _initialized = false;
+                      });
+                      _initPlayer();
+                    },
+                  ),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.open_in_new, size: 18),
+                    label: const Text('用系统播放器打开'),
+                    onPressed: () {
+                      FileOpenerService.openExternalFile(
+                          context, widget.filePath);
+                    },
+                  ),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.arrow_back, size: 18),
+                    label: const Text('返回'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white70,
+                      side: const BorderSide(color: Colors.white24),
+                    ),
+                    onPressed: () => Navigator.maybePop(context),
+                  ),
+                ],
               ),
             ],
           ),

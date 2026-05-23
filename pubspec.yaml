@@ -1,7 +1,7 @@
 name: knowledge_graph_app
 description: 移动图谱与数字孪生教学系统
 publish_to: "none"
-version: 0.11.0+0
+version: 0.12.0+0
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -29,7 +29,7 @@ dependencies:
   url_launcher: ^6.2.5
   media_kit: ^1.1.11
   media_kit_video: ^1.2.5
-  # media_kit_libs_windows_video: ^1.0.10  # 暂禁用：ANGLE.7z 下载不可达
+  media_kit_libs_windows_video: ^1.0.10  # libmpv Windows 视频解码库
   archive: ^3.6.1
   xml: ^6.5.0
   flutter_markdown: ^0.7.6

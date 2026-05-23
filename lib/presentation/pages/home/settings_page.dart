@@ -326,12 +326,12 @@ class _SettingsPageState extends State<SettingsPage> {
                     ButtonSegment(
                       value: ThemeMode.light,
                       label: Text('浅色'),
-                      icon: Icon(Icons.light_mode),
+                      icon: Icon(Icons.wb_sunny_outlined),
                     ),
                     ButtonSegment(
                       value: ThemeMode.dark,
                       label: Text('深色'),
-                      icon: Icon(Icons.dark_mode),
+                      icon: Icon(Icons.nightlight_round),
                     ),
                   ],
                   selected: {_themeMode},
@@ -342,6 +342,26 @@ class _SettingsPageState extends State<SettingsPage> {
                     MyApp.refreshTheme();
                   },
                 ),
+                const SizedBox(height: 8),
+                Builder(builder: (ctx) {
+                  final brightness = MediaQuery.platformBrightnessOf(ctx);
+                  final actual = _themeMode == ThemeMode.system
+                      ? '当前实际：${brightness == Brightness.dark ? '深色（系统）' : '浅色（系统）'}'
+                      : _themeMode == ThemeMode.light
+                          ? '当前实际：浅色'
+                          : '当前实际：深色';
+                  return Text(
+                    actual,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Theme.of(ctx)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.55),
+                      letterSpacing: 0.8,
+                    ),
+                  );
+                }),
               ],
             ),
           ),

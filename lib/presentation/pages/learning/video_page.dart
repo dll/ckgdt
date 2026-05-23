@@ -7,6 +7,7 @@ import '../../../data/local/course_dao.dart';
 import '../../../services/courseware_service.dart';
 import '../../../services/file_opener_service.dart';
 import '../../../services/courseware_download_service.dart';
+import 'video_player_page.dart';
 
 class VideoListPage extends StatefulWidget {
   final String? filterChapter; // 可选：按章节过滤
@@ -413,7 +414,7 @@ class _VideoListPageState extends State<VideoListPage> {
       final localFile = File(filePath);
       if (await localFile.exists()) {
         if (!mounted) return;
-        FileOpenerService.openFile(context, filePath, fileName);
+        _openVideoFile(filePath, fileName, chapter);
         return;
       }
     }
@@ -438,6 +439,40 @@ class _VideoListPageState extends State<VideoListPage> {
       fileType: fileType,
       chapter: chapter,
     );
+  }
+
+  /// 智能路由：桌面端走 app 内播放器（media_kit）；
+  /// 移动端走系统播放器（move_kit Android 暂不支持）；
+  /// 非视频后缀（如扩展课件实际为 PDF）回退到系统打开。
+  void _openVideoFile(String filePath, String fileName, String chapter) {
+    final ext = fileName.split('.').last.toLowerCase();
+    final isVideoExt =
+        const ['mp4', 'mkv', 'mov', 'avi', 'wmv', 'flv', 'webm', 'm4v']
+            .contains(ext);
+
+    if (!isVideoExt) {
+      // 非视频文件（例如扩展视频实际是 PDF 课件）→ 系统应用打开
+      FileOpenerService.openFile(context, filePath, fileName);
+      return;
+    }
+
+    // 桌面端 → app 内 media_kit 播放器（带错误处理 / 一键回退按钮）
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => InAppVideoPlayerPage(
+            filePath: filePath,
+            title: fileName,
+            chapter: chapter,
+          ),
+        ),
+      );
+      return;
+    }
+
+    // 移动端 → 系统应用打开
+    FileOpenerService.openExternalFile(context, filePath);
   }
 
   Future<void> _downloadAndOpen({
@@ -497,7 +532,7 @@ class _VideoListPageState extends State<VideoListPage> {
 
     if (resultPath != null) {
       if (!mounted) return;
-      FileOpenerService.openFile(context, resultPath, fileName);
+      _openVideoFile(resultPath, fileName, chapter);
     } else {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

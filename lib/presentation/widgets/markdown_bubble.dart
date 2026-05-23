@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import '../../services/clipboard_helper.dart';
 
 import '../../core/constants/color_ohos_compat.dart';
 /// 可复用的 Markdown 气泡组件
@@ -61,12 +61,10 @@ class MarkdownBubble extends StatelessWidget {
           ),
           onTapLink: (text, href, title) {
             if (href != null) {
-              Clipboard.setData(ClipboardData(text: href));
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('已复制链接: $href'),
-                  duration: const Duration(seconds: 2),
-                ),
+              ClipboardHelper.copyWithToast(
+                context,
+                href,
+                message: '已复制链接: $href',
               );
             }
           },

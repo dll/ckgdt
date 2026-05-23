@@ -2,11 +2,12 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/constants/app_urls.dart';
 
 /// Gitee API v5 服务
 /// 用于获取仓库列表、分支、提交等信息
 class GiteeService {
-  static const String _baseUrl = 'https://gitee.com/api/v5';
+  static const String _baseUrl = AppUrls.giteeApi;
   static const String _tokenKey = 'gitee_access_token';
   static const String _ownerKey = 'gitee_default_owner';
   static const String _repoPrefixKey = 'gitee_repo_prefix';

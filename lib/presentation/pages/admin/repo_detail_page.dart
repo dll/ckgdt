@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../services/gitee_service.dart';
+import '../../../services/clipboard_helper.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
 /// 仓库详情页（参照 毕设进度管家 /student/:id 页面）
@@ -421,12 +421,11 @@ class _RepoDetailPageState extends State<RepoDetailPage> {
               const SizedBox(height: 10),
               GestureDetector(
                 onTap: () => _openUrl(htmlUrl),
-                onLongPress: () {
-                  Clipboard.setData(ClipboardData(text: htmlUrl));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('仓库链接已复制')),
-                  );
-                },
+                onLongPress: () => ClipboardHelper.copyWithToast(
+                  context,
+                  htmlUrl,
+                  message: '仓库链接已复制',
+                ),
                 child: Row(
                   children: [
                     const Icon(Icons.link, color: Colors.white70, size: 16),

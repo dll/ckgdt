@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/design/noir_tokens.dart';
 import '../../../data/local/achievement_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../widgets/agent_entry_button.dart';
@@ -7,7 +8,6 @@ import 'tabs/scores_tab.dart';
 import 'tabs/report_tab.dart';
 import 'tabs/analysis_tab.dart';
 
-import '../../../core/constants/color_ohos_compat.dart';
 /// 课程达成度计算系统 — 8 Tab 壳页面
 ///
 /// 各 Tab 实现已拆分至 tabs/ 子目录：
@@ -28,10 +28,21 @@ class _AchievementPageState extends State<AchievementPage>
   final _authService = AuthService();
   final _achievementDao = AchievementDao();
 
+  static const _tabSpecs = <(IconData, String, String)>[
+    (Icons.analytics_outlined, '达成度概览', '01'),
+    (Icons.edit_note, '成绩管理', '02'),
+    (Icons.school_outlined, '平时达成', '03'),
+    (Icons.science_outlined, '实验达成', '04'),
+    (Icons.assignment_outlined, '考核达成', '05'),
+    (Icons.calculate_outlined, '计算过程', '06'),
+    (Icons.summarize_outlined, '报告生成', '07'),
+    (Icons.build_outlined, '持续改进', '08'),
+  ];
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 8, vsync: this);
+    _tabController = TabController(length: _tabSpecs.length, vsync: this);
   }
 
   @override
@@ -42,34 +53,71 @@ class _AchievementPageState extends State<AchievementPage>
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-
     return Column(
       children: [
+        // ── 编辑级章节条：黑底 paper 字 + 琥珀编号 + 1px 琥珀底线 ──
         Container(
-          color: primary.withValues(alpha: 0.05),
+          decoration: BoxDecoration(
+            color: NoirTokens.ink,
+            border: Border(
+              bottom: BorderSide(
+                color: NoirTokens.accent.withValues(alpha: 0.6),
+              ),
+            ),
+          ),
           child: Row(
             children: [
               Expanded(
                 child: TabBar(
                   controller: _tabController,
                   isScrollable: true,
-                  labelColor: primary,
-                  unselectedLabelColor: Colors.grey,
-                  indicatorColor: primary,
-                  tabs: const [
-                    Tab(icon: Icon(Icons.analytics_outlined, size: 18), text: '达成度概览'),
-                    Tab(icon: Icon(Icons.edit_note, size: 18), text: '成绩管理'),
-                    Tab(icon: Icon(Icons.school_outlined, size: 18), text: '平时达成'),
-                    Tab(icon: Icon(Icons.science_outlined, size: 18), text: '实验达成'),
-                    Tab(icon: Icon(Icons.assignment_outlined, size: 18), text: '考核达成'),
-                    Tab(icon: Icon(Icons.calculate_outlined, size: 18), text: '计算过程'),
-                    Tab(icon: Icon(Icons.summarize_outlined, size: 18), text: '报告生成'),
-                    Tab(icon: Icon(Icons.build_outlined, size: 18), text: '持续改进'),
+                  tabAlignment: TabAlignment.start,
+                  labelColor: NoirTokens.paper,
+                  unselectedLabelColor: NoirTokens.paper.withValues(alpha: 0.45),
+                  indicatorColor: NoirTokens.accent,
+                  indicatorWeight: 2,
+                  indicatorSize: TabBarIndicatorSize.label,
+                  dividerColor: Colors.transparent,
+                  labelStyle: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.6,
+                  ),
+                  unselectedLabelStyle: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 1.6,
+                  ),
+                  tabs: [
+                    for (final (icon, label, serial) in _tabSpecs)
+                      Tab(
+                        height: 56,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(serial,
+                                style: NoirTokens.serial(
+                                    color: NoirTokens.accent)),
+                            const SizedBox(width: 8),
+                            Icon(icon, size: 16),
+                            const SizedBox(width: 6),
+                            Text(label),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ),
-              const AgentEntryButton(agentId: 'achievement'),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Theme(
+                  // 顶栏入口在黑底上要可见，反转图标颜色
+                  data: Theme.of(context).copyWith(
+                    iconTheme: const IconThemeData(color: NoirTokens.paper),
+                  ),
+                  child: const AgentEntryButton(agentId: 'achievement'),
+                ),
+              ),
             ],
           ),
         ),
