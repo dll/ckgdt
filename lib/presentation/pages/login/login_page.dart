@@ -138,7 +138,7 @@ class _LoginPageState extends State<LoginPage>
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-              builder: (_) => const HomePage(initialTabIndex: 1)),
+              builder: (_) => const HomePage(initialTabIndex: 0)),
         );
         return;
       }
@@ -200,7 +200,7 @@ class _LoginPageState extends State<LoginPage>
           Navigator.of(ctx).pop(); // 关闭对话框
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
-                builder: (_) => const HomePage(initialTabIndex: 1)),
+                builder: (_) => const HomePage(initialTabIndex: 0)),
           );
         },
       ),
@@ -285,7 +285,7 @@ class _LoginPageState extends State<LoginPage>
         if (!mounted) return;
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-              builder: (_) => const HomePage(initialTabIndex: 1)),
+              builder: (_) => const HomePage(initialTabIndex: 0)),
         );
       } else {
         setState(() => _scanStatus = '用户 $userId 不存在，登录失败');
@@ -390,7 +390,7 @@ class _LoginPageState extends State<LoginPage>
       // 移动端登录成功，跳转首页
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-            builder: (_) => const HomePage(initialTabIndex: 1)),
+            builder: (_) => const HomePage(initialTabIndex: 0)),
       );
     } catch (e) {
       setState(() => _scanStatus = null);
@@ -886,7 +886,7 @@ class _LoginPageState extends State<LoginPage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'MAD-KG',
+                  'MAD-KGDT',
                   style: TextStyle(
                     color: _ink,
                     fontSize: 14,
