@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../../data/local/ai_config_dao.dart';
@@ -80,13 +81,12 @@ class EmbeddingService {
     }
   }
 
-  /// 批量 embed（部分 provider 支持 batch input）
+  /// 批量 embed。当前实现为并行调用（不是 provider 的 batch input 协议）—
+  /// 多数 provider 接受 input 字符串数组，可以省一次往返；这里为保持
+  /// 兼容性 + 简单性使用并行单次调用。
+  /// **注意**：并行度太高可能触发 provider 限流；> 20 条建议分批。
   Future<List<List<double>>> embedBatch(List<String> texts) async {
-    final results = <List<double>>[];
-    for (final t in texts) {
-      results.add(await embed(t));
-    }
-    return results;
+    return Future.wait(texts.map((t) => embed(t)));
   }
 
   /// 伪向量：把字符串哈希成稳定 128 维向量（仅作 graceful degradation）。
@@ -101,12 +101,12 @@ class EmbeddingService {
       final bucket = code % dim;
       v[bucket] += 1.0 / (1 + i / 10);
     }
-    // 归一化
-    var sum = 0.0;
+    // 归一化（向量除以 L2 范数）
+    var sumSq = 0.0;
     for (final x in v) {
-      sum += x * x;
+      sumSq += x * x;
     }
-    final mag = sum > 0 ? sum : 1;
+    final mag = sumSq > 0 ? math.sqrt(sumSq) : 1.0;
     for (var i = 0; i < dim; i++) {
       v[i] /= mag;
     }

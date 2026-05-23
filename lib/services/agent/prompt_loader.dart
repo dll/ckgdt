@@ -18,26 +18,40 @@ class PromptLoader {
 
   static const String _basePath = 'assets/agent_prompts/';
 
+  /// 内存缓存上限。24 个 Agent + 一些动态扩展，48 足够覆盖。
+  static const int _maxCacheSize = 48;
+
   /// 内存缓存：agentId → prompt 文本（或 null 表示已确认 assets 中没有）
-  static final Map<String, String?> _cache = {};
+  /// 使用 LinkedHashMap 保持插入顺序，便于 LRU 淘汰
+  static final Map<String, String?> _cache = <String, String?>{};
 
   /// 加载指定 agentId 的 prompt；若 assets 中无对应文件，返回 null。
   static Future<String?> load(String agentId) async {
-    if (_cache.containsKey(agentId)) return _cache[agentId];
+    final hit = _cache[agentId];
+    if (hit != null || _cache.containsKey(agentId)) {
+      // 命中（含 null 命中表示已知不存在）— 移到末尾标记为最近使用
+      _cache.remove(agentId);
+      _cache[agentId] = hit;
+      return hit;
+    }
 
+    String? value;
     try {
       final text = await rootBundle.loadString('$_basePath$agentId.md');
       final trimmed = text.trim();
-      _cache[agentId] = trimmed.isEmpty ? null : trimmed;
-      return _cache[agentId];
+      value = trimmed.isEmpty ? null : trimmed;
     } on FlutterError {
-      // assets 中没有这个文件 — 标记为 null 防止反复尝试
-      _cache[agentId] = null;
-      return null;
+      value = null;
     } catch (_) {
-      _cache[agentId] = null;
-      return null;
+      value = null;
     }
+
+    // 容量上限：超出时淘汰最早的
+    if (_cache.length >= _maxCacheSize) {
+      _cache.remove(_cache.keys.first);
+    }
+    _cache[agentId] = value;
+    return value;
   }
 
   /// 清除缓存（用于热更场景：下次访问会重新读 assets）
