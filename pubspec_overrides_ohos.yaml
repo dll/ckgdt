@@ -1,0 +1,14 @@
+# HarmonyOS 端 dependency 覆盖（pubspec_overrides 模式）
+#
+# **作用**：build_ohos.bat 把本文件 cp 到 pubspec_overrides.yaml，
+# pub get 时自动覆盖主 pubspec 的依赖版本。构建结束后删除恢复。
+#
+# **比 pubspec_ohos.yaml 整文件复制好在**：
+# - 主 pubspec 升级（加新依赖、改资源声明）时无需同步本文件
+# - flutter: assets 声明保持单一来源（避免 P0 bug）
+#
+# **背景**：flutter_ohos 锁 Dart SDK 3.4，syncfusion_flutter_pdf 33.x 要 Dart 3.7+
+# 24.2.10 是兼容 Dart 3.4 的稳定版；少量高级 PDF API 不可用，教学场景够用。
+
+dependency_overrides:
+  syncfusion_flutter_pdf: 24.2.10

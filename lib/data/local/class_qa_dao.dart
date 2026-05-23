@@ -165,7 +165,7 @@ class ClassQaDao {
           [replyId]);
       return true;
     } catch (e) {
-      swallowDebug(e, tag: 'ClassQaDao.incrementLike');
+      report(e, tag: 'ClassQaDao.incrementLike');
       return false;
     }
   }
