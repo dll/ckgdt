@@ -2,16 +2,18 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/cross_platform/sync_server.dart';
 import '../../../services/cross_platform/sync_client.dart';
 import '../../../services/cross_platform/sync_protocol.dart';
 import '../../../services/cross_platform/session_manager.dart';
+import '../../widgets/styled_qr.dart';
 import 'qr_scan_page.dart';
 
+import '../../../core/constants/app_urls.dart';
 import '../../../core/constants/color_ohos_compat.dart';
+import '../../../services/clipboard_helper.dart';
 /// 三端互通 Hub 页面
 ///
 /// 根据平台角色自动展示不同功能区：
@@ -171,8 +173,7 @@ class _CrossPlatformHubPageState extends State<CrossPlatformHubPage> {
   }
 
   Future<void> _openWebVersion() async {
-    if (_syncServer == null || !_syncServer!.isRunning) return;
-    final url = Uri.parse(_syncServer!.serverUrl!);
+    final url = Uri.parse(AppUrls.webApp);
     try {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } catch (e) {
@@ -627,27 +628,14 @@ class _CrossPlatformHubPageState extends State<CrossPlatformHubPage> {
               ],
             ),
             const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                    color: theme.colorScheme.outline.withValues(alpha: 0.2)),
-              ),
-              child: QrImageView(
-                data: _qrData!,
-                version: QrVersions.auto,
-                size: 200,
-                eyeStyle: const QrEyeStyle(
-                  eyeShape: QrEyeShape.square,
-                  color: Color(0xFF667eea),
-                ),
-                dataModuleStyle: const QrDataModuleStyle(
-                  dataModuleShape: QrDataModuleShape.square,
-                  color: Color(0xFF333333),
-                ),
-              ),
+            StyledQr(
+              data: _qrData!,
+              size: 200,
+              padding: 12,
+              borderColor:
+                  theme.colorScheme.outline.withValues(alpha: 0.2),
+              eyeColor: const Color(0xFF667eea),
+              moduleColor: const Color(0xFF333333),
             ),
             const SizedBox(height: 12),
             Text(
@@ -686,8 +674,17 @@ class _CrossPlatformHubPageState extends State<CrossPlatformHubPage> {
             ),
             const SizedBox(height: 12),
             Text(
-              '在浏览器中打开 Web 版应用（需先构建 Flutter Web）',
+              '在浏览器中打开 Web 版应用（公网部署）',
               style: TextStyle(fontSize: 13, color: theme.colorScheme.outline),
+            ),
+            const SizedBox(height: 8),
+            SelectableText(
+              AppUrls.webApp,
+              style: TextStyle(
+                fontSize: 12,
+                color: theme.colorScheme.primary,
+                fontFamily: 'monospace',
+              ),
             ),
             const SizedBox(height: 12),
             Row(
@@ -700,20 +697,44 @@ class _CrossPlatformHubPageState extends State<CrossPlatformHubPage> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                OutlinedButton(
-                  onPressed: () {
-                    // 复制 URL
-                    final url = _syncServer?.serverUrl ?? '';
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('地址已复制：$url')),
-                    );
-                  },
-                  child: const Text('复制地址'),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.copy, size: 16),
+                  label: const Text('复制地址'),
+                  onPressed: () => ClipboardHelper.copyWithToast(
+                    context,
+                    AppUrls.webApp,
+                    message: '地址已复制',
+                  ),
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+            _buildWebQr(theme),
           ],
         ),
+      ),
+    );
+  }
+
+  /// 公网 Web 版二维码 — 手机扫码直接打开 GitHub Pages 部署。
+  Widget _buildWebQr(ThemeData theme) {
+    return Center(
+      child: Column(
+        children: [
+          StyledQr(
+            data: AppUrls.webApp,
+            borderColor: theme.colorScheme.outline.withValues(alpha: 0.2),
+            eyeColor: theme.colorScheme.primary,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '手机扫码访问 Web 版',
+            style: TextStyle(
+              fontSize: 12,
+              color: theme.colorScheme.outline,
+            ),
+          ),
+        ],
       ),
     );
   }
