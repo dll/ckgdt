@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import '../data/local/database_helper.dart';
 import '../data/local/agent_call_log_dao.dart';
 import '../data/local/class_qa_dao.dart';
@@ -11,8 +10,7 @@ import '../services/rag_bootstrap_service.dart';
 /// 有可见内容；录完一键撤销恢复干净状态。
 ///
 /// **生产保护**：
-/// - 调用方应在 `kDebugMode` 守卫下；
-/// - 入口仅管理员可见；
+/// - 入口仅管理员可见（home_page _AdminToolsPage）；
 /// - 所有种入数据都带 `meta='demo_seed'` 或 `prompt_summary` 前缀 `[DEMO]`，
 ///   方便 [revertSeed] 精准撤销。
 ///
@@ -26,10 +24,10 @@ class DemoSeedService {
   static const String seedTag = '[DEMO_SEED]';
 
   /// 一键造数据。返回种入的记录数概览。
+  ///
+  /// **保护**：仅管理员入口可见（home_page _AdminToolsPage），
+  /// 加上数据带 [seedTag] 标记可一键撤销，allowed in release for demo recording.
   Future<Map<String, int>> seedAll() async {
-    if (!kDebugMode) {
-      throw StateError('DemoSeedService 仅在 debug 模式可用');
-    }
     final logsCount = await _seedAgentCallLogs();
     final qaCount = await _seedClassQa();
     // 守 RAG 索引已建（DataLoadingService 启动时会调）

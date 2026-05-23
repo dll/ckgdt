@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import '../../../core/design/noir_tokens.dart';
 import '../../../core/design/noir_components.dart';
@@ -1012,10 +1011,9 @@ class _AdminToolsPage extends StatelessWidget {
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CrossPlatformHubPage()))),
       _AdminTool(Icons.settings, '系统设置',
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()))),
-      // Demo 录制专用 — 仅 debug 构建可见，生产构建会被 tree-shake
-      if (kDebugMode)
-        _AdminTool(Icons.movie_creation_outlined, 'Demo 数据种子',
-            () => _showDemoSeedSheet(context)),
+      // Demo 录制专用 — 仅管理员可见（kDebugMode 守卫已撤，评比时也能演示）
+      _AdminTool(Icons.movie_creation_outlined, 'Demo 数据种子',
+          () => _showDemoSeedSheet(context)),
     ];
 
     return Scaffold(
