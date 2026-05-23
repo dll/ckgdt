@@ -511,13 +511,13 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
           onTap: _showFeedback,
         ),
 
-        // 子按钮：三端互通
+        // 子按钮：多端互通
         _buildPositionedSubButton(
           offset: 168,
           isOnRight: isOnRight,
           size: size,
           icon: Icons.devices,
-          label: '三端',
+          label: '多端',
           color: Colors.deepPurple,
           onTap: _showCrossPlatform,
         ),
