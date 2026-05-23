@@ -130,3 +130,25 @@ class OrchestratorResult {
 /// 注意：本类**不是 BaseAgent 的子类** —— 它是更高层次的调度器，
 /// 不需要自己有 persona 或 handleMessage。如果将来要用 Director 自动选择
 /// 是否走编排，可以再写一个 wrapper Agent 包装它。
+
+/// 预定义编排链 — 业务页面调用方便。
+class OrchestratorChains {
+  OrchestratorChains._();
+
+  /// 实验/作业批阅链：safety 审查 → 主批阅 → ethics 学术伦理建议。
+  /// 调用方传入"待批阅内容"，返回最终批阅结果（含 ethics 评论）。
+  static const List<String> labGrading = ['safety', 'lab_grading', 'ethics'];
+
+  /// 项目考核批阅链
+  static const List<String> assessmentGrading = [
+    'safety',
+    'assessment_grading',
+    'ethics'
+  ];
+
+  /// 学生作品批阅链
+  static const List<String> worksGrading = ['safety', 'works_grading', 'ethics'];
+
+  /// 答疑链：先安全审查再答疑
+  static const List<String> tutoring = ['safety', 'tutor'];
+}

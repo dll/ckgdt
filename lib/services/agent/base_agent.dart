@@ -210,17 +210,33 @@ abstract class BaseAgent {
   ///
   /// 如果 [config.useRag] 为 true，先检索相关课程知识，
   /// 将结果拼接到 persona 末尾作为参考资料。
+  /// 构造带 RAG 上下文的系统提示词
+  ///
+  /// 检索优先级：
+  /// 1. 向量索引（rag_embeddings 表非空）→ retrieveContextVector（语义检索）
+  /// 2. 索引为空 / 失败 → retrieveContext（TF-IDF + 关键字回退）
+  ///
+  /// 拼接结果到 persona 末尾作为参考资料。
   Future<String> buildRagPrompt(String userMessage) async {
     final persona = await loadEffectivePersona();
     if (!config.useRag) return persona;
 
     try {
-      final context = await _ragService.retrieveContext(
+      // 优先向量检索（语义匹配，对长文档/同义词更准）
+      var context = await _ragService.retrieveContextVector(
         userMessage,
-        maxConcepts: 6,
-        includeRelations: true,
-        includeResources: true,
+        topK: 6,
       );
+
+      // 向量索引为空 / 检索失败 → 回退到 TF-IDF
+      if (context.isEmpty) {
+        context = await _ragService.retrieveContext(
+          userMessage,
+          maxConcepts: 6,
+          includeRelations: true,
+          includeResources: true,
+        );
+      }
 
       if (context.isEmpty) return persona;
 
