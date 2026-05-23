@@ -417,14 +417,8 @@ class _HomePageState extends State<HomePage> {
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(24, 26, 24, 24),
             decoration: BoxDecoration(
-              color: NoirTokens.ink,
+              color: accent,
               borderRadius: BorderRadius.circular(NoirTokens.radius),
-              border: Border(
-                top: BorderSide(color: accent, width: 2),
-                left: const BorderSide(color: NoirTokens.ink),
-                right: const BorderSide(color: NoirTokens.ink),
-                bottom: const BorderSide(color: NoirTokens.ink),
-              ),
               boxShadow: NoirTokens.smallShadow,
             ),
             child: Column(
@@ -433,19 +427,19 @@ class _HomePageState extends State<HomePage> {
                 Row(
                   children: [
                     Text('№ 001 / DASHBOARD',
-                        style: NoirTokens.serial(color: accent)),
+                        style: NoirTokens.serial(color: Colors.white)),
                     const Spacer(),
                     Text(roleLabel,
-                        style: NoirTokens.caps(color: accent)),
+                        style: NoirTokens.caps(color: Colors.white)),
                   ],
                 ),
                 const SizedBox(height: 14),
-                Container(width: 36, height: 2, color: accent),
+                Container(width: 36, height: 2, color: Colors.white),
                 const SizedBox(height: 12),
                 Text(
                   '欢迎回来，$greetName',
                   style: const TextStyle(
-                    color: NoirTokens.paper,
+                    color: Colors.white,
                     fontSize: 26,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.3,
@@ -460,7 +454,7 @@ class _HomePageState extends State<HomePage> {
                           ? '教学视角 · 班级 / 实验 / 考核 / 达成'
                           : '学习视角 · 图谱 / 路径 / 实验 / 测验',
                   style: TextStyle(
-                    color: NoirTokens.paper.withValues(alpha: 0.7),
+                    color: Colors.white.withValues(alpha: 0.85),
                     fontSize: 12,
                     letterSpacing: 1.6,
                     fontWeight: FontWeight.w500,
@@ -757,11 +751,11 @@ class _HomePageState extends State<HomePage> {
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(
-                          color: NoirTokens.ink,
+                          color: accent,
                           borderRadius: BorderRadius.circular(NoirTokens.radius),
                         ),
                         child: Icon(steps[i].icon,
-                            color: NoirTokens.paper, size: 18),
+                            color: Colors.white, size: 18),
                       ),
                       const SizedBox(height: 8),
                       Text(steps[i].label,
@@ -802,20 +796,18 @@ class _HomePageState extends State<HomePage> {
       onTap: onTap,
       child: Stack(
         children: [
-          // 顶部右上 ink 圆角方块图标
           Align(
             alignment: Alignment.topRight,
             child: Container(
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: NoirTokens.ink,
+                color: accent,
                 borderRadius: BorderRadius.circular(NoirTokens.radius),
               ),
-              child: Icon(icon, size: 18, color: NoirTokens.paper),
+              child: Icon(icon, size: 18, color: Colors.white),
             ),
           ),
-          // 左下：主题色短线 + 标题
           Positioned(
             left: 0,
             right: 0,
@@ -1015,14 +1007,8 @@ class _AdminToolsPage extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(24, 26, 24, 24),
               decoration: BoxDecoration(
-                color: NoirTokens.ink,
+                color: accent,
                 borderRadius: BorderRadius.circular(NoirTokens.radius),
-                border: Border(
-                  top: BorderSide(color: accent, width: 2),
-                  left: const BorderSide(color: NoirTokens.ink),
-                  right: const BorderSide(color: NoirTokens.ink),
-                  bottom: const BorderSide(color: NoirTokens.ink),
-                ),
                 boxShadow: NoirTokens.smallShadow,
               ),
               child: Row(
@@ -1032,11 +1018,11 @@ class _AdminToolsPage extends StatelessWidget {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: accent,
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(NoirTokens.radius),
                     ),
                     child: const Icon(Icons.admin_panel_settings,
-                        color: NoirTokens.paper, size: 26),
+                        color: Colors.white, size: 26),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -1044,12 +1030,12 @@ class _AdminToolsPage extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('№ ADMIN / SYSTEM',
-                            style: NoirTokens.serial(color: accent)),
+                            style: NoirTokens.serial(color: Colors.white)),
                         const SizedBox(height: 6),
                         const Text(
                           '系统管理',
                           style: TextStyle(
-                            color: NoirTokens.paper,
+                            color: Colors.white,
                             fontSize: 22,
                             fontWeight: FontWeight.w800,
                             letterSpacing: -0.3,
@@ -1060,7 +1046,7 @@ class _AdminToolsPage extends StatelessWidget {
                         Text(
                           '系统级权限 · 管理各项功能与数据',
                           style: TextStyle(
-                            color: NoirTokens.paper.withValues(alpha: 0.65),
+                            color: Colors.white.withValues(alpha: 0.85),
                             fontSize: 12,
                             letterSpacing: 1.4,
                           ),
@@ -1104,12 +1090,12 @@ class _AdminToolsPage extends StatelessWidget {
                             width: 38,
                             height: 38,
                             decoration: BoxDecoration(
-                              color: NoirTokens.ink,
+                              color: accent,
                               borderRadius:
                                   BorderRadius.circular(NoirTokens.radius),
                             ),
                             child: Icon(t.icon,
-                                size: 18, color: NoirTokens.paper),
+                                size: 18, color: Colors.white),
                           ),
                         ),
                         Positioned(

@@ -463,14 +463,96 @@ flutter clean                                # 清理缓存
 | 平台 | 文件 | 字段 |
 |------|------|------|
 | 全局 | `pubspec.yaml` | `version: X.Y.Z+N`（N 归零） |
+| 全局 | `lib/main.dart` | `MaterialApp.title`（**两处**：dbLocked 分支 + 正常分支） |
 | Android | `android/app/src/main/res/values/strings.xml` | `app_name` |
 | Windows | `windows/CMakeLists.txt` | `BINARY_OUTPUT_NAME` |
 | Windows | `windows/runner/main.cpp` | `window.Create(L"…", ...)` |
 | Windows | `windows/runner/Runner.rc` | 4 处：`FileDescription` / `InternalName` / `OriginalFilename` / `ProductName` |
-| Web | `web/index.html` | `<title>` 和 `apple-mobile-web-app-title` |
-| Web | `web/manifest.json` | `"name"` |
+| Web | `web/index.html` | `<title>`、`apple-mobile-web-app-title`、`application-name`、`description`（描述应是中文项目说明，**不要默认 "A new Flutter project."**） |
+| Web | `web/manifest.json` | `"name"` 和 `"description"`（中文说明，**不要默认占位文案**） |
+
+**不要改**（这些是 Flutter 包标识符，必须保持英文 snake_case）：
+- `pubspec.yaml` 顶部 `name: knowledge_graph_app`
+- `windows/CMakeLists.txt` 第 3-7 行 `project(knowledge_graph_app)` / `BINARY_NAME` 变量名
 
 > **注意**：`windows/runner/Runner.rc` 中有 4 处版本号，需全部替换。`InternalName` 不带版本号（如 `移动图谱与数字孪生`）。`short_name` 不带版本号（如 `移动图谱与数字孪生`）。窗体内完整名称 `移动应用开发知识图谱与数字孪生平台` 固定不变，不需要随版本修改。
+
+---
+
+## 三端构建与发布流程
+
+每次 `重新构建三端` 默认按以下规则执行，**不再每次问用户**：
+
+### 三端命令（并行）
+
+```bash
+# Android — 注意 GRADLE_USER_HOME 环境变量已在 D:\development\cache\gradle 配置好缓存，
+# 不需要 unset。如果 connection timeout，检查 D:/development/cache/gradle/wrapper/dists/
+# 下是否有 gradle-8.12-all.zip.part 残留，删掉即可。
+flutter build apk --release
+
+# Windows — 包含 libmpv 视频解码（media_kit_libs_windows_video）
+flutter build windows --release
+
+# Web — 必须带 base href 适配 GitHub Pages 子路径，否则资源 404。
+# bash 下需要 MSYS_NO_PATHCONV=1 防止路径转换。
+MSYS_NO_PATHCONV=1 flutter build web --release --base-href "/mad-fd/"
+```
+
+### 产物路径
+
+| 平台 | 路径 | 命名 |
+|------|------|------|
+| Android | `build/app/outputs/flutter-apk/app-release.apk` | 默认（不可改）|
+| Windows | `build/windows/x64/runner/Release/移动图谱与数字孪生v{版本}.exe` | 由 `BINARY_OUTPUT_NAME` 控制 |
+| Web | `build/web/`（base=`/mad-fd/`）| 静态站 |
+
+### Web 公网部署（GitHub Pages）
+
+仓库：`git@github.com:dll/mad-fd.git`，部署分支：`gh-pages`，访问地址：`https://dll.github.io/mad-fd/`
+
+**每次 `flutter build web --base-href "/mad-fd/"` 完成后，按以下流程推送 gh-pages**（不动 master）：
+
+```bash
+# 1. 用独立目录组装（避免污染主仓库 .git）
+mkdir -p build/_gh-pages-deploy
+cp -r build/web/. build/_gh-pages-deploy/
+
+# 2. 初始化 gh-pages 分支并启用 longpaths 处理 URL 编码超长文件名
+git -C build/_gh-pages-deploy init -q -b gh-pages
+git -C build/_gh-pages-deploy config core.longpaths true
+git -C build/_gh-pages-deploy add -A
+git -C build/_gh-pages-deploy -c user.email="ldl@github" -c user.name="ldl" \
+    commit -q -m "deploy: web v{版本} base=/mad-fd/"
+
+# 3. 推送（首次新分支用普通 push，后续覆盖用 --force）
+git -C build/_gh-pages-deploy remote add origin git@github.com:dll/mad-fd.git
+git -C build/_gh-pages-deploy push -u --force origin gh-pages
+
+# 4. 清理（占用解除后）
+rm -rf build/_gh-pages-deploy
+```
+
+> **注意**：base href = `/mad-fd/`（带斜杠尾），**不能写 `/mad-fd`**，否则资源加载 404。
+> Gitee 仓库的 `gh-pages` 分支也保留着但 Gitee 个人版没 Pages 服务，不部署。
+
+### 升版三件套（每次升 minor 或 major）
+
+1. 按上面"升版时需同步修改的文件"表逐项替换版本号
+2. 三端构建
+3. Web push gh-pages
+
+### 三端命名一致性检查
+
+构建前可以一行命令审计：
+
+```bash
+grep -E "version:|app_name|BINARY_OUTPUT_NAME|window\.Create|FileDescription|InternalName|OriginalFilename|ProductName|<title>|apple-mobile-web-app-title|application-name|\"name\"|\"short_name\"|MaterialApp.*title:" \
+  pubspec.yaml lib/main.dart \
+  android/app/src/main/res/values/strings.xml \
+  windows/CMakeLists.txt windows/runner/main.cpp windows/runner/Runner.rc \
+  web/index.html web/manifest.json
+```
 
 ---
 
