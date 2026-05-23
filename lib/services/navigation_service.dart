@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../presentation/pages/quiz/quiz_page.dart';
 import '../presentation/pages/quiz/wrong_answers_page.dart';
+import '../presentation/pages/class_qa/class_qa_page.dart';
 import '../presentation/pages/learning/video_page.dart';
 import '../presentation/pages/learning/document_page.dart';
 import '../presentation/pages/learning/progress_page.dart';
@@ -289,6 +290,10 @@ class NavigationService {
         return const AiSkillPage(skillId: 'tutor');
       case 'feedback':
         return const FeedbackManagePage();
+      case 'class_qa':
+      case '班级问答':
+      case '问答':
+        return const ClassQaPage();
       case 'teacher_application':
         return const TeacherApplicationPage();
       case 'teacher_application_manage':
