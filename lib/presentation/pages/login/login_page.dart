@@ -13,6 +13,7 @@ import '../../../services/cross_platform/sync_protocol.dart';
 import '../../../services/cross_platform/session_manager.dart';
 import '../../widgets/styled_qr.dart';
 import '../cross_platform/qr_scan_page.dart';
+import '../privacy/privacy_policy_page.dart';
 import '../../widgets/voice_input_button.dart';
 import '../home/home_page.dart';
 import 'knowledge_graph_backdrop.dart';
@@ -814,11 +815,42 @@ class _LoginPageState extends State<LoginPage>
                           : _buildQrScanTab(),
                     ),
                   ),
+                  _buildPolicyFooter(accent),
                 ],
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  /// 登录卡底部协议链接 — 满足"用户使用前可阅读用户协议 / 隐私声明"的合规要求
+  Widget _buildPolicyFooter(Color accent) {
+    final faded = TextStyle(fontSize: 11, color: _ink.withValues(alpha: 0.6));
+    Widget link(String label, int tab) => InkWell(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => PrivacyPolicyPage(initialTab: tab)),
+          ),
+          child: Text(label,
+              style: TextStyle(
+                  fontSize: 11,
+                  color: accent,
+                  decoration: TextDecoration.underline)),
+        );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 4, 24, 18),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Text('登录即表示同意 ', style: faded),
+          link('《用户协议》', 0),
+          Text(' 与 ', style: faded),
+          link('《隐私声明》', 1),
+        ],
       ),
     );
   }

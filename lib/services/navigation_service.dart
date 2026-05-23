@@ -34,6 +34,8 @@ import '../presentation/pages/analytics/token_stats_page.dart';
 import '../presentation/pages/analytics/student_token_page.dart';
 import '../presentation/pages/analytics/class_token_page.dart';
 import '../presentation/pages/analytics/agent_calls_dashboard_page.dart';
+import '../presentation/pages/privacy/privacy_policy_page.dart';
+import '../presentation/pages/privacy/my_data_page.dart';
 import '../services/auth_service.dart';
 
 /// 全局导航服务 — 跨页面 Tab 切换 + 子页面跳转 + 返回
@@ -214,6 +216,10 @@ class NavigationService {
     'token统计': 'token_stats', 'token': 'token_stats', '用量统计': 'token_stats',
     '学生token': 'student_token', '班级token': 'class_token',
     'ai调用': 'agent_calls', 'agent统计': 'agent_calls', '智能体统计': 'agent_calls',
+
+    // ── 隐私 ──
+    '隐私': 'privacy', '协议': 'privacy', '用户协议': 'privacy', '隐私声明': 'privacy',
+    '我的数据': 'my_data', '导出我的': 'my_data', '删除我的数据': 'my_data',
   };
 
   /// 尝试通过关键词匹配子页面并导航
@@ -310,6 +316,10 @@ class NavigationService {
         return const ClassTokenPage();
       case 'agent_calls':
         return const AgentCallsDashboardPage();
+      case 'privacy':
+        return const PrivacyPolicyPage();
+      case 'my_data':
+        return const MyDataPage();
       default:
         return null;
     }

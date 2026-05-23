@@ -10,6 +10,8 @@ import '../learning/progress_page.dart';
 import '../learning/weakness_diagnosis_page.dart';
 import '../learning/student_lab_page.dart';
 import '../lab/productization_guide_page.dart';
+import '../privacy/privacy_policy_page.dart';
+import '../privacy/my_data_page.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
 class StudentCenterPage extends StatefulWidget {
@@ -590,6 +592,24 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const ProductizationGuidePage()),
+        ),
+      ),
+      _QuickAction(
+        icon: Icons.privacy_tip_outlined,
+        label: '我的数据',
+        color: Colors.blueGrey,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const MyDataPage()),
+        ),
+      ),
+      _QuickAction(
+        icon: Icons.gavel_outlined,
+        label: '协议声明',
+        color: Colors.grey,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const PrivacyPolicyPage()),
         ),
       ),
     ];
