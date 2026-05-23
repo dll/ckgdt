@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/constants/app_urls.dart';
 import '../data/local/database_helper.dart';
 import 'gitee_service.dart';
 
@@ -45,9 +46,9 @@ class SyncService {
 
   // ── 同步专用 Token（读写权限）──────────────────────────────────────────
 
-  /// 预置读写 Token（osgisOne/mad-fd 仓库，具有 projects 读写权限）
-  /// 如果没有配置过同步 Token，自动使用此默认值
-  static const _defaultSyncToken = '64a07762f8a3ab4415b8c943651bfb91';
+  /// 预置读写 Token — 集中维护在 `lib/core/constants/app_urls.dart` 的
+  /// [GiteeCredentials.syncToken]。详见该常量的设计权衡说明。
+  static String get _defaultSyncToken => GiteeCredentials.syncToken;
 
   /// 确保同步 Token 已配置（首次使用时自动设置）
   Future<void> _ensureSyncToken() async {

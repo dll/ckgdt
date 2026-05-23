@@ -1,0 +1,65 @@
+name: knowledge_graph_app
+description: 移动图谱与数字孪生教学系统
+publish_to: "none"
+version: 0.11.0+12
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  sqflite: ^2.3.0
+  sqflite_common_ffi: ^2.3.3
+  sqflite_common_ffi_web: ^0.4.3+1
+  sqlite3_flutter_libs: ^0.5.42
+  path_provider: ^2.1.1
+  path: ^1.9.0
+  fl_chart: ^0.66.0
+  shared_preferences: ^2.2.2
+  http: ^1.2.1
+  pdf: ^3.10.8
+  printing: ^5.13.1
+  cached_network_image: ^3.3.1
+  open_filex: ^4.7.0
+  file_picker: ^10.3.10
+  excel: ^4.0.6
+  intl: ^0.19.0
+  url_launcher: ^6.2.5
+  media_kit: ^1.1.11
+  media_kit_video: ^1.2.5
+  media_kit_libs_windows_video: ^1.0.10
+  archive: ^3.6.1
+  xml: ^6.5.0
+  flutter_markdown: ^0.7.6
+  crypto: ^3.0.3
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^5.1.1
+  network_info_plus: ^5.0.3
+  web_socket_channel: ^2.4.0
+  record: ^6.0.0
+  flutter_tts: ^4.2.0
+  syncfusion_flutter_pdf: ^24.2.9
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/
+    - assets/fonts/
+    - assets/graphs/01-课程图谱/
+    - assets/graphs/02-技术栈图谱/
+    - assets/graphs/03-实验图谱/
+    - assets/graphs/04-项目图谱/
+    - assets/graphs/05-教学图谱/
+    - assets/graphs/06-学习图谱/
+    - data/实验/实验教程/
+    - data/实验/移动技术栈/
+    - data/实验/实验指导/
+    - data/实验/报告模板/
