@@ -9,6 +9,7 @@ import '../admin/data_export_page.dart';
 import '../admin/class_manage_page.dart';
 import '../admin/survey_manage_page.dart';
 import '../analytics/learning_analytics_page.dart';
+import '../analytics/agent_calls_dashboard_page.dart';
 import '../graph/knowledge_graph_page.dart';
 import '../admin/teaching_manage_page.dart';
 import '../admin/lab_task_manage_page.dart';
@@ -468,6 +469,16 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const LearningAnalyticsPage()),
+        ),
+      ),
+      _ToolItem(
+        icon: Icons.insights,
+        label: 'AI 调用统计',
+        color: Colors.deepPurple,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (_) => const AgentCallsDashboardPage()),
         ),
       ),
       _ToolItem(

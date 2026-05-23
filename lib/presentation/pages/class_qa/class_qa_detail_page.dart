@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../data/local/class_qa_dao.dart';
 import '../../../data/models/class_qa_model.dart';
+import '../../../services/agent/agent_model.dart';
+import '../../../services/agent/agents/tutor_agent.dart';
 import '../../../services/auth_service.dart';
 
 /// 班级问答详情页 — 显示问题 + 所有回复 + 教师回复入口 + 学生互助回复
@@ -14,10 +16,12 @@ class ClassQaDetailPage extends StatefulWidget {
 class _ClassQaDetailPageState extends State<ClassQaDetailPage> {
   final _auth = AuthService();
   final _replyCtl = TextEditingController();
+  final _tutor = TutorAgent();
   ClassQaModel? _qa;
   List<ClassQaReplyModel> _replies = [];
   bool _loading = true;
   bool _replying = false;
+  bool _drafting = false;
 
   @override
   void initState() {
@@ -101,6 +105,43 @@ class _ClassQaDetailPageState extends State<ClassQaDetailPage> {
     if (reply.id == null) return;
     await ClassQaDao.instance.incrementLike(reply.id!);
     _load();
+  }
+
+  /// 让 tutor agent 基于问题正文起草一份回复，写入回复输入框；
+  /// 用户审阅 / 编辑后再发送。**不直接落库**。
+  ///
+  /// 用 RAG 上下文 → 课程相关问答更贴 6 章内容；session 临时构造，不污染主对话。
+  Future<void> _draftWithAi() async {
+    if (_qa == null) return;
+    setState(() => _drafting = true);
+    final session = AgentSession(activeAgentId: 'tutor');
+    final prompt = StringBuffer()
+      ..writeln('你是课堂助教。学生在班级问答中提了一个问题，请起草一份简明、'
+          '具体、能让其他同学学到东西的回答。')
+      ..writeln('如果问题太宽泛，请给出 2-3 个澄清子问题。')
+      ..writeln('---')
+      ..writeln('## 标题')
+      ..writeln(_qa!.title)
+      ..writeln('## 正文')
+      ..writeln(_qa!.body);
+    try {
+      final reply = await _tutor.handleMessage(prompt.toString(), session);
+      if (!mounted) return;
+      _replyCtl.text = reply.content;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('AI 草稿已填入下方，可编辑后发送'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('AI 起草失败：$e')),
+      );
+    } finally {
+      if (mounted) setState(() => _drafting = false);
+    }
   }
 
   @override
@@ -256,30 +297,56 @@ class _ClassQaDetailPageState extends State<ClassQaDetailPage> {
       child: Padding(
         padding: EdgeInsets.fromLTRB(
             12, 8, 12, 8 + MediaQuery.of(context).viewInsets.bottom),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: TextField(
-                controller: _replyCtl,
-                decoration: const InputDecoration(
-                  hintText: '回复...',
-                  border: OutlineInputBorder(),
-                  isDense: true,
+            // AI 起草按钮 — 调 tutor agent 起草，写入下方输入框
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: _drafting ? null : _draftWithAi,
+                icon: _drafting
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.auto_awesome, size: 16),
+                label: Text(_drafting ? 'AI 起草中…' : 'AI 起草回复',
+                    style: const TextStyle(fontSize: 12)),
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  foregroundColor: theme.colorScheme.primary,
                 ),
-                minLines: 1,
-                maxLines: 4,
               ),
             ),
-            const SizedBox(width: 8),
-            FilledButton(
-              onPressed: _replying ? null : _submitReply,
-              child: _replying
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('发送'),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _replyCtl,
+                    decoration: const InputDecoration(
+                      hintText: '回复...',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    minLines: 1,
+                    maxLines: 4,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: _replying ? null : _submitReply,
+                  child: _replying
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('发送'),
+                ),
+              ],
             ),
           ],
         ),

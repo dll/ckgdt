@@ -152,7 +152,10 @@ class LabGradingAgent extends BaseAgent {
   ///
   /// 触发场景：教师在 AI 批阅页打开"安全增强模式"开关，对疑似 AI 代写 / 涉敏内容
   /// 的提交做更严格审查。其它场景仍走 [gradeSubmission] 保持低成本。
-  Future<({String gradingJson, String ethicsAdvice, String safetyNote})>
+  ///
+  /// 返回 record 中的 [chainId] 与 `agent_call_logs.chain_id` 关联，
+  /// UI 可据此跳到 chain 详情页（agent_call_logs 仪表板）。
+  Future<({String chainId, String gradingJson, String ethicsAdvice, String safetyNote})>
       gradeSubmissionWithOrchestrator({
     required String taskTitle,
     required String content,
@@ -204,6 +207,7 @@ class LabGradingAgent extends BaseAgent {
             skipped: true));
 
     return (
+      chainId: result.chainId,
       gradingJson: gradingStep.output ?? '',
       ethicsAdvice: ethicsStep.output ?? '',
       safetyNote: safetyStep.output ?? '',

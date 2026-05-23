@@ -51,6 +51,10 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
   int _gradingTotal = 0;
   String _gradingStatus = '';
 
+  /// 增强批阅模式：用 OrchestratorAgent 串联 safety → lab_grading → ethics 三 Agent。
+  /// 适合疑似 AI 代写 / 涉敏内容批阅；常规批阅保持关闭以省 token。
+  bool _enhancedMode = false;
+
   // ── 复选框 ──
   final Set<int> _selectedForApproval = {};
 
@@ -195,17 +199,51 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
           if (mounted) setState(() {});
           continue;
         }
-        final result = await _gradingAgent.gradeSubmission(
-          taskTitle: taskTitle,
-          content: prepared.content,
-          maxScore: (sub['max_score'] as int?) ?? 100,
-          requirements: requirements,
-        );
+
+        // 增强模式 → Orchestrator 链路（safety → grading → ethics）
+        // 标准模式 → 单 Agent 直接批阅
+        String result;
+        String? ethicsAdvice;
+        String? safetyNote;
+        String? chainId;
+        if (_enhancedMode) {
+          final orchResult = await _gradingAgent.gradeSubmissionWithOrchestrator(
+            taskTitle: taskTitle,
+            content: prepared.content,
+            maxScore: (sub['max_score'] as int?) ?? 100,
+            requirements: requirements,
+          );
+          result = orchResult.gradingJson;
+          ethicsAdvice = orchResult.ethicsAdvice;
+          safetyNote = orchResult.safetyNote;
+          chainId = orchResult.chainId;
+        } else {
+          result = await _gradingAgent.gradeSubmission(
+            taskTitle: taskTitle,
+            content: prepared.content,
+            maxScore: (sub['max_score'] as int?) ?? 100,
+            requirements: requirements,
+          );
+        }
 
         final parsed = tryParseGradingJson(result);
         if (parsed != null) {
           final score = (parsed['score'] as num?)?.toInt() ?? 0;
-          final feedback = formatGradingFeedback(parsed);
+          var feedback = formatGradingFeedback(parsed);
+          // 增强模式：把 ethics + safety 摘要附加到反馈尾部，写入 grading_results
+          if (_enhancedMode) {
+            final extra = StringBuffer();
+            if (safetyNote != null && safetyNote.trim().isNotEmpty) {
+              extra.writeln('\n---\n## 🛡 安全审查\n$safetyNote');
+            }
+            if (ethicsAdvice != null && ethicsAdvice.trim().isNotEmpty) {
+              extra.writeln('\n---\n## ⚖️ 学术伦理建议\n$ethicsAdvice');
+            }
+            if (chainId != null) {
+              extra.writeln('\n_调用链: ${chainId}_');
+            }
+            if (extra.isNotEmpty) feedback = '$feedback${extra.toString()}';
+          }
           final dims =
               parsed['dimensions'] as Map<String, dynamic>?;
           final strengths = (parsed['strengths'] as List?)
@@ -773,13 +811,67 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                   ],
                 ),
               ] else
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: _startBatchGrading,
-                    icon: const Icon(Icons.auto_awesome, size: 18),
-                    label: const Text('开始批量AI批阅'),
-                  ),
+                Column(
+                  children: [
+                    // 增强模式开关 — Orchestrator 串联 safety + grading + ethics
+                    Row(
+                      children: [
+                        Switch(
+                          value: _enhancedMode,
+                          onChanged: (v) =>
+                              setState(() => _enhancedMode = v),
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Tooltip(
+                            message: '开启后每份报告会经过：\n'
+                                '🛡 内容安全审查 → 📝 主批阅 → ⚖️ 学术伦理建议\n'
+                                '更严谨但 Token 消耗约 3 倍，建议疑似 AI 代写时启用',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  _enhancedMode
+                                      ? Icons.shield
+                                      : Icons.shield_outlined,
+                                  size: 16,
+                                  color: _enhancedMode
+                                      ? primary
+                                      : Colors.grey,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _enhancedMode ? '增强批阅（3 Agent 链路）' : '标准批阅',
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      color: _enhancedMode
+                                          ? primary
+                                          : Colors.grey[700],
+                                      fontWeight: _enhancedMode
+                                          ? FontWeight.w600
+                                          : FontWeight.normal),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: _startBatchGrading,
+                        icon: Icon(
+                            _enhancedMode
+                                ? Icons.auto_awesome_motion
+                                : Icons.auto_awesome,
+                            size: 18),
+                        label: Text(_enhancedMode
+                            ? '开始增强 AI 批阅'
+                            : '开始批量 AI 批阅'),
+                      ),
+                    ),
+                  ],
                 ),
             ],
           ],

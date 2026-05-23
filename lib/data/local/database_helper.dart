@@ -1406,6 +1406,8 @@ class DatabaseHelper {
         agent_name TEXT NOT NULL,
         user_id TEXT,
         session_id TEXT,
+        chain_id TEXT,
+        chain_step INTEGER,
         prompt_summary TEXT,
         response_summary TEXT,
         duration_ms INTEGER,
@@ -1426,6 +1428,24 @@ class DatabaseHelper {
       CREATE INDEX IF NOT EXISTS idx_agent_call_logs_user
       ON agent_call_logs(user_id, created_at DESC)
     ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_agent_call_logs_chain
+      ON agent_call_logs(chain_id, chain_step)
+    ''');
+    // 老版本表迁移 — 缺 chain_id/chain_step 列时补齐（字段顺序无所谓）
+    try {
+      final cols = await db.rawQuery('PRAGMA table_info(agent_call_logs)');
+      final names = cols.map((r) => r['name'] as String).toSet();
+      if (!names.contains('chain_id')) {
+        await db.execute('ALTER TABLE agent_call_logs ADD COLUMN chain_id TEXT');
+      }
+      if (!names.contains('chain_step')) {
+        await db.execute(
+            'ALTER TABLE agent_call_logs ADD COLUMN chain_step INTEGER');
+      }
+    } catch (_) {
+      // ALTER 失败说明列已存在或 PRAGMA 失败，都不致命
+    }
 
     // ── class_qa：班级问答广场 ──────────────────────────────────────
     await db.execute('''
