@@ -155,7 +155,7 @@ void main() {
 
       expect(model.provider, 'deepseek');
       expect(model.apiKey, isNull);
-      expect(model.model, 'deepseek-chat');
+      expect(model.model, 'deepseek-v4-pro');
       expect(model.baseUrl, isNull);
       expect(model.updatedAt, isNull);
     });
@@ -164,7 +164,7 @@ void main() {
       const model = AiConfigModel();
 
       expect(model.provider, 'deepseek');
-      expect(model.model, 'deepseek-chat');
+      expect(model.model, 'deepseek-v4-pro');
       expect(model.apiKey, isNull);
       expect(model.baseUrl, isNull);
     });
