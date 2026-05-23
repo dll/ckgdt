@@ -37,6 +37,8 @@ class VoiceAgent extends BaseAgent {
     '通知中心': 'notification',
     '数据同步': 'sync',
     '三端互通': 'sync',
+    '四端互通': 'sync',
+    '多端互通': 'sync',
     '学习进度': 'progress',
     '错题本': 'wrong_answers',
     '我的收藏': 'favorites',

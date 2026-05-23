@@ -563,7 +563,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 _buildMenuCard(
                   icon: Icons.devices,
-                  title: '三端互通',
+                  title: '多端互通',
                   onTap: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const CrossPlatformHubPage())),
                 ),
@@ -1008,7 +1008,7 @@ class _AdminToolsPage extends StatelessWidget {
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RepoAnalyticsPage()))),
       _AdminTool(Icons.sync, '数据同步',
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DataSyncPage()))),
-      _AdminTool(Icons.devices, '三端互通',
+      _AdminTool(Icons.devices, '多端互通',
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CrossPlatformHubPage()))),
       _AdminTool(Icons.settings, '系统设置',
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()))),

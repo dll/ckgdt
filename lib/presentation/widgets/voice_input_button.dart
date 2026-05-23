@@ -584,6 +584,8 @@ class VoiceNavigationFab extends StatelessWidget {
       '搜索': 'search',
       '同步': 'sync',
       '三端': 'crossplatform',
+      '四端': 'crossplatform',
+      '多端': 'crossplatform',
       '互通': 'crossplatform',
       '通知': 'notification',
       '进度': 'progress',

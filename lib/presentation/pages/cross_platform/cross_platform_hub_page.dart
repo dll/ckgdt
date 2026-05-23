@@ -14,11 +14,11 @@ import 'qr_scan_page.dart';
 import '../../../core/constants/app_urls.dart';
 import '../../../core/constants/color_ohos_compat.dart';
 import '../../../services/clipboard_helper.dart';
-/// 三端互通 Hub 页面
+/// 多端互通 Hub 页面
 ///
 /// 根据平台角色自动展示不同功能区：
-/// - **桌面端**（服务器模式）：启动服务器 → 显示 QR 码 → 管理连接 → 打开 Web
-/// - **移动端**（客户端模式）：扫码连接 → 数据同步 → 显示连接状态
+/// - **桌面端**（服务器模式，Windows / HarmonyOS）：启动服务器 → 显示 QR 码 → 管理连接 → 打开 Web
+/// - **移动端**（客户端模式，Android）：扫码连接 → 数据同步 → 显示连接状态
 /// - **Web 端**（客户端模式）：手动输入地址连接 → 数据同步
 class CrossPlatformHubPage extends StatefulWidget {
   const CrossPlatformHubPage({super.key});
@@ -425,7 +425,7 @@ class _CrossPlatformHubPageState extends State<CrossPlatformHubPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('三端互通'),
+        title: const Text('多端互通'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
