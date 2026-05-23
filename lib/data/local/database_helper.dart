@@ -1397,6 +1397,76 @@ class DatabaseHelper {
       CREATE INDEX IF NOT EXISTS idx_notif_recip_user
       ON notification_recipients(user_id, is_read)
     ''');
+
+    // ── agent_call_logs：Agent LLM 调用审计日志 ─────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS agent_call_logs(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        agent_id TEXT NOT NULL,
+        agent_name TEXT NOT NULL,
+        user_id TEXT,
+        session_id TEXT,
+        prompt_summary TEXT,
+        response_summary TEXT,
+        duration_ms INTEGER,
+        prompt_chars INTEGER,
+        response_chars INTEGER,
+        provider TEXT,
+        model TEXT,
+        error TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_agent_call_logs_agent
+      ON agent_call_logs(agent_id, created_at DESC)
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_agent_call_logs_user
+      ON agent_call_logs(user_id, created_at DESC)
+    ''');
+
+    // ── class_qa：班级问答广场 ──────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS class_qa(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        author_id TEXT NOT NULL,
+        author_name TEXT NOT NULL,
+        author_role TEXT NOT NULL,
+        class_id TEXT,
+        title TEXT NOT NULL,
+        body TEXT NOT NULL,
+        visibility TEXT NOT NULL DEFAULT 'class',
+        status TEXT NOT NULL DEFAULT 'open',
+        accepted_reply_id INTEGER,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_class_qa_status
+      ON class_qa(class_id, status, updated_at DESC)
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS class_qa_replies(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        qa_id INTEGER NOT NULL,
+        author_id TEXT NOT NULL,
+        author_name TEXT NOT NULL,
+        author_role TEXT NOT NULL,
+        body TEXT NOT NULL,
+        is_teacher INTEGER NOT NULL DEFAULT 0,
+        likes INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (qa_id) REFERENCES class_qa(id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_class_qa_replies_qa
+      ON class_qa_replies(qa_id, created_at ASC)
+    ''');
   }
 
   // ── V14 迁移：AI 配置扩展 + 聊天历史 ──────────────────────────────────────

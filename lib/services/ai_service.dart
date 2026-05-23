@@ -51,7 +51,8 @@ class AiService {
   }) async {
     final config = configOverride ?? await _configDao.getConfig();
     final effectiveKey = config.effectiveApiKey;
-    if (effectiveKey == null || effectiveKey.isEmpty) {
+    final isLocal = config.provider == 'ollama' || config.provider == 'vllm';
+    if (!isLocal && (effectiveKey == null || effectiveKey.isEmpty)) {
       throw '抱歉，AI 服务暂时不可用。请在「设置  →  AI 配置」中配置 API Key。';
     }
 
@@ -69,7 +70,8 @@ class AiService {
           Uri.parse(url),
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer $effectiveKey',
+            // 本地服务（ollama/vllm）允许任意 Bearer，包括 dummy。给个占位让 header 合法
+            'Authorization': 'Bearer ${effectiveKey ?? 'local-no-key'}',
             'User-Agent': 'knowledge-graph-app/1.0',
           },
           body: jsonEncode({

@@ -169,6 +169,22 @@ class AiConfigModel {
       freeNote: '本地免费',
     ),
     ProviderPreset(
+      id: 'ollama',
+      name: 'Ollama（本地）',
+      baseUrl: 'http://localhost:11434/v1',
+      models: ['llama3.1:8b', 'qwen2.5:7b', 'qwen2.5:14b', 'mistral:7b', 'gemma2:9b'],
+      description: '本地运行的 Ollama 服务，OpenAI 兼容接口。无需 API Key、完全离线、教学场景内网首选。需先 `ollama pull <model>` 下载模型。',
+      freeNote: '本地免费',
+    ),
+    ProviderPreset(
+      id: 'vllm',
+      name: 'vLLM（本地/局域网）',
+      baseUrl: 'http://localhost:8000/v1',
+      models: ['Qwen/Qwen2.5-7B-Instruct', 'meta-llama/Llama-3.1-8B-Instruct'],
+      description: '高吞吐 vLLM 服务，OpenAI 兼容接口。生产级本地推理，支持多 GPU。校园机房部署后所有学生共用。',
+      freeNote: '本地免费',
+    ),
+    ProviderPreset(
       id: 'custom',
       name: '自定义服务',
       baseUrl: '',

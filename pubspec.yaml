@@ -59,6 +59,7 @@ flutter:
     - assets/graphs/04-项目图谱/
     - assets/graphs/05-教学图谱/
     - assets/graphs/06-学习图谱/
+    - assets/agent_prompts/
     - data/实验/实验教程/
     - data/实验/移动技术栈/
     - data/实验/实验指导/

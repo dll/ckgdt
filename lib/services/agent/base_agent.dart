@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'agent_model.dart';
+import 'prompt_loader.dart';
 import '../ai_service.dart';
 import '../rag_service.dart';
+import '../../data/local/agent_call_log_dao.dart';
 
 /// 智能体抽象基类
 ///
@@ -15,6 +17,15 @@ abstract class BaseAgent {
   /// 处理用户消息，返回智能体回复
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session);
+
+  /// 优先从 `assets/agent_prompts/{config.id}.md` 加载 persona；
+  /// 若 assets 中没有该文件则回退到代码中的 `config.persona`。
+  ///
+  /// 用 [PromptLoader] 内存缓存，二次调用零成本。
+  Future<String> loadEffectivePersona() async {
+    final fromAssets = await PromptLoader.load(config.id);
+    return fromAssets ?? config.persona;
+  }
 
   /// 判断此智能体是否能处理该消息（0.0 ~ 1.0）
   /// Director 用此分数选择最佳智能体
@@ -124,23 +135,52 @@ abstract class BaseAgent {
     return messages;
   }
 
-  /// 安全调用 AI 服务（带错误处理），返回含模型元数据的结果
+  /// 安全调用 AI 服务（带错误处理），返回含模型元数据的结果。
+  ///
+  /// 自动写入 [AgentCallLogDao] 审计日志（异常静默不影响主链路）。
   Future<AiChatResult> safeAiChatWithMeta(
     List<Map<String, String>> messages, {
     String? systemPrompt,
     required AiService aiService,
     double? temperature,
   }) async {
+    final stopwatch = Stopwatch()..start();
+    final effectivePrompt = systemPrompt ?? await loadEffectivePersona();
+    final lastUserMsg = messages.isNotEmpty
+        ? (messages.last['content'] ?? '')
+        : '';
+    final promptChars = effectivePrompt.length + lastUserMsg.length;
+    AiChatResult? result;
+    String? error;
+
     try {
-      return await aiService.chatWithMeta(messages,
-          systemPrompt: systemPrompt ?? config.persona,
-          temperature: temperature);
+      result = await aiService.chatWithMeta(messages,
+          systemPrompt: effectivePrompt, temperature: temperature);
+      return result;
     } catch (e) {
+      error = e.toString();
       debugPrint('${config.name}: AI 调用失败: $e');
       return AiChatResult(
         content: '抱歉，AI 服务暂时不可用。请检查网络连接和 AI 配置。\n\n错误: $e',
         provider: '',
         model: '',
+      );
+    } finally {
+      stopwatch.stop();
+      // 异步写日志，不 await — 不阻塞主调用链
+      AgentCallLogDao.instance.insert(
+        agentId: config.id,
+        agentName: config.name,
+        promptSummary: lastUserMsg.length > 200
+            ? '${lastUserMsg.substring(0, 200)}…'
+            : lastUserMsg,
+        responseSummary: result?.content,
+        durationMs: stopwatch.elapsedMilliseconds,
+        promptChars: promptChars,
+        responseChars: result?.content.length,
+        provider: result?.provider,
+        model: result?.model,
+        error: error,
       );
     }
   }
@@ -153,7 +193,7 @@ abstract class BaseAgent {
   }) async {
     try {
       return await aiService.chat(messages,
-          systemPrompt: systemPrompt ?? config.persona);
+          systemPrompt: systemPrompt ?? await loadEffectivePersona());
     } catch (e) {
       debugPrint('${config.name}: AI 调用失败: $e');
       return '抱歉，AI 服务暂时不可用。请检查网络连接和 AI 配置。\n\n错误: $e';
@@ -171,7 +211,8 @@ abstract class BaseAgent {
   /// 如果 [config.useRag] 为 true，先检索相关课程知识，
   /// 将结果拼接到 persona 末尾作为参考资料。
   Future<String> buildRagPrompt(String userMessage) async {
-    if (!config.useRag) return config.persona;
+    final persona = await loadEffectivePersona();
+    if (!config.useRag) return persona;
 
     try {
       final context = await _ragService.retrieveContext(
@@ -181,15 +222,15 @@ abstract class BaseAgent {
         includeResources: true,
       );
 
-      if (context.isEmpty) return config.persona;
+      if (context.isEmpty) return persona;
 
-      return '${config.persona}\n\n$context\n\n'
+      return '$persona\n\n$context\n\n'
           '请基于以上课程知识库的参考资料回答用户问题，'
           '引用具体概念或资料时标注来源。'
           '如果参考资料与问题无关，可忽略。';
     } catch (e) {
       debugPrint('${config.name}: RAG 检索失败: $e');
-      return config.persona;
+      return persona;
     }
   }
 
@@ -281,7 +322,7 @@ abstract class BaseAgent {
     // 准备系统提示词（RAG + 工具声明）
     String prompt = config.useRag
         ? await buildRagPrompt(userMessage)
-        : config.persona;
+        : await loadEffectivePersona();
 
     if (config.tools.isNotEmpty) {
       prompt += buildToolsPromptSection();
@@ -319,7 +360,7 @@ abstract class BaseAgent {
     // 第二轮调用（不再包含工具声明，防止无限循环）
     return safeAiChatWithMeta(
       followUp,
-      systemPrompt: config.persona,
+      systemPrompt: await loadEffectivePersona(),
       aiService: aiService,
     );
   }
