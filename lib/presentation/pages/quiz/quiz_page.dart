@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_theme.dart';
+import '../../../core/init_logger.dart';
+import '../../../data/local/database_helper.dart';
 import '../../../data/local/quiz_dao.dart';
 import '../../../data/local/wrong_answer_dao.dart';
 import '../../../data/models/question_model.dart';
@@ -939,22 +941,47 @@ class _QuizPageState extends State<QuizPage> {
 
   Widget _buildChapterSelection() {
     if (_chapters.isEmpty) {
+      final initErr = DatabaseHelper.lastInitError;
+      final logPath = InitLogger.currentLogPath;
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.quiz_outlined, size: 64, color: Colors.grey),
-            const SizedBox(height: 16),
-            const Text(
-              '暂无测验题目',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadChapters,
-              child: const Text('刷新'),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                initErr == null ? Icons.quiz_outlined : Icons.warning_amber,
+                size: 64,
+                color: initErr == null ? Colors.grey : Colors.orange,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                initErr == null ? '暂无测验题目' : '题库未正确初始化',
+                style: const TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+              if (initErr != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  initErr,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 12, color: Colors.redAccent),
+                ),
+                if (logPath != null) ...[
+                  const SizedBox(height: 12),
+                  SelectableText(
+                    '请把这条日志发给管理员：\n$logPath',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  ),
+                ],
+              ],
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadChapters,
+                child: const Text('刷新'),
+              ),
+            ],
+          ),
         ),
       );
     }
