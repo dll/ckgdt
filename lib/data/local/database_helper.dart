@@ -231,11 +231,12 @@ class DatabaseHelper {
           'db', 'seed-check questions=$qCount graphs=$gCount');
 
       // 题目阈值：种子 52 道，< 30 视为异常（容忍少量删除 / 同步差异）
-      // 图谱阈值：种子 23 个，< 5 视为异常
-      if (qCount >= 30 && gCount >= 5) return;
+      // 图谱阈值：种子 23 个，< 20 视为异常（学生反馈 graphs=7 也通过了旧阈值 5
+      // 但缺了 16 个图谱 → 知识图谱页大量空白；提到 20 让 _onUpgrade 误删触发修复）
+      if (qCount >= 30 && gCount >= 20) return;
 
       InitLogger.log(
-          'db', 'seed below threshold (Q<30 or G<5) — importing via SQL');
+          'db', 'seed below threshold (Q<30 or G<20) — importing via SQL');
       await _importSeedDataViaSql(db);
 
       // 最终验证 — 修复后还是空就明确告诉 UI
@@ -244,9 +245,9 @@ class DatabaseHelper {
       final q2 = (qc2.first['c'] as int?) ?? 0;
       final g2 = (gc2.first['c'] as int?) ?? 0;
       InitLogger.log('db', 'after repair questions=$q2 graphs=$g2');
-      if (q2 < 30 || g2 < 5) {
+      if (q2 < 30 || g2 < 20) {
         lastInitError =
-            'seed-repair-incomplete: questions=$q2 graphs=$g2 (expected ≥30/≥5)';
+            'seed-repair-incomplete: questions=$q2 graphs=$g2 (expected ≥30/≥20)';
         InitLogger.log('db', lastInitError!);
       }
     } catch (e, st) {

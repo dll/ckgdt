@@ -26,6 +26,7 @@ class _VoiceSettingsPageState extends State<VoiceSettingsPage> {
   bool _testing = false;
   String? _testResult;
   bool _testSuccess = false;
+  bool _voiceDisabled = false;
 
   @override
   void initState() {
@@ -45,9 +46,11 @@ class _VoiceSettingsPageState extends State<VoiceSettingsPage> {
     final appId = await SettingsService.getXunfeiAppId();
     final apiKey = await SettingsService.getXunfeiApiKey();
     final apiSecret = await SettingsService.getXunfeiApiSecret();
+    final disabled = await SettingsService.isVoiceDisabled();
     _appIdController.text = appId;
     _apiKeyController.text = apiKey;
     _apiSecretController.text = apiSecret;
+    _voiceDisabled = disabled;
     if (mounted) setState(() => _loading = false);
   }
 
@@ -213,6 +216,28 @@ class _VoiceSettingsPageState extends State<VoiceSettingsPage> {
                       ),
                     ),
                   ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // ── 应急开关：关掉语音功能（避开 record 包桌面端原生崩溃）──
+            Card(
+              child: SwitchListTile(
+                value: _voiceDisabled,
+                onChanged: (v) async {
+                  await SettingsService.setVoiceDisabled(v);
+                  if (mounted) setState(() => _voiceDisabled = v);
+                },
+                title: const Text('禁用语音功能'),
+                subtitle: const Text(
+                  '若桌面端点击麦克风按钮后程序崩溃，先打开此开关绕开。\n开关打开后所有麦克风按钮会显示"未配置"，但不会再调用麦克风原生层。',
+                  style: TextStyle(fontSize: 11),
+                ),
+                secondary: Icon(
+                  _voiceDisabled ? Icons.mic_off : Icons.mic,
+                  color: _voiceDisabled ? Colors.orange : primary,
                 ),
               ),
             ),
