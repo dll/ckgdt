@@ -200,19 +200,26 @@ lib/
 
 ### 种子数据库初始化流程（关键）
 
-种子 DB `assets/learning_data.db` 已预置 `user_version = 20`，包含 52 道测验题、23 个图谱等种子数据。初始化流程为三层防御：
+种子 DB `assets/learning_data.db` 已预置 `user_version = 20`，包含 52 道测验题、23 个图谱等种子数据。**应用 DB 当前 version = 24**（migrations 21-24 是增量加表 / 加列，不删数据），seed 打开时会触发 `_onUpgrade(20→24)`，结果是 schema 升级后数据保持。初始化流程：
 
 ```
-1. 复制 seed DB → assets/learning_data.db → knowledge_graph.db（仅首次）
-2. 打开 DB（version: 20）→ 若 seed DB 已设置 user_version=20，则跳过 onCreate/onUpgrade
-3. _ensureAllTables() → 始终执行，确保 59 张表存在
-4. _verifyAndRepairSeedData() → 检查 questions/graphs 是否为空，若空则从 seed DB 重新导入
+1. platform_init_native.dart 显式 setDatabasesPath = ApplicationSupportDirectory/databases
+   （桌面端 sqflite_common_ffi 默认是 CWD 相对路径，不同启动场景会变成"多次首次安装"）
+2. 复制 seed DB → assets/learning_data.db → <support>/databases/knowledge_graph.db（仅首次）
+3. 打开 DB（version: 24）→ 触发 _onUpgrade(20→24) 增量迁移
+4. _ensureAllTables() → 始终执行，确保 66 张表存在
+5. _verifyAndRepairSeedData() → 检查 questions/graphs 是否低于阈值（<30/<5），若是则 SQL 级重导
 ```
+
+**所有失败路径写文件日志**：`lib/core/init_logger.dart` → `<exe>/logs/mad_init.log`（写不进就退到 ApplicationSupport）。学生反馈"测验空白"时，让他把这文件发回来，立刻能看到具体异常。
+
+**UI 兜底**：`DatabaseHelper.lastInitError` 非空时，QuizPage 不再只显示"暂无测验题目"，而是显示具体错误码 + 日志路径，引导找管理员。
 
 **关键点**：
-- 种子 DB 的 `user_version = 20` 是核心：匹配 `openDatabase(version: 20)` 时，sqflite 不会触发 `onCreate`/`onUpgrade`，种子数据得以完整保留
-- `_importTableSafe()` 方法会对比目标表列名，只迁移匹配的列（处理 seed DB 与应用 DB 的 schema 差异）
-- 三层防御确保：正常复制 → 版本匹配跳过迁移 → 异常时自动修复空数据
+- 桌面端必须固化 `databasesPath`，不能依赖 `getDatabasesPath()` 默认（CWD 相对）
+- 所有 catch 必须接 `InitLogger.error/log`，不能用 `debugPrint`（Release 不可见）
+- `_importTableSafe()` 对比目标表列名，只迁移匹配的列
+- 题库阈值 ≥30 / 图谱 ≥5 — 低于阈值即触发 SQL 级修复
 
 ### 核心表
 

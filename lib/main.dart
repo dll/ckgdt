@@ -2,6 +2,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
+import 'core/init_logger.dart';
 import 'data/local/database_helper.dart';
 import 'l10n/gen/app_localizations.dart';
 import 'services/data_loading_service.dart';
@@ -29,16 +30,20 @@ import 'platform/platform_init_stub.dart'
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // 启动期文件日志器（必须最先初始化 — 后续每个 catch 都会写到日志）
+  await InitLogger.init();
+  InitLogger.log('main', 'app starting');
+
   bool dbLocked = false;
   String? dbError;
 
   // ── 全局错误处理：捕获 Flutter 框架异常（含原生插件崩溃）────────────────
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
-    debugPrint('=== FlutterError: ${details.exception}');
+    InitLogger.error('flutter', details.exception, details.stack);
   };
   PlatformDispatcher.instance.onError = (error, stack) {
-    debugPrint('=== PlatformError: $error\n$stack');
+    InitLogger.error('platform', error, stack);
     return true; // 已处理，防止应用退出
   };
 
@@ -47,8 +52,8 @@ void main() async {
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       MediaKit.ensureInitialized();
     }
-  } catch (e) {
-    debugPrint('=== main: MediaKit init skipped: $e');
+  } catch (e, st) {
+    InitLogger.error('main', 'MediaKit init skipped: $e', st);
   }
 
   // 平台相关初始化（数据库工厂、屏幕方向等）
@@ -57,17 +62,18 @@ void main() async {
   // Initialize database first
   try {
     await DatabaseHelper.instance.database;
-  } catch (e) {
-    debugPrint('=== main: Database init error: $e');
+  } catch (e, st) {
+    InitLogger.error('main', 'Database init error: $e', st);
     final err = e.toString();
-    if (err.contains('locked') || 
-        err.contains('database is locked') || 
+    // 只有数据库 lock 类异常才阻塞启动；种子数据问题让应用继续起来，
+    // UI 通过 DatabaseHelper.lastInitError 提示用户去看日志，而不是白屏。
+    if (err.contains('locked') ||
+        err.contains('database is locked') ||
         err.contains('singleInstance')) {
       dbLocked = true;
       dbError = '应用已在运行，请勿同时打开多个实例';
     } else {
-      dbLocked = true;
-      dbError = '数据库初始化失败: $e';
+      DatabaseHelper.lastInitError = 'db-init-throw: $e';
     }
   }
 
@@ -76,9 +82,15 @@ void main() async {
     if (!dbLocked) {
       await DataLoadingService.instance.initialize();
     }
-  } catch (e) {
-    debugPrint('=== main: DataLoadingService init error: $e');
+  } catch (e, st) {
+    InitLogger.error('main', 'DataLoadingService init error: $e', st);
   }
+
+  if (DatabaseHelper.lastInitError != null) {
+    InitLogger.log(
+        'main', 'startup with init error = ${DatabaseHelper.lastInitError}');
+  }
+  InitLogger.log('main', 'runApp');
 
   runApp(MyApp(dbLocked: dbLocked, dbError: dbError));
 }

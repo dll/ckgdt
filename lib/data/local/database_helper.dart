@@ -4,10 +4,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
+import '../../core/init_logger.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
+
+  /// 启动期 DB 初始化的失败摘要 — UI 可以读出来弹"数据库初始化异常"提示。
+  /// null = 一切正常；非空 = 学生看到测验空白时应该向管理员报这条字符串。
+  static String? lastInitError;
 
   DatabaseHelper._init();
 
@@ -147,18 +152,17 @@ class DatabaseHelper {
     final dbFolder = await getDatabasesPath();
     final dbPath = p.join(dbFolder, 'knowledge_graph.db');
 
-    debugPrint('=== DatabaseHelper: DB path: $dbPath');
+    InitLogger.log('db', 'native init dbFolder=$dbFolder dbPath=$dbPath');
 
     final exists = await databaseFactory.databaseExists(dbPath);
-    debugPrint('=== DatabaseHelper: Database exists = $exists');
+    InitLogger.log('db', 'databaseExists = $exists');
 
     // ── 第一步：如果 DB 不存在，从 assets 复制种子 DB ──
     // 种子 DB 的 user_version 已设为 20，匹配 openDatabase version 参数，
     // 这样 sqflite 不会触发 onCreate/onUpgrade，数据原封不动保留。
     if (!exists) {
       try {
-        debugPrint(
-            '=== DatabaseHelper: Copying seed DB from assets...');
+        InitLogger.log('db', 'copying seed DB from assets');
         final data = await rootBundle.load('assets/learning_data.db');
         final bytes =
             data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
@@ -171,16 +175,19 @@ class DatabaseHelper {
 
         try {
           await databaseFactory.writeDatabaseBytes(dbPath, bytes);
-        } catch (writeErr) {
-          debugPrint(
-              '=== DatabaseHelper: writeDatabaseBytes failed, trying direct file copy: $writeErr');
+        } catch (writeErr, st) {
+          InitLogger.error(
+              'db',
+              'writeDatabaseBytes failed, fallback to direct file copy: $writeErr',
+              st);
           // FFI 写入失败时回退到直接文件复制
           await File(dbPath).writeAsBytes(bytes);
         }
-        debugPrint(
-            '=== DatabaseHelper: Seed DB copied (${bytes.length} bytes)');
-      } catch (e) {
-        debugPrint('=== DatabaseHelper: Failed to copy seed DB: $e');
+        InitLogger.log('db', 'seed DB copied (${bytes.length} bytes)');
+      } catch (e, st) {
+        // 关键失败 — 一定要让 UI 看到
+        lastInitError = 'seed-copy-failed: $e';
+        InitLogger.error('db', 'failed to copy seed DB: $e', st);
       }
     }
 
@@ -220,24 +227,31 @@ class DatabaseHelper {
       final gc = await db.rawQuery('SELECT COUNT(*) as c FROM graphs');
       final qCount = (qc.first['c'] as int?) ?? 0;
       final gCount = (gc.first['c'] as int?) ?? 0;
-      debugPrint(
-          '=== DatabaseHelper: Seed check — Questions: $qCount, Graphs: $gCount');
+      InitLogger.log(
+          'db', 'seed-check questions=$qCount graphs=$gCount');
 
       // 题目阈值：种子 52 道，< 30 视为异常（容忍少量删除 / 同步差异）
       // 图谱阈值：种子 23 个，< 5 视为异常
       if (qCount >= 30 && gCount >= 5) return;
 
-      debugPrint(
-          '=== DatabaseHelper: Seed data below threshold (Q<30 or G<5)! Importing via SQL...');
+      InitLogger.log(
+          'db', 'seed below threshold (Q<30 or G<5) — importing via SQL');
       await _importSeedDataViaSql(db);
 
-      // 最终验证
+      // 最终验证 — 修复后还是空就明确告诉 UI
       final qc2 = await db.rawQuery('SELECT COUNT(*) as c FROM questions');
       final gc2 = await db.rawQuery('SELECT COUNT(*) as c FROM graphs');
-      debugPrint(
-          '=== DatabaseHelper: After repair — Questions: ${qc2.first['c']}, Graphs: ${gc2.first['c']}');
-    } catch (e) {
-      debugPrint('=== DatabaseHelper: Seed verify/repair error: $e');
+      final q2 = (qc2.first['c'] as int?) ?? 0;
+      final g2 = (gc2.first['c'] as int?) ?? 0;
+      InitLogger.log('db', 'after repair questions=$q2 graphs=$g2');
+      if (q2 < 30 || g2 < 5) {
+        lastInitError =
+            'seed-repair-incomplete: questions=$q2 graphs=$g2 (expected ≥30/≥5)';
+        InitLogger.log('db', lastInitError!);
+      }
+    } catch (e, st) {
+      lastInitError = 'seed-verify-failed: $e';
+      InitLogger.error('db', 'seed verify/repair error: $e', st);
     }
   }
 
@@ -246,7 +260,7 @@ class DatabaseHelper {
   /// 先将 asset 写入临时文件，打开为只读连接，再逐表 INSERT 到主库。
   Future<void> _importSeedDataViaSql(Database db) async {
     try {
-      debugPrint('=== DatabaseHelper [Native]: SQL-level seed import starting...');
+      InitLogger.log('db', 'SQL-level seed import starting');
       final data = await rootBundle.load('assets/learning_data.db');
       final bytes =
           data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
@@ -257,14 +271,14 @@ class DatabaseHelper {
 
       try {
         await databaseFactory.writeDatabaseBytes(tempPath, bytes);
-      } catch (e) {
-        debugPrint(
-            '=== DatabaseHelper [Native]: writeDatabaseBytes failed, trying direct write: $e');
+      } catch (e, st) {
+        InitLogger.error('db',
+            'temp writeDatabaseBytes failed, trying direct write: $e', st);
         try {
           await File(tempPath).writeAsBytes(bytes);
-        } catch (e2) {
-          debugPrint(
-              '=== DatabaseHelper [Native]: Temp seed write also failed: $e2');
+        } catch (e2, st2) {
+          lastInitError = 'seed-temp-write-failed: $e2';
+          InitLogger.error('db', 'temp seed write also failed: $e2', st2);
           return;
         }
       }
@@ -272,9 +286,9 @@ class DatabaseHelper {
       Database seedDb;
       try {
         seedDb = await openReadOnlyDatabase(tempPath);
-      } catch (e) {
-        debugPrint(
-            '=== DatabaseHelper [Native]: openReadOnlyDatabase failed, trying openDatabase: $e');
+      } catch (e, st) {
+        InitLogger.error('db',
+            'openReadOnlyDatabase failed, trying openDatabase: $e', st);
         // FFI 后端可能不支持 openReadOnlyDatabase，回退到普通 open
         seedDb = await openDatabase(tempPath, readOnly: true);
       }
@@ -301,9 +315,10 @@ class DatabaseHelper {
         await databaseFactory.deleteDatabase(tempPath);
       } catch (_) {}
 
-      debugPrint('=== DatabaseHelper [Native]: SQL-level seed import completed');
-    } catch (e) {
-      debugPrint('=== DatabaseHelper [Native]: SQL-level seed import failed: $e');
+      InitLogger.log('db', 'SQL-level seed import completed');
+    } catch (e, st) {
+      lastInitError = 'seed-sql-import-failed: $e';
+      InitLogger.error('db', 'SQL-level seed import failed: $e', st);
     }
   }
 
@@ -334,10 +349,9 @@ class DatabaseHelper {
         }
       }
       await batch.commit(noResult: true);
-      debugPrint(
-          '=== DatabaseHelper [Native]: Imported ${rows.length} $table');
-    } catch (e) {
-      debugPrint('=== DatabaseHelper [Native]: $table import error: $e');
+      InitLogger.log('db', 'imported ${rows.length} rows into $table');
+    } catch (e, st) {
+      InitLogger.error('db', '$table import error: $e', st);
     }
   }
 
