@@ -190,4 +190,130 @@ class NotificationService {
       debugPrint('NotificationService: 发送作品提交通知失败 — $e');
     }
   }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // AI 自动批阅 → 教师待复核（assessment / works）
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// AI 已为考核报告生成评分草稿，通知教师审核
+  Future<void> notifyAssessmentAutoGraded({
+    required String studentId,
+    required String studentName,
+    required String reportType,
+    required int score,
+  }) async {
+    try {
+      await _notificationDao.createNotification(
+        title: 'AI 批阅就绪：$studentName',
+        content: 'AI 已为 $studentName 的「$reportType」生成评分草稿（$score 分），等待教师审核。',
+        creatorId: 'system',
+        targetType: 'teachers',
+        type: 'ai_grading',
+        relatedEntityType: 'assessment_report',
+        relatedEntityId: 'assessment_grade_${reportType}_$studentId',
+      );
+    } catch (e) {
+      debugPrint('NotificationService: 考核 AI 批阅就绪通知失败 — $e');
+    }
+  }
+
+  /// AI 已为作品生成评分草稿，通知教师审核
+  Future<void> notifyWorkAutoGraded({
+    required String studentId,
+    required String studentName,
+    required String workTitle,
+    required int workId,
+    required int score,
+  }) async {
+    try {
+      await _notificationDao.createNotification(
+        title: 'AI 批阅就绪：$studentName',
+        content: 'AI 已为 $studentName 的作品「$workTitle」生成评分草稿（$score 分），等待教师审核。',
+        creatorId: 'system',
+        targetType: 'teachers',
+        type: 'ai_grading',
+        relatedEntityType: 'work_submission',
+        relatedEntityId: 'work_grade_$workId',
+      );
+    } catch (e) {
+      debugPrint('NotificationService: 作品 AI 批阅就绪通知失败 — $e');
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // AI 草稿就绪 → 通知学生（提交后选择"稍后通知"路径）
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// AI 草稿就绪 — 学生侧 "AI 已批阅，等待教师复核"
+  Future<void> notifyStudentAiDraftReady({
+    required String studentId,
+    required String domain, // 'lab' / 'assessment' / 'work'
+    required String entityTitle,
+    required int aiScore,
+  }) async {
+    final domainName = {
+      'lab': '实验',
+      'assessment': '考核',
+      'work': '作品',
+    }[domain] ?? '提交';
+    try {
+      await _notificationDao.createNotification(
+        title: 'AI 已批阅 ($domainName)：$entityTitle',
+        content: 'AI 给出 $aiScore 分（草稿）。教师复核后即为最终成绩，可在通知或对应页面查看优点 / 改进建议。',
+        creatorId: 'system',
+        targetType: 'individual',
+        targetId: studentId,
+        type: 'ai_grading',
+        relatedEntityType: '${domain}_submission',
+      );
+    } catch (e) {
+      debugPrint('NotificationService: AI 草稿就绪通知学生失败 — $e');
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 教师复核完成 → 通知学生（assessment / works，lab 已有 notifyLabGradeApproved）
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// 通知学生：教师已审核完成 AI 批阅（考核报告）
+  Future<void> notifyAssessmentGradeApproved({
+    required String studentId,
+    required String reportType,
+    required int score,
+  }) async {
+    try {
+      await _notificationDao.createNotification(
+        title: '考核批阅已完成',
+        content: '你的「$reportType」已批阅完成，得分 $score 分。请到考核 Tab 查看详情。',
+        creatorId: 'system',
+        targetType: 'individual',
+        targetId: studentId,
+        type: 'grade',
+        relatedEntityType: 'assessment_report',
+      );
+    } catch (e) {
+      debugPrint('NotificationService: 考核批阅完成通知学生失败 — $e');
+    }
+  }
+
+  /// 通知学生：教师已审核完成 AI 批阅（作品）
+  Future<void> notifyWorkGradeApproved({
+    required String studentId,
+    required String workTitle,
+    required int score,
+  }) async {
+    try {
+      await _notificationDao.createNotification(
+        title: '作品批阅已完成',
+        content: '你的作品「$workTitle」已批阅完成，得分 $score 分。请到作品页查看详情。',
+        creatorId: 'system',
+        targetType: 'individual',
+        targetId: studentId,
+        type: 'grade',
+        relatedEntityType: 'work_submission',
+      );
+    } catch (e) {
+      debugPrint('NotificationService: 作品批阅完成通知学生失败 — $e');
+    }
+  }
 }

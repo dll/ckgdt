@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../data/local/lab_task_dao.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/auto_grading_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../services/sync_service.dart';
 import '../../../services/gitee_service.dart';
@@ -751,6 +752,10 @@ class _StudentLabPageState extends State<StudentLabPage> {
                         filePaths: selectedFilePath,
                         fileNames: selectedFileName,
                       );
+                      // 拿提交 ID（用 task_id + user_id 反查）
+                      final subRow = await _dao.getSubmission(
+                          task['id'] as int, _userId);
+                      final subId = subRow?['id'] as int?;
                       // 通知教师
                       NotificationService().notifyLabSubmission(
                         studentId: _userId,
@@ -761,7 +766,47 @@ class _StudentLabPageState extends State<StudentLabPage> {
                       // 立即触发同步上传（不等定时器）
                       unawaited(SyncService().uploadStudentData(_userId));
                       if (ctx.mounted) Navigator.pop(ctx);
-                      if (mounted) {
+                      if (!mounted) return;
+
+                      // 询问学生：立即查看 AI 批阅 vs 稍后通知
+                      final taskTitle = task['title'] as String? ?? '实验任务';
+                      final inline = await _askWatchOrNotify(context, taskTitle);
+                      if (subId != null) {
+                        if (inline == true) {
+                          // 同步等待 AI，UI 弹 loading + 结果
+                          await _runInlineAiGrading(
+                            context: context,
+                            submissionId: subId,
+                            taskId: task['id'] as int,
+                            taskTitle: taskTitle,
+                            content: contentBuf.toString(),
+                            requirements:
+                                task['requirements'] as String? ?? '',
+                            maxScore: (task['max_score'] as int?) ?? 100,
+                          );
+                        } else {
+                          // 后台跑，AI 完成后通过通知告诉学生
+                          unawaited(AutoGradingService.instance
+                              .gradeLabSubmission(
+                            submissionId: subId,
+                            studentId: _userId,
+                            studentName: _authService.currentUser?.realName ??
+                                _userId,
+                            taskId: task['id'] as int,
+                            taskTitle: taskTitle,
+                            content: contentBuf.toString(),
+                            requirements:
+                                task['requirements'] as String? ?? '',
+                            maxScore: (task['max_score'] as int?) ?? 100,
+                          ));
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('提交成功！AI 批阅完成后会通知你。')),
+                            );
+                          }
+                        }
+                      } else if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('提交成功！')),
                         );
@@ -775,11 +820,156 @@ class _StudentLabPageState extends State<StudentLabPage> {
       ),
     );
   }
-}
 
-// ══════════════════════════════════════════════════════════════════════════════
-// 学生实验材料浏览页面（从 Gitee mad-data 仓库加载）
-// ══════════════════════════════════════════════════════════════════════════════
+  // ── AI 批阅交互 ──────────────────────────────────────────────────────────
+
+  /// 提交后弹窗：让学生选"立即查看 AI 批阅" / "稍后通知我"
+  Future<bool?> _askWatchOrNotify(BuildContext context, String taskTitle) async {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.auto_awesome, color: Color(0xFF667eea)),
+            SizedBox(width: 8),
+            Text('AI 批阅', style: TextStyle(fontSize: 18)),
+          ],
+        ),
+        content: Text('「$taskTitle」已提交。AI 批阅约需 10-30 秒。\n\n'
+            '在线等待会立刻看到优点 / 改进建议；\n'
+            '稍后通知则后台跑，完成时通过通知提示你。'),
+        actions: [
+          OutlinedButton.icon(
+            onPressed: () => Navigator.pop(ctx, false),
+            icon: const Icon(Icons.notifications_active),
+            label: const Text('稍后通知我'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(ctx, true),
+            icon: const Icon(Icons.visibility),
+            label: const Text('在线等待'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 在线等待 AI：弹 loading dialog 同步等结果，结果出来后弹评分详情
+  Future<void> _runInlineAiGrading({
+    required BuildContext context,
+    required int submissionId,
+    required int taskId,
+    required String taskTitle,
+    required String content,
+    required String requirements,
+    required int maxScore,
+  }) async {
+    // 先弹 loading
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: SizedBox(
+          height: 80,
+          child: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Expanded(child: Text('AI 正在批阅，请稍候…')),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final draft = await AutoGradingService.instance.gradeLabSubmission(
+      submissionId: submissionId,
+      studentId: _userId,
+      studentName: _authService.currentUser?.realName ?? _userId,
+      taskId: taskId,
+      taskTitle: taskTitle,
+      content: content,
+      requirements: requirements,
+      maxScore: maxScore,
+      returnDraft: true,
+    );
+
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).pop(); // 关 loading
+
+    if (draft == null || !draft.isUsable) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('AI 批阅失败，已发通知给教师人工批阅'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // 弹 AI 草稿详情
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.auto_awesome, color: Color(0xFF667eea)),
+            const SizedBox(width: 8),
+            Text('AI 批阅草稿 · ${draft.score} 分',
+                style: const TextStyle(fontSize: 18)),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('（教师复核后才是最终成绩）',
+                  style: TextStyle(color: Colors.grey, fontSize: 12)),
+              const SizedBox(height: 12),
+              if (draft.strengths.isNotEmpty) ...[
+                const Text('✓ 优点',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.green)),
+                const SizedBox(height: 4),
+                ...draft.strengths.map((s) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text('· $s'),
+                    )),
+                const SizedBox(height: 12),
+              ],
+              if (draft.improvements.isNotEmpty) ...[
+                const Text('✎ 改进建议',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.orange)),
+                const SizedBox(height: 4),
+                ...draft.improvements.map((s) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text('· $s'),
+                    )),
+                const SizedBox(height: 12),
+              ],
+              if (draft.feedback.isNotEmpty) ...[
+                const Text('总评',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Text(draft.feedback),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('知道了'),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _StudentMaterialsPage extends StatefulWidget {
   final int initialCategory;

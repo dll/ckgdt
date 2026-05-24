@@ -313,9 +313,41 @@ class _NotificationListPageState extends State<NotificationListPage> {
             onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('关闭'),
           ),
+          // 按 related_entity_type 路由到对应 Tab
+          if ((notification['related_entity_type'] as String? ?? '').isNotEmpty)
+            FilledButton.icon(
+              icon: const Icon(Icons.open_in_new, size: 18),
+              label: const Text('去查看'),
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                _navigateToRelated(
+                  notification['related_entity_type'] as String? ?? '',
+                );
+              },
+            ),
         ],
       ),
     );
+  }
+
+  /// 把通知里的 related_entity_type 翻译成提示，让用户自己跳对应 Tab
+  void _navigateToRelated(String entityType) {
+    final hint = {
+      'lab_submission': '请到 实验 Tab 查看 AI 批阅 / 教师评分',
+      'work_submission': '请到 作品 Tab 查看 AI 批阅 / 教师评分',
+      'assessment_report': '请到 考核 Tab 查看 AI 批阅 / 教师评分',
+      'feedback': '请到 反馈 Tab 查看',
+      'contribution_score': '请到 考核 Tab 查看贡献评分',
+    }[entityType];
+
+    if (hint == null) return;
+    Navigator.of(context).maybePop();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(hint), duration: const Duration(seconds: 3)),
+      );
+    });
   }
 
   /// 阅读统计弹窗（教师/管理员）

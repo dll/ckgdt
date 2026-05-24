@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../../data/local/works_dao.dart';
 import '../../../data/local/grading_result_dao.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/notification_service.dart';
 import '../../../services/agent/agents/works_grading_agent.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
@@ -326,6 +327,22 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
       final pending = await _gradingDao.getPendingResults('works', targetId: workId);
       for (final p in pending) {
         await _gradingDao.approveResult(p['id'] as int, widget.authService.getCurrentUserId() ?? '');
+      }
+    } catch (_) {}
+
+    // 通知学生：作品批阅已完成
+    try {
+      final work = await _worksDao.getWork(workId);
+      if (work != null) {
+        final studentId = work['student_id'] as String?;
+        final workTitle = work['title'] as String? ?? '作品';
+        if (studentId != null && studentId.isNotEmpty) {
+          await NotificationService().notifyWorkGradeApproved(
+            studentId: studentId,
+            workTitle: workTitle,
+            score: result.score,
+          );
+        }
       }
     } catch (_) {}
 
