@@ -30,7 +30,7 @@ flutter build windows --release
 
 **现象**：CMake 报 `ANGLE.7z Integrity check failed`
 
-**根因**：media_kit_libs_windows_video 首次构建会下载 ANGLE.7z，但 GitHub Releases 在国内有时下载到的是被截断的损坏文件。残留 `gradle-8.12-all.zip.part` 在 `~/.gradle/wrapper/dists/`。
+**根因**：media_kit_libs_windows_video 首次构建会下载 ANGLE.7z，但 GitHub Releases 在国内有时下载到的是被截断的损坏文件。损坏的 `.7z` 残留在 `build/windows/x64/` 下。
 
 **修复**：用 ghfast 镜像直接下载 + 校验 MD5：
 
