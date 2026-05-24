@@ -180,6 +180,21 @@ class SettingsService {
     await prefs.setString(_xunfeiApiSecretKey, value);
   }
 
+  // ── 语音功能开关（应急 — 桌面端 record 包偶发原生崩溃时可关掉）──
+  static const String _voiceDisabledKey = 'voice_disabled';
+
+  /// 用户主动关闭语音功能（默认 false）。
+  /// 关掉后 VoiceService 不再调用任何 record 包 API（绕过原生层崩溃）。
+  static Future<bool> isVoiceDisabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_voiceDisabledKey) ?? false;
+  }
+
+  static Future<void> setVoiceDisabled(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_voiceDisabledKey, value);
+  }
+
   // ═════════════════════════════════════════════════════════════════════════
   // 考核报告封面默认值
   // ═════════════════════════════════════════════════════════════════════════

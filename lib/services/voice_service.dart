@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:record/record.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import '../core/init_logger.dart';
 import '../services/settings_service.dart';
 
 /// 讯飞语音听写（IAT）服务
@@ -59,6 +60,8 @@ class VoiceService {
   /// 检查讯飞配置是否完整
   static Future<bool> isConfigured() async {
     if (!isPlatformSupported) return false;
+    // 用户主动禁用语音 → 上层 UI 视为"未配置"，避免点了崩
+    if (await SettingsService.isVoiceDisabled()) return false;
     final appId = await SettingsService.getXunfeiAppId();
     final apiKey = await SettingsService.getXunfeiApiKey();
     final apiSecret = await SettingsService.getXunfeiApiSecret();
@@ -71,11 +74,19 @@ class VoiceService {
 
   /// 开始语音识别
   Future<bool> startListening() async {
+    InitLogger.logFlush('voice', 'startListening called isListening=$_isListening');
     if (_isListening) return true;
 
     // 平台检查
     if (kIsWeb) {
       onError?.call('Web 平台暂不支持语音输入');
+      return false;
+    }
+
+    // 应急开关 — 用户主动关掉了语音（避开 record 包原生层偶发崩溃）
+    if (await SettingsService.isVoiceDisabled()) {
+      InitLogger.log('voice', 'voice disabled by user setting');
+      onError?.call('语音功能已被禁用 — 系统设置 → 语音设置 中可重新开启');
       return false;
     }
 
@@ -91,21 +102,25 @@ class VoiceService {
 
     try {
       // 1) 创建录音器（先 try，失败立即报错给 UI，避免后面的网络握手白做）
+      InitLogger.logFlush('voice', 'about to: new AudioRecorder()');
       try {
         _recorder = AudioRecorder();
-      } catch (e) {
+        InitLogger.log('voice', 'AudioRecorder() ok');
+      } catch (e, st) {
         onError?.call('无法初始化录音设备，请检查麦克风驱动是否安装');
-        debugPrint('VoiceService: AudioRecorder 初始化失败: $e');
+        InitLogger.error('voice', 'AudioRecorder ctor failed: $e', st);
         return false;
       }
 
       // 2) 检查麦克风权限（也是预检 — 没权限直接退出，不走原生 startStream）
+      InitLogger.logFlush('voice', 'about to: hasPermission()');
       bool hasPermission = false;
       try {
         hasPermission = await _recorder!.hasPermission();
-      } catch (e) {
+        InitLogger.log('voice', 'hasPermission = $hasPermission');
+      } catch (e, st) {
         onError?.call('麦克风初始化失败，请检查音频驱动是否正常安装');
-        debugPrint('VoiceService: 权限检查失败: $e');
+        InitLogger.error('voice', 'hasPermission failed: $e', st);
         _cleanup();
         return false;
       }
@@ -117,23 +132,28 @@ class VoiceService {
       }
 
       // 3) 连接讯飞 WebSocket
+      InitLogger.logFlush('voice', 'about to: WebSocket connect');
       final authUrl = _generateAuthUrl(apiKey, apiSecret);
       _wsChannel = WebSocketChannel.connect(Uri.parse(authUrl));
+      InitLogger.log('voice', 'WebSocket connect returned (channel created)');
       _fullText.clear();
       _firstFrame = true;
 
       _wsChannel!.stream.listen(
         _onWsMessage,
         onError: (e) {
+          InitLogger.log('voice', 'WS onError: $e');
           onError?.call('WebSocket 错误: $e');
           stopListening();
         },
         onDone: () {
+          InitLogger.log('voice', 'WS onDone');
           if (_isListening) stopListening();
         },
       );
 
       // 4) 开始流式录音
+      InitLogger.logFlush('voice', 'about to: startStream()');
       Stream<List<int>> stream;
       try {
         stream = await _recorder!.startStream(
@@ -144,9 +164,10 @@ class VoiceService {
             bitRate: 256000,
           ),
         );
-      } catch (e) {
+        InitLogger.log('voice', 'startStream returned');
+      } catch (e, st) {
         onError?.call('启动录音失败，请检查麦克风是否正常连接');
-        debugPrint('VoiceService: startStream 失败: $e');
+        InitLogger.error('voice', 'startStream failed: $e', st);
         _cleanup();
         return false;
       }
@@ -160,16 +181,17 @@ class VoiceService {
           _sendAudioFrame(audioData, appId);
         },
         onError: (e) {
-          debugPrint('VoiceService: 音频流错误: $e');
+          InitLogger.log('voice', 'audio stream onError: $e');
           onError?.call('录音异常: $e');
           stopListening();
         },
       );
 
+      InitLogger.log('voice', 'startListening complete (listening=true)');
       return true;
-    } catch (e) {
+    } catch (e, st) {
       onError?.call('启动语音识别失败: $e');
-      debugPrint('VoiceService: startListening 异常: $e');
+      InitLogger.error('voice', 'startListening outer exception: $e', st);
       _cleanup();
       return false;
     }

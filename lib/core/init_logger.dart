@@ -86,6 +86,21 @@ class InitLogger {
     } catch (_) {}
   }
 
+  /// 写一行日志并立即落盘 — 在调用容易"硬崩溃"的原生 API 前用，
+  /// 即使进程随后 abort，最后一条 logFlush 仍可在文件里看到。
+  static void logFlush(String tag, String message) {
+    debugPrint('[$tag] $message');
+    final f = _file;
+    if (f == null) return;
+    try {
+      f.writeAsStringSync(
+        '${DateTime.now().toIso8601String()} [$tag] $message\n',
+        mode: FileMode.append,
+        flush: true,
+      );
+    } catch (_) {}
+  }
+
   /// 写带 stack 的错误。
   static void error(String tag, Object e, [StackTrace? st]) {
     final stStr = st != null ? '\n$st' : '';

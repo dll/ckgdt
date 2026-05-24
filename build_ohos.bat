@@ -28,6 +28,11 @@ set BUILD_RESULT=%ERRORLEVEL%
 
 del pubspec_overrides.yaml >nul 2>&1
 
+REM 关键：build_ohos 期间 pubspec.lock 被降版（含 record_windows 1.0.6 的已知崩溃 bug）。
+REM 用普通 Flutter 工具链重新解析依赖，把 lock 恢复到 normal-build 想要的版本。
+REM 不做这步的话，下次 flutter build windows 会用残留的旧 lock，导致桌面端语音崩溃。
+call D:\development\flutter_ohos\flutter\bin\flutter.bat pub upgrade record record_windows >nul 2>&1
+
 :restore_and_exit
 powershell -ExecutionPolicy Bypass -File ohos_restore.ps1
 if "%BUILD_RESULT%"=="0" (
