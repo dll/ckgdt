@@ -1,8 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:printing/printing.dart';
 import 'package:pdf/pdf.dart';
+import '../../../services/auth_service.dart';
 import '../../../services/file_opener_service.dart';
+import '../../../services/gitee_service.dart';
 import '../../../services/tts_flutter_service.dart';
 import '../../pages/quiz/quiz_page.dart';
 
@@ -10,16 +13,28 @@ import '../../../core/constants/color_ohos_compat.dart';
 /// 应用内 PDF 查看器
 /// 使用 printing 包的 PdfPreview 组件渲染 PDF 页面
 /// AppBar 提供"使用系统工具打开"、"打印"和"章节测验"按钮
+///
+/// **跨设备路径回退**：file_paths 在不同设备绝对路径不同，本地不存在时
+/// 自动尝试从 Gitee 同步仓库按 fileName 下载（实验 PDF 走 sync_files 目录）。
 class InAppPdfViewerPage extends StatefulWidget {
   final String filePath;
   final String title;
   final String? chapter;
+
+  /// 用于回退下载：当 [filePath] 在本机找不到时，按 fileName 从远程拉。
+  /// 学生侧由提交后的 file_names 字段填入；如不传则不回退。
+  final String? remoteFileName;
+
+  /// 远程文件归属用户 ID（学生跨设备同步用本人；教师批阅时填学生 ID）
+  final String? remoteUserId;
 
   const InAppPdfViewerPage({
     super.key,
     required this.filePath,
     required this.title,
     this.chapter,
+    this.remoteFileName,
+    this.remoteUserId,
   });
 
   @override
@@ -40,7 +55,46 @@ class _InAppPdfViewerPageState extends State<InAppPdfViewerPage> {
     if (await file.exists()) {
       return file;
     }
-    throw '文件不存在: ${widget.filePath}';
+    // 本机不存在 → 尝试 Gitee 远程拉
+    final remote = await _tryDownloadFromRemote();
+    if (remote != null) return remote;
+    throw '文件不存在: ${widget.filePath}\n（远程仓库也未找到该文件）';
+  }
+
+  /// 按 fileName + userId 从 Gitee 同步仓库下载到本地 sync_files 目录
+  Future<File?> _tryDownloadFromRemote() async {
+    final fileName = widget.remoteFileName;
+    final userId =
+        widget.remoteUserId ?? AuthService().currentUser?.userId;
+    if (fileName == null || fileName.isEmpty || userId == null) return null;
+    try {
+      final gitee = GiteeService();
+      // 与 SyncService._downloadSubmissionFile 同步策略：先 实验/ 后 files/
+      // 仓库参数与 SyncService 同源（osgisOne/mad-fd master sync/students）
+      List<int>? bytes;
+      for (final subDir in ['实验', 'files']) {
+        final remotePath = 'sync/students/$userId/$subDir/$fileName';
+        try {
+          bytes = await gitee.downloadBinaryFile(
+            owner: 'osgisOne',
+            repo: 'mad-fd',
+            path: remotePath,
+            branch: 'master',
+          );
+          if (bytes != null && bytes.isNotEmpty) break;
+        } catch (_) {}
+      }
+      if (bytes == null || bytes.isEmpty) return null;
+      final appDir = await getApplicationDocumentsDirectory();
+      final dir = Directory('${appDir.path}/sync_files/$userId');
+      if (!dir.existsSync()) dir.createSync(recursive: true);
+      final localFile = File('${dir.path}/$fileName');
+      await localFile.writeAsBytes(bytes);
+      return localFile;
+    } catch (e) {
+      debugPrint('PdfViewer: 远程拉取失败 $e');
+      return null;
+    }
   }
 
   @override

@@ -211,6 +211,9 @@ class DatabaseHelper {
 
   /// 验证关键种子数据（questions/graphs/nodes/edges）是否存在，
   /// 如果为空则尝试从 asset DB 导入。
+  ///
+  /// **健康阈值**：questions < 30 / graphs < 5 都触发修复（种子分别是 52 / 23）。
+  /// 这是为了对抗 onUpgrade 误删 / 跨设备同步异常。
   Future<void> _verifyAndRepairSeedData(Database db) async {
     try {
       final qc = await db.rawQuery('SELECT COUNT(*) as c FROM questions');
@@ -220,10 +223,12 @@ class DatabaseHelper {
       debugPrint(
           '=== DatabaseHelper: Seed check — Questions: $qCount, Graphs: $gCount');
 
-      if (qCount > 0 && gCount > 0) return; // 数据完整，无需修复
+      // 题目阈值：种子 52 道，< 30 视为异常（容忍少量删除 / 同步差异）
+      // 图谱阈值：种子 23 个，< 5 视为异常
+      if (qCount >= 30 && gCount >= 5) return;
 
       debugPrint(
-          '=== DatabaseHelper: Seed data missing! Importing via SQL...');
+          '=== DatabaseHelper: Seed data below threshold (Q<30 or G<5)! Importing via SQL...');
       await _importSeedDataViaSql(db);
 
       // 最终验证
