@@ -105,20 +105,28 @@ rm -rf D:/FlutterProjects/knowledge_graph_app/build/_gh-pages-deploy
 移动图谱与数字孪生+<端名小写>+v<版本号>.zip
 ```
 
+> ⚠ **必须用 `scripts/pack_dist_zip.ps1`**，不能用 `Compress-Archive` 直接打。
+> PowerShell 5.1 的 `Compress-Archive` 把 ZIP 条目名编码成 OEM/GBK，
+> 在 Linux/macOS 或假设 UTF-8 的 unzip 工具上会报"无法解压"或文件名乱码。
+> `pack_dist_zip.ps1` 走 .NET `ZipFile.CreateFromDirectory` + UTF8 entryNameEncoding，跨平台安全。
+
 #### Windows
 ```bash
-cd build/windows/x64/runner/Release && \
-  powershell -NoProfile -Command "Compress-Archive -Path '*' -DestinationPath 'D:\FlutterProjects\knowledge_graph_app\dist\移动图谱与数字孪生+windows+v0.14.0.zip' -Force"
-cd /d/FlutterProjects/knowledge_graph_app
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pack_dist_zip.ps1 \
+  -SourceDir "build/windows/x64/runner/Release" \
+  -ZipPath   "dist/移动图谱与数字孪生+windows+v0.14.0.zip"
+# Release/ 内已含 启动说明.txt（如无，构建前自己 cp 一份进去）
 ```
 
 #### Android
 ```bash
 mkdir -p dist/_apk_pkg
-cp build/app/outputs/flutter-apk/app-release.apk dist/_apk_pkg/移动图谱与数字孪生-v0.14.0.apk
+cp build/app/outputs/flutter-apk/app-release.apk dist/_apk_pkg/移动图谱与数字孪生v0.14.0.apk
 # 写 安装说明.txt（参考 build-android）
-cd dist/_apk_pkg && powershell.exe -NoProfile -Command "Compress-Archive -Path '*' -DestinationPath '..\\移动图谱与数字孪生+android+v0.14.0.zip' -Force"
-cd /d/FlutterProjects/knowledge_graph_app && rm -rf dist/_apk_pkg
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pack_dist_zip.ps1 \
+  -SourceDir "dist/_apk_pkg" \
+  -ZipPath   "dist/移动图谱与数字孪生+android+v0.14.0.zip"
+rm -rf dist/_apk_pkg
 ```
 
 #### Web
@@ -126,8 +134,10 @@ cd /d/FlutterProjects/knowledge_graph_app && rm -rf dist/_apk_pkg
 mkdir -p dist/_web_pkg
 cp -r build/web/* dist/_web_pkg/
 # 写 启动说明.txt（参考 build-web）
-cd dist/_web_pkg && powershell.exe -NoProfile -Command "Compress-Archive -Path '*' -DestinationPath '..\\移动图谱与数字孪生+web+v0.14.0.zip' -Force"
-cd /d/FlutterProjects/knowledge_graph_app && rm -rf dist/_web_pkg
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pack_dist_zip.ps1 \
+  -SourceDir "dist/_web_pkg" \
+  -ZipPath   "dist/移动图谱与数字孪生+web+v0.14.0.zip"
+rm -rf dist/_web_pkg
 ```
 
 #### HarmonyOS
@@ -135,8 +145,10 @@ cd /d/FlutterProjects/knowledge_graph_app && rm -rf dist/_web_pkg
 mkdir -p dist/_ohos_pkg
 cp ohos/entry/build/default/outputs/default/entry-default-signed.hap dist/_ohos_pkg/移动图谱与数字孪生-v0.14.0.hap
 # 写 安装说明.txt（参考 build-ohos — 必含模拟器不兼容 + 真机指南）
-cd dist/_ohos_pkg && powershell.exe -NoProfile -Command "Compress-Archive -Path '*' -DestinationPath '..\\移动图谱与数字孪生+harmonyos+v0.14.0.zip' -Force"
-cd /d/FlutterProjects/knowledge_graph_app && rm -rf dist/_ohos_pkg
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pack_dist_zip.ps1 \
+  -SourceDir "dist/_ohos_pkg" \
+  -ZipPath   "dist/移动图谱与数字孪生+harmonyos+v0.14.0.zip"
+rm -rf dist/_ohos_pkg
 ```
 
 ### Step 6：commit 升版 + push

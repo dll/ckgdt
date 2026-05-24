@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show Platform;
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
@@ -80,24 +79,6 @@ class VoiceService {
       return false;
     }
 
-    // Windows 桌面端预检：尝试创建录音器并检测输入设备
-    // record 包在 Windows 缺少麦克风时可能导致原生层崩溃
-    if (!kIsWeb && Platform.isWindows) {
-      try {
-        final testRecorder = AudioRecorder();
-        final devices = await testRecorder.listInputDevices();
-        await testRecorder.dispose();
-        if (devices.isEmpty) {
-          onError?.call('未检测到麦克风设备，请连接麦克风后重试');
-          return false;
-        }
-      } catch (e) {
-        debugPrint('VoiceService: Windows 麦克风预检失败: $e');
-        onError?.call('麦克风初始化失败，请检查音频驱动是否正常安装');
-        return false;
-      }
-    }
-
     // 读取讯飞配置
     final appId = await SettingsService.getXunfeiAppId();
     final apiKey = await SettingsService.getXunfeiApiKey();
@@ -109,7 +90,33 @@ class VoiceService {
     }
 
     try {
-      // 1) 连接讯飞 WebSocket
+      // 1) 创建录音器（先 try，失败立即报错给 UI，避免后面的网络握手白做）
+      try {
+        _recorder = AudioRecorder();
+      } catch (e) {
+        onError?.call('无法初始化录音设备，请检查麦克风驱动是否安装');
+        debugPrint('VoiceService: AudioRecorder 初始化失败: $e');
+        return false;
+      }
+
+      // 2) 检查麦克风权限（也是预检 — 没权限直接退出，不走原生 startStream）
+      bool hasPermission = false;
+      try {
+        hasPermission = await _recorder!.hasPermission();
+      } catch (e) {
+        onError?.call('麦克风初始化失败，请检查音频驱动是否正常安装');
+        debugPrint('VoiceService: 权限检查失败: $e');
+        _cleanup();
+        return false;
+      }
+
+      if (!hasPermission) {
+        onError?.call('未授予麦克风权限');
+        _cleanup();
+        return false;
+      }
+
+      // 3) 连接讯飞 WebSocket
       final authUrl = _generateAuthUrl(apiKey, apiSecret);
       _wsChannel = WebSocketChannel.connect(Uri.parse(authUrl));
       _fullText.clear();
@@ -125,33 +132,6 @@ class VoiceService {
           if (_isListening) stopListening();
         },
       );
-
-      // 2) 创建录音器（安全包裹，防止原生层崩溃）
-      try {
-        _recorder = AudioRecorder();
-      } catch (e) {
-        onError?.call('无法初始化录音设备，请检查麦克风驱动是否安装');
-        debugPrint('VoiceService: AudioRecorder 初始化失败: $e');
-        _cleanup();
-        return false;
-      }
-
-      // 3) 检查麦克风权限
-      bool hasPermission = false;
-      try {
-        hasPermission = await _recorder!.hasPermission();
-      } catch (e) {
-        onError?.call('麦克风权限检查失败: $e');
-        debugPrint('VoiceService: 权限检查失败: $e');
-        _cleanup();
-        return false;
-      }
-
-      if (!hasPermission) {
-        onError?.call('未授予麦克风权限');
-        _cleanup();
-        return false;
-      }
 
       // 4) 开始流式录音
       Stream<List<int>> stream;
