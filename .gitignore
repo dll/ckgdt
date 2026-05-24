@@ -86,3 +86,8 @@ google-services.json
 GoogleService-Info.plist
 
 docs/分层架构HelloWorldAndroid版AI问答系统/
+
+# 4 端发布产物 zip 包（按 CLAUDE.md 部署产物规则放在 dist/）
+dist/
+lib.backup/
+pubspec_overrides.yaml
