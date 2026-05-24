@@ -68,7 +68,9 @@ class _QuizPageState extends State<QuizPage> {
         _chapters = chapters;
         _isLoading = false;
       });
-    } catch (e) {
+    } catch (e, st) {
+      InitLogger.error('quiz', 'getChapters failed: $e', st);
+      DatabaseHelper.lastInitError = 'quiz-load-failed: $e';
       if (!mounted) return;
       setState(() => _isLoading = false);
     }
@@ -976,9 +978,35 @@ class _QuizPageState extends State<QuizPage> {
                 ],
               ],
               const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _loadChapters,
-                child: const Text('刷新'),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: _loadChapters,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('刷新'),
+                  ),
+                  const SizedBox(width: 12),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      messenger.showSnackBar(
+                        const SnackBar(content: Text('正在重新导入题库...')),
+                      );
+                      final ok = await DatabaseHelper.instance.forceReimportSeed();
+                      if (!mounted) return;
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text(ok ? '题库已重新导入，刷新即可' : '重导失败，请看日志'),
+                          backgroundColor: ok ? Colors.green : Colors.red,
+                        ),
+                      );
+                      if (ok) await _loadChapters();
+                    },
+                    icon: const Icon(Icons.healing),
+                    label: const Text('修复题库'),
+                  ),
+                ],
               ),
             ],
           ),

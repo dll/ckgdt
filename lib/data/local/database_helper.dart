@@ -259,6 +259,32 @@ class DatabaseHelper {
   /// SQL 级别从 asset DB 导入种子数据（graphs/nodes/edges/questions/resource_files）
   /// 当 writeDatabaseBytes 整体复制失败时，作为健壮的回退方案：
   /// 先将 asset 写入临时文件，打开为只读连接，再逐表 INSERT 到主库。
+  /// 强制从 assets 重新导入种子题库 / 图谱（UI 兜底入口）。
+  /// 用户在 QuizPage 看到"暂无题目"且觉得不对时可以点这个修复。
+  /// 不影响成绩 / 错题 / 学生自己的数据，只补 questions/graphs/nodes/edges/resource_files。
+  Future<bool> forceReimportSeed() async {
+    try {
+      final db = await database;
+      InitLogger.log('db', 'forceReimportSeed invoked from UI');
+      await _importSeedDataViaSql(db);
+      final qc = await db.rawQuery('SELECT COUNT(*) as c FROM questions');
+      final gc = await db.rawQuery('SELECT COUNT(*) as c FROM graphs');
+      final q = (qc.first['c'] as int?) ?? 0;
+      final g = (gc.first['c'] as int?) ?? 0;
+      InitLogger.log('db', 'after force-reimport questions=$q graphs=$g');
+      if (q >= 30 && g >= 20) {
+        lastInitError = null;
+        return true;
+      }
+      lastInitError = 'force-reimport-incomplete: q=$q g=$g';
+      return false;
+    } catch (e, st) {
+      lastInitError = 'force-reimport-failed: $e';
+      InitLogger.error('db', 'forceReimportSeed failed: $e', st);
+      return false;
+    }
+  }
+
   Future<void> _importSeedDataViaSql(Database db) async {
     try {
       InitLogger.log('db', 'SQL-level seed import starting');
