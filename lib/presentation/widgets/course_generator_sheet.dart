@@ -356,7 +356,8 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
 
     try {
       final aiService = AiService();
-      final outline = _outlineContent!.trim();
+      // 大纲可选：未上传时为空字符串，让 AI 自由生成（_outlineContent 可能为 null）
+      final outline = _outlineContent?.trim() ?? '';
 
       // ── 步骤 1：生成课程章节 ──
       final hasOutline = outline.isNotEmpty;
@@ -408,7 +409,9 @@ $outline
       final course = CourseModel(
         id: courseId.isEmpty ? 'course_${DateTime.now().millisecondsSinceEpoch}' : courseId,
         name: name,
-        description: '基于上传大纲生成的$name课程',
+        description: hasOutline
+            ? '基于上传大纲生成的$name课程'
+            : 'AI 自动生成的$name课程',
         chapterCount: chapters.length,
         chapters: chapters,
         isActive: false,

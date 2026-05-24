@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'dart:async';
 import 'dart:convert';
 import '../../../data/local/lab_task_dao.dart';
 import '../../../data/local/grading_result_dao.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/notification_service.dart';
+import '../../../services/sync_service.dart';
 import '../../../services/agent/agents/lab_grading_agent.dart';
 import 'lab_tasks_page.dart';
 import '../../../core/constants/color_ohos_compat.dart';
@@ -338,6 +341,23 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
       final pending = await _gradingDao.getPendingResults('lab', targetId: submissionId);
       for (final p in pending) {
         await _gradingDao.approveResult(p['id'] as int, widget.authService.getCurrentUserId() ?? '');
+      }
+    } catch (_) {}
+
+    // 通知学生 + 触发同步（让学生端尽快看到分数）
+    try {
+      final sub = _submissions.firstWhere(
+        (s) => (s['id'] as int?) == submissionId,
+        orElse: () => <String, dynamic>{},
+      );
+      final studentId = sub['user_id'] as String?;
+      if (studentId != null && studentId.isNotEmpty) {
+        await NotificationService().notifyLabGradeApproved(
+          studentId: studentId,
+          taskTitle: _selectedTask?['title'] as String? ?? '实验',
+          score: result.score,
+        );
+        unawaited(SyncService().uploadStudentData(studentId));
       }
     } catch (_) {}
 
