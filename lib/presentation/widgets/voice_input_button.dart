@@ -148,12 +148,16 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
       if (mounted) setState(() => _recognizedText = text);
     };
     _voiceService.onComplete = (text) {
-      if (mounted) {
-        setState(() {
-          _recognizedText = text;
-          _isListening = false;
-        });
-        _pulseController.stop();
+      if (!mounted) return;
+      setState(() {
+        _recognizedText = text;
+        _isListening = false;
+      });
+      _pulseController.stop();
+      // 持续交互模式：识别一句话就自动跳。后续在 _navigateByVoice 那侧
+      // 把 dialog 关掉并跳到目标页（不再要求用户手动点"导航"按钮）。
+      if (text.trim().isNotEmpty) {
+        Navigator.of(context).maybePop(text);
       }
     };
     _voiceService.onError = (error) {
@@ -216,7 +220,7 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
               ],
             ),
             const SizedBox(height: 8),
-            Text('说出你想去的地方，如"打开测验""我要看知识图谱"',
+            Text('正在持续监听 — 说"打开测验""我要看图谱"等，自动跳转',
                 style: TextStyle(fontSize: 12, color: Colors.grey[500])),
             const SizedBox(height: 16),
             GestureDetector(
@@ -335,12 +339,16 @@ class _VoiceRecordDialogState extends State<_VoiceRecordDialog>
       if (mounted) setState(() => _recognizedText = text);
     };
     _voiceService.onComplete = (text) {
-      if (mounted) {
-        setState(() {
-          _recognizedText = text;
-          _isListening = false;
-        });
-        _pulseController.stop();
+      if (!mounted) return;
+      setState(() {
+        _recognizedText = text;
+        _isListening = false;
+      });
+      _pulseController.stop();
+      // 持续交互模式：识别一句话就自动跳。后续在 _navigateByVoice 那侧
+      // 把 dialog 关掉并跳到目标页（不再要求用户手动点"导航"按钮）。
+      if (text.trim().isNotEmpty) {
+        Navigator.of(context).maybePop(text);
       }
     };
     _voiceService.onError = (error) {
@@ -552,7 +560,7 @@ class VoiceNavigationFab extends StatelessWidget {
     final result = await showDialog<String>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => const _VoiceRecordDialog(),
+      builder: (ctx) => const VoiceNavigationDialog(),
     );
 
     if (result != null && result.isNotEmpty && context.mounted) {
