@@ -577,7 +577,20 @@ grep -E "version:|app_name|BINARY_OUTPUT_NAME|window\.Create|FileDescription|Int
 | Windows | `build/windows/x64/runner/Release/` 整个目录 | `*.exe` + 全部 dll + `data/`，**解压双击 EXE 直接运行** |
 | Android | `build/app/outputs/flutter-apk/app-release.apk` | apk 文件 + `安装说明.txt`，包大小 ~76M |
 | Web | `build/web/` 整个目录 | 静态资源 + `启动说明.txt`（教用户用 python http.server / serve 启动），包大小 ~39M |
-| HarmonyOS | `ohos/entry/build/default/outputs/default/entry-default-unsigned.hap` | 未签名 HAP + `安装说明.txt`（DevEco Studio 自动签名 + hdc install），~39M |
+| HarmonyOS | `ohos/entry/build/default/outputs/default/entry-default-signed.hap` | **已 OpenHarmony 调试签名** HAP（arm64-v8a 真机专用，模拟器不兼容）+ `安装说明.txt`，~39M |
+
+> **⚠ 鸿蒙模拟器限制（重要）**：flutter_ohos 工具链目前**只产 arm64-v8a 引擎**（`flutter/bin/cache/artifacts/engine/` 仅有 ohos-arm64-release，无 x86 变体）。华为官方手机模拟器（Pura 90 等）使用 **x86_64 镜像**（`abi: x86`），装 HAP 报：
+> ```
+> code:9568347 install parse native so failed.
+> the Abi type supported by the device does not match the Abi type configured in the C++ project
+> ```
+> **只能装到鸿蒙真机**（任何商用 NEXT 设备都是 arm64）。演示时必须用真机。
+
+### 鸿蒙签名（已就位，无需重签）
+
+凭证已存到 `ohos/signature/{debug.cer, debug.p7b, debug.p12, material/}`，
+`ohos/build-profile.json5` 用相对路径 `./signature/*` 引用，team clone 后直接构建即可。
+本套是 OpenHarmony 调试签名，仅可装开发者模式设备；商用发布需向华为申请正式证书替换 `ohos/signature/` 内文件。
 
 ### 命名规则要点
 
