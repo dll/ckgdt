@@ -52,6 +52,52 @@ class NotificationService {
     }
   }
 
+  /// AI 已自动生成批阅草稿，通知教师审核
+  Future<void> notifyLabAutoGraded({
+    required String studentId,
+    required String studentName,
+    required String taskTitle,
+    required int taskId,
+    required int score,
+  }) async {
+    try {
+      final entityId = 'lab_grade_${taskId}_$studentId';
+      await _notificationDao.createNotification(
+        title: 'AI 批阅就绪：$studentName',
+        content: 'AI 已为 $studentName 的实验「$taskTitle」生成评分草稿（$score 分），等待教师审核。',
+        creatorId: 'system',
+        targetType: 'teachers',
+        type: 'ai_grading',
+        relatedEntityType: 'lab_submission',
+        relatedEntityId: entityId,
+      );
+      debugPrint('NotificationService: AI 批阅就绪通知 — $studentName / $score 分');
+    } catch (e) {
+      debugPrint('NotificationService: AI 批阅就绪通知失败 — $e');
+    }
+  }
+
+  /// 通知学生：教师已审核完成 AI 批阅
+  Future<void> notifyLabGradeApproved({
+    required String studentId,
+    required String taskTitle,
+    required int score,
+  }) async {
+    try {
+      await _notificationDao.createNotification(
+        title: '实验批阅已完成',
+        content: '你的实验「$taskTitle」已批阅完成，得分 $score 分，请到实验 Tab 查看详情。',
+        creatorId: 'system',
+        targetType: 'individual',
+        targetId: studentId,
+        type: 'grade',
+        relatedEntityType: 'lab_submission',
+      );
+    } catch (e) {
+      debugPrint('NotificationService: 学生批阅完成通知失败 — $e');
+    }
+  }
+
   /// 学生提交考核报告时通知所有教师
   Future<void> notifyAssessmentSubmission({
     required String studentId,

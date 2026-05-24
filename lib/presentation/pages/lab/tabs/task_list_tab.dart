@@ -601,7 +601,7 @@ class _TaskListTabState extends State<_TaskListTab> {
                       }
                       setDialogState(() => isSubmitting = true);
                       try {
-                        await widget.labTaskDao.submitTask(
+                        final submissionId = await widget.labTaskDao.submitTask(
                           taskId: taskId,
                           userId: userId!,
                           content: contentCtrl.text.trim(),
@@ -615,6 +615,17 @@ class _TaskListTabState extends State<_TaskListTab> {
                         );
                         // 立即触发同步上传
                         unawaited(SyncService().uploadStudentData(userId));
+                        // 后台触发 AI 批阅草稿（不阻塞 UI）—— 学生侧体验：
+                        // 提交后教师会很快收到"AI 已生成评分草稿"，等教师审核
+                        if (submissionId > 0) {
+                          unawaited(_triggerAiGradingDraft(
+                            submissionId: submissionId,
+                            taskId: taskId,
+                            taskTitle: task['title'] as String? ?? '实验任务',
+                            content: contentCtrl.text.trim(),
+                            studentId: userId,
+                          ));
+                        }
                         if (context.mounted) {
                           Navigator.pop(ctx);
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -651,6 +662,70 @@ class _TaskListTabState extends State<_TaskListTab> {
         ),
       ),
     );
+  }
+
+  /// 学生提交后台触发 AI 批阅草稿
+  ///
+  /// 设计：AI 出 JSON 草稿写 grading_results.status='pending'，教师在 AI 批阅 Tab 审核 → approve/reject。
+  /// 学生侧只看到"已提交"状态，待教师审核完才看到分数（通过 lab_submissions.score 写回）。
+  /// 失败静默 — AI 调用失败不影响提交流程，教师可手动批阅。
+  Future<void> _triggerAiGradingDraft({
+    required int submissionId,
+    required int taskId,
+    required String taskTitle,
+    required String content,
+    required String studentId,
+  }) async {
+    try {
+      final agent = LabGradingAgent();
+      final tasks = await widget.labTaskDao.getTasks();
+      final task = tasks.firstWhere(
+        (t) => (t['id'] as int?) == taskId,
+        orElse: () => <String, dynamic>{},
+      );
+      final maxScore = (task['max_score'] as int?) ?? 100;
+      final requirements = task['requirements'] as String?;
+
+      final result = await agent.gradeSubmission(
+        taskTitle: taskTitle,
+        content: content,
+        maxScore: maxScore,
+        requirements: requirements,
+      );
+      final parsed = tryParseGradingJson(result);
+      if (parsed == null) return;
+
+      final score = (parsed['score'] as num?)?.toInt() ?? 0;
+      final feedback = formatGradingFeedback(parsed);
+      final dimensions = parsed['dimensions'] as Map<String, dynamic>?;
+      final strengths = (parsed['strengths'] as List?)?.cast<String>() ?? [];
+      final improvements = (parsed['improvements'] as List?)?.cast<String>() ?? [];
+      final aiFlag = (parsed['ai_flag'] as bool?) ?? false;
+
+      await GradingResultDao().saveResult(
+        domain: 'lab',
+        targetId: submissionId,
+        scorerId: 'ai',
+        rawJson: result,
+        score: score.toDouble(),
+        feedback: feedback,
+        dimensions: dimensions,
+        strengths: strengths,
+        improvements: improvements,
+        aiFlag: aiFlag,
+      );
+
+      final user = widget.authService.currentUser;
+      await NotificationService().notifyLabAutoGraded(
+        studentId: studentId,
+        studentName: user?.realName ?? studentId,
+        taskTitle: taskTitle,
+        taskId: taskId,
+        score: score,
+      );
+    } catch (e) {
+      debugPrint('TaskListTab: AI 批阅草稿后台任务失败 — $e');
+    }
   }
 }
 
