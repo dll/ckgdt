@@ -556,6 +556,66 @@ grep -E "version:|app_name|BINARY_OUTPUT_NAME|window\.Create|FileDescription|Int
 
 ---
 
+## 部署产物打包规则（4 端齐发）
+
+构建完 4 端后，把产物打成可分发 zip 放到 `dist/` 目录。**命名风格参考 DevEco Studio 官方包**（如 `devecostudio-windows-6.1.0.850.zip`）：
+
+```
+移动图谱与数字孪生+<端名小写>+v<版本号>.zip
+```
+
+例（v0.13.0）：
+- `移动图谱与数字孪生+windows+v0.13.0.zip`
+- `移动图谱与数字孪生+android+v0.13.0.zip`
+- `移动图谱与数字孪生+web+v0.13.0.zip`
+- `移动图谱与数字孪生+harmonyos+v0.13.0.zip`
+
+### 各端打包内容
+
+| 端 | 源路径 | 包内容 |
+|----|--------|--------|
+| Windows | `build/windows/x64/runner/Release/` 整个目录 | `*.exe` + 全部 dll + `data/`，**解压双击 EXE 直接运行** |
+| Android | `build/app/outputs/flutter-apk/app-release.apk` | apk 文件 + `安装说明.txt`，包大小 ~76M |
+| Web | `build/web/` 整个目录 | 静态资源 + `启动说明.txt`（教用户用 python http.server / serve 启动），包大小 ~39M |
+| HarmonyOS | `ohos/entry/build/default/outputs/default/entry-default-unsigned.hap` | 未签名 HAP + `安装说明.txt`（DevEco Studio 自动签名 + hdc install），~39M |
+
+### 命名规则要点
+
+1. **端名小写**：`windows / android / web / harmonyos`（参考 DevEco 风格）
+2. **版本号格式**：`v<主>.<次>.<构建>`（如 `v0.13.0`），与 `pubspec.yaml` 一致
+3. **加号分隔**：中文产品名后用 `+` 连接端名，端名后用 `+` 连接版本号
+4. **每端配 README**：txt 格式（`安装说明.txt` / `启动说明.txt`），中文，含默认账号
+
+### 一键打包脚本
+
+```bash
+# 1. 先确认 4 端构建产物齐全
+ls build/windows/x64/runner/Release/*.exe
+ls build/app/outputs/flutter-apk/app-release.apk
+ls build/web/index.html
+ls ohos/entry/build/default/outputs/default/*.hap
+
+# 2. 创建 dist 目录
+mkdir -p dist
+
+# 3. Windows（整个 Release 目录打包）
+cd build/windows/x64/runner/Release && \
+  powershell -NoProfile -Command "Compress-Archive -Path '*' -DestinationPath 'D:\FlutterProjects\knowledge_graph_app\dist\移动图谱与数字孪生+windows+vX.Y.Z.zip' -Force"
+cd /d/FlutterProjects/knowledge_graph_app
+
+# 4. Android / Web / HarmonyOS：mkdtemp + cp + 写 README + 打 zip
+# （详见 dist/ 历史 zip 的内部结构）
+```
+
+### 何时打包
+
+每次完成"升版三件套"+ 4 端构建 + gh-pages 部署后，最后一步打 4 个 zip 入 `dist/` 供分发。
+
+> **注意**：`dist/` 目录已 gitignore（产物大不入库）；如需正式发版，把 zip 上传到 Gitee Release / GitHub Release。
+
+---
+
+
 ## 注意事项
 
 1. **密码规则不可更改**：`userId.substring(userId.length - 6)`，已有数据依赖此逻辑
