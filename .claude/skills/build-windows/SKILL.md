@@ -91,10 +91,13 @@ dist/移动图谱与数字孪生+windows+v0.13.0.zip
 **用法**：解压后双击 EXE 直接运行，无需安装。
 
 ```bash
-# 一键打包脚本
-cd build/windows/x64/runner/Release
-powershell -NoProfile -Command "Compress-Archive -Path '*' -DestinationPath 'D:\FlutterProjects\knowledge_graph_app\dist\移动图谱与数字孪生+windows+v0.13.0.zip' -Force"
+# 一键打包脚本（用项目内 UTF-8 安全的 PS 包装器）
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pack_dist_zip.ps1 \
+  -SourceDir "build/windows/x64/runner/Release" \
+  -ZipPath   "dist/移动图谱与数字孪生+windows+v0.13.0.zip"
 ```
+
+> ⚠ **不要直接用 `Compress-Archive`**。PowerShell 5.1 的 `Compress-Archive` 把 ZIP 条目名按 OEM/GBK 写入，不带 UTF-8 标志位。Linux/macOS 或假设 UTF-8 的 unzip 工具会报"不能解压"或文件名乱码。`pack_dist_zip.ps1` 走 .NET `ZipFile.CreateFromDirectory` + UTF8 entryNameEncoding，跨平台安全。
 
 ## 性能 Tips
 
@@ -111,4 +114,4 @@ flutter analyze lib   # 必须 0 error
 
 ❌ **不要**改 `pubspec.yaml` 顶部 `name: knowledge_graph_app`（Flutter 包标识符必须英文）
 ❌ **不要**忘了 Runner.rc 的 4 处版本号同步
-❌ **不要**用 `Compress-Archive` 之外的工具打包（中文文件名兼容性最好）
+❌ **不要**用 `Compress-Archive` 直接打包（PS 5.1 用 GBK 写条目名，跨平台解压会爆）—— 一律走 `scripts/pack_dist_zip.ps1`

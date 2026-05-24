@@ -120,9 +120,11 @@ cat > dist/_apk_pkg/安装说明.txt <<EOF
 3. USB 传到手机或直接打开 apk 文件
 4. 默认账号：学生 2023211985/211985 / 教师 206004 / 管理员 419116
 EOF
-cd dist/_apk_pkg && powershell.exe -NoProfile -Command "Compress-Archive -Path '*' -DestinationPath '..\\移动图谱与数字孪生+android+v0.13.0.zip' -Force"
+cd dist/_apk_pkg && powershell.exe -NoProfile -ExecutionPolicy Bypass -File ../../scripts/pack_dist_zip.ps1 -SourceDir . -ZipPath "../移动图谱与数字孪生+android+v0.13.0.zip"
 cd /d/FlutterProjects/knowledge_graph_app && rm -rf dist/_apk_pkg
 ```
+
+> ⚠ **不要用 `Compress-Archive`**。PS 5.1 的 `Compress-Archive` 把 ZIP 条目名按 GBK 编码，跨平台 unzip 会报"不能解压"或文件名乱码。一律走 `scripts/pack_dist_zip.ps1`（.NET ZipFile + UTF-8）。
 
 ## ABI 选择（AAB / 多 APK）
 
