@@ -427,6 +427,16 @@ class SyncServerImpl {
     var filePath = request.uri.path;
     if (filePath == '/') filePath = '/index.html';
 
+    // build/web 是用 --base-href "/mad-fd/" 构建的（GitHub Pages 子路径），
+    // index.html 内的所有资源引用形如 /mad-fd/flutter_bootstrap.js。
+    // 当用户在 LAN 模式访问 http://<ip>:8765/mad-fd/... 时，把这个前缀剥掉，
+    // 让 /mad-fd/foo.js 与 /foo.js 都映射到同一份文件。
+    if (filePath.startsWith('/mad-fd/')) {
+      filePath = filePath.substring('/mad-fd'.length); // 保留前导 /
+    } else if (filePath == '/mad-fd') {
+      filePath = '/index.html';
+    }
+
     final webDir = _cachedWebDir;
     if (webDir == null) {
       _jsonResponse(request.response, 404, {
@@ -450,7 +460,14 @@ class SyncServerImpl {
     final slash = filePath.lastIndexOf('/');
     final isAsset = dot > slash && dot > 0;
     if (isAsset) {
-      _jsonResponse(request.response, 404, {'error': 'Not Found'});
+      // 关键：对静态资源的 404 必须按其 ext 设置 content-type，
+      // 否则 Chrome strict MIME 模式会先报"MIME 不可执行"再报 404，
+      // 比裸 404 还误导（用户以为是服务器配置问题）。
+      final ext = filePath.split('.').last.toLowerCase();
+      request.response.statusCode = 404;
+      request.response.headers.contentType = _mimeType(ext);
+      request.response.write('// 404: $filePath\n');
+      await request.response.close();
       return;
     }
 
