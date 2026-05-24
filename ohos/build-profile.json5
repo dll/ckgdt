@@ -1,9 +1,23 @@
 {
   "app": {
-    "signingConfigs": [],
+    "signingConfigs": [
+      {
+        "name": "default",
+        "material": {
+          "certpath": "C:/Users/ldl/.ohos/config/openharmony/default_ohos_iMSX1MWgTNq-6Gex-nv97-X1iZFagZbyl_iBQ4isUXU=.cer",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001A773E0A28C8295BEA9806DCD4ACCB90BF91B3FC953049FA8BFE087916DA2799177D2B4DB2DA31",
+          "profile": "C:/Users/ldl/.ohos/config/openharmony/default_ohos_iMSX1MWgTNq-6Gex-nv97-X1iZFagZbyl_iBQ4isUXU=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "C:/Users/ldl/.ohos/config/openharmony/default_ohos_iMSX1MWgTNq-6Gex-nv97-X1iZFagZbyl_iBQ4isUXU=.p12",
+          "storePassword": "0000001AFA8BAFF6783631158529A67CD0582E537CF8657A741D387888706B5FABDBB1283FD62E8528B2"
+        }
+      }
+    ],
     "products": [
       {
         "name": "default",
+        "signingConfig": "default",
         "compileSdkVersion": 20,
         "compatibleSdkVersion": 20,
         "runtimeOS": "OpenHarmony",
