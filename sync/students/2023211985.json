@@ -3,8 +3,8 @@
   "user_id": "2023211985",
   "user_name": "测试学生",
   "role": "student",
-  "synced_at": "2026-05-25T06:37:10.653",
-  "last_active": "2026-05-25T06:37:10.653",
+  "synced_at": "2026-05-25T06:41:05.158692",
+  "last_active": "2026-05-25T06:41:05.146758",
   "quiz_results": [
     {
       "user_id": "2023211985",
@@ -113,7 +113,7 @@
       "title": "HarmonyOS NEXT 学习路径",
       "description": "基于前置关系自动生成 · 1个前置概念 · 0个拓展概念",
       "node_ids": "c_93",
-      "progress": 0,
+      "progress": 0.0,
       "status": "active",
       "created_at": "2026-04-21T21:00:47.093511",
       "updated_at": "2026-04-21T21:00:47.093511"
@@ -123,7 +123,7 @@
       "title": "综合项目实践 学习路径",
       "description": "自动推荐 · 3个概念 · 基于前置关系链",
       "node_ids": "c_129,c_114,c_122",
-      "progress": 0,
+      "progress": 0.0,
       "status": "active",
       "created_at": "2026-04-18T14:05:55.615981",
       "updated_at": "2026-04-18T14:05:55.615981"
@@ -133,7 +133,7 @@
       "title": "应用架构 学习路径",
       "description": "自动推荐 · 2个概念 · 基于前置关系链",
       "node_ids": "c_129,c_114",
-      "progress": 0,
+      "progress": 0.0,
       "status": "active",
       "created_at": "2026-04-18T14:05:55.610984",
       "updated_at": "2026-04-18T14:05:55.610984"
@@ -143,7 +143,7 @@
       "title": "ArkTS 学习路径",
       "description": "自动推荐 · 2个概念 · 基于前置关系链",
       "node_ids": "c_93,c_95",
-      "progress": 0,
+      "progress": 0.0,
       "status": "active",
       "created_at": "2026-04-18T14:05:55.605965",
       "updated_at": "2026-04-18T14:05:55.605965"
@@ -153,7 +153,7 @@
       "title": "Dart语言 学习路径",
       "description": "自动推荐 · 2个概念 · 基于前置关系链",
       "node_ids": "c_1,c_46",
-      "progress": 0,
+      "progress": 0.0,
       "status": "active",
       "created_at": "2026-04-18T14:05:55.600965",
       "updated_at": "2026-04-18T14:05:55.600965"
@@ -163,7 +163,7 @@
       "title": "Swift语言 学习路径",
       "description": "自动推荐 · 2个概念 · 基于前置关系链",
       "node_ids": "c_1,c_34",
-      "progress": 0,
+      "progress": 0.0,
       "status": "active",
       "created_at": "2026-04-18T14:05:55.595981",
       "updated_at": "2026-04-18T14:05:55.595981"
@@ -173,7 +173,7 @@
       "title": "Kotlin语言 学习路径",
       "description": "自动推荐 · 2个概念 · 基于前置关系链",
       "node_ids": "c_1,c_28",
-      "progress": 0,
+      "progress": 0.0,
       "status": "active",
       "created_at": "2026-04-18T14:05:55.590926",
       "updated_at": "2026-04-18T14:05:55.590926"
@@ -183,7 +183,7 @@
       "title": "Jetpack Compose 学习路径",
       "description": "自动推荐 · 3个概念 · 基于前置关系链",
       "node_ids": "c_1,c_28,c_27",
-      "progress": 0,
+      "progress": 0.0,
       "status": "active",
       "created_at": "2026-04-18T14:05:55.582925",
       "updated_at": "2026-04-18T14:05:55.583926"
@@ -204,7 +204,7 @@
       "scored_at": null,
       "created_at": "2026-05-24T07:53:35.496936",
       "updated_at": "2026-05-24T07:53:35.496936",
-      "ai_suspicion": 0,
+      "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
     },
@@ -222,18 +222,62 @@
       "scored_at": null,
       "created_at": "2026-04-21T11:57:18.637947",
       "updated_at": "2026-04-21T11:57:18.637947",
-      "ai_suspicion": 0,
+      "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
     }
   ],
   "student_reports": [],
-  "student_works": [],
+  "student_works": [
+    {
+      "title": "智能温控监控系统的开发与整合",
+      "description": "【实时温度监控】通过Android端实时接收和展示多路温度传感器数据，使用仪表盘和数值面板直观显示当前温度值和变化趋势。【远程控制与告警】支持远程开启/关闭温控设备，当温度超出预设阈值时自动弹出告警通知并发送消息提醒。【历史数据分析】存储历史温度数据并以折线图形式展示温度变化趋势，支持按时间段筛选和导出数据报表。",
+      "tech_stack": "Kotlin + Android SDK",
+      "work_type": "综合项目",
+      "group_name": "cg1-mtcs",
+      "leader_name": "测试学生",
+      "user_id": "2023211985",
+      "file_path": null,
+      "file_size": null,
+      "status": "待提交",
+      "submit_time": null,
+      "tags": "[\"Kotlin\",\"Android\",\"SDK\"]",
+      "created_at": "2026-05-22T00:20:55.901721",
+      "updated_at": "2026-05-22T00:20:55.901721",
+      "related_node_ids": null,
+      "ai_suspicion": 0.0,
+      "teacher_confirmed": 0,
+      "project_id": null,
+      "group_id": null,
+      "video_url": null,
+      "thumbnail_url": null,
+      "video_duration": null,
+      "view_count": 0,
+      "like_count": 0,
+      "comment_count": 0,
+      "repo": "cg1-mtcs",
+      "class_group": "cg1",
+      "project": "智能温控监控系统的开发与整合",
+      "student_role": "Android开发工程师",
+      "student_name": "测试学生"
+    }
+  ],
   "survey_responses": [],
   "checkin_records": [],
   "work_comments": [],
   "work_likes": [],
-  "work_views": [],
+  "work_views": [
+    {
+      "work_id": 88,
+      "user_id": "2023211985",
+      "viewed_at": "2026-05-24T07:26:25.220485"
+    },
+    {
+      "work_id": 88,
+      "user_id": "2023211985",
+      "viewed_at": "2026-05-24T07:26:14.468542"
+    }
+  ],
   "peer_reviews": [],
   "collaboration_messages": [],
   "contribution_scores": [],
