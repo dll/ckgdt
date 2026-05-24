@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import '../../core/init_logger.dart';
 import '../models/question_model.dart';
 import '../models/quiz_result_model.dart';
 import 'database_helper.dart';
@@ -23,22 +23,35 @@ class QuizDao {
   }
 
   Future<List<String>> getChapters() async {
-    try {
-      final db = await _dbHelper.database;
-      debugPrint('=== QuizDao: Getting chapters');
-      final maps = await db.rawQuery(
-        'SELECT DISTINCT source FROM questions WHERE source IS NOT NULL AND source != "" ORDER BY source',
-      );
-      debugPrint('=== QuizDao: Got ${maps.length} chapters');
-      if (maps.isNotEmpty) {
-        debugPrint('=== QuizDao: First chapter record: ${maps.first}');
+    // 不再吞错。失败时往上抛，让 quiz_page 的 catch 写到 lastInitError，
+    // UI 显示具体错误而不是"暂无题目"误导学生。
+    // 加 retry：sqflite singleInstance 在多进程并发时会瞬时锁定，
+    // 隔 100ms 重试两次几乎可以化解。
+    final db = await _dbHelper.database;
+    Object? lastError;
+    StackTrace? lastSt;
+    for (int attempt = 0; attempt < 3; attempt++) {
+      try {
+        final maps = await db.rawQuery(
+          'SELECT DISTINCT source FROM questions WHERE source IS NOT NULL AND source != "" ORDER BY source',
+        );
+        if (attempt > 0) {
+          InitLogger.log('quiz_dao',
+              'getChapters succeeded after $attempt retries (${maps.length} rows)');
+        }
+        final chapters = maps.map((map) => map['source'] as String).toList();
+        return chapters.toSet().toList();
+      } catch (e, st) {
+        lastError = e;
+        lastSt = st;
+        InitLogger.log('quiz_dao',
+            'getChapters attempt ${attempt + 1} failed: $e — retrying after 100ms');
+        await Future<void>.delayed(const Duration(milliseconds: 100));
       }
-      final chapters = maps.map((map) => map['source'] as String).toList();
-      return chapters.toSet().toList();
-    } catch (e) {
-      debugPrint('=== QuizDao: Error getting chapters: $e');
-      return [];
     }
+    InitLogger.error(
+        'quiz_dao', 'getChapters all 3 attempts failed: $lastError', lastSt);
+    throw lastError!;
   }
 
   Future<int> saveQuizResult(QuizResultModel result) async {
