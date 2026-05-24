@@ -21,9 +21,9 @@ description: 一键升版 + 多端构建 + dist 打包 + gh-pages + Gitee Releas
 
 ## 升版三件套（每次升 minor / major 必做）
 
-### Step 1：升版同步 13 处文件
+### Step 1：升版同步 9 个文件 / 16 处字段
 
-升 0.13 → 0.14 时，把 `0.13.0` 替换为 `0.14.0`，构建号 `+N` 归零：
+下表用"升 0.13 → 0.14"作示例（实际升版时把 OLD/NEW 替换为对应版本），构建号 `+N` 归零：
 
 | 平台 | 文件 | 字段 |
 |------|------|------|
@@ -57,6 +57,8 @@ grep -E "version:|app_name|BINARY_OUTPUT_NAME|window\.Create|FileDescription|Int
 每条结果应该都包含新版本号（除 `name:` / `BINARY_NAME` / `short_name` / `description` / `bundleName` / `bundleIdentifier`）。
 
 ### Step 3：四端并行构建
+
+> 本节及 Step 4-6 沿用"升 0.13 → 0.14"的示例版本号，实际跑时把所有 `0.14.0` 替换为目标版本。
 
 ```bash
 # 4 端可并行（用 background task）
@@ -149,7 +151,7 @@ git add pubspec.yaml lib/main.dart \
 
 git commit -m "chore: 升版 v0.14.0
 
-- pubspec / main.dart 主标题 + 13 处版本号同步
+- pubspec / main.dart 主标题 + 9 文件 16 处字段同步
 - 4 端构建产物已打包到 dist/
 - Web 已 force-push 到 gh-pages
 
@@ -165,7 +167,7 @@ git push origin master
 
 ## 验收清单（每次升版必跑）
 
-- [ ] 13 处版本号字段都改对
+- [ ] 9 个文件 16 处版本号字段都改对（按 Step 1 表格逐项核）
 - [ ] `flutter analyze lib` 0 error
 - [ ] `flutter test test/core test/models test/services test/data` 全过
 - [ ] 4 端构建 SUCCESS（看构建日志最后是否有 ✓ Built）
