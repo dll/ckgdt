@@ -5,6 +5,7 @@ import '../../../data/local/assessment_dao.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../data/local/grading_result_dao.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/notification_service.dart';
 import '../../../services/agent/agents/assessment_grading_agent.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
@@ -279,6 +280,23 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
     if (result == null) return;
 
     final db = await DatabaseHelper.instance.database;
+    // 拿学生 ID + 报告类型，给后面的通知用
+    String? studentId;
+    String? reportType;
+    try {
+      final row = await db.query(
+        'student_reports',
+        columns: ['user_id', 'title'],
+        where: 'id = ?',
+        whereArgs: [reportId],
+        limit: 1,
+      );
+      if (row.isNotEmpty) {
+        studentId = row.first['user_id'] as String?;
+        reportType = row.first['title'] as String? ?? '考核报告';
+      }
+    } catch (_) {}
+
     await db.update(
       'student_reports',
       {
@@ -298,6 +316,17 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
         await _gradingDao.approveResult(p['id'] as int, widget.authService.getCurrentUserId() ?? '');
       }
     } catch (_) {}
+
+    // 通知学生：教师已复核
+    if (studentId != null && studentId.isNotEmpty) {
+      try {
+        await NotificationService().notifyAssessmentGradeApproved(
+          studentId: studentId,
+          reportType: reportType ?? '考核报告',
+          score: result.score,
+        );
+      } catch (_) {}
+    }
 
     setState(() {
       _approvedIds.add(reportId);
