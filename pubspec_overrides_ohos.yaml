@@ -16,3 +16,5 @@ dependency_overrides:
   file_picker: "^8.3.2"
   # 5.5.5+ 要 Dart 3.5+，锁到 5.5.4
   win32: "<=5.5.4"
+  # 1.3.x 用了 PopScope.onPopInvokedWithResult（Flutter 3.27+），降到 1.2.x
+  media_kit_video: "<=1.2.5"

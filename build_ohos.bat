@@ -1,13 +1,15 @@
 @echo off
-REM HarmonyOS HAP 构建脚本 — 用 pubspec_overrides.yaml 模式
+REM HarmonyOS HAP 构建脚本 — 用 PowerShell 脚本做 API 兼容补丁
 REM
 REM 流程：
-REM 1. cp pubspec_overrides_ohos.yaml → pubspec_overrides.yaml
-REM    （pub get 时 Dart 自动合并依赖覆盖，主 pubspec 不动）
-REM 2. flutter pub get + build hap
-REM 3. 删 pubspec_overrides.yaml 恢复主 pubspec 不被污染
+REM 1. ohos_patch.ps1 — 备份 lib/ + 全局降级 API（withValues/CardThemeData/...）
+REM 2. cp pubspec_overrides_ohos.yaml → pubspec_overrides.yaml（依赖降版）
+REM 3. flutter pub get + build hap
+REM 4. ohos_restore.ps1 — 还原 lib/
+REM 5. 删 pubspec_overrides.yaml
 REM
-REM 比 pubspec_ohos.yaml 整文件复制好在：主 pubspec 升级时本脚本无需同步
+REM **重要**：本脚本独占 — 跑时不要并行 build 其它平台
+REM **如果 build 中断**：手动跑 `powershell ./ohos_restore.ps1` 还原 lib/
 
 set "OHPM_HOME=D:\Program Files\Huawei\DevEco Studio\tools\ohpm"
 set "HVIGOR_HOME=D:\Program Files\Huawei\DevEco Studio\tools\hvigor"
@@ -15,7 +17,22 @@ set "OHOS_BASE_SDK_HOME=E:\Huawei\OpenHarmony\Sdk"
 set "OHOS_SDK_HOME=E:\Huawei\OpenHarmony\Sdk"
 set "PATH=%OHPM_HOME%\bin;%HVIGOR_HOME%\bin;%PATH%"
 
+powershell -ExecutionPolicy Bypass -File ohos_patch.ps1
+if errorlevel 1 goto restore_and_exit
+
 copy /Y pubspec_overrides_ohos.yaml pubspec_overrides.yaml >nul
+
 call D:\development\flutter_ohos\flutter\bin\flutter.bat pub get
 call D:\development\flutter_ohos\flutter\bin\flutter.bat build hap --release
-del pubspec_overrides.yaml >nul
+set BUILD_RESULT=%ERRORLEVEL%
+
+del pubspec_overrides.yaml >nul 2>&1
+
+:restore_and_exit
+powershell -ExecutionPolicy Bypass -File ohos_restore.ps1
+if "%BUILD_RESULT%"=="0" (
+  echo === HarmonyOS HAP build SUCCESS ===
+) else (
+  echo === HarmonyOS HAP build FAILED ===
+)
+exit /b %BUILD_RESULT%
