@@ -34,6 +34,7 @@ class _StudentLabPageState extends State<StudentLabPage> {
   bool _isLoading = true;
 
   String get _userId => _authService.currentUser?.userId ?? '';
+  Color accentColor = const Color(0xFF1677FF);
 
   /// 验证实验报告文件名：必须为 学号+姓名+任务名称.pdf
   String? _validateFileName(String fileName, String taskTitle) {
@@ -112,6 +113,7 @@ class _StudentLabPageState extends State<StudentLabPage> {
 
   @override
   Widget build(BuildContext context) {
+    accentColor = Theme.of(context).colorScheme.primary;
     if (_isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
@@ -258,10 +260,10 @@ class _StudentLabPageState extends State<StudentLabPage> {
   }
 
   Widget _buildMaterialsCard() {
-    const categories = [
-      {'icon': Icons.school, 'title': '实验教程', 'color': Color(0xFF667eea),
+    final categories = [
+      {'icon': Icons.school, 'title': '实验教程', 'color': accentColor,
        'dir': 'data/实验/实验教程/', 'desc': '6个实验的步骤教程'},
-      {'icon': Icons.layers, 'title': '移动技术栈', 'color': Color(0xFF764ba2),
+      {'icon': Icons.layers, 'title': '移动技术栈', 'color': accentColor,
        'dir': 'data/实验/移动技术栈/', 'desc': '主流技术手册'},
       {'icon': Icons.menu_book, 'title': '实验指导', 'color': Colors.teal,
        'dir': 'data/实验/实验指导/', 'desc': '实验指导书'},
@@ -278,7 +280,7 @@ class _StudentLabPageState extends State<StudentLabPage> {
           children: [
             Row(
               children: [
-                const Icon(Icons.menu_book, size: 18, color: Color(0xFF667eea)),
+                Icon(Icons.menu_book, size: 18, color: accentColor),
                 const SizedBox(width: 6),
                 const Text('实验材料',
                     style:
@@ -618,12 +620,12 @@ class _StudentLabPageState extends State<StudentLabPage> {
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       color: selectedFilePath != null
-                          ? const Color(0xFF667eea).withValues(alpha: 0.05)
+                          ? accentColor.withValues(alpha: 0.05)
                           : Colors.grey.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: selectedFilePath != null
-                            ? const Color(0xFF667eea).withValues(alpha: 0.3)
+                            ? accentColor.withValues(alpha: 0.3)
                             : Colors.grey.withValues(alpha: 0.3),
                         style: BorderStyle.solid,
                       ),
@@ -830,11 +832,11 @@ class _StudentLabPageState extends State<StudentLabPage> {
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.auto_awesome, color: Color(0xFF667eea)),
-            SizedBox(width: 8),
-            Text('AI 批阅', style: TextStyle(fontSize: 18)),
+            Icon(Icons.auto_awesome, color: accentColor),
+            const SizedBox(width: 8),
+            const Text('AI 批阅', style: TextStyle(fontSize: 18)),
           ],
         ),
         content: Text('「$taskTitle」已提交。AI 批阅约需 10-30 秒。\n\n'
@@ -915,7 +917,7 @@ class _StudentLabPageState extends State<StudentLabPage> {
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
-            const Icon(Icons.auto_awesome, color: Color(0xFF667eea)),
+            Icon(Icons.auto_awesome, color: accentColor),
             const SizedBox(width: 8),
             Text('AI 批阅草稿 · ${draft.score} 分',
                 style: const TextStyle(fontSize: 18)),
@@ -984,11 +986,11 @@ class _StudentMaterialsPageState extends State<_StudentMaterialsPage> {
   static const _dataRepoName = 'mad-data';
   static const _dataRepoBranch = 'master';
 
-  static const _categories = [
-    {'title': '实验教程', 'icon': Icons.school, 'color': Color(0xFF667eea),
+  static final _categories = [
+    {'title': '实验教程', 'icon': Icons.school, 'color': const Color(0xFF1677FF),
      'giteeDir': '实验/实验教程/',
      'desc': '6 个实验的详细步骤教程'},
-    {'title': '移动技术栈', 'icon': Icons.layers, 'color': Color(0xFF764ba2),
+    {'title': '移动技术栈', 'icon': Icons.layers, 'color': const Color(0xFF1677FF),
      'giteeDir': '实验/移动技术栈/',
      'desc': '覆盖 Kotlin/Swift/Flutter/ArkUI 等主流技术手册'},
     {'title': '实验指导', 'icon': Icons.menu_book, 'color': Colors.teal,

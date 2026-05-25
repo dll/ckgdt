@@ -47,8 +47,8 @@ android {
         applicationId = "cn.edu.chzu.madkg"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        versionCode = flutter.getVersionCode()
+        versionName = flutter.getVersionName()
     }
 
     buildTypes {

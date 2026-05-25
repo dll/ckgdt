@@ -7,6 +7,7 @@ import '../../../data/models/twin_profile_model.dart';
 import '../../widgets/agent_chat_overlay.dart';
 import '../../widgets/markdown_bubble.dart';
 
+import '../../../core/constants/app_theme.dart';
 import '../../../core/constants/color_ohos_compat.dart';
 /// 数字孪生仪表盘 — 教育教学数字镜像
 ///
@@ -44,8 +45,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
   late AnimationController _headerAnimCtrl;
   late Animation<double> _headerFade;
 
-  static const _primary = Color(0xFF667eea);
-  static const _gradient = [Color(0xFF667eea), Color(0xFF764ba2)];
+  Color primary = const Color(0xFF1677FF);
 
   @override
   void initState() {
@@ -195,6 +195,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    primary = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
       appBar: AppBar(
@@ -229,7 +230,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                     // ── Hero Header + 等级进度 ──
                     FadeTransition(
                       opacity: _headerFade,
-                      child: _buildHeader(isDark),
+                      child: _buildHeader(context, isDark),
                     ),
                     const SizedBox(height: 16),
 
@@ -414,18 +415,18 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: _primary.withValues(alpha: 0.12),
+        color: primary.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 11, color: _primary),
+          Icon(icon, size: 11, color: primary),
           const SizedBox(width: 3),
           Text(text,
               style: TextStyle(
                   fontSize: 10,
-                  color: isDark ? Colors.white70 : _primary,
+                  color: isDark ? Colors.white70 : primary,
                   fontWeight: FontWeight.w500)),
         ],
       ),
@@ -501,7 +502,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
   // Hero Header
   // ═══════════════════════════════════════════════════════════════════════════
 
-  Widget _buildHeader(bool isDark) {
+  Widget _buildHeader(BuildContext context, bool isDark) {
     final info = _getLevelInfo();
     final level = info['level'] as String;
     final levelColor = info['color'] as Color;
@@ -537,15 +538,11 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: _gradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: AppGradientTheme.of(context).linearGradient,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: _primary.withValues(alpha: 0.3),
+            color: primary.withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -1024,7 +1021,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
           children: [
             Row(
               children: [
-                Icon(Icons.menu_book, size: 18, color: _primary),
+                Icon(Icons.menu_book, size: 18, color: primary),
                 const SizedBox(width: 6),
                 Text('章节掌握度 · 知识骨架',
                     style: TextStyle(
@@ -1136,7 +1133,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
           children: [
             Row(
               children: [
-                Icon(Icons.groups, size: 18, color: _primary),
+                Icon(Icons.groups, size: 18, color: primary),
                 const SizedBox(width: 6),
                 Text('班级分布 · 育人心脏',
                     style: TextStyle(
@@ -1238,7 +1235,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
           children: [
             Row(
               children: [
-                Icon(Icons.grid_on, size: 18, color: _primary),
+                Icon(Icons.grid_on, size: 18, color: primary),
                 const SizedBox(width: 6),
                 Text('学习热力图 · 近30天',
                     style: TextStyle(
@@ -1522,7 +1519,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
           children: [
             Row(
               children: [
-                Icon(Icons.radar, size: 18, color: _primary),
+                Icon(Icons.radar, size: 18, color: primary),
                 const SizedBox(width: 6),
                 Text(_isTeacher ? '教学效能雷达' : '能力雷达',
                     style: TextStyle(
@@ -1543,8 +1540,8 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                           .map((v) =>
                               RadarEntry(value: v.clamp(0, 100)))
                           .toList(),
-                      fillColor: _primary.withValues(alpha: 0.2),
-                      borderColor: _primary,
+                      fillColor: primary.withValues(alpha: 0.2),
+                      borderColor: primary,
                       borderWidth: 2,
                     ),
                   ],
@@ -1609,7 +1606,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
           children: [
             Row(
               children: [
-                Icon(Icons.show_chart, size: 18, color: _primary),
+                Icon(Icons.show_chart, size: 18, color: primary),
                 const SizedBox(width: 6),
                 Text('成长曲线 · 近8周学习时长',
                     style: TextStyle(
@@ -1662,11 +1659,11 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                               FlSpot(e.key.toDouble(), e.value))
                           .toList(),
                       isCurved: true,
-                      color: _primary,
+                      color: primary,
                       barWidth: 3,
                       belowBarData: BarAreaData(
                         show: true,
-                        color: _primary.withValues(alpha: 0.1),
+                        color: primary.withValues(alpha: 0.1),
                       ),
                       dotData: const FlDotData(show: true),
                     ),
@@ -1744,7 +1741,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
         children: [
           ListTile(
             leading:
-                const Icon(Icons.psychology, color: _primary),
+                Icon(Icons.psychology, color: primary),
             title: const Text('AI 智能诊断',
                 style: TextStyle(fontWeight: FontWeight.bold)),
             subtitle: const Text('基于全量数据的深度分析与个性化建议',

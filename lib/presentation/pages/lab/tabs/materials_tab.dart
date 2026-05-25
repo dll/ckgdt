@@ -31,14 +31,14 @@ class _MaterialsTabState extends State<_MaterialsTab> {
     _MaterialCategory(
       title: '实验教程',
       icon: Icons.school,
-      color: Color(0xFF667eea),
+      color: Color(0xFF1677FF),
       assetDir: 'data/实验/实验教程/',
       description: '6 个实验的详细步骤教程，包含核心任务、操作指南和成功标准',
     ),
     _MaterialCategory(
       title: '移动技术栈',
       icon: Icons.layers,
-      color: Color(0xFF764ba2),
+      color: Color(0xFF0958D9),
       assetDir: 'data/实验/移动技术栈/',
       description: '覆盖 Kotlin/Swift/Flutter/ArkUI/Uniapp/MAUI 等主流技术的完整手册',
     ),

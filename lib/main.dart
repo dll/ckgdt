@@ -171,8 +171,8 @@ class _MyAppState extends State<MyApp> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  const Color(0xFF667eea),
-                  const Color(0xFF764ba2).withValues(alpha: 0.9),
+                  Color(0xFF1677FF),
+                  Color(0xFF0958D9).withValues(alpha: 0.9),
                 ],
               ),
             ),
@@ -208,7 +208,7 @@ class _MyAppState extends State<MyApp> {
                       label: const Text('请关闭其他实例'),
                       style: FilledButton.styleFrom(
                         backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF667eea),
+                        foregroundColor: const Color(0xFF1677FF),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 32,
                           vertical: 16,

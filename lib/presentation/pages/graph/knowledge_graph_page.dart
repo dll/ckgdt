@@ -69,6 +69,8 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   final _dao = KnowledgeGraphDao();
   final _transformationController = TransformationController();
 
+  Color primary = const Color(0xFF1677FF);
+
   // ── 数据 ────────────────────────────────────────────────────────────────
   List<_ConceptNode> _nodes = [];
   List<_ConceptEdge> _edges = [];
@@ -934,7 +936,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
         actionsPadding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
         title: Row(
           children: [
-            const Icon(Icons.analytics, color: Color(0xFF667eea), size: 20),
+            Icon(Icons.analytics, color: primary, size: 20),
             const SizedBox(width: 6),
             const Text('知识图谱统计', style: TextStyle(fontSize: 16)),
             const Spacer(),
@@ -956,7 +958,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                 // 概要统计卡 — 紧凑行
                 Row(
                   children: [
-                    _buildStatCard('概念', '$conceptCount', const Color(0xFF667eea)),
+                    _buildStatCard('概念', '$conceptCount', primary),
                     const SizedBox(width: 6),
                     _buildStatCard(
                         '关系', '$relationCount', const Color(0xFF4CAF50)),
@@ -1082,7 +1084,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                   label: Text(labels[i]),
                   selected: isSelected,
                   selectedColor:
-                      const Color(0xFF667eea).withValues(alpha: 0.2),
+                      primary.withValues(alpha: 0.2),
                   onSelected: (_) {
                     Navigator.pop(ctx);
                     _setChapterFilter(chapters[i]);
@@ -1212,7 +1214,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                               if (node.chapter != null)
                                 _buildBadge(
                                   '第${node.chapter}章',
-                                  const Color(0xFF667eea),
+                                  primary,
                                 ),
                               const SizedBox(width: 6),
                               _buildBadge(
@@ -1269,19 +1271,19 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF667eea)
+                          color: primary
                               .withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: const Color(0xFF667eea)
+                            color: primary
                                 .withValues(alpha: 0.2),
                           ),
                         ),
                         child: Text(
                           kw.trim(),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF667eea),
+                            color: primary,
                           ),
                         ),
                       );
@@ -1552,7 +1554,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                     icon: const Icon(Icons.account_tree, size: 18),
                     label: const Text('查看前置链'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF667eea),
+                      foregroundColor: primary,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -1572,7 +1574,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                     icon: const Icon(Icons.device_hub, size: 18),
                     label: const Text('聚焦关系网络'),
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF667eea),
+                      backgroundColor: primary,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -1983,6 +1985,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
 
   @override
   Widget build(BuildContext context) {
+    primary = Theme.of(context).colorScheme.primary;
     return Scaffold(
       appBar: _buildAppBar(),
       body: _isLoading
@@ -2083,10 +2086,10 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                 subtitle: Text('基于前置关系自动生成', style: TextStyle(fontSize: 11)),
               ),
             ),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'properties',
               child: ListTile(
-                leading: Icon(Icons.table_chart, color: Color(0xFF667eea)),
+                leading: Icon(Icons.table_chart, color: primary),
                 title: Text('属性管理'),
                 subtitle: Text('查看和编辑节点/关系', style: TextStyle(fontSize: 11)),
               ),
@@ -2099,11 +2102,11 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   }
 
   Widget _buildLoadingView() {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircularProgressIndicator(color: Color(0xFF667eea)),
+          CircularProgressIndicator(color: primary),
           SizedBox(height: 16),
           Text(
             '正在加载知识图谱...',
@@ -2167,7 +2170,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
             icon: const Icon(Icons.auto_fix_high),
             label: const Text('初始化知识图谱'),
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF667eea),
+              backgroundColor: primary,
               padding:
                   const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(
@@ -2364,14 +2367,14 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   Widget _buildSearchResultBar() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      color: const Color(0xFF667eea).withValues(alpha: 0.1),
+      color: primary.withValues(alpha: 0.1),
       child: Row(
         children: [
-          const Icon(Icons.search, size: 16, color: Color(0xFF667eea)),
+          Icon(Icons.search, size: 16, color: primary),
           const SizedBox(width: 6),
           Text(
             '找到 ${_highlightedNodeIds.length} 个匹配概念',
-            style: const TextStyle(fontSize: 13, color: Color(0xFF667eea)),
+            style: TextStyle(fontSize: 13, color: primary),
           ),
           const Spacer(),
           TextButton.icon(
@@ -2381,7 +2384,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
               padding: const EdgeInsets.symmetric(horizontal: 8),
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              foregroundColor: const Color(0xFF667eea),
+              foregroundColor: primary,
             ),
             onPressed: _scrollToFirstMatch,
           ),
@@ -2508,13 +2511,13 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFF667eea).withValues(alpha: 0.08),
+            primary.withValues(alpha: 0.08),
             const Color(0xFF4CAF50).withValues(alpha: 0.06),
           ],
         ),
         border: Border(
           bottom: BorderSide(
-            color: const Color(0xFF667eea).withValues(alpha: 0.15),
+            color: primary.withValues(alpha: 0.15),
           ),
         ),
       ),
@@ -2524,10 +2527,10 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
           if (_teacherAchievementMode) ...[
             Row(
               children: [
-                const Icon(Icons.people, size: 15, color: Color(0xFF667eea)),
+                Icon(Icons.people, size: 15, color: primary),
                 const SizedBox(width: 6),
-                const Text('查看：',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF667eea))),
+                Text('查看：',
+                    style: TextStyle(fontSize: 12, color: primary)),
                 const SizedBox(width: 4),
                 // 搜索框
                 Expanded(
@@ -2545,27 +2548,27 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(15),
                           borderSide: BorderSide(
-                            color: const Color(0xFF667eea)
+                            color: primary
                                 .withValues(alpha: 0.3),
                           ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(15),
                           borderSide: BorderSide(
-                            color: const Color(0xFF667eea)
+                            color: primary
                                 .withValues(alpha: 0.2),
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(15),
-                          borderSide: const BorderSide(
-                            color: Color(0xFF667eea),
+                          borderSide: BorderSide(
+                            color: primary,
                           ),
                         ),
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 0),
                         filled: true,
-                        fillColor: const Color(0xFF667eea)
+                        fillColor: primary
                             .withValues(alpha: 0.04),
                       ),
                       onChanged: (v) =>
@@ -2627,10 +2630,10 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                 isAllStudents
                     ? '全体达成度 ${pct.toStringAsFixed(1)}%'
                     : '达成度 ${pct.toStringAsFixed(1)}%',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF667eea),
+                  color: primary,
                 ),
               ),
               if (isAllStudents) ...[
@@ -2669,22 +2672,22 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF667eea).withValues(alpha: 0.1),
+                      color: primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: const Color(0xFF667eea).withValues(alpha: 0.3),
+                        color: primary.withValues(alpha: 0.3),
                       ),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.auto_awesome,
-                            size: 13, color: Color(0xFF667eea)),
+                            size: 13, color: primary),
                         SizedBox(width: 3),
                         Text('AI推荐',
                             style: TextStyle(
                                 fontSize: 10,
-                                color: Color(0xFF667eea),
+                                color: primary,
                                 fontWeight: FontWeight.bold)),
                       ],
                     ),
@@ -2739,18 +2742,18 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
             color: isSelected
-                ? const Color(0xFF667eea)
-                : const Color(0xFF667eea).withValues(alpha: 0.08),
+                ? primary
+                : primary.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: const Color(0xFF667eea).withValues(alpha: 0.3),
+              color: primary.withValues(alpha: 0.3),
             ),
           ),
           child: Text(
             label,
             style: TextStyle(
               fontSize: 11,
-              color: isSelected ? Colors.white : const Color(0xFF667eea),
+              color: isSelected ? Colors.white : primary,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             ),
           ),
@@ -2871,9 +2874,9 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                     ),
                   ),
                 ),
-                const Row(
+                Row(
                   children: [
-                    Icon(Icons.auto_awesome, color: Color(0xFF667eea)),
+                    Icon(Icons.auto_awesome, color: primary),
                     SizedBox(width: 8),
                     Text('AI 学习推荐',
                         style: TextStyle(
@@ -2894,7 +2897,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                     color: Colors.grey.shade50,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                        color: const Color(0xFF667eea)
+                        color: primary
                             .withValues(alpha: 0.15)),
                   ),
                   child: MarkdownBubble(
@@ -3432,12 +3435,12 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                             color: Colors.grey,
                             fontWeight: FontWeight.w600)),
                   ),
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.only(right: 8),
                     child: Text('点击节点 → 标记掌握',
                         style: TextStyle(
                             fontSize: 9,
-                            color: Color(0xFF667eea))),
+                            color: primary)),
                   ),
                 ],
               ),

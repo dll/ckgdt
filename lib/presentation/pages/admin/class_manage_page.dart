@@ -23,6 +23,7 @@ class _ClassManagePageState extends State<ClassManagePage>
   Map<String, int> _stats = {};
   bool _isLoading = true;
   bool _demoGenerated = false;
+  Color primary = const Color(0xFF1677FF);
 
   // ─────────────────────────────────────────────────────────────────────────
   // Lifecycle
@@ -136,6 +137,7 @@ class _ClassManagePageState extends State<ClassManagePage>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    primary = theme.colorScheme.primary;
     return Scaffold(
       appBar: AppBar(
         title: const Text('班级管理'),
@@ -216,13 +218,13 @@ class _ClassManagePageState extends State<ClassManagePage>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFF667eea).withValues(alpha: 0.08),
-            const Color(0xFF764ba2).withValues(alpha: 0.06),
+            primary.withValues(alpha: 0.08),
+            primary.withValues(alpha: 0.06),
           ],
         ),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: const Color(0xFF667eea).withValues(alpha: 0.15),
+          color: primary.withValues(alpha: 0.15),
         ),
       ),
       child: Row(
@@ -232,7 +234,7 @@ class _ClassManagePageState extends State<ClassManagePage>
             icon: Icons.class_outlined,
             label: '总班级',
             value: '${_stats['total'] ?? 0}',
-            color: const Color(0xFF667eea),
+            color: primary,
           ),
           _buildStatDivider(),
           _buildStatItem(
@@ -413,12 +415,12 @@ class _ClassManagePageState extends State<ClassManagePage>
                     decoration: BoxDecoration(
                       color: isArchived
                           ? Colors.grey.withValues(alpha: 0.15)
-                          : const Color(0xFF667eea).withValues(alpha: 0.12),
+                          : primary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
                       isArchived ? Icons.archive_rounded : Icons.school_rounded,
-                      color: isArchived ? Colors.grey : const Color(0xFF667eea),
+                      color: isArchived ? Colors.grey : primary,
                       size: 22,
                     ),
                   ),
@@ -1129,6 +1131,7 @@ class _ClassMemberSheetState extends State<_ClassMemberSheet> {
   List<Map<String, dynamic>> _members = [];
   bool _isLoading = true;
   String _searchQuery = '';
+  Color primary = const Color(0xFF1677FF);
 
   @override
   void initState() {
@@ -1165,6 +1168,7 @@ class _ClassMemberSheetState extends State<_ClassMemberSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    primary = theme.colorScheme.primary;
     return DraggableScrollableSheet(
       initialChildSize: 0.6,
       minChildSize: 0.4,
@@ -1344,7 +1348,7 @@ class _ClassMemberSheetState extends State<_ClassMemberSheet> {
           radius: 18,
           backgroundColor: isTeacherMember
               ? Colors.orange.withValues(alpha: 0.15)
-              : const Color(0xFF667eea).withValues(alpha: 0.12),
+              : primary.withValues(alpha: 0.12),
           child: Text(
             displayName.isNotEmpty ? displayName[0] : '?',
             style: TextStyle(
@@ -1352,7 +1356,7 @@ class _ClassMemberSheetState extends State<_ClassMemberSheet> {
               fontWeight: FontWeight.w600,
               color: isTeacherMember
                   ? Colors.orange[700]
-                  : const Color(0xFF667eea),
+                  : primary,
             ),
           ),
         ),

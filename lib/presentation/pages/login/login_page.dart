@@ -411,7 +411,7 @@ class _LoginPageState extends State<LoginPage>
       builder: (ctx) => AlertDialog(
         title: const Row(
           children: [
-            Icon(Icons.login, color: Color(0xFF667eea)),
+            Icon(Icons.login, color: _accent),
             SizedBox(width: 8),
             Text('确认身份', style: TextStyle(fontSize: 18)),
           ],

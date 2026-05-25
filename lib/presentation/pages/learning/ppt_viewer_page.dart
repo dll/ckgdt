@@ -68,6 +68,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
   double _slideWidthEmu = 12192000;
   double _slideHeightEmu = 6858000;
   double get _slideAspect => _slideWidthEmu / _slideHeightEmu;
+  Color primary = const Color(0xFF1677FF);
 
   // ═══════════════════════════════════════════════════════════════════════
   //  生命周期
@@ -750,6 +751,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
 
   @override
   Widget build(BuildContext context) {
+    primary = Theme.of(context).colorScheme.primary;
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: _isFullScreen
@@ -944,12 +946,12 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
             color: Colors.black,
             borderRadius: BorderRadius.circular(8),
             border: sel
-                ? Border.all(color: const Color(0xFF667eea), width: 3)
+                ? Border.all(color: primary, width: 3)
                 : Border.all(color: Colors.white24, width: 1),
             boxShadow: sel
                 ? [
                     BoxShadow(
-                        color: const Color(0xFF667eea).withValues(alpha: 0.4),
+                        color: primary.withValues(alpha: 0.4),
                         blurRadius: 12)
                   ]
                 : [
@@ -1012,12 +1014,12 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
               : null,
           borderRadius: BorderRadius.circular(8),
           border: sel
-              ? Border.all(color: const Color(0xFF667eea), width: 3)
+              ? Border.all(color: primary, width: 3)
               : Border.all(color: Colors.white24, width: 1),
           boxShadow: sel
               ? [
                   BoxShadow(
-                      color: const Color(0xFF667eea).withValues(alpha: 0.4),
+                      color: primary.withValues(alpha: 0.4),
                       blurRadius: 12)
                 ]
               : [
@@ -1315,8 +1317,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
           width: 60,
           height: 3,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-                colors: [Color(0xFF667eea), Color(0xFF764ba2)]),
+            gradient: LinearGradient(colors: [primary, primary.withValues(alpha: 0.7)]),
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -1359,7 +1360,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
     switch (para.level) {
       case 0:
         bullet = para.isBold ? '' : '\u25CF  ';
-        bulletColor = const Color(0xFF667eea);
+        bulletColor = primary;
         break;
       case 1:
         bullet = '\u25CB  ';
@@ -1461,7 +1462,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
               _showThumbnails
                   ? Icons.view_carousel
                   : Icons.view_carousel_outlined,
-              color: _showThumbnails ? const Color(0xFF667eea) : Colors.white70,
+              color: _showThumbnails ? primary : Colors.white70,
               size: 22,
             ),
             tooltip: '缩略图',
@@ -1546,7 +1547,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF667eea).withValues(alpha: 0.3),
+                    color: primary.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text('${_autoPlaySec}s',
@@ -1595,14 +1596,14 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
           padding: const EdgeInsets.all(8),
           decoration: highlight
               ? BoxDecoration(
-                  color: const Color(0xFF667eea).withValues(alpha: 0.2),
+                  color: primary.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 )
               : null,
           child: Icon(icon,
               size: 24,
               color: enabled
-                  ? (highlight ? const Color(0xFF667eea) : Colors.white)
+                  ? (highlight ? primary : Colors.white)
                   : Colors.white24),
         ),
       ),
@@ -1632,7 +1633,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
                   color: Colors.black,
                   borderRadius: BorderRadius.circular(4),
                   border: sel
-                      ? Border.all(color: const Color(0xFF667eea), width: 2)
+                      ? Border.all(color: primary, width: 2)
                       : Border.all(
                           color: Colors.white.withValues(alpha: 0.2),
                           width: 1),
@@ -1665,7 +1666,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
                     : null,
                 borderRadius: BorderRadius.circular(4),
                 border: sel
-                    ? Border.all(color: const Color(0xFF667eea), width: 2)
+                    ? Border.all(color: primary, width: 2)
                     : Border.all(
                         color: Colors.white.withValues(alpha: 0.2),
                         width: 1),
@@ -1714,7 +1715,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
       value: _slides.isEmpty ? 0 : (_currentIndex + 1) / _slides.length,
       backgroundColor: Colors.white.withValues(alpha: 0.08),
       valueColor:
-          const AlwaysStoppedAnimation<Color>(Color(0xFF667eea)),
+          AlwaysStoppedAnimation<Color>(primary),
       minHeight: 3,
     );
   }
@@ -1728,7 +1729,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(color: Color(0xFF667eea)),
+          CircularProgressIndicator(color: primary),
           const SizedBox(height: 16),
           Text(_loadingMsg,
               style: const TextStyle(color: Colors.white70)),

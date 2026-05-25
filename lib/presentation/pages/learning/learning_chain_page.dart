@@ -194,8 +194,8 @@ class _LearningChainPageState extends State<LearningChainPage>
   Widget build(BuildContext context) {
     final ch = widget.chapter;
     final chColor = ch != null
-        ? (ChapterHelper.chapterColors[ch] ?? const Color(0xFF667eea))
-        : const Color(0xFF667eea);
+        ? (ChapterHelper.chapterColors[ch] ?? Theme.of(context).colorScheme.primary)
+        : Theme.of(context).colorScheme.primary;
 
     return Scaffold(
       appBar: AppBar(

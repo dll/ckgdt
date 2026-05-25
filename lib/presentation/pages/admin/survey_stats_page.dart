@@ -497,8 +497,8 @@ class _SurveyStatsPageState extends State<SurveyStatsPage> {
         counts.values.isNotEmpty ? counts.values.reduce((a, b) => a > b ? a : b) : 1;
 
     final barColors = [
-      const Color(0xFF667eea),
-      const Color(0xFF764ba2),
+      const Color(0xFF1677FF),
+      const Color(0xFF0958D9),
       Colors.teal,
       Colors.orange,
       Colors.pink,

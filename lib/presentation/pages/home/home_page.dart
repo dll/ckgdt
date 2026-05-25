@@ -872,9 +872,9 @@ class _HomePageState extends State<HomePage> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.lock_outline, color: Color(0xFF667eea)),
+              Icon(Icons.lock_outline, color: Theme.of(ctx).colorScheme.primary),
               SizedBox(width: 8),
               Text('修改密码', style: TextStyle(fontSize: 18)),
             ],
