@@ -615,7 +615,25 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
           // ── 评分详情 ────────────────────────────────────
           if (score != null) ...[
             const SizedBox(height: 16),
-            _sectionHeader('教师评分', icon: Icons.star),
+            Row(
+              children: [
+                Expanded(child: _sectionHeader('教师评分', icon: Icons.star)),
+                // 仅教师/管理员能查审计 — 学生无操作权限不暴露入口
+                if (widget.authService.isTeacher ||
+                    widget.authService.isAdmin)
+                  TextButton.icon(
+                    icon: const Icon(Icons.history, size: 16),
+                    label: const Text('修改历史',
+                        style: TextStyle(fontSize: 12)),
+                    onPressed: () => ScoreHistoryDialog.show(
+                      context,
+                      tableName: 'work_scores',
+                      rowId: _work['id'] as int,
+                      title: '作品评分修改历史',
+                    ),
+                  ),
+              ],
+            ),
             _buildScoreDetail(),
           ],
 
@@ -1083,8 +1101,9 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                 onPressed: () async {
                   try {
                     final user = widget.authService.currentUser;
+                    final workId = _work['id'] as int;
                     await widget.worksDao.scoreWork(
-                      workId: _work['id'] as int,
+                      workId: workId,
                       scorerId:
                           widget.authService.getCurrentUserId(),
                       scorerName: user?.realName ?? (isPeer ? '同学' : '教师'),
@@ -1098,6 +1117,21 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                               ? commentCtrl.text.trim()
                               : null,
                     );
+                    // 审计：评分录入操作（失败不阻塞）
+                    try {
+                      await ScoreAuditDao.instance.logChange(
+                        tableName: 'work_scores',
+                        rowId: workId,
+                        field: 'total',
+                        newValue: (functionality + techDepth + integration +
+                                quality + documentation)
+                            .round()
+                            .toString(),
+                        scorerId: widget.authService.getCurrentUserId() ?? '',
+                        scorerName: user?.realName,
+                        op: 'create',
+                      );
+                    } catch (_) {}
                     if (context.mounted) {
                       Navigator.pop(ctx);
                       ScaffoldMessenger.of(context).showSnackBar(

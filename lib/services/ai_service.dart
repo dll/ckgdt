@@ -121,6 +121,108 @@ class AiService {
     return result.content;
   }
 
+  // ── 多模态：文本 + 图片 base64 列表 → AI 回复（含视觉理解）─────────────
+  /// 用 GLM-4V (zhipu:glm-4.6v) 等视觉模型分析图片 + 文本。
+  ///
+  /// 输入：
+  /// - [textPrompt]：文字描述/问题
+  /// - [imageBase64s]：图片 base64 列表（每张作为 data:image/jpeg;base64,...）
+  /// - [systemPrompt]：可选系统提示
+  ///
+  /// 默认强制用 `zhipu:glm-4.6v`（已注册 + 内置 free key），即使用户当前
+  /// 主配置是 deepseek 等纯文本模型也不影响。
+  ///
+  /// **空图列表**会 fallback 到普通 [chatWithMeta]（仅文本），并在 prompt
+  /// 里显式标 "未读到图片" — 这是给 UI 不要崩、视频缺失场景兜底用。
+  Future<AiChatResult> chatWithVision({
+    required String textPrompt,
+    required List<String> imageBase64s,
+    String? systemPrompt,
+    double? temperature,
+  }) async {
+    if (imageBase64s.isEmpty) {
+      // 退化为纯文本调用，但 prompt 加注解防 LLM 幻觉评论 "我看到的视频"
+      return chatWithMeta(
+        [
+          {
+            'role': 'user',
+            'content':
+                '$textPrompt\n\n[注：未提供视频帧 / 图片，仅按上述文字材料评判。]'
+          }
+        ],
+        systemPrompt: systemPrompt,
+        temperature: temperature,
+      );
+    }
+
+    // 强制走 zhipu glm-4.6v（vision capable + 已注册）
+    final visionConfig = AiConfigModel(
+      provider: 'zhipu',
+      model: 'glm-4.6v',
+      // apiKey 留空 → effectiveApiKey 命中内置 zhipu:glm-4.6v free key
+      apiKey: null,
+      maxTokens: 4096,
+      temperature: temperature ?? 0.3,
+      timeout: 120,
+    );
+    final effectiveKey = visionConfig.effectiveApiKey;
+    if (effectiveKey == null || effectiveKey.isEmpty) {
+      throw '视觉模型 zhipu:glm-4.6v 内置 Key 缺失，请在 AI 配置里手填。';
+    }
+
+    final url = '${visionConfig.effectiveBaseUrl}/chat/completions';
+
+    // OpenAI vision 兼容格式：content 是数组 [{type:text}, {type:image_url}, ...]
+    final visionContent = <Map<String, dynamic>>[
+      {'type': 'text', 'text': textPrompt},
+    ];
+    for (final b64 in imageBase64s) {
+      visionContent.add({
+        'type': 'image_url',
+        'image_url': {'url': 'data:image/jpeg;base64,$b64'},
+      });
+    }
+
+    final allMessages = <Map<String, dynamic>>[
+      if (systemPrompt != null) {'role': 'system', 'content': systemPrompt},
+      {'role': 'user', 'content': visionContent},
+    ];
+
+    final response = await http
+        .post(
+          Uri.parse(url),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $effectiveKey',
+            'User-Agent': 'knowledge-graph-app/1.0',
+          },
+          body: jsonEncode({
+            'model': visionConfig.model,
+            'messages': allMessages,
+            'temperature': visionConfig.temperature,
+            'max_tokens': visionConfig.maxTokens,
+          }),
+        )
+        .timeout(Duration(seconds: visionConfig.timeout));
+
+    if (response.statusCode != 200) {
+      throw '视觉 AI 请求失败 (${response.statusCode}): ${response.body}';
+    }
+
+    final json = jsonDecode(utf8.decode(response.bodyBytes));
+    final content = json['choices'][0]['message']['content'] as String;
+    final actualModel = json['model'] as String? ?? visionConfig.model;
+    final usage = json['usage'] as Map<String, dynamic>?;
+    return AiChatResult(
+      content: content,
+      provider: visionConfig.providerLabel,
+      model: actualModel,
+      promptTokens: (usage?['prompt_tokens'] as int?) ?? 0,
+      completionTokens: (usage?['completion_tokens'] as int?) ?? 0,
+      totalTokens: (usage?['total_tokens'] as int?) ?? 0,
+    );
+  }
+
   /// 自动保存 Token 历史（静默失败，不阻塞主流程）
   void _autoSaveTokenHistory(AiChatResult result) {
     try {

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../../../data/local/score_audit_dao.dart';
 import '../../../data/local/works_dao.dart';
 import '../../../data/local/grading_result_dao.dart';
 import '../../../services/auth_service.dart';
@@ -138,13 +139,27 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
       });
 
       try {
-        final result = await _gradingAgent.gradeWork(
+        // 用综合批阅版（读视频帧 + 加载考核材料）。
+        // 旧版 gradeWork(title/desc) 仍保留，但不再被 UI 直接调用 — 它没看视频，
+        // 评语是空泛幻觉。
+        final videoUrl = work['video_url'] as String?;
+        final compRes = await _gradingAgent.gradeWorkComprehensive(
           title: title,
           description: desc,
           techStack: techStack,
           studentName: studentName,
           groupName: groupName.isNotEmpty ? groupName : null,
+          videoUrl: videoUrl,
+          frameCount: 5,
         );
+        final result = compRes.content;
+        if (mounted) {
+          setState(() {
+            _gradingStatus = compRes.usedVideo
+                ? '已分析 ${compRes.frameCount} 帧视频画面 (${i + 1}/$_gradingTotal)'
+                : '${i + 1}/$_gradingTotal — 未读到视频，按描述+材料评分';
+          });
+        }
 
         final parsed = _tryParseJson(result);
         if (parsed != null) {
@@ -321,6 +336,19 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
       documentation: doc,
       comment: result.feedback,
     );
+    // 审计 — AI 自动评分（reason 标 'AI 批阅'，便于事后区分人工 vs AI）
+    try {
+      await ScoreAuditDao.instance.logChange(
+        tableName: 'work_scores',
+        rowId: workId,
+        field: 'total',
+        newValue: (func + tech + integ + qual + doc).toString(),
+        reason: 'AI 批阅',
+        scorerId: widget.authService.getCurrentUserId() ?? '',
+        scorerName: widget.authService.currentUser?.realName ?? '教师',
+        op: 'create',
+      );
+    } catch (_) {}
 
     // 更新 grading_results 状态
     try {

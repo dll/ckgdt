@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../../data/local/achievement_dao.dart';
+import '../../../../data/local/score_audit_dao.dart';
 import '../../../../services/auth_service.dart';
 import '../achievement_shared.dart';
 
@@ -195,6 +196,18 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
                 objective4Score: o4,
                 totalScore: total,
               );
+              // 审计：达成度成绩录入
+              try {
+                await ScoreAuditDao.instance.logChange(
+                  tableName: 'achievement_scores',
+                  rowId: _selectedBatchId!,
+                  field: 'total/${studentIdCtrl.text.trim()}',
+                  newValue: total.toStringAsFixed(2),
+                  scorerId: AuthService().getCurrentUserId() ?? '',
+                  scorerName: AuthService().currentUser?.realName,
+                  op: 'create',
+                );
+              } catch (_) {}
               if (ctx.mounted) Navigator.pop(ctx);
               _loadScores();
             },

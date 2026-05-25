@@ -1,7 +1,12 @@
 import 'dart:async';
+import 'dart:io';
+
+import 'package:flutter/services.dart' show rootBundle;
 
 import '../../ai_service.dart';
 import '../../auth_service.dart';
+import '../../video_frame_extractor.dart';
+import '../../../core/dev_paths.dart';
 import '../../../data/local/ai_history_dao.dart';
 import '../agent_model.dart';
 import '../base_agent.dart';
@@ -142,5 +147,150 @@ class WorksGradingAgent extends BaseAgent {
       userId: AuthService().currentUser?.userId,
     ));
     return result.content;
+  }
+
+  /// 综合批阅：考核材料 + 项目内容 + 视频帧。**这是真正读视频的版本**。
+  ///
+  /// 解决 "AI 没看视频" 的痼疾：
+  /// 1. 加载 `data/考核/移动应用开发综合考核方案.md`（评价标准）
+  /// 2. 用 ffmpeg 抽 [frameCount] 帧（默认 5）
+  /// 3. 调 [AiService.chatWithVision]（zhipu:glm-4.6v）
+  /// 4. 视频缺失/抽帧失败 → fallback 到 text-only，prompt 明确告知
+  ///
+  /// 返回 ({content, sourcesUsed}) — sourcesUsed 标识本次是否真用了视频。
+  Future<({String content, bool usedVideo, int frameCount, String? assessmentMaterial})>
+      gradeWorkComprehensive({
+    required String title,
+    String? description,
+    String? techStack,
+    String? studentName,
+    String? groupName,
+    String? videoPath,
+    String? videoUrl,
+    int frameCount = 5,
+  }) async {
+    // 1. 加载考核材料（任意一份失败都 fallback 空）
+    String? materialMd;
+    try {
+      materialMd = await rootBundle
+          .loadString('data/考核/移动应用开发综合考核方案.md');
+      // 太长截断（保留头尾）—— GLM-4V 上下文有限
+      if (materialMd.length > 6000) {
+        final head = materialMd.substring(0, 3500);
+        final tail = materialMd.substring(materialMd.length - 2000);
+        materialMd = '$head\n\n…（中段省略）…\n\n$tail';
+      }
+    } catch (e) {
+      stderr.writeln('[WorksGradingAgent] 考核材料加载失败：$e');
+    }
+
+    // 2. 抽视频帧（仅本地路径；远程 URL 暂不下载）
+    var frames = <String>[];
+    var resolvedVideoPath = videoPath;
+    if (resolvedVideoPath == null && videoUrl != null && videoUrl.isNotEmpty) {
+      // 简单兜底：如果 videoUrl 看起来像本地相对路径，转成绝对路径试试
+      if (!videoUrl.startsWith('http')) {
+        resolvedVideoPath = '${DevPaths.projectRoot}/$videoUrl';
+      }
+    }
+    if (resolvedVideoPath != null && File(resolvedVideoPath).existsSync()) {
+      frames = await VideoFrameExtractor.extractKeyFrames(
+        resolvedVideoPath,
+        frameCount: frameCount,
+      );
+    }
+
+    // 3. 拼综合 prompt（text 部分给视觉 / 文本路径都用）
+    final buf = StringBuffer();
+    buf.writeln('请按以下材料综合批阅学生作品：');
+    buf.writeln();
+    if (materialMd != null) {
+      buf.writeln('## 考核标准（节选）');
+      buf.writeln(materialMd);
+      buf.writeln();
+    }
+    buf.writeln('## 学生作品信息');
+    buf.writeln('- 名称：$title');
+    if (studentName != null) buf.writeln('- 学生：$studentName');
+    if (groupName != null) buf.writeln('- 小组：$groupName');
+    if (techStack != null) buf.writeln('- 技术栈：$techStack');
+    if (description != null && description.isNotEmpty) {
+      buf.writeln('- 描述：');
+      buf.writeln(description);
+    }
+    buf.writeln();
+    if (frames.isNotEmpty) {
+      buf.writeln('## 视频画面（${frames.length} 张关键帧 — 已附）');
+      buf.writeln(
+          '请结合画面分析作品的实际运行效果、UI 美观度、功能展示流畅度。');
+    } else {
+      buf.writeln('## 视频画面');
+      buf.writeln('（未提取到视频帧，请仅按文字材料评判，不要虚构画面内容）');
+    }
+    buf.writeln();
+    buf.writeln('## 硬规则（必须严格遵守）');
+    buf.writeln('1. 严格按 system prompt 的 5 维度 + JSON 输出格式');
+    buf.writeln('2. 若描述少于 50 字 → 总分必须低于 60');
+    buf.writeln('3. 若画面与描述明显不符（如描述说有 AI 功能但画面只是空表单）→ 总分扣 15-25');
+    buf.writeln('4. 评语必须引用具体内容（材料/描述/画面）作为依据，不可空泛');
+    buf.writeln('5. 分数允许任意整数（不再限制为 60/70/80/90/100）');
+
+    // 4. 调用：有图走 vision，无图走 text
+    final AiChatResult result;
+    try {
+      if (frames.isNotEmpty) {
+        result = await _ai.chatWithVision(
+          textPrompt: buf.toString(),
+          imageBase64s: frames,
+          systemPrompt: config.persona,
+          temperature: 0.3,
+        );
+      } else {
+        // 没视频帧也走 chatWithVision（内部会 fallback 到普通 chat），
+        // 让 prompt 里 "未提取到视频帧" 的注解被 LLM 看到。
+        result = await _ai.chatWithVision(
+          textPrompt: buf.toString(),
+          imageBase64s: const [],
+          systemPrompt: config.persona,
+          temperature: 0.3,
+        );
+      }
+    } catch (e) {
+      // 视觉调用失败 → 降级到原版 text-only gradeWork
+      stderr.writeln('[WorksGradingAgent] vision 失败 fallback to text: $e');
+      final text = await gradeWork(
+        title: title,
+        description: description,
+        techStack: techStack,
+        studentName: studentName,
+        groupName: groupName,
+      );
+      return (
+        content: text,
+        usedVideo: false,
+        frameCount: 0,
+        assessmentMaterial: materialMd != null ? '已加载' : null,
+      );
+    }
+
+    unawaited(AiHistoryDao().saveMessage(
+      sessionId: 'comprehensive_${DateTime.now().millisecondsSinceEpoch}',
+      agentId: config.id,
+      role: 'assistant',
+      content: result.content,
+      promptTokens: result.promptTokens,
+      completionTokens: result.completionTokens,
+      tokensUsed: result.totalTokens,
+      provider: result.provider,
+      model: result.model,
+      userId: AuthService().currentUser?.userId,
+    ));
+
+    return (
+      content: result.content,
+      usedVideo: frames.isNotEmpty,
+      frameCount: frames.length,
+      assessmentMaterial: materialMd != null ? '已加载' : null,
+    );
   }
 }

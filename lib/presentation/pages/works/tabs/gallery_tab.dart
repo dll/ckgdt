@@ -471,28 +471,40 @@ class _GalleryTabState extends State<_GalleryTab> {
         widget.authService.isTeacher || widget.authService.isAdmin;
     final needsScore =
         isTeacherOrAdmin && status == '已提交' && score == null;
+    // 学生身份时本人作品视觉强调（边框 + 角标），引导学生在全班 grid 里
+    // 一眼找到自己。
+    final currentUid = widget.authService.getCurrentUserId();
+    final isMine = !isTeacherOrAdmin &&
+        currentUid != null &&
+        (work['user_id'] as String?) == currentUid;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: isMine
+            ? BorderSide(color: primary, width: 2.5)
+            : BorderSide.none,
+      ),
       clipBehavior: Clip.antiAlias,
-      elevation: 2,
+      elevation: isMine ? 4 : 2,
       child: InkWell(
         onTap: () => _showWorkDetail(context, work),
         onLongPress: (widget.authService.isTeacher || widget.authService.isAdmin)
             ? () => _confirmDeleteWork(context, work)
             : null,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            // ── 缩略图区 ──────────────────────────────────
-            AspectRatio(
-              aspectRatio: 16 / 9,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Container(
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── 缩略图区 ──────────────────────────────────
+                AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
@@ -703,6 +715,30 @@ class _GalleryTabState extends State<_GalleryTab> {
                 ],
               ),
             ),
+          ],
+            ),
+            // 学生本人作品角标
+            if (isMine)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: primary,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Text(
+                    '我的',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

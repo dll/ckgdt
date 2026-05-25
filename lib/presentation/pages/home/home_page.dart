@@ -25,6 +25,7 @@ import '../admin/class_manage_page.dart';
 import '../admin/survey_manage_page.dart';
 import '../admin/question_manage_page.dart';
 import '../admin/data_export_page.dart';
+import '../admin/grade_entry_center_page.dart';
 import '../admin/release_center_page.dart';
 import '../admin/teaching_manage_page.dart';
 import '../admin/lab_task_manage_page.dart';
@@ -1010,6 +1011,8 @@ class _AdminToolsPage extends StatelessWidget {
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DataSyncPage()))),
       _AdminTool(Icons.devices, '多端互通',
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CrossPlatformHubPage()))),
+      _AdminTool(Icons.fact_check, '成绩录入中心',
+          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GradeEntryCenterPage()))),
       _AdminTool(Icons.settings, '系统设置',
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()))),
       // 仅 dev 机可用：4 端构建 + 双仓库 Release 一键发布
@@ -1086,7 +1089,7 @@ class _AdminToolsPage extends StatelessWidget {
             const NoirSectionTitle(
               eyebrow: '№ TOOLS',
               title: '管理工具',
-              subtitle: 'Administration toolkit · 17 modules',
+              subtitle: 'Administration toolkit · 18 modules',
               margin: EdgeInsets.zero,
             ),
             const SizedBox(height: NoirTokens.spaceMd),
