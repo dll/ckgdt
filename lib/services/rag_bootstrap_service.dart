@@ -50,14 +50,15 @@ class RagBootstrapService {
 
       debugPrint('=== RagBootstrap: indexing (v$lastIndexed → v$_indexedVersion)…');
       final rag = RagService();
-      var totalChunks = 0;
 
-      // 1) knowledge_concepts → 一份合并文档
-      totalChunks += await _indexConcepts(rag);
-      // 2) resource_files 描述 → 一份合并文档
-      totalChunks += await _indexResources(rag);
-      // 3) questions → 一份合并文档（章节分组）
-      totalChunks += await _indexQuestions(rag);
+      // 三类源相互独立 + embedBatch 是 HTTP 瓶颈 → 并行起跑，整体耗时从串行 ~2min
+      // 缩到 ~40-60s。RagEmbeddingDao 的写入由 sqflite 单连接序列化，并发安全。
+      final counts = await Future.wait([
+        _indexConcepts(rag),
+        _indexResources(rag),
+        _indexQuestions(rag),
+      ]);
+      final totalChunks = counts.fold<int>(0, (a, b) => a + b);
 
       await prefs.setInt(_prefIndexedVersion, _indexedVersion);
       debugPrint('=== RagBootstrap: indexed $totalChunks chunks total');
@@ -115,6 +116,8 @@ class RagBootstrapService {
     try {
       final db = await DatabaseHelper.instance.database;
       final rows = await db.query('resource_files',
+          // SQL 标准：双引号是标识符，空字符串必须用单引号（'' 而非 ""）。
+          // sqflite_common_ffi (桌面/Web) 严格按标准；不要回写 ""。
           where: "description IS NOT NULL AND description != ''",
           orderBy: 'chapter, file_type', limit: 500);
       if (rows.isEmpty) return 0;

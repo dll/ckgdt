@@ -2,6 +2,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
+import 'core/build_info.dart';
 import 'core/init_logger.dart';
 import 'data/local/database_helper.dart';
 import 'l10n/gen/app_localizations.dart';
@@ -158,7 +159,7 @@ class _MyAppState extends State<MyApp> {
     // 如果数据库被锁定，显示错误页面
     if (widget.dbLocked) {
       return MaterialApp(
-        title: '移动图谱与数字孪生v0.13.0',
+        title: BuildInfo.appBrandWithVersion,
         debugShowCheckedModeBanner: false,
         theme: ThemeManager.light(_colorIndex),
         darkTheme: ThemeManager.dark(_colorIndex),
@@ -225,7 +226,7 @@ class _MyAppState extends State<MyApp> {
     }
 
     return MaterialApp(
-      title: '移动图谱与数字孪生v0.13.0',
+      title: BuildInfo.appBrandWithVersion,
       debugShowCheckedModeBanner: false,
       themeMode: _themeMode,
       theme: ThemeManager.light(_colorIndex),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/build_info.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../main.dart';
 import '../../../services/auth_service.dart';
@@ -546,7 +547,7 @@ class _SettingsPageState extends State<SettingsPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('版本：0.11.0'),
+            const Text('版本：${BuildInfo.appVersion}'),
             const SizedBox(height: 8),
             Text('面向$platformName学习者的知识图谱与数字孪生教学平台（KGDT-MAD）。'),
             const SizedBox(height: 16),

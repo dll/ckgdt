@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../../core/build_info.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/settings_service.dart';
@@ -629,7 +630,7 @@ class _LoginPageState extends State<LoginPage>
               Container(width: 28, height: 1, color: _accent),
               const SizedBox(width: 10),
               const Text(
-                'V0.12.0  ·  EDITION 2026',
+                BuildInfo.appVersionLine,
                 style: TextStyle(
                   color: _accent,
                   fontSize: 11,
