@@ -25,6 +25,7 @@ import '../admin/class_manage_page.dart';
 import '../admin/survey_manage_page.dart';
 import '../admin/question_manage_page.dart';
 import '../admin/data_export_page.dart';
+import '../admin/release_center_page.dart';
 import '../admin/teaching_manage_page.dart';
 import '../admin/lab_task_manage_page.dart';
 import '../admin/repo_analytics_page.dart';
@@ -1011,6 +1012,9 @@ class _AdminToolsPage extends StatelessWidget {
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CrossPlatformHubPage()))),
       _AdminTool(Icons.settings, '系统设置',
           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()))),
+      // 仅 dev 机可用：4 端构建 + 双仓库 Release 一键发布
+      _AdminTool(Icons.rocket_launch, '构建发布中心',
+          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReleaseCenterPage()))),
       // Demo 录制专用 — 仅管理员可见（kDebugMode 守卫已撤，评比时也能演示）
       _AdminTool(Icons.movie_creation_outlined, 'Demo 数据种子',
           () => _showDemoSeedSheet(context)),
@@ -1082,7 +1086,7 @@ class _AdminToolsPage extends StatelessWidget {
             const NoirSectionTitle(
               eyebrow: '№ TOOLS',
               title: '管理工具',
-              subtitle: 'Administration toolkit · 15 modules',
+              subtitle: 'Administration toolkit · 17 modules',
               margin: EdgeInsets.zero,
             ),
             const SizedBox(height: NoirTokens.spaceMd),
