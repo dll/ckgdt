@@ -10,17 +10,13 @@ library;
 
 import 'dart:io';
 import 'package:path/path.dart' as p;
+import '../core/dev_paths.dart';
 
 class VersionBumpService {
   VersionBumpService._();
 
-  /// 项目根目录。release 模式 cwd 不可靠，做一次回退兜底。
-  static String get projectRoot {
-    final cwd = Directory.current.path;
-    if (File(p.join(cwd, 'pubspec.yaml')).existsSync()) return cwd;
-    // 兜底：硬编码 dev 机路径（与 feedback_manage_page 同手法）
-    return r'D:\FlutterProjects\knowledge_graph_app';
-  }
+  /// 项目根目录 — 委派给 [DevPaths.projectRoot]（统一兜底逻辑）。
+  static String get projectRoot => DevPaths.projectRoot;
 
   /// 解析当前 BuildInfo.appVersion。
   static Future<String> readCurrentVersion() async {
@@ -171,12 +167,12 @@ class VersionBumpService {
     final root = projectRoot;
     final found = <String, String>{};
 
-    Future<void> probe(String relPath, RegExp pat) async {
-      final f = File(p.join(root, relPath));
+    Future<void> probe(String key, RegExp pat, {String? sourceFile}) async {
+      final f = File(p.join(root, sourceFile ?? key));
       if (!await f.exists()) return;
       final s = await f.readAsString();
       final m = pat.firstMatch(s);
-      if (m != null) found[relPath] = m.group(1)!;
+      if (m != null) found[key] = m.group(1)!;
     }
 
     await probe('lib/core/build_info.dart',
@@ -189,8 +185,17 @@ class VersionBumpService {
         RegExp(r'BINARY_OUTPUT_NAME\s+"移动图谱与数字孪生v([0-9.]+)"'));
     await probe('windows/runner/main.cpp',
         RegExp(r'window\.Create\(L"移动图谱与数字孪生v([0-9.]+)"'));
+    // Runner.rc 有 3 处版本号字段（FileDescription/OriginalFilename/ProductName），
+    // 必须**全部**对齐。早期只 probe ProductName，导致其它两处的回归 bug 不会被
+    // verifyConsistency 抓到。这里独立 probe 三处。
     await probe('windows/runner/Runner.rc',
-        RegExp(r'ProductName",\s*"移动图谱与数字孪生v([0-9.]+)'));
+        RegExp(r'FileDescription",\s*"移动图谱与数字孪生v(\d+\.\d+\.\d+)'));
+    await probe('windows/runner/Runner.rc#OriginalFilename',
+        RegExp(r'OriginalFilename",\s*"移动图谱与数字孪生v(\d+\.\d+\.\d+)'),
+        sourceFile: 'windows/runner/Runner.rc');
+    await probe('windows/runner/Runner.rc#ProductName',
+        RegExp(r'ProductName",\s*"移动图谱与数字孪生v(\d+\.\d+\.\d+)'),
+        sourceFile: 'windows/runner/Runner.rc');
     await probe('web/index.html', RegExp(r'<title>移动图谱与数字孪生v([0-9.]+)'));
     await probe('web/manifest.json',
         RegExp(r'"name":\s*"移动图谱与数字孪生v([0-9.]+)'));
