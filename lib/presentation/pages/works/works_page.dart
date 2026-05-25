@@ -7,7 +7,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/app_theme.dart';
+import '../../../data/local/score_audit_dao.dart';
 import '../../../data/local/works_dao.dart';
+import '../../widgets/score_history_dialog.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/auto_grading_service.dart';
 import '../../../services/file_opener_service.dart';
@@ -24,6 +26,7 @@ part 'tabs/gallery_tab.dart';
 part 'tabs/work_detail_sheet.dart';
 part 'tabs/records_tab.dart';
 part 'tabs/leaderboard_tab.dart';
+part 'tabs/my_works_tab.dart';
 
 // ╔══════════════════════════════════════════════════════════════════════════════╗
 // ║  作品视角维度（多维过滤，复用考核页的 _GroupDimension 模式）                ║
@@ -85,11 +88,18 @@ class _WorksPageState extends State<WorksPage>
   bool get _isTeacherOrAdmin =>
       _authService.isTeacher || _authService.isAdmin;
 
+  bool get _isStudent => !_isTeacherOrAdmin;
+
+  /// 学生在第 0 个 tab 看到 "我的作品"；教师没有这个 tab 但多 "AI批阅"。
+  /// length = 3 公共 + 学生(+1 我的) + 教师(+1 AI批阅)。
+  int get _tabCount =>
+      3 + (_isStudent ? 1 : 0) + (_isTeacherOrAdmin ? 1 : 0);
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(
-      length: _isTeacherOrAdmin ? 4 : 3,
+      length: _tabCount,
       vsync: this,
     );
     _initData();
@@ -199,6 +209,8 @@ class _WorksPageState extends State<WorksPage>
             labelStyle:
                 const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             tabs: [
+              if (_isStudent)
+                const Tab(icon: Icon(Icons.person, size: 18), text: '我的作品'),
               const Tab(text: '作品展示'),
               const Tab(text: '作品记录'),
               const Tab(text: '排行榜'),
@@ -213,6 +225,11 @@ class _WorksPageState extends State<WorksPage>
               ? TabBarView(
                   controller: _tabController,
                   children: [
+                    if (_isStudent)
+                      _MyWorksTab(
+                        authService: _authService,
+                        onDataChanged: _loadOverview,
+                      ),
                     _GalleryTab(
                       authService: _authService,
                       allStudents: _allStudents,

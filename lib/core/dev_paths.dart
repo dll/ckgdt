@@ -35,4 +35,38 @@ class DevPaths {
     _cached = cwd;
     return cwd;
   }
+
+  /// ffmpeg 可执行文件路径。
+  ///
+  /// 解析顺序：
+  /// 1. PATH 中能直接 `ffmpeg` 调用 → 返回 'ffmpeg'（让 OS 找）
+  /// 2. Windows 已知装机路径
+  /// 3. macOS Homebrew 路径 / Linux apt 路径
+  /// 4. fallback：'ffmpeg'（runShell 时若不在 PATH 会报 ENOENT）
+  static String? _ffmpegCached;
+  static String get ffmpegPath {
+    if (_ffmpegCached != null) return _ffmpegCached!;
+    if (Platform.isWindows) {
+      const candidates = [
+        r'D:\development\ffmpeg-8.0.1-full_build\bin\ffmpeg.exe',
+        r'C:\ffmpeg\bin\ffmpeg.exe',
+      ];
+      for (final c in candidates) {
+        if (File(c).existsSync()) {
+          _ffmpegCached = c;
+          return c;
+        }
+      }
+    } else if (Platform.isMacOS) {
+      const candidates = ['/opt/homebrew/bin/ffmpeg', '/usr/local/bin/ffmpeg'];
+      for (final c in candidates) {
+        if (File(c).existsSync()) {
+          _ffmpegCached = c;
+          return c;
+        }
+      }
+    }
+    _ffmpegCached = 'ffmpeg'; // 兜底依赖 PATH
+    return _ffmpegCached!;
+  }
 }

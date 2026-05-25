@@ -11,6 +11,7 @@ import '../../../services/notification_service.dart';
 import '../../../services/sync_service.dart';
 import '../../../data/local/assessment_dao.dart';
 import '../../../data/local/database_helper.dart';
+import '../../../data/local/score_audit_dao.dart';
 import '../../../services/agent/agents/assessment_grading_agent.dart';
 import '../../widgets/agent_entry_button.dart';
 import '../learning/pdf_viewer_page.dart';

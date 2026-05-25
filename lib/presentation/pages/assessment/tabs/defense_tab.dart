@@ -125,7 +125,7 @@ class _DefenseTabState extends State<_DefenseTab> {
               onPressed: () async {
                 if (selectedGroupId == null || timeCtrl.text.trim().isEmpty)
                   return;
-                await _dao.addDefenseRecord(
+                final newId = await _dao.addDefenseRecord(
                   groupId: selectedGroupId!,
                   projectId: selectedProjectId,
                   scheduledTime: timeCtrl.text.trim(),
@@ -133,6 +133,18 @@ class _DefenseTabState extends State<_DefenseTab> {
                       ? locationCtrl.text.trim()
                       : '实验楼A301',
                 );
+                // 审计：答辩记录创建
+                try {
+                  await ScoreAuditDao.instance.logChange(
+                    tableName: 'defense_records',
+                    rowId: newId,
+                    field: 'scheduled_time',
+                    newValue: timeCtrl.text.trim(),
+                    scorerId: widget.authService.getCurrentUserId() ?? '',
+                    scorerName: widget.authService.currentUser?.realName,
+                    op: 'create',
+                  );
+                } catch (_) {}
                 if (ctx.mounted) Navigator.pop(ctx);
                 _loadData();
               },

@@ -980,7 +980,7 @@ class _ContributionTabState extends State<_ContributionTab>
                       widget.authService.getCurrentUserId() ?? '';
                   final userName = widget.authService.currentUser?.realName ??
                       _myInfo?['name'] as String? ?? '';
-                  await _dao.submitContributionScore(
+                  final newId = await _dao.submitContributionScore(
                     targetUserId: targetId,
                     targetUserName: targetName,
                     scorerUserId: userId,
@@ -997,6 +997,20 @@ class _ContributionTabState extends State<_ContributionTab>
                         ? commentCtrl.text.trim()
                         : null,
                   );
+                  // 审计：贡献度评分录入
+                  try {
+                    final total =
+                        codeVal + docVal + teamVal + initVal + qualVal;
+                    await ScoreAuditDao.instance.logChange(
+                      tableName: 'contribution_scores',
+                      rowId: newId,
+                      field: 'total',
+                      newValue: total.toString(),
+                      scorerId: userId,
+                      scorerName: userName,
+                      op: 'create',
+                    );
+                  } catch (_) {}
                   // 通知教师
                   NotificationService().notifyContributionScore(
                     scorerId: userId,

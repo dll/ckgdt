@@ -906,6 +906,29 @@ class DatabaseHelper {
       )
     ''');
 
+    // ── 成绩录入审计日志 ──────────────────────────────────────
+    // 任何成绩字段的录入/修改都写一行；只追加不改写。
+    // 教师改分必填 reason，方便事后追责（CLAUDE.md "可查看可修改可审计"）。
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS score_audit_log(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        table_name TEXT NOT NULL,
+        row_id INTEGER NOT NULL,
+        field TEXT NOT NULL,
+        old_value TEXT,
+        new_value TEXT,
+        reason TEXT,
+        scorer_id TEXT NOT NULL,
+        scorer_name TEXT,
+        op TEXT NOT NULL DEFAULT 'update',
+        changed_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_audit_table_row '
+        'ON score_audit_log(table_name, row_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_audit_scorer '
+        'ON score_audit_log(scorer_id)');
+
     // ── 作品管理：作品评分 ──────────────────────────────────
     await db.execute('''
       CREATE TABLE IF NOT EXISTS work_scores(
