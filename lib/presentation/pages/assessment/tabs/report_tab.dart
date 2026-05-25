@@ -904,6 +904,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
       }
 
       // AI 检查：报告内容是否匹配小组技术栈和特色功能
+      String? pdfTextForGrading;
       if (_isStudent && file.path != null) {
         final techInfo = await _dao.getStudentGroupTechInfo(userId);
         if (techInfo != null &&
@@ -913,6 +914,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
             file.path!,
             maxChars: 2000,
           );
+          pdfTextForGrading = pdfText;
           if (pdfText != null && pdfText.isNotEmpty) {
             // ignore: use_build_context_synchronously
             final reason = await AssessmentGradingAgent()
@@ -938,7 +940,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
         }
       }
 
-      await _dao.submitReport(
+      final reportId = await _dao.submitReport(
         userId: userId,
         studentName: userName,
         reportType: reportType,
@@ -954,7 +956,48 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
       );
 
       await _loadSubmissions();
-      if (mounted) {
+
+      // 没拿到 PDF 文本前先尝试解析（学生路径走过 alignment 检查会有，
+      // 教师代上传 / 验证跳过的情况下这里需要补抽一次）
+      if (pdfTextForGrading == null && file.path != null) {
+        try {
+          pdfTextForGrading =
+              await PdfTextService.extractFromFile(file.path!, maxChars: 6000);
+        } catch (_) {}
+      }
+
+      if (!mounted) return;
+
+      // 学生路径触发 AI 自动批阅；教师代上传则不打扰
+      if (_isStudent &&
+          reportId > 0 &&
+          pdfTextForGrading != null &&
+          pdfTextForGrading.isNotEmpty) {
+        final inline = await _askWatchOrNotify(reportType);
+        if (inline == true) {
+          await _runInlineAiGrading(
+            reportId: reportId,
+            studentId: userId,
+            studentName: userName,
+            reportType: reportType,
+            content: pdfTextForGrading,
+          );
+        } else {
+          unawaited(AutoGradingService.instance.gradeAssessmentReport(
+            reportId: reportId,
+            studentId: userId,
+            studentName: userName,
+            reportType: reportType,
+            content: pdfTextForGrading,
+          ));
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                  content: Text('$reportType 已提交：${file.name}\nAI 批阅完成后会通知你。')),
+            );
+          }
+        }
+      } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('$reportType 已提交: ${file.name}')),
         );
@@ -1291,6 +1334,148 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
     } catch (_) {
       return null;
     }
+  }
+
+  // ── AI 批阅交互（学生提交后）──────────────────────────────────────────────
+
+  /// 提交后弹"在线等待 / 稍后通知"二选一
+  Future<bool?> _askWatchOrNotify(String reportType) async {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.auto_awesome, color: Color(0xFF667eea)),
+            SizedBox(width: 8),
+            Text('AI 批阅', style: TextStyle(fontSize: 18)),
+          ],
+        ),
+        content: Text('「$reportType」已提交。AI 批阅约需 10-30 秒。\n\n'
+            '在线等待会立刻看到优点 / 改进建议；\n'
+            '稍后通知则后台跑，完成时通过通知提示你。'),
+        actions: [
+          OutlinedButton.icon(
+            onPressed: () => Navigator.pop(ctx, false),
+            icon: const Icon(Icons.notifications_active),
+            label: const Text('稍后通知我'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(ctx, true),
+            icon: const Icon(Icons.visibility),
+            label: const Text('在线等待'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 在线等待 AI：弹 loading dialog，结果出来后弹评分详情
+  Future<void> _runInlineAiGrading({
+    required int reportId,
+    required String studentId,
+    required String studentName,
+    required String reportType,
+    required String content,
+  }) async {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: SizedBox(
+          height: 80,
+          child: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Expanded(child: Text('AI 正在批阅，请稍候…')),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final draft = await AutoGradingService.instance.gradeAssessmentReport(
+      reportId: reportId,
+      studentId: studentId,
+      studentName: studentName,
+      reportType: reportType,
+      content: content,
+      returnDraft: true,
+    );
+
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).pop();
+
+    if (draft == null || !draft.isUsable) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('AI 批阅失败，已发通知给教师人工批阅'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.auto_awesome, color: Color(0xFF667eea)),
+            const SizedBox(width: 8),
+            Text('AI 批阅草稿 · ${draft.score} 分',
+                style: const TextStyle(fontSize: 18)),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('（教师复核后才是最终成绩）',
+                  style: TextStyle(color: Colors.grey, fontSize: 12)),
+              const SizedBox(height: 12),
+              if (draft.strengths.isNotEmpty) ...[
+                const Text('✓ 优点',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.green)),
+                const SizedBox(height: 4),
+                ...draft.strengths.map((s) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text('· $s'),
+                    )),
+                const SizedBox(height: 12),
+              ],
+              if (draft.improvements.isNotEmpty) ...[
+                const Text('✎ 改进建议',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.orange)),
+                const SizedBox(height: 4),
+                ...draft.improvements.map((s) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text('· $s'),
+                    )),
+                const SizedBox(height: 12),
+              ],
+              if (draft.feedback.isNotEmpty) ...[
+                const Text('总评',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Text(draft.feedback),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('知道了'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
