@@ -319,12 +319,12 @@ class _SearchPageState extends State<SearchPage> {
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 margin: const EdgeInsets.only(bottom: 10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF667eea).withValues(alpha: 0.1),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(question.source!,
-                    style: const TextStyle(
-                        fontSize: 12, color: Color(0xFF667eea))),
+                    style: TextStyle(
+                        fontSize: 12, color: Theme.of(context).colorScheme.primary)),
               ),
             Text(question.question,
                 style: const TextStyle(

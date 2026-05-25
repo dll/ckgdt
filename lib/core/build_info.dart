@@ -20,7 +20,7 @@ class BuildInfo {
   /// 主版本号。**升版时改这一处即可影响 lib/ 内所有显示**。
   /// 平台原生清单（CMakeLists / Runner.rc / strings.xml / web 元数据 / ohos app.json5）
   /// 必须同步修改 — 见 CLAUDE.md "升版同步表"。
-  static const String appVersion = '0.13.1';
+  static const String appVersion = '0.14.0';
 
   /// 窗体标题用简称（窗口边框、任务栏、浏览器标签页）。
   static const String appBrand = '移动图谱与数字孪生';
@@ -31,9 +31,9 @@ class BuildInfo {
   /// 登录页落款年份（年份每年元旦更新一次，与版本号解耦）。
   static const String appEdition = 'EDITION 2026';
 
-  /// 拼成 "移动图谱与数字孪生v0.13.1"，给窗体标题 / 文件名用。
+  /// 拼成 "移动图谱与数字孪生v0.14.0"，给窗体标题 / 文件名用。
   static const String appBrandWithVersion = '${appBrand}v$appVersion';
 
-  /// 拼成 "V0.13.1  ·  EDITION 2026"，给登录页副标题用。
+  /// 拼成 "V0.14.0  ·  EDITION 2026"，给登录页副标题用。
   static const String appVersionLine = 'V$appVersion  ·  $appEdition';
 }

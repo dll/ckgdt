@@ -210,12 +210,12 @@ class _WorksPageState extends State<WorksPage>
                 const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             tabs: [
               if (_isStudent)
-                const Tab(icon: Icon(Icons.person, size: 18), text: '我的作品'),
+                const Tab(text: '我的作品'),
               const Tab(text: '作品展示'),
               const Tab(text: '作品记录'),
               const Tab(text: '排行榜'),
               if (_isTeacherOrAdmin)
-                const Tab(icon: Icon(Icons.auto_awesome, size: 18), text: 'AI批阅'),
+                const Tab(text: 'AI批阅'),
             ],
           ),
         ),

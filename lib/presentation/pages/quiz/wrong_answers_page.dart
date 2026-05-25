@@ -19,6 +19,7 @@ class _WrongAnswersPageState extends State<WrongAnswersPage> {
 
   List<Map<String, dynamic>> _wrongAnswers = [];
   bool _isLoading = true;
+  Color primary = const Color(0xFF1677FF);
 
   @override
   void initState() {
@@ -146,6 +147,7 @@ class _WrongAnswersPageState extends State<WrongAnswersPage> {
 
   @override
   Widget build(BuildContext context) {
+    primary = Theme.of(context).colorScheme.primary;
     return Scaffold(
       appBar: AppBar(
         title: const Text('错题本'),
@@ -234,11 +236,11 @@ class _WrongAnswersPageState extends State<WrongAnswersPage> {
                                       width: double.infinity,
                                       padding: const EdgeInsets.all(12),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF667eea)
+                                        color: primary
                                             .withValues(alpha: 0.06),
                                         borderRadius: BorderRadius.circular(10),
                                         border: Border.all(
-                                          color: const Color(0xFF667eea)
+                                          color: primary
                                               .withValues(alpha: 0.15),
                                         ),
                                       ),
@@ -252,12 +254,12 @@ class _WrongAnswersPageState extends State<WrongAnswersPage> {
                                                   size: 16,
                                                   color: Colors.amber[700]),
                                               const SizedBox(width: 6),
-                                              const Text(
+                                              Text(
                                                 'AI 解析',
                                                 style: TextStyle(
                                                   fontSize: 13,
                                                   fontWeight: FontWeight.w600,
-                                                  color: Color(0xFF667eea),
+                                                  color: primary,
                                                 ),
                                               ),
                                               const Spacer(),
@@ -296,7 +298,7 @@ class _WrongAnswersPageState extends State<WrongAnswersPage> {
                                       label: const Text('生成 AI 解析'),
                                       style: OutlinedButton.styleFrom(
                                         foregroundColor:
-                                            const Color(0xFF667eea),
+                                            primary,
                                       ),
                                     ),
                                   ],
@@ -309,12 +311,12 @@ class _WrongAnswersPageState extends State<WrongAnswersPage> {
                                           // 返回首页并切换到知识图谱 Tab
                                           Navigator.pop(context, 'go_learn');
                                         },
-                                        icon: const Icon(Icons.menu_book,
+                                        icon: Icon(Icons.menu_book,
                                             size: 18,
-                                            color: Color(0xFF667eea)),
-                                        label: const Text('去学习',
+                                            color: primary),
+                                        label: Text('去学习',
                                             style: TextStyle(
-                                                color: Color(0xFF667eea))),
+                                                color: primary)),
                                       ),
                                       TextButton.icon(
                                         onPressed: () => _removeWrongAnswer(wrong['id']),

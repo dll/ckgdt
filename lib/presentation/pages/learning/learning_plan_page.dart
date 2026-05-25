@@ -11,6 +11,7 @@ import '../../../data/models/node_model.dart';
 import '../learning/video_page.dart';
 import '../materials/resource_viewer_page.dart';
 
+import '../../../core/constants/app_theme.dart';
 import '../../../core/constants/color_ohos_compat.dart';
 /// 学习路径页面 — 替代原"学习计划"
 /// 列表模式: 显示所有路径卡片
@@ -217,7 +218,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
               onPressed: _generateRemediationPath,
               icon: const Icon(Icons.auto_fix_high),
               label: const Text('AI 生成补强路径'),
-              backgroundColor: const Color(0xFF667eea),
+              backgroundColor: Theme.of(context).colorScheme.primary,
               foregroundColor: Colors.white,
             )
           : null,
@@ -281,9 +282,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
-          gradient: const LinearGradient(
-            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-          ),
+          gradient: AppGradientTheme.of(context).linearGradient,
         ),
         padding: const EdgeInsets.all(18),
         child: Row(

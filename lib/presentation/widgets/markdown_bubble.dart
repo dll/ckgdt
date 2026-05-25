@@ -36,7 +36,7 @@ class MarkdownBubble extends StatelessWidget {
     this.model,
     this.textColor,
     this.compact = false,
-    this.accentColor = const Color(0xFF667eea),
+    this.accentColor = const Color(0xFF1677FF),
   });
 
   @override
