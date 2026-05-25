@@ -196,6 +196,62 @@ class SettingsService {
   }
 
   // ═════════════════════════════════════════════════════════════════════════
+  // 构建发布中心（admin 工具）— GitHub PAT / Gitee Token / 仓库
+  //
+  // 与 Xunfei API key 同档次：admin 机器本身可信，不引入 secure_storage 依赖。
+  // 仅用于点"一键发布"按钮上传 Release 资产。
+  // ═════════════════════════════════════════════════════════════════════════
+  static const String _releaseGithubPatKey = 'release.github_pat';
+  static const String _releaseGiteeTokenKey = 'release.gitee_token';
+  static const String _releaseGithubRepoKey = 'release.github_repo';
+  static const String _releaseGiteeRepoKey = 'release.gitee_repo';
+
+  static const String _defaultGithubRepo = 'dll/mad-fd';
+  static const String _defaultGiteeRepo = 'osgisOne/mad-fd';
+
+  static Future<String> getReleaseGithubPat() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_releaseGithubPatKey) ?? '';
+  }
+
+  static Future<void> setReleaseGithubPat(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_releaseGithubPatKey, value.trim());
+  }
+
+  static Future<String> getReleaseGiteeToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_releaseGiteeTokenKey) ?? '';
+  }
+
+  static Future<void> setReleaseGiteeToken(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_releaseGiteeTokenKey, value.trim());
+  }
+
+  static Future<String> getReleaseGithubRepo() async {
+    final prefs = await SharedPreferences.getInstance();
+    final v = prefs.getString(_releaseGithubRepoKey);
+    return (v == null || v.isEmpty) ? _defaultGithubRepo : v;
+  }
+
+  static Future<void> setReleaseGithubRepo(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_releaseGithubRepoKey, value.trim());
+  }
+
+  static Future<String> getReleaseGiteeRepo() async {
+    final prefs = await SharedPreferences.getInstance();
+    final v = prefs.getString(_releaseGiteeRepoKey);
+    return (v == null || v.isEmpty) ? _defaultGiteeRepo : v;
+  }
+
+  static Future<void> setReleaseGiteeRepo(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_releaseGiteeRepoKey, value.trim());
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
   // 考核报告封面默认值
   // ═════════════════════════════════════════════════════════════════════════
 
