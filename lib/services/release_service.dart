@@ -36,6 +36,21 @@ class ReleaseStep {
 }
 
 class ReleaseService {
+  // ── 常量 ──────────────────────────────────────────────────────
+  /// bump 时遇 tag/release 已存在 → 自动 +patch 重试上限。
+  /// 超出抛错（防止跑飞到 0.13.30）。
+  static const int _kMaxBumpAttempts = 20;
+
+  /// HTTP 调用瞬时 5xx / 网络抖动重试次数。
+  static const int _kHttpRetryAttempts = 3;
+
+  /// HTTP 重试退避序列（指数）：1s / 4s / 16s。
+  static const List<Duration> _kHttpRetryBackoff = [
+    Duration(seconds: 1),
+    Duration(seconds: 4),
+    Duration(seconds: 16),
+  ];
+
   /// 步骤定义（顺序即执行顺序）。
   static List<ReleaseStep> defaultSteps() => [
         ReleaseStep(id: 'bump', label: '升版（自动 +patch 重发）'),
@@ -50,7 +65,9 @@ class ReleaseService {
         ReleaseStep(id: 'deploy_ghpages', label: '部署 gh-pages'),
       ];
 
-  final List<ReleaseStep> steps = defaultSteps();
+  final List<ReleaseStep> _steps = defaultSteps();
+  /// 只读视图（防止外部 mutate）。
+  List<ReleaseStep> get steps => List.unmodifiable(_steps);
   final StreamController<String> _logCtrl = StreamController.broadcast();
   final StreamController<void> _stepCtrl = StreamController.broadcast();
   String? _targetVersion;
@@ -62,6 +79,7 @@ class ReleaseService {
   bool get isRunning => _running;
 
   void _log(String tag, String msg) {
+    if (_logCtrl.isClosed) return;
     _logCtrl.add('[$tag] $msg');
   }
 
@@ -70,13 +88,20 @@ class ReleaseService {
     s.status = status;
     s.errorMessage = error;
     s.duration = dur;
-    _stepCtrl.add(null);
+    if (!_stepCtrl.isClosed) _stepCtrl.add(null);
+  }
+
+  /// 解析"目标版本"——之前 bump 已设过就用缓存，否则回退到 BuildInfo
+  /// 当前版本（admin 跳过 bump 直接重试 build/pack 的场景）。
+  Future<String> _resolveTargetVersion() async {
+    if (_targetVersion != null) return _targetVersion!;
+    return await VersionBumpService.readCurrentVersion();
   }
 
   /// 跑某一步（[stepId]）；其余步骤不动。
   /// 重试时 admin 点"重试此步"调用本方法。
   Future<bool> runStep(String stepId) async {
-    final s = steps.firstWhere((x) => x.id == stepId);
+    final s = _steps.firstWhere((x) => x.id == stepId);
     final start = DateTime.now();
     _setStep(s, ReleaseStepStatus.running);
     try {
@@ -135,24 +160,28 @@ class ReleaseService {
     }
     _running = true;
     try {
-      var found = fromStepId == null;
-      var allOk = true;
-      for (final s in steps) {
-        if (!found) {
-          if (s.id == fromStepId) {
-            found = true;
-          } else {
-            continue;
-          }
-        }
-        // 重置后续 step 状态
-        if (s.status != ReleaseStepStatus.running) {
-          _setStep(s, ReleaseStepStatus.pending);
+      // 起始 index：fromStepId 指定的步骤（默认 0）
+      final fromIdx = fromStepId == null
+          ? 0
+          : _steps.indexWhere((s) => s.id == fromStepId);
+      if (fromIdx < 0) {
+        _log('orch', '未知 fromStepId: $fromStepId');
+        return false;
+      }
+
+      // 重置 fromIdx 之后的所有步骤为 pending（含本身）。
+      // **不动 fromIdx 之前的步骤** — 之前 success/failed 都保持，
+      // 避免回退覆盖 admin 之前的进度。
+      for (var i = fromIdx; i < _steps.length; i++) {
+        if (_steps[i].status != ReleaseStepStatus.running) {
+          _setStep(_steps[i], ReleaseStepStatus.pending);
         }
       }
-      for (final s in steps) {
+
+      var allOk = true;
+      for (var i = fromIdx; i < _steps.length; i++) {
+        final s = _steps[i];
         if (s.status == ReleaseStepStatus.success) continue;
-        if (s.status == ReleaseStepStatus.skipped) continue;
         if (!allOk) {
           _setStep(s, ReleaseStepStatus.skipped);
           continue;
@@ -179,16 +208,26 @@ class ReleaseService {
     // 起始版本：当前 +1
     var target = VersionBumpService.bumpPatch(cur);
 
-    // 冲突检测：tag 已存在 / GitHub Release 已存在 → 继续 +patch
-    for (var i = 0; i < 20; i++) {
+    // 冲突检测：tag 已存在 / GitHub Release 已存在 → 继续 +patch。
+    // 超过 [_kMaxBumpAttempts] 次仍冲突就抛错，防止数字飞到不合理值。
+    var bumped = false;
+    for (var i = 0; i < _kMaxBumpAttempts; i++) {
       final hasTag = await _gitTagExists('v$target');
       final hasRelease = pat.isNotEmpty
           ? await _githubReleaseExists(githubRepo, 'v$target', pat)
           : false;
-      if (!hasTag && !hasRelease) break;
+      if (!hasTag && !hasRelease) {
+        bumped = true;
+        break;
+      }
       _log('bump',
           'v$target 已存在（tag=$hasTag, github_release=$hasRelease），继续 +1');
       target = VersionBumpService.bumpPatch(target);
+    }
+
+    if (!bumped) {
+      throw StateError(
+          '$_kMaxBumpAttempts 次 +patch 仍冲突，最后尝试 v$target — 检查仓库 tag/release');
     }
 
     _targetVersion = target;
@@ -206,7 +245,7 @@ class ReleaseService {
   }
 
   Future<void> _stepCheckWindows() async {
-    final ver = _targetVersion!;
+    final ver = await _resolveTargetVersion();
     final exe = File(p.join(VersionBumpService.projectRoot, 'build', 'windows',
         'x64', 'runner', 'Release', '移动图谱与数字孪生v$ver.exe'));
     if (!await exe.exists()) {
@@ -246,7 +285,7 @@ class ReleaseService {
 
   Future<void> _stepPackZips() async {
     final root = VersionBumpService.projectRoot;
-    final ver = _targetVersion!;
+    final ver = await _resolveTargetVersion();
     final distDir = Directory(p.join(root, 'dist'));
     if (!await distDir.exists()) await distDir.create();
 
@@ -351,7 +390,7 @@ class ReleaseService {
   }
 
   Future<void> _stepGitPush() async {
-    final ver = _targetVersion!;
+    final ver = await _resolveTargetVersion();
     final root = VersionBumpService.projectRoot;
 
     // 1. 添加版本号相关文件 + 仅这些（避免误传 dist 大文件 / 学生同步副作用）
@@ -410,7 +449,7 @@ class ReleaseService {
   }
 
   Future<void> _stepCreateReleases() async {
-    final ver = _targetVersion!;
+    final ver = await _resolveTargetVersion();
     final notes = _releaseNotes(ver);
     final pat = await SettingsService.getReleaseGithubPat();
     final giteeToken = await SettingsService.getReleaseGiteeToken();
@@ -421,19 +460,24 @@ class ReleaseService {
     if (pat.isEmpty) {
       _log('release', '! GitHub PAT 未配置，跳过 GitHub Release 创建');
     } else {
-      final r = await http.post(
-        Uri.parse('https://api.github.com/repos/$githubRepo/releases'),
-        headers: {
-          'Authorization': 'Bearer $pat',
-          'Accept': 'application/vnd.github+json',
-          'X-GitHub-Api-Version': '2022-11-28',
-        },
-        body: jsonEncode({
-          'tag_name': 'v$ver',
-          'name': 'v$ver',
-          'body': notes,
-          'target_commitish': 'master',
-        }),
+      final r = await _withHttpRetry(
+        'github create release',
+        () => http.post(
+          Uri.parse('https://api.github.com/repos/$githubRepo/releases'),
+          headers: {
+            'Authorization': 'Bearer $pat',
+            'Accept': 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28',
+          },
+          body: jsonEncode({
+            'tag_name': 'v$ver',
+            'name': 'v$ver',
+            'body': notes,
+            'target_commitish': 'master',
+          }),
+        ),
+        // 201 创建 / 422 已存在 都是确定结果；5xx 才重试
+        isSuccess: (r) => r.statusCode < 500,
       );
       if (r.statusCode == 201 || r.statusCode == 422) {
         // 422 = already exists（发版重试场景）
@@ -447,17 +491,21 @@ class ReleaseService {
     if (giteeToken.isEmpty) {
       _log('release', '! Gitee Token 未配置，跳过 Gitee Release 创建');
     } else {
-      final r = await http.post(
-        Uri.parse('https://gitee.com/api/v5/repos/$giteeRepo/releases'),
-        headers: {'Content-Type': 'application/json;charset=UTF-8'},
-        body: utf8.encode(jsonEncode({
-          'access_token': giteeToken,
-          'tag_name': 'v$ver',
-          'name': 'v$ver',
-          'body': notes,
-          'target_commitish': 'master',
-          'prerelease': false,
-        })),
+      final r = await _withHttpRetry(
+        'gitee create release',
+        () => http.post(
+          Uri.parse('https://gitee.com/api/v5/repos/$giteeRepo/releases'),
+          headers: {'Content-Type': 'application/json;charset=UTF-8'},
+          body: utf8.encode(jsonEncode({
+            'access_token': giteeToken,
+            'tag_name': 'v$ver',
+            'name': 'v$ver',
+            'body': notes,
+            'target_commitish': 'master',
+            'prerelease': false,
+          })),
+        ),
+        isSuccess: (r) => r.statusCode < 500,
       );
       if (r.statusCode == 201) {
         _log('release', 'Gitee: 创建成功');
@@ -472,7 +520,7 @@ class ReleaseService {
   }
 
   Future<void> _stepUploadAssets() async {
-    final ver = _targetVersion!;
+    final ver = await _resolveTargetVersion();
     final root = VersionBumpService.projectRoot;
     final distDir = Directory(p.join(root, 'dist'));
 
@@ -549,7 +597,7 @@ class ReleaseService {
 
   Future<void> _stepDeployGhPages() async {
     final root = VersionBumpService.projectRoot;
-    final ver = _targetVersion!;
+    final ver = await _resolveTargetVersion();
     final remotesProc = await Process.run('git', ['remote'],
         workingDirectory: root, runInShell: true);
     final remotes = (remotesProc.stdout as String).trim().split('\n');
@@ -667,14 +715,51 @@ class ReleaseService {
     return (r.stdout as String).trim() == tag;
   }
 
+  /// HTTP 重试封装：5xx 或网络异常时按 [_kHttpRetryBackoff] 退避重试。
+  /// 4xx 不重试（业务错误）；2xx 直接返回；最后一次失败抛错。
+  /// **谁该用**：所有发到 GitHub / Gitee 的请求。它们偶发 502/503/504 + 突然 RST。
+  Future<T> _withHttpRetry<T>(
+    String label,
+    Future<T> Function() action, {
+    bool Function(T)? isSuccess,
+  }) async {
+    for (var i = 0; i < _kHttpRetryAttempts; i++) {
+      try {
+        final r = await action();
+        if (isSuccess == null || isSuccess(r)) return r;
+        // isSuccess=false 视同瞬时错误，重试
+        if (i < _kHttpRetryAttempts - 1) {
+          _log('http', '$label: 上游返回非成功，${_kHttpRetryBackoff[i].inSeconds}s 后重试');
+          await Future<void>.delayed(_kHttpRetryBackoff[i]);
+          continue;
+        }
+        return r;
+      } catch (e) {
+        if (i < _kHttpRetryAttempts - 1) {
+          _log('http',
+              '$label 异常 ($e)，${_kHttpRetryBackoff[i].inSeconds}s 后重试');
+          await Future<void>.delayed(_kHttpRetryBackoff[i]);
+          continue;
+        }
+        rethrow;
+      }
+    }
+    throw StateError('$label 重试 $_kHttpRetryAttempts 次仍失败');
+  }
+
   Future<bool> _githubReleaseExists(
       String repo, String tag, String pat) async {
-    final r = await http.get(
-      Uri.parse('https://api.github.com/repos/$repo/releases/tags/$tag'),
-      headers: {
-        'Authorization': 'Bearer $pat',
-        'Accept': 'application/vnd.github+json',
-      },
+    final r = await _withHttpRetry(
+      'github release tags/$tag',
+      () => http.get(
+        Uri.parse('https://api.github.com/repos/$repo/releases/tags/$tag'),
+        headers: {
+          'Authorization': 'Bearer $pat',
+          'Accept': 'application/vnd.github+json',
+        },
+      ),
+      // 200 = 存在, 404 = 不存在，都是确定结果，不需要重试；5xx 视为瞬时
+      isSuccess: (r) => r.statusCode < 500,
     );
     return r.statusCode == 200;
   }
@@ -683,8 +768,12 @@ class ReleaseService {
     final giteeToken = await SettingsService.getReleaseGiteeToken();
     final giteeRepo = await SettingsService.getReleaseGiteeRepo();
     // 拿 release id（最近一个 tag = ver 的）
-    final r = await http.get(Uri.parse(
-        'https://gitee.com/api/v5/repos/$giteeRepo/releases/tags/v$ver?access_token=$giteeToken'));
+    final r = await _withHttpRetry(
+      'gitee get release by tag',
+      () => http.get(Uri.parse(
+          'https://gitee.com/api/v5/repos/$giteeRepo/releases/tags/v$ver?access_token=$giteeToken')),
+      isSuccess: (r) => r.statusCode < 500,
+    );
     if (r.statusCode != 200) {
       throw StateError('Gitee 取 release id 失败 [${r.statusCode}]: ${r.body}');
     }
@@ -692,19 +781,27 @@ class ReleaseService {
     final releaseId = rel['id'] as int;
 
     // 删旧资产（重发版）
-    final list = await http.get(Uri.parse(
-        'https://gitee.com/api/v5/repos/$giteeRepo/releases/$releaseId/attach_files?access_token=$giteeToken'));
+    final list = await _withHttpRetry(
+      'gitee list attach_files',
+      () => http.get(Uri.parse(
+          'https://gitee.com/api/v5/repos/$giteeRepo/releases/$releaseId/attach_files?access_token=$giteeToken')),
+      isSuccess: (r) => r.statusCode < 500,
+    );
     if (list.statusCode == 200) {
       final files = jsonDecode(utf8.decode(list.bodyBytes)) as List;
       for (final a in files) {
         final id = a['id'];
-        final del = await http.delete(Uri.parse(
-            'https://gitee.com/api/v5/repos/$giteeRepo/releases/$releaseId/attach_files/$id?access_token=$giteeToken'));
+        final del = await _withHttpRetry(
+          'gitee delete attach_file',
+          () => http.delete(Uri.parse(
+              'https://gitee.com/api/v5/repos/$giteeRepo/releases/$releaseId/attach_files/$id?access_token=$giteeToken')),
+          isSuccess: (r) => r.statusCode < 500,
+        );
         _log('upload:gitee', '删除旧资产 ${a['name']}: ${del.statusCode}');
       }
     }
 
-    // 上传新资产
+    // 上传新资产 — 大文件 multipart 是最容易遭遇 5xx 的；retry 价值最大。
     final assets = <String>[
       '移动图谱与数字孪生+windows+v$ver.zip',
       '移动图谱与数字孪生+android+v$ver.zip',
@@ -721,27 +818,35 @@ class ReleaseService {
         continue;
       }
       final size = await f.length();
-      final req = http.MultipartRequest(
-        'POST',
-        Uri.parse(
-            'https://gitee.com/api/v5/repos/$giteeRepo/releases/$releaseId/attach_files?access_token=$giteeToken'),
+      // 重试时 MultipartRequest 不能复用（stream 已 drain），每次新建一份
+      final result = await _withHttpRetry(
+        'gitee upload $name',
+        () async {
+          final req = http.MultipartRequest(
+            'POST',
+            Uri.parse(
+                'https://gitee.com/api/v5/repos/$giteeRepo/releases/$releaseId/attach_files?access_token=$giteeToken'),
+          );
+          // **关键**：把 + 预编码成 %2B（Gitee 服务端会把 multipart filename 当 URL 解码）
+          final submitName = name.replaceAll('+', '%2B');
+          req.files.add(http.MultipartFile(
+            'file',
+            f.openRead(),
+            size,
+            filename: submitName,
+          ));
+          final streamed = await req.send();
+          final body = await streamed.stream.bytesToString();
+          return (status: streamed.statusCode, body: body);
+        },
+        isSuccess: (r) => r.status < 500,
       );
-      // **关键**：把 + 预编码成 %2B（Gitee 服务端会把 multipart filename 当 URL 解码）
-      final submitName = name.replaceAll('+', '%2B');
-      req.files.add(http.MultipartFile(
-        'file',
-        f.openRead(),
-        size,
-        filename: submitName,
-      ));
-      final streamed = await req.send();
-      final body = await streamed.stream.bytesToString();
-      if (streamed.statusCode == 201) {
+      if (result.status == 201) {
         _log('upload:gitee',
             '✓ $name (${(size / 1024 / 1024).toStringAsFixed(1)} MB)');
       } else {
         throw StateError(
-            'Gitee 上传 $name 失败 [${streamed.statusCode}]: $body');
+            'Gitee 上传 $name 失败 [${result.status}]: ${result.body}');
       }
     }
   }

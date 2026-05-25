@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../../core/dev_paths.dart';
 import '../../../data/local/feedback_dao.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
@@ -569,12 +570,8 @@ class _FeedbackManagePageState extends State<FeedbackManagePage> {
     required void Function(String line) onOutput,
     required void Function(int exitCode) onDone,
   }) async {
-    // 获取项目根目录（向上查找 pubspec.yaml）
-    var projectDir = Directory.current.path;
-    // 在 release 模式下 cwd 可能不是项目目录，硬编码已知路径作为兜底
-    if (!File('$projectDir/pubspec.yaml').existsSync()) {
-      projectDir = r'D:\FlutterProjects\knowledge_graph_app';
-    }
+    // 获取项目根目录（向上查找 pubspec.yaml，兜底用 DevPaths 单例）
+    final projectDir = DevPaths.projectRoot;
 
     onOutput('[工作目录] $projectDir');
     onOutput('[启动 Claude Code ...]');
