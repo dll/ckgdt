@@ -3,8 +3,8 @@
   "user_id": "2023211985",
   "user_name": "测试学生",
   "role": "student",
-  "synced_at": "2026-05-25T14:58:01.386",
-  "last_active": "2026-05-25T14:58:01.386",
+  "synced_at": "2026-05-25T15:05:43.089854",
+  "last_active": "2026-05-25T15:05:43.069268",
   "quiz_results": [
     {
       "user_id": "2023211985",
@@ -113,7 +113,7 @@
       "title": "HarmonyOS NEXT 学习路径",
       "description": "基于前置关系自动生成 · 1个前置概念 · 0个拓展概念",
       "node_ids": "c_93",
-      "progress": 0,
+      "progress": 0.0,
       "status": "active",
       "created_at": "2026-04-21T21:00:47.093511",
       "updated_at": "2026-04-21T21:00:47.093511"
@@ -123,7 +123,7 @@
       "title": "综合项目实践 学习路径",
       "description": "自动推荐 · 3个概念 · 基于前置关系链",
       "node_ids": "c_129,c_114,c_122",
-      "progress": 0,
+      "progress": 0.0,
       "status": "active",
       "created_at": "2026-04-18T14:05:55.615981",
       "updated_at": "2026-04-18T14:05:55.615981"
@@ -133,7 +133,7 @@
       "title": "应用架构 学习路径",
       "description": "自动推荐 · 2个概念 · 基于前置关系链",
       "node_ids": "c_129,c_114",
-      "progress": 0,
+      "progress": 0.0,
       "status": "active",
       "created_at": "2026-04-18T14:05:55.610984",
       "updated_at": "2026-04-18T14:05:55.610984"
@@ -143,7 +143,7 @@
       "title": "ArkTS 学习路径",
       "description": "自动推荐 · 2个概念 · 基于前置关系链",
       "node_ids": "c_93,c_95",
-      "progress": 0,
+      "progress": 0.0,
       "status": "active",
       "created_at": "2026-04-18T14:05:55.605965",
       "updated_at": "2026-04-18T14:05:55.605965"
@@ -153,7 +153,7 @@
       "title": "Dart语言 学习路径",
       "description": "自动推荐 · 2个概念 · 基于前置关系链",
       "node_ids": "c_1,c_46",
-      "progress": 0,
+      "progress": 0.0,
       "status": "active",
       "created_at": "2026-04-18T14:05:55.600965",
       "updated_at": "2026-04-18T14:05:55.600965"
@@ -163,7 +163,7 @@
       "title": "Swift语言 学习路径",
       "description": "自动推荐 · 2个概念 · 基于前置关系链",
       "node_ids": "c_1,c_34",
-      "progress": 0,
+      "progress": 0.0,
       "status": "active",
       "created_at": "2026-04-18T14:05:55.595981",
       "updated_at": "2026-04-18T14:05:55.595981"
@@ -173,7 +173,7 @@
       "title": "Kotlin语言 学习路径",
       "description": "自动推荐 · 2个概念 · 基于前置关系链",
       "node_ids": "c_1,c_28",
-      "progress": 0,
+      "progress": 0.0,
       "status": "active",
       "created_at": "2026-04-18T14:05:55.590926",
       "updated_at": "2026-04-18T14:05:55.590926"
@@ -183,7 +183,7 @@
       "title": "Jetpack Compose 学习路径",
       "description": "自动推荐 · 3个概念 · 基于前置关系链",
       "node_ids": "c_1,c_28,c_27",
-      "progress": 0,
+      "progress": 0.0,
       "status": "active",
       "created_at": "2026-04-18T14:05:55.582925",
       "updated_at": "2026-04-18T14:05:55.583926"
@@ -204,7 +204,7 @@
       "scored_at": null,
       "created_at": "2026-05-24T07:53:35.496936",
       "updated_at": "2026-05-24T07:53:35.496936",
-      "ai_suspicion": 0,
+      "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
     },
@@ -222,7 +222,7 @@
       "scored_at": null,
       "created_at": "2026-04-21T11:57:18.637947",
       "updated_at": "2026-04-21T11:57:18.637947",
-      "ai_suspicion": 0,
+      "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
     }
@@ -245,7 +245,7 @@
       "created_at": "2026-05-25T13:20:30.975",
       "updated_at": "2026-05-25T13:20:30.975",
       "related_node_ids": null,
-      "ai_suspicion": 0,
+      "ai_suspicion": 0.0,
       "teacher_confirmed": 0,
       "project_id": null,
       "group_id": null,
