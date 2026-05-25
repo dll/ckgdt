@@ -211,7 +211,7 @@ class _LabMaterialPreviewPageState extends State<LabMaterialPreviewPage> {
   }
 
   MarkdownStyleSheet _buildStyleSheet(bool isDark) {
-    const accentColor = Color(0xFF667eea);
+    const accentColor = Color(0xFF1677FF);
     final baseTextColor = isDark ? Colors.white : Colors.black87;
     const baseFontSize = 14.0;
 

@@ -22,6 +22,7 @@ class _GraphListPageState extends State<GraphListPage>
   List<GraphModel> _categoryGraphs = []; // 6 个分类图谱
   Map<String, Map<String, int>> _stats = {}; // graphId → {nodes, edges}
   bool _isExpanded = false; // 子图谱展开状态
+  Color primary = const Color(0xFF1677FF);
 
   // 总统计
   int _totalNodes = 0;
@@ -98,7 +99,7 @@ class _GraphListPageState extends State<GraphListPage>
     for (final entry in _categoryColors.entries) {
       if (title.contains(entry.key)) return entry.value;
     }
-    return const Color(0xFF667eea);
+    return primary;
   }
 
   IconData _getCategoryIcon(String title) {
@@ -115,6 +116,7 @@ class _GraphListPageState extends State<GraphListPage>
 
   @override
   Widget build(BuildContext context) {
+    primary = Theme.of(context).colorScheme.primary;
     return Scaffold(
       appBar: AppBar(
         title: const Text('结构视图'),
@@ -181,8 +183,8 @@ class _GraphListPageState extends State<GraphListPage>
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            gradient: const LinearGradient(
-              colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+            gradient: LinearGradient(
+              colors: [primary, primary.withValues(alpha: 0.7)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -348,7 +350,7 @@ class _GraphListPageState extends State<GraphListPage>
                 Container(
                   width: 2,
                   height: isLast ? 40 : 90,
-                  color: const Color(0xFF667eea).withValues(alpha: 0.3),
+                  color: primary.withValues(alpha: 0.3),
                 ),
                 if (isLast)
                   Container(
@@ -367,7 +369,7 @@ class _GraphListPageState extends State<GraphListPage>
                   Container(
                     width: 16,
                     height: 2,
-                    color: const Color(0xFF667eea).withValues(alpha: 0.3),
+                    color: primary.withValues(alpha: 0.3),
                   ),
                   Container(
                     width: 10,

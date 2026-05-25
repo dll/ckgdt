@@ -495,7 +495,7 @@ class _TeacherManagePageState extends State<TeacherManagePage> {
       case 'admin':
         return Colors.deepOrange;
       case 'teacher':
-        return const Color(0xFF667eea);
+        return const Color(0xFF1677FF);
       default:
         return Colors.grey;
     }
@@ -624,7 +624,7 @@ class _TeacherManagePageState extends State<TeacherManagePage> {
               icon: Icons.school,
               label: '教师',
               value: '$_teacherCount',
-              color: const Color(0xFF667eea),
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
           const SizedBox(width: 10),

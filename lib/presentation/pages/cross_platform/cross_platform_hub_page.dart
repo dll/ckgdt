@@ -634,7 +634,7 @@ class _CrossPlatformHubPageState extends State<CrossPlatformHubPage> {
               padding: 12,
               borderColor:
                   theme.colorScheme.outline.withValues(alpha: 0.2),
-              eyeColor: const Color(0xFF667eea),
+              eyeColor: theme.colorScheme.primary,
               moduleColor: const Color(0xFF333333),
             ),
             const SizedBox(height: 12),

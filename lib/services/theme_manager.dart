@@ -24,7 +24,7 @@ class ThemeManager {
     final preset = AppColors.preset(colorIndex);
     final isDark = brightness == Brightness.dark;
 
-    final pageBg = isDark ? const Color(0xFF111419) : const Color(0xFFF1ECE2);
+    final pageBg = isDark ? NoirTokens.ink : const Color(0xFFF1ECE2);
     final cardBg = isDark ? const Color(0xFF181C24) : NoirTokens.paper;
     final onCard = isDark ? NoirTokens.paper : NoirTokens.ink;
     final hairline =
@@ -331,9 +331,9 @@ class ThemeManager {
       ),
 
       // ── 进度 ─────────────────────────────────────────────────────────
-      progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: NoirTokens.ink,
-        linearTrackColor: Color(0x1A0A0E1A),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: accent,
+        linearTrackColor: accent.withValues(alpha: 0.15),
       ),
 
       // ── 文本基础 ────────────────────────────────────────────────────

@@ -1345,9 +1345,9 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.auto_awesome, color: Color(0xFF667eea)),
+            Icon(Icons.auto_awesome, color: Theme.of(ctx).colorScheme.primary),
             SizedBox(width: 8),
             Text('AI 批阅', style: TextStyle(fontSize: 18)),
           ],
@@ -1423,7 +1423,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
-            const Icon(Icons.auto_awesome, color: Color(0xFF667eea)),
+            Icon(Icons.auto_awesome, color: Theme.of(ctx).colorScheme.primary),
             const SizedBox(width: 8),
             Text('AI 批阅草稿 · ${draft.score} 分',
                 style: const TextStyle(fontSize: 18)),

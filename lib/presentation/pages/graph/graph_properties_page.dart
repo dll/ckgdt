@@ -13,7 +13,7 @@ class GraphPropertiesPage extends StatefulWidget {
 
 class _GraphPropertiesPageState extends State<GraphPropertiesPage>
     with TickerProviderStateMixin {
-  static const _primaryColor = Color(0xFF667eea);
+  Color primary = const Color(0xFF1677FF);
 
   static const _conceptTypes = [
     'concept',
@@ -194,10 +194,11 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
 
   @override
   Widget build(BuildContext context) {
+    primary = Theme.of(context).colorScheme.primary;
     return Scaffold(
       appBar: AppBar(
         title: const Text('图谱属性管理'),
-        backgroundColor: _primaryColor,
+        backgroundColor: primary,
         foregroundColor: Colors.white,
         bottom: TabBar(
           controller: _tabController,
@@ -241,7 +242,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: _primaryColor))
+          ? Center(child: CircularProgressIndicator(color: primary))
           : TabBarView(
               controller: _tabController,
               children: [
@@ -253,7 +254,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
         animation: _tabController,
         builder: (context, _) {
           return FloatingActionButton(
-            backgroundColor: _primaryColor,
+            backgroundColor: primary,
             foregroundColor: Colors.white,
             tooltip: _tabController.index == 0 ? '添加节点' : '添加关系',
             onPressed: () {
@@ -276,7 +277,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
       child: Row(
         children: [
           if (_nodeSortField == value)
-            const Icon(Icons.check, size: 18, color: _primaryColor)
+            Icon(Icons.check, size: 18, color: primary)
           else
             const SizedBox(width: 18),
           const SizedBox(width: 8),
@@ -300,7 +301,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
           child: _filteredConcepts.isEmpty
               ? _buildEmptyState('暂无节点', Icons.bubble_chart_outlined)
               : RefreshIndicator(
-                  color: _primaryColor,
+                  color: primary,
                   onRefresh: _loadData,
                   child: ListView.builder(
                     padding: const EdgeInsets.fromLTRB(12, 4, 12, 80),
@@ -390,7 +391,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
                     if (chapter != null)
                       _badge(
                         '第$chapter章',
-                        _primaryColor,
+                        primary,
                       ),
                     if (importance.isNotEmpty)
                       _badge(
@@ -444,7 +445,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
           child: _filteredRelations.isEmpty
               ? _buildEmptyState('暂无关系', Icons.timeline_outlined)
               : RefreshIndicator(
-                  color: _primaryColor,
+                  color: primary,
                   onRefresh: _loadData,
                   child: ListView.builder(
                     padding: const EdgeInsets.fromLTRB(12, 4, 12, 80),
@@ -539,7 +540,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
                   children: [
                     _badge(
                       _relationLabels[relType] ?? relType,
-                      _primaryColor,
+                      primary,
                     ),
                     if (weight != null) ...[
                       const SizedBox(width: 6),
@@ -584,7 +585,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
         onChanged: onChanged,
         decoration: InputDecoration(
           hintText: hint,
-          prefixIcon: const Icon(Icons.search, color: _primaryColor),
+          prefixIcon: Icon(Icons.search, color: primary),
           suffixIcon: controller.text.isNotEmpty
               ? IconButton(
                   icon: const Icon(Icons.clear),
@@ -595,7 +596,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
                 )
               : null,
           filled: true,
-          fillColor: _primaryColor.withValues(alpha: 0.06),
+          fillColor: primary.withValues(alpha: 0.06),
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           border: OutlineInputBorder(
@@ -604,7 +605,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: _primaryColor, width: 1.5),
+            borderSide: BorderSide(color: primary, width: 1.5),
           ),
         ),
       ),
@@ -859,7 +860,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
                 ),
                 FilledButton(
                   style: FilledButton.styleFrom(
-                    backgroundColor: _primaryColor,
+                    backgroundColor: primary,
                   ),
                   onPressed: () {
                     final name = nameCtrl.text.trim();
@@ -1052,7 +1053,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
                 ),
                 FilledButton(
                   style: FilledButton.styleFrom(
-                    backgroundColor: _primaryColor,
+                    backgroundColor: primary,
                   ),
                   onPressed: () {
                     if (selectedSource == null || selectedTarget == null) {
@@ -1169,7 +1170,7 @@ class _AiRecommendDialog extends StatefulWidget {
 }
 
 class _AiRecommendDialogState extends State<_AiRecommendDialog> {
-  static const _primaryColor = Color(0xFF667eea);
+  Color primary = const Color(0xFF1677FF);
   static const _aiGold = Color(0xFFFFAB00);
 
   static const _typeLabels = <String, String>{
@@ -1244,6 +1245,7 @@ class _AiRecommendDialogState extends State<_AiRecommendDialog> {
 
   @override
   Widget build(BuildContext context) {
+    primary = Theme.of(context).colorScheme.primary;
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ConstrainedBox(
@@ -1266,7 +1268,7 @@ class _AiRecommendDialogState extends State<_AiRecommendDialog> {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
       decoration: BoxDecoration(
-        color: _primaryColor.withValues(alpha: 0.06),
+        color: primary.withValues(alpha: 0.06),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
       ),
       child: Row(
@@ -1277,12 +1279,12 @@ class _AiRecommendDialogState extends State<_AiRecommendDialog> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'AI 智能推荐',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: _primaryColor,
+                    color: primary,
                   ),
                 ),
                 Text(
@@ -1309,11 +1311,11 @@ class _AiRecommendDialogState extends State<_AiRecommendDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(
+            SizedBox(
               width: 48,
               height: 48,
               child: CircularProgressIndicator(
-                color: _primaryColor,
+                color: primary,
                 strokeWidth: 3,
               ),
             ),
@@ -1425,7 +1427,7 @@ class _AiRecommendDialogState extends State<_AiRecommendDialog> {
                 subtitle: _relationLabels[relType] ?? relType,
                 description: r['description'] as String? ?? '',
                 confidence: conf,
-                badgeColor: _primaryColor,
+                badgeColor: primary,
                 icon: Icons.arrow_right_alt,
               );
             }),
@@ -1438,14 +1440,14 @@ class _AiRecommendDialogState extends State<_AiRecommendDialog> {
   Widget _sectionTitle(IconData icon, String title, String count) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: _primaryColor),
+        Icon(icon, size: 20, color: primary),
         const SizedBox(width: 6),
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
-            color: _primaryColor,
+            color: primary,
           ),
         ),
         const Spacer(),
@@ -1490,7 +1492,7 @@ class _AiRecommendDialogState extends State<_AiRecommendDialog> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: checked
-            ? BorderSide(color: _primaryColor.withValues(alpha: 0.3), width: 1)
+            ? BorderSide(color: primary.withValues(alpha: 0.3), width: 1)
             : BorderSide.none,
       ),
       elevation: checked ? 2 : 0.5,
@@ -1504,7 +1506,7 @@ class _AiRecommendDialogState extends State<_AiRecommendDialog> {
               Checkbox(
                 value: checked,
                 onChanged: onChecked,
-                activeColor: _primaryColor,
+                activeColor: primary,
               ),
               Icon(icon, size: 20, color: badgeColor),
               const SizedBox(width: 8),
@@ -1643,7 +1645,7 @@ class _AiRecommendDialogState extends State<_AiRecommendDialog> {
           const SizedBox(width: 8),
           // 确认采纳
           FilledButton.icon(
-            style: FilledButton.styleFrom(backgroundColor: _primaryColor),
+            style: FilledButton.styleFrom(backgroundColor: primary),
             onPressed: totalSelected == 0 || _isSaving
                 ? null
                 : _applySelected,
@@ -1739,7 +1741,7 @@ class _AiRecommendDialogState extends State<_AiRecommendDialog> {
             content: Text(
               '✅ 已采纳：$addedConcepts 个概念、$addedRelations 条关系',
             ),
-            backgroundColor: _primaryColor,
+            backgroundColor: primary,
           ),
         );
       }

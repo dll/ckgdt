@@ -1188,7 +1188,7 @@ class _TechLogoPainter extends CustomPainter {
     final h = size.height;
     final cx = w / 2;
 
-    final color = selected ? Colors.white : const Color(0xFF667eea);
+    final color = selected ? Colors.white : const Color(0xFF1677FF);
     final paint = Paint()..color = color;
 
     // Head

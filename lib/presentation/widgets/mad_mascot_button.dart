@@ -113,7 +113,7 @@ class _MadMascotButtonState extends State<MadMascotButton>
         FloatingActionButton(
           mini: true,
           heroTag: 'mad_mascot',
-          backgroundColor: const Color(0xFF667eea),
+          backgroundColor: Theme.of(context).colorScheme.primary,
           tooltip: 'MAD 精灵',
           onPressed: _toggle,
           child: AnimatedBuilder(

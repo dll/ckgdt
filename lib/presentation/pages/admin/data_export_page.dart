@@ -69,7 +69,7 @@ class _DataExportPageState extends State<DataExportPage> {
           icon: Icons.assessment_outlined,
           title: '班级成绩总表',
           description: '导出全部学生的测验成绩，按平均分排序，包含各章节得分明细。',
-          color: const Color(0xFF667eea),
+          color: const Color(0xFF1677FF),
           generator: _generateGradeSummary,
         ),
         _ReportTemplate(
@@ -927,7 +927,7 @@ class _DataExportPageState extends State<DataExportPage> {
           icon: Icons.people_outline,
           label: '学生总数',
           value: '$_totalStudents',
-          color: const Color(0xFF667eea),
+          color: theme.colorScheme.primary,
         ),
         const SizedBox(width: 8),
         _buildSummaryCard(

@@ -46,7 +46,7 @@ class ChapterHelper {
 
   /// 章节主题色
   static const Map<int, Color> chapterColors = {
-    1: Color(0xFF667eea),
+     1: Color(0xFF1677FF),
     2: Color(0xFF4CAF50),
     3: Color(0xFF027DFD),
     4: Color(0xFF07C160),

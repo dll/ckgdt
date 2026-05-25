@@ -280,7 +280,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
       // 选中光晕
       if (isSelected) {
         final selGlow = Paint()
-          ..color = const Color(0xFF667eea).withValues(alpha: 0.3)
+          ..color = const Color(0xFF1677FF).withValues(alpha: 0.3)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16);
         canvas.drawCircle(center, radius + 14, selGlow);
       }
@@ -288,7 +288,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
       // 焦点中心标记
       if (isFocusCenter) {
         final focusGlow = Paint()
-          ..color = const Color(0xFF667eea).withValues(alpha: 0.15)
+          ..color = const Color(0xFF1677FF).withValues(alpha: 0.15)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
         canvas.drawCircle(center, radius + 20, focusGlow);
 
@@ -297,7 +297,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
           center,
           radius + 6,
           Paint()
-            ..color = const Color(0xFF667eea)
+            ..color = const Color(0xFF1677FF)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 2.5,
         );
@@ -346,7 +346,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
       // 选中边框环
       if (isSelected) {
         final selRing = Paint()
-          ..color = const Color(0xFF667eea)
+          ..color = const Color(0xFF1677FF)
           ..strokeWidth = 3
           ..style = PaintingStyle.stroke;
 
@@ -439,7 +439,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
       if (entry.value.isEmpty) continue;
       final ch = entry.key;
       final color = ChapterHelper.chapterColors[ch] ??
-          const Color(0xFF667eea);
+          const Color(0xFF1677FF);
 
       // 找边界
       double minX = double.infinity,
@@ -607,7 +607,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
     for (final ch in chapterCenters.keys) {
       final center = chapterCenters[ch]!;
       final color = ChapterHelper.chapterColors[ch] ??
-          const Color(0xFF667eea);
+          const Color(0xFF1677FF);
       final logos = ChapterHelper.chapterLogos[ch];
       if (logos == null || logos.isEmpty) continue;
 
@@ -868,13 +868,13 @@ class _MinimapPainter extends CustomPainter {
     canvas.drawRect(
       viewportRect,
       Paint()
-        ..color = const Color(0xFF667eea).withValues(alpha: 0.3)
+        ..color = const Color(0xFF1677FF).withValues(alpha: 0.3)
         ..style = PaintingStyle.fill,
     );
     canvas.drawRect(
       viewportRect,
       Paint()
-        ..color = const Color(0xFF667eea)
+        ..color = const Color(0xFF1677FF)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5,
     );
