@@ -26,9 +26,21 @@ class ReleaseCenterPage extends StatefulWidget {
 }
 
 class _ReleaseCenterPageState extends State<ReleaseCenterPage> {
+  // ── 常量 ────────────────────────────────────────────────────────
+  /// 控制台日志环形缓冲上限，超出截掉前面的。
+  /// HAP 构建期 Hvigor 一秒能吐数百行，5000 行约 1MB，不会爆内存。
+  static const int _kLogBufferMax = 5000;
+
+  /// 日志合批刷 UI 的间隔（ms）。
+  /// Hvigor / Gradle 高峰每秒 1000+ 行，逐行 setState 会卡 UI。
+  /// 50ms ~ 20fps，肉眼几乎察觉不到延迟，但帧数稳定。
+  static const Duration _kLogFlushInterval = Duration(milliseconds: 50);
+
   final ReleaseService _service = ReleaseService();
   final ScrollController _logScroll = ScrollController();
   final List<String> _logs = [];
+  final List<String> _pendingLogs = [];
+  Timer? _flushTimer;
   StreamSubscription<String>? _logSub;
   StreamSubscription<void>? _stepSub;
 
@@ -42,23 +54,32 @@ class _ReleaseCenterPageState extends State<ReleaseCenterPage> {
   void initState() {
     super.initState();
     _loadInitial();
-    _logSub = _service.logStream.listen((line) {
-      if (!mounted) return;
-      setState(() {
-        _logs.add(line);
-        if (_logs.length > 5000) {
-          _logs.removeRange(0, _logs.length - 5000);
-        }
-      });
-      // 自动滚动
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_logScroll.hasClients) {
-          _logScroll.jumpTo(_logScroll.position.maxScrollExtent);
-        }
-      });
-    });
+    _logSub = _service.logStream.listen(_onLog);
     _stepSub = _service.stepStream.listen((_) {
       if (mounted) setState(() {});
+    });
+  }
+
+  /// 收到一行日志：先入 pending 缓冲，[_kLogFlushInterval] 内合批一次 setState。
+  void _onLog(String line) {
+    _pendingLogs.add(line);
+    _flushTimer ??= Timer(_kLogFlushInterval, _flushLogs);
+  }
+
+  void _flushLogs() {
+    _flushTimer = null;
+    if (_pendingLogs.isEmpty || !mounted) return;
+    setState(() {
+      _logs.addAll(_pendingLogs);
+      _pendingLogs.clear();
+      if (_logs.length > _kLogBufferMax) {
+        _logs.removeRange(0, _logs.length - _kLogBufferMax);
+      }
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_logScroll.hasClients) {
+        _logScroll.jumpTo(_logScroll.position.maxScrollExtent);
+      }
     });
   }
 
@@ -66,6 +87,7 @@ class _ReleaseCenterPageState extends State<ReleaseCenterPage> {
   void dispose() {
     _logSub?.cancel();
     _stepSub?.cancel();
+    _flushTimer?.cancel();
     _logScroll.dispose();
     _service.dispose();
     super.dispose();
@@ -193,33 +215,20 @@ class _ReleaseCenterPageState extends State<ReleaseCenterPage> {
     }
   }
 
-  IconData _statusIcon(ReleaseStepStatus s) {
+  /// 把 [ReleaseStepStatus] 一次性映射成图标 + 颜色。
+  /// 单一映射来源——之前两个并列 switch 容易漂移。
+  ({IconData icon, Color color}) _statusStyle(ReleaseStepStatus s) {
     switch (s) {
       case ReleaseStepStatus.pending:
-        return Icons.radio_button_unchecked;
+        return (icon: Icons.radio_button_unchecked, color: Colors.grey);
       case ReleaseStepStatus.running:
-        return Icons.sync;
+        return (icon: Icons.sync, color: Colors.blue);
       case ReleaseStepStatus.success:
-        return Icons.check_circle;
+        return (icon: Icons.check_circle, color: Colors.green);
       case ReleaseStepStatus.failed:
-        return Icons.error;
+        return (icon: Icons.error, color: Colors.red);
       case ReleaseStepStatus.skipped:
-        return Icons.skip_next;
-    }
-  }
-
-  Color _statusColor(ReleaseStepStatus s) {
-    switch (s) {
-      case ReleaseStepStatus.pending:
-        return Colors.grey;
-      case ReleaseStepStatus.running:
-        return Colors.blue;
-      case ReleaseStepStatus.success:
-        return Colors.green;
-      case ReleaseStepStatus.failed:
-        return Colors.red;
-      case ReleaseStepStatus.skipped:
-        return Colors.grey.shade400;
+        return (icon: Icons.skip_next, color: const Color(0xFFBDBDBD));
     }
   }
 
@@ -388,7 +397,7 @@ class _ReleaseCenterPageState extends State<ReleaseCenterPage> {
   }
 
   Widget _buildStepRow(ReleaseStep step) {
-    final color = _statusColor(step.status);
+    final style = _statusStyle(step.status);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -399,7 +408,7 @@ class _ReleaseCenterPageState extends State<ReleaseCenterPage> {
                   height: 22,
                   child: CircularProgressIndicator(strokeWidth: 2.4),
                 )
-              : Icon(_statusIcon(step.status), color: color, size: 22),
+              : Icon(style.icon, color: style.color, size: 22),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

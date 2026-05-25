@@ -9,6 +9,9 @@
 ///   读不到 package_info；
 /// - 登录页 / 关于页 都是同步 build()，不能等 future；
 /// - 同步常量编译期写死，零 IO，零异常路径。
+///
+/// 注：构建发布相关的"项目根路径"放在 [DevPaths]（`lib/core/dev_paths.dart`），
+/// 那里需要 dart:io，**不能**在本文件引入——本文件被 web 端的登录/关于页面引用。
 library;
 
 class BuildInfo {
