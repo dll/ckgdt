@@ -33,7 +33,10 @@ class QuizDao {
     for (int attempt = 0; attempt < 3; attempt++) {
       try {
         final maps = await db.rawQuery(
-          'SELECT DISTINCT source FROM questions WHERE source IS NOT NULL AND source != "" ORDER BY source',
+          // 注意：SQL 标准里双引号 "" 是标识符，必须用单引号 '' 表示空字符串。
+          // sqflite_common_ffi (桌面/Web) 严格按标准；Android 原生 sqflite 容忍 ""，
+          // 这就是为什么手机能用、桌面/Web 报 "no such column" 的真凶。
+          "SELECT DISTINCT source FROM questions WHERE source IS NOT NULL AND source != '' ORDER BY source",
         );
         if (attempt > 0) {
           InitLogger.log('quiz_dao',
