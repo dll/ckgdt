@@ -141,6 +141,13 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
         whereArgs: [workId],
       );
 
+      // 上传视频即视为提交：把状态从"待提交"切到"已提交"
+      // 内含 NotifyTeachers，再触发 AI 自动批阅
+      final wasUnsubmitted = (_work['status'] as String? ?? '待提交') == '待提交';
+      if (wasUnsubmitted) {
+        await widget.worksDao.submitWork(workId);
+      }
+
       // 刷新
       final refreshed = await widget.worksDao.getWork(workId);
       if (mounted) {
@@ -155,6 +162,51 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
           ),
         );
         widget.onChanged?.call();
+      }
+
+      // 学生侧：触发 AI 自动批阅（仅首次提交）
+      if (wasUnsubmitted && refreshed != null && mounted) {
+        final isStudent =
+            !widget.authService.isTeacher && !widget.authService.isAdmin;
+        if (isStudent) {
+          final title = (refreshed['title'] as String?) ??
+              (refreshed['project'] as String?) ??
+              '作品';
+          final description = (refreshed['description'] as String?) ?? '';
+          final techStack = refreshed['tech_stack'] as String?;
+          final groupName = refreshed['group_name'] as String?;
+          final studentName = (refreshed['student_name'] as String?) ??
+              widget.authService.currentUser?.realName ??
+              userId;
+
+          final inline = await _askWatchOrNotify(title);
+          if (inline == true) {
+            await _runInlineAiGrading(
+              workId: workId,
+              studentId: userId,
+              studentName: studentName,
+              workTitle: title,
+              description: description,
+              techStack: techStack,
+              groupName: groupName,
+            );
+          } else {
+            unawaited(AutoGradingService.instance.gradeWork(
+              workId: workId,
+              studentId: userId,
+              studentName: studentName,
+              workTitle: title,
+              description: description,
+              techStack: techStack,
+              groupName: groupName,
+            ));
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('AI 批阅完成后会通知你。')),
+              );
+            }
+          }
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -1113,6 +1165,150 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
             max: max.toDouble(),
             divisions: max,
             onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── AI 批阅交互（学生上传视频后触发）────────────────────────────────────
+
+  Future<bool?> _askWatchOrNotify(String workTitle) async {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.auto_awesome, color: Color(0xFF667eea)),
+            SizedBox(width: 8),
+            Text('AI 批阅', style: TextStyle(fontSize: 18)),
+          ],
+        ),
+        content: Text('「$workTitle」已提交。AI 批阅约需 10-30 秒。\n\n'
+            '在线等待会立刻看到优点 / 改进建议；\n'
+            '稍后通知则后台跑，完成时通过通知提示你。'),
+        actions: [
+          OutlinedButton.icon(
+            onPressed: () => Navigator.pop(ctx, false),
+            icon: const Icon(Icons.notifications_active),
+            label: const Text('稍后通知我'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(ctx, true),
+            icon: const Icon(Icons.visibility),
+            label: const Text('在线等待'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _runInlineAiGrading({
+    required int workId,
+    required String studentId,
+    required String studentName,
+    required String workTitle,
+    required String description,
+    String? techStack,
+    String? groupName,
+  }) async {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: SizedBox(
+          height: 80,
+          child: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Expanded(child: Text('AI 正在批阅，请稍候…')),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final draft = await AutoGradingService.instance.gradeWork(
+      workId: workId,
+      studentId: studentId,
+      studentName: studentName,
+      workTitle: workTitle,
+      description: description,
+      techStack: techStack,
+      groupName: groupName,
+      returnDraft: true,
+    );
+
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).pop();
+
+    if (draft == null || !draft.isUsable) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('AI 批阅失败，已发通知给教师人工批阅'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.auto_awesome, color: Color(0xFF667eea)),
+            const SizedBox(width: 8),
+            Text('AI 批阅草稿 · ${draft.score} 分',
+                style: const TextStyle(fontSize: 18)),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('（教师复核后才是最终成绩）',
+                  style: TextStyle(color: Colors.grey, fontSize: 12)),
+              const SizedBox(height: 12),
+              if (draft.strengths.isNotEmpty) ...[
+                const Text('✓ 优点',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.green)),
+                const SizedBox(height: 4),
+                ...draft.strengths.map((s) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text('· $s'),
+                    )),
+                const SizedBox(height: 12),
+              ],
+              if (draft.improvements.isNotEmpty) ...[
+                const Text('✎ 改进建议',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.orange)),
+                const SizedBox(height: 4),
+                ...draft.improvements.map((s) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text('· $s'),
+                    )),
+                const SizedBox(height: 12),
+              ],
+              if (draft.feedback.isNotEmpty) ...[
+                const Text('总评',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Text(draft.feedback),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('知道了'),
           ),
         ],
       ),
