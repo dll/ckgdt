@@ -732,19 +732,20 @@ gh release create v0.13.1 \
 2. tag 选 `v0.13.1`，标题填同 GitHub
 3. 拖拽 5 个 zip + bat + pdf 上传
 
-或用 Gitee Open API（需个人令牌，参考 https://gitee.com/api/v5/swagger）：
+或用 Gitee Open API（需个人令牌，参考 https://gitee.com/api/v5/swagger）。**禁止用 curl 上传含中文的 multipart 文件**——Windows curl 用 ANSI/GBK 编码 multipart 的 `filename=`，Gitee 存进去就乱码。**用 `scripts/gitee_upload_assets.py`**（Python `requests`，UTF-8 正确）：
 
 ```bash
-curl -X POST "https://gitee.com/api/v5/repos/osgisOne/mad-fd/releases" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "access_token": "<gitee_token>",
-    "tag_name": "v0.13.1",
-    "name": "v0.13.1 — 修测验空题真凶 + 统一版本号",
-    "body": "...",
-    "target_commitish": "master"
-  }'
+export GITEE_TOKEN="<your_personal_token>"
+python scripts/gitee_upload_assets.py
 ```
+
+**两个 Gitee 编码坑**（已在脚本里规避，不要回退）：
+
+1. **必须用 Python `requests`，不要 curl on Windows**：curl 把 `Content-Disposition: filename=` 用 ANSI/GBK 编码，Gitee 存的是 GBK 字节，Web UI 按 latin-1 显示 → 乱码。`requests` 始终发 UTF-8，存进去后 Web UI 显示正常。
+
+2. **文件名里的 `+` 必须先转成 `%2B`**：Gitee 服务端会把 multipart filename 当 URL 解码，把 `+` 解成空格（`移动图谱+windows.zip` 会被存成 `移动图谱 windows.zip`）。脚本里的 `safe_name()` 把 `+` 替换成 `%2B`，Gitee 不再二次解码 `%XX`，存进去就是字面量 `+`。
+
+如果手动 curl 测试，**至少**把 `+` 换成 `%2B`，但仍躲不过 ANSI/GBK 坑——直接用脚本。
 
 ### 发布前检查清单（每次都过一遍）
 
