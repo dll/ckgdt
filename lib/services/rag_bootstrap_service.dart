@@ -115,7 +115,7 @@ class RagBootstrapService {
     try {
       final db = await DatabaseHelper.instance.database;
       final rows = await db.query('resource_files',
-          where: 'description IS NOT NULL AND description != ""',
+          where: "description IS NOT NULL AND description != ''",
           orderBy: 'chapter, file_type', limit: 500);
       if (rows.isEmpty) return 0;
       final buf = StringBuffer();

@@ -785,7 +785,7 @@ class ClassroomDao {
     final db = await DatabaseHelper.instance.database;
     final result = await db.rawQuery(
         'SELECT DISTINCT chapter FROM classroom_questions '
-        'WHERE chapter IS NOT NULL AND chapter != "" ORDER BY chapter');
+        "WHERE chapter IS NOT NULL AND chapter != '' ORDER BY chapter");
     return result.map((r) => r['chapter'] as String).toList();
   }
 
