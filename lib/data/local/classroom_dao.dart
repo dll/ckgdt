@@ -784,6 +784,8 @@ class ClassroomDao {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
     final result = await db.rawQuery(
+        // SQL 标准：双引号是标识符，空字符串必须用单引号（'' 而非 ""）。
+        // sqflite_common_ffi (桌面/Web) 严格按标准；不要回写 ""。
         'SELECT DISTINCT chapter FROM classroom_questions '
         "WHERE chapter IS NOT NULL AND chapter != '' ORDER BY chapter");
     return result.map((r) => r['chapter'] as String).toList();

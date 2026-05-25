@@ -10,7 +10,7 @@
     "placeholders": {
       "version": {
         "type": "String",
-        "example": "0.12.0"
+        "example": "0.13.1"
       }
     }
   },

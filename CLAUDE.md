@@ -456,33 +456,71 @@ flutter clean                                # 清理缓存
 
 ### 版本号规则
 
-**格式**：`主版本.次版本.构建`（如 `0.11.0`）
+**格式**：`主版本.次版本.构建`（如 `0.13.1`）
 
 - **主版本**（major）：重大架构变更
 - **次版本**（minor）：功能迭代
-- **构建号**（build）：每次 `flutter build` 自动 +1（`pubspec.yaml` 中 `+N` 号）
-- **构建号归零**：升次版本或主版本时，构建号从 0 开始（如 `0.11.0+0` → 下次构建 `0.11.0+1`）
+- **修订号**（patch）：bug 修复 / 文档 / 单一来源重构这类小迭代
+- **构建号**（pubspec `+N`）：每次 `flutter build` 自动 +1；升 minor / major 时归零
 
-### 升版时需同步修改的文件
+### 单一来源（SSOT）— `lib/core/build_info.dart`
 
-升版（如 0.11.0 → 0.12.0）时，将 `X.Y.Z` 替换为新版本号：
+Dart 代码里**只能从** `BuildInfo` 读版本号 / 品牌名，**禁止任何硬编码字符串**：
 
-| 平台 | 文件 | 字段 |
+```dart
+import 'core/build_info.dart';
+
+BuildInfo.appVersion           // '0.13.1'
+BuildInfo.appBrand             // '移动图谱与数字孪生'
+BuildInfo.appBrandWithVersion  // '移动图谱与数字孪生v0.13.1' (窗体标题 / MaterialApp.title)
+BuildInfo.appVersionLine       // 'V0.13.1  ·  EDITION 2026' (登录页副标题)
+BuildInfo.appFullName          // '移动应用开发知识图谱与数字孪生平台' (关于对话框 / 登录页全名)
+```
+
+**升版时改一处**（`BuildInfo.appVersion`）就同步影响 lib/ 内所有显示，包括 `MaterialApp.title`（dbLocked + 正常两条分支）、登录页副标题、设置页关于对话框。
+
+历史教训：之前散落 3 个硬编码（`lib/main.dart` × 2、`login_page.dart`、`settings_page.dart`），每次升版都漏改，登录页停在 `V0.12.0`、关于停在 `0.11.0`。**现在 lib/ 里 grep `0\.\d+\.\d+` 应只出现在 `build_info.dart` 一个文件里**。
+
+### 升版同步表（每次升 minor 或 patch 必逐项过一遍）
+
+| 类别 | 文件 | 字段 |
 |------|------|------|
-| 全局 | `pubspec.yaml` | `version: X.Y.Z+N`（N 归零） |
-| 全局 | `lib/main.dart` | `MaterialApp.title`（**两处**：dbLocked 分支 + 正常分支） |
+| Dart 单一来源 | `lib/core/build_info.dart` | `appVersion` |
+| pubspec | `pubspec.yaml` | `version: X.Y.Z+N`（N 归零） |
 | Android | `android/app/src/main/res/values/strings.xml` | `app_name` |
 | Windows | `windows/CMakeLists.txt` | `BINARY_OUTPUT_NAME` |
 | Windows | `windows/runner/main.cpp` | `window.Create(L"…", ...)` |
-| Windows | `windows/runner/Runner.rc` | 4 处：`FileDescription` / `InternalName` / `OriginalFilename` / `ProductName` |
-| Web | `web/index.html` | `<title>`、`apple-mobile-web-app-title`、`application-name`、`description`（描述应是中文项目说明，**不要默认 "A new Flutter project."**） |
-| Web | `web/manifest.json` | `"name"` 和 `"description"`（中文说明，**不要默认占位文案**） |
+| Windows | `windows/runner/Runner.rc` | 3 处：`FileDescription` / `OriginalFilename` / `ProductName`（`InternalName` 不带版本号） |
+| Web | `web/index.html` | `<title>`、`apple-mobile-web-app-title`、`application-name` |
+| Web | `web/manifest.json` | `"name"`（`short_name` 不带版本号） |
+| HarmonyOS | `ohos/AppScope/app.json5` | `versionName` + `versionCode`（递增 +1） |
+| i18n | `lib/l10n/app_zh.arb` | `appNameWithVersion.example`（占位符示例） |
 
-**不要改**（这些是 Flutter 包标识符，必须保持英文 snake_case）：
+**不要改**（Flutter 包标识符，必须保持英文 snake_case）：
 - `pubspec.yaml` 顶部 `name: knowledge_graph_app`
-- `windows/CMakeLists.txt` 第 3-7 行 `project(knowledge_graph_app)` / `BINARY_NAME` 变量名
+- `windows/CMakeLists.txt` 第 3-7 行 `project(knowledge_graph_app)` / `BINARY_NAME`
 
-> **注意**：`windows/runner/Runner.rc` 中有 4 处版本号，需全部替换。`InternalName` 不带版本号（如 `移动图谱与数字孪生`）。`short_name` 不带版本号（如 `移动图谱与数字孪生`）。窗体内完整名称 `移动应用开发知识图谱与数字孪生平台` 固定不变，不需要随版本修改。
+### 升版后一致性 grep（推荐每次跑一遍）
+
+```bash
+grep -E "version:|app_name|BINARY_OUTPUT_NAME|window\.Create|FileDescription|InternalName|OriginalFilename|ProductName|<title>|apple-mobile-web-app-title|application-name|\"name\"|versionName|appVersion = " \
+  pubspec.yaml \
+  android/app/src/main/res/values/strings.xml \
+  windows/CMakeLists.txt windows/runner/main.cpp windows/runner/Runner.rc \
+  web/index.html web/manifest.json \
+  ohos/AppScope/app.json5 \
+  lib/core/build_info.dart
+```
+
+期望所有非空版本号字段都对齐到同一个 `X.Y.Z`，否则中止构建去补漏。
+
+### 升版同步表中"必须改"的旧文件
+
+历史上漏改过：
+- 登录页 `lib/presentation/pages/login/login_page.dart` — 早期硬编码 `V0.12.0`
+- 设置页 `lib/presentation/pages/home/settings_page.dart` — 关于对话框硬编码 `0.11.0`
+
+这两处都已改为 `BuildInfo.appVersionLine` / `BuildInfo.appVersion`，**升版时不需要再单独改它们**。如果未来新增页面也要显示版本号，**必须**用 `BuildInfo`，禁止重复硬编码。
 
 ---
 
@@ -632,6 +670,94 @@ cd /d/FlutterProjects/knowledge_graph_app
 每次完成"升版三件套"+ 4 端构建 + gh-pages 部署后，最后一步打 4 个 zip 入 `dist/` 供分发。
 
 > **注意**：`dist/` 目录已 gitignore（产物大不入库）；如需正式发版，把 zip 上传到 Gitee Release / GitHub Release。
+
+---
+
+## 双仓库发布流程（Gitee + GitHub）
+
+代码主仓托管在 **Gitee**（`origin`），同时镜像到 **GitHub** 用于 GitHub Pages 部署 web 站。每次正式 release 都要：
+
+1. 推 `master` + tag 到两个仓库
+2. 在两个仓库各创建 Release + 上传 4 个 zip 资产
+
+### 远程仓库配置
+
+```bash
+# Gitee 主仓（已配置为 origin）
+git remote -v
+# origin  https://...@gitee.com/osgisOne/mad-fd.git (push)
+
+# 添加 GitHub 镜像（一次性，配完之后不动）
+git remote add github git@github.com:dll/mad-fd.git
+git remote -v
+# origin  https://...@gitee.com/osgisOne/mad-fd.git (push)
+# github  git@github.com:dll/mad-fd.git (push)
+```
+
+### 打 tag 与双推
+
+```bash
+# 1. 在 master 上打带消息的 annotated tag（不要 lightweight tag）
+git tag -a v0.13.1 -m "release: v0.13.1 — 修测验空题 + 单一来源版本号"
+
+# 2. 双仓库各推一遍（顺序无所谓）
+git push origin master
+git push origin v0.13.1
+git push github master
+git push github v0.13.1
+```
+
+> **注意**：`git push --tags` 会把所有本地 tag（含历史误打的）都推上去，**只推单个 tag** 用 `git push <remote> <tagname>`。
+
+### 创建 Release + 上传资产
+
+**GitHub**（用 `gh` CLI）：
+
+```bash
+gh release create v0.13.1 \
+  --repo dll/mad-fd \
+  --title "v0.13.1 — 修测验空题真凶 + 统一版本号" \
+  --notes-file dist/RELEASE_NOTES_v0.13.1.md \
+  dist/移动图谱与数字孪生+windows+v0.13.1.zip \
+  dist/移动图谱与数字孪生+android+v0.13.1.zip \
+  dist/移动图谱与数字孪生+web+v0.13.1.zip \
+  dist/移动图谱与数字孪生+harmonyos+v0.13.1.zip \
+  "dist/一键安装-Windows.bat" \
+  dist/安装手册.pdf
+```
+
+**Gitee**（个人版没有 CLI，用 Web UI）：
+
+1. 仓库主页 → 右侧 "Releases" → "创建发行版"
+2. tag 选 `v0.13.1`，标题填同 GitHub
+3. 拖拽 5 个 zip + bat + pdf 上传
+
+或用 Gitee Open API（需个人令牌，参考 https://gitee.com/api/v5/swagger）：
+
+```bash
+curl -X POST "https://gitee.com/api/v5/repos/osgisOne/mad-fd/releases" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "access_token": "<gitee_token>",
+    "tag_name": "v0.13.1",
+    "name": "v0.13.1 — 修测验空题真凶 + 统一版本号",
+    "body": "...",
+    "target_commitish": "master"
+  }'
+```
+
+### 发布前检查清单（每次都过一遍）
+
+- [ ] `BuildInfo.appVersion` 已升 → 跑一遍上文"升版后一致性 grep"，全部对齐
+- [ ] 4 端构建产物齐全（windows exe + android apk + web index.html + ohos hap）
+- [ ] 4 个 zip 用 `scripts/pack_dist_zip.ps1` 打包（**不要用 PowerShell `Compress-Archive`**，它在 PS 5.1 用 GBK 编码 ZIP entry 名，中文文件名解压会乱码）
+- [ ] Windows zip 同时生成 ASCII 别名（`MAD-windows-vX.Y.Z.zip`），避开 Windows 260 字符路径限制
+- [ ] 当前 master 已 commit + push 到 origin
+- [ ] tag 推到两个 remote（`origin` + `github`）
+- [ ] 两个仓库都创建了 Release + 上传 7 个资产
+- [ ] gh-pages 重新部署了新构建（`base-href "/mad-fd/"`）
+
+> **历史教训**：`dist/` 不入库（gitignore 不动），release 资产走平台 Release API；这样仓库 master 历史不会因为二进制膨胀。
 
 ---
 

@@ -1,9 +1,14 @@
+import 'package:sqflite/sqflite.dart';
 import '../../core/init_logger.dart';
 import '../models/question_model.dart';
 import '../models/quiz_result_model.dart';
 import 'database_helper.dart';
 
 class QuizDao {
+  static const _tag = 'quiz_dao';
+  static const _maxAttempts = 3;
+  static const _retryBackoff = Duration(milliseconds: 100);
+
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
 
   Future<List<QuestionModel>> getAllQuestions() async {
@@ -23,38 +28,46 @@ class QuizDao {
   }
 
   Future<List<String>> getChapters() async {
-    // 不再吞错。失败时往上抛，让 quiz_page 的 catch 写到 lastInitError，
-    // UI 显示具体错误而不是"暂无题目"误导学生。
-    // 加 retry：sqflite singleInstance 在多进程并发时会瞬时锁定，
-    // 隔 100ms 重试两次几乎可以化解。
+    // 失败抛出（曾经吞错导致 UI 显示"暂无题目"误导排查）。
+    // sqflite singleInstance 在多进程偶发瞬时锁，遇 BUSY/locked 才退避重试。
     final db = await _dbHelper.database;
     Object? lastError;
     StackTrace? lastSt;
-    for (int attempt = 0; attempt < 3; attempt++) {
+    for (int attempt = 0; attempt < _maxAttempts; attempt++) {
       try {
         final maps = await db.rawQuery(
-          // 注意：SQL 标准里双引号 "" 是标识符，必须用单引号 '' 表示空字符串。
-          // sqflite_common_ffi (桌面/Web) 严格按标准；Android 原生 sqflite 容忍 ""，
-          // 这就是为什么手机能用、桌面/Web 报 "no such column" 的真凶。
+          // SQL 标准：双引号是标识符，空字符串必须用单引号。
+          // sqflite_common_ffi (桌面/Web) 严格按标准；Android 原生 sqflite 容忍 ""。
           "SELECT DISTINCT source FROM questions WHERE source IS NOT NULL AND source != '' ORDER BY source",
         );
         if (attempt > 0) {
-          InitLogger.log('quiz_dao',
+          InitLogger.log(_tag,
               'getChapters succeeded after $attempt retries (${maps.length} rows)');
         }
-        final chapters = maps.map((map) => map['source'] as String).toList();
-        return chapters.toSet().toList();
+        return maps.map((map) => map['source'] as String).toList();
       } catch (e, st) {
+        if (!_isTransient(e)) {
+          InitLogger.error(_tag, 'getChapters non-transient: $e', st);
+          rethrow;
+        }
         lastError = e;
         lastSt = st;
-        InitLogger.log('quiz_dao',
-            'getChapters attempt ${attempt + 1} failed: $e — retrying after 100ms');
-        await Future<void>.delayed(const Duration(milliseconds: 100));
+        InitLogger.log(_tag,
+            'getChapters attempt ${attempt + 1} BUSY: $e — retrying after ${_retryBackoff.inMilliseconds}ms');
+        await Future<void>.delayed(_retryBackoff);
       }
     }
     InitLogger.error(
-        'quiz_dao', 'getChapters all 3 attempts failed: $lastError', lastSt);
-    throw lastError!;
+        _tag, 'getChapters all $_maxAttempts attempts failed: $lastError', lastSt);
+    throw lastError ?? StateError('getChapters: unreachable');
+  }
+
+  /// 仅 SQLite BUSY/LOCKED 算瞬时；语法/schema 错误不重试，立即抛出。
+  /// sqflite_common 2.5.x 没有 isDatabaseBusyError，只能按 message 匹配。
+  static bool _isTransient(Object e) {
+    if (e is! DatabaseException) return false;
+    final msg = e.toString().toLowerCase();
+    return msg.contains('locked') || msg.contains('busy');
   }
 
   Future<int> saveQuizResult(QuizResultModel result) async {
