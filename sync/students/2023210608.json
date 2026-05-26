@@ -3,8 +3,8 @@
   "user_id": "2023210608",
   "user_name": "刘宇乐",
   "role": "student",
-  "synced_at": "2026-05-26T11:11:19.208838",
-  "last_active": "2026-05-26T11:11:19.208838",
+  "synced_at": "2026-05-26T11:18:41.427220",
+  "last_active": "2026-05-26T11:18:41.427220",
   "quiz_results": [
     {
       "user_id": "2023210608",
@@ -36,6 +36,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 4,
+      "user_id": "2023210608",
+      "content": "PDF实验报告：2023210608刘宇乐实验四 微信小程序开发.pdf",
+      "file_paths": "D:\\miccrosoft\\2023210608刘宇乐实验四 微信小程序开发.pdf",
+      "file_names": "2023210608刘宇乐实验四 微信小程序开发.pdf",
+      "submit_time": "2026-05-26T11:18:41.365307",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-05-26T11:18:41.365307",
+      "updated_at": "2026-05-26T11:18:41.365307",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 3,
       "user_id": "2023210608",
