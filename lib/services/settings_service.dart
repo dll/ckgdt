@@ -45,7 +45,7 @@ class SettingsService {
       return isDark ? ThemeMode.dark : ThemeMode.system;
     }
 
-    return ThemeMode.system; // 默认跟随系统
+    return ThemeMode.dark; // 默认深色模式（匹配登录页 Noir 风格）
   }
 
   static Future<void> setThemeMode(ThemeMode mode) async {

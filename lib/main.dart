@@ -114,7 +114,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  ThemeMode _themeMode = ThemeMode.system;
+  ThemeMode _themeMode = ThemeMode.dark;
   int _colorIndex = 0;
   bool _feedbackEnabled = true;
   Locale? _locale; // null = follow system

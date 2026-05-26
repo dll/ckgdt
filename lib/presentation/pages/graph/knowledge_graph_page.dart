@@ -22,6 +22,8 @@ import 'graph_list_page.dart';
 import 'graph_properties_page.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
+import '../../../core/design/noir_tokens.dart';
+import '../../widgets/noir_page_shell.dart';
 
 // ── 私有类拆分到 parts/ 子目录（part / part of 模式）─────────
 part 'parts/concept_model.dart';
@@ -1987,36 +1989,44 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   Widget build(BuildContext context) {
     primary = Theme.of(context).colorScheme.primary;
     return Scaffold(
+      backgroundColor: NoirTokens.ink,
       appBar: _buildAppBar(),
-      body: _isLoading
-          ? _buildLoadingView()
-          : _errorMessage != null
-              ? _buildErrorView()
-              : !_hasData
-                  ? _buildEmptyView()
-                  : _buildMainContent(),
+      body: NoirBackground(
+        child: _isLoading
+            ? _buildLoadingView()
+            : _errorMessage != null
+                ? _buildErrorView()
+                : !_hasData
+                    ? _buildEmptyView()
+                    : _buildMainContent(),
+      ),
     );
   }
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
+      backgroundColor: NoirTokens.ink,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      iconTheme: const IconThemeData(color: NoirTokens.paper),
       title: _showSearch
           ? TextField(
               controller: _searchController,
               autofocus: true,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: '搜索概念...',
                 border: InputBorder.none,
-                hintStyle: TextStyle(color: Colors.white70),
+                hintStyle: TextStyle(color: NoirTokens.paper.withValues(alpha: 0.7)),
               ),
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: NoirTokens.paper),
               onChanged: _performSearch,
             )
-          : const Text('知识图谱'),
+          : Text('知识图谱', style: const TextStyle(color: NoirTokens.paper)),
       actions: [
         // 搜索
         IconButton(
-          icon: Icon(_showSearch ? Icons.close : Icons.search),
+          icon: Icon(_showSearch ? Icons.close : Icons.search, color: NoirTokens.paper),
           tooltip: '搜索概念',
           onPressed: () {
             setState(() {
@@ -2106,11 +2116,11 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircularProgressIndicator(color: primary),
+          CircularProgressIndicator(color: NoirTokens.accent),
           SizedBox(height: 16),
           Text(
             '正在加载知识图谱...',
-            style: TextStyle(color: Colors.grey, fontSize: 14),
+            style: TextStyle(color: NoirTokens.paper.withValues(alpha: 0.7), fontSize: 14),
           ),
         ],
       ),
@@ -2124,12 +2134,12 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            Icon(Icons.error_outline, size: 64, color: NoirTokens.danger),
             const SizedBox(height: 16),
             Text(
               _errorMessage!,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.red),
+              style: TextStyle(color: NoirTokens.danger.withValues(alpha: 0.9)),
             ),
             const SizedBox(height: 16),
             FilledButton.icon(
@@ -2149,20 +2159,20 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.hub_outlined,
-              size: 80, color: Colors.grey.shade300),
+              size: 80, color: NoirTokens.paper.withValues(alpha: 0.2)),
           const SizedBox(height: 16),
           Text(
             '暂无知识图谱数据',
             style: TextStyle(
               fontSize: 18,
-              color: Colors.grey.shade500,
+              color: NoirTokens.paper.withValues(alpha: 0.6),
               fontWeight: FontWeight.w500,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             '点击下方按钮初始化知识图谱',
-            style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
+            style: TextStyle(fontSize: 14, color: NoirTokens.paper.withValues(alpha: 0.4)),
           ),
           const SizedBox(height: 24),
           FilledButton.icon(
@@ -2170,11 +2180,12 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
             icon: const Icon(Icons.auto_fix_high),
             label: const Text('初始化知识图谱'),
             style: FilledButton.styleFrom(
-              backgroundColor: primary,
+              backgroundColor: NoirTokens.ink,
               padding:
                   const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(NoirTokens.radius),
+                side: BorderSide(color: NoirTokens.paper.withValues(alpha: 0.15)),
               ),
             ),
           ),
