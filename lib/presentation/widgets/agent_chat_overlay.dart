@@ -57,7 +57,9 @@ class _AgentChatOverlayState extends State<AgentChatOverlay> {
   final FocusNode _inputFocus = FocusNode();
 
   bool _isLoading = false;
-  bool _ttsEnabled = false;
+  // 默认开启语音朗读，让多智能体回复"开口说话"。
+  // 用户可点话筒图标关。tts.isAvailable=false 时第一次 _sendMessage 会自动降级。
+  bool _ttsEnabled = true;
   bool _isVoiceListening = false;
   bool _agentPanelExpanded = false;
 
