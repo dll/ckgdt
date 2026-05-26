@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_theme.dart';
+import '../../../core/design/noir_tokens.dart';
+import '../../widgets/noir_page_shell.dart';
 import '../../../core/constants/chapter_sorter.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../data/local/course_dao.dart';
@@ -382,8 +384,14 @@ class _LearningHubPageState extends State<LearningHubPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: NoirTokens.ink,
       appBar: AppBar(
-        title: Text(_isTeacherOrAdmin ? '教学资源管理' : '学习'),
+        backgroundColor: NoirTokens.ink,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        iconTheme: const IconThemeData(color: NoirTokens.paper),
+        title: Text(_isTeacherOrAdmin ? '教学资源管理' : '学习', style: const TextStyle(color: NoirTokens.paper)),
         actions: [
           if (_isTeacherOrAdmin) ...[
             IconButton(
@@ -420,12 +428,12 @@ class _LearningHubPageState extends State<LearningHubPage>
         ],
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: Colors.white,
-          indicatorWeight: 3,
-          labelColor: Colors.white,
-          labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-          unselectedLabelColor: Colors.white60,
-          unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+          indicatorColor: NoirTokens.accent,
+          indicatorWeight: 2,
+          labelColor: NoirTokens.paper,
+          labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 1.5),
+          unselectedLabelColor: NoirTokens.paper.withValues(alpha: 0.5),
+          unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
           tabs: [
             Tab(icon: const Icon(Icons.play_circle_outline), text: '视频 (${_videoLoading ? "..." : _videos.length})'),
             Tab(icon: const Icon(Icons.slideshow_outlined), text: 'PPT (${_pptLoading ? "..." : _pptFiles.length})'),
@@ -435,26 +443,28 @@ class _LearningHubPageState extends State<LearningHubPage>
           ],
         ),
       ),
-      body: Column(
-        children: [
-          // 预制/扩展 过滤条
-          _buildResourceModeBar(),
-          if (_resourceMode == 'recommend')
-            Expanded(child: _buildRecommendGrid())
-          else
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildVideoTab(),
-                  _buildFileListTab(_pptFiles, _pptLoading, '🖼️', 'PPT', _loadPPTs),
-                  _buildFileListTab(_pdfFiles, _pdfLoading, '📄', 'PDF', _loadPDFs),
-                  const QuizPage(embedded: true),
-                  _buildAiAssistTab(),
-                ],
+      body: NoirBackground(
+        child: Column(
+          children: [
+            // 预制/扩展 过滤条
+            _buildResourceModeBar(),
+            if (_resourceMode == 'recommend')
+              Expanded(child: _buildRecommendGrid())
+            else
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildVideoTab(),
+                    _buildFileListTab(_pptFiles, _pptLoading, '🖼️', 'PPT', _loadPPTs),
+                    _buildFileListTab(_pdfFiles, _pdfLoading, '📄', 'PDF', _loadPDFs),
+                    const QuizPage(embedded: true),
+                    _buildAiAssistTab(),
+                  ],
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -471,14 +481,14 @@ class _LearningHubPageState extends State<LearningHubPage>
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            color: NoirTokens.inkAlpha(0.08),
             border: Border(
-              bottom: BorderSide(color: Colors.grey.shade200),
+              bottom: BorderSide(color: NoirTokens.paper.withValues(alpha: 0.08)),
             ),
           ),
           child: Row(
             children: [
-              const Icon(Icons.filter_list, size: 16, color: Colors.grey),
+              Icon(Icons.filter_list, size: 16, color: NoirTokens.paper.withValues(alpha: 0.5)),
               const SizedBox(width: 8),
               SegmentedButton<String>(
                 segments: const [
@@ -530,7 +540,7 @@ class _LearningHubPageState extends State<LearningHubPage>
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     minimumSize: const Size(0, 32),
-                    foregroundColor: Colors.grey,
+                    foregroundColor: NoirTokens.paper.withValues(alpha: 0.5),
                   ),
                   onPressed: _cleanupEmptyExtended,
                 ),

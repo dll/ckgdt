@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/design/noir_tokens.dart';
 import '../../../core/design/noir_components.dart';
+import '../../widgets/noir_page_shell.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/navigation_service.dart';
 import '../../../services/unread_count_service.dart';
@@ -221,12 +222,17 @@ class _HomePageState extends State<HomePage> {
     NavigationService.instance.registerTabMapping(tabMapping);
 
     return Scaffold(
+      backgroundColor: NoirTokens.ink,
       appBar: AppBar(
-        title: Text(_platformTitle),
-
+        backgroundColor: NoirTokens.ink,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        iconTheme: const IconThemeData(color: NoirTokens.paper),
+        title: Text(_platformTitle, style: const TextStyle(color: NoirTokens.paper)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.search),
+            icon: const Icon(Icons.search, color: NoirTokens.paper),
             onPressed: () {
               Navigator.push(
                 context,
@@ -234,8 +240,6 @@ class _HomePageState extends State<HomePage> {
               );
             },
           ),
-          // 通知铃铛图标（带未读数 Badge）— Badge 独立订阅 UnreadCountService.count，
-          // 不再触发整页重建
           ValueListenableBuilder<int>(
             valueListenable: UnreadCountService.instance.count,
             builder: (context, unread, _) => Semantics(
@@ -248,7 +252,7 @@ class _HomePageState extends State<HomePage> {
                     unread > 99 ? '99+' : '$unread',
                     style: const TextStyle(fontSize: 10),
                   ),
-                  child: const Icon(Icons.notifications_outlined),
+                  child: const Icon(Icons.notifications_outlined, color: NoirTokens.paper),
                 ),
                 tooltip: '通知',
                 onPressed: () async {
@@ -263,7 +267,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           PopupMenuButton<String>(
-            icon: const Icon(Icons.person),
+            icon: const Icon(Icons.person, color: NoirTokens.paper),
             tooltip: '显示菜单',
             onSelected: (value) async {
               if (value == 'logout') {
@@ -322,7 +326,6 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               const PopupMenuDivider(),
-              // 学生：我的学习中心
               if (!isAdmin && !isTeacher)
                 const PopupMenuItem(
                   value: 'learning_center',
@@ -331,7 +334,6 @@ class _HomePageState extends State<HomePage> {
                     title: Text('学习中心'),
                   ),
                 ),
-              // 教师/管理员：工作台
               if (isTeacher || isAdmin)
                 PopupMenuItem(
                   value: 'teacher_workspace',
@@ -389,9 +391,11 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      body: bodyMap[_selectedIndex]?.call() ?? _buildHome(),
+      body: NoirBackground(child: bodyMap[_selectedIndex]?.call() ?? _buildHome()),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
+        indicatorColor: NoirTokens.accent.withValues(alpha: 0.35),
+        surfaceTintColor: Colors.transparent,
         onDestinationSelected: (index) {
           setState(() => _selectedIndex = index);
         },
@@ -409,7 +413,7 @@ class _HomePageState extends State<HomePage> {
             ? 'INSTRUCTOR'
             : 'STUDENT';
     final greetName = user?.realName ?? user?.userId ?? '同学';
-    final accent = Theme.of(context).colorScheme.primary;
+    final accent = NoirTokens.accent;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 28),
@@ -421,9 +425,10 @@ class _HomePageState extends State<HomePage> {
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(24, 26, 24, 24),
             decoration: BoxDecoration(
-              color: accent,
+              color: NoirTokens.inkDeep,
               borderRadius: BorderRadius.circular(NoirTokens.radius),
-              boxShadow: NoirTokens.smallShadow,
+              border: Border.all(color: NoirTokens.inkAlpha(0.10)),
+              boxShadow: NoirTokens.cardShadow,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -431,19 +436,19 @@ class _HomePageState extends State<HomePage> {
                 Row(
                   children: [
                     Text('№ 001 / DASHBOARD',
-                        style: NoirTokens.serial(color: Colors.white)),
+                        style: NoirTokens.serial(color: accent)),
                     const Spacer(),
                     Text(roleLabel,
-                        style: NoirTokens.caps(color: Colors.white)),
+                        style: NoirTokens.caps(color: NoirTokens.paper)),
                   ],
                 ),
                 const SizedBox(height: 14),
-                Container(width: 36, height: 2, color: Colors.white),
+                Container(width: 36, height: 2, color: accent),
                 const SizedBox(height: 12),
                 Text(
                   '欢迎回来，$greetName',
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: NoirTokens.paper,
                     fontSize: 26,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.3,
@@ -458,7 +463,7 @@ class _HomePageState extends State<HomePage> {
                           ? '教学视角 · 班级 / 实验 / 考核 / 达成'
                           : '学习视角 · 图谱 / 路径 / 实验 / 测验',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.85),
+                    color: NoirTokens.paper.withValues(alpha: 0.85),
                     fontSize: 12,
                     letterSpacing: 1.6,
                     fontWeight: FontWeight.w500,
