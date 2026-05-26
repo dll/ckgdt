@@ -3,8 +3,8 @@
   "user_id": "2022210623",
   "user_name": "张爽",
   "role": "student",
-  "synced_at": "2026-05-25T17:13:10.757064",
-  "last_active": "2026-05-25T17:13:10.740081",
+  "synced_at": "2026-05-26T16:30:12.257898",
+  "last_active": "2026-05-26T16:30:12.238284",
   "quiz_results": [
     {
       "user_id": "2022210623",
@@ -85,6 +85,7 @@
   "checkin_records": [],
   "work_comments": [],
   "work_likes": [],
+  "notification_recipients": [],
   "work_views": [],
   "peer_reviews": [],
   "collaboration_messages": [],
