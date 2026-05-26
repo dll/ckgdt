@@ -3,8 +3,8 @@
   "user_id": "2023210583",
   "user_name": "程乐",
   "role": "student",
-  "synced_at": "2026-05-26T16:39:15.434284",
-  "last_active": "2026-05-26T16:39:15.429227",
+  "synced_at": "2026-05-26T16:45:00.068902",
+  "last_active": "2026-05-26T16:45:00.062847",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
@@ -197,7 +197,6 @@
     }
   ],
   "work_likes": [],
-  "notification_recipients": [],
   "work_views": [],
   "peer_reviews": [],
   "collaboration_messages": [],
