@@ -32,6 +32,8 @@ class VoiceService {
   WebSocketChannel? _wsChannel;
   bool _isListening = false;
   bool _firstFrame = true;
+  bool _cleaningUp = false;
+  Timer? _cleanupTimer;
   final StringBuffer _fullText = StringBuffer();
 
   bool get isListening => _isListening;
@@ -78,6 +80,10 @@ class VoiceService {
     if (_isListening) return true;
 
     // 平台检查
+    // 取消待处理的延迟清理，防止新会话被旧清理干扰
+    _cleanupTimer?.cancel();
+    _cleanupTimer = null;
+
     if (kIsWeb) {
       onError?.call('Web 平台暂不支持语音输入');
       return false;
@@ -200,7 +206,6 @@ class VoiceService {
   /// 停止语音识别
   Future<void> stopListening() async {
     if (!_isListening) return;
-    _isListening = false;
 
     try {
       // 停止录音
@@ -217,15 +222,11 @@ class VoiceService {
 
       // 等待识别结果回来后 WebSocket 会自动关闭
       // 设置超时兜底
-      Future.delayed(const Duration(seconds: 5), () {
-        _cleanup();
-      });
+      _delayedCleanup();
     } catch (e) {
       debugPrint('VoiceService: stop error: $e');
       _cleanup();
     }
-
-    onStateChanged?.call(false);
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -342,7 +343,7 @@ class VoiceService {
 
       if (status == 2) {
         onComplete?.call(_fullText.toString());
-        _cleanup();
+        _delayedCleanup();
       }
     } catch (e) {
       debugPrint('VoiceService: parse error: $e');
@@ -364,15 +365,42 @@ class VoiceService {
   }
 
   void _cleanup() {
-    try { _audioSub?.cancel(); } catch (_) {}
+    if (_cleaningUp) return;
+    _cleaningUp = true;
+    _cleanupTimer?.cancel();
+    _cleanupTimer = null;
+    final sub = _audioSub;
     _audioSub = null;
-    try { _recorder?.stop(); } catch (_) {}
-    try { _recorder?.dispose(); } catch (_) {}
+    sub?.cancel().catchError((_) {});
+    final rec = _recorder;
     _recorder = null;
+    _cleanupRecorder(rec);
     try { _wsChannel?.sink.close(); } catch (_) {}
     _wsChannel = null;
     _isListening = false;
     _firstFrame = true;
+    _cleaningUp = false;
     onStateChanged?.call(false);
+  }
+
+  /// 安全释放录音器原生资源（异步，捕获所有异常）
+  Future<void> _cleanupRecorder(AudioRecorder? rec) async {
+    if (rec == null) return;
+    try {
+      await rec.stop();
+    } catch (e) {
+      debugPrint('VoiceService: recorder.stop error: $e');
+    }
+    try {
+      await rec.dispose();
+    } catch (e) {
+      debugPrint('VoiceService: recorder.dispose error: $e');
+    }
+  }
+
+  /// 延迟清理 — 给 TTS 播报留出时间后再释放录音器原生资源
+  void _delayedCleanup() {
+    _cleanupTimer?.cancel();
+    _cleanupTimer = Timer(const Duration(seconds: 1), _cleanup);
   }
 }

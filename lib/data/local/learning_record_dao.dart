@@ -1,4 +1,5 @@
 import 'package:sqflite/sqflite.dart';
+import '../../core/text_utils.dart';
 import 'database_helper.dart';
 
 class LearningRecordDao {
@@ -84,7 +85,7 @@ class LearningRecordDao {
     for (final r in quizRows) {
       final ch = r['chapter'];
       if (ch == null) continue;
-      final chInt = ch is int ? ch : int.tryParse(ch.toString().replaceAll(RegExp(r'[^0-9]'), ''));
+      final chInt = ch is int ? ch : int.tryParse(extractDigits(ch.toString()));
       if (chInt != null) {
         chapterQuiz[chInt] = (r['avg_score'] as num?)?.toDouble() ?? 0;
       }

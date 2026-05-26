@@ -241,7 +241,9 @@ class _AgentChatOverlayState extends State<AgentChatOverlay> {
         if (mounted) {
           setState(() => _isVoiceListening = false);
           if (finalText.trim().isNotEmpty) {
-            _sendMessage(finalText.trim());
+            _sendMessage(finalText.trim()).catchError((Object e) {
+              debugPrint('Voice onComplete _sendMessage error: $e');
+            });
           }
         }
       };
@@ -256,8 +258,8 @@ class _AgentChatOverlayState extends State<AgentChatOverlay> {
     }
   }
 
-  void _stopVoiceInput() {
-    VoiceService().stopListening();
+  Future<void> _stopVoiceInput() async {
+    await VoiceService().stopListening();
     if (mounted) setState(() => _isVoiceListening = false);
   }
 
