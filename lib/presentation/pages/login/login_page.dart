@@ -196,7 +196,7 @@ class _LoginPageState extends State<LoginPage>
     final text = await showDialog<String>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const VoiceNavigationDialog(),
+      builder: (_) => const VoiceNavigationDialog(continuousMode: false),
     );
 
     if (text == null || text.trim().isEmpty || !mounted) return;

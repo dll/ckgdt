@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../services/navigation_service.dart';
 import '../../services/voice_service.dart';
 import '../pages/settings/voice_settings_page.dart';
 
@@ -118,11 +119,34 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
   }
 }
 
-/// 语音导航对话框（公开版，供 HomePage 等外部调用）
+/// 语音导航对话框（公开版，供 HomePage / 登录页 / 全局 FAB 调用）。
 ///
-/// 返回识别到的文本，调用方根据文本内容进行导航。
+/// **两种模式**（构造时选定，dialog 期间不变）：
+///
+/// 1. **持续模式（默认）**——"小度"式：每识别完一句调 [onSentence]
+///    （通常做导航），dialog **不关闭**，自动重启监听等下一句。
+///    用户点"完成"才关。适合多次连续语音操作。
+///
+/// 2. **单句模式**（[continuousMode]=false）——识别完一句立即
+///    `Navigator.pop(text)` 返回。适合登录场景（说一次学号即结束）。
+///
+/// 之前 dialog 内部统一调 `Navigator.maybePop`，曾在双重 status==2 等
+/// 边缘场景把根页面也 pop 掉，触发"语音导航后自动退出系统"。
+/// 持续模式从架构上禁止这条路径——dialog 自闭环管理生命周期。
 class VoiceNavigationDialog extends StatefulWidget {
-  const VoiceNavigationDialog({super.key});
+  /// 持续模式（默认）vs 单句模式
+  final bool continuousMode;
+
+  /// 持续模式下，每识别完一句的回调（可选）。
+  /// 调用方在此触发导航/操作，本 dialog 不关。
+  /// 回调时 dialog 仍 mounted，可放心调 SnackBar / NavigationService。
+  final void Function(String sentence)? onSentence;
+
+  const VoiceNavigationDialog({
+    super.key,
+    this.continuousMode = true,
+    this.onSentence,
+  });
 
   @override
   State<VoiceNavigationDialog> createState() => _VoiceNavigationDialogState();
@@ -132,7 +156,9 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
     with SingleTickerProviderStateMixin {
   final VoiceService _voiceService = VoiceService();
   String _recognizedText = '';
+  final List<String> _history = []; // 持续模式下已识别的历史句
   bool _isListening = false;
+  bool _restarting = false;
   String? _errorMsg;
   late AnimationController _pulseController;
 
@@ -149,15 +175,27 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
     };
     _voiceService.onComplete = (text) {
       if (!mounted) return;
-      setState(() {
-        _recognizedText = text;
-        _isListening = false;
-      });
-      _pulseController.stop();
-      // 持续交互模式：识别一句话就自动跳。后续在 _navigateByVoice 那侧
-      // 把 dialog 关掉并跳到目标页（不再要求用户手动点"导航"按钮）。
-      if (text.trim().isNotEmpty) {
-        Navigator.of(context).maybePop(text);
+      final sentence = text.trim();
+      if (sentence.isEmpty) return;
+
+      if (widget.continuousMode) {
+        // 持续模式：把一句加入历史 → 触发回调 → 自动重启监听
+        setState(() {
+          _history.add(sentence);
+          _recognizedText = '';
+          _isListening = false;
+        });
+        _pulseController.stop();
+        widget.onSentence?.call(sentence);
+        _restartListening();
+      } else {
+        // 单句模式：dialog pop 返回这句
+        setState(() {
+          _recognizedText = sentence;
+          _isListening = false;
+        });
+        _pulseController.stop();
+        Navigator.of(context).maybePop(sentence);
       }
     };
     _voiceService.onError = (error) {
@@ -178,6 +216,12 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
 
   @override
   void dispose() {
+    // 关键：清掉所有 voice callbacks，避免 dialog 销毁后 ws 残余消息
+    // 仍调用旧闭包导致 navigator 多 pop 一次（"导航后退出"根因）。
+    _voiceService.onResult = null;
+    _voiceService.onComplete = null;
+    _voiceService.onError = null;
+    _voiceService.onStateChanged = null;
     _pulseController.dispose();
     if (_isListening) _voiceService.stopListening();
     super.dispose();
@@ -197,16 +241,31 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
     _pulseController.stop();
   }
 
+  /// 持续模式下，一句识别完后自动启动下一轮。
+  /// 等待 _delayedCleanup (1s) 跑完，确保旧 ws / 旧 audio sub 已释放。
+  Future<void> _restartListening() async {
+    if (_restarting) return;
+    _restarting = true;
+    try {
+      await Future<void>.delayed(const Duration(milliseconds: 1100));
+      if (!mounted || !widget.continuousMode) return;
+      await _startListening();
+    } finally {
+      _restarting = false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final primary = theme.colorScheme.primary;
+    final continuous = widget.continuousMode;
 
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
       content: SizedBox(
-        width: 300,
+        width: 320,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -214,14 +273,18 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
               children: [
                 Icon(Icons.record_voice_over, color: primary),
                 const SizedBox(width: 8),
-                const Text('语音导航',
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(continuous ? '语音助手（持续）' : '语音输入',
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold)),
               ],
             ),
             const SizedBox(height: 8),
-            Text('正在持续监听 — 说"打开测验""我要看图谱"等，自动跳转',
-                style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+            Text(
+              continuous
+                  ? '说一句执行一次操作，对话框不会关，点"完成"结束。'
+                  : '说一句话即可，识别完成自动关闭。',
+              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+            ),
             const SizedBox(height: 16),
             GestureDetector(
               onTap: _isListening ? _stopListening : _startListening,
@@ -266,6 +329,7 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
                   color: _isListening ? Colors.red : Colors.grey),
             ),
             const SizedBox(height: 12),
+            // 当前识别中的部分文本
             Container(
               width: double.infinity,
               constraints: const BoxConstraints(minHeight: 50),
@@ -291,21 +355,68 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
                       ),
                     ),
             ),
+            // 持续模式：历史已识别 + 已执行的句
+            if (continuous && _history.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                constraints: const BoxConstraints(maxHeight: 120),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: primary.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: SingleChildScrollView(
+                  reverse: true,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final s in _history)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Row(
+                            children: [
+                              Icon(Icons.check_circle,
+                                  color: primary.withValues(alpha: 0.7),
+                                  size: 14),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(s,
+                                    style: const TextStyle(fontSize: 12)),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 8),
           ],
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('取消'),
-        ),
-        FilledButton(
-          onPressed: _recognizedText.isNotEmpty
-              ? () => Navigator.pop(context, _recognizedText)
-              : null,
-          child: const Text('导航'),
-        ),
+        if (continuous)
+          // 持续模式：唯一关闭路径 = 用户主动点完成
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.check, size: 18),
+            label: const Text('完成'),
+          )
+        else ...[
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: _recognizedText.isNotEmpty
+                ? () => Navigator.pop(context, _recognizedText)
+                : null,
+            child: const Text('确认'),
+          ),
+        ],
       ],
     );
   }
@@ -557,15 +668,19 @@ class VoiceNavigationFab extends StatelessWidget {
     }
 
     if (!context.mounted) return;
-    final result = await showDialog<String>(
+    // 持续模式：识别一句即跳转，dialog 不关，用户点"完成"才结束。
+    await showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => const VoiceNavigationDialog(),
+      builder: (ctx) => VoiceNavigationDialog(
+        continuousMode: true,
+        onSentence: (sentence) {
+          if (ctx.mounted) {
+            _navigateByVoice(ctx, sentence);
+          }
+        },
+      ),
     );
-
-    if (result != null && result.isNotEmpty && context.mounted) {
-      _navigateByVoice(context, result);
-    }
   }
 
   /// 根据语音内容进行页面导航
@@ -631,13 +746,8 @@ class VoiceNavigationFab extends StatelessWidget {
   }
 
   void _doNavigate(BuildContext context, String route) {
-    // 通过 NavigatorState 发送自定义消息到 HomePage
-    // 这里用 SnackBar 提示 + 延迟关闭让用户看到反馈
-    // 实际导航由 HomePage 的 VoiceNavCallback 完成
-    final state = context.findAncestorStateOfType<NavigatorState>();
-    if (state != null) {
-      // 利用路由名传递导航意图
-      Navigator.of(context).maybePop(route);
-    }
+    // 持续模式下 dialog 必须保持打开，不能再用 maybePop 传递路由。
+    // 直接通过 NavigationService 切 Tab — `route` 是已经匹配过的关键词。
+    NavigationService.instance.navigateByKeyword(route);
   }
 }

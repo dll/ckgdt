@@ -357,15 +357,21 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
     }
 
     if (!navContext.mounted) return;
-    final result = await showDialog<String>(
+    // 持续监听模式（小度风格）：每识别一句就执行导航，dialog 不关。
+    // 用户主动点"完成"才结束。dialog 内自闭环管理生命周期，避免之前
+    // "导航成功后 dialog 异步残余 pop 把根页面也 pop 掉"的退出 bug。
+    await showDialog<void>(
       context: navContext,
       barrierDismissible: false,
-      builder: (ctx) => const VoiceNavigationDialog(),
+      builder: (ctx) => VoiceNavigationDialog(
+        continuousMode: true,
+        onSentence: (sentence) {
+          if (navContext.mounted) {
+            _navigateByVoiceText(navContext, sentence);
+          }
+        },
+      ),
     );
-
-    if (result != null && result.isNotEmpty && navContext.mounted) {
-      _navigateByVoiceText(navContext, result);
-    }
   }
 
   void _showAgentChat() {
@@ -407,8 +413,9 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
         normalized.contains('返回上一页') ||
         normalized.contains('回到上一页')) {
       if (normalized.contains('首页') || normalized.contains('主页')) {
-        final navigator = Navigator.of(context);
-        navigator.popUntil((route) => route.isFirst);
+        // 持续模式：dialog 是栈顶 ModalRoute，popUntil 会误伤
+        // → 改用 navService.popToRoot() （直接走根 navigator key）
+        navService.popToRoot();
         navService.switchToTab(0);
       } else {
         navService.goBack();
@@ -438,9 +445,10 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
       return;
     }
 
-    // ── 先 popUntil 回到首页（全局 FAB 可能在任何页面触发） ──
-    final navigator = Navigator.of(context);
-    navigator.popUntil((route) => route.isFirst);
+    // 注意：之前这里有 navigator.popUntil((r) => r.isFirst) 兜底
+    // —— 但持续语音模式下会把 dialog 自身也 pop 掉（dialog 是 ModalRoute），
+    // 改用 navService.popToRoot() 直接通过 NavigationService 操作根 navigator。
+    // navigateByKeyword 命中时它内部用 onSwitchTab 切 Tab，不影响 dialog。
 
     // ── Tab 映射（角色感知，动态注册） ──
     if (navService.navigateByKeyword(normalized)) {
