@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
+import '../../../core/text_utils.dart';
 import '../../auth_service.dart';
 import '../../ai_service.dart';
 import '../agent_model.dart';
@@ -317,8 +318,7 @@ $_subPageListForPrompt
   }
 
   Future<AgentMessage> _handleLogin(String rawMessage) async {
-    final digits =
-        chineseToDigits(rawMessage).replaceAll(RegExp(r'[^\d]'), '');
+    final digits = extractDigits(chineseToDigits(rawMessage));
     if (digits.isNotEmpty) {
       final password = digits.length >= 6
           ? digits.substring(digits.length - 6)
