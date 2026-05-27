@@ -33,6 +33,10 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# pubspec.lock 不追踪——学生端/CI 自动 sync 会因 Flutter 版本不同导致 lock 降级漂移
+# 开发者 clone 后请执行 flutter pub get 重新生成
+/pubspec.lock
+
 # Generated video intermediate assets
 docs/video/**/audio/
 docs/video/**/sent/
