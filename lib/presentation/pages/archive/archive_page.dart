@@ -1,6 +1,5 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../../services/auth_service.dart';
+import '../../../core/error_handler.dart';
 import '../../../services/agent/agents/archive_agent.dart';
 import '../../../data/local/archive_dao.dart';
 import '../../../data/models/archive_document_model.dart';
@@ -19,11 +18,9 @@ class ArchivePage extends StatefulWidget {
 class _ArchivePageState extends State<ArchivePage>
     with SingleTickerProviderStateMixin, InnerTabRequestMixin {
   late TabController _tabController;
-  final _authService = AuthService();
   final _dao = ArchiveDao();
   final _agent = ArchiveAgent();
-  String _courseType = 'exam';
-  bool _isLoading = true;
+  String _detectedCourseType = 'assess';
 
   @override
   String get innerTabPageKey => 'archive';
@@ -42,7 +39,7 @@ class _ArchivePageState extends State<ArchivePage>
       if (!_tabController.indexIsChanging) setState(() {});
     });
     bindInnerTabRequest();
-    _isLoading = false;
+    _detectCourseTypeFromSyllabus();
   }
 
   @override
@@ -52,38 +49,37 @@ class _ArchivePageState extends State<ArchivePage>
     super.dispose();
   }
 
-  void _onCourseTypeChanged(String val) {
-    if (val != _courseType) setState(() => _courseType = val);
+  Future<void> _detectCourseTypeFromSyllabus() async {
+    try {
+      final syllabi = await _dao.getDocuments(
+        period: 'beginning',
+        documentType: 'syllabus',
+      );
+      final content = syllabi.isNotEmpty ? syllabi.first.content : null;
+      final detected = detectCourseTypeFromSyllabus(content);
+      if (detected != _detectedCourseType && mounted) {
+        setState(() => _detectedCourseType = detected);
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ArchivePage._detectCourseType', stack: st);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
+    final courseTypeLabel = isExamCourse(_detectedCourseType) ? '考试' : '考查';
     return Column(
       children: [
         Container(
           color: primary.withValues(alpha: 0.05),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Row(
             children: [
-              Icon(Icons.school_outlined, size: 18, color: primary),
-              const SizedBox(width: 8),
-              Text('课程类型', style: TextStyle(fontSize: 13, color: primary)),
-              const SizedBox(width: 8),
-              SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(value: 'exam', label: Text('考试', style: TextStyle(fontSize: 12))),
-                  ButtonSegment(value: 'assess', label: Text('考查', style: TextStyle(fontSize: 12))),
-                ],
-                selected: {_courseType},
-                onSelectionChanged: (s) => _onCourseTypeChanged(s.first),
-                style: ButtonStyle(
-                  visualDensity: VisualDensity.compact,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-              ),
-              const Spacer(),
-              Text(periodLabelForCurrentTab, style: TextStyle(fontSize: 13, color: primary)),
+              Icon(Icons.school_outlined, size: 16, color: primary),
+              const SizedBox(width: 6),
+              Text('课程类型：$courseTypeLabel（由大纲自动检测）',
+                  style: TextStyle(fontSize: 12, color: primary)),
             ],
           ),
         ),
@@ -91,7 +87,8 @@ class _ArchivePageState extends State<ArchivePage>
           color: primary.withValues(alpha: 0.05),
           child: TabBar(
             controller: _tabController,
-            isScrollable: true,
+            isScrollable: false,
+            tabAlignment: TabAlignment.fill,
             labelColor: primary,
             unselectedLabelColor: Colors.grey,
             indicatorColor: primary,
@@ -108,39 +105,32 @@ class _ArchivePageState extends State<ArchivePage>
             children: [
               ArchivePeriodTab(
                 periodKey: 'beginning',
-                courseType: _courseType,
+                courseType: _detectedCourseType,
                 dao: _dao,
                 agent: _agent,
+                onSyllabusChanged: _detectCourseTypeFromSyllabus,
               ),
               ArchivePeriodTab(
                 periodKey: 'midterm',
-                courseType: _courseType,
+                courseType: _detectedCourseType,
                 dao: _dao,
                 agent: _agent,
               ),
               ArchivePeriodTab(
                 periodKey: 'final',
-                courseType: _courseType,
+                courseType: _detectedCourseType,
                 dao: _dao,
                 agent: _agent,
               ),
               ArchiveActionTab(
-                courseType: _courseType,
+                courseType: _detectedCourseType,
                 dao: _dao,
-                onRefresh: () => setState(() {}),
+                onRefresh: () => _detectCourseTypeFromSyllabus(),
               ),
             ],
           ),
         ),
       ],
     );
-  }
-
-  String get periodLabelForCurrentTab {
-    final idx = _tabController.index;
-    if (idx >= 0 && idx < archivePeriodLabels.length) {
-      return archivePeriodLabels[idx];
-    }
-    return '';
   }
 }
