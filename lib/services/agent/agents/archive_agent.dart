@@ -50,7 +50,7 @@ class ArchiveAgent extends BaseAgent {
     String? templateRef,
   }) async {
     final db = await DatabaseHelper.instance.database;
-    final contextData = await _collectContext(db, documentType);
+    final contextData = await _collectContext(db, documentType, courseType: courseType);
     final prompt = _buildPrompt(title, documentType, period, courseType,
         templateRef: templateRef, context: contextData);
     final messages = [
@@ -71,7 +71,7 @@ class ArchiveAgent extends BaseAgent {
   }
 
   Future<Map<String, dynamic>> _collectContext(
-      Database db, String documentType) async {
+      Database db, String documentType, {String courseType = 'assess'}) async {
     final context = <String, dynamic>{};
     try {
       if (documentType == 'syllabus') {
@@ -80,10 +80,9 @@ class ArchiveAgent extends BaseAgent {
       } else if (documentType == 'lesson_plan') {
         final rows = await db.query('lesson_plans', limit: 50);
         context['lesson_plans'] = rows;
-        // Also fetch existing teaching_schedule for context
         final teachingDocs = await _dao.getDocuments(
           period: 'beginning',
-          courseType: 'exam',
+          courseType: courseType,
           documentType: 'teaching_schedule',
         );
         if (teachingDocs.isNotEmpty) {
@@ -98,10 +97,9 @@ class ArchiveAgent extends BaseAgent {
       } else if (documentType == 'teaching_schedule') {
         final syllabusRows = await db.query('syllabus_items', limit: 50);
         context['syllabus_items'] = syllabusRows;
-        // Also fetch existing teaching_task and course_schedule
         final taskDocs = await _dao.getDocuments(
           period: 'beginning',
-          courseType: 'exam',
+          courseType: courseType,
           documentType: 'teaching_task',
         );
         if (taskDocs.isNotEmpty) {
@@ -109,7 +107,7 @@ class ArchiveAgent extends BaseAgent {
         }
         final scheduleDocs = await _dao.getDocuments(
           period: 'beginning',
-          courseType: 'exam',
+          courseType: courseType,
           documentType: 'course_schedule',
         );
         if (scheduleDocs.isNotEmpty) {
@@ -126,25 +124,104 @@ class ArchiveAgent extends BaseAgent {
   }
 
   Future<String> reviewDocument(ArchiveDocument doc) async {
-    final prompt = '''请审核以下教学归档文档，从以下几个方面给出评价（每条一行，用 Markdown 列表格式）：
+    final checklist = _reviewChecklist(doc.documentType);
+    final courseTypeLabel = doc.courseType == 'exam' ? '考试' : '考查';
+    final prompt = '''你是一位严谨的教学归档审核专家。请严格按照以下标准逐项审核，每项给出 ✅ 通过 / ⚠️ 建议修改 / ❌ 不通过 并说明理由。
 
-1. **内容完整性**：是否覆盖了应包含的全部要素
-2. **格式规范性**：是否符合教学文档的格式要求
-3. **数据准确性**：内容中涉及的数据是否合理
-4. **改进建议**：如有问题请给出具体修改建议
+=== 文档基本信息 ===
+- **标题**：${doc.title}
+- **文档类型**：${_docTypeLabel(doc.documentType)}
+- **教学阶段**：${_periodLabel(doc.period)}
+- **课程类型**：$courseTypeLabel
 
-文档标题：${doc.title}
-文档类型：${doc.documentType}
-教学阶段：${doc.period}
+=== 通用审核标准 ===
+1. **内容完整性**：文档是否覆盖了该类型应包含的全部要素，是否存在明显缺失
+2. **格式规范性**：是否符合教学文档的标准格式，Markdown 表格/标题/列表是否正确
+3. **数据准确性**：课程名称、教师姓名、学时数、班级等信息是否具体明确，无占位符（如"________"）
+4. **语言规范性**：表述是否正式规范，无口语化或模糊表达
+5. **一致性**：文档内部的课程类型、学期等信息是否前后一致
 
-文档内容：
-${doc.content ?? '（无内容）'}''';
+=== 专项审核标准（$checklist）===
+
+=== 审核结论 ===
+请在最后给出总体评价：
+- **综合评级**：优秀 / 良好 / 需修改 / 不合格
+- **必须修改项**：列出必须修改的关键问题
+- **建议改进项**：列出可选的改进建议
+
+=== 待审文档 ===
+${doc.content ?? '（文档无内容）'}''';
     final messages = [
-      {'role': 'system', 'content': '你是一位教学文档审核专家，请根据学校规范严格审核。'},
+      {'role': 'system', 'content': '你是一位严谨的教学归档审核专家，请严格按照标准逐项审核，给出客观评价。'},
       {'role': 'user', 'content': prompt},
     ];
     final result = await safeAiChatWithMeta(messages, aiService: _ai);
     return result.content;
+  }
+
+  String _docTypeLabel(String dt) {
+    const labels = {
+      'teaching_task': '教学任务书', 'syllabus': '教学大纲', 'calendar': '校历',
+      'course_schedule': '课程课表', 'teaching_schedule': '教学进度表',
+      'lesson_plan': '教学教案', 'courseware': '教学课件', 'roll_call': '学生点名册',
+      'midterm_exam': '期中试卷', 'midterm_analysis': '期中成绩分析',
+      'midterm_check': '期中检查表', 'teaching_log': '教学日志',
+      'final_exam': '期末试卷', 'final_analysis': '期末成绩分析',
+      'course_summary': '课程总结', 'exam_review_form': '试卷审核表',
+      'final_assessment': '期末考核材料', 'assessment_review_form': '考核审核表',
+      'print_report': '印刷审批表', 'archive_form': '归档确认表',
+    };
+    return labels[dt] ?? dt;
+  }
+
+  String _periodLabel(String p) {
+    const labels = {'beginning': '期初', 'midterm': '期中', 'final': '期末'};
+    return labels[p] ?? p;
+  }
+
+  String _reviewChecklist(String dt) {
+    const checklists = {
+      'teaching_task': '''
+- 教师姓名是否与教学任务书原始数据一致
+- 课程名称、总学时、讲授/实验学时是否完整
+- 教学班级、计划人数是否填写
+- 院（系）/教研室主任签章栏是否预留''',
+      'syllabus': '''
+- 课程简介是否清晰说明课程定位与目标
+- 教学内容与学时分配是否合理，各章节学时之和是否等于总学时
+- 考核方式是否明确（考试/考查），成绩构成比例是否具体
+- 参考教材是否列出书名、作者、出版社''',
+      'calendar': '''
+- 是否不包含任何课程、教师、班级等课程专属信息（必须是全校通用校历）
+- 教学周历是否覆盖完整学期（周次、日期范围、说明）
+- 节假日安排是否完整（法定假日、调课说明）
+- 作息时间是否分冬季/夏季标注
+- 关键节点是否包含（考试周、暑假等）''',
+      'course_schedule': '''
+- 理论课与实验课是否区分清晰
+- 实验分组是否合理，每组时间/地点是否明确
+- 周次、星期、节次是否连续无冲突''',
+      'teaching_schedule': '''
+- 理论教学进度与实验教学进度是否分别列出
+- 周次、日期、章节、教学内容是否完整对应
+- 教学方式是否多样化（讲授/讨论/实践等）
+- 与教学大纲的学时分配是否一致''',
+      'lesson_plan': '''
+- 每份教案的教学目标是否具体可衡量
+- 教学重点与难点是否明确
+- 教学内容与过程是否详细，时间分配是否合理
+- 教学方法是否针对内容特点选择
+- 课后作业是否与教学目标对应
+- 教学反思栏是否预留''',
+      'courseware': '''
+- 课件清单是否覆盖全部章节
+- 资源类型标注是否清晰（PPT/视频/文档等）
+- 是否与教学进度表章节对应''',
+    };
+    return checklists[dt] ?? '''
+- 文档结构是否完整，各要素是否齐全
+- 内容是否与教学阶段、课程类型匹配
+- 各项数据是否合理、具体''';
   }
 
   String _buildPrompt(
