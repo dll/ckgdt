@@ -283,6 +283,11 @@ lib/
 - 管理员：`user_id = '419116'`，密码 = `'419116'`
 - **密码规则**：所有用户密码 = `userId.substring(userId.length - 6)`，**不可更改**
 
+### 编码补充规则
+
+1. **禁止 `catch (_)`**：禁止使用 `catch (_) {}` 静默吞错。必须改写成 `catch (e, st) { swallowDebug(e, tag: 'TagName', stack: st); }`。唯一例外是确定不关心失败的 schema 探测（如 ALTER TABLE 试探列是否存在），用 `swallow(e, tag: '...')` 代替。
+2. **pubspec.lock 不追踪**：`/pubspec.lock` 已加入 `.gitignore`。学生端/CI 不同 Flutter 版本会导致 lock 文件降级漂移。开发者 clone 后运行 `flutter pub get` 生成。
+
 ---
 
 ## 多智能体系统
