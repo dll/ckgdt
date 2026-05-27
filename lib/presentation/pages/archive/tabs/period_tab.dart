@@ -735,7 +735,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     const dayNames = {1: '星期一', 2: '星期二', 3: '星期三', 4: '星期四', 5: '星期五', 6: '星期六', 7: '星期日'};
 
     // Split theory vs lab
-    final theory = rows.where((r) => r['type']!.contains('理论')).toList();
+    final theory = rows.where((r) => r['type']!.contains('教务')).toList();
     final lab = rows.where((r) => r['type']!.contains('实验')).toList();
 
     // Extract teacher name
@@ -1153,8 +1153,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         };
       case 'course_schedule':
         return {
-          'system': '教务管理系统（导出XLSX，教师手工增强）',
-          'description': '衍生自教务管理系统的XLSX课表文件，含★教务（教务系统排课）和○实验两种类型标记，"主讲内容"列为教师手工添加',
+          'system': '实验教学服务平台',
+          'description': '实验教学服务平台 → 实践教学 → 课表查询 → 我的课表 导出XLSX文件。含★教务（排课）和○实验两种类型标记',
         };
       case 'teaching_schedule':
         return {
@@ -1631,7 +1631,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       case 'syllabus_evaluation': return '学院';
       case 'syllabus_review': return '学院';
       case 'calendar': return '校历';
-      case 'course_schedule': return '教务系统';
+      case 'course_schedule': return '实验教学服务平台';
       case 'teaching_schedule': return '外部系统';
       case 'lesson_plan': return '外部系统';
       case 'courseware': return '课件库';
