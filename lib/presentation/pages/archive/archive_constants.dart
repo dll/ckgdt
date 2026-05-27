@@ -1,0 +1,83 @@
+import 'package:flutter/material.dart';
+import '../../../data/models/archive_document_model.dart';
+
+const List<String> archivePeriodLabels = ['期初', '期中', '期末', '归档'];
+const List<String> archivePeriodKeys = ['beginning', 'midterm', 'final', 'archive'];
+
+const List<IconData> archivePeriodIcons = [
+  Icons.wb_sunny_outlined,
+  Icons.cloud_outlined,
+  Icons.nights_stay_outlined,
+  Icons.archive_outlined,
+];
+
+String periodLabel(String key) {
+  const map = {'beginning': '期初', 'midterm': '期中', 'final': '期末', 'archive': '归档'};
+  return map[key] ?? key;
+}
+
+const examCourseDocs = {
+  'beginning': [
+    DocumentTypeDef(key: 'teaching_task', label: '教学任务单', iconCodePoint: '0xe3e4', canImport: true, canPrint: true),
+    DocumentTypeDef(key: 'syllabus', label: '教学大纲', iconCodePoint: '0xe3e4', sourceTable: 'syllabus_items', canImport: true, needsGeneration: true, canPrint: true),
+    DocumentTypeDef(key: 'calendar', label: '教学日历', iconCodePoint: '0xe8b1', canImport: true, needsGeneration: true, canPrint: true),
+    DocumentTypeDef(key: 'course_schedule', label: '课程课表', iconCodePoint: '0xe8b1', canImport: true, canPrint: true),
+    DocumentTypeDef(key: 'teaching_schedule', label: '教学进度表', iconCodePoint: '0xe8b1', canCreate: true, needsGeneration: true, canPrint: true),
+    DocumentTypeDef(key: 'lesson_plan', label: '教学教案', iconCodePoint: '0xe882', sourceTable: 'lesson_plans', needsGeneration: true, canPrint: true),
+    DocumentTypeDef(key: 'courseware', label: '教学课件', iconCodePoint: '0xe2c7', canImport: true, needsGeneration: true, canPrint: false),
+    DocumentTypeDef(key: 'roll_call', label: '学生点名册', iconCodePoint: '0xe7fb', canImport: true, canPrint: false),
+  ],
+  'midterm': [
+    DocumentTypeDef(key: 'midterm_exam', label: '期中试卷', iconCodePoint: '0xe869', needsGeneration: true),
+    DocumentTypeDef(key: 'midterm_analysis', label: '期中成绩分析', iconCodePoint: '0xe872', needsGeneration: true),
+    DocumentTypeDef(key: 'teaching_log', label: '教学日志', iconCodePoint: '0xe8b1', sourceTable: 'teaching_progress'),
+  ],
+  'final': [
+    DocumentTypeDef(key: 'final_exam', label: '期末试卷', iconCodePoint: '0xe869', needsGeneration: true),
+    DocumentTypeDef(key: 'final_analysis', label: '期末成绩分析', iconCodePoint: '0xe872', needsGeneration: true),
+    DocumentTypeDef(key: 'course_summary', label: '课程总结', iconCodePoint: '0xe3e4', needsGeneration: true),
+    DocumentTypeDef(key: 'exam_review_form', label: '试卷审核表', iconCodePoint: '0xe8b1', needsGeneration: true),
+  ],
+  'archive': [
+    DocumentTypeDef(key: 'all_materials', label: '全部教学材料', iconCodePoint: '0xe2c7'),
+    DocumentTypeDef(key: 'print_report', label: '印刷审批表', iconCodePoint: '0xe858', needsGeneration: true),
+    DocumentTypeDef(key: 'archive_form', label: '归档确认表', iconCodePoint: '0xe884', needsGeneration: true),
+  ],
+};
+
+const assessCourseDocs = {
+  'beginning': [
+    DocumentTypeDef(key: 'teaching_task', label: '教学任务单', iconCodePoint: '0xe3e4', canImport: true, canPrint: true),
+    DocumentTypeDef(key: 'syllabus', label: '教学大纲', iconCodePoint: '0xe3e4', sourceTable: 'syllabus_items', canImport: true, needsGeneration: true, canPrint: true),
+    DocumentTypeDef(key: 'calendar', label: '教学日历', iconCodePoint: '0xe8b1', canImport: true, needsGeneration: true, canPrint: true),
+    DocumentTypeDef(key: 'course_schedule', label: '课程课表', iconCodePoint: '0xe8b1', canImport: true, canPrint: true),
+    DocumentTypeDef(key: 'teaching_schedule', label: '教学进度表', iconCodePoint: '0xe8b1', canCreate: true, needsGeneration: true, canPrint: true),
+    DocumentTypeDef(key: 'lesson_plan', label: '教学教案', iconCodePoint: '0xe882', sourceTable: 'lesson_plans', needsGeneration: true, canPrint: true),
+    DocumentTypeDef(key: 'courseware', label: '教学课件', iconCodePoint: '0xe2c7', canImport: true, needsGeneration: true, canPrint: false),
+    DocumentTypeDef(key: 'roll_call', label: '学生点名册', iconCodePoint: '0xe7fb', canImport: true, canPrint: false),
+  ],
+  'midterm': [
+    DocumentTypeDef(key: 'midterm_check', label: '期中检查表', iconCodePoint: '0xe8b1', needsGeneration: true),
+    DocumentTypeDef(key: 'teaching_log', label: '教学日志', iconCodePoint: '0xe8b1', sourceTable: 'teaching_progress'),
+  ],
+  'final': [
+    DocumentTypeDef(key: 'final_assessment', label: '期末考核材料', iconCodePoint: '0xe869', needsGeneration: true),
+    DocumentTypeDef(key: 'final_analysis', label: '期末成绩分析', iconCodePoint: '0xe872', needsGeneration: true),
+    DocumentTypeDef(key: 'course_summary', label: '课程总结', iconCodePoint: '0xe3e4', needsGeneration: true),
+    DocumentTypeDef(key: 'assessment_review_form', label: '考核审核表', iconCodePoint: '0xe8b1', needsGeneration: true),
+  ],
+  'archive': [
+    DocumentTypeDef(key: 'all_materials', label: '全部教学材料', iconCodePoint: '0xe2c7'),
+    DocumentTypeDef(key: 'archive_form', label: '归档确认表', iconCodePoint: '0xe884', needsGeneration: true),
+  ],
+};
+
+bool isExamCourse(String courseType) => courseType == 'exam';
+
+Map<String, List<DocumentTypeDef>> docsForCourseType(String courseType) =>
+    isExamCourse(courseType) ? examCourseDocs : assessCourseDocs;
+
+List<DocumentTypeDef> docsForPeriod(String courseType, String period) {
+  final all = docsForCourseType(courseType);
+  return all[period] ?? [];
+}
