@@ -3,8 +3,8 @@
   "user_id": "2023210575",
   "user_name": "安豪",
   "role": "student",
-  "synced_at": "2026-05-27T12:49:19.847499",
-  "last_active": "2026-05-27T12:49:19.834828",
+  "synced_at": "2026-05-27T12:58:54.443990",
+  "last_active": "2026-05-27T12:58:54.402511",
   "quiz_results": [
     {
       "user_id": "2023210575",
@@ -33,6 +33,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 1,
+      "user_id": "2023210575",
+      "content": "PDF实验报告：2023210575安豪实验一 开发环境搭建.pdf\n\n--- 报告正文（自动提取）---\n实验一_Uniapp开发实验报告+安豪+2023210575.md2026-03-171 / 18\n实验一：移动应用开发环境搭建 一、实验基本信息实验编号：d20301035101、d20301009201 实验名称：移动应用开发环境搭建学时分配：2学时实验类型：验证型负责平台：Uniapp（跨平台移动应用开发框架）姓名：安豪学号：2023210575班级：软件工程23级1班实验日期：2026年3月9日二、实验目的1. 掌握Uniapp开发环境的搭建方法2. 熟悉HBuilderX开发工具的使用3. 了解uni-app项目的创建和运行流程4. 掌握使用AI辅助工具生成Vue代码的方法5. 验证Uniapp跨平台开发环境的可用性三、实验环境3.1 硬件环境操作系统：Windows 11 3.2 软件环境HBuilderX版本：4.08 Node.js版本：24.14.0 npm版本：11.9.0浏览器版本：Chrome 145.0.7632.160 3.3 环境依赖检查\n# Node.js版本检查 node -v # 输出：v24.14.0  # npm版本检查 npm -v # 输出：11.9.0\n实验一\n_Uniapp\n开发实验报告\n+\n安豪\n+2023210575.md\n2026-03-17\n2\n/\n18\n四、实验步骤\n4.1 HBuilderX\n安装\n步骤\n1\n：下载\nHBuilderX\n1\n.\n访问官网：\nhttps://www.dcloud.io/hbuilderx.html\n2\n.\n下载\nWindows/macOS\n版本\n3\n.\n选择\n\"\n正式版\n\"\n或\n\"App\n开发版\n\"\n步骤\n2\n：安装配置\n1\n.\n解压下载的压缩包到指定目录\n2\n.\n运行\nHBuilderX.exe\n启动程序\n3\n.\n完成初始配置\n图\n1\nHBuilderX\n下载页面\n实验一\n_Uniapp\n开发实验报告\n+\n安豪\n+2023210575.md\n2026-03-17\n3\n/\n18\n图\n2\nHBuilderX\n安装完成界面\n4.2\n创建\nUniapp\n项目\n步骤\n1\n：新建项目\n1\n.\n打开\nHBuilderX\n2\n.\n点击菜单\n\"\n文件\n\" → \"\n新建\n\" → \"\n项目\n\"\n3\n.\n选择\n\"uni-app\"\n项目类型\n4\n.\n填写项目信息：\n项目名称：智慧校园\nHelloWorld\n模板：默认模板\nVue\n版本：\nVue 3\n5\n.\n点击\n\"\n创建\n\"\n按钮\n步骤\n2\n：项目结构说明\n智慧校园\nHelloWorld/\n├── pages/              #\n页面文件目录\n│   └── index/         #\n首页目录\n│       └── index.vue  #\n首页文件\n├── static/            #\n静态资源目录\n├── uni_modules/       # uni-app\n插件目录\n├── App.vue           #\n应用配置文件\n├── main.js           #\n入口文件\n├── manifest.json     #\n应用配置清单\n├── pages.json        #\n页面路由配置\n└── package.json      #\n项目依赖配置\n实验一\n_Uniapp\n开发实验报告\n+\n安豪\n+2023210575.md\n2026-03-17\n4\n/\n18\n图\n3\n项目创建界面\n实验一\n_Uniapp\n开发实验报告\n+\n安豪\n+2023210575.md\n2026-03-17\n5\n/\n18\n图\n4\n项目结构\n4.3\n使用\nAI\n辅助生成\nVue\n代码\n步骤\n1\n：修改首页代码\n打开\npages/index/index.vue\n文件，使用\nAI\n辅助工具生成\n\"\n智慧校园\n\"\n主题的\nHelloWorld\n代码。\n步骤\n2\n：生成的代码内容\n<template>\n<view class=\"container\">\n<view class=\"header\">\n<text class=\"title\">\n智慧校园\n</text>\n</view>\n<view class=\"content\">\n<text class=\"welcome\">\n欢迎使用智慧校园系统\n</text>\n<text class=\"subtitle\">Hello World - Uniapp</text>\n</view>\n</view>\n</template>\n实验一\n_Uniapp\n开发实验报告\n+\n安豪\n+2023210575.md\n2026-03-17\n6\n/\n18\n<script>\nexport default {\ndata() {\nreturn {\nmessage: 'Hello World'\n}\n}\n}\n</script>\n<style>\n.container {\npadding: 20rpx;\ntext-align: center;\n}\n.header {\nmargin-bottom: 40rpx;\n}\n.title {\nfont-size: 48rpx;\nfont-weight: bold;\ncolor: #007AFF;\n}\n.content {\npadding: 40rpx;\nbackground-color: #f5f5f5;\nborder-radius: 20rpx;\n}\n.welcome {\ndisplay: block;\nfont-size: 32rpx;\nmargin-bottom: 20rpx;\n}\n.subtitle {\ndisplay: block;\nfont-size: 28rpx;\ncolor: #666;\n}\n</style>\n实验一\n_Uniapp\n开发实验报告\n+\n安豪\n+2023210575.md\n2026-03-17\n7\n/\n18\n图\n5\n代码编辑界面\n4.4\n运行测试验证\n步骤\n1\n：浏览器运行测试\n1\n.\n点击菜单\n\"\n运行\n\" → \"\n运行到浏览器\n\" → \"Chrome\"\n2\n.\n等待自动打开浏览器\n3\n.\n查看页面显示效果\n实验一\n_Uniapp\n开发实验报告\n+\n安豪\n+2023210575.md\n2026-03-17\n8\n/\n18\n实验一\n_Uniapp\n开发实验报告\n+\n安豪\n+2023210575.md\n2026-03-17\n9\n/\n18\n图\n6\n浏览器登录运行效果\n步骤\n2\n：真机测试\n真机测试\n：\n开启手机\nUSB\n调试模式\n实验一\n_Uniapp\n开发实验报告\n+\n安豪\n+2023210575.md\n2026-03-17\n10\n/\n18\n使用\nUSB\n数据线连接电脑\n点击菜单\n\"\n运行\n\" → \"\n运行到手机或模拟器\n\" → \"\n运行到\nAndroid\n设备\n\"\n选择已连接的设备\n等待应用安装并自动启动\n实验一\n_Uniapp\n开发实验报告\n+\n安豪\n+2023210575.md\n2026-03-17\n11\n/\n18\n图\n7\n真机测试界面\n实验一\n_Uniapp\n开发实验报告\n+\n安豪\n+2023210575.md\n2026-03-17\n12\n/\n18\nalt text\n图\n8\n登录成功界面\n实验一\n_Uniapp\n开发实验报告\n+\n安豪\n+2023210575.md\n2026-03-17\n13\n/\n18\n图\n9\n真机环境\n五、实验结果\n5.1\n环境搭建成功验证\n检查项\n状态\n说明\nHBuilderX\n安装\n✅\n成功\n版本：\n4.08\n实验一\n_Uniapp\n开发实验报告\n+\n安豪\n+2023210575.md\n2026-03-17\n14\n/\n18\n检查项\n状态\n说明\nNode.js\n环境\n✅\n成功\n版本：\nv24.14.0\nnpm\n环境\n✅\n成功\n版本：\n11.9.0\n项目创建\n✅\n成功\n项目名称：智慧校园\nHelloWorld\n代码生成\n✅\n成功\n使用\nAI\n辅助生成\nVue\n代码\n浏览器运行\n✅\n成功\nChrome 145.0.7632.160\n正常显示\n5.2\n项目运行效果\n浏览器运行效果：\n页面正常加载，显示\n\"\n智慧校园\n\"\n标题\n渐变背景效果正常\n卡片布局显示正常\n功能图标和文字清晰可见\n响应式布局正常\n5.3\n代码实现验证\n关键代码片段：\n1\n.\n页面模板结构\n<template>\n<view class=\"container\">\n<!--\n页面内容\n-->\n</view>\n</template>\n2\n.\n数据定义\ndata() {\nreturn\n{\nmessage\n:\n'Hello World'\n,\nsystemName\n:\n'\n智慧校园\n'\n}\n}\n3\n.\n样式实现\n.container\n{\nmin-height\n:\n100vh\n;\n实验一\n_Uniapp\n开发实验报告\n+\n安豪\n+2023210575.md\n2026-03-17\n15\n/\n18\nbackground\n:\nlinear-gradient\n(\n135deg\n, #\n667\neea\n0%\n, #\n764\nba2\n100%\n);\n}\n六、遇到的问题及解决方案\n问题\n1\n：项目创建后文件为空\n问题描述：\n在\nHBuilderX\n中创建\nuni-app\n项目后，发现项目文件夹为空，没有生成任何文件。\n解决方案：\n重新创建项目，确保选择正确的项目类型和模板。\n解决过程：\n1\n.\n关闭当前项目\n2\n.\n重新点击\n\"\n文件\n\" → \"\n新建\n\" → \"\n项目\n\"\n3\n.\n确保选择\n\"uni-app\"\n项目类型，而不是\n\"\n普通项目\n\"\n4\n.\n选择\n\"\n默认模板\n\"\n或\n\"Hello uni-app\"\n模板\n5\n.\n点击\n\"\n创建\n\"\n按钮，等待项目生成完成\n问题\n2\n：浏览器运行时页面空白\n问题描述：\n运行项目到浏览器后，页面显示空白，没有任何内容。\n解决方案：\n检查代码语法错误，确保\nVue\n文件格式正确。\n解决过程：\n1\n.\n打开浏览器开发者工具（\nF12\n）\n2\n.\n查看\nConsole\n控制台的错误信息\n3\n.\n检查\nindex.vue\n文件中的语法错误\n4\n.\n修正代码后保存文件\n5\n.\n刷新浏览器页面\n问题\n3\n：\nNode.js\n版本过高导致兼容性问题\n问题描述：\nNode.js\n版本为\nv24.14.0\n，可能存在与某些依赖包的兼容性问题。\n解决方案：\n使用\nnvm\n管理多个\nNode.js\n版本，根据项目需求切换版本。\n解决过程：\n1\n.\n安装\nnvm\n（\nNode Version Manager\n）\n2\n.\n安装\nLTS\n版本的\nNode.js\n（如\nv18.x\n或\nv20.x\n）\n3\n.\n使用\nnvm use 18\n切换到稳定版本\n4\n.\n重新安装项目依赖\n5\n.\n验证项目运行正常\n问题\n4\n：\nHBuilderX\n运行速度慢\n问题描述：\nHBuilderX\n启动和编译速度较慢，影响开发效率。\n实验一\n_Uniapp\n开发实验报告\n+\n安豪\n+2023210575.md\n2026-03-17\n16\n/\n18\n解决方案：\n优化\nHBuilderX\n配置，关闭不必要的插件和功能。\n解决过程：\n1\n.\n点击\n\"\n工具\n\" → \"\n设置\n\"\n2\n.\n关闭不常用的插件\n3\n.\n调整内存配置\n4\n.\n清理项目缓存\n5\n.\n重启\nHBuilderX\n七、实验总结\n7.1\n实验收获\n1\n.\n技术技能提升\n掌握了\nHBuilderX\n开发工具的安装和使用方法\n熟悉了\nuni-app\n项目的创建流程和项目结构\n学会了使用\nAI\n辅助工具生成\nVue\n代码\n理解了\nuni-app\n跨平台开发的原理和优势\n2\n.\n开发流程理解\n了解了移动应用开发的基本流程\n掌握了从环境搭建到项目运行的完整过程\n学会了多平台测试和验证的方法\n3\n.\n问题解决能力\n提高了独立解决环境配置问题的能力\n学会了查阅文档和搜索解决方案的方法\n培养了调试和排错的技能\n7.2\n心得体会\n通过本次实验，我深刻体会到：\n1\n.\n环境搭建的重要性\n良好的开发环境是高效开发的基础\n正确的版本配置能避免很多兼容性问题\n详细的文档记录有助于问题排查\n2\n.\nAI\n辅助开发的优势\nAI\n工具能快速生成基础代码框架\n提高了开发效率，减少了重复性工作\n但仍需要人工审核和优化代码\n3\n.\n跨平台开发的便利性\nuni-app\n一套代码可以运行多个平台\n实验一\n_Uniapp\n开发实验报告\n+\n安豪\n+2023210575.md\n2026-03-17\n17\n/\n18\n大大降低了多平台开发的成本\n适合快速原型开发和小型项目\n4\n.\n团队协作的重要性\n本次实验是小组合作，每位同学负责不同平台\n通过交流学习，了解了其他开发环境的特点\n团队协作能够更高效地完成复杂任务\n5\n.\n实践出真知\n理论知识需要通过实践来巩固\n动手操作过程中会遇到各种问题\n解决问题的过程就是学习的过程\n7.3\n改进建议\n1\n.\n对实验的建议\n建议在实验指导书中增加常见问题的解决方案说明\n建议提供更详细的环境配置检查清单\n建议增加跨平台测试的具体步骤说明\n建议提供更多\nAI\n辅助开发的实例演示\n2\n.\n对学习方法的建议\n建议在实验前先预习\nuni-app\n的基础知识\n建议多动手实践，遇到问题先尝试自己解决\n建议建立个人知识库，记录学习过程中的问题和解决方案\n建议多参考官方文档和社区资源\n八、附录\n8.1\n相关资源链接\nHBuilderX\n官网：\nhttps://www.dcloud.io/hbuilderx.html\nuni-app\n官方文档：\nhttps://uniapp.dcloud.io/\nVue.js\n官方文档：\nhttps://cn.vuejs.org/\nNode.js\n官网：\nhttps://nodejs.org/\n8.2\n参考资料\n1\n.\n《\nuni-app\n跨平台开发实战》\n2\n.\n《\nVue.js\n设计与实现》\n3\n.\n《移动应用开发技术》课程教材\n8.3\n实验截图清单\n图号\n图片标题\n说明\n图\n1\nHBuilderX\n下载页面\n官网下载界面\n实验一\n_Uniapp\n开发实验报告\n+\n安豪\n+2023210575.md\n2026-03-17\n18\n/\n18\n图号\n图片标题\n说明\n图\n2\nHBuilderX\n安装完成界面\n软件启动界面\n图\n3\n项目创建界面\n创建项目对话框\n图\n4\n项目结构\n文件目录结构\n图\n5\n代码编辑界面\n编写代码界面\n图\n6\n浏览器运行效果\nChrome\n显示效果\n图\n7\n真机测试界面\n手机上的登录界面\n图\n8\n登录成功界面\n手机登录成功\n图\n9\n环境验证结果\n真机环境\n实验完成日期：\n2026\n年\n3\n月\n9\n日\n报告提交日期：\n2026\n年\n3\n月\n9\n日\n指导教师：\n刘东良\n实验评分\n实验评分：\n_________\n分\n教师评语：\n备注：\n1\n.\n本实验报告已按照实验要求完成所有内容\n2\n.\n所有截图已准备完毕，详见截图文件\n3\n.\n实验过程记录完整，问题解决方案详细\n4\n.\n实验总结结合个人实际体验撰写\n",
+      "file_paths": "C:\\Users\\安豪\\Desktop\\大三下实验图片\\移动应用开发\\2023210575安豪实验一 开发环境搭建.pdf",
+      "file_names": "2023210575安豪实验一 开发环境搭建.pdf",
+      "submit_time": "2026-05-27T12:58:54.385504",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-05-02T23:10:09.220085",
+      "updated_at": "2026-05-27T12:58:54.385504",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 5,
       "user_id": "2023210575",
@@ -65,24 +83,6 @@
       "scored_at": null,
       "created_at": "2026-05-14T16:56:33.426444",
       "updated_at": "2026-05-14T16:56:33.426444",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 1,
-      "user_id": "2023210575",
-      "content": "PDF实验报告：2023210575安豪实验一 开发环境搭建.pdf",
-      "file_paths": "E:\\uniapptest\\cg1cifms\\2023210575安豪实验一 开发环境搭建.pdf",
-      "file_names": "2023210575安豪实验一 开发环境搭建.pdf",
-      "submit_time": "2026-05-04T21:03:40.008501",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-05-02T23:10:09.220085",
-      "updated_at": "2026-05-04T21:03:40.008501",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
