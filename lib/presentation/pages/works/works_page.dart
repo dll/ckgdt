@@ -17,6 +17,7 @@ import '../../../services/sync_service.dart';
 import '../../../services/gitee_service.dart';
 import '../../../services/agent/agents/works_grading_agent.dart';
 import '../../widgets/agent_entry_button.dart';
+import '../../widgets/inner_tab_request_mixin.dart';
 import 'ai_grading_tab.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
@@ -77,7 +78,7 @@ class WorksPage extends StatefulWidget {
 }
 
 class _WorksPageState extends State<WorksPage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, InnerTabRequestMixin {
   late TabController _tabController;
   final _authService = AuthService();
   final _worksDao = WorksDao();
@@ -96,6 +97,17 @@ class _WorksPageState extends State<WorksPage>
       3 + (_isStudent ? 1 : 0) + (_isTeacherOrAdmin ? 1 : 0);
 
   @override
+  String get innerTabPageKey => 'works';
+  @override
+  String get innerTabSpeakLabel => '作品';
+  @override
+  TabController get innerTabController => _tabController;
+  @override
+  List<String> innerTabLabels() => _isStudent
+      ? const ['我的作品', '作品展示', '作品记录', '排行榜']
+      : const ['作品展示', '作品记录', '排行榜', 'AI批阅'];
+
+  @override
   void initState() {
     super.initState();
     _tabController = TabController(
@@ -103,6 +115,7 @@ class _WorksPageState extends State<WorksPage>
       vsync: this,
     );
     _initData();
+    bindInnerTabRequest();
   }
 
   Future<void> _initData() async {
@@ -145,6 +158,7 @@ class _WorksPageState extends State<WorksPage>
 
   @override
   void dispose() {
+    unbindInnerTabRequest();
     _tabController.dispose();
     super.dispose();
   }

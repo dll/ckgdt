@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../core/init_logger.dart';
+
 import '../presentation/pages/quiz/quiz_page.dart';
+import '../presentation/pages/archive/archive_page.dart';
 import '../presentation/pages/quiz/wrong_answers_page.dart';
 import '../presentation/pages/class_qa/class_qa_page.dart';
 import '../presentation/pages/learning/video_page.dart';
@@ -65,12 +68,137 @@ class NavigationService {
     onSwitchTab?.call(index);
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // 内层 Tab 总线（语音 → 顶层 Tab → 内层 TabController）
+  //
+  // 语音命令"打开考核的报告"分两步：
+  //   1. switchToTab(顶层"考核") — HomePage 切换底部 NavigationBar
+  //   2. requestInnerTab('assessment','报告') — 在总线上挂一个待消费请求，
+  //      AssessmentPage 挂载后通过 consumeInnerTab 拿到并切自己的 TabController
+  //
+  // innerTabSeq 每次自增触发监听者回调；同一 page 监听自己的 pageKeyword，
+  // 不属于自己的请求会被 consume 时跳过（保留给真正目标 page）。
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// 待处理的内层 tab 切换请求
+  PendingInnerTabRequest? _pendingInnerTab;
+
+  /// 序列号 ValueNotifier — 每次 requestInnerTab 自增 1，page 监听此变化
+  /// （比直接监听 _pendingInnerTab 简单，避免 Map<page, listener> 复杂化）
+  final ValueNotifier<int> innerTabSeq = ValueNotifier<int>(0);
+
+  /// 提交一个内层 tab 切换请求
+  ///
+  /// [pageKeyword]：父页面标识（'assessment' / 'works' / ...）
+  /// [tabKeyword]：内层 tab 关键词（如 '报告' / 'AI批阅'），由 page 自己解析为 idx
+  void requestInnerTab(String pageKeyword, String tabKeyword) {
+    _pendingInnerTab = PendingInnerTabRequest(pageKeyword, tabKeyword);
+    innerTabSeq.value = innerTabSeq.value + 1;
+  }
+
+  /// 消费匹配的内层 tab 请求 — page 在 build 后调用
+  ///
+  /// 仅当待处理请求的 pageKeyword 与传入参数匹配时返回；否则返回 null
+  /// （让其他 page 有机会消费）。一旦消费即清空，避免重复触发。
+  PendingInnerTabRequest? consumeInnerTab(String pageKeyword) {
+    final req = _pendingInnerTab;
+    if (req != null && req.pageKeyword == pageKeyword) {
+      _pendingInnerTab = null;
+      return req;
+    }
+    return null;
+  }
+
+  /// `assessment`/`works`/`lab`/... → 顶层 NavigationBar 的中文 label
+  ///
+  /// 教师 6 Tab：教学（教学+课堂聚合）、评价（实验+考核+作品聚合）、达成、归档
+  /// 学生 6 Tab：学习、实验、考核、作品
+  /// 必须与 home_page.dart 注册到 [registerTabMapping] 的 label 保持一致。
+  static String? pageKeyToTabLabel(String pageKey, {required bool isTeacher}) {
+    if (isTeacher) {
+      switch (pageKey) {
+        case 'assessment':
+        case 'works':
+        case 'lab':
+        case 'experiment':
+          return '评价';
+        case 'achievement':
+          return '达成';
+        case 'archive':
+          return '归档';
+        case 'classroom':
+        case 'learning':
+          return '教学';
+      }
+    } else {
+      switch (pageKey) {
+        case 'assessment':
+          return '考核';
+        case 'works':
+        case 'showcase':
+          return '作品';
+        case 'lab':
+        case 'experiment':
+          return '实验';
+        case 'classroom':
+        case 'learning':
+          return '学习';
+        case 'archive':
+          return '归档';
+      }
+    }
+    return null;
+  }
+
+  /// VoiceAgent 英文 keyword → 候选中文 tab label（按角色有多个候选）
+  ///
+  /// VoiceAgent AI 输出的 keyword 是英文（如 'classroom'），
+  /// 而 [_tabMapping] 由 HomePage 按角色动态注册（6 Tab 精简结构）。
+  /// 本映射提供候选 label 列表，按顺序查找第一个在 _tabMapping 中存在的。
+  ///
+  /// 教师 Tab：首页 图谱 教学 评价 达成 归档 [+管理]
+  /// 学生 Tab：首页 图谱 学习 实验 考核 作品
+  static final _voiceKeywordToLabel = <String, List<String>>{
+    'home': ['首页'],
+    'graph': ['图谱'],
+    'learning': ['教学', '学习'],
+    'classroom': ['课堂', '教学', '学习'],
+    'experiment': ['实验', '评价'],
+    'assessment': ['考核', '评价'],
+    'showcase': ['作品', '评价'],
+    'achievement': ['达成'],
+    'archive': ['归档'],
+    'admin': ['管理'],
+    'settings': ['设置'],
+    'git': ['仓库'],
+    'notification': ['通知'],
+    'sync': ['同步'],
+    // 以下非顶层 Tab，由 navigate_sub_page 处理
+    'quiz': ['测验'],
+    'video': ['视频'],
+  };
+
   /// 根据关键词导航到对应 Tab
   /// 返回 true 表示成功匹配并导航
   bool navigateByKeyword(String keyword) {
     final normalized = keyword.toLowerCase();
+    InitLogger.log('nav', 'navigateByKeyword keyword=$keyword normalized=$normalized tabMapping keys=${_tabMapping.keys.toList()}');
 
-    // 先在动态 Tab 映射中精确查找（角色感知）
+    // 0) 英文 keyword（VoiceAgent AI 输出）→ 中文 Tab label
+    final labels = _voiceKeywordToLabel[normalized];
+    if (labels != null) {
+      for (final label in labels) {
+        final idx = _tabMapping[label];
+        if (idx != null) {
+          InitLogger.log('nav', 'navigateByKeyword voiceKey $normalized → label=$label → idx=$idx');
+          switchToTab(idx);
+          return true;
+        }
+      }
+      InitLogger.log('nav', 'navigateByKeyword voiceKey $normalized labels=$labels none found in tabMapping');
+    }
+
+    // 1) 先在动态 Tab 映射中精确查找（角色感知）
     for (final entry in _tabMapping.entries) {
       if (normalized.contains(entry.key)) {
         switchToTab(entry.value);
@@ -78,7 +206,7 @@ class NavigationService {
       }
     }
 
-    // 别名 → 标准 Tab 名映射（解析后查动态映射）
+    // 2) 别名 → 标准 Tab 名映射（解析后查动态映射）
     const aliasMap = <String, String>{
       '首页': '首页', '主页': '首页', '回家': '首页',
       '知识图谱': '图谱',
@@ -105,6 +233,7 @@ class NavigationService {
       }
     }
 
+    InitLogger.log('nav', 'navigateByKeyword FAILED keyword=$keyword normalized=$normalized');
     return false;
   }
 
@@ -221,6 +350,10 @@ class NavigationService {
     // ── 隐私 ──
     '隐私': 'privacy', '协议': 'privacy', '用户协议': 'privacy', '隐私声明': 'privacy',
     '我的数据': 'my_data', '导出我的': 'my_data', '删除我的数据': 'my_data',
+
+    // ── 归档 ──
+    '归档': 'archive', '存档': 'archive', '教学材料': 'archive',
+    '期初': 'archive', '期中': 'archive', '期末': 'archive',
   };
 
   /// 尝试通过关键词匹配子页面并导航
@@ -321,6 +454,8 @@ class NavigationService {
         return const PrivacyPolicyPage();
       case 'my_data':
         return const MyDataPage();
+      case 'archive':
+        return const ArchivePage();
       default:
         return null;
     }
@@ -348,5 +483,15 @@ class NavigationService {
   void dispose() {
     onSwitchTab = null;
     _tabMapping = {};
+    _pendingInnerTab = null;
   }
+}
+
+/// 待处理的内层 Tab 切换请求 — 由 [NavigationService.requestInnerTab] 提交，
+/// 顶层 page（如 AssessmentPage）在 build 后通过 [NavigationService.consumeInnerTab] 取出。
+class PendingInnerTabRequest {
+  final String pageKeyword;
+  final String tabKeyword;
+
+  const PendingInnerTabRequest(this.pageKeyword, this.tabKeyword);
 }

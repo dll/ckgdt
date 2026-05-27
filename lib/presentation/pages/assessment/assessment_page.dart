@@ -14,6 +14,7 @@ import '../../../data/local/database_helper.dart';
 import '../../../data/local/score_audit_dao.dart';
 import '../../../services/agent/agents/assessment_grading_agent.dart';
 import '../../widgets/agent_entry_button.dart';
+import '../../widgets/inner_tab_request_mixin.dart';
 import '../learning/pdf_viewer_page.dart';
 import 'ai_grading_tab.dart';
 import 'assessment_materials_tab.dart';
@@ -40,7 +41,7 @@ class AssessmentPage extends StatefulWidget {
 }
 
 class _AssessmentPageState extends State<AssessmentPage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, InnerTabRequestMixin {
   late TabController _tabController;
   final _authService = AuthService();
   final _assessmentDao = AssessmentDao();
@@ -49,10 +50,22 @@ class _AssessmentPageState extends State<AssessmentPage>
   bool get _isStudent => !_authService.isTeacher && !_authService.isAdmin;
 
   @override
+  String get innerTabPageKey => 'assessment';
+  @override
+  String get innerTabSpeakLabel => '考核';
+  @override
+  TabController get innerTabController => _tabController;
+  @override
+  List<String> innerTabLabels() => _isStudent
+      ? const ['分组', '项目', '贡献', '材料', '答辩', '报告', '成绩']
+      : const ['分组', '项目', '贡献', '材料', '答辩', '报告', '成绩', 'AI批阅'];
+
+  @override
   void initState() {
     super.initState();
     _tabController = TabController(length: _isStudent ? 7 : 8, vsync: this);
     _initDemoData();
+    bindInnerTabRequest();
   }
 
   Future<void> _initDemoData() async {
@@ -78,6 +91,7 @@ class _AssessmentPageState extends State<AssessmentPage>
 
   @override
   void dispose() {
+    unbindInnerTabRequest();
     _tabController.dispose();
     super.dispose();
   }

@@ -168,6 +168,20 @@ class _AgentChatOverlayState extends State<AgentChatOverlay> {
           }
         }
         break;
+      case 'inner_tab':
+        final page = action.params['page'] as String?;
+        final tab = action.params['tab'] as String?;
+        if (page != null && tab != null) {
+          navService.requestInnerTab(page, tab);
+          final isTeacher = AuthService().isTeacher || AuthService().isAdmin;
+          final parentLabel = NavigationService.pageKeyToTabLabel(
+            page,
+            isTeacher: isTeacher,
+          );
+          if (parentLabel != null) navService.navigateByKeyword(parentLabel);
+          if (mounted) Navigator.of(context).pop();
+        }
+        break;
       case 'go_back':
         if (mounted) Navigator.of(context).pop(); // 先关闭面板
         navService.goBack();

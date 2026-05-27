@@ -63,11 +63,16 @@ class VoiceService {
   static Future<bool> isConfigured() async {
     if (!isPlatformSupported) return false;
     // 用户主动禁用语音 → 上层 UI 视为"未配置"，避免点了崩
-    if (await SettingsService.isVoiceDisabled()) return false;
+    if (await SettingsService.isVoiceDisabled()) {
+      InitLogger.log('voice', 'isConfigured: voice disabled by user');
+      return false;
+    }
     final appId = await SettingsService.getXunfeiAppId();
     final apiKey = await SettingsService.getXunfeiApiKey();
     final apiSecret = await SettingsService.getXunfeiApiSecret();
-    return appId.isNotEmpty && apiKey.isNotEmpty && apiSecret.isNotEmpty;
+    final ok = appId.isNotEmpty && apiKey.isNotEmpty && apiSecret.isNotEmpty;
+    InitLogger.log('voice', 'isConfigured appId=${appId.length}chars apiKey=${apiKey.length}chars apiSecret=${apiSecret.length}chars => $ok');
+    return ok;
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -319,19 +324,22 @@ class VoiceService {
     try {
       final response = jsonDecode(message as String) as Map<String, dynamic>;
       final code = response['code'] as int? ?? -1;
+      final data = response['data'] as Map<String, dynamic>?;
+      final status = data?['status'] as int? ?? 0;
+
+      InitLogger.log('voice', 'WS msg code=$code status=$status hasResult=${data?['result'] != null}');
 
       if (code != 0) {
         final msg = response['message'] ?? '未知错误';
+        InitLogger.log('voice', 'WS error code=$code msg=$msg');
         onError?.call('讯飞错误 [$code]: $msg');
         _cleanup();
         return;
       }
 
-      final data = response['data'] as Map<String, dynamic>?;
       if (data == null) return;
 
       final result = data['result'] as Map<String, dynamic>?;
-      final status = data['status'] as int? ?? 0;
 
       if (result != null) {
         final text = _parseResult(result);
@@ -342,11 +350,13 @@ class VoiceService {
       }
 
       if (status == 2) {
-        onComplete?.call(_fullText.toString());
+        final finalText = _fullText.toString();
+        InitLogger.log('voice', 'WS status=2 (end) finalText="${finalText.length > 50 ? '${finalText.substring(0, 50)}...' : finalText}"');
+        onComplete?.call(finalText);
         _delayedCleanup();
       }
     } catch (e) {
-      debugPrint('VoiceService: parse error: $e');
+      InitLogger.log('voice', 'WS parse error: $e');
     }
   }
 

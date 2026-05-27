@@ -152,7 +152,8 @@ class SettingsService {
 
   static Future<String> getXunfeiAppId() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_xunfeiAppIdKey) ?? _defaultXunfeiAppId;
+    final v = prefs.getString(_xunfeiAppIdKey);
+    return (v == null || v.isEmpty) ? _defaultXunfeiAppId : v;
   }
 
   static Future<void> setXunfeiAppId(String value) async {
@@ -162,7 +163,8 @@ class SettingsService {
 
   static Future<String> getXunfeiApiKey() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_xunfeiApiKeyKey) ?? _defaultXunfeiApiKey;
+    final v = prefs.getString(_xunfeiApiKeyKey);
+    return (v == null || v.isEmpty) ? _defaultXunfeiApiKey : v;
   }
 
   static Future<void> setXunfeiApiKey(String value) async {
@@ -172,7 +174,8 @@ class SettingsService {
 
   static Future<String> getXunfeiApiSecret() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_xunfeiApiSecretKey) ?? _defaultXunfeiApiSecret;
+    final v = prefs.getString(_xunfeiApiSecretKey);
+    return (v == null || v.isEmpty) ? _defaultXunfeiApiSecret : v;
   }
 
   static Future<void> setXunfeiApiSecret(String value) async {
