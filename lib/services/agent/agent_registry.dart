@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../core/init_logger.dart';
 import 'agent_model.dart';
 import 'base_agent.dart';
 import '../../data/local/ai_history_dao.dart';
@@ -27,6 +28,7 @@ import 'agents/works_grading_agent.dart';
 import 'agents/safety_agent.dart';
 import 'agents/virtual_student_agent.dart';
 import 'agents/virtual_teacher_agent.dart';
+import 'agents/archive_agent.dart';
 
 /// 智能体注册表 + Director 编排
 ///
@@ -79,6 +81,8 @@ class AgentRegistry {
     // 数字孪生智能体
     _register(VirtualStudentAgent());
     _register(VirtualTeacherAgent());
+    // 归档智能体
+    _register(ArchiveAgent());
     _register(AssistantAgent()); // 兜底，最后注册
 
     _initialized = true;
@@ -161,8 +165,8 @@ class AgentRegistry {
       }
 
       return reply;
-    } catch (e) {
-      debugPrint('AgentRegistry: 智能体处理错误: $e');
+    } catch (e, st) {
+      InitLogger.error('voice', 'Agent dispatch error: $e', st);
       final errorReply = agent.buildReply('抱歉，处理出错了：$e');
       _session.messages.add(errorReply);
       onMessage?.call(errorReply);

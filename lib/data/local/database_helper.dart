@@ -1022,6 +1022,23 @@ class DatabaseHelper {
         UNIQUE(survey_id, user_id)
       )
     ''');
+
+    // ── 教学归档文档表（第八轮新增）──────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS archive_documents(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        document_type TEXT NOT NULL,
+        period TEXT NOT NULL,
+        course_type TEXT,
+        status TEXT DEFAULT 'draft',
+        content TEXT,
+        file_path TEXT,
+        is_generated INTEGER DEFAULT 0,
+        created_at TEXT,
+        updated_at TEXT
+      )
+    ''');
   }
 
   /// V6 新增: 教学管理（大纲+教案+教学进度）表
