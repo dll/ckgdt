@@ -1,7 +1,6 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
-
+import '../../../core/init_logger.dart';
 import '../../../core/text_utils.dart';
 import '../../auth_service.dart';
 import '../../ai_service.dart';
@@ -21,31 +20,21 @@ class VoiceAgent extends BaseAgent {
   final AiService _aiService = AiService();
 
   // ── 支持的导航页面清单（供 AI prompt 引用） ──────────────────────────────
+  //
+  // 教师 6 Tab：首页 图谱 教学 评价 达成 归档 [+管理]
+  // 学生 6 Tab：首页 图谱 学习 实验 考核 作品
   static const _navPages = <String, String>{
     '首页': 'home',
     '知识图谱': 'graph',
-    '章节测验': 'quiz',
-    '视频教程': 'video',
-    '学习中心': 'learning',
-    '课堂管理': 'classroom',
-    '实验任务': 'experiment',
-    '考核管理': 'assessment',
-    '作品展评': 'showcase',
-    '达成度': 'achievement',
-    '系统设置': 'settings',
-    '管理面板': 'admin',
-    'Git仓库': 'git',
-    '通知中心': 'notification',
-    '数据同步': 'sync',
-    '三端互通': 'sync',
-    '四端互通': 'sync',
-    '多端互通': 'sync',
-    '学习进度': 'progress',
-    '错题本': 'wrong_answers',
-    '我的收藏': 'favorites',
-    '搜索': 'search',
-    '实践': 'practice',
-    '课件工坊': 'courseware',
+    '教学中心': 'learning',    // 教师：教学中心（教学+课堂聚合）
+    '学习中心': 'learning',    // 学生：学习中心
+    '评价中心': 'assessment',  // 教师：评价中心（实验+考核+作品聚合）
+    '实验任务': 'experiment',  // 学生：实验
+    '考核管理': 'assessment',  // 学生：考核
+    '作品展评': 'showcase',    // 学生：作品
+    '达成度': 'achievement',   // 教师：达成
+    '归档': 'archive',         // 教师：归档
+    '管理面板': 'admin',       // 管理员：管理
   };
 
   /// 子页面导航清单（供 AI prompt 引用）
@@ -75,6 +64,22 @@ class VoiceAgent extends BaseAgent {
     '成长曲线': 'growth_curve',
   };
 
+  /// 内层 Tab 清单（顶层 page 内部的 TabController 标签）
+  ///
+  /// AI 用来识别"打开评价的作品页面"这种"父页面+内层"指令，输出
+  /// {intent:"inner_tab", page:"assessment", tab:"项目"}。
+  ///
+  /// page 的值必须与 NavigationService.innerTabAliases 的 key 一致，
+  /// tab 必须是该 page 的某个 tab label（页面 build 时的 tabs 顺序）。
+  static const _innerTabs = <String, List<String>>{
+    'assessment': ['分组', '项目', '贡献', '材料', '答辩', '报告', '成绩', 'AI批阅'],
+    'works': ['我的作品', '作品展示', '作品记录', '排行榜', 'AI批阅'],
+    'achievement': ['达成度概览', '成绩管理', '平时达成', '实验达成', '考核达成', '计算过程', '报告生成', '持续改进'],
+    'classroom': ['在线状态', '课堂签到', '课堂互动', '课堂工具', '课堂提问'],
+    'lab': ['任务列表', '我的提交', '提交管理', '实验报告', '实验材料', '任务管理', 'AI批阅', '仓库报表'],
+    'learning': ['视频', 'PPT', 'PDF', '测验', '助手'],
+  };
+
   /// 构建可用页面列表文本（嵌入 AI prompt）
   static String get _pageListForPrompt {
     final buf = StringBuffer();
@@ -93,6 +98,24 @@ class VoiceAgent extends BaseAgent {
     return buf.toString();
   }
 
+  /// 构建内层 Tab 清单文本（嵌入 AI prompt）
+  static String get _innerTabListForPrompt {
+    const pageLabel = <String, String>{
+      'assessment': '考核（评价中心）',
+      'works': '作品展评',
+      'achievement': '达成度',
+      'classroom': '课堂',
+      'lab': '实验',
+      'learning': '学习中心',
+    };
+    final buf = StringBuffer();
+    _innerTabs.forEach((page, tabs) {
+      final label = pageLabel[page] ?? page;
+      buf.writeln('- $label (page=$page) 的内层 Tab: ${tabs.join(" / ")}');
+    });
+    return buf.toString();
+  }
+
   @override
   AgentConfig get config => AgentConfig(
         id: 'voice',
@@ -100,15 +123,24 @@ class VoiceAgent extends BaseAgent {
         emoji: '🎙️',
         description: '智能语音交互，自然语言导航、登录退出、多轮对话。',
         persona: '''你是"小知"，移动图谱与数字孪生教学系统的语音导航助手。
-你的职责是理解用户的自然语言指令，执行导航、返回、退出等操作。
+你的职责是理解用户的自然语言指令，执行导航、返回、退出等操作，并在用户提问时直接回答。
 
 ## 核心能力
 1. **页面导航**：理解用户想去哪个页面，即使表述不精确。
 2. **子页面操作**：理解用户想进入哪个子功能页面。
-3. **返回操作**：用户说"返回""回去""上一页"时执行返回。
-4. **退出系统**：用户说"退出系统""关闭应用""退出程序"时退出。
-5. **多轮澄清**：意图模糊时主动追问，如"你想打开哪个页面？"
-6. **上下文理解**：根据对话历史理解代词和省略。
+3. **内层 Tab 切换**：理解"打开评价的作品页面"这种"父页面+内层 Tab"指令。
+4. **返回操作**：用户说"返回""回去""上一页"时执行返回。
+5. **退出操作**：退出系统/退出登录。
+6. **多轮澄清**：意图模糊时主动追问，如"你想打开哪个页面？"
+7. **自由问答**：用户问问题时直接给出简短答案（≤60字适合朗读）。
+
+## 底部 Tab 结构（角色不同 label 不同，keyword 相同）
+- **教师/管理员**：首页 | 图谱 | 教学 | 评价 | 达成 | 归档 [+管理]
+- **学生**：首页 | 图谱 | 学习 | 实验 | 考核 | 作品
+- 教师的"教学"=学生的"学习" → keyword: learning
+- 教师的"评价"聚合了学生的"实验+考核+作品" → keyword: assessment
+- 用户说"课堂"/"课程"也映射到 keyword: learning
+- 用户说"实验"/"考核"/"作品"时，如果是教师角色也填 keyword: assessment
 
 ## 可导航主页面（底部Tab）
 $_pageListForPrompt
@@ -116,14 +148,20 @@ $_pageListForPrompt
 ## 可导航子页面（二级页面）
 $_subPageListForPrompt
 
+## 可切换的内层 Tab（顶层页面内部的 TabController）
+$_innerTabListForPrompt
+
 ## 输出格式
 你必须返回 **严格 JSON**（不包含 markdown 代码块标记），格式如下：
 
 主页面导航：
-{"intent":"navigate","keyword":"graph","label":"知识图谱","reply":"好的，正在打开知识图谱。"}
+{"intent":"navigate","keyword":"learning","label":"教学","reply":"好的，正在打开教学。"}
 
 子页面导航：
 {"intent":"sub_page","keyword":"wrong_answers","label":"错题本","reply":"好的，正在打开错题本。"}
+
+内层 Tab 切换（必须同时给 page 和 tab）：
+{"intent":"inner_tab","page":"assessment","tab":"项目","reply":"好的，切换到考核的项目。"}
 
 返回上一页：
 {"intent":"back","reply":"好的，正在返回上一页。"}
@@ -134,20 +172,27 @@ $_subPageListForPrompt
 退出系统：
 {"intent":"exit_app","reply":"好的，正在退出系统。"}
 
-需要澄清：
+退出登录：
+{"intent":"logout","reply":"好的，正在退出登录。"}
+
+需要澄清（仅当用户意图完全无法判断时才用，不要对明确的页面名称追问）：
 {"intent":"clarify","reply":"你想打开哪个页面呢？"}
 
-闲聊/问候/帮助：
-{"intent":"chat","reply":"你好！我是小知，可以帮你导航。试试说"打开图谱"或"返回"。"}
+闲聊/问候/问答：
+{"intent":"chat","reply":"<对用户问题的简短回答，或问候>"}
 
 ## 规则
-- reply 字段必须简短（≤40字），适合语音朗读。
-- keyword 必须是上述页面列表中的 keyword 值之一。
+- reply 必须简短（≤60 字），适合语音朗读，**不要包含 markdown 标记**。
+- keyword 必须是上述"可导航主页面"清单里的 keyword 值之一。
+- **重要**：用户说"打开教学""打开课堂""打开学习""打开课程"→ keyword: learning
+- **重要**：用户说"打开评价""打开考核""打开实验""打开作品"→ keyword: assessment（教师的评价中心聚合这些）
+- inner_tab 的 page 必须是 assessment/works/achievement/classroom/lab/learning 之一。
+- 用户说"打开评价的作品页"→ inner_tab: page=assessment, tab=项目。
 - 只返回 JSON，不要返回任何其他文字。
-- 如果用户提到章节号（如"第三章"），在 JSON 中额外添加 "chapter": 3。
+- 如果用户问知识类问题，用 chat 意图作答。
 - "返回""回去""上一页""后退" → intent: back
 - "退出系统""关闭应用""退出程序""关闭系统" → intent: exit_app
-- "退出登录""注销""登出" → 不要用此prompt处理，会在代码中快速通道处理。''',
+- "退出登录""注销""登出" → intent: logout''',
         priority: 9,
         requiresAi: true,
         keywords: [
@@ -379,18 +424,21 @@ $_subPageListForPrompt
     try {
       // 尝试从响应中提取 JSON
       final raw = result.content.trim();
+      InitLogger.log('voice', '_parseAiResponse rawLen=${raw.length} raw="${raw.length > 200 ? '${raw.substring(0, 200)}...' : raw}"');
       final jsonStr = _extractJson(raw);
+      InitLogger.log('voice', '_parseAiResponse jsonStrLen=${jsonStr.length} jsonStr="${jsonStr.length > 200 ? '${jsonStr.substring(0, 200)}...' : jsonStr}"');
       final json = jsonDecode(jsonStr) as Map<String, dynamic>;
 
       final intent = json['intent'] as String? ?? 'chat';
       final reply = json['reply'] as String? ?? '我没听清，请再说一遍。';
+      InitLogger.log('voice', '_parseAiResponse intent=$intent keyword=${json['keyword']} label=${json['label']} page=${json['page']} tab=${json['tab']}');
 
       switch (intent) {
         case 'navigate':
           final keyword = json['keyword'] as String? ?? '';
           final label = json['label'] as String? ?? keyword;
           final chapter = json['chapter'];
-          final params = <String, dynamic>{'keyword': keyword};
+          final params = <String, dynamic>{'keyword': keyword, 'label': label};
           if (chapter != null) params['chapter'] = chapter;
           return buildReply(
             reply,
@@ -415,6 +463,23 @@ $_subPageListForPrompt
               type: 'navigate_sub_page',
               params: {'keyword': keyword},
               description: '打开子页面$label',
+            ),
+            modelProvider: result.provider,
+            modelName: result.model,
+            promptTokens: result.promptTokens,
+            completionTokens: result.completionTokens,
+            totalTokens: result.totalTokens,
+          );
+
+        case 'inner_tab':
+          final page = json['page'] as String? ?? '';
+          final tab = json['tab'] as String? ?? '';
+          return buildReply(
+            reply,
+            action: AgentAction(
+              type: 'inner_tab',
+              params: {'page': page, 'tab': tab},
+              description: '切到 $page 的 $tab',
             ),
             modelProvider: result.provider,
             modelName: result.model,
@@ -451,6 +516,20 @@ $_subPageListForPrompt
             totalTokens: result.totalTokens,
           );
 
+        case 'logout':
+          return buildReply(
+            reply,
+            action: const AgentAction(
+              type: 'navigate_login',
+              description: '退出登录',
+            ),
+            modelProvider: result.provider,
+            modelName: result.model,
+            promptTokens: result.promptTokens,
+            completionTokens: result.completionTokens,
+            totalTokens: result.totalTokens,
+          );
+
         case 'clarify':
         case 'chat':
         case 'status':
@@ -464,9 +543,9 @@ $_subPageListForPrompt
             totalTokens: result.totalTokens,
           );
       }
-    } catch (e) {
+    } catch (e, st) {
       // JSON 解析失败，直接返回 AI 原文
-      debugPrint('VoiceAgent: JSON 解析失败: $e');
+      InitLogger.error('voice', 'VoiceAgent JSON 解析失败 raw="${result.content.length > 100 ? '${result.content.substring(0, 100)}...' : result.content}" error=$e', st);
       return buildReply(
         result.content,
         modelProvider: result.provider,

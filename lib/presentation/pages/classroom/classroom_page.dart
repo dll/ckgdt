@@ -7,6 +7,7 @@ import '../../../services/auth_service.dart';
 import '../../../services/sync_service.dart';
 import '../../../core/constants/role_guard.dart';
 import '../../widgets/agent_entry_button.dart';
+import '../../widgets/inner_tab_request_mixin.dart';
 import 'classroom_question_tab.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
@@ -29,7 +30,7 @@ class ClassroomPage extends StatefulWidget {
 }
 
 class _ClassroomPageState extends State<ClassroomPage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, InnerTabRequestMixin {
   late TabController _tabController;
   final _authService = AuthService();
   final _classroomDao = ClassroomDao();
@@ -40,10 +41,21 @@ class _ClassroomPageState extends State<ClassroomPage>
   List<Map<String, dynamic>> _classes = [];
 
   @override
+  String get innerTabPageKey => 'classroom';
+  @override
+  String get innerTabSpeakLabel => '课堂';
+  @override
+  TabController get innerTabController => _tabController;
+  @override
+  List<String> innerTabLabels() =>
+      const ['在线状态', '课堂签到', '课堂互动', '课堂工具', '课堂提问'];
+
+  @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 5, vsync: this);
     _init();
+    bindInnerTabRequest();
   }
 
   Future<void> _init() async {
@@ -70,6 +82,7 @@ class _ClassroomPageState extends State<ClassroomPage>
 
   @override
   void dispose() {
+    unbindInnerTabRequest();
     _tabController.dispose();
     super.dispose();
   }

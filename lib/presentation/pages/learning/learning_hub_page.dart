@@ -20,6 +20,7 @@ import '../materials/ai_settings_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../data/local/hot_video_dao.dart';
 import '../../widgets/agent_entry_button.dart';
+import '../../widgets/inner_tab_request_mixin.dart';
 import '../../widgets/markdown_bubble.dart';
 import '../admin/data_import_page.dart';
 import '../quiz/quiz_page.dart';
@@ -40,7 +41,7 @@ class LearningHubPage extends StatefulWidget {
 }
 
 class _LearningHubPageState extends State<LearningHubPage>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, InnerTabRequestMixin {
   late TabController _tabController;
   final _authService = AuthService();
 
@@ -80,10 +81,21 @@ class _LearningHubPageState extends State<LearningHubPage>
       initialIndex: widget.initialTab,
     );
     _loadAllData();
+    bindInnerTabRequest();
   }
 
   @override
+  String get innerTabPageKey => 'learning';
+  @override
+  String get innerTabSpeakLabel => '学习';
+  @override
+  TabController get innerTabController => _tabController;
+  @override
+  List<String> innerTabLabels() => const ['视频', 'PPT', 'PDF', '测验', '助手'];
+
+  @override
   void dispose() {
+    unbindInnerTabRequest();
     _tabController.dispose();
     _inputController.dispose();
     _scrollController.dispose();

@@ -16,6 +16,7 @@ import '../../../services/course_resource_service.dart';
 import '../../../services/pdf_text_service.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../widgets/agent_entry_button.dart';
+import '../../widgets/inner_tab_request_mixin.dart';
 import '../admin/repo_detail_page.dart';
 import 'lab_material_preview_page.dart';
 import '../learning/pdf_viewer_page.dart';
@@ -280,7 +281,7 @@ Future<void> previewOrPromptSync(
 }
 
 class _LabTasksPageState extends State<LabTasksPage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, InnerTabRequestMixin {
   late TabController _tabController;
   final _authService = AuthService();
   final _labTaskDao = LabTaskDao();
@@ -289,11 +290,23 @@ class _LabTasksPageState extends State<LabTasksPage>
   bool get _isTeacherOrAdmin => _authService.isTeacher || _authService.isAdmin;
 
   @override
+  String get innerTabPageKey => 'lab';
+  @override
+  String get innerTabSpeakLabel => '实验';
+  @override
+  TabController get innerTabController => _tabController;
+  @override
+  List<String> innerTabLabels() => _isTeacherOrAdmin
+      ? const ['任务列表', '提交管理', '实验报告', '实验材料', '任务管理', 'AI批阅', '仓库报表']
+      : const ['任务列表', '我的提交', '实验报告', '实验材料', '仓库报表'];
+
+  @override
   void initState() {
     super.initState();
     final tabCount = _isTeacherOrAdmin ? 7 : 5;
     _tabController = TabController(length: tabCount, vsync: this);
     _initData();
+    bindInnerTabRequest();
   }
 
   Future<void> _initData() async {
@@ -307,6 +320,7 @@ class _LabTasksPageState extends State<LabTasksPage>
 
   @override
   void dispose() {
+    unbindInnerTabRequest();
     _tabController.dispose();
     super.dispose();
   }
