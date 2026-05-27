@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -13,12 +14,11 @@ import 'presentation/pages/login/login_page.dart';
 import 'presentation/pages/feedback/feedback_dialog.dart';
 import 'presentation/pages/feedback/ai_help_dialog.dart';
 import 'presentation/pages/cross_platform/cross_platform_hub_page.dart';
-import 'presentation/widgets/voice_input_button.dart';
 import 'presentation/widgets/agent_chat_overlay.dart';
 import 'services/voice_service.dart';
-import 'services/navigation_service.dart';
+import 'services/voice_assistant_controller.dart';
+import 'services/tts_flutter_service.dart';
 import 'services/auth_service.dart';
-import 'services/agent/agent_registry.dart';
 import 'presentation/pages/profile/virtual_twin_page.dart';
 
 import 'core/constants/color_ohos_compat.dart';
@@ -92,6 +92,9 @@ void main() async {
         'main', 'startup with init error = ${DatabaseHelper.lastInitError}');
   }
   InitLogger.log('main', 'runApp');
+
+  // 预初始化 TTS — 不阻塞冷启动；首次 speak 时不再有 init 延迟
+  unawaited(TtsFlutterService.instance.initialize());
 
   runApp(MyApp(dbLocked: dbLocked, dbError: dbError));
 }
@@ -275,6 +278,8 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
   late AnimationController _animController;
   late Animation<double> _expandAnimation;
 
+  bool _voiceActive = false;
+
   @override
   void initState() {
     super.initState();
@@ -286,12 +291,19 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
       parent: _animController,
       curve: Curves.easeOutCubic,
     );
+    _voiceActive = VoiceAssistantController.instance.isListening.value;
+    VoiceAssistantController.instance.isListening.addListener(_onVoiceChanged);
   }
 
   @override
   void dispose() {
+    VoiceAssistantController.instance.isListening.removeListener(_onVoiceChanged);
     _animController.dispose();
     super.dispose();
+  }
+
+  void _onVoiceChanged() {
+    if (mounted) setState(() => _voiceActive = VoiceAssistantController.instance.isListening.value);
   }
 
   void _toggle() {
@@ -337,12 +349,18 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
     }
   }
 
-  Future<void> _showVoiceNavigation() async {
+  Future<void> _toggleVoice() async {
     _collapse();
+    final ctrl = VoiceAssistantController.instance;
+
+    if (_voiceActive) {
+      await ctrl.stopLoop();
+      return;
+    }
+
     final navContext = widget.navigatorKey.currentContext;
     if (navContext == null) return;
 
-    // 检查语音配置
     final configured = await VoiceService.isConfigured();
     if (!configured) {
       if (navContext.mounted) {
@@ -356,22 +374,7 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
       return;
     }
 
-    if (!navContext.mounted) return;
-    // 持续监听模式（小度风格）：每识别一句就执行导航，dialog 不关。
-    // 用户主动点"完成"才结束。dialog 内自闭环管理生命周期，避免之前
-    // "导航成功后 dialog 异步残余 pop 把根页面也 pop 掉"的退出 bug。
-    await showDialog<void>(
-      context: navContext,
-      barrierDismissible: false,
-      builder: (ctx) => VoiceNavigationDialog(
-        continuousMode: true,
-        onSentence: (sentence) {
-          if (navContext.mounted) {
-            _navigateByVoiceText(navContext, sentence);
-          }
-        },
-      ),
-    );
+    await ctrl.startLoop();
   }
 
   void _showAgentChat() {
@@ -395,92 +398,6 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
         MaterialPageRoute(builder: (_) => const VirtualTwinPage()),
       );
     }
-  }
-
-  /// 根据语音文本进行全局页面导航
-  ///
-  /// 四级路由：快速通道（返回/退出）→ Tab 映射 → 子页面匹配 → AI 智能体
-  void _navigateByVoiceText(BuildContext context, String text) {
-    final navService = NavigationService.instance;
-    final normalized =
-        text.replaceAll(RegExp(r'[，。！？、\s]'), '').toLowerCase();
-
-    // ── 快速通道：返回操作 ──
-    if (normalized == '返回' ||
-        normalized == '回去' ||
-        normalized == '上一页' ||
-        normalized == '后退' ||
-        normalized.contains('返回上一页') ||
-        normalized.contains('回到上一页')) {
-      if (normalized.contains('首页') || normalized.contains('主页')) {
-        // 持续模式：dialog 是栈顶 ModalRoute，popUntil 会误伤
-        // → 改用 navService.popToRoot() （直接走根 navigator key）
-        navService.popToRoot();
-        navService.switchToTab(0);
-      } else {
-        navService.goBack();
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('语音导航: "$text" → 返回'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-
-    // ── 快速通道：退出系统 ──
-    if ((normalized.contains('退出') && normalized.contains('系统')) ||
-        (normalized.contains('退出') && normalized.contains('程序')) ||
-        (normalized.contains('关闭') && normalized.contains('应用')) ||
-        (normalized.contains('关闭') && normalized.contains('系统')) ||
-        (normalized.contains('关闭') && normalized.contains('程序'))) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('正在退出系统…'),
-          duration: Duration(seconds: 1),
-        ),
-      );
-      navService.exitApp();
-      return;
-    }
-
-    // 注意：之前这里有 navigator.popUntil((r) => r.isFirst) 兜底
-    // —— 但持续语音模式下会把 dialog 自身也 pop 掉（dialog 是 ModalRoute），
-    // 改用 navService.popToRoot() 直接通过 NavigationService 操作根 navigator。
-    // navigateByKeyword 命中时它内部用 onSwitchTab 切 Tab，不影响 dialog。
-
-    // ── Tab 映射（角色感知，动态注册） ──
-    if (navService.navigateByKeyword(normalized)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('语音导航: "$text"'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-
-    // ── 子页面匹配（统一使用 NavigationService） ──
-    if (navService.navigateToSubPage(normalized)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('语音导航: "$text"'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-
-    // ── 都没匹配 → 分发给 AI 智能体 ──
-    final registry = AgentRegistry.instance;
-    registry.dispatch(text);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('正在理解: "$text"'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
   }
 
   @override
@@ -543,15 +460,15 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
           onTap: _showCrossPlatform,
         ),
 
-        // 子按钮：语音导航（最上方）
+        // 子按钮：语音（上）— 点击开启/关闭常驻聆听
         _buildPositionedSubButton(
           offset: 224,
           isOnRight: isOnRight,
           size: size,
-          icon: Icons.mic,
-          label: '语音',
-          color: Colors.teal,
-          onTap: _showVoiceNavigation,
+          icon: _voiceActive ? Icons.mic_off : Icons.mic,
+          label: _voiceActive ? '关闭' : '语音',
+          color: _voiceActive ? Colors.red : Colors.teal,
+          onTap: _toggleVoice,
         ),
 
         // 子按钮：多智能体助手

@@ -36,6 +36,7 @@ import '../admin/teacher_application_manage_page.dart';
 import '../analytics/learning_analytics_page.dart';
 import '../analytics/token_stats_page.dart';
 import '../works/works_page.dart';
+import '../archive/archive_page.dart';
 import '../lab/lab_tasks_page.dart';
 import '../repo/git_repo_page.dart';
 import '../repo/student_repo_page.dart';
@@ -165,7 +166,15 @@ class _HomePageState extends State<HomePage> {
       ));
       bodyMap[destinations.length - 1] = () => const AchievementPage();
 
-      // 5: 管理（仅管理员）
+      // 5: 归档（教师/管理员通用）
+      destinations.add(const NavigationDestination(
+        icon: Icon(Icons.archive_outlined),
+        selectedIcon: Icon(Icons.archive),
+        label: '归档',
+      ));
+      bodyMap[destinations.length - 1] = () => const ArchivePage();
+
+      // 6: 管理（仅管理员）
       if (isAdmin) {
         destinations.add(const NavigationDestination(
           icon: Icon(Icons.admin_panel_settings_outlined),

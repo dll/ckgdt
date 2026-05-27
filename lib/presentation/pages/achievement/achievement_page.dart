@@ -3,6 +3,7 @@ import '../../../core/design/noir_tokens.dart';
 import '../../../data/local/achievement_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../widgets/agent_entry_button.dart';
+import '../../widgets/inner_tab_request_mixin.dart';
 import 'tabs/overview_tab.dart';
 import 'tabs/scores_tab.dart';
 import 'tabs/report_tab.dart';
@@ -23,7 +24,7 @@ class AchievementPage extends StatefulWidget {
 }
 
 class _AchievementPageState extends State<AchievementPage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, InnerTabRequestMixin {
   late TabController _tabController;
   final _authService = AuthService();
   final _achievementDao = AchievementDao();
@@ -40,13 +41,25 @@ class _AchievementPageState extends State<AchievementPage>
   ];
 
   @override
+  String get innerTabPageKey => 'achievement';
+  @override
+  String get innerTabSpeakLabel => '达成';
+  @override
+  TabController get innerTabController => _tabController;
+  @override
+  List<String> innerTabLabels() =>
+      _tabSpecs.map((s) => s.$2).toList(growable: false);
+
+  @override
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabSpecs.length, vsync: this);
+    bindInnerTabRequest();
   }
 
   @override
   void dispose() {
+    unbindInnerTabRequest();
     _tabController.dispose();
     super.dispose();
   }

@@ -176,7 +176,25 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
     _voiceService.onComplete = (text) {
       if (!mounted) return;
       final sentence = text.trim();
-      if (sentence.isEmpty) return;
+
+      if (sentence.isEmpty) {
+        // 无语音输入：持续模式自动重试，单句模式提示用户
+        if (widget.continuousMode) {
+          setState(() {
+            _errorMsg = '未检测到语音，正在重新聆听…';
+            _isListening = false;
+          });
+          _pulseController.stop();
+          _restartListening();
+        } else {
+          setState(() {
+            _errorMsg = '未检测到语音，请点击重试';
+            _isListening = false;
+          });
+          _pulseController.stop();
+        }
+        return;
+      }
 
       if (widget.continuousMode) {
         // 持续模式：把一句加入历史 → 触发回调 → 自动重启监听
@@ -184,6 +202,7 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
           _history.add(sentence);
           _recognizedText = '';
           _isListening = false;
+          _errorMsg = null;
         });
         _pulseController.stop();
         widget.onSentence?.call(sentence);
@@ -273,7 +292,7 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
               children: [
                 Icon(Icons.record_voice_over, color: primary),
                 const SizedBox(width: 8),
-                Text(continuous ? '语音助手（持续）' : '语音输入',
+                Text(continuous ? '语音助手' : '语音输入',
                     style: const TextStyle(
                         fontSize: 18, fontWeight: FontWeight.bold)),
               ],
@@ -281,7 +300,7 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
             const SizedBox(height: 8),
             Text(
               continuous
-                  ? '说一句执行一次操作，对话框不会关，点"完成"结束。'
+                  ? '说一句执行一次操作。'
                   : '说一句话即可，识别完成自动关闭。',
               style: TextStyle(fontSize: 12, color: Colors.grey[500]),
             ),
