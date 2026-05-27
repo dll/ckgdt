@@ -20,12 +20,17 @@ const examCourseDocs = {
   'beginning': [
     DocumentTypeDef(key: 'teaching_task', label: '教学任务单', iconCodePoint: '0xe3e4', canImport: true, canPrint: true),
     DocumentTypeDef(key: 'syllabus', label: '教学大纲', iconCodePoint: '0xe3e4', sourceTable: 'syllabus_items', canImport: true, needsGeneration: true, canPrint: true),
+    DocumentTypeDef(key: 'syllabus_evaluation', label: '大纲合理性评价表', iconCodePoint: '0xe869', canImport: true, canPrint: true),
+    DocumentTypeDef(key: 'syllabus_review', label: '大纲合理性审核表', iconCodePoint: '0xe8b1', canImport: true, canPrint: true),
     DocumentTypeDef(key: 'calendar', label: '教学日历', iconCodePoint: '0xe8b1', canImport: true, needsGeneration: true, canPrint: true),
     DocumentTypeDef(key: 'course_schedule', label: '课程课表', iconCodePoint: '0xe8b1', canImport: true, canPrint: true),
-    DocumentTypeDef(key: 'teaching_schedule', label: '教学进度表', iconCodePoint: '0xe8b1', canCreate: true, needsGeneration: true, canPrint: true),
+    DocumentTypeDef(key: 'teaching_schedule', label: '教学进度表', iconCodePoint: '0xe8b1', canCreate: true, needsGeneration: true, canImport: true, canPrint: true),
     DocumentTypeDef(key: 'lesson_plan', label: '教学教案', iconCodePoint: '0xe882', sourceTable: 'lesson_plans', needsGeneration: true, canPrint: true),
     DocumentTypeDef(key: 'courseware', label: '教学课件', iconCodePoint: '0xe2c7', canImport: true, needsGeneration: true, canPrint: false),
     DocumentTypeDef(key: 'roll_call', label: '学生点名册', iconCodePoint: '0xe7fb', canImport: true, canPrint: false),
+    DocumentTypeDef(key: 'teacher_guide', label: '教师教学指导手册', iconCodePoint: '0xe869', canImport: true, canPrint: true),
+    DocumentTypeDef(key: 'student_guide', label: '学生学习指导手册', iconCodePoint: '0xe8b1', canImport: true, canPrint: true),
+    DocumentTypeDef(key: 'assessment_plan', label: '综合考核方案', iconCodePoint: '0xe8b1', canImport: true, canPrint: true),
   ],
   'midterm': [
     DocumentTypeDef(key: 'midterm_exam', label: '期中试卷', iconCodePoint: '0xe869', needsGeneration: true),
@@ -49,12 +54,17 @@ const assessCourseDocs = {
   'beginning': [
     DocumentTypeDef(key: 'teaching_task', label: '教学任务单', iconCodePoint: '0xe3e4', canImport: true, canPrint: true),
     DocumentTypeDef(key: 'syllabus', label: '教学大纲', iconCodePoint: '0xe3e4', sourceTable: 'syllabus_items', canImport: true, needsGeneration: true, canPrint: true),
+    DocumentTypeDef(key: 'syllabus_evaluation', label: '大纲合理性评价表', iconCodePoint: '0xe869', canImport: true, canPrint: true),
+    DocumentTypeDef(key: 'syllabus_review', label: '大纲合理性审核表', iconCodePoint: '0xe8b1', canImport: true, canPrint: true),
     DocumentTypeDef(key: 'calendar', label: '教学日历', iconCodePoint: '0xe8b1', canImport: true, needsGeneration: true, canPrint: true),
     DocumentTypeDef(key: 'course_schedule', label: '课程课表', iconCodePoint: '0xe8b1', canImport: true, canPrint: true),
-    DocumentTypeDef(key: 'teaching_schedule', label: '教学进度表', iconCodePoint: '0xe8b1', canCreate: true, needsGeneration: true, canPrint: true),
+    DocumentTypeDef(key: 'teaching_schedule', label: '教学进度表', iconCodePoint: '0xe8b1', canCreate: true, needsGeneration: true, canImport: true, canPrint: true),
     DocumentTypeDef(key: 'lesson_plan', label: '教学教案', iconCodePoint: '0xe882', sourceTable: 'lesson_plans', needsGeneration: true, canPrint: true),
     DocumentTypeDef(key: 'courseware', label: '教学课件', iconCodePoint: '0xe2c7', canImport: true, needsGeneration: true, canPrint: false),
     DocumentTypeDef(key: 'roll_call', label: '学生点名册', iconCodePoint: '0xe7fb', canImport: true, canPrint: false),
+    DocumentTypeDef(key: 'teacher_guide', label: '教师教学指导手册', iconCodePoint: '0xe869', canImport: true, canPrint: true),
+    DocumentTypeDef(key: 'student_guide', label: '学生学习指导手册', iconCodePoint: '0xe8b1', canImport: true, canPrint: true),
+    DocumentTypeDef(key: 'assessment_plan', label: '综合考核方案', iconCodePoint: '0xe8b1', canImport: true, canPrint: true),
   ],
   'midterm': [
     DocumentTypeDef(key: 'midterm_check', label: '期中检查表', iconCodePoint: '0xe8b1', needsGeneration: true),
@@ -80,4 +90,14 @@ Map<String, List<DocumentTypeDef>> docsForCourseType(String courseType) =>
 List<DocumentTypeDef> docsForPeriod(String courseType, String period) {
   final all = docsForCourseType(courseType);
   return all[period] ?? [];
+}
+
+/// Detect course type from syllabus content.
+/// Returns 'assess' (考查) by default; 'exam' (考试) if syllabus explicitly contains 考试 and no 考查.
+String detectCourseTypeFromSyllabus(String? content) {
+  if (content == null || content.isEmpty) return 'assess';
+  final hasExam = content.contains('考试');
+  final hasAssess = content.contains('考查');
+  if (hasExam && !hasAssess) return 'exam';
+  return 'assess';
 }
