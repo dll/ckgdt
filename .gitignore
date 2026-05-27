@@ -99,3 +99,15 @@ pubspec_overrides.yaml
 # Claude Code 本地配置（settings.local.json 含本地路径白名单 / worktrees 是本地状态）
 .claude/*
 !.claude/skills/
+
+# ── IDE / 工具临时缓存（不该入库） ──
+.cursor-plugin/
+.omm/
+.flutter-plugins
+/android/build/
+
+# ── 编译/调试残留 ──
+nuget.exe
+ohos_build_log.txt
+*_temp.xlsx
+test/screenshots/failures/
