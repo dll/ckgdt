@@ -11,6 +11,7 @@ import 'package:printing/printing.dart';
 import '../../../../core/error_handler.dart';
 import '../../../../services/agent/agents/archive_agent.dart';
 import '../../../../services/archive/ai_audit_processor.dart';
+import '../../../../services/archive/ai_draft_processor.dart';
 import '../../../../services/archive/base_document_processor.dart';
 import '../../../../services/archive/pandoc_service.dart';
 import '../../../../services/archive/processor_registry.dart';
@@ -94,12 +95,25 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       builder: (_) => const Center(child: CircularProgressIndicator()),
     );
     try {
-      final doc = await widget.agent.generateDocument(
-        title: title,
-        documentType: def.key,
-        period: widget.periodKey,
-        courseType: widget.courseType,
-      );
+      // commit 7：优先走 ProcessorRegistry → AiDraftProcessor.generateAsDocument
+      // 内部仍委托 archive_agent，但走统一接口未来更易替换。
+      // 没注册的 docType（系统导入类不会有 needsGeneration）回退原路径。
+      final processor = ProcessorRegistry.instance.find(def.key);
+      ArchiveDocument doc;
+      if (processor is AiDraftProcessor) {
+        doc = await processor.generateAsDocument(
+          period: widget.periodKey,
+          courseType: widget.courseType,
+          title: title,
+        );
+      } else {
+        doc = await widget.agent.generateDocument(
+          title: title,
+          documentType: def.key,
+          period: widget.periodKey,
+          courseType: widget.courseType,
+        );
+      }
       if (mounted) Navigator.of(context).pop();
       _load();
       if (def.key == 'syllabus') widget.onSyllabusChanged?.call();
