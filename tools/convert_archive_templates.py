@@ -27,25 +27,38 @@ ROOT = Path(__file__).resolve().parent.parent
 SRC_ROOT = ROOT / "data" / "归档"
 DST_ROOT = ROOT / "assets" / "archive_templates"
 
-# 期间名 → 英文 key（避免 assets 中文路径在某些平台触发 bug）
+# 期间名 → 英文 key（与 lib/presentation/pages/archive/archive_constants.dart 的
+# archivePeriodKeys 对齐：beginning / midterm / final / archive）
 PERIOD_MAP = {
-    "期初": "start",
-    "期中": "mid",
-    "期末": "end",
-    "归档": "final",
+    "期初": "beginning",
+    "期中": "midterm",
+    "期末": "final",
+    "归档": "archive",
 }
 
 # 把同质模板归一化成 docType key（多份历届材料 → 同一 doc 类型 → AI 取最新一份当主参考、其它当副参考）
+#
 # **顺序敏感**：必须先匹配具体词（"合理性审核表"）再匹配宽泛词（"教学大纲"），否则
-# "课程教学大纲合理性审核表.docx" 会被先归到 syllabus 而不是 syllabus_audit。
+# "课程教学大纲合理性审核表.docx" 会被先归到 syllabus 而不是 syllabus_review。
+#
+# **命名口径**：与 lib/presentation/pages/archive/archive_constants.dart 的 docType
+# key 严格对齐（这个 key 是 archive_documents 表持久化的 documentType 字段值，
+# 改名会破坏 UI / 持久化，故以 archive_constants 为准）。
 DOC_TYPE_PATTERNS = [
-    (r"合理性审核表", "syllabus_audit"),
-    (r"合理性评价表", "syllabus_review"),
-    (r"达成评价报告|达成度评价", "obe_report"),
-    (r"教学进度表", "progress_table"),
+    # 期初材料
+    (r"合理性审核表", "syllabus_review"),       # archive_constants 命名
+    (r"合理性评价表", "syllabus_evaluation"),    # archive_constants 命名
+    (r"达成评价报告|达成度评价", "obe_report"),  # 期末材料的依据，期初放 _ref 也无妨
+    (r"教学进度表", "teaching_schedule"),
+    (r"教学日历|校\s*历", "calendar"),
     (r"考核方案|综合考核", "assessment_plan"),
-    (r"教学指导手册", "teaching_handbook"),
-    (r"学习指导手册", "learning_handbook"),
+    (r"教师教学指导手册|教师指导手册", "teacher_guide"),
+    (r"学生学习指导手册|学生指导手册", "student_guide"),
+    (r"教学教案|教案", "lesson_plan"),
+    (r"学生点名册|点名册", "roll_call"),
+    (r"课程课表|课程表", "course_schedule"),
+    (r"教学任务书|教学任务单", "teaching_task"),
+    # 兜底：任何还有"教学大纲"的进 syllabus
     (r"教学大纲", "syllabus"),
 ]
 
