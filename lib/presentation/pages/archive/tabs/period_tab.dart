@@ -15,6 +15,7 @@ import '../../../../services/archive/ai_draft_processor.dart';
 import '../../../../services/archive/base_document_processor.dart';
 import '../../../../services/archive/pandoc_service.dart';
 import '../../../../services/archive/processor_registry.dart';
+import '../../../../services/archive/review_result.dart';
 import '../../../../services/archive_package_service.dart';
 import '../../../../data/local/archive_dao.dart';
 import '../../../../data/models/archive_document_model.dart';
@@ -2414,13 +2415,10 @@ class DocCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
-    final hasDoc = doc != null;
-    final statusLabel = hasDoc
-        ? (doc!.status == 'archived' ? '已归档' : doc!.isGenerated ? '已生成' : '草稿')
-        : '未创建';
-    final statusColor = hasDoc
-        ? (doc!.status == 'archived' ? Colors.green : Colors.blue)
-        : Colors.grey;
+    final badge = _StatusBadge.from(doc);
+    // 桌面才允许打印 / 归档（PandocService + LibreOffice 子进程依赖）
+    final canDesktopOps =
+        !kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux);
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
@@ -2441,9 +2439,13 @@ class DocCard extends StatelessWidget {
                         onTap: onShowSource,
                         child: Icon(Icons.info_outline, size: 14, color: Colors.grey.shade500),
                       ),
+                      const SizedBox(width: 6),
+                      badge.build(),
                     ],
                   ),
-                  Text(statusLabel, style: TextStyle(fontSize: 11, color: statusColor)),
+                  if (badge.subtitle != null)
+                    Text(badge.subtitle!,
+                        style: TextStyle(fontSize: 11, color: badge.subtitleColor ?? Colors.grey)),
                 ],
               ),
             ),
@@ -2460,13 +2462,132 @@ class DocCard extends StatelessWidget {
             if (onPreview != null)
               ActionBtn(icon: Icons.visibility, tooltip: '预览', onTap: onPreview),
             if (onPrint != null)
-              ActionBtn(icon: Icons.print, tooltip: '打印', onTap: onPrint),
+              ActionBtn(
+                icon: Icons.print,
+                tooltip: canDesktopOps ? '打印' : '打印仅桌面端可用',
+                onTap: canDesktopOps ? onPrint : null,
+              ),
             if (onArchive != null)
-              ActionBtn(icon: Icons.archive, tooltip: '归档', color: Colors.green, onTap: onArchive),
+              ActionBtn(
+                icon: Icons.archive,
+                tooltip: canDesktopOps ? '归档' : '归档仅桌面端可用',
+                color: canDesktopOps ? Colors.green : null,
+                onTap: canDesktopOps ? onArchive : null,
+              ),
             if (onDelete != null)
               ActionBtn(icon: Icons.delete_outline, tooltip: '删除', color: Colors.red.shade300, onTap: onDelete),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// 状态徽标 —— 把 5 状态（未创建/草稿/审核中/已批准/已归档）+ 审核结果
+/// 错误/警告计数浓缩成一个 chip + 一行 subtitle。
+class _StatusBadge {
+  final String label;
+  final Color color;
+  final IconData? icon;
+  final String? subtitle;
+  final Color? subtitleColor;
+
+  _StatusBadge({
+    required this.label,
+    required this.color,
+    this.icon,
+    this.subtitle,
+    this.subtitleColor,
+  });
+
+  factory _StatusBadge.from(ArchiveDocument? doc) {
+    if (doc == null) {
+      return _StatusBadge(
+        label: '未创建',
+        color: Colors.grey,
+        icon: Icons.radio_button_unchecked,
+        subtitle: '尚未生成或导入',
+      );
+    }
+    final status = doc.status;
+    final review = ReviewResult.fromJson(doc.reviewJson);
+    final errCount = review.errors.length;
+    final warnCount = review.warnings.length;
+
+    switch (status) {
+      case 'archived':
+        return _StatusBadge(
+          label: '已归档',
+          color: Colors.green,
+          icon: Icons.check_circle,
+          subtitle: review.totalFindings > 0
+              ? '审核通过 (置信 ${(review.confidence * 100).toStringAsFixed(0)}%)'
+              : '已写入归档目录',
+          subtitleColor: Colors.green.shade700,
+        );
+      case 'approved':
+        return _StatusBadge(
+          label: '已批准',
+          color: Colors.green.shade600,
+          icon: Icons.task_alt,
+          subtitle: '可一键打印 / 归档',
+          subtitleColor: Colors.green.shade700,
+        );
+      case 'reviewing':
+        if (errCount > 0) {
+          return _StatusBadge(
+            label: '需修订',
+            color: Colors.red,
+            icon: Icons.error_outline,
+            subtitle: '$errCount 项错误'
+                '${warnCount > 0 ? ' / $warnCount 项建议' : ''}',
+            subtitleColor: Colors.red.shade700,
+          );
+        }
+        return _StatusBadge(
+          label: warnCount > 0 ? '建议改进' : '审核中',
+          color: Colors.orange,
+          icon: Icons.hourglass_top,
+          subtitle: warnCount > 0
+              ? '$warnCount 项建议（可忽略）'
+              : '等待审核',
+          subtitleColor: Colors.orange.shade700,
+        );
+      default: // draft
+        return _StatusBadge(
+          label: doc.isGenerated ? '已生成' : '草稿',
+          color: Colors.blue,
+          icon: doc.isGenerated ? Icons.auto_awesome : Icons.edit_note,
+          subtitle: doc.isGenerated
+              ? '由 AI 起草，待审核'
+              : '已创建，待审核',
+          subtitleColor: Colors.blue.shade700,
+        );
+    }
+  }
+
+  Widget build() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 0.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 11, color: color),
+            const SizedBox(width: 2),
+          ],
+          Text(label,
+              style: TextStyle(
+                fontSize: 10,
+                color: color,
+                fontWeight: FontWeight.w600,
+              )),
+        ],
       ),
     );
   }
