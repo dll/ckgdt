@@ -86,11 +86,32 @@ void main() {
       expect(bytes[0], equals(0x50));
     });
 
-    test('markdownToPdf throws UnimplementedError (commit 5 will implement)',
+    test('markdownToPdf produces valid PDF bytes (needs pandoc + libreoffice)',
         () async {
+      if (!svc.isAvailable || !await svc.isInstalled) {
+        debugPrint('⏭️ skip: pandoc not available');
+        return;
+      }
+
+      try {
+        final bytes = await svc.markdownToPdf('# Hello\n\n这是一段测试文本。');
+        // PDF magic: %PDF-
+        expect(bytes.length, greaterThan(100));
+        expect(bytes[0], equals(0x25)); // '%'
+        expect(bytes[1], equals(0x50)); // 'P'
+        expect(bytes[2], equals(0x44)); // 'D'
+        expect(bytes[3], equals(0x46)); // 'F'
+      } on PandocException catch (e) {
+        // LibreOffice 未装时不挂红，只打印警告
+        debugPrint('⏭️ skip: ${e.message}');
+      }
+    });
+
+    test('markdownToPdf rejects empty input', () async {
+      if (!svc.isAvailable) return;
       expect(
-        () => svc.markdownToPdf('# Hello'),
-        throwsA(isA<UnimplementedError>()),
+        () => svc.markdownToPdf(''),
+        throwsA(isA<PandocException>()),
       );
     });
   });

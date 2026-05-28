@@ -1,13 +1,17 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:excel/excel.dart' hide Border;
 import 'package:archive/archive.dart';
 import 'package:xml/xml.dart';
+import 'package:printing/printing.dart';
 import '../../../../core/error_handler.dart';
 import '../../../../services/agent/agents/archive_agent.dart';
 import '../../../../services/archive/ai_audit_processor.dart';
+import '../../../../services/archive/base_document_processor.dart';
+import '../../../../services/archive/pandoc_service.dart';
 import '../../../../services/archive/processor_registry.dart';
 import '../../../../data/local/archive_dao.dart';
 import '../../../../data/models/archive_document_model.dart';
@@ -122,10 +126,131 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
 
   Future<void> _printDoc(ArchiveDocument doc) async {
     if (!mounted) return;
-    final formatted = _officialFormat(doc);
+
+    // 跨平台守门：移动端 / web 不支持 pandoc + libreoffice 子进程
+    if (kIsWeb || !(Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('一键打印仅在 Windows/macOS/Linux 桌面端可用')),
+      );
+      return;
+    }
+
+    final content = doc.content ?? '';
+    if (content.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('文档内容为空，无法打印')),
+      );
+      return;
+    }
+
+    // loading 提示（pandoc + soffice 两步通常 5-15 秒）
     showDialog(
       context: context,
-      builder: (_) => _PrintPreviewDialog(doc: doc.copyWith(content: formatted)),
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: SizedBox(
+          height: 80,
+          child: Row(
+            children: [
+              SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
+              SizedBox(width: 16),
+              Expanded(child: Text('正在生成 PDF（pandoc + LibreOffice）...')),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final pdfBytes = await _renderPdfBytes(doc);
+      if (!mounted) return;
+      Navigator.of(context).pop(); // 关 loading
+
+      // 唤起系统打印对话框（用户选打印机/份数/页码）
+      await Printing.layoutPdf(
+        onLayout: (_) async => pdfBytes,
+        name: doc.title,
+      );
+    } on PandocException catch (e) {
+      swallowDebug(e, tag: 'ArchivePeriodTab._printDoc.pandoc');
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      _showPrintErrorDialog(
+        title: '打印环境未就绪',
+        message: e.message,
+      );
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ArchivePeriodTab._printDoc', stack: st);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('打印失败：$e')),
+      );
+    }
+  }
+
+  /// 走 ProcessorRegistry 拿 toPdf；未注册则用 PandocService 默认路径，
+  /// 自动从 `data/归档/<期>/模板/<docType>.docx` 找 reference-doc 继承样式。
+  Future<Uint8List> _renderPdfBytes(ArchiveDocument doc) async {
+    final processor = ProcessorRegistry.instance.find(doc.documentType);
+    if (processor != null && processor.supportsPrint) {
+      return processor.toPdf(doc);
+    }
+    // fallback：直接 pandoc，自动 reference-doc 发现
+    return PandocService.instance.markdownToPdf(
+      doc.content ?? '',
+      referenceDocPath: _autoReferenceDocFor(doc),
+    );
+  }
+
+  /// 自动发现 reference docx：`data/归档/<期>/模板/` 下文件名 contains label
+  String? _autoReferenceDocFor(ArchiveDocument doc) {
+    final root = BaseDocumentProcessor.archiveDataRoot;
+    if (root == null) return null;
+    final periodZh = periodLabel(doc.period);
+    final templateDir = Directory('$root${Platform.pathSeparator}$periodZh${Platform.pathSeparator}模板');
+    if (!templateDir.existsSync()) return null;
+    final defs = docsForCourseType(widget.courseType);
+    String? label;
+    for (final list in defs.values) {
+      for (final d in list) {
+        if (d.key == doc.documentType) {
+          label = d.label;
+          break;
+        }
+      }
+      if (label != null) break;
+    }
+    if (label == null) return null;
+    try {
+      for (final entry in templateDir.listSync()) {
+        if (entry is! File) continue;
+        if (!entry.path.toLowerCase().endsWith('.docx')) continue;
+        final base = entry.uri.pathSegments.last;
+        if (base.contains(label)) return entry.path;
+      }
+    } on Exception catch (e, st) {
+      swallowDebug(e, tag: 'ArchivePeriodTab._autoReferenceDocFor', stack: st);
+    }
+    return null;
+  }
+
+  void _showPrintErrorDialog({required String title, required String message}) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error),
+            const SizedBox(width: 8),
+            Expanded(child: Text(title)),
+          ],
+        ),
+        content: SingleChildScrollView(child: SelectableText(message)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('知道了')),
+        ],
+      ),
     );
   }
 
@@ -1865,14 +1990,11 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         .where((d) => d.canPrint && _findDoc(d) != null)
         .toList();
     if (toPrint.isEmpty) return;
+    // 顺序触发，每次都唤起系统打印框；用户可在框内取消跳过该份
     for (final def in toPrint) {
       final doc = _findDoc(def)!;
       if (!mounted) return;
-      final formatted = _officialFormat(doc);
-      await showDialog(
-        context: context,
-        builder: (_) => _PrintPreviewDialog(doc: doc.copyWith(content: formatted)),
-      );
+      await _printDoc(doc);
     }
   }
 
@@ -1887,80 +2009,6 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('已归档 ${toArchive.length} 份文档')),
       );
-    }
-  }
-
-  String _officialFormat(ArchiveDocument doc) {
-    final base = doc.content ?? '';
-    final hasContent = base.trim().isNotEmpty;
-    final ts = DateTime.now().toString().substring(0, 16);
-    const semester = '2025-2026学年第二学期';
-
-    /// Wrap actual content with official document header/footer
-    String wrap(String title, [String? extraHeader]) {
-      final buf = StringBuffer();
-      buf.writeln('# $title\n');
-      if (extraHeader != null) buf.writeln('$extraHeader\n');
-      buf.writeln('---\n');
-
-      if (doc.documentType == 'teaching_task' && hasContent) {
-        // Parse 2-column KV table (项目 | 内容) → single 10-column data row
-        final kv = <String, String>{};
-        for (final line in base.split('\n')) {
-          final m = RegExp(r'^\|\s*(.+?)\s*\|\s*(.+?)\s*\|$').firstMatch(line.trim());
-          if (m != null) kv[m.group(1)!.trim()] = m.group(2)!.trim();
-        }
-        const keyMap = {
-          '课程名称': '课程名称', '课程类别': '课程类别',
-          '总学时': '总学时', '讲授': '讲授',
-          '实验': '实验', '实践': '实践',
-          '课外自主学时': '课外自主', '教学班级': '教学班级',
-          '计划人数': '计划人数', '备注': '备注',
-        };
-        final teacherMatch = RegExp(r'\*\*教师\*\*[：:]\s*(.*?)[\n|]').firstMatch(base);
-        final teacher = teacherMatch?.group(1)?.trim() ?? '';
-        final semesterMatch = RegExp(r'\*\*学期\*\*[：:]\s*(.*?)[\n|]').firstMatch(base);
-        final semesterText = semesterMatch?.group(1)?.trim() ?? semester;
-        buf.writeln('**院（系）：** ________     **教研室主任：** ________\n');
-        buf.writeln('经学校批准聘请 **$teacher** 老师担任 **$semesterText** 以下教学任务：\n');
-        buf.writeln('| 课程名称 | 课程类别 | 总学时 | 讲授 | 实验 | 实践 | 课外自主 | 教学班级 | 计划人数 | 备注 |');
-        buf.writeln('|----------|----------|--------|------|------|------|----------|----------|----------|------|');
-        buf.write('|');
-        for (final col in keyMap.keys) {
-          buf.write(' ${kv[col] ?? ''} |');
-        }
-        buf.writeln('');
-        buf.writeln('');
-        buf.writeln('**系（部）主任：** ________     **教研室主任：** ________\n');
-        buf.writeln('**填表人：** ________     **日期：** ____年____月____日\n');
-      } else if (hasContent) {
-        // Use actual content (already structured markdown)
-        buf.writeln(base.trim());
-      } else {
-        // Show empty template
-        buf.writeln('（暂无内容）');
-      }
-      buf.writeln('');
-      buf.writeln('---');
-      buf.writeln('> 打印时间：$ts');
-      return buf.toString();
-    }
-
-    switch (doc.documentType) {
-      case 'teaching_task':
-        return wrap('教 学 任 务 书');
-      case 'syllabus':
-        return wrap('教 学 大 纲');
-      case 'calendar':
-        return wrap('校 历', '**学年学期：** $semester');
-      case 'course_schedule':
-        return wrap('课 程 课 表', '**学期：** $semester  **课程：** 移动应用开发  **班级：** 软件231,软件232');
-      case 'teaching_schedule':
-        return wrap('教 学 进 度 表', '**学期：** $semester  **课程：** 移动应用开发  **班级：** 软件231,软件232');
-      case 'lesson_plan':
-        return wrap('教 学 教 案');
-      default:
-        return base;
     }
   }
 
@@ -2262,49 +2310,6 @@ class _DocumentPreviewSheet extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _PrintPreviewDialog extends StatelessWidget {
-  final ArchiveDocument doc;
-  const _PrintPreviewDialog({required this.doc});
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('打印预览'),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(doc.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const Divider(),
-            Expanded(
-              child: SingleChildScrollView(
-                child: doc.content != null
-                    ? MarkdownBubble(content: doc.content!)
-                    : const Text('（文档无内容）'),
-              ),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
-        FilledButton.icon(
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('已发送到打印机：${doc.title}')),
-            );
-            Navigator.pop(context);
-          },
-          icon: const Icon(Icons.print),
-          label: const Text('确认打印'),
-        ),
-      ],
     );
   }
 }
