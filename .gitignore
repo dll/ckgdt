@@ -111,3 +111,6 @@ nuget.exe
 ohos_build_log.txt
 *_temp.xlsx
 test/screenshots/failures/
+
+# ── 归档输出（一键归档落盘 docx + zip）──
+/archive_out/
