@@ -3,8 +3,8 @@
   "user_id": "2023210599",
   "user_name": "姜少威",
   "role": "student",
-  "synced_at": "2026-05-28T22:10:31.630414",
-  "last_active": "2026-05-28T22:10:31.554829",
+  "synced_at": "2026-05-28T22:58:47.406422",
+  "last_active": "2026-05-28T22:58:47.402907",
   "quiz_results": [
     {
       "user_id": "2023210599",
@@ -168,20 +168,6 @@
   "checkin_records": [],
   "work_comments": [],
   "work_likes": [],
-  "notification_recipients": [
-    {
-      "notification_id": 1,
-      "user_id": "2023210599",
-      "is_read": 0,
-      "read_at": null
-    },
-    {
-      "notification_id": 2,
-      "user_id": "2023210599",
-      "is_read": 0,
-      "read_at": null
-    }
-  ],
   "work_views": [
     {
       "work_id": 86,
