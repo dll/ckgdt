@@ -63,6 +63,12 @@ flutter:
     - assets/graphs/05-教学图谱/
     - assets/graphs/06-学习图谱/
     - assets/agent_prompts/
+    - assets/archive_templates/start/
+    - assets/archive_templates/start/_ref/syllabus/
+    - assets/archive_templates/start/_ref/assessment_plan/
+    - assets/archive_templates/start/_ref/progress_table/
+    - assets/archive_templates/start/_ref/learning_handbook/
+    - assets/archive_templates/start/_ref/teaching_handbook/
     - data/实验/实验教程/
     - data/实验/移动技术栈/
     - data/实验/实验指导/
