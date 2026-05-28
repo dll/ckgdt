@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'ai_audit_processor.dart';
 import 'document_processor.dart';
 
 /// 归档文档处理器注册表（单例）。
@@ -42,15 +43,23 @@ class ProcessorRegistry {
   }
 
   /// 注册全部内置 Processor。
-  /// commit 4-7 会逐步往这里加：
-  ///   - commit 4: AiAuditProcessor (syllabus_review / syllabus_evaluation)
-  ///   - commit 7: AiDraftProcessor (syllabus / lesson_plan / teaching_schedule / ...)
-  ///   - 如果做 SystemImportProcessor: teaching_task / course_schedule / calendar / roll_call
-  ///
-  /// 当前 commit 3 仅做骨架，注册表为空。UI 调 find() 都返回 null，回退到
-  /// 现有 archive_agent.generateDocument 路径（兼容）。
+  /// commit 4: AiAuditProcessor 大纲合理性审核表 / 评价表
+  /// 后续 commit 5/6/7 会逐步加 SystemImport / AiDraft 类型
   void registerAll() {
-    // 留给后续 commit 填充
+    // 大纲合理性审核表 — 审核源 docType=syllabus，结果落 docType=syllabus_review
+    register(AiAuditProcessor(
+      targetDocType: 'syllabus',
+      targetDocLabel: '教学大纲',
+      auditDocType: 'syllabus_review',
+      auditDocLabel: '大纲合理性审核表',
+    ));
+    // 大纲合理性评价表 — 同样审核教学大纲，但出第二份评价表（二审视角）
+    register(AiAuditProcessor(
+      targetDocType: 'syllabus',
+      targetDocLabel: '教学大纲',
+      auditDocType: 'syllabus_evaluation',
+      auditDocLabel: '大纲合理性评价表',
+    ));
   }
 
   /// 测试用：清空注册表

@@ -7,10 +7,13 @@ import 'package:archive/archive.dart';
 import 'package:xml/xml.dart';
 import '../../../../core/error_handler.dart';
 import '../../../../services/agent/agents/archive_agent.dart';
+import '../../../../services/archive/ai_audit_processor.dart';
+import '../../../../services/archive/processor_registry.dart';
 import '../../../../data/local/archive_dao.dart';
 import '../../../../data/models/archive_document_model.dart';
 import '../../../../presentation/widgets/markdown_bubble.dart';
 import '../archive_constants.dart';
+import '../widgets/review_result_dialog.dart';
 
 class ArchivePeriodTab extends StatefulWidget {
   final String periodKey;
@@ -128,6 +131,17 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
 
   Future<void> _reviewDoc(ArchiveDocument doc) async {
     if (!mounted) return;
+
+    // commit 4：优先走 Processor 路径（结构化审核 + 自动创建审核表卡片）。
+    // 当前注册了 syllabus 的 AiAuditProcessor → docType=syllabus 的文档走新流水线。
+    // 其它 docType 仍回退到旧的 archive_agent.reviewDocument（markdown 字符串）。
+    final processor = _findAuditProcessorFor(doc);
+    if (processor != null) {
+      await _reviewDocViaProcessor(doc, processor);
+      return;
+    }
+
+    // ── 回退：旧版 markdown 审核（保留向后兼容）───────────────────────────
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -163,6 +177,60 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('审核失败，请重试')),
+        );
+      }
+    }
+  }
+
+  /// 查找该 doc.documentType 对应的 AiAuditProcessor。
+  /// 注意：审核处理器的 targetDocType 是被审目标，所以遍历找 targetDocType 匹配的。
+  AiAuditProcessor? _findAuditProcessorFor(ArchiveDocument doc) {
+    final reg = ProcessorRegistry.instance;
+    for (final t in reg.registeredDocTypes) {
+      final p = reg.find(t);
+      if (p is AiAuditProcessor && p.targetDocType == doc.documentType) {
+        return p;
+      }
+    }
+    return null;
+  }
+
+  /// Processor 路径：跑 reviewTarget → 弹 ReviewResultDialog（含三栏 + 忽略 + 再审）
+  Future<void> _reviewDocViaProcessor(
+    ArchiveDocument doc,
+    AiAuditProcessor processor,
+  ) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+    try {
+      final result = await processor.reviewTarget(doc);
+      if (!mounted) return;
+      Navigator.of(context).pop(); // 关 loading
+
+      // 重新拉一次 doc 以拿到最新的 reviewJson / status
+      final fresh = await widget.dao.getDocumentById(doc.id!);
+      final target = fresh ?? doc;
+      if (!mounted) return;
+
+      await showDialog(
+        context: context,
+        builder: (_) => ReviewResultDialog(
+          target: target,
+          initial: result,
+          onUpdated: (_) => _load(), // 父级刷新文档列表（审核表自动出现）
+        ),
+      );
+      // 对话框关闭后再刷一次（覆盖再审/忽略后的状态）
+      if (mounted) await _load();
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ArchivePeriodTab._reviewDocViaProcessor', stack: st);
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('AI 审核失败：$e')),
         );
       }
     }

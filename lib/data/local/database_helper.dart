@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
 import '../../core/init_logger.dart';
+import '../../core/error_handler.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -62,7 +63,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 24,
+      version: 25,
       singleInstance: true, // 启用单例模式
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
@@ -117,7 +118,7 @@ class DatabaseHelper {
         // 重新打开（版本号必须与主初始化一致）
         final db2 = await openDatabase(
           dbName,
-          version: 24,
+          version: 25,
           singleInstance: true, // 启用单例模式
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
@@ -195,7 +196,7 @@ class DatabaseHelper {
     Database db;
     db = await openDatabase(
       dbPath,
-      version: 24,
+      version: 25,
       singleInstance: true, // 启用单例模式，防止多实例同时访问
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
@@ -694,6 +695,9 @@ class DatabaseHelper {
     if (oldVersion < 24) {
       await _migrateToV24(db);
     }
+    if (oldVersion < 25) {
+      await _migrateToV25(db);
+    }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
   }
@@ -1024,6 +1028,7 @@ class DatabaseHelper {
     ''');
 
     // ── 教学归档文档表（第八轮新增）──────────────────────────
+    // V25 新增 review_json / reviewed_at / origin_doc_id 列：审核流水线持久化
     await db.execute('''
       CREATE TABLE IF NOT EXISTS archive_documents(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1035,6 +1040,9 @@ class DatabaseHelper {
         content TEXT,
         file_path TEXT,
         is_generated INTEGER DEFAULT 0,
+        review_json TEXT DEFAULT '',
+        reviewed_at TEXT DEFAULT '',
+        origin_doc_id INTEGER,
         created_at TEXT,
         updated_at TEXT
       )
@@ -1922,6 +1930,30 @@ class DatabaseHelper {
     try {
       await db.execute('ALTER TABLE ai_chat_history ADD COLUMN model TEXT');
     } catch (_) {}
+  }
+
+  /// V25: archive_documents 新增 review_json + status 流转列（commit 4 审核流水线）
+  Future<void> _migrateToV25(Database db) async {
+    try {
+      await db.execute(
+          "ALTER TABLE archive_documents ADD COLUMN review_json TEXT DEFAULT ''");
+    } catch (e, st) {
+      swallow(e, tag: 'V25.add_review_json'); // 列已存在是常态，吞掉
+    }
+    try {
+      await db.execute(
+          "ALTER TABLE archive_documents ADD COLUMN reviewed_at TEXT DEFAULT ''");
+    } catch (e, st) {
+      swallow(e, tag: 'V25.add_reviewed_at');
+    }
+    // origin_doc_id：审核表所属的源文档 ID（如 syllabus_review 指向源 syllabus 的 ID）
+    // 让我们能查询"教学大纲 #5 对应的审核表是哪份"。
+    try {
+      await db.execute(
+          'ALTER TABLE archive_documents ADD COLUMN origin_doc_id INTEGER');
+    } catch (e, st) {
+      swallow(e, tag: 'V25.add_origin_doc_id');
+    }
   }
 
   /// V24: ai_chat_history 性能索引（Token 统计查询用）

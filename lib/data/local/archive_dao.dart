@@ -59,4 +59,17 @@ class ArchiveDao {
         [period]);
     return (result.first['c'] as int?) ?? 0;
   }
+
+  /// V25：按 originDocId 查询关联的审核表（如教学大纲 #5 对应的大纲合理性审核表）。
+  /// 返回所有指向该源文档的审核表（一般每个 docType 唯一，但理论上可能有多份）。
+  Future<List<ArchiveDocument>> getAuditDocsForOrigin(int originDocId) async {
+    final db = await DatabaseHelper.instance.database;
+    final rows = await db.query(
+      'archive_documents',
+      where: 'origin_doc_id = ?',
+      whereArgs: [originDocId],
+      orderBy: 'created_at DESC',
+    );
+    return rows.map((r) => ArchiveDocument.fromMap(r)).toList();
+  }
 }

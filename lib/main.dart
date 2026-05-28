@@ -18,6 +18,7 @@ import 'presentation/widgets/agent_chat_overlay.dart';
 import 'services/voice_service.dart';
 import 'services/voice_assistant_controller.dart';
 import 'services/tts_flutter_service.dart';
+import 'services/archive/processor_registry.dart';
 import 'services/auth_service.dart';
 import 'presentation/pages/profile/virtual_twin_page.dart';
 
@@ -95,6 +96,9 @@ void main() async {
 
   // 预初始化 TTS — 不阻塞冷启动；首次 speak 时不再有 init 延迟
   unawaited(TtsFlutterService.instance.initialize());
+
+  // 注册归档文档处理器（commit 4：syllabus_review / syllabus_evaluation 审核处理器）
+  ProcessorRegistry.instance.registerAll();
 
   runApp(MyApp(dbLocked: dbLocked, dbError: dbError));
 }
