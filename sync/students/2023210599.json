@@ -3,8 +3,8 @@
   "user_id": "2023210599",
   "user_name": "姜少威",
   "role": "student",
-  "synced_at": "2026-05-28T23:02:50.563851",
-  "last_active": "2026-05-28T23:02:50.542184",
+  "synced_at": "2026-05-28T23:04:09.205700",
+  "last_active": "2026-05-28T23:04:09.198659",
   "quiz_results": [
     {
       "user_id": "2023210599",
@@ -177,7 +177,7 @@
       "user_id": "2023210599",
       "file_path": null,
       "file_size": null,
-      "status": "已评分",
+      "status": "待提交",
       "submit_time": null,
       "tags": "[\"Java\",\"Android\",\"SDK\"]",
       "created_at": "2026-04-19T11:13:20.538207",
@@ -187,12 +187,12 @@
       "teacher_confirmed": 0,
       "project_id": null,
       "group_id": null,
-      "video_url": "assets/videos/demo_2023210599.mp4",
+      "video_url": null,
       "thumbnail_url": null,
-      "video_duration": "03:15",
-      "view_count": 22,
-      "like_count": 36,
-      "comment_count": 1,
+      "video_duration": null,
+      "view_count": 0,
+      "like_count": 0,
+      "comment_count": 0,
       "repo": "cg3-ihftpdi",
       "class_group": "cg3",
       "project": "智能健康运动记录平台开发与整合",
@@ -204,13 +204,7 @@
   "checkin_records": [],
   "work_comments": [],
   "work_likes": [],
-  "work_views": [
-    {
-      "work_id": 86,
-      "user_id": "2023210599",
-      "viewed_at": "2026-04-24T10:24:06.301087"
-    }
-  ],
+  "work_views": [],
   "peer_reviews": [],
   "collaboration_messages": [],
   "contribution_scores": [],
