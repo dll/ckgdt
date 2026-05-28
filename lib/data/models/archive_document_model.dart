@@ -11,6 +11,18 @@ class ArchiveDocument {
   final String createdAt;
   final String updatedAt;
 
+  /// V25：AI 审核结果 JSON。schema 见 archive_review_agent.dart 注释。
+  /// 空字符串表示未审核过；非空且为合法 JSON 表示已审核（status 通常为 reviewing/approved）。
+  final String reviewJson;
+
+  /// V25：上一次审核时间戳（ISO8601）。空字符串表示未审核。
+  final String reviewedAt;
+
+  /// V25：审核表所属的源文档 ID。
+  /// 例：syllabus_review 文档的 originDocId 指向被审的 syllabus 文档 ID。
+  /// null 表示该文档不是审核衍生品（自身就是源文档或导入文档）。
+  final int? originDocId;
+
   ArchiveDocument({
     this.id,
     required this.title,
@@ -21,6 +33,9 @@ class ArchiveDocument {
     this.content,
     this.filePath,
     this.isGenerated = false,
+    this.reviewJson = '',
+    this.reviewedAt = '',
+    this.originDocId,
     String? createdAt,
     String? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now().toIso8601String(),
@@ -36,6 +51,9 @@ class ArchiveDocument {
         'content': content,
         'file_path': filePath,
         'is_generated': isGenerated ? 1 : 0,
+        'review_json': reviewJson,
+        'reviewed_at': reviewedAt,
+        'origin_doc_id': originDocId,
         'created_at': createdAt,
         'updated_at': updatedAt,
       };
@@ -50,6 +68,9 @@ class ArchiveDocument {
         content: map['content'] as String?,
         filePath: map['file_path'] as String?,
         isGenerated: (map['is_generated'] as int? ?? 0) == 1,
+        reviewJson: map['review_json'] as String? ?? '',
+        reviewedAt: map['reviewed_at'] as String? ?? '',
+        originDocId: map['origin_doc_id'] as int?,
         createdAt: map['created_at'] as String?,
         updatedAt: map['updated_at'] as String?,
       );
@@ -64,6 +85,9 @@ class ArchiveDocument {
     String? content,
     String? filePath,
     bool? isGenerated,
+    String? reviewJson,
+    String? reviewedAt,
+    int? originDocId,
     String? createdAt,
     String? updatedAt,
   }) =>
@@ -77,6 +101,9 @@ class ArchiveDocument {
         content: content ?? this.content,
         filePath: filePath ?? this.filePath,
         isGenerated: isGenerated ?? this.isGenerated,
+        reviewJson: reviewJson ?? this.reviewJson,
+        reviewedAt: reviewedAt ?? this.reviewedAt,
+        originDocId: originDocId ?? this.originDocId,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );
