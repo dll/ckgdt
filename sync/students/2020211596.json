@@ -3,8 +3,8 @@
   "user_id": "2020211596",
   "user_name": "李世程",
   "role": "student",
-  "synced_at": "2026-05-28T10:54:22.773257",
-  "last_active": "2026-05-28T10:54:22.673390",
+  "synced_at": "2026-05-28T10:55:35.296245",
+  "last_active": "2026-05-28T10:55:35.296257",
   "quiz_results": [
     {
       "user_id": "2020211596",
@@ -68,7 +68,7 @@
       "task_id": 5,
       "user_id": "2020211596",
       "content": "PDF实验报告：2020211596李世程实验五 鸿蒙多端应用开发.pdf\n\n--- 报告正文（自动提取）---\n实验五：鸿蒙多端应用开发（\nMau\nl\n技术栈）\n一、实验基本信息\n项目\n内容\n实验编号\nd20301035105\n、\nd20301009205\n学时分配\n4\n学时\n实验类型\n验证型实验\n每组人数\n6\n人（分组协作完成）\n对应课程目标\n课程目标\n3\n：掌握鸿蒙多端开发、\nMaul\n组件使用及分\n布式数据同步能力\n使用技术栈\nMaul\n+\nArkTS\n+\n鸿蒙\nNext\n核心\nAPI\n+\n传感器\nAPI\n+\n分\n布式\nKVStore\n二、实验目的\n1.\n掌握鸿蒙多端应用的核心开发流程与技术要点，熟悉\nMaul\n组件库的使用方法。\n2.\n掌握\nArkTS\n声明式\nUI\n开发，实现手机、平板多端自适应布局，理解响应式设计\n原理。\n3.\n掌握鸿蒙传感器\nAPI\n调用，实现光线、陀螺仪数据的采集与展示。\n4.\n掌握鸿蒙分布式数据同步机制，实现跨设备数据实时同步。\n5.\n理解鸿蒙多端开发的技术优势，能够独立完成简单多端应用的开发、调试与验\n证。\n6.\n能够结合\nMaul\n技术栈，优化多端应用的开发效率与\nUI\n适配效果。\n三、实验环境\n3.1\n鸿蒙开发环境\n•\n开发工具：\nDevEco\nStudio\n（最新版）\n•\n开发语言：\nArkTS\n•\nUI\n框架：\nMaul\n组件库\n•\n运行环境：鸿蒙\nNext\n模拟器（手机、平板）\n3.2\n核心依赖与工具\n•\nMaul\n组件库：用于快速构建多端适配\nUI\n，简化布局与间距适配\n•\n传感器\nAPI\n：鸿蒙系统传感器模块，实现光线、陀螺仪数据采集\n•\n分布式\nKVStore\n：实现跨设备数据同步与存储\n•\nTRAE\nAI\n工具：辅助生成\nArkTS\n代码，提升开发效率\n四、实验内容\n4.1\n核心任务\n基于\nMaul\n技术栈开发\n“\n智慧天气\n”\n多端应用，实现以下功能，达成多端统一运行效果：\n1.\n对接模拟天气数据，展示城市、温度、天气状况、空气质量等核心信息。\n2.\n实现手机、平板多端自适应布局，适配不同屏幕尺寸与显示比例。\n3.\n集成光线传感器、陀螺仪，实现环境数据采集与实时展示。\n4.\n实现分布式数据同步，验证跨设备数据实时更新功能。\n5.\n完成技术分析报告，总结多端适配与硬件集成的关键技术要点。\n4.2\n实战案例\n开发\n“\n智慧天气\n”\n应用，基于\nMaul\n组件构建\nUI\n界面，集成传感器与分布式能力，实现一\n套代码、多端运行，体验鸿蒙多端开发的便捷性，验证\nMaul\n技术栈在多端适配中的优\n势。\n4.3\n开发任务清单\n任务阶段\n主要内容\n关键技术点\n天气应用开发\nArkTS\n声明式\nUI\n开发，\nMau\nl\n组件适配\n@State\n、数据绑定、\nMaul\n基\n础组件\n多端适配\n手机\n/\n平板布局自适应，屏幕尺\n寸适配\n断点系统、媒体查询、\nMau\nl\n适配方法\n传感器集成\n光线、陀螺仪数据采集与展示\n传感器\nAPI\n调用、数据实时监\n听\n分布式同步\n跨设备数据同步，多端数据一\n致性\n分布式\nKVStore\n、数据监听与\n更新\n五、实验步骤\n5.1\n天气应用开发与多端适配（\nMaul\n版）\n1.\n创建项目\n：打开\nDevEco\nStudio\n，新建\nEmpty\nAbility\n项目，选择\nArkTS\n语言，命\n名为\nWeatherApp\n，集成\nMaul\n组件库。\n2.\n配置依赖\n：确认\nMaul\n组件库已导入，无需额外配置，直接调用\nMContainer\n、\nMColumn\n等\nMaul\n组件。\n3.\nAI\n辅助编码\n：使用\nTRAE\n工具，输入需求\n“\nArkTS\n+\nMaul\n天气应用页面，声明\n式\nUI\n，城市、温度、天气状况展示\n”\n，生成基础代码并优化。\n4.\n核心代码实现\n：编写天气首页代码，实现城市、温度、天气状况的展示，代码如\n下：\n@Entry\n@Component\nstruct\nIndex\n{\n@State\ncityName:\nstring\n=\n'\n合肥\n';\n@State\ntemperature:\nnumber\n=\n22;\n@State\nweather:\nstring\n=\n'\n晴\n';\n@State\naqi:\nnumber\n=\n45;\nbuild()\n{\n//\nMaul\n容器，自动适配安全区和多端间距\nMContainer()\n{\nMColumn([\nText(this.cityName)\n.fontSize(24)\n.fontWeight(FontWeight.Bold),\nText(`${this.temperature}\n°\nC`)\n.fontSize(60)\n.fontWeight(FontWeight.Lighter),\nText(this.weather)\n.fontSize(20),\nMRow([\nText('\n空气质量\n:\n'),\nText(`${this.aqi}\n(\n优\n)`)\n.fontColor('#00ff00')\n])\n])\n.alignItems(HorizontalAlign.Center)\n}\n.width('100%')\n.height('100%')\n.backgroundColor('#f5f5f5')\n}\n}\n5.\n多端适配实现\n：添加设备判断与布局切换逻辑，实现手机\n/\n平板自适应，代码如\n下：\n@State\ncurrentBreakpoint:\nstring\n=\n'md';\n@State\nisPhone:\nboolean\n=\ntrue;\naboutToAppear()\n{\n//\nMaul\n内置方法判断设备类型\nthis.isPhone\n=\nMaulUI.isPhone();\nlet\nwindowWidth\n=\nwindow.getWindow().getWindowProperties().windowWidth;\nthis.currentBreakpoint\n=\nwindowWidth\n<\n600\n?\n'sm'\n:\n'lg';\n}\nbuild()\n{\nMContainer()\n{\nif\n(this.isPhone)\n{\n//\n手机布局：单列居中\nMColumn([this.phoneLayout()])\n.alignItems(HorizontalAlign.Center)\n}\nelse\n{\n//\n平板布局：双列均分\nMRow([\nthis.tabletLeftLayout(),\nthis.tabletRightLayout()\n]).width('100%').spacing(20)\n}\n}\n.fill()\n.bgColor('#f5f5f5')\n}\n//\n手机布局组件\n@Builder\nphoneLayout()\n{\nColumn()\n{\nText(this.cityName).fontSize(24)\nText(`${this.temperature}\n°\nC`).fontSize(50)\n}\n}\n//\n平板左侧布局\n@Builder\ntabletLeftLayout()\n{\nColumn()\n{\nText(this.cityName).fontSize(32).fontWeight(FontWeight.Bold)\nText(`${this.temperature}\n°\nC`).fontSize(80)\n}\n.width('40%')\n.alignItems(HorizontalAlign.Center)\n}\n//\n平板右侧布局\n@Builder\ntabletRightLayout()\n{\nColumn()\n{\nText(this.weather).fontSize(28)\nText(`\n空气质量\n:\n${this.aqi}\n(\n优\n)`).fontSize(22)\n}\n.width('60%')\n.padding({\nleft:\n30\n})\n}\n5.2\n传感器集成开发\n1.\n光线传感器开发\n：导入\nsensor\n模块，实现环境亮度采集与展示，代码如下：\nimport\nsensor\nfrom\n'@ohos.sensor';\n@Entry\n@Component\nstruct\nLightSensorPage\n{\n@State\nlightIntensity:\nnumber\n=\n0;\naboutToAppear()\n{\n//\n监听光线传感器数据\nsensor.on(sensor.SensorType.SENSOR_TYPE_ID_LIGHT,\n(data)\n=>\n{\nthis.lightIntensity\n=\ndata.light;\n});\n}\naboutToDisappear()\n{\n//\n取消监听，避免资源泄漏\nsensor.off(sensor.SensorType.SENSOR_TYPE_ID_LIGHT);\n}\nbuild()\n{\nMContainer()\n{\nMText(\"\n光线传感器数据\n\")\n.fontSize(22)\n.fontWeight(FontWeight.Bold),\nMCard()\n{\nText(`\n当前环境亮度\n:\n${this.lightIntensity.toFixed(0)}\nlux`)\n.fontSize(18)\n}\n.bgColor('#e3f2fd')\n}\n.fill()\n.padding(20)\n}\n}\n2.\n陀螺仪传感器开发\n：实现设备姿态采集，代码如下：\nimport\nsensor\nfrom\n'@ohos.sensor';\n@Entry\n@Component\nstruct\nGyroscopePage\n{\n@State\nrotateX:\nnumber\n=\n0;\n@State\nrotateY:\nnumber\n=\n0;\n@State\nrotateZ:\nnumber\n=\n0;\naboutToAppear()\n{\nsensor.on(sensor.SensorType.SENSOR_TYPE_ID_GYROSCOPE,\n(data)\n=>\n{\nthis.rotateX\n=\ndata.x;\nthis.rotateY\n=\ndata.y;\nthis.rotateZ\n=\ndata.z;\n});\n}\naboutToDisappear()\n{\nsensor.off(sensor.SensorType.SENSOR_TYPE_ID_GYROSCOPE);\n}\nbuild()\n{\nMContainer()\n{\nMText(\"\n陀螺仪数据\n\")\n.fontSize(22)\n.fontWeight(FontWeight.Bold),\nMRow([\nMCard()\n{\nText(`X\n轴\n:\n${this.rotateX.toFixed(2)}`)\n},\nMCard()\n{\nText(`Y\n轴\n:\n${this.rotateY.toFixed(2)}`)\n},\nMCard()\n{\nText(`Z\n轴\n:\n${this.rotateZ.toFixed(2)}`)\n}\n])\n.spacing(20)\n}\n.fill()\n.padding(20)\n}\n}\n3.\n权限配置\n：在\nmodule.json5\n中添加传感器与分布式权限，确保功能正常运行：\n\"requestPermissions\":\n[\n{\"name\":\n\"ohos.permission.INTERNET\"},\n{\"name\":\n\"ohos.permission.SENSOR\"},\n{\"name\":\n\"ohos.permission.DISTRIBUTED_DATASYNC\"}\n]\n5.3\n分布式数据同步开发\n1.\n初始化分布式\nKVStore\n，实现跨设备数据同步，代码如下：\nimport\ndistributedData\nfrom\n'@ohos.data.distributedData';\n@Entry\n@Component\nstruct\nDistributedSyncPage\n{\n@State\nsyncCity:\nstring\n=\n'\n合肥\n';\n@State\nsyncTemp:\nnumber\n=\n22;\n//\n初始化分布式存储\nasync\ninitKVStore()\n{\ntry\n{\nconst\nKVManager\n=\ndistributedData.createKVManager({\nbundleName:\n'com.example.weatherapp',\nkvStoreType:\ndistributedData.KVStoreType.SINGLE_VERSION\n});\nconst\nkvStore\n=\nawait\nKVManager.getKVStore('weatherStore');\n//\n写入初始数据\nawait\nkvStore.put('city',\nthis.syncCity);\nawait\nkvStore.put('temperature',\nthis.syncTemp.toString());\n//\n监听数据变化（跨设备同步）\nkvStore.on('change',\n(data)\n=>\n{\nthis.syncCity\n=\ndata.city;\nthis.syncTemp\n=\nNumber(data.temperature);\n});\n}\ncatch\n(e)\n{\nconsole.error('\n分布式\nKVStore\n初始化失败：\n',\ne);\n}\n}\naboutToAppear()\n{\nthis.initKVStore();\n}\nbuild()\n{\nMContainer()\n{\nMText(\"\n分布式数据同步演示\n\")\n.fontSize(22)\n.fontWeight(FontWeight.Bold),\nMCard()\n{\nColumn()\n{\nText(`\n同步城市\n:\n${this.syncCity}`)\nText(`\n同步温度\n:\n${this.syncTemp}\n°\nC`)\n}\n.padding(30)\n}\n.bgColor('#f3e5f5')\n}\n.fill()\n.padding(20)\n}\n}\n2.\n同步验证\n：启动两个模拟器（手机、平板），登录同一华为账号，验证数据实时\n同步效果，确保修改一端数据后，另一端自动更新。\n六、实验结果\n6.1\n成功标准验证\n1.\n功能完整性：天气应用可正常展示城市、温度、天气状况、空气质量，无功能异\n常。\n2.\n多端适配：手机、平板布局切换正常，无布局错乱、字体异常，\nMaul\n组件适配效\n果达标。\n3.\n传感器功能：光线、陀螺仪数据采集正常，实时更新，无数据丢失或延迟。\n4.\n分布式同步：跨设备数据实时同步，修改数据后两端同步更新，无错误。\n5.\n代码可运行：所有核心代码可正常编译、运行，无语法错误，注释规范。\n6.\n报告完整性：完成技术分析报告，符合模板要求，内容详实。\n6.2\n界面特点\n1.\n手机端：单列居中布局，聚焦核心天气信息，字号适中，操作简洁，适配小屏幕\n显示。\n2.\n平板端：双列布局，左侧展示核心信息，右侧补充详细内容，充分利用大屏空\n间。\n3.\nMaul\n组件优势：无需手动调整间距、安全区，组件自带适配效果，大幅提升开发\n效率。\n6.3\n实验界面截图展示\n本次实验通过\nDevEco\nStudio\n模拟器完成全功能验证，分别对手机端、平板端界面，\n以及传感器、分布式同步功能进行截图记录，截图占位如下，便于后续插入实验实际\n运行效果截图：\n图\n1\n天气应用主界面（手机端）\n图\n2\n天气应用主界面（平板端）\n图\n3\n光线传感器数据展示界面\n图\n4\n陀螺仪传感器数据展示界面\n6.\n4\n技术分析报告（模板）\nmarkdown\n#\n多端适配与硬件集成技术分析报告（\nMaul\n技术栈）\n##\n1.\n多端适配分析\n-\n手机布局特点：单列居中布局，聚焦城市、温度等核心信息，字号适配小屏幕，\n操作流程简洁，符合手机用户使用习惯。\n-\n平板布局特点：双列均分布局，左侧展示核心温度、城市信息，右侧补充天气状\n况、空气质量，充分利用大屏优势，提升信息展示效率。\n-\n适配实现：通过\nMaulUI.isPhone()\n方法判断设备类型，结合屏幕宽度设置断点\n（\nsm/lg\n），实现布局自动切换，无需额外编写多套代码。\n-\nMaul\n组件优势：\nMContainer\n、\nMColumn\n、\nMCard\n等组件自带多端适配能力，无\n需手动配置间距、安全区，简化开发流程，提升开发效率。\n##\n2.\n传感器集成分析\n-\n光线传感器：用于采集环境亮度，可联动界面亮度自动调节，提升用户体验，采\n集延迟低、数据准确，需注意销毁时取消监听，避免资源泄漏。\n-\n陀螺仪传感器：用于采集设备姿态，可拓展实现体感交互（如旋转设备切换城\n市），数据采集实时性强，适配鸿蒙传感器\nAPI\n调用规范。\n-\n权限配置：需在\nmodule.json5\n中配置\nSENSOR\n、\nDISTRIBUTED_DATASYNC\n权\n限，否则无法正常获取传感器数据与实现跨设备同步。\n##\n3.\n分布式能力分析\n-\n原理：基于鸿蒙分布式\nKVStore\n，采用键值对存储方式，依赖同一华为账号与局\n域网环境，实现跨设备数据实时同步。\n-\n实现：通过创建\nKVManager\n、监听数据变化，实现城市、温度等核心数据的同步\n更新，确保多端数据一致性。\n-\n注意事项：需确保多设备登录同一华为账号、处于同一局域网，否则同步功能无\n法正常生效。\n##\n4.\n技术选型建议\n1.\nUI\n开发：优先使用\nMaul\n组件库，简化多端适配代码，保证\nUI\n风格统一，提\n升开发效率。\n2.\n状态管理：使用\n@State\n实现简单状态管理，复杂场景可结合\n@Link\n、\n@Provide\n等装饰器，确保数据与\nUI\n联动。\n3.\n传感器调用：统一封装传感器监听与销毁方法，避免资源泄漏，提升代码可维\n护性。\n4.\n分布式开发：提前确认设备环境（账号、网络），做好异常处理，避免同步失\n败导致的功能异常。\n##\n5.\n问题与优化方向\n-\n常见问题：传感器权限配置遗漏、分布式同步失败、多端布局错乱。\n-\n优化方向：完善异常处理逻辑，增加加载状态、错误提示；优化\nMaul\n组件布局\n细节，提升多端适配兼容性。\n6.\n5\nUML\n模型设计与解析\n为更清晰地展示本项目整体架构、类结构与交互流程，本次实验使用\nUML\n建模工具完\n成架构图、类图、顺序图的设计，以下为各图表内容与详细解析。\n6.\n5\n.1\n系统架构图\nPlantUML\n代码\n@startuml\n鸿蒙多端天气应用架构图\ntitle\n鸿蒙多端天气应用（\nMaul\n技术栈）架构\nrectangle\n表示层【\nUI\n层】\n{\ncomponent\n天气首页\ncomponent\n多端适配布局\ncomponent\n传感器展示页面\ncomponent\n分布式同步页面\n}\nrectangle\n业务逻辑层\n{\ncomponent\nState\n状态管理\ncomponent\n多端适配逻辑\ncomponent\n传感器数据监听\ncomponent\n分布式数据同步\n}\nrectangle\n数据与硬件层\n{\ncomponent\n鸿蒙传感器\nAPI\ncomponent\n分布式\nKVStore\ncomponent\n本地数据存储\n}\n天气首页\n-->\nState\n状态管理\n多端适配布局\n-->\nState\n状态管理\n传感器展示页面\n-->\n传感器数据监听\n分布式同步页面\n-->\n分布式数据同步\nState\n状态管理\n-->\n本地数据存储\n传感器数据监听\n-->\n鸿蒙传感器\nAPI\n分布式数据同步\n-->\n分布式\nKVStore\n@enduml\n架构图解析\n本项目采用三层架构设计，层次清晰、职责明确，便于维护与扩展。表示层负责用户\n界面展示与交互，基于\nMaul\n组件快速构建；业务逻辑层负责核心逻辑处理，是连\n接\nUI\n与底层数据的核心枢纽；数据与硬件层负责与鸿蒙系统能力交互，为上层提供稳定\n的数据与硬件支撑，整体体现了解耦、复用、可扩展的软件工程思想。\n6.\n5\n.2\n项目类图\nPlantUML\n代码\npuml\n@startuml\n鸿蒙天气应用类图\nclass\nIndex\n{\n-\ncityName:\nstring\n-\ntemperature:\nnumber\n-\nweather:\nstring\n-\naqi:\nnumber\n-\nisPhone:\nboolean\n+\nbuild()\n+\nphoneLayout()\n+\ntabletLeftLayout()\n+\ntabletRightLayout()\n}\nclass\nLightSensorPage\n{\n-\nlightIntensity:\nnumber\n+\naboutToAppear()\n+\naboutToDisappear()\n+\nbuild()\n}\nclass\nGyroscopePage\n{\n-\nrotateX:\nnumber\n-\nrotateY:\nnumber\n-\nrotateZ:\nnumber\n+\naboutToAppear()\n+\naboutToDisappear()\n+\nbuild()\n}\nclass\nDistributedSyncPage\n{\n-\nsyncCity:\nstring\n-\nsyncTemp:\nnumber\n+\ninitKVStore()\n+\naboutToAppear()\n+\nbuild()\n}\nIndex\n-->\nLightSensorPage\nIndex\n-->\nGyroscopePage\nIndex\n-->\nDistributedSyncPage\n@enduml\n类图解析\n该图展示了项目核心页面组件及其结构关系，所有页面均采用\nArkTS\n组件化开发，结\n构统一、易于维护。\nIndex\n作为应用入口，负责多端布局切换与页面导航；\nLightSensorPage\n和\nGyroscopePage\n分别负责光线、陀螺仪数据的监听与展示；\nDistributedSyncPage\n负责分布式数据的初始化、同步与展示，充分体现面向对象的设\n计思想。\n6.\n5\n.3\n功能交互顺序图\nPlantUML\n代码\npuml\n@startuml\n功能交互流程顺序图\nactor\nUser\nparticipant\n天气首页\nparticipant\nStateManager\nparticipant\n传感器模块\nparticipant\n分布式模块\nparticipant\n鸿蒙系统\nAPI\nUser\n->\n天气首页\n:\n打开应用\n天气首页\n->\nStateManager:\n加载城市、温度等数据\nStateManager\n-->\n天气首页\n:\n渲染天气界面\nUser\n->\n天气首页\n:\n切换设备（手机\n/\n平板）\n天气首页\n->\nStateManager:\n判断屏幕宽度\nStateManager\n-->\n天气首页\n:\n自动切换布局\nUser\n->\n传感器模块\n:\n查看传感器数据\n传感器模块\n->\n鸿蒙系统\nAPI:\n注册传感器监听\n鸿蒙系统\nAPI\n-->\n传感器模块\n:\n实时返回数据\n传感器模块\n-->\nUser:\n展示光线、陀螺仪信息\nUser\n->\n分布式模块\n:\n查看同步数据\n分布式模块\n->\n鸿蒙系统\nAPI:\n初始化\nKVStore\n鸿蒙系统\nAPI\n-->\n分布式模块\n:\n监听跨设备变化\n分布式模块\n-->\nUser:\n展示同步后的天气数据\n@enduml\n顺序图解析\n该图完整描述了用户从启动应用到完成核心功能的交互流程，涵盖天气页面加载、多\n端适配切换、传感器数据采集、分布式数据同步四大核心场景，清晰展示了用户、\nU\nI\n页面、业务模块与鸿蒙系统\nAPI\n之间的调用时序和数据流向，便于理解应用整体运行\n逻辑，也为后续调试排查问题提供了清晰的流程参考。\n七、技术对比与分析\n7.1\n核心技术特点\n•\nMaul\n组件库\n：简化多端适配开发，组件自带间距、安全区适配，无需手动编写\n适配逻辑，提升开发效率。\n•\nArkTS\n声明式\nUI\n：代码简洁，数据绑定灵活，可快速实现\nUI\n与数据的联动，便\n于调试与维护。\n•\n鸿蒙分布式能力\n：跨设备数据同步便捷，无需复杂配置，依托\nKVStore\n即可实现\n多端数据一致性。\n•\n传感器\nAPI\n：调用简单，数据采集实时，可快速集成到多端应用中，丰富应用交\n互场景。\n7.2\n适用场景分析\n本实验开发的智慧天气应用，基于\nMaul\n技术栈，适用于鸿蒙多端场景，可拓展至物联\n网设备、移动终端、平板等多设备，核心优势的是\n“\n一套代码、多端运行\n”\n，降低开发与\n维护成本，适合中小型多端应用开发。\n八、实验总结\n8.1\n技术收获\n1.\n掌握了鸿蒙多端应用的开发流程，熟悉了\nArkTS\n声明式开发模式与\nMaul\n组件库\n的使用方法。\n2.\n掌握了多端适配的核心原理，能够使用\nMaul\n组件实现手机、平板的自适应布局\n切换。\n3.\n掌握了鸿蒙传感器\nAPI\n的调用方法，能够实现光线、陀螺仪数据的采集与展示，\n理解了资源释放的重要性。\n4.\n掌握了鸿蒙分布式数据同步机制，能够实现跨设备数据实时同步，理解了分布\n式\nKVStore\n的使用流程。\n5.\n学会了使用\nAI\n工具（\nTRAE\n）辅助生成代码，提升开发效率，掌握了代码优化与\n异常处理的基本方法。\n8.2\n开发建议\n1.\n多端适配：开发前明确设备屏幕尺寸，利用\nMaul\n组件的适配能力，减少手动适\n配代码，提升开发效率。\n2.\n传感器开发：封装传感器监听与销毁的通用方法，便于复用，避免资源泄漏。\n3.\n分布式开发：提前确认设备环境（账号、网络），做好异常处理，避免同步失败\n导致的功能异常。\n4.\n代码规范：编写代码时添加详细注释，规范变量命名，提升代码可维护性与可读\n性。\n8.3\n后续学习建议\n1.\n深入学习\nMaul\n组件库的高级用法，实现更复杂的多端适配场景（如折叠屏适\n配）。\n2.\n学习鸿蒙分布式高级特性，实现更复杂的跨设备协同功能（如多设备联动操\n作）。\n3.\n掌握状态管理高级用法，结合\n@Link\n、\n@Provide\n等装饰器，实现复杂场景的数据\n联动。\n4.\n学习应用打包、发布流程，了解鸿蒙应用的上线规范与审核要求。\n5.\n深入研究传感器的高级应用，结合物联网场景，实现更丰富的交互效果。\n",
-      "file_paths": "C:\\Users\\Administrator\\Downloads\\1779936712300\\2020211596李世程实验五 鸿蒙多端应用开发.pdf",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2020211596/2020211596李世程实验五 鸿蒙多端应用开发.pdf",
       "file_names": "2020211596李世程实验五 鸿蒙多端应用开发.pdf",
       "submit_time": "2026-05-28T10:54:06.616779",
       "status": "已提交",
@@ -86,7 +86,7 @@
       "task_id": 4,
       "user_id": "2020211596",
       "content": "PDF实验报告：2020211596李世程实验四 微信小程序开发.pdf\n\n--- 报告正文（自动提取）---\n实验四：微信小程序开发（基\n于\nmaul\n技术栈）\n一、实验项目基本信息\n项目\n内容\n实验编号\nd20301035104\n、\nd20301009204\n学时分配\n4\n学时\n实验类型\n验证型\n每组人数\n6\n人（组内分工协作）\n对应课程目标\n课程目标\n2\n：掌握小程序开\n发\n技术栈\nmaul\n（核心开发技术栈）\n二、实验任务与案例\n核心任务\n借助\nAI\n编程工具（\nTRAE\n）辅助，基于\nmaul\n技术栈开发通知小程序，实现\n“\n列表展示\n+\n详情页路由\n+\n本地存储\n”\n核心功能，体验\nAI\n工具在代码生成与调试中的作用，完成一个\n可预览的\n“\n智慧校园通知\n”\n小程序，熟练掌握\nmaul\n技术栈在小程序开发中的应用。\n实战案例\n开发\n“\n智慧校园通知\n”\n小程序，基于\nmaul\n技术栈实现校园通知列表展示、点击列表项跳\n转至详情页、已读状态本地存储等功能，完整体验小程序从项目创建、编码开发、测\n试调试到预览发布的全流程，巩固\nmaul\n技术栈的实操应用能力。\n三、开发任务清单\n任务阶段\n主要内容\n关键技术点\nmaul\n技术栈应用\n通知列表\n列表展示校园通\n知，区分已读\n/\n未读\n状态\nWXML\n、\nwx:for\n列\n表渲染\nmaul\n模板语法适\n配，列表渲染优化\n详情页\n接收列表参数，展\n示通知完整内容\n页面路由、参数传\n递\nmaul\n路由配置，\n参数解析适配\n本地存储\n持久化存储通知已\n读状态，页面同步\n更新\nwx.setStorage\n本\n地存储\nAPI\nmaul\n本地存储封\n装与调用\nAI\n辅助\n生成核心代码、调\n试代码、优化功能\nTRAE\n使用\nAI\n生成\nmaul\n适配\n代码，调试\nmau\nl\n语法问题\n四、实验步骤详解（基于\nmaul\n技术栈）\n第一课时：小程序基础与列表开发（\nmaul\n适配）\n1.1\n需求分析\n页面流程图\nPlain\nText\n首页\n(\n通知列表\n)\n→\n详情页\n(\n通知详情\n)\n↓\n本地存储\n(\n已读状态\n)\n通知数据结构\njavascript\n{\nid:\n1,\ntitle:\n\"\n关于期末考试安排的通知\n\",\ncontent:\n\"\n详细内容\n...\",\nauthor:\n\"\n教务处\n\",\ntime:\n\"2024-01-01\",\nisRead:\nfalse\n}\n1.2\n创建小程序项目（\nmaul\n技术栈配置）\n1.\n打开微信开发者工具，点击\n“\n新建项目\n”\n，填写项目名称\n“\n智慧校园通知\n”\n，选择项目保\n存路径；\n2.\n填写\nAppID\n（无个人\nAppID\n可选择\n“\n测试号\n”\n，点击\n“\n申请测试号\n”\n获取并填写）；\n3.\n选择\n“\nJavaScript\n模板\n”\n，勾选\n“\n不使用云服务\n”\n，点击\n“\n创建\n”\n；\n4.\n配置\nmaul\n技术栈：在项目根目录执行\nnpm\ninit\n初始化项目，安装\nmaul\n相关依赖\n（\nnpm\ninstall\nmaul\n--save\n），配置\nproject.config.json\n文件，确保\nmaul\n技术栈与微信\n开发者工具兼容，重启开发者工具完成配置。\n1.3\nAI\n辅助编码（\nTRAE+maul\n）\n使用\nTRAE\n生成\nmaul\n适配的列表页代码\n-\n描述需求：\n“\n基于\nmaul\n技术栈的微信小程序通知列表页面，使用\nWXML\n列表渲染，\n点击列表项跳转至详情页，区分已读\n/\n未读状态，适配\nmaul\n语法\n”\n；\n-\nAI\n生成代码片段后，根据\nmaul\n技术栈规范，微调代码适配\nmaul\n模板语法和\nAPI\n调\n用方式。\n通知列表页面实现（\nmaul\n适配版）\nhtml\n<!--\npages/index/index.wxml\n-->\n<view\nclass=\"container\">\n<view\nclass=\"news-list\">\n<view\nclass=\"news-item\n{{item.isRead\n?\n'read'\n:\n''}}\"\nwx:for=\"{{newsList}}\"\nwx:key=\"id\"\nbindtap=\"goToDetail\"\ndata-id=\"{{item.id}}\"\n>\n<view\nclass=\"title\">{{item.title}}</view>\n<view\nclass=\"info\">\n<text>{{item.author}}</text>\n<text>{{item.time}}</text>\n</view>\n</view>\n</view>\n</view>\ncss\n/*\npages/index/index.wxss\n*/\n.news-item\n{\npadding:\n16px;\nborder-bottom:\n1px\nsolid\n#eee;\nbackground:\n#fff;\n}\n.news-item.read\n{\nopacity:\n0.6;\n}\n.title\n{\nfont-size:\n16px;\nfont-weight:\nbold;\nmargin-bottom:\n8px;\n}\n.info\n{\nfont-size:\n12px;\ncolor:\n#999;\ndisplay:\nflex;\njustify-content:\nspace-between;\n}\n.container\n{\npadding:\n0;\nmargin:\n0;\nbox-sizing:\nborder-box;\n}\njavascript\n//\npages/index/index.js\n//\n引入\nmaul\n相关工具函数，适配\nmaul\n技术栈\nimport\n{\nmaulStorage,\nmaulRouter\n}\nfrom\n'maul';\nPage({\ndata:\n{\nnewsList:\n[]\n},\nonLoad()\n{\nthis.loadNews();\n},\n//\n下拉刷新，\nmaul\n适配下拉刷新逻辑\nonPullDownRefresh()\n{\nthis.loadNews().then(()\n=>\n{\nwx.stopPullDownRefresh();\n});\n},\nloadNews()\n{\n//\n模拟通知数据\nconst\nnewsList\n=\n[\n{\nid:\n1,\ntitle:\n\"\n关于期末考试安排的通知\n\",\ncontent:\n\"\n详细内\n容\n...\",\nauthor:\n\"\n教务处\n\",\ntime:\n\"2024-01-01\",\nisRead:\nfalse\n},\n{\nid:\n2,\ntitle:\n\"\n图书馆开放时间调整\n\",\ncontent:\n\"\n详细内容\n...\",\nauthor:\n\"\n图书馆\n\",\ntime:\n\"2024-01-02\",\nisRead:\nfalse\n},\n{\nid:\n3,\ntitle:\n\"\n校园网络维护通知\n\",\ncontent:\n\"\n详细内容\n...\",\nauthor:\n\"\n信息中心\n\",\ntime:\n\"2024-01-03\",\nisRead:\nfalse\n}\n];\n//\n使用\nmaul\n封装的本地存储方法，读取已读\nID\nconst\nreadIds\n=\nmaulStorage.get('readIds')\n||\n[];\nnewsList.forEach(news\n=>\n{\nnews.isRead\n=\nreadIds.includes(news.id);\n});\nthis.setData({\nnewsList\n});\n},\n//\n跳转详情页，使用\nmaul\n路由适配\ngoToDetail(e)\n{\nconst\nid\n=\ne.currentTarget.dataset.id;\nmaulRouter.navigateTo({\nurl:\n`/pages/detail/detail?id=${id}`\n});\n}\n});\n第二课时：详情页、存储与发布（\nmaul\n适配）\n2.1\n详情页开发（\nmaul\n适配）\nAI\n辅助生成\nmaul\n适配的详情页\n-\n描述需求：\n“\n基于\nmaul\n技术栈的微信小程序通知详情页，接收列表传递的\nID\n参数，\n展示通知完整内容，调用\nmaul\n本地存储标记已读状态\n”\n；\n-\n对\nAI\n生成的代码进行微调，适配\nmaul\n的参数解析和本地存储\nAPI\n。\n详情页实现（\nmaul\n适配版）\nhtml\n<!--\npages/detail/detail.wxml\n-->\n<view\nclass=\"container\">\n<view\nclass=\"title\">{{news.title}}</view>\n<view\nclass=\"info\">\n<text>\n发布部门：\n{{news.author}}</text>\n<text>\n发布时间：\n{{news.time}}</text>\n</view>\n<view\nclass=\"content\">{{news.content}}</view>\n</view>\njavascript\n//\npages/detail/detail.js\n//\n引入\nmaul\n相关工具函数\nimport\n{\nmaulStorage,\nmaulRouter\n}\nfrom\n'maul';\nPage({\ndata:\n{\nnews:\n{}\n},\n//\n页面加载，接收参数（\nmaul\n适配参数解析）\nonLoad(options)\n{\nconst\nid\n=\nparseInt(options.id);\nthis.loadDetail(id);\n},\nloadDetail(id)\n{\n//\n模拟全部通知数据\nconst\nallNews\n=\n[\n{\nid:\n1,\ntitle:\n\"\n关于期末考试安排的通知\n\",\ncontent:\n\"\n本次期末考\n试安排如下：\n1.\n考试时间为\n2024\n年\n1\n月\n15\n日\n-1\n月\n20\n日；\n2.\n考生需携带准考\n证和身份证入场；\n3.\n严禁作弊，作弊将取消考试成绩。\n\",\nauthor:\n\"\n教务处\n\",\ntime:\n\"2024-01-01\"\n},\n{\nid:\n2,\ntitle:\n\"\n图书馆开放时间调整\n\",\ncontent:\n\"\n因图书馆设备维\n护，自\n2024\n年\n1\n月\n5\n日起，开放时间调整为\n8:00-21:00\n，周末正常开放，望各\n位同学相互转告。\n\",\nauthor:\n\"\n图书馆\n\",\ntime:\n\"2024-01-02\"\n},\n{\nid:\n3,\ntitle:\n\"\n校园网络维护通知\n\",\ncontent:\n\"\n为提升校园网络质\n量，将于\n2024\n年\n1\n月\n8\n日凌晨\n2:00-4:00\n进行网络维护，维护期间校园网络将暂\n停使用，给各位师生带来不便，敬请谅解。\n\",\nauthor:\n\"\n信息中心\n\",\ntime:\n\"2024-01-03\"\n}\n];\nconst\nnews\n=\nallNews.find(n\n=>\nn.id\n===\nid);\nthis.setData({\nnews\n});\n//\n标记已读，调用\nmaul\n本地存储方法\nthis.markAsRead(id);\n},\nmarkAsRead(id)\n{\nlet\nreadIds\n=\nmaulStorage.get('readIds')\n||\n[];\nif\n(!readIds.includes(id))\n{\nreadIds.push(id);\n//\n使用\nmaul\n封装的本地存储方法，保存已读\nID\nmaulStorage.set('readIds',\nreadIds);\n}\n}\n});\n2.2\n本地存储（\nmaul\n适配）\n基于\nmaul\n技术栈的本地存储封装，简化存储操作，确保已读状态持久化，适配小程序\n本地存储\nAPI\n，代码如下：\njavascript\n//\n引入\nmaul\n存储工具\nimport\n{\nmaulStorage\n}\nfrom\n'maul';\n//\n保存已读\nID\n（\nmaul\n封装方法）\nmaulStorage.set('readIds',\n[1,\n2,\n3]);\n//\n读取已读\nID\n（\nmaul\n封装方法）\nconst\nreadIds\n=\nmaulStorage.get('readIds');\n//\n检查是否已读\nconst\nisRead\n=\nreadIds.includes(newsId);\n2.3\n测试验证与发布（\nmaul\n适配）\n真机预览\n1.\n点击微信开发者工具顶部\n“\n编译\n”\n按钮，检查\nmaul\n技术栈适配是否正常，无语法错\n误、无报错信息；\n2.\n点击\n“\n预览\n”\n按钮，生成二维码，使用微信扫描二维码，在手机上预览小程序；\n3.\n测试核心功能：列表渲染是否正常、点击跳转是否流畅、已读状态是否同步、本地\n存储是否有效，确保\nmaul\n技术栈适配无异常。\n体验版发布\n1.\n点击微信开发者工具顶部\n“\n上传\n”\n按钮，填写版本号（如\n1.0.0\n）、版本描述（基\n于\nmaul\n技术栈开发，实现校园通知列表、详情页、本地存储功能）；\n2.\n点击\n“\n上传\n”\n，等待上传完成，在微信公众平台小程序后台，找到\n“\n版本管理\n”\n，将上传\n的版本设为\n“\n体验版\n”\n；\n3.\n获取体验版二维码，供小组成员和老师测试体验。\n五\n、\n微信小程序开发主流架构对比分析\n5.1\n、核心技术架构总览\n对\n比\n维\n度\nMAUL\n小\n程序\nFlutter\n小\n程序\nuni-app\n小程序\n原生小程\n序\nReact\nNative\n小程序\n技\n术\n底\n层\n微信原生\n封装\n+\n工具库\n自绘引擎\n+\n小程序容器\n适配\nVue\n语法\n+\n多端编\n译层\n微信原生\n框架\n+\n多\n页面分离\nReact\n语\n法\n+\nJS\n桥接容器\n开\n发\n语\n言\nWXML\n+\nWXSS\n+\nJS/TS\nDart\nVue\n/\nJS\n/\nTS\nWXML\n+\nWXSS\n+\nJS/TS\nReact\n/\nJSX\n/\nTS\n渲\n染\n模\n式\n原生\nWebView\n渲染\n自绘渲染\n（无\nWebView\n）\n编译为原\n生小程序\n渲染\n原生\nWebView\n渲染\nJS\n桥接\n+\n原生渲\n染\n跨\n端\n能\n力\n仅微信小\n程序\n微信小程\n序、\nAPP\n、\nWeb\n微信\n/\n支\n付宝\n/\n抖\n音\n/APP/H5\n仅微信小\n程序\n微信小程\n序、\nAPP\n、\nWeb\n编\n译\n方\n式\n原生运\n行，无需\n编译\n静态编译\n+\n容器运行\n实时编译\n+\n代码转\n换\n原生运\n行，无需\n编译\n打包运行\n+\n桥接通\n信\n热\n更\n新\n不支持\n支持\n支持\n不支持\n支持\n对\n比\n维\n度\nMAUL\n小\n程序\nFlutter\n小\n程序\nuni-app\n小程序\n原生小程\n序\nReact\nNative\n小程序\n性\n能\n表\n现\n中高\n极高\n高\n中\n中高\n5.2\n、开发模式与工程化\n对\n比\n维\n度\nMAUL\n小程序\nFlutter\n小程序\nuni-app\n小程\n序\n原生小程序\nReact\nNative\n小程序\n开\n发\n工\n具\n微信开发者\n工具\nAndroid\nStudio\n/\nVS\nCode\nHBuilderX\n/\nVS\nCode\n微信开发者\n工具\nVS\nCode\n/\nWebStorm\n组\n件\n化\n标准组件化\n+\n封装增强\n强组件\n化、自定\n义度极高\n强组件化、生\n态丰富\n组件化较\n弱、页面独\n立\n强组件\n化、函数\n式开发\n状\n态\n管\n理\n全局\nData\n+\nmaulStorage\nProvider\n/\nBloc\n/\nRiverpod\nVuex\n/\nPinia\n全局\ndata\n+\n本地存储\nRedux\n/\nMobx\n/\nContext\n路\n由\n管\n理\nmaulRouter\n封装\n自定义路\n由\n+\n页\n面栈\nuni.navigate\n系列\nAPI\nwx.navigate\n系列\nAPI\n自定义路\n由封装\n工\n程\n化\n简易分包\n+\n配置文件\n完整打\n包、依赖\n管理\n自动编译、多\n端适配\n原生配置、\n手动分包\n模块化打\n包、桥接\n配置\n调\n试\n方\n式\n官方调试\n+\nmaul\n日志\n控制台\n+\n真机调试\n控制台\n+\n多\n端预览\n微信开发者\n工具调试\n桥接日志\n+\n真机调\n试\n5.3\n、\nUI\n渲染与样式能力\n对\n比\n维\n度\nMAUL\n小\n程序\nFlutter\n小\n程序\nuni-app\n小\n程序\n原生小\n程序\nReact\nNative\n小\n程序\n对\n比\n维\n度\nMAUL\n小\n程序\nFlutter\n小\n程序\nuni-app\n小\n程序\n原生小\n程序\nReact\nNative\n小\n程序\n样\n式\n语\n法\nWXSS\n+\n扩展封\n装\n自建样式系\n统（类\nCSS\n）\n类\nCSS\n/\nSCSS\n/\n内\n联样式\nWXSS\n固\n定语法\n内联样式\n/\nCSS-in-\nJS\nUI\n组\n件\n库\n原生组\n件\n+\nmaul\n增\n强\nFlutter\nUI\n库、自定义\n组件\nuView\n、\nVant\n、\nuni-\nui\nWeUI\n、\nVant\nWeapp\nReact\nNative\nUI\n库适配\n动\n画\n能\n力\n基础\nCSS\n动\n画\n极强（帧动\n画、物理动\n画）\nCSS\n动画\n+\n小程序动画\n基础\nCSS\n动\n画\n原生级流\n畅动画\n适\n配\n能\n力\n微信原\n生尺寸\n适配\n像素级屏幕\n适配\n自动适配多\n端\n微信原\n生尺寸\n适配\n自适应布\n局\n+\n尺寸\n适配\n自\n定\n义\n程\n度\n中\n最高\n高\n中\n高\n5.4\n、网络请求与原生能力\n对\n比\n维\n度\nMAUL\n小程\n序\nFlutter\n小程序\nuni-app\n小\n程序\n原生小程序\nReact\nNative\n小程序\n请\n求\n方\n式\nwx.request\n封装\nDio\n/\nHTTP\n封\n装\nuni.request\nwx.request\nfetch\n/\naxios\n封装\n拦\n截\n器\n简易封装\n支持\n支持\n手动封装\n支持\n文\n件\n上\n传\n下\n载\n支持\n支持\n支持\n支持\n支持\n对\n比\n维\n度\nMAUL\n小程\n序\nFlutter\n小程序\nuni-app\n小\n程序\n原生小程序\nReact\nNative\n小程序\n原\n生\nAPI\n调\n用\n直接调用\n+\nmaul\n封装\n容器桥\n接调用\n直接兼容微\n信\nAPI\n原生直接调\n用\n桥接封\n装调用\n蓝\n牙\n/\n地\n图\n/\n相\n机\n等\n完整支持\n有限支\n持\n完整支持\n完整支持\n部分支\n持\n微\n信\n生\n态\n权\n限\n原生支持\n需容器\n适配\n完美支持\n原生支持\n需桥接\n适配\n5.5\n、性能、体验与限制\n对比维\n度\nMAUL\n小程序\nFlutter\n小程序\nuni-app\n小程序\n原生\n小程\n序\nReact\nNative\n小程\n序\n启动速\n度\n快\n快\n快\n最快\n中\n页面切\n换\n流畅\n流畅\n流畅\n最流\n畅\n较流畅\n内存占\n用\n低\n较高\n低\n低\n中\n包体积\n小\n大\n小\n最小\n中\n小程序\n限制\n无限制\n受容器约\n束较多\n几乎无限\n制\n无限\n制\n受桥接约束\n复杂页\n面稳定\n性\n高\n高\n高\n最高\n中高\n5.6\n、上手难度与学习成本\n对比\n维度\nMAUL\n小程\n序\nFlutter\n小程序\nuni-app\n小程序\n原生小\n程序\nReact\nNative\n小\n程序\n入门\n难度\n低（原生基\n础\n+\n封\n装\nAPI\n）\n高（需学\nDart\n）\n低（会\nVue\n即\n可）\n中（原\n生语\n法）\n高（需学\nReact\n）\n文档\n完善\n度\n中（实验\n/\n教学专用）\n高\n极高\n高\n高\n社区\n生态\n小（教学场\n景）\n大\n最大\n中\n大\n问题\n解决\n速度\n快\n中\n快\n快\n中\n团队\n适配\n成本\n低\n高\n低\n中\n高\n5.7\n、适用场景与选型建议\n框架\n最适合场景\nMAUL\n小程序\n教学实验、快速上手、原生基础上简化开\n发\nFlutter\n小程序\n高性能、复杂动画、跨平台\nAPP\n+\n小程序\nuni-app\n小程序\n多端统一开发、快速上线、中小团队\n原生小程序\n纯微信小程序、追求极致稳定、官方新特\n性\nReact\nNative\n小程\n序\nReact\n技术栈、已有\nRN\n项目、代码复用\n六、\n项目结构\n6.1\n项目结构\nCampusNotification/\n├──\napp.json\n//\n小程序配置文件\n├──\napp.js\n//\n应用逻辑文件\n├──\napp.wxss\n//\n全局样式文件\n├──\nsitemap.json\n//\n站点地图配置\n├──\npages/\n│\n├──\nindex/\n//\n通知列表页\n│\n│\n├──\nindex.wxml\n│\n│\n├──\nindex.js\n│\n│\n├──\nindex.wxss\n│\n│\n└──\nindex.json\n│\n└──\ndetail/\n//\n通知详情页\n│\n├──\ndetail.wxml\n│\n├──\ndetail.js\n│\n├──\ndetail.wxss\n│\n└──\ndetail.json\n└──\nREADME.md\n//\n项目说明文档\n6.2\n、\nMAUL\n技术栈架构图\n6.3\n、数据流向架构图\n七\n、难重点指导（\nmaul\n技术栈适配）\n重点\n1.\nWXML\n模板语法及\nwx:for\n列表渲染，适配\nmaul\n模板渲染规则；\n2.\n基于\nmaul\n的页面路由跳转（\nmaulRouter.navigateTo\n）及参数传递；\n3.\nmaul\n技术栈的本地存储封装方法（\nmaulStorage.get/set\n）的使用。\n难点\n1.\n本地存储同步\n/\n异步区别：\nmaulStorage\n封装了同步和异步方法，需根据场景选择，\n避免出现数据同步延迟问题；\n2.\n页面间数据传递：\nURL\n参数解析及\nmaul\n路由适配，确保参数传递准确无误；\n3.\nmaul\n技术栈与微信小程序\nAPI\n的兼容：配置\nproject.config.json\n，确保\nmaul\n依赖安\n装正确，避免出现语法报错。\nAI\n解决技巧（结合\nmaul\n技术栈）\n1.\n代码生成：向\nTRAE\n描述需求时，明确标注\n“\n基于\nmaul\n技术栈\n”\n，让\nAI\n生成适\n配\nmaul\n语法的\nWXML/WXSS/JS\n代码；\n2.\n调试技巧：向\nTRAE\n询问\n“\nmaul\n技术栈适配微信小程序的调试技巧\n”“\nmaul\n本地存储\n报错解决方法\n”\n，快速排查问题；\n3.\n性能优化：询问\n“\nmaul\n技术栈开发小程序的性能优化建议\n”\n，优化列表渲染和本地存\n储效率。\n八\n、成功标准\n□\n通知列表页面功能完整，\nmaul\n适配正常，列表渲染无异常\n□\n详情页跳转正常，参数传递准确，\nmaul\n路由适配无误\n□\n数据本地存储功能正常，\nmaulStorage\n方法调用正确，已读状态同步\n□\n有效使用\nAI\n工具生成\nmaul\n适配代码，完成调试优化\n□\n小程序可正常预览，无\nmaul\n语法报错和功能异常\n",
-      "file_paths": "C:\\Users\\Administrator\\Downloads\\1779936712300\\2020211596李世程实验四 微信小程序开发.pdf",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2020211596/2020211596李世程实验四 微信小程序开发.pdf",
       "file_names": "2020211596李世程实验四 微信小程序开发.pdf",
       "submit_time": "2026-05-28T10:53:18.535344",
       "status": "已提交",
@@ -104,7 +104,7 @@
       "task_id": 3,
       "user_id": "2020211596",
       "content": "PDF实验报告：2020211596李世程实验三 跨平台应用开发.pdf",
-      "file_paths": "C:\\Users\\Administrator\\Documents/sync_files/2020211596/2020211596李世程实验三 跨平台应用开发.pdf",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2020211596/2020211596李世程实验三 跨平台应用开发.pdf",
       "file_names": "2020211596李世程实验三 跨平台应用开发.pdf",
       "submit_time": "2026-04-30T08:11:03.242277",
       "status": "已提交",
@@ -122,7 +122,7 @@
       "task_id": 2,
       "user_id": "2020211596",
       "content": "PDF实验报告：2020211596李世程实验二 原生应用开发.pdf",
-      "file_paths": "C:\\Users\\Administrator\\Documents/sync_files/2020211596/2020211596李世程实验二 原生应用开发.pdf",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2020211596/2020211596李世程实验二 原生应用开发.pdf",
       "file_names": "2020211596李世程实验二 原生应用开发.pdf",
       "submit_time": "2026-04-30T08:10:18.389791",
       "status": "已提交",
@@ -140,7 +140,7 @@
       "task_id": 1,
       "user_id": "2020211596",
       "content": "PDF实验报告：2020211596李世程实验一 开发环境搭建.pdf",
-      "file_paths": "C:\\Users\\Administrator\\Documents/sync_files/2020211596/2020211596李世程实验一 开发环境搭建.pdf",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2020211596/2020211596李世程实验一 开发环境搭建.pdf",
       "file_names": "2020211596李世程实验一 开发环境搭建.pdf",
       "submit_time": "2026-04-30T08:08:17.126563",
       "status": "已提交",
@@ -194,6 +194,7 @@
   "checkin_records": [],
   "work_comments": [],
   "work_likes": [],
+  "notification_recipients": [],
   "work_views": [],
   "peer_reviews": [],
   "collaboration_messages": [],
@@ -208,13 +209,13 @@
       "description": "搭建 Android Studio、Flutter、微信开发者工具、DevEco Studio、HBuilderX（Uniapp）、Visual Studio（MAUI）开发环境，各成员根据分工完成对应平台环境配置并成功运行 Hello World 项目。\n\n【实验学时】2学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标1 | 【分组人数】6人/组",
       "requirements": "AI新范式开发流程：\n① 需求分析：明确各平台环境依赖与版本要求；\n② AI辅助编码：使用 TRAE 生成 Hello World 模板代码；\n③ 测试验证：在模拟器/真机上验证项目运行；\n④ 部署运维：记录环境配置文档，总结常见问题与解决方案。",
       "deliverables": "各平台Hello World运行截图、环境配置文档、常见问题解决方案、实验报告",
-      "due_date": "2026-05-05T18:55:11.522761",
+      "due_date": "2026-05-13T10:33:01.318409",
       "difficulty": "简单",
       "max_score": 100,
       "status": "active",
       "creator_id": "206004",
-      "created_at": "2026-04-21T18:55:11.522761",
-      "updated_at": "2026-04-21T18:55:11.522761",
+      "created_at": "2026-04-29T10:33:01.318391",
+      "updated_at": "2026-04-29T10:33:01.318391",
       "related_node_ids": null
     },
     {
@@ -224,13 +225,13 @@
       "description": "Android方向：使用 Kotlin 实现\"智慧校园\"登录页面（EditText输入验证、Activity跳转与数据传递）。iOS方向（演示/模拟器）：使用 SwiftUI 实现登录页面，理解 ViewController 生命周期。组内每人选择不同平台或技术方案实现同一功能，完成后进行组内技术对比分享。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标1 | 【分组人数】6人/组",
       "requirements": "AI新范式开发流程：\n① 需求分析：编写登录功能需求文档（输入验证规则、页面跳转逻辑）；\n② AI辅助编码：使用 TRAE 生成登录页面骨架代码并手动完善业务逻辑；\n③ 测试验证：编写输入验证测试用例，验证边界条件；\n④ 部署运维：打包调试版本，记录平台差异对比报告。",
       "deliverables": "登录页面运行截图及录屏、输入验证测试报告、平台差异对比分析报告、实验报告",
-      "due_date": "2026-05-12T18:55:11.797985",
+      "due_date": "2026-05-20T10:33:01.323798",
       "difficulty": "中等",
       "max_score": 100,
       "status": "active",
       "creator_id": "206004",
-      "created_at": "2026-04-21T18:55:11.522761",
-      "updated_at": "2026-04-21T18:55:11.522761",
+      "created_at": "2026-04-29T10:33:01.318391",
+      "updated_at": "2026-04-29T10:33:01.318391",
       "related_node_ids": null
     },
     {
@@ -240,13 +241,13 @@
       "description": "开发\"智慧校园\"业务数据列表页（RESTful API 网络数据请求 + JSON 解析 + 下拉刷新），组内成员分别使用 Flutter（Dart）、React Native（JSX）、Uniapp（Vue）、MAUI（C#）等不同框架实现同一功能需求。扩展案例：集成设备传感器（如GPS定位、加速度计），体验移动硬件能力调用。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标2 | 【分组人数】6人/组",
       "requirements": "AI新范式开发流程：\n① 需求分析：定义列表页数据结构、API接口规范与传感器调用需求；\n② AI辅助编码：使用 TRAE 生成网络请求与JSON解析代码，辅助生成传感器调用模板；\n③ 测试验证：模拟API异常响应测试容错能力，验证传感器数据采集准确性；\n④ 部署运维：多框架性能对比测试，输出框架适用性分析报告。",
       "deliverables": "列表页运行截图及录屏、API交互测试报告、多框架性能对比报告、实验报告",
-      "due_date": "2026-05-19T18:55:12.109359",
+      "due_date": "2026-05-27T10:33:01.324839",
       "difficulty": "中等",
       "max_score": 100,
       "status": "active",
       "creator_id": "206004",
-      "created_at": "2026-04-21T18:55:11.522761",
-      "updated_at": "2026-04-21T18:55:11.522761",
+      "created_at": "2026-04-29T10:33:01.318391",
+      "updated_at": "2026-04-29T10:33:01.318391",
       "related_node_ids": null
     },
     {
@@ -256,13 +257,13 @@
       "description": "借助 AI 编程工具辅助开发\"智慧校园通知\"小程序（列表 + 详情页路由 + 本地存储），体验 AI 工具在代码生成与调试中的作用。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标2 | 【分组人数】6人/组",
       "requirements": "AI新范式开发流程：\n① 需求分析：绘制小程序页面流程图与数据模型；\n② AI辅助编码：使用 TRAE 生成小程序页面代码与数据绑定逻辑；\n③ 测试验证：使用微信开发者工具进行真机预览与功能测试；\n④ 部署运维：体验小程序审核与发布流程（体验版）。",
       "deliverables": "小程序预览码截图、页面流程图、功能测试报告、实验报告",
-      "due_date": "2026-05-26T18:55:12.397381",
+      "due_date": "2026-06-03T10:33:01.325539",
       "difficulty": "中等",
       "max_score": 100,
       "status": "active",
       "creator_id": "206004",
-      "created_at": "2026-04-21T18:55:11.522761",
-      "updated_at": "2026-04-21T18:55:11.522761",
+      "created_at": "2026-04-29T10:33:01.318391",
+      "updated_at": "2026-04-29T10:33:01.318391",
       "related_node_ids": null
     },
     {
@@ -272,13 +273,13 @@
       "description": "使用 DevEco Studio 开发\"智慧天气\"应用，实现手机/平板界面自适应布局；通过模拟器演示分布式数据同步原理。扩展案例：调用设备传感器（如光线传感器、陀螺仪）实现简单的物联网数据采集与展示场景。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标3 | 【分组人数】6人/组",
       "requirements": "AI新范式开发流程：\n① 需求分析：定义天气应用功能需求与多端适配策略，明确传感器数据采集需求；\n② AI辅助编码：使用 TRAE 辅助生成 ArkUI 页面布局与传感器调用代码；\n③ 测试验证：在不同设备模拟器上验证UI适配效果与传感器数据准确性；\n④ 部署运维：编写多端适配与硬件集成技术分析报告。",
       "deliverables": "天气应用运行截图（手机+平板）、多端适配效果对比截图、技术分析报告、实验报告",
-      "due_date": "2026-06-02T18:55:12.675264",
+      "due_date": "2026-06-10T10:33:01.326935",
       "difficulty": "较难",
       "max_score": 100,
       "status": "active",
       "creator_id": "206004",
-      "created_at": "2026-04-21T18:55:11.522761",
-      "updated_at": "2026-04-21T18:55:11.522761",
+      "created_at": "2026-04-29T10:33:01.318391",
+      "updated_at": "2026-04-29T10:33:01.318391",
       "related_node_ids": null
     },
     {
@@ -288,13 +289,13 @@
       "description": "团队开发\"智慧健康\"等业务应用（建议选题涉及传感器或硬件交互场景），每人负责一个技术栈（Android/Flutter/React Native/Uniapp/MAUI/微信小程序），使用 Git 进行版本控制与协作，借助 AI 编程工具辅助代码生成与调试。每组6人，实验中每人选择一个技术栈独立完成对应实验任务，组内进行技术分享与对比分析。\n\n【实验学时】6学时 | 【实验类型】综合型 | 【实验要求】必做 | 【对应课程目标】目标1-4 | 【分组人数】6人/组",
       "requirements": "AI新范式开发流程：\n① 需求分析：团队协作完成项目需求文档与技术选型方案；\n② AI辅助编码：各成员使用 TRAE 辅助各技术栈端的代码开发；\n③ 测试验证：制定测试计划，进行功能测试与跨端兼容性测试；\n④ 部署运维：完成多端应用打包部署，撰写技术选型对比报告与项目总结。",
       "deliverables": "可运行的多端应用安装包、Git仓库地址、技术选型对比报告、答辩PPT、演示视频、项目总结报告",
-      "due_date": "2026-06-16T18:55:12.941181",
+      "due_date": "2026-06-24T10:33:01.331392",
       "difficulty": "较难",
       "max_score": 100,
       "status": "active",
       "creator_id": "206004",
-      "created_at": "2026-04-21T18:55:11.522761",
-      "updated_at": "2026-04-21T18:55:11.522761",
+      "created_at": "2026-04-29T10:33:01.318391",
+      "updated_at": "2026-04-29T10:33:01.318391",
       "related_node_ids": null
     }
   ],
@@ -307,8 +308,8 @@
       "description": "适用于各章节实验的标准报告模板",
       "creator_id": "206004",
       "is_default": 1,
-      "created_at": "2026-04-21T18:55:13.347181",
-      "updated_at": "2026-04-21T18:55:13.347181"
+      "created_at": "2026-04-29T10:33:01.333747",
+      "updated_at": "2026-04-29T10:33:01.333747"
     },
     {
       "id": 2,
@@ -318,8 +319,8 @@
       "description": "适用于综合项目的完整开发文档模板",
       "creator_id": "206004",
       "is_default": 0,
-      "created_at": "2026-04-21T18:55:13.347181",
-      "updated_at": "2026-04-21T18:55:13.347181"
+      "created_at": "2026-04-29T10:33:01.333747",
+      "updated_at": "2026-04-29T10:33:01.333747"
     },
     {
       "id": 3,
@@ -329,8 +330,8 @@
       "description": "适用于项目答辩准备的PPT大纲模板",
       "creator_id": "206004",
       "is_default": 0,
-      "created_at": "2026-04-21T18:55:13.347181",
-      "updated_at": "2026-04-21T18:55:13.347181"
+      "created_at": "2026-04-29T10:33:01.333747",
+      "updated_at": "2026-04-29T10:33:01.333747"
     }
   ],
   "classroom_messages": [],
