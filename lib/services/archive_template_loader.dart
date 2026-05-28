@@ -23,12 +23,14 @@ class ArchiveTemplateLoader {
 
   static const String _basePath = 'assets/archive_templates/';
 
-  /// 期间中文名 → 英文 key（与 Python 脚本 PERIOD_MAP 对齐）
+  /// 期间中文名 → 英文 key（与 Python 脚本 PERIOD_MAP 和
+  /// `lib/presentation/pages/archive/archive_constants.dart` 的
+  /// archivePeriodKeys 对齐）
   static const Map<String, String> periodKey = {
-    '期初': 'start',
-    '期中': 'mid',
-    '期末': 'end',
-    '归档': 'final',
+    '期初': 'beginning',
+    '期中': 'midterm',
+    '期末': 'final',
+    '归档': 'archive',
   };
 
   /// 内存缓存：path → 内容（或 null 表示已确认 assets 中没有）
@@ -106,7 +108,7 @@ class ArchiveTemplateLoader {
     try {
       final manifestStr = await rootBundle.loadString('AssetManifest.json');
       // 解析 manifest 比 jsonDecode 更轻量：直接 substring 匹配 key
-      // （key 形如 "assets/archive_templates/start/_ref/syllabus/xxx.md"）
+      // （key 形如 "assets/archive_templates/beginning/_ref/syllabus/xxx.md"）
       final result = <String>[];
       final pattern = RegExp(r'"(' + RegExp.escape(dirPath) + r'[^"]+\.md)"');
       for (final m in pattern.allMatches(manifestStr)) {
