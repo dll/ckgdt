@@ -3,6 +3,8 @@ import 'package:sqflite/sqflite.dart';
 import '../base_agent.dart';
 import '../agent_model.dart';
 import '../../ai_service.dart';
+import '../../archive_template_loader.dart';
+import '../../archive_context_service.dart';
 import '../../../data/local/archive_dao.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../data/models/archive_document_model.dart';
@@ -10,6 +12,7 @@ import '../../../data/models/archive_document_model.dart';
 class ArchiveAgent extends BaseAgent {
   final _dao = ArchiveDao();
   final _ai = AiService();
+  final _ctx = ArchiveContextService();
 
   @override
   AgentConfig get config => const AgentConfig(
@@ -51,8 +54,26 @@ class ArchiveAgent extends BaseAgent {
   }) async {
     final db = await DatabaseHelper.instance.database;
     final contextData = await _collectContext(db, documentType, courseType: courseType);
+
+    // 三段式增强：[REFERENCE] 历届模板（few-shot 风格学习材料）+ [SYSTEM_FACTS] 系统事实
+    // 这两段只在能拿到时才注入；拿不到（assets 缺 / DB 没数据）走原有 prompt 逻辑不变。
+    final periodZh = _periodLabel(period); // beginning -> 期初
+    final referenceMd = await ArchiveTemplateLoader.loadPrimary(
+      periodZh: periodZh,
+      docType: documentType,
+    );
+    String? systemFacts;
+    try {
+      systemFacts = await _ctx.collectForPrompt();
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ArchiveAgent.collectForPrompt', stack: st);
+    }
+
     final prompt = _buildPrompt(title, documentType, period, courseType,
-        templateRef: templateRef, context: contextData);
+        templateRef: templateRef,
+        context: contextData,
+        referenceMd: referenceMd,
+        systemFacts: systemFacts);
     final messages = [
       {'role': 'system', 'content': config.persona},
       {'role': 'user', 'content': prompt},
@@ -175,7 +196,12 @@ ${doc.content ?? '（文档无内容）'}''';
   }
 
   String _periodLabel(String p) {
-    const labels = {'beginning': '期初', 'midterm': '期中', 'final': '期末'};
+    const labels = {
+      'beginning': '期初',
+      'midterm': '期中',
+      'final': '期末',
+      'archive': '归档',
+    };
     return labels[p] ?? p;
   }
 
@@ -231,8 +257,31 @@ ${doc.content ?? '（文档无内容）'}''';
     String courseType, {
     String? templateRef,
     Map<String, dynamic>? context,
+    String? referenceMd,
+    String? systemFacts,
   }) {
     final buf = StringBuffer();
+
+    // [REFERENCE] 历届模板（首选）—— LLM 学结构 + 风格，不是抄字段
+    if (referenceMd != null && referenceMd.isNotEmpty) {
+      buf.writeln('=== [REFERENCE] 历届同类材料（仅供学习结构和行文风格，事实数据以下方系统事实为准）===');
+      // 太长会挤占其它段；截 3500 字（中文约 ~7000 token），保大头去尾。
+      final ref = referenceMd.length > 3500
+          ? '${referenceMd.substring(0, 3500)}\n...（截断，原文更长）'
+          : referenceMd;
+      buf.writeln(ref);
+      buf.writeln('=== [REFERENCE] 结束 ===\n');
+    }
+
+    // [SYSTEM_FACTS] 当前系统事实清单（最高权威）
+    if (systemFacts != null && systemFacts.isNotEmpty) {
+      buf.writeln('=== [SYSTEM_FACTS] 系统当前事实（与上方模板冲突时以此为准）===');
+      buf.writeln(systemFacts);
+      buf.writeln('=== [SYSTEM_FACTS] 结束 ===\n');
+    }
+
+    // [TASK] 后续是原有的指令（基本信息 / 类型专项 / 参考数据 / 输出要求）
+    buf.writeln('=== [TASK] 生成指令 ===');
     buf.writeln('请生成以下教学归档文档：');
     buf.writeln('- 标题：$title');
     buf.writeln('- 文档类型：$documentType');
@@ -411,14 +460,13 @@ ${doc.content ?? '（文档无内容）'}''';
     }
 
     buf.writeln('\n=== 输出要求（必须遵守）===');
-    buf.writeln(
-        '1. 用 Markdown 格式输出完整的文档内容，包含标题和正式表格。');
-    buf.writeln(
-        '2. **教师名称必须使用参考数据中的真实姓名，禁止编造或猜测。**');
-    buf.writeln(
-        '3. 课程类型（$courseTypeLabel）必须与给定的类型一致。');
-    buf.writeln(
-        '4. 教学日历是全校校历，不涉及任何课程、教师或班级。');
+    buf.writeln('1. 用 Markdown 格式输出完整的文档内容，包含标题和正式表格。');
+    buf.writeln('2. **教师姓名 / 班级 / 专业 / 学期 / 学时 / 学分 / 课程类型** —— 必须使用 [SYSTEM_FACTS] 段的真实数据，与 [REFERENCE] 不一致时**优先用 [SYSTEM_FACTS]**，禁止照抄历届模板里的旧值。');
+    buf.writeln('3. **章节标题 / 章节数 / 实验项目编号** —— 必须使用 [SYSTEM_FACTS] 第 3、4 段的真实数据，禁止编造。');
+    buf.writeln('4. **课程目标条数 / 毕业要求映射** —— 沿用 [REFERENCE] 模板的 OBE 框架（教育部规范），不可改条数。');
+    buf.writeln('5. **章节内容详细描述 / 教学重难点 / 思政元素** —— 你可以发挥专业判断创作，但必须与本章主题契合（如鸿蒙章谈民族品牌 ✓，跨平台章谈民族品牌 ✗）。');
+    buf.writeln('6. **教学日历是全校校历，不涉及任何课程、教师或班级**。');
+    buf.writeln('7. 系统数据缺失时，**用专业判断补全并标 [推断]**，禁止编造数字（学时 / 分数 / 题量等）。');
     return buf.toString();
   }
 }
