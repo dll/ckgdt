@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:excel/excel.dart' hide Border;
 import 'package:archive/archive.dart';
 import 'package:xml/xml.dart';
+import 'package:flutter/services.dart';
 import 'package:printing/printing.dart';
 import '../../../../core/error_handler.dart';
 import '../../../../services/agent/agents/archive_agent.dart';
@@ -13,6 +14,7 @@ import '../../../../services/archive/ai_audit_processor.dart';
 import '../../../../services/archive/base_document_processor.dart';
 import '../../../../services/archive/pandoc_service.dart';
 import '../../../../services/archive/processor_registry.dart';
+import '../../../../services/archive_package_service.dart';
 import '../../../../data/local/archive_dao.dart';
 import '../../../../data/models/archive_document_model.dart';
 import '../../../../presentation/widgets/markdown_bubble.dart';
@@ -120,7 +122,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (_) => _DocumentPreviewSheet(doc: doc, dao: widget.dao, agent: widget.agent, onArchived: _load),
+      builder: (_) => _DocumentPreviewSheet(doc: doc),
     );
   }
 
@@ -362,14 +364,138 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
   }
 
   Future<void> _archiveDoc(ArchiveDocument doc) async {
-    final updated = doc.copyWith(status: 'archived');
-    await widget.dao.saveDocument(updated);
-    _load();
-    if (mounted) {
+    if (!mounted) return;
+
+    if (kIsWeb || !(Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已归档：${doc.title}')),
+        const SnackBar(content: Text('一键归档仅在桌面端可用')),
+      );
+      return;
+    }
+
+    final content = doc.content ?? '';
+    if (content.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('文档内容为空，无法归档')),
+      );
+      return;
+    }
+
+    final docLabel = _docLabelFor(doc.documentType);
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: SizedBox(
+          height: 80,
+          child: Row(
+            children: [
+              SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
+              SizedBox(width: 16),
+              Expanded(child: Text('正在归档（pandoc 生成 docx 并落盘）...')),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final svc = ArchivePackageService.instance;
+      final outPath = await svc.archiveDocxOf(doc, docLabel: docLabel);
+      // status 流转 → archived
+      await widget.dao.saveDocument(doc.copyWith(status: 'archived'));
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      _load();
+
+      // 复制到剪贴板（QQ 群粘贴）
+      await Clipboard.setData(ClipboardData(text: outPath));
+      if (!mounted) return;
+      _showArchivedDialog(
+        title: '已归档',
+        path: outPath,
+        message: 'docx 已保存，文件路径已复制到剪贴板，可直接粘贴到 QQ 群发送。',
+      );
+    } on ArchivePackageException catch (e) {
+      swallowDebug(e, tag: 'ArchivePeriodTab._archiveDoc.pkg');
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      _showPrintErrorDialog(title: '归档失败', message: e.message);
+    } on PandocException catch (e) {
+      swallowDebug(e, tag: 'ArchivePeriodTab._archiveDoc.pandoc');
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      _showPrintErrorDialog(title: '归档环境未就绪', message: e.message);
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ArchivePeriodTab._archiveDoc', stack: st);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('归档失败：$e')),
       );
     }
+  }
+
+  String _docLabelFor(String docType) {
+    final defs = docsForCourseType(widget.courseType);
+    for (final list in defs.values) {
+      for (final d in list) {
+        if (d.key == docType) return d.label;
+      }
+    }
+    return docType;
+  }
+
+  /// 归档完成提示：显示文件路径 + 「打开文件夹 / 复制路径 / 关闭」三个动作
+  void _showArchivedDialog({
+    required String title,
+    required String path,
+    required String message,
+  }) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.check_circle_outline, color: Colors.green),
+            const SizedBox(width: 8),
+            Text(title),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(message),
+            const SizedBox(height: 12),
+            SelectableText(
+              path,
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton.icon(
+            icon: const Icon(Icons.folder_open, size: 16),
+            label: const Text('打开文件夹'),
+            onPressed: () async {
+              await ArchivePackageService.instance.revealInFileManager(path);
+            },
+          ),
+          TextButton.icon(
+            icon: const Icon(Icons.copy, size: 16),
+            label: const Text('再次复制'),
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: path));
+            },
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('关闭'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _deleteDoc(ArchiveDocument doc) async {
@@ -1999,15 +2125,115 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
   }
 
   Future<void> _archiveAll() async {
-    final toArchive = _documents.where((d) => d.status != 'archived').toList();
-    if (toArchive.isEmpty) return;
-    for (final doc in toArchive) {
-      await widget.dao.saveDocument(doc.copyWith(status: 'archived'));
-    }
-    _load();
-    if (mounted) {
+    if (!mounted) return;
+
+    if (kIsWeb || !(Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已归档 ${toArchive.length} 份文档')),
+        const SnackBar(content: Text('一键归档仅在桌面端可用')),
+      );
+      return;
+    }
+
+    final toArchive =
+        _documents.where((d) => (d.content ?? '').trim().isNotEmpty).toList();
+    if (toArchive.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('当前期没有可归档的文档')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: SizedBox(
+          height: 80,
+          child: Row(
+            children: [
+              SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
+              SizedBox(width: 16),
+              Expanded(child: Text('正在归档当前期所有文档并打包 zip...')),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    int success = 0;
+    final failures = <String>[];
+    String? lastSampleDocPath;
+    final svc = ArchivePackageService.instance;
+    ArchiveNaming? naming;
+    try {
+      // 用第一份非空文档算 naming（教师/课程/学期相同）
+      naming = await svc.buildNaming(
+        doc: toArchive.first,
+        docLabel: _docLabelFor(toArchive.first.documentType),
+      );
+
+      for (final doc in toArchive) {
+        try {
+          final docLabel = _docLabelFor(doc.documentType);
+          final path = await svc.archiveDocxOf(
+            doc,
+            docLabel: docLabel,
+            naming: naming.copyWith(docLabel: docLabel),
+          );
+          await widget.dao.saveDocument(doc.copyWith(status: 'archived'));
+          success++;
+          lastSampleDocPath = path;
+        } on Exception catch (e, st) {
+          swallowDebug(e, tag: 'ArchivePeriodTab._archiveAll.one', stack: st);
+          failures.add('${doc.title}: $e');
+        }
+      }
+
+      if (success == 0) {
+        if (!mounted) return;
+        Navigator.of(context).pop();
+        _showPrintErrorDialog(
+          title: '归档全部失败',
+          message: failures.isEmpty ? '未知错误' : failures.join('\n'),
+        );
+        return;
+      }
+
+      // 打 zip
+      final zipPath = await svc.zipPeriod(
+        period: widget.periodKey,
+        naming: naming,
+      );
+
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      _load();
+
+      // 复制 zip 路径到剪贴板
+      await Clipboard.setData(ClipboardData(text: zipPath));
+      if (!mounted) return;
+      _showArchivedDialog(
+        title: '本期已归档（$success/${toArchive.length}）',
+        path: zipPath,
+        message: failures.isEmpty
+            ? 'zip 已生成，路径已复制。粘贴到 QQ 群即可分享，或拖动文件到群窗口。'
+            : '$success 份归档成功，${failures.length} 份失败。zip 已生成，路径已复制。\n\n失败列表：\n${failures.join('\n')}',
+      );
+    } on ArchivePackageException catch (e) {
+      swallowDebug(e, tag: 'ArchivePeriodTab._archiveAll.pkg');
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      _showPrintErrorDialog(title: '归档失败', message: e.message);
+      // 即便 zip 失败，已写入的 docx 仍能在文件夹里手动找到
+      if (lastSampleDocPath != null) {
+        await svc.revealInFileManager(lastSampleDocPath);
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ArchivePeriodTab._archiveAll', stack: st);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('归档失败：$e')),
       );
     }
   }
@@ -2256,10 +2482,7 @@ class ActionBtn extends StatelessWidget {
 
 class _DocumentPreviewSheet extends StatelessWidget {
   final ArchiveDocument doc;
-  final ArchiveDao dao;
-  final ArchiveAgent? agent;
-  final VoidCallback? onArchived;
-  const _DocumentPreviewSheet({required this.doc, required this.dao, this.agent, this.onArchived});
+  const _DocumentPreviewSheet({required this.doc});
 
   @override
   Widget build(BuildContext context) {
@@ -2280,22 +2503,9 @@ class _DocumentPreviewSheet extends StatelessWidget {
               children: [
                 IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
                 Expanded(child: Text(doc.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
-                IconButton(icon: const Icon(Icons.rate_review_outlined), tooltip: '审核', onPressed: () {
-                  Navigator.pop(context);
-                }),
-                IconButton(icon: const Icon(Icons.print), tooltip: '打印', onPressed: () {
-                  Navigator.pop(context);
-                }),
-                IconButton(icon: const Icon(Icons.archive), tooltip: '归档', onPressed: () async {
-                  await dao.saveDocument(doc.copyWith(status: 'archived'));
-                  onArchived?.call();
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('已归档：${doc.title}')),
-                    );
-                  }
-                }),
+                // 注：审核 / 打印 / 归档 操作请在卡片上的快捷按钮处发起，
+                //    走 ArchivePackageService 完整路径（生成 docx/PDF + 打包 + 复制路径）。
+                //    预览面板只负责"看内容"，不再提供伪操作按钮。
               ],
             ),
           ),
