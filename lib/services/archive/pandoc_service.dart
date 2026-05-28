@@ -74,24 +74,126 @@ class PandocService {
 
   /// markdown → PDF 字节。
   ///
-  /// 由于 pandoc 直接 markdown → pdf 需要 LaTeX 引擎（笨重），
-  /// 改走两步：先 md → docx（带 reference-doc 样式），再 docx → pdf。
+  /// **两步走**：pandoc md → docx（继承学校样式）→ LibreOffice headless docx → pdf。
+  /// 这样保证打印产出和归档 docx 视觉一致，避免直接 pandoc + LaTeX 的字体 / 中文坑。
   ///
-  /// 但 pandoc docx → pdf 依赖 LibreOffice/Word。Windows 上若有 Word，
-  /// 优先用 Word COM；没有则提示用户。
+  /// **依赖**：用户机器上需装 LibreOffice（`soffice.exe`）。校区一般已装；
+  /// 没装时抛 [PandocException] 提示安装地址。
   ///
-  /// 当前简化实现：直接 pandoc markdown → docx，再让调用方用
-  /// `Printing.layoutPdf` + 自己绘制 markdown，或者通过外部转换。
-  ///
-  /// **本方法当前抛 UnimplementedError**——commit 5 实现一键打印时再补全。
+  /// 检测顺序：PATH `soffice` → `C:\Program Files\LibreOffice\program\soffice.exe`
+  /// → `C:\Program Files (x86)\LibreOffice\program\soffice.exe`。
   Future<Uint8List> markdownToPdf(
-    String markdown, {
-    String? referenceDocPath,
+    String markdown,
+    {String? referenceDocPath,
   }) async {
-    throw UnimplementedError(
-        '[PandocService] markdownToPdf 在 commit 5 实现。'
-        '当前请通过 markdownToDocx + 外部 Word/LibreOffice 转 PDF。');
+    if (markdown.isEmpty) {
+      throw const PandocException('markdown 内容为空，无法转 PDF');
+    }
+
+    // 第 1 步：md → docx（继承样式）
+    final docxBytes = await markdownToDocx(
+      markdown,
+      referenceDocPath: referenceDocPath,
+    );
+
+    // 第 2 步：docx → pdf
+    return _docxToPdfViaSoffice(docxBytes);
   }
+
+  /// 用 LibreOffice headless 把 docx 字节转 PDF 字节。
+  Future<Uint8List> _docxToPdfViaSoffice(Uint8List docxBytes) async {
+    final soffice = await _findSoffice();
+    if (soffice == null) {
+      throw const PandocException(
+        '未找到 LibreOffice (soffice.exe)。请到 https://www.libreoffice.org/download/ '
+        '下载安装，或确保 soffice 在 PATH 中。',
+      );
+    }
+
+    final tmpDir = Directory.systemTemp;
+    final stamp = DateTime.now().microsecondsSinceEpoch;
+    final inputDocx = File(p.join(tmpDir.path, 'mad_print_$stamp.docx'));
+    // soffice 输出 PDF 同名替换扩展，所以 outDir 给 tmpDir，输出文件就是 mad_print_$stamp.pdf
+    final outputPdf = File(p.join(tmpDir.path, 'mad_print_$stamp.pdf'));
+
+    try {
+      await inputDocx.writeAsBytes(docxBytes, flush: true);
+
+      if (kDebugMode) {
+        debugPrint('[PandocService] soffice convert: $soffice → ${inputDocx.path}');
+      }
+
+      final result = await Process.run(
+        soffice,
+        [
+          '--headless',
+          '--norestore',
+          '--nologo',
+          '--convert-to', 'pdf',
+          '--outdir', tmpDir.path,
+          inputDocx.path,
+        ],
+        runInShell: true,
+      ).timeout(const Duration(seconds: 90));
+
+      if (result.exitCode != 0) {
+        throw PandocException(
+          'LibreOffice 退出码 ${result.exitCode}: ${result.stderr}',
+        );
+      }
+      if (!outputPdf.existsSync()) {
+        throw PandocException(
+          'LibreOffice 转换完成但未生成 PDF: ${outputPdf.path}\n'
+          'stdout: ${result.stdout}\nstderr: ${result.stderr}',
+        );
+      }
+
+      return await outputPdf.readAsBytes();
+    } finally {
+      try {
+        if (inputDocx.existsSync()) await inputDocx.delete();
+      } catch (_) {/* ignore cleanup */}
+      try {
+        if (outputPdf.existsSync()) await outputPdf.delete();
+      } catch (_) {/* ignore cleanup */}
+    }
+  }
+
+  /// 探测 LibreOffice 可执行文件路径。命中即缓存。
+  Future<String?> _findSoffice() async {
+    if (_sofficePathCache != null) return _sofficePathCache;
+    if (!isAvailable) return null;
+
+    // 1) PATH 中的 soffice
+    try {
+      final r = await Process.run('soffice', ['--version'], runInShell: true)
+          .timeout(const Duration(seconds: 5));
+      if (r.exitCode == 0) return _sofficePathCache = 'soffice';
+    } on Exception catch (_) {/* ignore, fallback */}
+
+    // 2) Windows 默认安装路径
+    if (Platform.isWindows) {
+      const candidates = [
+        r'C:\Program Files\LibreOffice\program\soffice.exe',
+        r'C:\Program Files (x86)\LibreOffice\program\soffice.exe',
+      ];
+      for (final c in candidates) {
+        if (File(c).existsSync()) return _sofficePathCache = c;
+      }
+    } else if (Platform.isMacOS) {
+      const mac = '/Applications/LibreOffice.app/Contents/MacOS/soffice';
+      if (File(mac).existsSync()) return _sofficePathCache = mac;
+    } else if (Platform.isLinux) {
+      const linuxCandidates = ['/usr/bin/soffice', '/usr/bin/libreoffice'];
+      for (final c in linuxCandidates) {
+        if (File(c).existsSync()) return _sofficePathCache = c;
+      }
+    }
+
+    return null;
+  }
+
+  String? _sofficePathCache;
 
   /// 通用：调 pandoc 子进程，stdin 喂 [input]，stdout 收字节。
   Future<Uint8List> _convert({
@@ -101,7 +203,7 @@ class PandocService {
     List<String> extraArgs = const [],
   }) async {
     if (!await isInstalled) {
-      throw PandocException(
+      throw const PandocException(
         'pandoc 不在 PATH 或未安装。请到 https://pandoc.org/installing.html 安装。',
       );
     }
@@ -158,7 +260,10 @@ class PandocService {
 
   /// 测试用：清空安装状态缓存
   @visibleForTesting
-  void resetCacheForTest() => _isInstalledCache = null;
+  void resetCacheForTest() {
+    _isInstalledCache = null;
+    _sofficePathCache = null;
+  }
 }
 
 class PandocException implements Exception {
