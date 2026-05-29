@@ -345,7 +345,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
       for (final p in pending) {
         await _gradingDao.approveResult(p['id'] as int, widget.authService.getCurrentUserId() ?? '');
       }
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'LabAiGrading.approveStatus');
     }
 
@@ -364,7 +364,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
         );
         unawaited(SyncService().uploadStudentData(studentId));
       }
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'LabAiGrading.notifySync');
     }
 

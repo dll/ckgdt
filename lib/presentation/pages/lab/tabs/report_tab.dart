@@ -33,7 +33,7 @@ class _ReportTabState extends State<_ReportTab> {
       if (_isTeacherOrAdmin) {
         try {
           await SyncService().downloadAllStudentData();
-        } catch (e, st) {
+        } catch (e) {
           swallow(e, tag: 'LabReportTab.downloadAll');
         }
       } else {
@@ -42,7 +42,7 @@ class _ReportTabState extends State<_ReportTab> {
         if (userId != null && userId.isNotEmpty) {
           try {
             await SyncService().downloadOwnData(userId);
-          } catch (e, st) {
+          } catch (e) {
             swallow(e, tag: 'LabReportTab.downloadOwn');
           }
         }

@@ -100,7 +100,7 @@ class AuthService {
     for (final table in userIdTables) {
       try {
         await db.delete(table, where: 'user_id = ?', whereArgs: [userId]);
-      } catch (e, st) {
+      } catch (e) {
         swallow(e, tag: 'AuthService.cleanUserTables');
       }
     }
@@ -109,26 +109,26 @@ class AuthService {
     try {
       await db.delete('peer_reviews',
           where: 'reviewer_id = ?', whereArgs: [userId]);
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'AuthService.cleanPeerReviews');
     }
     try {
       await db.delete('collaboration_messages',
           where: 'sender_id = ?', whereArgs: [userId]);
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'AuthService.cleanCollabMsgs');
     }
     try {
       await db.delete('classroom_messages',
           where: 'sender_id = ?', whereArgs: [userId]);
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'AuthService.cleanClassMsgs');
     }
     try {
       await db.delete('contribution_scores',
           where: 'scorer_user_id = ? OR target_user_id = ?',
           whereArgs: [userId, userId]);
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'AuthService.cleanContributionScores');
     }
 
@@ -140,7 +140,7 @@ class AuthService {
         await db.delete('path_nodes',
             where: 'path_id = ?', whereArgs: [p['id']]);
       }
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'AuthService.cleanPathNodes');
     }
 
@@ -189,7 +189,7 @@ class AuthService {
           debugPrint('AuthService: 清理 $table 中 $count 条孤立记录');
           totalCleaned += count;
         }
-      } catch (e, st) {
+      } catch (e) {
         swallow(e, tag: 'AuthService.cleanOrphanLoop');
       }
     }
@@ -208,7 +208,7 @@ class AuthService {
           debugPrint('AuthService: 清理 ${entry.key} 中 $count 条孤立记录');
           totalCleaned += count;
         }
-      } catch (e, st) {
+      } catch (e) {
         swallow(e, tag: 'AuthService.cleanSpecialTables');
       }
     }
@@ -235,7 +235,7 @@ class AuthService {
           'sync/students',
           ref: SyncService.repoBranch,
         );
-      } catch (e, st) {
+      } catch (e) {
         swallow(e, tag: 'AuthService.listRemoteDir');
         return;
       }

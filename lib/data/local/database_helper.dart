@@ -343,7 +343,7 @@ class DatabaseHelper {
       // 清理临时文件
       try {
         await databaseFactory.deleteDatabase(tempPath);
-      } catch (e, st) {
+      } catch (e) {
         swallow(e, tag: 'DatabaseHelper.cleanTemp');
       }
 
@@ -778,12 +778,12 @@ class DatabaseHelper {
   Future<void> _ensureAchievementColumns(Database db) async {
     try {
       await db.rawQuery('SELECT calc_results_json FROM achievement_batches LIMIT 1');
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'DatabaseHelper.ensureAchievement');
       try {
         await db.execute('ALTER TABLE achievement_batches ADD COLUMN calc_results_json TEXT');
         debugPrint('=== DatabaseHelper: Added calc_results_json column to achievement_batches');
-      } catch (e2, st2) {
+      } catch (e2) {
         swallow(e2, tag: 'DatabaseHelper.alterAchievement');
       }
     }
@@ -793,12 +793,12 @@ class DatabaseHelper {
   Future<void> _ensureUsersColumns(Database db) async {
     try {
       await db.rawQuery('SELECT repository_url FROM users LIMIT 1');
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'DatabaseHelper.ensureUsers');
       try {
         await db.execute('ALTER TABLE users ADD COLUMN repository_url TEXT');
         debugPrint('=== DatabaseHelper: Added repository_url column to users');
-      } catch (e2, st2) {
+      } catch (e2) {
         swallow(e2, tag: 'DatabaseHelper.alterUsers');
       }
     }
@@ -808,34 +808,34 @@ class DatabaseHelper {
   Future<void> _ensureResourceFileColumns(Database db) async {
     try {
       await db.rawQuery('SELECT chapter FROM resource_files LIMIT 1');
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'DatabaseHelper.ensureResChapter');
       try {
         await db.execute('ALTER TABLE resource_files ADD COLUMN chapter TEXT');
         debugPrint('=== DatabaseHelper: Added chapter column to resource_files');
-      } catch (e2, st2) {
+      } catch (e2) {
         swallow(e2, tag: 'DatabaseHelper.alterResChapter');
       }
     }
     try {
       await db.rawQuery('SELECT description FROM resource_files LIMIT 1');
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'DatabaseHelper.ensureResDesc');
       try {
         await db.execute('ALTER TABLE resource_files ADD COLUMN description TEXT');
         debugPrint('=== DatabaseHelper: Added description column to resource_files');
-      } catch (e2, st2) {
+      } catch (e2) {
         swallow(e2, tag: 'DatabaseHelper.alterResDesc');
       }
     }
     try {
       await db.rawQuery('SELECT source_type FROM resource_files LIMIT 1');
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'DatabaseHelper.ensureResSourceType');
       try {
         await db.execute("ALTER TABLE resource_files ADD COLUMN source_type TEXT DEFAULT 'preset'");
         debugPrint('=== DatabaseHelper: Added source_type column to resource_files');
-      } catch (e2, st2) {
+      } catch (e2) {
         swallow(e2, tag: 'DatabaseHelper.alterResSourceType');
       }
     }
@@ -1475,7 +1475,7 @@ class DatabaseHelper {
     // 密码支持
     try {
       await db.execute('ALTER TABLE users ADD COLUMN password_hash TEXT');
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'DatabaseHelper.v13PasswordHash');
     }
 
@@ -1558,7 +1558,7 @@ class DatabaseHelper {
         await db.execute(
             'ALTER TABLE agent_call_logs ADD COLUMN chain_step INTEGER');
       }
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'DatabaseHelper.v13AgentCallLogs');
     }
 
@@ -1628,19 +1628,19 @@ class DatabaseHelper {
     try {
       await db.execute(
           'ALTER TABLE ai_configs ADD COLUMN temperature REAL DEFAULT 0.7');
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'DatabaseHelper.v14Temperature');
     }
     try {
       await db.execute(
           'ALTER TABLE ai_configs ADD COLUMN max_tokens INTEGER DEFAULT 2048');
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'DatabaseHelper.v14MaxTokens');
     }
     try {
       await db.execute(
           'ALTER TABLE ai_configs ADD COLUMN timeout INTEGER DEFAULT 60');
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'DatabaseHelper.v14Timeout');
     }
 
@@ -1716,14 +1716,14 @@ class DatabaseHelper {
       await db.execute(
         'ALTER TABLE ai_chat_history ADD COLUMN starred INTEGER DEFAULT 0',
       );
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'DatabaseHelper.v16Starred');
     }
     try {
       await db.execute(
         'ALTER TABLE ai_chat_history ADD COLUMN title TEXT',
       );
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'DatabaseHelper.v16Title');
     }
   }
@@ -1734,7 +1734,7 @@ class DatabaseHelper {
       await db.execute(
         'ALTER TABLE wrong_answers ADD COLUMN explanation TEXT',
       );
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'DatabaseHelper.v17Explanation');
     }
   }
@@ -1745,7 +1745,7 @@ class DatabaseHelper {
       await db.execute(
         'ALTER TABLE student_reports ADD COLUMN file_path TEXT',
       );
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'DatabaseHelper.v18FilePath');
     }
   }
@@ -1785,7 +1785,7 @@ class DatabaseHelper {
     for (final sql in alters) {
       try {
         await db.execute(sql);
-      } catch (e, st) {
+      } catch (e) {
         swallow(e, tag: 'DatabaseHelper.v20AlterLoop');
       }
     }
@@ -1806,7 +1806,7 @@ class DatabaseHelper {
       await db.execute(
         'CREATE INDEX IF NOT EXISTS idx_twin_snap_user ON twin_snapshots(user_id, generated_at DESC)'
       );
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'DatabaseHelper.v20TwinIndex');
     }
 
@@ -1886,14 +1886,14 @@ class DatabaseHelper {
       await db.execute(
         'CREATE INDEX IF NOT EXISTS idx_hot_videos_platform ON hot_videos(platform)'
       );
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'DatabaseHelper.v21IdxPlatform');
     }
     try {
       await db.execute(
         'CREATE INDEX IF NOT EXISTS idx_hot_video_fav_user ON hot_video_favorites(user_id)'
       );
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'DatabaseHelper.v21IdxFavUser');
     }
 
@@ -1963,22 +1963,22 @@ class DatabaseHelper {
   Future<void> _migrateToV22(Database db) async {
     try {
       await db.execute('ALTER TABLE ai_chat_history ADD COLUMN prompt_tokens INTEGER DEFAULT 0');
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'DatabaseHelper.v22PromptTokens');
     }
     try {
       await db.execute('ALTER TABLE ai_chat_history ADD COLUMN completion_tokens INTEGER DEFAULT 0');
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'DatabaseHelper.v22CompletionTokens');
     }
     try {
       await db.execute('ALTER TABLE ai_chat_history ADD COLUMN provider TEXT');
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'DatabaseHelper.v22Provider');
     }
     try {
       await db.execute('ALTER TABLE ai_chat_history ADD COLUMN model TEXT');
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'DatabaseHelper.v22Model');
     }
   }
@@ -1988,13 +1988,13 @@ class DatabaseHelper {
     try {
       await db.execute(
           "ALTER TABLE archive_documents ADD COLUMN review_json TEXT DEFAULT ''");
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'V25.add_review_json'); // 列已存在是常态，吞掉
     }
     try {
       await db.execute(
           "ALTER TABLE archive_documents ADD COLUMN reviewed_at TEXT DEFAULT ''");
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'V25.add_reviewed_at');
     }
     // origin_doc_id：审核表所属的源文档 ID（如 syllabus_review 指向源 syllabus 的 ID）
@@ -2002,7 +2002,7 @@ class DatabaseHelper {
     try {
       await db.execute(
           'ALTER TABLE archive_documents ADD COLUMN origin_doc_id INTEGER');
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'V25.add_origin_doc_id');
     }
   }
@@ -2011,12 +2011,12 @@ class DatabaseHelper {
   Future<void> _migrateToV24(Database db) async {
     try {
       await db.execute('CREATE INDEX IF NOT EXISTS idx_ai_chat_role_date ON ai_chat_history(role, created_at DESC)');
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'DatabaseHelper.v24IdxRoleDate');
     }
     try {
       await db.execute('CREATE INDEX IF NOT EXISTS idx_ai_chat_role_user ON ai_chat_history(role, user_id)');
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'DatabaseHelper.v24IdxRoleUser');
     }
   }
@@ -2025,7 +2025,7 @@ class DatabaseHelper {
   Future<void> _migrateToV23(Database db) async {
     try {
       await db.execute('ALTER TABLE ai_chat_history ADD COLUMN user_id TEXT DEFAULT \'\'');
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'DatabaseHelper.v23UserId');
     }
     await db.execute('''
