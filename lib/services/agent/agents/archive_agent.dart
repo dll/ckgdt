@@ -5,6 +5,7 @@ import '../agent_model.dart';
 import '../../ai_service.dart';
 import '../../archive_template_loader.dart';
 import '../../archive_context_service.dart';
+import '../../../core/constants/archive_periods.dart' as periods;
 import '../../../data/local/archive_dao.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../data/models/archive_document_model.dart';
@@ -57,7 +58,7 @@ class ArchiveAgent extends BaseAgent {
 
     // 三段式增强：[REFERENCE] 历届模板（few-shot 风格学习材料）+ [SYSTEM_FACTS] 系统事实
     // 这两段只在能拿到时才注入；拿不到（assets 缺 / DB 没数据）走原有 prompt 逻辑不变。
-    final periodZh = _periodLabel(period); // beginning -> 期初
+    final periodZh = periods.periodLabel(period); // beginning -> 期初
     final referenceMd = await ArchiveTemplateLoader.loadPrimary(
       periodZh: periodZh,
       docType: documentType,
@@ -152,7 +153,7 @@ class ArchiveAgent extends BaseAgent {
 === 文档基本信息 ===
 - **标题**：${doc.title}
 - **文档类型**：${_docTypeLabel(doc.documentType)}
-- **教学阶段**：${_periodLabel(doc.period)}
+- **教学阶段**：${periods.periodLabel(doc.period)}
 - **课程类型**：$courseTypeLabel
 
 === 通用审核标准 ===
@@ -193,16 +194,6 @@ ${doc.content ?? '（文档无内容）'}''';
       'print_report': '印刷审批表', 'archive_form': '归档确认表',
     };
     return labels[dt] ?? dt;
-  }
-
-  String _periodLabel(String p) {
-    const labels = {
-      'beginning': '期初',
-      'midterm': '期中',
-      'final': '期末',
-      'archive': '归档',
-    };
-    return labels[p] ?? p;
   }
 
   String _reviewChecklist(String dt) {

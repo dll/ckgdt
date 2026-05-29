@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../../core/error_handler.dart';
 
 /// AI 审核结果的 schema —— archive_documents.review_json 列里存的就是这个的 toJson。
 ///
@@ -69,8 +70,9 @@ class ReviewResult {
     if (json.isEmpty) return ReviewResult(overall: 'pending');
     try {
       return ReviewResult.fromMap(jsonDecode(json) as Map<String, dynamic>);
-    } catch (_) {
+    } catch (e, st) {
       // 解析失败兜底：仍能展示文档但审核状态视作 pending
+      swallowDebug(e, tag: 'ReviewResult.fromJson', stack: st);
       return ReviewResult(overall: 'pending');
     }
   }

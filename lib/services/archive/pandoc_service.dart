@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
+import '../../core/error_handler.dart';
 
 /// Pandoc 子进程封装。
 ///
@@ -152,10 +153,14 @@ class PandocService {
     } finally {
       try {
         if (inputDocx.existsSync()) await inputDocx.delete();
-      } catch (_) {/* ignore cleanup */}
+      } catch (e) {
+        swallow(e, tag: 'PandocService.cleanup.inputDocx');
+      }
       try {
         if (outputPdf.existsSync()) await outputPdf.delete();
-      } catch (_) {/* ignore cleanup */}
+      } catch (e) {
+        swallow(e, tag: 'PandocService.cleanup.outputPdf');
+      }
     }
   }
 
@@ -169,7 +174,9 @@ class PandocService {
       final r = await Process.run('soffice', ['--version'], runInShell: true)
           .timeout(const Duration(seconds: 5));
       if (r.exitCode == 0) return _sofficePathCache = 'soffice';
-    } on Exception catch (_) {/* ignore, fallback */}
+    } on Exception catch (e) {
+      swallow(e, tag: 'PandocService._findSoffice.path');
+    }
 
     // 2) Windows 默认安装路径
     if (Platform.isWindows) {
@@ -251,10 +258,14 @@ class PandocService {
       // 清理临时文件
       try {
         if (inputFile.existsSync()) await inputFile.delete();
-      } catch (_) {/* ignore */}
+      } catch (e) {
+        swallow(e, tag: 'PandocService.cleanup.input');
+      }
       try {
         if (outputFile.existsSync()) await outputFile.delete();
-      } catch (_) {/* ignore */}
+      } catch (e) {
+        swallow(e, tag: 'PandocService.cleanup.output');
+      }
     }
   }
 

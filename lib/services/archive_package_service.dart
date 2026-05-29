@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:archive/archive_io.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
+import '../core/constants/archive_periods.dart' as periods;
 import '../core/error_handler.dart';
 import '../data/local/class_dao.dart';
 import '../data/local/course_dao.dart';
@@ -10,7 +11,7 @@ import 'archive/pandoc_service.dart';
 import 'archive/processor_registry.dart';
 import 'auth_service.dart';
 
-/// 一键归档打包服务（commit 6 核心）。
+/// 一键归档打包服务。
 ///
 /// **职责**：把已审核通过 / 已存稿的归档文档落盘成符合学校命名规范的 docx，
 /// 按"学期/课程/期"分目录归档，整期可打 zip 供 QQ 群分享。
@@ -230,15 +231,7 @@ class ArchivePackageService {
     return ArchiveFile(relPath, bytes.length, bytes);
   }
 
-  String _periodLabel(String key) {
-    const map = {
-      'beginning': '期初',
-      'midterm': '期中',
-      'final': '期末',
-      'archive': '归档',
-    };
-    return map[key] ?? key;
-  }
+  String _periodLabel(String key) => periods.periodLabel(key);
 
   /// 默认学期：当前年月推断（>=8 月为上半年；<8 月为下半年）
   String _defaultSemester() {

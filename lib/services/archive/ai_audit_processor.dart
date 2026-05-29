@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import '../../core/constants/archive_periods.dart' as periods;
 import '../../core/error_handler.dart';
 import '../../data/local/archive_dao.dart';
 import '../../data/models/archive_document_model.dart';
@@ -118,7 +119,7 @@ class AiAuditProcessor extends BaseDocumentProcessor {
       swallowDebug(e, tag: 'AiAuditProcessor.collectForPrompt', stack: st);
     }
     final referenceMd = await ArchiveTemplateLoader.loadPrimary(
-      periodZh: _periodLabel(target.period),
+      periodZh: periods.periodLabel(target.period),
       docType: targetDocType,
     );
 
@@ -205,15 +206,11 @@ class AiAuditProcessor extends BaseDocumentProcessor {
     ArchiveDocument target,
     ReviewResult review,
   ) async {
-    // 查现有的审核表（按 origin_doc_id + auditDocType 唯一）
-    final existing = await _dao.getDocuments(
-      period: target.period,
-      courseType: target.courseType,
-      documentType: auditDocType,
-    );
+    // origin_doc_id 是 audit→target 的反向键，DAO 已有索引友好的查询。
+    final linkedAll = await _dao.getAuditDocsForOrigin(target.id!);
     ArchiveDocument? linked;
-    for (final d in existing) {
-      if (d.originDocId == target.id) {
+    for (final d in linkedAll) {
+      if (d.documentType == auditDocType) {
         linked = d;
         break;
       }
@@ -306,7 +303,7 @@ class AiAuditProcessor extends BaseDocumentProcessor {
     buf.writeln('## [AUDIT_TARGET] 待审文档');
     buf.writeln('**标题**：${target.title}');
     buf.writeln('**类型**：$targetDocLabel');
-    buf.writeln('**期间**：${_periodLabel(target.period)}');
+    buf.writeln('**期间**：${periods.periodLabel(target.period)}');
     buf.writeln();
     buf.writeln('```markdown');
     final content = target.content ?? '';
@@ -424,16 +421,6 @@ class AiAuditProcessor extends BaseDocumentProcessor {
         latencyMs: latencyMs,
       );
     }
-  }
-
-  String _periodLabel(String p) {
-    const labels = {
-      'beginning': '期初',
-      'midterm': '期中',
-      'final': '期末',
-      'archive': '归档',
-    };
-    return labels[p] ?? p;
   }
 
   // BaseDocumentProcessor 默认 toPdf/toDocx 已经处理 markdown→docx。

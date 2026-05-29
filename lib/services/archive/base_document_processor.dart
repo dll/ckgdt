@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
+import '../../core/constants/archive_periods.dart' as periods;
 import '../../data/models/archive_document_model.dart';
 import 'document_processor.dart';
 import 'pandoc_service.dart';
@@ -21,40 +22,36 @@ abstract class BaseDocumentProcessor extends DocumentProcessor {
   /// 子类可 override 给特定 docType 指定 reference docx 模板路径。
   /// 默认走自动发现：`<archiveDataRoot>/<期>/模板/{docType}.docx` 或同期任一
   /// 文件名包含 [docType] 中文 keyword 的 docx。
-  String? referenceDocxFor(ArchiveDocument doc) {
+  String? referenceDocxFor(ArchiveDocument doc) =>
+      findReferenceDocx(period: doc.period, docLabel: docLabel);
+
+  /// 静态版本：UI fallback（registry 没注册的 docType）也能复用同一套查找逻辑，
+  /// 不必再造一份 `data/归档/<期>/模板/` 扫描。
+  static String? findReferenceDocx({
+    required String period,
+    required String docLabel,
+  }) {
     if (archiveDataRoot == null) return null;
-    final periodZh = _periodLabel(doc.period);
+    final periodZh = periods.periodLabel(period);
     final templateDir = Directory(p.join(archiveDataRoot!, periodZh, '模板'));
     if (!templateDir.existsSync()) return null;
-    // 用 docLabel 做 fuzzy 匹配（如 "教学大纲" 命中 "...教学大纲...20260528.docx"）
-    final keyword = docLabel;
     try {
       for (final entry in templateDir.listSync()) {
         if (entry is! File) continue;
         if (!entry.path.toLowerCase().endsWith('.docx')) continue;
-        if (p.basename(entry.path).contains(keyword)) {
+        if (p.basename(entry.path).contains(docLabel)) {
           if (kDebugMode) {
-            debugPrint('[BaseDocumentProcessor.$docType] reference docx: ${entry.path}');
+            debugPrint('[BaseDocumentProcessor] reference docx for $docLabel: ${entry.path}');
           }
           return entry.path;
         }
       }
     } on Exception catch (e) {
       if (kDebugMode) {
-        debugPrint('[BaseDocumentProcessor.$docType] reference docx scan failed: $e');
+        debugPrint('[BaseDocumentProcessor] reference docx scan failed: $e');
       }
     }
     return null;
-  }
-
-  String _periodLabel(String p) {
-    const labels = {
-      'beginning': '期初',
-      'midterm': '期中',
-      'final': '期末',
-      'archive': '归档',
-    };
-    return labels[p] ?? p;
   }
 
   @override

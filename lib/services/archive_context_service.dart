@@ -11,7 +11,7 @@ import 'auth_service.dart';
 /// 一份结构化文本，注入 prompt 的 [SYSTEM_FACTS] 段。AI 据此决定哪些
 /// 字段照搬模板、哪些字段必须替换为本课程/本班级的真实值。
 ///
-/// **6 类事实**（与第八轮方案一致）：
+/// **6 类事实**：
 ///   1. 课程：当前激活课程的 id / name / description / chapterCount / chapters
 ///   2. 班级：教师当前管理的活跃班级（专业 / 学期 / 学生数）
 ///   3. 章节：DB graphs 表里被标为 chapter 的根节点（标题 + 节点数）

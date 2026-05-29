@@ -56,11 +56,11 @@ abstract class DocumentProcessor {
   Future<String> review(ArchiveDocument doc);
 
   /// **一键打印** —— 把 [doc] 的 markdown 内容转成 PDF 字节供 Printing.layoutPdf。
-  /// 由 commit 5 在通用基类 [BaseDocumentProcessor] 实现，子类一般无需 override。
+  /// 在通用基类 [BaseDocumentProcessor] 实现，子类一般无需 override。
   Future<Uint8List> toPdf(ArchiveDocument doc);
 
   /// **一键归档** —— 把 [doc] 的 markdown 内容转成 docx 字节落盘。
-  /// 由 commit 5 在通用基类 [BaseDocumentProcessor] 实现，子类一般无需 override。
+  /// 在通用基类 [BaseDocumentProcessor] 实现，子类一般无需 override。
   Future<Uint8List> toDocx(ArchiveDocument doc);
 }
 
