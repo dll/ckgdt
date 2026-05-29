@@ -3,8 +3,8 @@
   "user_id": "2023210643",
   "user_name": "张海天",
   "role": "student",
-  "synced_at": "2026-05-27T04:13:32.557794",
-  "last_active": "2026-05-27T04:13:32.557794",
+  "synced_at": "2026-05-29T08:26:15.921088",
+  "last_active": "2026-05-29T08:26:15.917993",
   "quiz_results": [
     {
       "user_id": "2023210643",
@@ -536,32 +536,6 @@
   "checkin_records": [],
   "work_comments": [],
   "work_likes": [],
-  "notification_recipients": [
-    {
-      "notification_id": 1,
-      "user_id": "2023210643",
-      "is_read": 0,
-      "read_at": null
-    },
-    {
-      "notification_id": 2,
-      "user_id": "2023210643",
-      "is_read": 0,
-      "read_at": null
-    },
-    {
-      "notification_id": 75,
-      "user_id": "2023210643",
-      "is_read": 0,
-      "read_at": null
-    },
-    {
-      "notification_id": 76,
-      "user_id": "2023210643",
-      "is_read": 0,
-      "read_at": null
-    }
-  ],
   "work_views": [],
   "peer_reviews": [],
   "collaboration_messages": [],
