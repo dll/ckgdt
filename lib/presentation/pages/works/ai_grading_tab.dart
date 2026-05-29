@@ -352,7 +352,7 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
         scorerName: widget.authService.currentUser?.realName ?? '教师',
         op: 'create',
       );
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'WorksAiGrading.auditLog');
     }
 
@@ -362,7 +362,7 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
       for (final p in pending) {
         await _gradingDao.approveResult(p['id'] as int, widget.authService.getCurrentUserId() ?? '');
       }
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'WorksAiGrading.approveStatus');
     }
 
@@ -380,7 +380,7 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
           );
         }
       }
-    } catch (e, st) {
+    } catch (e) {
       swallow(e, tag: 'WorksAiGrading.notify');
     }
 
