@@ -10,6 +10,7 @@ import '../../../services/sync_service.dart';
 import '../../../services/agent/agents/lab_grading_agent.dart';
 import 'lab_tasks_page.dart';
 import '../../../core/constants/color_ohos_compat.dart';
+import '../../../core/error_handler.dart';
 
 /// 实验 AI 智能批阅 Tab — 仅教师/管理员可见
 ///
@@ -106,11 +107,11 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
         final tid = p['target_id'] as int;
         if (!_approvedIds.contains(tid) && !_gradingResults.containsKey(tid)) {
           Map<String, dynamic>? dims;
-          try { dims = jsonDecode(p['dimensions'] as String? ?? ''); } catch (_) {}
+          try { dims = jsonDecode(p['dimensions'] as String? ?? ''); } catch (e, st) { swallowDebug(e, tag: 'LabAiGrading.dims', stack: st); }
           List<String> strengths = [];
-          try { strengths = (jsonDecode(p['strengths'] as String? ?? '[]') as List).cast<String>(); } catch (_) {}
+          try { strengths = (jsonDecode(p['strengths'] as String? ?? '[]') as List).cast<String>(); } catch (e, st) { swallowDebug(e, tag: 'LabAiGrading.strengths', stack: st); }
           List<String> improvements = [];
-          try { improvements = (jsonDecode(p['improvements'] as String? ?? '[]') as List).cast<String>(); } catch (_) {}
+          try { improvements = (jsonDecode(p['improvements'] as String? ?? '[]') as List).cast<String>(); } catch (e, st) { swallowDebug(e, tag: 'LabAiGrading.improvements', stack: st); }
           _gradingResults[tid] = _GradingResult(
             score: (p['score'] as num?)?.toInt() ?? 0,
             feedback: (p['feedback'] as String?) ?? '',
@@ -122,7 +123,9 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
           );
         }
       }
-    } catch (_) {}
+    } catch (e, st) {
+      swallowDebug(e, tag: 'LabAiGrading.loadSubs', stack: st);
+    }
     if (mounted) setState(() => _submissions = subs);
   }
 
@@ -342,7 +345,9 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
       for (final p in pending) {
         await _gradingDao.approveResult(p['id'] as int, widget.authService.getCurrentUserId() ?? '');
       }
-    } catch (_) {}
+    } catch (e, st) {
+      swallow(e, tag: 'LabAiGrading.approveStatus');
+    }
 
     // 通知学生 + 触发同步（让学生端尽快看到分数）
     try {
@@ -359,7 +364,9 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
         );
         unawaited(SyncService().uploadStudentData(studentId));
       }
-    } catch (_) {}
+    } catch (e, st) {
+      swallow(e, tag: 'LabAiGrading.notifySync');
+    }
 
     setState(() {
       _approvedIds.add(submissionId);
@@ -461,7 +468,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                   // 反馈编辑
                   TextField(
                     controller: feedbackCtrl,
-                    maxLines: 6,
+                    maxLines: null,
                     decoration: const InputDecoration(
                       labelText: '批阅反馈',
                       border: OutlineInputBorder(),
@@ -1098,11 +1105,11 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
         ),
         subtitle: result != null
             ? Text(
-                result.feedback.length > 60
-                    ? '${result.feedback.substring(0, 60)}...'
+                result.feedback.length > 200
+                    ? '${result.feedback.substring(0, 200)}...'
                     : result.feedback,
                 style: const TextStyle(fontSize: 11),
-                maxLines: 1,
+                maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               )
             : Text(
@@ -1265,8 +1272,8 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                       ))
                 else
                   Text(
-                      e.feedback.length > 100
-                          ? '${e.feedback.substring(0, 100)}...'
+                      e.feedback.length > 200
+                          ? '${e.feedback.substring(0, 200)}...'
                           : e.feedback,
                       style: const TextStyle(fontSize: 12)),
               ],

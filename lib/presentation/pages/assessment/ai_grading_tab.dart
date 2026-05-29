@@ -9,6 +9,7 @@ import '../../../services/notification_service.dart';
 import '../../../services/agent/agents/assessment_grading_agent.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
+import '../../../core/error_handler.dart';
 /// 考核 AI 智能批阅 Tab — 仅教师/管理员可见
 ///
 /// 四区结构：
@@ -76,11 +77,11 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
         final tid = p['target_id'] as int;
         if (!_approvedIds.contains(tid) && !_gradingResults.containsKey(tid)) {
           Map<String, dynamic>? dims;
-          try { dims = jsonDecode(p['dimensions'] as String? ?? ''); } catch (_) {}
+          try { dims = jsonDecode(p['dimensions'] as String? ?? ''); } catch (e, st) { swallowDebug(e, tag: 'AiGradingTab.dims', stack: st); }
           List<String> strengths = [];
-          try { strengths = (jsonDecode(p['strengths'] as String? ?? '[]') as List).cast<String>(); } catch (_) {}
+          try { strengths = (jsonDecode(p['strengths'] as String? ?? '[]') as List).cast<String>(); } catch (e, st) { swallowDebug(e, tag: 'AiGradingTab.strengths', stack: st); }
           List<String> improvements = [];
-          try { improvements = (jsonDecode(p['improvements'] as String? ?? '[]') as List).cast<String>(); } catch (_) {}
+          try { improvements = (jsonDecode(p['improvements'] as String? ?? '[]') as List).cast<String>(); } catch (e, st) { swallowDebug(e, tag: 'AiGradingTab.improvements', stack: st); }
           _gradingResults[tid] = _GradingResult(
             score: (p['score'] as num?)?.toInt() ?? 0,
             feedback: (p['feedback'] as String?) ?? '',
@@ -90,7 +91,7 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
           );
         }
       }
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'AiGradingTab', stack: st); }
     if (mounted) setState(() => _reports = reports);
   }
 
@@ -232,7 +233,8 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
         return map;
       }
       return null;
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AiGradingTab.parseJson', stack: st);
       return null;
     }
   }
@@ -295,7 +297,7 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
         studentId = row.first['user_id'] as String?;
         reportType = row.first['title'] as String? ?? '考核报告';
       }
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'AiGradingTab', stack: st); }
 
     await db.update(
       'student_reports',
@@ -315,7 +317,7 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
       for (final p in pending) {
         await _gradingDao.approveResult(p['id'] as int, widget.authService.getCurrentUserId() ?? '');
       }
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'AiGradingTab', stack: st); }
 
     // 通知学生：教师已复核
     if (studentId != null && studentId.isNotEmpty) {
@@ -325,7 +327,7 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
           reportType: reportType ?? '考核报告',
           score: result.score,
         );
-      } catch (_) {}
+      } catch (e, st) { swallowDebug(e, tag: 'AiGradingTab', stack: st); }
     }
 
     setState(() {
@@ -401,7 +403,7 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
                   const SizedBox(height: 12),
                   TextField(
                     controller: feedbackCtrl,
-                    maxLines: 6,
+                    maxLines: null,
                     decoration: const InputDecoration(
                       labelText: '批阅反馈',
                       border: OutlineInputBorder(),
@@ -745,11 +747,11 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
         ]),
         subtitle: result != null
             ? Text(
-                result.feedback.length > 60
-                    ? '${result.feedback.substring(0, 60)}...'
+                result.feedback.length > 200
+                    ? '${result.feedback.substring(0, 200)}...'
                     : result.feedback,
                 style: const TextStyle(fontSize: 11),
-                maxLines: 1,
+                maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               )
             : null,

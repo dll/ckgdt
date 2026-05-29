@@ -87,7 +87,9 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
     try {
       _currentUserId = widget.authService.getCurrentUserId();
       await _loadSubmissions();
-    } catch (_) {}
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AssessmentReportTab.init', stack: st);
+    }
     if (mounted) setState(() => _loading = false);
   }
 
@@ -100,7 +102,9 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
           _submissions = subs;
         });
       }
-    } catch (_) {}
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AssessmentReportTab.loadSubs', stack: st);
+    }
   }
 
   @override
@@ -963,7 +967,9 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
         try {
           pdfTextForGrading =
               await PdfTextService.extractFromFile(file.path!, maxChars: 6000);
-        } catch (_) {}
+        } catch (e, st) {
+          swallowDebug(e, tag: 'AssessmentReportTab.pdfText', stack: st);
+        }
       }
 
       if (!mounted) return;
@@ -1331,7 +1337,8 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
         return map;
       }
       return null;
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AssessmentReportTab.parseGradingJson', stack: st);
       return null;
     }
   }
