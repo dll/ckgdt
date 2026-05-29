@@ -27,7 +27,6 @@ import '../admin/data_import_page.dart';
 import '../quiz/quiz_page.dart';
 import 'video_player_page.dart';
 import 'pdf_viewer_page.dart';
-import 'ppt_viewer_page.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
 /// 学习中心页面 — 合并原"视频"和"课件"菜单

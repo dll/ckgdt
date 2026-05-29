@@ -4,7 +4,6 @@ import '../../../services/gitee_service.dart';
 import '../../../services/course_resource_service.dart';
 import '../../widgets/agent_entry_button.dart';
 
-import '../../../core/constants/color_ohos_compat.dart';
 
 // ── Tab 实现拆分到 tabs/ 子目录（part / part of 模式）──────────────
 part 'tabs/repo_list_tab.dart';

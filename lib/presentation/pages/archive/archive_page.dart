@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import '../../../core/error_handler.dart';
 import '../../../services/agent/agents/archive_agent.dart';
 import '../../../data/local/archive_dao.dart';
-import '../../../data/models/archive_document_model.dart';
 import '../../widgets/inner_tab_request_mixin.dart';
 import 'archive_constants.dart';
 import 'tabs/period_tab.dart';
-import 'tabs/archive_action_tab.dart';
+import 'tabs/midterm_tab.dart';
+import 'tabs/final_tab.dart';
+import 'tabs/archive_content_tab.dart';
 
 class ArchivePage extends StatefulWidget {
   const ArchivePage({super.key});
@@ -110,23 +111,17 @@ class _ArchivePageState extends State<ArchivePage>
                 agent: _agent,
                 onSyllabusChanged: _detectCourseTypeFromSyllabus,
               ),
-              ArchivePeriodTab(
-                periodKey: 'midterm',
+              MidtermTab(
                 courseType: _detectedCourseType,
                 dao: _dao,
                 agent: _agent,
               ),
-              ArchivePeriodTab(
-                periodKey: 'final',
+              FinalTab(
                 courseType: _detectedCourseType,
                 dao: _dao,
                 agent: _agent,
               ),
-              ArchiveActionTab(
-                courseType: _detectedCourseType,
-                dao: _dao,
-                onRefresh: () => _detectCourseTypeFromSyllabus(),
-              ),
+              const ArchiveContentTab(),
             ],
           ),
         ),

@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
-import 'package:sqflite/sqflite.dart';
 import '../data/local/database_helper.dart';
 import 'ai_service.dart';
 

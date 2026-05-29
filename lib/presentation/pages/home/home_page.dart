@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/design/noir_tokens.dart';
 import '../../../core/design/noir_components.dart';
+import '../../../core/error_handler.dart';
 import '../../widgets/noir_page_shell.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/navigation_service.dart';
@@ -37,7 +38,6 @@ import '../analytics/learning_analytics_page.dart';
 import '../analytics/token_stats_page.dart';
 import '../works/works_page.dart';
 import '../archive/archive_page.dart';
-import '../lab/lab_tasks_page.dart';
 import '../repo/git_repo_page.dart';
 import '../repo/student_repo_page.dart';
 import '../achievement/achievement_page.dart';
@@ -45,7 +45,6 @@ import '../profile/student_center_page.dart';
 import '../profile/teacher_workspace_page.dart';
 import '../help/handbook_page.dart';
 import '../skill/ai_skill_page.dart';
-import '../classroom/classroom_page.dart';
 import '../sync/data_sync_page.dart';
 import 'teaching_hub_page.dart';
 import 'evaluation_hub_page.dart';
@@ -73,7 +72,6 @@ class _HomePageState extends State<HomePage> {
   final _authService = AuthService();
   final _courseDao = CourseDao();
   late int _selectedIndex;
-  CourseModel? _activeCourse;
 
   @override
   void initState() {
@@ -105,9 +103,11 @@ class _HomePageState extends State<HomePage> {
     try {
       final course = await _courseDao.getActiveCourse();
       if (mounted && course != null) {
-        setState(() => _activeCourse = course);
+        setState(() {});
       }
-    } catch (_) {}
+    } catch (e, st) {
+      swallowDebug(e, tag: 'HomePage._loadActiveCourse', stack: st);
+    }
   }
 
   /// 当前平台显示名称：AppBar 内部居中标题（完整名称，无版本号）

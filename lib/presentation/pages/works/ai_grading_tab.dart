@@ -504,14 +504,6 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
     return Colors.red;
   }
 
-  String _scoreLabel(int score) {
-    if (score >= 90) return '优秀';
-    if (score >= 80) return '良好';
-    if (score >= 70) return '中等';
-    if (score >= 60) return '及格';
-    return '不及格';
-  }
-
   String _dimLabel(String key) {
     const labels = {
       'functionality': '功能完整性',

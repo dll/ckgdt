@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../services/ai_service.dart';
-import '../../../data/local/quiz_dao.dart';
 import '../../../data/local/learning_record_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../widgets/markdown_bubble.dart';
@@ -19,7 +18,6 @@ class _DeepPracticePageState extends State<DeepPracticePage>
     with TickerProviderStateMixin {
   late TabController _tabController;
   final _authService = AuthService();
-  final _quizDao = QuizDao();
   final _learningRecordDao = LearningRecordDao();
 
   // 章节深度内容定义
@@ -501,7 +499,6 @@ class _DeepPracticePageState extends State<DeepPracticePage>
 
   // 用户学习进度（章节→节索引→是否完成）
   Map<String, Set<int>> _completedSections = {};
-  int _expandedChapter = -1;
   int _selectedSection = -1;
   String? _selectedChapter;
   bool _isAiLoading = false;
