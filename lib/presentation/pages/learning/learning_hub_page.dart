@@ -1507,7 +1507,7 @@ class _LearningHubPageState extends State<LearningHubPage>
       try {
         final course = await CourseDao().getActiveCourse();
         if (course != null) courseName = course.name;
-      } catch (e, st) {
+      } catch (e) {
         swallow(e, tag: 'LearningHub.getCourseName');
       }
 
