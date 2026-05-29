@@ -150,7 +150,8 @@ class _RepoReportTabState extends State<_RepoReportTab>
                 final dt = DateTime.parse(dateStr);
                 lastCommitDate =
                     DateFormat('yyyy-MM-dd HH:mm').format(dt.toLocal());
-              } catch (_) {
+              } catch (e, st) {
+                swallowDebug(e, tag: 'RepoReportTab.parseDate', stack: st);
                 lastCommitDate = dateStr;
               }
             }
@@ -167,7 +168,9 @@ class _RepoReportTabState extends State<_RepoReportTab>
               try {
                 final dt = DateTime.parse(dateStr);
                 if (dt.isAfter(weekAgo)) recentCommits++;
-              } catch (_) {}
+              } catch (e, st) {
+                swallowDebug(e, tag: 'RepoReportTab.parseWeekAgo', stack: st);
+              }
             }
           }
 

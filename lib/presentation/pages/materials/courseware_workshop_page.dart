@@ -16,6 +16,7 @@ import '../../../data/models/ai_config_model.dart';
 import 'ai_settings_page.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
+import '../../../core/error_handler.dart';
 /// 可选的 AI 模型选项
 class _ModelOption {
   final String label;        // 显示名称（如 "DeepSeek - deepseek-chat"）
@@ -233,7 +234,9 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
           _balanceText = '¥${result['available']}';
         });
       }
-    } catch (_) {}
+    } catch (e, st) {
+      swallowDebug(e, tag: 'CoursewareWorkshop.balance', stack: st);
+    }
   }
 
   @override
@@ -1598,9 +1601,10 @@ class Example {
                 outputPath: videoPath,
               );
               if (burned != null) {
-                try { File(rawVideoPath).deleteSync(); } catch (_) {}
+                try { File(rawVideoPath).deleteSync(); } catch (e) { swallow(e, tag: 'CoursewareWorkshop.delRaw'); }
               } else {
-                try { File(rawVideoPath).renameSync(videoPath); } catch (_) {
+                try { File(rawVideoPath).renameSync(videoPath); } catch (e) {
+                  swallow(e, tag: 'CoursewareWorkshop.renRaw');
                   videoPath = rawVideoPath;
                 }
               }
@@ -1739,10 +1743,11 @@ class Example {
             outputPath: videoPath,
           );
           if (burned != null) {
-            try { File(rawVideoPath).deleteSync(); } catch (_) {}
+            try { File(rawVideoPath).deleteSync(); } catch (e) { swallow(e, tag: 'CoursewareWorkshop.delRaw'); }
             finalVideoPath = videoPath;
           } else {
-            try { File(rawVideoPath).renameSync(videoPath); } catch (_) {
+            try { File(rawVideoPath).renameSync(videoPath); } catch (e) {
+              swallow(e, tag: 'CoursewareWorkshop.renFinalRaw');
               finalVideoPath = rawVideoPath;
             }
           }
@@ -3019,7 +3024,9 @@ class Example {
         final name = path.split(Platform.pathSeparator).last;
         return '$name ($sizeStr)';
       }
-    } catch (_) {}
+    } catch (e, st) {
+      swallowDebug(e, tag: 'CoursewareWorkshop.fileInfo', stack: st);
+    }
     return path.split(Platform.pathSeparator).last;
   }
 
@@ -3285,7 +3292,8 @@ class Example {
     if (start >= 0 && end > start) {
       try {
         return jsonDecode(content.substring(start, end + 1));
-      } catch (_) {
+      } catch (e, st) {
+        swallowDebug(e, tag: 'CoursewareWorkshop.parseJson', stack: st);
         return <String, dynamic>{};
       }
     }
@@ -3773,10 +3781,11 @@ class Example {
             outputPath: outputPath,
           );
           if (burned != null) {
-            try { File(rawOutputPath).deleteSync(); } catch (_) {}
+            try { File(rawOutputPath).deleteSync(); } catch (e) { swallow(e, tag: 'CoursewareWorkshop.delOutput'); }
             finalVideoPath = outputPath;
           } else {
-            try { File(rawOutputPath).renameSync(outputPath); } catch (_) {
+            try { File(rawOutputPath).renameSync(outputPath); } catch (e) {
+              swallow(e, tag: 'CoursewareWorkshop.renOutput');
               finalVideoPath = rawOutputPath;
             }
           }

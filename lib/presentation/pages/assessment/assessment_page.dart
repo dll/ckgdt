@@ -22,6 +22,7 @@ import 'audit_print_panel.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
 import '../../../services/pdf_text_service.dart';
+import '../../../core/error_handler.dart';
 
 // ── Tab 实现拆分到 tabs/ 子目录（part / part of 模式）──────────────
 part 'tabs/group_tab.dart';

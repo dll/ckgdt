@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
+import '../core/error_handler.dart';
 import '../data/local/database_helper.dart';
 import '../data/models/twin_profile_model.dart';
 
@@ -27,7 +28,7 @@ class TwinService {
         [userId],
       );
       quizAvg = (r.first['avg'] as num?)?.toDouble() ?? 0;
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
 
     // 2. 实验完成率
     double labRate = 0;
@@ -45,7 +46,7 @@ class TwinService {
       totalTasks = (total.first['c'] as int?) ?? 0;
       doneTasks = (done.first['c'] as int?) ?? 0;
       labRate = totalTasks > 0 ? (doneTasks / totalTasks * 100).clamp(0, 100) : 0;
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
 
     // 3. 错题消化率
     double wrongDigest = 0;
@@ -61,7 +62,7 @@ class TwinService {
       final a = (allWrong.first['c'] as int?) ?? 0;
       final e = (explained.first['c'] as int?) ?? 0;
       wrongDigest = a > 0 ? (e / a * 100).clamp(0, 100) : 100;
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
 
     // 4. 概念覆盖率
     double conceptCov = 0;
@@ -75,7 +76,7 @@ class TwinService {
       totalNodes = (tn.first['c'] as int?) ?? 0;
       final learnedNodes = (ln.first['c'] as int?) ?? 0;
       conceptCov = totalNodes > 0 ? (learnedNodes / totalNodes * 100).clamp(0, 100) : 0;
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
 
     // 5. 总学习时长（分钟）
     int studyMin = 0;
@@ -85,7 +86,7 @@ class TwinService {
         [userId],
       );
       studyMin = (r.first['total'] as num?)?.toInt() ?? 0;
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
 
     // 6. 近 8 周每周学习时长
     final weeklyMinutes = <double>[];
@@ -99,7 +100,8 @@ class TwinService {
         );
         weeklyMinutes.add((r.first['total'] as num?)?.toDouble() ?? 0);
       }
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TwinService.learningPattern', stack: st);
       weeklyMinutes.addAll(List.filled(8, 0));
     }
 
@@ -116,7 +118,7 @@ class TwinService {
           chapterMastery[ch] = avg.clamp(0, 100);
         }
       }
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
 
     // 8. 每日活跃热力图（近 30 天）
     final dailyActivity = <double>[];
@@ -131,7 +133,8 @@ class TwinService {
         );
         dailyActivity.add((r.first['total'] as num?)?.toDouble() ?? 0);
       }
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TwinService.dailyActivity', stack: st);
       dailyActivity.addAll(List.filled(30, 0));
     }
 
@@ -221,7 +224,7 @@ class TwinService {
         "SELECT COUNT(*) as c FROM users WHERE role = 'student' AND is_active = 1",
       );
       classSize = (r.first['c'] as int?) ?? 0;
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
 
     // 班级均分（测验）
     double classAvg = 0;
@@ -230,7 +233,7 @@ class TwinService {
         "SELECT AVG(score) as avg FROM quiz_results WHERE user_id IN (SELECT user_id FROM users WHERE role = 'student')",
       );
       classAvg = (r.first['avg'] as num?)?.toDouble() ?? 0;
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
 
     // 节点覆盖率（全班均值）
     final nodeCov = <int, double>{};
@@ -244,7 +247,7 @@ class TwinService {
         nodeCov[(r['node_id'] as int)] =
             (r['avg'] as num?)?.toDouble() ?? 0;
       }
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
 
     // 薄弱节点 Top 5
     final weakSpots = <WeakSpot>[];
@@ -264,7 +267,7 @@ class TwinService {
           avgScore: (r['avg_score'] as num?)?.toDouble() ?? 0,
         ));
       }
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
 
     // 待批阅数
     int pending = 0;
@@ -273,7 +276,7 @@ class TwinService {
         "SELECT COUNT(*) as c FROM lab_submissions WHERE status = '已提交'",
       );
       pending = (r.first['c'] as int?) ?? 0;
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
 
     // ── 新增维度 ──
 
@@ -303,7 +306,7 @@ class TwinService {
         final tier = r['tier'] as String;
         classDistribution[tier] = (r['cnt'] as int?) ?? 0;
       }
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
 
     // 教学进度（教学大纲执行率）
     double teachingProgress = 0;
@@ -317,7 +320,7 @@ class TwinService {
       final t = (total.first['c'] as int?) ?? 0;
       final d = (done.first['c'] as int?) ?? 0;
       teachingProgress = t > 0 ? (d / t * 100).clamp(0, 100) : 0;
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
 
     // 班级参与度（近7天有学习记录的学生占比）
     double classEngagement = 0;
@@ -329,7 +332,7 @@ class TwinService {
       );
       final active = (r.first['c'] as int?) ?? 0;
       classEngagement = classSize > 0 ? (active / classSize * 100).clamp(0, 100) : 0;
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
 
     // 批阅及时性（3天内批完的占比）
     double gradingTimeliness = 0;
@@ -343,7 +346,7 @@ class TwinService {
       final tg = (totalGraded.first['c'] as int?) ?? 0;
       final tl = (timelyGraded.first['c'] as int?) ?? 0;
       gradingTimeliness = tg > 0 ? (tl / tg * 100).clamp(0, 100) : 100;
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
 
     // 截止日期预警
     int deadlineWarnings = 0;
@@ -355,7 +358,7 @@ class TwinService {
         [now, threeDaysLater],
       );
       deadlineWarnings = (r.first['c'] as int?) ?? 0;
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
 
     // 学生预警
     final alerts = await _buildStudentAlerts(db, classSize);
@@ -403,7 +406,7 @@ class TwinService {
       for (final r in rows) {
         peakHours.add((r['hour'] as int?) ?? 0);
       }
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
 
     // 学习稳定度（weeklyMinutes 的变异系数取反）
     double consistency = 50;
@@ -737,7 +740,7 @@ class TwinService {
         studyTimeDelta: studyTimeDelta,
         summary: parts.isEmpty ? '整体保持稳定' : parts.join('，'),
       );
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
     return null;
   }
 
@@ -768,7 +771,7 @@ class TwinService {
         studyTimeDelta: pendingDelta,
         summary: parts.isEmpty ? '教学状态稳定' : parts.join('，'),
       );
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
     return null;
   }
 
@@ -793,7 +796,7 @@ class TwinService {
         where: 'user_id = ? AND generated_at < ?',
         whereArgs: [userId, cutoff],
       );
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
   }
 
   /// 获取上一次的快照（跳过最新的，取前一个）
@@ -811,7 +814,7 @@ class TwinService {
       if (rows.isEmpty) return null;
       return jsonDecode(rows.first['snapshot_json'] as String)
           as Map<String, dynamic>;
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
     return null;
   }
 
@@ -836,7 +839,7 @@ class TwinService {
         return jsonDecode(rows.first['snapshot_json'] as String)
             as Map<String, dynamic>;
       }
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
     return null;
   }
 

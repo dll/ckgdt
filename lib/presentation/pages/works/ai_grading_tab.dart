@@ -9,6 +9,7 @@ import '../../../services/notification_service.dart';
 import '../../../services/agent/agents/works_grading_agent.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
+import '../../../core/error_handler.dart';
 /// 作品 AI 智能批阅 Tab — 仅教师/管理员可见
 ///
 /// 四区结构（与实验/考核 AI 批阅保持一致风格）：
@@ -77,11 +78,11 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
         final tid = p['target_id'] as int;
         if (!_approvedIds.contains(tid) && !_gradingResults.containsKey(tid)) {
           Map<String, dynamic>? dims;
-          try { dims = jsonDecode(p['dimensions'] as String? ?? ''); } catch (_) {}
+          try { dims = jsonDecode(p['dimensions'] as String? ?? ''); } catch (e, st) { swallowDebug(e, tag: 'WorksAiGrading.dims', stack: st); }
           List<String> strengths = [];
-          try { strengths = (jsonDecode(p['strengths'] as String? ?? '[]') as List).cast<String>(); } catch (_) {}
+          try { strengths = (jsonDecode(p['strengths'] as String? ?? '[]') as List).cast<String>(); } catch (e, st) { swallowDebug(e, tag: 'WorksAiGrading.strengths', stack: st); }
           List<String> improvements = [];
-          try { improvements = (jsonDecode(p['improvements'] as String? ?? '[]') as List).cast<String>(); } catch (_) {}
+          try { improvements = (jsonDecode(p['improvements'] as String? ?? '[]') as List).cast<String>(); } catch (e, st) { swallowDebug(e, tag: 'WorksAiGrading.improvements', stack: st); }
           _gradingResults[tid] = _GradingResult(
             score: (p['score'] as num?)?.toInt() ?? 0,
             feedback: (p['feedback'] as String?) ?? '',
@@ -91,7 +92,9 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
           );
         }
       }
-    } catch (_) {}
+    } catch (e, st) {
+      swallowDebug(e, tag: 'WorksAiGrading.loadSubs', stack: st);
+    }
     if (mounted) setState(() => _works = submitted);
   }
 
@@ -245,7 +248,8 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
         return map;
       }
       return null;
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'WorksAiGrading.parseJson', stack: st);
       return null;
     }
   }
@@ -348,7 +352,9 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
         scorerName: widget.authService.currentUser?.realName ?? '教师',
         op: 'create',
       );
-    } catch (_) {}
+    } catch (e, st) {
+      swallow(e, tag: 'WorksAiGrading.auditLog');
+    }
 
     // 更新 grading_results 状态
     try {
@@ -356,7 +362,9 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
       for (final p in pending) {
         await _gradingDao.approveResult(p['id'] as int, widget.authService.getCurrentUserId() ?? '');
       }
-    } catch (_) {}
+    } catch (e, st) {
+      swallow(e, tag: 'WorksAiGrading.approveStatus');
+    }
 
     // 通知学生：作品批阅已完成
     try {
@@ -372,7 +380,9 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
           );
         }
       }
-    } catch (_) {}
+    } catch (e, st) {
+      swallow(e, tag: 'WorksAiGrading.notify');
+    }
 
     setState(() {
       _approvedIds.add(workId);
@@ -451,7 +461,7 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
                   const SizedBox(height: 12),
                   TextField(
                     controller: feedbackCtrl,
-                    maxLines: 6,
+                    maxLines: null,
                     decoration: const InputDecoration(
                       labelText: '批阅反馈',
                       border: OutlineInputBorder(),
