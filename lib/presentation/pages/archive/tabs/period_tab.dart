@@ -30,6 +30,10 @@ class ArchivePeriodTab extends StatefulWidget {
   final ArchiveAgent agent;
   final VoidCallback? onSyllabusChanged;
 
+  /// 期中/期末等期特有的附加面板（进度一致性检查 / 考核材料统计等）。
+  /// 渲染在文档卡片列表上方，随列表一起滚动。期初不传，保持纯文档流。
+  final List<Widget> extraHeader;
+
   const ArchivePeriodTab({
     super.key,
     required this.periodKey,
@@ -37,6 +41,7 @@ class ArchivePeriodTab extends StatefulWidget {
     required this.dao,
     required this.agent,
     this.onSyllabusChanged,
+    this.extraHeader = const [],
   });
 
   @override
@@ -2301,48 +2306,51 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       return const Center(child: CircularProgressIndicator());
     }
     final docs = _expectedDocs;
+    final hasHeader = widget.extraHeader.isNotEmpty;
+    final cards = docs.map((def) {
+      final doc = _findDoc(def);
+      return DocCard(
+        def: def,
+        doc: doc,
+        source: _importSource(def.key),
+        onShowSource: () => _showSourceInfo(def),
+        onDownloadTemplate: def.canImport ? () => _downloadTemplate(def) : null,
+        onImport: def.canImport ? () => _importDoc(def) : null,
+        onCreate: def.canCreate ? () => _createDoc(def) : null,
+        onGenerate: def.needsGeneration ? () => _generateDoc(def) : null,
+        onReview: doc != null ? () => _reviewDoc(doc) : null,
+        onPreview: doc != null ? () => _previewDoc(doc) : null,
+        onPrint: (doc != null && def.canPrint) ? () => _printDoc(doc) : null,
+        onArchive: doc != null && doc.status != 'archived'
+            ? () => _archiveDoc(doc)
+            : null,
+        onDelete: doc != null ? () => _deleteDoc(doc) : null,
+      );
+    }).toList();
+
+    final body = cards.isEmpty && !hasHeader
+        ? const [
+            SizedBox(height: 80),
+            Center(
+                child: Text('暂无配置的文档类型',
+                    style: TextStyle(color: Colors.grey))),
+          ]
+        : cards;
+
     return Column(
       children: [
         if (docs.isNotEmpty) _buildActionBar(),
         Expanded(
           child: RefreshIndicator(
             onRefresh: _load,
-            child: docs.isEmpty
-                ? ListView(children: const [
-                    SizedBox(height: 80),
-                    Center(
-                        child: Text('暂无配置的文档类型',
-                            style: TextStyle(color: Colors.grey))),
-                  ])
-                : ListView.builder(
-                    padding: const EdgeInsets.all(12),
-                    itemCount: docs.length,
-                    itemBuilder: (_, i) {
-                      final def = docs[i];
-                      final doc = _findDoc(def);
-                      return DocCard(
-                        def: def,
-                        doc: doc,
-                        source: _importSource(def.key),
-                        onShowSource: () => _showSourceInfo(def),
-                        onDownloadTemplate: def.canImport ? () => _downloadTemplate(def) : null,
-                        onImport: def.canImport ? () => _importDoc(def) : null,
-                        onCreate: def.canCreate ? () => _createDoc(def) : null,
-                        onGenerate: def.needsGeneration
-                            ? () => _generateDoc(def)
-                            : null,
-                        onReview: doc != null ? () => _reviewDoc(doc) : null,
-                        onPreview: doc != null ? () => _previewDoc(doc) : null,
-                        onPrint: (doc != null && def.canPrint)
-                            ? () => _printDoc(doc)
-                            : null,
-                        onArchive: doc != null && doc.status != 'archived'
-                            ? () => _archiveDoc(doc)
-                            : null,
-                        onDelete: doc != null ? () => _deleteDoc(doc) : null,
-                      );
-                    },
-                  ),
+            child: ListView(
+              padding: const EdgeInsets.all(12),
+              children: [
+                ...widget.extraHeader,
+                if (hasHeader && cards.isNotEmpty) const SizedBox(height: 12),
+                ...body,
+              ],
+            ),
           ),
         ),
       ],
