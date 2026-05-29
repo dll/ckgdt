@@ -33,14 +33,18 @@ class _ReportTabState extends State<_ReportTab> {
       if (_isTeacherOrAdmin) {
         try {
           await SyncService().downloadAllStudentData();
-        } catch (_) {}
+        } catch (e, st) {
+          swallow(e, tag: 'LabReportTab.downloadAll');
+        }
       } else {
         // 学生打开时从云端同步自己在其他设备提交的数据
         final userId = widget.authService.getCurrentUserId();
         if (userId != null && userId.isNotEmpty) {
           try {
             await SyncService().downloadOwnData(userId);
-          } catch (_) {}
+          } catch (e, st) {
+            swallow(e, tag: 'LabReportTab.downloadOwn');
+          }
         }
       }
 
@@ -503,7 +507,9 @@ class _ReportTabState extends State<_ReportTab> {
         final decoded = jsonDecode(contentRaw) as Map;
         contentMap =
             decoded.map((k, v) => MapEntry(k.toString(), v.toString()));
-      } catch (_) {}
+      } catch (e, st) {
+        swallowDebug(e, tag: 'LabReportTab.parseContent', stack: st);
+      }
     }
 
     final hasAnyContent = contentMap.isNotEmpty ||
@@ -1364,7 +1370,9 @@ class _ReportTabState extends State<_ReportTab> {
       try {
         final decoded = jsonDecode(rawJson) as List;
         sections = decoded.map((s) => Map<String, dynamic>.from(s)).toList();
-      } catch (_) {}
+      } catch (e, st) {
+        swallowDebug(e, tag: 'LabReportTab.parseSections', stack: st);
+      }
     }
 
     // 解析已有报告内容
@@ -1376,7 +1384,9 @@ class _ReportTabState extends State<_ReportTab> {
           final decoded = jsonDecode(contentRaw) as Map;
           contentMap =
               decoded.map((k, v) => MapEntry(k.toString(), v.toString()));
-        } catch (_) {}
+        } catch (e, st) {
+          swallowDebug(e, tag: 'LabReportTab.parseEditContent', stack: st);
+        }
       }
     }
 

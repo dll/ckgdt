@@ -18,6 +18,7 @@ import '../../../data/local/ai_config_dao.dart';
 import '../materials/courseware_workshop_page.dart';
 import '../materials/ai_settings_page.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/error_handler.dart';
 import '../../../data/local/hot_video_dao.dart';
 import '../../widgets/agent_entry_button.dart';
 import '../../widgets/inner_tab_request_mixin.dart';
@@ -134,7 +135,8 @@ class _LearningHubPageState extends State<LearningHubPage>
         _videos = sorted;
         _videoLoading = false;
       });
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'LearningHub.loadVideos', stack: st);
       if (!mounted) return;
       setState(() => _videoLoading = false);
     }
@@ -163,7 +165,8 @@ class _LearningHubPageState extends State<LearningHubPage>
         _pptFiles = sorted;
         _pptLoading = false;
       });
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'LearningHub.loadPPTs', stack: st);
       if (!mounted) return;
       setState(() => _pptLoading = false);
     }
@@ -192,7 +195,8 @@ class _LearningHubPageState extends State<LearningHubPage>
         _pdfFiles = sorted;
         _pdfLoading = false;
       });
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'LearningHub.loadPDFs', stack: st);
       if (!mounted) return;
       setState(() => _pdfLoading = false);
     }
@@ -206,7 +210,9 @@ class _LearningHubPageState extends State<LearningHubPage>
         _aiProviderLabel = config.providerLabel;
         _aiModel = config.model;
       });
-    } catch (_) {}
+    } catch (e, st) {
+      swallowDebug(e, tag: 'LearningHub.loadAiConfig', stack: st);
+    }
   }
 
   /// 加载推荐视频（DB 已有 + AI 推荐）
@@ -1501,7 +1507,9 @@ class _LearningHubPageState extends State<LearningHubPage>
       try {
         final course = await CourseDao().getActiveCourse();
         if (course != null) courseName = course.name;
-      } catch (_) {}
+      } catch (e, st) {
+        swallow(e, tag: 'LearningHub.getCourseName');
+      }
 
       // 使用 SlideGeneratorService 生成 PDF
       final material = await slideGen.generateFromAI(
@@ -1654,7 +1662,9 @@ class _ExtendedCoursewareSheetState extends State<_ExtendedCoursewareSheet> {
           _chapters = course.chapters;
         });
       }
-    } catch (_) {}
+    } catch (e, st) {
+      swallowDebug(e, tag: 'LearningHub.loadCourseInfo', stack: st);
+    }
   }
 
   void _log(String msg) {
@@ -2133,7 +2143,9 @@ class _RecommendVideoCard extends StatelessWidget {
           if (url.isNotEmpty) {
             try {
               await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-            } catch (_) {}
+            } catch (e, st) {
+              swallowDebug(e, tag: 'LearningHub.launchUrl', stack: st);
+            }
           }
         },
         child: Column(

@@ -7,6 +7,7 @@ import '../data/local/database_helper.dart';
 import '../data/models/user_model.dart';
 import 'sync_service.dart';
 import 'gitee_service.dart';
+import '../core/error_handler.dart';
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
@@ -99,27 +100,37 @@ class AuthService {
     for (final table in userIdTables) {
       try {
         await db.delete(table, where: 'user_id = ?', whereArgs: [userId]);
-      } catch (_) {} // 表可能不存在
+      } catch (e, st) {
+        swallow(e, tag: 'AuthService.cleanUserTables');
+      }
     }
 
     // 1b. 特殊字段名的表
     try {
       await db.delete('peer_reviews',
           where: 'reviewer_id = ?', whereArgs: [userId]);
-    } catch (_) {}
+    } catch (e, st) {
+      swallow(e, tag: 'AuthService.cleanPeerReviews');
+    }
     try {
       await db.delete('collaboration_messages',
           where: 'sender_id = ?', whereArgs: [userId]);
-    } catch (_) {}
+    } catch (e, st) {
+      swallow(e, tag: 'AuthService.cleanCollabMsgs');
+    }
     try {
       await db.delete('classroom_messages',
           where: 'sender_id = ?', whereArgs: [userId]);
-    } catch (_) {}
+    } catch (e, st) {
+      swallow(e, tag: 'AuthService.cleanClassMsgs');
+    }
     try {
       await db.delete('contribution_scores',
           where: 'scorer_user_id = ? OR target_user_id = ?',
           whereArgs: [userId, userId]);
-    } catch (_) {}
+    } catch (e, st) {
+      swallow(e, tag: 'AuthService.cleanContributionScores');
+    }
 
     // 1c. path_nodes — 通过 learning_paths 关联
     try {
@@ -129,7 +140,9 @@ class AuthService {
         await db.delete('path_nodes',
             where: 'path_id = ?', whereArgs: [p['id']]);
       }
-    } catch (_) {}
+    } catch (e, st) {
+      swallow(e, tag: 'AuthService.cleanPathNodes');
+    }
 
     // 2. 删除用户记录
     final deleted = await _userDao.deleteUser(userId);
@@ -176,7 +189,9 @@ class AuthService {
           debugPrint('AuthService: 清理 $table 中 $count 条孤立记录');
           totalCleaned += count;
         }
-      } catch (_) {} // 表可能不存在
+      } catch (e, st) {
+        swallow(e, tag: 'AuthService.cleanOrphanLoop');
+      }
     }
 
     // 特殊字段名的表
@@ -193,7 +208,9 @@ class AuthService {
           debugPrint('AuthService: 清理 ${entry.key} 中 $count 条孤立记录');
           totalCleaned += count;
         }
-      } catch (_) {}
+      } catch (e, st) {
+        swallow(e, tag: 'AuthService.cleanSpecialTables');
+      }
     }
 
     // 同时清理远程同步文件（查找 Gitee 上存在但本地 users 表中不存在的文件）
@@ -218,8 +235,9 @@ class AuthService {
           'sync/students',
           ref: SyncService.repoBranch,
         );
-      } catch (_) {
-        return; // 目录不存在
+      } catch (e, st) {
+        swallow(e, tag: 'AuthService.listRemoteDir');
+        return;
       }
 
       // 获取本地所有学生 user_id
