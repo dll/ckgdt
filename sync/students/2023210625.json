@@ -3,8 +3,8 @@
   "user_id": "2023210625",
   "user_name": "汪蓉",
   "role": "student",
-  "synced_at": "2026-05-29T11:24:52.487490",
-  "last_active": "2026-05-29T11:24:52.487490",
+  "synced_at": "2026-05-29T11:25:46.970005",
+  "last_active": "2026-05-29T11:25:46.970020",
   "quiz_results": [
     {
       "user_id": "2023210625",
@@ -37,7 +37,7 @@
       "task_id": 6,
       "user_id": "2023210625",
       "content": "PDF实验报告：2023210625汪蓉实验六 跨平台综合项目实战.pdf",
-      "file_paths": "D:\\cangku\\cg2sclspdi\\docs\\实验六\\2023210625汪蓉实验六 跨平台综合项目实战.pdf",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2023210625/2023210625汪蓉实验六 跨平台综合项目实战.pdf",
       "file_names": "2023210625汪蓉实验六 跨平台综合项目实战.pdf",
       "submit_time": "2026-05-26T10:30:52.427689",
       "status": "已提交",
