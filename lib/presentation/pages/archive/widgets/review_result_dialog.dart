@@ -4,7 +4,7 @@ import '../../../../services/archive/ai_audit_processor.dart';
 import '../../../../services/archive/processor_registry.dart';
 import '../../../../services/archive/review_result.dart';
 
-/// AI 审核结果展示对话框（commit 4 核心 UI）。
+/// AI 审核结果展示对话框。
 ///
 /// **能力**：
 ///   - 展示 errors / warnings / passed 三栏（按等级分色）

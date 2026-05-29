@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../core/constants/archive_periods.dart' as periods;
 import '../../core/error_handler.dart';
 import '../../data/local/archive_dao.dart';
 import '../../data/models/archive_document_model.dart';
@@ -6,7 +7,7 @@ import '../agent/agents/archive_agent.dart';
 import 'base_document_processor.dart';
 import 'document_processor.dart';
 
-/// AI 起草处理器（commit 7）。
+/// AI 起草处理器。
 ///
 /// **价值主张**：把现有 [ArchiveAgent.generateDocument] 包装为 [DocumentProcessor]
 /// 接口实现，让"一键生成"走统一注册表路径。这样 period_tab 不必再 if-else
@@ -23,7 +24,7 @@ import 'document_processor.dart';
 ///     mhtml/xlsx 解析器导入，不走 AI。
 ///   - AiAudit 类（大纲合理性审核表 / 评价表）已有专门的 AiAuditProcessor。
 ///
-/// **registerAll 配套**：commit 7 在 ProcessorRegistry.registerAll 里枚举所有
+/// **registerAll 配套**：[ProcessorRegistry.registerAll] 里枚举所有
 /// `needsGeneration=true` 的 docType 自动注册。
 class AiDraftProcessor extends BaseDocumentProcessor {
   AiDraftProcessor({
@@ -104,15 +105,8 @@ class AiDraftProcessor extends BaseDocumentProcessor {
     }
   }
 
-  String _defaultTitle(String period) {
-    const labels = {
-      'beginning': '期初',
-      'midterm': '期中',
-      'final': '期末',
-      'archive': '归档',
-    };
-    return '${labels[period] ?? period}$docTypeLabel';
-  }
+  String _defaultTitle(String period) =>
+      '${periods.periodLabel(period)}$docTypeLabel';
 
   @visibleForTesting
   static AiDraftProcessor forTest({

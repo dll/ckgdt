@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../../data/models/archive_document_model.dart';
 
-const List<String> archivePeriodLabels = ['期初', '期中', '期末', '归档'];
-const List<String> archivePeriodKeys = ['beginning', 'midterm', 'final', 'archive'];
+export '../../../core/constants/archive_periods.dart' show
+    archivePeriodKeys,
+    archivePeriodLabels,
+    periodLabel;
 
 const List<IconData> archivePeriodIcons = [
   Icons.wb_sunny_outlined,
@@ -10,11 +12,6 @@ const List<IconData> archivePeriodIcons = [
   Icons.nights_stay_outlined,
   Icons.archive_outlined,
 ];
-
-String periodLabel(String key) {
-  const map = {'beginning': '期初', 'midterm': '期中', 'final': '期末', 'archive': '归档'};
-  return map[key] ?? key;
-}
 
 const examCourseDocs = {
   'beginning': [

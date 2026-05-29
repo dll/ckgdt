@@ -1,9 +1,11 @@
 import 'dart:async';
-import 'dart:io' show Platform, Directory, File;
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
+import 'package:path/path.dart' as p;
 import 'core/build_info.dart';
+import 'core/dev_paths.dart';
 import 'core/init_logger.dart';
 import 'data/local/database_helper.dart';
 import 'l10n/gen/app_localizations.dart';
@@ -99,10 +101,12 @@ void main() async {
   // 预初始化 TTS — 不阻塞冷启动；首次 speak 时不再有 init 延迟
   unawaited(TtsFlutterService.instance.initialize());
 
-  // 注册归档文档处理器（commit 4：syllabus_review / syllabus_evaluation 审核处理器）
+  // 注册归档文档处理器
   ProcessorRegistry.instance.registerAll();
-  // 注入归档模板 / 输出根目录（commit 5/6 用于 reference-doc 自动发现 + 打包输出）
-  await _initArchivePaths();
+  // 注入归档模板 / 输出根目录（reference-doc 自动发现 + 打包输出）。
+  // 用 unawaited 避开冷启动关键路径——首次需要这两条路径的代码（打开归档页）
+  // 不会先于 main 完成。
+  unawaited(_initArchivePaths());
 
   runApp(MyApp(dbLocked: dbLocked, dbError: dbError));
 }
@@ -111,44 +115,18 @@ void main() async {
 ///
 /// - `data/归档/` 用于 reference-doc 模板查找（学校原版样式继承）
 /// - `archive_out/` 用于一键归档的输出根目录（按 学期/课程/期 分目录）
-///
-/// 路径策略：优先项目根（开发期），其次可执行文件同级目录（发布期）。
 Future<void> _initArchivePaths() async {
   if (kIsWeb) return;
   if (!(Platform.isWindows || Platform.isMacOS || Platform.isLinux)) return;
   try {
-    String? root = _detectProjectRoot();
-    if (root == null) return;
-
-    final templates = '$root${Platform.pathSeparator}data${Platform.pathSeparator}归档';
-    final outDir = '$root${Platform.pathSeparator}archive_out';
+    final root = DevPaths.projectRoot;
+    final templates = p.join(root, 'data', '归档');
+    final outDir = p.join(root, 'archive_out');
     BaseDocumentProcessor.archiveDataRoot = templates;
     ArchivePackageService.outputRoot = outDir;
     InitLogger.log('archive', 'templates=$templates outDir=$outDir');
   } catch (e, st) {
     InitLogger.error('archive', e, st);
-  }
-}
-
-/// 探测项目/分发包根目录：先 CWD，再 exe 同级。
-String? _detectProjectRoot() {
-  // dev：从 CWD 找到含 pubspec.yaml 的祖先
-  var cwd = Directory.current;
-  for (int i = 0; i < 5; i++) {
-    if (File('${cwd.path}${Platform.pathSeparator}pubspec.yaml').existsSync()) {
-      return cwd.path;
-    }
-    final parent = cwd.parent;
-    if (parent.path == cwd.path) break;
-    cwd = parent;
-  }
-  // 发布：exe 同级
-  try {
-    final exe = Platform.resolvedExecutable;
-    final exeDir = File(exe).parent.path;
-    return exeDir;
-  } catch (_) {
-    return null;
   }
 }
 

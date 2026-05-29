@@ -96,7 +96,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       builder: (_) => const Center(child: CircularProgressIndicator()),
     );
     try {
-      // commit 7：优先走 ProcessorRegistry → AiDraftProcessor.generateAsDocument
+      // 优先走 ProcessorRegistry → AiDraftProcessor.generateAsDocument
       // 内部仍委托 archive_agent，但走统一接口未来更易替换。
       // 没注册的 docType（系统导入类不会有 needsGeneration）回退原路径。
       final processor = ProcessorRegistry.instance.find(def.key);
@@ -213,43 +213,13 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     if (processor != null && processor.supportsPrint) {
       return processor.toPdf(doc);
     }
-    // fallback：直接 pandoc，自动 reference-doc 发现
     return PandocService.instance.markdownToPdf(
       doc.content ?? '',
-      referenceDocPath: _autoReferenceDocFor(doc),
+      referenceDocPath: BaseDocumentProcessor.findReferenceDocx(
+        period: doc.period,
+        docLabel: _docLabelFor(doc.documentType),
+      ),
     );
-  }
-
-  /// 自动发现 reference docx：`data/归档/<期>/模板/` 下文件名 contains label
-  String? _autoReferenceDocFor(ArchiveDocument doc) {
-    final root = BaseDocumentProcessor.archiveDataRoot;
-    if (root == null) return null;
-    final periodZh = periodLabel(doc.period);
-    final templateDir = Directory('$root${Platform.pathSeparator}$periodZh${Platform.pathSeparator}模板');
-    if (!templateDir.existsSync()) return null;
-    final defs = docsForCourseType(widget.courseType);
-    String? label;
-    for (final list in defs.values) {
-      for (final d in list) {
-        if (d.key == doc.documentType) {
-          label = d.label;
-          break;
-        }
-      }
-      if (label != null) break;
-    }
-    if (label == null) return null;
-    try {
-      for (final entry in templateDir.listSync()) {
-        if (entry is! File) continue;
-        if (!entry.path.toLowerCase().endsWith('.docx')) continue;
-        final base = entry.uri.pathSegments.last;
-        if (base.contains(label)) return entry.path;
-      }
-    } on Exception catch (e, st) {
-      swallowDebug(e, tag: 'ArchivePeriodTab._autoReferenceDocFor', stack: st);
-    }
-    return null;
   }
 
   void _showPrintErrorDialog({required String title, required String message}) {
@@ -274,7 +244,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
   Future<void> _reviewDoc(ArchiveDocument doc) async {
     if (!mounted) return;
 
-    // commit 4：优先走 Processor 路径（结构化审核 + 自动创建审核表卡片）。
+    // 优先走 Processor 路径（结构化审核 + 自动创建审核表卡片）。
     // 当前注册了 syllabus 的 AiAuditProcessor → docType=syllabus 的文档走新流水线。
     // 其它 docType 仍回退到旧的 archive_agent.reviewDocument（markdown 字符串）。
     final processor = _findAuditProcessorFor(doc);

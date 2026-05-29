@@ -46,8 +46,8 @@ class ProcessorRegistry {
 
   /// 注册全部内置 Processor。
   ///
-  /// commit 4: AiAuditProcessor — 大纲合理性审核表 / 评价表
-  /// commit 7: AiDraftProcessor — 所有 needsGeneration=true 的 docType（教学大纲 /
+  /// - AiAuditProcessor — 大纲合理性审核表 / 评价表
+  /// - AiDraftProcessor — 所有 needsGeneration=true 的 docType（教学大纲 /
   ///           日历 / 进度表 / 教案 / 课件 / 期中试卷 / ...）
   /// 系统导入类（教学任务书 / 课表 / 学生名单）不在这里注册——它们的入口是
   /// period_tab 内的 mhtml/xlsx 解析器，按 docType=null 兜底走 PandocService。
