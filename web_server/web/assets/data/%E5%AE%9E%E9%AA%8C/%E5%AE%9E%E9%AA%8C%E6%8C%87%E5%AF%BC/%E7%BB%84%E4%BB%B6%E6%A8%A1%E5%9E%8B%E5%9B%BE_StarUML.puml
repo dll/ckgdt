@@ -1,0 +1,75 @@
+@startuml 组件模型
+
+' 设置样式
+skinparam componentStyle uml2
+skinparam packageStyle rectangle
+
+' 组件架构包
+package "校园通知组件架构" {
+    
+    ' 页面组件
+    [Index Page] as indexPage
+    [Detail Page] as detailPage
+    
+    ' 自定义组件
+    [Notice List Component] as noticeList
+    [Notice Item Component] as noticeItem
+    [Loading Component] as loading
+    [Back Button Component] as backBtn
+    
+    ' 基础组件
+    [View] as view
+    [Text] as text
+    [Image] as image
+    [Button] as button
+}
+
+' 通信机制包
+package "组件通信机制" {
+    [Event System] as eventSystem
+    [Data Binding] as dataBinding
+    [URL Parameter] as urlParam
+}
+
+' 接口定义
+interface "Component Lifecycle" as lifecycle
+interface "Event Handling" as eventHandling
+
+' 组件关系
+indexPage --> noticeList : 使用
+indexPage --> loading : 使用
+detailPage --> backBtn : 使用
+
+noticeList --> noticeItem : 包含
+noticeItem --> view : 使用
+noticeItem --> text : 使用
+noticeItem --> button : 使用
+
+backBtn --> button : 使用
+loading --> view : 使用
+loading --> text : 使用
+
+' 通信关系
+noticeItem --> eventSystem : 事件冒泡
+indexPage --> eventSystem : 事件监听
+detailPage --> eventSystem : 事件监听
+
+indexPage --> dataBinding : 数据绑定
+detailPage --> dataBinding : 数据绑定
+noticeList --> dataBinding : 数据绑定
+
+indexPage --> urlParam : 页面跳转
+detailPage --> urlParam : 参数接收
+
+' 接口实现
+indexPage ..|> lifecycle
+detailPage ..|> lifecycle
+noticeList ..|> lifecycle
+noticeItem ..|> lifecycle
+loading ..|> lifecycle
+backBtn ..|> lifecycle
+
+noticeItem ..|> eventHandling
+backBtn ..|> eventHandling
+
+@enduml

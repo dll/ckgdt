@@ -1,0 +1,94 @@
+@startuml MVVM模型
+
+' 设置样式
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+hide empty members
+
+' MVVM架构包图
+package "校园通知MVVM架构" {
+    
+    package "Model层" {
+        class Notice {
+            +id: Number
+            +title: String
+            +time: String
+            +content: String
+        }
+        
+        class App {
+            +onLaunch(): void
+            +globalData: Object
+            +globalData.noticeList: Array
+        }
+    }
+    
+    package "ViewModel层" {
+        class IndexPage {
+            +data: Object
+            +data.noticeList: Array
+            +onLoad(): void
+            +goToDetail(e): void
+        }
+        
+        class DetailPage {
+            +data: Object
+            +data.notice: Object
+            +onLoad(options): void
+            +goBack(): void
+        }
+    }
+    
+    package "View层" {
+        class IndexView {
+            +container: View
+            +header: View
+            +notice-list: View
+            +notice-item: View
+            +bindtap: String
+        }
+        
+        class DetailView {
+            +container: View
+            +header: View
+            +notice-content: View
+            +back-btn: View
+            +bindtap: String
+        }
+    }
+}
+
+' 微信小程序框架
+package "微信小程序框架" {
+    class DataResponseSystem {
+        +setData(): void
+    }
+    
+    class EventSystem {
+        +bindtap(): void
+    }
+    
+    class RenderEngine {
+        +updateView(): void
+    }
+}
+
+' 关系连接
+Notice --> IndexPage : 数据提供
+App --> IndexPage : 全局数据管理
+App --> DetailPage : 全局数据管理
+
+IndexPage --> IndexView : 数据绑定
+DetailPage --> DetailView : 数据绑定
+
+IndexView --> RenderEngine : 模板渲染
+DetailView --> RenderEngine : 模板渲染
+
+DataResponseSystem --> IndexPage : 数据变化通知
+DataResponseSystem --> DetailPage : 数据变化通知
+EventSystem --> IndexPage : 事件触发
+EventSystem --> DetailPage : 事件触发
+RenderEngine --> IndexView : 视图更新
+RenderEngine --> DetailView : 视图更新
+
+@enduml

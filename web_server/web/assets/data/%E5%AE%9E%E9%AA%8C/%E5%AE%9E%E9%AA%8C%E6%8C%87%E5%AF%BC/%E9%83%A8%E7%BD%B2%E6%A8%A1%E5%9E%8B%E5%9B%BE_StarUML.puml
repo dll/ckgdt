@@ -1,0 +1,72 @@
+@startuml 部署模型
+
+' 设置样式
+skinparam nodeStyle rectangle
+skinparam databaseStyle cylinder
+skinparam cloudStyle cloud
+
+' 开发环境
+node "开发环境" as devEnv
+node "开发者设备" as devMachine
+node "微信开发者工具" as devTool
+
+devEnv --> devMachine
+devEnv --> devTool
+devMachine -> devTool
+
+' 微信平台
+cloud "微信平台" as wechatPlatform
+node "开发管理" as devManagement
+node "审核发布" as reviewPublish
+node "运行环境" as runtimeEnv
+
+wechatPlatform --> devManagement
+wechatPlatform --> reviewPublish
+wechatPlatform --> runtimeEnv
+devTool -> devManagement
+devManagement -> reviewPublish
+reviewPublish -> runtimeEnv
+
+' 运行环境节点
+node "运行环境" as runtime
+node "微信客户端" as wechatClient
+node "小程序容器" as miniprogramContainer
+database "本地存储" as localStorage
+
+runtime --> wechatClient
+runtime --> miniprogramContainer
+runtime --> localStorage
+wechatPlatform -> runtime
+wechatClient -> miniprogramContainer
+miniprogramContainer -> localStorage
+
+' 第三方服务
+database "第三方服务" as thirdPartyServices
+database "云存储" as cloudStorage
+database "云数据库" as cloudDatabase
+node "云函数" as cloudFunction
+
+thirdPartyServices --> cloudStorage
+thirdPartyServices --> cloudDatabase
+thirdPartyServices --> cloudFunction
+runtime -> thirdPartyServices
+
+' 网络连接
+devTool -[hidden]-> devManagement
+devManagement -[hidden]-> reviewPublish
+reviewPublish -[hidden]-> runtimeEnv
+runtimeEnv -[hidden]-> wechatClient
+wechatClient -[hidden]-> cloudDatabase
+wechatClient -[hidden]-> cloudStorage
+wechatClient -[hidden]-> cloudFunction
+
+' 数据流
+devMachine -> devTool
+devTool -> devManagement
+devManagement -> reviewPublish
+reviewPublish -> runtimeEnv
+runtimeEnv -> wechatClient
+wechatClient -> localStorage
+wechatClient -> thirdPartyServices
+
+@enduml

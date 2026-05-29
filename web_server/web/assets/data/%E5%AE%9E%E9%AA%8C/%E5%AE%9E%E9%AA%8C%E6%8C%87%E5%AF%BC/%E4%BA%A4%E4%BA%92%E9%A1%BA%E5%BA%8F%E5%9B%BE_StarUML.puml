@@ -1,0 +1,235 @@
+@startuml 用户交互顺序图
+
+' 设置样式
+skinparam actorStyle awesome
+skinparam sequenceMessageAlign center
+skinparam sequenceLifeLineBorderThickness 2
+skinparam sequenceBoxBorderColor #333333
+skinparam sequenceBoxBackgroundColor #F8F8F8
+
+title 校园通知小程序用户交互顺序图
+
+actor "用户" as user
+participant "微信客户端" as wechatClient
+participant "小程序首页" as homepage
+participant "通知列表" as noticeList
+participant "通知详情" as noticeDetail
+participant "搜索功能" as search
+participant "个人中心" as profile
+participant "设置页面" as settings
+participant "云数据库" as cloudDatabase
+participant "本地存储" as localStorage
+
+== 启动与首页 ==
+user -> wechatClient : 打开微信
+wechatClient -> wechatClient : 搜索校园通知小程序
+wechatClient -> homepage : 启动小程序
+activate homepage
+
+homepage -> localStorage : 检查缓存
+activate localStorage
+localStorage --> homepage : 返回缓存数据
+deactivate localStorage
+
+homepage -> cloudDatabase : 请求最新通知
+activate cloudDatabase
+cloudDatabase --> homepage : 返回通知列表
+deactivate cloudDatabase
+
+homepage -> localStorage : 更新缓存
+activate localStorage
+localStorage --> homepage : 缓存更新成功
+deactivate localStorage
+
+homepage --> wechatClient : 显示首页
+wechatClient --> user : 展示首页界面
+
+== 浏览通知列表 ==
+user -> homepage : 点击"通知列表"
+homepage -> noticeList : 跳转到通知列表
+activate noticeList
+
+noticeList -> cloudDatabase : 请求通知分类
+activate cloudDatabase
+cloudDatabase --> noticeList : 返回分类数据
+deactivate cloudDatabase
+
+noticeList --> wechatClient : 显示分类通知
+wechatClient --> user : 展示通知列表
+
+group 下拉刷新
+    user -> noticeList : 下拉刷新
+    noticeList -> cloudDatabase : 请求最新数据
+    activate cloudDatabase
+    cloudDatabase --> noticeList : 返回最新数据
+    deactivate cloudDatabase
+    noticeList --> wechatClient : 更新列表显示
+    wechatClient --> user : 显示刷新结果
+end
+
+group 上拉加载更多
+    user -> noticeList : 上拉加载更多
+    noticeList -> cloudDatabase : 请求更多数据
+    activate cloudDatabase
+    cloudDatabase --> noticeList : 返回更多数据
+    deactivate cloudDatabase
+    noticeList --> wechatClient : 追加显示数据
+    wechatClient --> user : 显示加载结果
+end
+
+deactivate noticeList
+
+== 查看通知详情 ==
+user -> noticeList : 点击某条通知
+noticeList -> noticeDetail : 跳转到通知详情
+activate noticeDetail
+
+noticeDetail -> cloudDatabase : 请求通知详情
+activate cloudDatabase
+cloudDatabase --> noticeDetail : 返回详情数据
+deactivate cloudDatabase
+
+noticeDetail -> localStorage : 记录已读状态
+activate localStorage
+localStorage --> noticeDetail : 状态保存成功
+deactivate localStorage
+
+noticeDetail --> wechatClient : 显示通知详情
+wechatClient --> user : 展示详情内容
+
+group 收藏功能
+    user -> noticeDetail : 点击收藏按钮
+    noticeDetail -> cloudDatabase : 更新收藏状态
+    activate cloudDatabase
+    cloudDatabase --> noticeDetail : 状态更新成功
+    deactivate cloudDatabase
+    noticeDetail -> localStorage : 更新本地收藏
+    activate localStorage
+    localStorage --> noticeDetail : 本地更新成功
+    deactivate localStorage
+    noticeDetail --> wechatClient : 更新收藏状态显示
+    wechatClient --> user : 显示收藏状态变化
+end
+
+group 分享功能
+    user -> noticeDetail : 点击分享按钮
+    noticeDetail -> wechatClient : 调用微信分享接口
+    wechatClient -> wechatClient : 显示分享界面
+    wechatClient --> user : 展示分享选项
+end
+
+deactivate noticeDetail
+
+== 搜索功能 ==
+user -> homepage : 点击搜索按钮
+homepage -> search : 跳转到搜索页面
+activate search
+
+user -> search : 输入搜索关键词
+search -> cloudDatabase : 请求搜索结果
+activate cloudDatabase
+cloudDatabase --> search : 返回搜索结果
+deactivate cloudDatabase
+
+search -> localStorage : 保存搜索历史
+activate localStorage
+localStorage --> search : 保存成功
+deactivate localStorage
+
+search --> wechatClient : 显示搜索结果
+wechatClient --> user : 展示搜索结果
+
+user -> search : 点击搜索结果
+search -> noticeDetail : 跳转到通知详情
+deactivate search
+
+== 个人中心 ==
+user -> homepage : 点击"我的"
+homepage -> profile : 跳转到个人中心
+activate profile
+
+profile -> cloudDatabase : 请求用户信息
+activate cloudDatabase
+cloudDatabase --> profile : 返回用户数据
+deactivate cloudDatabase
+
+profile -> localStorage : 检查本地设置
+activate localStorage
+localStorage --> profile : 返回设置数据
+deactivate localStorage
+
+profile --> wechatClient : 显示个人中心
+wechatClient --> user : 展示个人中心
+
+group 收藏列表
+    user -> profile : 点击"我的收藏"
+    profile -> cloudDatabase : 请求收藏列表
+    activate cloudDatabase
+    cloudDatabase --> profile : 返回收藏数据
+    deactivate cloudDatabase
+    profile --> wechatClient : 显示收藏列表
+    wechatClient --> user : 展示收藏内容
+end
+
+group 阅读历史
+    user -> profile : 点击"阅读历史"
+    profile -> cloudDatabase : 请求历史记录
+    activate cloudDatabase
+    cloudDatabase --> profile : 返回历史数据
+    deactivate cloudDatabase
+    profile --> wechatClient : 显示历史记录
+    wechatClient --> user : 展示历史内容
+end
+
+deactivate profile
+
+== 设置功能 ==
+user -> profile : 点击"设置"
+profile -> settings : 跳转到设置页面
+activate settings
+
+settings -> localStorage : 读取当前设置
+activate localStorage
+localStorage --> settings : 返回设置数据
+deactivate localStorage
+
+settings --> wechatClient : 显示设置界面
+wechatClient --> user : 展示设置选项
+
+group 通知设置
+    user -> settings : 点击"通知设置"
+    settings -> wechatClient : 请求通知权限
+    wechatClient -> wechatClient : 显示权限对话框
+    wechatClient --> settings : 返回用户选择
+    settings -> localStorage : 保存通知设置
+    activate localStorage
+    localStorage --> settings : 保存成功
+    deactivate localStorage
+    settings --> wechatClient : 更新设置状态
+    wechatClient --> user : 显示设置结果
+end
+
+group 缓存管理
+    user -> settings : 点击"清理缓存"
+    settings -> localStorage : 请求清理缓存
+    activate localStorage
+    localStorage --> settings : 缓存清理成功
+    deactivate localStorage
+    settings --> wechatClient : 显示清理结果
+    wechatClient --> user : 提示清理成功
+end
+
+deactivate settings
+
+== 退出小程序 ==
+user -> wechatClient : 返回或关闭
+wechatClient -> homepage : 触发小程序隐藏
+homepage -> localStorage : 保存当前状态
+activate localStorage
+localStorage --> homepage : 保存成功
+deactivate localStorage
+
+deactivate homepage
+wechatClient --> user : 小程序已隐藏
+
+@enduml

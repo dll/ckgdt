@@ -36,8 +36,8 @@ class _StudentTokenPageState extends State<StudentTokenPage> {
       ]);
       if (mounted) {
         setState(() {
-          _classes = results[0] as List<Map<String, dynamic>>;
-          _students = results[1] as List<Map<String, dynamic>>;
+          _classes = results[0];
+          _students = results[1];
           _loading = false;
         });
       }
