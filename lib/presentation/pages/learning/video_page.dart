@@ -32,6 +32,10 @@ class _VideoListPageState extends State<VideoListPage> {
   void initState() {
     super.initState();
     VideoSourceManager.instance.registerDefaults();
+    // 加载用户的平台开关偏好，使 FilterChip 切换真正生效
+    VideoSourceManager.instance.loadEnabledPrefs().then((_) {
+      if (mounted) setState(() {});
+    });
     _loadVideos();
   }
 

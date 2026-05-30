@@ -134,13 +134,12 @@ class BilibiliProvider implements VideoSourceProvider {
   int _parseDuration(String? dur) {
     if (dur == null) return 0;
     final parts = dur.split(':');
+    int seg(int i) => i < parts.length ? (int.tryParse(parts[i].trim()) ?? 0) : 0;
     if (parts.length == 2) {
-      return int.tryParse(parts[0])! * 60 + int.tryParse(parts[1])!;
+      return seg(0) * 60 + seg(1);
     }
     if (parts.length == 3) {
-      return int.tryParse(parts[0])! * 3600 +
-          int.tryParse(parts[1])! * 60 +
-          int.tryParse(parts[2])!;
+      return seg(0) * 3600 + seg(1) * 60 + seg(2);
     }
     return int.tryParse(dur) ?? 0;
   }
