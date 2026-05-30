@@ -40,6 +40,22 @@ jobs:
         run: flutter test test/core test/models test/services
         # 排除 widget tests（依赖资源/字体，CI 渲染不稳）
 
+      - name: catch(_) 棘轮门禁（只许降不许升）
+        # 历轮（10-12）catch(_) 反复反弹。此门禁锁死上限：
+        # 新代码引入 catch(_) 使总数超过 tool/catch_underscore_ceiling.txt 即失败。
+        # 清理后请同步下调天花板文件，棘轮单向收紧。
+        run: |
+          ceiling=$(tr -d '[:space:]' < tool/catch_underscore_ceiling.txt)
+          actual=$(grep -rn 'catch (_)' lib --include='*.dart' | wc -l | tr -d '[:space:]')
+          echo "catch(_) 实际=$actual 上限=$ceiling"
+          if [ "$actual" -gt "$ceiling" ]; then
+            echo "::error::catch(_) 数量 $actual 超过上限 $ceiling。请用 swallow/swallowDebug 替代新引入的 catch(_)。"
+            exit 1
+          fi
+          if [ "$actual" -lt "$ceiling" ]; then
+            echo "::warning::catch(_) 已降到 $actual（上限 $ceiling）。请把 tool/catch_underscore_ceiling.txt 下调到 $actual 以收紧棘轮。"
+          fi
+
   # ─── 三端构建（push 到 master 时跑，PR 不跑） ────────────────────
   build-web:
     name: Build Web

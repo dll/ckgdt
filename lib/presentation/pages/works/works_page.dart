@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/app_theme.dart';
+import '../../../core/error_handler.dart';
 import '../../../data/local/score_audit_dao.dart';
 import '../../../data/local/works_dao.dart';
 import '../../widgets/score_history_dialog.dart';
@@ -124,7 +125,9 @@ class _WorksPageState extends State<WorksPage>
       try {
         final userId = _authService.getCurrentUserId();
         if (userId != null) await SyncService().downloadOwnData(userId);
-      } catch (_) {}
+      } catch (e, st) {
+        swallowDebug(e, tag: 'WorksPage.downloadOwnData', stack: st);
+      }
     }
     // 一次性清理旧版虚假互动数据
     try {
@@ -133,7 +136,9 @@ class _WorksPageState extends State<WorksPage>
         await _worksDao.cleanupFakeData();
         await prefs.setBool('works_fake_data_cleaned', true);
       }
-    } catch (_) {}
+    } catch (e, st) {
+      swallowDebug(e, tag: 'WorksPage.cleanupFakeData', stack: st);
+    }
     // 1. 从 JSON 加载学生数据
     try {
       final jsonStr =
@@ -143,7 +148,9 @@ class _WorksPageState extends State<WorksPage>
           decoded.map((e) => Map<String, dynamic>.from(e)).toList();
       // 2. 同步到数据库（每人一个作品，幂等）
       await _worksDao.syncStudentWorks(_allStudents);
-    } catch (_) {}
+    } catch (e, st) {
+      swallowDebug(e, tag: 'WorksPage.loadStudents', stack: st);
+    }
     // 3. 加载统计概览
     await _loadOverview();
     if (mounted) setState(() => _initialized = true);
@@ -153,7 +160,9 @@ class _WorksPageState extends State<WorksPage>
     try {
       final ov = await _worksDao.getOverview();
       if (mounted) setState(() => _overview = ov);
-    } catch (_) {}
+    } catch (e, st) {
+      swallowDebug(e, tag: 'WorksPage.loadOverview', stack: st);
+    }
   }
 
   @override
@@ -422,7 +431,8 @@ String _timeAgo(String? isoTime) {
     if (diff.inHours > 0) return '${diff.inHours}小时前';
     if (diff.inMinutes > 0) return '${diff.inMinutes}分钟前';
     return '刚刚';
-  } catch (_) {
+  } catch (e) {
+    swallow(e, tag: 'WorksPage._fmtTime');
     return isoTime;
   }
 }

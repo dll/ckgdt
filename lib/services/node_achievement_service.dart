@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
+import '../core/error_handler.dart';
 import '../data/local/database_helper.dart';
 
 /// 节点级达成度服务 — 聚合 quiz/lab/work 分数到图谱节点
@@ -20,7 +21,9 @@ class NodeAchievementService {
     try {
       await db.rawQuery('SELECT $columnName FROM $tableName LIMIT 0');
       return true;
-    } catch (_) {
+    } catch (e) {
+      // schema 探测：列不存在属正常路径，不打日志
+      swallow(e, tag: 'NodeAchievement._columnExists');
       return false;
     }
   }
@@ -75,7 +78,9 @@ class NodeAchievementService {
             ''', [userId, nodeId]);
             quizScore = (qr.first['avg_score'] as num?)?.toDouble() ?? 0;
           }
-        } catch (_) {}
+        } catch (e, st) {
+          swallowDebug(e, tag: 'NodeAchievement.quizScore', stack: st);
+        }
       }
 
       if (hasLabSubmissions && hasLabTasks) {
@@ -91,7 +96,9 @@ class NodeAchievementService {
             ''', [userId, '%$nodeId%']);
             labScore = (lr.first['avg_score'] as num?)?.toDouble() ?? 0;
           }
-        } catch (_) {}
+        } catch (e, st) {
+          swallowDebug(e, tag: 'NodeAchievement.labScore', stack: st);
+        }
       }
 
       if (hasWorkScores && hasStudentWorks) {
@@ -106,7 +113,9 @@ class NodeAchievementService {
             ''', [userId, '%$nodeId%']);
             workScore = (wr.first['avg_score'] as num?)?.toDouble() ?? 0;
           }
-        } catch (_) {}
+        } catch (e, st) {
+          swallowDebug(e, tag: 'NodeAchievement.workScore', stack: st);
+        }
       }
 
       final overall = quizScore * 0.3 + labScore * 0.4 + workScore * 0.3;
@@ -171,7 +180,8 @@ class NodeAchievementService {
         ORDER BY avg_score ASC
         LIMIT ?
       ''', [limit]);
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'NodeAchievement.getWeakNodes', stack: st);
       return [];
     }
   }
