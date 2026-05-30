@@ -2,6 +2,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../widgets/live_stream_panel.dart';
 import '../../services/live_stream_service.dart';
+import '../../services/screenshot_service.dart';
+import '../pages/feedback/feedback_dialog.dart' show feedbackScreenshotKey;
 import 'dart:async';
 
 /// 管理答辩直播浮窗的显示、隐藏、状态切换
@@ -67,6 +69,34 @@ class LiveStreamOverlay {
     if (_fullscreen) return;
     _minimized = !_minimized;
     _notify();
+  }
+
+  /// 截取浮窗背后的应用画面（屏幕共享）。
+  ///
+  /// 浮窗本身会被根 RepaintBoundary 一起截进去，所以先把面板临时最小化成小圆点、
+  /// 等一帧渲染完成再截图，截完恢复原状。返回截图文件路径（失败 null）。
+  static Future<String?> captureScreenBehindPanel() async {
+    final wasMinimized = _minimized;
+    final wasFullscreen = _fullscreen;
+
+    // 临时收起面板，让背后的演示画面露出来
+    _minimized = true;
+    _fullscreen = false;
+    _notify();
+
+    // 等待两帧确保最小化布局已绘制
+    await WidgetsBinding.instance.endOfFrame;
+    await WidgetsBinding.instance.endOfFrame;
+
+    final path = await ScreenshotService.instance
+        .captureToFile(feedbackScreenshotKey, prefix: 'live_screen');
+
+    // 恢复原状
+    _minimized = wasMinimized;
+    _fullscreen = wasFullscreen;
+    _notify();
+
+    return path;
   }
 
   static void toggleFullscreen() {
