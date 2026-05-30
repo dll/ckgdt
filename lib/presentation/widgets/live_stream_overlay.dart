@@ -107,7 +107,8 @@ class _LiveStreamWrapper extends StatefulWidget {
   State<_LiveStreamWrapper> createState() => _LiveStreamWrapperState();
 }
 
-class _LiveStreamWrapperState extends State<_LiveStreamWrapper> {
+class _LiveStreamWrapperState extends State<_LiveStreamWrapper>
+    with WidgetsBindingObserver {
   Offset _pos = LiveStreamOverlay.panelPosition;
   Size _size = LiveStreamOverlay.panelSize;
   bool _minimized = false;
@@ -119,6 +120,9 @@ class _LiveStreamWrapperState extends State<_LiveStreamWrapper> {
   @override
   void initState() {
     super.initState();
+    // 浮窗是 OverlayEntry（非路由），系统返回键不会自动关它，反而会退出 App。
+    // 注册为 WidgetsBindingObserver，浮窗挂载晚于 Navigator，didPopRoute 优先触发。
+    WidgetsBinding.instance.addObserver(this);
     _pos = LiveStreamOverlay.panelPosition;
     _size = LiveStreamOverlay.panelSize;
     _sub = widget.updateStream.listen((_) {
@@ -134,8 +138,22 @@ class _LiveStreamWrapperState extends State<_LiveStreamWrapper> {
     });
   }
 
+  /// 拦截 Android 返回键：全屏→先退全屏；否则关闭直播浮窗。返回 true 表示已消费，
+  /// 阻止返回事件继续冒泡到 Navigator（避免误退页面/退出 App）。
+  @override
+  Future<bool> didPopRoute() async {
+    if (!LiveStreamOverlay.isVisible) return false;
+    if (LiveStreamOverlay.isFullscreen) {
+      LiveStreamOverlay.toggleFullscreen();
+    } else {
+      LiveStreamOverlay.hide();
+    }
+    return true;
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _sub?.cancel();
     super.dispose();
   }
