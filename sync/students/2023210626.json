@@ -3,8 +3,8 @@
   "user_id": "2023210626",
   "user_name": "王建",
   "role": "student",
-  "synced_at": "2026-05-29T08:57:40.477344",
-  "last_active": "2026-05-29T08:57:40.477356",
+  "synced_at": "2026-05-30T11:13:39.851275",
+  "last_active": "2026-05-30T11:13:39.846274",
   "quiz_results": [
     {
       "user_id": "2023210626",
@@ -96,7 +96,7 @@
       "task_id": 1,
       "user_id": "2023210626",
       "content": "PDF实验报告：2023210626王建实验一 开发环境搭建.pdf",
-      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2023210626/2023210626王建实验一 开发环境搭建.pdf",
+      "file_paths": "C:\\Users\\脆脆鲨\\Documents/sync_files/2023210626/2023210626王建实验一 开发环境搭建.pdf",
       "file_names": "2023210626王建实验一 开发环境搭建.pdf",
       "submit_time": "2026-05-04T06:30:01.687872",
       "status": "已提交",
@@ -132,7 +132,7 @@
       "task_id": 4,
       "user_id": "2023210626",
       "content": "PDF实验报告：2023210626王建实验四 微信小程序开发.pdf",
-      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2023210626/2023210626王建实验四 微信小程序开发.pdf",
+      "file_paths": "C:\\Users\\脆脆鲨\\Documents/sync_files/2023210626/2023210626王建实验四 微信小程序开发.pdf",
       "file_names": "2023210626王建实验四 微信小程序开发.pdf",
       "submit_time": "2026-04-24T20:47:49.224863",
       "status": "已提交",
