@@ -20,6 +20,7 @@ import 'ai_grading_tab.dart';
 import 'assessment_materials_tab.dart';
 import 'audit_print_panel.dart';
 
+import '../../../core/design/noir_tokens.dart';
 import '../../../core/constants/color_ohos_compat.dart';
 import '../../../services/pdf_text_service.dart';
 import '../../../core/error_handler.dart';
