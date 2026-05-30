@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import '../data/local/material_dao.dart';
 import '../data/models/ai_config_model.dart';
 import '../data/models/material_model.dart';
+import '../core/error_handler.dart';
 import 'ai_service.dart';
 import 'plantuml_service.dart';
 
@@ -103,7 +104,9 @@ ${additionalRequirements != null ? '额外要求: $additionalRequirements' : ''}
     }
     try {
       return jsonDecode(match.group(0)!) as Map<String, dynamic>;
-    } catch (_) {
+    } catch (e) {
+      // AI 输出非合法 JSON 属预期，回退兜底教案
+      swallow(e, tag: 'CoursewareService.parseLessonPlan');
       return _fallbackLessonPlan(topic, chapter, classHours);
     }
   }
@@ -419,7 +422,10 @@ ${context != null ? '上下文说明: $context' : ''}
               final bytes = file.readAsBytesSync();
               boldFont = pw.Font.ttf(bytes.buffer.asByteData());
             }
-          } catch (_) {}
+          } catch (e) {
+            // 字体文件读取失败，尝试下一候选路径
+            swallow(e, tag: 'CoursewareService.loadBoldFont');
+          }
         }
       }
       boldFont ??= font;
@@ -785,7 +791,8 @@ ${context != null ? '上下文说明: $context' : ''}
                 'narration': item['narration']?.toString() ?? '',
               })
           .toList();
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'CoursewareService.parseNarration', stack: st);
       return [];
     }
   }
@@ -1583,7 +1590,9 @@ ${context != null ? '上下文说明: $context' : ''}
         runInShell: true,
       );
       return result.exitCode == 0;
-    } catch (_) {
+    } catch (e) {
+      // pip 不可用/未安装即视为环境不具备
+      swallow(e, tag: 'CoursewareService.checkPythonPptx');
       return false;
     }
   }
@@ -2234,7 +2243,9 @@ if __name__ == '__main__':
         runInShell: true,
       );
       return result.exitCode == 0;
-    } catch (_) {
+    } catch (e) {
+      // python/PIL 不可用即视为环境不具备
+      swallow(e, tag: 'CoursewareService.checkPillow');
       return false;
     }
   }

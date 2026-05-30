@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../data/local/ai_config_dao.dart';
 import '../data/local/ai_history_dao.dart';
 import '../data/models/ai_config_model.dart';
+import '../core/error_handler.dart';
 import 'auth_service.dart';
 
 /// AI 对话结果（含模型元数据 + Token 用量）
@@ -280,7 +281,9 @@ class AiService {
             };
           }
         }
-      } catch (_) {}
+      } catch (e, st) {
+        swallowDebug(e, tag: 'AiService.queryBalance', stack: st);
+      }
     }
 
     return null;
@@ -317,7 +320,9 @@ class AiService {
     try {
       final list = jsonDecode(match.group(0)!) as List;
       return list.cast<Map<String, dynamic>>();
-    } catch (_) {
+    } catch (e) {
+      // AI 输出非合法 JSON 数组属预期，回退兜底幻灯片
+      swallow(e, tag: 'AiService.parseSlides');
       return _fallbackSlides(topic, slideCount);
     }
   }
@@ -369,7 +374,9 @@ answer_index 为 0-3（对应 A-D），仅返回 JSON，不要其他文字。
     try {
       final list = jsonDecode(match.group(0)!) as List;
       return list.cast<Map<String, dynamic>>();
-    } catch (_) {
+    } catch (e) {
+      // AI 输出非合法 JSON 数组属预期，回退空列表
+      swallow(e, tag: 'AiService.parseJsonList');
       return [];
     }
   }
@@ -486,7 +493,9 @@ answer_index 为 0-3（对应 A-D），仅返回 JSON，不要其他文字。
         'concepts': (parsed['concepts'] as List?)?.cast<Map<String, dynamic>>() ?? [],
         'relations': (parsed['relations'] as List?)?.cast<Map<String, dynamic>>() ?? [],
       };
-    } catch (_) {
+    } catch (e) {
+      // AI 输出非合法 JSON 属预期，回退空结构
+      swallow(e, tag: 'AiService.parseConceptGraph');
       return {'concepts': <Map<String, dynamic>>[], 'relations': <Map<String, dynamic>>[]};
     }
   }
@@ -500,7 +509,8 @@ answer_index 为 0-3（对应 A-D），仅返回 JSON，不要其他文字。
         ],
       ).timeout(const Duration(seconds: 15));
       return result.contains('成功') || result.length > 2;
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AiService.testConnection', stack: st);
       return false;
     }
   }
