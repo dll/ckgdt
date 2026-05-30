@@ -24,9 +24,14 @@ class AuthService {
   bool get isAdmin => _currentUser?.isAdmin ?? false;
   bool get isTeacher => _currentUser?.isTeacher ?? false;
 
+  /// 登录态响应式通知 — 供全局悬浮层（数字孪生宠物）显隐用。
+  /// 登录成功置 true，退出登录置 false。
+  final ValueNotifier<bool> loggedInNotifier = ValueNotifier<bool>(false);
+
   Future<void> checkLoginStatus() async {
     _currentUser = await _userDao.getCurrentUser();
     if (_currentUser != null) {
+      loggedInNotifier.value = true;
       startHeartbeat();
       _startSyncIfEnabled();
     }
@@ -36,6 +41,7 @@ class AuthService {
     final success = await _userDao.login(userId, password);
     if (success) {
       _currentUser = await _userDao.getUser(userId);
+      loggedInNotifier.value = true;
       startHeartbeat();
       _startSyncIfEnabled();
     }
@@ -49,6 +55,7 @@ class AuthService {
     // 写入 session 表
     await _userDao.setCurrentUser(userId, '');
     _currentUser = user;
+    loggedInNotifier.value = true;
     startHeartbeat();
     _startSyncIfEnabled();
     return true;
@@ -59,6 +66,7 @@ class AuthService {
     _syncService.stopAutoSync();
     await _userDao.logout();
     _currentUser = null;
+    loggedInNotifier.value = false;
   }
 
   Future<List<UserModel>> getStudents() async {
