@@ -250,11 +250,11 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     if (!mounted) return;
 
     // 优先走 Processor 路径（结构化审核 + 自动创建审核表卡片）。
-    // 当前注册了 syllabus 的 AiAuditProcessor → docType=syllabus 的文档走新流水线。
-    // 其它 docType 仍回退到旧的 archive_agent.reviewDocument（markdown 字符串）。
-    final processor = _findAuditProcessorFor(doc);
-    if (processor != null) {
-      await _reviewDocViaProcessor(doc, processor);
+    // 一个目标文档可能对应多个审核处理器（如教学大纲 → 合理性审核表 + 评价表），
+    // 全部运行，各自生成对应审核表卡片。其它 docType 回退到旧的 markdown 审核。
+    final processors = _findAuditProcessorsFor(doc);
+    if (processors.isNotEmpty) {
+      await _reviewDocViaProcessors(doc, processors);
       return;
     }
 
@@ -299,23 +299,26 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     }
   }
 
-  /// 查找该 doc.documentType 对应的 AiAuditProcessor。
-  /// 注意：审核处理器的 targetDocType 是被审目标，所以遍历找 targetDocType 匹配的。
-  AiAuditProcessor? _findAuditProcessorFor(ArchiveDocument doc) {
+  /// 查找该 doc.documentType 对应的全部 AiAuditProcessor。
+  /// 一个目标（如 syllabus）可被多个审核器消费（审核表 + 评价表），全部返回。
+  /// 注意：审核处理器的 targetDocType 是被审目标，遍历找 targetDocType 匹配的。
+  List<AiAuditProcessor> _findAuditProcessorsFor(ArchiveDocument doc) {
     final reg = ProcessorRegistry.instance;
+    final result = <AiAuditProcessor>[];
     for (final t in reg.registeredDocTypes) {
       final p = reg.find(t);
       if (p is AiAuditProcessor && p.targetDocType == doc.documentType) {
-        return p;
+        result.add(p);
       }
     }
-    return null;
+    return result;
   }
 
-  /// Processor 路径：跑 reviewTarget → 弹 ReviewResultDialog（含三栏 + 忽略 + 再审）
-  Future<void> _reviewDocViaProcessor(
+  /// Processor 路径：依次跑全部审核器的 reviewTarget（各自生成审核表卡片），
+  /// 用最后一个结果弹 ReviewResultDialog（含三栏 + 忽略 + 再审）。
+  Future<void> _reviewDocViaProcessors(
     ArchiveDocument doc,
-    AiAuditProcessor processor,
+    List<AiAuditProcessor> processors,
   ) async {
     showDialog(
       context: context,
@@ -323,9 +326,13 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       builder: (_) => const Center(child: CircularProgressIndicator()),
     );
     try {
-      final result = await processor.reviewTarget(doc);
+      ReviewResult? result;
+      for (final processor in processors) {
+        result = await processor.reviewTarget(doc);
+      }
       if (!mounted) return;
       Navigator.of(context).pop(); // 关 loading
+      if (result == null) return;
 
       // 重新拉一次 doc 以拿到最新的 reviewJson / status
       final fresh = await widget.dao.getDocumentById(doc.id!);
@@ -336,14 +343,14 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         context: context,
         builder: (_) => ReviewResultDialog(
           target: target,
-          initial: result,
+          initial: result!,
           onUpdated: (_) => _load(), // 父级刷新文档列表（审核表自动出现）
         ),
       );
       // 对话框关闭后再刷一次（覆盖再审/忽略后的状态）
       if (mounted) await _load();
     } catch (e, st) {
-      swallowDebug(e, tag: 'ArchivePeriodTab._reviewDocViaProcessor', stack: st);
+      swallowDebug(e, tag: 'ArchivePeriodTab._reviewDocViaProcessors', stack: st);
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1111,7 +1118,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
           ? dayNames[dayNum]!
           : entry.value.first['day'] ?? '';
       final periodInfo = entry.value.first['period'] ?? '';
-      buf.writeln('### $entry.key（$people人）— $dayName $periodInfo\n');
+      buf.writeln('### ${entry.key}（$people人）— $dayName $periodInfo\n');
       buf.writeln('| 周次 | 日期 | 地点 |');
       buf.writeln('|------|------|------|');
       for (final r in entry.value) {
@@ -1376,7 +1383,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       final doc = XmlDocument.parse(xml);
       final texts = doc.findAllElements('w:t').map((e) => e.innerText).join('');
       return texts.replaceAll(RegExp(r'\s+'), ' ').trim();
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ArchivePeriodTab._extractDocxText', stack: st);
       return null;
     }
   }
