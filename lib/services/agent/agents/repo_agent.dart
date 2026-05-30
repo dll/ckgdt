@@ -1,4 +1,6 @@
 import '../../ai_service.dart';
+import '../../auth_service.dart';
+import '../../../data/local/assessment_dao.dart';
 import '../agent_model.dart';
 import '../base_agent.dart';
 
@@ -7,7 +9,7 @@ class RepoAgent extends BaseAgent {
   final AiService _ai = AiService();
 
   @override
-  AgentConfig get config => const AgentConfig(
+  AgentConfig get config => AgentConfig(
         id: 'repo',
         name: '仓库管家',
         emoji: '📦',
@@ -44,6 +46,28 @@ class RepoAgent extends BaseAgent {
         keywords: ['仓库', '代码', '提交', 'git', 'gitee', '分支', 'commit', '推送', 'push'],
         capabilities: ['仓库状态', '提交记录', '规范检查', 'Git指导'],
         requiresAi: true,
+        tools: [
+          AgentTool(
+            name: 'get_my_contribution',
+            description: '获取当前登录学生在小组项目中的贡献度评价（代码/文档/团队协作/主动性/质量五维 + 综合得分），用于回答"我的贡献""贡献分布"',
+            parameters: {},
+            execute: (params) async {
+              final userId = AuthService().currentUser?.userId;
+              if (userId == null) return '未登录，无法获取贡献度';
+              final s = await AssessmentDao().getContributionSummary(userId);
+              final reviews = (s['totalReviews'] ?? 0).toInt();
+              if (reviews == 0) return '该学生暂无贡献度评价记录（组内互评尚未进行）';
+              String f(String k) => ((s[k] ?? 0)).toStringAsFixed(1);
+              return '基于 $reviews 次评价的贡献度（满分按各维度设定）：\n'
+                  '- 代码贡献：${f('code')}\n'
+                  '- 文档贡献：${f('doc')}\n'
+                  '- 团队协作：${f('teamwork')}\n'
+                  '- 主动性：${f('initiative')}\n'
+                  '- 质量：${f('quality')}\n'
+                  '- 综合得分：${f('overall')}';
+            },
+          ),
+        ],
         usageSteps: [
           '选择 📦 仓库管家',
           '询问 Git 操作或仓库管理问题',
@@ -63,7 +87,7 @@ class RepoAgent extends BaseAgent {
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
     final messages = buildAiMessages(userMessage, session);
-    final result = await safeAiChatWithMeta(messages, aiService: _ai);
+    final result = await safeAiChatWithTools(userMessage, messages, aiService: _ai);
     return buildReplyFromResult(result);
   }
 }
