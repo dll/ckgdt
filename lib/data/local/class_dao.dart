@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import '../../core/error_handler.dart';
 import '../models/user_model.dart';
 import 'database_helper.dart';
 
@@ -521,7 +522,8 @@ class ClassDao {
         await _updateStudentCount(classId);
       }
       return count;
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ClassDao.syncAllStudentsToClass', stack: st);
       return 0;
     }
   }

@@ -1,3 +1,4 @@
+import '../core/error_handler.dart';
 import '../data/local/database_helper.dart';
 import '../data/local/class_dao.dart';
 
@@ -17,7 +18,10 @@ class DefaultClassService {
       if (rows.isNotEmpty && rows.first['default_class_id'] != null) {
         return rows.first['default_class_id'] as int;
       }
-    } catch (_) {}
+    } catch (e) {
+      // default_class_id 列在 V26 前不存在，探测失败可忽略
+      swallow(e, tag: 'DefaultClassService.getDefaultClassId');
+    }
     return null;
   }
 
@@ -37,7 +41,9 @@ class DefaultClassService {
     final classes = await _classDao.getActiveClasses();
     try {
       return classes.firstWhere((c) => c['id'] == classId);
-    } catch (_) {
+    } catch (e) {
+      // 默认班级 id 不在活跃班级中（已归档/被删），返回 null
+      swallow(e, tag: 'DefaultClassService.getDefaultClass');
       return null;
     }
   }
