@@ -16,6 +16,10 @@ class VideoSourceManager {
 
   final Map<String, VideoSourceProvider> _providers = {};
 
+  /// 用户开关的内存缓存（platformId → 是否启用）。null 表示未加载。
+  /// [loadEnabledPrefs] 启动时灌一次，[setProviderEnabled] 写时同步更新。
+  Map<String, bool>? _enabledCache;
+
   void registerDefaults() {
     final providers = <VideoSourceProvider>[
       BilibiliProvider(),
@@ -34,8 +38,24 @@ class VideoSourceManager {
     _providers[provider.platformId] = provider;
   }
 
+  /// 从 SharedPreferences 加载全部平台开关到内存缓存。app 启动时调一次。
+  Future<void> loadEnabledPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    _enabledCache = {
+      for (final id in _providers.keys)
+        id: prefs.getBool('$_prefsPrefix$id') ?? true,
+    };
+  }
+
+  /// 平台是否对用户可用：既要 provider 本身可用（const enabled），
+  /// 又要用户未在设置里关掉（prefs，默认开）。缓存未加载时只看 provider.enabled。
+  bool _isUserEnabled(VideoSourceProvider p) {
+    if (!p.enabled) return false;
+    return _enabledCache?[p.platformId] ?? true;
+  }
+
   List<VideoSourceProvider> getEnabledProviders() {
-    return _providers.values.where((p) => p.enabled).toList();
+    return _providers.values.where(_isUserEnabled).toList();
   }
 
   VideoSourceProvider? getProvider(String platformId) {
@@ -51,6 +71,8 @@ class VideoSourceManager {
     if (provider == null) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('$_prefsPrefix$platformId', enabled);
+    // 同步内存缓存，使 getEnabledProviders 立即生效
+    (_enabledCache ??= {})[platformId] = enabled;
   }
 
   Future<bool> loadProviderEnabled(String platformId) async {
