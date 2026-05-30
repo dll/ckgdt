@@ -24,8 +24,8 @@ class AuthService {
   bool get isAdmin => _currentUser?.isAdmin ?? false;
   bool get isTeacher => _currentUser?.isTeacher ?? false;
 
-  /// 登录态响应式通知 — 供全局悬浮层（数字孪生宠物）显隐用。
-  /// 登录成功置 true，退出登录置 false。
+  /// 登录态响应式通知 — 登录成功置 true，退出登录置 false。
+  /// 供需要随登录状态显隐的 UI 订阅。
   final ValueNotifier<bool> loggedInNotifier = ValueNotifier<bool>(false);
 
   Future<void> checkLoginStatus() async {

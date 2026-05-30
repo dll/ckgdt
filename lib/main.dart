@@ -25,7 +25,6 @@ import 'services/archive/base_document_processor.dart';
 import 'services/archive_package_service.dart';
 import 'services/auth_service.dart';
 import 'presentation/pages/profile/virtual_twin_page.dart';
-import 'presentation/widgets/twin_pet_overlay.dart';
 
 import 'core/constants/color_ohos_compat.dart';
 // 条件导入：Web 端使用 ffi_web，桌面端使用 ffi
@@ -281,13 +280,6 @@ class _MyAppState extends State<MyApp> {
               child ?? const SizedBox.shrink(),
               if (_feedbackEnabled)
                 _FloatingHelpFab(navigatorKey: _navigatorKey),
-              // 数字孪生悬浮宠物：登录后常驻，退出登录自动隐身
-              ValueListenableBuilder<bool>(
-                valueListenable: AuthService().loggedInNotifier,
-                builder: (_, loggedIn, __) => loggedIn
-                    ? TwinPetOverlay(navigatorKey: _navigatorKey)
-                    : const SizedBox.shrink(),
-              ),
             ],
           ),
         );

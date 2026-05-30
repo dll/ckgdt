@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../../../core/error_handler.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/twin_service.dart';
 import '../../../services/agent/agent_registry.dart';
@@ -26,7 +27,10 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
   final _twinService = TwinService();
 
   bool get _isTeacher => _authService.isTeacher || _authService.isAdmin;
-  String get _agentId => _isTeacher ? 'virtual_teacher' : 'virtual_student';
+  // 数字孪生智能体为双模（学生/教师自动识别），注册 id 为 'digital_twin'。
+  // 历史上这里误用了未注册的 'virtual_student'/'virtual_teacher'，导致 AI
+  // 解读与深度对话静默失效（getAgent 返回 null）。
+  static const String _agentId = 'digital_twin';
 
   StudentTwinProfile? _studentProfile;
   TeacherTwinProfile? _teacherProfile;
@@ -76,7 +80,9 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
       } else {
         _studentProfile = await _twinService.buildStudentProfile(userId);
       }
-    } catch (_) {}
+    } catch (e, st) {
+      swallowDebug(e, tag: 'VirtualTwinPage.loadProfile', stack: st);
+    }
     if (mounted) {
       setState(() => _profileLoading = false);
       _headerAnimCtrl.forward();
