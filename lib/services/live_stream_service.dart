@@ -3,6 +3,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
+import '../core/error_handler.dart';
 
 enum LiveStreamStatus { idle, initializing, ready, recording, error }
 
@@ -118,8 +119,9 @@ class LiveStreamService {
       await _initCameraController(next);
       _emit(LiveStreamStatus.ready,
           isCameraOn: true, cameraCount: _cameras.length);
-    } catch (e) {
-      // 切换失败，保留当前
+    } catch (e, st) {
+      // 切换失败，保留当前摄像头
+      swallowDebug(e, tag: 'LiveStream.switchCamera', stack: st);
     }
   }
 
@@ -149,10 +151,19 @@ class LiveStreamService {
     final ts = DateTime.now().millisecondsSinceEpoch;
     _lastRecordPath = '${dir.path}/live_record_$ts.mp4';
 
+    // 视频录制为 best-effort：camera_windows 等平台不支持 startVideoRecording，
+    // 单独 try 包裹，失败也不能阻断音频录制与计时（否则主平台录制按钮直接报错失效）。
     try {
       if (_cameraController != null && _cameraController!.value.isInitialized) {
         await _cameraController!.startVideoRecording();
       }
+    } catch (e, st) {
+      // 平台不支持视频录制（如 Windows）— 降级为音频+计时
+      swallowDebug(e, tag: 'LiveStream.startVideoRecording', stack: st);
+      _lastRecordPath = null;
+    }
+
+    try {
       if (_currentState.isMicOn) {
         await _audioRecorder.start(
           const RecordConfig(encoder: AudioEncoder.aacLc),
@@ -183,11 +194,14 @@ class LiveStreamService {
       if (_currentState.isMicOn) {
         await _audioRecorder.stop();
       }
-    } catch (_) {}
+    } catch (e, st) {
+      swallowDebug(e, tag: 'LiveStream.stopRecording', stack: st);
+    }
 
     _emit(LiveStreamStatus.ready,
         isCameraOn: _currentState.isCameraOn,
         isMicOn: _currentState.isMicOn,
+        recordDuration: Duration.zero,
         cameraCount: _currentState.cameraCount);
 
     return _lastRecordPath;
@@ -200,7 +214,8 @@ class LiveStreamService {
     try {
       final xFile = await _cameraController!.takePicture();
       return xFile.path;
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'LiveStream.takeSnapshot', stack: st);
       return null;
     }
   }
@@ -222,6 +237,25 @@ class LiveStreamService {
   CameraController? get cameraController => _cameraController;
   List<CameraDescription> get cameras => _cameras;
   int get currentCameraIndex => _currentCameraIndex;
+
+  /// 释放摄像头但保留单例与状态流（关闭浮窗时调用）。
+  ///
+  /// 浮窗关闭后必须停掉摄像头，否则 webcam 指示灯常亮、下次打开还拿着陈旧的
+  /// controller。区别于 [dispose]：这里**不**关闭 _stateController（单例随 app 生命周期）。
+  Future<void> shutdownCamera() async {
+    if (_currentState.isRecording) {
+      await stopRecording();
+    }
+    if (_cameraListener != null) {
+      _cameraController?.removeListener(_cameraListener!);
+      _cameraListener = null;
+    }
+    await _cameraController?.dispose();
+    _cameraController = null;
+    _isInitialized = false;
+    _emit(LiveStreamStatus.idle,
+        isCameraOn: false, recordDuration: Duration.zero);
+  }
 
   Future<void> dispose() async {
     _recordTimer?.cancel();
