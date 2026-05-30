@@ -1,4 +1,5 @@
 import '../../ai_service.dart';
+import '../../../data/local/achievement_dao.dart';
 import '../agent_model.dart';
 import '../base_agent.dart';
 
@@ -7,7 +8,7 @@ class AchievementAgent extends BaseAgent {
   final AiService _ai = AiService();
 
   @override
-  AgentConfig get config => const AgentConfig(
+  AgentConfig get config => AgentConfig(
         id: 'achievement',
         name: '达成分析师',
         emoji: '🏆',
@@ -54,6 +55,63 @@ class AchievementAgent extends BaseAgent {
         keywords: ['达成', '目标', '达成度', '改进', '课程目标', 'OBE', '持续改进'],
         capabilities: ['达成度查询', '报告生成', '改进建议', '目标分析'],
         requiresAi: true,
+        tools: [
+          AgentTool(
+            name: 'list_achievement_batches',
+            description: '获取所有达成度评价批次列表（含批次名、学生数），分析前先查可用批次及其 id',
+            parameters: {},
+            execute: (params) async {
+              final batches = await AchievementDao().getAllBatches();
+              if (batches.isEmpty) return '暂无达成度批次，请教师先在"达成"页创建批次并录入成绩';
+              return batches
+                  .map((b) => '- id=${b['id']} 《${b['name'] ?? b['batch_name'] ?? '未命名'}》'
+                      '（${b['student_count'] ?? 0} 名学生，状态：${b['status'] ?? '进行中'}）')
+                  .join('\n');
+            },
+          ),
+          AgentTool(
+            name: 'get_class_achievement',
+            description: '获取指定批次的班级各课程目标平均达成度（CO1-CO4 + 总评）',
+            parameters: {'batch_id': '批次 id（数字，来自 list_achievement_batches）'},
+            execute: (params) async {
+              final id = int.tryParse('${params['batch_id']}');
+              if (id == null) return '请提供有效的批次 id（先用 list_achievement_batches 查询）';
+              final avg = await AchievementDao().calculateClassAverage(id);
+              if (avg.isEmpty) return '批次 #$id 暂无成绩数据';
+              final buf = StringBuffer('批次 #$id 班级平均达成度：\n');
+              avg.forEach((k, v) {
+                buf.writeln('- $k：${(v).toStringAsFixed(3)}');
+              });
+              return buf.toString();
+            },
+          ),
+          AgentTool(
+            name: 'get_improvement_suggestions',
+            description: '获取指定批次基于真实成绩计算的持续改进建议（按课程目标列出薄弱项 + 未达标学生数 + 改进措施）',
+            parameters: {'batch_id': '批次 id（数字）'},
+            execute: (params) async {
+              final id = int.tryParse('${params['batch_id']}');
+              if (id == null) return '请提供有效的批次 id';
+              final list = await AchievementDao().generateImprovementSuggestions(id);
+              if (list.isEmpty) return '批次 #$id 暂无成绩，无法生成改进建议';
+              final buf = StringBuffer();
+              for (final s in list) {
+                final ach = (s['achievement'] as num?)?.toDouble() ?? 0;
+                buf.writeln('### ${s['objectiveName']}（达成度 ${ach.toStringAsFixed(3)}，'
+                    '${s['level'] ?? ''}）');
+                if (s['lowStudentCount'] != null) {
+                  buf.writeln('未达标学生：${s['lowStudentCount']}/${s['totalStudents'] ?? '?'} 名');
+                }
+                final actions = (s['actions'] as List?)?.cast<String>() ?? [];
+                for (final a in actions.take(4)) {
+                  buf.writeln('- $a');
+                }
+                buf.writeln();
+              }
+              return buf.toString();
+            },
+          ),
+        ],
         usageSteps: [
           '选择 🏆 达成分析师',
           '查询课程目标达成情况',
@@ -73,7 +131,7 @@ class AchievementAgent extends BaseAgent {
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
     final messages = buildAiMessages(userMessage, session);
-    final result = await safeAiChatWithMeta(messages, aiService: _ai);
+    final result = await safeAiChatWithTools(userMessage, messages, aiService: _ai);
     return buildReplyFromResult(result);
   }
 }

@@ -1,4 +1,7 @@
 import '../../ai_service.dart';
+import '../../auth_service.dart';
+import '../../../data/local/quiz_dao.dart';
+import '../../../data/local/wrong_answer_dao.dart';
 import '../agent_model.dart';
 import '../base_agent.dart';
 
@@ -7,7 +10,7 @@ class QuizAgent extends BaseAgent {
   final AiService _ai = AiService();
 
   @override
-  AgentConfig get config => const AgentConfig(
+  AgentConfig get config => AgentConfig(
         id: 'quiz',
         name: '测验教练',
         emoji: '📝',
@@ -73,6 +76,58 @@ D. Text
         capabilities: ['出题', '批改', '错题分析', '章节推荐'],
         requiresAi: true,
         useRag: true,
+        tools: [
+          AgentTool(
+            name: 'get_my_wrong_answers',
+            description: '获取当前登录学生的错题列表（题干/错误答案/正确答案/章节/错误次数），用于错题分析和复习建议',
+            parameters: {},
+            execute: (params) async {
+              final userId = AuthService().currentUser?.userId;
+              if (userId == null) return '未登录，无法获取错题';
+              final rows = await WrongAnswerDao().getWrongAnswers(userId);
+              if (rows.isEmpty) return '该学生暂无错题记录，表现不错！';
+              final buf = StringBuffer('共 ${rows.length} 道错题：\n');
+              for (final r in rows.take(20)) {
+                final q = (r['question'] as String? ?? '').replaceAll('\n', ' ');
+                final shortQ = q.length > 50 ? '${q.substring(0, 50)}…' : q;
+                buf.writeln('- [第${r['chapter'] ?? '?'}章] $shortQ '
+                    '(你答:${r['user_answer'] ?? '?'} / 正确:${r['correct_answer'] ?? '?'}'
+                    ' / 错${r['times'] ?? 1}次)');
+              }
+              return buf.toString();
+            },
+          ),
+          AgentTool(
+            name: 'get_my_quiz_summary',
+            description: '获取当前登录学生的测验总览统计（测验次数、累计正确率、平均分）',
+            parameters: {},
+            execute: (params) async {
+              final userId = AuthService().currentUser?.userId;
+              if (userId == null) return '未登录，无法获取测验统计';
+              final s = await QuizDao().getQuizSummary(userId);
+              if (s.isEmpty || (s['total_count'] as int? ?? 0) == 0) {
+                return '该学生暂无测验记录';
+              }
+              final correct = (s['total_correct'] as num?)?.toInt() ?? 0;
+              final total = (s['total_questions'] as num?)?.toInt() ?? 0;
+              final rate = total > 0 ? (correct * 100 / total).toStringAsFixed(1) : '0';
+              final avg = (s['avg_score'] as num?)?.toStringAsFixed(1) ?? '0';
+              return '测验次数：${s['total_count']}，累计答对 $correct/$total（正确率 $rate%），平均分 $avg';
+            },
+          ),
+          AgentTool(
+            name: 'get_chapter_question_stats',
+            description: '获取题库各章节题目数量分布，用于按章节出题前了解题库覆盖',
+            parameters: {},
+            execute: (params) async {
+              final stats = await QuizDao().getChapterStats();
+              if (stats.isEmpty) return '题库暂无题目';
+              return stats
+                  .map((s) => '- ${s['source']}：${s['count']} 题')
+                  .join('\n');
+            },
+          ),
+        ],
         usageSteps: [
           '选择 📝 测验教练',
           '指定章节或主题，如"第3章出5道题"',
@@ -93,7 +148,7 @@ D. Text
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
     final messages = buildAiMessages(userMessage, session);
-    final result = await safeAiChatWithRag(userMessage, messages, aiService: _ai);
+    final result = await safeAiChatWithTools(userMessage, messages, aiService: _ai);
     return buildReplyFromResult(result);
   }
 }
