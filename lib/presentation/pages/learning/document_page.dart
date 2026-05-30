@@ -7,6 +7,7 @@ import '../../../data/local/course_dao.dart';
 import '../../../services/courseware_service.dart';
 import '../../../services/file_opener_service.dart';
 import '../../../services/courseware_download_service.dart';
+import '../../widgets/back_button_bar.dart';
 
 class DocumentListPage extends StatefulWidget {
   const DocumentListPage({super.key});
@@ -80,8 +81,8 @@ class _DocumentListPageState extends State<DocumentListPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('课程资料'),
+      appBar: BackButtonBar(
+        title: '课程资料',
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,

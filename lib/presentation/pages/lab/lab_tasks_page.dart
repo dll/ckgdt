@@ -10,7 +10,7 @@ import '../../../data/local/grading_result_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../services/sync_service.dart';
-import '../../../services/agent/agents/lab_grading_agent.dart';
+import '../../../services/agent/agents/grading_agent.dart';
 import '../../../services/gitee_service.dart';
 import '../../../services/course_resource_service.dart';
 import '../../../services/pdf_text_service.dart';

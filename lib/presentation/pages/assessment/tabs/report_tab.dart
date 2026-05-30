@@ -921,7 +921,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
           pdfTextForGrading = pdfText;
           if (pdfText != null && pdfText.isNotEmpty) {
             // ignore: use_build_context_synchronously
-            final reason = await AssessmentGradingAgent()
+            final reason = await GradingAgent()
                 .checkReportTechStackAlignment(
               reportContent: pdfText,
               groupTechStack: techInfo['techStack'] ?? '',
@@ -1218,7 +1218,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                     : () async {
                         setDialogState(() => isAiGrading = true);
                         try {
-                          final agent = AssessmentGradingAgent();
+                          final agent = GradingAgent();
                           final result = await agent.gradeReport(
                             reportType: title,
                             studentName: userId,

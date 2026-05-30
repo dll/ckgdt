@@ -5,6 +5,7 @@ import '../../../data/local/learning_record_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/ai_service.dart';
 import '../../widgets/markdown_bubble.dart';
+import '../../widgets/back_button_bar.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
 class WeaknessDiagnosisPage extends StatefulWidget {
@@ -350,10 +351,8 @@ $wrongSummary
         widget.targetUserId != _authService.getCurrentUserId();
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(isViewingOther
-            ? '学生薄弱点诊断 ($_userId)'
-            : '知识薄弱点诊断'),
+      appBar: BackButtonBar(
+        title: isViewingOther ? '学生薄弱点诊断 ($_userId)' : '知识薄弱点诊断',
         actions: [
           if (!_isLoading)
             IconButton(

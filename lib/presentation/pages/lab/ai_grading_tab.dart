@@ -7,7 +7,7 @@ import '../../../data/local/grading_result_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../services/sync_service.dart';
-import '../../../services/agent/agents/lab_grading_agent.dart';
+import '../../../services/agent/agents/grading_agent.dart';
 import 'lab_tasks_page.dart';
 import '../../../core/constants/color_ohos_compat.dart';
 import '../../../core/error_handler.dart';
@@ -34,7 +34,7 @@ class LabAiGradingTab extends StatefulWidget {
 }
 
 class _LabAiGradingTabState extends State<LabAiGradingTab> {
-  final _gradingAgent = LabGradingAgent();
+  final _gradingAgent = GradingAgent();
   final _gradingDao = GradingResultDao();
 
   // ── 任务数据 ──

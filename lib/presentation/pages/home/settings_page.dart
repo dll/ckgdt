@@ -14,6 +14,7 @@ import '../settings/course_manage_page.dart';
 import '../../../data/local/course_dao.dart';
 import '../profile/chat_history_page.dart';
 import '../analytics/token_stats_page.dart';
+import '../../widgets/back_button_bar.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
 class SettingsPage extends StatefulWidget {
@@ -57,13 +58,10 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     final authService = AuthService();
     final user = authService.currentUser;
-    final primaryColor = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('设置'),
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
+      appBar: BackButtonBar(
+        title: '设置',
       ),
       body: ListView(
         children: [

@@ -85,6 +85,8 @@ class _ClassroomQuestionTabState extends State<ClassroomQuestionTab> {
       await widget.classroomDao.importFromLabTasks();
       await widget.classroomDao.importFromAssessment();
     }
+    // 始终从课程资源导入（courseware 源可能不断增加）
+    await widget.classroomDao.importFromCourseware();
     await _loadData();
   }
 

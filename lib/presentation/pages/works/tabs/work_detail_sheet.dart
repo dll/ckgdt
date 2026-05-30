@@ -1045,7 +1045,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                     : () async {
                         setDialogState(() => isAiGrading = true);
                         try {
-                          final agent = WorksGradingAgent();
+                          final agent = GradingAgent();
                           final result = await agent.gradeWork(
                             title: _work['title'] as String? ?? '',
                             description: _work['description'] as String?,

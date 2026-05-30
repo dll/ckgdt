@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../widgets/back_button_bar.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/cross_platform/sync_server.dart';
 import '../../../services/cross_platform/sync_client.dart';
@@ -424,8 +425,8 @@ class _CrossPlatformHubPageState extends State<CrossPlatformHubPage> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('多端互通'),
+      appBar: BackButtonBar(
+        title: '多端互通',
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

@@ -24,6 +24,7 @@ import '../sync/data_sync_page.dart';
 
 import '../../../core/constants/role_guard.dart';
 
+import '../../widgets/back_button_bar.dart';
 import '../../../core/constants/color_ohos_compat.dart';
 class TeacherWorkspacePage extends StatefulWidget {
   const TeacherWorkspacePage({super.key});
@@ -143,7 +144,7 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
     final role = user?.role ?? 'student';
     if (!RoleGuard.isTeacherOrAdmin(role)) {
       return Scaffold(
-        appBar: AppBar(title: const Text('教师工作台')),
+        appBar: BackButtonBar(title: '教师工作台'),
         body: const Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -168,8 +169,8 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('教师工作台'),
+      appBar: BackButtonBar(
+        title: '教师工作台',
       ),
       body: RefreshIndicator(
         onRefresh: _loadData,

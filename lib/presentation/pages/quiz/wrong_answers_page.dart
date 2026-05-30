@@ -4,6 +4,7 @@ import '../../../data/local/learning_path_dao.dart';
 import '../../../services/ai_service.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/tts_flutter_service.dart';
+import '../../widgets/back_button_bar.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
 class WrongAnswersPage extends StatefulWidget {
@@ -149,9 +150,8 @@ class _WrongAnswersPageState extends State<WrongAnswersPage> {
   Widget build(BuildContext context) {
     primary = Theme.of(context).colorScheme.primary;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('错题本'),
-
+      appBar: BackButtonBar(
+        title: '错题本',
         actions: [
           if (_wrongAnswers.isNotEmpty)
             IconButton(

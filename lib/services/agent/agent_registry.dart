@@ -6,8 +6,6 @@ import '../../data/local/ai_history_dao.dart';
 import '../auth_service.dart';
 import 'agents/voice_agent.dart';
 import 'agents/graph_agent.dart';
-import 'agents/path_agent.dart';
-import 'agents/learning_agent.dart';
 import 'agents/quiz_agent.dart';
 import 'agents/repo_agent.dart';
 import 'agents/assessment_agent.dart';
@@ -20,15 +18,10 @@ import 'agents/tutor_agent.dart';
 import 'agents/doc_converter_agent.dart';
 import 'agents/mobile_expert_agent.dart';
 import 'agents/ethics_agent.dart';
-import 'agents/course_gen_agent.dart';
-import 'agents/madkg_agent.dart';
-import 'agents/lab_grading_agent.dart';
-import 'agents/assessment_grading_agent.dart';
-import 'agents/works_grading_agent.dart';
 import 'agents/safety_agent.dart';
-import 'agents/virtual_student_agent.dart';
-import 'agents/virtual_teacher_agent.dart';
 import 'agents/archive_agent.dart';
+import 'agents/grading_agent.dart';
+import 'agents/digital_twin_agent.dart';
 
 /// 智能体注册表 + Director 编排
 ///
@@ -57,8 +50,6 @@ class AgentRegistry {
 
     _register(VoiceAgent());
     _register(GraphAgent());
-    _register(PathAgent());
-    _register(LearningAgent());
     _register(QuizAgent());
     _register(RepoAgent());
     _register(AssessmentAgent());
@@ -70,19 +61,14 @@ class AgentRegistry {
     _register(DocConverterAgent());
     _register(MobileExpertAgent());
     _register(EthicsAgent());
-    _register(CourseGenAgent());
-    _register(MadkgAgent());
-    // 批阅智能体（教师/管理员专用）
-    _register(LabGradingAgent());
-    _register(AssessmentGradingAgent());
-    _register(WorksGradingAgent());
     // 安全监控智能体（管理员专用）
     _register(SafetyAgent());
-    // 数字孪生智能体
-    _register(VirtualStudentAgent());
-    _register(VirtualTeacherAgent());
     // 归档智能体
     _register(ArchiveAgent());
+    // 统一批阅智能体（教师/管理员专用）
+    _register(GradingAgent());
+    // 数字孪生智能体
+    _register(DigitalTwinAgent());
     _register(AssistantAgent()); // 兜底，最后注册
 
     _initialized = true;

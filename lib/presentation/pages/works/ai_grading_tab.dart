@@ -6,7 +6,7 @@ import '../../../data/local/works_dao.dart';
 import '../../../data/local/grading_result_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/notification_service.dart';
-import '../../../services/agent/agents/works_grading_agent.dart';
+import '../../../services/agent/agents/grading_agent.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
 import '../../../core/error_handler.dart';
@@ -27,7 +27,7 @@ class WorksAiGradingTab extends StatefulWidget {
 }
 
 class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
-  final _gradingAgent = WorksGradingAgent();
+  final _gradingAgent = GradingAgent();
   final _worksDao = WorksDao();
   final _gradingDao = GradingResultDao();
 

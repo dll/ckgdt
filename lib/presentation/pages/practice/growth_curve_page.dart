@@ -5,6 +5,7 @@ import '../../../services/auth_service.dart';
 import '../../../data/local/quiz_dao.dart';
 import '../../../data/local/learning_record_dao.dart';
 
+import '../../widgets/back_button_bar.dart';
 import '../../../core/constants/color_ohos_compat.dart';
 /// 能力增长曲线 — 灵感来自"天天向上"项目
 /// 用数学模型展示不同学习模式的长期效果差异
@@ -153,10 +154,8 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('能力增长曲线'),
-        backgroundColor: primary,
-        foregroundColor: Colors.white,
+      appBar: BackButtonBar(
+        title: '能力增长曲线',
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,

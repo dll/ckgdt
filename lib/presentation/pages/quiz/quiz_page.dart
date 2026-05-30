@@ -15,6 +15,7 @@ import '../analytics/learning_analytics_page.dart';
 import '../learning/video_page.dart';
 import '../practice/deep_practice_page.dart';
 import 'wrong_answers_page.dart';
+import '../../widgets/back_button_bar.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
 class QuizPage extends StatefulWidget {
@@ -369,8 +370,8 @@ class _QuizPageState extends State<QuizPage> {
     if (widget.embedded) return body;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('章节测验'),
+      appBar: BackButtonBar(
+        title: '章节测验',
         actions: const [AgentEntryButton(agentId: 'quiz')],
       ),
       body: body,

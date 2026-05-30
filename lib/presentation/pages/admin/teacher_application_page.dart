@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../data/local/teacher_application_dao.dart';
 import '../../../data/local/notification_dao.dart';
 import '../../../services/auth_service.dart';
+import '../../widgets/back_button_bar.dart';
 
 /// 教师申请页面 — 学生填写工号即可提交申请
 class TeacherApplicationPage extends StatefulWidget {
@@ -97,7 +98,7 @@ class _TeacherApplicationPageState extends State<TeacherApplicationPage> {
     final isAlreadyTeacher = _authService.isTeacher || _authService.isAdmin;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('教师申请')),
+      appBar: BackButtonBar(title: '教师申请'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(

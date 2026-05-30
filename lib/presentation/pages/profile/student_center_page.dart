@@ -13,6 +13,7 @@ import '../lab/productization_guide_page.dart';
 import '../privacy/privacy_policy_page.dart';
 import '../privacy/my_data_page.dart';
 
+import '../../widgets/back_button_bar.dart';
 import '../../../core/constants/color_ohos_compat.dart';
 class StudentCenterPage extends StatefulWidget {
   const StudentCenterPage({super.key});
@@ -111,8 +112,8 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('我的学习中心'),
+      appBar: BackButtonBar(
+        title: '我的学习中心',
       ),
       body: RefreshIndicator(
         onRefresh: _loadData,

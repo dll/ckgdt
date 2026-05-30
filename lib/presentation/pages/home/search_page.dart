@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/back_button_bar.dart';
 import '../../../data/local/graph_dao.dart';
 import '../../../data/local/quiz_dao.dart';
 import '../graph/graph_detail_page.dart';
@@ -73,8 +74,8 @@ class _SearchPageState extends State<SearchPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('搜索'),
+      appBar: BackButtonBar(
+        title: '搜索',
 
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
