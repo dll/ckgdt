@@ -3,8 +3,8 @@
   "user_id": "2020211613",
   "user_name": "张顺",
   "role": "student",
-  "synced_at": "2026-05-30T13:38:42.025212",
-  "last_active": "2026-05-30T13:38:42.025230",
+  "synced_at": "2026-05-30T13:38:49.971210",
+  "last_active": "2026-05-30T13:38:49.971227",
   "quiz_results": [
     {
       "user_id": "2020211613",
@@ -33,6 +33,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 4,
+      "user_id": "2020211613",
+      "content": "PDF实验报告：2020211613张顺实验四 微信小程序开发.pdf",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/cache/file_picker/1780119529278/2020211613张顺实验四 微信小程序开发.pdf",
+      "file_names": "2020211613张顺实验四 微信小程序开发.pdf",
+      "submit_time": "2026-05-30T13:38:49.953786",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-04-27T16:26:05.065957",
+      "updated_at": "2026-05-30T13:38:49.953786",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 3,
       "user_id": "2020211613",
@@ -83,24 +101,6 @@
       "scored_at": null,
       "created_at": "2026-04-27T16:24:25.535317",
       "updated_at": "2026-05-30T13:38:12.388943",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 4,
-      "user_id": "2020211613",
-      "content": "PDF实验报告：2020211613张顺实验四 微信小程序开发.pdf",
-      "file_paths": "/data/user/0/cn.edu.chzu.madkg/cache/file_picker/1777278364367/2020211613张顺实验四 微信小程序开发.pdf",
-      "file_names": "2020211613张顺实验四 微信小程序开发.pdf",
-      "submit_time": "2026-04-27T16:26:05.065957",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-04-27T16:26:05.065957",
-      "updated_at": "2026-04-27T16:26:05.065957",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
