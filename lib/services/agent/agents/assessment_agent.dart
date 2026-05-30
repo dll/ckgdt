@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import '../../ai_service.dart';
+import '../../../core/error_handler.dart';
+import '../../../data/local/assessment_dao.dart';
 import '../agent_model.dart';
 import '../base_agent.dart';
 
@@ -7,7 +11,7 @@ class AssessmentAgent extends BaseAgent {
   final AiService _ai = AiService();
 
   @override
-  AgentConfig get config => const AgentConfig(
+  AgentConfig get config => AgentConfig(
         id: 'assessment',
         name: '考核助理',
         emoji: '📊',
@@ -53,6 +57,57 @@ class AssessmentAgent extends BaseAgent {
         keywords: ['考核', '分组', '答辩', '成绩', '评分', '项目', '立项', '贡献'],
         capabilities: ['分组查询', '答辩安排', '成绩统计', '考核指导'],
         requiresAi: true,
+        tools: [
+          AgentTool(
+            name: 'list_assessment_groups',
+            description: '获取项目考核分组列表（组名/组长/项目名/成员）',
+            parameters: {},
+            execute: (params) async {
+              final groups = await AssessmentDao().getGroups();
+              if (groups.isEmpty) return '当前暂无考核分组';
+              return groups.map((g) {
+                var members = '';
+                final raw = g['member_names'] as String?;
+                if (raw != null && raw.isNotEmpty) {
+                  try {
+                    members = (jsonDecode(raw) as List).join('、');
+                  } catch (e) {
+                    // member_names 非合法 JSON（旧数据/手填），按原文展示
+                    swallow(e, tag: 'AssessmentAgent.memberNames');
+                    members = raw;
+                  }
+                }
+                return '- 《${g['name']}》组长：${g['leader'] ?? '未定'}'
+                    '，项目：${g['project_name'] ?? '未定'}'
+                    '${members.isNotEmpty ? '，成员：$members' : ''}';
+              }).join('\n');
+            },
+          ),
+          AgentTool(
+            name: 'get_group_stats',
+            description: '获取分组总体统计（组数/总人数/平均每组人数）',
+            parameters: {},
+            execute: (params) async {
+              final s = await AssessmentDao().getGroupStats();
+              final avg = (s['avg_members'] as num?)?.toStringAsFixed(1) ?? '0';
+              return '共 ${s['group_count'] ?? 0} 组，'
+                  '${s['total_members'] ?? 0} 人，平均每组 $avg 人';
+            },
+          ),
+          AgentTool(
+            name: 'get_score_overview',
+            description: '获取项目考核成绩总览（已评分数/平均分/最高最低分）',
+            parameters: {},
+            execute: (params) async {
+              final s = await AssessmentDao().getScoreOverview();
+              final count = (s['count'] as int?) ?? 0;
+              if (count == 0) return '暂无项目考核成绩';
+              final avg = (s['avg_score'] as num?)?.toStringAsFixed(1) ?? '0';
+              return '已评分 $count 项，平均分 $avg，'
+                  '最高 ${s['max_score']}，最低 ${s['min_score']}';
+            },
+          ),
+        ],
         usageSteps: [
           '选择 📊 考核助理',
           '询问分组、答辩或成绩相关问题',
@@ -72,7 +127,7 @@ class AssessmentAgent extends BaseAgent {
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
     final messages = buildAiMessages(userMessage, session);
-    final result = await safeAiChatWithMeta(messages, aiService: _ai);
+    final result = await safeAiChatWithTools(userMessage, messages, aiService: _ai);
     return buildReplyFromResult(result);
   }
 }

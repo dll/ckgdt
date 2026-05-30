@@ -1,4 +1,6 @@
 import '../../ai_service.dart';
+import '../../auth_service.dart';
+import '../../../data/local/lab_task_dao.dart';
 import '../agent_model.dart';
 import '../base_agent.dart';
 
@@ -7,7 +9,7 @@ class LabAgent extends BaseAgent {
   final AiService _ai = AiService();
 
   @override
-  AgentConfig get config => const AgentConfig(
+  AgentConfig get config => AgentConfig(
         id: 'lab',
         name: '实验助手',
         emoji: '🔬',
@@ -48,6 +50,41 @@ class LabAgent extends BaseAgent {
         keywords: ['实验', '任务', '提交', '截止', '报告', '实验报告', 'lab'],
         capabilities: ['实验任务', '提交状态', '截止提醒', '实验指导'],
         requiresAi: true,
+        tools: [
+          AgentTool(
+            name: 'list_lab_tasks',
+            description: '获取已发布的实验任务列表（标题/章节/截止日期/难度/状态）',
+            parameters: {},
+            execute: (params) async {
+              final tasks = await LabTaskDao().getTasks(status: 'active');
+              if (tasks.isEmpty) return '当前暂无已发布的实验任务';
+              return tasks
+                  .map((t) => '- [${t['chapter'] ?? '?'}] 《${t['title']}》'
+                      '（截止：${t['due_date'] ?? '未设'}，难度：${t['difficulty'] ?? '中等'}，'
+                      '满分：${t['max_score'] ?? 100}）')
+                  .join('\n');
+            },
+          ),
+          AgentTool(
+            name: 'get_my_lab_submissions',
+            description: '获取当前登录学生的实验提交情况（已交哪些实验/得分/提交时间），用于回答"我交了哪些实验""我的成绩"',
+            parameters: {},
+            execute: (params) async {
+              final userId = AuthService().currentUser?.userId;
+              if (userId == null) return '未登录，无法获取提交记录';
+              final subs = await LabTaskDao().getSubmissions(userId: userId);
+              if (subs.isEmpty) return '该学生暂无实验提交记录';
+              return subs.map((s) {
+                final score = s['score'];
+                final scoreStr = score == null
+                    ? '待批阅'
+                    : '$score/${s['max_score'] ?? 100} 分';
+                return '- 《${s['task_title'] ?? '实验#${s['task_id']}'}》'
+                    '（提交于 ${s['submit_time'] ?? '?'}，$scoreStr）';
+              }).join('\n');
+            },
+          ),
+        ],
         usageSteps: [
           '选择 🔬 实验助手',
           '查询实验任务列表或截止日期',
@@ -67,7 +104,7 @@ class LabAgent extends BaseAgent {
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
     final messages = buildAiMessages(userMessage, session);
-    final result = await safeAiChatWithMeta(messages, aiService: _ai);
+    final result = await safeAiChatWithTools(userMessage, messages, aiService: _ai);
     return buildReplyFromResult(result);
   }
 }
