@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../../../core/error_handler.dart';
 import '../../../data/local/database_helper.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
@@ -127,7 +128,7 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
           dist['0-59'] = dist['0-59']! + 1;
         }
       }
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'LearningAnalytics.q0', stack: st); }
     return dist;
   }
 
@@ -151,7 +152,8 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
                 'attempts': (r['attempt_count'] as int?) ?? 0,
               })
           .toList();
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'LearningAnalytics.q1', stack: st);
       return [];
     }
   }
@@ -213,7 +215,8 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
           'level': level,
         };
       }).toList();
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'LearningAnalytics.q2', stack: st);
       return [];
     }
   }
@@ -241,7 +244,8 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
           .toList()
           .reversed
           .toList();
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'LearningAnalytics.q3', stack: st);
       return [];
     }
   }
@@ -266,7 +270,8 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
         ORDER BY avg_score DESC
         LIMIT 30
       ''');
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'LearningAnalytics.q4', stack: st);
       return [];
     }
   }
