@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:file_picker/file_picker.dart';
+import '../../core/error_handler.dart';
 import '../../services/live_stream_service.dart';
 
 class LiveStreamPanel extends StatefulWidget {
@@ -307,7 +308,8 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
       final cam = _service.cameraController?.description;
       if (cam == null) return 'CAM';
       return cam.lensDirection == CameraLensDirection.front ? 'FRONT' : 'BACK';
-    } catch (_) {
+    } catch (e) {
+      swallow(e, tag: 'LiveStreamPanel.cameraLabel');
       return 'CAM';
     }
   }
@@ -580,7 +582,9 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
               () => _sharedImages.add(File(result.files.single.path!)));
         }
       }
-    } catch (_) {}
+    } catch (e, st) {
+      swallowDebug(e, tag: 'LiveStreamPanel.pickImage', stack: st);
+    }
   }
 }
 
