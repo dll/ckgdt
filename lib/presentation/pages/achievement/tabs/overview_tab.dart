@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../../../core/error_handler.dart';
 import '../../../../data/local/achievement_dao.dart';
 import '../../../../services/auth_service.dart';
+import '../../../../services/default_class_service.dart';
 import '../achievement_shared.dart';
 
 import '../../../../core/constants/color_ohos_compat.dart';
@@ -408,11 +410,15 @@ class _BatchDetailSheetState extends State<BatchDetailSheet> {
   Future<void> _loadDetail() async {
     try {
       final batchId = widget.batch['id'] as int;
-      final scores = await widget.achievementDao.getScoresByBatch(batchId);
+      final rawScores = await widget.achievementDao.getScoresByBatch(batchId);
+      final scores = await DefaultClassService.instance.filterByDefaultClass(
+          rawScores, (s) => (s['student_id'] ?? '').toString());
       Map<String, dynamic>? results;
       try {
         results = await widget.achievementDao.getCalculationResults(batchId);
-      } catch (_) {}
+      } catch (e) {
+        swallow(e, tag: 'AchievementOverview.getCalculationResults');
+      }
 
       if (mounted) {
         setState(() {
