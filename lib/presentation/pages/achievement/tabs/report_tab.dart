@@ -8,6 +8,7 @@ import 'package:printing/printing.dart';
 import '../../../../services/default_class_service.dart';
 import '../../../../data/local/achievement_dao.dart';
 import '../../../../services/auth_service.dart';
+import '../../../../core/error_handler.dart';
 import '../../../widgets/markdown_bubble.dart';
 import '../achievement_shared.dart';
 
@@ -137,8 +138,9 @@ class _ReportTabState extends State<ReportTab> {
           objective4Achievement: objAchievements[3],
           weightedAchievement: weighted,
         );
-      } catch (_) {
+      } catch (e) {
         // 旧数据库可能缺少 calc_results_json 列，忽略保存失败
+        swallow(e, tag: 'ReportTab.saveCalcResults');
       }
 
       // 同时更新批次状态
@@ -149,7 +151,9 @@ class _ReportTabState extends State<ReportTab> {
       try {
         surveyData =
             await widget.achievementDao.getSurveySatisfactionSummary();
-      } catch (_) {}
+      } catch (e, st) {
+        swallowDebug(e, tag: 'ReportTab.surveySatisfaction', stack: st);
+      }
 
       if (mounted) {
         setState(() {
@@ -573,16 +577,20 @@ class _ReportTabState extends State<ReportTab> {
       try {
         chineseFont = await PdfGoogleFonts.notoSansSCRegular();
         chineseBoldFont = await PdfGoogleFonts.notoSansSCBold();
-      } catch (_) {
+      } catch (e, st) {
         // 离线回退到本地字体
+        swallowDebug(e, tag: 'ReportTab.googleFonts', stack: st);
         try {
           final fontData = await rootBundle.load('assets/fonts/msyh.ttc');
           chineseFont = pw.Font.ttf(fontData);
-        } catch (_) {}
+        } catch (e2) {
+          swallow(e2, tag: 'ReportTab.localFontRegular');
+        }
         try {
           final boldData = await rootBundle.load('assets/fonts/msyhbd.ttc');
           chineseBoldFont = pw.Font.ttf(boldData);
-        } catch (_) {
+        } catch (e2) {
+          swallow(e2, tag: 'ReportTab.localFontBold');
           chineseBoldFont = chineseFont;
         }
       }

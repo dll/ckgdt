@@ -8,6 +8,7 @@ import 'package:xml/xml.dart';
 import '../../../services/file_opener_service.dart';
 import '../../../services/ppt_export_service.dart';
 import '../../../services/tts_flutter_service.dart';
+import '../../../core/error_handler.dart';
 import '../../pages/quiz/quiz_page.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
@@ -234,7 +235,9 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
           _slideHeightEmu = cy;
         }
       }
-    } catch (_) {}
+    } catch (e, st) {
+      swallowDebug(e, tag: 'PptViewer.parseSlideSize', stack: st);
+    }
   }
 
   // ── 读取主题颜色 ──────────────────────────────────────────────────────
@@ -266,7 +269,9 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
           }
         }
       }
-    } catch (_) {}
+    } catch (e, st) {
+      swallowDebug(e, tag: 'PptViewer.parseThemeColors', stack: st);
+    }
   }
 
   // ── 幻灯片关系文件 ────────────────────────────────────────────────────
@@ -290,7 +295,9 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
         }
         map[id] = resolved;
       }
-    } catch (_) {}
+    } catch (e, st) {
+      swallowDebug(e, tag: 'PptViewer.parseRels', stack: st);
+    }
     return map;
   }
 
@@ -488,7 +495,8 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
         relW: relW.clamp(0.0, 1.0),
         relH: relH.clamp(0.0, 1.0),
       );
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'PptViewer.parseSlideImage', stack: st);
       return null;
     }
   }
@@ -529,7 +537,9 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
           ));
         }
       }
-    } catch (_) {}
+    } catch (e, st) {
+      swallowDebug(e, tag: 'PptViewer.parseTable', stack: st);
+    }
     return result;
   }
 
