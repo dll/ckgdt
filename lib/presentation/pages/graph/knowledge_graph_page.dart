@@ -72,6 +72,9 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   final _dao = KnowledgeGraphDao();
   final _transformationController = TransformationController();
 
+  /// 顶部双 Tab：0=知识图谱（概念画布）/ 1=结构图谱（层级树）
+  late final TabController _topTabController;
+
   Color primary = const Color(0xFF1677FF);
 
   // ── 数据 ────────────────────────────────────────────────────────────────
@@ -135,6 +138,11 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   @override
   void initState() {
     super.initState();
+    _topTabController = TabController(length: 2, vsync: this);
+    // 切到结构图谱 tab 时，知识图谱专属的搜索/筛选/统计 action 隐藏
+    _topTabController.addListener(() {
+      if (mounted) setState(() {});
+    });
     _layoutAnimController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
@@ -144,6 +152,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
 
   @override
   void dispose() {
+    _topTabController.dispose();
     _transformationController.dispose();
     _searchController.dispose();
     _layoutAnimController.dispose();
@@ -1994,19 +2003,30 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
     return Scaffold(
       backgroundColor: NoirTokens.ink,
       appBar: _buildAppBar(),
-      body: NoirBackground(
-        child: _isLoading
-            ? _buildLoadingView()
-            : _errorMessage != null
-                ? _buildErrorView()
-                : !_hasData
-                    ? _buildEmptyView()
-                    : _buildMainContent(),
+      body: TabBarView(
+        controller: _topTabController,
+        children: [
+          // Tab 0：知识图谱（概念画布）
+          NoirBackground(
+            child: _isLoading
+                ? _buildLoadingView()
+                : _errorMessage != null
+                    ? _buildErrorView()
+                    : !_hasData
+                        ? _buildEmptyView()
+                        : _buildMainContent(),
+          ),
+          // Tab 1：结构图谱（层级树，内嵌模式不套 Scaffold）
+          const NoirBackground(
+            child: GraphListPage(embedded: true),
+          ),
+        ],
       ),
     );
   }
 
   PreferredSizeWidget _buildAppBar() {
+    final onGraphTab = _topTabController.index == 0;
     return AppBar(
       backgroundColor: NoirTokens.ink,
       surfaceTintColor: Colors.transparent,
@@ -2026,89 +2046,90 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
               onChanged: _performSearch,
             )
           : Text('知识图谱', style: const TextStyle(color: NoirTokens.paper)),
+      bottom: TabBar(
+        controller: _topTabController,
+        labelColor: NoirTokens.paper,
+        unselectedLabelColor: NoirTokens.paper.withValues(alpha: 0.5),
+        indicatorColor: primary,
+        tabs: const [
+          Tab(icon: Icon(Icons.bubble_chart), text: '知识图谱'),
+          Tab(icon: Icon(Icons.account_tree), text: '结构图谱'),
+        ],
+      ),
       actions: [
-        // 搜索
-        IconButton(
-          icon: Icon(_showSearch ? Icons.close : Icons.search, color: NoirTokens.paper),
-          tooltip: '搜索概念',
-          onPressed: () {
-            setState(() {
-              _showSearch = !_showSearch;
-              if (!_showSearch) {
-                _searchController.clear();
-                _performSearch('');
-              }
-            });
-          },
-        ),
-        // 章节筛选
-        IconButton(
-          icon: Badge(
-            isLabelVisible: _chapterFilter != null,
-            label: _chapterFilter != null
-                ? Text('${_chapterFilter}')
-                : null,
-            child: const Icon(Icons.filter_list),
+        // 以下三个 action 仅对「知识图谱」概念画布有意义，结构图谱 tab 下隐藏
+        if (onGraphTab) ...[
+          // 搜索
+          IconButton(
+            icon: Icon(_showSearch ? Icons.close : Icons.search, color: NoirTokens.paper),
+            tooltip: '搜索概念',
+            onPressed: () {
+              setState(() {
+                _showSearch = !_showSearch;
+                if (!_showSearch) {
+                  _searchController.clear();
+                  _performSearch('');
+                }
+              });
+            },
           ),
-          tooltip: '章节筛选',
-          onPressed: _showChapterFilterMenu,
-        ),
-        // 统计
-        IconButton(
-          icon: const Icon(Icons.analytics_outlined),
-          tooltip: '统计信息',
-          onPressed: () async {
-            await _loadStats();
-            _showStatsDialog();
-          },
-        ),
-        // 更多
-        PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert),
-          tooltip: '更多',
-          onSelected: (value) {
-            if (value == 'structure') {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const GraphListPage()),
-              );
-            } else if (value == 'recommend') {
-              _generateRecommendedPaths();
-            } else if (value == 'properties') {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const GraphPropertiesPage()),
-              ).then((_) => _loadData());
-            }
-          },
-          itemBuilder: (_) => [
-            const PopupMenuItem(
-              value: 'structure',
-              child: ListTile(
-                leading: Icon(Icons.account_tree, color: Colors.teal),
-                title: Text('结构视图'),
-                subtitle: Text('查看章节层级结构', style: TextStyle(fontSize: 11)),
-              ),
+          // 章节筛选
+          IconButton(
+            icon: Badge(
+              isLabelVisible: _chapterFilter != null,
+              label: _chapterFilter != null
+                  ? Text('${_chapterFilter}')
+                  : null,
+              child: const Icon(Icons.filter_list),
             ),
-            const PopupMenuItem(
-              value: 'recommend',
-              child: ListTile(
-                leading: Icon(Icons.route, color: Colors.orange),
-                title: Text('生成推荐路径'),
-                subtitle: Text('基于前置关系自动生成', style: TextStyle(fontSize: 11)),
+            tooltip: '章节筛选',
+            onPressed: _showChapterFilterMenu,
+          ),
+          // 统计
+          IconButton(
+            icon: const Icon(Icons.analytics_outlined),
+            tooltip: '统计信息',
+            onPressed: () async {
+              await _loadStats();
+              _showStatsDialog();
+            },
+          ),
+        ],
+        // 更多（推荐路径 / 属性管理）— 结构图谱入口已升为 Tab，从此菜单移除
+        if (onGraphTab)
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            tooltip: '更多',
+            onSelected: (value) {
+              if (value == 'recommend') {
+                _generateRecommendedPaths();
+              } else if (value == 'properties') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const GraphPropertiesPage()),
+                ).then((_) => _loadData());
+              }
+            },
+            itemBuilder: (_) => [
+              const PopupMenuItem(
+                value: 'recommend',
+                child: ListTile(
+                  leading: Icon(Icons.route, color: Colors.orange),
+                  title: Text('生成推荐路径'),
+                  subtitle: Text('基于前置关系自动生成', style: TextStyle(fontSize: 11)),
+                ),
               ),
-            ),
-            PopupMenuItem(
-              value: 'properties',
-              child: ListTile(
-                leading: Icon(Icons.table_chart, color: primary),
-                title: Text('属性管理'),
-                subtitle: Text('查看和编辑节点/关系', style: TextStyle(fontSize: 11)),
+              PopupMenuItem(
+                value: 'properties',
+                child: ListTile(
+                  leading: Icon(Icons.table_chart, color: primary),
+                  title: Text('属性管理'),
+                  subtitle: Text('查看和编辑节点/关系', style: TextStyle(fontSize: 11)),
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
         const AgentEntryButton(agentId: 'graph'),
       ],
     );
