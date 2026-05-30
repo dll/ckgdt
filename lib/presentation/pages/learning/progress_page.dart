@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../../data/local/quiz_dao.dart';
 import '../../../data/local/learning_record_dao.dart';
 import '../../widgets/agent_entry_button.dart';
+import '../../widgets/back_button_bar.dart';
 import '../../../data/models/quiz_result_model.dart';
 import '../../../services/auth_service.dart';
 
@@ -63,8 +64,8 @@ class _ProgressPageState extends State<ProgressPage> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('学习进度'),
+      appBar: BackButtonBar(
+        title: '学习进度',
         actions: const [AgentEntryButton(agentId: 'learning')],
         bottom: TabBar(
           controller: _tabController,

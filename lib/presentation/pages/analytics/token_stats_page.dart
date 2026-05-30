@@ -5,6 +5,7 @@ import '../../../services/auth_service.dart';
 import 'student_token_page.dart';
 import 'class_token_page.dart';
 import 'request_detail_tab.dart';
+import '../../widgets/back_button_bar.dart';
 
 class TokenStatsPage extends StatefulWidget {
   const TokenStatsPage({super.key});
@@ -108,10 +109,8 @@ class _TokenStatsPageState extends State<TokenStatsPage>
     final primary = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Token 用量统计'),
-        backgroundColor: primary,
-        foregroundColor: Colors.white,
+      appBar: BackButtonBar(
+        title: 'Token 用量统计',
         actions: [
           IconButton(icon: const Icon(Icons.refresh), onPressed: _loadData),
         ],

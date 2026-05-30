@@ -5,6 +5,7 @@ import '../../../data/models/ai_config_model.dart';
 import '../../../services/ai_service.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
+import '../../widgets/back_button_bar.dart';
 class AiSettingsPage extends StatefulWidget {
   const AiSettingsPage({super.key});
 
@@ -216,8 +217,8 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('AI 接口配置'),
+      appBar: BackButtonBar(
+        title: 'AI 接口配置',
         actions: [
           TextButton(
             onPressed: _saving ? null : _save,

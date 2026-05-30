@@ -63,7 +63,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 25,
+      version: 26,
       singleInstance: true, // 启用单例模式
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
@@ -118,7 +118,7 @@ class DatabaseHelper {
         // 重新打开（版本号必须与主初始化一致）
         final db2 = await openDatabase(
           dbName,
-          version: 25,
+          version: 26,
           singleInstance: true, // 启用单例模式
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
@@ -198,7 +198,7 @@ class DatabaseHelper {
     Database db;
     db = await openDatabase(
       dbPath,
-      version: 25,
+      version: 26,
       singleInstance: true, // 启用单例模式，防止多实例同时访问
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
@@ -702,6 +702,9 @@ class DatabaseHelper {
     if (oldVersion < 25) {
       await _migrateToV25(db);
     }
+    if (oldVersion < 26) {
+      await _migrateToV26(db);
+    }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
   }
@@ -771,6 +774,7 @@ class DatabaseHelper {
     await _migrateToV22(db);
     await _migrateToV23(db);
     await _migrateToV24(db);
+    await _migrateToV26(db);
     await _ensureAchievementColumns(db);
   }
 
@@ -2004,6 +2008,15 @@ class DatabaseHelper {
           'ALTER TABLE archive_documents ADD COLUMN origin_doc_id INTEGER');
     } catch (e) {
       swallow(e, tag: 'V25.add_origin_doc_id');
+    }
+  }
+
+  /// V26: current_session 增加 default_class_id（默认班级）
+  Future<void> _migrateToV26(Database db) async {
+    try {
+      await db.execute('ALTER TABLE current_session ADD COLUMN default_class_id INTEGER');
+    } catch (e) {
+      swallow(e, tag: 'V26.add_default_class_id');
     }
   }
 

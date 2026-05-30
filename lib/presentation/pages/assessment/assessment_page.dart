@@ -12,7 +12,7 @@ import '../../../services/sync_service.dart';
 import '../../../data/local/assessment_dao.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../data/local/score_audit_dao.dart';
-import '../../../services/agent/agents/assessment_grading_agent.dart';
+import '../../../services/agent/agents/grading_agent.dart';
 import '../../widgets/agent_entry_button.dart';
 import '../../widgets/inner_tab_request_mixin.dart';
 import '../learning/pdf_viewer_page.dart';

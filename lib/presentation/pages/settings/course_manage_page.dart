@@ -4,6 +4,7 @@ import '../../../data/models/course_model.dart';
 import '../../widgets/course_generator_sheet.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
+import '../../widgets/back_button_bar.dart';
 /// 课程管理页面 — 查看、切换、删除课程
 class CourseManagePage extends StatefulWidget {
   const CourseManagePage({super.key});
@@ -46,8 +47,8 @@ class _CourseManagePageState extends State<CourseManagePage> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('课程管理'),
+      appBar: BackButtonBar(
+        title: '课程管理',
         actions: [
           IconButton(
             icon: const Icon(Icons.add),

@@ -697,6 +697,87 @@ class ClassroomDao {
     return imported;
   }
 
+  /// 从课程资源（resource_files）导入 — 覆盖所有课件材料
+  Future<int> importFromCourseware() async {
+    await _ensureTable();
+    final db = await DatabaseHelper.instance.database;
+
+    final existing = await db.query('classroom_questions',
+        columns: ['source_id'],
+        where: "source_type = 'courseware'");
+    final existingIds = existing.map((e) => e['source_id'] as int?).toSet();
+
+    List<Map<String, dynamic>> resources;
+    try {
+      resources = await db.query('resource_files');
+    } catch (e) {
+      swallow(e, tag: 'ClassroomDao.importCourseware');
+      return 0;
+    }
+
+    int imported = 0;
+    final batch = db.batch();
+    for (final r in resources) {
+      final rId = r['id'] as int?;
+      if (existingIds.contains(rId)) continue;
+
+      final name = r['file_name'] as String? ?? '';
+      final desc = r['description'] as String? ?? '';
+      final chapter = r['chapter'] as String? ?? '';
+      final fileType = r['file_type'] as String? ?? '';
+
+      // 根据文件类型生成差异化的提问文本
+      String qType;
+      String question;
+      String refAnswer;
+      String diff;
+      final chNum = chapter.replaceAll(RegExp(r'[^0-9]'), '');
+      if (chNum.isNotEmpty && int.tryParse(chNum) != null) {
+        final ci = int.parse(chNum);
+        diff = ci <= 2 ? 'easy' : ci <= 4 ? 'medium' : 'hard';
+      } else {
+        diff = 'medium';
+      }
+
+      switch (fileType.toLowerCase()) {
+        case 'video':
+          qType = 'open';
+          question = '【视频课件】$name\n请简述该视频课件的主要内容与技术要点。';
+          refAnswer = '课件位于第$chapter章，$desc';
+          break;
+        case 'pdf':
+          qType = 'open';
+          question = '【PDF课件】$name\n请总结该文档的核心知识点。';
+          refAnswer = '本文档属于$chapter，核心内容为：$desc';
+          break;
+        case 'ppt':
+          qType = 'open';
+          question = '【PPT课件】$name\n该课件讲授了哪些关键技术？请结合课程内容回答。';
+          refAnswer = '该PPT属于$chapter章节，重点介绍：$desc';
+          break;
+        default:
+          qType = 'open';
+          question = '【学习资料】$name\n请根据学习内容回答相关问题。';
+          refAnswer = desc.isNotEmpty ? desc : '请查阅第$chapter章对应课件';
+      }
+
+      batch.insert('classroom_questions', {
+        'source_type': 'courseware',
+        'source_id': rId,
+        'chapter': chapter,
+        'difficulty': diff,
+        'question': question,
+        'reference_answer': refAnswer,
+        'question_type': qType,
+        'answer_index': -1,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      imported++;
+    }
+    await batch.commit(noResult: true);
+    return imported;
+  }
+
   /// 从考核项目导入
   Future<int> importFromAssessment() async {
     await _ensureTable();

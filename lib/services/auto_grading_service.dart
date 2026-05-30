@@ -16,9 +16,7 @@ import 'package:flutter/foundation.dart';
 import '../core/init_logger.dart';
 import '../data/local/grading_result_dao.dart';
 import '../presentation/pages/lab/lab_tasks_page.dart' show tryParseGradingJson;
-import 'agent/agents/assessment_grading_agent.dart';
-import 'agent/agents/lab_grading_agent.dart';
-import 'agent/agents/works_grading_agent.dart';
+import 'agent/agents/grading_agent.dart';
 import 'notification_service.dart';
 
 /// AI 批阅结果（解析后）—— UI 与服务共享
@@ -71,7 +69,7 @@ class AutoGradingService {
     bool notifyStudent = true,
   }) async {
     try {
-      final agent = LabGradingAgent();
+      final agent = GradingAgent();
       final result = await agent.gradeSubmission(
         taskTitle: taskTitle,
         content: content,
@@ -123,7 +121,7 @@ class AutoGradingService {
     bool notifyStudent = true,
   }) async {
     try {
-      final agent = AssessmentGradingAgent();
+      final agent = GradingAgent();
       final result = await agent.gradeReport(
         reportType: reportType,
         studentName: studentName,
@@ -175,7 +173,7 @@ class AutoGradingService {
     bool notifyStudent = true,
   }) async {
     try {
-      final agent = WorksGradingAgent();
+      final agent = GradingAgent();
       final result = await agent.gradeWork(
         title: workTitle,
         description: description,

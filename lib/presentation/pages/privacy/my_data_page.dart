@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../services/auth_service.dart';
+import '../../widgets/back_button_bar.dart';
 
 /// "我的数据"页 — 学生 / 教师都可访问的隐私权利入口。
 ///
@@ -247,13 +248,13 @@ class _MyDataPageState extends State<MyDataPage> {
 
     if (user == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('我的数据')),
+        appBar: BackButtonBar(title: '我的数据'),
         body: const Center(child: Text('请先登录')),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('我的数据')),
+      appBar: BackButtonBar(title: '我的数据'),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(

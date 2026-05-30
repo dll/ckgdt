@@ -677,7 +677,7 @@ class _TaskListTabState extends State<_TaskListTab> {
     required String studentId,
   }) async {
     try {
-      final agent = LabGradingAgent();
+      final agent = GradingAgent();
       final tasks = await widget.labTaskDao.getTasks();
       final task = tasks.firstWhere(
         (t) => (t['id'] as int?) == taskId,

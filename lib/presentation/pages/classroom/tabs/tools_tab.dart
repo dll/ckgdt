@@ -40,10 +40,13 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
   String? _pollQuestion;
 
   // ── 倒计时 ──
+  Timer? _countdownTimer;
   int _timerSeconds = 300; // 5分钟
   int _remainingSeconds = 0;
-  Timer? _countdownTimer;
+  int? _timerStartMillis;
   bool _timerRunning = false;
+  final _customTimerController = TextEditingController();
+  final _timerFormKey = GlobalKey<FormState>();
 
   @override
   void initState() {
@@ -284,6 +287,17 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
       _timerRunning = false;
       _remainingSeconds = 0;
     });
+  }
+
+  void _applyCustomTimer(String value) {
+    final parsed = int.tryParse(value.trim());
+    if (parsed != null && parsed > 0 && parsed <= 180) {
+      setState(() => _timerSeconds = parsed * 60);
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请输入1~180之间的整数分钟'), backgroundColor: Colors.orange),
+      );
+    }
   }
 
   String _formatTime(int seconds) {
@@ -744,6 +758,56 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
               onSelected: (v) => setState(() => _timerSeconds = m * 60),
             )).toList(),
           ),
+          const SizedBox(height: 8),
+          // 自定义时间输入 + 语音输入
+          Form(
+            key: _timerFormKey,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 120,
+                  child: TextFormField(
+                    controller: _customTimerController,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: '自定义分钟',
+                      hintStyle: TextStyle(color: Colors.grey[400], fontSize: 12),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      suffixIcon: IconButton(
+                        icon: Icon(Icons.graphic_eq, size: 18, color: Colors.grey[600]),
+                        tooltip: '语音输入',
+                        onPressed: () async {
+                          final text = await showDialog<String>(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (_) => const _VoiceTimerDialog(),
+                          );
+                          if (text != null && text.isNotEmpty) {
+                            _customTimerController.text = text;
+                          }
+                        },
+                      ),
+                    ),
+                    onFieldSubmitted: (v) => _applyCustomTimer(v),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilledButton.tonal(
+                  onPressed: () => _applyCustomTimer(_customTimerController.text),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text('确认', style: TextStyle(fontSize: 12)),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 12),
         ],
 
@@ -819,6 +883,66 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
               ),
             ],
           ],
+        ),
+      ],
+    );
+  }
+}
+
+// ╔══════════════════════════════════════════════════════════════════════════════╗
+// ║  语音倒计时输入对话框                                                       ║
+// ╚══════════════════════════════════════════════════════════════════════════════╝
+
+class _VoiceTimerDialog extends StatefulWidget {
+  const _VoiceTimerDialog();
+  @override
+  State<_VoiceTimerDialog> createState() => _VoiceTimerDialogState();
+}
+
+class _VoiceTimerDialogState extends State<_VoiceTimerDialog> {
+  final _idCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _idCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Row(
+        children: [
+          Icon(Icons.graphic_eq, size: 20),
+          SizedBox(width: 8),
+          Text('语音设置倒计时'),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('请说出分钟数（例如"五分钟"、"十分钟"）', style: TextStyle(fontSize: 13)),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _idCtrl,
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: '或手动输入分钟数',
+              prefixIcon: Icon(Icons.timer_outlined),
+              border: OutlineInputBorder(),
+            ),
+            keyboardType: TextInputType.number,
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _idCtrl.text.trim()),
+          child: const Text('确认'),
         ),
       ],
     );

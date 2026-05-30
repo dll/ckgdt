@@ -15,7 +15,7 @@ import '../../../services/auto_grading_service.dart';
 import '../../../services/file_opener_service.dart';
 import '../../../services/sync_service.dart';
 import '../../../services/gitee_service.dart';
-import '../../../services/agent/agents/works_grading_agent.dart';
+import '../../../services/agent/agents/grading_agent.dart';
 import '../../widgets/agent_entry_button.dart';
 import '../../widgets/inner_tab_request_mixin.dart';
 import 'ai_grading_tab.dart';

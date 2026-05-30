@@ -1,14 +1,18 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../core/design/noir_tokens.dart';
 import '../../../core/design/noir_components.dart';
 import '../../../core/error_handler.dart';
 import '../../widgets/noir_page_shell.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/screenshot_service.dart';
 import '../../../services/navigation_service.dart';
 import '../../../services/unread_count_service.dart';
+import '../../../services/default_class_service.dart';
 import '../../../dev/demo_seed_service.dart';
 import '../notification/notification_list_page.dart';
 import '../../widgets/agent_chat_overlay.dart';
+import '../../widgets/screenshot_capture_page.dart';
 import '../login/login_page.dart';
 import '../graph/knowledge_graph_page.dart';
 import '../graph/favorites_page.dart';
@@ -53,11 +57,44 @@ import '../practice/deep_practice_page.dart';
 import '../practice/growth_curve_page.dart';
 import '../cross_platform/cross_platform_hub_page.dart';
 import '../settings/course_manage_page.dart';
+import '../profile/virtual_twin_page.dart';
 import '../../widgets/course_generator_sheet.dart';
 import '../../../data/local/course_dao.dart';
 import '../../../data/models/course_model.dart';
 import 'settings_page.dart';
 import 'search_page.dart';
+
+const _cardColors = {
+  '知识图谱': Color(0xFF667eea),
+  '学习路径': Color(0xFF764ba2),
+  '章节测验': Color(0xFFf093fb),
+  'Git仓库': Color(0xFF4facfe),
+  '技能工具': Color(0xFF43e97b),
+  '智慧问答': Color(0xFFfa709a),
+  '深度实践': Color(0xFFf6d365),
+  '成长曲线': Color(0xFFa18cd1),
+  'Token统计': Color(0xFFfbc2eb),
+  '数据同步': Color(0xFF84fab0),
+  '多端互通': Color(0xFF8fd3f4),
+  '数字孪生': Color(0xFFa1c4fd),
+  '学习进度': Color(0xFFc2e9fb),
+  '错题本': Color(0xFFfccb90),
+  '我的收藏': Color(0xFFd57eeb),
+  '问卷调查': Color(0xFFe0c3fc),
+  '班级问答': Color(0xFF8ec5fc),
+  '成绩统计': Color(0xFFf5576c),
+  '班级管理': Color(0xFFf093fb),
+  '教学管理': Color(0xFF4facfe),
+  '题库管理': Color(0xFF43e97b),
+  '问卷管理': Color(0xFFfa709a),
+  '反馈管理': Color(0xFFf6d365),
+  '一键生课': Color(0xFFa18cd1),
+  '课程管理': Color(0xFFfbc2eb),
+  '学生管理': Color(0xFF84fab0),
+  '数据导入': Color(0xFF8fd3f4),
+  '数据导出': Color(0xFFa1c4fd),
+  '仓库分析': Color(0xFFc2e9fb),
+};
 
 class HomePage extends StatefulWidget {
   final int initialTabIndex;
@@ -79,6 +116,7 @@ class _HomePageState extends State<HomePage> {
     _selectedIndex = widget.initialTabIndex;
     _refreshUnreadCount();
     _loadActiveCourse();
+    _ensureClassesInitialized();
     // 注册全局导航服务回调
     NavigationService.instance.onSwitchTab = (index) {
       if (mounted) {
@@ -107,6 +145,14 @@ class _HomePageState extends State<HomePage> {
       }
     } catch (e, st) {
       swallowDebug(e, tag: 'HomePage._loadActiveCourse', stack: st);
+    }
+  }
+
+  Future<void> _ensureClassesInitialized() async {
+    try {
+      await DefaultClassService.instance.ensureDefaultClass();
+    } catch (e, st) {
+      swallowDebug(e, tag: 'HomePage._ensureClasses', stack: st);
     }
   }
 
@@ -241,6 +287,11 @@ class _HomePageState extends State<HomePage> {
         title: Text(_platformTitle, style: const TextStyle(color: NoirTokens.paper)),
         actions: [
           IconButton(
+            icon: const Icon(Icons.camera_alt, color: NoirTokens.paper),
+            tooltip: '刷新截图',
+            onPressed: _captureAllScreenshots,
+          ),
+          IconButton(
             icon: const Icon(Icons.search, color: NoirTokens.paper),
             onPressed: () {
               Navigator.push(
@@ -320,6 +371,11 @@ class _HomePageState extends State<HomePage> {
                   MaterialPageRoute(
                       builder: (_) => HandbookPage(role: handRole)),
                 );
+              } else if (value == 'virtual_twin') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const VirtualTwinPage()),
+                );
               } else if (value == 'change_password') {
                 _showChangePasswordDialog();
               }
@@ -335,6 +391,13 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'virtual_twin',
+                child: ListTile(
+                  leading: Icon(Icons.auto_awesome, color: Colors.purple),
+                  title: Text('数字孪生'),
+                ),
+              ),
               if (!isAdmin && !isTeacher)
                 const PopupMenuItem(
                   value: 'learning_center',
@@ -521,66 +584,85 @@ class _HomePageState extends State<HomePage> {
                   icon: Icons.account_tree,
                   title: '知识图谱',
                   onTap: () => setState(() => _selectedIndex = 1),
+                  cardColor: _cardColors['知识图谱'],
+                  description: '可视化学科知识结构',
                 ),
                 _buildMenuCard(
                   icon: Icons.route,
                   title: '学习路径',
-                  onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const LearningPlanPage())),
+                  destinationPage: const LearningPlanPage(),
+                  cardColor: _cardColors['学习路径'],
+                  description: '智能规划学习路线',
                 ),
                 _buildMenuCard(
                   icon: Icons.quiz,
                   title: '章节测验',
-                  onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const QuizPage())),
+                  destinationPage: const QuizPage(),
+                  cardColor: _cardColors['章节测验'],
+                  description: '章节知识点自测',
                 ),
                 _buildMenuCard(
                   icon: Icons.source,
                   title: 'Git仓库',
-                  onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) =>
-                        isTeacherOrAdmin ? const GitRepoPage() : const StudentRepoPage())),
+                  destinationPage: isTeacherOrAdmin ? const GitRepoPage() : const StudentRepoPage(),
+                  cardColor: _cardColors['Git仓库'],
+                  description: '代码版本管理',
                 ),
                 _buildMenuCard(
                   icon: Icons.tips_and_updates,
                   title: '技能工具',
-                  onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const SkillsHubPage())),
+                  destinationPage: const SkillsHubPage(),
+                  cardColor: _cardColors['技能工具'],
+                  description: 'AI 教学辅助工具',
+                ),
+                _buildMenuCard(
+                  icon: Icons.auto_awesome,
+                  title: '数字孪生',
+                  destinationPage: const VirtualTwinPage(),
+                  cardColor: _cardColors['数字孪生'],
+                  description: 'AI 数字分身',
                 ),
                 _buildMenuCard(
                   icon: Icons.chat_bubble_outline,
                   title: '智慧问答',
                   onTap: () => AgentChatOverlay.show(context),
+                  cardColor: _cardColors['智慧问答'],
+                  description: 'AI 智能答疑解惑',
                 ),
                 _buildMenuCard(
                   icon: Icons.biotech,
                   title: '深度实践',
-                  onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const DeepPracticePage())),
+                  destinationPage: const DeepPracticePage(),
+                  cardColor: _cardColors['深度实践'],
+                  description: '项目实战训练',
                 ),
                 _buildMenuCard(
                   icon: Icons.show_chart,
                   title: '成长曲线',
-                  onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const GrowthCurvePage())),
+                  destinationPage: const GrowthCurvePage(),
+                  cardColor: _cardColors['成长曲线'],
+                  description: '学习轨迹分析',
                 ),
                 _buildMenuCard(
                   icon: Icons.token,
                   title: 'Token统计',
-                  onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const TokenStatsPage())),
+                  destinationPage: const TokenStatsPage(),
+                  cardColor: _cardColors['Token统计'],
+                  description: 'Token 消耗统计',
                 ),
                 _buildMenuCard(
                   icon: Icons.sync,
                   title: '数据同步',
-                  onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const DataSyncPage())),
+                  destinationPage: const DataSyncPage(),
+                  cardColor: _cardColors['数据同步'],
+                  description: '跨设备数据同步',
                 ),
                 _buildMenuCard(
                   icon: Icons.devices,
                   title: '多端互通',
-                  onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const CrossPlatformHubPage())),
+                  destinationPage: const CrossPlatformHubPage(),
+                  cardColor: _cardColors['多端互通'],
+                  description: '多平台无缝衔接',
                 ),
 
                 // ── 学生专属功能 ──────────────────────────────────
@@ -588,32 +670,37 @@ class _HomePageState extends State<HomePage> {
                   _buildMenuCard(
                     icon: Icons.trending_up,
                     title: '学习进度',
-                    onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const ProgressPage())),
+                    destinationPage: const ProgressPage(),
+                    cardColor: _cardColors['学习进度'],
+                    description: '个人学习进度',
                   ),
                   _buildMenuCard(
                     icon: Icons.error,
                     title: '错题本',
-                    onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const WrongAnswersPage())),
+                    destinationPage: const WrongAnswersPage(),
+                    cardColor: _cardColors['错题本'],
+                    description: '错题回顾巩固',
                   ),
                   _buildMenuCard(
                     icon: Icons.star,
                     title: '我的收藏',
-                    onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const FavoritesPage())),
+                    destinationPage: const FavoritesPage(),
+                    cardColor: _cardColors['我的收藏'],
+                    description: '收藏的知识点',
                   ),
                   _buildMenuCard(
                     icon: Icons.poll,
                     title: '问卷调查',
-                    onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const SurveyPage())),
+                    destinationPage: const SurveyPage(),
+                    cardColor: _cardColors['问卷调查'],
+                    description: '教学反馈问卷',
                   ),
                   _buildMenuCard(
                     icon: Icons.forum_outlined,
                     title: '班级问答',
-                    onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const ClassQaPage())),
+                    destinationPage: const ClassQaPage(),
+                    cardColor: _cardColors['班级问答'],
+                    description: '班级互动问答',
                   ),
                 ],
 
@@ -622,44 +709,51 @@ class _HomePageState extends State<HomePage> {
                   _buildMenuCard(
                     icon: Icons.bar_chart,
                     title: '成绩统计',
-                    onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const LearningAnalyticsPage())),
+                    destinationPage: const LearningAnalyticsPage(),
+                    cardColor: _cardColors['成绩统计'],
+                    description: '班级成绩分析',
                   ),
                   _buildMenuCard(
                     icon: Icons.class_,
                     title: '班级管理',
-                    onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const ClassManagePage())),
+                    destinationPage: const ClassManagePage(),
+                    cardColor: _cardColors['班级管理'],
+                    description: '班级信息管理',
                   ),
                   _buildMenuCard(
                     icon: Icons.school,
                     title: '教学管理',
-                    onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const TeachingManagePage())),
+                    destinationPage: const TeachingManagePage(),
+                    cardColor: _cardColors['教学管理'],
+                    description: '教学进度管理',
                   ),
                   _buildMenuCard(
                     icon: Icons.quiz_outlined,
                     title: '题库管理',
-                    onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const QuestionManagePage())),
+                    destinationPage: const QuestionManagePage(),
+                    cardColor: _cardColors['题库管理'],
+                    description: '试题库维护',
                   ),
                   _buildMenuCard(
                     icon: Icons.poll,
                     title: '问卷管理',
-                    onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const SurveyManagePage())),
+                    destinationPage: const SurveyManagePage(),
+                    cardColor: _cardColors['问卷管理'],
+                    description: '调查问卷管理',
                   ),
                   _buildMenuCard(
                     icon: Icons.feedback,
                     title: '反馈管理',
-                    onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const FeedbackManagePage())),
+                    destinationPage: const FeedbackManagePage(),
+                    cardColor: _cardColors['反馈管理'],
+                    description: '用户反馈处理',
                   ),
                   _buildMenuCard(
                     icon: Icons.forum,
                     title: '班级问答',
-                    onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const ClassQaPage())),
+                    destinationPage: const ClassQaPage(),
+                    cardColor: _cardColors['班级问答'],
+                    description: '班级互动问答',
                   ),
                   _buildMenuCard(
                     icon: Icons.add_box_outlined,
@@ -678,6 +772,8 @@ class _HomePageState extends State<HomePage> {
                         _loadActiveCourse();
                       }
                     },
+                    cardColor: _cardColors['一键生课'],
+                    description: '自动生成课程',
                   ),
                   _buildMenuCard(
                     icon: Icons.school_outlined,
@@ -687,6 +783,8 @@ class _HomePageState extends State<HomePage> {
                         MaterialPageRoute(builder: (_) => const CourseManagePage()));
                       _loadActiveCourse();
                     },
+                    cardColor: _cardColors['课程管理'],
+                    description: '课程信息配置',
                   ),
                 ],
 
@@ -695,26 +793,30 @@ class _HomePageState extends State<HomePage> {
                   _buildMenuCard(
                     icon: Icons.people,
                     title: '学生管理',
-                    onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const StudentManagePage())),
+                    destinationPage: const StudentManagePage(),
+                    cardColor: _cardColors['学生管理'],
+                    description: '学生账户管理',
                   ),
                   _buildMenuCard(
                     icon: Icons.upload,
                     title: '数据导入',
-                    onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const DataImportPage())),
+                    destinationPage: const DataImportPage(),
+                    cardColor: _cardColors['数据导入'],
+                    description: '批量数据导入',
                   ),
                   _buildMenuCard(
                     icon: Icons.download,
                     title: '数据导出',
-                    onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const DataExportPage())),
+                    destinationPage: const DataExportPage(),
+                    cardColor: _cardColors['数据导出'],
+                    description: '数据导出备份',
                   ),
                   _buildMenuCard(
                     icon: Icons.analytics,
                     title: '仓库分析',
-                    onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const RepoAnalyticsPage())),
+                    destinationPage: const RepoAnalyticsPage(),
+                    cardColor: _cardColors['仓库分析'],
+                    description: '代码仓库分析',
                   ),
                 ],
               ];
@@ -729,7 +831,7 @@ class _HomePageState extends State<HomePage> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisCount: cols,
-                childAspectRatio: 1.05,
+                childAspectRatio: 0.9,
                 mainAxisSpacing: 10,
                 crossAxisSpacing: 10,
                 children: indexedItems,
@@ -815,59 +917,199 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /// 截图自动捕获导航
+  Future<void> _pushWithScreenshot(String key, Widget page) {
+    return Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ScreenshotCapturePage(
+          captureKey: key,
+          child: page,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _captureAllScreenshots() async {
+    final isTeacher = _authService.isTeacher;
+    final isAdmin = _authService.isAdmin;
+    final isTeacherOrAdmin = isTeacher || isAdmin;
+
+    final pages = <String, Widget>{
+      '学习路径': const LearningPlanPage(),
+      '章节测验': const QuizPage(),
+      'Git仓库': isTeacherOrAdmin ? const GitRepoPage() : const StudentRepoPage(),
+      '技能工具': const SkillsHubPage(),
+      '数字孪生': const VirtualTwinPage(),
+      '深度实践': const DeepPracticePage(),
+      '成长曲线': const GrowthCurvePage(),
+      'Token统计': const TokenStatsPage(),
+      '数据同步': const DataSyncPage(),
+      '多端互通': const CrossPlatformHubPage(),
+    };
+
+    if (!isTeacherOrAdmin) {
+      pages['学习进度'] = const ProgressPage();
+      pages['错题本'] = const WrongAnswersPage();
+      pages['我的收藏'] = const FavoritesPage();
+      pages['问卷调查'] = const SurveyPage();
+      pages['班级问答'] = const ClassQaPage();
+    }
+
+    if (isTeacherOrAdmin) {
+      pages['成绩统计'] = const LearningAnalyticsPage();
+      pages['班级管理'] = const ClassManagePage();
+      pages['教学管理'] = const TeachingManagePage();
+      pages['题库管理'] = const QuestionManagePage();
+      pages['问卷管理'] = const SurveyManagePage();
+      pages['反馈管理'] = const FeedbackManagePage();
+      pages['班级问答'] = const ClassQaPage();
+      pages['课程管理'] = const CourseManagePage();
+    }
+
+    if (isAdmin) {
+      pages['学生管理'] = const StudentManagePage();
+      pages['数据导入'] = const DataImportPage();
+      pages['数据导出'] = const DataExportPage();
+      pages['仓库分析'] = const RepoAnalyticsPage();
+    }
+
+    int completed = 0;
+    final total = pages.length;
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text('正在截取封面 ($completed/$total)...'),
+          ],
+        ),
+      ),
+    );
+
+    for (final entry in pages.entries) {
+      if (!mounted) break;
+      try {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ScreenshotCapturePage(
+              captureKey: entry.key,
+              child: entry.value,
+            ),
+          ),
+        );
+        await Future.delayed(const Duration(milliseconds: 300));
+      } catch (e, st) {
+        swallowDebug(e, tag: 'ScreenshotCapture', stack: st);
+      }
+      completed++;
+    }
+
+    if (mounted) {
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('已截取 $completed 个页面封面')),
+      );
+      setState(() {});
+    }
+  }
+
+  static void _noOp() {}
+
   Widget _buildMenuCard({
     required IconData icon,
     required String title,
-    required VoidCallback onTap,
+    VoidCallback? onTap,
+    String? imageAsset,
+    String? description,
+    Color? cardColor,
+    String? captureKey,
+    Widget? destinationPage,
   }) {
-    final accent = Theme.of(context).colorScheme.primary;
+    final effectiveColor = cardColor ?? Theme.of(context).colorScheme.primary;
+    final effectiveOnTap = destinationPage != null
+        ? () => _pushWithScreenshot(captureKey ?? title, destinationPage)
+        : (onTap ?? _noOp);
     return Semantics(
       label: '$title 功能入口',
       button: true,
       child: NoirCard(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-        onTap: onTap,
-        child: Stack(
+        padding: EdgeInsets.zero,
+        onTap: effectiveOnTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Align(
-              alignment: Alignment.topRight,
-              child: Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: accent,
-                  borderRadius: BorderRadius.circular(NoirTokens.radius),
+            Expanded(
+              flex: 3,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(NoirTokens.radius)),
+                child: _MenuCardImage(
+                  captureKey: captureKey ?? title,
+                  imageAsset: imageAsset,
+                  icon: icon,
+                  cardColor: effectiveColor,
                 ),
-                child: Icon(icon, size: 18, color: Colors.white),
               ),
             ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(width: 22, height: 2, color: accent),
-                  const SizedBox(height: 8),
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.4,
-                      color: NoirTokens.ink,
-                      height: 1.1,
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.4,
+                        color: NoirTokens.ink,
+                        height: 1.1,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 2,
-                  ),
-                ],
+                    if (description != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        description,
+                        style: NoirTokens.muted(size: 10),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildGradientPlaceholder(IconData icon, Color color) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [color, color.withValues(alpha: 0.6)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Center(
+        child: Icon(icon, size: 32, color: Colors.white.withValues(alpha: 0.9)),
       ),
     );
   }
@@ -1118,7 +1360,7 @@ class _AdminToolsPage extends StatelessWidget {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   crossAxisCount: cols,
-                  childAspectRatio: 1.05,
+                childAspectRatio: 0.9,
                   mainAxisSpacing: 10,
                   crossAxisSpacing: 10,
                   children: tools.map((t) => NoirCard(
@@ -1254,4 +1496,56 @@ class _AdminTool {
   final String title;
   final VoidCallback onTap;
   const _AdminTool(this.icon, this.title, this.onTap);
+}
+
+/// 根据状态显示缓存截图、asset 图片或渐变色占位
+class _MenuCardImage extends StatelessWidget {
+  final String? captureKey;
+  final String? imageAsset;
+  final IconData icon;
+  final Color cardColor;
+
+  const _MenuCardImage({
+    this.captureKey,
+    this.imageAsset,
+    required this.icon,
+    required this.cardColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (imageAsset != null) {
+      return Image.asset(imageAsset!, fit: BoxFit.cover);
+    }
+    return FutureBuilder<String?>(
+      future: captureKey != null
+          ? ScreenshotService.instance.getCapturedPath(captureKey!)
+          : Future.value(null),
+      builder: (context, snapshot) {
+        final path = snapshot.data;
+        if (path != null) {
+          return Image.file(File(path), fit: BoxFit.cover);
+        }
+        return _buildGradientPlaceholder();
+      },
+    );
+  }
+
+  Widget _buildGradientPlaceholder() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            cardColor,
+            cardColor.withValues(alpha: 0.6),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Center(
+        child: Icon(icon, size: 40, color: Colors.white.withValues(alpha: 0.8)),
+      ),
+    );
+  }
 }

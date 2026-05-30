@@ -7,7 +7,10 @@ import '../../../data/local/course_dao.dart';
 import '../../../services/courseware_service.dart';
 import '../../../services/file_opener_service.dart';
 import '../../../services/courseware_download_service.dart';
+import '../../../services/video_source/video_source_manager.dart';
 import 'video_player_page.dart';
+import '../../widgets/back_button_bar.dart';
+import 'video_source_selector.dart';
 
 class VideoListPage extends StatefulWidget {
   final String? filterChapter; // 可选：按章节过滤
@@ -23,10 +26,12 @@ class _VideoListPageState extends State<VideoListPage> {
   List<Map<String, dynamic>> _videos = [];
   bool _isLoading = true;
   String _resourceMode = 'all'; // 'all', 'preset', 'extended'
+  String? _selectedPlatformId;
 
   @override
   void initState() {
     super.initState();
+    VideoSourceManager.instance.registerDefaults();
     _loadVideos();
   }
 
@@ -34,7 +39,6 @@ class _VideoListPageState extends State<VideoListPage> {
     try {
       final db = await _dbHelper.database;
 
-      // 构建查询条件
       final whereParts = <String>['file_type = ?'];
       final whereArgs = <dynamic>['video'];
 
@@ -43,11 +47,19 @@ class _VideoListPageState extends State<VideoListPage> {
         whereArgs.add('%${widget.filterChapter}%');
       }
 
-      // 预制/扩展过滤
       if (_resourceMode == 'preset') {
         whereParts.add("(source_type = 'preset' OR source_type IS NULL)");
       } else if (_resourceMode == 'extended') {
         whereParts.add("source_type = 'extended'");
+      }
+
+      if (_selectedPlatformId != null) {
+        try {
+          whereParts.add('platform_source = ?');
+          whereArgs.add(_selectedPlatformId);
+        } catch (_) {
+          // column doesn't exist yet
+        }
       }
 
       final result = await db.query(
@@ -78,8 +90,8 @@ class _VideoListPageState extends State<VideoListPage> {
         : '视频教程';
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
+      appBar: BackButtonBar(
+        title: title,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -89,8 +101,15 @@ class _VideoListPageState extends State<VideoListPage> {
       ),
       body: Column(
         children: [
-          // 预制/扩展 切换栏
           _buildResourceModeBar(),
+          VideoSourceSelector(
+            selectedPlatformId: _selectedPlatformId,
+            onPlatformChanged: (platformId) {
+              setState(() => _selectedPlatformId = platformId);
+              _loadVideos();
+            },
+          ),
+          const SizedBox(height: 4),
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -176,7 +195,9 @@ class _VideoListPageState extends State<VideoListPage> {
                 ? '未找到「${widget.filterChapter}」的视频'
                 : _resourceMode == 'extended'
                     ? '暂无扩展视频'
-                    : '暂无视频教程',
+                    : _selectedPlatformId != null
+                        ? '暂无「$_selectedPlatformId」视频'
+                        : '暂无视频教程',
             style: TextStyle(fontSize: 18, color: Colors.grey[600]),
           ),
           const SizedBox(height: 8),

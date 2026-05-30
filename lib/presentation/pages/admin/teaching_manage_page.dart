@@ -1158,7 +1158,25 @@ class _ProgressTabState extends State<_ProgressTab>
       statusLabel = '计划';
     }
 
-    return Card(
+    final plannedDate = item['planned_date'] as String? ?? '未定';
+    final actualDate = item['actual_date'] as String? ?? '未开始';
+    final progressTip = '第${item['chapter']}章 · ${item['topic']}\n'
+        '状态：$statusLabel\n'
+        '计划时间：$plannedDate\n'
+        '实际进度：$actualDate\n'
+        '出勤：${item['attendance'] ?? '-'} · 作业：${item['homework_completion'] ?? '-'}';
+
+    return Tooltip(
+      message: progressTip,
+      preferBelow: false,
+      verticalOffset: 20,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[800],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      textStyle: const TextStyle(color: Colors.white, fontSize: 12, height: 1.5),
+      child: Card(
       margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
@@ -1309,6 +1327,7 @@ class _ProgressTabState extends State<_ProgressTab>
             ],
           ),
         ),
+      ),
       ),
     );
   }

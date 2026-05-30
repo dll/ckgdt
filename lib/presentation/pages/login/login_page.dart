@@ -188,37 +188,154 @@ class _LoginPageState extends State<LoginPage>
   // 语音登录 — 直接弹出语音对话框，说学号自动登录
   // ═══════════════════════════════════════════════════════════════════════════
 
-  /// 点击语音登录按钮 → 复用统一 VoiceNavigationDialog
+  /// 语音登录 — 显示语音对话框，含失败重试 + 手动输入兜底
   Future<void> _startVoiceLogin() async {
     if (!mounted) return;
 
-    // 使用统一的语音导航对话框（与首页语音导航相同）
-    final text = await showDialog<String>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const VoiceNavigationDialog(continuousMode: false),
-    );
-
-    if (text == null || text.trim().isEmpty || !mounted) return;
-
-    // 提取学号数字
-    final digits = extractDigits(text);
-    if (digits.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('未识别到学号，请重试或手动输入'),
-          backgroundColor: Colors.orange,
-        ),
+    // 循环尝试，直到成功、取消或选择手动输入
+    while (mounted) {
+      final text = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const VoiceNavigationDialog(continuousMode: false),
       );
+
+      if (text == null || text.trim().isEmpty) {
+        if (!mounted) return;
+        // 语音识别失败→弹出重试/手动选择
+        final action = await _showVoiceRetryDialog();
+        if (action == null || action == 'cancel' || !mounted) return;
+        if (action == 'manual') {
+          // 用户选择手动输入，弹出学号输入框
+          final manualId = await _showManualIdDialog();
+          if (manualId == null || manualId.isEmpty || !mounted) return;
+          _userIdController.text = manualId;
+          _passwordController.text = manualId.length >= 6
+              ? manualId.substring(manualId.length - 6)
+              : manualId;
+          _login();
+          return;
+        }
+        // 'retry' → 继续循环，重新语音识别
+        continue;
+      }
+
+      // 提取学号数字
+      final digits = extractDigits(text);
+      if (digits.isEmpty) {
+        final action = await _showVoiceRetryDialog();
+        if (action == null || action == 'cancel' || !mounted) return;
+        if (action == 'manual') {
+          final manualId = await _showManualIdDialog();
+          if (manualId == null || manualId.isEmpty || !mounted) return;
+          _userIdController.text = manualId;
+          _passwordController.text = manualId.length >= 6
+              ? manualId.substring(manualId.length - 6)
+              : manualId;
+          _login();
+          return;
+        }
+        continue;
+      }
+
+      // 自动填充表单并登录
+      _userIdController.text = digits;
+      _passwordController.text = digits.length >= 6
+          ? digits.substring(digits.length - 6)
+          : digits;
+      _login();
       return;
     }
+  }
 
-    // 自动填充表单并登录（同 _quickLogin 路径）
-    _userIdController.text = digits;
-    _passwordController.text = digits.length >= 6
-        ? digits.substring(digits.length - 6)
-        : digits;
-    _login();
+  /// 语音识别失败后弹出重试/手动选择对话框
+  Future<String?> _showVoiceRetryDialog() async {
+    if (!mounted) return null;
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _paper,
+        title: const Row(
+          children: [
+            Icon(Icons.graphic_eq, color: _accent, size: 20),
+            SizedBox(width: 8),
+            Text('语音未识别', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: _ink)),
+          ],
+        ),
+        content: const Text('未识别到学号，请选择操作：', style: TextStyle(color: _ink, fontSize: 13)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'cancel'),
+            child: Text('取消', style: TextStyle(color: _ink.withValues(alpha: 0.6))),
+          ),
+          OutlinedButton(
+            onPressed: () => Navigator.pop(ctx, 'retry'),
+            child: const Text('重试', style: TextStyle(color: _ink)),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, 'manual'),
+            style: FilledButton.styleFrom(backgroundColor: _ink),
+            child: const Text('手动输入', style: TextStyle(color: _paper)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 手动输入学号对话框（语音失败兜底）
+  Future<String?> _showManualIdDialog() async {
+    if (!mounted) return null;
+    final idCtrl = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _paper,
+        title: const Row(
+          children: [
+            Icon(Icons.person, color: _accent, size: 20),
+            SizedBox(width: 8),
+            Text('手动输入学号', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: _ink)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('语音识别失败，请手动输入学号/工号：', style: TextStyle(color: _ink, fontSize: 13)),
+            const SizedBox(height: 14),
+            TextField(
+              controller: idCtrl,
+              autofocus: true,
+              style: const TextStyle(color: _ink, fontSize: 16, letterSpacing: 2),
+              decoration: InputDecoration(
+                hintText: '输入学号/工号',
+                hintStyle: TextStyle(color: _ink.withValues(alpha: 0.3)),
+                prefixIcon: Icon(Icons.badge, color: _ink.withValues(alpha: 0.5)),
+                border: OutlineInputBorder(borderSide: BorderSide(color: _ink.withValues(alpha: 0.25))),
+                focusedBorder: OutlineInputBorder(borderSide: const BorderSide(color: _ink, width: 1.5)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('取消', style: TextStyle(color: _ink.withValues(alpha: 0.6))),
+          ),
+          FilledButton(
+            onPressed: () {
+              final v = idCtrl.text.trim();
+              if (v.isNotEmpty) {
+                Navigator.pop(ctx, v);
+              }
+            },
+            style: FilledButton.styleFrom(backgroundColor: _ink),
+            child: const Text('确认', style: TextStyle(color: _paper)),
+          ),
+        ],
+      ),
+    );
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/back_button_bar.dart';
 import '../../../data/local/favorite_dao.dart';
 import '../../../data/local/graph_dao.dart';
 import '../../../services/auth_service.dart';
@@ -81,8 +82,8 @@ class _FavoritesPageState extends State<FavoritesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('我的收藏'),
+      appBar: BackButtonBar(
+        title: '我的收藏',
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(48),
           child: Padding(

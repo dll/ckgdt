@@ -17,6 +17,7 @@ import 'ai_settings_page.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
 import '../../../core/error_handler.dart';
+import '../../widgets/back_button_bar.dart';
 /// 可选的 AI 模型选项
 class _ModelOption {
   final String label;        // 显示名称（如 "DeepSeek - deepseek-chat"）
@@ -242,18 +243,8 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('课件工坊'),
-            if (_selectedModelLabel != '默认')
-              Text(
-                'AI: $_selectedModelLabel',
-                style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.8)),
-              ),
-          ],
-        ),
+      appBar: BackButtonBar(
+        title: '课件工坊',
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),

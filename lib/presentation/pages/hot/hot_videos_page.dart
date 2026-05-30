@@ -4,6 +4,7 @@ import '../../../data/local/hot_video_dao.dart';
 import '../../../data/models/hot_video_model.dart';
 import '../../../services/auth_service.dart';
 import 'add_video_page.dart';
+import '../../widgets/back_button_bar.dart';
 
 class HotVideosPage extends StatefulWidget {
   const HotVideosPage({super.key});
@@ -123,7 +124,7 @@ class _HotVideosPageState extends State<HotVideosPage> {
   Widget build(BuildContext context) {
     if (!_authService.isLoggedIn) {
       return Scaffold(
-        appBar: AppBar(title: const Text('推荐视频')),
+        appBar: BackButtonBar(title: '推荐视频'),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -141,8 +142,8 @@ class _HotVideosPageState extends State<HotVideosPage> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('推荐视频'),
+      appBar: BackButtonBar(
+        title: '推荐视频',
         actions: [
           IconButton(
             icon: const Icon(Icons.favorite),

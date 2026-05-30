@@ -1081,7 +1081,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                           }
                           return;
                         }
-                        final agent = LabGradingAgent();
+                        final agent = GradingAgent();
                         final result = await agent.gradeSubmission(
                           taskTitle: taskTitle,
                           content: prepared.content,

@@ -72,10 +72,10 @@ class ArchivePackageService {
     final user = _auth.currentUser;
     final teacherName = user?.realName ?? user?.userId ?? '[未登录]';
     if (user == null) warnings.add('教师未登录');
-    String department = '[未填学院]';
-
     // 学期：取教师当前班级的 semester；找不到给当前学年默认值
     String semester = _defaultSemester();
+    // 学院：优先取班级 major/department，否则用教师所在单位简称
+    String department = '信息学院';
     try {
       final tid = user?.userId;
       if (tid != null) {
@@ -83,10 +83,12 @@ class ArchivePackageService {
         if (classes.isNotEmpty) {
           final s = classes.first['semester']?.toString();
           if (s != null && s.isNotEmpty) semester = s;
-          // 部分项目把学院塞在 major 字段或单独 department 字段
-          final dept = classes.first['department']?.toString() ??
-              classes.first['major']?.toString();
-          if (dept != null && dept.isNotEmpty) department = dept;
+          // 优先取 students.json 或 class 配置中的 major
+          final dept = classes.first['major']?.toString() ??
+              classes.first['department']?.toString();
+          if (dept != null && dept.isNotEmpty && dept != '[未填学院]') {
+            department = dept;
+          }
         }
       }
     } catch (e, st) {
