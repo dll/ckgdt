@@ -88,7 +88,9 @@ class LiveStreamService {
   }
 
   Future<void> _initCameraController(int index) async {
-    _cameraListener?.call();
+    if (_cameraListener != null) {
+      _cameraController?.removeListener(_cameraListener!);
+    }
     _cameraListener = null;
     await _cameraController?.dispose();
 
@@ -127,7 +129,9 @@ class LiveStreamService {
 
   Future<void> toggleCamera() async {
     if (_currentState.isCameraOn) {
-      _cameraListener?.call();
+      if (_cameraListener != null) {
+        _cameraController?.removeListener(_cameraListener!);
+      }
       _cameraListener = null;
       await _cameraController?.dispose();
       _cameraController = null;
@@ -205,19 +209,6 @@ class LiveStreamService {
         cameraCount: _currentState.cameraCount);
 
     return _lastRecordPath;
-  }
-
-  Future<String?> takeSnapshot() async {
-    if (_cameraController == null || !_cameraController!.value.isInitialized) {
-      return null;
-    }
-    try {
-      final xFile = await _cameraController!.takePicture();
-      return xFile.path;
-    } catch (e, st) {
-      swallowDebug(e, tag: 'LiveStream.takeSnapshot', stack: st);
-      return null;
-    }
   }
 
   void _emit(LiveStreamStatus status,
