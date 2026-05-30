@@ -276,6 +276,69 @@ class _DefenseTabState extends State<_DefenseTab> {
                   ]),
                 ),
               ),
+              // 直播入口（始终可见，不依赖答辩安排是否存在）
+              Card(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 2,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: LinearGradient(
+                      colors: [
+                        NoirTokens.inkDeep,
+                        NoirTokens.ink.withValues(alpha: 0.95),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: NoirTokens.accent.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.videocam,
+                            color: NoirTokens.accent, size: 24),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('答辩直播',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 15,
+                                    color: NoirTokens.paper)),
+                            const SizedBox(height: 2),
+                            Text('开启摄像头 + 屏幕演示，支持录制',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: NoirTokens.paper.withValues(alpha: 0.5))),
+                          ],
+                        ),
+                      ),
+                      FilledButton.tonalIcon(
+                        onPressed: () => LiveStreamOverlay.show(context),
+                        icon: const Icon(Icons.play_arrow, size: 18),
+                        label: const Text('开始直播'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: NoirTokens.accent.withValues(alpha: 0.15),
+                          foregroundColor: NoirTokens.accent,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -538,27 +601,6 @@ class _DefenseTabState extends State<_DefenseTab> {
                           style: TextStyle(
                               fontSize: 12, color: Colors.grey[700])),
                     ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: FilledButton.tonalIcon(
-                    onPressed: () {
-                      LiveStreamOverlay.show(context);
-                    },
-                    icon: Icon(Icons.videocam, size: 16,
-                        color: Colors.indigo[400]),
-                    label: Text('开始直播',
-                        style: TextStyle(fontSize: 12,
-                            color: Colors.indigo[600],
-                            fontWeight: FontWeight.w600)),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 6),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
-                    ),
                   ),
                 ),
               ],
