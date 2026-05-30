@@ -11,6 +11,7 @@ import '../../../services/ai_service.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/knowledge_seed_service.dart';
 import '../../../data/local/user_dao.dart';
+import '../../../services/default_class_service.dart';
 import '../../../data/models/user_model.dart';
 import '../learning/learning_chain_page.dart';
 import '../learning/video_page.dart';
@@ -260,9 +261,11 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
       if (isTeacherOrAdmin) {
         _teacherAchievementMode = true;
 
-        // 加载学生列表（首次）
+        // 加载学生列表（首次）—— 按默认班级过滤，避免混入已归档年级
         if (_studentList.isEmpty) {
-          _studentList = await UserDao().getStudents();
+          final all = await UserDao().getStudents();
+          _studentList = await DefaultClassService.instance
+              .filterByDefaultClass(all, (u) => u.userId);
         }
 
         if (_selectedStudentId == null) {

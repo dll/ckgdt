@@ -5,6 +5,8 @@ import '../../../data/local/classroom_dao.dart';
 import '../../../data/local/class_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/sync_service.dart';
+import '../../../services/voice_service.dart';
+import '../../../core/error_handler.dart';
 import '../../../core/constants/role_guard.dart';
 import '../../widgets/agent_entry_button.dart';
 import '../../widgets/inner_tab_request_mixin.dart';
@@ -77,7 +79,9 @@ class _ClassroomPageState extends State<ClassroomPage>
           }
         });
       }
-    } catch (_) {}
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ClassroomPage._loadClasses', stack: st);
+    }
   }
 
   @override

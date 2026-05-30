@@ -80,4 +80,25 @@ class DefaultClassService {
     if (classId == null) return [];
     return _classDao.getClassStudents(classId);
   }
+
+  /// 获取默认班级全部学生的 user_id 集合，用于按班级过滤成绩/作品/考核等
+  /// 以 student_id 为键的数据列表。默认班级未设或为空时返回 null（表示"不过滤"）。
+  Future<Set<String>?> getDefaultClassStudentIds() async {
+    final classId = await getDefaultClassId();
+    if (classId == null) return null;
+    final students = await _classDao.getClassStudents(classId);
+    if (students.isEmpty) return null;
+    return students.map((s) => s.userId).toSet();
+  }
+
+  /// 按默认班级过滤一组以 student_id 为键的记录。
+  /// [idOf] 从每条记录取出学生 user_id。默认班级未设/为空时原样返回（不过滤）。
+  Future<List<T>> filterByDefaultClass<T>(
+    List<T> items,
+    String Function(T) idOf,
+  ) async {
+    final ids = await getDefaultClassStudentIds();
+    if (ids == null) return items;
+    return items.where((e) => ids.contains(idOf(e))).toList();
+  }
 }
