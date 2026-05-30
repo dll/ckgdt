@@ -1,11 +1,8 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'package:file_picker/file_picker.dart';
 import '../../core/error_handler.dart';
 import '../../services/live_stream_service.dart';
-import 'live_stream_overlay.dart';
 
 class LiveStreamPanel extends StatefulWidget {
   final VoidCallback onClose;
@@ -36,7 +33,6 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
   final _service = LiveStreamService();
   StreamSubscription? _stateSub;
   LiveStreamState? _state;
-  final List<File> _sharedImages = [];
 
   late AnimationController _pulseAnim;
   bool _controlsVisible = true;
@@ -218,19 +214,15 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
     );
   }
 
-  // ── Body: Camera + Screen ───────────────────────────────────────────
+  // ── Body: 摄像头预览（画中画，铺满主体）────────────────────────────
+  //
+  // 移动演示场景：直播浮窗悬浮在正在演示的 App 之上，学生在浮窗背后操作
+  // App 演示，浮窗内只显示摄像头实时画面（人脸），实现"边演示边露脸"。
 
   Widget _buildBody() {
     return GestureDetector(
       onTap: _toggleControls,
-      child: Row(
-        children: [
-          Expanded(flex: 2, child: _buildCameraPreview()),
-          const VerticalDivider(width: 1, color: Color(0xFFF4B942)),
-
-          Expanded(flex: 3, child: _buildScreenArea()),
-        ],
-      ),
+      child: _buildCameraPreview(),
     );
   }
 
@@ -336,85 +328,6 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
     );
   }
 
-  Widget _buildScreenArea() {
-    if (_sharedImages.isEmpty) {
-      return Container(
-        color: const Color(0xFF050811),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.monitor_heart_outlined, size: 32,
-                  color: const Color(0xFFF7F4EE).withValues(alpha: 0.15)),
-              const SizedBox(height: 8),
-              Text(
-                '屏幕共享',
-                style: TextStyle(
-                  color: const Color(0xFFF7F4EE).withValues(alpha: 0.3),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 2,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '点击「共享」按钮捕获当前屏幕',
-                style: TextStyle(
-                  color: const Color(0xFFF7F4EE).withValues(alpha: 0.2),
-                  fontSize: 10,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return PageView.builder(
-      itemCount: _sharedImages.length,
-      itemBuilder: (_, i) => Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.file(_sharedImages[i], fit: BoxFit.contain),
-          Positioned(
-            right: 4,
-            top: 4,
-            child: GestureDetector(
-              onTap: () => setState(() => _sharedImages.removeAt(i)),
-              child: Container(
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.5),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.close, size: 12, color: Colors.white),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 4,
-            bottom: 4,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(2),
-              ),
-              child: Text(
-                '画面 ${i + 1}/${_sharedImages.length}',
-                style: const TextStyle(
-                  color: Color(0xFFF4B942),
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // ── Controls ────────────────────────────────────────────────────────
 
   Widget _buildControls() {
@@ -446,12 +359,9 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
               _service.toggleMic,
               active: s?.isMicOn == true,
             ),
-            const SizedBox(width: 4),
-            _ctrlBtn(Icons.screen_share_outlined, '共享屏幕', _captureScreen,
-                active: true),
           ],
           const Spacer(),
-          // 录制时间 + 截图计数
+          // 录制时间
           if (isRec)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -466,26 +376,6 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   fontFeatures: [FontFeature.tabularFigures()],
-                ),
-              ),
-            ),
-          if (_sharedImages.isNotEmpty && !widget.compact)
-            Padding(
-              padding: const EdgeInsets.only(left: 4),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF4B942).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  '📷 ${_sharedImages.length}',
-                  style: const TextStyle(
-                    color: Color(0xFFF4B942),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
                 ),
               ),
             ),
@@ -560,47 +450,14 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
       ),
     );
   }
-
-  Future<void> _captureScreen() async {
-    // 1. 优先：截取浮窗背后的应用画面（真正的"屏幕共享"）
-    final screenPath = await LiveStreamOverlay.captureScreenBehindPanel();
-    if (screenPath != null) {
-      if (mounted) {
-        setState(() => _sharedImages.add(File(screenPath)));
-      }
-      return;
-    }
-
-    // 2. 降级：摄像头快照
-    final snapshotPath = await _service.takeSnapshot();
-    if (snapshotPath != null) {
-      if (mounted) {
-        setState(() => _sharedImages.add(File(snapshotPath)));
-      }
-      return;
-    }
-
-    // 3. 再降级：选本地图片
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.image,
-        allowMultiple: false,
-      );
-      if (result != null && result.files.single.path != null) {
-        if (mounted) {
-          setState(
-              () => _sharedImages.add(File(result.files.single.path!)));
-        }
-      }
-    } catch (e, st) {
-      swallowDebug(e, tag: 'LiveStreamPanel.pickImage', stack: st);
-    }
-  }
 }
 
 // ── CameraPreview 封装 ─────────────────────────────────────────────────
 
-/// 缩放适配的摄像头预览，避免 CameraPreview 与系统 API 命名冲突
+/// 缩放适配的摄像头预览，避免 CameraPreview 与系统 API 命名冲突。
+///
+/// 直播浮窗是小尺寸画中画，按容器实际尺寸做 cover 适配（铺满不留黑边），
+/// 而不是按全屏 MediaQuery 计算（那样在小浮窗里会严重错位）。
 class _ScaledCameraPreview extends StatelessWidget {
   final CameraController controller;
   const _ScaledCameraPreview(this.controller);
@@ -611,14 +468,21 @@ class _ScaledCameraPreview extends StatelessWidget {
       return Container(color: Colors.black);
     }
 
-    final size = MediaQuery.of(context).size;
-    final scale = 1 /
-        (controller.value.aspectRatio * size.width / size.height);
+    final previewSize = controller.value.previewSize;
+    // previewSize 为传感器方向（宽高可能与显示相反），取其宽高比，
+    // 用 FittedBox.cover 铺满浮窗容器。
+    final double w = previewSize?.height ?? 16;
+    final double h = previewSize?.width ?? 9;
 
     return ClipRect(
-      child: Transform.scale(
-        scale: scale,
-        child: CameraPreview(controller),
+      child: FittedBox(
+        fit: BoxFit.cover,
+        clipBehavior: Clip.hardEdge,
+        child: SizedBox(
+          width: w,
+          height: h,
+          child: CameraPreview(controller),
+        ),
       ),
     );
   }
