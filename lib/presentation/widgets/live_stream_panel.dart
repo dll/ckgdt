@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import '../../core/design/noir_tokens.dart';
 import '../../core/error_handler.dart';
 import '../../services/live_stream_service.dart';
 
@@ -46,14 +47,28 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
     _pulseAnim = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
+    );
+    _syncPulse(_state?.status);
 
     _stateSub = _service.state.listen((s) {
-      if (mounted) setState(() => _state = s);
+      if (!mounted) return;
+      _syncPulse(s.status);
+      setState(() => _state = s);
     });
 
     _service.initializeCamera();
     _showControlsTemporarily();
+  }
+
+  /// 录制脉冲灯只在录制时跑，空闲时停掉，避免常驻 60fps 空转重建。
+  void _syncPulse(LiveStreamStatus? status) {
+    final shouldPulse = status == LiveStreamStatus.recording;
+    if (shouldPulse && !_pulseAnim.isAnimating) {
+      _pulseAnim.repeat(reverse: true);
+    } else if (!shouldPulse && _pulseAnim.isAnimating) {
+      _pulseAnim.stop();
+      _pulseAnim.value = 1.0;
+    }
   }
 
   @override
@@ -101,10 +116,10 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
       height: 36,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF050811),
+        color: NoirTokens.inkDeep,
         border: Border(
           bottom: BorderSide(
-            color: const Color(0xFFF4B942).withValues(alpha: 0.15),
+            color: NoirTokens.accent.withValues(alpha: 0.15),
             width: 0.5,
           ),
         ),
@@ -117,8 +132,8 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
             _buildStatusText(),
             style: TextStyle(
               color: _state?.status == LiveStreamStatus.recording
-                  ? const Color(0xFFF4B942)
-                  : const Color(0xFFF7F4EE).withValues(alpha: 0.7),
+                  ? NoirTokens.accent
+                  : NoirTokens.paper.withValues(alpha: 0.7),
               fontSize: 11,
               fontWeight: FontWeight.w600,
               letterSpacing: 2,
@@ -205,8 +220,8 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
       child: IconButton(
         icon: Icon(icon, size: 14),
         color: active
-            ? const Color(0xFFF4B942)
-            : const Color(0xFFF7F4EE).withValues(alpha: 0.6),
+            ? NoirTokens.accent
+            : NoirTokens.paper.withValues(alpha: 0.6),
         onPressed: onTap,
         padding: EdgeInsets.zero,
         splashRadius: 14,
@@ -265,7 +280,7 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
               child: Text(
                 _getCameraLabel(),
                 style: const TextStyle(
-                  color: Color(0xFFF4B942),
+                  color: NoirTokens.accent,
                   fontSize: 9,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1.5,
@@ -309,17 +324,17 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
 
   Widget _placeholder(IconData icon, String text) {
     return Container(
-      color: const Color(0xFF050811),
+      color: NoirTokens.inkDeep,
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 28,
-                color: const Color(0xFFF7F4EE).withValues(alpha: 0.3)),
+                color: NoirTokens.paper.withValues(alpha: 0.3)),
             const SizedBox(height: 6),
             Text(text,
                 style: TextStyle(
-                  color: const Color(0xFFF7F4EE).withValues(alpha: 0.4),
+                  color: NoirTokens.paper.withValues(alpha: 0.4),
                   fontSize: 10,
                 )),
           ],
@@ -338,10 +353,10 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
       height: widget.compact ? 38 : 44,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF050811),
+        color: NoirTokens.inkDeep,
         border: Border(
           top: BorderSide(
-            color: const Color(0xFFF4B942).withValues(alpha: 0.15),
+            color: NoirTokens.accent.withValues(alpha: 0.15),
             width: 0.5,
           ),
         ),
@@ -385,7 +400,7 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
             width: 24,
             height: 4,
             decoration: BoxDecoration(
-              color: const Color(0xFFF7F4EE).withValues(alpha: 0.2),
+              color: NoirTokens.paper.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -441,8 +456,8 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
       child: IconButton(
         icon: Icon(icon, size: widget.compact ? 14 : 16),
         color: active
-            ? const Color(0xFFF4B942)
-            : const Color(0xFFF7F4EE).withValues(alpha: 0.6),
+            ? NoirTokens.accent
+            : NoirTokens.paper.withValues(alpha: 0.6),
         onPressed: onTap,
         tooltip: tooltip,
         padding: EdgeInsets.zero,
