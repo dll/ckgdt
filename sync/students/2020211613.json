@@ -3,8 +3,8 @@
   "user_id": "2020211613",
   "user_name": "张顺",
   "role": "student",
-  "synced_at": "2026-05-30T13:37:41.613531",
-  "last_active": "2026-05-30T13:37:41.613554",
+  "synced_at": "2026-05-30T13:38:12.405040",
+  "last_active": "2026-05-30T13:38:12.405053",
   "quiz_results": [
     {
       "user_id": "2020211613",
@@ -33,6 +33,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 1,
+      "user_id": "2020211613",
+      "content": "PDF实验报告：2020211613张顺实验一 开发环境搭建.pdf",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/cache/file_picker/1780119491130/2020211613张顺实验一 开发环境搭建.pdf",
+      "file_names": "2020211613张顺实验一 开发环境搭建.pdf",
+      "submit_time": "2026-05-30T13:38:12.388943",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-04-27T16:24:25.535317",
+      "updated_at": "2026-05-30T13:38:12.388943",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 4,
       "user_id": "2020211613",
@@ -83,24 +101,6 @@
       "scored_at": null,
       "created_at": "2026-04-27T16:25:16.082909",
       "updated_at": "2026-04-27T16:25:16.082909",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 1,
-      "user_id": "2020211613",
-      "content": "PDF实验报告：2020211613张顺实验一 开发环境搭建.pdf",
-      "file_paths": "/data/user/0/cn.edu.chzu.madkg/cache/file_picker/1777278262926/2020211613张顺实验一 开发环境搭建.pdf",
-      "file_names": "2020211613张顺实验一 开发环境搭建.pdf",
-      "submit_time": "2026-04-27T16:24:25.535317",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-04-27T16:24:25.535317",
-      "updated_at": "2026-04-27T16:24:25.535317",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
@@ -490,6 +490,18 @@
     },
     {
       "notification_id": 140,
+      "user_id": "2020211613",
+      "is_read": 0,
+      "read_at": null
+    },
+    {
+      "notification_id": 157,
+      "user_id": "2020211613",
+      "is_read": 0,
+      "read_at": null
+    },
+    {
+      "notification_id": 158,
       "user_id": "2020211613",
       "is_read": 0,
       "read_at": null
