@@ -5,6 +5,7 @@ import 'package:camera/camera.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../core/error_handler.dart';
 import '../../services/live_stream_service.dart';
+import 'live_stream_overlay.dart';
 
 class LiveStreamPanel extends StatefulWidget {
   final VoidCallback onClose;
@@ -347,7 +348,7 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
                   color: const Color(0xFFF7F4EE).withValues(alpha: 0.15)),
               const SizedBox(height: 8),
               Text(
-                '屏幕演示',
+                '屏幕共享',
                 style: TextStyle(
                   color: const Color(0xFFF7F4EE).withValues(alpha: 0.3),
                   fontSize: 12,
@@ -357,7 +358,7 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
               ),
               const SizedBox(height: 4),
               Text(
-                '点击截图按钮共享屏幕',
+                '点击「共享」按钮捕获当前屏幕',
                 style: TextStyle(
                   color: const Color(0xFFF7F4EE).withValues(alpha: 0.2),
                   fontSize: 10,
@@ -400,7 +401,7 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
                 borderRadius: BorderRadius.circular(2),
               ),
               child: Text(
-                '截图 ${i + 1}/${_sharedImages.length}',
+                '画面 ${i + 1}/${_sharedImages.length}',
                 style: const TextStyle(
                   color: Color(0xFFF4B942),
                   fontSize: 9,
@@ -446,7 +447,7 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
               active: s?.isMicOn == true,
             ),
             const SizedBox(width: 4),
-            _ctrlBtn(Icons.camera_alt_outlined, '截图', _captureScreen,
+            _ctrlBtn(Icons.screen_share_outlined, '共享屏幕', _captureScreen,
                 active: true),
           ],
           const Spacer(),
@@ -561,7 +562,16 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
   }
 
   Future<void> _captureScreen() async {
-    // 优先用摄像头快照
+    // 1. 优先：截取浮窗背后的应用画面（真正的"屏幕共享"）
+    final screenPath = await LiveStreamOverlay.captureScreenBehindPanel();
+    if (screenPath != null) {
+      if (mounted) {
+        setState(() => _sharedImages.add(File(screenPath)));
+      }
+      return;
+    }
+
+    // 2. 降级：摄像头快照
     final snapshotPath = await _service.takeSnapshot();
     if (snapshotPath != null) {
       if (mounted) {
@@ -570,7 +580,7 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
       return;
     }
 
-    // 降级：选本地图片
+    // 3. 再降级：选本地图片
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.image,
