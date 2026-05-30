@@ -540,6 +540,27 @@ class _DefenseTabState extends State<_DefenseTab> {
                     ],
                   ),
                 ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: FilledButton.tonalIcon(
+                    onPressed: () {
+                      LiveStreamOverlay.show(context);
+                    },
+                    icon: Icon(Icons.videocam, size: 16,
+                        color: Colors.indigo[400]),
+                    label: Text('开始直播',
+                        style: TextStyle(fontSize: 12,
+                            color: Colors.indigo[600],
+                            fontWeight: FontWeight.w600)),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 6),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
