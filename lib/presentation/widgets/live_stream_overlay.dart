@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../../core/design/noir_tokens.dart';
 import '../widgets/live_stream_panel.dart';
 import '../../services/live_stream_service.dart';
 import 'dart:async';
@@ -80,31 +81,17 @@ class LiveStreamOverlay {
     _notify();
   }
 
-  static void updatePosition(Offset delta) {
-    if (_locked || _fullscreen) return;
-    _position += delta;
-    _notify();
-  }
-
+  /// 拖拽/缩放时持久化位置与尺寸到静态字段，但**不** _notify —
+  /// 调用方（wrapper 的手势回调）已自行 setState 更新本地副本，再 notify 会
+  /// 触发第二次重建并把刚算出的值原样回读，纯属浪费。
   static void setPosition(Offset newPos) {
     if (_locked || _fullscreen) return;
     _position = newPos;
-    _notify();
-  }
-
-  static void updateSize(Offset delta) {
-    if (_locked || _fullscreen) return;
-    _size = Size(
-      max(140, _size.width + delta.dx),
-      max(180, _size.height + delta.dy),
-    );
-    _notify();
   }
 
   static void setSize(Size newSize) {
     if (_locked || _fullscreen) return;
     _size = newSize;
-    _notify();
   }
 
   static void _notify() {
@@ -192,7 +179,7 @@ class _LiveStreamWrapperState extends State<_LiveStreamWrapper> {
         width: 56,
         height: 56,
         decoration: BoxDecoration(
-          color: const Color(0xFF0A0E1A),
+          color: NoirTokens.ink,
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
@@ -202,11 +189,11 @@ class _LiveStreamWrapperState extends State<_LiveStreamWrapper> {
             ),
           ],
           border: Border.all(
-            color: const Color(0xFFF4B942).withValues(alpha: 0.4),
+            color: NoirTokens.accent.withValues(alpha: 0.4),
             width: 2,
           ),
         ),
-        child: const Icon(Icons.videocam, color: Color(0xFFF4B942), size: 24),
+        child: const Icon(Icons.videocam, color: NoirTokens.accent, size: 24),
       ),
     );
   }
@@ -232,7 +219,7 @@ class _LiveStreamWrapperState extends State<_LiveStreamWrapper> {
           children: [
             Container(
               decoration: BoxDecoration(
-                color: const Color(0xFF0A0E1A),
+                color: NoirTokens.ink,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
@@ -271,7 +258,7 @@ class _LiveStreamWrapperState extends State<_LiveStreamWrapper> {
                     width: 22,
                     height: 22,
                     child: Icon(Icons.open_in_full,
-                        size: 12, color: Color(0xFFF4B942)),
+                        size: 12, color: NoirTokens.accent),
                   ),
                 ),
               ),
@@ -283,7 +270,7 @@ class _LiveStreamWrapperState extends State<_LiveStreamWrapper> {
 
   Widget _buildFullscreenPanel(Size screenSize) {
     return Container(
-      color: const Color(0xFF0A0E1A),
+      color: NoirTokens.ink,
       child: LiveStreamPanel(
         onClose: () => LiveStreamOverlay.hide(),
         onMinimize: () => LiveStreamOverlay.toggleFullscreen(),
