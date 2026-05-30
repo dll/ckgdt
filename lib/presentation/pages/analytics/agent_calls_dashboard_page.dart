@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/role_guard.dart';
 import '../../../data/local/agent_call_log_dao.dart';
 import '../../../services/auth_service.dart';
+import '../../widgets/back_button_bar.dart';
 
 /// AI 调用统计仪表板（教师 / 管理员）。
 ///
@@ -58,7 +59,7 @@ class _AgentCallsDashboardPageState extends State<AgentCallsDashboardPage>
     final role = AuthService().currentUser?.role ?? 'student';
     if (!RoleGuard.isTeacherOrAdmin(role)) {
       return Scaffold(
-        appBar: AppBar(title: const Text('AI 调用统计')),
+        appBar: BackButtonBar(title: 'AI 调用统计'),
         body: const Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -75,8 +76,8 @@ class _AgentCallsDashboardPageState extends State<AgentCallsDashboardPage>
       );
     }
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('AI 调用统计'),
+      appBar: BackButtonBar(
+        title: 'AI 调用统计',
         bottom: TabBar(
           controller: _tab,
           tabs: const [

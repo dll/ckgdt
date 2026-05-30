@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../widgets/back_button_bar.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../services/ai_service.dart';
@@ -374,13 +375,54 @@ const _skills = <_SkillDef>[
       _SkillCase(title: '移动开发课程达成度', userInput: '移动应用开发课程达成度分析', resultSummary: '生成 5 个课程目标的达成度分析：含评价方法矩阵、计算公式模板、3 个薄弱环节诊断、5 条 CQI 改进措施。'),
     ],
   ),
+  _SkillDef(
+    id: 'archive',
+    name: '归档技能',
+    subtitle: 'AI 生成教学归档材料',
+    icon: Icons.archive,
+    color: Colors.brown,
+    description: '根据课程类型（考试/考查）和教学阶段（期初/期中/期末），AI 自动生成规范的教学归档文档。'
+        '覆盖课程总结、试卷审核表、教学过程记录等常见归档类型，'
+        '支持一键生成和打印，大幅减少教师归档工作量。',
+    features: [
+      '覆盖期初/期中/期末全阶段归档',
+      '支持考试/考查两种课程类型',
+      '自动填充课程信息和教学数据',
+      '输出结构化的 Markdown 文档',
+      '可扩展自定义归档模板',
+    ],
+    examples: ['期末课程总结报告', '试卷命题审核表', '教学过程记录表', '课程达成度分析报告'],
+    systemPrompt: '''你是一位经验丰富的教学归档专家，熟悉课程教学文档的规范与格式。
+你可以根据课程类型（考试/考查）和教学阶段（期初/期中/期末），
+参考学校模板，生成规范的教学归档文档。
+
+请根据用户需求生成相应文档内容，使用 Markdown 格式输出。
+
+输出应包含：
+1. 文档标题和基本信息（课程、学期、教师）
+2. 正文结构（根据文档类型自动适配）
+3. 表格和清单（如有需要）
+4. 签名和日期栏
+5. 归档说明''',
+    usageSteps: [
+      '进入 AI 技能中心，选择"归档技能"',
+      '输入归档类型和教学阶段（如"期末课程总结"）',
+      'AI 自动生成规范的教学归档文档',
+      '预览并确认文档内容完整准确',
+      '保存 Markdown 文档，用于打印或归档',
+    ],
+    classicCases: [
+      _SkillCase(title: '期末课程总结', userInput: '请生成期末课程总结', resultSummary: '生成包含教学概况、成绩分析、经验反思的完整课程总结报告，含数据表格和下一步改进建议。'),
+      _SkillCase(title: '试卷审核表', userInput: '请生成试卷审核表', resultSummary: '生成包含命题质量评估、难度分布分析、审核意见的试卷审核表，适用于考试课程归档。'),
+    ],
+  ),
 ];
 
 _SkillDef _getSkill(String id) =>
     _skills.firstWhere((s) => s.id == id, orElse: () => _skills.first);
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 技能中心页 — 展示所有 9 个 AI 技能
+// 技能中心页 — 展示所有 10 个 AI 技能
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class SkillsHubPage extends StatefulWidget {
@@ -412,7 +454,7 @@ class _SkillsHubPageState extends State<SkillsHubPage> {
     final gradient = AppGradientTheme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('AI 技能中心')),
+      appBar: BackButtonBar(title: 'AI 技能中心'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -447,7 +489,7 @@ class _SkillsHubPageState extends State<SkillsHubPage> {
                     SizedBox(height: 8),
                     Text(
                       '利用 AI 为每个教学模块生成新内容，涵盖图谱构建、路径规划、'
-                      '自动出题、实验设计等 9 大技能，助力智慧教学。',
+                      '自动出题、实验设计等 10 大技能，助力智慧教学。',
                       style: TextStyle(color: Colors.white70, fontSize: 13),
                     ),
                   ],
@@ -718,8 +760,8 @@ class _AiSkillPageState extends State<AiSkillPage>
     final primary = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_skill.name),
+      appBar: BackButtonBar(
+        title: _skill.name,
         bottom: TabBar(
           controller: _tabController,
           labelColor: primary,

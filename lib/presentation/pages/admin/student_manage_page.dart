@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../data/local/class_dao.dart';
 import '../../../data/models/user_model.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/default_class_service.dart';
 import 'student_detail_page.dart';
 
 class StudentManagePage extends StatefulWidget {
@@ -14,26 +15,55 @@ class StudentManagePage extends StatefulWidget {
 class _StudentManagePageState extends State<StudentManagePage> {
   final _authService = AuthService();
   final _classDao = ClassDao();
+  final _defaultClassService = DefaultClassService.instance;
 
   List<UserModel> _students = [];
+  List<Map<String, dynamic>> _classes = [];
+  int? _selectedClassId;
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadStudents();
+    _init();
+  }
+
+  Future<void> _init() async {
+    await _loadClasses();
+    await _loadStudents();
+  }
+
+  Future<void> _loadClasses() async {
+    try {
+      _classes = await _defaultClassService.getAvailableClasses();
+      if (_classes.isNotEmpty && _selectedClassId == null) {
+        _selectedClassId = await _defaultClassService.getDefaultClassId();
+        // 如果没有设置过默认，用第一个活跃班级
+        if (_selectedClassId == null) {
+          _selectedClassId = _classes.first['id'] as int;
+          await _defaultClassService.setDefaultClassId(_selectedClassId!);
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadStudents() async {
     setState(() => _isLoading = true);
     try {
-      final students = await _authService.getStudents();
-      setState(() {
-        _students = students;
-        _isLoading = false;
-      });
+      List<UserModel> students;
+      if (_selectedClassId != null) {
+        students = await _classDao.getClassStudents(_selectedClassId!);
+      } else {
+        students = await _authService.getStudents();
+      }
+      if (mounted) {
+        setState(() {
+          _students = students;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -198,7 +228,29 @@ class _StudentManagePageState extends State<StudentManagePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('学生管理'),
+        title: _classes.isNotEmpty && _classes.length > 1
+            ? DropdownButton<int>(
+                value: _selectedClassId,
+                dropdownColor: Colors.white,
+                underline: const SizedBox(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 17,
+                ),
+                items: _classes.map((c) => DropdownMenuItem<int>(
+                  value: c['id'] as int,
+                  child: Text(c['name'] as String? ?? ''),
+                )).toList(),
+                onChanged: (id) async {
+                  if (id != null) {
+                    setState(() => _selectedClassId = id);
+                    await _defaultClassService.setDefaultClassId(id);
+                    _loadStudents();
+                  }
+                },
+              )
+            : const Text('学生管理'),
 
         actions: [
           IconButton(

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../services/auth_service.dart';
 import '../../widgets/agent_entry_button.dart';
+import '../../widgets/back_button_bar.dart';
 import '../../../data/local/learning_path_dao.dart';
 import '../../../data/local/graph_dao.dart';
 import '../../../data/local/knowledge_graph_dao.dart';
@@ -183,20 +184,8 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
     final primary = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_selectedPath != null ? '路径详情' : '学习路径'),
-        backgroundColor: primary,
-        foregroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (_selectedPath != null) {
-              _closeDetail();
-            } else {
-              Navigator.of(context).pop();
-            }
-          },
-        ),
+      appBar: BackButtonBar(
+        title: _selectedPath != null ? '路径详情' : '学习路径',
         actions: [
           if (_selectedPath == null)
             IconButton(

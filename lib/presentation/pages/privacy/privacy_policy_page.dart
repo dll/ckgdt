@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import '../../widgets/back_button_bar.dart';
 
 /// 用户协议 + 隐私声明合并页（双 Tab 静态展示）。
 ///
@@ -21,8 +22,8 @@ class PrivacyPolicyPage extends StatelessWidget {
       length: 2,
       initialIndex: initialTab,
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('用户协议与隐私声明'),
+        appBar: BackButtonBar(
+          title: '用户协议与隐私声明',
           bottom: const TabBar(
             tabs: [
               Tab(text: '用户协议'),

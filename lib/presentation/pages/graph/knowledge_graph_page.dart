@@ -100,7 +100,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   int _focusDepth = 2;
 
   // ── 蒙版视图 ─────────────────────────────────────────────────────────────
-  MaskShape _selectedMask = MaskShape.android;
+  MaskShape _selectedMask = MaskShape.harmonyOS;
   Path? _currentMaskPath; // 缓存当前蒙版路径
 
   // ── 统计 ────────────────────────────────────────────────────────────────

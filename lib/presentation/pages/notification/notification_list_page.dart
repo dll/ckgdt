@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/back_button_bar.dart';
 import '../../../data/local/notification_dao.dart';
 import '../../../services/auth_service.dart';
 import 'compose_notification_page.dart';
@@ -460,16 +461,8 @@ class _NotificationListPageState extends State<NotificationListPage> {
     final isAdminOrTeacher = _authService.isAdmin || _authService.isTeacher;
 
     return Scaffold(
-      appBar: AppBar(
-        leading: _isSelectionMode
-            ? IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: _toggleSelectionMode,
-              )
-            : null,
-        title: _isSelectionMode
-            ? Text('已选 ${_selectedIds.length} 项')
-            : const Text('通知'),
+      appBar: BackButtonBar(
+        title: _isSelectionMode ? '已选 ${_selectedIds.length} 项' : '通知',
         actions: _isSelectionMode
             ? [
                 // 全选 / 取消全选

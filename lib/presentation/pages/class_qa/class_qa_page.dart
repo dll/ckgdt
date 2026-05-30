@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/back_button_bar.dart';
 import '../../../data/local/class_qa_dao.dart';
 import '../../../data/models/class_qa_model.dart';
 import '../../../services/auth_service.dart';
@@ -44,8 +45,8 @@ class _ClassQaPageState extends State<ClassQaPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('班级问答'),
+      appBar: BackButtonBar(
+        title: '班级问答',
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.filter_list),

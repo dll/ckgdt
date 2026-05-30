@@ -3,6 +3,7 @@ import '../../../services/settings_service.dart';
 import '../../../services/voice_service.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
+import '../../widgets/back_button_bar.dart';
 /// 讯飞语音配置页面
 ///
 /// 配置讯飞开放平台的 AppID、APIKey、APISecret，
@@ -150,16 +151,14 @@ class _VoiceSettingsPageState extends State<VoiceSettingsPage> {
 
     if (_loading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('讯飞语音设置')),
+        appBar: BackButtonBar(title: '讯飞语音设置'),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('讯飞语音设置'),
-        backgroundColor: primary,
-        foregroundColor: Colors.white,
+      appBar: BackButtonBar(
+        title: '讯飞语音设置',
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

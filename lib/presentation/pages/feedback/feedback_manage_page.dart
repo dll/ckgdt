@@ -6,6 +6,8 @@ import '../../../core/dev_paths.dart';
 import '../../../data/local/feedback_dao.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
+import '../../widgets/back_button_bar.dart';
+
 /// 管理员 — 问题反馈管理页面
 class FeedbackManagePage extends StatefulWidget {
   const FeedbackManagePage({super.key});
@@ -51,10 +53,8 @@ class _FeedbackManagePageState extends State<FeedbackManagePage> {
     final primary = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('问题反馈管理'),
-        backgroundColor: primary,
-        foregroundColor: Colors.white,
+      appBar: BackButtonBar(
+        title: '问题反馈管理',
         actions: [
           if (_feedbackList.isNotEmpty)
             IconButton(

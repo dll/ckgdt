@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/back_button_bar.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
 /// 用户手册页面 — 根据角色显示对应的操作指南
@@ -25,8 +26,8 @@ class HandbookPage extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_title),
+      appBar: BackButtonBar(
+        title: _title,
         actions: [
           IconButton(
             icon: const Icon(Icons.help_outline),

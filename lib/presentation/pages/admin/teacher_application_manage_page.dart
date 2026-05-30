@@ -4,6 +4,8 @@ import '../../../data/local/notification_dao.dart';
 import '../../../services/auth_service.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
+import '../../widgets/back_button_bar.dart';
+
 /// 教师申请审核页面 — 管理员查看、审核教师申请
 class TeacherApplicationManagePage extends StatefulWidget {
   const TeacherApplicationManagePage({super.key});
@@ -50,8 +52,8 @@ class _TeacherApplicationManagePageState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('教师申请审核'),
+      appBar: BackButtonBar(
+        title: '教师申请审核',
         bottom: TabBar(
           controller: _tabController,
           tabs: [

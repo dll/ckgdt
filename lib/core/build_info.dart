@@ -20,7 +20,7 @@ class BuildInfo {
   /// 主版本号。**升版时改这一处即可影响 lib/ 内所有显示**。
   /// 平台原生清单（CMakeLists / Runner.rc / strings.xml / web 元数据 / ohos app.json5）
   /// 必须同步修改 — 见 CLAUDE.md "升版同步表"。
-  static const String appVersion = '0.14.0';
+  static const String appVersion = '1.16.0';
 
   /// 窗体标题用简称（窗口边框、任务栏、浏览器标签页）。
   static const String appBrand = '移动图谱与数字孪生';

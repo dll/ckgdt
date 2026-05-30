@@ -6,7 +6,7 @@ import '../../../data/local/assessment_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/assessment_pdf_service.dart';
 import '../../../services/settings_service.dart';
-import '../../../services/agent/agents/assessment_grading_agent.dart';
+import '../../../services/agent/agents/grading_agent.dart';
 
 /// 审核打印面板 — 替代原"提交"Tab。
 ///
@@ -779,7 +779,7 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
   Future<void> _generateAdvisorComment() async {
     setState(() => _aiGenerating = true);
     try {
-      final agent = AssessmentGradingAgent();
+      final agent = GradingAgent();
       final reports = _matchedReports();
       final feedbackJoined = reports
           .map((r) => '【${r.type}（${r.score ?? "未批"}分）】${r.feedback ?? ""}')

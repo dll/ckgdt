@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/back_button_bar.dart';
 import '../../../data/local/ai_history_dao.dart';
 import '../../../services/agent/agent_registry.dart';
 import '../../widgets/markdown_bubble.dart';
@@ -84,8 +85,8 @@ class _ChatHistoryPageState extends State<ChatHistoryPage>
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('对话历史'),
+      appBar: BackButtonBar(
+        title: '对话历史',
         bottom: TabBar(
           controller: _tabController,
           tabs: [
@@ -390,8 +391,8 @@ class _ChatDetailPageState extends State<_ChatDetailPage> {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.agentName),
+      appBar: BackButtonBar(
+        title: widget.agentName,
         actions: [
           IconButton(
             icon: const Icon(Icons.star_border),
