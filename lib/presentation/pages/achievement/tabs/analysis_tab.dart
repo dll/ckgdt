@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../../data/local/achievement_dao.dart';
 import '../../../../services/default_class_service.dart';
+import '../../../../core/error_handler.dart';
 import '../achievement_shared.dart';
 
 import '../../../../core/constants/color_ohos_compat.dart';
@@ -41,7 +42,9 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
       try {
         surveyData =
             await widget.achievementDao.getSurveySatisfactionSummary();
-      } catch (_) {}
+      } catch (e, st) {
+        swallowDebug(e, tag: 'CalcTab.surveySatisfaction', stack: st);
+      }
 
       if (mounted) {
         setState(() {
@@ -54,7 +57,8 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
           }
         });
       }
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'CalcTab.loadBatches', stack: st);
       if (mounted) setState(() => _loading = false);
     }
   }
@@ -80,7 +84,8 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
         _weightedAchievement = weighted;
       }
       if (mounted) setState(() { _scores = scores; _loading = false; });
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'CalcTab.loadScoresAndCalc', stack: st);
       if (mounted) setState(() => _loading = false);
     }
   }
@@ -615,7 +620,8 @@ class _ContinuousImprovementTabState
           }
         });
       }
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'CalcTab.reloadBatches', stack: st);
       if (mounted) setState(() => _loading = false);
     }
   }
@@ -637,7 +643,9 @@ class _ContinuousImprovementTabState
       try {
         surveyData =
             await widget.achievementDao.getSurveySatisfactionSummary();
-      } catch (_) {}
+      } catch (e, st) {
+        swallowDebug(e, tag: 'CalcTab.surveySatisfaction2', stack: st);
+      }
 
       if (mounted) {
         setState(() {
