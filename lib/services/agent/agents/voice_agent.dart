@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../../core/constants/inner_tab_registry.dart';
 import '../../../core/init_logger.dart';
 import '../../../core/text_utils.dart';
 import '../../auth_service.dart';
@@ -64,21 +65,14 @@ class VoiceAgent extends BaseAgent {
     '成长曲线': 'growth_curve',
   };
 
-  /// 内层 Tab 清单（顶层 page 内部的 TabController 标签）
+  /// 内层 Tab 清单 — 单一来源见 [kInnerTabRegistry]
+  /// （core/constants/inner_tab_registry.dart）。
   ///
   /// AI 用来识别"打开评价的作品页面"这种"父页面+内层"指令，输出
   /// {intent:"inner_tab", page:"assessment", tab:"项目"}。
   ///
-  /// page 的值必须与 NavigationService.innerTabAliases 的 key 一致，
-  /// tab 必须是该 page 的某个 tab label（页面 build 时的 tabs 顺序）。
-  static const _innerTabs = <String, List<String>>{
-    'assessment': ['分组', '项目', '贡献', '材料', '答辩', '报告', '成绩', 'AI批阅'],
-    'works': ['我的作品', '作品展示', '作品记录', '排行榜', 'AI批阅'],
-    'achievement': ['达成度概览', '成绩管理', '平时达成', '实验达成', '考核达成', '计算过程', '报告生成', '持续改进'],
-    'classroom': ['在线状态', '课堂签到', '课堂互动', '课堂工具', '课堂提问'],
-    'lab': ['任务列表', '我的提交', '提交管理', '实验报告', '实验材料', '任务管理', 'AI批阅', '仓库报表'],
-    'learning': ['视频', 'PPT', 'PDF', '测验', '助手'],
-  };
+  /// 历史上这里曾手抄一份 `_innerTabs`，与各页 `innerTabLabels()` 双向漂移
+  /// （archive 整段缺失）。现统一从注册表读取，页面挂载时 mixin 做运行时校验。
 
   /// 构建可用页面列表文本（嵌入 AI prompt）
   static String get _pageListForPrompt {
@@ -100,17 +94,9 @@ class VoiceAgent extends BaseAgent {
 
   /// 构建内层 Tab 清单文本（嵌入 AI prompt）
   static String get _innerTabListForPrompt {
-    const pageLabel = <String, String>{
-      'assessment': '考核（评价中心）',
-      'works': '作品展评',
-      'achievement': '达成度',
-      'classroom': '课堂',
-      'lab': '实验',
-      'learning': '学习中心',
-    };
     final buf = StringBuffer();
-    _innerTabs.forEach((page, tabs) {
-      final label = pageLabel[page] ?? page;
+    kInnerTabRegistry.forEach((page, tabs) {
+      final label = kInnerTabPageLabels[page] ?? page;
       buf.writeln('- $label (page=$page) 的内层 Tab: ${tabs.join(" / ")}');
     });
     return buf.toString();
