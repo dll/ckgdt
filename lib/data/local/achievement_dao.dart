@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math' show sqrt;
 import 'package:sqflite/sqflite.dart';
 import 'database_helper.dart';
+import '../../core/error_handler.dart';
 
 /// 课程达成度 DAO — 达成度批次管理、成绩录入、计算、报告生成
 class AchievementDao {
@@ -222,7 +223,8 @@ class AchievementDao {
         '课程目标3': (parsed['目标3'] as num?)?.toDouble() ?? 0.30,
         '课程目标4': (parsed['目标4'] as num?)?.toDouble() ?? 0.30,
       };
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AchievementDao.parseObjWeights', stack: st);
       objWeights = {'课程目标1': 0.15, '课程目标2': 0.25, '课程目标3': 0.30, '课程目标4': 0.30};
     }
 
@@ -499,7 +501,8 @@ class AchievementDao {
     if (json == null || json.isEmpty) return null;
     try {
       return jsonDecode(json) as Map<String, dynamic>;
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AchievementDao.parseCalcResults', stack: st);
       return null;
     }
   }
@@ -881,7 +884,9 @@ class AchievementDao {
       final nodeResult =
           await db.rawQuery('SELECT COUNT(*) as c FROM nodes');
       graphNodeCount = (nodeResult.first['c'] as int?) ?? 0;
-    } catch (_) {}
+    } catch (e) {
+      swallow(e, tag: 'AchievementDao.countNodes');
+    }
 
     // 获取测验题数
     int quizQuestionCount = 0;
@@ -889,7 +894,9 @@ class AchievementDao {
       final quizResult =
           await db.rawQuery('SELECT COUNT(*) as c FROM questions');
       quizQuestionCount = (quizResult.first['c'] as int?) ?? 0;
-    } catch (_) {}
+    } catch (e) {
+      swallow(e, tag: 'AchievementDao.countQuestions');
+    }
 
     // 每章测验题数
     final chapterQuizCounts = <int, int>{};
@@ -905,7 +912,9 @@ class AchievementDao {
           chapterQuizCounts[ch] = (row['c'] as int?) ?? 0;
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      swallow(e, tag: 'AchievementDao.chapterQuizCounts');
+    }
 
     final suggestions = <Map<String, dynamic>>[];
 
