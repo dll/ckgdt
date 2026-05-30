@@ -56,7 +56,8 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
           _loadingComments = false;
         });
       }
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'WorkDetailSheet.loadInteractionData', stack: st);
       if (mounted) setState(() => _loadingComments = false);
     }
   }
@@ -106,7 +107,9 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
           await File(filePath).copy(destFile.path);
           savedPath = destFile.path;
         }
-      } catch (_) {}
+      } catch (e, st) {
+        swallowDebug(e, tag: 'WorkDetailSheet.saveVideoLocal', stack: st);
+      }
 
       // 同步上传到 Gitee 仓库（通过 SyncService 的文件上传）
       try {
@@ -234,7 +237,9 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
         });
       }
       widget.onChanged?.call();
-    } catch (_) {}
+    } catch (e, st) {
+      swallowDebug(e, tag: 'WorkDetailSheet.toggleLike', stack: st);
+    }
   }
 
   Future<void> _submitComment() async {
@@ -255,7 +260,9 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
       _commentCtrl.clear();
       await _loadInteractionData();
       widget.onChanged?.call();
-    } catch (_) {}
+    } catch (e, st) {
+      swallowDebug(e, tag: 'WorkDetailSheet.submitComment', stack: st);
+    }
   }
 
   @override
@@ -1131,7 +1138,10 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                         scorerName: user?.realName,
                         op: 'create',
                       );
-                    } catch (_) {}
+                    } catch (e) {
+                      // 审计日志失败不阻塞评分主流程
+                      swallow(e, tag: 'WorkDetailSheet.scoreAudit');
+                    }
                     if (context.mounted) {
                       Navigator.pop(ctx);
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -1171,7 +1181,9 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
         return map;
       }
       return null;
-    } catch (_) {
+    } catch (e) {
+      // AI 输出非 JSON 属预期，解析失败回退 null
+      swallow(e, tag: 'WorkDetailSheet.parseAiJson');
       return null;
     }
   }

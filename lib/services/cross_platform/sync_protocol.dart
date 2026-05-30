@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import '../../core/error_handler.dart';
 import '../../../data/local/database_helper.dart';
 
 /// 同步协议 — 负责全量/增量数据的序列化与反序列化
@@ -52,7 +53,8 @@ class SyncProtocol {
           where: 'user_id = ?', whereArgs: [userId]);
       tables['quiz_results'] =
           quiz.map((r) => Map<String, dynamic>.from(r)).toList();
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'SyncProtocol.exportUserData.quiz_results', stack: st);
       tables['quiz_results'] = [];
     }
 
@@ -62,7 +64,8 @@ class SyncProtocol {
           where: 'user_id = ?', whereArgs: [userId]);
       tables['learning_records'] =
           learning.map((r) => Map<String, dynamic>.from(r)).toList();
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'SyncProtocol.exportUserData.learning_records', stack: st);
       tables['learning_records'] = [];
     }
 
@@ -72,7 +75,8 @@ class SyncProtocol {
           where: 'user_id = ?', whereArgs: [userId]);
       tables['wrong_answers'] =
           wrong.map((r) => Map<String, dynamic>.from(r)).toList();
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'SyncProtocol.exportUserData.wrong_answers', stack: st);
       tables['wrong_answers'] = [];
     }
 
@@ -82,7 +86,8 @@ class SyncProtocol {
           where: 'user_id = ?', whereArgs: [userId]);
       tables['favorites'] =
           fav.map((r) => Map<String, dynamic>.from(r)).toList();
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'SyncProtocol.exportUserData.favorites', stack: st);
       tables['favorites'] = [];
     }
 
@@ -92,7 +97,8 @@ class SyncProtocol {
           where: 'user_id = ?', whereArgs: [userId]);
       tables['class_members'] =
           members.map((r) => Map<String, dynamic>.from(r)).toList();
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'SyncProtocol.exportUserData.class_members', stack: st);
       tables['class_members'] = [];
     }
 
@@ -110,7 +116,8 @@ class SyncProtocol {
           where: 'user_id = ?', whereArgs: [userId]);
       tables['notification_recipients'] =
           recipients.map((r) => Map<String, dynamic>.from(r)).toList();
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'SyncProtocol.exportUserData.notifications', stack: st);
       tables['notifications'] = [];
       tables['notification_recipients'] = [];
     }
@@ -189,7 +196,10 @@ class SyncProtocol {
             final (sql, values) = _buildSafeUpsert(tableName, row);
             await db.rawInsert(sql, values);
             count++;
-          } catch (_) {}
+          } catch (e) {
+            // 逐行降级插入失败：外层已记录表级错误，此处避免逐行刷屏
+            swallow(e, tag: 'SyncProtocol.importRowFallback');
+          }
         }
         stats[tableName] = count;
       }

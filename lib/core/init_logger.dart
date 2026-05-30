@@ -14,6 +14,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'error_handler.dart';
 
 class InitLogger {
   InitLogger._();
@@ -43,8 +44,9 @@ class InitLogger {
         mode: FileMode.append,
         flush: true,
       );
-    } catch (_) {
+    } catch (e) {
       // 日志器自身挂掉绝不能影响 main
+      swallow(e, tag: 'InitLogger.init');
       _file = null;
     }
   }
@@ -60,14 +62,19 @@ class InitLogger {
       await probe.writeAsString('ok', flush: true);
       await probe.delete();
       return logs;
-    } catch (_) {}
+    } catch (e) {
+      // exe 同级不可写（只读安装目录等），回退到下一策略
+      swallow(e, tag: 'InitLogger.resolveLogDir.exe');
+    }
 
     try {
       final support = await getApplicationSupportDirectory();
       final logs = Directory(p.join(support.path, 'logs'));
       if (!await logs.exists()) await logs.create(recursive: true);
       return logs;
-    } catch (_) {}
+    } catch (e) {
+      swallow(e, tag: 'InitLogger.resolveLogDir.support');
+    }
 
     return null;
   }
@@ -83,7 +90,9 @@ class InitLogger {
         mode: FileMode.append,
         flush: false,
       );
-    } catch (_) {}
+    } catch (e) {
+      swallow(e, tag: 'InitLogger.log');
+    }
   }
 
   /// 写一行日志并立即落盘 — 在调用容易"硬崩溃"的原生 API 前用，
@@ -98,7 +107,9 @@ class InitLogger {
         mode: FileMode.append,
         flush: true,
       );
-    } catch (_) {}
+    } catch (e) {
+      swallow(e, tag: 'InitLogger.logFlush');
+    }
   }
 
   /// 写带 stack 的错误。
@@ -113,7 +124,9 @@ class InitLogger {
         mode: FileMode.append,
         flush: true, // 错误立即落盘
       );
-    } catch (_) {}
+    } catch (e) {
+      swallow(e, tag: 'InitLogger.error');
+    }
   }
 
   /// 当前日志文件路径（用于 UI 提示用户去哪找）
