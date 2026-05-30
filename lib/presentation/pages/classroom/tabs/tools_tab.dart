@@ -79,7 +79,9 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
           _studentsLoaded = true;
         });
       }
-    } catch (_) {}
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ClassroomTools._loadScoreboard', stack: st);
+    }
   }
 
   // ── 分层点名逻辑 ──
@@ -901,15 +903,80 @@ class _VoiceTimerDialog extends StatefulWidget {
 
 class _VoiceTimerDialogState extends State<_VoiceTimerDialog> {
   final _idCtrl = TextEditingController();
+  final _voice = VoiceService();
+  bool _listening = false;
+  String _heard = '';
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _voice.onResult = (text) {
+      if (!mounted) return;
+      setState(() => _heard = text);
+    };
+    _voice.onComplete = (finalText) {
+      if (!mounted) return;
+      final mins = _parseMinutes(finalText);
+      setState(() {
+        _heard = finalText;
+        if (mins != null) _idCtrl.text = '$mins';
+      });
+    };
+    _voice.onError = (e) {
+      if (!mounted) return;
+      setState(() { _error = e; _listening = false; });
+    };
+    _voice.onStateChanged = (listening) {
+      if (!mounted) return;
+      setState(() => _listening = listening);
+    };
+  }
 
   @override
   void dispose() {
+    _voice.stopListening();
     _idCtrl.dispose();
     super.dispose();
   }
 
+  Future<void> _toggleListen() async {
+    if (_listening) {
+      await _voice.stopListening();
+      return;
+    }
+    if (!await VoiceService.isConfigured()) {
+      if (mounted) setState(() => _error = '语音未配置（讯飞密钥）或被禁用，请手动输入');
+      return;
+    }
+    setState(() { _error = null; _heard = ''; });
+    await _voice.startListening();
+  }
+
+  /// 从识别文本里解析分钟数：支持阿拉伯数字与常见中文数字（一~二十）。
+  int? _parseMinutes(String text) {
+    final digit = RegExp(r'(\d+)').firstMatch(text);
+    if (digit != null) return int.tryParse(digit.group(1)!);
+    const cn = {
+      '零': 0, '一': 1, '两': 2, '二': 2, '三': 3, '四': 4, '五': 5,
+      '六': 6, '七': 7, '八': 8, '九': 9, '十': 10,
+    };
+    // 处理"十五""二十""三十"等
+    if (text.contains('十')) {
+      final idx = text.indexOf('十');
+      final tens = idx > 0 ? (cn[text[idx - 1]] ?? 1) : 1;
+      final ones = idx + 1 < text.length ? (cn[text[idx + 1]] ?? 0) : 0;
+      return tens * 10 + ones;
+    }
+    for (final e in cn.entries) {
+      if (text.contains(e.key)) return e.value;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
     return AlertDialog(
       title: const Row(
         children: [
@@ -921,13 +988,37 @@ class _VoiceTimerDialogState extends State<_VoiceTimerDialog> {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('请说出分钟数（例如"五分钟"、"十分钟"）', style: TextStyle(fontSize: 13)),
+          const Text('点击麦克风说出分钟数（如"五分钟""十五分钟"），也可手动输入',
+              style: TextStyle(fontSize: 13)),
           const SizedBox(height: 16),
+          IconButton.filled(
+            onPressed: _toggleListen,
+            iconSize: 36,
+            style: IconButton.styleFrom(
+              backgroundColor: _listening ? Colors.red : primary,
+            ),
+            icon: Icon(_listening ? Icons.stop : Icons.mic),
+          ),
+          const SizedBox(height: 8),
+          if (_listening)
+            const Text('正在聆听…', style: TextStyle(fontSize: 12, color: Colors.red)),
+          if (_heard.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text('识别：$_heard',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            ),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(_error!,
+                  style: const TextStyle(fontSize: 12, color: Colors.orange)),
+            ),
+          const SizedBox(height: 12),
           TextField(
             controller: _idCtrl,
-            autofocus: true,
             decoration: const InputDecoration(
-              hintText: '或手动输入分钟数',
+              hintText: '分钟数',
               prefixIcon: Icon(Icons.timer_outlined),
               border: OutlineInputBorder(),
             ),
@@ -937,11 +1028,17 @@ class _VoiceTimerDialogState extends State<_VoiceTimerDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: () async {
+            await _voice.stopListening();
+            if (context.mounted) Navigator.pop(context);
+          },
           child: const Text('取消'),
         ),
         FilledButton(
-          onPressed: () => Navigator.pop(context, _idCtrl.text.trim()),
+          onPressed: () async {
+            await _voice.stopListening();
+            if (context.mounted) Navigator.pop(context, _idCtrl.text.trim());
+          },
           child: const Text('确认'),
         ),
       ],

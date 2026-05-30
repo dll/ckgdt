@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../../data/local/achievement_dao.dart';
+import '../../../../services/default_class_service.dart';
 import '../achievement_shared.dart';
 
 import '../../../../core/constants/color_ohos_compat.dart';
@@ -62,7 +63,9 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
     if (_selectedBatchId == null) return;
     setState(() => _loading = true);
     try {
-      final scores = await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
+      final rawScores = await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
+      final scores = await DefaultClassService.instance.filterByDefaultClass(
+          rawScores, (s) => (s['student_id'] ?? '').toString());
       if (scores.isNotEmpty) {
         final avgs = List<double>.filled(4, 0);
         for (final s in scores) {
