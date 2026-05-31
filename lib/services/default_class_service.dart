@@ -58,20 +58,28 @@ class DefaultClassService {
     await _classDao.generateDemoData();
 
     final existing = await getDefaultClassId();
-    if (existing != null) return;
-
-    final active = await _classDao.getActiveClasses();
-    if (active.isEmpty) {
-      await _classDao.generateDemoData();
-      final refreshed = await _classDao.getActiveClasses();
-      if (refreshed.isNotEmpty) {
-        await setDefaultClassId(refreshed.first['id'] as int);
-      }
-      return;
+    if (existing != null) {
+      // 校验已设的默认班级仍是活跃班级；若已被归档/删除则重选
+      final active = await _classDao.getActiveClasses();
+      if (active.any((c) => c['id'] == existing)) return;
     }
 
-    // 取第一个活跃班级作为默认
-    await setDefaultClassId(active.first['id'] as int);
+    var active = await _classDao.getActiveClasses();
+    if (active.isEmpty) {
+      await _classDao.generateDemoData();
+      active = await _classDao.getActiveClasses();
+    }
+    if (active.isEmpty) return;
+
+    await setDefaultClassId(_pickDefault(active));
+  }
+
+  /// 确定性挑选默认班级：活跃班级里按 name 升序取第一个。
+  /// 这样默认稳定落在「软件231」（排在「软件232」前），而非依赖 created_at 顺序。
+  int _pickDefault(List<Map<String, dynamic>> active) {
+    final sorted = [...active]..sort((a, b) =>
+        ((a['name'] as String?) ?? '').compareTo((b['name'] as String?) ?? ''));
+    return sorted.first['id'] as int;
   }
 
   /// 获取默认班级下的学生列表

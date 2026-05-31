@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../learning/learning_hub_page.dart';
 import '../classroom/classroom_page.dart';
 import '../../../services/navigation_service.dart';
@@ -48,7 +48,7 @@ class _TeachingHubPageState extends State<TeachingHubPage> {
     return Column(
       children: [
         Container(
-          color: primary.withValues(alpha: 0.05),
+          color: primary.withOpacity(0.05),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [

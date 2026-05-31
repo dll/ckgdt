@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../../core/error_handler.dart';
 import '../../../../data/local/database_helper.dart';
 import '../../../../data/local/teaching_dao.dart';
@@ -150,7 +150,7 @@ class _MidtermSpecialPanelsState extends State<MidtermSpecialPanels> {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(children: [
@@ -208,9 +208,9 @@ class _MidtermSpecialPanelsState extends State<MidtermSpecialPanels> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
+        color: color.withOpacity(0.08),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+        border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Column(
         children: [

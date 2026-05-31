@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../core/error_handler.dart';
 import '../../../services/auth_service.dart';
@@ -370,7 +370,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: (isDark ? Colors.white : Colors.black)
-                      .withValues(alpha: 0.08),
+                      .withOpacity(0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -421,7 +421,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: primary.withValues(alpha: 0.12),
+        color: primary.withOpacity(0.12),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
@@ -548,7 +548,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: primary.withValues(alpha: 0.3),
+            color: primary.withOpacity(0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -565,13 +565,13 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.4),
+                      color: Colors.white.withOpacity(0.4),
                       width: 2),
                 ),
                 child: CircleAvatar(
                   radius: 32,
                   backgroundColor:
-                      Colors.white.withValues(alpha: 0.15),
+                      Colors.white.withOpacity(0.15),
                   child: Text(
                     _isTeacher ? '🧑‍🏫' : '🧑‍🎓',
                     style: const TextStyle(fontSize: 28),
@@ -591,7 +591,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                     border: Border.all(color: Colors.white, width: 2),
                     boxShadow: [
                       BoxShadow(
-                        color: pulseColor.withValues(alpha: 0.5),
+                        color: pulseColor.withOpacity(0.5),
                         blurRadius: 6,
                       ),
                     ],
@@ -624,10 +624,10 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
             padding:
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
             decoration: BoxDecoration(
-              color: levelColor.withValues(alpha: 0.3),
+              color: levelColor.withOpacity(0.3),
               borderRadius: BorderRadius.circular(14),
               border:
-                  Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                  Border.all(color: Colors.white.withOpacity(0.3)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -653,7 +653,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                   value: progress,
                   minHeight: 4,
                   backgroundColor:
-                      Colors.white.withValues(alpha: 0.2),
+                      Colors.white.withOpacity(0.2),
                   valueColor:
                       const AlwaysStoppedAnimation(Colors.white),
                 ),
@@ -722,7 +722,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
+                  color: color.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: color, size: 18),
@@ -784,10 +784,10 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
         padding: const EdgeInsets.only(bottom: 16),
         child: Card(
           elevation: 1,
-          color: color.withValues(alpha: 0.06),
+          color: color.withOpacity(0.06),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: color.withValues(alpha: 0.3)),
+            side: BorderSide(color: color.withOpacity(0.3)),
           ),
           child: Padding(
             padding: const EdgeInsets.all(12),
@@ -840,10 +840,10 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
       padding: const EdgeInsets.only(bottom: 16),
       child: Card(
         elevation: 1,
-        color: Colors.orange.withValues(alpha: 0.06),
+        color: Colors.orange.withOpacity(0.06),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: Colors.orange.withValues(alpha: 0.3)),
+          side: BorderSide(color: Colors.orange.withOpacity(0.3)),
         ),
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -935,8 +935,8 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                 onPressed: _quickLoading
                     ? null
                     : () => _quickChat(a.label, a.prompt),
-                backgroundColor: a.color.withValues(alpha: 0.08),
-                side: BorderSide(color: a.color.withValues(alpha: 0.2)),
+                backgroundColor: a.color.withOpacity(0.08),
+                side: BorderSide(color: a.color.withOpacity(0.2)),
               ))
           .toList(),
     );
@@ -1385,12 +1385,12 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: achieved
-            ? Colors.amber.withValues(alpha: 0.12)
+            ? Colors.amber.withOpacity(0.12)
             : (isDark ? Colors.white10 : Colors.grey.shade100),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: achieved
-              ? Colors.amber.withValues(alpha: 0.4)
+              ? Colors.amber.withOpacity(0.4)
               : Colors.transparent,
         ),
       ),
@@ -1465,7 +1465,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                 contentPadding: EdgeInsets.zero,
                 leading: CircleAvatar(
                   radius: 14,
-                  backgroundColor: typeColor.withValues(alpha: 0.1),
+                  backgroundColor: typeColor.withOpacity(0.1),
                   child: Icon(typeIcon, size: 14, color: typeColor),
                 ),
                 title: Text(
@@ -1546,7 +1546,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                           .map((v) =>
                               RadarEntry(value: v.clamp(0, 100)))
                           .toList(),
-                      fillColor: primary.withValues(alpha: 0.2),
+                      fillColor: primary.withOpacity(0.2),
                       borderColor: primary,
                       borderWidth: 2,
                     ),
@@ -1669,7 +1669,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                       barWidth: 3,
                       belowBarData: BarAreaData(
                         show: true,
-                        color: primary.withValues(alpha: 0.1),
+                        color: primary.withOpacity(0.1),
                       ),
                       dotData: const FlDotData(show: true),
                     ),
@@ -1714,8 +1714,8 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                   leading: CircleAvatar(
                     radius: 14,
                     backgroundColor: s.avgScore >= 60
-                        ? Colors.orange.withValues(alpha: 0.2)
-                        : Colors.red.withValues(alpha: 0.2),
+                        ? Colors.orange.withOpacity(0.2)
+                        : Colors.red.withOpacity(0.2),
                     child: Text(
                       s.avgScore.toStringAsFixed(0),
                       style: TextStyle(

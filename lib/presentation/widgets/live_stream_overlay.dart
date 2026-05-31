@@ -1,4 +1,4 @@
-import 'dart:math';
+﻿import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../core/design/noir_tokens.dart';
 import '../widgets/live_stream_panel.dart';
@@ -204,13 +204,13 @@ class _LiveStreamWrapperState extends State<_LiveStreamWrapper>
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.4),
+              color: Colors.black.withOpacity(0.4),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
           ],
           border: Border.all(
-            color: NoirTokens.accent.withValues(alpha: 0.4),
+            color: NoirTokens.accent.withOpacity(0.4),
             width: 2,
           ),
         ),
@@ -244,7 +244,7 @@ class _LiveStreamWrapperState extends State<_LiveStreamWrapper>
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.5),
+                    color: Colors.black.withOpacity(0.5),
                     blurRadius: 24,
                     offset: const Offset(0, 8),
                   ),

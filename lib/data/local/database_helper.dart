@@ -63,7 +63,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 26,
+      version: 27,
       singleInstance: true, // 启用单例模式
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
@@ -118,7 +118,7 @@ class DatabaseHelper {
         // 重新打开（版本号必须与主初始化一致）
         final db2 = await openDatabase(
           dbName,
-          version: 26,
+          version: 27,
           singleInstance: true, // 启用单例模式
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
@@ -198,7 +198,7 @@ class DatabaseHelper {
     Database db;
     db = await openDatabase(
       dbPath,
-      version: 26,
+      version: 27,
       singleInstance: true, // 启用单例模式，防止多实例同时访问
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
@@ -411,11 +411,60 @@ class DatabaseHelper {
         }
         await batch.commit(noResult: true);
         debugPrint('=== DatabaseHelper: Students import completed (new entries merged)');
-      } catch (e) {
-        debugPrint('=== DatabaseHelper: Error importing students: $e');
+
+        // ── reconcile：按 students.json 校正已存在行的 is_active / real_name ──
+        // ConflictAlgorithm.ignore 不会更新已存在行，导致旧库/同步里被错置成
+        // is_active=1 的归档学生（计科22）永远纠不回来。这里逐行对账修正。
+        await _reconcileStudents(db, students);
+      } catch (e, st) {
+        InitLogger.error('db', 'importing students failed: $e', st);
       }
-    } catch (e) {
-      debugPrint('=== DatabaseHelper: Error checking students: $e');
+    } catch (e, st) {
+      InitLogger.error('db', 'checking students failed: $e', st);
+    }
+  }
+
+  /// 按 students.json 名单对账已存在的 users 行（幂等）：
+  /// 1. 校正 is_active / real_name（仅当与名单不一致时更新）；
+  /// 2. 删除 `student_` 前缀幽灵行（覆盖 DB 已是最新 version、不再触发 onUpgrade 的场景）。
+  Future<void> _reconcileStudents(
+      Database db, List<dynamic> students) async {
+    try {
+      var fixed = 0;
+      final batch = db.batch();
+      for (final s in students) {
+        final uid = s['user_id'] as String?;
+        if (uid == null) continue;
+        final desiredActive = (s['is_active'] as int?) ?? 1;
+        final name = s['real_name'];
+        final existing = await db.query('users',
+            columns: ['is_active', 'real_name'],
+            where: 'user_id = ?',
+            whereArgs: [uid],
+            limit: 1);
+        if (existing.isEmpty) continue;
+        final curActive = existing.first['is_active'] as int?;
+        final curName = existing.first['real_name'] as String?;
+        if (curActive != desiredActive || (name != null && curName != name)) {
+          batch.update(
+              'users',
+              {'is_active': desiredActive, 'real_name': name},
+              where: 'user_id = ?',
+              whereArgs: [uid]);
+          fixed++;
+        }
+      }
+      await batch.commit(noResult: true);
+
+      // 双保险清幽灵（与 V27 迁移重复无害）
+      final ghostCm = await db.rawDelete(
+          "DELETE FROM class_members WHERE user_id LIKE 'student\\_%' ESCAPE '\\'");
+      final ghostU = await db.rawDelete(
+          "DELETE FROM users WHERE user_id LIKE 'student\\_%' ESCAPE '\\'");
+      InitLogger.log('db',
+          'reconcile students: fixed=$fixed ghost_users=$ghostU ghost_members=$ghostCm');
+    } catch (e, st) {
+      swallowDebug(e, tag: 'DatabaseHelper.reconcileStudents', stack: st);
     }
   }
 
@@ -704,6 +753,9 @@ class DatabaseHelper {
     }
     if (oldVersion < 26) {
       await _migrateToV26(db);
+    }
+    if (oldVersion < 27) {
+      await _migrateToV27(db);
     }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
@@ -2017,6 +2069,23 @@ class DatabaseHelper {
       await db.execute('ALTER TABLE current_session ADD COLUMN default_class_id INTEGER');
     } catch (e) {
       swallow(e, tag: 'V26.add_default_class_id');
+    }
+  }
+
+  /// V27: 清理种子库残留的 49 行 `student_` 前缀幽灵学生。
+  ///
+  /// 这些行是已归档「计科22」队列的重复副本，却被标记为 is_active=1，
+  /// 能穿过所有 is_active 过滤，导致答辩名单等处混入归档学生。
+  /// 真实登录/导入/同步流程从不创建 `student_` 前缀的 user_id，故可安全删除。
+  Future<void> _migrateToV27(Database db) async {
+    try {
+      final cm = await db.rawDelete(
+          "DELETE FROM class_members WHERE user_id LIKE 'student\\_%' ESCAPE '\\'");
+      final u = await db.rawDelete(
+          "DELETE FROM users WHERE user_id LIKE 'student\\_%' ESCAPE '\\'");
+      InitLogger.log('db', 'V27 purge ghost: users=$u class_members=$cm');
+    } catch (e, st) {
+      swallowDebug(e, tag: 'V27.purge_ghost', stack: st);
     }
   }
 

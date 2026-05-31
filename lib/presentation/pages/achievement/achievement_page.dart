@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../core/design/noir_tokens.dart';
 import '../../../data/local/achievement_dao.dart';
 import '../../../services/auth_service.dart';
@@ -81,7 +81,7 @@ class _AchievementPageState extends State<AchievementPage>
                   isScrollable: true,
                   tabAlignment: TabAlignment.start,
                   labelColor: Colors.white,
-                  unselectedLabelColor: Colors.white.withValues(alpha: 0.55),
+                  unselectedLabelColor: Colors.white.withOpacity(0.55),
                   indicatorColor: Colors.white,
                   indicatorWeight: 2,
                   indicatorSize: TabBarIndicatorSize.label,
@@ -105,7 +105,7 @@ class _AchievementPageState extends State<AchievementPage>
                           children: [
                             Text(serial,
                                 style: NoirTokens.serial(
-                                    color: Colors.white.withValues(alpha: 0.85))),
+                                    color: Colors.white.withOpacity(0.85))),
                             const SizedBox(width: 8),
                             Icon(icon, size: 16),
                             const SizedBox(width: 6),
