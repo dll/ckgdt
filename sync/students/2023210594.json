@@ -3,8 +3,8 @@
   "user_id": "2023210594",
   "user_name": "赫宇豪",
   "role": "student",
-  "synced_at": "2026-05-31T15:41:07.757089",
-  "last_active": "2026-05-31T15:41:07.757089",
+  "synced_at": "2026-05-31T15:41:50.416308",
+  "last_active": "2026-05-31T15:41:50.416308",
   "quiz_results": [
     {
       "user_id": "2023210594",
@@ -43,6 +43,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 6,
+      "user_id": "2023210594",
+      "content": "PDF实验报告：2023210594赫宇豪实验六 跨平台综合项目实战.pdf",
+      "file_paths": "D:\\新建文件夹\\刘栋梁\\大作业\\最新6\\2023210594赫宇豪实验六 跨平台综合项目实战.pdf",
+      "file_names": "2023210594赫宇豪实验六 跨平台综合项目实战.pdf",
+      "submit_time": "2026-05-31T15:41:50.405303",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-05-31T15:41:50.405303",
+      "updated_at": "2026-05-31T15:41:50.405303",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 5,
       "user_id": "2023210594",
