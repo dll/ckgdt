@@ -3,8 +3,8 @@
   "user_id": "2023210648",
   "user_name": "张政",
   "role": "student",
-  "synced_at": "2026-06-01T01:58:39.771724",
-  "last_active": "2026-06-01T01:58:39.771734",
+  "synced_at": "2026-06-01T01:59:47.920032",
+  "last_active": "2026-06-01T01:59:47.920041",
   "quiz_results": [
     {
       "user_id": "2023210648",
@@ -34,6 +34,24 @@
   "learning_paths": [],
   "lab_submissions": [
     {
+      "task_id": 2,
+      "user_id": "2023210648",
+      "content": "PDF实验报告：2023210648张政实验二 原生应用开发.pdf\n",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/cache/file_picker/1780250363529/2023210648张政实验二 原生应用开发.pdf",
+      "file_names": "2023210648张政实验二 原生应用开发.pdf",
+      "submit_time": "2026-06-01T01:59:47.916866",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-06-01T01:59:36.052512",
+      "updated_at": "2026-06-01T01:59:47.916866",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
+    {
       "task_id": 3,
       "user_id": "2023210648",
       "content": "PDF实验报告：2023210648张政实验三 跨平台应用开发.pdf\n",
@@ -47,24 +65,6 @@
       "scored_at": null,
       "created_at": "2026-06-01T01:58:39.759064",
       "updated_at": "2026-06-01T01:58:39.759064",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 2,
-      "user_id": "2023210648",
-      "content": "PDF实验报告：2023210648张政实验二 原生应用开发.pdf\n",
-      "file_paths": "/data/user/0/cn.edu.chzu.madkg/cache/file_picker/1780250169232/2023210648张政实验二 原生应用开发.pdf",
-      "file_names": "2023210648张政实验二 原生应用开发.pdf",
-      "submit_time": "2026-06-01T01:56:21.942743",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-06-01T01:56:21.942743",
-      "updated_at": "2026-06-01T01:56:21.942743",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
