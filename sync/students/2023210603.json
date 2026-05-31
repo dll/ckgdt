@@ -3,8 +3,8 @@
   "user_id": "2023210603",
   "user_name": "李俊杰",
   "role": "student",
-  "synced_at": "2026-05-29T00:02:33.647647",
-  "last_active": "2026-05-29T00:02:33.647690",
+  "synced_at": "2026-05-31T22:58:02.125856",
+  "last_active": "2026-05-31T22:58:02.125856",
   "quiz_results": [
     {
       "user_id": "2023210603",
@@ -45,7 +45,7 @@
       "task_id": 5,
       "user_id": "2023210603",
       "content": "PDF实验报告：2023210603李俊杰实验五 鸿蒙多端应用开发.pdf",
-      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2023210603/2023210603李俊杰实验五 鸿蒙多端应用开发.pdf",
+      "file_paths": "C:\\Users\\li\\Documents/sync_files/2023210603/2023210603李俊杰实验五 鸿蒙多端应用开发.pdf",
       "file_names": "2023210603李俊杰实验五 鸿蒙多端应用开发.pdf",
       "submit_time": "2026-05-07T12:59:47.348585",
       "status": "已提交",
@@ -63,7 +63,7 @@
       "task_id": 4,
       "user_id": "2023210603",
       "content": "PDF实验报告：2023210603李俊杰实验四 微信小程序开发.pdf",
-      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2023210603/2023210603李俊杰实验四 微信小程序开发.pdf",
+      "file_paths": "C:\\Users\\li\\Documents/sync_files/2023210603/2023210603李俊杰实验四 微信小程序开发.pdf",
       "file_names": "2023210603李俊杰实验四 微信小程序开发.pdf",
       "submit_time": "2026-04-24T14:25:48.367653",
       "status": "已提交",
@@ -117,7 +117,7 @@
       "task_id": 1,
       "user_id": "2023210603",
       "content": "PDF实验报告：2023210603李俊杰实验一 开发环境搭建.pdf",
-      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2023210603/2023210603李俊杰实验一 开发环境搭建.pdf",
+      "file_paths": "C:\\Users\\li\\Documents/sync_files/2023210603/2023210603李俊杰实验一 开发环境搭建.pdf",
       "file_names": "2023210603李俊杰实验一 开发环境搭建.pdf",
       "submit_time": "2026-04-24T14:19:17.217275",
       "status": "已提交",
@@ -133,40 +133,7 @@
     }
   ],
   "student_reports": [],
-  "student_works": [
-    {
-      "title": "智能健康运动记录平台开发与整合",
-      "description": "【数据可视化展示】使用图表库将用户的运动数据（步数、卡路里、心率、运动时长）以折线图、环形图等形式直观展示，支持日/周/月维度切换。【个性化运动计划】根据用户的身体数据和运动目标，自动生成每周运动计划表，包含运动类型、时长和强度建议。【AI健康建议】调用AI大模型分析用户的运动和健康数据，生成个性化的健身指导和饮食搭配建议。",
-      "tech_stack": "Java + Android SDK",
-      "work_type": "综合项目",
-      "group_name": "cg1-ihftpdi",
-      "leader_name": "李俊杰",
-      "user_id": "2023210603",
-      "file_path": null,
-      "file_size": null,
-      "status": "待提交",
-      "submit_time": null,
-      "tags": "[\"Java\",\"Android\",\"SDK\"]",
-      "created_at": "2026-04-27T09:21:25.974673",
-      "updated_at": "2026-04-27T09:21:25.974729",
-      "related_node_ids": null,
-      "ai_suspicion": 0.0,
-      "teacher_confirmed": 0,
-      "project_id": null,
-      "group_id": null,
-      "video_url": null,
-      "thumbnail_url": null,
-      "video_duration": null,
-      "view_count": 0,
-      "like_count": 0,
-      "comment_count": 0,
-      "repo": "cg1-ihftpdi",
-      "class_group": "cg1",
-      "project": "智能健康运动记录平台开发与整合",
-      "student_role": "Android开发工程师",
-      "student_name": "李俊杰"
-    }
-  ],
+  "student_works": [],
   "survey_responses": [
     {
       "survey_id": 1,
@@ -178,20 +145,6 @@
   "checkin_records": [],
   "work_comments": [],
   "work_likes": [],
-  "notification_recipients": [
-    {
-      "notification_id": 1,
-      "user_id": "2023210603",
-      "is_read": 0,
-      "read_at": null
-    },
-    {
-      "notification_id": 2,
-      "user_id": "2023210603",
-      "is_read": 0,
-      "read_at": null
-    }
-  ],
   "work_views": [],
   "peer_reviews": [],
   "collaboration_messages": [],
