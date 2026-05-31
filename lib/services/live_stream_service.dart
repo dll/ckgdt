@@ -229,6 +229,21 @@ class LiveStreamService {
   List<CameraDescription> get cameras => _cameras;
   int get currentCameraIndex => _currentCameraIndex;
 
+  /// 抓取当前摄像头一帧并返回图片文件路径（失败返回 null）。
+  /// 供快照广播：每隔几秒抓一帧上传到 Gitee 供其他用户观看。
+  Future<String?> takeSnapshot() async {
+    final ctrl = _cameraController;
+    if (ctrl == null || !ctrl.value.isInitialized) return null;
+    if (ctrl.value.isTakingPicture) return null;
+    try {
+      final xFile = await ctrl.takePicture();
+      return xFile.path;
+    } catch (e, st) {
+      swallowDebug(e, tag: 'LiveStream.takeSnapshot', stack: st);
+      return null;
+    }
+  }
+
   /// 释放摄像头但保留单例与状态流（关闭浮窗时调用）。
   ///
   /// 浮窗关闭后必须停掉摄像头，否则 webcam 指示灯常亮、下次打开还拿着陈旧的
