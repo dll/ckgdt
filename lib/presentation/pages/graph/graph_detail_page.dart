@@ -77,6 +77,10 @@ class _GraphDetailPageState extends State<GraphDetailPage>
   List<NodeModel> _descendantLeaves = []; // 选中节点的所有叶子节点
   Set<String> _drillPathNodeIds = {}; // 上溯+下钻的全部节点ID（用于高亮）
 
+  // ── 画布尺寸（由 _buildGraphView 设置，供缩放方法使用）──────────────────
+  double _canvasW = 1000;
+  double _canvasH = 1000;
+
   @override
   void initState() {
     super.initState();
@@ -1231,6 +1235,8 @@ class _GraphDetailPageState extends State<GraphDetailPage>
   Widget _buildGraphView() {
     final canvasW = MediaQuery.of(context).size.width * 2.5;
     final canvasH = MediaQuery.of(context).size.height * 2.5;
+    _canvasW = canvasW;
+    _canvasH = canvasH;
 
     return Stack(
       children: [
@@ -1360,22 +1366,99 @@ class _GraphDetailPageState extends State<GraphDetailPage>
     return _transformationController.value.getMaxScaleOnAxis();
   }
 
+  Size _getViewportSize() {
+    final renderBox = context.findRenderObject() as RenderBox?;
+    return renderBox?.size ?? const Size(400, 600);
+  }
+
+  /// 计算所有可见节点的包围盒
+  Rect _computeNodesBounds() {
+    if (_visiblePositionedNodes.isEmpty) {
+      return Rect.fromLTWH(0, 0, _canvasW, _canvasH);
+    }
+    double minX = double.infinity, minY = double.infinity;
+    double maxX = double.negativeInfinity, maxY = double.negativeInfinity;
+    for (final p in _visiblePositionedNodes) {
+      if (p.x < minX) minX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y > maxY) maxY = p.y;
+    }
+    const pad = 100.0;
+    return Rect.fromLTWH(minX - pad, minY - pad,
+        (maxX - minX) + pad * 2, (maxY - minY) + pad * 2);
+  }
+
   void _zoomIn() {
+    final viewport = _getViewportSize();
+    final cx = viewport.width / 2;
+    final cy = viewport.height / 2;
+    final cur = _transformationController.value;
     final s = (_getCurrentScale() * 1.3).clamp(0.05, 5.0);
-    _transformationController.value = Matrix4.diagonal3Values(s, s, 1);
+    final inv = Matrix4.inverted(cur);
+    final focus = MatrixUtils.transformPoint(inv, Offset(cx, cy));
+    _transformationController.value = Matrix4.identity()
+      ..setEntry(0, 0, s)
+      ..setEntry(1, 1, s)
+      ..setEntry(0, 3, -s * focus.dx + cx)
+      ..setEntry(1, 3, -s * focus.dy + cy);
   }
 
   void _zoomOut() {
+    final viewport = _getViewportSize();
+    final cx = viewport.width / 2;
+    final cy = viewport.height / 2;
+    final cur = _transformationController.value;
     final s = (_getCurrentScale() / 1.3).clamp(0.05, 5.0);
-    _transformationController.value = Matrix4.diagonal3Values(s, s, 1);
+    final inv = Matrix4.inverted(cur);
+    final focus = MatrixUtils.transformPoint(inv, Offset(cx, cy));
+    _transformationController.value = Matrix4.identity()
+      ..setEntry(0, 0, s)
+      ..setEntry(1, 1, s)
+      ..setEntry(0, 3, -s * focus.dx + cx)
+      ..setEntry(1, 3, -s * focus.dy + cy);
   }
 
+  /// 复位：缩放至 0.8 并将图谱包围盒居中到视口
   void _resetView() {
-    _transformationController.value = Matrix4.identity();
+    final bounds = _computeNodesBounds();
+    final viewport = _getViewportSize();
+    final scale = 0.8;
+    final cx = viewport.width / 2;
+    final cy = viewport.height / 2;
+    final centerX = bounds.center.dx;
+    final centerY = bounds.center.dy;
+    _transformationController.value = Matrix4.identity()
+      ..setEntry(0, 0, scale)
+      ..setEntry(1, 1, scale)
+      ..setEntry(0, 3, -scale * centerX + cx)
+      ..setEntry(1, 3, -scale * centerY + cy);
   }
 
+  /// 全图：计算包围盒自动缩放适配视口
   void _fitAll() {
-    _resetView();
+    final bounds = _computeNodesBounds();
+    final viewport = _getViewportSize();
+    if (bounds.width <= 0 || bounds.height <= 0) {
+      _resetView();
+      return;
+    }
+    final padW = viewport.width * 0.1;
+    final padH = viewport.height * 0.1;
+    final availW = viewport.width - padW * 2;
+    final availH = viewport.height - padH * 2;
+    final scaleX = availW / bounds.width;
+    final scaleY = availH / bounds.height;
+    final scale = math.min(scaleX, scaleY).clamp(0.05, 5.0);
+    final cx = viewport.width / 2;
+    final cy = viewport.height / 2;
+    final centerX = bounds.center.dx;
+    final centerY = bounds.center.dy;
+    _transformationController.value = Matrix4.identity()
+      ..setEntry(0, 0, scale)
+      ..setEntry(1, 1, scale)
+      ..setEntry(0, 3, -scale * centerX + cx)
+      ..setEntry(1, 3, -scale * centerY + cy);
   }
 
   void _centerOnSelected() {
@@ -1385,12 +1468,15 @@ class _GraphDetailPageState extends State<GraphDetailPage>
       orElse: () => null,
     );
     if (pNode == null) return;
+    final viewport = _getViewportSize();
     final s = _getCurrentScale().clamp(0.05, 5.0);
+    final cx = viewport.width / 2;
+    final cy = viewport.height / 2;
     _transformationController.value = Matrix4.identity()
       ..setEntry(0, 0, s)
       ..setEntry(1, 1, s)
-      ..setEntry(0, 3, -s * pNode.x + 300)
-      ..setEntry(1, 3, -s * pNode.y + 350);
+      ..setEntry(0, 3, -s * pNode.x + cx)
+      ..setEntry(1, 3, -s * pNode.y + cy);
   }
 
   // ── 鹰眼小地图 ──────────────────────────────────────────────────────
@@ -1464,13 +1550,17 @@ class _GraphDetailPageState extends State<GraphDetailPage>
     );
   }
 
+  /// 点击小地图跳转
   void _animateCenter(double x, double y, double canvasW, double canvasH) {
+    final viewport = _getViewportSize();
     final s = _getCurrentScale().clamp(0.05, 5.0);
+    final cx = viewport.width / 2;
+    final cy = viewport.height / 2;
     _transformationController.value = Matrix4.identity()
       ..setEntry(0, 0, s)
       ..setEntry(1, 1, s)
-      ..setEntry(0, 3, -s * x + 300)
-      ..setEntry(1, 3, -s * y + 350);
+      ..setEntry(0, 3, -s * x + cx)
+      ..setEntry(1, 3, -s * y + cy);
   }
 
   // ── 节点拖拽处理（长按+拖拽）─────────────────────────────────────────
