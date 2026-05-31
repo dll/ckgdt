@@ -3,8 +3,8 @@
   "user_id": "2023210599",
   "user_name": "姜少威",
   "role": "student",
-  "synced_at": "2026-05-31T23:26:10.194326",
-  "last_active": "2026-05-31T23:26:10.194326",
+  "synced_at": "2026-05-31T23:27:06.917058",
+  "last_active": "2026-05-31T23:27:06.917058",
   "quiz_results": [
     {
       "user_id": "2023210599",
@@ -56,6 +56,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 2,
+      "user_id": "2023210599",
+      "content": "PDF实验报告：2023210599姜少威实验二 原生应用开发.pdf\n\n--- 报告正文（自动提取）---\n移动应用开发实验报告\n封面信息\n项目\n内容\n实验名称\n原生应用开发\n实验编号\nd20301035102\n、\nd20301009202\n学号\n2023210599\n姓名\n姜少威\n班级\n软件\n232\n组别\nCG3\n项目名称\n智能健康运动记录平台\n技术栈\nAndroid (Kotlin)\n实验目的\n1.\n掌握\nAndroid Kotlin\n登录页面开发\n2.\n学会\nActivity\n间数据传递\n3.\n掌握\nSQLite\n数据库操作\n4.\n完成个人中心页面设计\n实验环境\n平台\n开发工具\n语言\nSDK\n版本\nAndroid\nAndroid Studio\nKotlin\nAPI 24+\n表\n1\n实验环境\n实验步骤\n1.\n需求分析\n1.1\n功能需求\n●\n用户名输入\n●\n密码输入\n●\n登录按钮\n●\n注册按钮\n●\n输入验证（不能为空、长度限制）\n1.2\n界面需求\n●\nMaterial Design\n风格（\nAndroid\n）\n●\n输入框占位提示\n●\n密码隐藏显示\n1.3\n跳转需求\n●\n登录成功\n→\n个人中心\n●\n点击注册\n→\n注册页面\n●\n传递用户名数据\n2. Android\n登录页面开发\n2.1\n项目创建\n●\n打开\nAndroid Studio\n●\n创建\nEmpty Activity\n项目\n●\n选择\nKotlin\n语言\n●\n最低\nSDK\n：\nAPI 24\n2.\n2\n系统架构设计\n1\n系统架构框架图\n图\n1\n系统架构图\n2\n系统类图\n图\n2\n系统类图\n3\n系统顺序图\n图\n.3\n登录功能顺序图\n图\n4\n注册功能顺序图\n2.\n3\n布局实现\n<!\n--\nactivity_main.xml\n--\n>\n<LinearLayout\nandroid:orientation=\"vertical\"\nandroid:padding=\"16dp\">\n<EditText\nandroid:id=\"@+id/et_username\"\nandroid:hint=\"\n请输入用户名\n\"\nandroid:inputType=\"text\"/>\n<EditText\nandroid:id=\"@+id/et_password\"\nandroid:hint=\"\n请输入密码\n\"\nandroid:inputType=\"textPassword\"/>\n<Button\nandroid:id=\"@+id/btn_login\"\nandroid:text=\"\n登录\n\"/>\n<Button\nandroid:id=\"@+id/btn_register\"\nandroid:text=\"\n注册\n\"/>\n</LinearLayout>\n2.4\n登录逻辑实现\n// MainActivity.kt\nclass MainActivity : AppCompatActivity() {\nprivate lateinit var etUsername: EditText\nprivate lateinit var etPassword: EditText\nprivate lateinit var btnLogin: Button\nprivate lateinit var btnRegister: Button\nprivate lateinit var dbHelper: DatabaseHelper\noverride fun onCreate(savedInstanceState: Bundle?) {\nsuper.onCreate(savedInstanceState)\ns\netContentView(R.layout.activity_main)\netUsername = findViewById(R.id.et_username)\netPassword = findViewById(R.id.et_password)\nbtnLogin = findViewById(R.id.btn_login)\nbtnRegister = findViewById(R.id.btn_register)\ndbHelper = DatabaseHelper(this)\nbtnLogin.setOnClickListener {\nval username = etUsername.text.toString()\nval password = etPassword.text.toString()\nif (validateInput(username, password)) {\nlogin(username, password)\n}\n}\nbtnRegister.setOnClickListener {\nval intent = Intent(this, RegisterActivity::class.java)\nstartActivity(intent)\n}\n}\nprivate fun validateInput(username: String, password: String): Boolean {\nif (username.isEmpty()) {\netUsername.error = \"\n用户名不能为空\n\"\nreturn false\n}\nif (password.isEmpty()) {\netPassword.error = \"\n密码不能为空\n\"\nreturn false\n}\nreturn true\n}\nprivate fun login(username: String, pass\nword: String) {\nval db = dbHelper.readableDatabase\nval cursor = db.query(\"users\", arrayOf(\"password\"), \"username=?\",\narrayOf(username), null, null, null)\nif (cursor.moveToFirst()) {\nval storedPassword = cursor.getString(0)\nif (password == storedPassword) {\n//\n跳转到个人中心\nval intent = Intent(this, HomeActivity::class.java)\nintent.putExtra\n(\"username\", username)\nstartActivity(intent)\n} else {\nToast.makeText(this, \"\n用户名或密码错误\n\", Toast.LENGTH_SHORT).show()\n}\n} else {\nToast.makeText(this, \"\n用户不存在\n\", Toast.LENGTH_SHORT).show()\n}\ncursor.close()\n}\n}\n2.5\n注册页面实现\n// RegisterActivity.kt\nclass RegisterActivity : AppCompatActivity() {\nprivate lateinit var etUsername: EditText\nprivate lateinit var etPassword: EditText\nprivate lateinit var etConfirmPassword: EditText\nprivate lateinit var btnRegister: Button\nprivate lateinit var dbHelper: DatabaseHelper\noverride fun onCreate(savedInstanceState: Bundle?) {\nsuper.onCreate(savedInstanceState\n)\nsetContentView(R.layout.activity_register)\netUsername = findViewById(R.id.et_username)\netPassword = findViewById(R.id.et_password)\netConfirmPassword = findViewById(R.id.et_confirm_password)\nbtnRegister = findViewById(R.id.btn_register)\ndbHelper = DatabaseHelper(this)\nbtnRegister.setOnClickListener {\nval username = etUsername.text.toString()\nval password = etPassword.text.toString()\nval confirmPassword = etConfirmPassword.text.toString()\nif (validateInput(username, password, confirmPassword)) {\nregister(username, password)\n}\n}\n}\nprivate fun validateInput(username: String, password: String, confirmPassword: String):\nBoolean {\nif (username.isEmpty()) {\netUsername.error = \"\n用户名不能为空\n\"\nreturn false\n}\nif (password.isEmpty()) {\netPassword.error = \"\n密码不能为空\n\"\nreturn false\n}\nif (password != confirmPassword) {\netConfirmPassword.error = \"\n两次输入的密码不一致\n\"\nreturn false\n}\nreturn true\n}\nprivate fun register(username: String, password\n: String) {\nval db = dbHelper.writableDatabase\nval cursor = db.query(\"users\", arrayOf(\"id\"), \"username=?\", arrayOf(username), null,\nnull, null)\nif (cursor.moveToFirst()) {\nToast.makeText(this, \"\n用户已存在\n\", Toast.LENGTH_SHORT).show()\n} else {\nval values = ContentValues()\nvalues.put(\"username\", username)\nvalues.put(\"password\", password)\nvalues.put(\"register_time\", System.currentTimeMillis())\ndb.insert(\"users\", null, values)\nToast.makeText(this, \"\n注册成功\n\", Toast.LENGTH_SHORT).show()\nfinish()\n}\ncursor.close()\n}\n}\n2.6\n个人中心页面\n// HomeActivity.kt\nclass HomeActivity : AppCompatActivity() {\noverride fun onCreate(savedInstanceState: Bundle?) {\nsuper.onCreate(savedInstanceState)\nsetContentView(R.layout.activity_home)\nval username = intent.getStringExtra(\"username\")\nval tvWelcome = findViewById<TextView>(R.id.tv_welcome)\ntvWelcome.text = \"\n欢迎\n$username\"\n}\n}\n2.7\n数据库辅助类\n// DatabaseHelper.kt\nclass DatabaseHelper(context: Context) : SQLiteOpenHelper(context, \"androiddb.db\",\nnull, 1) {\noverride fun onCreate(db: SQLiteDatabase) {\nval createTable = \"CREATE TABLE users (id INTEGER PRIMARY KEY\nAUTOINCREMENT, username TEXT UNIQUE, password TEXT, register_time\nINTEGER)\"\ndb.execSQL(createTable)\n}\noverride fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: I\nnt) {\ndb.execSQL(\"DROP TABLE IF EXISTS users\")\nonCreate(db)\n}\n}\n实验结果\n验证结果\n平台\n登录功能\n输入验证\n页面跳转\n数据传递\nAndroid\n[\n√\n]\n成功\n[\n√\n]\n成功\n[\n√\n]\n成功\n[\n√\n]\n成功\n表\n2\n实验验证结果\n截图记录\nAndroid\n登录页面\n图\n5\n登录页面真机测试截图\nAndroid\n个人中心\n图\n6\n个人中心真机测试截图\nAndroid\n注册页面\n图\n7\n注册页面真机测试截图\n平台差异对比\n对比项\nAndroid\niOS\n开发语言\nKotlin\nSwift\nUI\n框架\nXML\nSwift\nUI\n页面跳转\nIntent\nNavigationLink\n数据传递\nIntent.putExtra\n@Binding\n布局方式\n线性布局\n/\n约束布局\nStack/Grid\n生命周期\nActivity\nViewController\n表\n3\n平台差异对比\n表\n问题与解决\n问题描述\n解决方案\n解决结果\n数据库创建失败\n确保\nSQLiteOpenHelper\n正确实现\n数据库创建成功\n密码验证失败\n检查数据库查询逻辑\n密码验证正常\n注册时用户已存在\n添加用户存在性检查\n注册逻辑正确\n表\n4\n实验中的问题与解决方法\n实验总结\n实验收获\n●\n掌握\nAndroid Kotlin\n登录页面开发\n●\n学会\nActivity\n间数据传递\n●\n掌握输入验证逻辑实现\n●\n理解\nSQLite\n数据库连接和操作的基本流程\n●\n学会使用\nAndroid\n内置\nSQLite\n数据库存储用户信息\n●\n掌握个人中心页面设计和底部导航栏实现\n●\n学会卡片式布局和\nMaterial Design\n风格应用\n技术要点\n●\nKotlin\n语言特性\n：使用\nlateinit var\n延迟初始化、\ncompanion object\n定义常量\n●\nActivity\n生命周期\n：\nonCreate\n方法的使用、\nIntent\n跳转\n●\nUI\n控件使用\n：\nEditText\n输入框、\nButton\n按钮、\nToast\n提示\n●\n数据库操作\n：\nSQLiteOpenHelper\n、\nContentValues\n、\nCursor\n查询\n●\n输入验证\n：空值检查、密码一致性验证\n●\n布局设计\n：\nLinearLayout\n嵌套、卡片式布局、底部导航栏\n考核指标\n考核项\n评分标准\n得分\n功能完整性\n登录功能完整，输入验证正确\n25\n分\n代码质量\n代码结构清晰，注释完整\n20\n分\n页面跳转\nActivity/View\n跳转正常\n15\n分\n数据传递\n数据传递正确\n15\n分\n平台对比\n完成平台差异分析\n15\n分\n实验报告\n报告结构完整，内容详实\n10\n分\n教师评价\n项目\n评价\n实验完成情况\n技术掌握程度\n创新点\n综合评价\n成绩\n教师签名：\n___________________\n日期：\n___________________\n",
+      "file_paths": "C:\\Users\\20818\\Documents/sync_files/2023210599/2023210599姜少威实验二 原生应用开发.pdf",
+      "file_names": "2023210599姜少威实验二 原生应用开发.pdf",
+      "submit_time": "2026-05-31T23:27:06.893756",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-04-24T10:22:28.744114",
+      "updated_at": "2026-05-31T23:27:06.893756",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 1,
       "user_id": "2023210599",
@@ -142,24 +160,6 @@
       "scored_at": null,
       "created_at": "2026-04-24T10:22:35.374569",
       "updated_at": "2026-04-24T10:22:35.374569",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 2,
-      "user_id": "2023210599",
-      "content": "PDF实验报告：2023210599姜少威实验二 原生应用开发.pdf",
-      "file_paths": "C:\\Users\\20818\\Documents/sync_files/2023210599/2023210599姜少威实验二 原生应用开发.pdf",
-      "file_names": "2023210599姜少威实验二 原生应用开发.pdf",
-      "submit_time": "2026-04-24T10:22:28.744114",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-04-24T10:22:28.744114",
-      "updated_at": "2026-04-24T10:22:28.744114",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
