@@ -138,8 +138,8 @@ class _SubmissionTabState extends State<_SubmissionTab> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
-            colors: [theme.colorScheme.primary.withOpacity(0.04),
-                theme.colorScheme.secondary.withOpacity(0.02)],
+            colors: [theme.colorScheme.primary.withValues(alpha: 0.04),
+                theme.colorScheme.secondary.withValues(alpha: 0.02)],
             begin: Alignment.topLeft, end: Alignment.bottomRight,
           ),
         ),
@@ -188,7 +188,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                       Flexible(child: Container(
                         height: 55 * ratio,
                         decoration: BoxDecoration(
-                          color: color.withOpacity(0.7),
+                          color: color.withValues(alpha: 0.7),
                           borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
                         ),
                       )),
@@ -223,13 +223,13 @@ class _SubmissionTabState extends State<_SubmissionTab> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(children: [
           Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
           const SizedBox(height: 2),
-          Text(label, style: TextStyle(fontSize: 10, color: color.withOpacity(0.8))),
+          Text(label, style: TextStyle(fontSize: 10, color: color.withValues(alpha: 0.8))),
         ]),
       ),
     );
@@ -263,7 +263,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
           padding: const EdgeInsets.all(14),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              CircleAvatar(radius: 18, backgroundColor: statusColor.withOpacity(0.1),
+              CircleAvatar(radius: 18, backgroundColor: statusColor.withValues(alpha: 0.1),
                   child: Icon(statusIcon, color: statusColor, size: 20)),
               const SizedBox(width: 12),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -278,7 +278,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _scoreColor(score, maxScore).withOpacity(0.1),
+                    color: _scoreColor(score, maxScore).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text('$score/$maxScore',
@@ -289,7 +289,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
+                    color: statusColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(status,
@@ -316,7 +316,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
               const SizedBox(height: 8),
               Container(
                 width: double.infinity, padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: Colors.green.withOpacity(0.04),
+                decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.04),
                     borderRadius: BorderRadius.circular(8)),
                 child: Row(children: [
                   Icon(Icons.comment, size: 14, color: Colors.green[700]),
@@ -483,7 +483,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
-            colors: [primary.withOpacity(0.05), primary.withOpacity(0.12)],
+            colors: [primary.withValues(alpha: 0.05), primary.withValues(alpha: 0.12)],
             begin: Alignment.topLeft, end: Alignment.bottomRight,
           ),
         ),
@@ -572,9 +572,9 @@ class _SubmissionTabState extends State<_SubmissionTab> {
               child: Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.08),
+                  color: Colors.orange.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange.withOpacity(0.2)),
+                  border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
                 ),
                 child: Row(children: [
                   Icon(Icons.warning_amber, size: 16, color: Colors.orange[700]),
@@ -666,7 +666,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: primary.withOpacity(0.1),
+                        color: primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -679,7 +679,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.1),
+                          color: Colors.red.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text('${unsubmitted.length}人未交',
@@ -719,8 +719,8 @@ class _SubmissionTabState extends State<_SubmissionTab> {
               avatar: Icon(Icons.person_outline, size: 14,
                   color: Colors.red[300]),
               label: Text(name, style: const TextStyle(fontSize: 12)),
-              backgroundColor: Colors.red.withOpacity(0.05),
-              side: BorderSide(color: Colors.red.withOpacity(0.2)),
+              backgroundColor: Colors.red.withValues(alpha: 0.05),
+              side: BorderSide(color: Colors.red.withValues(alpha: 0.2)),
               padding: EdgeInsets.zero,
               visualDensity: VisualDensity.compact,
             );
@@ -748,7 +748,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
         child: ListTile(
           leading: CircleAvatar(
             radius: 18,
-            backgroundColor: statusColor.withOpacity(0.1),
+            backgroundColor: statusColor.withValues(alpha: 0.1),
             child: Text(userName.isNotEmpty ? userName.substring(0, 1) : '?',
                 style:
                     TextStyle(fontWeight: FontWeight.bold, color: statusColor)),
@@ -767,7 +767,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: _scoreColor(score, maxScore).withOpacity(0.1),
+                      color: _scoreColor(score, maxScore).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text('$score分',
@@ -781,7 +781,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
+                      color: Colors.orange.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Text('待批改',
@@ -875,10 +875,10 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.05),
+                  color: Colors.green.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
                   border:
-                      Border.all(color: Colors.green.withOpacity(0.2)),
+                      Border.all(color: Colors.green.withValues(alpha: 0.2)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

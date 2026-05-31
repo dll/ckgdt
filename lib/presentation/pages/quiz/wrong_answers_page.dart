@@ -237,11 +237,11 @@ class _WrongAnswersPageState extends State<WrongAnswersPage> {
                                       padding: const EdgeInsets.all(12),
                                       decoration: BoxDecoration(
                                         color: primary
-                                            .withOpacity(0.06),
+                                            .withValues(alpha: 0.06),
                                         borderRadius: BorderRadius.circular(10),
                                         border: Border.all(
                                           color: primary
-                                              .withOpacity(0.15),
+                                              .withValues(alpha: 0.15),
                                         ),
                                       ),
                                       child: Column(

@@ -187,7 +187,7 @@ class _RepoListTabState extends State<_RepoListTab>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
+                  color: color.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -290,7 +290,7 @@ class _RepoListTabState extends State<_RepoListTab>
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: color.withOpacity(0.7)),
+        Icon(icon, size: 14, color: color.withValues(alpha: 0.7)),
         const SizedBox(width: 3),
         Text(text, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
       ],

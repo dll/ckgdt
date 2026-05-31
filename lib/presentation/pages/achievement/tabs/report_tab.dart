@@ -1021,7 +1021,7 @@ class _ReportTabState extends State<ReportTab> {
               child: Center(
                 child: Column(
                   children: [
-                    Icon(Icons.bar_chart, size: 80, color: Colors.grey.withOpacity(0.3)),
+                    Icon(Icons.bar_chart, size: 80, color: Colors.grey.withValues(alpha: 0.3)),
                     const SizedBox(height: 16),
                     const Text(
                       '选择批次后点击"计算达成度"查看结果',
@@ -1040,7 +1040,7 @@ class _ReportTabState extends State<ReportTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        border: Border.all(color: primary.withOpacity(0.3)),
+        border: Border.all(color: primary.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: DropdownButtonHideUnderline(
@@ -1137,7 +1137,7 @@ class _ReportTabState extends State<ReportTab> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: primary.withOpacity(0.1),
+                    color: primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -1166,7 +1166,7 @@ class _ReportTabState extends State<ReportTab> {
             Container(
               margin: const EdgeInsets.symmetric(vertical: 8),
               height: 1,
-              color: Colors.grey.withOpacity(0.2),
+              color: Colors.grey.withValues(alpha: 0.2),
             ),
 
             // 加权总达成度
@@ -1187,13 +1187,13 @@ class _ReportTabState extends State<ReportTab> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      achievementLevelColor(_weightedAchievement).withOpacity(0.15),
-                      achievementLevelColor(_weightedAchievement).withOpacity(0.05),
+                      achievementLevelColor(_weightedAchievement).withValues(alpha: 0.15),
+                      achievementLevelColor(_weightedAchievement).withValues(alpha: 0.05),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: achievementLevelColor(_weightedAchievement).withOpacity(0.3),
+                    color: achievementLevelColor(_weightedAchievement).withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
@@ -1257,7 +1257,7 @@ class _ReportTabState extends State<ReportTab> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.1),
+                  color: Colors.grey.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
@@ -1275,7 +1275,7 @@ class _ReportTabState extends State<ReportTab> {
                       Container(
                         height: isBold ? 24 : 20,
                         decoration: BoxDecoration(
-                          color: Colors.grey.withOpacity(0.12),
+                          color: Colors.grey.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(isBold ? 6 : 4),
                         ),
                       ),
@@ -1285,8 +1285,8 @@ class _ReportTabState extends State<ReportTab> {
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              color.withOpacity(0.8),
-                              color.withOpacity(0.5),
+                              color.withValues(alpha: 0.8),
+                              color.withValues(alpha: 0.5),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(isBold ? 6 : 4),
@@ -1343,7 +1343,7 @@ class _ReportTabState extends State<ReportTab> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: primary.withOpacity(0.08),
+                color: primary.withValues(alpha: 0.08),
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
               ),
               child: const Row(
@@ -1364,10 +1364,10 @@ class _ReportTabState extends State<ReportTab> {
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
-                  color: i.isEven ? Colors.transparent : Colors.grey.withOpacity(0.04),
+                  color: i.isEven ? Colors.transparent : Colors.grey.withValues(alpha: 0.04),
                   border: i == 3
                       ? null
-                      : Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.1))),
+                      : Border(bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.1))),
                 ),
                 child: Row(
                   children: [
@@ -1429,7 +1429,7 @@ class _ReportTabState extends State<ReportTab> {
             Container(
               height: 8,
               decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.04),
+                color: Colors.grey.withValues(alpha: 0.04),
                 borderRadius: const BorderRadius.vertical(bottom: Radius.circular(8)),
               ),
             ),
@@ -1450,10 +1450,10 @@ class _ReportTabState extends State<ReportTab> {
                     margin: EdgeInsets.only(right: i < 3 ? 8 : 0),
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: kObjectiveColors[i].withOpacity(0.06),
+                      color: kObjectiveColors[i].withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: kObjectiveColors[i].withOpacity(0.15),
+                        color: kObjectiveColors[i].withValues(alpha: 0.15),
                       ),
                     ),
                     child: Column(
@@ -1476,7 +1476,7 @@ class _ReportTabState extends State<ReportTab> {
                               CircularProgressIndicator(
                                 value: achievement.clamp(0.0, 1.0),
                                 strokeWidth: 4,
-                                backgroundColor: Colors.grey.withOpacity(0.15),
+                                backgroundColor: Colors.grey.withValues(alpha: 0.15),
                                 color: kObjectiveColors[i],
                               ),
                               Text(
@@ -1494,7 +1494,7 @@ class _ReportTabState extends State<ReportTab> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                           decoration: BoxDecoration(
-                            color: achievementLevelColor(achievement).withOpacity(0.15),
+                            color: achievementLevelColor(achievement).withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -1597,7 +1597,7 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.grey.withOpacity(0.08),
+                          color: Colors.grey.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: SelectableText(

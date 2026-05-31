@@ -347,7 +347,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.edit_note, size: 64, color: Colors.grey.withOpacity(0.5)),
+                          Icon(Icons.edit_note, size: 64, color: Colors.grey.withValues(alpha: 0.5)),
                           const SizedBox(height: 12),
                           const Text('暂无成绩数据', style: TextStyle(color: Colors.grey)),
                           const SizedBox(height: 8),
@@ -375,7 +375,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        border: Border.all(color: primary.withOpacity(0.3)),
+        border: Border.all(color: primary.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: DropdownButtonHideUnderline(
@@ -407,7 +407,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
     return ActionChip(
       avatar: Icon(icon, size: 16, color: color),
       label: Text(label, style: TextStyle(fontSize: 12, color: color)),
-      side: BorderSide(color: color.withOpacity(0.4)),
+      side: BorderSide(color: color.withValues(alpha: 0.4)),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       onPressed: onTap,
     );
@@ -430,7 +430,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
               children: [
                 CircleAvatar(
                   radius: 18,
-                  backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                   child: Text(
                     (score['student_name'] ?? '?').toString().characters.first,
                     style: TextStyle(
@@ -460,8 +460,8 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: totalScore >= 60
-                        ? Colors.green.withOpacity(0.1)
-                        : Colors.red.withOpacity(0.1),
+                        ? Colors.green.withValues(alpha: 0.1)
+                        : Colors.red.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -495,7 +495,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
                     margin: EdgeInsets.only(right: i < 3 ? 6 : 0),
                     padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
                     decoration: BoxDecoration(
-                      color: kObjectiveColors[i].withOpacity(0.06),
+                      color: kObjectiveColors[i].withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Column(
