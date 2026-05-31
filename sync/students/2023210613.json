@@ -3,8 +3,8 @@
   "user_id": "2023210613",
   "user_name": "倪俊杰",
   "role": "student",
-  "synced_at": "2026-05-31T22:34:35.942364",
-  "last_active": "2026-05-31T22:34:35.933639",
+  "synced_at": "2026-05-31T22:44:38.552857",
+  "last_active": "2026-05-31T22:44:38.549629",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
@@ -102,7 +102,22 @@
       "teacher_confirmed": 0
     }
   ],
-  "student_reports": [],
+  "student_reports": [
+    {
+      "template_id": null,
+      "task_id": null,
+      "user_id": "2023210613",
+      "title": "第一周报告",
+      "content_json": "2023210613倪俊杰第一周报告.pdf",
+      "file_path": "C:\\Users\\21510\\Downloads\\2023210613倪俊杰第一周报告.pdf",
+      "status": "已提交",
+      "submit_time": "2026-05-31T22:38:22.136672",
+      "score": null,
+      "feedback": null,
+      "created_at": "2026-05-31T22:38:22.136672",
+      "updated_at": null
+    }
+  ],
   "student_works": [
     {
       "title": "在线学习辅助平台开发与整合",
