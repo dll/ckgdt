@@ -3,8 +3,8 @@
   "user_id": "2023210617",
   "user_name": "钱皓",
   "role": "student",
-  "synced_at": "2026-05-31T22:58:22.004563",
-  "last_active": "2026-05-31T22:58:21.999014",
+  "synced_at": "2026-05-31T23:08:21.886144",
+  "last_active": "2026-05-31T23:08:21.882636",
   "quiz_results": [
     {
       "user_id": "2023210617",
@@ -213,7 +213,36 @@
       "teacher_confirmed": 0
     }
   ],
-  "student_reports": [],
+  "student_reports": [
+    {
+      "template_id": null,
+      "task_id": null,
+      "user_id": "2023210617",
+      "title": "第一周报告",
+      "content_json": "2023210617钱皓第一周报告.pdf",
+      "file_path": "C:\\Users\\钱皓\\Desktop\\2023210617钱皓第一周报告.pdf",
+      "status": "已提交",
+      "submit_time": "2026-05-31T23:02:41.995261",
+      "score": null,
+      "feedback": null,
+      "created_at": "2026-05-31T23:02:41.995261",
+      "updated_at": null
+    },
+    {
+      "template_id": null,
+      "task_id": null,
+      "user_id": "2023210617",
+      "title": "第四周报告",
+      "content_json": "2023210617钱皓第四周报告.pdf",
+      "file_path": "C:\\Users\\钱皓\\Desktop\\2023210617钱皓第四周报告.pdf",
+      "status": "已提交",
+      "submit_time": "2026-05-31T23:07:14.157901",
+      "score": null,
+      "feedback": null,
+      "created_at": "2026-05-31T23:07:14.157901",
+      "updated_at": null
+    }
+  ],
   "student_works": [
     {
       "title": "在线学习辅助平台开发与整合",
