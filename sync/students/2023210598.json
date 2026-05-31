@@ -3,8 +3,8 @@
   "user_id": "2023210598",
   "user_name": "姬鹏炜",
   "role": "student",
-  "synced_at": "2026-05-31T23:31:12.198218",
-  "last_active": "2026-05-31T23:31:12.198218",
+  "synced_at": "2026-05-31T23:31:26.689380",
+  "last_active": "2026-05-31T23:31:26.689380",
   "quiz_results": [
     {
       "user_id": "2023210598",
@@ -23,6 +23,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 2,
+      "user_id": "2023210598",
+      "content": "PDF实验报告：2023210598姬鹏炜实验二 原生应用开发.pdf\n\n--- 报告正文（自动提取）---\n移动应用开发实验报告\n封面信息\n项目\n内容\n实验名称\n原生应用开发\n实验编号\nd20301035102\n、\nd20301009202\n学号\n2023210598\n姓名\n姬鹏炜\n班级\n软件\n232\n日期\n2026\n-\n04\n-\n23\n组别\n组一\n项目名称\n智能健康运动记录平台开发与整合\n技术栈\n安卓原生开发（\nKotlin\n）\n实验目的\n1.\n掌握\nAndroid Kotlin\n登录页面开发\n2.\n理解\niOS SwiftUI\n登录实现\n3.\n学会\nActivity\n间数据传递\n4.\n完成平台差异对比分析\n实验环境\n平台\n开发工具\n语言\nSDK\n版本\nAndroid\nAndroid Studio\nKotlin\nAPI 24+\niOS\nXcode\nSwift\niOS 16+\n实验步骤\n1.\n需求分析\n1.1\n功能需求\n●\n用户名输入（学号）\n●\n密码输入\n●\n登录按钮\n●\n输入验证（不能为空、长度限制）\n1.2\n界面需求\n●\nMaterial Design\n风格（\nAndroid\n）\n●\nSwiftUI\n风格（\niOS\n）\n●\n输入框占位提示\n●\n密码隐藏显示\n1.3\n跳转需求\n●\n登录成功\n→\n个人中心\n●\n传递用户名数据\n2.\n架构设计\n2.1\n架构图\n图\n1.\n架构图\n用户\n：操作\nAPP\n的人\n健康运动助手\n：实验开发的原生应用\n核心流程：输入\n→\n验证\n→\n登录\n→\n跳转\n→\n传值\n2.2\n顺序图\n图\n2.\n顺序图\n清晰展示登录完整时序：\n1.\n用户输入账号密码\n2.\n点击登录触发验证\n3.\n验证工具检查规则\n4.\n通过则跳转并传递用户名\n5.\n个人中心展示数据\n2.3\n类图（\nAndroid\n核心）\n图\n3\n.\n顺序图\n1.\nLoginActivity\n○\n控件：用户名输入框、密码输入框、登录按钮\n○\n方法：初始化视图、输入校验、页面跳转\n2.\nPersonalCenterActivity\n○\n展示欢迎语、健康评分、运动数据\n○\n接收并显示传递的用户名\n3.\nInputValidator\n○\n工具类，统一处理非空、长度校验\n○\n复用性强，符合实验验证需求\n3. Android\n登录页面开发\n3.1\n项目创建\n●\n打开\nAndroid Studio\n图\n4\n.\n打开\nAndroid Studio\n●\n创建\nEmpty Activity\n项目\n●\n选择\nKotlin\n语言\n●\n最低\nSDK\n：\nAPI 24\n3.2 AI\n辅助编码\n●\n使用\nTRAE\n描述需求：\nKotlin\n登录页面，\nEditText\n输入验证，\nActivity\n跳转\n●\nAI\n生成代码片段\n●\n手动完善业务逻辑\n图\n5\n.\nAI\n编码辅助\n图\n6\n.\nAI\n编码辅助\n2\n3.3\n创建个人中心页面\n●\n新建\nActivity\n：\nHomeActivity\n●\n布局显示欢迎信息\n图\n7\n.\nAI\n编码辅助\n3\n实验结果\n验证结果\n平台\n登录功能\n输入验证\n页面跳转\n数据传递\nAndroid\n[x]\n成功\n[x]\n成功\n[x]\n成功\n[x]\n成功\n测试用例\n输入测试\n测试场景\n输入\n预期结果\n实际结果\n用户名为空\n用户名：空\n/\n密码：\n123456\n用户名输入框提示\n\"\n学号\n不能为空\n\"\n[x]\n通过\n图\n8\n.\n登陆失败测试\n1\n密码长度测试\n测试场景\n输入\n预期结果\n实际结果\n密码为空\n用户名：\n2023210603 /\n密\n码：空\n弹出\nToast\n提示\n\"\n密码不\n能为空\n\"\n[x]\n通过\n图\n9\n.\n登陆失败测试\n2\n正确凭证测试\n测试场景\n输入\n预期结果\n实际结果\n登录成功\n用户名：\n2023210603 /\n密\n码：\n123456\n跳转到个人信息中\n心\n[x]\n通过\n图\n10\n.\n登陆\n后界面显示\n图\n11\n.\n功能界面显示\n平台差异对比\n对比项\nAndroid\niOS\n开发语言\nKotlin\nSwift\nUI\n框架\nXML/Compose\nSwiftUI\n页面跳转\nIntent\nNavigationLink\n数据传递\nIntent.putExtra\n@Binding\n布局方式\n线性布局\n/\n约束布局\nStack/Grid\n生命周期\nActivity\nViewController\n问题与解决\n问题描述\n解决方案\n解决结果\n实验总结\n实验收获\n●\n掌握\nAndroid Kotlin\n登录页面开发，实现\nActivity\n间\nIntent\n数据传递（用户名）及页\n面跳转\n●\n了解\niOS SwiftUI\n登录实现逻辑，完成\nAndroid/iOS\n平台核心差异对比\n●\n解决\nAndroid\n开发中布局、依赖、数据传递等实操问题，提升环境调试能力\n技术要点\n●\n使用\nKotlin\n实现\nEditText\n输入验证\n●\n通过\nIntent\n实现\nActivity\n间数据传递\n●\n使用\nInputValidator\n工具类统一处理输入校验逻辑\n●\n遵循\nMaterial Design\n设计规范\n课后思考\n原生开发相比跨平台的优势和劣势\n优势\n：\n●\n原生开发（\nAndroid/iOS\n）：性能优、功能完整、体验贴合平台、低版本适配稳\n●\n跨平台开发（\nFlutter/React Native\n）：开发效率高、成本低、一套代码多平台、迭代\n同步\n劣势\n：\n●\n原生开发：成本高、周期长、多平台需重复开发\n●\n跨平台开发：性能有损耗，平台独有功能适配难、调试复杂\n如何选择原生开发\nvs\n跨平台开发\n●\n选原生\n：对性能\n/\n体验要求高（如游戏、金融\nAPP\n）、需用平台独有功能、团队有原\n生开发资源\n●\n选跨平台\n：轻量应用\n/\n初创项目、需快速多平台上线、预算\n/\n人力有限\n●\n折中方案\n：核心模块原生\n+\n非核心模块跨平台\nAI\n辅助代码生成对开发效率的影响\n正面\n：降低入门门槛，减少模板代码编写时间，快速排查语法错误，提升开发效率\n负面\n：易导致新手依赖、代码质量参差不齐，存在版权\n/\n安全风险\n建议\n：用\nAI\n生成基础代码后手动理解优化，核心逻辑仍需自主编写，做好代码校验\n考核指标\n考核项\n评分标准\n得分\n功能完整性\n登录功能完整，输入验证正确\n25\n分\n代码质量\n代码结构清晰，注释完整\n20\n分\n考核项\n评分标准\n得分\n页面跳转\nActivity/View\n跳转正常\n15\n分\n数据传递\n数据传递正确\n15\n分\n平台对比\n完成平台差异分析\n15\n分\n实验报告\n报告结构完整，内容详实\n10\n分\n教师评价\n项目\n评价\n实验完成情况\n技术掌握程度\n创新点\n综合评价\n成绩\n教师签名：\n_______________\n日期：\n___________________\n",
+      "file_paths": "D:\\GradeThree\\MobileApplicationDevelopment\\ExperimentFolder\\jpw\\实验PDF\\2023210598姬鹏炜实验二 原生应用开发.pdf",
+      "file_names": "2023210598姬鹏炜实验二 原生应用开发.pdf",
+      "submit_time": "2026-05-31T23:31:26.670978",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-04-24T15:32:31.837381",
+      "updated_at": "2026-05-31T23:31:26.670978",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 1,
       "user_id": "2023210598",
@@ -109,24 +127,6 @@
       "scored_at": null,
       "created_at": "2026-04-24T15:32:38.636251",
       "updated_at": "2026-04-24T15:32:38.636251",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 2,
-      "user_id": "2023210598",
-      "content": "PDF实验报告：2023210598姬鹏炜实验二 原生应用开发.pdf",
-      "file_paths": "D:\\GradeThree\\MobileApplicationDevelopment\\ExperimentFolder\\实验PDF\\2023210598姬鹏炜实验二 原生应用开发.pdf",
-      "file_names": "2023210598姬鹏炜实验二 原生应用开发.pdf",
-      "submit_time": "2026-04-24T15:32:31.837381",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-04-24T15:32:31.837381",
-      "updated_at": "2026-04-24T15:32:31.837381",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
