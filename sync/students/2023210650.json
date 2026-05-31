@@ -3,8 +3,8 @@
   "user_id": "2023210650",
   "user_name": "周俊峰",
   "role": "student",
-  "synced_at": "2026-05-31T23:09:21.557229",
-  "last_active": "2026-05-31T23:09:21.557229",
+  "synced_at": "2026-05-31T23:10:12.821279",
+  "last_active": "2026-05-31T23:10:12.821279",
   "quiz_results": [
     {
       "user_id": "2023210650",
@@ -23,6 +23,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 2,
+      "user_id": "2023210650",
+      "content": "PDF实验报告：2023210650周俊峰实验二 原生应用开发.pdf\n",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/cache/file_picker/1780208942981/2023210650周俊峰实验二 原生应用开发.pdf",
+      "file_names": "2023210650周俊峰实验二 原生应用开发.pdf",
+      "submit_time": "2026-05-31T23:10:12.808972",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-05-31T14:29:04.466305",
+      "updated_at": "2026-05-31T23:10:12.808972",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 1,
       "user_id": "2023210650",
@@ -109,24 +127,6 @@
       "scored_at": null,
       "created_at": "2026-05-31T14:29:10.955917",
       "updated_at": "2026-05-31T23:05:07.325883",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 2,
-      "user_id": "2023210650",
-      "content": "PDF实验报告：2023210650周俊峰实验二 原生应用开发.pdf\n",
-      "file_paths": "/data/user/0/cn.edu.chzu.madkg/cache/file_picker/1780208942981/2023210650周俊峰实验二 原生应用开发.pdf",
-      "file_names": "2023210650周俊峰实验二 原生应用开发.pdf",
-      "submit_time": "2026-05-31T23:04:21.950610",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-05-31T14:29:04.466305",
-      "updated_at": "2026-05-31T23:04:21.950610",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
