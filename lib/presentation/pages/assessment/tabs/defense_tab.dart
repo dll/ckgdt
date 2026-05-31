@@ -319,57 +319,76 @@ class _DefenseTabState extends State<_DefenseTab> {
                     ),
                   ),
                   padding: const EdgeInsets.all(16),
-                  child: Row(
+                  child: Column(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: NoirTokens.accent.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.videocam,
-                            color: NoirTokens.accent, size: 24),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: NoirTokens.accent.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.videocam,
+                                color: NoirTokens.accent, size: 24),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('答辩直播',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 15,
+                                        color: NoirTokens.paper)),
+                                const SizedBox(height: 2),
+                                Text('摄像头 + 演示，全员可见，支持录制',
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        color: NoirTokens.paper
+                                            .withValues(alpha: 0.5))),
+                              ],
+                            ),
+                          ),
+                          FilledButton.tonalIcon(
+                            onPressed: _startLiveBroadcast,
+                            icon: const Icon(Icons.play_arrow, size: 18),
+                            label: const Text('开始直播'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor:
+                                  NoirTokens.accent.withValues(alpha: 0.15),
+                              foregroundColor: NoirTokens.accent,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 10),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('答辩直播',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 15,
-                                    color: NoirTokens.paper)),
-                            const SizedBox(height: 2),
-                            Text('开启摄像头 + 屏幕演示，支持录制',
-                                style: TextStyle(
-                                    fontSize: 11,
-                                    color: NoirTokens.paper.withValues(alpha: 0.5))),
-                          ],
-                        ),
-                      ),
+                      // 教师专属：直播授权（明确标签按钮，整行可见）
                       if (!_isStudent) ...[
-                        IconButton(
-                          tooltip: '直播授权',
-                          onPressed: () => LiveAuthorizeSheet.show(context),
-                          icon: const Icon(Icons.cast_connected,
-                              color: NoirTokens.accent, size: 20),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: () => LiveAuthorizeSheet.show(context),
+                            icon: const Icon(Icons.cast_connected, size: 18),
+                            label: const Text('直播授权 · 设置哪些学生可开播'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: NoirTokens.accent,
+                              side: BorderSide(
+                                  color: NoirTokens.accent
+                                      .withValues(alpha: 0.5)),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
                         ),
-                        const SizedBox(width: 4),
                       ],
-                      FilledButton.tonalIcon(
-                        onPressed: _startLiveBroadcast,
-                        icon: const Icon(Icons.play_arrow, size: 18),
-                        label: const Text('开始直播'),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: NoirTokens.accent.withValues(alpha: 0.15),
-                          foregroundColor: NoirTokens.accent,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                        ),
-                      ),
                     ],
                   ),
                 ),
