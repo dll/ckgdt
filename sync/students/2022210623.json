@@ -3,8 +3,8 @@
   "user_id": "2022210623",
   "user_name": "张爽",
   "role": "student",
-  "synced_at": "2026-05-31T16:11:21.133440",
-  "last_active": "2026-05-31T16:11:21.118989",
+  "synced_at": "2026-05-31T16:12:38.197594",
+  "last_active": "2026-05-31T16:12:38.188625",
   "quiz_results": [
     {
       "user_id": "2022210623",
@@ -46,6 +46,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 2,
+      "user_id": "2022210623",
+      "content": "PDF实验报告：2022210623张爽实验二 原生应用开发.pdf",
+      "file_paths": "E:\\小卡\\31819\\2022210623张爽实验二 原生应用开发.pdf",
+      "file_names": "2022210623张爽实验二 原生应用开发.pdf",
+      "submit_time": "2026-05-31T16:12:38.184637",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-05-31T16:12:38.184637",
+      "updated_at": "2026-05-31T16:12:38.184637",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 1,
       "user_id": "2022210623",
