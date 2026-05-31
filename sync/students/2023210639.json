@@ -3,8 +3,8 @@
   "user_id": "2023210639",
   "user_name": "邢兆丰",
   "role": "student",
-  "synced_at": "2026-05-31T22:29:01.360885",
-  "last_active": "2026-05-31T22:29:01.360885",
+  "synced_at": "2026-05-31T22:37:51.043415",
+  "last_active": "2026-05-31T22:37:51.043415",
   "quiz_results": [
     {
       "user_id": "2023210639",
@@ -23,6 +23,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 1,
+      "user_id": "2023210639",
+      "content": "PDF实验报告：2023210639邢兆丰实验一 开发环境搭建.pdf\n\n--- 报告正文（自动提取）---\n移动应用开发实验报告\n封面信息\n项目\n内容\n实验名称\n开发环境搭建\n实验编号\nd20301035101\n、\nd20301009201\n学号\n2023210639\n姓名\n邢兆丰\n班级\n软件\n231\n日期\n2026-03-13\n组别\n第\n2\n组\n项目名称\n多端温控系统\n实验目的\n1.\n掌握\n6\n大主流移动开发工具的安装配置方法\n2.\n了解各平台的\nHelloWorld\n创建流程\n3.\n体验\nAI\n辅助代码生成工具的使用\n4.\n完成环境配置文档的编写\n实验环境\n序号\n开发工具\n版本要求\n验证项目\n1\nAndroid\nStudio\n2024.1+\nKotlin\nHelloWorld\n2\nFlutter\nSDK\n3.19+\nDart\nHelloWorld\n3\n微信开发者工具\n最新版\n微信小程序\nHelloWorld\n4\nDevEco\nStudio\n5.0+\nHarmonyOS\nHelloWorld\n5\nHBuilderX\n4.0+\nVue\nHelloWorld\n序号\n开发工具\n版本要求\n验证项目\n6\nVisual\nStudio\n2022\nC#\nHelloWorld\n实验步骤\n1.\nAndroid\nStudio\n环境搭建\n1.1\n下载与安装\n●\n访问官网：\nhttps://developer.android.com/studio\n●\n下载\nWindows\n版本\n●\n运行安装程序，勾选必要组件\n●\n完成安装\n1.2\n配置验证\n●\n启动\nAndroid\nStudio\n●\n创建\nEmpty\nActivity\n项目\n●\n使用\nAI\n辅助生成\nHelloWorld\n代码\n●\n运行项目验证\n2.\nFlutter\n环境搭建\n2.1\n下载\nFlutter\nSDK\n●\n访问：\nhttps://flutter.dev/docs/get-started/install\n●\n下载对应系统版本（\n3.41.4\n）\n●\n解压到指定目录（\nD:\\flutter\n）\n●\n添加到系统\nPATH\n环境变量\n2.2\n配置验证\n●\n运行\nflutter\ndoctor\n检查环境\n●\n创建\nFlutter\n项目：\nflutter\ncreate\ntemp_control_system\n●\n使用\nAI\n辅助生成\nDart\n代码\n●\n运行项目验证\n3.\n鸿蒙开发环境搭建\n3.1\n下载\nDevEco\nStudio\n●\n访问：\nhttps://developer.harmonyos.com/\n●\n下载\nDevEco\nStudio\n●\n完成安装\n3.2\n创建鸿蒙项目\n●\n启动\nDevEco\nStudio\n●\n创建\nEmpty\nAbility\n项目\n●\n使用\nAI\n辅助生成\nArkTS\n代码\n●\n运行项目验证\n4.\nUniapp\n开发环境搭建\n4.1\n安装\nHBuilderX\n●\n访问：\nhttps://www.dcloud.io/hbuilderx.html\n●\n下载\nHBuilderX\n●\n完成安装\n4.2\n创建\nUniapp\n项目\n●\n新建\nuni-app\n项目\n●\n使用\nAI\n辅助生成\nVue\n代码\n●\n运行项目验证\n5.\nMAUI\n开发环境搭建\n5.1\n安装\nVisual\nStudio\n●\n安装\nVisual\nStudio\n2022\n●\n勾选\n\".NET\nMAUI\"\nworkload\n5.2\n创建\nMAUI\n项目\n●\n新建\n.NET\nMAUI\n项目\n●\n使用\nAI\n辅助生成\nC#\n代码\n●\n运行项目验证\n6.\n微信小程序开发环境\n6.1\n安装微信开发者工具\n●\n访问：\nhttps://developers.weixin.qq.com/miniprogram/dev/devtools/download.html\n●\n下载并安装\n●\n扫码登录\n6.2\n创建小程序项目\n●\n新建小程序项目\n●\n使用\nAI\n辅助生成小程序代码\n●\n运行项目验证\n实验结果\n验证结果\n工具\n安装状态\n项目创建\n运行状态\n备注\nAndroid\nStudio\n[x]\n成功\n[x]\n成功\n[x]\n成功\n<br\n/>\nFlutter\n[x]\n成功\n[x]\n成功\n[x]\n成功\n版本\n3.41.4\nDevEco\nStudio\n[\n]\n成功\n[\n]\n成功\n[\n]\n成功\n<br\n/>\nHBuilderX\n[\n]\n成功\n[\n]\n成功\n[\n]\n成功\n<br\n/>\nVisual\nStudio\n[\n]\n成功\n[\n]\n成功\n[\n]\n成功\n<br\n/>\n微信开发者工具\n[x]\n成功\n[x]\n成功\n[x]\n成功\n<br\n/>\n截图记录\nAndroid\nStudio\n运行截图\n图\n1\nandroid\nstudio\nFlutter\n运行截图\n图\n2\nflutter\n鸿蒙运行截图\n图\n3\n鸿蒙\nUniapp\n运行截图\n图\n4\nuniapp\nMAUI\n运行截图\n图\n5\nmaui\n微信小程序运行截图\n图\n6\n微信小程序\n问题与解决\n问题描述\n解决方案\n解决结果\nGradle\n构建失败\n配置国内镜像源，清理\nGradl\ne\n缓存\n✅\n成功解决\n网络连接异常\n切换网络环境，使用代理\n✅\n成功解决\nFlutter\nSDK\n配置路径错误\n重新配置环境变量，重启\nIDE\n✅\n成功解决\n实验总结\n实验收获\n●\n掌握了\nFlutter\nSDK\n和\nAndroid\nStudio\n的安装与配置方法\n●\n熟悉了\nFlutter\n项目的创建与运行流程\n●\n实现了多端温控系统的开发与测试\n●\n体验了\nAI\n辅助代码生成工具的使用\n技术要点\n●\nFlutter\nSDK\n环境变量配置\n●\nAndroid\nStudio\n插件安装与配置\n●\nFlutter\n项目结构与目录组织\n●\n跨平台应用开发与部署\n考核指标\n考核项\n评分标准\n得分\n环境搭建完整性\n6\n个开发工具全部安装成功\n20\n分\n项目创建与运行\n6\n个\nHelloWorld\n项目成功运行\n30\n分\n截图记录\n提供所有工具运行截图\n20\n分\n考核项\n评分标准\n得分\n问题解决\n能独立解决遇到的问题\n15\n分\n实验报告质量\n报告结构完整，内容详实\n15\n分\n教师评价\n项目\n评价\n实验完成情况\n<br\n/>\n技术掌握程度\n<br\n/>\n创新点\n<br\n/>\n综合评价\n<br\n/>\n成绩\n<br\n/>\n教师签名：\n___________________\n日期：\n___________________\n",
+      "file_paths": "C:\\Users\\32236\\OneDrive\\Desktop\\作业报告\\2023210639邢兆丰实验一 开发环境搭建.pdf",
+      "file_names": "2023210639邢兆丰实验一 开发环境搭建.pdf",
+      "submit_time": "2026-05-31T22:37:51.016114",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-05-01T12:18:18.037702",
+      "updated_at": "2026-05-31T22:37:51.016114",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 6,
       "user_id": "2023210639",
@@ -109,24 +127,6 @@
       "scored_at": null,
       "created_at": "2026-05-03T11:19:20.702998",
       "updated_at": "2026-05-03T11:19:20.702998",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 1,
-      "user_id": "2023210639",
-      "content": "PDF实验报告：2023210639邢兆丰实验一 开发环境搭建.pdf",
-      "file_paths": "C:\\Users\\32236\\OneDrive\\文档/sync_files/2023210639/2023210639邢兆丰实验一 开发环境搭建.pdf",
-      "file_names": "2023210639邢兆丰实验一 开发环境搭建.pdf",
-      "submit_time": "2026-05-03T11:10:32.901191",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-05-01T12:18:18.037702",
-      "updated_at": "2026-05-03T11:10:32.901191",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
