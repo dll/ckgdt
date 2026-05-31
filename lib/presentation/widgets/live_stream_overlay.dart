@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/design/noir_tokens.dart';
 import '../widgets/live_stream_panel.dart';
 import '../../services/live_stream_service.dart';
+import '../../services/live_broadcast_service.dart';
 import 'dart:async';
 
 /// 管理答辩直播浮窗的显示、隐藏、状态切换
@@ -62,6 +63,8 @@ class LiveStreamOverlay {
     _locked = false;
     // 释放摄像头：否则关闭浮窗后 webcam 指示灯常亮
     LiveStreamService().shutdownCamera();
+    // 关闭浮窗即停止快照广播（写下播状态，观看端尽快移除）
+    LiveBroadcastService.instance.stopBroadcasting();
   }
 
   static void toggleMinimize() {
