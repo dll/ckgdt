@@ -1,9 +1,10 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../data/local/classroom_dao.dart';
 import '../../../data/local/class_dao.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/default_class_service.dart';
 import '../../../services/sync_service.dart';
 import '../../../services/voice_service.dart';
 import '../../../core/error_handler.dart';
@@ -62,20 +63,24 @@ class _ClassroomPageState extends State<ClassroomPage>
 
   Future<void> _init() async {
     await _loadClasses();
-    // 自动将所有学生同步到默认班级（解决只显示少数人的问题）
-    if (_selectedClassId != null) {
-      await _classDao.syncAllStudentsToClass(_selectedClassId!);
-    }
   }
 
   Future<void> _loadClasses() async {
     try {
       final classes = await _classDao.getActiveClasses();
+      // 默认班级走 DefaultClassService（确定性落到软件231），不再把所有
+      // 学生灌进同一个班级（旧 syncAllStudentsToClass 会合并软件231+232，
+      // 破坏班级隔离）。
+      final defaultId =
+          await DefaultClassService.instance.getDefaultClassId();
       if (mounted) {
         setState(() {
           _classes = classes;
           if (classes.isNotEmpty && _selectedClassId == null) {
-            _selectedClassId = classes.first['id'] as int;
+            final hasDefault =
+                defaultId != null && classes.any((c) => c['id'] == defaultId);
+            _selectedClassId =
+                hasDefault ? defaultId : classes.first['id'] as int;
           }
         });
       }
@@ -106,7 +111,7 @@ class _ClassroomPageState extends State<ClassroomPage>
         _buildHeader(context, primary),
         // ── TabBar ────────────────────────────────────────────────
         Container(
-          color: primary.withValues(alpha: 0.04),
+          color: primary.withOpacity(0.04),
           child: TabBar(
             controller: _tabController,
             labelColor: primary,
@@ -171,7 +176,7 @@ class _ClassroomPageState extends State<ClassroomPage>
 
     // 直接构建渐变，避免 ThemeExtension 可能的延迟
     final headerGradient = LinearGradient(
-      colors: [primary, primary.withValues(alpha: 0.7)],
+      colors: [primary, primary.withOpacity(0.7)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     );
@@ -192,7 +197,7 @@ class _ClassroomPageState extends State<ClassroomPage>
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: Colors.white.withOpacity(0.2),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.cast_for_education,
@@ -214,7 +219,7 @@ class _ClassroomPageState extends State<ClassroomPage>
                   '$displayName${className.isNotEmpty ? ' · $className' : ''}',
                   style: TextStyle(
                       fontSize: 13,
-                      color: Colors.white.withValues(alpha: 0.85)),
+                      color: Colors.white.withOpacity(0.85)),
                 ),
               ],
             ),

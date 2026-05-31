@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../core/constants/score_colors.dart';
@@ -502,7 +502,7 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
             padding:
                 const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: Colors.grey.withValues(alpha: 0.1),
+              color: Colors.grey.withOpacity(0.1),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text('$weight%',

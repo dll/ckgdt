@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../data/local/lab_task_dao.dart';
 import '../../../services/auth_service.dart';
 
@@ -147,7 +147,7 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: Colors.blue.withValues(alpha: 0.1),
+            color: Colors.blue.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: const Icon(Icons.assignment, color: Colors.blue, size: 22),
@@ -163,7 +163,7 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
               decoration: BoxDecoration(
-                color: diffColor.withValues(alpha: 0.1),
+                color: diffColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(difficulty,
@@ -178,7 +178,7 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(
-                  color: Colors.grey.withValues(alpha: 0.1),
+                  color: Colors.grey.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(status == 'closed' ? '已关闭' : status,
@@ -470,7 +470,7 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: Colors.green.withValues(alpha: 0.1),
+            color: Colors.green.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text('已批 $graded', style: const TextStyle(fontSize: 11, color: Colors.green)),
@@ -479,7 +479,7 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: Colors.orange.withValues(alpha: 0.1),
+            color: Colors.orange.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text('待批 $pending', style: const TextStyle(fontSize: 11, color: Colors.orange)),
@@ -497,7 +497,7 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: isGraded ? Colors.green.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
+          backgroundColor: isGraded ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
           child: Icon(
             isGraded ? Icons.check_circle : Icons.hourglass_bottom,
             color: isGraded ? Colors.green : Colors.orange,
@@ -518,7 +518,7 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
             ? Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.1),
+                  color: Colors.green.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text('$score分', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
@@ -728,7 +728,7 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: Colors.purple.withValues(alpha: 0.1),
+            color: Colors.purple.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: const Icon(Icons.article, color: Colors.purple, size: 22),
@@ -743,7 +743,7 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.1),
+                  color: Colors.blue.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: const Text('默认', style: TextStyle(fontSize: 10, color: Colors.blue)),

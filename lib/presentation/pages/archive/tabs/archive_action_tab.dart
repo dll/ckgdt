@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../../core/error_handler.dart';
 import '../../../../data/local/archive_dao.dart';
 import '../../../../data/models/archive_document_model.dart';
@@ -337,7 +337,7 @@ class _StatBadge extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
+            color: color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text('$count', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color)),

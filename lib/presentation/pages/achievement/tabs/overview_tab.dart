@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../../core/error_handler.dart';
 import '../../../../data/local/achievement_dao.dart';
 import '../../../../services/auth_service.dart';
@@ -234,7 +234,7 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
         Center(
           child: Column(
             children: [
-              Icon(Icons.analytics_outlined, size: 80, color: Colors.grey.withValues(alpha: 0.5)),
+              Icon(Icons.analytics_outlined, size: 80, color: Colors.grey.withOpacity(0.5)),
               const SizedBox(height: 16),
               const Text(
                 '暂无达成度批次',
@@ -304,7 +304,7 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: statusColor(status).withValues(alpha: 0.15),
+                          color: statusColor(status).withOpacity(0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -448,7 +448,7 @@ class _BatchDetailSheetState extends State<BatchDetailSheet> {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey.withValues(alpha: 0.3),
+              color: Colors.grey.withOpacity(0.3),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -556,7 +556,7 @@ class _BatchDetailSheetState extends State<BatchDetailSheet> {
               children: [
                 CircleAvatar(
                   radius: 16,
-                  backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                  backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                   child: Text(
                     (score['student_name'] ?? '?').toString().substring(0, 1),
                     style: TextStyle(
@@ -640,7 +640,7 @@ class _BatchDetailSheetState extends State<BatchDetailSheet> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: achievementLevelColor(weighted).withValues(alpha: 0.15),
+                color: achievementLevelColor(weighted).withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -671,7 +671,7 @@ class _BatchDetailSheetState extends State<BatchDetailSheet> {
                   Container(
                     height: 20,
                     decoration: BoxDecoration(
-                      color: Colors.grey.withValues(alpha: 0.15),
+                      color: Colors.grey.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -680,7 +680,7 @@ class _BatchDetailSheetState extends State<BatchDetailSheet> {
                     child: Container(
                       height: 20,
                       decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.7),
+                        color: color.withOpacity(0.7),
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),

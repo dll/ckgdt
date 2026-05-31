@@ -179,7 +179,9 @@ class GradingAgent extends BaseAgent {
                 ''', [id]);
                 if (list.isEmpty) return '未找到提交记录 (ID: $id)';
                 final sub = list.first;
-                return '提交详情：\n- 学生：${sub['student_name'] ?? sub['user_id']}\n- 实验任务：${sub['task_title'] ?? '-'}\n- 状态：${sub['status'] ?? '-'}\n- 提交时间：${sub['submit_time'] ?? '-'}\n- 当前分数：${sub['score'] ?? '未批阅'}\n- 当前评语：${sub['feedback'] ?? '-'}';
+                final content = sub['content'] as String? ?? '';
+                final contentPreview = content.length > 1000 ? '${content.substring(0, 1000)}…(后略)' : (content.isEmpty ? '(空)' : content);
+                return '提交详情：\n- 学生：${sub['student_name'] ?? sub['user_id']}\n- 实验任务：${sub['task_title'] ?? '-'}\n- 状态：${sub['status'] ?? '-'}\n- 提交时间：${sub['submit_time'] ?? '-'}\n- 当前分数：${sub['score'] ?? '未批阅'}\n- 当前评语：${sub['feedback'] ?? '-'}\n- 提交内容：$contentPreview';
               } catch (e) {
                 return '查询提交详情失败：$e';
               }
@@ -216,7 +218,11 @@ class GradingAgent extends BaseAgent {
                   ORDER BY s.submit_time DESC
                 ''', [taskId]);
                 if (list.isEmpty) return '该实验全部已批阅';
-                return list.map((s) => '- 学生：${s['student_name'] ?? s['user_id']} (提交ID: ${s['id']})，提交时间：${s['submit_time'] ?? '-'}').join('\n');
+                return list.map((s) {
+                  final c = s['content'] as String? ?? '';
+                  final preview = c.length > 200 ? '${c.substring(0, 200)}…' : c;
+                  return '- 学生：${s['student_name'] ?? s['user_id']} (提交ID: ${s['id']})，提交时间：${s['submit_time'] ?? '-'}\n  内容预览：$preview';
+                }).join('\n');
               } catch (e) {
                 return '查询待批阅列表失败：$e';
               }
@@ -231,6 +237,9 @@ class GradingAgent extends BaseAgent {
               try {
                 final id = params['submissionId'] as int;
                 final score = (params['score'] as num).toInt();
+                if (score < 0 || score > 100) {
+                  return '评分失败：分数 $score 超出范围（0-100）';
+                }
                 final feedback = params['feedback'] as String? ?? '';
                 await dao.gradeSubmission(id, score: score, feedback: feedback);
                 return '评分成功：提交ID $id，分数 $score，评语 "$feedback"';
@@ -335,6 +344,12 @@ class GradingAgent extends BaseAgent {
                 final integration = (params['integration'] as num).toInt();
                 final quality = (params['quality'] as num).toInt();
                 final documentation = (params['documentation'] as num).toInt();
+                // 范围校验
+                if (functionality < 0 || functionality > 25) return '功能完整性（0-25）超出范围：$functionality';
+                if (techDepth < 0 || techDepth > 20) return '技术实现深度（0-20）超出范围：$techDepth';
+                if (integration < 0 || integration > 25) return '跨框架整合（0-25）超出范围：$integration';
+                if (quality < 0 || quality > 15) return '性能与质量（0-15）超出范围：$quality';
+                if (documentation < 0 || documentation > 15) return '文档与协作（0-15）超出范围：$documentation';
                 final scorerId = params['scorerId'] as String?;
                 final comment = params['comment'] as String? ?? '';
                 final total = functionality + techDepth + integration + quality + documentation;
@@ -392,7 +407,9 @@ class GradingAgent extends BaseAgent {
                 final id = params['workId'] as int;
                 final work = await dao.getWork(id);
                 if (work == null) return '未找到作品 (ID: $id)';
-                return '作品详情：\n- 标题：${work['title'] ?? '-'}\n- 学生：${work['student_name'] ?? work['user_id'] ?? '-'}\n- 技术栈：${work['tech_stack'] ?? '-'}\n- 状态：${work['status'] ?? '-'}\n- 描述：${(work['description'] as String? ?? '').length > 200 ? '${(work['description'] as String).substring(0, 200)}…' : (work['description'] ?? '-')}\n- 教师评分：${work['score'] ?? '未评分'}\n- 互评均分：${work['peer_avg'] ?? '-'}（${work['peer_count'] ?? 0}人）\n- 观看：${work['view_count'] ?? 0}，点赞：${work['like_count'] ?? 0}，评论：${work['comment_count'] ?? 0}';
+                final desc = work['description'] as String? ?? '';
+                final descDisplay = desc.length > 2000 ? '${desc.substring(0, 2000)}…(后略)' : (desc.isEmpty ? '-' : desc);
+                return '作品详情：\n- 标题：${work['title'] ?? '-'}\n- 学生：${work['student_name'] ?? work['user_id'] ?? '-'}\n- 技术栈：${work['tech_stack'] ?? '-'}\n- 状态：${work['status'] ?? '-'}\n- 描述：$descDisplay\n- 教师评分：${work['score'] ?? '未评分'}\n- 互评均分：${work['peer_avg'] ?? '-'}（${work['peer_count'] ?? 0}人）\n- 观看：${work['view_count'] ?? 0}，点赞：${work['like_count'] ?? 0}，评论：${work['comment_count'] ?? 0}';
               } catch (e) {
                 return '查询作品详情失败：$e';
               }
@@ -457,6 +474,12 @@ class GradingAgent extends BaseAgent {
                 final integration = (params['integration'] as num).toInt();
                 final quality = (params['quality'] as num).toInt();
                 final documentation = (params['documentation'] as num).toInt();
+                // 范围校验
+                if (functionality < 0 || functionality > 25) return '功能完整性（0-25）超出范围：$functionality';
+                if (techDepth < 0 || techDepth > 20) return '技术实现深度（0-20）超出范围：$techDepth';
+                if (integration < 0 || integration > 20) return '跨框架整合（0-20）超出范围：$integration';
+                if (quality < 0 || quality > 20) return '性能与质量（0-20）超出范围：$quality';
+                if (documentation < 0 || documentation > 15) return '文档与协作（0-15）超出范围：$documentation';
                 final comment = params['comment'] as String? ?? '';
                 final total = functionality + techDepth + integration + quality + documentation;
 
@@ -565,7 +588,11 @@ class GradingAgent extends BaseAgent {
     prompt.writeln('1. 若提交内容与任务要求无关或字数少于50字 → 分数必须低于60');
     prompt.writeln('2. 若内容疑似 AI 生成（上下文过于统一、无个性化痕迹、格式过于标准）→ 在 JSON 中设置 "ai_flag": true 并扣 20 分');
     prompt.writeln('3. 输出必须引用任务要求的具体条目作为评分依据');
-    prompt.writeln('4. 分数只允许为以下值之一：{0, 60, 70, 80, 90, 100}');
+    prompt.writeln('4. 分数允许任意整数（0-100），要求精确到个位评分，勿取整到离散值');
+    prompt.writeln('5. 若总分低于70分，必须满足：');
+    prompt.writeln('   a) 在 "improvements" 中逐条列出具体不足（至少3条）');
+    prompt.writeln('   b) 每条不足必须附带可操作的修复步骤（具体到：修改哪个代码文件、添加什么逻辑、调用什么API）');
+    prompt.writeln('   c) "feedback" 字段必须包含至少200字的详细批改与修复指引');
 
     final messages = [
       {'role': 'user', 'content': prompt.toString()},
@@ -668,6 +695,16 @@ class GradingAgent extends BaseAgent {
     if (groupName != null) prompt.writeln('## 小组：$groupName');
     prompt.writeln('## 报告内容：');
     prompt.writeln(content);
+    prompt.writeln();
+    prompt.writeln('## 硬规则（必须严格遵守）');
+    prompt.writeln('1. 若报告内容与考核要求无关或字数少于80字 → 总分必须低于60');
+    prompt.writeln('2. 若内容疑似 AI 生成（上下文过于统一、无个性化痕迹、格式过于标准）→ 在 JSON 中设置 "ai_flag": true 并扣 20 分');
+    prompt.writeln('3. 输出必须引用报告中的具体内容作为评分依据，不可空泛');
+    prompt.writeln('4. 分数允许任意整数（0-100），要求精确到个位评分');
+    prompt.writeln('5. 若总分低于70分，必须满足：');
+    prompt.writeln('   a) 在 "improvements" 中逐条列出具体不足（至少3条）');
+    prompt.writeln('   b) 每条不足必须附带可操作的修复步骤（具体到：修改哪个文件、添加什么逻辑、参考什么接口）');
+    prompt.writeln('   c) "feedback" 字段必须包含至少200字的详细批改与修复指引');
 
     final messages = [
       {'role': 'user', 'content': prompt.toString()},
@@ -724,7 +761,8 @@ class GradingAgent extends BaseAgent {
       if (clean.toUpperCase().startsWith('PASS') || clean.startsWith('通过')) return null;
       final reason = clean.length > 100 ? '${clean.substring(0, 100)}…' : clean;
       return reason;
-    } catch (_) {
+    } catch (e, st) {
+      stderr.writeln('[GradingAgent] checkReportTechStackAlignment 失败: $e\n$st');
       return null;
     }
   }
@@ -760,6 +798,10 @@ class GradingAgent extends BaseAgent {
     prompt.writeln('5. 若疑似 AI 生成（无个性化痕迹、格式过于标准）→ 设置 "ai_flag": true 并扣 20 分');
     prompt.writeln('6. 必须引用评分维度（功能/技术/集成/质量/文档）作为评分依据');
     prompt.writeln('7. 分数允许任意整数（0-100）');
+    prompt.writeln('8. 若总分低于70分，必须满足：');
+    prompt.writeln('   a) 在 "improvements" 中逐条列出具体不足（至少3条）');
+    prompt.writeln('   b) 每条不足必须附带可操作的修复步骤（具体到：修改哪个文件、添加什么布局/逻辑、优化什么性能点）');
+    prompt.writeln('   c) "feedback" 字段必须包含至少200字的详细批改与修复指引');
 
     final messages = [
       {'role': 'user', 'content': prompt.toString()},
@@ -778,6 +820,66 @@ class GradingAgent extends BaseAgent {
       model: result.model,
       userId: AuthService().currentUser?.userId,
     ));
+    return result.content;
+  }
+
+  /// 综合批阅降级路径：保留考核材料 + 视频信息 + 硬规则的 text-only 调用。
+  ///
+  /// 当 vision API 不可用时调用，不丢弃已加载的 [materialMd] 上下文，
+  /// 并明确告知 AI 视频帧提取失败的事实（防幻觉）。
+  Future<String> _gradeWorkWithContext({
+    required String title,
+    String? description,
+    String? techStack,
+    String? studentName,
+    String? groupName,
+    String? materialMd,
+    bool hasFrames = false,
+    int frameCount = 0,
+  }) async {
+    final buf = StringBuffer();
+    buf.writeln('请按以下材料综合批阅学生作品（text-only 模式）：');
+    buf.writeln();
+    if (materialMd != null) {
+      buf.writeln('## 考核标准（节选）');
+      buf.writeln(materialMd);
+      buf.writeln();
+    }
+    buf.writeln('## 学生作品信息');
+    buf.writeln('- 名称：$title');
+    if (studentName != null) buf.writeln('- 学生：$studentName');
+    if (groupName != null) buf.writeln('- 小组：$groupName');
+    if (techStack != null) buf.writeln('- 技术栈：$techStack');
+    if (description != null && description.isNotEmpty) {
+      buf.writeln('- 描述：');
+      buf.writeln(description);
+    }
+    buf.writeln();
+    buf.writeln('## 视频画面');
+    if (hasFrames) {
+      buf.writeln('（原有 $frameCount 张视频关键帧，但因视觉服务暂时不可用，无法分析画面）');
+      buf.writeln('请结合文字材料评判，在反馈中注明"视频画面未成功分析"，不要虚构画面内容。');
+    } else {
+      buf.writeln('（无视频帧可用，请仅按文字材料评判，不要虚构画面内容）');
+    }
+    buf.writeln();
+    buf.writeln('## 硬规则（必须严格遵守）');
+    buf.writeln('1. 严格按 system prompt 的 5 维度 + JSON 输出格式，必须包含 relevance 字段');
+    buf.writeln('2. 先做"真实性校验"：对比作品名称/描述/技术栈是否一致？');
+    buf.writeln('3. 明显对不上 → total_score=0, relevance="unrelated"');
+    buf.writeln('4. 若描述少于 50 字 → 总分必须低于 60');
+    buf.writeln('5. 评语必须引用具体材料/描述作为依据，不可空泛');
+    buf.writeln('6. 分数允许任意整数（0-100）');
+    buf.writeln('7. 若总分低于70分，必须满足：');
+    buf.writeln('   a) improvements 至少3条具体不足');
+    buf.writeln('   b) 每条附带可操作的修复步骤');
+    buf.writeln('   c) feedback 至少200字详细批改与修复指引');
+
+    final result = await safeAiChatWithMeta(
+      [{'role': 'user', 'content': buf.toString()}],
+      aiService: _ai,
+      temperature: 0.3,
+    );
     return result.content;
   }
 
@@ -868,6 +970,10 @@ class GradingAgent extends BaseAgent {
     buf.writeln('5. 若画面与描述明显不符（如描述说有 AI 功能但画面只是空表单）→ 总分扣 15-25');
     buf.writeln('6. 评语必须引用具体内容（材料/描述/画面）作为依据，不可空泛');
     buf.writeln('7. 分数允许任意整数（0-100）');
+    buf.writeln('8. 若总分低于70分，必须满足：');
+    buf.writeln('   a) 在 "improvements" 中逐条列出具体不足（至少3条）');
+    buf.writeln('   b) 每条不足必须附带可操作的修复步骤（具体到：修改哪个文件、添加什么布局/逻辑、优化什么性能点）');
+    buf.writeln('   c) "feedback" 字段必须包含至少200字的详细批改与修复指引');
 
     // 4. 调用：有图走 vision，无图走 text
     final AiChatResult result;
@@ -888,17 +994,20 @@ class GradingAgent extends BaseAgent {
         );
       }
     } catch (e) {
-      // 视觉调用失败 → 降级到原版 text-only gradeWork
+      // 视觉调用失败 → 降级到 text-only，但保留考核材料与硬规则上下文
       stderr.writeln('[GradingAgent] vision 失败 fallback to text: $e');
-      final text = await gradeWork(
+      final fallbackResult = await _gradeWorkWithContext(
         title: title,
         description: description,
         techStack: techStack,
         studentName: studentName,
         groupName: groupName,
+        materialMd: materialMd,
+        hasFrames: frames.isNotEmpty,
+        frameCount: frames.length,
       );
       return (
-        content: text,
+        content: fallbackResult,
         usedVideo: false,
         frameCount: 0,
         assessmentMaterial: materialMd != null ? '已加载' : null,

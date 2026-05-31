@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../widgets/back_button_bar.dart';
 import '../../../data/local/class_qa_dao.dart';
 import '../../../data/models/class_qa_model.dart';
@@ -115,8 +115,8 @@ class _ClassQaPageState extends State<ClassQaPage> {
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: isAnswered
-            ? Colors.green.withValues(alpha: 0.15)
-            : theme.colorScheme.primary.withValues(alpha: 0.15),
+            ? Colors.green.withOpacity(0.15)
+            : theme.colorScheme.primary.withOpacity(0.15),
         foregroundColor: isAnswered ? Colors.green : theme.colorScheme.primary,
         child: Icon(isAnswered ? Icons.check : Icons.help_outline),
       ),

@@ -1,9 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../../core/design/noir_tokens.dart';
 import '../../core/error_handler.dart';
 import '../../data/models/user_model.dart';
 import '../../services/auth_service.dart';
+import '../../services/default_class_service.dart';
 import '../../services/live_broadcast_service.dart';
 
 /// 教师端「直播授权」面板 — 勾选哪些学生可以开播答辩直播。
@@ -44,7 +45,14 @@ class _LiveAuthorizeSheetState extends State<LiveAuthorizeSheet> {
 
   Future<void> _load() async {
     try {
-      final students = await _auth.getStudents();
+      // 只取默认班级（单个班级）的学生，避免混入已归档年级（计科22）
+      final raw =
+          await DefaultClassService.instance.getDefaultClassStudents();
+      var students = raw.cast<UserModel>();
+      // 默认班级未设置时回退到全体活跃学生（仍排除归档/幽灵）
+      if (students.isEmpty) {
+        students = await _auth.getStudents();
+      }
       final authorized =
           await LiveBroadcastService.instance.getAuthorizedIds();
       if (mounted) {
@@ -92,7 +100,7 @@ class _LiveAuthorizeSheetState extends State<LiveAuthorizeSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: NoirTokens.paper.withValues(alpha: 0.3),
+                color: NoirTokens.paper.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -112,7 +120,7 @@ class _LiveAuthorizeSheetState extends State<LiveAuthorizeSheet> {
                   ),
                   Text('${_authorized.length} 人',
                       style: TextStyle(
-                          color: NoirTokens.paper.withValues(alpha: 0.6),
+                          color: NoirTokens.paper.withOpacity(0.6),
                           fontSize: 12)),
                 ],
               ),
@@ -127,7 +135,7 @@ class _LiveAuthorizeSheetState extends State<LiveAuthorizeSheet> {
                           child: Text('暂无学生数据',
                               style: TextStyle(
                                   color: NoirTokens.paper
-                                      .withValues(alpha: 0.5))))
+                                      .withOpacity(0.5))))
                       : ListView.builder(
                           controller: scrollCtrl,
                           itemCount: _students.length,
@@ -143,7 +151,7 @@ class _LiveAuthorizeSheetState extends State<LiveAuthorizeSheet> {
                               subtitle: Text(s.userId,
                                   style: TextStyle(
                                       color: NoirTokens.paper
-                                          .withValues(alpha: 0.5),
+                                          .withOpacity(0.5),
                                       fontSize: 12)),
                               onChanged: (v) => setState(() {
                                 if (v) {

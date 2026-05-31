@@ -1,4 +1,4 @@
-part of '../classroom_page.dart';
+﻿part of '../classroom_page.dart';
 
 class _ClassroomToolsTab extends StatefulWidget {
   final ClassroomDao classroomDao;
@@ -336,7 +336,7 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                       child: ChoiceChip(
                         label: Text(_difficultyLabel(d), style: const TextStyle(fontSize: 12)),
                         selected: _selectedDifficulty == d,
-                        selectedColor: _difficultyColor(d).withValues(alpha: 0.2),
+                        selectedColor: _difficultyColor(d).withOpacity(0.2),
                         onSelected: _isRolling || _showResult ? null : (v) {
                           if (v) setState(() => _selectedDifficulty = d);
                         },
@@ -350,7 +350,7 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: _difficultyColor(_selectedDifficulty).withValues(alpha: 0.06),
+                    color: _difficultyColor(_selectedDifficulty).withOpacity(0.06),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -380,9 +380,9 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                   height: 100,
                   decoration: BoxDecoration(
                     color: _isRolling
-                        ? Colors.orange.withValues(alpha: 0.1)
+                        ? Colors.orange.withOpacity(0.1)
                         : _showResult
-                          ? _difficultyColor(_selectedDifficulty).withValues(alpha: 0.08)
+                          ? _difficultyColor(_selectedDifficulty).withOpacity(0.08)
                           : (isDark ? Colors.grey[850] : Colors.grey[50]),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
@@ -390,7 +390,7 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                           ? Colors.orange
                           : _showResult
                             ? _difficultyColor(_selectedDifficulty)
-                            : Colors.grey.withValues(alpha: 0.2),
+                            : Colors.grey.withOpacity(0.2),
                       width: _isRolling || _showResult ? 2 : 1,
                     ),
                   ),
@@ -544,9 +544,9 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Text('$label $count人',
         style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w500)),
@@ -572,7 +572,7 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
+                    color: color.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(icon, color: color, size: 20),
@@ -616,7 +616,7 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                 width: 24, height: 24,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.1),
+                  color: Colors.blue.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Text('${String.fromCharCode(65 + i)}',
@@ -688,7 +688,7 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                  border: Border.all(color: Colors.blue.withOpacity(0.3)),
                 ),
                 child: Row(
                   children: [
@@ -703,9 +703,9 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                             child: LinearProgressIndicator(
                               value: pct,
                               minHeight: 6,
-                              backgroundColor: Colors.grey.withValues(alpha: 0.1),
+                              backgroundColor: Colors.grey.withOpacity(0.1),
                               valueColor: AlwaysStoppedAnimation(
-                                Colors.blue.withValues(alpha: 0.7)),
+                                Colors.blue.withOpacity(0.7)),
                             ),
                           ),
                         ],
@@ -820,8 +820,8 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
           decoration: BoxDecoration(
             color: _timerRunning
                 ? (_remainingSeconds <= 30
-                    ? Colors.red.withValues(alpha: 0.1)
-                    : Colors.blue.withValues(alpha: 0.05))
+                    ? Colors.red.withOpacity(0.1)
+                    : Colors.blue.withOpacity(0.05))
                 : (isDark ? Colors.grey[850] : Colors.grey[50]),
             borderRadius: BorderRadius.circular(12),
           ),

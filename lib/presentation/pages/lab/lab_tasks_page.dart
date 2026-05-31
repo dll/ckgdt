@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -15,8 +15,10 @@ import '../../../services/gitee_service.dart';
 import '../../../services/course_resource_service.dart';
 import '../../../services/pdf_text_service.dart';
 import '../../../core/constants/app_theme.dart';
+import '../../../services/score_export_service.dart';
 import '../../widgets/agent_entry_button.dart';
 import '../../widgets/inner_tab_request_mixin.dart';
+import '../../widgets/score_preview_dialog.dart';
 import '../admin/repo_detail_page.dart';
 import 'lab_material_preview_page.dart';
 import '../learning/pdf_viewer_page.dart';
@@ -50,11 +52,14 @@ Map<String, dynamic>? tryParseGradingJson(String text) {
     if (jsonMatch == null) return null;
     final jsonStr = jsonMatch.group(0)!;
     final map = jsonDecode(jsonStr) as Map<String, dynamic>;
-    if (map.containsKey('score') || map.containsKey('feedback')) {
+    // 兼容三种批阅类型的 JSON key：lab 用 score / feedback，assessment 和 work 用 total_score / scores / feedback
+    if (map.containsKey('score') || map.containsKey('total_score') ||
+        map.containsKey('feedback') || map.containsKey('scores')) {
       return map;
     }
     return null;
-  } catch (_) {
+  } catch (e) {
+    swallow(e, tag: 'tryParseGradingJson');
     return null;
   }
 }
@@ -209,9 +214,13 @@ String? _resolveFilePath(String filePath, String fileNames) {
             }
           }
         }
-      } catch (_) {}
+      } catch (e) {
+        swallow(e, tag: '_resolveFilePath.inner');
+      }
     }
-  } catch (_) {}
+  } catch (e) {
+    swallow(e, tag: '_resolveFilePath.outer');
+  }
 
   return null;
 }
@@ -313,7 +322,9 @@ class _LabTasksPageState extends State<LabTasksPage>
   Future<void> _initData() async {
     try {
       await _labTaskDao.initDemoDataIfEmpty();
-    } catch (_) {}
+    } catch (e, st) {
+      swallowDebug(e, tag: 'LabPage._initData', stack: st);
+    }
     if (mounted) {
       setState(() => _initialized = true);
     }
@@ -324,6 +335,84 @@ class _LabTasksPageState extends State<LabTasksPage>
     unbindInnerTabRequest();
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _showLabScorePreview() async {
+    final data = await ScoreExportService.instance.getLabScoresForPreview();
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (_) => ScorePreviewDialog.lab(
+        data,
+        onExport: data.isNotEmpty
+            ? () async {
+                Navigator.pop(context);
+                await _exportLabScores();
+              }
+            : null,
+      ),
+    );
+  }
+
+  Future<void> _exportLabScores() async {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(const SnackBar(
+      content: Text('正在导出实验成绩…'),
+      duration: Duration(seconds: 1),
+    ));
+    final path = await ScoreExportService.instance.exportLabScores();
+    messenger.hideCurrentSnackBar();
+    if (!mounted) return;
+    if (path != null) {
+      messenger.showSnackBar(SnackBar(
+        content: Text('导出成功！\n$path'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: '确定',
+          onPressed: () => messenger.hideCurrentSnackBar(),
+        ),
+      ));
+    } else {
+      messenger.showSnackBar(SnackBar(
+        content: const Text('暂无成绩数据可导出'),
+        backgroundColor: Colors.orange,
+        action: SnackBarAction(
+          label: '确定',
+          onPressed: () => messenger.hideCurrentSnackBar(),
+        ),
+      ));
+    }
+  }
+
+  Widget _buildScoreActions(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return PopupMenuButton<String>(
+      icon: Icon(Icons.assessment, size: 20, color: primary),
+      tooltip: '实验成绩',
+      onSelected: (v) {
+        if (v == 'view') _showLabScorePreview();
+        if (v == 'export') _exportLabScores();
+      },
+      itemBuilder: (_) => [
+        const PopupMenuItem(
+          value: 'view',
+          child: Row(children: [
+            Icon(Icons.table_chart, size: 18),
+            SizedBox(width: 8),
+            Text('查看成绩'),
+          ]),
+        ),
+        const PopupMenuItem(
+          value: 'export',
+          child: Row(children: [
+            Icon(Icons.file_download, size: 18),
+            SizedBox(width: 8),
+            Text('导出成绩'),
+          ]),
+        ),
+      ],
+    );
   }
 
   @override
@@ -338,7 +427,7 @@ class _LabTasksPageState extends State<LabTasksPage>
       children: [
         // Tab 栏 + Agent 入口
         Container(
-          color: primary.withValues(alpha: 0.05),
+          color: primary.withOpacity(0.05),
           child: Row(
             children: [
               Expanded(
@@ -369,6 +458,7 @@ class _LabTasksPageState extends State<LabTasksPage>
                 ),
               ),
               const AgentEntryButton(agentId: 'lab'),
+              if (_isTeacherOrAdmin) _buildScoreActions(context),
             ],
           ),
         ),

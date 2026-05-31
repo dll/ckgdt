@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -13,8 +13,10 @@ import '../../../data/local/assessment_dao.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../data/local/score_audit_dao.dart';
 import '../../../services/agent/agents/grading_agent.dart';
+import '../../../services/score_export_service.dart';
 import '../../widgets/agent_entry_button.dart';
 import '../../widgets/inner_tab_request_mixin.dart';
+import '../../widgets/score_preview_dialog.dart';
 import '../learning/pdf_viewer_page.dart';
 import 'ai_grading_tab.dart';
 import 'assessment_materials_tab.dart';
@@ -79,7 +81,9 @@ class _AssessmentPageState extends State<AssessmentPage>
       try {
         final userId = _authService.getCurrentUserId();
         if (userId != null) await SyncService().downloadOwnData(userId);
-      } catch (_) {}
+      } catch (e) {
+        swallow(e, tag: 'AssessmentPage.downloadOwnData');
+      }
     }
     try {
       final jsonStr =
@@ -88,7 +92,9 @@ class _AssessmentPageState extends State<AssessmentPage>
       final students =
           decoded.map((e) => Map<String, dynamic>.from(e)).toList();
       await _assessmentDao.syncGroupsFromStudentData(students);
-    } catch (_) {}
+    } catch (e) {
+      swallow(e, tag: 'AssessmentPage.syncGroups');
+    }
     if (mounted) {
       setState(() => _initialized = true);
     }
@@ -99,6 +105,85 @@ class _AssessmentPageState extends State<AssessmentPage>
     unbindInnerTabRequest();
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _showAssessmentScorePreview() async {
+    final data =
+        await ScoreExportService.instance.getAssessmentScoresForPreview();
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (_) => ScorePreviewDialog.assessment(
+        data,
+        onExport: data.isNotEmpty
+            ? () async {
+                Navigator.pop(context);
+                await _exportAssessmentScores();
+              }
+            : null,
+      ),
+    );
+  }
+
+  Future<void> _exportAssessmentScores() async {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(const SnackBar(
+      content: Text('正在导出考核成绩…'),
+      duration: Duration(seconds: 1),
+    ));
+    final path =
+        await ScoreExportService.instance.exportAssessmentScores();
+    messenger.hideCurrentSnackBar();
+    if (!mounted) return;
+    if (path != null) {
+      messenger.showSnackBar(SnackBar(
+        content: Text('导出成功！\n$path'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: '确定',
+          onPressed: () => messenger.hideCurrentSnackBar(),
+        ),
+      ));
+    } else {
+      messenger.showSnackBar(SnackBar(
+        content: const Text('暂无成绩数据可导出'),
+        backgroundColor: Colors.orange,
+        action: SnackBarAction(
+          label: '确定',
+          onPressed: () => messenger.hideCurrentSnackBar(),
+        ),
+      ));
+    }
+  }
+
+  Widget _buildScoreActions() {
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.assessment, size: 20, color: Colors.white),
+      tooltip: '考核成绩',
+      onSelected: (v) {
+        if (v == 'view') _showAssessmentScorePreview();
+        if (v == 'export') _exportAssessmentScores();
+      },
+      itemBuilder: (_) => [
+        const PopupMenuItem(
+          value: 'view',
+          child: Row(children: [
+            Icon(Icons.table_chart, size: 18),
+            SizedBox(width: 8),
+            Text('查看成绩'),
+          ]),
+        ),
+        const PopupMenuItem(
+          value: 'export',
+          child: Row(children: [
+            Icon(Icons.file_download, size: 18),
+            SizedBox(width: 8),
+            Text('导出成绩'),
+          ]),
+        ),
+      ],
+    );
   }
 
   @override
@@ -119,7 +204,7 @@ class _AssessmentPageState extends State<AssessmentPage>
             gradient: gradient.linearGradient,
             boxShadow: [
               BoxShadow(
-                color: gradient.gradientStart.withValues(alpha: 0.12),
+                color: gradient.gradientStart.withOpacity(0.12),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -135,7 +220,7 @@ class _AssessmentPageState extends State<AssessmentPage>
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.18),
+                        color: Colors.white.withOpacity(0.18),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(Icons.assessment,
@@ -160,7 +245,7 @@ class _AssessmentPageState extends State<AssessmentPage>
                                 : '统一管理分组、评分、答辩、报告与成绩，形成完整考核流程。',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.white.withValues(alpha: 0.85),
+                              color: Colors.white.withOpacity(0.85),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -170,6 +255,7 @@ class _AssessmentPageState extends State<AssessmentPage>
                     ),
                     const AgentEntryButton(agentId: 'assessment', color: Colors.white),
                     _buildHeaderRoleBadge(),
+                    if (!_isStudent) _buildScoreActions(),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -199,9 +285,9 @@ class _AssessmentPageState extends State<AssessmentPage>
           margin: const EdgeInsets.fromLTRB(12, 0, 12, 4),
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-            color: primary.withValues(alpha: 0.06),
+            color: primary.withOpacity(0.06),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: primary.withValues(alpha: 0.12)),
+            border: Border.all(color: primary.withOpacity(0.12)),
           ),
           child: TabBar(
             controller: _tabController,
@@ -214,7 +300,7 @@ class _AssessmentPageState extends State<AssessmentPage>
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: primary.withValues(alpha: 0.10),
+                  color: primary.withOpacity(0.10),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -264,9 +350,9 @@ class _AssessmentPageState extends State<AssessmentPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.16),
+        color: Colors.white.withOpacity(0.16),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+        border: Border.all(color: Colors.white.withOpacity(0.22)),
       ),
       child: Text(
         label,
@@ -300,19 +386,19 @@ class _AssessmentTopStat extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.14),
+        color: Colors.white.withOpacity(0.14),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 15, color: Colors.white.withValues(alpha: 0.85)),
+          Icon(icon, size: 15, color: Colors.white.withOpacity(0.85)),
           const SizedBox(width: 4),
           Text(
             '$label $value',
             style: TextStyle(
               fontSize: 12,
-              color: Colors.white.withValues(alpha: 0.92),
+              color: Colors.white.withOpacity(0.92),
               fontWeight: FontWeight.w500,
             ),
           ),

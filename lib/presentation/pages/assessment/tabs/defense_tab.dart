@@ -1,4 +1,4 @@
-part of '../assessment_page.dart';
+﻿part of '../assessment_page.dart';
 
 class _DefenseTab extends StatefulWidget {
   final AuthService authService;
@@ -208,7 +208,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                     gradient: LinearGradient(
                       colors: [
                         Colors.amber.shade50,
-                        Colors.orange.shade50.withValues(alpha: 0.3),
+                        Colors.orange.shade50.withOpacity(0.3),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -223,7 +223,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.amber.withValues(alpha: 0.2),
+                              color: Colors.amber.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Icon(Icons.info_outline,
@@ -255,7 +255,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
                     gradient: LinearGradient(
-                      colors: [Colors.indigo.shade50, Colors.blue.shade50.withValues(alpha: 0.3)],
+                      colors: [Colors.indigo.shade50, Colors.blue.shade50.withOpacity(0.3)],
                       begin: Alignment.topLeft, end: Alignment.bottomRight,
                     ),
                   ),
@@ -312,7 +312,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                     gradient: LinearGradient(
                       colors: [
                         NoirTokens.inkDeep,
-                        NoirTokens.ink.withValues(alpha: 0.95),
+                        NoirTokens.ink.withOpacity(0.95),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -326,7 +326,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: NoirTokens.accent.withValues(alpha: 0.15),
+                              color: NoirTokens.accent.withOpacity(0.15),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Icon(Icons.videocam,
@@ -347,7 +347,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                                     style: TextStyle(
                                         fontSize: 11,
                                         color: NoirTokens.paper
-                                            .withValues(alpha: 0.5))),
+                                            .withOpacity(0.5))),
                               ],
                             ),
                           ),
@@ -357,7 +357,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                             label: const Text('开始直播'),
                             style: FilledButton.styleFrom(
                               backgroundColor:
-                                  NoirTokens.accent.withValues(alpha: 0.15),
+                                  NoirTokens.accent.withOpacity(0.15),
                               foregroundColor: NoirTokens.accent,
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 10),
@@ -380,7 +380,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                               foregroundColor: NoirTokens.accent,
                               side: BorderSide(
                                   color: NoirTokens.accent
-                                      .withValues(alpha: 0.5)),
+                                      .withOpacity(0.5)),
                               padding:
                                   const EdgeInsets.symmetric(vertical: 10),
                               shape: RoundedRectangleBorder(
@@ -397,10 +397,10 @@ class _DefenseTabState extends State<_DefenseTab> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.grey.withValues(alpha: 0.06),
+                  color: Colors.grey.withOpacity(0.06),
                   borderRadius: BorderRadius.circular(10),
                   border: Border(
-                    left: BorderSide(color: Colors.indigo.withValues(alpha: 0.5), width: 3),
+                    left: BorderSide(color: Colors.indigo.withOpacity(0.5), width: 3),
                   ),
                 ),
                 child: Row(
@@ -425,7 +425,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.grey.withValues(alpha: 0.06),
+                            color: Colors.grey.withOpacity(0.06),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Icon(Icons.event_busy,
@@ -465,9 +465,9 @@ class _DefenseTabState extends State<_DefenseTab> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.05),
+          color: color.withOpacity(0.05),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withValues(alpha: 0.12)),
+          border: Border.all(color: color.withOpacity(0.12)),
         ),
         child: Row(
           children: [
@@ -475,7 +475,7 @@ class _DefenseTabState extends State<_DefenseTab> {
               width: 26,
               height: 26,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
+                color: color.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Center(
@@ -496,7 +496,7 @@ class _DefenseTabState extends State<_DefenseTab> {
               padding:
                   const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
+                color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(time,
@@ -517,7 +517,7 @@ class _DefenseTabState extends State<_DefenseTab> {
       child: Row(children: [
         Container(
           width: 22, height: 22,
-          decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
+          decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
           child: Center(child: Text(num, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color))),
         ),
         const SizedBox(width: 8),
@@ -567,7 +567,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.indigo.withValues(alpha: 0.08),
+                        color: Colors.indigo.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(Icons.record_voice_over,
@@ -592,10 +592,10 @@ class _DefenseTabState extends State<_DefenseTab> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.1),
+                        color: statusColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                            color: statusColor.withValues(alpha: 0.3)),
+                            color: statusColor.withOpacity(0.3)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -617,7 +617,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.grey.withValues(alpha: 0.05),
+                    color: Colors.grey.withOpacity(0.05),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
@@ -634,7 +634,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                       Container(
                           width: 1,
                           height: 16,
-                          color: Colors.grey.withValues(alpha: 0.2)),
+                          color: Colors.grey.withOpacity(0.2)),
                       const SizedBox(width: 8),
                       Icon(Icons.location_on,
                           size: 14, color: Colors.indigo[300]),
@@ -646,7 +646,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                       Container(
                           width: 1,
                           height: 16,
-                          color: Colors.grey.withValues(alpha: 0.2)),
+                          color: Colors.grey.withOpacity(0.2)),
                       const SizedBox(width: 8),
                       Icon(Icons.timer_outlined,
                           size: 14, color: Colors.indigo[300]),

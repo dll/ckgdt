@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../data/local/score_audit_dao.dart';
 
 /// 通用 "成绩修改历史" 弹窗。
@@ -133,7 +133,7 @@ class ScoreHistoryDialog extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: color.withOpacity(0.12),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(text,
