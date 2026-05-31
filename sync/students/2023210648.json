@@ -3,8 +3,8 @@
   "user_id": "2023210648",
   "user_name": "张政",
   "role": "student",
-  "synced_at": "2026-05-31T21:46:45.726892",
-  "last_active": "2026-05-31T21:46:45.726901",
+  "synced_at": "2026-05-31T21:47:31.196007",
+  "last_active": "2026-05-31T21:47:31.196012",
   "quiz_results": [
     {
       "user_id": "2023210648",
@@ -33,6 +33,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 3,
+      "user_id": "2023210648",
+      "content": "PDF实验报告：2023210648张政实验三 跨平台应用开发.pdf\n",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/cache/file_picker/1780235246877/2023210648张政实验三 跨平台应用开发.pdf",
+      "file_names": "2023210648张政实验三 跨平台应用开发.pdf",
+      "submit_time": "2026-05-31T21:47:31.187423",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-05-31T21:47:31.187423",
+      "updated_at": "2026-05-31T21:47:31.187423",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 2,
       "user_id": "2023210648",
@@ -119,24 +137,6 @@
       "scored_at": null,
       "created_at": "2026-04-25T15:25:39.451329",
       "updated_at": "2026-04-25T17:40:30.887114",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 3,
-      "user_id": "2023210648",
-      "content": "PDF实验报告：2023210648张政实验三 跨平台应用开发.pdf",
-      "file_paths": "/data/user/0/cn.edu.chzu.madkg/cache/file_picker/1777110024314/2023210648张政实验三 跨平台应用开发.pdf",
-      "file_names": "2023210648张政实验三 跨平台应用开发.pdf",
-      "submit_time": "2026-04-25T17:40:25.107680",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-04-19T20:04:16.887669",
-      "updated_at": "2026-04-25T17:40:25.107680",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
