@@ -1,4 +1,4 @@
-part of '../assessment_page.dart';
+﻿part of '../assessment_page.dart';
 
 class _ScoreTab extends StatefulWidget {
   final AuthService authService;
@@ -84,13 +84,13 @@ class _ScoreTabState extends State<_ScoreTab> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(18),
                   gradient: LinearGradient(
-                    colors: [primary, primary.withValues(alpha: 0.7)],
+                    colors: [primary, primary.withOpacity(0.7)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: primary.withValues(alpha: 0.2),
+                      color: primary.withOpacity(0.2),
                       blurRadius: 16,
                       offset: const Offset(0, 6),
                     ),
@@ -103,7 +103,7 @@ class _ScoreTabState extends State<_ScoreTab> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.school,
-                            color: Colors.white.withValues(alpha: 0.8),
+                            color: Colors.white.withOpacity(0.8),
                             size: 20),
                         const SizedBox(width: 8),
                         const Text('我的考核成绩',
@@ -128,13 +128,13 @@ class _ScoreTabState extends State<_ScoreTab> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 5),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.18),
+                          color: Colors.white.withOpacity(0.18),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
                           '${_myScore!['group_name'] ?? ''} · ${_myScore!['project_name'] ?? ''}',
                           style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.9),
+                              color: Colors.white.withOpacity(0.9),
                               fontSize: 12,
                               fontWeight: FontWeight.w500),
                         ),
@@ -143,7 +143,7 @@ class _ScoreTabState extends State<_ScoreTab> {
                       Column(
                         children: [
                           Icon(Icons.pending_outlined,
-                              color: Colors.white.withValues(alpha: 0.6),
+                              color: Colors.white.withOpacity(0.6),
                               size: 36),
                           const SizedBox(height: 8),
                           const Text('暂无成绩',
@@ -172,13 +172,13 @@ class _ScoreTabState extends State<_ScoreTab> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(18),
                   gradient: LinearGradient(
-                    colors: [primary, primary.withValues(alpha: 0.7)],
+                    colors: [primary, primary.withOpacity(0.7)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: primary.withValues(alpha: 0.2),
+                      color: primary.withOpacity(0.2),
                       blurRadius: 16,
                       offset: const Offset(0, 6),
                     ),
@@ -203,10 +203,10 @@ class _ScoreTabState extends State<_ScoreTab> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.grey.withValues(alpha: 0.06),
+                color: Colors.grey.withOpacity(0.06),
                 borderRadius: BorderRadius.circular(10),
                 border: Border(
-                  left: BorderSide(color: Colors.indigo.withValues(alpha: 0.5), width: 3),
+                  left: BorderSide(color: Colors.indigo.withOpacity(0.5), width: 3),
                 ),
               ),
               child: Row(
@@ -232,7 +232,7 @@ class _ScoreTabState extends State<_ScoreTab> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.grey.withValues(alpha: 0.06),
+                          color: Colors.grey.withOpacity(0.06),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Icon(Icons.leaderboard_outlined,
@@ -289,7 +289,7 @@ class _ScoreTabState extends State<_ScoreTab> {
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
             colors: [
-              Colors.indigo.withValues(alpha: 0.04),
+              Colors.indigo.withOpacity(0.04),
               Colors.white,
             ],
             begin: Alignment.topLeft,
@@ -305,7 +305,7 @@ class _ScoreTabState extends State<_ScoreTab> {
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: Colors.indigo.withValues(alpha: 0.1),
+                    color: Colors.indigo.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(Icons.bar_chart, size: 16, color: Colors.indigo[400]),
@@ -334,7 +334,7 @@ class _ScoreTabState extends State<_ScoreTab> {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.15),
+            color: Colors.white.withOpacity(0.15),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: Colors.white, size: 20),
@@ -348,7 +348,7 @@ class _ScoreTabState extends State<_ScoreTab> {
         const SizedBox(height: 2),
         Text(label,
             style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.75), fontSize: 11)),
+                color: Colors.white.withOpacity(0.75), fontSize: 11)),
       ],
     );
   }
@@ -383,7 +383,7 @@ class _ScoreTabState extends State<_ScoreTab> {
           gradient: rank <= 3
               ? LinearGradient(
                   colors: [
-                    rankColor.withValues(alpha: 0.06),
+                    rankColor.withOpacity(0.06),
                     Colors.white,
                   ],
                   begin: Alignment.topLeft,
@@ -399,10 +399,10 @@ class _ScoreTabState extends State<_ScoreTab> {
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: rankColor.withValues(alpha: 0.12),
+                color: rankColor.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(12),
                 border: rank <= 3
-                    ? Border.all(color: rankColor.withValues(alpha: 0.3))
+                    ? Border.all(color: rankColor.withOpacity(0.3))
                     : null,
               ),
               child: Center(
@@ -436,7 +436,7 @@ class _ScoreTabState extends State<_ScoreTab> {
               padding:
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: scoreColor.withValues(alpha: 0.08),
+                color: scoreColor.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text('$totalScore',
@@ -482,7 +482,7 @@ class _ScoreTabState extends State<_ScoreTab> {
             child: LinearProgressIndicator(
               value: ratio,
               minHeight: 8,
-              backgroundColor: color.withValues(alpha: 0.08),
+              backgroundColor: color.withOpacity(0.08),
               valueColor: AlwaysStoppedAnimation(color),
             ),
           ),
@@ -507,7 +507,7 @@ class _ScoreTabState extends State<_ScoreTab> {
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
             colors: [
-              Colors.indigo.withValues(alpha: 0.04),
+              Colors.indigo.withOpacity(0.04),
               Colors.white,
             ],
             begin: Alignment.topLeft,
@@ -523,7 +523,7 @@ class _ScoreTabState extends State<_ScoreTab> {
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: Colors.indigo.withValues(alpha: 0.1),
+                    color: Colors.indigo.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(Icons.bar_chart, size: 16, color: Colors.indigo[400]),

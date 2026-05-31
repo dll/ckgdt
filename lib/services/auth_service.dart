@@ -69,8 +69,8 @@ class AuthService {
     loggedInNotifier.value = false;
   }
 
-  Future<List<UserModel>> getStudents() async {
-    return await _userDao.getStudents();
+  Future<List<UserModel>> getStudents({bool includeInactive = false}) async {
+    return await _userDao.getStudents(includeInactive: includeInactive);
   }
 
   Future<bool> createStudent(UserModel student) async {

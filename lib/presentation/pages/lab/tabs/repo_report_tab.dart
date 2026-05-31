@@ -1,4 +1,4 @@
-part of '../lab_tasks_page.dart';
+﻿part of '../lab_tasks_page.dart';
 
 class _RepoReportTab extends StatefulWidget {
   const _RepoReportTab();
@@ -441,10 +441,10 @@ class _RepoReportTabState extends State<_RepoReportTab>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.1),
+                        color: Colors.green.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: Colors.green.withValues(alpha: 0.3),
+                          color: Colors.green.withOpacity(0.3),
                         ),
                       ),
                       child: Text(
@@ -563,7 +563,7 @@ class _RepoReportTabState extends State<_RepoReportTab>
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.06),
+          color: color.withOpacity(0.06),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -582,7 +582,7 @@ class _RepoReportTabState extends State<_RepoReportTab>
               label,
               style: TextStyle(
                 fontSize: 10,
-                color: color.withValues(alpha: 0.7),
+                color: color.withOpacity(0.7),
               ),
             ),
           ],

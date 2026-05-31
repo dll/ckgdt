@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -17,8 +17,10 @@ import '../../../services/file_opener_service.dart';
 import '../../../services/sync_service.dart';
 import '../../../services/gitee_service.dart';
 import '../../../services/agent/agents/grading_agent.dart';
+import '../../../services/score_export_service.dart';
 import '../../widgets/agent_entry_button.dart';
 import '../../widgets/inner_tab_request_mixin.dart';
+import '../../widgets/score_preview_dialog.dart';
 import 'ai_grading_tab.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
@@ -172,6 +174,84 @@ class _WorksPageState extends State<WorksPage>
     super.dispose();
   }
 
+  Future<void> _showWorkScorePreview() async {
+    final data =
+        await ScoreExportService.instance.getWorkScoresForPreview();
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (_) => ScorePreviewDialog.works(
+        data,
+        onExport: data.isNotEmpty
+            ? () async {
+                Navigator.pop(context);
+                await _exportWorkScores();
+              }
+            : null,
+      ),
+    );
+  }
+
+  Future<void> _exportWorkScores() async {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(const SnackBar(
+      content: Text('正在导出作品成绩…'),
+      duration: Duration(seconds: 1),
+    ));
+    final path = await ScoreExportService.instance.exportWorkScores();
+    messenger.hideCurrentSnackBar();
+    if (!mounted) return;
+    if (path != null) {
+      messenger.showSnackBar(SnackBar(
+        content: Text('导出成功！\n$path'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: '确定',
+          onPressed: () => messenger.hideCurrentSnackBar(),
+        ),
+      ));
+    } else {
+      messenger.showSnackBar(SnackBar(
+        content: const Text('暂无成绩数据可导出'),
+        backgroundColor: Colors.orange,
+        action: SnackBarAction(
+          label: '确定',
+          onPressed: () => messenger.hideCurrentSnackBar(),
+        ),
+      ));
+    }
+  }
+
+  Widget _buildScoreActions() {
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.assessment, size: 20, color: Colors.white),
+      tooltip: '作品成绩',
+      onSelected: (v) {
+        if (v == 'view') _showWorkScorePreview();
+        if (v == 'export') _exportWorkScores();
+      },
+      itemBuilder: (_) => [
+        const PopupMenuItem(
+          value: 'view',
+          child: Row(children: [
+            Icon(Icons.table_chart, size: 18),
+            SizedBox(width: 8),
+            Text('查看成绩'),
+          ]),
+        ),
+        const PopupMenuItem(
+          value: 'export',
+          child: Row(children: [
+            Icon(Icons.file_download, size: 18),
+            SizedBox(width: 8),
+            Text('导出成绩'),
+          ]),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final gradTheme = AppGradientTheme.of(context);
@@ -202,6 +282,7 @@ class _WorksPageState extends State<WorksPage>
                   ),
                   const AgentEntryButton(agentId: 'works', color: Colors.white),
                   _buildRoleBadge(isTeacher),
+                  if (_isTeacherOrAdmin) _buildScoreActions(),
                 ],
               ),
               if (_initialized) ...[
@@ -215,7 +296,7 @@ class _WorksPageState extends State<WorksPage>
         Container(
           margin: const EdgeInsets.fromLTRB(12, 6, 12, 2),
           decoration: BoxDecoration(
-            color: primary.withValues(alpha: 0.06),
+            color: primary.withOpacity(0.06),
             borderRadius: BorderRadius.circular(10),
           ),
           child: TabBar(
@@ -284,9 +365,9 @@ class _WorksPageState extends State<WorksPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.2),
+        color: Colors.white.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+        border: Border.all(color: Colors.white.withOpacity(0.3)),
       ),
       child: Text(
         isTeacher ? '教师端' : '学生端',
@@ -326,7 +407,7 @@ class _WorksPageState extends State<WorksPage>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(s['icon'] as IconData,
-                        color: Colors.white.withValues(alpha: 0.8), size: 14),
+                        color: Colors.white.withOpacity(0.8), size: 14),
                     const SizedBox(width: 3),
                     Text('${s['value']}',
                         style: const TextStyle(
@@ -336,7 +417,7 @@ class _WorksPageState extends State<WorksPage>
                     const SizedBox(width: 2),
                     Text(s['label'] as String,
                         style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.7),
+                            color: Colors.white.withOpacity(0.7),
                             fontSize: 10)),
                   ],
                 ),
@@ -403,7 +484,7 @@ Widget _statChip(IconData icon, String value, String label, Color color) {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
     decoration: BoxDecoration(
-      color: color.withValues(alpha: 0.08),
+      color: color.withOpacity(0.08),
       borderRadius: BorderRadius.circular(8),
     ),
     child: Row(

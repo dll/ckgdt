@@ -1,8 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../widgets/back_button_bar.dart';
 import '../../../data/local/notification_dao.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/update_service.dart';
 import 'compose_notification_page.dart';
+import '../settings/update_dialog.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
 /// 通知列表页面 — 展示用户的通知消息
@@ -235,6 +237,7 @@ class _NotificationListPageState extends State<NotificationListPage> {
     final title = notification['title'] as String? ?? '';
     final content = notification['content'] as String? ?? '';
     final notifType = notification['type'] as String? ?? 'manual';
+    final relatedType = notification['related_entity_type'] as String? ?? '';
 
     await showDialog(
       context: context,
@@ -314,21 +317,66 @@ class _NotificationListPageState extends State<NotificationListPage> {
             onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('关闭'),
           ),
+          // 应用更新通知 — 显示"立即更新"和"忽略"
+          if (relatedType == 'app_update')
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                _onAppUpdateIgnore(notification);
+              },
+              child: const Text('忽略'),
+            ),
+          if (relatedType == 'app_update')
+            FilledButton.icon(
+              icon: const Icon(Icons.system_update, size: 18),
+              label: const Text('立即更新'),
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                _onAppUpdateTap();
+              },
+            ),
           // 按 related_entity_type 路由到对应 Tab
-          if ((notification['related_entity_type'] as String? ?? '').isNotEmpty)
+          if (relatedType.isNotEmpty && relatedType != 'app_update')
             FilledButton.icon(
               icon: const Icon(Icons.open_in_new, size: 18),
               label: const Text('去查看'),
               onPressed: () {
                 Navigator.of(ctx).pop();
-                _navigateToRelated(
-                  notification['related_entity_type'] as String? ?? '',
-                );
+                _navigateToRelated(relatedType);
               },
             ),
         ],
       ),
     );
+  }
+
+  /// 应用更新 — 忽略此版本
+  Future<void> _onAppUpdateIgnore(
+      Map<String, dynamic> notification) async {
+    final relatedId =
+        notification['related_entity_id'] as String? ?? '';
+    if (relatedId.startsWith('app_update_v')) {
+      final version = relatedId.substring('app_update_v'.length);
+      await UpdateService().ignoreVersion(version);
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('已忽略此版本更新'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+    await _loadNotifications();
+  }
+
+  /// 应用更新 — 立即更新
+  void _onAppUpdateTap() {
+    Navigator.of(context).maybePop();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await UpdateDialog.showCheckUpdate(context);
+    });
   }
 
   /// 把通知里的 related_entity_type 翻译成提示，让用户自己跳对应 Tab
@@ -429,6 +477,8 @@ class _NotificationListPageState extends State<NotificationListPage> {
         return Icons.alarm;
       case 'manual':
         return Icons.campaign;
+      case 'update':
+        return Icons.system_update;
       default:
         return Icons.notifications;
     }
@@ -571,7 +621,7 @@ class _NotificationListPageState extends State<NotificationListPage> {
                 Icon(
                   Icons.notifications_none,
                   size: 64,
-                  color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                  color: theme.colorScheme.outline.withOpacity(0.4),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -586,7 +636,7 @@ class _NotificationListPageState extends State<NotificationListPage> {
                   '新的通知将显示在这里',
                   style: TextStyle(
                     fontSize: 13,
-                    color: theme.colorScheme.outline.withValues(alpha: 0.6),
+                    color: theme.colorScheme.outline.withOpacity(0.6),
                   ),
                 ),
               ],
@@ -621,7 +671,7 @@ class _NotificationListPageState extends State<NotificationListPage> {
             : isRead
                 ? BorderSide.none
                 : BorderSide(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                    color: theme.colorScheme.primary.withOpacity(0.2),
                     width: 1,
                   ),
       ),
@@ -663,7 +713,7 @@ class _NotificationListPageState extends State<NotificationListPage> {
                     ? Icon(
                         _getTypeIcon(notifType),
                         size: 20,
-                        color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                        color: theme.colorScheme.outline.withOpacity(0.4),
                       )
                     : Stack(
                         children: [
@@ -699,7 +749,7 @@ class _NotificationListPageState extends State<NotificationListPage> {
                         fontSize: 15,
                         fontWeight: isRead ? FontWeight.normal : FontWeight.w600,
                         color: isRead
-                            ? theme.colorScheme.onSurface.withValues(alpha: 0.7)
+                            ? theme.colorScheme.onSurface.withOpacity(0.7)
                             : theme.colorScheme.onSurface,
                       ),
                       maxLines: 1,

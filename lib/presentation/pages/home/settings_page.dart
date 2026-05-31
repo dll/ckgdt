@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../core/build_info.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../core/error_handler.dart';
@@ -41,6 +41,7 @@ import '../admin/student_manage_page.dart';
 import '../admin/data_import_page.dart';
 import '../admin/data_export_page.dart';
 import '../admin/repo_analytics_page.dart';
+import '../settings/update_dialog.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
 class SettingsPage extends StatefulWidget {
@@ -301,7 +302,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                     ? [
                                         BoxShadow(
                                           color: preset.primary
-                                              .withValues(alpha: 0.4),
+                                              .withOpacity(0.4),
                                           blurRadius: 8,
                                           spreadRadius: 1,
                                         )
@@ -389,7 +390,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       color: Theme.of(ctx)
                           .colorScheme
                           .onSurface
-                          .withValues(alpha: 0.55),
+                          .withOpacity(0.55),
                       letterSpacing: 0.8,
                     ),
                   );
@@ -459,6 +460,13 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           _buildMenuItem(
             context,
+            icon: Icons.system_update,
+            title: '检查更新',
+            subtitle: 'v${BuildInfo.appVersion}  — 检查 GitHub 新版本',
+            onTap: () => UpdateDialog.showCheckUpdate(context),
+          ),
+          _buildMenuItem(
+            context,
             icon: Icons.support_agent,
             title: '系统帮助',
             subtitle: 'AI 助手解答使用问题',
@@ -518,7 +526,7 @@ class _SettingsPageState extends State<SettingsPage> {
       visualDensity: VisualDensity.compact,
       leading: CircleAvatar(
         radius: 18,
-        backgroundColor: primary.withValues(alpha: 0.1),
+        backgroundColor: primary.withOpacity(0.1),
         child: Icon(icon, color: primary, size: 20),
       ),
       title: Text(title, style: const TextStyle(fontSize: 14)),

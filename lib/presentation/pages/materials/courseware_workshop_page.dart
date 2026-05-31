@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -682,10 +682,10 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: scoreColor.withValues(alpha: 0.15),
+                                color: scoreColor.withOpacity(0.15),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
-                                    color: scoreColor.withValues(alpha: 0.3)),
+                                    color: scoreColor.withOpacity(0.3)),
                               ),
                               child: Text(
                                 '$score 分',
@@ -2033,7 +2033,7 @@ class Example {
                             : Colors.grey.shade300,
                     boxShadow: isCurrent
                         ? [BoxShadow(
-                            color: Colors.deepPurple.withValues(alpha: 0.3),
+                            color: Colors.deepPurple.withOpacity(0.3),
                             blurRadius: 8,
                           )]
                         : null,
@@ -2360,9 +2360,9 @@ class Example {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: scoreColor.withValues(alpha: 0.15),
+                      color: scoreColor.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: scoreColor.withValues(alpha: 0.3)),
+                      border: Border.all(color: scoreColor.withOpacity(0.3)),
                     ),
                     child: Text(
                       '$score 分 · $scoreLabel',
@@ -2983,7 +2983,7 @@ class Example {
       ),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: isReady ? Colors.green : color.withValues(alpha: 0.15),
+          backgroundColor: isReady ? Colors.green : color.withOpacity(0.15),
           child: Icon(
             isReady ? Icons.check : icon,
             color: isReady ? Colors.white : color,

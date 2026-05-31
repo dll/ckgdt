@@ -28,11 +28,15 @@ class UserDao {
     return maps.map((map) => UserModel.fromMap(map)).toList();
   }
 
-  Future<List<UserModel>> getStudents() async {
+  /// 获取学生列表。默认只返回活跃学生（is_active=1）；
+  /// 需要看归档/已停用学生（如审计、孤立数据清理）时传 includeInactive: true。
+  Future<List<UserModel>> getStudents({bool includeInactive = false}) async {
     final db = await _dbHelper.database;
     final maps = await db.query(
       'users',
-      where: 'role = ?',
+      where: includeInactive
+          ? 'role = ?'
+          : 'role = ? AND is_active = 1',
       whereArgs: ['student'],
       orderBy: 'user_id',
     );

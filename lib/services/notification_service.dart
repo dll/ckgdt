@@ -316,4 +316,41 @@ class NotificationService {
       debugPrint('NotificationService: 作品批阅完成通知学生失败 — $e');
     }
   }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 应用更新通知
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// 新版本发布时通知所有用户
+  Future<void> notifyAppUpdate({
+    required String newVersion,
+    required String releaseNotes,
+  }) async {
+    try {
+      final preview = releaseNotes.length > 100
+          ? '${releaseNotes.substring(0, 100)}...'
+          : releaseNotes;
+      await _notificationDao.createNotification(
+        title: '新版本 v$newVersion 已发布',
+        content: '新版本 v$newVersion 可供更新。$preview',
+        creatorId: 'system',
+        targetType: 'all',
+        type: 'update',
+        relatedEntityType: 'app_update',
+        relatedEntityId: 'app_update_v$newVersion',
+      );
+      await _notificationDao.createNotification(
+        title: '新版本 v$newVersion 已发布',
+        content: '新版本 v$newVersion 可供更新。$preview',
+        creatorId: 'system',
+        targetType: 'teachers',
+        type: 'update',
+        relatedEntityType: 'app_update',
+        relatedEntityId: 'app_update_v$newVersion',
+      );
+      debugPrint('NotificationService: 应用更新通知 — v$newVersion');
+    } catch (e) {
+      debugPrint('NotificationService: 发送应用更新通知失败 — $e');
+    }
+  }
 }

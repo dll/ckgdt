@@ -1,4 +1,4 @@
-part of '../assessment_page.dart';
+﻿part of '../assessment_page.dart';
 
 class _AssessmentReportTab extends StatefulWidget {
   final AuthService authService;
@@ -118,9 +118,9 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
           margin: const EdgeInsets.fromLTRB(12, 6, 12, 4),
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-            color: indigo.withValues(alpha: 0.06),
+            color: indigo.withOpacity(0.06),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: indigo.withValues(alpha: 0.10)),
+            border: Border.all(color: indigo.withOpacity(0.10)),
           ),
           child: TabBar(
             controller: _subTabController,
@@ -134,7 +134,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
               borderRadius: BorderRadius.circular(11),
               boxShadow: [
                 BoxShadow(
-                  color: indigo.withValues(alpha: 0.10),
+                  color: indigo.withOpacity(0.10),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -269,8 +269,8 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
               borderRadius: BorderRadius.circular(14),
               gradient: LinearGradient(
                 colors: [
-                  Colors.indigo.withValues(alpha: 0.08),
-                  Colors.purple.withValues(alpha: 0.04),
+                  Colors.indigo.withOpacity(0.08),
+                  Colors.purple.withOpacity(0.04),
                 ],
               ),
             ),
@@ -336,7 +336,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                 Container(
                   width: 2,
                   height: 200,
-                  color: color.withValues(alpha: 0.3),
+                  color: color.withOpacity(0.3),
                 ),
             ],
           ),
@@ -364,7 +364,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.1),
+                          color: color.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text('${w['week']}',
@@ -393,7 +393,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Icon(Icons.check_circle_outline,
-                              size: 14, color: color.withValues(alpha: 0.6)),
+                              size: 14, color: color.withOpacity(0.6)),
                           const SizedBox(width: 6),
                           Expanded(
                               child: Text(t,
@@ -411,7 +411,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Icon(Icons.description,
-                              size: 14, color: Colors.orange.withValues(alpha: 0.6)),
+                              size: 14, color: Colors.orange.withOpacity(0.6)),
                           const SizedBox(width: 6),
                           Expanded(
                               child: Text(d,
@@ -425,9 +425,9 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                   width: double.infinity,
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.06),
+                    color: color.withOpacity(0.06),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: color.withValues(alpha: 0.2)),
+                    border: Border.all(color: color.withOpacity(0.2)),
                   ),
                   child: Text(focus,
                       style: TextStyle(
@@ -483,9 +483,9 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.grey.withValues(alpha: 0.04),
+        color: Colors.grey.withOpacity(0.04),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.15)),
+        border: Border.all(color: Colors.grey.withOpacity(0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -693,10 +693,10 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
       children: [
         // 警告卡片
         Card(
-          color: Colors.red.withValues(alpha: 0.06),
+          color: Colors.red.withOpacity(0.06),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: Colors.red.withValues(alpha: 0.3)),
+            side: BorderSide(color: Colors.red.withOpacity(0.3)),
           ),
           child: Padding(
             padding: const EdgeInsets.all(14),
@@ -758,9 +758,9 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
+                color: color.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: color.withValues(alpha: 0.25)),
+                border: Border.all(color: color.withOpacity(0.25)),
               ),
               child: Center(
                 child: Text(r['num'] as String,
@@ -783,7 +783,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(Icons.check_box_outlined,
-                        size: 14, color: color.withValues(alpha: 0.6)),
+                        size: 14, color: color.withOpacity(0.6)),
                     const SizedBox(width: 6),
                     Expanded(
                         child: Text(req,
@@ -805,7 +805,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                       height: 18,
                       margin: const EdgeInsets.only(right: 6),
                       decoration: BoxDecoration(
-                        color: Colors.indigo.withValues(alpha: 0.1),
+                        color: Colors.indigo.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Center(
@@ -828,9 +828,9 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
             width: double.infinity,
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.amber.withValues(alpha: 0.1),
+              color: Colors.amber.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+              border: Border.all(color: Colors.amber.withOpacity(0.3)),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,

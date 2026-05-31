@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
@@ -54,7 +54,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                  color: theme.colorScheme.onSurface.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -73,7 +73,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
             Text(
               'AI 自动生成完整课程体系：大纲、章节、题库、资源',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
               ),
               textAlign: TextAlign.center,
             ),
@@ -109,7 +109,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                   ),
                   borderRadius: BorderRadius.circular(12),
                   color: _outlineContent != null
-                      ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
+                      ? theme.colorScheme.primaryContainer.withOpacity(0.3)
                       : null,
                 ),
                 child: Row(
@@ -120,7 +120,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                           : Icons.upload_file,
                       color: _outlineContent != null
                           ? theme.colorScheme.primary
-                          : theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                          : theme.colorScheme.onSurface.withOpacity(0.5),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -144,7 +144,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                                 ? '已加载 ${_outlineContent!.length} 字'
                                 : '可选：上传 .txt / .md 大纲文件，不上传则 AI 自动生成',
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                              color: theme.colorScheme.onSurface.withOpacity(0.5),
                             ),
                           ),
                         ],
@@ -251,7 +251,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                             child: Text(
                               _logs[_logs.length - 1 - i],
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                color: theme.colorScheme.onSurface.withOpacity(0.6),
                                 fontSize: 11,
                               ),
                             ),
