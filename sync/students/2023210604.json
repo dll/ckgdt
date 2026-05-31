@@ -3,8 +3,8 @@
   "user_id": "2023210604",
   "user_name": "李冉",
   "role": "student",
-  "synced_at": "2026-05-29T16:01:00.016823",
-  "last_active": "2026-05-29T16:01:00.006823",
+  "synced_at": "2026-05-31T12:07:03.196688",
+  "last_active": "2026-05-31T12:07:03.189645",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
@@ -160,7 +160,28 @@
   "checkin_records": [],
   "work_comments": [],
   "work_likes": [],
-  "work_views": [],
+  "work_views": [
+    {
+      "work_id": 7147,
+      "user_id": "2023210604",
+      "viewed_at": "2026-05-29T16:03:07.732092"
+    },
+    {
+      "work_id": 7147,
+      "user_id": "2023210604",
+      "viewed_at": "2026-05-29T16:03:03.322232"
+    },
+    {
+      "work_id": 84,
+      "user_id": "2023210604",
+      "viewed_at": "2026-05-29T16:02:57.802953"
+    },
+    {
+      "work_id": 7147,
+      "user_id": "2023210604",
+      "viewed_at": "2026-05-29T16:02:49.521491"
+    }
+  ],
   "peer_reviews": [],
   "collaboration_messages": [],
   "contribution_scores": [],
