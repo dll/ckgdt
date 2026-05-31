@@ -3,8 +3,8 @@
   "user_id": "2023210592",
   "user_name": "龚成磊",
   "role": "student",
-  "synced_at": "2026-05-31T12:58:00.377979",
-  "last_active": "2026-05-31T12:58:00.377990",
+  "synced_at": "2026-05-31T12:59:49.364510",
+  "last_active": "2026-05-31T12:59:49.364522",
   "quiz_results": [
     {
       "user_id": "2023210592",
@@ -33,6 +33,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 1,
+      "user_id": "2023210592",
+      "content": "PDF实验报告：2023210592龚成磊实验一 开发环境搭建.pdf",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/cache/file_picker/1780203588356/2023210592龚成磊实验一 开发环境搭建.pdf",
+      "file_names": "2023210592龚成磊实验一 开发环境搭建.pdf",
+      "submit_time": "2026-05-31T12:59:49.345595",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-04-28T20:40:23.886578",
+      "updated_at": "2026-05-31T12:59:49.345595",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 6,
       "user_id": "2023210592",
@@ -119,24 +137,6 @@
       "scored_at": null,
       "created_at": "2026-04-28T20:40:54.498986",
       "updated_at": "2026-04-28T20:40:54.498986",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 1,
-      "user_id": "2023210592",
-      "content": "PDF实验报告：2023210592龚成磊实验一 开发环境搭建.pdf",
-      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2023210592/2023210592龚成磊实验一 开发环境搭建.pdf",
-      "file_names": "2023210592龚成磊实验一 开发环境搭建.pdf",
-      "submit_time": "2026-04-28T20:40:23.886578",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-04-28T20:40:23.886578",
-      "updated_at": "2026-04-28T20:40:23.886578",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
