@@ -3,8 +3,8 @@
   "user_id": "2023210617",
   "user_name": "钱皓",
   "role": "student",
-  "synced_at": "2026-05-31T23:15:30.104289",
-  "last_active": "2026-05-31T23:15:30.097261",
+  "synced_at": "2026-05-31T23:15:34.837678",
+  "last_active": "2026-05-31T23:15:34.832131",
   "quiz_results": [
     {
       "user_id": "2023210617",
@@ -110,14 +110,14 @@
       "content": "PDF实验报告：2023210617钱皓实验二 原生应用开发.pdf\n",
       "file_paths": "C:\\Users\\钱皓\\Desktop\\2023210617钱皓实验二 原生应用开发.pdf",
       "file_names": "2023210617钱皓实验二 原生应用开发.pdf",
-      "submit_time": "2026-05-31T23:15:30.094238",
+      "submit_time": "2026-05-31T23:15:34.830085",
       "status": "已提交",
       "score": null,
       "feedback": null,
       "scorer_id": null,
       "scored_at": null,
       "created_at": "2026-05-19T08:19:23.216688",
-      "updated_at": "2026-05-31T23:15:30.094238",
+      "updated_at": "2026-05-31T23:15:34.830085",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
