@@ -3,8 +3,8 @@
   "user_id": "2023210648",
   "user_name": "张政",
   "role": "student",
-  "synced_at": "2026-06-01T01:09:55.762899",
-  "last_active": "2026-06-01T01:09:55.762910",
+  "synced_at": "2026-06-01T01:17:49.121920",
+  "last_active": "2026-06-01T01:17:49.121932",
   "quiz_results": [
     {
       "user_id": "2023210648",
@@ -34,6 +34,24 @@
   "learning_paths": [],
   "lab_submissions": [
     {
+      "task_id": 2,
+      "user_id": "2023210648",
+      "content": "PDF实验报告：2023210648张政实验二 原生应用开发.pdf\n",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/cache/file_picker/1780247857686/2023210648张政实验二 原生应用开发.pdf",
+      "file_names": "2023210648张政实验二 原生应用开发.pdf",
+      "submit_time": "2026-06-01T01:17:49.084369",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-06-01T01:17:49.084369",
+      "updated_at": "2026-06-01T01:17:49.084369",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
+    {
       "task_id": 1,
       "user_id": "2023210648",
       "content": "PDF实验报告：2023210648张政实验一 开发环境搭建.pdf\n",
@@ -47,24 +65,6 @@
       "scored_at": null,
       "created_at": "2026-06-01T01:09:55.748967",
       "updated_at": "2026-06-01T01:09:55.748967",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 2,
-      "user_id": "2023210648",
-      "content": "PDF实验报告：2023210648张政实验二 原生应用开发.pdf\n",
-      "file_paths": "/data/user/0/cn.edu.chzu.madkg/cache/file_picker/1780246774559/2023210648张政实验二 原生应用开发.pdf",
-      "file_names": "2023210648张政实验二 原生应用开发.pdf",
-      "submit_time": "2026-06-01T00:59:43.211236",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-06-01T00:59:43.211236",
-      "updated_at": "2026-06-01T00:59:43.211236",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
