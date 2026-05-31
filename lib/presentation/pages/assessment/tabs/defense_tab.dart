@@ -17,6 +17,32 @@ class _DefenseTabState extends State<_DefenseTab> {
   bool get _isStudent =>
       !widget.authService.isTeacher && !widget.authService.isAdmin;
 
+  /// 开始答辩直播：校验开播权限 → 启动快照广播 + 弹摄像头浮窗。
+  /// 教师/管理员恒可开播；学生需教师在「直播授权」里授权。
+  Future<void> _startLiveBroadcast() async {
+    final allowed = await LiveBroadcastService.instance.canBroadcast();
+    if (!mounted) return;
+    if (!allowed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('你还没有开播权限，请联系教师在「直播授权」中授权'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+    // 先弹摄像头浮窗（初始化摄像头），再启动快照广播上传循环
+    LiveStreamOverlay.show(context);
+    final ok = await LiveBroadcastService.instance.startBroadcasting();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ok ? '直播已开始，其他用户进入系统即可看到' : '直播启动失败，请检查网络/Gitee 配置'),
+        backgroundColor: ok ? Colors.green : Colors.red,
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -322,8 +348,17 @@ class _DefenseTabState extends State<_DefenseTab> {
                           ],
                         ),
                       ),
+                      if (!_isStudent) ...[
+                        IconButton(
+                          tooltip: '直播授权',
+                          onPressed: () => LiveAuthorizeSheet.show(context),
+                          icon: const Icon(Icons.cast_connected,
+                              color: NoirTokens.accent, size: 20),
+                        ),
+                        const SizedBox(width: 4),
+                      ],
                       FilledButton.tonalIcon(
-                        onPressed: () => LiveStreamOverlay.show(context),
+                        onPressed: _startLiveBroadcast,
                         icon: const Icon(Icons.play_arrow, size: 18),
                         label: const Text('开始直播'),
                         style: FilledButton.styleFrom(
