@@ -3,8 +3,8 @@
   "user_id": "2023210650",
   "user_name": "周俊峰",
   "role": "student",
-  "synced_at": "2026-05-31T14:29:05.095537",
-  "last_active": "2026-05-31T14:29:05.095548",
+  "synced_at": "2026-05-31T14:29:10.992871",
+  "last_active": "2026-05-31T14:29:10.992883",
   "quiz_results": [
     {
       "user_id": "2023210650",
@@ -23,6 +23,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 3,
+      "user_id": "2023210650",
+      "content": "PDF实验报告：2023210650周俊峰实验三 跨平台应用开发.pdf\n\n--- 报告正文（自动提取）---\n移动应用开发实验报告\n封面信息\n项目\n内容\n实验名称\n跨平台应用开发\n实验编号\nd20301035103\n、\nd20301009203\n学号\n____2023210650____\n姓名\n______\n周俊峰\n______\n班级\n____\n软件\n232______\n日期\n____2026\n年\n4\n月\n___\n组别\n_______\n组\n2_____\n项目名称\n智慧校园生活服务平台\n技术栈\nUniapp\n实验目的\n1.\n掌握\n4\n种跨平台框架的列表页开发\n2.\n学会\nRESTful\nAPI\n数据请求与\nJSON\n解析\n3.\n了解移动设备传感器调用方法\n4.\n完成框架适用性对比分析\n实验环境\n框架\n开发工具\n语言\n依赖包\nUniapp\nHBuilderX\nVue\nuni.request\n实验步骤\n1.\n需求分析\n1.1\n数据模型定义\n{\n\"code\": 200,\n\"data\": {\n\"items\": [\n{\n\"id\": 1,\n\"title\":\n\"\n智慧校园更新通知\n\",\n\"content\":\n\"\n系统升级通知\n...\",\n\"author\":\n\"\n管理员\n\",\n\"time\": \"2024\n-\n01\n-\n01 10:00:00\"\n}\n]\n}\n}\n1.2\nAPI\n接口规范\n•\nURL: https://api.example.com/news\n•\nMethod: GET\n•\nResponse: JSON\n2.\nFlutter\n开发\n2.1\n项目创建\n☐\n打开\nAndroid\nStudio/VS Code\n☐\n新建\nFlutter\n项目\n3. React\nNative\n开发\n3.1\n项目创建\n☐\n打开\nVS\nCode\n☐\n新建\nReact\nNative\n项目\n4.\nUniapp\n开发\n4.1\n项目创建\n☒\n打开\nHBuilderX\n☒\n新建\nuni\n-\napp\n项目\n4.2\n新闻列表实现\n// pages/index/index.vue\n<template>\n<view class=\"content\">\n<view class=\"news\n-\nitem\" v\n-\nfor=\"item in newsList\" :key=\"item.id\">\n<text class=\"title\">{{item.title}}</text>\n<text class=\"info\">{{item.author}}\n-\n{{item.time}}</text>\n</view>\n</view>\n</template>\n<script>\nimport { mockRequest } from '../../utils/mock.js';\nexport default {\ndata() {\nreturn {\nnewsList: []\n}\n},\nonLoad() {\nthis.fetchNews();\n},\nonPullDownRefresh() {\nthis.fetchNews().then(() => {\nuni.stopPullDownRefresh();\n});\n},\nmethods: {\nasync fetchNews() {\ntry {\nconst res = await mockRequest('https://api.example.com/news');\nif (res.data.code === 200) {\nthis.newsList = res.data.data.items;\n}\n} catch (error) {\nconsole.error('\n获取新闻失败\n:',\nerror);\nuni.showToast({\ntitle:\n'\n获取新闻失败\n',\nicon: 'none'\n});\n}\n}\n}\n}\n</script>\n<style>\n.content {\npadding: 20rpx;\n}\n.news\n-\nitem {\npadding: 20rpx;\nborder\n-\nbottom: 1rpx solid #eee;\n}\n.title {\nfont\n-\nsize: 32rpx;\nfont\n-\nweight: bold;\nmargin\n-\nbottom: 10rpx;\n}\n.info {\nfont\n-\nsize: 24rpx;\ncolor: #999;\n}\n</style>\n5.\nMAUI\n开发\n5.1\n项目创建\n☐\n打开\nVisual\nStudio\n☐\n新建\n.NET\nMAUI\n项目\n6.\n传感器集成扩展\n6.1\nGPS\n定位实现（\nFlutter\n示例）\nimport 'package:geolocator/geolocator.dart';\nFuture<void> getLocation() async {\nbool serviceEnabled = await Geolocator.isLocationServiceEnabled();\nif (!serviceEnabled) return;\nLocationPermission permission = await Geolocator.checkPermission();\nif (permission == LocationPermission.denied) {\npermission = await Geolocator.requestPermission();\n}\nPosition position = await Geolocator.getCurrentPosition();\nprint('\n位置\n:\n${position.latitude}, ${position.longitude}');\n}\n实验结果\n验证结果\n框架\n列表展示\n网络请求\nJSON\n解析\n下拉刷新\n传感器集成\nFlutter\n[ ]\n成功\n[ ]\n成功\n[ ]\n成功\n[ ]\n成功\n[ ]\n成功\nReact Native\n[ ]\n成功\n[ ]\n成功\n[ ]\n成功\n[ ]\n成功\n[ ]\n成功\nUniapp\n[x]\n成功\n[x]\n成功\n[x]\n成功\n[x]\n成功\n[ ]\n成功\nMAUI\n[ ]\n成功\n[ ]\n成功\n[ ]\n成功\n[ ]\n成功\n[ ]\n成功\n截图记录\nUniapp\n运行截图\n框架对比分析\n对比项\nFlutter\nReact Native\nUniapp\nMAUI\n开发语言\nDart\nJavaScript\nVue\nC#\n性能\n★★★★★\n★★★★☆\n★★★☆☆\n★★★★☆\n学习成本\n中等\n低\n低\n中等\n生态成熟度\n高\n高\n中\n中\n跨平台一致性\n高\n中\n中\n高\n对比项\nFlutter\nReact Native\nUniapp\nMAUI\n社区活跃度\n高\n高\n中\n中\n问题与解决\n问题描述\n解决方案\n解决结果\n文件夹名称包含中文导致\nnpm\n初始化失败\n创建英文名称的文件夹”\ncross\n-\nplatform\n-\napp\n”\n已解决\nPowerShell\n执行策略限制\n修改执行策略为\nRemoteSigned\n已解决\n实际\nAPI\n无法访问\n创建模拟数据文件\nmock.js\n已解决\nES\n模块语法错误\n修改\npackage.json\n设置”\ntype\n”\n:\n“module”\n已解决\n实验总结\n实验收获\n•\n掌握了\nUniapp\n框架的基本使用方法\n•\n学会了使用\nuni.request\n进行网络请求\n•\n熟悉了\nVue\n组件的编写方式\n•\n理解了跨平台应用开发的基本概念\n•\n学会了使用模拟数据进行开发和测试\n技术要点\n•\nVue\n组件开发\n：使用\ntemplate\n、\nscript\n、\nstyle\n三部分构建组件\n•\n网络请求\n：使用\nuni.request\n发起异步请求\n•\n数据绑定\n：使用\nv\n-\nfor\n循环渲染列表数据\n•\n生命周期\n：使用\nonLoad\n、\nonPullDownRefresh\n等生命周期函数\n•\n错误处理\n：使用\ntry\n-\ncatch\n处理网络请求异常\n•\n样式设计\n：使用\nrpx\n单位实现响应式布局\n考核指标\n考核项\n评分标准\n得分\n功能完整性\n列表展示、网络请求、下拉刷新功能完整\n25\n分\n代码质量\n代码结构清晰，注释完整\n20\n分\n多框架实现\n至少完成\n2\n个框架的开发\n25\n分\n考核项\n评分标准\n得分\n传感器集成\n成功集成传感器功能\n15\n分\n框架对比\n完成框架适用性分析\n10\n分\n实验报告\n报告结构完整，内容详实\n5\n分\n教师评价\n项目\n评价\n实验完成情况\n技术掌握程度\n创新点\n综合评价\n成绩\n教师签名：\n___________________\n日期：\n___________________\n",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/cache/file_picker/1780208950049/2023210650周俊峰实验三 跨平台应用开发.pdf",
+      "file_names": "2023210650周俊峰实验三 跨平台应用开发.pdf",
+      "submit_time": "2026-05-31T14:29:10.955917",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-05-31T14:29:10.955917",
+      "updated_at": "2026-05-31T14:29:10.955917",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 2,
       "user_id": "2023210650",
