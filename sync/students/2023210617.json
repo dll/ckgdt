@@ -3,8 +3,8 @@
   "user_id": "2023210617",
   "user_name": "钱皓",
   "role": "student",
-  "synced_at": "2026-05-31T23:08:21.886144",
-  "last_active": "2026-05-31T23:08:21.882636",
+  "synced_at": "2026-05-31T23:15:30.104289",
+  "last_active": "2026-05-31T23:15:30.097261",
   "quiz_results": [
     {
       "user_id": "2023210617",
@@ -105,6 +105,24 @@
   "learning_paths": [],
   "lab_submissions": [
     {
+      "task_id": 2,
+      "user_id": "2023210617",
+      "content": "PDF实验报告：2023210617钱皓实验二 原生应用开发.pdf\n",
+      "file_paths": "C:\\Users\\钱皓\\Desktop\\2023210617钱皓实验二 原生应用开发.pdf",
+      "file_names": "2023210617钱皓实验二 原生应用开发.pdf",
+      "submit_time": "2026-05-31T23:15:30.094238",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-05-19T08:19:23.216688",
+      "updated_at": "2026-05-31T23:15:30.094238",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
+    {
       "task_id": 1,
       "user_id": "2023210617",
       "content": "PDF实验报告：2023210617钱皓实验一 开发环境搭建.pdf\n\n--- 报告正文（自动提取）---\n实验⼀：在线学习辅助平台开发环境\n搭建\n实验项⽬基本信息\n实验编号\n：\nd20301035101\n、\nd20301009201\n学时分配\n：\n2\n学时\n实验类型\n：验证型\n每组⼈\n数\n：\n6\n⼈\n对应课程⽬标\n：课程⽬标\n1\n🎯\n核⼼步骤列表\n📋\n实验概览\n1.\n需求分析阶段\n：明确\nCordova\n跨平台开发环境依赖与版本要求\n2.\n环境搭建阶段\n：下载安装\nNode.js\n、\nCordova\n、\nAndroid Studio\n等开发⼯具\n3.\nAI\n辅助编码阶段\n：使⽤\nTRAE\n⽣成在线学习辅助平台核⼼功能代码\n4.\n测试验证阶段\n：在模拟器\n/\n真机上验证平台功能运⾏\n5.\n部署运维阶段\n：记录环境配置⽂档，总结常⻅问题\n🛠\n开发⼯具清单\n序号\n开发⼯具\n主要⽤途\n验证项⽬\n1\nNode.js\nJavaScript\n运⾏环境\nnpm\n命令验证\n2\nCordova CLI\n跨平台开发框架\ncordova create\n项⽬\n3\nAndroid Studio\nAndroid\n原⽣开发环境\nAndroid\n模拟器\n4\nVS Code\n代码编辑器\nJavaScript/HTML/CSS\n5\nGit\n版本控制\ngit clone/push\n6\nChrome DevTools\n调试⼯具\n浏览器调试\n✅\n成功标准\n☐\n6\n个开发⼯具成功安装并启动\n☐\nCordova\n项⽬成功创建\n☐\n在线学习辅助平台核⼼功能成功实现\n☐\n模拟器\n/\n真机调试正常\n☐\n环境配置⽂档完整\n实验任务与案例\n核⼼任务\n搭建完整的\nCordova\n跨平台开发⼯具链，使⽤\nAI\n辅助⽣成在线学习辅助平台核⼼功能代码，验\n证开发环境可⽤性，实现题⽬测试、定时功能、\nAI\n错题分析、题库管理、考试防作弊等核⼼模\n块。\n实战案例\n组内\n6\n名成员分⼯合作，\n完成在线学习辅助平台的开发环境搭建，实现\n\"\n智慧校园\n\"\n主题的学习辅\n助平台，掌握从环境搭建到项⽬部署的完整流程，并输出环境配置⽂档。\n第⼀课时：环境准备与⼯具安装（\n1\n学时）\n1.1\n需求分析阶段\n步骤\n1\n：明确环境依赖要求\n1.\nNode.js\n环境\nNode.js 14+\nnpm 6+\n2.\nCordova\n开发环境\nCordova 12+\nCordova\n插件\n3.\nAndroid\n开发环境\nJDK 17+\nAndroid Studio 2024.1+\nAndroid SDK 34+\n4.\n代码编辑器\nVS Code 1.85+\n推荐插件：\nESLint\n、\nPrettier\n5.\n版本控制\nGit 2.30+\nGitee/GitHub\n账号\n6.\n调试⼯具\nChrome DevTools\nAndroid Studio\n模拟器\n1.2 Node.js\n环境搭建\n步骤\n1\n：下载与安装\n1.\n访问官⽹：\nhttps://node\nj\ns.or\ng\n/\n2.\n下载\nLTS\n版本（推荐\n18.x\n或\n20.x\n）\n3.\n运⾏安装程序，按提⽰完成安装\n4.\n验证安装：\nnode\n--\nversion\nnpm\n--\nversion\n步骤\n2\n：配置\nnpm\n镜像\n1.\n配置淘宝镜像加速：\nnpm config set registry https://registry.npmmirror.com\n2.\n验证配置：\nnpm config get registry\n1.3 Cordova\n环境搭建\n步骤\n1\n：全局安装\nCordova\n1.\n使⽤\nnpm\n安装\nCordova CLI\n：\nnpm install\n-\ng cordova\n2.\n验证安装：\ncordova\n--\nversion\n步骤\n2\n：创建\nCordova\n项⽬\n1.\n创建项⽬⽬录：\ncordova create cg3olapdi\n2.\n进⼊项⽬⽬录：\ncd cg3olapdi\n3.\n添加\nAndroid\n平台：\ncordova platform add android\n第⼆课时：项⽬开发与功能实现（\n1\n学时）\n2.1 Android Studio\n环境搭建\n步骤\n1\n：下载与安装\n1.\n访问官⽹：\nhttps://developer.android.com/studio\n2.\n下载\nWindows/macOS\n版本\n3.\n运⾏安装程序，勾选：\nAndroid Studio\nAndroid SDK\nAndroid Virtual Device\n4.\n完成安装\n步骤\n2\n：配置环境变量\n1.\n设置\nANDROID_HOME\n环境变量\n2.\n将\nSDK\n⼯具添加到\nPATH\n3.\n验证配置：\necho $ANDROID_HOME\n2.2\n项⽬核⼼功能实现\n步骤\n1\n：创建项⽬结构\n1.\n创建\nHTML\n主⻚⾯（\nindex.html\n）\n2.\n创建\nCSS\n样式⽂件（\ncss/styles.css\n）\n3.\n创建\nJavaScript\n模块：\njs/app.js\n（主应⽤逻\n辑）\njs/quiz.js\n（测试功能）\njs/timer.js\n（定时功能）\njs/ai\n-\nanalysis.js\n（\nAI\n分析\n功能）\njs/question\n-\nbank.js\n（题库管\n理）\njs/anti\n-\ncheat.js\n（防作弊功能）\njs/storage.js\n（数据存储）\n步骤\n2\n：使⽤\nAI\n辅助⽣成代码\n1.\n题⽬测试功能\n使⽤\nTRAE\n⽣成\nQuiz\n类\n实现四种测试模式实现答题和结果计\n算\n2.\n定时功能\n使⽤\nTRAE\n⽣成\nTimer\n类\n实现考试计时器实现学习计时\n器\n3.\nAI\n错题分析\n使⽤\nTRAE\n⽣成\nAIAnalysis\n类实现\n知识点识别实现错误类型分析实\n现学习建议⽣成\n4.\n题库管理\n使⽤\nTRAE\n⽣成\nQuestionBank\n类实\n现题⽬\nCRUD\n操作实现筛选和搜索\n5.\n考试防作弊\n使⽤\nTRAE\n⽣成\nAntiCheat\n类\n实现切屏检测实现摄像头监\n控\n6.\n数据存储\n使⽤\nTRAE\n⽣成\nStorage\n类\n实现\nLocalStorage\n封装实现数据导⼊导\n出\n2.3\n测试验证阶段\n步骤\n1\n：浏览器测试\n1.\n在\nChrome\n浏览器中打开\nindex.html\n2.\n测试所有功能模块：\n✅\n题⽬测试流程\n✅\n定时器功能\n✅\nAI\n错题分析\n✅\n题库管理\n✅\n考试防作弊\n3.\n使⽤\nChrome DevTools\n调试\n步骤\n2\n：模拟器测试\n1.\n启动\nAndroid\n模拟器\n2.\n构建并运⾏应⽤：\ncordova emulate android\n3.\n在模拟器中测试所有功能\n4.\n记录测试结果\n步骤\n3\n：真机测试\n1.\n连接\nAndroid\n设备（开启\nUSB\n调试）\n2.\n构建并运⾏：\ncordova run android\n3.\n在真机上测试所有功能\n4.\n记录测试结果\n2.4\n问题排查与解决\n常⻅问题\n1.\nNode.js\n版本不兼容\n解决⽅案：升级到推荐版本\n2.\nCordova\n平台添加失败\n解决⽅案：检查\nAndroid SDK\n配置\n3.\n模拟器启动失败\n解决⽅案：检查\nHAXM\n是否安装\n4.\n真机连接失败\n解决⽅案：检查\nUSB\n调试和驱动\n实验成果展⽰\n功能模块完成情况\n1.\n题⽬测试功能\n✅\n✅\n四种测试模式：随机测试、分类测试、错题重做、模拟考试\n✅\n多种题型⽀持：单选题、多选题、判断题\n✅\n实进进度显⽰和答题统计\n✅\n答题结果分析和成绩展⽰\n✅\n答案解析和错题标记\n2.\n定时功能\n✅\n✅\n考试计时器：精确记录答题⽤时\n✅\n学习计时器：累计学习时⻓\n✅\n时间格式化显⽰（时\n:\n分\n:\n秒）\n✅\n⽀持暂停、继续、重置操作\n✅\n实时更新显⽰\n3. AI\n错题分析功能\n✅\n✅\n智能识别错题知识点\n✅\n⾃动分析错误类型（概念混淆、⽅法记忆错误等）\n✅\n提供个性化学习建议\n✅\n⽣成错题复习计划\n✅\n弱点知识点统计\n✅\n批量分析功能\n4.\n题库管理系统\n✅\n✅\n题⽬增删改查（\nCRUD\n）\n✅\n分类管理（按知识点分类）\n✅\n难度分级（简单、中等、困难）\n✅\n批量导⼊\n/\n导出题⽬\n✅\nJSON\n格式数据交换\n✅\n题⽬\n筛选和搜索\n5.\n考试防作弊功能\n✅\n✅\n切屏检测：监控应⽤切换\n✅\n摄像头监控：实时⼈脸检测\n✅\n警告机制：多次违规⾃动终⽌\n✅\n可配置开关：根据需求启⽤\n✅\n违规记录和统计\n6.\n产品化功能\n✅\n✅\n响应式设计：适配各种屏幕尺⼨\n✅\n精美\nUI\n界⾯：现代化设计⻛格\n✅\n数据持久化：本地存储学习数据\n✅\n数据导出：⽀持学习数据备份\n✅\n⽤⼾等级系统：经验值和等级提升\n✅\n启动画⾯和过渡动画\n技术亮点\n1.\n模块化架构\n每个功能独⽴成模块清晰的职\n责划分易于维护和扩展\n2.\n数据持久化\n使⽤\nLocalStorage\n实现本地存储完整的数据管理\nAPI\n⽀持数据导⼊导出\n3.\n响应式设计\n适配⼿机、平板等不同设备灵\n活的布局系统流畅的⽤⼾体验\n4.\n⽆依赖框架\n纯原⽣\nJavaScript\n实现轻量⾼\n效\n易于理解和修改\n总结与思考\n实验总结\n掌握了\nCordova\n跨平台开发环境的搭建流程\n了解了\nNode.js\n、\nCordova\n、\nAndroid Studio\n等⼯具的配置体验了\nAI\n辅助代码⽣成⼯具\n（\nTRAE\n）的使⽤完成了在线学习辅助平台所有核⼼\n功能的开发实现了从环境搭建到项\n⽬部署的完整流程\n输出了完整的环境配置⽂档\n课后思考\n1.\nCordova\n与其他跨平台框架（\nFlutter\n、\nReact Native\n）的优缺点对⽐\n2.\n如何根据项⽬需求选择合适的跨平台开发框架\n3.\nAI\n辅助开发对开发效率的提升分析\n4.\nLocalStorage\n与其他存储⽅案（\nSQLite\n、\nIndexedDB\n）的适⽤场景\n5.\n如何优化移动应⽤的性能和⽤⼾体验\n附录\n相关⽂档\nREADME.md\n-\n项⽬说明\nDEVELOPMENT.md\n-\n开发指南\nAPI.md\n-\nAPI\n⽂档\nCORDOVA_SETUP.md\n-\nCordova\n环境构建指南\n项⽬⽂件结构\ncg3olapdi/\n├── index.html              #\n主页面\n├── config.xml              # Cordova\n配置文件\n├── package.json            #\n项目依赖配置\n├── README.md               #\n项目说明文档\n├── DEVELOPMENT.md         #\n开发指南\n├── API.md                  # API\n文档\n├── CORDOVA_SETUP.md       # Cordova\n环境构建指南\n├── sample\n-\nquestions.json   #\n示例题目数据\n├── check\n-\nenv.bat          #\n环境检查脚本\n├── init\n-\nproject.bat       #\n项目初始化脚本\n├── css/\n│   └── styles.css          #\n全局样式（响应式设计）\n└── js/\n├── storage.js          #\n数据存储管理\n├── timer.js            #\n定时器功能\n├── anti\n-\ncheat.js       #\n防作弊功能\n├── ai\n-\nanalysis.js      # AI\n分析功能\n├── question\n-\nbank.js    #\n题库管理\n├── quiz.js             #\n测试功能\n├── app.js              #\n应用主逻辑\n└── cordova.js          # Cordova\n占位文件\n联系⽅式\n开发团队\n：\nCG3\n-\nOLAPDI Team\n项⽬地址\n：\nGitee\n技术⽀持\n：\nsupport@example.com\n实验报告版本\n: v1.0.0\n完成⽇\n期\n: 2026\n年\n3\n⽉\n18\n⽇\n",
@@ -190,24 +208,6 @@
       "scored_at": null,
       "created_at": "2026-05-19T08:21:58.970896",
       "updated_at": "2026-05-19T08:21:58.970896",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 2,
-      "user_id": "2023210617",
-      "content": "PDF实验报告：2023210617钱皓实验二 原生应用开发.pdf\n",
-      "file_paths": "C:\\Users\\钱皓\\Desktop\\2023210617钱皓实验二 原生应用开发.pdf",
-      "file_names": "2023210617钱皓实验二 原生应用开发.pdf",
-      "submit_time": "2026-05-19T08:19:23.216688",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-05-19T08:19:23.216688",
-      "updated_at": "2026-05-19T08:19:23.216688",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
