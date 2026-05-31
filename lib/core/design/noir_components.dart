@@ -146,7 +146,7 @@ class NoirButton extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: variant == NoirButtonVariant.primary
                               ? NoirTokens.accent
-                              : NoirTokens.ink.withOpacity(0.08),
+                              : NoirTokens.ink.withValues(alpha: 0.08),
                           borderRadius:
                               BorderRadius.circular(NoirTokens.radius),
                         ),
@@ -428,7 +428,7 @@ class NoirAppBar extends StatelessWidget implements PreferredSizeWidget {
             preferredSize: const Size.fromHeight(1),
             child: Container(
               height: 1,
-              color: NoirTokens.accent.withOpacity(0.6),
+              color: NoirTokens.accent.withValues(alpha: 0.6),
             ),
           ),
     );
@@ -495,6 +495,6 @@ class NoirHairline extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         height: height,
-        color: NoirTokens.ink.withOpacity(opacity),
+        color: NoirTokens.ink.withValues(alpha: opacity),
       );
 }

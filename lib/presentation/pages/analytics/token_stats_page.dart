@@ -267,7 +267,7 @@ class _TokenStatsPageState extends State<TokenStatsPage>
                     drawVerticalLine: false,
                     horizontalInterval: maxTokens > 0 ? (maxTokens / 4).ceilToDouble() : 50,
                     getDrawingHorizontalLine: (value) => FlLine(
-                      color: Colors.grey.withOpacity(0.15),
+                      color: Colors.grey.withValues(alpha: 0.15),
                       strokeWidth: 1,
                     ),
                   ),
@@ -324,7 +324,7 @@ class _TokenStatsPageState extends State<TokenStatsPage>
                       ),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: primary.withOpacity(0.1),
+                        color: primary.withValues(alpha: 0.1),
                       ),
                     ),
                   ],
@@ -419,7 +419,7 @@ class _TokenStatsPageState extends State<TokenStatsPage>
                     show: true,
                     drawVerticalLine: false,
                     getDrawingHorizontalLine: (value) =>
-                        FlLine(color: Colors.grey.withOpacity(0.15), strokeWidth: 1),
+                        FlLine(color: Colors.grey.withValues(alpha: 0.15), strokeWidth: 1),
                   ),
                 ),
               ),
@@ -491,7 +491,7 @@ class _TokenStatsPageState extends State<TokenStatsPage>
           borderRadius: BorderRadius.circular(3),
           child: LinearProgressIndicator(
             value: ratio,
-            backgroundColor: color.withOpacity(0.1),
+            backgroundColor: color.withValues(alpha: 0.1),
             valueColor: AlwaysStoppedAnimation(color),
             minHeight: 8,
           ),
@@ -532,7 +532,7 @@ class _TokenStatsPageState extends State<TokenStatsPage>
         child: Center(
           child: Column(
             children: [
-              Icon(Icons.token, size: 48, color: Colors.grey.withOpacity(0.3)),
+              Icon(Icons.token, size: 48, color: Colors.grey.withValues(alpha: 0.3)),
               const SizedBox(height: 8),
               Text(message, style: const TextStyle(color: Colors.grey)),
             ],

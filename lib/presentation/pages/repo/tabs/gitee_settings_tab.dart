@@ -207,11 +207,11 @@ class _GiteeSettingsTabState extends State<_GiteeSettingsTab> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: (_testSuccess ? Colors.green : Colors.red)
-                    .withOpacity(0.1),
+                    .withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                     color: (_testSuccess ? Colors.green : Colors.red)
-                        .withOpacity(0.3)),
+                        .withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [

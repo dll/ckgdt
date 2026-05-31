@@ -95,12 +95,12 @@ class _RecordsTabState extends State<_RecordsTab> {
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
             color: selected
-                ? primary.withOpacity(0.12)
+                ? primary.withValues(alpha: 0.12)
                 : Colors.grey[100],
             borderRadius: BorderRadius.circular(10),
             border: selected
                 ? Border.all(
-                    color: primary.withOpacity(0.3))
+                    color: primary.withValues(alpha: 0.3))
                 : null,
           ),
           child: Column(

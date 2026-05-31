@@ -421,7 +421,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.1),
+                      color: Colors.grey.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -538,11 +538,11 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 24, vertical: 12),
                     decoration: BoxDecoration(
-                      color: _scoreColor(result.score).withOpacity(0.1),
+                      color: _scoreColor(result.score).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                           color: _scoreColor(result.score)
-                              .withOpacity(0.3)),
+                              .withValues(alpha: 0.3)),
                     ),
                     child: Column(
                       children: [
@@ -564,7 +564,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
+                      color: Colors.orange.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Row(
@@ -613,7 +613,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                           const SizedBox(height: 2),
                           LinearProgressIndicator(
                             value: dimMax > 0 ? dimScore / dimMax : 0,
-                            backgroundColor: Colors.grey.withOpacity(0.2),
+                            backgroundColor: Colors.grey.withValues(alpha: 0.2),
                             color: _scoreColor((dimScore / dimMax * 100).toInt()),
                           ),
                           if (comment.isNotEmpty)
@@ -911,7 +911,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text('$label $value',
@@ -1032,11 +1032,11 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
       margin: const EdgeInsets.only(bottom: 4),
       decoration: BoxDecoration(
         color: isApproved
-            ? Colors.green.withOpacity(0.05)
+            ? Colors.green.withValues(alpha: 0.05)
             : result != null
                 ? (result.aiFlag
-                    ? Colors.orange.withOpacity(0.08)
-                    : Colors.blue.withOpacity(0.05))
+                    ? Colors.orange.withValues(alpha: 0.08)
+                    : Colors.blue.withValues(alpha: 0.05))
                 : null,
         borderRadius: BorderRadius.circular(8),
       ),
@@ -1069,7 +1069,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: _scoreColor(result.score).withOpacity(0.15),
+                  color: _scoreColor(result.score).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text('${result.score}分',
@@ -1094,7 +1094,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.2),
+                  color: Colors.green.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Text('已核准',
@@ -1235,7 +1235,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: _scoreColor(e.score).withOpacity(0.15),
+                color: _scoreColor(e.score).withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
               child: Center(
@@ -1484,9 +1484,9 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                   tickCount: 4,
                   ticksTextStyle: const TextStyle(fontSize: 0),
                   tickBorderData: BorderSide(
-                      color: Colors.grey.withOpacity(0.2)),
+                      color: Colors.grey.withValues(alpha: 0.2)),
                   gridBorderData: BorderSide(
-                      color: Colors.grey.withOpacity(0.2)),
+                      color: Colors.grey.withValues(alpha: 0.2)),
                   radarBorderData: const BorderSide(color: Colors.transparent),
                   getTitle: (index, _) {
                     if (index >= keys.length) return const RadarChartTitle(text: '');
@@ -1500,7 +1500,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                       dataEntries: avgRates
                           .map((r) => RadarEntry(value: r * 100))
                           .toList(),
-                      fillColor: primary.withOpacity(0.2),
+                      fillColor: primary.withValues(alpha: 0.2),
                       borderColor: primary,
                       borderWidth: 2,
                       entryRadius: 3,
@@ -1591,7 +1591,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                       dotData: const FlDotData(show: true),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: primary.withOpacity(0.1),
+                        color: primary.withValues(alpha: 0.1),
                       ),
                     ),
                   ],
@@ -1636,7 +1636,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                     drawVerticalLine: false,
                     horizontalInterval: 20,
                     getDrawingHorizontalLine: (_) => FlLine(
-                      color: Colors.grey.withOpacity(0.15),
+                      color: Colors.grey.withValues(alpha: 0.15),
                       strokeWidth: 1,
                     ),
                   ),
@@ -1719,7 +1719,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                             LinearProgressIndicator(
                               value: rate.clamp(0.0, 1.0),
                               backgroundColor:
-                                  Colors.grey.withOpacity(0.2),
+                                  Colors.grey.withValues(alpha: 0.2),
                               color:
                                   achieved ? Colors.green : Colors.orange,
                               minHeight: 8,

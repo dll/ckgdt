@@ -106,7 +106,7 @@ class _TaskListTabState extends State<_TaskListTab> {
                   selectedColor: Theme.of(context)
                       .colorScheme
                       .primary
-                      .withOpacity(0.15),
+                      .withValues(alpha: 0.15),
                   padding: EdgeInsets.zero,
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
@@ -238,7 +238,7 @@ class _TaskListTabState extends State<_TaskListTab> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: dueDateColor.withOpacity(0.1),
+                            color: dueDateColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
@@ -336,7 +336,7 @@ class _TaskListTabState extends State<_TaskListTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(difficulty,
@@ -448,10 +448,10 @@ class _TaskListTabState extends State<_TaskListTab> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.05),
+                        color: Colors.green.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                            color: Colors.green.withOpacity(0.2)),
+                            color: Colors.green.withValues(alpha: 0.2)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -506,7 +506,7 @@ class _TaskListTabState extends State<_TaskListTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(

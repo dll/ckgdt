@@ -337,7 +337,7 @@ class _StatBadge extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text('$count', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color)),

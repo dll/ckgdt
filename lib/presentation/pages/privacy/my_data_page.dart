@@ -270,7 +270,7 @@ class _MyDataPageState extends State<MyDataPage> {
                           CircleAvatar(
                             radius: 22,
                             backgroundColor:
-                                theme.colorScheme.primary.withOpacity(0.15),
+                                theme.colorScheme.primary.withValues(alpha: 0.15),
                             child: Icon(Icons.person,
                                 color: theme.colorScheme.primary),
                           ),
@@ -348,7 +348,7 @@ class _MyDataPageState extends State<MyDataPage> {
                           style: TextStyle(color: Colors.red)),
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(
-                            color: Colors.red.withOpacity(0.3)),
+                            color: Colors.red.withValues(alpha: 0.3)),
                       ),
                     ),
                   ),

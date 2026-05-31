@@ -1695,7 +1695,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     Widget chip(IconData icon, String label, bool enabled, [Color? color]) {
       final c = color ?? primary;
       return Material(
-        color: enabled ? c.withOpacity(0.1) : Colors.grey.shade100,
+        color: enabled ? c.withValues(alpha: 0.1) : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
@@ -1722,7 +1722,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: primary.withOpacity(0.03),
+        color: primary.withValues(alpha: 0.03),
         border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
       ),
       child: Row(
@@ -2004,9 +2004,9 @@ class _StatusBadge {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withOpacity(0.3), width: 0.5),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 0.5),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

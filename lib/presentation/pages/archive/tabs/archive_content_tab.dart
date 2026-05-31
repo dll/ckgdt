@@ -185,7 +185,7 @@ class _ArchiveContentTabState extends State<ArchiveContentTab> {
                 dense: true,
                 leading: CircleAvatar(
                   radius: 18,
-                  backgroundColor: color.withOpacity(0.15),
+                  backgroundColor: color.withValues(alpha: 0.15),
                   child: Icon(icon, size: 18, color: color),
                 ),
                 title: Text(entry.name,
