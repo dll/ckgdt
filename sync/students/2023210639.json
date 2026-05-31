@@ -3,8 +3,8 @@
   "user_id": "2023210639",
   "user_name": "邢兆丰",
   "role": "student",
-  "synced_at": "2026-05-31T22:57:36.966353",
-  "last_active": "2026-05-31T22:57:36.966353",
+  "synced_at": "2026-05-31T23:01:59.630952",
+  "last_active": "2026-05-31T23:01:59.630952",
   "quiz_results": [
     {
       "user_id": "2023210639",
@@ -23,6 +23,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 2,
+      "user_id": "2023210639",
+      "content": "PDF实验报告：2023210639邢兆丰实验二 原生应用开发.pdf\n\n--- 报告正文（自动提取）---\n移动应用开发实验报告\n封面信息\n项目\n内容\n实验名称\n原生应用开发\n实验编号\nd20301035102\n、\nd20301009202\n学号\n2023210639\n姓名\n邢兆丰\n班级\n软件\n231\n日期\n2026-03-20\n组别\n第\n2\n组\n项目名称\n多端温控系统\n技术栈\nAndroid\n(Kotlin)\n/\niOS\n(SwiftUI)\n实验目的\n1.\n掌握\nAndroid\nKotlin\n登录页面开发\n2.\n理解\niOS\nSwiftUI\n登录实现\n3.\n学会\nActivity\n间数据传递\n4.\n完成平台差异对比分析\n实验环境\n平台\n开发工具\n语言\nSDK\n版本\nAndroid\nAndroid\nStudio\nPanda\n2\nKotlin\nAPI\n24+\niOS\nXcode\nSwift\niOS\n16+\n跨平台\nAndroid\nStudio\nDart/Flutter\n3.41.4\n实验步骤\n1.\n需求分析\n1.1\n功能需求\n●\n用户名输入（学号）\n●\n密码输入（学号后\n6\n位）\n●\n登录按钮\n●\n输入验证（不能为空、长度限制）\n1.2\n界面需求\n●\nMaterial\nDesign\n风格（\nAndroid\n）\n●\nMaterial\nDesign\n3\n风格（\nFlutter\n）\n●\n输入框占位提示\n●\n密码隐藏显示\n●\n渐变背景效果\n1.3\n跳转需求\n●\n登录成功\n→\n个人中心\n/\n温控系统主页\n●\n传递用户名数据\n2.\nAndroid\n登录页面开发\n2.1\n项目创建\n●\n打开\nAndroid\nStudio\n●\n创建\nEmpty\nActivity\n项目\n●\n选择\nKotlin\n语言\n●\n最低\nSDK\n：\nAPI\n24\n2.2\n布局实现\n<!--\nactivity_login.xml\n-->\n<LinearLayout\nandroid:orientation=\"vertical\"\nandroid:padding=\"16dp\">\n<EditText\nandroid:id=\"@+id/et_username\"\nandroid:hint=\"\n请输入学号\n\"\nandroid:inputType=\"text\"/>\n<EditText\nandroid:id=\"@+id/et_password\"\nandroid:hint=\"\n请输入密码\n\"\nandroid:inputType=\"textPassword\"/>\n<Button\nandroid:id=\"@+id/btn_login\"\nandroid:text=\"\n登录\n\"/>\n<TextView\nandroid:id=\"@+id/tv_error\"\nandroid:textColor=\"@color/red\"/>\n<CheckBox\nandroid:id=\"@+id/cb_remember\"\nandroid:text=\"\n记住密码\n\"/>\n</LinearLayout>\n2.3\n登录逻辑实现\nclass\nLoginActivity\n:\nAppCompatActivity()\n{\nprivate\nlateinit\nvar\netUsername:\nEditText\nprivate\nlateinit\nvar\netPassword:\nEditText\nprivate\nlateinit\nvar\nbtnLogin:\nButton\nprivate\nlateinit\nvar\ntvError:\nTextView\nprivate\nlateinit\nvar\ncbRemember:\nCheckBox\noverride\nfun\nonCreate(savedInstanceState:\nBundle?)\n{\nsuper.onCreate(savedInstanceState)\nsetContentView(R.layout.activity_login)\ninitViews()\nloadSavedCredentials()\nsetListeners()\n}\nprivate\nfun\ninitViews()\n{\netUsername\n=\nfindViewById(R.id.et_username)\netPassword\n=\nfindViewById(R.id.et_password)\nbtnLogin\n=\nfindViewById(R.id.btn_login)\ntvError\n=\nfindViewById(R.id.tv_error)\ncbRemember\n=\nfindViewById(R.id.cb_remember)\n}\nprivate\nfun\nsetListeners()\n{\nbtnLogin.setOnClickListener\n{\nval\nusername\n=\netUsername.text.toString().trim()\nval\npassword\n=\netPassword.text.toString().trim()\nif\n(validateInputs(username,\npassword))\n{\nsaveCredentials(username,\npassword)\nnavigateToMain(username)\n}\n}\n}\nprivate\nfun\nvalidateInputs(username:\nString,\npassword:\nString):\nBoolean\n{\nif\n(username.isEmpty())\n{\ntvError.text\n=\n\"\n学号不能为空\n\"\nreturn\nfalse\n}\nif\n(password.isEmpty())\n{\ntvError.text\n=\n\"\n密码不能为空\n\"\nreturn\nfalse\n}\nif\n(username\n!=\n\"admin\"\n||\npassword\n!=\n\"123456\")\n{\ntvError.text\n=\n\"\n用户名或密码错误\n\"\nreturn\nfalse\n}\ntvError.text\n=\n\"\"\nreturn\ntrue\n}\nprivate\nfun\nnavigateToMain(username:\nString)\n{\nval\nintent\n=\nIntent(this,\nMainActivity::class.java)\nintent.putExtra(\"username\",\nusername)\nstartActivity(intent)\nfinish()\n}\n}\n2.4\n个人中心页面\nclass\nMainActivity\n:\nAppCompatActivity()\n{\noverride\nfun\nonCreate(savedInstanceState:\nBundle?)\n{\nsuper.onCreate(savedInstanceState)\nsetContentView(R.layout.activity_main)\nval\nusername\n=\nintent.getStringExtra(\"username\")\n?:\n\"\"\nval\ntvWelcome\n=\nfindViewById<TextView>(R.id.tv_welcome)\ntvWelcome.text\n=\n\"\n欢迎回来，\n$username\n！\n\"\n}\n}\n3.\niOS\n登录页面开发\n3.1\n项目创建\n●\n打开\nXcode\n●\n创建\nSwiftUI\n项目\n●\n命名为\nNativeLogin\n3.2\n登录页面实现\nstruct\nContentView:\nView\n{\n@State\nprivate\nvar\nusername:\nString\n=\n\"\"\n@State\nprivate\nvar\npassword:\nString\n=\n\"\"\n@State\nprivate\nvar\nisLoginSuccess:\nBool\n=\nfalse\nvar\nbody:\nsome\nView\n{\nNavigationView\n{\nVStack(spacing:\n20)\n{\nTextField(\"\n请输入学号\n\",\ntext:\n$username)\n.textFieldStyle(RoundedBorderTextFieldStyle())\nSecureField(\"\n请输入密码\n\",\ntext:\n$password)\n.textFieldStyle(RoundedBorderTextFieldStyle())\nButton(\"\n登录\n\")\n{\nif\nvalidateInput()\n{\nisLoginSuccess\n=\ntrue\n}\n}\n.padding()\n.background(Color.blue)\n.foregroundColor(.white)\nNavigationLink(destination:\nHomeView(username:\nusername),\nisActive:\n$isLoginSuccess)\n{\nEmptyView()\n}\n}\n.padding()\n.navigationTitle(\"\n智慧校园登录\n\")\n}\n}\nfunc\nvalidateInput()\n->\nBool\n{\nreturn\n!username.isEmpty\n&&\n!password.isEmpty\n}\n}\n3.3\n个人中心页面\nstruct\nHomeView:\nView\n{\nlet\nusername:\nString\nvar\nbody:\nsome\nView\n{\nVStack\n{\nText(\"\n欢迎\n(username)\")\n.font(.largeTitle)\n.padding()\n}\n.navigationTitle(\"\n个人中心\n\")\n}\n}\n4.\nFlutter\n跨平台实现\n4.1\n登录页面实现\nclass\nLoginPage\nextends\nStatefulWidget\n{\nconst\nLoginPage({super.key});\n@override\nState<LoginPage>\ncreateState()\n=>\n_LoginPageState();\n}\nclass\n_LoginPageState\nextends\nState<LoginPage>\n{\nfinal\n_usernameController\n=\nTextEditingController();\nfinal\n_passwordController\n=\nTextEditingController();\nbool\n_isLoading\n=\nfalse;\nString\n_errorMessage\n=\n'';\nvoid\n_handleLogin()\n{\nsetState(()\n{\n_isLoading\n=\ntrue;\n_errorMessage\n=\n'';\n});\nString\nusername\n=\n_usernameController.text.trim();\nString\npassword\n=\n_passwordController.text.trim();\nif\n(username.isEmpty\n||\npassword.isEmpty)\n{\nsetState(()\n{\n_isLoading\n=\nfalse;\n_errorMessage\n=\n'\n请输入用户名和密码\n';\n});\nreturn;\n}\nif\n(username\n==\n'2023210639'\n&&\npassword\n==\n'210639')\n{\nsetState(()\n=>\n_isLoading\n=\nfalse);\nNavigator.pushReplacement(\ncontext,\nMaterialPageRoute(builder:\n(context)\n=>\nHomePage(username:\nusername)),\n);\n}\nelse\n{\nsetState(()\n{\n_isLoading\n=\nfalse;\n_errorMessage\n=\n'\n用户名或密码错误\n';\n});\n}\n}\n@override\nWidget\nbuild(BuildContext\ncontext)\n{\nreturn\nScaffold(\nbody:\nContainer(\ndecoration:\nBoxDecoration(\ngradient:\nLinearGradient(\nbegin:\nAlignment.topCenter,\nend:\nAlignment.bottomCenter,\ncolors:\n[Colors.blue.shade400,\nColors.blue.shade700],\n),\n),\nchild:\nSafeArea(\nchild:\nCenter(\nchild:\nSingleChildScrollView(\npadding:\nconst\nEdgeInsets.all(24.0),\nchild:\nCard(\nelevation:\n8,\nshape:\nRoundedRectangleBorder(borderRadius:\nBorderRadius.circular(16)),\nchild:\nPadding(\npadding:\nconst\nEdgeInsets.all(32.0),\nchild:\nColumn(\nmainAxisSize:\nMainAxisSize.min,\nchildren:\n[\nIcon(Icons.thermostat,\nsize:\n80,\ncolor:\nColors.blue.shade700),\nconst\nSizedBox(height:\n24),\nconst\nText('\n多端温控系统\n',\nstyle:\nTextStyle(fontSize:\n28,\nfontWeight:\nFontWeight.bold)),\nconst\nSizedBox(height:\n32),\nTextField(\ncontroller:\n_usernameController,\ndecoration:\nInputDecoration(\nlabelText:\n'\n用户名\n',\nprefixIcon:\nconst\nIcon(Icons.person),\nborder:\nOutlineInputBorder(borderRadius:\nBorderRadius.circular(8)),\n),\n),\nconst\nSizedBox(height:\n16),\nTextField(\ncontroller:\n_passwordController,\nobscureText:\ntrue,\ndecoration:\nInputDecoration(\nlabelText:\n'\n密码\n',\nprefixIcon:\nconst\nIcon(Icons.lock),\nborder:\nOutlineInputBorder(borderRadius:\nBorderRadius.circular(8)),\n),\n),\nif\n(_errorMessage.isNotEmpty)\nText(_errorMessage,\nstyle:\nconst\nTextStyle(color:\nColors.red)),\nconst\nSizedBox(height:\n24),\nSizedBox(\nwidth:\ndouble.infinity,\nheight:\n50,\nchild:\nElevatedButton(\nonPressed:\n_isLoading\n?\nnull\n:\n_handleLogin,\nchild:\n_isLoading\n?\nconst\nCircularProgressIndicator()\n:\nconst\nText('\n登录\n'),\n),\n),\n],\n),\n),\n),\n),\n),\n),\n),\n);\n}\n}\n4.2\n温控系统主页\nclass\nHomePage\nextends\nStatelessWidget\n{\nfinal\nString\nusername;\nconst\nHomePage({super.key,\nrequired\nthis.username});\n@override\nWidget\nbuild(BuildContext\ncontext)\n{\nreturn\nScaffold(\nappBar:\nAppBar(\ntitle:\nconst\nText('\n温控系统\n'),\nactions:\n[\nIconButton(\nicon:\nconst\nIcon(Icons.logout),\nonPressed:\n()\n{\nNavigator.pushReplacement(\ncontext,\nMaterialPageRoute(builder:\n(context)\n=>\nconst\nLoginPage()),\n);\n},\n),\n],\n),\nbody:\nPadding(\npadding:\nconst\nEdgeInsets.all(16.0),\nchild:\nColumn(\nchildren:\n[\nCard(\nchild:\nPadding(\npadding:\nconst\nEdgeInsets.all(16.0),\nchild:\nRow(\nchildren:\n[\nCircleAvatar(child:\nText(username[0].toUpperCase())),\nconst\nSizedBox(width:\n16),\nColumn(\ncrossAxisAlignment:\nCrossAxisAlignment.start,\nchildren:\n[\nText('\n欢迎，\n$username',\nstyle:\nconst\nTextStyle(fontSize:\n18,\nfontWeight:\nFontWeight.bold)),\nconst\nText('\n系统管理员\n',\nstyle:\nTextStyle(color:\nColors.grey)),\n],\n),\n],\n),\n),\n),\nconst\nSizedBox(height:\n16),\nconst\nText('\n温度监控\n',\nstyle:\nTextStyle(fontSize:\n20,\nfontWeight:\nFontWeight.bold)),\nconst\nSizedBox(height:\n16),\nExpanded(\nchild:\nGridView.count(\ncrossAxisCount:\n2,\nchildren:\n[\n_buildTempCard('\n客厅\n',\n24.5,\nIcons.home),\n_buildTempCard('\n卧室\n',\n22.3,\nIcons.bed),\n_buildTempCard('\n厨房\n',\n26.8,\nIcons.kitchen),\n_buildTempCard('\n卫生间\n',\n23.1,\nIcons.bathroom),\n],\n),\n),\n],\n),\n),\n);\n}\nWidget\n_buildTempCard(String\nroom,\ndouble\ntemp,\nIconData\nicon)\n{\nreturn\nCard(\nchild:\nPadding(\npadding:\nconst\nEdgeInsets.all(16.0),\nchild:\nColumn(\nchildren:\n[\nIcon(icon,\nsize:\n48,\ncolor:\nColors.blue),\nconst\nSizedBox(height:\n8),\nText(room,\nstyle:\nconst\nTextStyle(fontWeight:\nFontWeight.bold)),\nText('${temp}\n°\nC',\nstyle:\nconst\nTextStyle(fontSize:\n24)),\n],\n),\n),\n);\n}\n}\n实验结果\n验证结果\n平台\n登录功能\n输入验证\n页面跳转\n数据传递\nAndroid\n[x]\n成功\n[x]\n成功\n[x]\n成功\n[x]\n成功\niOS\n[\n]\n成功\n[\n]\n成功\n[\n]\n成功\n[\n]\n成功\nFlutter\n[x]\n成功\n[x]\n成功\n[x]\n成功\n[x]\n成功\n截图记录\nAndroid\n登录页面\n图\n1\nandroid\n登录\nAndroid\n个人中心\n图\n2\nandroid\n个人中心\niOS\n登录页面\n图\n3\nios\n登录\niOS\n个人中心\n图\n4\nios\n个人中心\nFlutter\n登录页面\n图\n5\nflutter\n登录\nFlutter\n温控主页\n图\n6\nflutter\n个人中心\n平台差异对比\n对比项\nAndroid\niOS\nFlutter\n开发语言\nKotlin\nSwift\nDart\nUI\n框架\nXML/Compose\nSwiftUI\nWidgets\n页面跳转\nIntent\nNavigationLink\nNavigator\n数据传递\nIntent.putExtra\n@Binding\n构造函数\n布局方式\n线性布局\n/\n约束布局\nStack/Grid\nWidget\n树\n生命周期\nActivity\nViewController\nStatefulWidget\n数据库连接\nJDBC\nCore\nData\nmysql1\n库\n开发效率\n平台特定代码\n平台特定代码\n一次编写多端运行\n问题与解决\n问题描述\n解决方案\n解决结果\n数据库连接失败（模拟器无\n法访问主机）\n修改连接地址为\n10.0.2.2\n，添加本\n地验证备用方案\n✅\n成功解决\n防火墙阻止\nMySQL\n连接\n添加入站规则允许\n3306\n端口\n✅\n成功解决\n布局溢出问题\n使用\nSingleChildScrollView\n，优化\n布局间距\n✅\n成功解决\nGradle\n构建失败\n配置国内镜像源，清理\nGradle\n缓\n存\n✅\n成功解决\n实验总结\n实验收获\n●\n掌握了\nAndroid\nKotlin\n登录页面开发，包括\nEditText\n输入验证和\nIntent\n页面跳转\n●\n理解了\niOS\nSwiftUI\n登录实现的基本原理\n●\n学会了\nActivity\n间数据传递和页面导航\n●\n掌握了\nFlutter\n跨平台开发技术，实现了多端温控系统\n●\n完成了平台差异对比分析，理解了不同平台的技术特点\n技术要点\n●\nAndroid\n：\nEditText\n输入验证、\nIntent\n页面跳转、\nSharedPreferences\n数据存储\n●\niOS\n：\nSwiftUI\n视图绑定、\nNavigationLink\n导航、状态管理\n●\nFlutter\n：\nStatefulWidget\n状态管理、\nNavigator\n页面路由、\nMaterial\nDesign\n组件\n●\n数据库：\nMySQL\n连接、用户验证、本地验证备用方案\n考核指标\n考核项\n评分标准\n得分\n功能完整性\n登录功能完整，输入验证正确\n25\n分\n代码质量\n代码结构清晰，注释完整\n20\n分\n考核项\n评分标准\n得分\n页面跳转\nActivity/View\n跳转正常\n15\n分\n数据传递\n数据传递正确\n15\n分\n平台对比\n完成平台差异分析\n15\n分\n实验报告\n报告结构完整，内容详实\n10\n分\n教师评价\n项目\n评价\n实验完成情况\n<br\n/>\n技术掌握程度\n<br\n/>\n创新点\n<br\n/>\n综合评价\n<br\n/>\n成绩\n<br\n/>\n教师签名：\n___________________\n日期：\n___________________\n",
+      "file_paths": "C:\\Users\\32236\\OneDrive\\Desktop\\作业报告\\2023210639邢兆丰实验二 原生应用开发.pdf",
+      "file_names": "2023210639邢兆丰实验二 原生应用开发.pdf",
+      "submit_time": "2026-05-31T23:01:59.615295",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-05-03T11:19:20.702998",
+      "updated_at": "2026-05-31T23:01:59.615295",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 6,
       "user_id": "2023210639",
@@ -112,24 +130,6 @@
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
-    },
-    {
-      "task_id": 2,
-      "user_id": "2023210639",
-      "content": "PDF实验报告：2023210639邢兆丰实验二 原生应用开发.pdf",
-      "file_paths": "C:\\Users\\32236\\OneDrive\\文档/sync_files/2023210639/2023210639邢兆丰实验二 原生应用开发.pdf",
-      "file_names": "2023210639邢兆丰实验二 原生应用开发.pdf",
-      "submit_time": "2026-05-03T11:19:20.702998",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-05-03T11:19:20.702998",
-      "updated_at": "2026-05-03T11:19:20.702998",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
     }
   ],
   "student_reports": [
@@ -145,6 +145,20 @@
       "score": null,
       "feedback": null,
       "created_at": "2026-05-31T22:50:46.254137",
+      "updated_at": null
+    },
+    {
+      "template_id": null,
+      "task_id": null,
+      "user_id": "2023210639",
+      "title": "第二周报告",
+      "content_json": "2023210639邢兆丰第二周报告.pdf",
+      "file_path": "C:\\Users\\32236\\OneDrive\\Desktop\\邢兆丰的个人东西\\2023210639邢兆丰第二周报告.pdf",
+      "status": "已提交",
+      "submit_time": "2026-05-31T22:57:56.503125",
+      "score": null,
+      "feedback": null,
+      "created_at": "2026-05-31T22:57:56.503125",
       "updated_at": null
     }
   ],
