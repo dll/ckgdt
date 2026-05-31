@@ -3,8 +3,8 @@
   "user_id": "2023210603",
   "user_name": "李俊杰",
   "role": "student",
-  "synced_at": "2026-05-31T23:19:15.728040",
-  "last_active": "2026-05-31T23:19:15.728040",
+  "synced_at": "2026-05-31T23:23:01.282694",
+  "last_active": "2026-05-31T23:23:01.282694",
   "quiz_results": [
     {
       "user_id": "2023210603",
@@ -26,17 +26,17 @@
     {
       "task_id": 1,
       "user_id": "2023210603",
-      "content": "PDF实验报告：2023210603李俊杰实验一 开发环境搭建.pdf\n\n--- 报告正文（自动提取）---\n项目\n内容\n实验名称\n开发环境搭建\n实验编号\nd20301035101\n、\nd20301009201\n学号\n2023210603\n姓名\n李俊杰\n班级\n软件\n232\n日期\n2026-04-23\n组别\n组一\n项目名称\n智能健康运动记录平台开发与整合\n序号\n开发工具\n版本要求\n验证项目\n1\nAndroid Studio\n2024.1+\nKotlin HelloWorld\n2\nFlutter SDK\n3.19+\nDart HelloWorld\n3\n微信开发者工具\n最新版\n微信小程序\nHelloWorld\n4\nDevEco Studio\n5.0+\nHarmonyOS HelloWorld\n5\nHBuilderX\n4.0+\nVue HelloWorld\n6\nVisual Studio\n2022\nC# HelloWorld\n移动应用开发实验报告\n封面信息\n实验目的\n1.\n掌握\n6\n大主流移动开发工具的安装配置方法\n2.\n了解各平台的\nHelloWorld\n创建流程\n3.\n体验\nAI\n辅助代码生成工具的使用\n4.\n完成环境配置文档的编写\n实验环境\n实验步骤\n1. Android Studio\n环境搭建\n1.1\n需求分析阶段\n环境依赖要求\n：\nJDK 17+\nAndroid Studio 2024.1+\nAndroid SDK 34+\nAGP 9.0.0\n（内置\nKotlin\n支持）\nGradle 9.2.1\n（与\nAGP 9.0.0\n配套，适配\ncompileSdk 36\n）\n1.2\n下载与安装\n访问官网：\nhttps://developer.android.com/studio\n下载\nWindows\n版本\n运行安装程序，勾选：\nAndroid Studio\nAndroid SDK\nAndroid Virtual Device\n完成安装\n1.3\n配置验证\n启动\nAndroid Studio\n创建\nEmpty Activity\n项目\n工具\n安装状态\n项目创建\n运行状态\n备注\nAndroid Studio\n[x]\n成功\n[x]\n成功\n[x]\n成功\n使用\nAI\n辅助生成\nHelloWorld\n代码\n使用\nAI\n辅助生成\nHelloWorld\n代码\n运行项目验证\n实验结果\n验证结果\n截图记录\nAndroid Studio\n运行截图\n问题描述\n解决方案\n解决结果\nTrae\n在\nAndroid Studio\n使用\n过程中缺少语言插件\n安装\nIntelliJ\n适配的中文语言插件（本地导入插件\n文件）\n成功安装中文\n语言包\nAndroid Studio\n配置与小组\n统一标准不一致\n参考\nAndroid Studio\n标准配置流程，统一\nJDK\n版\n本、\nSDK\n路径、\nGradle\n配置等环境参数\n环境配置与小\n组保持一致\n问题与解决\n问题讨论与解决方案\n1.\n汇总常见问题\n：实验过程中发现的常见问题主要为：\nTrae\n在\nAndroid Studio\n使用过程中，需安装对\n应的语言插件（\nAndroid Studio\n无官方中文语言包，通常需安装\nIntelliJ\n适配的语言插件），同时需\n确保其\nAndroid Studio\n的各项配置与小组统一标准保持一致，避免因环境配置差异导致项目无法正\n常编译运行或运行结果不一致的情况出现。\n2.\n讨论解决方案\n：针对上述问题，小组共同讨论后确定解决方案：指导\nTrae\n参考\nAndroid Studio\n的标\n准配置流程，结合小组统一的环境配置要求（如\nJDK\n版本、\nSDK\n路径、\nGradle\n配置等），自主完成\n语言插件的安装（可通过本地导入插件文件的方式完成）与环境参数的调试配置，确保其开发环境\n与小组整体保持一致，保障后续实验协作的顺利推进。\n实验总结\n实验收获\n掌握了\nAndroid\n开发环境的搭建逻辑与项目开发基础流程\n建立了版本匹配、配置验证的核心思维\n培养了问题排查能力\n统一了团队协作的环境配置标准\n技术要点\nAGP 9.0.0\n内置\nKotlin\n支持，无需手动声明插件\n所有仓库配置集中在\nsettings\n，项目内不重复声明\nGradle 9.2.1\n与\nAGP 9.0.0\n配套，适配\ncompileSdk 36\n严格按照\nJDK 17+\n、\nAndroid Studio 2024.1+\n、\nAndroid SDK 34+\n的要求进行环境配置\n考核项\n评分标准\n得分\n环境搭建完整性\n6\n个开发工具全部安装成功\n20\n分\n项目创建与运行\n6\n个\nHelloWorld\n项目成功运行\n30\n分\n截图记录\n提供所有工具运行截图\n20\n分\n问题解决\n能独立解决遇到的问题\n15\n分\n实验报告质量\n报告结构完整，内容详实\n15\n分\n项目\n评价\n实验完成情况\n技术掌握程度\n创新点\n综合评价\n成绩\n总结\n本次移动应用开发环境搭建实验为\n2\n学时验证型实验，小组协作完成了\nAndroid\n开发环境的搭建与验证，\n严格按照\nJDK 17+\n、\nAndroid Studio 2024.1+\n、\nAndroid SDK 34+\n的要求，完成了\nAndroid Studio\n的下\n载、安装与配置，创建\nEmpty Activity\n项目并结合\nAI\n辅助生成\nHelloWorld\n代码，在模拟器中成功编译运行\n并记录结果，针对实验中出现的语言插件缺失、环境配置不一致等问题，明确了适配性解决方案；通过\n本次实验，我们掌握了\nAndroid\n开发环境的搭建逻辑与项目开发基础流程，建立了版本匹配、配置验证的\n核心思维，培养了问题排查能力，同时统一了团队协作的环境配置标准，为后续移动应用开发课程的学\n习奠定了坚实的环境与认知基础。\n考核指标\n教师评价\n教师签名：\n__\n__\n__\n_\n日期：\n__\n__\n__\n_\n",
-      "file_paths": "C:\\Users\\li\\Documents/sync_files/2023210603/2023210603李俊杰实验一 开发环境搭建.pdf",
+      "content": "PDF实验报告：2023210603李俊杰实验一 开发环境搭建.pdf\n\n--- 报告正文（自动提取）---\n项目\n内容\n实验名称\n开发环境搭建\n实验编号\nd20301035101\n、\nd20301009201\n学号\n2023210603\n姓名\n李俊杰\n班级\n软件\n232\n日期\n2026-04-23\n组别\n组一\n项目名称\n智能健康运动记录平台开发与整合\n序号\n开发工具\n版本要求\n验证项目\n1\nAndroid Studio\n2024.1+\nKotlin HelloWorld\n2\nFlutter SDK\n3.19+\nDart HelloWorld\n3\n微信开发者工具\n最新版\n微信小程序\nHelloWorld\n4\nDevEco Studio\n5.0+\nHarmonyOS HelloWorld\n5\nHBuilderX\n4.0+\nVue HelloWorld\n6\nVisual Studio\n2022\nC# HelloWorld\n移动应用开发实验报告\n封面信息\n实验目的\n1.\n掌握\n6\n大主流移动开发工具的安装配置方法\n2.\n了解各平台的\nHelloWorld\n创建流程\n3.\n体验\nAI\n辅助代码生成工具的使用\n4.\n完成环境配置文档的编写\n实验环境\n实验步骤\n1. Android Studio\n环境搭建\n1.1\n需求分析阶段\n环境依赖要求\n：\nJDK 17+\nAndroid Studio 2024.1+\nAndroid SDK 34+\nAGP 9.0.0\n（内置\nKotlin\n支持）\nGradle 9.2.1\n（与\nAGP 9.0.0\n配套，适配\ncompileSdk 36\n）\n1.2\n下载与安装\n访问官网：\nhttps://developer.android.com/studio\n下载\nWindows\n版本\n运行安装程序，勾选：\nAndroid Studio\nAndroid SDK\nAndroid Virtual Device\n完成安装\n1.3\n配置验证\n启动\nAndroid Studio\n创建\nEmpty Activity\n项目\n使用\nAI\n辅助生成\nHelloWorld\n代码\n工具\n安装状态\n项目创建\n运行状态\n备注\nAndroid Studio\n[x]\n成功\n[x]\n成功\n[x]\n成功\n使用\nAI\n辅助生成\nHelloWorld\n代码\n运行项目验证\n实验结果\n验证结果\n截图记录\nAndroid Studio\n运行截图\n问题描述\n解决方案\n解决结果\nTrae\n在\nAndroid Studio\n使用\n过程中缺少语言插件\n安装\nIntelliJ\n适配的中文语言插件（本地导入插件\n文件）\n成功安装中文\n语言包\nAndroid Studio\n配置与小组\n统一标准不一致\n参考\nAndroid Studio\n标准配置流程，统一\nJDK\n版\n本、\nSDK\n路径、\nGradle\n配置等环境参数\n环境配置与小\n组保持一致\n问题与解决\n问题讨论与解决方案\n1.\n汇总常见问题\n：实验过程中发现的常见问题主要为：\nTrae\n在\nAndroid Studio\n使用过程中，需安装对\n应的语言插件（\nAndroid Studio\n无官方中文语言包，通常需安装\nIntelliJ\n适配的语言插件），同时需\n确保其\nAndroid Studio\n的各项配置与小组统一标准保持一致，避免因环境配置差异导致项目无法正\n常编译运行或运行结果不一致的情况出现。\n考核项\n评分标准\n得分\n环境搭建完整性\n6\n个开发工具全部安装成功\n20\n分\n项目创建与运行\n6\n个\nHelloWorld\n项目成功运行\n30\n分\n截图记录\n提供所有工具运行截图\n20\n分\n问题解决\n能独立解决遇到的问题\n15\n分\n实验报告质量\n报告结构完整，内容详实\n15\n分\n项目\n评价\n实验完成情况\n2.\n讨论解决方案\n：针对上述问题，小组共同讨论后确定解决方案：指导\nTrae\n参考\nAndroid Studio\n的标\n准配置流程，结合小组统一的环境配置要求（如\nJDK\n版本、\nSDK\n路径、\nGradle\n配置等），自主完成\n语言插件的安装（可通过本地导入插件文件的方式完成）与环境参数的调试配置，确保其开发环境\n与小组整体保持一致，保障后续实验协作的顺利推进。\n实验总结\n实验收获\n掌握了\nAndroid\n开发环境的搭建逻辑与项目开发基础流程\n建立了版本匹配、配置验证的核心思维\n培养了问题排查能力\n统一了团队协作的环境配置标准\n技术要点\nAGP 9.0.0\n内置\nKotlin\n支持，无需手动声明插件\n所有仓库配置集中在\nsettings\n，项目内不重复声明\nGradle 9.2.1\n与\nAGP 9.0.0\n配套，适配\ncompileSdk 36\n严格按照\nJDK 17+\n、\nAndroid Studio 2024.1+\n、\nAndroid SDK 34+\n的要求进行环境配置\n总结\n本次移动应用开发环境搭建实验为\n2\n学时验证型实验，小组协作完成了\nAndroid\n开发环境的搭建与验证，\n严格按照\nJDK 17+\n、\nAndroid Studio 2024.1+\n、\nAndroid SDK 34+\n的要求，完成了\nAndroid Studio\n的下\n载、安装与配置，创建\nEmpty Activity\n项目并结合\nAI\n辅助生成\nHelloWorld\n代码，在模拟器中成功编译运行\n并记录结果，针对实验中出现的语言插件缺失、环境配置不一致等问题，明确了适配性解决方案；通过\n本次实验，我们掌握了\nAndroid\n开发环境的搭建逻辑与项目开发基础流程，建立了版本匹配、配置验证的\n核心思维，培养了问题排查能力，同时统一了团队协作的环境配置标准，为后续移动应用开发课程的学\n习奠定了坚实的环境与认知基础。\n考核指标\n教师评价\n项目\n评价\n技术掌握程度\n创新点\n综合评价\n成绩\n教师签名：\n__\n刘东良\n__\n__\n_\n日期：\n__\n__\n__\n_\n",
+      "file_paths": "D:\\MyProjects\\移动应用实验开发\\实验\\实验一\\2023210603李俊杰实验一 开发环境搭建.pdf",
       "file_names": "2023210603李俊杰实验一 开发环境搭建.pdf",
-      "submit_time": "2026-05-31T23:19:15.718481",
+      "submit_time": "2026-05-31T23:23:01.272517",
       "status": "已提交",
       "score": null,
       "feedback": null,
       "scorer_id": null,
       "scored_at": null,
-      "created_at": "2026-04-24T14:19:17.217275",
-      "updated_at": "2026-05-31T23:19:15.718481",
+      "created_at": "2026-05-31T23:23:01.272517",
+      "updated_at": "2026-05-31T23:23:01.272517",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
