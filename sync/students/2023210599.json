@@ -3,8 +3,8 @@
   "user_id": "2023210599",
   "user_name": "姜少威",
   "role": "student",
-  "synced_at": "2026-05-31T23:27:06.917058",
-  "last_active": "2026-05-31T23:27:06.917058",
+  "synced_at": "2026-05-31T23:28:25.394734",
+  "last_active": "2026-05-31T23:28:25.394734",
   "quiz_results": [
     {
       "user_id": "2023210599",
@@ -56,6 +56,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 3,
+      "user_id": "2023210599",
+      "content": "PDF实验报告：2023210599姜少威实验三 跨平台应用开发.pdf\n\n--- 报告正文（自动提取）---\n移动应用开发实验报告\n封面信息\n项目\n内容\n实验名称\n跨平台应用开发\n实验编号\nd20301035103\n、\nd20301009203\n学号\n202321059\n9\n姓名\n姜少威\n班级\n软件\n232\n组别\nCG3\n项目名称\n智能健康运动记录平台\n技术栈\nFlutter\n实验目的\n1.\n掌握\n4\n种跨平台框架的列表页开发\n2.\n学会\nRESTful API\n数据请求与\nJSON\n解析\n3.\n了解移动设备传感器调用方法\n4.\n完成框架适用性对比分析\n实验环境\n框架\n开发工具\n语言\n依赖包\nFlutter\nVS Code\nDart\nhttp, provider\nReact Native\nVS Code\nJavaScript\naxios, @react\n-\nnative\n-\ncommunity/refresh\n-\ncontrol\nUniapp\nHBuilderX\nVue\nuni.request\nMAUI\nVisual Studio\nC#\nHttpClient, Newtonsoft.Json\n表\n1\n实验环境表\n实验步骤\n1.\n需求分析\n1.1\n数据模型定义\n{\n\"code\": 200,\n\"data\": {\n\"items\": [\n{\n\"id\": 1,\n\"title\": \"\n智慧校园更新通知\n\",\n\"content\": \"\n系统升级通知\n...\",\n\"author\": \"\n管理员\n\",\n\"time\": \"2024\n-\n01\n-\n01 10:00:00\"\n}\n]\n}\n}\n1.2 API\n接口规范\n●\nURL:\nhttps://api.example.com/news\n●\nMethod: GET\n●\nResponse: JSON\n2. Flutter\n开发\n2.1\n项目创建\nflutter create news_list\ncd news_list\n2.2\n添加依赖\n# pubspec.yaml\ndependencies:\nflutter:\nsdk: flutter\nhttp: ^1.1.0\nprovider: ^6.1.0\n2.3\n新闻列表实现\n// main.dart\nimport 'package:flutter/material.dart';\nimport 'package:http/http.dart' as http;\nimport 'dart:convert';\nimport 'package:provider/provider.dart';\nvoid main() {\nrunApp(\nChangeNotifierProvider(\ncreate: (_) => NewsProvider(),\nchild: MyApp(),\n),\n);\n}\nclass News {\nfinal int id;\nfinal String title;\nfinal String content;\nfinal String author;\nfinal String time;\nNews({required this.id, required this.title, required this.content,\nrequired this.author, required this.time});\nfactory News.fromJson(Map<String, dynamic> json) {\nreturn News(\nid: json['id'],\ntitle: json['title'],\ncontent: json['content'],\nauthor: json['author'],\ntime: json['time'],\n);\n}\n}\nclass NewsProvider extends ChangeNotifier {\nList<News> _newsList = [];\nList<News> get newsList => _newsList;\nFuture<void> fetchNews() async {\nfinal response = await http.get(\nUri.parse('https://api.example.com/news')\n);\nif (response.statusCode == 200) {\nfinal data = json.decode(response.body);\nfinal items = data['data']['items'] as List;\n_newsList = items.map((item) => News.fromJson(item)).toList\n();\nnotifyListeners();\n}\n}\n}\nclass NewsListPage extends StatelessWidget {\n@override\nWidget build(BuildContext context) {\nreturn Scaffold(\nappBar: AppBar(title: Text('\n智慧校园新闻\n')),\nbody: Consumer<NewsProvider>(\nbuilder: (context, provider, child) {\nreturn RefreshIndicator(\nonRefresh: () => provider.fetchNews(),\nchild:\nListView.builder(\nitemCount: provider.newsList.length,\nitemBuilder: (context, index) {\nfinal news = provider.newsList[index];\nreturn ListTile(\ntitle: Text(news.title),\nsubtitle: Text(news.author),\ntrailing: Text(news.time),\n);\n},\n),\n);\n},\n),\n);\n}\n}\n3.\n传感器集成扩展\n3.1 GPS\n定位实现（\nFlutter\n示例）\nimport 'package:geolocator/geolocator.dart';\nFuture<void> getLocation() async {\nbool serviceEnabled = await Geolocator.isLocationServiceEnabled();\nif (!serviceEnabled) return;\nLocationPermission permission = await Geolocator.checkPermission();\nif (permission == LocationPermission.denied) {\npermission = await Geolocator.requestPermission();\n}\nPosition position = await Geolocator.getCurrentPosition();\nprint('\n位置\n: ${position.latitude}, ${position.longitude}');\n}\n实验结果\n验证结果\n框架\n列表展示\n网络请求\nJSON\n解析\n下拉刷新\n传感器集成\nFlutter\n☑\n成功\n☑\n成功\n☑\n成功\n☑\n成功\n☑\n成功\nReact Native\n☑\n成功\n☑\n成功\n☑\n成功\n☑\n成功\n☑\n成功\nUniapp\n☑\n成功\n☑\n成功\n☑\n成功\n☑\n成功\n☑\n成功\nMAUI\n☑\n成功\n☑\n成功\n☑\n成功\n☑\n成功\n☑\n成功\n表\n2\n验证结果表\n截图记录\nFlutter\n运行截图\n登录界面\n图\n1\n登录界面\n运动激励\n界面\n图\n2\n运动激励界面\n1\n图\n3\n运动激励界面\n2\n社区互动\n图\n4\n社区互动界面\n框架对比分析\n对比项\nFlutter\nReact Native\nUniapp\nMAUI\n开发语言\nDart\nJavaScript\nVue\nC#\n性能\n★★★★★\n★★★★☆\n★★★☆☆\n★★★★☆\n学习成本\n中等\n低\n低\n中等\n生态成熟度\n高\n高\n中\n中\n跨平台一致性\n高\n中\n中\n高\n社区活跃度\n高\n高\n中\n中\n表\n3\n框架对比分析表\n问题与解决\n问题描述\n解决方案\n解决结果\nGradle\n版本冲突\n更新\nGradle\n版本至\n8.2.2\n已解决\n依赖下载失败\n配置国内镜像源\n已解决\n设备连接问题\n启用\nUSB\n调试和无线调试\n已解决\n表\n4\n问题与解决方案表\n实验总结\n实验收获\n●\n掌握了\nFlutter\n框架的基本开发流程\n●\n学会了\nRESTful API\n数据请求与\nJSON\n解析\n●\n实现了列表页开发与下拉刷新功能\n●\n体验了移动设备真机测试\n技术要点\n●\nFlutter\n状态管理（\nProvider\n）的应用\n●\nDart\n语言的异步编程\n●\n移动应用的导航与路由\n●\n真机测试与调试技巧\n考核指标\n考核项\n评分标准\n得分\n功能完整性\n列表展示、网络请求、下拉刷新功能完整\n25\n分\n代码质量\n代码结构清晰，注释完整\n20\n分\n多框架实现\n至少完成\n2\n个框架的开发\n25\n分\n传感器集成\n成功集成传感器功能\n15\n分\n框架对比\n完成框架适用性分析\n10\n分\n实验报告\n报告结构完整，内容详实\n5\n分\n教师评价\n项目\n评价\n实验完成情况\n技术掌握程度\n创新点\n综合评价\n成绩\n教师签名：\n___________________\n日期：\n___________________\n",
+      "file_paths": "C:\\Users\\20818\\Documents/sync_files/2023210599/2023210599姜少威实验三 跨平台应用开发.pdf",
+      "file_names": "2023210599姜少威实验三 跨平台应用开发.pdf",
+      "submit_time": "2026-05-31T23:28:25.349970",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-04-24T10:22:35.374569",
+      "updated_at": "2026-05-31T23:28:25.349970",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 2,
       "user_id": "2023210599",
@@ -142,24 +160,6 @@
       "scored_at": null,
       "created_at": "2026-04-24T22:28:25.360863",
       "updated_at": "2026-04-24T22:28:25.360863",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 3,
-      "user_id": "2023210599",
-      "content": "PDF实验报告：2023210599姜少威实验三 跨平台应用开发.pdf",
-      "file_paths": "C:\\Users\\20818\\Documents/sync_files/2023210599/2023210599姜少威实验三 跨平台应用开发.pdf",
-      "file_names": "2023210599姜少威实验三 跨平台应用开发.pdf",
-      "submit_time": "2026-04-24T10:22:35.374569",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-04-24T10:22:35.374569",
-      "updated_at": "2026-04-24T10:22:35.374569",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
