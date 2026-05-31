@@ -3,8 +3,8 @@
   "user_id": "2023210637",
   "user_name": "席永杰",
   "role": "student",
-  "synced_at": "2026-05-31T22:55:46.189441",
-  "last_active": "2026-05-31T22:55:46.189441",
+  "synced_at": "2026-05-31T22:56:00.624719",
+  "last_active": "2026-05-31T22:56:00.624719",
   "quiz_results": [
     {
       "user_id": "2023210637",
@@ -33,6 +33,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 1,
+      "user_id": "2023210637",
+      "content": "PDF实验报告：2023210637席永杰实验一 开发环境搭建.pdf\n\n--- 报告正文（自动提取）---\n实验\n一\n：微信小程序登录注册系统开发\n**\n文档版本\n**:\nv1.0.0\n**\n实验名称\n**:\n实验\n一\n微信小程序登录注册系统开发\n**\n学生姓名\n**:\n席永杰\n**\n学号\n**:\n2023210637\n**\n项目名称\n**:\n多端温控系统\n(MTCS)\n**\n完成日期\n**:\n2026-03-13\n目录\n1.\n实验目的\n2.\n实验环境\n3.\n实验内容\n4.\n实验步骤\n5.\n实验结果\n6.\n实验总结\n7.\n附录\n1.\n实验目的\n1.\n掌握微信小程序开发环境的配置方法\n2.\n掌握微信小程序页面布局和样式设计\n3.\n实现用户登录注册功能的前端界面\n4.\n设计并实现完整的数据库系统架构\n5.\n掌握\nGit\n分支管理和代码提交规范\n6.\n完成微信小程序与后端数据库的集成设计\n2.\n实验环境\n2.1\n开发环境\n●\n操作系统\n:\nWindows\n11\n●\n微信开发者工具\n:\n最新稳定版本\n●\n代码编辑器\n:\nVS\nCode\n/\nWebStorm\n●\n版本控制\n:\nGit\n2.40+\n2.2\n技术栈\n●\n前端\n:\n微信小程序\n(WXML,\nWXSS,\nJavaScript)\n●\n后端\n:\nNode.js\n(API\n设计\n)\n●\n数据库\n:\nMySQL\n8.0+\n●\n开发工具\n:\nNavicat\nPremium\n2.3\n项目环境\n●\nGit\n仓库\n:\nhttps://gitee.com/chzuczldl/cg2mtcs.git\n●\n分支管理\n:\nmaster,\nfeat-xyj\n●\n开发规范\n:\n遵循阿里\nJava\n开发手册\n3.\n实验内容\n3.1\n微信小程序开发\n3.1.1\n登录页面功能\n●\n用户账号密码登录界面\n●\n表单验证和错误提示\n●\n记住登录状态功能\n●\n登录成功跳转逻辑\n3.1.2\n注册页面功能\n●\n用户注册信息收集\n●\n密码强度验证\n●\n邮箱格式验证\n●\n用户协议确认\n3.1.3\n界面设计\n●\n响应式布局设计\n●\n现代化\nUI\n风格\n●\n用户体验优化\n●\n交互效果实现\n3.2\n数据库系统设计\n3.2.1\n数据库架构\n●\n用户信息管理表\n●\n安全认证相关表\n●\n登录历史记录表\n●\n角色权限管理表\n3.2.2\n安全机制\n●\n密码加密存储\n●\n账户锁定机制\n●\n登录\nIP\n记录\n●\n双因素认证支持\n3.2.3\n性能优化\n●\n索引设计优化\n●\n查询性能调优\n●\n数据备份策略\n●\n监控和维护机制\n3.3\n版本控制管理\n●\nGit\n分支策略实施\n●\n代码提交规范\n●\n远程仓库同步\n●\n团队协作流程\n4.\n实验步骤\n4.1\n微信小程序项目初始化\n4.1.1\n项目结构创建\n#\n创建项目目录结构\ncg2mtcs/\n├──\npages/\n│\n├──\nlogin/\n#\n登录页面\n│\n└──\nregister/\n#\n注册页面\n├──\napp.js\n#\n小程序入口\n├──\napp.json\n#\n配置文件\n└──\napp.wxss\n#\n全局样式\n4.1.2\n登录页面开发\n1.\nWXML\n结构设计\n○\n用户名密码输入框\n○\n登录按钮和状态控制\n○\n错误提示区域\n○\n底部链接区域\n2.\nWXSS\n样式实现\n○\n渐变背景设计\n○\n输入框样式优化\n○\n按钮交互效果\n○\n响应式适配\n3.\nJavaScript\n逻辑\n○\n表单验证函数\n○\n登录状态管理\n○\n本地存储操作\n○\n页面跳转逻辑\n4.1.3\n注册页面开发\n1.\n注册表单设计\n○\n多字段信息收集\n○\n实时验证反馈\n○\n协议确认功能\n○\n注册流程控制\n2.\n用户交互优化\n○\n输入提示信息\n○\n错误状态显示\n○\n加载动画效果\n○\n成功反馈机制\n4.2\n数据库系统设计\n4.2.1\n数据库表结构设计\n创建\n6\n个核心数据表：\n1.\nmtcs_users\n-\n用户主表\n2.\nmtcs_user_security\n-\n安全信息表\n3.\nmtcs_login_history\n-\n登录历史表\n4.\nmtcs_password_resets\n-\n密码重置表\n5.\nmtcs_user_roles\n-\n角色管理表\n6.\nmtcs_user_role_mapping\n-\n角色关联表\n4.2.2\nSQL\n脚本编写\n--\n创建数据库和表结构\nCREATE\nDATABASE\nmtcs_db\nCHARACTER\nSET\nutf8mb4;\n--\n用户表创建语句\nCREATE\nTABLE\nmtcs_users\n(\nuser_id\nBIGINT\nAUTO_INCREMENT\nPRIMARY\nKEY,\nusername\nVARCHAR(50)\nUNIQUE\nNOT\nNULL,\nemail\nVARCHAR(100)\nUNIQUE\nNOT\nNULL,\npassword_hash\nVARCHAR(255)\nNOT\nNULL,\n--\n...\n其他字段\n);\n4.2.3\n存储过程和函数\n创建关键业务逻辑：\n●\n用户注册存储过程\n●\n登录验证函数\n●\n密码重置流程\n●\n数据清理任务\n4.3\nGit\n版本控制实施\n4.3.1\n分支策略\n#\n创建功能分支\ngit\ncheckout\n-b\nfeat-xyj\n#\n开发完成后提交代码\ngit\nadd\n.\ngit\ncommit\n-m\n\"feat:\n实现微信小程序登录注册功能\n\"\n#\n推送到远程仓库\ngit\npush\norigin\nfeat-xyj\n4.3.2\n提交规范\n遵循标准的\nGit\n提交消息格式：\n<\n类型\n>:\n<\n描述\n>\n<\n详细说明\n>\n5.\n实验结果\n5.1\n功能实现验证\n5.1.1\n登录功能测试\n测试用例\n1\n:\n正确账号密码登录\n●\n输入用户名\n:\nxyj\n●\n输入密码\n:\n123456\n●\n预期结果\n:\n登录成功，显示欢迎信息\n●\n实际结果\n:\n✅\n功能正常\n测试用例\n2\n:\n错误密码登录\n●\n输入用户名\n:\nxyj\n●\n输入密码\n:\nwrongpassword\n●\n预期结果\n:\n登录失败，显示错误提示\n●\n实际结果\n:\n✅\n功能正常\n5.1.2\n注册功能测试\n测试用例\n:\n新用户注册\n●\n输入用户信息\n:\n用户名、邮箱、密码等\n●\n预期结果\n:\n注册成功，跳转到登录页\n●\n实际结果\n:\n✅\n功能正常\n5.2\n界面效果展示\n5.2.1\n登录页面\n●\n渐变背景设计\n●\n清晰的输入框布局\n●\n友好的错误提示\n●\n流畅的交互动画\n5.2.2\n注册页面\n●\n完整的注册表单\n●\n实时验证反馈\n●\n用户协议确认\n●\n注册流程指引\n5.3\n数据库系统验证\n5.3.1\n表结构验证\n--\n验证表创建成功\nSHOW\nTABLES\nLIKE\n'mtcs_%';\n--\n预期结果\n+-------------------+\n|\nTables_in_mtcs_db\n|\n+-------------------+\n|\nmtcs_users\n|\n|\nmtcs_user_security\n|\n|\nmtcs_login_history\n|\n|\nmtcs_password_resets\n|\n|\nmtcs_user_roles\n|\n|\nmtcs_user_role_mapping\n|\n+-------------------+\n5.3.2\n数据操作测试\n--\n测试用户注册\nCALL\nsp_register_user('testuser',\n'test@example.com',\n'hashed_password',\n'salt',\n'Test\nUser',\n@user_id,\n@result_code,\n@result_message);\n--\n预期结果\n:\n注册成功，返回用户\nID\n5.4\nGit\n仓库状态\n5.4.1\n分支管理\n#\n查看分支状态\ngit\nbranch\n-a\n#\n预期结果\n*\nfeat-xyj\nmaster\nremotes/origin/feat-xyj\nremotes/origin/master\n5.4.2\n提交记录\n#\n查看提交历史\ngit\nlog\n--oneline\n-10\n#\n预期结果\nea1c586\nfeat:\n实现微信小程序登录注册功能和数据库设计\n6.\n实验总结\n6.1\n完成情况\n6.1.1\n主要成果\n1.\n✅\n微信小程序开发\n○\n完成登录页面设计和实现\n○\n完成注册页面设计和实现\n○\n实现完整的用户交互流程\n2.\n✅\n数据库系统设计\n○\n设计完整的数据库架构\n○\n实现安全认证机制\n○\n创建维护和备份策略\n3.\n✅\n版本控制管理\n○\n实施\nGit\n分支策略\n○\n规范代码提交流程\n○\n完成远程仓库同步\n6.1.2\n技术实现\n●\n前端技术\n:\n熟练掌握微信小程序开发\n●\n数据库设计\n:\n掌握\nMySQL\n高级特性\n●\n安全机制\n:\n实现多层次安全防护\n●\n项目管理\n:\n规范开发流程和文档\n6.2\n遇到的问题与解决方案\n6.2.1\n技术问题\n问题\n解决方案\n微信小程序页面跳转异常\n检查\napp.json\n页面配置，确保路径正确\n数据库外键约束错误\n调整表创建顺序，先创建主表再创建从表\nGit\n提交作者信息缺失\n配置全局用户信息：\ngit\nconfig\nuser.name/email\n6.2.2\n设计问题\n问题\n解决方案\n用户体验不够友好\n增加实时验证和错误提示\n安全性考虑不足\n添加密码加密和账户锁定机制\n可扩展性受限\n采用模块化设计和标准化接口\n6.3\n实验心得\n6.3.1\n技术收获\n1.\n微信小程序开发\n○\n掌握了小程序页面生命周期\n○\n学会了\nWXML\n和\nWXSS\n的配合使用\n○\n理解了小程序的数据绑定机制\n2.\n数据库设计能力\n○\n提升了数据库架构设计能力\n○\n学会了复杂的\nSQL\n查询优化\n○\n掌握了存储过程和函数编写\n3.\n项目管理技能\n○\n规范了代码编写和提交流程\n○\n学会了文档编写和版本管理\n○\n提升了问题解决能力\n6.3.2\n工程实践\n通过本次实验，我深刻理解了软件开发的完整流程：\n●\n从需求分析到技术选型\n●\n从界面设计到后端实现\n●\n从本地开发到版本控制\n●\n从功能测试到文档编写\n6.4\n改进方向\n6.4.1\n技术优化\n1.\n性能优化\n○\n实现前端页面懒加载\n○\n优化数据库查询性能\n○\n添加缓存机制\n2.\n功能完善\n○\n实现第三方登录集成\n○\n添加图形验证码功能\n○\n完善用户权限管理\n3.\n安全增强\n○\n实现\nHTTPS\n通信加密\n○\n添加操作日志审计\n○\n完善数据备份机制\n6.4.2\n工程实践\n1.\n自动化部署\n○\n实现\nCI/CD\n流水线\n○\n自动化测试流程\n○\n监控和告警系统\n2.\n团队协作\n○\n完善代码审查流程\n○\n建立知识共享机制\n○\n规范文档编写标准\n7.\n附录\n7.1\n相关文件清单\n7.1.1\n微信小程序文件\n文件路径\n说明\n版本\npages/login/login.wxml\n登录页面结构\nv1.0.0\npages/login/login.wxss\n登录页面样式\nv1.0.0\npages/login/login.js\n登录页面逻辑\nv1.0.0\npages/register/register.wxml\n注册页面结构\nv1.0.0\npages/register/register.wxss\n注册页面样式\nv1.0.0\npages/register/register.js\n注册页面逻辑\nv1.0.0\n7.1.2\n数据库设计文件\n文件路径\n说明\n版本\ndatabase/mtcs_database_design\n.md\n数据库设计文档\nv1.0.0\ndatabase/mtcs_database_schema\n.sql\n数据库初始化脚本\nv1.0.0\ndatabase/mtcs_database_backup\n.sql\n备份恢复脚本\nv1.0.0\ndatabase/mtcs_database_api.md\nAPI\n接口文档\nv1.0.0\n7.1.3\n项目配置文件\n文件路径\n说明\n版本\napp.json\n小程序配置文件\nv1.0.0\nproject.config.json\n项目配置文件\nv1.0.0\nmtcs-java-apk.md\n开发规范文档\nv1.0.0\n7.2\n测试账号信息\n7.2.1\n可用测试账号\n用户名\n密码\n角色\n状态\nadmin\n123456\n超级管理员\n正常\nxyj\n123456\n普通用户\n正常\n7.2.2\n测试环境\n●\n微信开发者工具\n:\n最新版本\n●\n测试设备\n:\n模拟器\n/\n真机\n●\n网络环境\n:\n本地开发环境\n7.3\n参考资料\n1.\n微信小程序官方文档\n2.\nMySQL\n8.0\n官方文档\n3.\nGit\n官方文档\n4.\n阿里\nJava\n开发手册\n7.4\n版本历史\n版本\n日期\n修改内容\n作者\nv1.0.0\n2026-03-13\n初始版本，完成实验\n一\n所有内容\n席永杰\n实验完成确认\n学生签名\n:\n___________________\n日期\n:\n2026\n年\n3\n月\n13\n日\n指导教师审阅\n:\n___________________\n审阅日期\n:\n___________________\n实验报告结束\n",
+      "file_paths": "C:\\Users\\xyj12\\Documents/sync_files/2023210637/2023210637席永杰实验一 开发环境搭建.pdf",
+      "file_names": "2023210637席永杰实验一 开发环境搭建.pdf",
+      "submit_time": "2026-05-31T22:56:00.590405",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-05-01T12:02:22.485030",
+      "updated_at": "2026-05-31T22:56:00.590405",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 5,
       "user_id": "2023210637",
@@ -101,24 +119,6 @@
       "scored_at": null,
       "created_at": "2026-05-01T12:03:39.094930",
       "updated_at": "2026-05-01T12:03:39.094930",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 1,
-      "user_id": "2023210637",
-      "content": "PDF实验报告：2023210637席永杰实验一 开发环境搭建.pdf",
-      "file_paths": "C:\\Users\\xyj12\\Documents/sync_files/2023210637/2023210637席永杰实验一 开发环境搭建.pdf",
-      "file_names": "2023210637席永杰实验一 开发环境搭建.pdf",
-      "submit_time": "2026-05-01T12:02:22.485030",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-05-01T12:02:22.485030",
-      "updated_at": "2026-05-01T12:02:22.485030",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
