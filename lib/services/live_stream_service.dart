@@ -11,6 +11,7 @@ class LiveStreamState {
   final LiveStreamStatus status;
   final bool isCameraOn;
   final bool isMicOn;
+  final bool isScreenSharing;
   final Duration recordDuration;
   final String? error;
   final int cameraCount;
@@ -21,6 +22,7 @@ class LiveStreamState {
     this.status = LiveStreamStatus.idle,
     this.isCameraOn = false,
     this.isMicOn = false,
+    this.isScreenSharing = false,
     this.recordDuration = Duration.zero,
     this.error,
     this.cameraCount = 0,
@@ -30,6 +32,7 @@ class LiveStreamState {
     LiveStreamStatus? status,
     bool? isCameraOn,
     bool? isMicOn,
+    bool? isScreenSharing,
     Duration? recordDuration,
     String? error,
     int? cameraCount,
@@ -38,6 +41,7 @@ class LiveStreamState {
         status: status ?? this.status,
         isCameraOn: isCameraOn ?? this.isCameraOn,
         isMicOn: isMicOn ?? this.isMicOn,
+        isScreenSharing: isScreenSharing ?? this.isScreenSharing,
         recordDuration: recordDuration ?? this.recordDuration,
         error: error ?? this.error,
         cameraCount: cameraCount ?? this.cameraCount,
@@ -53,6 +57,7 @@ class LiveStreamService {
   List<CameraDescription> _cameras = [];
   int _currentCameraIndex = 0;
   bool _isInitialized = false;
+  bool _isScreenSharing = false;
 
   final _stateController = StreamController<LiveStreamState>.broadcast();
   Stream<LiveStreamState> get state => _stateController.stream;
@@ -212,12 +217,13 @@ class LiveStreamService {
   }
 
   void _emit(LiveStreamStatus status,
-      {bool? isCameraOn, bool? isMicOn, Duration? recordDuration,
-       String? error, int? cameraCount}) {
+      {bool? isCameraOn, bool? isMicOn, bool? isScreenSharing,
+       Duration? recordDuration, String? error, int? cameraCount}) {
     _currentState = _currentState.copyWith(
       status: status,
       isCameraOn: isCameraOn,
       isMicOn: isMicOn,
+      isScreenSharing: isScreenSharing,
       recordDuration: recordDuration,
       error: error,
       cameraCount: cameraCount,
@@ -228,6 +234,13 @@ class LiveStreamService {
   CameraController? get cameraController => _cameraController;
   List<CameraDescription> get cameras => _cameras;
   int get currentCameraIndex => _currentCameraIndex;
+  bool get isScreenSharing => _isScreenSharing;
+
+  void toggleScreenShare() {
+    _isScreenSharing = !_isScreenSharing;
+    _emit(_currentState.status,
+        isScreenSharing: _isScreenSharing);
+  }
 
   /// 抓取当前摄像头一帧并返回图片文件路径（失败返回 null）。
   /// 供快照广播：每隔几秒抓一帧上传到 Gitee 供其他用户观看。
@@ -259,6 +272,7 @@ class LiveStreamService {
     await _cameraController?.dispose();
     _cameraController = null;
     _isInitialized = false;
+    _isScreenSharing = false;
     _emit(LiveStreamStatus.idle,
         isCameraOn: false, recordDuration: Duration.zero);
   }

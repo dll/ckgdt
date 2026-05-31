@@ -4,9 +4,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:path/path.dart' as p;
+import 'core/app_keys.dart';
 import 'core/build_info.dart';
 import 'core/dev_paths.dart';
 import 'core/init_logger.dart';
+import 'services/live_broadcast_service.dart';
 import 'data/local/database_helper.dart';
 import 'l10n/gen/app_localizations.dart';
 import 'services/data_loading_service.dart';
@@ -24,6 +26,8 @@ import 'services/archive/processor_registry.dart';
 import 'services/archive/base_document_processor.dart';
 import 'services/archive_package_service.dart';
 import 'services/auth_service.dart';
+import 'services/update_service.dart';
+import 'services/notification_service.dart';
 import 'presentation/pages/profile/virtual_twin_page.dart';
 
 import 'core/constants/color_ohos_compat.dart';
@@ -107,8 +111,28 @@ void main() async {
   // 用 unawaited 避开冷启动关键路径——首次需要这两条路径的代码（打开归档页）
   // 不会先于 main 完成。
   unawaited(_initArchivePaths());
+  unawaited(_checkAppUpdate());
 
   runApp(MyApp(dbLocked: dbLocked, dbError: dbError));
+}
+
+/// 后台检查应用更新 — 每日一次，发现新版本时通知所有用户
+Future<void> _checkAppUpdate() async {
+  try {
+    final hasUpdate = await UpdateService().backgroundCheck();
+    if (hasUpdate) {
+      final info = await UpdateService().checkForUpdate();
+      if (info != null) {
+        await NotificationService().notifyAppUpdate(
+          newVersion: info.version,
+          releaseNotes: info.releaseNotes,
+        );
+        InitLogger.log('update', '发现新版本 v${info.version}，已发送通知');
+      }
+    }
+  } catch (e, st) {
+    InitLogger.error('update', e, st);
+  }
 }
 
 /// 注入归档相关绝对路径。仅 Windows / macOS / Linux 桌面端有意义。
@@ -162,6 +186,9 @@ class _MyAppState extends State<MyApp> {
     MyApp._state = this;
     _loadTheme();
     _loadFeedbackSetting();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      LiveBroadcastService.screenCaptureKey = broadcastCaptureKey;
+    });
   }
 
   @override
@@ -274,13 +301,16 @@ class _MyAppState extends State<MyApp> {
         // 用 RepaintBoundary 包裹，供截图用
         // 用 Stack + Positioned 添加全局反馈浮动按钮
         return RepaintBoundary(
-          key: feedbackScreenshotKey,
-          child: Stack(
-            children: [
-              child ?? const SizedBox.shrink(),
-              if (_feedbackEnabled)
-                _FloatingHelpFab(navigatorKey: _navigatorKey),
-            ],
+          key: broadcastCaptureKey,
+          child: RepaintBoundary(
+            key: feedbackScreenshotKey,
+            child: Stack(
+              children: [
+                child ?? const SizedBox.shrink(),
+                if (_feedbackEnabled)
+                  _FloatingHelpFab(navigatorKey: _navigatorKey),
+              ],
+            ),
           ),
         );
       },

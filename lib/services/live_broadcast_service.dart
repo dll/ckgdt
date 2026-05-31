@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import '../core/error_handler.dart';
 import 'auth_service.dart';
@@ -16,6 +19,7 @@ class LiveSession {
   final String userName;
   final String role;
   final bool isLive;
+  final bool isScreenSharing;
   final DateTime updatedAt;
   final String snapshotPath; // Gitee 仓库内路径，用 getRawUrl 取图
 
@@ -24,6 +28,7 @@ class LiveSession {
     required this.userName,
     required this.role,
     required this.isLive,
+    required this.isScreenSharing,
     required this.updatedAt,
     required this.snapshotPath,
   });
@@ -41,6 +46,7 @@ class LiveSession {
         userName: m['name'] as String? ?? userId,
         role: m['role'] as String? ?? 'student',
         isLive: m['isLive'] as bool? ?? false,
+        isScreenSharing: m['isScreenSharing'] as bool? ?? false,
         updatedAt:
             DateTime.tryParse(m['updatedAt'] as String? ?? '') ?? DateTime(2000),
         snapshotPath: m['snapshotPath'] as String? ?? 'live/$userId/snapshot.jpg',
@@ -83,6 +89,10 @@ class LiveBroadcastService {
   final ValueNotifier<bool> broadcastingNotifier = ValueNotifier<bool>(false);
   Timer? _broadcastTimer;
   bool _uploading = false;
+
+  /// GlobalKey for the outer RepaintBoundary covering the full app screen,
+  /// used for screen capture when screen sharing is active.
+  static GlobalKey? screenCaptureKey;
 
   String get _owner => SyncService.repoOwner;
   String get _repo => SyncService.repoName;
@@ -205,16 +215,58 @@ class LiveBroadcastService {
     await _writeStatus(isLive: false, snapshotPath: '');
   }
 
+  /// Capture the full app screen (including camera PiP overlay) via
+  /// RepaintBoundary, returning PNG bytes.
+  /// Falls back to camera-only if screen capture fails.
+  Future<Uint8List?> _captureScreen() async {
+    final key = screenCaptureKey;
+    if (key == null) return null;
+    try {
+      final boundary = key.currentContext?.findRenderObject()
+          as RenderRepaintBoundary?;
+      if (boundary == null) return null;
+      final image = await boundary.toImage(pixelRatio: 1.0);
+      final byteData = await image.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
+      return byteData?.buffer.asUint8List();
+    } catch (e, st) {
+      swallowDebug(e, tag: 'LiveBroadcast.captureScreen', stack: st);
+      return null;
+    }
+  }
+
   Future<void> _pushSnapshot() async {
-    if (_uploading) return; // 上一帧还没传完就跳过，避免堆积
+    if (_uploading) return;
     _uploading = true;
     try {
       final uid = _auth.currentUser?.userId;
       if (uid == null) return;
-      final localPath = await LiveStreamService().takeSnapshot();
       final snapshotPath = '$_liveDir/$uid/snapshot.jpg';
-      if (localPath != null) {
-        final bytes = await File(localPath).readAsBytes();
+      final isSharing = LiveStreamService().isScreenSharing;
+
+      Uint8List? bytes;
+      if (isSharing && screenCaptureKey != null) {
+        final captured = await _captureScreen();
+        if (captured != null) {
+          bytes = captured;
+        }
+      }
+
+      // Fall back to camera snapshot if screen capture is off or failed
+      if (bytes == null) {
+        final localPath = await LiveStreamService().takeSnapshot();
+        if (localPath != null) {
+          bytes = await File(localPath).readAsBytes();
+          try {
+            await File(localPath).delete();
+          } catch (e) {
+            swallow(e, tag: 'LiveBroadcast.delTmp');
+          }
+        }
+      }
+
+      if (bytes != null) {
         await _gitee.createOrUpdateBinaryFile(
           owner: _owner,
           repo: _repo,
@@ -223,12 +275,6 @@ class LiveBroadcastService {
           message: 'live: $uid 快照',
           branch: _branch,
         );
-        // 本地临时快照删掉，不堆积文档目录
-        try {
-          await File(localPath).delete();
-        } catch (e) {
-          swallow(e, tag: 'LiveBroadcast.delTmp');
-        }
       }
       await _writeStatus(isLive: true, snapshotPath: snapshotPath);
     } catch (e, st) {
@@ -242,10 +288,12 @@ class LiveBroadcastService {
       {required bool isLive, required String snapshotPath}) async {
     final uid = _auth.currentUser?.userId;
     if (uid == null) return;
+    final isSharing = isLive && LiveStreamService().isScreenSharing;
     final status = {
       'isLive': isLive,
       'name': _auth.currentUser?.realName ?? uid,
       'role': _auth.currentUser?.role ?? 'student',
+      'isScreenSharing': isSharing,
       'updatedAt': DateTime.now().toIso8601String(),
       'snapshotPath': snapshotPath,
     };
