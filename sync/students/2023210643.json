@@ -3,8 +3,8 @@
   "user_id": "2023210643",
   "user_name": "张海天",
   "role": "student",
-  "synced_at": "2026-05-31T22:38:12.115643",
-  "last_active": "2026-05-31T22:38:12.116612",
+  "synced_at": "2026-05-31T22:39:23.329895",
+  "last_active": "2026-05-31T22:39:23.329895",
   "quiz_results": [
     {
       "user_id": "2023210643",
@@ -389,6 +389,24 @@
   ],
   "lab_submissions": [
     {
+      "task_id": 1,
+      "user_id": "2023210643",
+      "content": "PDF实验报告：2023210643张海天实验一 开发环境搭建.pdf\n\n--- 报告正文（自动提取）---\n序号\n开发工具\n主要用途\n版本要求\n1\n.NET SDK\n框架运行与编译环境\n8.0\n2\nVisual Studio 2026\n核心\nIDE\n开发环境\n2026\n3\nGit\n代码版本控制\n最新版\n4\nTailwind CSS\n前端页面样式优化\n最新版\n智慧校园系统\n-\n开发环境搭建指南\n项目基本信息\n项目名称\n：智慧校园系统登录应用\n(SGTPDILoginApp)\n项目类型\n：\nASP.NET Core Web\n应用\n前端技术\n：\nHTML, Tailwind CSS\n后端技术\n：\nC#, .NET 8.0, .NET MAUI\n开发工具\n：\nVisual Studio 2026\n核心步骤列表\n环境搭建概览\n1.\n需求分析阶段\n：明确项目技术栈与版本要求\n2.\n环境搭建阶段\n：安装配置\nVisual Studio 2026\n与依赖\n3.\n项目初始化阶段\n：使用命令行创建项目并配置版本控制\n4.\n测试验证阶段\n：构建项目，运行并验证前后端功能\n5.\n部署运维阶段\n：代码提交与远程推送，总结常见问题\n开发工具清单\n✅\n成功标准\nVisual Studio 2026\n安装并成功配置\n.NET MAUI\n工作负载\n.NET 8.0\n环境配置完成\nASP.NET Core\n项目成功创建并可编译\n成功运行\ndotnet run\n并在本地端口（如\n5046\n）访问\n登录页面功能正常（输入学号\n2023210643\n，密码\n123456\n成功登录）\n成功跳转并展示带有\n\"Hello World!\"\n和学生信息的页面\n项目代码成功提交并推送至\nGitee\n远程仓库分支\n第一课时：基础环境搭建（\n1\n学时）\n1.1 Visual Studio\n与\n.NET\n环境配置\n步骤\n1\n：下载与安装\nVisual Studio 2026\n1.\n访问微软官方网站下载\nVisual Studio 2026\n安装程序。\n2.\n运行安装程序，在工作负载选择界面，务必勾选\n\".NET MAUI\"\n相关工作负载。\n3.\n等待安装完成并启动\nVisual Studio\n。\n步骤\n2\n：验证\n.NET\n环境\n1.\n打开命令行工具（\nCMD\n或\nPowerShell\n）。\n2.\n执行命令：\ndotnet --version\n3.\n确认输出版本号包含\n8.0\n，证明\n.NET 8.0 SDK\n环境准备就绪。\n第二课时：项目初始化与配置（\n1\n学时）\n2.1\n创建\nASP.NET Core\n项目\n步骤\n1\n：初始化\nWeb\n应用\n1.\n打开命令行工具，进入目标工作区。\n2.\n执行项目创建命令：\ndotnet new webapp -o SGTPDILoginApp\n3.\n进入生成的项目目录：\ncd SGTPDILoginApp\n2.2 Git\n初始化与远程仓库关联\n步骤\n1\n：配置本地与远程仓库\n1.\n在项目根目录执行初始化：\ngit init\n2.\n关联\nGitee\n远程仓库：\ngit remote add origin https://gitee.com/chzuczldl/cg2-\nsgtpdi.git\n3.\n创建并切换到专属开发分支：\ngit checkout -b SGTPDI-C#+.NET+MAUI\n第三课时：功能实现与页面设计（\n1\n学时）\n3.1\n登录功能开发\n步骤\n1\n：编写登录页面\n1.\n创建或修改\nIndex.cshtml\n页面，实现包含学号和密码输入框的表单。\n2.\n引入\nTailwind CSS\n优化页面样式，去掉默认的\nbar\n栏和\nfooter\n栏，实现现代化布局。\n3.\n增加交互效果，如按钮悬停效果和输入框焦点效果。\n步骤\n2\n：实现登录逻辑\n1.\n打开\nIndex.cshtml.cs\n文件。\n2.\n编写登录验证逻辑，设定测试账号：\n2023210643\n，密码：\n123456\n。\n3.\n添加错误提示机制，输入错误时在前端显示提示信息。\n3.2\n学生信息页面开发\n步骤\n1\n：编写信息展示与退出功能\n1.\n创建\nHelloWorld.cshtml\n页面。\n2.\n页面中展示学生学号（\n2023210643\n）、姓名（张海天）以及\n\"Hello World!\"\n欢迎信息。\n3.\n在\nHelloWorld.cshtml.cs\n中实现退出登录逻辑，点击退出后重定向至登录页面。\n第四课时：功能验证与问题排查（\n1\n学时）\n4.1\n项目本地部署与验证\n步骤\n1\n：构建与运行项目\n1.\n在项目目录执行构建命令：\ndotnet build\n2.\n构建成功后，执行运行命令：\ndotnet run\n3.\n观察控制台输出，确认服务监听的本地端口（例如\nhttp://localhost:5046\n）。\n步骤\n2\n：系统功能测试\n1.\n登录测试：浏览器访问项目地址，输入正确的账号密码，验证是否成功跳转到学生信息页面。测试\n错误密码是否正确拦截并提示。\n2.\n信息展示测试：确认\nHelloWorld.cshtml\n页面正常显示学号和姓名。\n3.\n退出测试：点击退出登录按钮，验证是否成功返回登录页。\n4.2\n常见问题排查\n问题\n1\n：执行\ndotnet run\n提示端口被占用\n原因\n：默认端口被其他程序占用。\n解决\n：打开\nProperties/launchSettings.json\n，修改\napplicationUrl\n的端口号后重新运\n行。\n问题\n2\n：\nTailwind CSS\n样式未生效\n原因\n：\nCDN\n链接未引入或本地缓存问题。\n解决\n：检查\n_Layout.cshtml\n的\n<head>\n标签，确保正确引入了\nTailwind\n样式表。\n问题\n3\n：\nGit\n推送失败\n原因\n：本地分支落后于远程分支。\n解决\n：先执行\ngit pull origin SGTPDI-C#+.NET+MAUI\n合并代码，再进行\npush\n。\n总结与思考\n实验总结\n掌握基于\nC#\n和\n.NET 8.0\n的\nWeb\n应用开发环境搭建\n熟悉\nVisual Studio 2026\n和\n.NET\n命令行工具的使用\n了解\nGit\n版本控制及\nGitee\n远程仓库的基本操作\n完成项目的创建、功能实现、本地运行和代码推送\n课后思考\n28.\nASP.NET Core\n的\nRazor Pages\n模式在开发小型\nWeb\n应用时有哪些效率优势？\n29.\n如何进一步通过依赖注入（\nDI\n）和实体框架（\nEF Core\n）将硬编码的账号密码改为连接数据库验\n证？\n30.\n.NET MAUI\n的跨平台特性对本项目未来向\nAndroid/iOS\n端扩展有什么帮助？\n附录：快速启动命令\n项目运行\nGit\n提交与推送\n#\n进入项目目录\ncd\nSGTPDILoginApp\n#\n编译项目\ndotnet build\n#\n运行项目\ndotnet run\ngit\nadd .\ngit\ncommit\n-m\n\"update:\n优化项目结构\n\"\ngit\npush origin SGTPDI-C\n#+.NET+MAUI\n",
+      "file_paths": "E:\\Download\\2023210643张海天实验一 开发环境搭建.pdf",
+      "file_names": "2023210643张海天实验一 开发环境搭建.pdf",
+      "submit_time": "2026-05-31T22:39:23.307612",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-05-31T22:39:23.307612",
+      "updated_at": "2026-05-31T22:39:23.307612",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
+    {
       "task_id": 6,
       "user_id": "2023210643",
       "content": "PDF实验报告：2023210643张海天实验六 跨平台综合项目实战.pdf",
@@ -474,24 +492,6 @@
       "scored_at": null,
       "created_at": "2026-04-24T09:30:02.122621",
       "updated_at": "2026-04-24T09:30:02.122621",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 1,
-      "user_id": "2023210643",
-      "content": "PDF实验报告：2023210643张海天实验一 开发环境搭建.pdf",
-      "file_paths": "E:\\Document/sync_files/2023210643/2023210643张海天实验一 开发环境搭建.pdf",
-      "file_names": "2023210643张海天实验一 开发环境搭建.pdf",
-      "submit_time": "2026-04-24T09:27:35.252001",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-04-24T09:27:35.252001",
-      "updated_at": "2026-04-24T09:27:35.252001",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
