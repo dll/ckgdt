@@ -3,8 +3,8 @@
   "user_id": "2023210621",
   "user_name": "史东振",
   "role": "student",
-  "synced_at": "2026-05-31T23:53:15.811385",
-  "last_active": "2026-05-31T23:53:15.811385",
+  "synced_at": "2026-05-31T23:56:41.442691",
+  "last_active": "2026-05-31T23:56:41.442691",
   "quiz_results": [
     {
       "user_id": "2023210621",
@@ -68,6 +68,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 1,
+      "user_id": "2023210621",
+      "content": "PDF实验报告：2023210621史东振实验一 开发环境搭建.pdf\n\n--- 报告正文（自动提取）---\n移动应用开发实验报告\n封面信息\n项目\n内容\n实验名称\n开发环境搭建\n实验编号\nd20301035101、d20301009201\n学号\n2023210621\n姓名\n史东振\n班级\n软件工程232\n日期\n2026.3.13\n组别\n2\n项目名称\n二手物品交易平台开发与整合\n实验目的\n1.\n掌握鸿蒙开发工具DevEco Studio的安装配置方法\n2.\n了解鸿蒙平台的HelloWorld创建流程\n3.\n体验AI辅助代码生成工具（TRAE）的使用\n4.\n完成环境配置文档的编写\n实验环境\n序号\n开发工具\n版本要求\n验证项目\n1\nDevEco Studio\n5.0+\nHarmonyOS ArkTS HelloWorld\n实验步骤\n1. 鸿蒙开发环境搭建\n1.1 下载DevEco Studio\n[√] 访问官网：\nhttps://developer.harmonyos.com/\n[√] 下载DevEco Studio 5.0版本\n[√] 运行安装程序，选择安装路径\n[√] 完成安装\n1.2 配置HarmonyOS SDK\n[√] 启动DevEco Studio\n[√] 打开SDK Manager配置SDK路径\n[√] 下载HarmonyOS SDK 5.0+\n[√] 配置模拟器（Phone设备）\n1.3 创建鸿蒙项目\n[√] 新建Empty Ability项目\n[√] 选择ArkTS语言\n[√] 配置项目参数（项目名：cg2-sgtpdi，包名：com.example.sgtpdi）\n[√] 完成项目创建\n1.4 AI辅助编码\n[√] 使用TRAE AI工具生成ArkTS代码\n[√] 描述需求：实现登录页面、商品列表、AI信用评估等\n[√] AI生成代码后手动完善业务逻辑\n[√] 运行项目验证\n2. 后端开发环境搭建\n2.1 安装Node.js\n[√] 访问官网：\nhttps://nodejs.org/\n[√] 下载Node.js 18+ LTS版本\n[√] 完成安装并验证：\nnode -v\n、\nnpm -v\n2.2 初始化后端项目\n[√] 创建项目目录：cg2-sgtpdi-server\n[√] 初始化npm项目：\nnpm init\n[√] 安装Express框架：\nnpm install express\n[√] 安装MySQL驱动：\nnpm install mysql2\n[√] 安装其他依赖：cors、body-parser、multer等\n2.3 配置MySQL数据库\n[√] 安装MySQL 8.0\n[√] 创建数据库：sgtpdi\n[√] 创建数据表：users、products、trades、notifications等\n[√] 配置数据库连接参数\n实验结果\n验证结果\n工具\n安装状态\n项目创建\n运行状态\n备注\nDevEco Studio\n[√] 成功\n[√] 成功\n[√] 成功\nHarmonyOS HelloWorld运行正常\nNode.js\n[√] 成功\n[√] 成功\n[√] 成功\nExpress服务启动正常\nMySQL\n[√] 成功\n[√] 成功\n[√] 成功\n数据库连接正常\n鸿蒙开发环境配置详情\n系统要求\n：\n操作系统：Windows 11 64位\n内存：16GB\n硬盘：500GB可用空间\n处理器：Intel Core i7\n安装步骤\n：\n1.\n下载DevEco Studio 5.0安装包（约1.2GB）\n2.\n运行安装程序，选择安装路径：\nD:\\DevEcoStudio\n3.\n启动后配置HarmonyOS SDK路径\n4.\n下载SDK组件：API 12、ArkTS工具链、模拟器镜像\n5.\n创建Phone模拟器设备（分辨率：1080x2340）\n6.\n运行HelloWorld项目验证环境配置\n关键配置\n：\nSDK版本：HarmonyOS 5.0.0 (API 12)\n开发语言：ArkTS\n项目模板：Empty Ability\n模拟器：Phone设备\n构建工具：Hvigor\n问题与解决\n问题描述\n解决方案\n解决结果\nSDK下载缓慢，经\n常中断\n配置国内镜像源（华为镜像站）\n成功解决，下载\n速度提升至正常\n模拟器启动失败，\n提示VT-x不可用\n在BIOS中启用Intel VT-x虚拟化技术\n成功解决，模拟\n器正常运行\n编译报错：SDK版\n本不匹配\n检查并统一SDK版本为API 12\n成功解决，编译\n通过\nNode.js依赖安装失\n败\n配置npm国内镜像源：\nnpm config set registry\nhttps://registry.npmmirror.com\n成功解决\nMySQL连接被拒绝\n修改MySQL认证插件为mysql_native_password\n成功解决\n实验总结\n实验收获\n掌握了DevEco Studio的安装和完整配置方法\n了解了HarmonyOS SDK的版本管理和项目结构\n熟悉了ArkTS声明式UI开发的基本语法\n体验了AI辅助代码生成工具（TRAE）的高效开发方式\n学会了Node.js后端环境和MySQL数据库的搭建\n技术要点\nDevEco Studio开发环境搭建\nHarmonyOS SDK配置（API 12）\nArkTS语言基础（装饰器、状态管理）\n鸿蒙模拟器创建和配置\n项目构建工具Hvigor的使用\nNode.js + Express后端框架搭建\nMySQL数据库设计与配置\n考核指标\n考核项\n评分标准\n得分\n环境搭建完整性\nDevEco Studio安装成功，SDK配置正确，后端环境完整\n20分\n项目创建与运行\nHelloWorld项目成功运行，后端服务正常启动\n30分\n截图记录\n提供关键步骤截图，清晰完整\n20分\n问题解决\n能独立解决各种环境配置问题\n15分\n实验报告质量\n报告结构完整，内容详实\n15分\n教师评价\n项目\n评价\n实验完成情况\n技术掌握程度\n创新点\n综合评价\n成绩\n教师签名：\n___________________\n日期：\n___________________\n",
+      "file_paths": "D:\\harmonyOS\\home\\实验报告\\2023210621史东振实验一 开发环境搭建.pdf",
+      "file_names": "2023210621史东振实验一 开发环境搭建.pdf",
+      "submit_time": "2026-05-31T23:56:41.413303",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-04-26T18:57:51.765510",
+      "updated_at": "2026-05-31T23:56:41.413303",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 6,
       "user_id": "2023210621",
@@ -154,24 +172,6 @@
       "scored_at": null,
       "created_at": "2026-04-26T18:58:41.099796",
       "updated_at": "2026-05-31T23:18:24.922257",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 1,
-      "user_id": "2023210621",
-      "content": "PDF实验报告：2023210621史东振实验一 开发环境搭建.pdf\n",
-      "file_paths": "/data/user/0/cn.edu.chzu.madkg/cache/file_picker/1777201070861/2023210621史东振实验一 开发环境搭建.pdf",
-      "file_names": "2023210621史东振实验一 开发环境搭建.pdf",
-      "submit_time": "2026-05-31T23:18:20.819882",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-04-26T18:57:51.765510",
-      "updated_at": "2026-05-31T23:18:20.819882",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
