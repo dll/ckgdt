@@ -77,7 +77,7 @@ class _CourseManagePageState extends State<CourseManagePage> {
           Text(
             '点击右上角 + 按钮一键生成课程',
             style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.6),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
           const SizedBox(height: 24),
@@ -191,7 +191,7 @@ class _CourseManagePageState extends State<CourseManagePage> {
                 Text(
                   course.description,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -241,7 +241,7 @@ class _CourseManagePageState extends State<CourseManagePage> {
             label,
             style: TextStyle(
               fontSize: 11,
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ],
@@ -280,7 +280,7 @@ class _CourseManagePageState extends State<CourseManagePage> {
                   Text(
                     course.description,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurface.withOpacity(0.7),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                 const SizedBox(height: 20),

@@ -4,9 +4,11 @@ import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../core/error_handler.dart';
 import '../data/local/lab_task_dao.dart';
 import '../data/local/assessment_dao.dart';
 import '../data/local/works_dao.dart';
+import 'default_class_service.dart';
 
 class ScoreExportService {
   ScoreExportService._();
@@ -16,6 +18,16 @@ class ScoreExportService {
   final _assessmentDao = AssessmentDao();
   final _worksDao = WorksDao();
 
+  /// 实验成绩按默认班级收窄（行级含 user_id，可过滤）。
+  /// 默认班级未设/为空时原样返回（与各成绩页 filterByDefaultClass 约定一致）。
+  /// 考核(项目/小组维度)、作品(student_name 维度)无 per-student user_id，
+  /// 不做班级过滤——强行映射会破坏跨班项目组语义。
+  Future<List<Map<String, dynamic>>> _filterLabByClass(
+      List<Map<String, dynamic>> rows) {
+    return DefaultClassService.instance
+        .filterByDefaultClass(rows, (r) => (r['user_id'] as String?) ?? '');
+  }
+
   // ══════════════════════════════════════════════════════════
   //  实验成绩导出
   // ══════════════════════════════════════════════════════════
@@ -23,7 +35,8 @@ class ScoreExportService {
   Future<String?> exportLabScores() async {
     if (kIsWeb) return null;
     try {
-      final data = await _labTaskDao.getAllStudentLabScores();
+      final data = await _filterLabByClass(
+          await _labTaskDao.getAllStudentLabScores());
       if (data.isEmpty) return null;
 
       final buf = StringBuffer();
@@ -42,15 +55,19 @@ class ScoreExportService {
       }
 
       return await _saveToFile(buf.toString(), '实验成绩');
-    } catch (e) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ScoreExportService.exportLabScores', stack: st);
       return null;
     }
   }
 
   Future<List<Map<String, dynamic>>> getLabScoresForPreview() async {
     try {
-      return await _labTaskDao.getAllStudentLabScores();
-    } catch (e) {
+      return await _filterLabByClass(
+          await _labTaskDao.getAllStudentLabScores());
+    } catch (e, st) {
+      swallowDebug(e,
+          tag: 'ScoreExportService.getLabScoresForPreview', stack: st);
       return [];
     }
   }
@@ -83,7 +100,9 @@ class ScoreExportService {
       }
 
       return await _saveToFile(buf.toString(), '考核成绩');
-    } catch (e) {
+    } catch (e, st) {
+      swallowDebug(e,
+          tag: 'ScoreExportService.exportAssessmentScores', stack: st);
       return null;
     }
   }
@@ -91,7 +110,9 @@ class ScoreExportService {
   Future<List<Map<String, dynamic>>> getAssessmentScoresForPreview() async {
     try {
       return await _assessmentDao.getScoreRanking();
-    } catch (e) {
+    } catch (e, st) {
+      swallowDebug(e,
+          tag: 'ScoreExportService.getAssessmentScoresForPreview', stack: st);
       return [];
     }
   }
@@ -127,7 +148,8 @@ class ScoreExportService {
       }
 
       return await _saveToFile(buf.toString(), '作品成绩');
-    } catch (e) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ScoreExportService.exportWorkScores', stack: st);
       return null;
     }
   }
@@ -135,7 +157,9 @@ class ScoreExportService {
   Future<List<Map<String, dynamic>>> getWorkScoresForPreview() async {
     try {
       return await _worksDao.getScoreRecords();
-    } catch (e) {
+    } catch (e, st) {
+      swallowDebug(e,
+          tag: 'ScoreExportService.getWorkScoresForPreview', stack: st);
       return [];
     }
   }
@@ -165,7 +189,8 @@ class ScoreExportService {
         [0xEF, 0xBB, 0xBF, ...const Utf8Encoder().convert(content)],
       );
       return file.path;
-    } catch (e) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ScoreExportService._saveToFile', stack: st);
       return null;
     }
   }

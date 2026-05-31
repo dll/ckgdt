@@ -115,8 +115,8 @@ class _ClassQaPageState extends State<ClassQaPage> {
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: isAnswered
-            ? Colors.green.withOpacity(0.15)
-            : theme.colorScheme.primary.withOpacity(0.15),
+            ? Colors.green.withValues(alpha: 0.15)
+            : theme.colorScheme.primary.withValues(alpha: 0.15),
         foregroundColor: isAnswered ? Colors.green : theme.colorScheme.primary,
         child: Icon(isAnswered ? Icons.check : Icons.help_outline),
       ),

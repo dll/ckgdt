@@ -280,7 +280,7 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.12),
+                  color: Colors.blue.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(Icons.account_tree, size: 20, color: Colors.blue),
@@ -334,9 +334,9 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: (isDark ? Colors.blue[900] : Colors.blue[50])!
-                    .withOpacity(0.5),
+                    .withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
               ),
               child: const Text(
                 '数据流向：mad-data（课件配置）→ Gitee API → App 本地缓存\n'
@@ -361,7 +361,7 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         border: Border(left: BorderSide(color: color, width: 3)),
-        color: color.withOpacity(0.04),
+        color: color.withValues(alpha: 0.04),
         borderRadius: const BorderRadius.horizontal(right: Radius.circular(8)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -404,7 +404,7 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.12),
+                  color: Colors.orange.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(Icons.verified_user, size: 20,
@@ -501,7 +501,7 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.purple.withOpacity(0.12),
+              color: Colors.purple.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(Icons.list_alt, size: 20, color: Colors.purple),
@@ -549,7 +549,7 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: groupColor.withOpacity(0.15),
+                  color: groupColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text('CG${groupNum ?? "?"}',
@@ -583,7 +583,7 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
 
   Widget _buildMiniStat(IconData icon, String text, Color color) {
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(icon, size: 13, color: color.withOpacity(0.7)),
+      Icon(icon, size: 13, color: color.withValues(alpha: 0.7)),
       const SizedBox(width: 3),
       Text(text, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
     ]);

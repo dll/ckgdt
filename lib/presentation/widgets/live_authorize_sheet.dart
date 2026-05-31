@@ -100,7 +100,7 @@ class _LiveAuthorizeSheetState extends State<LiveAuthorizeSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: NoirTokens.paper.withOpacity(0.3),
+                color: NoirTokens.paper.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -120,7 +120,7 @@ class _LiveAuthorizeSheetState extends State<LiveAuthorizeSheet> {
                   ),
                   Text('${_authorized.length} 人',
                       style: TextStyle(
-                          color: NoirTokens.paper.withOpacity(0.6),
+                          color: NoirTokens.paper.withValues(alpha: 0.6),
                           fontSize: 12)),
                 ],
               ),
@@ -135,7 +135,7 @@ class _LiveAuthorizeSheetState extends State<LiveAuthorizeSheet> {
                           child: Text('暂无学生数据',
                               style: TextStyle(
                                   color: NoirTokens.paper
-                                      .withOpacity(0.5))))
+                                      .withValues(alpha: 0.5))))
                       : ListView.builder(
                           controller: scrollCtrl,
                           itemCount: _students.length,
@@ -151,7 +151,7 @@ class _LiveAuthorizeSheetState extends State<LiveAuthorizeSheet> {
                               subtitle: Text(s.userId,
                                   style: TextStyle(
                                       color: NoirTokens.paper
-                                          .withOpacity(0.5),
+                                          .withValues(alpha: 0.5),
                                       fontSize: 12)),
                               onChanged: (v) => setState(() {
                                 if (v) {

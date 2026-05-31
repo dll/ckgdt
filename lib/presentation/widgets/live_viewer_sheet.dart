@@ -40,7 +40,7 @@ class LiveViewerSheet extends StatelessWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: NoirTokens.paper.withOpacity(0.3),
+                color: NoirTokens.paper.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -129,7 +129,7 @@ class _LiveTileState extends State<_LiveTile> {
               children: [
                 CircleAvatar(
                   radius: 16,
-                  backgroundColor: NoirTokens.accent.withOpacity(0.2),
+                  backgroundColor: NoirTokens.accent.withValues(alpha: 0.2),
                   child: Text(
                     s.userName.isNotEmpty ? s.userName.characters.first : '?',
                     style: const TextStyle(
@@ -148,7 +148,7 @@ class _LiveTileState extends State<_LiveTile> {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.2),
+                    color: Colors.red.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Row(
@@ -170,7 +170,7 @@ class _LiveTileState extends State<_LiveTile> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 6, vertical: 3),
                     decoration: BoxDecoration(
-                      color: NoirTokens.accent.withOpacity(0.2),
+                      color: NoirTokens.accent.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Row(
@@ -212,7 +212,7 @@ class _LiveTileState extends State<_LiveTile> {
                           child: Text('等待画面…',
                               style: TextStyle(
                                   color: NoirTokens.paper
-                                      .withOpacity(0.5))),
+                                      .withValues(alpha: 0.5))),
                         ),
                       ),
                     ),

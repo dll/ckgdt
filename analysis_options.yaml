@@ -9,6 +9,14 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  exclude:
+    # 本地手工备份目录（gitignore，非项目源码）。其内含旧版 Flutter API
+    # （CardTheme/withOpacity 等）会污染 `flutter analyze` 计数，必须排除。
+    - lib.backup/**
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`
