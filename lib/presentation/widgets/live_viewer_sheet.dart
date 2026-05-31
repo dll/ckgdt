@@ -164,6 +164,29 @@ class _LiveTileState extends State<_LiveTile> {
                     ],
                   ),
                 ),
+                if (s.isScreenSharing) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 6, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: NoirTokens.accent.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.tv, color: NoirTokens.accent, size: 10),
+                        SizedBox(width: 3),
+                        Text('共享屏幕',
+                            style: TextStyle(
+                                color: NoirTokens.accent,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

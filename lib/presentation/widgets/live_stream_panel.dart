@@ -374,6 +374,13 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
               _service.toggleMic,
               active: s?.isMicOn == true,
             ),
+            const SizedBox(width: 4),
+            _ctrlBtn(
+              s?.isScreenSharing == true ? Icons.tv : Icons.screen_share,
+              '共享屏幕',
+              _service.toggleScreenShare,
+              active: s?.isScreenSharing == true,
+            ),
           ],
           const Spacer(),
           // 录制时间
