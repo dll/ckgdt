@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../../core/build_info.dart';
 import '../../../core/constants/app_theme.dart';
+import '../../../core/error_handler.dart';
 import '../../../main.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/settings_service.dart';
+import '../../widgets/screenshot_capture_page.dart';
 import '../materials/ai_settings_page.dart';
 import '../settings/voice_settings_page.dart';
 import '../settings/ai_data_page.dart';
@@ -15,6 +17,30 @@ import '../../../data/local/course_dao.dart';
 import '../profile/chat_history_page.dart';
 import '../analytics/token_stats_page.dart';
 import '../../widgets/back_button_bar.dart';
+import '../learning/learning_plan_page.dart';
+import '../quiz/quiz_page.dart';
+import '../repo/git_repo_page.dart';
+import '../repo/student_repo_page.dart';
+import '../skill/ai_skill_page.dart';
+import '../profile/virtual_twin_page.dart';
+import '../practice/deep_practice_page.dart';
+import '../practice/growth_curve_page.dart';
+import '../sync/data_sync_page.dart';
+import '../cross_platform/cross_platform_hub_page.dart';
+import '../learning/progress_page.dart';
+import '../quiz/wrong_answers_page.dart';
+import '../graph/favorites_page.dart';
+import '../survey/survey_page.dart';
+import '../class_qa/class_qa_page.dart';
+import '../analytics/learning_analytics_page.dart';
+import '../admin/class_manage_page.dart';
+import '../admin/teaching_manage_page.dart';
+import '../admin/question_manage_page.dart';
+import '../admin/survey_manage_page.dart';
+import '../admin/student_manage_page.dart';
+import '../admin/data_import_page.dart';
+import '../admin/data_export_page.dart';
+import '../admin/repo_analytics_page.dart';
 
 import '../../../core/constants/color_ohos_compat.dart';
 class SettingsPage extends StatefulWidget {
@@ -129,6 +155,13 @@ class _SettingsPageState extends State<SettingsPage> {
                 setState(() => _notificationsEnabled = value);
               },
             ),
+          ),
+          _buildMenuItem(
+            context,
+            icon: Icons.camera_alt,
+            title: '后台截图',
+            subtitle: '批量截取各功能页面封面图（后台静默运行）',
+            onTap: () => _refreshAllScreenshots(context),
           ),
           _buildMenuItem(
             context,
@@ -565,5 +598,102 @@ class _SettingsPageState extends State<SettingsPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _refreshAllScreenshots(BuildContext context) async {
+    final auth = AuthService();
+    final isTeacher = auth.isTeacher;
+    final isAdmin = auth.isAdmin;
+    final isTeacherOrAdmin = isTeacher || isAdmin;
+
+    final pages = <String, Widget>{
+      '学习路径': const LearningPlanPage(),
+      '章节测验': const QuizPage(),
+      'Git仓库': isTeacherOrAdmin ? const GitRepoPage() : const StudentRepoPage(),
+      '技能工具': const SkillsHubPage(),
+      '数字孪生': const VirtualTwinPage(),
+      '深度实践': const DeepPracticePage(),
+      '成长曲线': const GrowthCurvePage(),
+      'Token统计': const TokenStatsPage(),
+      '数据同步': const DataSyncPage(),
+      '多端互通': const CrossPlatformHubPage(),
+    };
+
+    if (!isTeacherOrAdmin) {
+      pages['学习进度'] = const ProgressPage();
+      pages['错题本'] = const WrongAnswersPage();
+      pages['我的收藏'] = const FavoritesPage();
+      pages['问卷调查'] = const SurveyPage();
+      pages['班级问答'] = const ClassQaPage();
+    }
+
+    if (isTeacherOrAdmin) {
+      pages['成绩统计'] = const LearningAnalyticsPage();
+      pages['班级管理'] = const ClassManagePage();
+      pages['教学管理'] = const TeachingManagePage();
+      pages['题库管理'] = const QuestionManagePage();
+      pages['问卷管理'] = const SurveyManagePage();
+      pages['反馈管理'] = const FeedbackManagePage();
+      pages['课程管理'] = const CourseManagePage();
+    }
+
+    if (isAdmin) {
+      pages['学生管理'] = const StudentManagePage();
+      pages['数据导入'] = const DataImportPage();
+      pages['数据导出'] = const DataExportPage();
+      pages['仓库分析'] = const RepoAnalyticsPage();
+    }
+
+    int completed = 0;
+    final total = pages.length;
+    if (!context.mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) => AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text('正在后台截取封面 ($completed/$total)...'),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    for (final entry in pages.entries) {
+      if (!context.mounted) break;
+      try {
+        await Navigator.push(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (_, __, ___) => ScreenshotCapturePage(
+              captureKey: entry.key,
+              child: entry.value,
+            ),
+            transitionsBuilder: (_, __, ___, child) => child,
+            opaque: false,
+            barrierDismissible: false,
+            transitionDuration: Duration.zero,
+            reverseTransitionDuration: Duration.zero,
+          ),
+        );
+      } catch (e, st) {
+        swallowDebug(e, tag: 'ScreenshotCapture', stack: st);
+      }
+      completed++;
+    }
+
+    if (context.mounted) {
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('已截取 $completed 个页面封面')),
+      );
+      setState(() {});
+    }
   }
 }

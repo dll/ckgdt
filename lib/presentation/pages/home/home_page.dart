@@ -341,11 +341,6 @@ class _HomePageState extends State<HomePage> {
         title: Text(_platformTitle, style: const TextStyle(color: NoirTokens.paper)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.camera_alt, color: NoirTokens.paper),
-            tooltip: '刷新截图',
-            onPressed: _captureAllScreenshots,
-          ),
-          IconButton(
             icon: const Icon(Icons.search, color: NoirTokens.paper),
             onPressed: () {
               Navigator.push(
@@ -979,7 +974,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// 截图自动捕获导航
   Future<void> _pushWithScreenshot(String key, Widget page) {
     return Navigator.push(
       context,
@@ -990,98 +984,6 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
-  }
-
-  Future<void> _captureAllScreenshots() async {
-    final isTeacher = _authService.isTeacher;
-    final isAdmin = _authService.isAdmin;
-    final isTeacherOrAdmin = isTeacher || isAdmin;
-
-    final pages = <String, Widget>{
-      '学习路径': const LearningPlanPage(),
-      '章节测验': const QuizPage(),
-      'Git仓库': isTeacherOrAdmin ? const GitRepoPage() : const StudentRepoPage(),
-      '技能工具': const SkillsHubPage(),
-      '数字孪生': const VirtualTwinPage(),
-      '深度实践': const DeepPracticePage(),
-      '成长曲线': const GrowthCurvePage(),
-      'Token统计': const TokenStatsPage(),
-      '数据同步': const DataSyncPage(),
-      '多端互通': const CrossPlatformHubPage(),
-    };
-
-    if (!isTeacherOrAdmin) {
-      pages['学习进度'] = const ProgressPage();
-      pages['错题本'] = const WrongAnswersPage();
-      pages['我的收藏'] = const FavoritesPage();
-      pages['问卷调查'] = const SurveyPage();
-      pages['班级问答'] = const ClassQaPage();
-    }
-
-    if (isTeacherOrAdmin) {
-      pages['成绩统计'] = const LearningAnalyticsPage();
-      pages['班级管理'] = const ClassManagePage();
-      pages['教学管理'] = const TeachingManagePage();
-      pages['题库管理'] = const QuestionManagePage();
-      pages['问卷管理'] = const SurveyManagePage();
-      pages['反馈管理'] = const FeedbackManagePage();
-      pages['班级问答'] = const ClassQaPage();
-      pages['课程管理'] = const CourseManagePage();
-    }
-
-    if (isAdmin) {
-      pages['学生管理'] = const StudentManagePage();
-      pages['数据导入'] = const DataImportPage();
-      pages['数据导出'] = const DataExportPage();
-      pages['仓库分析'] = const RepoAnalyticsPage();
-    }
-
-    int completed = 0;
-    final total = pages.length;
-
-    if (!mounted) return;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 16),
-            Text('正在截取封面 ($completed/$total)...'),
-          ],
-        ),
-      ),
-    );
-
-    for (final entry in pages.entries) {
-      if (!mounted) break;
-      try {
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ScreenshotCapturePage(
-              captureKey: entry.key,
-              child: entry.value,
-            ),
-          ),
-        );
-        await Future.delayed(const Duration(milliseconds: 300));
-      } catch (e, st) {
-        swallowDebug(e, tag: 'ScreenshotCapture', stack: st);
-      }
-      completed++;
-    }
-
-    if (mounted) {
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已截取 $completed 个页面封面')),
-      );
-      setState(() {});
-    }
   }
 
   static void _noOp() {}

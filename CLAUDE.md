@@ -547,6 +547,8 @@ flutter build windows --release
 # Web — 必须带 base href 适配 GitHub Pages 子路径，否则资源 404。
 # bash 下需要 MSYS_NO_PATHCONV=1 防止路径转换。
 MSYS_NO_PATHCONV=1 flutter build web --release --base-href "/mad-fd/"
+# ⚠ 构建完成后必须改 renderer canvaskit → html（见"Web 空白"坑）
+powershell -Command "(Get-Content build/web/flutter_bootstrap.js -Raw) -replace '\"renderer\":\"canvaskit\"', '\"renderer\":\"html\"' | Set-Content build/web/flutter_bootstrap.js"
 ```
 
 ### 产物路径

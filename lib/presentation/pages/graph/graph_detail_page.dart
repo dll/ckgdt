@@ -1229,45 +1229,248 @@ class _GraphDetailPageState extends State<GraphDetailPage>
   // ── 图谱画布 ────────────────────────────────────────────────────────────
 
   Widget _buildGraphView() {
-    return Container(
-      color: const Color(0xFFF8FAFE),
-      child: GestureDetector(
-        onTapDown: (d) => _handleTap(d.localPosition),
-        onDoubleTapDown: (d) => _handleDoubleTap(d.localPosition),
-        onLongPressStart: (d) => _handleLongPressOrDragStart(d.localPosition),
-        onLongPressMoveUpdate: (d) => _handleDragUpdate(d.localPosition),
-        onLongPressEnd: (_) => _handleDragEnd(),
-        child: InteractiveViewer(
-          transformationController: _transformationController,
-          constrained: false,
-          boundaryMargin: const EdgeInsets.all(300),
-          minScale: 0.05,
-          maxScale: 5.0,
-          child: CustomPaint(
-            painter: GraphPainter(
-              nodes: _nodes,
-              edges: _edges.where((e) {
-                final vis = _visiblePositionedNodes.map((p) => p.node.id).toSet();
-                return vis.contains(e.sourceId) && vis.contains(e.targetId);
-              }).toList(),
-              selectedNode: _selectedNode,
-              positionedNodes: _visiblePositionedNodes,
-              highlightedNodeIds: _highlightedNodeIds,
-              collapsedNodes: _collapsedNodes,
-              adjacentNodeIds: _adjacentNodeIds,
-              hasChildrenFn: _hasChildren,
-              learningPathNodeIds: _showLearningPath ? _learningPathNodeIds : [],
-              drillPathNodeIds: _drillPathNodeIds,
-              ancestorPath: _ancestorPath,
-            ),
-            size: Size(
-              MediaQuery.of(context).size.width * 2.5,
-              MediaQuery.of(context).size.height * 2.5,
+    final canvasW = MediaQuery.of(context).size.width * 2.5;
+    final canvasH = MediaQuery.of(context).size.height * 2.5;
+
+    return Stack(
+      children: [
+        Container(
+          color: const Color(0xFFF8FAFE),
+          child: GestureDetector(
+            onTapDown: (d) => _handleTap(d.localPosition),
+            onDoubleTapDown: (d) => _handleDoubleTap(d.localPosition),
+            onLongPressStart: (d) => _handleLongPressOrDragStart(d.localPosition),
+            onLongPressMoveUpdate: (d) => _handleDragUpdate(d.localPosition),
+            onLongPressEnd: (_) => _handleDragEnd(),
+            child: InteractiveViewer(
+              transformationController: _transformationController,
+              constrained: false,
+              boundaryMargin: const EdgeInsets.all(300),
+              minScale: 0.05,
+              maxScale: 5.0,
+              child: CustomPaint(
+                painter: GraphPainter(
+                  nodes: _nodes,
+                  edges: _edges.where((e) {
+                    final vis = _visiblePositionedNodes.map((p) => p.node.id).toSet();
+                    return vis.contains(e.sourceId) && vis.contains(e.targetId);
+                  }).toList(),
+                  selectedNode: _selectedNode,
+                  positionedNodes: _visiblePositionedNodes,
+                  highlightedNodeIds: _highlightedNodeIds,
+                  collapsedNodes: _collapsedNodes,
+                  adjacentNodeIds: _adjacentNodeIds,
+                  hasChildrenFn: _hasChildren,
+                  learningPathNodeIds: _showLearningPath ? _learningPathNodeIds : [],
+                  drillPathNodeIds: _drillPathNodeIds,
+                  ancestorPath: _ancestorPath,
+                ),
+                size: Size(canvasW, canvasH),
+              ),
             ),
           ),
         ),
+        Positioned(
+          left: 8,
+          bottom: 8,
+          child: _buildGraphToolbar(),
+        ),
+        if (_visiblePositionedNodes.isNotEmpty)
+          Positioned(
+            right: 8,
+            bottom: 8,
+            child: _buildMinimap(canvasW, canvasH),
+          ),
+      ],
+    );
+  }
+
+  // ── 缩放工具栏 ──────────────────────────────────────────────────────────
+
+  Widget _buildGraphToolbar() {
+    return AnimatedBuilder(
+      animation: _transformationController,
+      builder: (context, _) {
+        final scale = _getCurrentScale();
+        final percent = (scale * 100).round();
+
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _toolBtn(Icons.add, '放大', _zoomIn),
+              Container(
+                width: 40,
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  border: Border.symmetric(
+                    horizontal: BorderSide(color: Colors.grey.shade200, width: 1),
+                  ),
+                ),
+                child: Text(
+                  '$percent%',
+                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: Colors.grey.shade600),
+                ),
+              ),
+              _toolBtn(Icons.remove, '缩小', _zoomOut),
+              Divider(height: 1, color: Colors.grey.shade200),
+              _toolBtn(Icons.crop_free, '复位', _resetView),
+              Divider(height: 1, color: Colors.grey.shade200),
+              _toolBtn(Icons.fit_screen, '全图', _fitAll),
+              if (_selectedNode != null) ...[
+                Divider(height: 1, color: Colors.grey.shade200),
+                _toolBtn(Icons.my_location, '居中选中', _centerOnSelected),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _toolBtn(IconData icon, String tooltip, VoidCallback onTap) {
+    return Tooltip(
+      message: tooltip,
+      preferBelow: false,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: SizedBox(
+          width: 40,
+          height: 36,
+          child: Icon(icon, size: 20, color: Colors.grey.shade700),
+        ),
       ),
     );
+  }
+
+  double _getCurrentScale() {
+    return _transformationController.value.getMaxScaleOnAxis();
+  }
+
+  void _zoomIn() {
+    final s = (_getCurrentScale() * 1.3).clamp(0.05, 5.0);
+    _transformationController.value = Matrix4.diagonal3Values(s, s, 1);
+  }
+
+  void _zoomOut() {
+    final s = (_getCurrentScale() / 1.3).clamp(0.05, 5.0);
+    _transformationController.value = Matrix4.diagonal3Values(s, s, 1);
+  }
+
+  void _resetView() {
+    _transformationController.value = Matrix4.identity();
+  }
+
+  void _fitAll() {
+    _resetView();
+  }
+
+  void _centerOnSelected() {
+    if (_selectedNode == null) return;
+    final pNode = _visiblePositionedNodes.cast<PositionedNode?>().firstWhere(
+      (p) => p!.node.id == _selectedNode!.id,
+      orElse: () => null,
+    );
+    if (pNode == null) return;
+    final s = _getCurrentScale().clamp(0.05, 5.0);
+    _transformationController.value = Matrix4.identity()
+      ..setEntry(0, 0, s)
+      ..setEntry(1, 1, s)
+      ..setEntry(0, 3, -s * pNode.x + 300)
+      ..setEntry(1, 3, -s * pNode.y + 350);
+  }
+
+  // ── 鹰眼小地图 ──────────────────────────────────────────────────────
+
+  Widget _buildMinimap(double canvasW, double canvasH) {
+    const mapW = 140.0;
+    const mapH = 120.0;
+    final scaleX = mapW / canvasW;
+    final scaleY = mapH / canvasH;
+
+    return GestureDetector(
+      onTapDown: (details) {
+        final tapX = details.localPosition.dx / scaleX;
+        final tapY = details.localPosition.dy / scaleY;
+        _animateCenter(tapX, tapY, canvasW, canvasH);
+      },
+      onPanUpdate: (details) {
+        final tapX = details.localPosition.dx / scaleX;
+        final tapY = details.localPosition.dy / scaleY;
+        _animateCenter(tapX, tapY, canvasW, canvasH);
+      },
+      child: AnimatedBuilder(
+        animation: _transformationController,
+        builder: (context, _) {
+          final matrix = _transformationController.value;
+          final inv = Matrix4.inverted(matrix);
+          final renderBox = context.findRenderObject() as RenderBox?;
+          final parentSize = renderBox?.size ?? const Size(400, 600);
+
+          final topLeft = MatrixUtils.transformPoint(inv, Offset.zero);
+          final bottomRight = MatrixUtils.transformPoint(
+            inv,
+            Offset(parentSize.width, parentSize.height),
+          );
+
+          final vpLeft = (topLeft.dx * scaleX).clamp(0.0, mapW);
+          final vpTop = (topLeft.dy * scaleY).clamp(0.0, mapH);
+          final vpRight = (bottomRight.dx * scaleX).clamp(0.0, mapW);
+          final vpBottom = (bottomRight.dy * scaleY).clamp(0.0, mapH);
+
+          return Container(
+            width: mapW,
+            height: mapH,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.92),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade300),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: CustomPaint(
+                painter: _DetailMinimapPainter(
+                  nodes: _visiblePositionedNodes,
+                  canvasWidth: canvasW,
+                  canvasHeight: canvasH,
+                  viewportRect: Rect.fromLTRB(vpLeft, vpTop, vpRight, vpBottom),
+                ),
+                size: const Size(mapW, mapH),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _animateCenter(double x, double y, double canvasW, double canvasH) {
+    final s = _getCurrentScale().clamp(0.05, 5.0);
+    _transformationController.value = Matrix4.identity()
+      ..setEntry(0, 0, s)
+      ..setEntry(1, 1, s)
+      ..setEntry(0, 3, -s * x + 300)
+      ..setEntry(1, 3, -s * y + 350);
   }
 
   // ── 节点拖拽处理（长按+拖拽）─────────────────────────────────────────
@@ -1658,4 +1861,72 @@ class _GraphDetailPageState extends State<GraphDetailPage>
 // ══════════════════════════════════════════════════════════════════════════════
 // GraphPainter — 对标 Python visualization/graph_2d.py 的渲染质量
 // ══════════════════════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════════════════════
+// _DetailMinimapPainter — 详细图谱鹰眼小地图
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _DetailMinimapPainter extends CustomPainter {
+  final List<PositionedNode> nodes;
+  final double canvasWidth;
+  final double canvasHeight;
+  final Rect viewportRect;
+
+  _DetailMinimapPainter({
+    required this.nodes,
+    required this.canvasWidth,
+    required this.canvasHeight,
+    required this.viewportRect,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final sx = size.width / canvasWidth;
+    final sy = size.height / canvasHeight;
+
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Paint()..color = const Color(0xFFF8FAFE),
+    );
+
+    for (final pNode in nodes) {
+      final center = Offset(pNode.x * sx, pNode.y * sy);
+      final color = _parseNodeColor(pNode.node.color);
+      canvas.drawCircle(
+        center,
+        2.5,
+        Paint()..color = color,
+      );
+    }
+
+    canvas.drawRect(
+      viewportRect,
+      Paint()
+        ..color = const Color(0xFF1677FF).withValues(alpha: 0.3)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawRect(
+      viewportRect,
+      Paint()
+        ..color = const Color(0xFF1677FF)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+  }
+
+  Color _parseNodeColor(String? colorStr) {
+    if (colorStr == null || colorStr.isEmpty) return Colors.grey;
+    try {
+      final hex = colorStr.replaceFirst('#', '');
+      final value = int.parse(hex, radix: 16);
+      return Color(value | 0xFF000000);
+    } catch (_) {
+      return Colors.grey;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DetailMinimapPainter old) =>
+      old.viewportRect != viewportRect || old.nodes != nodes;
+}
 
