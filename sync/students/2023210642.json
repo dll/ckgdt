@@ -3,8 +3,8 @@
   "user_id": "2023210642",
   "user_name": "叶庭东",
   "role": "student",
-  "synced_at": "2026-05-31T23:50:50.348557",
-  "last_active": "2026-05-31T23:50:50.348557",
+  "synced_at": "2026-05-31T23:57:55.020470",
+  "last_active": "2026-05-31T23:57:55.020470",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
@@ -121,7 +121,64 @@
       "teacher_confirmed": 0
     }
   ],
-  "student_reports": [],
+  "student_reports": [
+    {
+      "template_id": null,
+      "task_id": null,
+      "user_id": "2023210642",
+      "title": "第一周报告",
+      "content_json": "2023210642叶庭东第一周报告.pdf",
+      "file_path": "D:\\gitee\\cg2mtcs\\实验考核过程\\报告文档\\2023210642叶庭东第一周报告.pdf",
+      "status": "已提交",
+      "submit_time": "2026-05-31T23:55:51.505458",
+      "score": null,
+      "feedback": null,
+      "created_at": "2026-05-31T23:55:51.505458",
+      "updated_at": null
+    },
+    {
+      "template_id": null,
+      "task_id": null,
+      "user_id": "2023210642",
+      "title": "第二周报告",
+      "content_json": "2023210642叶庭东第二周报告.pdf",
+      "file_path": "D:\\gitee\\cg2mtcs\\实验考核过程\\报告文档\\2023210642叶庭东第二周报告.pdf",
+      "status": "已提交",
+      "submit_time": "2026-05-31T23:55:59.829796",
+      "score": null,
+      "feedback": null,
+      "created_at": "2026-05-31T23:55:59.830793",
+      "updated_at": null
+    },
+    {
+      "template_id": null,
+      "task_id": null,
+      "user_id": "2023210642",
+      "title": "第三周报告",
+      "content_json": "2023210642叶庭东第三周报告.pdf",
+      "file_path": "D:\\gitee\\cg2mtcs\\实验考核过程\\报告文档\\2023210642叶庭东第三周报告.pdf",
+      "status": "已提交",
+      "submit_time": "2026-05-31T23:56:08.639138",
+      "score": null,
+      "feedback": null,
+      "created_at": "2026-05-31T23:56:08.639138",
+      "updated_at": null
+    },
+    {
+      "template_id": null,
+      "task_id": null,
+      "user_id": "2023210642",
+      "title": "第四周报告",
+      "content_json": "2023210642叶庭东第四周报告.pdf",
+      "file_path": "D:\\gitee\\cg2mtcs\\实验考核过程\\报告文档\\2023210642叶庭东第四周报告.pdf",
+      "status": "已提交",
+      "submit_time": "2026-05-31T23:56:20.510355",
+      "score": null,
+      "feedback": null,
+      "created_at": "2026-05-31T23:56:20.510355",
+      "updated_at": null
+    }
+  ],
   "student_works": [
     {
       "title": "多端温控系统",
