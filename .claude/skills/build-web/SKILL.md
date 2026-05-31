@@ -42,7 +42,28 @@ MSYS_NO_PATHCONV=1 flutter build web --release --base-href "/mad-fd/"
 - `web/index.html` 的 `<meta name="description">` 改中文项目说明
 - `web/manifest.json` 的 `"description"` 改中文项目说明
 
-### 坑 4：Web 公网 URL 跟局域网同步 URL 混淆
+### 坑 4：Web 空白 / 部分元素不显示 / 登录框空白
+
+**现象**：GitHub Pages 部署后页面空白或只显示部分元素，登录区域全部空白。
+
+**根因**：`canvaskit` 渲染器需要 `SharedArrayBuffer`（依赖 `Cross-Origin-Opener-Policy: same-origin` + `Cross-Origin-Embedder-Policy: require-corp` 头），**GitHub Pages 无法设置这些头**，导致 canvaskit 静默初始化失败。
+
+**修复**：构建完成后需将 `flutter_bootstrap.js` 中的 `renderer` 从 `canvaskit` 改为 `html`，然后部署。
+
+手工修复：
+```bash
+# 构建后执行（或在 deploy_web.ps1 里已自动完成）
+powershell -Command "(Get-Content build/web/flutter_bootstrap.js -Raw) -replace '\"renderer\":\"canvaskit\"', '\"renderer\":\"html\"' | Set-Content build/web/flutter_bootstrap.js"
+```
+
+自动部署脚本：
+```powershell
+.\scripts\deploy_web.ps1
+```
+
+> **不要在 `web/index.html` 里尝试其他 hack**。`flutter_bootstrap.js` 是生成的，renderer 选择逻辑在 JS 层面。替换字符串是唯一可靠的方式。
+
+### 坑 5：Web 公网 URL 跟局域网同步 URL 混淆
 
 **根因**：项目内"三端互通"页之前显示局域网 IP（如 `http://192.168.1.105:8765`），但学生想访问 Web 版需要公网 URL。
 
