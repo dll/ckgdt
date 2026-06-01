@@ -3,8 +3,8 @@
   "user_id": "2023210648",
   "user_name": "张政",
   "role": "student",
-  "synced_at": "2026-06-01T09:01:33.946090",
-  "last_active": "2026-06-01T09:01:33.922688",
+  "synced_at": "2026-06-01T09:03:09.019119",
+  "last_active": "2026-06-01T09:03:04.303079",
   "quiz_results": [
     {
       "user_id": "2023210648",
@@ -33,6 +33,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 2,
+      "user_id": "2023210648",
+      "content": "PDF实验报告：2023210648张政实验二 原生应用开发.pdf\n",
+      "file_paths": "E:\\QQ\\接收\\2023210648张政实验二 原生应用开发.pdf",
+      "file_names": "2023210648张政实验二 原生应用开发.pdf",
+      "submit_time": "2026-06-01T09:03:09.019119",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-06-01T09:03:04.293879",
+      "updated_at": "2026-06-01T09:03:09.019119",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 1,
       "user_id": "2023210648",
@@ -83,24 +101,6 @@
       "scored_at": null,
       "created_at": "2026-06-01T08:46:46.311194",
       "updated_at": "2026-06-01T08:46:46.311194",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 2,
-      "user_id": "2023210648",
-      "content": "PDF实验报告：2023210648张政实验二 原生应用开发.pdf\n",
-      "file_paths": "E:\\QQ\\接收\\2023210648张政实验二 原生应用开发.pdf",
-      "file_names": "2023210648张政实验二 原生应用开发.pdf",
-      "submit_time": "2026-06-01T08:42:00.740993",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-06-01T08:41:57.521219",
-      "updated_at": "2026-06-01T08:42:00.740993",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
