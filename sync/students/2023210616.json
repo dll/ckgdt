@@ -3,8 +3,8 @@
   "user_id": "2023210616",
   "user_name": "彭绍洋",
   "role": "student",
-  "synced_at": "2026-06-01T08:17:17.121158",
-  "last_active": "2026-06-01T08:17:17.121182",
+  "synced_at": "2026-06-01T08:17:23.725973",
+  "last_active": "2026-06-01T08:17:23.726005",
   "quiz_results": [
     {
       "user_id": "2023210616",
@@ -33,6 +33,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 6,
+      "user_id": "2023210616",
+      "content": "PDF实验报告：2023210616彭绍洋实验六 跨平台综合项目实战.pdf\n",
+      "file_paths": "C:\\Users\\彭绍洋的\\Downloads\\2023210616彭绍洋实验六 跨平台综合项目实战.pdf",
+      "file_names": "2023210616彭绍洋实验六 跨平台综合项目实战.pdf",
+      "submit_time": "2026-06-01T08:17:23.662376",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-05-26T20:47:45.856033",
+      "updated_at": "2026-06-01T08:17:23.662376",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 5,
       "user_id": "2023210616",
@@ -119,24 +137,6 @@
       "scored_at": null,
       "created_at": "2026-04-27T09:54:30.274014",
       "updated_at": "2026-06-01T08:16:52.700768",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 6,
-      "user_id": "2023210616",
-      "content": "PDF实验报告：2023210616彭绍洋实验六 跨平台综合项目实战.pdf\n\n--- 报告正文（自动提取）---\n实验六：跨平台综合项目实战\n一、项目概述\n1.1\n项目名称\n云端智能畜牧养殖管理系统\n(CIFMS\n-\nCloud Intelligent Farm Management System)\n1.2\n项目简介\n基于\nHarmonyOS ArkTS\n开发的智能畜牧养殖管理应用，采用\nMVVM\n架构模式，实现牲畜\n管理、环境监测、设备监控、饲料管理等核心功能模块。系统通过\nMockService\n提供完整\n的模拟数据，支持离线开发和测试。\n1.3\n技术栈\n层次\n技术选型\n说明\n框架\nHarmonyOS ArkTS\n方舟开发语言\nUI\n组件\nArkUI\n声明式\nUI\n框架\n架构模式\nMVVM\nModel\n-\nView\n-\nViewModel\n状态管理\nViewModel + @State\n响应式状态管理\n数据模拟\nMockService\n本地模拟数据层\n路由管理\n@ohos.router\n声明式路由\n二、功能模块设计\n2.1\n系统功能架构\n┌─────────────────────────────────────────────────┐\n│                  CIFMS\n系统架构\n│\n├─────────────────────────────────────────────────┤\n│\n首页仪表盘\n│\n牲畜管理\n│\n环境监测\n│\n设备管理\n│\n饲料管理\n│\n├─────────────────────────────────────────────────┤\n│                    ViewModel\n层\n│\n│  DashboardVM │ AnimalVM  │ EnvVM    │ EquipVM\n│ FeedVM    │\n├─────────────────────────────────────────────────┤\n│                   Service\n层\n│\n│              MockService / HttpService           │\n├─────────────────────────────────────────────────┤\n│                    Model\n层\n│\n│  Dashboard  │  Animal   │  Env     │ Equipment │   Feed    │\n└─────────────────────────────────────────────────┘\n2.2\n核心功能模块\n模块\n功能描述\n页面文件\n数据接口\n首页仪表盘\n数据概览统计、告警通\n知展示\nIndex.ets\ngetDashboard()\n牲畜管理\n牲畜档案管理、增删改\n查\nAnimalList.ets\ngetAnimals()\n环境监测\n温湿度、氨气、\nCO2\n实\n时监控\nEnvironment.ets\ngetEnvironment()\n设备管理\n设备状态监控、维护周\n期管理\nEquipmentList.ets\ngetEquipment()\n饲料管理\n库存管理、消耗统计、\n预警\nFeedManagement.ets\ngetFeed()\n三、数据模型设计\n3.1\n核心数据模型\n设备模型\n(Equipment)\n：\ninterface\nEquipment {\nid\n:\nstring\n;\n//\n设备唯一标识\nname\n:\nstring\n;\n//\n设备名称\ntype\n:\nstring\n;\n//\n设备类型：传感器\n/\n通风系统\n/\n水泵\n/\n搅拌机\n/\n喂食系统\n/\n控制\n器\n/\n监控设备\n/\n控制设备\nlocation\n:\nstring\n;\n//\n安装位置：牛舍\nA\n区\n/\n牛舍\nB\n区\n/\n羊舍\n/\n蓄水池\n/\n饲料车间等\nstatus\n:\n'online'\n|\n'offline'\n|\n'warning'\n|\n'maintenance'\n;\n//\n设备状态\nlastMaintenance\n:\nstring\n;\n//\n上次维护时间\nnextMaintenance\n:\nstring\n;\n//\n下次维护时间\nruntime\n:\nnumber\n;\n//\n运行时长（小时）\npower\n:\nnumber\n;\n//\n设备功率（\nW\n）\n}\n饲料模型\n(Feed)\n：\ninterface\nFeed {\nid\n:\nstring\n;\nname\n:\nstring\n;\n//\n饲料名称：玉米\n/\n豆粕\n/\n麸皮\n/\n苜蓿草\n/\n预混料\n/\n青贮饲料\ntype\n:\nstring\n;\n//\n饲料类型：能量饲料\n/\n蛋白质饲料\n/\n粗饲料\n/\n添加剂\nunit\n:\nstring\n;\n//\n单位：\nkg\nstock\n:\nnumber\n;\n//\n当前库存\nminStock\n:\nnumber\n;\n//\n最低库存警戒线\nmaxStock\n:\nnumber\n;\n//\n最大库存容量\nprice\n:\nnumber\n;\n//\n单价（元\n/kg\n）\nlastPurchase\n:\nstring\n;\n//\n最后采购时间\nconsumptionRate\n:\nnumber\n;\n//\n日消耗量（\nkg/\n天）\n}\n牲畜模型\n(Animal)\n：\ninterface\nAnimal {\nid\n:\nstring\n;\nname\n:\nstring\n;\n//\n牲畜名称\ntype\n:\nstring\n;\n//\n类型：肉牛\n/\n奶牛\n/\n绵羊\n/\n山羊\nage\n:\nnumber\n;\n//\n月龄\nweight\n:\nnumber\n;\n//\n体重（\nkg\n）\nhealth\n:\nstring\n;\n//\n健康状态：健康\n/\n亚健康\n/\n生病\nlastCheck\n:\nstring\n;\n//\n最后检查时间\nbreed\n:\nstring\n;\n//\n品种\norigin\n:\nstring\n;\n//\n来源：本地\n/\n进口\nmilkYield\n:\nnumber\n;\n//\n日产量（牛奶，\nkg\n）\n}\n3.2 MockService\n数据结构\nexport\nclass\nMockService {\n//\n仪表盘汇总数据\nstatic\ngetDashboard\n()\n:\nDashboard {\nreturn\n{\ntotalAnimals\n:\n68\n,\n//\n牲畜总数\nhealthyAnimals\n:\n58\n,\n//\n健康数量\nsickAnimals\n:\n4\n,\n//\n生病数量\ntemperature\n:\n26.5\n,\n//\n当前温度\nhumidity\n:\n65\n,\n//\n湿度\nmilkProduction\n:\n1250\n,\n//\n今日产奶\ntodayFeed\n:\n850\n,\n//\n今日耗料\nactiveEquipment\n:\n15\n,\n//\n在线设备\ntotalEquipment\n:\n18\n,\n//\n设备总数\nfeedStock\n:\n12500\n//\n饲料库存\n}\n;\n}\n//\n设备列表（\n18\n台设备）\nstatic\ngetEquipment\n()\n:\nEquipment[]\n;\n//\n饲料库存（\n6\n种饲料）\nsta\ntic\ngetFeed\n()\n:\nFeed[]\n;\n//\n牲畜列表（\n12\n头牲畜）\nstatic\ngetAnimals\n()\n:\nAnimal[]\n;\n//\n环境监测（\n24\n小时数据）\nstatic\ngetEnvironment\n()\n:\nEnvironment[]\n;\n}\n四、关键技术实现\n4.1 MVVM\n架构实现\nViewModel\n层设计\n：\nexport\nclass\nEquipmentViewModel {\nequipment\n:\nEquipment[]\n=\n[]\n;\n//\n设备列表数据\nisLoading\n:\nboolean\n=\ntrue\n;\n//\n加载状态\nerror\n:\nstring\n=\n''\n;\n//\n错误信息\nfilterStatus\n:\nstring\n=\n'\n全部\n'\n;\n//\n筛选条件\n//\n数据加载\nasync\nloadEquipment\n()\n:\nPromise\n<\nvoid\n>\n{\nthis\n.\nisLoading\n=\ntrue\n;\ntry\n{\n//\n优先从\nHTTP\n服务获取\nconst\nhttpService\n=\nHttpService\n.\ngetInstance\n()\n;\nthis\n.\nequipment\n=\nawait\nhttpService\n.\nget\n<\nEquipment[]\n>\n(\n'/equipment'\n)\n;\n}\ncatch\n{\n//\n失败时使用\nMock\n数据\nthis\n.\nequipment\n=\nMockService\n.\ngetEquipment\n()\n;\n}\nfinally\n{\nthis\n.\nisLoading\n=\nfalse\n;\n}\n}\n//\n状态统计\ngetStatusStats\n()\n:\nStatusStats {\nreturn\n{\nonline\n:\nthis\n.\nequipment\n.\nfilter\n(e\n=>\ne\n.\nstatus\n===\n'online'\n)\n.\nlength\n,\noffline\n:\nthis\n.\nequipment\n.\nfilter\n(e\n=>\ne\n.\nstatus\n===\n'offline'\n)\n.\nlength\n,\nalert\n:\nthis\n.\nequipment\n.\nfilter\n(e\n=>\ne\n.\nstatus\n==\n=\n'warning'\n)\n.\nlength\n,\nmaintenance\n:\nthis\n.\nequipment\n.\nfilter\n(e\n=>\ne\n.\nstatus\n===\n'maintenance'\n)\n.\nlen\ngth\n}\n;\n}\n// CRUD\n操作\naddEquipment\n(equipment\n:\nEquipment)\n:\nboolean\n;\nupdateEquipment\n(id\n:\nstring\n,\nupdates\n:\nPartial\n<\nEquipment\n>\n)\n:\nboolean\n;\ndeleteEquipment\n(id\n:\nstring\n)\n:\nboolean\n;\n}\n4.2 UI\n状态管理\n@State\n装饰器实现响应式更新\n：\n@Entry\n@Component\nstruct EquipmentList {\n@State equipment\n:\nEquipment[]\n=\n[]\n;\n//\n设备列表\n@State isLoading\n:\nboolean\n=\ntrue\n;\n//\n加载状态\n@State showDialog\n:\nboolean\n=\nfalse\n;\n//\n对话框显示\n@State isEditMode\n:\nboolean\n=\nfalse\n;\n//\n编辑模式\n//\n数据更新触发\nUI\n自动刷新\naddEquipment\n(newItem\n:\nEquipment) {\nconst\nnewArray\n=\nthis\n.\nequipment\n.\nslice\n()\n;\nnewArray\n.\npush\n(newItem)\n;\nthis\n.\nequipment\n=\nnewArray\n;\n//\n赋值操作触发\nUI\n更新\n}\n}\n4.3 ForEach\n列表渲染\n列表渲染关键代码\n：\nScroll\n() {\nColumn\n({ space\n:\n12\n}) {\nForEach\n(\nthis\n.\nequipment\n,\n(item\n:\nEquipment)\n=>\n{\nEquipmentCardItem\n({\nequipment\n:\nitem\n,\nstatusColor\n:\nthis\n.\nviewModel\n.\ngetStatusColor\n(item\n.\nstatus\n)\n,\nonEdit\n:\n()\n=>\n{\n/*\n编辑回调\n*/\n}\n,\nonDelete\n:\n()\n=>\n{\n/*\n删除回调\n*/\n}\n})\n})\n}\n.\npadding\n({ left\n:\n16\n,\nright\n:\n16\n,\nbottom\n:\n16\n})\n}\n.\nwidth\n(\n'100%'\n)\n.\nlayoutWeight\n(\n1\n)\n//\n占满剩余空间\n4.4\n组件复用设计\n通用卡片组件\n：\n组件名\n用途\n特点\nStatCard\n统计数值展示\n图标\n数值\n单位\nAlertItem\n告警信息展示\n级别颜色\n时间\nAnimalCard\n牲畜信息卡片\n图标\n健康状态\n体重\n组件名\n用途\n特点\nEquipmentCardItem\n设备信息卡片\n状态指示\n+\n维护周期\nFeedCardItem\n饲料库存卡片\n进度条\n+\n库存预警\n五、页面功能实现\n5.1\n首页仪表盘\n核心功能\n：\n-\n4\n个快速入口按钮（牲畜\n/\n环境\n/\n设备\n/\n饲料）\n-\n8\n个统计卡片网格布局\n-\n4\n条\n最新告警通知列表\n统计数据源\n：\n牲畜总数\n: 68\n头\n健康率\n: 85.3%\n温度\n: 26.5°C\n湿度\n: 65%\n产奶\n: 1250kg\n耗料\n: 850kg\n设备在线\n:\n15/18\n饲料库存\n: 12500kg\n5.2\n设备管理页面\n核心功能\n：\n-\n设备状态统计\nbadge\n（在线\n/\n离线\n/\n告警\n/\n维护）\n-\n设备列表卡片展示\n-\n新增\n/\n编辑\n/\n删除设备\n-\n状态颜色映射：\n-\n�\n在线\n(online): #22c55e\n-\n⚪\n离线\n(offline): #9ca3af\n-\n�\n告警\n(warning): #ef4444\n-\n�\n维护\n(maintenance): #f59e0b\n设备类型分布\n：\n|\n类型\n|\n数量\n|\n示例\n| |\n——\n|\n——\n|\n——\n| |\n传感器\n| 6 |\n温度\n/\n氨气\n/\n湿度\n/CO2\n传感器\n| |\n通风系统\n| 3 | V001/V002/V003 | |\n喂食系统\n| 3 |\n自动喂食器\nA/B/C | |\n监控设备\n| 2 |\n视频监控\nCam1/Cam2 | |\n水泵\n| 2 | P001/P002 | |\n其他\n| 2 |\n搅拌机\n/\n控制器\n|\n5.3\n饲料管理页面\n核心功能\n：\n-\n库存统计（总库存\n/\n今日消耗\n/\n预警数量）\n-\n库存进度条可视化\n-\n库存状态计\n算逻辑：\n-\n充足\n(norm\nal):\n库存\n> 50%\n-\n预警\n(warning):\n库存\n20%\n-\n50%\n-\n危险\n(danger):\n库\n存\n< 20%\n库存预警示例\n：\n-\n玉米：\n500kg\n（低于警戒线\n1000kg\n）\n⚠️\n-\n豆粕：\n2500kg\n（充足）\n✓\n-\n苜\n蓿草：\n3200kg\n（充足）\n✓\n六、项目结构\nCIFMS/\n├── entry/src/main/ets/\n│   ├── common/\n│   │   ├── constants/\n│   │   │   └── Constants.ets        #\n应用常量\n│\n│   └── utils/\n│   │       └── CommonUtils.ets      #\n工具函数\n│   │\n│   ├── components/                  #\n复用组件\n│   │   ├── StatCard.ets            #\n统计卡片\n│   │   ├── AlertItem.ets           #\n告警项\n│   │   ├── AnimalCard.ets          #\n牲畜卡片\n│   │   ├── Anim\nalEditDialog.ets    #\n牲畜编辑对话框\n│   │   ├── EquipmentEditDialog.ets #\n设备编辑对话框\n│   │   ├── FeedEditDialog.ets      #\n饲料编辑对话框\n│   │   └── EnvironmentEditDialog.ets\n│   │\n│   ├── model/                       #\n数据模型\n│   │   ├── Alert.ets\n│   │   ├── Animal.ets\n│\n│   ├── Dashboard.ets\n│   │   ├── Environment.ets\n│   │   ├── Equipment.ets\n│   │   └── Feed.ets\n│   │\n│   ├── pages/                       #\n页面组件\n│   │   ├── Index.ets               #\n首页仪表盘\n│   │   ├── AnimalList.ets          #\n牲畜管理\n│   │   ├── Environ\nment.ets         #\n环境监测\n│   │   ├── EquipmentList.ets      #\n设备管理\n│   │   └── FeedManagement.ets      #\n饲料管理\n│   │\n│   ├── service/                     #\n服务层\n│   │   ├── HttpService.ets         # HTTP\n服务\n│   │   └── MockService.ets         #\n模拟数据\n│   │\n│\n├── viewmodel/                   #\n视图模型\n│   │   ├── DashboardViewModel.ets\n│   │   ├── AnimalViewModel.ets\n│   │   ├── EnvironmentViewModel.ets\n│   │   ├── EquipmentViewModel.ets\n│   │   └── FeedViewModel.ets\n│   │\n│   └── entryability/\n│       └── EntryAb\nility.ets         #\n应用入口\n│\n└── AppScope/\n└── resources/\n├── base/element/\n│   ├── color.json          #\n颜色资源\n│   ├── float.json          #\n尺寸资源\n│   └── string.json          #\n字符串资源\n└── media/\n└── background.png       #\n背景图片\n七、实验结果\n7.1\n功能验证\n功能模块\n状态\n验证内容\n首页仪表盘\n✅\n完成\n8\n项统计指标、\n4\n条告警、\n4\n个快速入口\n牲畜管理\n✅\n完成\n12\n头牲畜、\nCRUD\n操作、健康状态显示\n环境监测\n✅\n完成\n24\n小时历史数据、\n6\n项环境指标\n设备管理\n✅\n完成\n18\n台设备、状态统计、维护周期管理\n饲料管理\n✅\n完成\n6\n种饲料、库存预警、消耗统计\n7.2\n界面展示\n首页仪表盘\n：\n-\n顶部蓝色标题栏\n+\n应用图标\n-\n4\n个功能入口按钮（牲畜\n/\n环境\n/\n设备\n/\n饲料）\n-\n2x4\n网格布局的统计卡片\n-\n告警通知列表（带时间戳和状态标签）\n设备管理页面\n：\n-\n橙色主题标题栏\n+\n添加按钮\n-\n4\n个状态统计\nbadge\n（在线\n15/\n离线\n1/\n告\n警\n1/\n维护\n1\n）\n-\n卡片式设备列表（图标\n+\n名称\n+\n类型\n+\n状态）\n-\n编辑\n/\n删除操作按钮\n饲料管理页面\n：\n-\n紫色主题标题栏\n-\n3\n个统计卡片（总库存\n/\n今日消耗\n/\n预警数量）\n-\n带进\n度条的库存卡片（颜色随状态变化）\n八、总结与展望\n8.1\n项目亮点\n1.\nMVVM\n架构\n：清晰的分层设计，\nViewModel\n负责业务逻辑，\nView\n专注\nUI\n渲染\n2.\n组件化开发\n：抽取\nStatCard\n、\nAlertItem\n等通用组件，提高代码复用率\n3.\n响应式状态管理\n：\n@State\n装饰器实现数据与\nUI\n自动同步\n4.\nMock\n数据支持\n：完整的模拟数据层，支持离线开发和快速原型验证\n5.\n声明式\nUI\n：\nArkUI\n声明式语法，代码简洁易懂\n8.2\n技术收获\n通过本次项目实战，掌握了以下\nHarmonyOS\n开发核心技能：\n•\n✅\nArkUI\n声明式\nUI\n组件开发\n•\n✅\nMVVM\n架构模式实践\n•\n✅\n@State\n响应式状态管理\n•\n✅\nForEach\n列表渲染优化\n•\n✅\n组件通信与数据传递\n•\n✅\n页面路由与导航\n•\n✅\n自定义组件封装\n8.3\n改进方向\n•\n增加真实后端\nAPI\n对接\n•\n实现数据持久化存储\n•\n添加更多环境监测指标\n•\n优化设备告警规则引擎\n•\n增加数据可视化图表\n",
-      "file_paths": "C:\\Users\\彭绍洋的\\Downloads\\2023210616彭绍洋实验六 跨平台综合项目实战.pdf",
-      "file_names": "2023210616彭绍洋实验六 跨平台综合项目实战.pdf",
-      "submit_time": "2026-05-26T20:47:45.856033",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-05-26T20:47:45.856033",
-      "updated_at": "2026-05-26T20:47:45.856033",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
