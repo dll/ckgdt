@@ -3,8 +3,8 @@
   "user_id": "2023210640",
   "user_name": "徐宗申",
   "role": "student",
-  "synced_at": "2026-06-01T09:07:46.826207",
-  "last_active": "2026-06-01T09:07:46.826207",
+  "synced_at": "2026-06-01T09:08:11.764757",
+  "last_active": "2026-06-01T09:08:11.764757",
   "quiz_results": [
     {
       "user_id": "2023210640",
@@ -39,14 +39,14 @@
       "content": "PDF实验报告：2023210640徐宗申实验三 跨平台应用开发.pdf\n",
       "file_paths": "C:\\Users\\32250\\Desktop\\2023210640徐宗申实验三 跨平台应用开发.pdf",
       "file_names": "2023210640徐宗申实验三 跨平台应用开发.pdf",
-      "submit_time": "2026-06-01T09:07:46.788961",
+      "submit_time": "2026-06-01T09:08:11.733693",
       "status": "已提交",
       "score": null,
       "feedback": null,
       "scorer_id": null,
       "scored_at": null,
       "created_at": "2026-05-05T00:33:24.569611",
-      "updated_at": "2026-06-01T09:07:46.788961",
+      "updated_at": "2026-06-01T09:08:11.733693",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
