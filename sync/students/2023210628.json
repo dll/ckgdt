@@ -3,8 +3,8 @@
   "user_id": "2023210628",
   "user_name": "王全洋",
   "role": "student",
-  "synced_at": "2026-06-01T08:22:04.431526",
-  "last_active": "2026-06-01T08:22:04.431526",
+  "synced_at": "2026-06-01T08:23:50.865518",
+  "last_active": "2026-06-01T08:23:50.865518",
   "quiz_results": [
     {
       "user_id": "2023210628",
@@ -23,6 +23,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 1,
+      "user_id": "2023210628",
+      "content": "PDF实验报告：2023210628王全洋实验一 开发环境搭建.pdf\n\n--- 报告正文（自动提取）---\n2023210628+\n王全洋\n+\n实验一开发环境搭建\n.md\n2026-05-05\n1\n/\n10\n实验一：移动应用开发环境搭建报告\n引言\n作为一名软件工程专业的学生，我过去的学习主要集中在\nJava\n和\nWeb\n开发上。现在我开始了第一次跨平台移动\n应用开发实验。从下载\nHBuilderX\n到运行第一个\nUniApp\n登录应用，整个过程就像一场充满挑战的冒险，有成功\n的喜悦，也有遇到问题时的焦虑。但当看到浏览器上那个简单却完整的登录界面时，那种成就感真的难以言\n喻。\n实验基本信息\n实验编号\n：\nd20301035101\n、\nd20301009201\n实验名称\n：\nUniApp\n开发环境搭建与\nVue3 HelloWorld\n实现\n实验类型\n：验证型\n学时分配\n：\n2\n学时\n实验日期\n：\n2026\n年\n3\n月\n13\n日\n学生信息\n：\n2023210628\n王全洋\n组别\n：第\n2\n组\n小组成员\n序号\n姓名\n技术栈\n负责内容\n1\n王全洋\nUniApp\n跨平台应用开发（\nUniApp\n）\n2\n王建\nAndroid\n原生\nAndroid\n应用开发\n3\n王智宇\nFlutter\n跨平台应用开发（\nFlutter\n）\n4\n魏志宏\nHarmonyOS\n鸿蒙应用开发\n5\n邬凯伦\nMAUI\n跨平台应用开发（\nMAUI\n）\n6\n徐宗申\n微信小程序\n微信小程序开发\n实验目的\n1\n.\n掌握\nHBuilderX\n的安装与配置\n2\n.\n熟悉\nVue3\n语言基础\n3\n.\n实现简单的登录功能\n4\n.\n验证开发环境的可用性\n5\n.\n学习应用部署与调试方法\n实验环境\n环境项\n版本\n操作系统\nWindows 11\nNode.js\nv18.0+\n2023210628+\n王全洋\n+\n实验一开发环境搭建\n.md\n2026-05-05\n2\n/\n10\n环境项\n版本\nHBuilderX\n4.0+\n开发框架\nUniApp 3.0\n浏览器\nEdge/Chrome\n实验步骤与个人体验\n1. HBuilderX\n安装与配置\n步骤\n1\n：下载与安装\n1\n.\n访问\nHBuilderX\n官网：\nhttps://www.dcloud.io/hbuilderx.html\n2\n.\n下载\nWindows\n版本（标准版或\nApp\n开发版）\n3\n.\n解压安装包到指定目录（如\nD:\\HBuilderX\n）\n4\n.\n运行\nHBuilderX.exe\n启动\nIDE\n5\n.\n安装相关插件（如\nuni-app\n插件、\nVue\n插件）\n个人感受\n：\n当我看到\nHBuilderX\n的安装界面时，心里其实有点期待\n——\n听说这个工具对前端开发者特别友好。\n解压后直接运行，发现确实很方便，不需要复杂的安装过程。启动过程中，我一直在想：这就是未来我要用来\n开发跨平台移动应用的工具啊，感觉自己离成为一名移动开发工程师又近了一步。\n步骤\n2\n：插件配置\n1\n.\n打开\nHBuilderX\n，进入工具菜单\n2\n.\n安装\nuni-app\n插件\n3\n.\n安装\nVue3\n语法支持插件\n4\n.\n配置浏览器运行环境\n个人感受\n：\n插件安装的过程很顺利，\nHBuilderX\n的插件市场很丰富。当我看到\nuni-app\n插件安装完成后，那种感\n觉就像准备好了所有工具，终于可以开始创作了！\n2.\n项目创建与\nHelloWorld\n实现\n步骤\n1\n：创建项目\n1\n.\n启动\nHBuilderX\n2\n.\n选择\n\"\n文件\n\" -> \"\n新建\n\" -> \"\n项目\n\"\n3\n.\n选择\n\"uni-app\"\n模板\n4\n.\n配置项目信息：\n项目名称：\ntest\n模板：默认模板\nVue\n版本：\nVue 3\n项目位置：\nD:\\uniapp\\test\n5\n.\n点击\n\"\n创建\n\"\n按钮创建项目\n个人感受\n：\n看到\nHBuilderX\n创建项目时的进度条，我特别期待看到生成的代码。当项目打开的那一刻，我被它\n的结构震撼了\n——\n原来\nUniApp\n项目的组织这么清晰，页面、组件、静态资源都分类得很好。我当时就想：以后\n2023210628+\n王全洋\n+\n实验一开发环境搭建\n.md\n2026-05-05\n3\n/\n10\n就要在这个环境里写代码了，一定要好好珍惜。\n步骤\n2\n：实现登录功能\n登录页面\n(pages/login/login.vue)\n<template>\n<view class=\"content\">\n<view class=\"login-box\">\n<text class=\"title\">\n用户登录\n</text>\n<input\nclass=\"input\"\nv-model=\"username\"\nplaceholder=\"\n请输入用户名\n\"\n/>\n<input\nclass=\"input\"\nv-model=\"password\"\ntype=\"password\"\nplaceholder=\"\n请输入密码\n\"\n/>\n<button class=\"login-btn\" @click=\"handleLogin\">\n登录\n</button>\n<text class=\"error\" v-if=\"errorMsg\">{{ errorMsg }}</text>\n</view>\n</view>\n</template>\n<script>\nexport default {\ndata() {\nreturn {\nusername: '',\npassword: '',\nerrorMsg: ''\n}\n},\nmethods: {\nhandleLogin() {\nif (!this.username || !this.password) {\nthis.errorMsg = '\n用户名和密码不能为空\n'\nreturn\n}\nif (this.username === 'admin' && this.password === '123456') {\nuni.navigateTo({\nurl: '/pages/index/index?username=' + this.username\n})\n} else {\nthis.errorMsg = '\n用户名或密码错误\n'\n}\n}\n}\n}\n2023210628+\n王全洋\n+\n实验一开发环境搭建\n.md\n2026-05-05\n4\n/\n10\n</script>\n<style>\n.content {\nmin-height: 100vh;\ndisplay: flex;\nalign-items: center;\njustify-content: center;\nbackground-color: #f5f5f5;\n}\n.login-box {\nwidth: 80%;\npadding: 40rpx;\nbackground-color: white;\nborder-radius: 20rpx;\n}\n.title {\nfont-size: 40rpx;\nfont-weight: bold;\ntext-align: center;\nmargin-bottom: 40rpx;\n}\n.input {\nwidth: 100%;\nheight: 80rpx;\nborder: 1px solid #ddd;\nborder-radius: 10rpx;\npadding: 0 20rpx;\nmargin-bottom: 20rpx;\n}\n.login-btn {\nwidth: 100%;\nheight: 80rpx;\nbackground-color: #007aff;\ncolor: white;\nborder-radius: 10rpx;\n}\n.error {\ncolor: red;\nfont-size: 24rpx;\ntext-align: center;\nmargin-top: 20rpx;\n}\n</style>\n首页\n(pages/index/index.vue)\n<template>\n<view class=\"content\">\n<view class=\"header\">\n<image class=\"logo\" src=\"/static/logo.png\"></image>\n<view class=\"user-info\">\n2023210628+\n王全洋\n+\n实验一开发环境搭建\n.md\n2026-05-05\n5\n/\n10\n<text class=\"welcome\">\n欢迎\n{{ username }}\n！\n</text>\n<text class=\"student-id\">\n学号：\n{{ username }}</text>\n</view>\n<button @click=\"logout\" class=\"logout-btn\">\n退出登录\n</button>\n</view>\n<view class=\"hello-box\">\n<text class=\"hello-text\">Hello World!</text>\n<text class=\"sub-text\">\n欢迎使用\nUniApp\n开发跨平台应用\n</text>\n</view>\n</view>\n</template>\n<script>\nexport default {\ndata() {\nreturn {\nusername: ''\n}\n},\nonLoad(options) {\nthis.username = options.username || '\n用户\n'\n},\nmethods: {\nlogout() {\nuni.navigateTo({\nurl: '/pages/login/login'\n})\n}\n}\n}\n</script>\n<style>\n.content {\nmin-height: 100vh;\nbackground-color: #f5f5f5;\n}\n.header {\ndisplay: flex;\nalign-items: center;\npadding: 20rpx 30rpx;\nbackground-color: white;\n}\n.logo {\nwidth: 80rpx;\nheight: 80rpx;\n}\n.user-info {\nflex: 1;\nmargin-left: 20rpx;\n}\n.welcome {\nfont-size: 32rpx;\nfont-weight: bold;\n2023210628+\n王全洋\n+\n实验一开发环境搭建\n.md\n2026-05-05\n6\n/\n10\n}\n.student-id {\nfont-size: 24rpx;\ncolor: #999;\n}\n.logout-btn {\nwidth: 160rpx;\nheight: 60rpx;\nbackground-color: #ff4d4f;\ncolor: white;\nfont-size: 24rpx;\nborder-radius: 30rpx;\n}\n.hello-box {\ndisplay: flex;\nflex-direction: column;\nalign-items: center;\njustify-content: center;\npadding-top: 200rpx;\n}\n.hello-text {\nfont-size: 60rpx;\nfont-weight: bold;\ncolor: #007aff;\n}\n.sub-text {\nfont-size: 28rpx;\ncolor: #666;\nmargin-top: 20rpx;\n}\n</style>\n个人感受\n：\n当我开始写\nVue3\n代码时，真的被它的简洁性惊艳到了。相比传统的\nJavaScript\n，\nVue3\n的语法更简\n洁，代码量更少，而且响应式特性让我感觉更放心。写登录逻辑的时候，我一直在想：这就是我第一次写的跨\n平台应用代码，虽然简单，但意义重大。当我写完代码，看到没有语法错误时，那种满足感油然而生。\n3.\n测试与部署\n步骤\n1\n：浏览器运行\n1\n.\n在\nHBuilderX\n中点击\n\"\n运行\n\" -> \"\n运行到浏览器\n\"\n2\n.\n选择\nChrome\n或\nEdge\n浏览器\n3\n.\n等待项目编译完成\n4\n.\n浏览器自动打开并显示应用\n个人感受\n：\n浏览器启动的过程特别期待，我盯着屏幕上的编译进度条，心里一直在祈祷：千万别出错啊！当浏\n览器终于显示出我写的登录界面时，我激动得差点跳起来。然后看到自己写的登录功能正常工作，那种感觉就\n像看到自己的孩子出生一样，特别有成就感。\n步骤\n2\n：功能测试\n2023210628+\n王全洋\n+\n实验一开发环境搭建\n.md\n2026-05-05\n7\n/\n10\n1\n.\n测试登录功能（正确用户名密码）\n2\n.\n测试错误提示（错误用户名密码）\n3\n.\n测试页面跳转（登录成功跳转首页）\n4\n.\n测试退出登录（首页返回登录页）\n个人感受\n：\n当我反复测试登录功能时，看着\n\"\n登录成功\n\"\n的提示和页面跳转，心里特别开心。这让我意识到，原\n来编程真的可以创造出有实际用途的东西。\n实验结果\n1.\n环境搭建成功\n✅\nHBuilderX\n安装完成\n✅\n插件配置正确\n✅\n项目创建成功\n2.\n功能实现\n✅\n登录界面布局美观\n✅\n输入验证功能正常\n✅\n登录逻辑实现正确\n✅\n页面跳转功能正常\n3.\n运行效果\nHBuilderX\n启动界面\n登录页面\n2023210628+\n王全洋\n+\n实验一开发环境搭建\n.md\n2026-05-05\n8\n/\n10\n首页\n问题与解决方案\n问题\n解决方案\n个人感悟\nHBuilderX\n启\n动慢\n关闭不必要的插件，增加内\n存分配\n遇到问题时，不要着急，要善于寻找解决方案。优化配置\n真的很重要！\n项目编译失败\n检查\nNode.js\n版本，确保版本\n兼容\n有时候看似复杂的问题，其实只需要一个简单的设置就能\n解决。\n2023210628+\n王全洋\n+\n实验一开发环境搭建\n.md\n2026-05-05\n9\n/\n10\n问题\n解决方案\n个人感悟\n浏览器无法访\n问\n检查端口占用，更换运行端\n口\n细节决定成败，端口配置这种小细节也不能忽视。\n实验总结\n完成情况\n✅\n成功安装并配置\nHBuilderX\n✅\n实现了\nVue3 HelloWorld\n项目\n✅\n完成了登录功能的开发\n✅\n在浏览器上验证了应用运行\n✅\n记录了环境配置和问题解决过程\n技术收获\n1\n.\n掌握了\nHBuilderX\n的安装与配置方法\n：从一无所知到能独立完成环境搭建，这个过程让我对跨平台开发\n有了初步的认识。\n2\n.\n熟悉了\nVue3\n语言的基本语法\n：\nVue3\n的简洁性和响应式特性让我对它产生了浓厚的兴趣，我想深入学习这\n门语言。\n3\n.\n了解了\nUniApp\n应用的开发流程\n：从项目创建到界面设计，再到功能实现和测试，整个流程清晰明了。\n4\n.\n学习了应用部署与调试技巧\n：学会了使用浏览器测试，这对以后的开发非常重要。\n5\n.\n体验了\nAI\n辅助开发工具的使用\n：在遇到问题时，\nAI\n工具给了我很大的帮助，让我感受到了科技的力量。\n个人感悟\n这次实验对我来说意义重大。它不仅让我掌握了跨平台开发的基本技能，更让我体会到了编程的乐趣。当我看\n到自己写的代码在浏览器上运行时，那种成就感是无法用言语形容的。\n我意识到，移动开发并不是想象中那么难，只要有耐心、有方法，就能一步步实现自己的目标。就像这次实验\n一样，从环境搭建到功能实现，每一步都需要认真对待，每一个问题都需要想办法解决。\n后续改进\n1\n.\n增加用户注册功能\n：让应用更加完整，用户可以自己注册账号。\n2\n.\n实现记住密码功能\n：提升用户体验，避免用户每次都要输入密码。\n3\n.\n添加网络请求验证\n：让登录功能更加真实，连接到后端服务器。\n4\n.\n优化界面设计和用户体验\n：让应用看起来更加美观、易用。\n附录\n项目结构\ntest/\n├── pages/\n│   ├── login/\n│   │   └── login.vue          #\n登录页面\n│   └── index/\n2023210628+\n王全洋\n+\n实验一开发环境搭建\n.md\n2026-05-05\n10\n/\n10\n│       └── index.vue          #\n首页\n├── static/\n│   └── logo.png               #\n静态资源\n├── unpackage/                 #\n编译输出目录\n│   └── dist/\n├── App.vue                    #\n应用配置\n├── index.html                 # H5\n入口\n├── main.js                    #\n入口文件\n├── manifest.json              #\n应用配置\n├── pages.json                 #\n页面配置\n└── uni.scss                   #\n全局样式\n环境配置命令\n#\n查看\nNode.js\n版本\nnode -v\n#\n查看\nnpm\n版本\nnpm -v\n#\n安装依赖\nnpm install\n实验报告完成时间\n：\n2026\n年\n3\n月\n13\n日\n实验感悟\n：这不仅是一次技术实验，更是一次成长的经历。从环境搭建的\n磕磕绊绊到最终应用的成功运行，我深刻体会到了\n\"\n实践出真知\n\"\n的道理。未来，我会继续努力学习跨平台开\n发，希望能开发出更多有意义的应用。\n",
+      "file_paths": "C:\\Users\\31025\\Desktop\\uniapp\\OSPDIuniapp\\docu\\2023210628王全洋实验一 开发环境搭建.pdf",
+      "file_names": "2023210628王全洋实验一 开发环境搭建.pdf",
+      "submit_time": "2026-06-01T08:23:50.856657",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-05-05T12:00:04.711269",
+      "updated_at": "2026-06-01T08:23:50.856657",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 6,
       "user_id": "2023210628",
@@ -91,24 +109,6 @@
       "scored_at": null,
       "created_at": "2026-05-11T23:06:02.842917",
       "updated_at": "2026-05-11T23:06:02.842917",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 1,
-      "user_id": "2023210628",
-      "content": "PDF实验报告：2023210628王全洋实验一 开发环境搭建.pdf",
-      "file_paths": "C:\\Users\\31025\\Desktop\\uniapp\\test\\docu\\2023210628王全洋实验一 开发环境搭建.pdf",
-      "file_names": "2023210628王全洋实验一 开发环境搭建.pdf",
-      "submit_time": "2026-05-05T19:59:13.554909",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-05-05T12:00:04.711269",
-      "updated_at": "2026-05-05T19:59:13.554909",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
