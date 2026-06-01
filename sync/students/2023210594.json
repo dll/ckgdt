@@ -3,8 +3,8 @@
   "user_id": "2023210594",
   "user_name": "赫宇豪",
   "role": "student",
-  "synced_at": "2026-06-01T09:24:25.666856",
-  "last_active": "2026-06-01T09:24:25.666856",
+  "synced_at": "2026-06-01T09:25:02.046111",
+  "last_active": "2026-06-01T09:25:02.046111",
   "quiz_results": [
     {
       "user_id": "2023210594",
@@ -49,14 +49,14 @@
       "content": "PDF实验报告：2023210594赫宇豪实验一 开发环境搭建.pdf\n\n--- 报告正文（自动提取）---\n移动应用开发实验报告\n封面信息\n项目\n内容\n实验名称\n开发环境搭建\n实验编号\nd20301035101\n、\nd20301009201\n学号\n2023210594\n姓名\n赫宇豪\n班级\n软件\n232\n日期\n2026\n-\n03\n-\n09\n组别\n组三·\nCifms\n项目名称\n智慧校园生活服务平台\n实验目的\n掌握\n6\n大主流移动开发工具的安装配置方法\n了解各平台的\nHelloWorld\n创建流程\n体验\nAI\n辅助代码生成工具的使用\n完成环境配置文档的编写\n实验环境\n序号\n开发工具\n版本要求\n验证项目\n1\nAndroid Studio\n2024.1+\nKotlin HelloWorld\n2\nFlutter SDK\n3.19+\nDart HelloWorld\n序号\n开发工具\n版本要求\n验证项目\n3\n微信开发者工具\n最新版\n微信小程序\nHelloWorld\n4\nDevEco Studio\n5.0+\nHarmonyOS HelloWorld\n5\nHBuilderX\n4.0+\nVue HelloWorld\n6\nVisual Studio\n2022\nC# HelloWorld\n实验步骤\n1. Android\nStudio\n环境搭建\n1.1\n下载与安装\n访问官网：\nhttps://developer.android.com/studio\n下载\nWindows/macOS\n版本\n运行安装程序，勾选必要组件\n完成安装\n1.2\n配置验证\n启动\nAndroid\nStudio\n创建\nEmpty\nActivity\n项目\n使用\nAI\n辅助生成\nHelloWorld\n代码\n运行项目验证\n2.\nFlutter\n环境搭建\n2.1\n下载\nFlutter\nSDK\n访问：\nhttps://flutter.dev/docs/get\n-\nstarted/install\n下载对应系统版本\n解压到指定目录\n添加到系统\nPATH\n环境变量\n2.2\n配置验证\n运行\nflutter doctor\n检查环境\n创建\nFlutter\n项目：\nflutter create hello_flutter\n使用\nAI\n辅助生成\nDart\n代码\n运行项目验证\n3.\n鸿蒙开发环境搭建\n3.1\n下载\nDevEco\nStudio\n访问：\nhttps://developer.harmonyos.com/\n下载\nDevEco\nStudio\n完成安装\n3.2\n创建鸿蒙项目\n启动\nDevEco\nStudio\n创建\nEmpty\nAbility\n项目\n使用\nAI\n辅助生成\nArkTS\n代码\n运行项目验证\n4.\nUniapp\n开发环境搭建\n4.1\n安装\nHBuilderX\n访问：\nhttps://www.dcloud.io/hbuilderx.html\n下载\nHBuilderX\n4.45\n完成安装\n4.2\n创建\nUniapp\n项目\n新建\nuni\n-\napp\n项目\n使用\nAI\n辅助生成\nVue\n代码\n运行项目验证\n5.\nMAUI\n开发环境搭建\n5.1\n安装\nVisual\nStudio\n安装\nVisual\nStudio 2022\n勾选”\n.NET\nMAUI” workload\n5.2\n创建\nMAUI\n项目\n新建\n.NET\nMAUI\n项目\n使用\nAI\n辅助生成\nC#\n代码\n运行项目验证\n6.\n微信小程序开发环境\n6.1\n安装微信开发者工具\n访问：\nhttps://developers.weixin.qq.com/miniprogram/dev/devtools/download.html\n下载并安装\n扫码登录\n6.2\n创建小程序项目\n新建小程序项目\n使用\nAI\n辅助生成小程序代码\n运行项目验证\n实验结果\n验证结果\n工具\n安装状态\n项目创建\n运行状态\n备注\nAndroid Studio\n成功\n成功\n成功\n无\nFlutter\n成功\n成功\n成功\n无\nDevEco Studio\n成功\n成功\n成功\n无\nHBuilderX\n成功\n成功\n成功\nVue\n2.6.14\n工具\n安装状态\n项目创建\n运行状态\n备注\nVisual Studio\n成功\n成功\n成功\n无\n微信开发者工具\n[ ]\n成功\n[ ]\n成功\n[ ]\n成功\n无\n截图记录\nAndroid\nStudio\n运行截图\nFlutter\n运行截图\n鸿蒙运行截图\nUniapp\n运行截图\nUniapp\n运行截图\nMAUI\n运行截图\n微信小程序运行截图\n问题与解决\n问题描述\n解决方案\n解决结果\n问题描述\n解决方案\n解决结果\nESLint\n组件命名规范问题\n将\nLogin\n组件重命名为\nLoginForm\n，并更新相关\n引用\n解决\n跨域问题\n在\nvue.config.js\n中配置\ndevServer.proxy\n解决\n依赖安装失败\n清除\nnpm\n缓存并重新安装\n依赖\n解决\n部署路径问题\n在\nvue.config.js\n中配置\npublicPath\n解决\n实验总结\n实验收获\n掌握了\nHBuilderX\n的安装和配置方法\n了解了\nVue\n项目的创建和运行流程\n熟悉了\nGit\n的基本操作和远程仓库管理\n学会了前端项目的生产环境部署方法\n技术要点\nVue 2.6.14\n框架的基本使用\n组件化开发和响应式数据绑定\n前端项目的环境搭建和配置\n远程仓库的代码管理和协作\n考核指标\n考核项\n评分标准\n得分\n环境搭建完整性\n6\n个开发工具全部安装成功\n20\n分\n考核项\n评分标准\n得分\n项目创建与运行\n6\n个\nHelloWorld\n项目成功运行\n30\n分\n截图记录\n提供所有工具运行截图\n20\n分\n问题解决\n能独立解决遇到的问题\n15\n分\n实验报告质量\n报告结构完整，内容详实\n15\n分\n教师评价\n项目\n评价\n实验完成情况\n技术掌握程度\n创新点\n综合评价\n成绩\n教师签名：\n___________________\n日期：\n___________________\n",
       "file_paths": "C:\\Users\\赫\\Documents/sync_files/2023210594/2023210594赫宇豪实验一 开发环境搭建.pdf",
       "file_names": "2023210594赫宇豪实验一 开发环境搭建.pdf",
-      "submit_time": "2026-06-01T09:24:25.647769",
+      "submit_time": "2026-06-01T09:25:02.033605",
       "status": "已提交",
       "score": null,
       "feedback": null,
       "scorer_id": null,
       "scored_at": null,
       "created_at": "2026-05-04T22:40:53.014885",
-      "updated_at": "2026-06-01T09:24:25.647769",
+      "updated_at": "2026-06-01T09:25:02.033605",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
