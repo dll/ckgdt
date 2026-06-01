@@ -3,8 +3,8 @@
   "user_id": "2023210634",
   "user_name": "王智宇",
   "role": "student",
-  "synced_at": "2026-06-01T08:58:31.455496",
-  "last_active": "2026-06-01T08:58:31.455496",
+  "synced_at": "2026-06-01T09:05:47.625691",
+  "last_active": "2026-06-01T09:05:47.625691",
   "quiz_results": [
     {
       "user_id": "2023210634",
@@ -27,7 +27,7 @@
       "task_id": 1,
       "user_id": "2023210634",
       "content": "PDF实验报告：2023210634王智宇实验一 开发环境搭建.pdf\n\n--- 报告正文（自动提取）---\n移动应⽤开发实验报告\n封⾯信息\n项⽬\n内容\n实验名称\n开发环境搭建\n实验编号\nd20301035101\n、\nd20301009201\n学号\n2023210634\n姓名\n王智宇\n班级\n________________\n⽇期\n2026-06-01\n组别\ncg2-ospdi\n项⽬名称\n线上购物平台开发与整合\n实验⽬的\n1.\n掌握\n6\n⼤主流移动开发⼯具的安装配置⽅法\n2.\n了解各平台的\nHelloWorld\n创建流程\n3.\n体验\nAI\n辅助开发⼯具的使⽤\n4.\n完成环境配置⽂档的编写\n实验环境\n序号\n开发⼯具\n版本要求\n验证项⽬\n1\nAndroid Studio\n2024.1+\nKotlin HelloWorld\n2\nFlutter SDK\n3.11.1+\nDart HelloWorld\n3\n微信开发者⼯具\n最新版\n微信⼩程序\nHelloWorld\n4\nDevEco Studio\n5.0+\nHarmonyOS HelloWorld\n5\nHBuilderX\n4.0+\nVue HelloWorld\n6\nVisual Studio\n2022\nC# HelloWorld\n实验步骤\n1. Android Studio\n环境搭建\n1.1\n下载与安装\n访问官⽹：\nhttps://developer.android.com/studio\n下载\nWindows/macOS\n版本\n实验⼀\n开发环境搭建报告\n.md\n2026-06-01\n1\n/\n5\n运⾏安装程序，勾选必要组件\n完成安装\n1.2\n配置验证\n启动\nAndroid Studio\n创建\nEmpty Activity\n项⽬\n使⽤\nAI\n辅助⽣成\nHelloWorld\n代码\n运⾏项⽬验证\n2. Flutter\n环境搭建\n2.1\n下载\nFlutter SDK\n访问：\nhttps://flutter.dev/docs/get-started/install\n下载对应系统版本\n解压到指定⽬录\n添加到系统\nPATH\n环境变量\n2.2\n配置验证\n运⾏\nflutter doctor\n检查环境\n创建\nFlutter\n项⽬：\nflutter create shopping_app\n使⽤\nAI\n辅助⽣成\nDart\n代码\n运⾏项⽬验证\n3.\n鸿蒙开发环境搭建\n3.1\n下载\nDevEco Studio\n访问：\nhttps://developer.harmonyos.com/\n下载\nDevEco Studio\n完成安装\n3.2\n创建鸿蒙项⽬\n启动\nDevEco Studio\n创建\nEmpty Ability\n项⽬\n使⽤\nAI\n辅助⽣成\nArkTS\n代码\n运⾏项⽬验证\n4. Uniapp\n开发环境搭建\n4.1\n安装\nHBuilderX\n访问：\nhttps://www.dcloud.io/hbuilderx.html\n下载\nHBuilderX\n完成安装\n实验⼀\n开发环境搭建报告\n.md\n2026-06-01\n2\n/\n5\n4.2\n创建\nUniapp\n项⽬\n新建\nuni-app\n项⽬\n使⽤\nAI\n辅助⽣成\nVue\n代码\n运⾏项⽬验证\n5. MAUI\n开发环境搭建\n5.1\n安装\nVisual Studio\n安装\nVisual Studio 2022\n勾选\n\".NET MAUI\" workload\n5.2\n创建\nMAUI\n项⽬\n新建\n.NET MAUI\n项⽬\n使⽤\nAI\n辅助⽣成\nC#\n代码\n运⾏项⽬验证\n6.\n微信⼩程序开发环境\n6.1\n安装微信开发者⼯具\n访问：\nhttps://developers.weixin.qq.com/miniprogram/dev/devtools/download.html\n下载并安装\n扫码登录\n6.2\n创建⼩程序项⽬\n新建⼩程序项⽬\n使⽤\nAI\n辅助⽣成⼩程序代码\n运⾏项⽬验证\n实验结果\n验证结果\n⼯具\n安装状态\n项⽬创建\n运⾏状态\n备注\nAndroid Studio\n成功\n成功\n成功\n已成功运⾏购物\nApp\nFlutter\n成功\n成功\n成功\nshopping_app\n项⽬已成功运⾏\nDevEco Studio\n成功\n成功\n成功\n已完成环境配置\nHBuilderX\n成功\n成功\n成功\nUniapp\n项⽬已创建\nVisual Studio\n成功\n成功\n成功\nMAUI\n环境已配置\n微信开发者⼯具\n成功\n成功\n成功\n⼩程序项⽬已创建\n截图记录\n实验⼀\n开发环境搭建报告\n.md\n2026-06-01\n3\n/\n5\nAndroid Studio\n运⾏截图\nAndroid\n运⾏截图\nFlutter\n运⾏截图\nFlutter\n运⾏截图\n鸿蒙运⾏截图\n鸿蒙运⾏截图\nUniapp\n运⾏截图\nUniapp\n运⾏截图\nMAUI\n运⾏截图\nMAUI\n运⾏截图\n微信⼩程序运⾏截图\n微信⼩程序运⾏截图\n问题与解决\n问题描述\n解决⽅案\n解决结果\nFlutter doctor\n检测到\nAndroid SDK\n未配置\n配置\nANDROID_HOME\n环境变量并添加\npath\n已解决\nGradle\n构建速度慢\n配置国内镜像源\n已解决\n设备连接问题\n启⽤开发者选项和\nUSB\n调试\n已解决\n实验总结\n实验收获\n成功配置了\n6\n个主流移动开发环境，包括\nAndroid\n、\nFlutter\n、\nHarmonyOS\n、\nUniapp\n、\nMAUI\n和微信⼩程序\n掌握了各开发⼯具的基本使⽤⽅法和项⽬创建流程\n学习了使⽤\nAI\n辅助开发⼯具提升开发效率\n了解了跨平台开发的基本概念和优势\n技术要点\nFlutter\n使⽤\nDart\n语⾔，采⽤\nMaterial Design\n⻛格，⽀持热重载功能\nAndroid\n开发使⽤\nKotlin\n语⾔，基于\nGradle\n构建系统\n各平台都有⾃⼰的\nSDK\n和开发⼯具链\n状态管理可以使⽤\nProvider\n等⽅案\n⽹络请求使⽤\nhttp\n库，本地存储使⽤\nshared_preferences\n和\nsqflite\n实验⼀\n开发环境搭建报告\n.md\n2026-06-01\n4\n/\n5\n考核指标\n考核项\n评分标准\n得分\n环境搭建完整性\n6\n个开发⼯具全部安装成功\n20\n分\n项⽬创建与运⾏\n6\n个\nHelloWorld\n项⽬成功运⾏\n30\n分\n截图记录\n提供所有⼯具运⾏截图\n20\n分\n问题解决\n能独⽴解决遇到的问题\n15\n分\n实验报告质量\n报告结构完整，内容详实\n15\n分\n教师评价\n项⽬\n评价\n实验完成情况\n技术掌握程度\n创新点\n综合评价\n成绩\n教师签名：\n___________________\n⽇期：\n___________________\n实验⼀\n开发环境搭建报告\n.md\n2026-06-01\n5\n/\n5\n",
-      "file_paths": "E:\\shopping\\2023210634王智宇实验一 开发环境搭建.pdf",
+      "file_paths": "E:\\联想安卓下载/sync_files/2023210634/2023210634王智宇实验一 开发环境搭建.pdf",
       "file_names": "2023210634王智宇实验一 开发环境搭建.pdf",
       "submit_time": "2026-06-01T08:58:31.421027",
       "status": "已提交",
