@@ -9,10 +9,10 @@ void main() {
   // ═══════════════════════════════════════════════════════════════════════════
 
   group('SettingsService - ThemeMode', () {
-    test('getThemeMode should return system by default', () async {
+    test('getThemeMode should return dark by default (Noir style)', () async {
       SharedPreferences.setMockInitialValues({});
       final mode = await SettingsService.getThemeMode();
-      expect(mode, ThemeMode.system);
+      expect(mode, ThemeMode.dark);
     });
 
     test('setThemeMode and getThemeMode should round-trip light mode', () async {
