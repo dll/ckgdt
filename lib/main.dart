@@ -10,6 +10,7 @@ import 'core/dev_paths.dart';
 import 'core/init_logger.dart';
 import 'services/live_broadcast_service.dart';
 import 'data/local/database_helper.dart';
+import 'l10n/gen/app_localizations.dart';
 import 'services/data_loading_service.dart';
 import 'services/theme_manager.dart';
 import 'services/settings_service.dart';
@@ -292,8 +293,8 @@ class _MyAppState extends State<MyApp> {
       darkTheme: ThemeManager.dark(_colorIndex),
       navigatorKey: _navigatorKey,
       locale: _locale,
-      supportedLocales: const [Locale("zh"), Locale("en")],
-      localizationsDelegates: const [],
+      supportedLocales: AppL10n.supportedLocales,
+      localizationsDelegates: AppL10n.localizationsDelegates,
       home: const LoginPage(),
       builder: (context, child) {
         // 用 RepaintBoundary 包裹，供截图用
