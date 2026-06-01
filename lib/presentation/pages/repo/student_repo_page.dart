@@ -4,7 +4,6 @@ import '../../../services/auth_service.dart';
 import '../../../services/course_resource_service.dart';
 import '../../widgets/agent_entry_button.dart';
 
-import '../../../core/constants/color_ohos_compat.dart';
 /// 学生仓库页面 — 学生专属视图
 ///
 /// 功能：

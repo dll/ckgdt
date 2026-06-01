@@ -5,7 +5,6 @@ import '../../../../services/auth_service.dart';
 import '../../../../services/default_class_service.dart';
 import '../achievement_shared.dart';
 
-import '../../../../core/constants/color_ohos_compat.dart';
 // ══════════════════════════════════════════════════════════════════════════════
 // Tab 1 — 达成度概览
 // ══════════════════════════════════════════════════════════════════════════════

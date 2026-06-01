@@ -2,7 +2,6 @@
 import '../../../services/settings_service.dart';
 import '../../../services/voice_service.dart';
 
-import '../../../core/constants/color_ohos_compat.dart';
 import '../../widgets/back_button_bar.dart';
 /// 讯飞语音配置页面
 ///

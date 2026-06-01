@@ -6,7 +6,6 @@ import '../../../services/update_service.dart';
 import 'compose_notification_page.dart';
 import '../settings/update_dialog.dart';
 
-import '../../../core/constants/color_ohos_compat.dart';
 /// 通知列表页面 — 展示用户的通知消息
 ///
 /// 功能：

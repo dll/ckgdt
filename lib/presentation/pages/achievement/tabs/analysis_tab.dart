@@ -5,7 +5,6 @@ import '../../../../services/default_class_service.dart';
 import '../../../../core/error_handler.dart';
 import '../achievement_shared.dart';
 
-import '../../../../core/constants/color_ohos_compat.dart';
 // ══════════════════════════════════════════════════════════════════════════════
 // Tab 4 — 计算过程（大纲目标 + 考核结构 + 公式 + 班级概览 + 学生表 + 分布图）
 // ══════════════════════════════════════════════════════════════════════════════

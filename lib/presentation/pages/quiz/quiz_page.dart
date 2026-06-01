@@ -17,7 +17,6 @@ import '../practice/deep_practice_page.dart';
 import 'wrong_answers_page.dart';
 import '../../widgets/back_button_bar.dart';
 
-import '../../../core/constants/color_ohos_compat.dart';
 class QuizPage extends StatefulWidget {
   final bool embedded;
 

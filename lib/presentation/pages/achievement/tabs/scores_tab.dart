@@ -5,7 +5,6 @@ import '../../../../services/auth_service.dart';
 import '../../../../services/default_class_service.dart';
 import '../achievement_shared.dart';
 
-import '../../../../core/constants/color_ohos_compat.dart';
 // ══════════════════════════════════════════════════════════════════════════════
 // Tab 2 — 成绩管理（录入/自动计算/批量）
 // ══════════════════════════════════════════════════════════════════════════════

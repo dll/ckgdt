@@ -3,7 +3,6 @@ import '../../../data/local/course_dao.dart';
 import '../../../data/models/course_model.dart';
 import '../../widgets/course_generator_sheet.dart';
 
-import '../../../core/constants/color_ohos_compat.dart';
 import '../../widgets/back_button_bar.dart';
 /// 课程管理页面 — 查看、切换、删除课程
 class CourseManagePage extends StatefulWidget {

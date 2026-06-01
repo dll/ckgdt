@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import '../../../core/dev_paths.dart';
 import '../../../data/local/feedback_dao.dart';
 
-import '../../../core/constants/color_ohos_compat.dart';
 import '../../widgets/back_button_bar.dart';
 
 /// 管理员 — 问题反馈管理页面
