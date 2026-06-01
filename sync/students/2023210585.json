@@ -3,8 +3,8 @@
   "user_id": "2023210585",
   "user_name": "崔浩宇",
   "role": "student",
-  "synced_at": "2026-06-01T09:53:31.900426",
-  "last_active": "2026-06-01T09:53:31.900443",
+  "synced_at": "2026-06-01T09:54:46.963147",
+  "last_active": "2026-06-01T09:54:46.963158",
   "quiz_results": [
     {
       "user_id": "2023210585",
@@ -33,6 +33,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 5,
+      "user_id": "2023210585",
+      "content": "PDF实验报告：2023210585崔浩宇实验五 鸿蒙多端应用开发.pdf\n",
+      "file_paths": "D:\\Desktop\\2023210585崔浩宇实验五 鸿蒙多端应用开发.pdf",
+      "file_names": "2023210585崔浩宇实验五 鸿蒙多端应用开发.pdf",
+      "submit_time": "2026-06-01T09:54:46.951945",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-05-08T19:08:41.341280",
+      "updated_at": "2026-06-01T09:54:46.951945",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 4,
       "user_id": "2023210585",
@@ -101,24 +119,6 @@
       "scored_at": null,
       "created_at": "2026-04-25T10:21:50.700663",
       "updated_at": "2026-06-01T09:49:11.048529",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 5,
-      "user_id": "2023210585",
-      "content": "PDF实验报告：2023210585崔浩宇实验五 鸿蒙多端应用开发.pdf",
-      "file_paths": "D:\\Desktop\\2023210585崔浩宇实验五 鸿蒙多端应用开发.pdf",
-      "file_names": "2023210585崔浩宇实验五 鸿蒙多端应用开发.pdf",
-      "submit_time": "2026-05-30T22:22:26.831274",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-05-08T19:08:41.341280",
-      "updated_at": "2026-05-30T22:22:26.831274",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
