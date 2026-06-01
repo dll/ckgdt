@@ -56,6 +56,20 @@ jobs:
             echo "::warning::catch(_) 已降到 $actual（上限 $ceiling）。请把 tool/catch_underscore_ceiling.txt 下调到 $actual 以收紧棘轮。"
           fi
 
+      - name: withOpacity 零容忍门禁（CLAUDE.md 规则5）
+        # 第十二轮鸿蒙补丁 ohos_patch.ps1 把 ~1246 处 withValues 误降级成已废弃的
+        # withOpacity 并提交进 master（commit 944b452d7），analyze 从 583 飙到 2462。
+        # 项目规范要求一律用 .withValues(alpha:)。此门禁锁死 lib/ 内 .withOpacity( = 0，
+        # 防鸿蒙补丁态误提交重演（与本地 pre-commit guard 互为第二道网）。
+        run: |
+          actual=$(grep -rho '\.withOpacity(' lib --include='*.dart' | wc -l | tr -d '[:space:]')
+          echo ".withOpacity( 在 lib/ 出现 $actual 处（应为 0）"
+          if [ "$actual" -gt 0 ]; then
+            echo "::error::lib/ 内出现 $actual 处 .withOpacity( —— 应为 .withValues(alpha:)。疑似鸿蒙构建补丁态（ohos_patch.ps1）误提交，请跑 ohos_restore.ps1 还原。"
+            grep -rn '\.withOpacity(' lib --include='*.dart' | head -20
+            exit 1
+          fi
+
   # ─── 多端构建（push 到 master 时跑，PR 不跑） ────────────────────
   build-web:
     name: Build Web
