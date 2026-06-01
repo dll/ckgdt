@@ -172,10 +172,10 @@ jobs:
         run: |
           mkdir -p build/ios/ipa
           cp -R "build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app" "build/ios/ipa/Payload"
-          cd build/ios/ipa && zip -r -q "Runner.ipa" "Payload" && rm -rf "Payload"
+          (cd build/ios/ipa && zip -r -q "Runner.ipa" "Payload" && rm -rf "Payload")
           VERSION=$(sed -n 's/^version: *\([0-9.]*\)+.*/\1/p' pubspec.yaml)
           echo "Version: ${VERSION}"
-          cp "Runner.ipa" "移动图谱与数字孪生+ios+v${VERSION}-unsigned.ipa"
+          cp "build/ios/ipa/Runner.ipa" "build/ios/ipa/移动图谱与数字孪生+ios+v${VERSION}-unsigned.ipa"
 
       - uses: actions/upload-artifact@v4
         with:
