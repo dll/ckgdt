@@ -3,8 +3,8 @@
   "user_id": "2023210618",
   "user_name": "钱家澍",
   "role": "student",
-  "synced_at": "2026-06-01T08:23:46.853686",
-  "last_active": "2026-06-01T08:23:46.853686",
+  "synced_at": "2026-06-01T08:24:30.924449",
+  "last_active": "2026-06-01T08:24:30.924449",
   "quiz_results": [
     {
       "user_id": "2023210618",
@@ -56,6 +56,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 1,
+      "user_id": "2023210618",
+      "content": "PDF实验报告：2023210618钱家澍实验一 开发环境搭建.pdf\n\n--- 报告正文（自动提取）---\n钱家澍\n-\n实验一\nAndroid\n开发环境搭建\n一、项目概述\n本报告记录了\nAndroid\n应用开发环境的搭建过程，以及实现的登录功能和界面。项目\n基于\nAndroid Studio\n开发工具，使用\nMaterial Design\n风格实现登录页面，支持用户名\n和密码输入、输入验证和登录跳转功能。\n1.1\n项目背景\n随着移动互联网的快速发展，\nAndroid\n应用开发已成为软件开发领域的重要方向，广泛\n应用于生活、工作、娱乐等多个场景，市场需求持续攀升。搭建一个完整的\nAndroid\n开发环境，是进行\nAndroid\n应用开发的基础前提，更是入门学习\nAndroid\n开\n发的关键环\n节。完整的开发环境搭建涵盖\nJDK\n安装配置、\nAndroid Studio\n部署、模拟器调试及真\n机连接等核心步骤，其规范性直接影响后续开发效率与功能调试效果，只有扎实掌握\n环境搭建方法，才能为后续的应用开发、功能优化及技术提升筑牢基础，顺利开启\nAndroid\n开发学习之路。\n1.2\n项目目标\n●\n搭建完整的\nAndroid\n开发环境\n●\n实现基\n本的登录功能和界面\n●\n掌握\nAndroid\n应用开发的基本流程\n●\n学习\nMaterial Design\n设计规范的应用\n1.3\n项目意义\n通过本次\nAndroid\n开发实验，我们系统掌握了\nAndroid\n开发环境的搭建方法，在实操中\n解决了版本兼容、路径配置、模拟器启动异常等常见问题，形成了规范、高效的搭建\n思路，为后续开发扫清基础障碍。同时，我们深入了解了\nAndroid\n应用的基本架构，\n清晰认知\n四大组件的功能定位与交互逻辑，掌握了\nXML\n布局与基础代码编写方法，\n打破了对开发的陌生感，建立起完整的认知框架。实验全程模拟真实开发流程，让我\n们在需求分析、代码编写、测试排查中提升了实操与问题解决能力，巩固了理论知\n识，为后续开展复杂应用开发、学习高级技术打下了坚实基础。\n二、环境搭建\n2.1\n开发工具\n●\nAndroid Studio\n：\n2025.3.2\n●\nJDK\n：\n17.0.18\n版本\n●\n操作系统\n：\nWindows 10\n2.2\n项目创建\n●\n项目目录\n：\nF:\n\\\nAndroid Studio\n\\\nApplic\nationjoin\n●\n包名\n：\ncom.example.applicationjoin\n●\n开发模式\n：\nAndroid\n应用\n●\n后端服务\n：不使用云服务\n2.3\n项目结构\nApplicationjoin/\n├──\napp/\n│\n├──\nsrc/\n│\n│\n├──\nmain/\n│\n│\n│\n├──\njava/com/example/applicationjoin/\n│\n│\n│\n│\n├──\nMainActivity.java        #\n登录页面逻辑\n│\n│\n│\n│\n└──\nUserCenterActivity.java    #\n个人中心页面逻辑\n│\n│\n│\n├──\nres/\n│\n│\n│\n│\n├──\nlayout/\n│\n│\n│\n│\n│\n├──\nactivity_main.xml\n#\n登录页面布局\n│\n│\n│\n│\n│\n└──\nactivity_user_center.xml  #\n个人中心页面\n│\n│\n│\n│\n├──\nvalues/\n│\n│\n│\n│\n│\n├──\ncolors.xml              #\n颜色资源\n│\n│\n│\n│\n│\n└──\nstrings.xml             #\n字符串资源\n│\n│\n│\n└──\nAndroidManifest.xml\n#\n应用配置文件\n├──\nbuild.gradle.kts                            #\n项目级配置\n└──\nsettings.gradle.kts                          #\n项目设置\n三、功能实现\n3.1\n登录功能\n●\n用户名\n/\n密码输入\n：支持学号和密码输入\n●\n密码可见性切换\n：点击眼睛图标可切换密码显示\n/\n隐藏\n●\n登录验证\n：输入为空时显示提示信息\n●\n长度限制\n：用户名长度应为\n10\n位，密码长度至少为\n6\n位\n●\n模拟登录\n：输入正确学号和密码即可登录\n3.2\n页面跳转\n●\n登录成功\n：从登录页面跳转到个人中心页面\n●\n传递数据\n：将用户名数据传递到个人中心页面\n3.3\n实现说明\n●\n登录页面\n：使用\nMaterial Design\n组件实现，包含用户名输入框、密码输入框和登录\n按钮\n●\n验证逻辑\n：实现了输\n入为空检查、长度验证和简单的登录验证\n●\n页面跳转\n：使用\nIntent\n实现页面间的跳转和数据传递\n●\n用户体验\n：添加了密码可见性切换功能，提升用户体验\n四、测试结果\n4.1\n功能测试\n表\n1\n-\n功能\n测试表\n测试项\n预期结果\n实际结果\n状态\n登录页面显示\n显示登录表单、输入框、登\n录按钮\n正常显示\n✅\n通过\n用户名输入\n输入框可正常输入\n正常输入\n✅\n通过\n密码输入\n输入框可正常输入，支持可\n见性切换\n正常输入，可见性切\n换正常\n✅\n通过\n输入验证\n为空时显示提示信息\n显示提示信息\n✅\n通过\n长度限制\n验证用户名和密码长度\n长度验证通过\n✅\n通过\n登录功能\n输入正确学号密码后登录成\n功并跳转到个人中心\n登录成功并跳转\n✅\n通过\n4.2\n运行截图\n4.2.1\n实验环境截图\n图\n1\n-\n实验环境\n图\n图\n2\n-\n实验环境\n图\n4.2.2\n登录页面截图\n图\n3\n-\n实验环境\n图\n五、环境配置文档\n5.1\n依赖要求\n表\n2\n-\n依赖\n要求\n表\n依赖项\n版本要求\n用途\nAndroid Studio\n2025.3.2\nAndroid\n应用开发、调试和预览\nJDK\n17.0.18\n运行\nAndroid Studio\n和编译项目\nGradle\n9.3.1\n构建工具\n5.2\n安装步骤\n1.\n下载\nAndroid Studio\n○\n访问\nAndroid Studio\n官网\n○\n下载最新版本的\nAndroid Studio\n○\n运行安装程序并按照向导完成安装\n2.\n安装\nJDK\n○\n下载\nJDK 17.0.18\n版本\n○\n运行安装程序并按照向导完成安装\n○\n配置\nJAVA_HOME\n环境变量\n3.\n创建项目\n○\n启动\nAndroid Studio\n○\n选择\n\"\n新建项目\n\"\n○\n输入项目名称：\nApplicationjoin\n○\n选择保存目录：\nF:\n\\\nAndroid Studio\n\\\nApplicationjoin\n○\n选择项目模板：\nEmpty Activity\n○\n点击\n\"\n完成\n\"\n按钮，等待项目加载完成\n4.\n配置依赖\n○\n在\nbuild.gradle.kts\n文件中添加必要的依赖\n○\n同步项目以应用依赖变更\n5.3\n编译运行\n1.\n构建项目\n○\n点击\nAndroid Studio\n顶部的\n\"\n构建\n\"\n菜单\n○\n选择\n\"\n构建项目\n\"\n或使用快捷键\nCtrl+F9\n2.\n运行应用\n○\n点击\nAndroid Studio\n顶部的\n\"\n运行\n\"\n按钮或使用快捷键\nShift+F10\n○\n等待编译完成后，选择模拟器或真机\n○\n点击\n\"\n确定\n\"\n开始安装和运行应用\n3.\n测试登录功能\n○\n在登录页面输入学号：\n2023210618\n○\n输入密码：\n000000\n○\n点击登录按钮\n○\n验证是否成功跳转到个人中心页面\n六、遇到的问题与解决方案\n6.1\n问题一：\nAndroid Studio\n启动缓慢\n解决方案\n：\n●\n增加\nAndroid Studio\n的内存分配\n●\n关闭不必要的插件\n●\n清理缓存和索引\n6.2\n问题二：模拟器运行卡顿\n解决方案\n：\n●\n启用硬件加速\n●\n调整模拟器配置，减少内存使用\n●\n使用真机进行测试\n6.3\n问题三：\nMaterial Design\n组件导入失败\n解决方案\n：\n●\n在\nbuild.gradle.kts\n文件中添加\nMaterial Design\n依赖\n●\n同步项目以更新依赖\n七、总结\n7.1\n已完成的工作\n●\n✅\nAndroid Studio\n开发环境配置\n●\n✅\n登录页面布局实现\n●\n✅\n登录功能实现\n●\n✅\n输入验证功能实现\n●\n✅\n页面跳转功能实现\n●\n✅\n环境配置文档编写\n●\n✅\n测试用例设计与执行\n7.2\n技术栈\n●\n前端框架\n：\nAndroid\n原生开发\n●\n开发工具\n：\nAndroid Studio\n●\nUI\n组件\n：\nMaterial Design\n组件\n●\n存储方案\n：内存存储（传递数据）\n7.3\n技术收获\n●\n掌握了\nAndroid\n开发环境的搭建方法\n●\n学习了\nMaterial Design\n设计规范的应用\n●\n理解了\nAndroid\n应用的基本架构和开发流程\n●\n熟悉了\nIntent\n用于页面跳转和数据传递\n●\n掌握了基本的输入验证和用户交互处理\n7.4\n项目价值\n本项目实现了一个基础的\nAndroid\n登录功能，为后续的应用开发提供了参考。通过本\n实\n验，不仅学习了\nAndroid\n开发的基本技能，还培养了问题解决能力和项目管理能\n力。\n7.5\n后续优化方向\n●\n功能优化\n：实现真实的后端登录验证\n●\n界面优化\n：添加更多页面和相关功能\n●\n用户体验\n：优化用户界面和交互体验\n●\n安全性\n：添加记住密码功能和密码找回功能\n●\n性能优化\n：提升应用运行速度和稳定性\n7.6\n参考资料\n●\nAndroid\n官方开发文档\n●\nMaterial Design\n设计指南\n●\nAndroid Studio\n使用指南\n报告完成时间\n：\n2026\n-\n03\n-\n16\n报告人\n：钱家澍（负责\nAndroid\n登录页面开发）\n",
+      "file_paths": "C:\\Users\\戴尔\\Desktop\\作业\\刘东良\\2023210618钱家澍实验一 开发环境搭建.pdf",
+      "file_names": "2023210618钱家澍实验一 开发环境搭建.pdf",
+      "submit_time": "2026-06-01T08:24:30.875804",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-06-01T08:24:30.875804",
+      "updated_at": "2026-06-01T08:24:30.875804",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 6,
       "user_id": "2023210618",
@@ -142,24 +160,6 @@
       "scored_at": null,
       "created_at": "2026-04-26T15:51:02.967942",
       "updated_at": "2026-04-26T15:54:14.898184",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 1,
-      "user_id": "2023210618",
-      "content": "PDF实验报告：2023210618钱家澍实验一 开发环境搭建.pdf",
-      "file_paths": "C:\\Users\\戴尔\\Desktop\\作业\\刘东良\\2023210618钱家澍实验一 开发环境搭建.pdf",
-      "file_names": "2023210618钱家澍实验一 开发环境搭建.pdf",
-      "submit_time": "2026-04-26T15:53:32.966579",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-04-26T15:53:32.966579",
-      "updated_at": "2026-04-26T15:53:32.966579",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
