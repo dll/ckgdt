@@ -14,7 +14,6 @@ import '../privacy/privacy_policy_page.dart';
 import '../privacy/my_data_page.dart';
 
 import '../../widgets/back_button_bar.dart';
-import '../../../core/constants/color_ohos_compat.dart';
 class StudentCenterPage extends StatefulWidget {
   const StudentCenterPage({super.key});
 

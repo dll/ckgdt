@@ -2,7 +2,6 @@
 import '../../../data/local/knowledge_graph_dao.dart';
 import '../../../services/ai_service.dart';
 
-import '../../../core/constants/color_ohos_compat.dart';
 /// Page for viewing and managing knowledge graph concepts & relations.
 class GraphPropertiesPage extends StatefulWidget {
   const GraphPropertiesPage({super.key});

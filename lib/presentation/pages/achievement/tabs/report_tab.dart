@@ -12,7 +12,6 @@ import '../../../../core/error_handler.dart';
 import '../../../widgets/markdown_bubble.dart';
 import '../achievement_shared.dart';
 
-import '../../../../core/constants/color_ohos_compat.dart';
 class ReportTab extends StatefulWidget {
   final AuthService authService;
   final AchievementDao achievementDao;

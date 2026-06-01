@@ -43,7 +43,6 @@ import '../admin/data_export_page.dart';
 import '../admin/repo_analytics_page.dart';
 import '../settings/update_dialog.dart';
 
-import '../../../core/constants/color_ohos_compat.dart';
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
 

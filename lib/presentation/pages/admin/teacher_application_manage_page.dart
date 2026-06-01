@@ -3,7 +3,6 @@ import '../../../data/local/teacher_application_dao.dart';
 import '../../../data/local/notification_dao.dart';
 import '../../../services/auth_service.dart';
 
-import '../../../core/constants/color_ohos_compat.dart';
 import '../../widgets/back_button_bar.dart';
 
 /// 教师申请审核页面 — 管理员查看、审核教师申请

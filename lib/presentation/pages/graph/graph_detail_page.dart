@@ -11,7 +11,6 @@ import '../../../services/graph_layout_service.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/clipboard_helper.dart';
 
-import '../../../core/constants/color_ohos_compat.dart';
 
 // ── Painter 拆分到 parts/（part / part of 模式）─────────────
 part 'parts/graph_detail_painter.dart';
