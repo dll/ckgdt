@@ -3,8 +3,8 @@
   "user_id": "2023210648",
   "user_name": "张政",
   "role": "student",
-  "synced_at": "2026-06-01T09:09:55.605383",
-  "last_active": "2026-06-01T09:09:55.593287",
+  "synced_at": "2026-06-01T09:11:04.924164",
+  "last_active": "2026-06-01T09:11:04.910636",
   "quiz_results": [
     {
       "user_id": "2023210648",
@@ -34,6 +34,24 @@
   "learning_paths": [],
   "lab_submissions": [
     {
+      "task_id": 6,
+      "user_id": "2023210648",
+      "content": "PDF实验报告：2023210648张政实验六 跨平台综合项目实战.pdf\n",
+      "file_paths": "E:\\QQ\\接收\\2023210648张政实验六 跨平台综合项目实战.pdf",
+      "file_names": "2023210648张政实验六 跨平台综合项目实战.pdf",
+      "submit_time": "2026-06-01T09:11:04.902807",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-06-01T09:11:04.902807",
+      "updated_at": "2026-06-01T09:11:04.902807",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
+    {
       "task_id": 3,
       "user_id": "2023210648",
       "content": "PDF实验报告：2023210648张政实验三 跨平台应用开发.pdf\n",
@@ -47,24 +65,6 @@
       "scored_at": null,
       "created_at": "2026-06-01T09:07:51.886801",
       "updated_at": "2026-06-01T09:07:54.158",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 6,
-      "user_id": "2023210648",
-      "content": "PDF实验报告：2023210648张政实验六 跨平台综合项目实战.pdf\n",
-      "file_paths": "E:\\QQ\\接收\\2023210648张政实验六 跨平台综合项目实战.pdf",
-      "file_names": "2023210648张政实验六 跨平台综合项目实战.pdf",
-      "submit_time": "2026-06-01T09:07:17.224327",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-06-01T09:07:17.224327",
-      "updated_at": "2026-06-01T09:07:17.224327",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
