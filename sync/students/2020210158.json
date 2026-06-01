@@ -3,8 +3,8 @@
   "user_id": "2020210158",
   "user_name": "苏洲",
   "role": "student",
-  "synced_at": "2026-06-01T09:10:23.462368",
-  "last_active": "2026-06-01T09:10:23.462368",
+  "synced_at": "2026-06-01T09:14:32.555284",
+  "last_active": "2026-06-01T09:14:32.555284",
   "quiz_results": [
     {
       "user_id": "2020210158",
@@ -66,6 +66,24 @@
     }
   ],
   "lab_submissions": [
+    {
+      "task_id": 3,
+      "user_id": "2020210158",
+      "content": "PDF实验报告：2020210158苏洲实验三 跨平台应用开发.pdf\n\n--- 报告正文（自动提取）---\n实验三：跨平台应用开发\n实验项目基本信息\n实验编号：\nd20301035103\n、\nd20301009203\n学时分配：\n4\n学时\n实验类型：验证型\n每组人数：\n6\n人\n对应课程目标：课程目标\n2\n核心步骤列表\n实验概览\n需求分析阶段：定义列表页数据结构、\nAPI\n接口规范与传感器调用需求\nAI\n辅助编码阶段：使用\nTRAE\n生成网络请求与\nJSON\n解析代码，辅助生成传感器调用模板\n测试验证阶段：模拟\nAPI\n异常响应测试容错能力，验证传感器数据采集\n部署运维阶段：多框架性能对比测试，输出框架适用性分析报告\n开发任务清单\n任务阶段\n主要内容\n关键技术点\nFlutter\n列表\nDart\n+\nProvider\nHTTP\n请求、\nJSON\n解析、下拉刷新\nReact\nNative\n列表\nJSX\n+\nHooks\nAxios\n、\nFlatList\n、下拉刷新\nUniapp\n列表\nVue\n+\nPinia\nuni.request\n、下拉刷新\nMAUI\n列表\nC#\n+\nMVVM\nHttpClient\n、数据绑定\n实验任务与案例\n核心任务\n开发业务数据列表页（\nRESTful\nAPI\n网络数据请求\n+\nJSON\n解析\n+\n下拉刷新），组内成员分别使\n用\nFlutter\n、\nReact\nNative\n、\nUniapp\n、\nMAUI\n等不同框架实现同一功能需求。扩展案例：集成设备传感器\n（\nGPS\n定位、加速度计）。\n实战案例\n开发\n\"\n智慧校园\n\"\n新闻列表模块，从\nRESTful\nAPI\n获取新闻数据，解析\nJSON\n并展示列表，实现下拉刷新功\n能，体验跨平台框架的开发差异。\n系统架构设计\n本项目采用分层架构设计，\nFlutter\n端作为\nUI\n展示层，通过\nProvider\n进行状态管理，整体架构如下：\n图\n1.\nFlutter\n新闻列表系统整体架构图\n核心类结构设计\n系统核心类设计遵循分层架构思想，各层职责明确，类关系如下：\n图\n2.\nFlutter\n新闻列表核心类结构图\n数据请求时序设计\n用户启动应用或下拉刷新时，\nFlutter\n应用通过\nHTTP\n请求获取新闻数据，完整时序如下：\n图\n3.\nFlutter\n新闻列表数据请求时序图\n第一课时：\nFlutter\n与\nReact\nNative\n开发（\n2\n学时）\n3.1\n需求分析阶段\n步骤\n1\n：定义数据模型\n{\n\"code\":\n200,\n\"data\":\n{\n\"items\":\n[\n{\n\"id\":\n1,\n\"title\":\n\"\n智慧校园更新通知\n\",\n\"content\":\n\"\n系统升级通知\n...\",\n\"author\":\n\"\n管理员\n\",\n\"time\":\n\"2024-01-01\n10:00:00\"\n}\n]\n}\n}\n步骤\n2\n：确定\nAPI\n接口\nURL:\nhttps://api.example.com/news\nMethod:\nGET\nResponse:\nJSON\n3.2\nFlutter\n列表开发\n步骤\n1\n：创建\nFlutter\n项目\nflutter\ncreate\nnews_list\ncd\nnews_list\n步骤\n2\n：添加依赖\n#\npubspec.yaml\ndependencies:\nflutter:\nsdk:\nflutter\nhttp:\n^1.1.0\nprovider:\n^6.1.0\n步骤\n3\n：\nAI\n辅助生成代码\n使用\nTRAE\n描述需求：\nFlutter\n新闻列表页，下拉刷新，\nProvider\n状态管理\n生成代码片段\n步骤\n4\n：实现新闻列表（符合架构图规范）\n根据架构图和类图设计，实现分层架构的\nFlutter\n新闻列表应用：\n//\nmain.dart\nimport\n'package:flutter/material.dart';\nimport\n'package:provider/provider.dart';\nimport\n'pages/news_list_page.dart';\nimport\n'providers/news_provider.dart';\nvoid\nmain()\n{\nrunApp(const\nMyApp());\n}\nclass\nMyApp\nextends\nStatelessWidget\n{\nconst\nMyApp({Key?\nkey})\n:\nsuper(key:\nkey);\n@override\nWidget\nbuild(BuildContext\ncontext)\n{\nreturn\nChangeNotifierProvider(\ncreate:\n(_)\n=>\nNewsProvider(),\nchild:\nMaterialApp(\ntitle:\n'\n智慧校园新闻\n',\ntheme:\nThemeData(\nprimarySwatch:\nColors.blue,\nuseMaterial3:\ntrue,\n),\nhome:\nconst\nNewsListPage(),\n),\n);\n}\n}\n//\nmodels/news.dart\n///\nData\nLayer:\n新闻数据模型类\nclass\nNews\n{\nfinal\nint\nid;\nfinal\nString\ntitle;\nfinal\nString\ncontent;\nfinal\nString\nauthor;\nfinal\nString\ntime;\nNews({required\nthis.id,\nrequired\nthis.title,\nrequired\nthis.content,\nrequired\nthis.author,\nrequired\nthis.time});\nfactory\nNews.fromJson(Map<String,\ndynamic>\njson)\n{\nreturn\nNews(\nid:\njson['id']\n??\n0,\ntitle:\njson['title']\n??\n'',\ncontent:\njson['content']\n??\n'',\nauthor:\njson['author']\n??\n'',\ntime:\njson['time']\n??\n'',\n);\n}\n}\n项目结构（符合架构图）：\nlib/\n├──\nmain.dart\n#\n应用入口\n(MyApp)\n├──\nmodels/\n│\n└──\nnews.dart\n#\nData\nLayer:\n数据模型\n├──\nservices/\n│\n└──\nnews_service.dart\n#\nNetwork\nLayer:\n网络服务\n├──\nproviders/\n│\n└──\nnews_provider.dart\n#\nState\nManagement:\n状态管理\n├──\npages/\n│\n└──\nnews_list_page.dart\n#\nUI\nLayer:\n页面\n└──\nwidgets/\n├──\nnews_list_item.dart\n#\nUI\nLayer:\n列表项\n└──\nerror_dialog.dart\n#\nUI\nLayer:\n错误弹窗\n3.3\nReact\nNative\n列表开发\n步骤\n1\n：创建\nReact\nNative\n项目\nnpx\nreact-native-init\nNewsList\ncd\nNewsList\n步骤\n2\n：安装依赖\nnpm\ninstall\naxios\n@react-native-community/refresh-control\n步骤\n3\n：\nAI\n辅助生成代码\n使用\nTRAE\n描述需求：\nReact\nNative\n新闻列表，\nFlatList\n，下拉刷新\n生成代码片段\n步骤\n4\n：实现新闻列表（符合分层架构规范）\n根据架构图设计，实现分层架构的\nReact\nNative\n新闻列表应用：\n//\nsrc/models/News.js\n/**\n*\nData\nLayer:\n新闻数据模型类\n*/\nexport\nclass\nNews\n{\nconstructor({\nid,\ntitle,\ncontent,\nauthor,\ntime\n})\n{\nthis.id\n=\nid\n||\n0;\nthis.title\n=\ntitle\n||\n'';\nthis.content\n=\ncontent\n||\n'';\nthis.author\n=\nauthor\n||\n'';\nthis.time\n=\ntime\n||\n'';\n}\nstatic\nfromJson(json)\n{\nreturn\nnew\nNews({\nid:\njson.id,\ntitle:\njson.title,\ncontent:\njson.content,\nauthor:\njson.author,\ntime:\njson.time,\n});\n}\n}\n项目结构（符合分层架构）：\nsrc/\n├──\nmodels/\n│\n└──\nNews.js\n#\nData\nLayer:\n数据模型\n├──\nservices/\n│\n└──\nNewsService.js\n#\nNetwork\nLayer:\n网络服务\n├──\nhooks/\n│\n└──\nuseNews.js\n#\nState\nManagement:\n状态\nHook\n├──\ncomponents/\n#\nUI\nLayer:\n可复用组件\n│\n├──\nNewsListItem.jsx\n│\n├──\nNewsDetailModal.jsx\n│\n├──\nErrorDialog.jsx\n│\n├──\nLoadingIndicator.jsx\n│\n└──\nEmptyState.jsx\n└──\nscreens/\n└──\nNewsListScreen.jsx\n#\nUI\nLayer:\n页面\n3.7\n测试验证与对比报告\n步骤\n1\n：编写测试用例\n测试用例\n1\n：正常数据请求与列表展示测试\n测试项\n测试内容\n测试场景\n应用启动后正常加载新闻列表数据\n测试步骤\n1.\n启动应用\n2.\n等待数据加载\n3.\n查看列表展示\n预期结果\n显示加载指示器\n→\n成功加载并展示新闻列表\n实际结果\n✅\n符合预期，列表正常展示\n图\n4.\n应用启动后加载指示器显示（上）和新闻列表成功展示（下）\n测试用例\n2\n：新闻详情弹窗测试\n测试项\n测试内容\n测试场景\n点击列表项弹出新闻详情对话框\n测试步骤\n1.\n点击任意新闻列表项\n2.\n查看弹窗内容\n3.\n点击确定关闭弹窗\n预期结果\n弹出\nAlertDialog\n显示新闻标题和详情，点击确定后关闭\n实际结果\n✅\n符合预期，弹窗正常显示和关闭\n图\n5.\n点击新闻列表项后弹出的详情对话框\n测试用例\n3\n：下拉刷新功能测试\n测试场景：用户下拉列表触发数据刷新\n预期结果：显示刷新指示器\n→\n重新获取数据\n→\n更新列表内容\n实际结果：\n✅\n符合预期，下拉刷新功能正常\n测试用例\n4\n：网络异常处理测试\n测试场景：网络异常时的错误处理\n预期结果：显示友好的错误提示信息，不崩溃\n实际结果：\n✅\n符合预期，显示\n\"\n网络连接失败\n\"\n提示\n测试用例\n5\n：空数据处理测试\n测试场景：\nAPI\n返回空数据列表时的处理\n预期结果：显示\n\"\n暂无数据\n\"\n提示或空状态页面\n实际结果：\n✅\n符合预期，显示空状态提示\n步骤\n2\n：输出框架对比报告\n对比项\nFlutter\nReact\nNative\nUniapp\nMAUI\n开发语言\nDart\nJavaScript\nVue\nC#\n性能\n★★★★★\n★★★★☆\n★★★☆☆\n★★★★☆\n学习成本\n中等\n低\n低\n中等\n总结与思考\n一、实验总结\n本次实验通过实现\n\"\n智慧校园\n\"\n新闻列表模块，深入掌握了跨平台移动应用开发的核心技术：\n1.\n分层架构设计实践\n实现了\nUI\nLayer\n、\nState\nManagement\n、\nNetwork\nLayer\n、\nData\nLayer\n的清晰分层\nFlutter\n采用\nProvider\n模式，\nReact\nNative\n采用\nHooks\n模式，均实现了状态与\nUI\n的分离\n代码结构符合单一职责原则，便于维护和扩展\n2.\nRESTful\nAPI\n数据请求与\nJSON\n解析\n掌握了\nHTTP\nGET\n请求的封装与异常处理\n实现了\nJSON\n到数据模型的自动映射（\nfromJson\n工厂方法）\n完善了网络超时、连接失败等异常场景的处理机制\n3.\n跨平台框架核心特性对比\nFlutter\n：自绘引擎，性能最优，\nUI\n一致性最好，但学习曲线较陡\nReact\nNative\n：使用原生组件，生态丰富，\nJavaScript\n开发者上手快\nUniapp\n：基于\nVue\n，一套代码多端运行，适合快速开发\nMAUI\n：微软生态集成度高，适合企业级\n.NET\n应用\n4.\n测试验证体系建立\n完成了\n5\n个核心测试用例的设计与执行\n验证了加载状态、列表展示、详情弹窗、下拉刷新、异常处理等功能\n二、技术选型对比分析\n对比维度\nFlutter\nReact\nNative\n推荐场景\n性能\n★★★★★\n自绘引擎\n★★★★☆\n原生组件\n高性能\nUI\n选\nFlutter\n开发效率\n★★★★☆\n热重载快\n★★★★★\nJS\n生态\n快速迭代选\nRN\nUI\n一致性\n★★★★★\n像素级控制\n★★★☆☆\n依赖原生\n品牌一致性高选\nFlutter\n包体积\n★★★☆☆\n包含引擎\n★★★★☆\n相对较小\n包体积敏感选\nRN\n生态成熟度\n★★★★☆\n快速增长中\n★★★★★\n非常成熟\n依赖第三方库多选\nRN\n三、实现难点与解决方案\n1.\n状态管理复杂性\n难点：异步数据请求与\nUI\n状态同步\n解决：\nFlutter\n使用\nChangeNotifier+Consumer\n，\nReact\nNative\n使用\nuseState+useEffect\n2.\n异常处理完整性\n难点：网络异常、数据解析异常、空数据等多种场景\n解决：统一封装\nService\n层，\ntry-catch\n捕获，友好错误提示\n3.\n下拉刷新与加载状态\n难点：刷新指示器与数据加载的协调\n解决：使用\nRefreshIndicator\n（\nFlutter\n）和\nRefreshControl\n（\nRN\n），状态统一管理\n4.\n跨平台\nUI\n一致性\n难点：不同平台组件差异\n解决：封装通用组件（\nNewsListItem\n、\nLoadingIndicator\n等），统一样式\n四、性能优化策略\n1.\n列表性能优化\n使用\nListView.builder\n（\nFlutter\n）和\nFlatList\n（\nRN\n）实现懒加载\n设置合理的\nitem\n高度，避免重排\n图片懒加载和缓存（实际项目中）\n2.\n网络请求优化\n添加请求超时机制（\n10\n秒）\n实现数据缓存策略（如\nSharedPreferences\n本地缓存）\n合并重复请求，避免竞态条件\n3.\n状态更新优化\n避免不必要的\nrebuild/selective\nupdate\n使用\nconst\n构造函数减少对象创建\n合理使用\nshouldComponentUpdate/memo\n4.\n启动速度优化\n延迟加载非首屏数据\n使用\nsplash\nscreen\n提升感知性能\n代码分割和懒加载\n五、未来功能扩展建议\n1.\n功能增强\n新闻搜索与筛选功能\n新闻收藏与本地存储\n新闻分享功能（微信、\nQQ\n等）\n推送通知（新新闻提醒）\n2.\n技术升级\n集成离线存储（\nSQLite/Hive\n）\n实现数据分页加载（上拉加载更多）\n添加骨架屏提升加载体验\n集成\nFirebase\nAnalytics\n统计用户行为\n3.\n架构演进\n引入依赖注入（\nGetIt/Koin\n）\n实现\nRepository\n模式，支持多数据源\n添加单元测试和集成测试\nCI/CD\n自动化构建与部署\n4.\n跨平台扩展\n适配\nWeb\n端（\nFlutter\nWeb/React\nNative\nWeb\n）\n桌面端支持（\nWindows/macOS/Linux\n）\n小程序版本（\nUniapp\n方案）\n六、课后思考\n1.\n框架选型决策因素\n团队技术栈与学习能力\n项目性能要求与复杂度\n长期维护成本与生态发展\n目标平台（\niOS/Android/Web/\n桌面）\n2.\n跨平台开发的挑战与机遇\n如何平衡代码复用与平台特性\n原生模块集成的最佳实践\n跨平台调试与性能分析工具\n3.\n移动应用发展趋势\n跨平台框架与原生开发的融合\nAI\n辅助代码生成对开发效率的影响\n5G\n时代实时数据交互的新模式\n",
+      "file_paths": "E:\\文档/sync_files/2020210158/2020210158苏洲实验三 跨平台应用开发.pdf",
+      "file_names": "2020210158苏洲实验三 跨平台应用开发.pdf",
+      "submit_time": "2026-06-01T09:14:32.507028",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-04-24T10:48:02.561611",
+      "updated_at": "2026-06-01T09:14:32.507028",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 4,
       "user_id": "2020210158",
@@ -134,24 +152,6 @@
       "scored_at": null,
       "created_at": "2026-04-24T10:51:44.597718",
       "updated_at": "2026-06-01T08:36:56.984569",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 3,
-      "user_id": "2020210158",
-      "content": "PDF实验报告：2020210158苏洲实验三 跨平台应用开发.pdf",
-      "file_paths": "E:\\文档/sync_files/2020210158/2020210158苏洲实验三 跨平台应用开发.pdf",
-      "file_names": "2020210158苏洲实验三 跨平台应用开发.pdf",
-      "submit_time": "2026-04-24T10:48:02.561611",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-04-24T10:48:02.561611",
-      "updated_at": "2026-04-24T10:48:02.561611",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
