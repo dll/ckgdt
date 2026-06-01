@@ -3,8 +3,8 @@
   "user_id": "2020211596",
   "user_name": "李世程",
   "role": "student",
-  "synced_at": "2026-06-01T08:53:56.144899",
-  "last_active": "2026-06-01T08:53:56.144906",
+  "synced_at": "2026-06-01T08:54:20.216645",
+  "last_active": "2026-06-01T08:54:20.216668",
   "quiz_results": [
     {
       "user_id": "2020211596",
@@ -47,6 +47,24 @@
   "learning_paths": [],
   "lab_submissions": [
     {
+      "task_id": 1,
+      "user_id": "2020211596",
+      "content": "PDF实验报告：2020211596李世程实验一 开发环境搭建.pdf\n\n--- 报告正文（自动提取）---\n实验一：移动应用开发环境搭建\n（\n.NET\nMAUI\n开发环境）\n一、实验基本信息\n•\n实验编号：\nd20301035101\n、\nd20301009201\n•\n学时分配：\n2\n学时\n•\n实验类型：验证型实验\n•\n每组人数：\n6\n人（分组协作完成）\n•\n对应课程目标：课程目标\n1\n（掌握原生应用开发基础）\n•\n个人负责模块：\n.NET\nMAUI\n开发环境搭建与项目验证\n二、实验目的\n1.\n掌握\n.NET\nMAUI\n开发环境的核心依赖、版本要求与完整搭建流程。\n2.\n掌握\nVisual\nStudio\n2022\n的安装、工作负载配置方法，熟悉开发工具基本操\n作。\n3.\n掌握\n.NET\nMAUI\n项目的创建、模板生成与基础配置技巧。\n4.\n学会运用\nAI\n辅助工具生成基础代码，实现简单的智慧校园主题\nHello\nWorld\n项\n目。\n5.\n掌握\nMAUI\n项目的编译、调试方法，能在模拟器（\nWindows/Android\n）中验证\n环境可用性。\n6.\n了解\nMAUI\n开发环境常见问题的排查与解决方法，能独立完成环境配置文档的\n整理。\n三、实验环境\n3.1\n.NET\nMAUI\n开发环境\n•\n系统要求：\nWindows\n10\n1909+\n版本（推荐\nWindows\n11\n）\n•\n开发工具：\nVisual\nStudio\n2022\n社区版\n/\n专业版（最低\n17.8\n版本）\n•\n开发语言：\nC#\n•\nUI\n框架：\nXAML\n/\nMAUI\n原生组件\n•\n框架版本：\n.NET\n8.0\nSDK\n（\nMAUI\n官方推荐稳定版本）\n•\n必备组件：\n.NET\nMAUI\n工作负载、\nAndroid\nSDK\n（内置自动安装）、\nAndroid\n模拟器\n•\n调试设备：\nWindows\n计算机、\nAndroid\n模拟器\n•\n辅助工具：\nAI\n辅助编码工具、\nNuGet\n包管理器\n•\n官方资源：\nVisual\nStudio\n官网（\nhttps://visualstudio.microsoft.com/\n）\n四、实验内容\n4.1\n核心任务\n完成\n.NET\nMAUI\n移动应用开发环境的完整搭建，使用\nAI\n辅助生成\nHello\nWorld\n模\n板代码，验证环境可用性，掌握从环境配置到项目运行的全流程，具体完成以下功\n能：\n1.\n完成\nVisual\nStudio\n2022\n及\n.NET\nMAUI\n工作负载的安装与配置。\n2.\n验证开发环境的完整性，排查并解决安装过程中的常见问题。\n3.\n创建智慧校园主题的\n.NET\nMAUI\n项目，完成基础配置。\n4.\n使用\nAI\n辅助生成页面代码，实现简单的\nHello\nWorld\n交互功能。\n5.\n在模拟器中编译、运行项目，验证环境与项目的可用性。\n6.\n整理\nMAUI\n环境配置文档，记录安装步骤与常见问题解决方案。\n4.2\n实战案例\n作为小组负责\nMAUI\n开发的成员，创建智慧校园主题的\nMAUI\nHello\nWorld\n项目，\n完成环境安装、项目创建、代码编写、编译运行全流程，输出独立的\nMAUI\n环境配\n置文档。项目需实现基础交互：界面显示\n“\n智慧校园\n”\n标题、\nHello\nWorld\n文字，点击\n按钮可更新文字内容，确保能在\nWindows\n计算机或\nAndroid\n模拟器中正常运行。\n项目基础信息\nplain\ntext\n项目名称：\nHelloMAUI_SmartCampus\n框架版本：\n.NET\n8.0\n项目类型：\n.NET\nMAUI\nApp\n核心功能：页面显示与按钮交互\n五、实验步骤\n5.1\n第一课时：环境准备与工具安装（\n1\n学时）\n1.\n**\n需求分析阶段\n**\n：明确\n.NET\nMAUI\n开发必备环境依赖与版本要求，确保系统\n版本、工具版本兼容性，梳理环境搭建全流程。\n2.\n**\n下载与安装\nVisual\nStudio\n2022**\n：访问\nVisual\nStudio\n官网\n（\nhttps://visualstudio.microsoft.com/\n），下载\nVisual\nStudio\n2022\n社区版（免费可\n用）；运行安装程序，进入工作负载选择界面，必勾选\n“\n.NET\nMulti-platform\nApp\nUI\n开发\n”\n（\n.NET\nMAUI\n工作负载），系统会自动关联勾选\n.NET\n8.0\nSDK\n、\nAndroid\nSDK\n、\nAndroid\n模拟器；设置安装路径，点击安装，等待组件下载与配置完成。\n3.\n**\n环境验证\n**\n：安装完成后重启电脑，启动\nVisual\nStudio\n2022\n，登录微软账号\n（无账号可注册免费社区版账号）；进入\n“\n工具\n￫\n获取工具和功能\n”\n，确认\n.NET\nMAUI\n工作负载已完整安装，无缺失组件。\n5.2\n第二课时：多平台环境配置与验证（\n1\n学时）\n1.\n**\n创建\n.NET\nMAUI\n项目\n**\n：打开\nVisual\nStudio\n2022\n，选择\n“\n创建新项目\n”\n；搜\n索并选择\n“\n.NET\nMAUI\n应用\n”\n模板，点击下一步；配置项目名称为\nHelloMAUI_SmartCampus\n（智慧校园），设置存储路径，框架选择\n.NET\n8.0\n，点\n击创建，等待项目模板生成。\n2.\n**AI\n辅助编码（\nHello\nWorld\n实现）\n**\n：项目生成后，打开\nMainPage.xaml\n界\n面设计文件，使用\nAI\n辅助生成智慧校园主题代码，替换默认界面；打开\nMainPage.xaml.cs\n逻辑文件，添加按钮点击事件代码，实现文字更新交互功能。\n3.\n**\n测试验证阶段\n**\n：选择运行目标（\nWindows\n计算机\n/Android\n模拟器），点击\n顶部启动调试按钮（绿色三角）；等待项目编译，无报错后自动启动应用；验证运\n行结果：界面显示\n“\n智慧校园\n”\n标题、\nHello\nWorld\n文字，点击按钮可更新文字，功能\n正常即完成验证。\n4.\n**\n常见问题排查与解决\n**\n：针对\nAndroid\n模拟器无法启动、编译报错、依赖缺\n失等常见问题，逐一排查并记录解决方案，完善环境配置文档。\n5.3\n环境配置文档整理\n1.\n梳理\nVisual\nStudio\n2022\n及\n.NET\nMAUI\n工作负载的安装步骤，明确每一步的\n操作要点与注意事项。\n2.\n记录实验过程中遇到的常见问题、报错信息及对应的解决方法，便于后续查阅\n与复用。\n3.\n整理项目创建、\nAI\n辅助编码、调试运行的核心步骤，形成完整的环境配置与项\n目验证文档。\n六、实验结果\n6.1\n成功标准验证\n成功标准\n验证结果\n开发工具安装成功\n✅\nVisual\nStudio\n2022\n成功安装并启动，无报错\nMAUI\n环境配置完\n整\n✅\n.NET\nMAUI\n工作负载、\n.NET\n8.0\nSDK\n、\nAndroid\nSDK\n完\n整安装\nMAUI\n项目创建成\n功\n✅\n成功创建\nHelloMAUI_SmartCampus\n项目，模板生成正\n常\n项目运行验证通过\n✅\n项目编译无报错，在模拟器中正常运行，交互功能正常\n环境配置文档完整\n✅\n完成环境配置文档，记录安装步骤与常见问题解决方案\n6.2\n界面特点\n1.\n.NET\nMAUI\nHello\nWorld\n界面\n：遵循\nMAUI\n原生风格，布局简洁合理，突出\n“\n智慧校园\n”\n主题，包含标题、核心文字与交互按钮，控件对齐规范，适配\nWindows\n、\nAndroid\n多平台显示，交互流畅。\n6.3\n环境配置对比（精简版）\n对比项\nWindows\n环境\nAndroid\n模拟器环境\n运行要求\nWindows\n10\n1909+\n，无\n需额外配置\n需开启电脑虚拟化技术，\n安装\nAndroid\n模拟器\n运行速度\n较快，启动无延迟\n相对较慢，首次启动需加\n载模拟器\n调试体验\n便捷，报错信息清晰\n需排查模拟器启动问题，\n调试流程略复杂\n6.4\n环境架构图（文字版）\nplain\ntext\n系统环境\n→\n开发工具\n→\n项目验证\nWindows\n系统\n→\nVisual\nStudio\n2022\n（\nMAUI\n工作负载）\n→\nMAUI\n项目（编\n译\n→\n运行\n→\n调试）\n七、开发环境对比分析\n7.1\n开发环境对比\n环境类型\n核心工具\n优势\n不足\nWindows\n开发环\n境\nVisual\nStudio\n2022\n+\n.NET\n8\n安装便捷、运行流\n畅、调试高效\n仅支持\nWindows\n系统，无法直接调\n试\niOS\nAndroid\n模拟器环\n境\nVisual\nStudio\n内\n置\nAndroid\n模拟器\n可模拟\nAndroid\n设\n备，贴近真实运行\n场景\n启动慢、占用内存\n大，需开启虚拟化\n7.2\n工具特性对比\n工具名称\n核心功能\n使用体验\n适用场景\nVisual\nStudio\n2022\nMAUI\n项目开发、\n功能强大、集成度\n.NET\nMAUI\n跨平\n编译、调试、部署\n高，操作便捷\n台应用开发全流程\nAI\n辅助编码工具\n生成基础代码、优\n化逻辑、排查错误\n高效便捷，降低入\n门难度\n基础页面开发、代\n码快速生成\nNuGet\n包管理器\n还原项目依赖、安\n装第三方库\n操作简单，依赖管\n理高效\n项目依赖缺失、需\n添加第三方功能\n7.3\n生态与支持对比\n工具\n/\n环境\n社区活跃度\n官方支持\n问题解决方案\nVisual\nStudio\n2022\n非常活跃\nMicrosoft\n官方持\n续更新维护\n丰富，官网文档、\n社区教程齐全\n.NET\nMAUI\n活跃\nMicrosoft\n官方支\n持，持续优化\n较多，官方文档、\n社区论坛可查询\nAndroid\n模拟器\n活跃\nGoogle\n+\nMicrosoft\n联合支\n持\n齐全，常见问题均\n有成熟解决方案\n7.4\n适用场景分析\n1.\nWindows\n开发环境\n：适合\n.NET\nMAUI\n入门开发、\nWindows\n平台应用调试，\n适合初学者快速搭建环境、验证项目。\n2.\nAndroid\n模拟器环境\n：适合验证\nMAUI\n应用在\nAndroid\n设备上的运行效果，贴\n近真实用户使用场景。\n3.\nVisual\nStudio\n2022\n：适合\n.NET\n技术栈团队、跨平台应用开发，可满足从项\n目创建到部署的全流程需求。\n八、实验总结\n8.1\n技术收获\n1.\n掌握\n.NET\nMAUI\n开发环境的核心依赖与版本要求，能独立完成\nVisual\nStudio\n2022\n及\nMAUI\n工作负载的安装与配置。\n2.\n熟悉\nVisual\nStudio\n2022\n的基本操作，掌握\nMAUI\n项目的创建、模板生成与基\n础配置方法。\n3.\n学会运用\nAI\n辅助工具生成基础代码，实现简单的页面交互功能，提升开发效\n率。\n4.\n掌握\nMAUI\n项目的编译、调试方法，能在\nWindows\n计算机、\nAndroid\n模拟器\n中验证项目运行效果。\n5.\n了解\nMAUI\n开发环境常见问题的排查思路与解决方法，能独立整理环境配置文\n档。\n6.\n明确\n.NET\nMAUI\n开发环境的优势与不足，为后续原生应用与跨平台应用开发\n奠定基础。\n8.2\n项目结构\nplain\ntext\nHelloMAUI_SmartCampus/\n├─\nMainPage.xaml\n主页面布局（智慧校园主题）\n├─\nMainPage.xaml.cs\n主页面后台逻辑（按钮交互）\n└─\nApp.xaml.cs\n程序入口与基础配置\n8.3\n工具选择建议\n•\n.NET\nMAUI\n开发首选工具：\nVisual\nStudio\n2022\n社区版（免费、功能齐全、官\n方支持完善）。\n•\n基础代码生成：选用\nAI\n辅助编码工具，降低入门难度，提升开发效率。\n•\n依赖管理：使用\nNuGet\n包管理器，快速还原项目依赖、安装第三方库。\n•\n多平台验证：优先使用\nWindows\n计算机调试，再通过\nAndroid\n模拟器验证\nAndroid\n平台兼容性。\n8.4\n后续学习建议\n1.\n深入学习\nVisual\nStudio\n2022\n的高级功能，如调试技巧、代码优化、\nCI/CD\n部\n署等。\n2.\n学习\n.NET\nMAUI\n基础控件、布局方式与数据绑定，逐步掌握复杂页面开发。\n3.\n深入研究\nAndroid\n模拟器的高级配置，解决启动慢、卡顿等问题，提升调试效\n率。\n4.\n学习\n.NET\n8.0\n相关特性，了解\nMAUI\n框架的底层原理与优化方案。\n5.\n尝试开发简单的\nMAUI\n功能模块，结合\nAI\n辅助工具提升代码质量与开发效\n率。\n九、思考与讨论\n9.1\n.NET\nMAUI\n开发环境优缺点\n优点\n：\n•\n集成度高，\nVisual\nStudio\n2022\n一站式完成开发、编译、调试、部署，操作便\n捷。\n•\n环境搭建流程清晰，官方文档完善，常见问题有成熟解决方案。\n•\n支持多平台调试，可在\nWindows\n、\nAndroid\n等平台快速验证项目，适配性强。\n•\n结合\nAI\n辅助工具，降低入门难度，适合初学者快速上手。\n•\n基于\n.NET\n生态，后续可无缝衔接\nMAUI\n高级开发与跨平台项目开发。\n缺点\n：\n•\n对电脑配置要求较高，安装组件较多，占用磁盘空间与内存较大。\n•\nAndroid\n模拟器启动较慢，调试过程中可能出现卡顿，影响开发效率。\n•\nWindows\n环境下无法直接调试\niOS\n平台，需额外配置\nMac\n环境，成本较高。\n•\n部分组件安装过程中可能出现兼容性问题，排查与解决耗时。\n9.2\n开发环境选型思路\n1.\n明确开发需求与目标平台，若需多平台验证，优先选择\nWindows\n11\n系统，确\n保环境兼容性。\n2.\n结合电脑配置选择工具版本，低配电脑可选择\nVisual\nStudio\n2022\n社区版，减\n少资源占用。\n3.\n评估学习成本，初学者优先选择\nVisual\nStudio\n2022\n+\nAI\n辅助工具，降低入门\n难度。\n4.\n考虑后续开发需求，若需开发\niOS\n平台应用，提前规划\nMac\n环境配置。\n5.\n优先选择官方推荐的版本（如\n.NET\n8.0\nSDK\n），确保环境稳定性与兼容性。\n9.3\n移动应用开发环境发展趋势\n1.\n开发工具集成度持续提升，\nVisual\nStudio\n等工具不断优化，实现\n“\n一站式\n”\n开发\n体验，降低环境搭建与操作难度。\n2.\nAI\n辅助开发深度融合，不仅能生成基础代码，还能辅助排查环境问题、优化配\n置，提升开发效率。\n3.\n跨平台开发环境日趋成熟，\nMAUI\n等框架的环境配置不断简化，多平台调试体\n验持续优化。\n4.\n模拟器技术不断升级，启动速度、运行流畅度提升，逐步贴近真实设备运行效\n果。\n5.\n环境兼容性持续改善，不同系统、不同版本的工具适配更加完善，减少兼容性\n问题。\n---\n实验完成日期：\n2026\n年\n4\n月\n20\n日\n实验者：李世程\n学号：\n2020211596\n",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2020211596/2020211596李世程实验一 开发环境搭建.pdf",
+      "file_names": "2020211596李世程实验一 开发环境搭建.pdf",
+      "submit_time": "2026-06-01T08:54:20.153927",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-04-30T08:08:17.126563",
+      "updated_at": "2026-06-01T08:54:20.153927",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
+    {
       "task_id": 3,
       "user_id": "2020211596",
       "content": "PDF实验报告：2020211596李世程实验三 跨平台应用开发.pdf",
@@ -78,24 +96,6 @@
       "scored_at": null,
       "created_at": "2026-04-30T08:10:18.389791",
       "updated_at": "2026-06-01T08:42:48.880244",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 1,
-      "user_id": "2020211596",
-      "content": "PDF实验报告：2020211596李世程实验一 开发环境搭建.pdf",
-      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2020211596/2020211596李世程实验一 开发环境搭建.pdf",
-      "file_names": "2020211596李世程实验一 开发环境搭建.pdf",
-      "submit_time": "2026-06-01T08:42:40.350191",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-04-30T08:08:17.126563",
-      "updated_at": "2026-06-01T08:42:40.350191",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
