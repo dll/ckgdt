@@ -56,29 +56,51 @@ gem sources --add https://gems.ruby-china.com/ --remove https://rubygems.org/
 flutter run -d <device-id>
 ```
 
-### 发布构建（IPA）
+### 无签名验证编译（当前 CI 方式）
+```bash
+flutter build ipa --release --no-codesign
+```
+产物仅验证编译通过，不可装真机。
+
+### 签名构建（需 Apple 证书）
+
+方式一（`--export-method`，**推荐**，无需额外文件）：
+```bash
+flutter build ipa --release --export-method=development   # 开发包
+flutter build ipa --release --export-method=ad-hoc         # 内测分发
+flutter build ipa --release --export-method=app-store      # 上架 App Store
+```
+
+方式二（`ExportOptions.plist`，需自建文件）：
 ```bash
 flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
 ```
 
-**产物**：`build/ios/ipa/移动图谱与数字孪生.ipa`
+**产物**：`build/ios/ipa/Runner.ipa`
 
-`ExportOptions.plist` 关键字段：
+> **注意**：`ios/ExportOptions.plist` **不存在**于仓库中（已 gitignore，含 teamID 不该 commit）。
+> 签名前需手动创建该文件，内容如下：
+
 ```xml
-<key>method</key>
-<string>app-store</string>  <!-- 或 ad-hoc / development / enterprise -->
-<key>teamID</key>
-<string>XXXXXXXXXX</string>  <!-- 10 位 Team ID -->
-<key>signingStyle</key>
-<string>automatic</string>
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>method</key>
+    <string>app-store</string>  <!-- 或 ad-hoc / development / enterprise -->
+    <key>teamID</key>
+    <string>XXXXXXXXXX</string>  <!-- 10 位 Team ID -->
+</dict>
+</plist>
 ```
 
-## 升版同步（v0.13 → v0.14）
+## 升版同步
 
 | 文件 | 字段 |
 |------|------|
-| `ios/Runner/Info.plist` | `CFBundleShortVersionString` "0.14.0" + `CFBundleVersion` "14"（build number 必须递增）|
-| `ios/Runner/Info.plist` | `CFBundleDisplayName` "移动图谱与数字孪生v0.14.0"（任务管理器显示）|
+| `ios/Runner/Info.plist` | `CFBundleShortVersionString` 与 `pubspec.yaml` 的 `version` 主版本号（如 `1.16.2`）对齐 |
+| `ios/Runner/Info.plist` | `CFBundleVersion` = build number，每次上传递增 |
+| `ios/Runner/Info.plist` | `CFBundleDisplayName` "移动图谱与数字孪生"（窗口标题由 `BuildInfo.appBrand` 控制） |
 
 **不要改**：
 - `CFBundleIdentifier`（一旦提交 App Store 不可变；本项目 = `cn.edu.chzu.madkg`，以 `ios/Runner.xcodeproj` 的 `PRODUCT_BUNDLE_IDENTIFIER` 为准）
