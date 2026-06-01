@@ -21,7 +21,7 @@ foreach ($f in $files) {
     $c = Get-Content $f.FullName -Raw -Encoding UTF8
     $orig = $c
     # Color.withValues({alpha: x}) → Color.withOpacity(x)
-    $c = $c -replace '\.withValues\(alpha:\s*([^)]+)\)', '.withOpacity($1)'
+    $c = $c -replace '\.withValues\(\s*alpha:\s*([^)]+)\)', '.withOpacity($1)'
     # Theme classes 去 Data 后缀
     $c = $c -replace 'CardThemeData\(', 'CardTheme('
     $c = $c -replace 'DialogThemeData\(', 'DialogTheme('
@@ -30,6 +30,11 @@ foreach ($f in $files) {
     $c = $c -replace 'onPopInvokedWithResult:', 'onPopInvoked:'
     # DropdownButtonFormField.initialValue → value
     $c = $c -replace 'DropdownButtonFormField<([^>]+)>\(\s*initialValue:', 'DropdownButtonFormField<$1>(value:'
+    # activeThumbColor on SwitchListTile (Flutter 3.27+) → remove
+    $c = $c -replace '\s*activeThumbColor:\s*[^,]+,\s*', ' '
+    $c = $c -replace '\s*activeThumbColor:\s*[^\n;]+', ''
+    # Color.toARGB32() (Flutter 3.27+) → Color.value
+    $c = $c -replace '\.toARGB32\(\)', '.value'
     if ($c -ne $orig) {
         Set-Content -Path $f.FullName -Value $c -Encoding UTF8 -NoNewline
         $count++
