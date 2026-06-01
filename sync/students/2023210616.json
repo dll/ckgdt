@@ -3,8 +3,8 @@
   "user_id": "2023210616",
   "user_name": "彭绍洋",
   "role": "student",
-  "synced_at": "2026-06-01T08:09:31.816427",
-  "last_active": "2026-06-01T08:09:31.816456",
+  "synced_at": "2026-06-01T08:10:12.142101",
+  "last_active": "2026-06-01T08:10:12.142120",
   "quiz_results": [
     {
       "user_id": "2023210616",
@@ -33,6 +33,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 1,
+      "user_id": "2023210616",
+      "content": "PDF实验报告：2023210616彭绍洋实验一 开发环境搭建.pdf\n\n--- 报告正文（自动提取）---\n实验一：鸿蒙应用开发环境搭建\n实验基本信息\n-\n实验名称\n：开发环境搭建\n-\n实验类型\n：验证型\n-\n实验学时\n：\n2\n学时\n-\n实验日期\n：\n2026\n年\n3\n月\n13\n日\n-\n学生姓名\n：彭绍洋\n-\n学号\n：\n2023210616\n-\n实验主题\n：智慧校园\n-\n负责平台\n：鸿蒙应用开发\n一、实验目的\n1.\n掌握鸿蒙应用开发环境的搭建方法\n2.\n熟悉\nDevEco\nStudio\n的使用\n3.\n实现智慧校园登录功能\n4.\n验证开发环境的可用性\n5.\n学习应用部署和测试流程\n二、实验环境\n2.1\n系统环境\n-\n操作系统\n：\nWindows\n11\n家庭中文版\n64\n位\n-\n内存\n：\n14GB\n-\n硬盘\n：\n100GB\n以上\n-\n分辨率\n：\n1280\n800\n以上\n2.2\n开发工具\n-\nDevEco\nStudio\n：\n5.0+\n-\nHarmonyOS\nSDK\n：\n5.0+\n-\nNode.js\n：内置\n-\n*OHPM**\n：内置\n三、实验步骤\n3.1\n环境搭建\n1.\n下载\nDevEco\nStudio\n-\n访问华为开发者联盟官网\n-\n登录华为账号\n-\n下载\nWindows\n版本的\nDevEco\nStudio\n5.0+\n2.\n安装\nDevEco\nStudio\n-\n运行安装程序\n-\n选择安装路径\n-\n勾选必要组件\n-\n完成安装\n3.\n配置开发环境\n-\n首次启动\nDevEco\nStudio\n-\n配置\nHarmonyOS\nSDK\n-\n安装必要的工具和依赖\n3.2\n项目创建\n1.\n创建\nEmpty\nAbility\n项目\n-\n打开\nDevEco\nStudio\n-\n点击\n\"Create\nProject\"\n-\n选择\n\"Empty\nAbility\"\n-\n配置项目信息\n2.\n实现登录功能\n-\n创建登录页面（\nLoginPage.ets\n）\n-\n实现\nUI\n界面\n-\n添加登录逻辑\n-\n实现错误提示\n3.3\n测试验证\n1.\n环境验证\n-\n构建项目：成功构建\nHAP\n包\n-\n代码验证：登录功能代码完整\n-\n环境配置：\nDevEco\nStudio\n配置正确\n2.\n测试说明\n-\n项目构建成功，证明开发环境配置正确\n-\n代码实现完整，包含登录验证逻辑\n-\n成功运行\nHarmonyOS\n模拟器并测试登录功能\n四、项目实现\n4.1\n项目结构\n```\nharmonyos_login_app/\n├──\nsrc/\n│\n└──\nmain/\n│\n└──\nets/\n│\n├──\nentry/\n│\n│\n├──\npages/\n│\n│\n│\n└──\nLoginPage.ets\n│\n│\n└──\nentryability/\n│\n│\n└──\nEntryAbility.ts\n│\n└──\ncommon/\n│\n└──\ncomponents/\n├──\nresources/\n└──\nconfig.json\n```\n4.2\n核心代码\nLoginPage.ets\n```typescript\n@Entry\n@Component\nstruct\nLoginPage\n{\n@State\naccount:\nstring\n=\n'';\n@State\npassword:\nstring\n=\n'';\n@State\nerrorMessage:\nstring\n=\n'';\n@State\nisLoading:\nboolean\n=\nfalse;\nbuild()\n{\nColumn({\nspace:\n20\n})\n{\n//\n标题\nText('\n智慧校园登录\n')\n.fontSize(32)\n.fontWeight(FontWeight.Bold)\n.margin({\ntop:\n100\n})\n//\n错误提示\nif\n(this.errorMessage)\n{\nText(this.errorMessage)\n.fontSize(14)\n.fontColor(Color.Red)\n.margin({\ntop:\n10\n})\n}\n//\n账号输入\nTextInput({\nplaceholder:\n'\n请输入学号\n/\n工号\n',\ntext:\nthis.account\n})\n.width('80%')\n.height(50)\n.backgroundColor('#f5f5f5')\n.borderRadius(8)\n.padding({\nleft:\n15,\nright:\n15\n})\n.onChange((value:\nstring)\n=>\n{\nthis.account\n=\nvalue;\n})\n//\n密码输入\nTextInput({\nplaceholder:\n'\n请输入密码\n',\ntext:\nthis.password,\ntype:\nInputType.Password\n})\n.width('80%')\n.height(50)\n.backgroundColor('#f5f5f5')\n.borderRadius(8)\n.padding({\nleft:\n15,\nright:\n15\n})\n.onChange((value:\nstring)\n=>\n{\nthis.password\n=\nvalue;\n})\n//\n登录按钮\nButton('\n登录\n',\n{\ntype:\nButtonType.Capsule,\nstateEffect:\ntrue\n})\n.width('80%')\n.height(50)\n.fontSize(18)\n.fontWeight(FontWeight.Medium)\n.backgroundColor('#007AFF')\n.onClick(()\n=>\n{\nthis.login();\n})\n.enabled(!this.isLoading)\n//\n加载状态\nif\n(this.isLoading)\n{\nLoadingProgress()\n.width(40)\n.height(40)\n.margin({\ntop:\n20\n})\n}\n//\n底部信息\nText('\n©\n2026\n智慧校园系统\n')\n.fontSize(12)\n.fontColor('#999999')\n.margin({\ntop:\n100\n})\n}\n.width('100%')\n.height('100%')\n.backgroundColor('#ffffff')\n.alignItems(HorizontalAlign.Center)\n}\nlogin()\n{\nif\n(!this.account)\n{\nthis.errorMessage\n=\n'\n请输入账号\n';\nreturn;\n}\nif\n(!this.password)\n{\nthis.errorMessage\n=\n'\n请输入密码\n';\nreturn;\n}\nthis.errorMessage\n=\n'';\nthis.isLoading\n=\ntrue;\n//\n模拟登录请求\nsetTimeout(()\n=>\n{\nthis.isLoading\n=\nfalse;\n//\n简单的登录验证\nif\n(this.account\n===\n'admin'\n&&\nthis.password\n===\n'123456')\n{\n//\n登录成功，跳转到主页面\nconsole.log('\n登录成功\n');\nthis.errorMessage\n=\n'\n登录成功！\n';\n}\nelse\n{\nthis.errorMessage\n=\n'\n账号或密码错误\n';\n}\n},\n1500);\n}\n}\n```\n4.3\n配置文件\nconfig.json\n```json\n{\n\"app\":\n{\n\"bundleName\":\n\"com.example.smartcampus\",\n\"vendor\":\n\"example\",\n\"version\":\n{\n\"code\":\n1000000,\n\"name\":\n\"1.0.0\"\n},\n\"apiVersion\":\n{\n\"compatible\":\n5,\n\"target\":\n5\n}\n},\n\"deviceConfig\":\n{},\n\"module\":\n{\n\"package\":\n\"com.example.smartcampus\",\n\"name\":\n\".MainAbility\",\n\"mainAbility\":\n\"EntryAbility\",\n\"deviceTypes\":\n[\"phone\"],\n\"distro\":\n{\n\"deliveryWithInstall\":\ntrue,\n\"moduleName\":\n\"entry\",\n\"moduleType\":\n\"entry\",\n\"installationFree\":\nfalse\n},\n\"abilities\":\n[\n{\n\"name\":\n\"EntryAbility\",\n\"srcEntry\":\n\"./ets/entry/entryability/EntryAbility.ts\",\n\"description\":\n\"\",\n\"icon\":\n\"$media:icon\",\n\"label\":\n\"\n智慧校园\n\",\n\"visible\":\ntrue,\n\"orientation\":\n\"unspecified\",\n\"launchType\":\n\"standard\"\n}\n]\n}\n}\n```\n五、测试结果\n5.1\n环境验证结果\n|\n测试项\n|\n预期结果\n|\n实际结果\n|\n状态\n|\n|-------|---------|---------|------|\n|\nDevEco\nStudio\n安装\n|\n成功安装\n|\n✓\n|\n通过\n|\n|\nHarmonyOS\nSDK\n配置\n|\n配置正确\n|\n✓\n|\n通过\n|\n|\n项目创建\n|\n成功创建\n|\n✓\n|\n通过\n|\n|\n代码编译\n|\n编译成功\n|\n✓\n|\n通过\n|\n|\nHAP\n包生成\n|\n生成成功\n|\n✓\n|\n通过\n|\n5.2\n功能验证\n|\n功能模块\n|\n实现情况\n|\n状态\n|\n|---------|---------|------|\n|\n登录页面\nUI\n|\n完整实现\n|\n✓\n|\n通过\n|\n|\n账号密码输入\n|\n支持\n|\n✓\n|\n通过\n|\n|\n错误提示功能\n|\n完整实现\n|\n✓\n|\n通过\n|\n|\n登录验证逻辑\n|\n完整实现\n|\n✓\n|\n通过\n|\n|\n加载状态显示\n|\n支持\n|\n✓\n|\n通过\n|\n六、截图记录\n6.1\n环境搭建\n[DevEco\nStudio\n启动界面\n]\n[\n构建成功界面\n]\n6.2\n项目验证\n[\n项目结构\n]\n[HAP\n包生成结果\n]\n6.3\n模拟器\n测试\n模拟器启动成功界面\n登录页面界面\n登录成功提示界面\n错误提示\n界面\n七、问题与解决方案\n7.1\n遇到的问题\n1.\n问题：\nDevEco\nStudio\n安装过程中网络连接失败\n解决方案：检查网络连接，使用稳定的网络环境\n2.\n问题：模拟器启动失败（\nError\nCode:\n00801001\n）\n解决方案：通过开启\nWindows\n11\n家庭版的\nHyper-V\n功能，成功解决模拟器启动问题\n3.\n问题：\nTextInput\n组件密码类型设置错误\n解决方案：调整\nTextInput\n组件的密码类型设置方式，确保代码编译通过\n7.2\n解决效果\n-\n环境搭建成功：\nDevEco\nStudio\n安装配置完成\n-\n项目构建成功：\nHAP\n包生成成功\n-\n代码实现完整：登录功能代码编译通过\n-\n环境验证完成：证明开发环境配置正确\n八、实验总结\n8.1\n完成情况\n-\n✅\n成功搭建鸿蒙应用开发环境\n-\n✅\n成功创建智慧校园登录应用\n-\n✅\n成功实现登录功能\n-\n✅\n成功构建项目并生成\nHAP\n包\n-\n✅\n成功运行\nHarmonyOS\n模拟器并测试\n-\n✅\n完成实验报告\n8.2\n收获与体会\n1.\n技术收获：\n-\n掌握了\nDevEco\nStudio\n的安装和配置\n-\n熟悉了\nHarmonyOS\n应用开发流程\n-\n学习了\nArkTS\n语言和\nUI\n组件的使用\n2.\n实践体会：\n-\n环境搭建是开发的基础，需要仔细配置\n-\n测试是确保应用质量的关键环节\n-\n团队协作和文档编写的重要性\n3.\n改进方向\n：\n-\n进一步优化登录界面的用户体验\n-\n添加更多功能模块，如注册、忘记密码等\n-\n学习\nHarmonyOS\n的高级特性\n九、附件\n-\n[\n]\n项目代码\n-\n[\n]\n测试截图\n-\n[\n]\n环境配置文档\n---\n实验完成时间\n：\n2026\n年\n3\n月\n13\n日\n实验地点\n：软件应用开发实验室\n指导教师\n：\n刘东良\n",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2023210616/2023210616彭绍洋实验一 开发环境搭建.pdf",
+      "file_names": "2023210616彭绍洋实验一 开发环境搭建.pdf",
+      "submit_time": "2026-06-01T08:10:12.112119",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-04-27T09:54:30.274014",
+      "updated_at": "2026-06-01T08:10:12.112119",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 6,
       "user_id": "2023210616",
@@ -119,24 +137,6 @@
       "scored_at": null,
       "created_at": "2026-04-27T09:55:13.050837",
       "updated_at": "2026-04-27T09:55:13.050837",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 1,
-      "user_id": "2023210616",
-      "content": "PDF实验报告：2023210616彭绍洋实验一 开发环境搭建.pdf",
-      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2023210616/2023210616彭绍洋实验一 开发环境搭建.pdf",
-      "file_names": "2023210616彭绍洋实验一 开发环境搭建.pdf",
-      "submit_time": "2026-04-27T09:54:30.274014",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-04-27T09:54:30.274014",
-      "updated_at": "2026-04-27T09:54:30.274014",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
