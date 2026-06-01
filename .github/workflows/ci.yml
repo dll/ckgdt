@@ -168,10 +168,13 @@ jobs:
       - name: Build unsigned IPA
         run: flutter build ipa --release --no-codesign
 
-      - name: Rename IPA with version
+      - name: Package IPA from archive
         run: |
+          mkdir -p build/ios/ipa
+          cp -R "build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app" "build/ios/ipa/Payload"
+          cd build/ios/ipa && zip -r -q "Runner.ipa" "Payload" && rm -rf "Payload"
           VERSION=$(grep 'version:' pubspec.yaml | head -1 | awk '{print $2}' | cut -d'+' -f1)
-          cp build/ios/ipa/Runner.ipa "build/ios/ipa/MAD-KG-v${VERSION}-unsigned.ipa"
+          cp "Runner.ipa" "MAD-KG-v${VERSION}-unsigned.ipa"
 
       - uses: actions/upload-artifact@v4
         with:
