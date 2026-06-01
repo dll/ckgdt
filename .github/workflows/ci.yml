@@ -46,7 +46,9 @@ jobs:
         # 清理后请同步下调天花板文件，棘轮单向收紧。
         run: |
           ceiling=$(tr -d '[:space:]' < tool/catch_underscore_ceiling.txt)
-          actual=$(grep -rn 'catch (_)' lib --include='*.dart' | wc -l | tr -d '[:space:]')
+          # { grep || true; } 同 withOpacity 门禁：防 catch(_) 清到 0 时 grep 退出 1
+          # 在 pipefail+set -e 下让赋值 abort，导致干净树假失败。
+          actual=$( { grep -rn 'catch (_)' lib --include='*.dart' || true; } | wc -l | tr -d '[:space:]')
           echo "catch(_) 实际=$actual 上限=$ceiling"
           if [ "$actual" -gt "$ceiling" ]; then
             echo "::error::catch(_) 数量 $actual 超过上限 $ceiling。请用 swallow/swallowDebug 替代新引入的 catch(_)。"
@@ -62,7 +64,10 @@ jobs:
         # 项目规范要求一律用 .withValues(alpha:)。此门禁锁死 lib/ 内 .withOpacity( = 0，
         # 防鸿蒙补丁态误提交重演（与本地 pre-commit guard 互为第二道网）。
         run: |
-          actual=$(grep -rho '\.withOpacity(' lib --include='*.dart' | wc -l | tr -d '[:space:]')
+          # grep 无匹配时退出码 1；GitHub Actions 默认 shell 带 pipefail+set -e，
+          # 会让 actual=$(...) 赋值在 echo 前就 abort。本门禁期望 0 匹配（成功态），
+          # 必须用 { grep || true; } 吞掉 grep 的"无匹配=1"，否则干净树反而假失败、阻塞合并。
+          actual=$( { grep -rho '\.withOpacity(' lib --include='*.dart' || true; } | wc -l | tr -d '[:space:]')
           echo ".withOpacity( 在 lib/ 出现 $actual 处（应为 0）"
           if [ "$actual" -gt 0 ]; then
             echo "::error::lib/ 内出现 $actual 处 .withOpacity( —— 应为 .withValues(alpha:)。疑似鸿蒙构建补丁态（ohos_patch.ps1）误提交，请跑 ohos_restore.ps1 还原。"
