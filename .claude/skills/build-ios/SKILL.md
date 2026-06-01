@@ -12,7 +12,7 @@ iOS 构建**不能在 Windows / Linux 上做**。原因：
 - 需要 codesign（仅 macOS / 限制版有 wineprefix 但极不稳）
 - 需要 Apple Developer 账号 + 钥匙串
 
-**当前项目状态**：本仓库目前**没有 iOS 构建产物**（`ios/Runner.xcodeproj` 等基础文件存在但未维护过签名）。
+**当前项目状态**：`ios/Runner.xcodeproj` 等基础文件存在；`.github/workflows/ci.yml` 有 `build-ios` job 跑**无签名**编译验证（`--no-codesign`，commit `f30070a73` 加入，绿灯运行待 GitHub Actions 核实）。**尚未配置过签名**——无证书/Profile，无法产出可装真机的 IPA。
 
 ## 前置准备（一次性 setup）
 
@@ -32,7 +32,7 @@ iOS 构建**不能在 Windows / Linux 上做**。原因：
 
 **手动方式**（需要 admin team 角色）：
 1. https://developer.apple.com/account → Certificates → 新建 iOS Distribution
-2. Identifiers → 创建 App ID `cn.edu.chzu.madkgdt`
+2. Identifiers → 创建 App ID `cn.edu.chzu.madkg`
 3. Profiles → 创建 Provisioning Profile（Distribution / App Store / Ad Hoc）
 4. 下载 .mobileprovision 双击导入 Xcode
 
@@ -81,7 +81,7 @@ flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
 | `ios/Runner/Info.plist` | `CFBundleDisplayName` "移动图谱与数字孪生v0.14.0"（任务管理器显示）|
 
 **不要改**：
-- `CFBundleIdentifier`（一旦提交 App Store 不可变；本项目 = `cn.edu.chzu.madkgdt`）
+- `CFBundleIdentifier`（一旦提交 App Store 不可变；本项目 = `cn.edu.chzu.madkg`，以 `ios/Runner.xcodeproj` 的 `PRODUCT_BUNDLE_IDENTIFIER` 为准）
 
 ## 上传 TestFlight
 
@@ -103,7 +103,7 @@ xcrun altool --upload-app --type ios \
 ## ⚠ 已知坑（基于行业经验）
 
 ### 坑 1：Provisioning Profile 不匹配
-**现象**：`No profiles for 'cn.edu.chzu.madkgdt' were found`
+**现象**：`No profiles for 'cn.edu.chzu.madkg' were found`
 **修复**：
 - 删 `~/Library/MobileDevice/Provisioning Profiles/*` 让 Xcode 重下
 - 或在 developer.apple.com 重新生成 profile，确保 App ID 完全匹配
@@ -120,7 +120,7 @@ pod install --verbose --no-repo-update  # 跳过 repo 更新
 **修复**：Build Settings → Enable Bitcode → No
 
 ### 坑 4：minimum iOS version
-**当前**：`Podfile` 第一行 `platform :ios, '12.0'` —— iOS 12+
+**当前**：`Podfile` 第一行 `platform :ios, '13.0'` —— iOS 13+（pbxproj `IPHONEOS_DEPLOYMENT_TARGET` 也是 13.0）
 **注意**：升 iOS 13/14 会让一部分老设备装不上
 
 ### 坑 5：图标缺失
