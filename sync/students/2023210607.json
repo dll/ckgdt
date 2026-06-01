@@ -3,8 +3,8 @@
   "user_id": "2023210607",
   "user_name": "刘海静",
   "role": "student",
-  "synced_at": "2026-06-01T09:26:32.935517",
-  "last_active": "2026-06-01T09:26:32.935517",
+  "synced_at": "2026-06-01T09:27:55.365862",
+  "last_active": "2026-06-01T09:27:55.365862",
   "quiz_results": [
     {
       "user_id": "2023210607",
@@ -36,6 +36,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 3,
+      "user_id": "2023210607",
+      "content": "PDF实验报告：2023210607刘海静实验三 跨平台应用开发.pdf\n\n--- 报告正文（自动提取）---\n实验三：跨平台应用开发\n一、项目基本信息\n•\n项目名称\n：\nEHLAS\n-\n适老居家生活辅助系统\n•\n实验日期\n：\n2026-04-10\n•\n学时分配\n：\n4\n学时\n•\n技术栈方向\n：\nUni-app\n+\nMAUI\n•\n主要任务\n：实现健康资讯列表模块（跨平台数据请求\n+\n下拉刷新\n+\n适老\n化设计）。\n二、实验目标\n1.\n掌握跨平台框架（\nUni-app\n和\nMAUI\n）的开发流程与项目结构。\n2.\n实现网络数据请求功能（\nuni.request\n和\nHttpClient\n）。\n3.\n完成数据解析与处理功能（\nJSON\n解析）。\n4.\n实现下拉刷新功能。\n5.\n深度应用\nAI\n辅助工具（如\nTrae\n）解决开发中的关键问题。\n三、开发环境与工具\n3.1\nUni-app\n开发环境\n•\n操作系统\n：\nWindows\n11\n•\n核心开发工具\n：\nHBuilderX\n•\n辅助开发工具\n：\nTrae\n(AI\n代码助手\n)\n•\n关键技术参数\n：\nVue\n3.4.21,\nPinia\n2.1.7,\nUni-app\n3.0.0,\nVite\n5.2.8\n3.2\nMAUI\n开发环境\n•\n操作系统\n：\nWindows\n11\n•\n核心开发工具\n：\nVisual\nStudio\n2026\n•\n辅助开发工具\n：\nTrae\n(AI\n代码助手\n)\n•\n关键技术参数\n：\n.NET\n10.0,\nMAUI\n10.0,\nC#\n12.0,\nXAML\n四、功能需求与设计\n4.1\n核心功能需求\n•\n网络数据请求\n：使用\nuni.request\n（\nUni-app\n）和\nHttpClient\n（\nMAUI\n）\n从服务器获取新闻数据。\n•\n数据解析\n：解析服务器返回的\nJSON\n数据，提取新闻列表。\n•\n下拉刷新\n：用户下拉页面时触发数据刷新，更新列表内容。\n•\n适老化设计\n：大字体、高对比度、简洁交互。\n4.2\nUI\n界面设计\n4.2.1\nUni-app\n界面设计\n•\n设计思路\n：采用\nFlexbox\n弹性布局，结合适老化设计原则。\n•\n适老化设计\n：\n•\n字体大小：标题\n44rpx\n、正文\n30-36rpx\n、提示\n26-28rpx\n•\n触摸区域：列表项高度自适应，按钮高度\n80-90rpx\n•\n颜色对比：主色调\n#2E7D32\n（深绿）、背景色\n#f5f7fa\n（浅灰）\n4.2.2\nMAUI\n界面设计\n•\n设计思路\n：采用卡片式布局，结合适老化设计原则。\n•\n适老化设计\n：\n•\n字体大小：标题\n24px\n、摘要\n16px\n、日期\n14px\n•\n触摸区域：按钮高度\n50px\n，卡片间距\n10px\n•\n颜色对比：主色调\n#7C3AED\n（紫色）、背景色\n#FFFFFF\n（白色）\n4.3\n系统架构设计\n4.3.1\nUni-app\n系统架构\n•\n框架图\n：\n•\n类图\n：\n•\n顺序图\n：\n4.3.2\nMAUI\n系统架构\n•\n框架图\n：\n•\n类图\n：\n•\n顺序图\n：\n五、开发实现过程\n5.1\nUni-app\n实现\n5.1.1\nUI\n布局实现\n•\n技术方案\n：使用\nVue\n3\n单文件组件（\n.vue\n）编写界面，采用\nFlexbox\n弹\n性布局实现响应式设计。\n•\n遇到的布局难题及解决\n：\n•\n问题：状态栏高度在不同设备上不一致\n•\n解决：使用\nuni.getSystemInfoSync()\n动态获取状态栏高度并设置样式\n5.1.2\n业务逻辑实现\n1.\nRESTful\nAPI\n数据请求\n：\n•\n使用\nuni.request\nAPI\n发起网络请求\n•\nPromise\n封装，支持\nasync/await\n语法\n•\n统一错误处理，返回友好的错误提示\n2.\nJSON\n数据解析\n：\n•\n创建\nNewsItem\n和\nNewsResponse\n数据模型类\n•\n实现\nfromJson\n静态方法进行\nJSON\n数据解析\n•\n在\nfromJson\n方法中添加默认值处理，确保数据完整性\n3.\n下拉刷新功能\n：\n•\n使用\nscroll-view\n组件，设置\nrefresher-enabled\n属性启用下拉刷新\n•\n监听\nrefresherrefresh\n事件，触发数据刷新\n•\n添加\n500ms\n延迟确保刷新动画完整显示\n5.2\nMAUI\n实现\n5.2.1\nUI\n布局实现\n•\n技术方案\n：使用\nXAML\n编写界面，采用\nStackLayout\n和\nCollectionView\n实现响应式设计。\n•\n遇到的布局难题及解决\n：\n•\n问题：\nXAML\n解析错误，颜色值无效\n•\n解决：使用固定颜色值替代\nAppThemeBinding\n，确保\nXAML\n正确解析\n5.2.2\n业务逻辑实现\n1.\n数据绑定\n：\n•\n使用\nMVVM\n架构，实现\nNewsViewModel\n•\nObservableCollection\n存储新闻数据\n•\nINotifyPropertyChanged\n实现属性变更通知\n2.\n下拉刷新功能\n：\n•\n使用\nRefreshView\n组件实现下拉刷新\n•\n绑定\nRefreshCommand\n命令处理刷新逻辑\n•\n集成\nHttpClient\n网络请求，实现真实数据加载\n3.\nHttpClient\n网络请求\n：\n•\n使用\nHttpClient\n从\nRESTful\nAPI\n获取新闻数据\n•\n实现异步请求处理，确保\nUI\n界面流畅\n•\n添加错误处理和异常捕获，提高应用稳定性\n•\n实现数据缓存机制，减少重复网络请求\n5.3\nAI\n辅助开发（\nTrae\n应用记录）\n5.3.1\nUni-app\nAI\n辅助\n•\nPrompt\n示例\n：\n•\n“\nUni-app\n新闻列表页面，使用\nVue\n3\nComposition\nAPI\n，\nPinia\n状态管\n理，支持下拉刷新功能，适老化设计\n”\n•\n“\n实现\nJSON\n数据解析，创建\nNewsItem\n和\nNewsResponse\n数据模型\n类，提供\nfromJson\n方法\n”\n•\n“\n封装\nuni.request\n网络请求，支持\nPromise\n，统一错误处理，支持\nMock\n数据模式\n”\n•\nAI\n解决的难点\n：\n•\n自动生成\nNewsItem.fromJson()\n和\nNewsResponse.fromJson()\n方法，\n实现数据验证和默认值处理\n•\n提供\nscroll-view\n组件的完整配置方案，解决刷新动画与数据加载的时序\n问题\n•\n推荐使用\nPinia\nComposition\nAPI\n风格，自动生成完整的\nStore\n结构\n5.3.2\nMAUI\nAI\n辅助\n•\nPrompt\n示例\n：\n•\n“\nMAUI\n新闻资讯列表页面，使用\nMVVM\n架构，支持下拉刷新功能，适\n老化设计\n”\n•\n“\n实现\nNewsItem\n数据模型，包含标题、摘要和日期属性\n”\n•\n“\n修复\nXAML\n解析错误，确保页面正确显示\n”\n•\n“\nC#\nMAUI\n新闻列表，\nHttpClient\n，\nMVVM\n，实现网络请求获取新闻数\n据\n”\n•\nAI\n解决的难点\n：\n•\n自动生成完整的\nMVVM\n架构代码，包括\nNewsViewModel\n和\nNewsItem\n类\n•\n提供适老化设计的\nXAML\n布局方案，确保界面清晰易读\n•\n修复\nXAML\n解析错误，确保页面能够正确加载和显示\n•\n实现\nHttpClient\n网络请求的完整代码，包括异步处理和错误捕获\n六、实验结果与自测\n6.1\n运行截图展示\n6.1.1\nUni-app\n运行效果\n•\n资讯列表页面\n：\n•\n下拉刷新效果\n：\n•\n资讯详情页面\n：\n6.1.2\nMAUI\n运行效果\n•\n新闻资讯页面\n：\n•\n下拉刷新效果\n：\n•\n新闻详情页面\n：\n6.2\n功能达标清单\n功能点\nUni-app\n状态\nMAUI\n状\n态\n备注\n网络数据\n请求\n✅\n✅\nUni-app\n使用\nuni.request\n，\nMAUI\n使用\nHttpClient\n数据解析\n✅\n✅\n均实现\nJSON\n数据解析\n下拉刷新\n功能\n✅\n✅\nUni-app\n使用\nscroll-view\n，\nMAUI\n使用\nRefreshView\n适老化设\n计\n✅\n✅\n均实现大字体、高对比度设计\n七、问题排查与解决总结\n7.1\nUni-app\n问题\n序\n号\n遇到的问题\n原因分析\n解决方案\n1\n状态栏高度适\n配问题\n不同设备状态栏\n高度不同\n使用\nuni.getSystemInfoSync()\n动态\n获取高度\n2\n下拉刷新动画\n不流畅\n数据加载过快导\n致动画未完成\n添加\n500ms\n延迟确保动画完整显示\n3\nJSON\n解析错\n误\n后端返回数据格\n式不一致\n在\nfromJson\n方法中添加默认值处理\n7.2\nMAUI\n问题\n序\n号\n遇到的问\n题\n原因分析\n解决方案\n1\nXAML\n解\n析错误\n颜色值无效或\nAppThemeBinding\n语法错\n误\n使用固定颜色值替代\nAppThemeBinding\n2\n新闻内容\n不显示\n数据绑定路径错误或数据未\n初始化\n确保数据正确初始化并绑定到\nCollectionView\n3\n导航栏标\n题显示错\n误\nAppShell.xaml\n中的标题未\n更新\n修改\nAppShell.xaml\n中的导航\n栏标题\n4\n网络请求\n失败\n网络连接问题或\nAPI\n地址错\n误\n添加网络状态检查和错误处\n理，提供友好的错误提示\n5\n数据解析\n错误\nAPI\n返回数据格式与预期不\n符\n添加数据验证和默认值处理，\n确保应用稳定性\n八、实验体会与总结\n8.1\n技术感悟\n8.1.1\nUni-app\n技术感悟\n•\nUni-app\n基于\nVue\n3\n，语法熟悉，上手快；组件化开发模式，代码复用性\n高\n•\nuni.request\n封装简单，支持\nPromise\n，\nMock\n数据模式便于前端独立开\n发调试\n•\nPinia\n状态管理简洁高效，\nComposition\nAPI\n风格符合\nVue\n3\n特性\n8.1.2\nMAUI\n技术感悟\n•\nMAUI\n基于\n.NET\n，使用\nC#\n和\nXAML\n，语法熟悉，上手快\n•\nMVVM\n架构使代码结构清晰，数据与界面分离，便于维护\n•\nCollectionView\n组件功能强大，支持多种布局方式和数据绑定\n•\nHttpClient\n网络请求使用简单，支持异步操作，适合移动应用开发\n•\n合理的错误处理和异常捕获是保证应用稳定性的关键\n8.2\nAI\n协作心得\n•\n清晰描述需求是获得高质量代码的关键，需要明确技术栈和框架版本\n•\nAI\n能够快速生成符合规范的代码框架，大幅提升开发效率\n•\n需要对\nAI\n生成的代码进行审查和测试，确保功能正确\n8.3\n跨平台开发对比\n特性\nUni-app\nMAUI\n技术栈\nVue\n3\n+\nJavaScript/TypeScript\n.NET\n+\nC#\n+\nXAML\n开发工\n具\nHBuilderX\nVisual\nStudio\n网络请\n求\nuni.request\nHttpClient\n状态管\n理\nPinia\nMVVM\n+\nObservableCollection\n下拉刷\n新\nscroll-view\n组件\nRefreshView\n组件\n优势\n多端发布能力强，生态成熟\n原生性能，\n.NET\n生态支持\n8.4\n后续计划\n•\n实现新闻详情页面，点击新闻进入详情查看\n•\n添加新闻分类功能，支持不同类型的健康资讯\n•\n实现新闻收藏功能，保存重要的健康资讯\n•\n接入真实的\nRESTful\nAPI\n，获取实时新闻数据\n•\n列表虚拟滚动（长列表优化），图片懒加载，数据缓存策略\n•\n骨架屏加载效果，更丰富的动画效果，无障碍访问支持\n九、组员报告完成状态表\n序号\n姓名\n负责方向\n完成状态\n报告提交日期\n1\n刘海静\nUni-app\n列表开发\n✅\n已完成\n2026-04-02\n2\n刘海静\nMAUI\n新闻资讯列表开发\n✅\n已完成\n2026-04-10\n",
+      "file_paths": "D:\\移动应用开发\\2023210607刘海静实验三 跨平台应用开发.pdf",
+      "file_names": "2023210607刘海静实验三 跨平台应用开发.pdf",
+      "submit_time": "2026-06-01T09:27:55.335124",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-04-24T13:05:48.638940",
+      "updated_at": "2026-06-01T09:27:55.335124",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 2,
       "user_id": "2023210607",
@@ -122,24 +140,6 @@
       "scored_at": null,
       "created_at": "2026-04-24T13:06:02.928611",
       "updated_at": "2026-04-24T13:06:02.928611",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 3,
-      "user_id": "2023210607",
-      "content": "PDF实验报告：2023210607刘海静实验三 跨平台应用开发.pdf",
-      "file_paths": "D:\\移动应用开发\\2023210607刘海静实验三 跨平台应用开发.pdf",
-      "file_names": "2023210607刘海静实验三 跨平台应用开发.pdf",
-      "submit_time": "2026-04-24T13:05:48.638940",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-04-24T13:05:48.638940",
-      "updated_at": "2026-04-24T13:05:48.638940",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
