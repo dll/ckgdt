@@ -3,8 +3,8 @@
   "user_id": "2023210578",
   "user_name": "车蕊",
   "role": "student",
-  "synced_at": "2026-06-01T08:57:20.020087",
-  "last_active": "2026-06-01T08:57:20.013207",
+  "synced_at": "2026-06-01T09:10:00.539518",
+  "last_active": "2026-06-01T09:10:00.539536",
   "quiz_results": [
     {
       "user_id": "2023210578",
@@ -81,7 +81,7 @@
       "task_id": 2,
       "user_id": "2023210578",
       "content": "PDF实验报告：2023210578车蕊实验二 原生应用开发.pdf",
-      "file_paths": "C:\\Users\\时黎\\OneDrive\\其他/sync_files/2023210578/2023210578车蕊实验二 原生应用开发.pdf",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2023210578/2023210578车蕊实验二 原生应用开发.pdf",
       "file_names": "2023210578车蕊实验二 原生应用开发.pdf",
       "submit_time": "2026-04-24T14:14:45.034527",
       "status": "已提交",
@@ -171,20 +171,6 @@
   "checkin_records": [],
   "work_comments": [],
   "work_likes": [],
-  "notification_recipients": [
-    {
-      "notification_id": 1,
-      "user_id": "2023210578",
-      "is_read": 0,
-      "read_at": null
-    },
-    {
-      "notification_id": 2,
-      "user_id": "2023210578",
-      "is_read": 0,
-      "read_at": null
-    }
-  ],
   "work_views": [
     {
       "work_id": 75,
