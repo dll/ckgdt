@@ -3,8 +3,8 @@
   "user_id": "2023210621",
   "user_name": "史东振",
   "role": "student",
-  "synced_at": "2026-06-01T10:05:29.309285",
-  "last_active": "2026-06-01T10:05:29.309285",
+  "synced_at": "2026-06-01T10:08:25.035205",
+  "last_active": "2026-06-01T10:08:25.035205",
   "quiz_results": [
     {
       "user_id": "2023210621",
@@ -111,14 +111,14 @@
       "content": "PDF实验报告：2023210621史东振实验三 跨平台应用开发.pdf\n",
       "file_paths": "/data/user/0/cn.edu.chzu.madkg/cache/file_picker/1780272287434/2023210621史东振实验三 跨平台应用开发.pdf",
       "file_names": "2023210621史东振实验三 跨平台应用开发.pdf",
-      "submit_time": "2026-06-01T10:05:29.281119",
+      "submit_time": "2026-06-01T10:08:25.004802",
       "status": "已提交",
       "score": null,
       "feedback": null,
       "scorer_id": null,
       "scored_at": null,
       "created_at": "2026-04-26T18:59:36.512069",
-      "updated_at": "2026-06-01T10:05:29.281119",
+      "updated_at": "2026-06-01T10:08:25.004802",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
