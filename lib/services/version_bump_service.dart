@@ -110,8 +110,9 @@ class VersionBumpService {
       'windows/runner/Runner.rc',
       // 同时改 FileDescription / OriginalFilename / ProductName 这 3 处，
       // 不动 InternalName（按 CLAUDE.md 规则不带版本号）
+      // 注：用 \d+\.\d+\.\d+ 而非 [0-9.]+ 以避免误吞 .exe 后缀
       RegExp(
-          r'(FileDescription|OriginalFilename|ProductName)(",\s*"移动图谱与数字孪生v)[0-9.]+'),
+          r'(FileDescription|OriginalFilename|ProductName)(",\s*"移动图谱与数字孪生v)\d+\.\d+\.\d+'),
       (m) => '${m.group(1)}${m.group(2)}$newVersion',
       tag: 'Runner.rc (3 处)',
     );
