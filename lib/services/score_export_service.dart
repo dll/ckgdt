@@ -2,13 +2,13 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
 
 import '../core/error_handler.dart';
 import '../data/local/lab_task_dao.dart';
 import '../data/local/assessment_dao.dart';
 import '../data/local/works_dao.dart';
 import 'default_class_service.dart';
+import 'output_path_service.dart';
 
 class ScoreExportService {
   ScoreExportService._();
@@ -180,7 +180,9 @@ class ScoreExportService {
 
   Future<String?> _saveToFile(String content, String prefix) async {
     try {
-      final dir = await getApplicationDocumentsDirectory();
+      // 走 OutputPathService：桌面端落到 exe/out/（教师在 exe 旁即可找到导出），
+      // 移动端回退文档目录。不直接用 getApplicationDocumentsDirectory。
+      final dir = await OutputPathService.getOutputDirectory();
       final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
       final fileName = '${prefix}_$timestamp.csv';
       final file = File('${dir.path}/$fileName');
