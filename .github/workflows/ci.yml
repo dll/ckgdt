@@ -198,4 +198,4 @@ jobs:
           publish_branch: gh-pages
           force_orphan: true
           cname: false
-          commit_message: 'deploy: web v0.12.0 base=/mad-fd/ (auto)'
+          commit_message: 'deploy: web auto from GitHub Actions'
