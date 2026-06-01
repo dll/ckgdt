@@ -3,8 +3,8 @@
   "user_id": "2020210158",
   "user_name": "苏洲",
   "role": "student",
-  "synced_at": "2026-06-01T08:30:23.664049",
-  "last_active": "2026-06-01T08:30:23.664049",
+  "synced_at": "2026-06-01T08:36:57.025033",
+  "last_active": "2026-06-01T08:36:57.025033",
   "quiz_results": [
     {
       "user_id": "2020210158",
@@ -67,6 +67,24 @@
   ],
   "lab_submissions": [
     {
+      "task_id": 1,
+      "user_id": "2020210158",
+      "content": "PDF实验报告：2020210158苏洲实验一 开发环境搭建.pdf\n\n--- 报告正文（自动提取）---\n在\n线\n学\n习\n辅\n助\n平\n台\n-\n开\n发\n环\n境\n搭\n建\n指\n南\n项\n目\n基\n本\n信\n息\n核\n心\n步\n骤\n列\n\n\n\n\n\n项目名称：在线学习辅助平台\n项目类型：前后端分离架构\n前端技术：\nAndroid(Java)\n后端技术：\nSpringBoot(Java)\n开发工具：\nAndroidStudio+IntelliJIDEA\n表\n开\n发\n工\n具\n清\n环\n境搭建概\n览\n1.\n需求分析阶段：明确前后端技术栈与版本要求\n2.\n环境搭建阶段：安装配置开发工具与依赖\n3.\n项目导入阶段：导入前后端项目代码\n4.\n测试验证阶段：启动后端服务，运行前端应用\n5.\n部署运维阶段：记录环境配置，总结常见问题\n单\n序\n号\n开\n发\n工\n具\n主\n要\n用\n途\n版\n本\n要\n求\n1\nJ\nD\nK\nJ\na\nv\na\n运\n行\n环\n境\nJ\nD\nK\n1\n7\n+\n2\nA\nn\nd\nr\no\ni\nd\nS\nt\nu\nd\ni\no\nA\nn\nd\nr\no\ni\nd\n前\n端\n开\n发\n2\n0\n2\n4\n.\n1\n+\n3\nI\nn\nt\ne\nl\nl\ni\nJ\nI\nD\nE\nA\n后\n端\n开\n发\n2\n0\n2\n3\n.\n3\n+\n4\nG\nr\na\nd\nl\ne\n项\n目\n构\n建\n8\n.\n2\n+\n5\nM\ny\nS\nQ\nL\n数\n据\n存\n储\n8\n.\n0\n+\n6\nR\ne\nd\ni\ns\n缓\n存\n服\n务\n7\n.\n0\n+\n7\nR\na\nb\nb\ni\nt\nM\nQ\n消\n息\n队\n列\n3\n.\n1\n2\n+\n✅\n成\n功\n标\n准\n\n[\n]\nJ\nD\nK\n1\n7\n+\n安\n装\n配\n置\n完\n成\n\n[\n]\nA\nn\nd\nr\no\ni\nd\nS\nt\nu\nd\ni\no\n安\n装\n并\n配\n置\nS\nD\nK\n3\n4\n+\n\n[\n]\nI\nn\nt\ne\nl\nl\ni\nJ\nI\nD\nE\nA\n安\n装\n并\n配\n置\nS\np\nr\ni\nn\ng\nB\no\no\nt\n插\n件\n\n[\n]\nMySQL\n8.0+\n安装并创建数据库\n\n[\n]\nRedis\n7.0+\n安装并启动服务\n\n[\n]\nRabbitMQ\n3.12+\n安装并启动服务\n\n[\n]\n后端服务成功启动（端口\n8081\n）\n\n[\n]\n前端应用成功运行并连接后端\n\n[\n]\n用户登录功能正常\n第一\n课时\n：基\n础环\n境搭建（\n1\n学\n时\n）\n1.1\nJDK\n环\n境配置\n步\n骤\n1\n：下\n载\n与安装\nJDK\n17\n6.\n访问官网：\nhttps://www.oracle.com/java/technologies/downloads/#java17\n7.\n下载\nWindows\nx64\nInstaller\n版本\n8.\n运行安装程序，记住安装路径（如：\n`C:\\Program\nFiles\\Java\\jdk-17`\n）\n步\n骤\n2\n：配置\n环\n境\n变\n量\n9.\n打开系统属性\n→\n高级\n→\n环境变量\n10.\n新建系统变量\n`JAVA_HOME`\n，值为\nJDK\n安装路径\n11.\n编辑\n`Path`\n变量，添加\n`%JAVA_HOME%\\bin`\n12.\n验证安装：打开\nCMD\n，执行\n`java\n-version`\njava\nversion\n\"17.0.x\"\n202x-xx-xx\nLTS\nJava(TM)\nSE\nRuntime\nEnvironment\n(build\n17.0.x+xx-LTS-xxx)\nJava\nHotSpot(TM)\n64-Bit\nServer\nVM\n(build\n17.0.x+xx-LTS-xxx,\nmixed\nmode,\nsharing)\n1.2\nAndroid\nStudio\n环\n境搭建\n步\n骤\n1\n：下\n载\n与安装\n13.\n访问官网：\nhttps://developer.android.com/studio\n14.\n下载最新版本（\n2024.1+\n）\n15.\n运行安装程序，勾选：\n\nAndroid\nStudio\n\nAndroid\nSDK\n\nAndroid\nVirtual\nDevice\n(AVD)\n16.\n完成安装\n步\n骤\n2\n：配置\nAndroid\nSDK\n17.\n启动\nAndroid\nStudio\n18.\n打开\nSDK\nManager\n（\nTools\n→\nSDK\nManager\n）\n19.\n安装以下组件：\n\nAndroid\nSDK\nPlatform\n34\n\nAndroid\nSDK\nBuild-Tools\n34\n\nAndroid\nEmulator\n\nAndroid\nSDK\nPlatform-Tools\n\nIntel\nx86\nEmulator\nAccelerator\n(HAXM\ninstaller)\n步\n骤\n3\n：\n创\n建模\n拟\n器\n20.\n打开\nAVD\nManager\n（\nTools\n→\nAVD\nManager\n）\n21.\n点击\n\"Create\nVirtual\nDevice\"\n22.\n选择设备：\nPixel\n6\n23.\n选择系统镜像：\nAndroid\n14.0\n(API\n34)\n24.\n完成创建并启动模拟器\n1.3\nIntelliJ\nIDEA\n环\n境搭建\n步\n骤\n1\n：下\n载\n与安装\n25.\n访问官网：\nhttps://www.jetbrains.com/idea/download/\n26.\n下载\nUltimate\n或\nCommunity\n版本\n27.\n运行安装程序，完成安装\n步\n骤\n2\n：安装插件\n28.\n启动\nIntelliJ\nIDEA\n29.\n打开\nSettings\n→\nPlugins\n30.\n安装以下插件：\n\nSpring\nBoot\n（内置）\n\nLombok\n\nRainbow\nBrackets\n\n.env\nfiles\nsupport\n第二\n课时\n：数据\n库\n与中\n间\n件配置（\n1\n学\n时\n）\n2.1\nMySQL\n数据\n库\n安装\n步\n骤\n1\n：下\n载\n与安装\n31.\n访问官网：\nhttps://dev.mysql.com/downloads/mysql/\n32.\n下载\nMySQL\nInstaller\nfor\nWindows\n33.\n运行安装程序，选择\n\"Server\nonly\"\n34.\n配置\nroot\n密码（建议：\n`******`\n）\n35.\n记住端口号（默认：\n3306\n）\n步\n骤\n2\n：\n创\n建数据\n库\n36.\n打开\nMySQL\nCommand\nLine\nClient\n37.\n登录\nMySQL\n：\n`mysql\n-u\nroot\n-p`\n38.\n创建数据库：\nCREATE\nDATABASE\nonline_learning_platform\nCHARACTER\nSET\nutf8mb4\nCOLLATE\nutf8mb4_unicode_ci;\nUSE\nonline_learning_platform;\n39.\n执行项目\nSQL\n脚本（位于\n`backend/src/main/resources/db/schema.sql`\n）：\nsource\ne:/Android_Code/online_learning_platform/backend/src/main/resources/db/s\nchema.sql\n2.2\nRedis\n缓\n存服\n务\n安装\n步\n骤\n1\n：下\n载\n与安装\n40.\n访问\nGitHub\n：\nhttps://github.com/tporadowski/redis/releases\n41.\n下载\nRedis-x64-xxx.zip\n42.\n解压到指定目录（如：\n`C:\\redis`\n）\n步\n骤\n2\n：配置\nRedis\n43.\n编辑\n`redis.windows.conf`\n文件\n44.\n修改以下配置：\n#\n设置密码\nrequirepass\n******\n#\n修改端口（可选）\nport\n9999\n步\n骤\n3\n：启\n动\nRedis\n服\n务\n45.\n打开\nCMD\n，进入\nRedis\n目录\n46.\n执行：\n`redis-server.exe\nredis.windows.conf`\n47.\n服务启动后，窗口保持打开状态\n2.3\nRabbitMQ\n消息\n队\n列安装\n步\n骤\n1\n：安装\nErlang\n48.\n访问：\nhttps://www.erlang.org/downloads\n49.\n下载并安装\nErlang\nOTP\n步\n骤\n2\n：安装\nRabbitMQ\n50.\n访问：\nhttps://www.rabbitmq.com/download.html\n51.\n下载\nWindows\nInstaller\n版本\n52.\n运行安装程序，完成安装\n步\n骤\n3\n：启\n动\nRabbitMQ\n服\n务\n53.\n打开\nCMD\n，进入\nRabbitMQ\n安装目录的\n`sbin`\n文件夹\n54.\n执行：\n`rabbitmq-plugins\nenable\nrabbitmq_management`\n55.\n执行：\n`rabbitmq-service\nstart`\n56.\n访问管理界面：\nhttp://localhost:15672\n57.\n默认账号：\nguest\n/\nguest\n第三\n课时\n：\n项\n目\n导\n入与配置（\n1\n学\n时\n）\n3.1\n后端\n项\n目\n导\n入\n步\n骤\n1\n：\n导\n入\n项\n目\n58.\n打开\nIntelliJ\nIDEA\n59.\n选择\n\"Open\"\n，选择\n`backend`\n文件夹\n60.\n等待\nGradle\n同步完成\n步\n骤\n2\n：配置\napplication.yml\n61.\n打开\n`backend/src/main/resources/application.yml`\n62.\n修改数据库配置：\nspring:\ndatasource:\nurl:\njdbc:mysql://localhost:3306/online_learning_platform?useUnicode=true&cha\nracterEncoding=utf-8&serverTimezone=Asia/Shanghai\nusername:\nroot\npassword:\n******\n63.\n修改\nRedis\n配置：\nspring:\ndata:\nredis:\nhost:\nlocalhost\nport:\n9999\npassword:\n******\n64.\n修改\nRabbitMQ\n配置：\nspring:\nrabbitmq:\nhost:\nlocalhost\nport:\n5672\nusername:\nguest\npassword:\n******\n步\n骤\n3\n：启\n动\n后端服\n务\n65.\n找到\n`BackendApplication.java`\n文件\n66.\n右键点击，选择\n\"Run\n'BackendApplication'\"\n67.\n等待服务启动，控制台显示：\nTomcat\nstarted\non\nport(s):\n8081\n(http)\nStarted\nBackendApplication\nin\nx.xxx\nseconds\n68.\n访问\nAPI\n文档：\nhttp://localhost:8081/doc.html\n3.2\n前端\n项\n目\n导\n入\n步\n骤\n1\n：\n导\n入\n项\n目\n69.\n打开\nAndroid\nStudio\n70.\n选择\n\"Open\"\n，选择项目根目录\n`online_learning_platform`\n71.\n等待\nGradle\n同步完成\n步\n骤\n2\n：配置\nBASE_URL\n72.\n打开\n`app/src/main/java/com/su/online_learning_platform/constants/AppConstants.java`\n73.\n确认\nBASE_URL\n配置：\npublic\nstatic\nfinal\nString\nBASE_URL\n=\n\"http://10.0.2.2:8081/api/\";\n//\n注意：模拟器使用\n10.0.2.2\n访问本机\nlocalhost\n步\n骤\n3\n：\n运\n行\n前\n端\n应\n用\n7\n4\n.\n确\n保\n模\n拟\n器\n已\n启\n动\n7\n5\n.\n点\n击\n运\n行\n按\n钮\n（\n绿\n色\n三\n角\n形\n）\n7\n6\n.\n等\n待\n应\n用\n安\n装\n并\n启\n动\n7\n7\n.\n应\n用\n会\n自\n动\n跳\n转\n到\n登\n录\n界\n面\n第\n四\n课\n时\n：\n功\n能\n验\n证\n与\n问\n题\n排\n查\n（\n1\n学\n时\n）\n4\n.\n1\n功\n能\n验\n证\n步\n骤\n1\n：\n验\n证\n后\n端\n服\n务\n7\n8\n.\n打\n开\n浏\n览\n器\n，\n访\n问\n：\nh\nt\nt\np\n:\n/\n/\nl\no\nc\na\nl\nh\no\ns\nt\n:\n8\n0\n8\n1\n/\nd\no\nc\n.\nh\nt\nm\nl\n7\n9\n.\n确\n认\nK\nn\ni\nf\ne\n4\nj\nA\nP\nI\n文\n档\n页\n面\n正\n常\n显\n示\n8\n0\n.\n测\n试\n用\n户\n注\n册\n接\n口\n：\n\nP\nO\nS\nT\n/\na\np\ni\n/\na\nu\nt\nh\n/\nr\ne\ng\ni\ns\nt\ne\nr\n\n参\n数\n：\nu\ns\ne\nr\nn\na\nm\ne\n,\np\na\ns\ns\nw\no\nr\nd\n,\ne\nm\na\ni\nl\n,\np\nh\no\nn\ne\n,\nr\no\nl\ne\n步\n骤\n3\n：\n验\n证\n网\n络\n连\n接\n8\n6\n.\n确\n保\n后\n端\n服\n务\n运\n行\n在\n8\n0\n8\n1\n端\n口\n8\n7\n.\n确\n保\n前\n端\nB\nA\nS\nE\n_\nU\nR\nL\n配\n置\n正\n确\n8\n8\n.\n检\n查\n防\n火\n墙\n设\n置\n，\n确\n保\n端\n口\n未\n被\n阻\n步\n骤\n2\n：\n验证\n前端\n应\n用\n81.\n在模拟器中打开应用\n82.\n点击\n\"\n注册新账号\n\"\n83.\n填写注册信息，完成注册\n84.\n返回登录界面，使用注册的账号登录\n85.\n验证是否成功跳转到主界面\n止\n4\n.\n2\n常\n见\n问\n题\n排\n查\n问题\n1\n：\n应\n用启\n动\n后立即崩\n溃\n原因\n：\nSharedPreferencesUtil\n初始化问题\n解决\n：已修复，确保使用最新代码\n问题\n2\n：无法\n连\n接后端服\n务\n原因\n：\nBASE_URL\n配置错误或后端未启动\n解决\n：\n\n检查后端服务是否启动\n\n确认\nBASE_URL\n使用\n`10.0.2.2`\n（模拟器）或实际\nIP\n（真机）\n问题\n3\n：数据\n库连\n接失\n败\n原因\n：\nMySQL\n未启动或配置错误\n解决\n：\n\n检查\nMySQL\n服务是否运行\n\n确认数据库名称、用户名、密码正确\n\n检查防火墙设置\n问题\n4\n：\nGradle\n同步失\n败\n原因\n：网络问题或依赖版本冲突\n解决\n：\n\n检查网络连接\n\n尝试使用阿里云镜像（已配置）\n\n清理\nGradle\n缓存：\n`./gradlew\nclean`\n问题\n5\n：模\n拟\n器启\n动\n失\n败\n原因\n：\nHAXM\n未安装或\nBIOS\n设置问题\n解决\n：\n\n安装\nIntel\nHAXM\n\n在\nBIOS\n中启用\nVT-x/AMD-V\n虚拟化技术\n总结\n与思考\n实验总结\n\n掌握前后端分离项目的开发环境搭建\n\n熟悉\nAndroid\nStudio\n和\nIntelliJ\nIDEA\n的使用\n\n了解\nMySQL\n、\nRedis\n、\nRabbitMQ\n的安装配置\n\n完成项目的导入、配置和运行\n课\n后思考\n89.\n前后端分离架构的优势与挑战\n90.\n如何优化开发环境的搭建流程\n91.\n容器化技术（\nDocker\n）在环境搭建中的应用\n92.\nCI/CD\n流程在移动应用开发中的作用\n附\n录\n：快速启\n动\n命令\n后端启\n动\n#\n进入\nbackend\n目录\ncd\nbackend\n#\n使用\nGradle\n启动\n./gradlew\nbootRun\n#\n或使用\nIDEA\n直接运行\nBackendApplication\n前端启\n动\n#\n在项目根目录\n./gradlew\n:app:installDebug\n#\n或在\nAndroid\nStudio\n中点击运行按钮\n服\n务\n检\n查\n#\n检\n查\nM\ny\nS\nQ\nL\nm\ny\ns\nq\nl\n-\nu\nr\no\no\nt\n-\np\n-\ne\n\"\nS\nH\nO\nW\nD\nA\nT\nA\nB\nA\nS\nE\nS\n;\n\"\n#\n检\n查\nR\ne\nd\ni\ns\nr\ne\nd\ni\ns\n-\nc\nl\ni\n-\np\n9\n9\n9\n9\n-\na\n*\n*\n*\n*\n*\n*\np\ni\nn\ng\n#\n检\n查\nR\na\nb\nb\ni\nt\nM\nQ\nc\nu\nr\nl\nh\nt\nt\np\n:\n/\n/\nl\no\nc\na\nl\nh\no\ns\nt\n:\n1\n5\n6\n7\n2\n/\na\np\ni\n/\no\nv\ne\nr\nv\ni\ne\nw\n-\nu\ng\nu\ne\ns\nt\n:\n*\n*\n*\n*\n*\n*\n#\n检\n查\n后\n端\n服\n务\nc\nu\nr\nl\nh\nt\nt\np\n:\n/\n/\nl\no\nc\na\nl\nh\no\ns\nt\n:\n8\n0\n8\n1\n/\na\nc\nt\nu\na\nt\no\nr\n/\nh\ne\na\nl\nt\n냠\nퟩ\n벼쫵룚캻\n벼쫵햻\n훷튪릦쓜\n냠ퟩ\n3\nAndroid\n뾪\n랢\nJava+Android SDK\n톧쾰쳡탑ꆢ훇쓜뇊볇ꆢ\nAI\n룶탔뮯췆볶ꆢ닺욷뮯ꎺ쓚죝\n냦좨놣뮤ꆢ톧쾰뷸뛈춬늽\nCordova\n냠ퟩ\n3\n뾪랢\nHTML+CSS+JavaScript\n쳢쒿닢쫔ꆢ뚨쪱릦쓜ꆢ\nAI\n듭쳢럖컶ꆢ닺욷뮯ꎺ쳢\n뿢맜샭쾵춳ꆢ뾼쫔럀ퟷ뇗\n냠ퟩ\n3\n킡돌탲뾪랢\nJS+WeChat MiniProg\n떼죫퟊풴ꆢ틬뎣떯뒰ꆢ\nAI\n훇쓜듰틉ꆢ닺욷뮯ꎺ캢탅짺\n첬헻뫏ꆢ뿎돌럖쿺\nFlutter\n뾪랢\nDart+Flutter\n냠ퟩ\n짧쟸붻쇷뿕볤ꆢ쿻쾢춨횪릦쓜ꆢ\nAI\n훇쓜엺룄ꆢ닺욷뮯\nꎺ뢻쎽쳥횧돖ꆢ쪵쪱춨탅\n3\nMAUI\n뾪랢\nC#+.NET+MAUI\n톧쾰볆뮮ꆢ톧쾰뷸뛈ꆢ\nAI\n횪쪶춼웗릹붨ꆢ닺욷뮯ꎺ뿧\n욽첨톧쾰쳥퇩ꆢ쓚죝맜샭쾵춳\nh\nퟩ풱\n쯕훞\n럑퓏\n뷰쿨폮\nퟩ풱탅쾢\n짛폮헰\n췵쳬믛\n냠ퟩ\n3\n",
+      "file_paths": "C:\\Users\\lenovo\\Desktop\\应用开发\\2020210158苏洲实验一 开发环境搭建.pdf",
+      "file_names": "2020210158苏洲实验一 开发环境搭建.pdf",
+      "submit_time": "2026-06-01T08:36:56.984569",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-04-24T10:51:44.597718",
+      "updated_at": "2026-06-01T08:36:56.984569",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
+    {
       "task_id": 4,
       "user_id": "2020210158",
       "content": "PDF实验报告：2020210158苏洲实验四 微信小程序开发.pdf",
@@ -98,24 +116,6 @@
       "scored_at": null,
       "created_at": "2026-05-09T10:29:29.585329",
       "updated_at": "2026-05-09T10:29:29.585329",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 1,
-      "user_id": "2020210158",
-      "content": "PDF实验报告：2020210158苏洲实验一 开发环境搭建.pdf",
-      "file_paths": "C:\\Users\\lenovo\\Desktop\\应用开发\\2020210158苏洲实验一 开发环境搭建.pdf",
-      "file_names": "2020210158苏洲实验一 开发环境搭建.pdf",
-      "submit_time": "2026-05-05T23:34:03.197945",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-04-24T10:51:44.597718",
-      "updated_at": "2026-05-05T23:34:03.197945",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
