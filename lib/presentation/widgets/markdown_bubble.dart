@@ -2,7 +2,6 @@
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../services/clipboard_helper.dart';
 
-import '../../core/constants/color_ohos_compat.dart';
 /// 可复用的 Markdown 气泡组件
 ///
 /// 用于所有 AI 助手/智能体的回复展示，支持：

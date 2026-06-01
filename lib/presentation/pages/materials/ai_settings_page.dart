@@ -4,7 +4,6 @@ import '../../../data/local/ai_config_dao.dart';
 import '../../../data/models/ai_config_model.dart';
 import '../../../services/ai_service.dart';
 
-import '../../../core/constants/color_ohos_compat.dart';
 import '../../widgets/back_button_bar.dart';
 class AiSettingsPage extends StatefulWidget {
   const AiSettingsPage({super.key});

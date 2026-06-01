@@ -28,7 +28,6 @@ import '../quiz/quiz_page.dart';
 import 'video_player_page.dart';
 import 'pdf_viewer_page.dart';
 
-import '../../../core/constants/color_ohos_compat.dart';
 /// 学习中心页面 — 合并原"视频"和"课件"菜单
 /// 4 个 Tab：视频、PPT、PDF、AI助手
 class LearningHubPage extends StatefulWidget {

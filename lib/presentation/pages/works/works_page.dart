@@ -23,7 +23,6 @@ import '../../widgets/inner_tab_request_mixin.dart';
 import '../../widgets/score_preview_dialog.dart';
 import 'ai_grading_tab.dart';
 
-import '../../../core/constants/color_ohos_compat.dart';
 
 // ── Tab 实现拆分到 tabs/ 子目录（part / part of 模式）──────────────
 part 'tabs/gallery_tab.dart';

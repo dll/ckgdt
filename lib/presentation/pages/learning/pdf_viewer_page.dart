@@ -9,7 +9,6 @@ import '../../../services/gitee_service.dart';
 import '../../../services/tts_flutter_service.dart';
 import '../../pages/quiz/quiz_page.dart';
 
-import '../../../core/constants/color_ohos_compat.dart';
 /// 应用内 PDF 查看器
 /// 使用 printing 包的 PdfPreview 组件渲染 PDF 页面
 /// AppBar 提供"使用系统工具打开"、"打印"和"章节测验"按钮

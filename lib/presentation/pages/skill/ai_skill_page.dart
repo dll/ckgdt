@@ -10,7 +10,6 @@ import '../../../data/local/skill_dao.dart';
 import '../../../data/local/ai_history_dao.dart';
 import '../../widgets/markdown_bubble.dart';
 
-import '../../../core/constants/color_ohos_compat.dart';
 // ═══════════════════════════════════════════════════════════════════════════════
 // 技能定义
 // ═══════════════════════════════════════════════════════════════════════════════

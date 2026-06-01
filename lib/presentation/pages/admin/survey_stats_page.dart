@@ -2,7 +2,6 @@
 import 'package:flutter/services.dart';
 import '../../../data/local/survey_dao.dart';
 
-import '../../../core/constants/color_ohos_compat.dart';
 /// 问卷统计报告页面 — 管理员查看问卷回收数据与可视化分析
 class SurveyStatsPage extends StatefulWidget {
   final int surveyId;

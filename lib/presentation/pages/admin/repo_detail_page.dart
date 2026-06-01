@@ -4,7 +4,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../services/gitee_service.dart';
 import '../../../services/clipboard_helper.dart';
 
-import '../../../core/constants/color_ohos_compat.dart';
 /// 仓库详情页（参照 毕设进度管家 /student/:id 页面）
 /// 显示：仓库基本信息 / 4个统计卡片 / 分支列表 / 发布版本 / 提交记录表格
 class RepoDetailPage extends StatefulWidget {

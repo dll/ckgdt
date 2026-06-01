@@ -15,7 +15,6 @@ import '../../../data/local/database_helper.dart';
 import '../../../data/models/ai_config_model.dart';
 import 'ai_settings_page.dart';
 
-import '../../../core/constants/color_ohos_compat.dart';
 import '../../../core/error_handler.dart';
 import '../../widgets/back_button_bar.dart';
 /// 可选的 AI 模型选项

@@ -13,7 +13,6 @@ import '../../widgets/styled_qr.dart';
 import 'qr_scan_page.dart';
 
 import '../../../core/constants/app_urls.dart';
-import '../../../core/constants/color_ohos_compat.dart';
 import '../../../services/clipboard_helper.dart';
 /// 多端互通 Hub 页面
 ///
