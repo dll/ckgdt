@@ -117,3 +117,21 @@ test/screenshots/failures/
 
 # ── 归档输出（一键归档落盘 docx + zip）──
 /archive_out/
+
+# ── Python 字节码缓存 ──
+__pycache__/
+
+# ── Android AVD 自动生成 ──
+avd_features.ini
+
+# ── 运行时数据（不追踪）──
+/live/
+
+# ── 旧 Web Server 构建（已移除）──
+/web_server/
+
+# ── 旧 OHOS 覆盖方案（已移除）──
+/ohos_overrides/
+
+# ── 草稿 / 计划文档 ──
+/drafts/
