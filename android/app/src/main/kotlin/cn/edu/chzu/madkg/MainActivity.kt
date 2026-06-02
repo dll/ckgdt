@@ -2,7 +2,6 @@ package cn.edu.chzu.madkg
 
 import android.content.Intent
 import android.os.Build
-import androidx.activity.result.contract.ActivityResultContracts
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -17,16 +16,6 @@ class MainActivity : FlutterActivity() {
 
     private var screenCapturePlugin: ScreenCapturePlugin? = null
     private var captureEventSink: EventChannel.EventSink? = null
-
-    private val screenCaptureResult = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == RESULT_OK && result.data != null) {
-            screenCapturePlugin?.onCaptureResult(result.resultCode, result.data!!)
-        } else {
-            captureEventSink?.error("PERMISSION_DENIED", "用户拒绝屏幕捕获权限", null)
-        }
-    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -46,7 +35,7 @@ class MainActivity : FlutterActivity() {
                             return@setMethodCallHandler
                         }
                         val intent = screenCapturePlugin!!.createCaptureIntent()
-                        screenCaptureResult.launch(intent)
+                        startActivityForResult(intent, REQUEST_CODE_SCREEN_CAPTURE)
                         result.success(true)
                     }
                     "stop" -> {
@@ -68,6 +57,17 @@ class MainActivity : FlutterActivity() {
                     screenCapturePlugin?.setEventSink(null)
                 }
             })
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_CODE_SCREEN_CAPTURE) {
+            if (resultCode == RESULT_OK && data != null) {
+                screenCapturePlugin?.onCaptureResult(resultCode, data)
+            } else {
+                captureEventSink?.error("PERMISSION_DENIED", "用户拒绝屏幕捕获权限", null)
+            }
+        }
     }
 
     override fun onDestroy() {
