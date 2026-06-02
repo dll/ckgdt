@@ -127,6 +127,9 @@ avd_features.ini
 # ── 运行时数据（不追踪）──
 /live/
 
+# ── Gitee 学生同步数据（BOT 自动生成，不得入 Git 历史）──
+/sync/
+
 # ── 旧 Web Server 构建（已移除）──
 /web_server/
 
