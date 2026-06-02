@@ -25,6 +25,7 @@ import 'audit_print_panel.dart';
 import '../../../core/design/noir_tokens.dart';
 import '../../../services/pdf_text_service.dart';
 import '../../../core/error_handler.dart';
+import 'defense/defense_broadcast_page.dart';
 import '../../widgets/live_stream_overlay.dart';
 import '../../../services/live_broadcast_service.dart';
 import '../../widgets/live_authorize_sheet.dart';
