@@ -65,6 +65,10 @@ android {
     }
 }
 
+dependencies {
+    implementation("androidx.activity:activity-ktx:1.8.0")
+}
+
 flutter {
     source = "../.."
 }
