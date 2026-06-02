@@ -14,8 +14,22 @@ class _DefenseTabState extends State<_DefenseTab> {
   Map<int, Map<String, dynamic>> _groupEligibility = {};
   bool _loading = true;
 
+  // 班级选择
+  String _selectedClass = 'all';
+  List<String> _classNames = [];
+  Map<int, String?> _groupClassName = {};
+
   bool get _isStudent =>
       !widget.authService.isTeacher && !widget.authService.isAdmin;
+
+  List<Map<String, dynamic>> get _filteredRecords {
+    if (_selectedClass == 'all') return _defenseRecords;
+    return _defenseRecords.where((d) {
+      final gid = d['group_id'] as int?;
+      final cn = gid != null ? _groupClassName[gid] : null;
+      return cn == _selectedClass;
+    }).toList();
+  }
 
   /// 开始答辩直播：校验开播权限 → 启动快照广播 + 弹摄像头浮窗。
   /// 教师/管理员恒可开播；学生需教师在「直播授权」里授权。
@@ -53,6 +67,28 @@ class _DefenseTabState extends State<_DefenseTab> {
     try {
       var records = await _dao.getDefenseRecords();
 
+      // 班级映射：group_id → class_name（通过 class_members 查找）
+      final db = await DatabaseHelper.instance.database;
+      final classes = await db.query('classes');
+      final classNames = classes.map((c) => c['name'] as String).where((n) => n.isNotEmpty).toList();
+      final groupClassMap = <int, String?>{};
+      for (final r in records) {
+        final gid = r['group_id'] as int?;
+        if (gid == null || groupClassMap.containsKey(gid)) continue;
+        try {
+          final members = await db.query('class_members',
+            where: 'user_id IN (SELECT user_id FROM assessment_group_members WHERE group_id = ?)',
+            whereArgs: [gid], limit: 1);
+          if (members.isNotEmpty) {
+            final classId = members.first['class_id'] as int?;
+            if (classId != null) {
+              final cls = await db.query('classes', where: 'id = ?', whereArgs: [classId], limit: 1);
+              if (cls.isNotEmpty) groupClassMap[gid] = cls.first['name'] as String?;
+            }
+          }
+        } catch (_) {}
+      }
+
       if (_isStudent) {
         final userId = widget.authService.getCurrentUserId();
         if (userId != null) {
@@ -78,6 +114,8 @@ class _DefenseTabState extends State<_DefenseTab> {
         setState(() {
           _defenseRecords = records;
           _groupEligibility = eligibility;
+          _classNames = classNames;
+          _groupClassName = groupClassMap;
           _loading = false;
         });
       }
@@ -393,6 +431,102 @@ class _DefenseTabState extends State<_DefenseTab> {
                   ),
                 ),
               ),
+              // ── LAN 直播新入口（独立卡片） ──────────────────────────
+              Card(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 2,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: LinearGradient(
+                      colors: [NoirTokens.accent.withValues(alpha: 0.08), NoirTokens.inkDeep],
+                      begin: Alignment.topLeft, end: Alignment.bottomRight,
+                    ),
+                  ),
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.wifi_tethering, color: Colors.green, size: 24),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('LAN 直播（新）',
+                                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: NoirTokens.paper)),
+                            const SizedBox(height: 2),
+                            Text('桌面/手机三路流 · 局域网直连 · 无需 Gitee',
+                                style: TextStyle(fontSize: 11, color: NoirTokens.paper.withValues(alpha: 0.5))),
+                          ],
+                        ),
+                      ),
+                      FilledButton.tonalIcon(
+                        onPressed: () => Navigator.push(context, MaterialPageRoute(
+                          builder: (_) => const DefenseBroadcastPage(initialRole: 'presenter'))),
+                        icon: const Icon(Icons.live_tv, size: 18),
+                        label: const Text('主播'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.green.withValues(alpha: 0.15),
+                          foregroundColor: Colors.green,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton(
+                        onPressed: () => Navigator.push(context, MaterialPageRoute(
+                          builder: (_) => const DefenseBroadcastPage(initialRole: 'viewer'))),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: NoirTokens.paper.withValues(alpha: 0.7),
+                          side: BorderSide(color: NoirTokens.paper.withValues(alpha: 0.2)),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: const Text('观看'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // 班级选择器
+              Row(
+                children: [
+                  Icon(Icons.filter_alt, size: 16, color: Colors.grey[500]),
+                  const SizedBox(width: 6),
+                  Text('班级筛选：', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(children: [
+                        ChoiceChip(label: const Text('全部', style: TextStyle(fontSize: 12)),
+                          selected: _selectedClass == 'all',
+                          selectedColor: NoirTokens.accent.withValues(alpha: 0.3),
+                          onSelected: (_) => setState(() => _selectedClass = 'all'),
+                          visualDensity: VisualDensity.compact,
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                        ..._classNames.map((cn) => Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: ChoiceChip(label: Text(cn, style: const TextStyle(fontSize: 12)),
+                            selected: _selectedClass == cn,
+                            selectedColor: NoirTokens.accent.withValues(alpha: 0.3),
+                            onSelected: (_) => setState(() => _selectedClass = cn),
+                            visualDensity: VisualDensity.compact,
+                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                        )),
+                      ]),
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -439,7 +573,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                   ),
                 )
               else
-                ..._defenseRecords.map((d) => _buildDefenseCard(context, d)),
+                ..._filteredRecords.map((d) => _buildDefenseCard(context, d)),
               // leave room for FAB
               if (canEdit) const SizedBox(height: 72),
             ],
@@ -657,11 +791,11 @@ class _DefenseTabState extends State<_DefenseTab> {
                     ],
                   ),
                 ),
-              ],
-            ),
-          ),
-        ),
-      ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
     );
   }
 }
