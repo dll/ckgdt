@@ -7,7 +7,7 @@ import '../../services/auth_service.dart';
 import '../../services/default_class_service.dart';
 import '../../services/live_broadcast_service.dart';
 
-/// 教师端「直播授权」面板 — 勾选哪些学生可以开播答辩直播。
+/// 教师端「直播授权」面板 — 勾选学生可以开播答辩直播。
 ///
 /// 授权名单写入 Gitee `live/authorized.json`，开播端开播前校验。
 /// 教师/管理员本身恒可开播，无需在此勾选。

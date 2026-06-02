@@ -375,7 +375,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                           child: OutlinedButton.icon(
                             onPressed: () => LiveAuthorizeSheet.show(context),
                             icon: const Icon(Icons.cast_connected, size: 18),
-                            label: const Text('直播授权 · 设置哪些学生可开播'),
+                            label: const Text('直播授权 · 设置学生可开播'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: NoirTokens.accent,
                               side: BorderSide(
