@@ -8,12 +8,10 @@ import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'package:win32/win32.dart';
 
-import '../../core/error_handler.dart';
-
 /// Windows 桌面抓取 — GDI `BitBlt` + `image` 包 JPEG 编码。
 ///
 /// 捕获主显示器，缩放至目标分辨率，输出 JPEG 字节。
-//// win32 5.x 的句柄类型均为 int，非 Pointer，此处已对齐。
+/// win32 5.x 的句柄类型均为 int，非 Pointer，此处已对齐。
 class WinScreenCapturer {
   WinScreenCapturer._();
   static final WinScreenCapturer instance = WinScreenCapturer._();

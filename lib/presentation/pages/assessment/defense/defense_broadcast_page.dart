@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 
 import '../../../../core/design/noir_tokens.dart';
 import '../../../../core/error_handler.dart';
-import '../../../../services/auth_service.dart';
 import '../../../../services/defense_streaming/defense_streaming_server.dart';
 import '../../../../services/defense_streaming/phone_screen_capturer.dart';
 import '../../../../services/defense_streaming/win_screen_capturer.dart';
@@ -30,10 +29,9 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
   final _winCap = WinScreenCapturer.instance;
   final _phoneCap = PhoneScreenCapturer.instance;
   final _live = LiveStreamService();
-  final _auth = AuthService();
 
   bool _serverReady = false;
-  String _serverIp = ''; int _serverPort = 8766; int _viewerCount = 0;
+  String _serverIp = ''; int _serverPort = 8766;   int get _viewerCount => 0;
   bool _winOn = false; bool _cameraOn = false;
   String _layoutMode = 'dual';
 
@@ -95,7 +93,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
       if (!_cameraOn) return;
       try {
         final p = await _live.takeSnapshot();
-        if (p != null) { final f = File(p); final b = await f.readAsBytes(); try { await f.delete(); } catch (_) {} _server.pushCameraFrame(b); }
+        if (p != null) { final f = File(p); final b = await f.readAsBytes(); try { await f.delete(); } catch (e) { swallow(e, tag: 'Defense.cam.del'); } _server.pushCameraFrame(b); }
       } catch (e) { swallow(e, tag: 'Defense.cam'); }
     });
     setState(() {});

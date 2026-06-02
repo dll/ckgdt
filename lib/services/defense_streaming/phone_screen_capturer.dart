@@ -93,7 +93,7 @@ class PhoneScreenCapturer {
     _nativeSub = null;
     _nativeFrame = null;
     if (_useNative) {
-      try { _methodChannel.invokeMethod('stop'); } catch (_) {}
+      try { _methodChannel.invokeMethod('stop'); } catch (e, st) { swallowDebug(e, tag: 'PhoneScreenCapturer.stop', stack: st); }
     }
   }
 

@@ -4,6 +4,8 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
+import '../../core/error_handler.dart';
+
 /// 布局模式
 enum LayoutMode { dual, winOnly, phoneOnly, cameraOnly }
 
@@ -58,7 +60,7 @@ class DefenseStreamingServer {
   Future<void> stop() async {
     _running = false;
     for (final s in _sessions) {
-      try { await s.response.close(); } catch (_) {}
+      try { await s.response.close(); } catch (e, st) { swallowDebug(e, tag: 'DefenseStreaming.stop', stack: st); }
     }
     _sessions.clear();
     await _server?.close(force: true);
@@ -145,7 +147,7 @@ class DefenseStreamingServer {
         final b = utf8.encode('\r\n--frame\r\nContent-Type: image/jpeg\r\nContent-Length: ${frame.length}\r\n\r\n');
         s.response.add(b);
         s.response.add(frame);
-      } catch (_) { stale.add(s); }
+      } catch (e, st) { swallowDebug(e, tag: 'DefenseStreaming.bcast', stack: st); stale.add(s); }
     }
     for (final s in stale) _sessions.remove(s);
   }
@@ -179,7 +181,7 @@ class DefenseStreamingServer {
           if (!a.isLoopback) return a.address;
         }
       }
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'DefenseStreaming.localIp', stack: st); }
     return '127.0.0.1';
   }
 
