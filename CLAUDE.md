@@ -769,7 +769,7 @@ python scripts/gitee_upload_assets.py
 
 ### ⚠ 环境变量（GH_TOKEN / GITEE_TOKEN）
 
-**存储位置**：`GH_TOKEN` 在**系统级**（Machine）环境变量，`GITEE_TOKEN` 可能也在 Machine 级。
+**存储位置**：`GH_TOKEN` 和 `GITEE_TOKEN` 均在**系统级**（Machine）环境变量。
 
 **关键陷阱**：bash/PowerShell tool 运行在新进程中，`$env:GH_TOKEN` **读不到** User 级变量。必须用：
 ```powershell
@@ -779,7 +779,11 @@ $env:GH_TOKEN = $token   # 传到当前进程
 
 **GitHub Release**：`gh release create` 需要 `GH_TOKEN`。先在当前进程设好 `$env:GH_TOKEN` 再调用 `gh`，或直接用 `Invoke-RestMethod` 调 GitHub REST API。
 
-**Gitee Release**：不推送到 Gitee Release（仓库已超配额），只推代码到 Gitee origin。如需上传脚本，修改 `scripts/gitee_upload_assets.py` 中 `TOKEN` 和 `ASSETS` 路径后按上述方式传递 `GITEE_TOKEN`。
+**Gitee Release**：用 `scripts/gitee_upload_assets.py` 上传资产。先在当前进程设好 `$env:GITEE_TOKEN` 再执行脚本：
+```powershell
+$env:GITEE_TOKEN = [System.Environment]::GetEnvironmentVariable('GITEE_TOKEN','Machine')
+python scripts/gitee_upload_assets.py
+```
 
 **rebase 陷阱**：每次 `git push origin master` 可能被 bot 提交拦截（`fetch first`），先用 `git pull --rebase origin master` 解决。
 
