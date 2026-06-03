@@ -77,7 +77,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
       if (mounted) setState(() { _serverReady = true; _serverIp = ip; _serverPort = port; });
     };
     await _server.start();
-    if (Platform.isWindows) _winCap.initialize();
+    // 教师主播只接收转发学生流，不推自己的桌面
     _statusTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
       if (!mounted || !_server.isRunning) return;
       try {
@@ -97,29 +97,43 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
   }
 
   Future<void> _initDefender() async {
-    final ip = _ipCtrl.text.trim();
-    if (ip.isEmpty) {
+    try {
+      final ip = _ipCtrl.text.trim();
+      if (ip.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('教师服务器 IP 不能为空')));
+        }
+        return;
+      }
+      _remoteServerUrl = 'http://$ip:8766';
+      _startDefenderStreaming();
+      _startHeartbeat();
+    } catch (e, st) {
+      swallowDebug(e, tag: 'Defender.init', stack: st);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('教师服务器 IP 不能为空')));
+          SnackBar(content: Text('启动答辩失败: $e')));
       }
-      return;
     }
-    _remoteServerUrl = 'http://$ip:8766';
-    _startDefenderStreaming();
-    _startHeartbeat();
   }
 
   void _startDefenderStreaming() {
-    if (Platform.isWindows) {
-      _winCap.initialize();
-      _startWinToRemote();
-    } else if (Platform.isAndroid) {
-      if (DefenseBroadcastPage.screenCaptureKey != null) {
-        _phoneCap.start(_remoteServerUrl!, DefenseBroadcastPage.screenCaptureKey!);
+    try {
+      if (Platform.isWindows) {
+        _winCap.initialize();
+        _startWinToRemote();
+      } else if (Platform.isAndroid) {
+        if (DefenseBroadcastPage.screenCaptureKey != null) {
+          _phoneCap.start(_remoteServerUrl!, DefenseBroadcastPage.screenCaptureKey!);
+        } else {
+          debugPrint('Defender: screenCaptureKey is null, skip phone capture');
+        }
       }
+      _startCamToRemote();
+    } catch (e, st) {
+      swallowDebug(e, tag: 'Defender.streaming', stack: st);
     }
-    _startCamToRemote();
   }
 
   void _startWinToRemote() {
@@ -143,24 +157,29 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
   }
 
   void _startCamToRemote() {
-    _cameraOn = true;
-    _live.initializeCamera();
-    _camTimer = Timer.periodic(const Duration(milliseconds: 330), (_) async {
-      if (!_cameraOn || _remoteServerUrl == null) return;
-      try {
-        final b = await _live.takeSnapshotBytes();
-        if (b != null) {
-          await http.post(
-            Uri.parse('$_remoteServerUrl/frame/camera'),
-            body: b,
-            headers: {'Content-Type': 'image/jpeg'},
-          ).timeout(const Duration(seconds: 2));
+    try {
+      _cameraOn = true;
+      _live.initializeCamera();
+      _camTimer = Timer.periodic(const Duration(milliseconds: 330), (_) async {
+        if (!_cameraOn || _remoteServerUrl == null) return;
+        try {
+          final b = await _live.takeSnapshotBytes();
+          if (b != null) {
+            await http.post(
+              Uri.parse('$_remoteServerUrl/frame/camera'),
+              body: b,
+              headers: {'Content-Type': 'image/jpeg'},
+            ).timeout(const Duration(seconds: 2));
+          }
+        } catch (e, st) {
+          swallowDebug(e, tag: 'Defender.cam', stack: st);
         }
-      } catch (e, st) {
-        swallowDebug(e, tag: 'Defender.cam', stack: st);
-      }
-    });
-    if (mounted) setState(() {});
+      });
+      if (mounted) setState(() {});
+    } catch (e, st) {
+      swallowDebug(e, tag: 'Defender.cam.init', stack: st);
+      _cameraOn = false;
+    }
   }
 
   void _startHeartbeat() {
@@ -200,6 +219,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
   }
 
   void _startWin() {
+    if (_winOn) return;
     _winOn = true;
     _winTimer = Timer.periodic(const Duration(milliseconds: 100), (_) async {
       if (!_winOn) return;
@@ -469,31 +489,65 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
   }
 
   Widget _buildPreview() {
+    // 调试：显示当前状态
+    if (!_server.isRunning) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          color: NoirTokens.inkDeep,
+          child: _empty('服务器未启动\n点击"开始"启动服务器'),
+        ),
+      );
+    }
+
+    final winUrl = 'http://$_serverIp:$_serverPort/raw/win';
+    final phoneUrl = 'http://$_serverIp:$_serverPort/raw/phone';
+    final cameraUrl = 'http://$_serverIp:$_serverPort/raw/camera';
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: Container(
         color: NoirTokens.inkDeep,
-        child: _winOn || _cameraOn
-          ? Row(children: [
-              Expanded(
-                child: _layoutMode != 'phoneOnly'
-                  ? DefenseViewerWidget(
-                      url: _server.isRunning
-                          ? 'http://$_serverIp:$_serverPort/raw/win'
-                          : null,
-                      label: 'Win 桌面')
-                  : _empty('手机画面')),
-              if (_layoutMode == 'dual') ...[
-                Container(width: 2, color: NoirTokens.paper.withValues(alpha: 0.1)),
-                Expanded(
-                  child: DefenseViewerWidget(
-                    url: _server.isRunning
-                        ? 'http://$_serverIp:$_serverPort/raw/camera'
-                        : null,
-                    label: '摄像头')),
-              ],
-            ])
-          : _empty('开始桌面或摄像头抓取以预览'),
+        child: Column(
+          children: [
+            // 调试信息栏
+            Container(
+              padding: const EdgeInsets.all(8),
+              color: Colors.blue.withValues(alpha: 0.2),
+              child: Text(
+                '服务器运行中 | 布局: $_layoutMode | 观众: $_viewerCount',
+                style: const TextStyle(color: Colors.white, fontSize: 11),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            // 视频预览区
+            Expanded(
+              child: Row(children: [
+                if (_layoutMode == 'dual' || _layoutMode == 'winOnly') ...[
+                  Expanded(
+                    child: DefenseViewerWidget(
+                      url: winUrl,
+                      label: '学生桌面 (raw/win)',
+                    )),
+                  if (_layoutMode == 'dual')
+                    Container(width: 2, color: NoirTokens.paper.withValues(alpha: 0.1)),
+                ],
+                if (_layoutMode == 'dual' || _layoutMode == 'cameraOnly')
+                  Expanded(
+                    child: DefenseViewerWidget(
+                      url: cameraUrl,
+                      label: '学生摄像头 (raw/camera)',
+                    )),
+                if (_layoutMode == 'phoneOnly')
+                  Expanded(
+                    child: DefenseViewerWidget(
+                      url: phoneUrl,
+                      label: '学生手机 (raw/phone)',
+                    )),
+              ]),
+            ),
+          ],
+        ),
       ),
     );
   }
