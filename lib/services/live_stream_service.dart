@@ -257,6 +257,21 @@ class LiveStreamService {
     }
   }
 
+  /// 抓取当前摄像头一帧并返回 JPEG 字节（失败返回 null）。
+  /// 高效版本：避免文件系统 I/O，直接返回内存字节。
+  Future<Uint8List?> takeSnapshotBytes() async {
+    final ctrl = _cameraController;
+    if (ctrl == null || !ctrl.value.isInitialized) return null;
+    if (ctrl.value.isTakingPicture) return null;
+    try {
+      final xFile = await ctrl.takePicture();
+      return await xFile.readAsBytes();
+    } catch (e, st) {
+      swallowDebug(e, tag: 'LiveStream.takeSnapshotBytes', stack: st);
+      return null;
+    }
+  }
+
   /// 释放摄像头但保留单例与状态流（关闭浮窗时调用）。
   ///
   /// 浮窗关闭后必须停掉摄像头，否则 webcam 指示灯常亮、下次打开还拿着陈旧的
