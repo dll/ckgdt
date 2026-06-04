@@ -1,20 +1,22 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../../core/design/noir_tokens.dart';
 import '../../core/error_handler.dart';
+import '../../core/network_utils.dart';
+import '../../data/local/database_helper.dart';
 import '../../data/models/user_model.dart';
 import '../../services/auth_service.dart';
-import '../../services/default_class_service.dart';
 import '../../services/live_broadcast_service.dart';
+import '../../services/notification_service.dart';
 
 /// 教师端「直播授权」面板 — 勾选学生可以开播答辩直播。
 ///
-/// 授权名单写入 Gitee `live/authorized.json`，开播端开播前校验。
-/// 教师/管理员本身恒可开播，无需在此勾选。
+/// 只显示进行中班级的学生，已归档班级（计科221/222）的学生不显示。
 class LiveAuthorizeSheet extends StatefulWidget {
-  const LiveAuthorizeSheet({super.key});
+  final String? className;
+  const LiveAuthorizeSheet({super.key, this.className});
 
-  static void show(BuildContext context) {
+  static void show(BuildContext context, {String? className}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -22,7 +24,7 @@ class LiveAuthorizeSheet extends StatefulWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => const LiveAuthorizeSheet(),
+      builder: (_) => LiveAuthorizeSheet(className: className),
     );
   }
 
@@ -32,37 +34,62 @@ class LiveAuthorizeSheet extends StatefulWidget {
 
 class _LiveAuthorizeSheetState extends State<LiveAuthorizeSheet> {
   final _auth = AuthService();
-  List<UserModel> _students = [];
+  List<UserModel> _displayedStudents = [];
   final Set<String> _authorized = {};
   bool _loading = true;
   bool _saving = false;
 
+  List<Map<String, dynamic>> _activeClasses = [];
+  String _selectedClass = 'all';
+  Set<String> _activeClassStudentIds = {};
+
   @override
   void initState() {
     super.initState();
+    _selectedClass = widget.className ?? 'all';
     _load();
   }
 
   Future<void> _load() async {
     try {
-      // 只取默认班级（单个班级）的学生，避免混入已归档年级（计科22）
-      final raw =
-          await DefaultClassService.instance.getDefaultClassStudents();
-      var students = raw.cast<UserModel>();
-      // 默认班级未设置时回退到全体活跃学生（仍排除归档/幽灵）
-      if (students.isEmpty) {
-        students = await _auth.getStudents();
+      final db = await DatabaseHelper.instance.database;
+
+      // 1. 加载所有进行中的班级（排除归档班级）
+      final classes = await db.query('classes',
+          where: 'is_archived = ?',
+          whereArgs: [0],
+          orderBy: 'name');
+
+      // 2. 获取所有进行中班级的学生ID
+      final activeClassIds = classes.map((c) => c['id'] as int).toList();
+      Set<String> activeStudentIds = {};
+
+      if (activeClassIds.isNotEmpty) {
+        final placeholders = List.filled(activeClassIds.length, '?').join(',');
+        final members = await db.rawQuery(
+          'SELECT DISTINCT user_id FROM class_members WHERE class_id IN ($placeholders)',
+          activeClassIds,
+        );
+        activeStudentIds = members.map((m) => m['user_id'] as String).toSet();
       }
+
+      // 3. 加载已授权名单
       final authorized =
           await LiveBroadcastService.instance.getAuthorizedIds();
+
+      // 4. 只保留属于进行中班级的授权
+      final validAuthorized = authorized.where((uid) => activeStudentIds.contains(uid)).toSet();
+
       if (mounted) {
         setState(() {
-          _students = students;
+          _activeClasses = classes;
+          _activeClassStudentIds = activeStudentIds;
           _authorized
             ..clear()
-            ..addAll(authorized);
+            ..addAll(validAuthorized);
           _loading = false;
         });
+        await _filterStudents();
       }
     } catch (e, st) {
       swallowDebug(e, tag: 'LiveAuthorize.load', stack: st);
@@ -70,12 +97,91 @@ class _LiveAuthorizeSheetState extends State<LiveAuthorizeSheet> {
     }
   }
 
+  Future<void> _filterStudents() async {
+    try {
+      final db = await DatabaseHelper.instance.database;
+
+      if (_selectedClass == 'all') {
+        // 显示所有进行中班级的学生
+        if (_activeClassStudentIds.isEmpty) {
+          setState(() => _displayedStudents = []);
+          return;
+        }
+
+        final placeholders = List.filled(_activeClassStudentIds.length, '?').join(',');
+        final userMaps = await db.rawQuery(
+          'SELECT * FROM users WHERE user_id IN ($placeholders) AND role = ? ORDER BY user_id',
+          [..._activeClassStudentIds.toList(), 'student'],
+        );
+
+        setState(() {
+          _displayedStudents = userMaps.map((m) => UserModel.fromMap(m)).toList();
+        });
+      } else {
+        // 显示指定班级的学生
+        final classRows = await db.query('classes',
+            where: 'name = ? AND is_archived = ?',
+            whereArgs: [_selectedClass, 0],
+            limit: 1);
+
+        if (classRows.isEmpty) {
+          setState(() => _displayedStudents = []);
+          return;
+        }
+
+        final classId = classRows.first['id'] as int;
+        final members = await db.query('class_members',
+            where: 'class_id = ?', whereArgs: [classId]);
+        final userIds = members.map((m) => m['user_id'] as String).toList();
+
+        if (userIds.isEmpty) {
+          setState(() => _displayedStudents = []);
+          return;
+        }
+
+        final placeholders = List.filled(userIds.length, '?').join(',');
+        final userMaps = await db.rawQuery(
+          'SELECT * FROM users WHERE user_id IN ($placeholders) AND role = ? ORDER BY user_id',
+          [...userIds, 'student'],
+        );
+
+        setState(() {
+          _displayedStudents = userMaps.map((m) => UserModel.fromMap(m)).toList();
+        });
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'LiveAuthorize.filter', stack: st);
+      setState(() => _displayedStudents = []);
+    }
+  }
+
   Future<void> _save() async {
     setState(() => _saving = true);
+    final previousAuthorized = await LiveBroadcastService.instance.getAuthorizedIds();
     final ok = await LiveBroadcastService.instance
         .setAuthorizedIds(_authorized.toList());
     if (!mounted) return;
     setState(() => _saving = false);
+
+    // 发送通知给新授权的学生
+    if (ok) {
+      final newlyAuthorized = _authorized.difference(previousAuthorized.toSet());
+      final notificationService = NotificationService();
+
+      // 获取教师本机 IP 用于局域网答辩
+      final serverIp = await NetworkUtils.getLocalIp();
+
+      for (final uid in newlyAuthorized) {
+        final student = _displayedStudents.where((s) => s.userId == uid).firstOrNull;
+        notificationService.notifyDefenseAuthorized(
+          studentId: uid,
+          studentName: student?.realName ?? uid,
+          serverIp: serverIp,
+        );
+      }
+    }
+
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(ok ? '授权已保存（${_authorized.length} 人可开播）' : '保存失败，请检查网络'),
@@ -112,7 +218,7 @@ class _LiveAuthorizeSheetState extends State<LiveAuthorizeSheet> {
                       color: NoirTokens.accent, size: 18),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text('直播授权 · 选择可开播的学生',
+                    child: Text('直播授权 · 进行中班级学生',
                         style: TextStyle(
                             color: NoirTokens.paper,
                             fontWeight: FontWeight.w700,
@@ -125,22 +231,59 @@ class _LiveAuthorizeSheetState extends State<LiveAuthorizeSheet> {
                 ],
               ),
             ),
+            // 班级选择器（只显示进行中的班级）
+            if (_activeClasses.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(children: [
+                    ChoiceChip(
+                      label: const Text('全部', style: TextStyle(fontSize: 11)),
+                      selected: _selectedClass == 'all',
+                      selectedColor: NoirTokens.accent.withValues(alpha: 0.3),
+                      onSelected: (_) {
+                        setState(() => _selectedClass = 'all');
+                        _filterStudents();
+                      },
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    ..._activeClasses.map((c) {
+                      final name = c['name'] as String? ?? '';
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: ChoiceChip(
+                          label: Text(name, style: const TextStyle(fontSize: 11)),
+                          selected: _selectedClass == name,
+                          selectedColor: NoirTokens.accent.withValues(alpha: 0.3),
+                          onSelected: (_) {
+                            setState(() => _selectedClass = name);
+                            _filterStudents();
+                          },
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      );
+                    }),
+                  ]),
+                ),
+              ),
+            const SizedBox(height: 8),
             Expanded(
               child: _loading
                   ? const Center(
                       child: CircularProgressIndicator(
                           color: NoirTokens.accent))
-                  : _students.isEmpty
+                  : _displayedStudents.isEmpty
                       ? Center(
-                          child: Text('暂无学生数据',
+                          child: Text('该班级暂无学生',
                               style: TextStyle(
                                   color: NoirTokens.paper
                                       .withValues(alpha: 0.5))))
                       : ListView.builder(
                           controller: scrollCtrl,
-                          itemCount: _students.length,
+                          itemCount: _displayedStudents.length,
                           itemBuilder: (_, i) {
-                            final s = _students[i];
+                            final s = _displayedStudents[i];
                             final on = _authorized.contains(s.userId);
                             return SwitchListTile(
                               value: on,

@@ -3,8 +3,10 @@ import '../../widgets/back_button_bar.dart';
 import '../../../data/local/notification_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/update_service.dart';
+import '../../../services/sync_service.dart';
 import 'compose_notification_page.dart';
 import '../settings/update_dialog.dart';
+import '../assessment/defense/defense_broadcast_page.dart';
 
 /// 通知列表页面 — 展示用户的通知消息
 ///
@@ -341,7 +343,7 @@ class _NotificationListPageState extends State<NotificationListPage> {
               label: const Text('去查看'),
               onPressed: () {
                 Navigator.of(ctx).pop();
-                _navigateToRelated(relatedType);
+                _navigateToRelated(relatedType, notification);
               },
             ),
         ],
@@ -379,7 +381,33 @@ class _NotificationListPageState extends State<NotificationListPage> {
   }
 
   /// 把通知里的 related_entity_type 翻译成提示，让用户自己跳对应 Tab
-  void _navigateToRelated(String entityType) {
+  void _navigateToRelated(String entityType, [Map<String, dynamic>? notification]) {
+    // 答辩直播：直接跳转到答辩页面并传入 serverIp
+    if (entityType == 'defense_live') {
+      String? serverIp;
+      final content = notification?['content'] as String? ?? '';
+      // 从通知内容中提取 IP：教师机 IP: 192.168.x.x
+      final ipMatch = RegExp(r'IP:\s*(\d+\.\d+\.\d+\.\d+)').firstMatch(content);
+      if (ipMatch != null) {
+        serverIp = ipMatch.group(1);
+      }
+
+      Navigator.of(context).maybePop();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DefenseBroadcastPage(
+              initialRole: 'defender',
+              serverIp: serverIp,
+            ),
+          ),
+        );
+      });
+      return;
+    }
+
     final hint = {
       'lab_submission': '请到 实验 Tab 查看 AI 批阅 / 教师评分',
       'work_submission': '请到 作品 Tab 查看 AI 批阅 / 教师评分',

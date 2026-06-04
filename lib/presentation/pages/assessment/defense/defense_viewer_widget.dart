@@ -38,6 +38,10 @@ class _DefenseViewerWidgetState extends State<DefenseViewerWidget> {
   int _contentLen = 0;
   int _readBytes = 0;
 
+  // Cached URI to avoid re-parsing on reconnects
+  Uri? _cachedUri;
+  String? _lastValidatedUrl;
+
   static const _boundary = '--frame';
 
   @override
@@ -56,19 +60,48 @@ class _DefenseViewerWidgetState extends State<DefenseViewerWidget> {
     _reconnectTimer?.cancel();
     _sub?.cancel();
     _client?.close(force: true);
-    _client = null; _sub = null;
+    _client = null;
+    _sub = null;
+    _cachedUri = null;
+    _lastValidatedUrl = null;
+  }
+
+  void _setError(String status) {
+    if (mounted) setState(() { _error = true; _status = status; });
   }
 
   void _connect() {
     final url = widget.url;
     if (url == null || url.isEmpty) {
-      setState(() { _status = '未配置服务器'; }); return;
+      if (mounted) setState(() { _status = '未配置服务器'; });
+      return;
     }
+
+    // 只在 URL 改变时重新解析
+    if (url != _lastValidatedUrl) {
+      final uri = Uri.tryParse(url);
+      if (uri == null || !uri.hasAuthority || uri.host.isEmpty) {
+        _setError('URL 格式错误');
+        _cachedUri = null;
+        _lastValidatedUrl = null;
+        return;
+      }
+      _cachedUri = uri;
+      _lastValidatedUrl = url;
+    }
+
+    // 确保有有效的 URI
+    if (_cachedUri == null) {
+      _setError('内部错误：URI 未初始化');
+      return;
+    }
+
     _client = HttpClient();
-    _client!.getUrl(Uri.parse(url)).then((req) {
+    _client!.getUrl(_cachedUri!).then((req) {
       req.headers.set('Accept', 'multipart/x-mixed-replace');
       return req.close();
     }).then((res) {
+      if (!mounted) return;
       if (res.statusCode != 200) {
         setState(() { _error = true; _status = '${res.statusCode}'; });
         res.drain(); _schedule(); return;
@@ -76,21 +109,23 @@ class _DefenseViewerWidgetState extends State<DefenseViewerWidget> {
       setState(() { _connected = true; _error = false; _status = '已连接'; });
       _buf.clear(); _state = 0; _contentLen = 0; _readBytes = 0;
       _sub = res.listen(_parse, onDone: () {
-        setState(() { _connected = false; _status = '断开'; });
+        if (mounted) setState(() { _connected = false; _status = '断开'; });
         _schedule();
       }, onError: (e) {
-        setState(() { _error = true; _status = '$e'; });
+        if (mounted) setState(() { _error = true; _status = '$e'; });
         _schedule();
       });
     }).catchError((e) {
-      setState(() { _error = true; _status = '连接失败: $e'; });
+      if (mounted) setState(() { _error = true; _status = '连接失败: $e'; });
       _schedule();
     });
   }
 
   void _schedule() {
     _reconnectTimer?.cancel();
-    _reconnectTimer = Timer(const Duration(seconds: 3), _connect);
+    _reconnectTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) _connect();
+    });
   }
 
   void _parse(List<int> chunk) {
@@ -100,6 +135,12 @@ class _DefenseViewerWidgetState extends State<DefenseViewerWidget> {
         final data = _buf.toBytes();
         final idx = _indexOf(data, utf8.encode(_boundary));
         if (idx < 0) {
+          if (data.length > 1024 * 1024) {
+            _buf.clear();
+            if (mounted) setState(() { _error = true; _status = '流数据损坏'; });
+            _disconnect();
+            break;
+          }
           if (data.length > _boundary.length) { _buf.clear(); _buf.add(data.sublist(data.length - _boundary.length + 1)); }
           break;
         }
@@ -130,7 +171,7 @@ class _DefenseViewerWidgetState extends State<DefenseViewerWidget> {
         final frame = data.sublist(0, _contentLen);
         _buf.clear();
         if (data.length > _contentLen) _buf.add(data.sublist(_contentLen));
-        setState(() { _frame = frame; _status = '直播中'; });
+        if (mounted) setState(() { _frame = frame; _status = '直播中'; });
         _state = 0; continue;
       }
       break;

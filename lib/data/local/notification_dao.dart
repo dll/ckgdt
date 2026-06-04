@@ -285,4 +285,67 @@ class NotificationDao {
       'read_count': (result.first['read_count'] as int?) ?? 0,
     };
   }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 全局数据统计（通知管理仪表盘用）
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// 获取全局通知概览统计
+  Future<Map<String, dynamic>> getGlobalStats() async {
+    final db = await _dbHelper.database;
+    final totalNotif = (await db.rawQuery(
+        'SELECT COUNT(*) AS c FROM notifications')).first['c'] as int? ?? 0;
+    final totalRecip = (await db.rawQuery(
+        'SELECT COUNT(*) AS c FROM notification_recipients')).first['c'] as int? ?? 0;
+    final totalRead = (await db.rawQuery(
+        "SELECT COUNT(*) AS c FROM notification_recipients WHERE is_read = 1")).first['c'] as int? ?? 0;
+    final sentToday = (await db.rawQuery(
+        "SELECT COUNT(*) AS c FROM notifications WHERE date(created_at) = date('now')")).first['c'] as int? ?? 0;
+    final typeDist = await db.rawQuery(
+        "SELECT type, COUNT(*) AS count FROM notifications GROUP BY type ORDER BY count DESC");
+    return {
+      'total_notifications': totalNotif,
+      'total_recipients': totalRecip,
+      'total_read': totalRead,
+      'sent_today': sentToday,
+      'type_distribution': typeDist,
+    };
+  }
+
+  /// 获取用户个人统计（收到的通知中）
+  Future<Map<String, dynamic>> getUserStats(String userId) async {
+    final db = await _dbHelper.database;
+    final total = (await db.rawQuery(
+        'SELECT COUNT(*) AS c FROM notification_recipients WHERE user_id = ?', [userId])).first['c'] as int? ?? 0;
+    final unread = (await db.rawQuery(
+        'SELECT COUNT(*) AS c FROM notification_recipients WHERE user_id = ? AND is_read = 0', [userId])).first['c'] as int? ?? 0;
+    final readToday = (await db.rawQuery(
+        "SELECT COUNT(*) AS c FROM notification_recipients WHERE user_id = ? AND is_read = 1 AND date(read_at) = date('now')", [userId])).first['c'] as int? ?? 0;
+    final monthly = await db.rawQuery('''
+      SELECT strftime('%m', created_at) AS month, COUNT(*) AS count
+      FROM notification_recipients nr
+      JOIN notifications n ON nr.notification_id = n.id
+      WHERE nr.user_id = ?
+      GROUP BY month ORDER BY month
+    ''', [userId]);
+    return {
+      'total': total,
+      'unread': unread,
+      'read_today': readToday,
+      'monthly': monthly,
+    };
+  }
+
+  /// 获取当天收到的通知量（最近 7 天逐日）
+  Future<List<Map<String, dynamic>>> getDailyStats(String userId) async {
+    final db = await _dbHelper.database;
+    return await db.rawQuery('''
+      SELECT date(n.created_at) AS day, COUNT(*) AS count,
+        SUM(CASE WHEN nr.is_read = 1 THEN 1 ELSE 0 END) AS read_count
+      FROM notification_recipients nr
+      JOIN notifications n ON nr.notification_id = n.id
+      WHERE nr.user_id = ? AND n.created_at >= datetime('now', '-6 days')
+      GROUP BY day ORDER BY day
+    ''', [userId]);
+  }
 }

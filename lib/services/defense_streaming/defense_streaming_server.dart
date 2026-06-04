@@ -38,31 +38,42 @@ class DefenseStreamingServer {
   void Function(String ip, int port)? onServerReady;
 
   Future<void> start({int port = 8766}) async {
-    if (_running) return;
+    if (_running) {
+      debugPrint('DefenseStreamingServer: already running, skipping start');
+      return;
+    }
+    debugPrint('DefenseStreamingServer: getting local IP...');
     _host = await _localIp();
+    debugPrint('DefenseStreamingServer: local IP = $_host');
     _port = port;
     for (int i = 0; i < 20; i++) {
       try {
         _server = await HttpServer.bind(InternetAddress.anyIPv4, _port, shared: true);
+        debugPrint('DefenseStreamingServer: bound to port $_port');
         break;
       } on SocketException {
         _port++;
       }
     }
-    if (_server == null) return;
+    if (_server == null) {
+      debugPrint('DefenseStreamingServer: FAILED to bind server after 20 attempts');
+      return;
+    }
     _running = true;
     _host ??= '127.0.0.1';
-    debugPrint('DefenseStreamingServer: http://$_host:$_port');
+    debugPrint('DefenseStreamingServer: starting at http://$_host:$_port');
     _server!.listen(_onRequest, onError: (_) {});
+    debugPrint('DefenseStreamingServer: calling onServerReady callback with ip=$_host, port=$_port');
     onServerReady?.call(_host!, _port);
   }
 
   Future<void> stop() async {
     _running = false;
-    for (final s in _sessions) {
+    final sessionsToClose = List.of(_sessions);
+    _sessions.clear();
+    for (final s in sessionsToClose) {
       try { await s.response.close(); } catch (e, st) { swallowDebug(e, tag: 'DefenseStreaming.stop', stack: st); }
     }
-    _sessions.clear();
     await _server?.close(force: true);
     _server = null;
   }
@@ -126,6 +137,14 @@ class DefenseStreamingServer {
     r.headers.contentType = ContentType.parse('multipart/x-mixed-replace; boundary=frame');
     r.headers.add('Cache-Control', 'no-cache');
     r.headers.add('Connection', 'keep-alive');
+
+    // 立即发送初始边界帧，避免客户端等待超时
+    try {
+      r.add(utf8.encode('\r\n--frame\r\n'));
+    } catch (e) {
+      swallowDebug(e, tag: 'DefenseStreaming.stream.init');
+    }
+
     final session = _Session(response: r, source: source);
     _sessions.add(session);
     r.done.then((_) => _sessions.remove(session));
@@ -138,9 +157,16 @@ class DefenseStreamingServer {
       try {
         Uint8List? frame;
         if (s.source != null) {
-          frame = s.source == 'win' ? _latestWinFrame
-                : s.source == 'phone' ? _latestPhoneFrame : _latestCameraFrame;
+          // 特定源请求：优先返回指定源，如果没有则回退到其他可用源
+          if (s.source == 'win') {
+            frame = _latestWinFrame ?? _latestPhoneFrame ?? _latestCameraFrame;
+          } else if (s.source == 'phone') {
+            frame = _latestPhoneFrame ?? _latestWinFrame ?? _latestCameraFrame;
+          } else {
+            frame = _latestCameraFrame;
+          }
         } else {
+          // 通用流：返回任何可用的帧
           frame = _latestWinFrame ?? _latestPhoneFrame ?? _latestCameraFrame;
         }
         if (frame == null) continue;
@@ -170,18 +196,32 @@ class DefenseStreamingServer {
 
   Future<String?> _localIp() async {
     try {
+      debugPrint('DefenseStreamingServer: listing network interfaces...');
       final ifs = await NetworkInterface.list(type: InternetAddressType.IPv4, includeLoopback: false);
+      debugPrint('DefenseStreamingServer: found ${ifs.length} interfaces');
       for (final i in ifs) {
+        debugPrint('DefenseStreamingServer: interface ${i.name} has ${i.addresses.length} addresses');
         for (final a in i.addresses) {
-          if (a.address.startsWith('192.168') || a.address.startsWith('10.') || a.address.startsWith('172.')) return a.address;
+          debugPrint('DefenseStreamingServer: checking address ${a.address}');
+          if (a.address.startsWith('192.168') || a.address.startsWith('10.') || a.address.startsWith('172.')) {
+            debugPrint('DefenseStreamingServer: selected private IP ${a.address}');
+            return a.address;
+          }
         }
       }
       for (final i in ifs) {
         for (final a in i.addresses) {
-          if (!a.isLoopback) return a.address;
+          if (!a.isLoopback) {
+            debugPrint('DefenseStreamingServer: fallback to non-loopback IP ${a.address}');
+            return a.address;
+          }
         }
       }
-    } catch (e, st) { swallowDebug(e, tag: 'DefenseStreaming.localIp', stack: st); }
+    } catch (e, st) {
+      debugPrint('DefenseStreamingServer: _localIp() error: $e');
+      swallowDebug(e, tag: 'DefenseStreaming.localIp', stack: st);
+    }
+    debugPrint('DefenseStreamingServer: no suitable IP found, using 127.0.0.1');
     return '127.0.0.1';
   }
 
