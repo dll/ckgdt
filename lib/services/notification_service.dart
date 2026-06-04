@@ -317,6 +317,31 @@ class NotificationService {
     }
   }
 
+  /// 通知学生已被授权答辩直播
+  Future<int?> notifyDefenseAuthorized({
+    required String studentId,
+    required String studentName,
+    required String serverIp,
+  }) async {
+    try {
+      final notificationId = await _notificationDao.createNotification(
+        title: '答辩直播授权',
+        content: '你已被授权参加答辩直播。教师机 IP: $serverIp，请打开答辩页面连接。',
+        creatorId: 'system',
+        targetType: 'individual',
+        targetId: studentId,
+        type: 'defense',
+        relatedEntityType: 'defense_live',
+        relatedEntityId: 'defense_auth_$studentId',
+      );
+      debugPrint('NotificationService: 答辩授权通知 — $studentName → $serverIp');
+      return notificationId;
+    } catch (e) {
+      debugPrint('NotificationService: 发送答辩授权通知失败 — $e');
+      return null;
+    }
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // 应用更新通知
   // ─────────────────────────────────────────────────────────────────────────

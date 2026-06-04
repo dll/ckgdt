@@ -59,28 +59,53 @@ class PhoneScreenCapturer {
   Future<void> _tryNativeStart(int fps) async {
     if (!Platform.isAndroid) return;
     try {
-      await _methodChannel.invokeMethod('start');
-      _useNative = true;
+      debugPrint('PhoneScreenCapturer: requesting native screen capture permission...');
+
+      // 先订阅事件流，以便接收权限拒绝的错误
       _nativeSub = _eventChannel.receiveBroadcastStream().listen((event) {
-        if (event is Uint8List) _nativeFrame = event;
+        if (event is Uint8List) {
+          _nativeFrame = event;
+        } else if (event == null) {
+          // null 表示原生端已启动成功
+          debugPrint('PhoneScreenCapturer: native capture started successfully');
+        }
       }, onError: (e) {
+        debugPrint('PhoneScreenCapturer: native error - $e');
         swallowDebug(e, tag: 'PhoneScreenCapturer.native');
         _useNative = false;
+        _nativeSub?.cancel();
+        _nativeSub = null;
+        // 用户拒绝权限后，降级到 RepaintBoundary 捕获
         _fallbackToRepaintBoundary(fps);
       });
-      // 等待 STARTED 确认
+
+      // 调用原生方法启动屏幕捕获（会弹出系统授权对话框）
+      await _methodChannel.invokeMethod('start');
+      _useNative = true;
+
+      // 等待用户授权结果（通过 EventChannel 返回）
       await Future.delayed(const Duration(milliseconds: 500));
-      _timer = Timer.periodic(Duration(milliseconds: (1000 / fps).round()), (_) => _sendNativeFrame());
+
+      // 如果用户授权成功，启动定时器推送帧
+      if (_useNative && _active) {
+        _timer = Timer.periodic(Duration(milliseconds: (1000 / fps).round()), (_) => _sendNativeFrame());
+        debugPrint('PhoneScreenCapturer: native capture timer started');
+      }
     } on MissingPluginException {
+      debugPrint('PhoneScreenCapturer: native plugin not available, falling back to RepaintBoundary');
       _fallbackToRepaintBoundary(fps);
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('PhoneScreenCapturer: native start failed - $e');
+      swallowDebug(e, tag: 'PhoneScreenCapturer.nativeStart', stack: st);
       _fallbackToRepaintBoundary(fps);
     }
   }
 
   void _fallbackToRepaintBoundary(int fps) {
     if (!_active) return;
+    debugPrint('PhoneScreenCapturer: falling back to RepaintBoundary capture');
     _useNative = false;
+    _timer?.cancel();
     final ms = (1000 / fps).round().clamp(50, 1000);
     _timer = Timer.periodic(Duration(milliseconds: ms), (_) => _grabAndSend());
   }

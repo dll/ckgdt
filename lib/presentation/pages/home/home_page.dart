@@ -9,10 +9,12 @@ import '../../../services/screenshot_service.dart';
 import '../../../services/navigation_service.dart';
 import '../../../services/unread_count_service.dart';
 import '../../../services/live_broadcast_service.dart';
+import '../../../services/sync_service.dart';
 import '../../widgets/live_viewer_sheet.dart';
 import '../../../services/default_class_service.dart';
 import '../../../dev/demo_seed_service.dart';
 import '../notification/notification_list_page.dart';
+import '../notification/notification_manage_page.dart';
 import '../../widgets/agent_chat_overlay.dart';
 import '../../widgets/screenshot_capture_page.dart';
 import '../login/login_page.dart';
@@ -92,6 +94,7 @@ const _cardColors = {
   '反馈管理': Color(0xFFf6d365),
   '一键生课': Color(0xFFa18cd1),
   '课程管理': Color(0xFFfbc2eb),
+  '通知管理': Color(0xFF667eea),
   '学生管理': Color(0xFF84fab0),
   '数据导入': Color(0xFF8fd3f4),
   '数据导出': Color(0xFFa1c4fd),
@@ -119,6 +122,8 @@ class _HomePageState extends State<HomePage> {
     _refreshUnreadCount();
     _loadActiveCourse();
     _ensureClassesInitialized();
+    // 学生登录后自动拉取最新通知
+    _pullNotifications();
     // 进入系统即开始轮询直播会话，全员可见正在进行的答辩直播
     LiveBroadcastService.instance.startWatching();
     // 注册全局导航服务回调
@@ -189,6 +194,11 @@ class _HomePageState extends State<HomePage> {
   Future<void> _refreshUnreadCount() async {
     final userId = _authService.getCurrentUserId();
     await UnreadCountService.instance.refresh(userId);
+  }
+
+  /// 拉取最新通知（学生登录后）
+  Future<void> _pullNotifications() async {
+    // 通知同步功能后续接入
   }
 
   Future<void> _loadActiveCourse() async {
@@ -720,6 +730,13 @@ class _HomePageState extends State<HomePage> {
                   destinationPage: const CrossPlatformHubPage(),
                   cardColor: _cardColors['多端互通'],
                   description: '多平台无缝衔接',
+                ),
+                _buildMenuCard(
+                  icon: Icons.notifications_active,
+                  title: '通知管理',
+                  destinationPage: const NotificationManagePage(),
+                  cardColor: _cardColors['通知管理'],
+                  description: '通知列表与数据统计',
                 ),
 
                 // ── 学生专属功能 ──────────────────────────────────
