@@ -1429,6 +1429,166 @@ class SyncService {
     }
   }
 
+  // ── 通知同步 ────────────────────────────────────────────────────────
+
+  /// 上传单个通知到 Gitee
+  Future<void> uploadNotification(int notificationId) async {
+    try {
+      await _ensureSyncToken();
+      final db = await DatabaseHelper.instance.database;
+
+      // 查询通知详情
+      final notifRows = await db.query('notifications', where: 'id = ?', whereArgs: [notificationId]);
+      if (notifRows.isEmpty) {
+        debugPrint('SyncService: 通知 $notificationId 不存在');
+        return;
+      }
+
+      final notif = notifRows.first;
+
+      // 查询接收人列表
+      final recipientRows = await db.query(
+        'notification_recipients',
+        where: 'notification_id = ?',
+        whereArgs: [notificationId],
+      );
+
+      // 构建 JSON
+      final data = {
+        ...notif,
+        'recipients': recipientRows,
+      };
+
+      // 生成文件名：notif_{id}_{timestamp}.json
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = 'notif_${notificationId}_$timestamp.json';
+      final content = jsonEncode(data);
+
+      // 上传到 sync/notifications/
+      await _gitee.createOrUpdateFile(
+        owner: repoOwner,
+        repo: repoName,
+        path: 'sync/notifications/$fileName',
+        content: content,
+        message: 'upload notification $notificationId',
+        branch: repoBranch,
+      );
+
+      debugPrint('SyncService: 通知 $notificationId 已上传到 Gitee');
+    } catch (e, st) {
+      swallowDebug(e, tag: 'SyncService.uploadNotification', stack: st);
+    }
+  }
+
+  /// 从 Gitee 下载所有通知
+  Future<void> downloadNotifications() async {
+    try {
+      await _ensureSyncToken();
+
+      // 列出 sync/notifications/ 目录下的所有文件
+      final files = await _gitee.listDir(
+        repoOwner,
+        repoName,
+        'sync/notifications',
+        ref: repoBranch,
+      );
+
+      for (final file in files) {
+        final path = file['path'] as String?;
+        if (path == null || !path.endsWith('.json')) continue;
+
+        try {
+          // 下载文件内容
+          final content = await _gitee.getFileContent(
+            repoOwner,
+            repoName,
+            path,
+            ref: repoBranch,
+          );
+
+          if (content != null) {
+            final data = jsonDecode(content) as Map<String, dynamic>;
+            await _importNotification(data);
+          }
+        } catch (e, st) {
+          swallowDebug(e, tag: 'SyncService.downloadNotification', stack: st);
+        }
+      }
+
+      debugPrint('SyncService: 通知下载完成');
+    } catch (e, st) {
+      swallowDebug(e, tag: 'SyncService.downloadNotifications', stack: st);
+    }
+  }
+
+  /// 导入单个通知到本地数据库（使用自然键去重）
+  Future<void> _importNotification(Map<String, dynamic> data) async {
+    try {
+      final db = await DatabaseHelper.instance.database;
+
+      // 提取通知数据
+      final notif = Map<String, dynamic>.from(data);
+      final recipients = notif.remove('recipients') as List<dynamic>? ?? [];
+
+      // 使用自然键检查是否已存在：(entity_type, entity_id, created_at, target_id)
+      final entityType = notif['related_entity_type'] as String?;
+      final entityId = notif['related_entity_id'] as String?;
+      final createdAt = notif['created_at'] as String?;
+      final targetId = notif['target_id'] as String?;
+
+      if (entityType == null || entityId == null || createdAt == null) {
+        return; // 缺少自然键字段
+      }
+
+      // 检查是否已存在
+      final existing = await db.query(
+        'notifications',
+        where: 'related_entity_type = ? AND related_entity_id = ? AND created_at = ? AND target_type = ? AND target_id = ?',
+        whereArgs: [entityType, entityId, createdAt, notif['target_type'], targetId],
+        limit: 1,
+      );
+
+      int notificationId;
+      if (existing.isNotEmpty) {
+        // 已存在，使用现有 ID
+        notificationId = existing.first['id'] as int;
+        debugPrint('SyncService: 通知已存在，跳过 (id=$notificationId)');
+      } else {
+        // 插入新通知（不指定 id，让数据库自动生成）
+        final insertData = Map<String, dynamic>.from(notif);
+        insertData.remove('id'); // 移除原 ID
+        notificationId = await db.insert('notifications', insertData);
+        debugPrint('SyncService: 导入通知 id=$notificationId');
+      }
+
+      // 导入接收人记录（使用自然键去重）
+      for (final r in recipients) {
+        final recipient = r as Map<String, dynamic>;
+        final recipientId = recipient['recipient_id'] as String?;
+        if (recipientId == null) continue;
+
+        // 检查是否已存在
+        final existingRecipient = await db.query(
+          'notification_recipients',
+          where: 'notification_id = ? AND recipient_id = ?',
+          whereArgs: [notificationId, recipientId],
+          limit: 1,
+        );
+
+        if (existingRecipient.isEmpty) {
+          await db.insert('notification_recipients', {
+            'notification_id': notificationId,
+            'recipient_id': recipientId,
+            'is_read': recipient['is_read'] ?? 0,
+            'read_at': recipient['read_at'],
+          });
+        }
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'SyncService.importNotification', stack: st);
+    }
+  }
+
   /// 测试同步仓库连接
   Future<SyncResult> testConnection() async {
     try {
