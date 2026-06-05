@@ -3,8 +3,8 @@
   "user_id": "2023210644",
   "user_name": "张靖婷",
   "role": "student",
-  "synced_at": "2026-06-05T17:11:35.307551",
-  "last_active": "2026-06-05T17:11:35.308071",
+  "synced_at": "2026-06-05T17:12:59.573605",
+  "last_active": "2026-06-05T17:12:59.573605",
   "quiz_results": [
     {
       "user_id": "2023210644",
@@ -53,6 +53,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 4,
+      "user_id": "2023210644",
+      "content": "PDF实验报告：2023210644张靖婷实验四 微信小程序开发.pdf\n\n--- 报告正文（自动提取）---\n移动应用开发实验报告\n封面信息\n项目\n内容\n实验名称\n微信小程序开发\n实验编号\nd20301035104\n、\nd20301009204\n学号\n2023210644\n姓名\n张靖婷\n班级\n软件\n231\n日期\n2026\n年\n4\n月\n组别\n智能健康运动记录平台开发与整合\n(IHFTPDI)\n项目名称\n智能健康运动记录平台（\nIHFTPDI\n）\n技术栈\n微信小程序\n(JavaScript)\n实验目的\n1.\n掌握微信小程序开发流程\n2.\n学会\nWXML/WXSS/JS\n开发\n3.\n理解页面路由与数据传递\n4.\n掌握本地存储使用\n5.\n体验\nAI\n辅助开发\n实验环境\n工具\n版本\n用途\n微信开发者工具\n最新版\n小程序开发与调试\nNode.js\n18+\n可选，用于\nnpm\n依赖管理\nAI\n辅助工具\nTRAE\n代码生成与调试\n实验步骤\n1.\n需求分析\n1.1\n页面流程图\n首页\n(\n运动记录列表\n)\n→\n详情页\n(\n运动记录详情\n)\n↓\n本地存储\n(\n已读状态\n)\n1.2\n数据模型\n//\n运动记录数据结构\n{\nid:\n1,\ntype:\n\"\n跑步\n\",\nduration:\n\"30\n分钟\n\",\nsteps:\n5000,\ncalories:\n200,\ndate:\n\"2024-01-01\",\nremark:\n\"\n晨跑\n\",\nisRead:\nfalse\n}\n2.\n创建小程序项目\n2.1\n新建项目\n●\n打开微信开发者工具\n●\n新建小程序项目\n●\n填写\nAppID\n（如无则使用测试号）\n●\n选择\nJavaScript\n模板\n3.\n运动记录列表页面开发\n3.1\nWXML\n布局\n<!--\npages/index/index.wxml\n-->\n<view\nclass=\"container\">\n<view\nclass=\"record-list\">\n<view\nclass=\"record-item\n{{item.isRead\n?\n'read'\n:\n''}}\"\nwx:for=\"{{recordList}}\"\nwx:key=\"id\"\nbindtap=\"goToDetail\"\ndata-id=\"{{item.id}}\"\n>\n<view\nclass=\"type\">{{item.type}}</view>\n<view\nclass=\"info\">\n<text>\n时长：\n{{item.duration}}</text>\n<text>\n步数：\n{{item.steps}}</text>\n<text>\n消耗：\n{{item.calories}}kcal</text>\n</view>\n<view\nclass=\"date\">{{item.date}}</view>\n</view>\n</view>\n</view>\n3.2\nWXSS\n样式\n/*\npages/index/index.wxss\n*/\n.record-item\n{\npadding:\n16px;\nborder-bottom:\n1px\nsolid\n#eee;\nbackground:\n#fff;\n}\n.record-item.read\n{\nopacity:\n0.6;\n}\n.type\n{\nfont-size:\n16px;\nfont-weight:\nbold;\nmargin-bottom:\n8px;\n}\n.info\n{\nfont-size:\n12px;\ncolor:\n#666;\ndisplay:\nflex;\njustify-content:\nspace-between;\nmargin-bottom:\n8px;\n}\n.date\n{\nfont-size:\n12px;\ncolor:\n#999;\n}\n3.3\nJS\n逻辑\n//\npages/index/index.js\nPage({\ndata:\n{\nrecordList:\n[]\n},\nonLoad()\n{\nthis.loadRecords();\n},\nonPullDownRefresh()\n{\nthis.loadRecords().then(()\n=>\n{\nwx.stopPullDownRefresh();\n});\n},\nloadRecords()\n{\n//\n模拟数据\nconst\nrecordList\n=\n[\n{\nid:\n1,\ntype:\n\"\n跑步\n\",\nduration:\n\"30\n分钟\n\",\nsteps:\n5000,\ncalories:\n200,\ndate:\n\"2024-01-01\",\nremark:\n\"\n晨跑\n\",\nisRead:\nfalse\n},\n{\nid:\n2,\ntype:\n\"\n骑行\n\",\nduration:\n\"45\n分钟\n\",\nsteps:\n0,\ncalories:\n350,\ndate:\n\"2024-01-02\",\nremark:\n\"\n户外骑行\n\",\nisRead:\nfalse\n},\n{\nid:\n3,\ntype:\n\"\n游泳\n\",\nduration:\n\"60\n分钟\n\",\nsteps:\n0,\ncalories:\n500,\ndate:\n\"2024-01-03\",\nremark:\n\"\n自由泳\n\",\nisRead:\nfalse\n}\n];\n//\n读取本地存储的已读状态\nconst\nreadIds\n=\nwx.getStorageSync('readIds')\n||\n[];\nrecordList.forEach(record\n=>\n{\nrecord.isRead\n=\nreadIds.includes(record.id);\n});\nthis.setData({\nrecordList\n});\n},\ngoToDetail(e)\n{\nconst\nid\n=\ne.currentTarget.dataset.id;\nwx.navigateTo({\nurl:\n`/pages/detail/detail?id=${id}`\n});\n}\n});\n3.4\n配置文件\n//\npages/index/index.json\n{\n\"navigationBarTitleText\":\n\"\n运动记录\n\",\n\"enablePullDownRefresh\":\ntrue,\n\"usingComponents\":\n{}\n}\n4.\n详情页开发\n4.1\nWXML\n布局\n<!--\npages/detail/detail.wxml\n-->\n<view\nclass=\"container\">\n<view\nclass=\"type\">{{record.type}}</view>\n<view\nclass=\"info\">\n<view\nclass=\"item\">\n<text\nclass=\"label\">\n时长：\n</text>\n<text>{{record.duration}}</text>\n</view>\n<view\nclass=\"item\">\n<text\nclass=\"label\">\n步数：\n</text>\n<text>{{record.steps}}</text>\n</view>\n<view\nclass=\"item\">\n<text\nclass=\"label\">\n消耗：\n</text>\n<text>{{record.calories}}kcal</text>\n</view>\n<view\nclass=\"item\">\n<text\nclass=\"label\">\n日期：\n</text>\n<text>{{record.date}}</text>\n</view>\n<view\nclass=\"item\">\n<text\nclass=\"label\">\n备注：\n</text>\n<text>{{record.remark}}</text>\n</view>\n</view>\n</view>\n4.2\nJS\n逻辑\n//\npages/detail/detail.js\nPage({\ndata:\n{\nrecord:\n{}\n},\nonLoad(options)\n{\nconst\nid\n=\nparseInt(options.id);\nthis.loadDetail(id);\n},\nloadDetail(id)\n{\n//\n模拟数据\nconst\nallRecords\n=\n[\n{\nid:\n1,\ntype:\n\"\n跑步\n\",\nduration:\n\"30\n分钟\n\",\nsteps:\n5000,\ncalories:\n200,\ndate:\n\"2024-01-01\",\nremark:\n\"\n晨跑\n\"\n},\n{\nid:\n2,\ntype:\n\"\n骑行\n\",\nduration:\n\"45\n分钟\n\",\nsteps:\n0,\ncalories:\n350,\ndate:\n\"2024-01-02\",\nremark:\n\"\n户外骑行\n\"\n},\n{\nid:\n3,\ntype:\n\"\n游泳\n\",\nduration:\n\"60\n分钟\n\",\nsteps:\n0,\ncalories:\n500,\ndate:\n\"2024-01-03\",\nremark:\n\"\n自由泳\n\"\n}\n];\nconst\nrecord\n=\nallRecords.find(r\n=>\nr.id\n===\nid);\nthis.setData({\nrecord\n});\n//\n标记为已读\nthis.markAsRead(id);\n},\nmarkAsRead(id)\n{\nlet\nreadIds\n=\nwx.getStorageSync('readIds')\n||\n[];\nif\n(!readIds.includes(id))\n{\nreadIds.push(id);\nwx.setStorageSync('readIds',\nreadIds);\n}\n}\n});\n5.\n本地存储功能\n5.1\n已读状态存储\n//\n保存已读\nID\nwx.setStorageSync('readIds',\n[1,\n2,\n3]);\n//\n读取已读\nID\nconst\nreadIds\n=\nwx.getStorageSync('readIds');\n//\n检查是否已读\nconst\nisRead\n=\nreadIds.includes(recordId);\n6.\n测试与发布\n6.1\n真机预览\n●\n编译项目\n●\n扫描二维码预览\n●\n测试各项功能\n6.2\n体验版发布\n●\n点击上传\n●\n填写版本信息\n●\n获取体验版二维码\n实验结果\n验证结果\n功能\n状态\n备注\n运动记录列表展示\n成功\n列表正常渲染，样式统一\n详情页跳转\n成功\n点击跳转正常，无卡顿\n已读状态存储\n成功\n持久化生效，重启保持\n下拉刷新\n成功\n数据刷新正常\n真机预览\n成功\n小程序可在真机运行\n截图记录\n运动记录列表页面\n运动记录详情页面\n已读状态效果\n实验总结\n实验收获\n●\n掌握了微信小程序完整开发流程，包括页面搭建、列表渲染、路由跳转与参数传递\n●\n学会了使用\nWXML/WXSS/JS\n进行小程序开发\n●\n理解了本地存储的使用方法，实现了已读状态持久化\n●\n体验了\nAI\n辅助工具在代码生成和调试中的应用\n●\n完成了真机预览和体验版发布流程\n技术要点\n●\nwx:for\n列表渲染与数据绑定\n●\n页面路由与参数传递（\nwx.navigateTo\n）\n●\n本地存储\nAPI\n（\nwx.setStorageSync/wx.getStorageSync\n）\n●\n下拉刷新功能实现\n●\nAI\n辅助编码提升开发效率\n考核指标\n考核项\n评分标准\n得分\n功能完整性\n通知列表、详情页、本地存储功能完整\n30\n分\n代码质量\n代码结构清晰，注释完整\n20\n分\n页面设计\n界面美观，用户体验良好\n15\n分\n本地存储\n已读状态存储正常\n15\n分\n真机预览\n小程序可在真机上正常运行\n10\n分\n实验报告\n报告结构完整，内容详实\n10\n分\n教师评价\n项目\n评价\n实验完成情况\n技术掌握程度\n创新点\n综合评价\n成绩\n教师签名：\n___________________\n日期：\n___________________\n",
+      "file_paths": "E:\\download\\2023210644张靖婷实验四 微信小程序开发.pdf",
+      "file_names": "2023210644张靖婷实验四 微信小程序开发.pdf",
+      "submit_time": "2026-06-05T17:12:59.541800",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-06-05T17:12:59.541800",
+      "updated_at": "2026-06-05T17:12:59.541800",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 3,
       "user_id": "2023210644",
