@@ -1,0 +1,70 @@
+{
+  "version": "2.0",
+  "user_id": "2022210552",
+  "user_name": "曹万千",
+  "role": "student",
+  "synced_at": "2026-06-06T16:49:01.016921",
+  "last_active": "2026-06-06T16:49:01.012391",
+  "quiz_results": [],
+  "learning_records": [],
+  "wrong_answers": [],
+  "favorites": [],
+  "feedback": [],
+  "learning_paths": [],
+  "lab_submissions": [],
+  "student_reports": [],
+  "student_works": [
+    {
+      "title": "智慧社区生活服务平台开发与整合",
+      "description": "【UI动画设计】使用Flutter的AnimationController和Hero动画实现页面间的流畅过渡效果，为列表加载、按钮点击等操作添加微交互动效。【交互体验优化】基于Material Design 3设计规范优化用户操作流程，减少操作步骤，提供下拉刷新、手势导航等便捷交互方式。【AI界面推荐】调用AI大模型根据用户的使用习惯和偏好，智能调整首页功能模块的排列顺序和推荐内容。",
+      "tech_stack": "Dart + Flutter",
+      "work_type": "综合项目",
+      "group_name": "cg1-sclsdpi",
+      "leader_name": "曹万千",
+      "user_id": "2022210552",
+      "file_path": null,
+      "file_size": null,
+      "status": "已提交",
+      "submit_time": null,
+      "tags": "[\"Dart\",\"Flutter\"]",
+      "created_at": "2026-04-18T16:18:03.794703",
+      "updated_at": "2026-04-18T16:18:03.794703",
+      "project_id": null,
+      "group_id": null,
+      "video_url": "assets/videos/demo_2022210552.mp4",
+      "thumbnail_url": null,
+      "video_duration": "03:25",
+      "view_count": 211,
+      "like_count": 50,
+      "comment_count": 2,
+      "repo": "cg1-sclsdpi",
+      "class_group": "cg1",
+      "project": "智慧社区生活服务平台开发与整合",
+      "student_role": "Flutter开发工程师",
+      "student_name": "曹万千"
+    }
+  ],
+  "survey_responses": [],
+  "checkin_records": [],
+  "work_comments": [],
+  "work_likes": [],
+  "peer_reviews": [],
+  "notification_recipients": [
+    {
+      "notification_id": 2,
+      "user_id": "2022210552",
+      "is_read": 0,
+      "read_at": null
+    },
+    {
+      "notification_id": 1,
+      "user_id": "2022210552",
+      "is_read": 1,
+      "read_at": "2026-05-08T23:22:43.933411"
+    }
+  ],
+  "collaboration_messages": [],
+  "contribution_scores": [],
+  "classroom_messages": [],
+  "path_nodes": []
+}
