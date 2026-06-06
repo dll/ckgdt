@@ -3,8 +3,8 @@
   "user_id": "2022210552",
   "user_name": "曹万千",
   "role": "student",
-  "synced_at": "2026-06-06T16:54:01.028086",
-  "last_active": "2026-06-06T16:54:01.014340",
+  "synced_at": "2026-06-06T18:19:01.031518",
+  "last_active": "2026-06-06T18:19:01.023469",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
@@ -50,6 +50,19 @@
       "score": null,
       "feedback": null,
       "created_at": "2026-06-06T16:53:54.785063",
+      "updated_at": null
+    },
+    {
+      "template_id": null,
+      "task_id": null,
+      "user_id": "2022210552",
+      "title": "项目报告",
+      "content_json": "2022210552+曹万千+项目报告.pdf",
+      "status": "已提交",
+      "submit_time": "2026-06-06T16:54:07.714554",
+      "score": null,
+      "feedback": null,
+      "created_at": "2026-06-06T16:54:07.714554",
       "updated_at": null
     }
   ],
