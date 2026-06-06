@@ -3,8 +3,8 @@
   "user_id": "2023210643",
   "user_name": "张海天",
   "role": "student",
-  "synced_at": "2026-06-06T20:39:30.059484",
-  "last_active": "2026-06-06T20:39:30.059484",
+  "synced_at": "2026-06-06T20:49:30.030454",
+  "last_active": "2026-06-06T20:49:30.030454",
   "quiz_results": [
     {
       "user_id": "2023210643",
@@ -541,15 +541,78 @@
       "updated_at": null
     }
   ],
-  "student_works": [],
+  "student_works": [
+    {
+      "title": "二手物品交易平台开发与整合",
+      "description": "【数据报表生成】自动汇总平台的交易数据生成运营报表，包含交易量、成交率、热门品类和用户活跃度等关键指标。【图表展示】使用图表组件可视化展示交易趋势、价格分布和用户增长数据，支持多维度筛选和对比分析。【AI交易分析】调用AI大模型分析平台交易数据模式，预测热门品类趋势和最佳定价策略。",
+      "tech_stack": "C# + .NET + MAUI",
+      "work_type": "综合项目",
+      "group_name": "cg2-sgtpdi",
+      "leader_name": "张海天",
+      "user_id": "2023210643",
+      "file_path": "E:\\Document/works_videos/2023210643/secondhand_intro_sub.mp4",
+      "file_size": "5.0MB",
+      "status": "已提交",
+      "submit_time": "2026-06-06T20:41:25.900330",
+      "tags": "[\"C#\",\".NET\",\"MAUI\"]",
+      "created_at": "2026-06-06T20:40:55.077984",
+      "updated_at": "2026-06-06T20:41:25.900330",
+      "related_node_ids": null,
+      "ai_suspicion": 0.0,
+      "teacher_confirmed": 0,
+      "project_id": null,
+      "group_id": null,
+      "video_url": "E:\\Document/works_videos/2023210643/secondhand_intro_sub.mp4",
+      "thumbnail_url": null,
+      "video_duration": null,
+      "view_count": 0,
+      "like_count": 1,
+      "comment_count": 0,
+      "repo": "cg2-sgtpdi",
+      "class_group": "cg2",
+      "project": "二手物品交易平台开发与整合",
+      "student_role": "MAUI开发工程师",
+      "student_name": "张海天"
+    }
+  ],
   "survey_responses": [],
   "checkin_records": [],
   "work_comments": [],
-  "work_likes": [],
-  "work_views": [],
+  "work_likes": [
+    {
+      "work_id": 55,
+      "user_id": "2023210643",
+      "created_at": "2026-06-06T20:46:30.564162"
+    }
+  ],
+  "work_views": [
+    {
+      "work_id": 86,
+      "user_id": "2023210643",
+      "viewed_at": "2026-06-06T20:42:33.244701"
+    }
+  ],
   "peer_reviews": [],
   "collaboration_messages": [],
-  "contribution_scores": [],
+  "contribution_scores": [
+    {
+      "target_user_id": "2023210643",
+      "target_user_name": "张海天",
+      "scorer_user_id": "2023210643",
+      "scorer_user_name": "张海天",
+      "scorer_type": "self",
+      "repo": "cg2-sgtpdi",
+      "dimension": "individual",
+      "code_contribution": 17,
+      "doc_contribution": 17,
+      "teamwork_score": 17,
+      "initiative_score": 17,
+      "quality_score": 17,
+      "overall_score": 85,
+      "comment": null,
+      "scored_at": "2026-06-06T20:43:25.280910"
+    }
+  ],
   "work_scores": [],
   "project_scores": [],
   "lab_tasks": [
