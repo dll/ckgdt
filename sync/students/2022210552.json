@@ -3,8 +3,8 @@
   "user_id": "2022210552",
   "user_name": "曹万千",
   "role": "student",
-  "synced_at": "2026-06-06T16:49:01.016921",
-  "last_active": "2026-06-06T16:49:01.012391",
+  "synced_at": "2026-06-06T16:54:01.028086",
+  "last_active": "2026-06-06T16:54:01.014340",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
@@ -12,7 +12,47 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [],
-  "student_reports": [],
+  "student_reports": [
+    {
+      "template_id": null,
+      "task_id": null,
+      "user_id": "2022210552",
+      "title": "答辩报告",
+      "content_json": "2022210552+曹万千+答辩报告.pdf",
+      "status": "已提交",
+      "submit_time": "2026-06-06T16:50:31.683183",
+      "score": null,
+      "feedback": null,
+      "created_at": "2026-06-06T16:50:31.683183",
+      "updated_at": null
+    },
+    {
+      "template_id": null,
+      "task_id": null,
+      "user_id": "2022210552",
+      "title": "个人报告",
+      "content_json": "2022210552+曹万千+个人报告.pdf",
+      "status": "已提交",
+      "submit_time": "2026-06-06T16:50:39.972621",
+      "score": null,
+      "feedback": null,
+      "created_at": "2026-06-06T16:50:39.972621",
+      "updated_at": null
+    },
+    {
+      "template_id": null,
+      "task_id": null,
+      "user_id": "2022210552",
+      "title": "小组报告",
+      "content_json": "2022210552+曹万千+小组报告.pdf",
+      "status": "已提交",
+      "submit_time": "2026-06-06T16:53:54.785063",
+      "score": null,
+      "feedback": null,
+      "created_at": "2026-06-06T16:53:54.785063",
+      "updated_at": null
+    }
+  ],
   "student_works": [
     {
       "title": "智慧社区生活服务平台开发与整合",
