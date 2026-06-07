@@ -1,4 +1,6 @@
-﻿import 'dart:io';
+﻿import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../core/design/noir_tokens.dart';
 import '../../../core/design/noir_components.dart';
@@ -10,6 +12,8 @@ import '../../../services/navigation_service.dart';
 import '../../../services/unread_count_service.dart';
 import '../../../services/live_broadcast_service.dart';
 import '../../../services/sync_service.dart';
+import '../../../services/gitee_service.dart';
+import '../assessment/defense/defense_broadcast_page.dart';
 import '../../widgets/live_viewer_sheet.dart';
 import '../../../services/default_class_service.dart';
 import '../../../dev/demo_seed_service.dart';
@@ -115,6 +119,10 @@ class _HomePageState extends State<HomePage> {
   final _courseDao = CourseDao();
   late int _selectedIndex;
 
+  String? _defenseServerIp;
+  int _defenseServerPort = 8766;
+  Timer? _defensePollTimer;
+
   @override
   void initState() {
     super.initState();
@@ -122,8 +130,10 @@ class _HomePageState extends State<HomePage> {
     _refreshUnreadCount();
     _loadActiveCourse();
     _ensureClassesInitialized();
-    // 学生登录后自动拉取最新通知
+    // 学生登录后自动拉取 Gitee 答辩通知（每 30 秒轮询，降低 Gitee 配额压力）
     _pullNotifications();
+    _defensePollTimer = Timer.periodic(
+      const Duration(seconds: 30), (_) => _pullNotifications());
     // 进入系统即开始轮询直播会话，全员可见正在进行的答辩直播
     LiveBroadcastService.instance.startWatching();
     // 注册全局导航服务回调
@@ -136,6 +146,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    _defensePollTimer?.cancel();
     LiveBroadcastService.instance.stopWatching();
     NavigationService.instance.dispose();
     super.dispose();
@@ -196,9 +207,114 @@ class _HomePageState extends State<HomePage> {
     await UnreadCountService.instance.refresh(userId);
   }
 
-  /// 拉取最新通知（学生登录后）
+  /// 从 Gitee 拉取答辩通知，发现授权后设置 _defenseServerIp 以显示横幅
   Future<void> _pullNotifications() async {
-    // 通知同步功能后续接入
+    if (_authService.isTeacher || _authService.isAdmin) return;
+    final uid = _authService.getCurrentUserId();
+    if (uid == null) return;
+
+    try {
+      final gitee = GiteeService();
+      final json = await gitee.getFileContent(
+        SyncService.repoOwner,
+        SyncService.repoName,
+        'defense/teacher_server.json',
+        ref: SyncService.repoBranch,
+      );
+      if (json == null) {
+        if (_defenseServerIp != null && mounted) {
+          setState(() => _defenseServerIp = null);
+        }
+        return;
+      }
+
+      final data = jsonDecode(json) as Map<String, dynamic>;
+      final authorized = (data['authorizedStudents'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [];
+      final ip = data['teacherIp'] as String?;
+      final port = data['serverPort'] as int? ?? 8766;
+      final ts = data['timestamp'] as String?;
+
+      // 超过 5 分钟视为过期广播
+      if (ts != null) {
+        final time = DateTime.tryParse(ts);
+        if (time != null &&
+            DateTime.now().difference(time) > const Duration(minutes: 5)) {
+          if (_defenseServerIp != null && mounted) {
+            setState(() => _defenseServerIp = null);
+          }
+          return;
+        }
+      }
+
+      if (authorized.contains(uid) && ip != null && ip.isNotEmpty) {
+        if (!mounted) return;
+        if (_defenseServerIp != ip || _defenseServerPort != port) {
+          setState(() {
+            _defenseServerIp = ip;
+            _defenseServerPort = port;
+          });
+        }
+      } else {
+        if (_defenseServerIp != null && mounted) {
+          setState(() => _defenseServerIp = null);
+        }
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'HomePage.pullDefense', stack: st);
+    }
+  }
+
+  /// 答辩广播横幅：检测到教师开播且当前用户在授权名单中时显示
+  Widget _buildDefenseBanner() {
+    if (_defenseServerIp == null || _authService.isTeacher || _authService.isAdmin) {
+      return const SizedBox.shrink();
+    }
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DefenseBroadcastPage(
+                initialRole: 'defender',
+                serverIp: _defenseServerIp,
+                serverPort: _defenseServerPort,
+              ),
+            ),
+          );
+        },
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: [
+              Colors.orange.withValues(alpha: 0.9),
+              Colors.red.withValues(alpha: 0.85),
+            ]),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.sensors, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text('教师正在答辩直播 — 点击连接',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13)),
+              ),
+              const Text('连接',
+                  style: TextStyle(color: Colors.white, fontSize: 12)),
+              const Icon(Icons.chevron_right, color: Colors.white, size: 18),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _loadActiveCourse() async {
@@ -525,6 +641,7 @@ class _HomePageState extends State<HomePage> {
       body: NoirBackground(
         child: Column(
           children: [
+            _buildDefenseBanner(),
             _buildLiveBanner(),
             Expanded(
                 child: bodyMap[_selectedIndex]?.call() ?? _buildHome()),
