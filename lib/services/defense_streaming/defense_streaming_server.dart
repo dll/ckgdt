@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 
 import '../../core/error_handler.dart';
+import '../output_path_service.dart';
 
 /// 布局模式
 enum LayoutMode { dual, winOnly, phoneOnly, cameraOnly }
@@ -38,6 +39,10 @@ class DefenseStreamingServer {
 
   final Set<String> _authorizedStudents = {};
   File? _authFile;
+
+  // 最近活跃的答辩学生（教师端据此显示答辩项目信息）
+  String? _activeDefenderId;
+  DateTime _lastDefenderAt = DateTime(2000);
 
   void Function(String ip, int port)? onServerReady;
 
@@ -87,7 +92,7 @@ class DefenseStreamingServer {
 
     // 设置授权缓存文件并加载历史授权（支持服务端重启后无需重授权）
     try {
-      final dir = Directory.systemTemp;
+      final dir = await OutputPathService.getOutputDirectory();
       _authFile = File('${dir.path}/mad_defense_auth.json');
       _loadAuth();
     } catch (e, st) {
@@ -163,8 +168,10 @@ class DefenseStreamingServer {
       else if (p == '/stream/feed' && req.method == 'GET') _stream(req);
       else if (p == '/raw/win' && req.method == 'GET') _stream(req, 'win');
       else if (p == '/raw/phone' && req.method == 'GET') _stream(req, 'phone');
+      else if (p == '/raw/screen' && req.method == 'GET') _stream(req, 'screen');
       else if (p == '/raw/camera' && req.method == 'GET') _stream(req, 'camera');
       else if (p == '/api/authorized' && req.method == 'GET') _authorizedEndpoint(req);
+      else if (p == '/heartbeat' && req.method == 'POST') _heartbeat(req);
       else _json(req, 404, {'error': 'unknown'});
     } catch (e) {
       _json(req, 500, {'error': '$e'});
@@ -202,11 +209,14 @@ class DefenseStreamingServer {
       try {
         Uint8List? frame;
         if (s.source != null) {
-          // 特定源请求：优先返回指定源，如果没有则回退到其他可用源
+          // 特定源请求：只返回对应源，绝不回退到摄像头（否则桌面分区会串到人脸画面）
           if (s.source == 'win') {
-            frame = _latestWinFrame ?? _latestPhoneFrame ?? _latestCameraFrame;
+            frame = _latestWinFrame;
           } else if (s.source == 'phone') {
-            frame = _latestPhoneFrame ?? _latestWinFrame ?? _latestCameraFrame;
+            frame = _latestPhoneFrame;
+          } else if (s.source == 'screen') {
+            // 桌面分区：win/phone 谁有取谁（Windows 学生推 win，安卓学生推 phone），但绝不取 camera
+            frame = _latestWinFrame ?? _latestPhoneFrame;
           } else {
             frame = _latestCameraFrame;
           }
@@ -236,6 +246,7 @@ class DefenseStreamingServer {
         'cameraAge': DateTime.now().difference(_lastCameraAt).inMilliseconds,
       },
       'layout': _layoutMode.name,
+      'activeDefenderId': activeDefenderId,
     });
   }
 
@@ -283,6 +294,27 @@ class DefenseStreamingServer {
       'port': _port,
     });
   }
+
+  Future<void> _heartbeat(HttpRequest req) async {
+    try {
+      final body = await utf8.decoder.bind(req).join();
+      final data = jsonDecode(body) as Map<String, dynamic>;
+      final sid = data['studentId'] as String?;
+      if (sid != null && sid.isNotEmpty) {
+        _activeDefenderId = sid;
+        _lastDefenderAt = DateTime.now();
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'DefenseStreaming.heartbeat', stack: st);
+    }
+    _json(req, 200, {'ok': true});
+  }
+
+  /// 最近 10 秒内有心跳的答辩学生 id（无则 null）。
+  String? get activeDefenderId =>
+      DateTime.now().difference(_lastDefenderAt) <= const Duration(seconds: 10)
+          ? _activeDefenderId
+          : null;
 }
 
 class _Session {

@@ -7,6 +7,8 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../../../../services/default_class_service.dart';
 import '../../../../data/local/achievement_dao.dart';
+import '../../../../services/achievement/achievement_docx_service.dart';
+import '../../../../services/achievement/achievement_excel_service.dart';
 import '../../../../services/auth_service.dart';
 import '../../../../core/error_handler.dart';
 import '../../../widgets/markdown_bubble.dart';
@@ -542,6 +544,74 @@ class _ReportTabState extends State<ReportTab> {
       context: context,
       builder: (ctx) => ReportPreviewDialog(reportText: reportText),
     );
+  }
+
+  Future<void> _exportDocx() async {
+    if (_calcResults == null || _selectedBatchId == null) return;
+    try {
+      final batch = _batches.firstWhere((b) => b['id'] == _selectedBatchId,
+          orElse: () => <String, dynamic>{});
+      final teacherName = widget.authService.currentUser?.realName ?? '教师';
+      final scores = await widget.achievementDao.getScores(_selectedBatchId!);
+
+      final objectives = <Map<String, dynamic>>[];
+      for (int i = 0; i < 4; i++) {
+        objectives.add({
+          'objective': i + 1,
+          'weight': kDefaultWeights[i],
+          'achievement': _objectiveAchievements[i],
+          'avgScore': _objectiveAchievements[i] * 100,
+        });
+      }
+
+      final path = await AchievementDocxService.instance.generateReport(
+        batchName: batch['batch_name'] ?? '达成评价',
+        courseName: batch['course_name'] ?? '移动应用开发',
+        className: batch['class_name'] ?? '班级',
+        semester: batch['semester'] ?? DateTime.now().year.toString(),
+        teacherName: teacherName,
+        syllabus: {},
+        objectives: objectives,
+        classStats: {
+          'studentCount': scores.length,
+          'avgTotal': _weightedAchievement * 100,
+          'maxTotal': _maxOf(scores, (s) => (s['total_score'] as double?) ?? 0),
+          'minTotal': _minOf(scores, (s) => (s['total_score'] as double?) ?? 0),
+          'stdDev': _stdDevOf(scores, (s) => (s['total_score'] as double?) ?? 0),
+        },
+        students: scores,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Word 报告已保存: $path'), duration: const Duration(seconds: 4)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('导出Word失败: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  double _maxOf(List<Map<String, dynamic>> items, double Function(Map<String, dynamic>) getter) {
+    if (items.isEmpty) return 0;
+    return items.map(getter).reduce((a, b) => a > b ? a : b);
+  }
+
+  double _minOf(List<Map<String, dynamic>> items, double Function(Map<String, dynamic>) getter) {
+    if (items.isEmpty) return 0;
+    return items.map(getter).reduce((a, b) => a < b ? a : b);
+  }
+
+  double _stdDevOf(List<Map<String, dynamic>> items, double Function(Map<String, dynamic>) getter) {
+    if (items.isEmpty) return 0;
+    final values = items.map(getter).toList();
+    final mean = values.reduce((a, b) => a + b) / values.length;
+    final variance = values.map((v) => (v - mean) * (v - mean)).reduce((a, b) => a + b) / values.length;
+    return sqrt(variance);
   }
 
   Future<void> _exportReport() async {
@@ -1110,6 +1180,11 @@ class _ReportTabState extends State<ReportTab> {
           onPressed: (_calcResults != null && !_generatingReport) ? _exportReport : null,
           icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
           label: const Text('导出PDF报告'),
+        ),
+        OutlinedButton.icon(
+          onPressed: (_calcResults != null && !_generatingReport) ? _exportDocx : null,
+          icon: const Icon(Icons.description, size: 18),
+          label: const Text('导出Word报告'),
         ),
       ],
     );
