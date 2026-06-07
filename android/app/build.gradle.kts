@@ -68,3 +68,13 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // CameraX：前台服务内用 ImageAnalysis 采集前置摄像头帧（答辩人脸流，后台存活）
+    val cameraxVersion = "1.3.4"
+    implementation("androidx.camera:camera-core:$cameraxVersion")
+    implementation("androidx.camera:camera-camera2:$cameraxVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
+    // ProcessCameraProvider.getInstance() 返回 Guava ListenableFuture，需显式上 classpath
+    implementation("com.google.guava:guava:33.2.1-android")
+}
