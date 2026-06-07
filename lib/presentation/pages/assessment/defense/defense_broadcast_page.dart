@@ -19,6 +19,7 @@ import '../../../../services/live_stream_service.dart';
 import '../../../../services/sync_service.dart';
 import '../../../widgets/live_stream_panel.dart';
 import 'defense_controls_panel.dart';
+import 'defense_project_info_panel.dart';
 import 'defense_viewer_widget.dart';
 
 class DefenseBroadcastPage extends StatefulWidget {
@@ -44,6 +45,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
   String _serverIp = '';
   int _serverPort = 8766;
   int _viewerCount = 0;
+  String? _activeDefenderId;
   bool _winOn = false;
   bool _cameraOn = false;
   String _layoutMode = 'dual';
@@ -119,8 +121,9 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
           if (resp.statusCode == 200 && mounted) {
             final data = jsonDecode(resp.body) as Map<String, dynamic>;
             final newCount = (data['viewers'] as int?) ?? 0;
-            if (_viewerCount != newCount) {
-              setState(() { _viewerCount = newCount; });
+            final defId = data['activeDefenderId'] as String?;
+            if (_viewerCount != newCount || _activeDefenderId != defId) {
+              setState(() { _viewerCount = newCount; _activeDefenderId = defId; });
             }
           }
         } catch (e, st) {
@@ -169,7 +172,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
       return 0;
     } on SocketException { return 1; }
     on TimeoutException { return 1; }
-    catch (_) { return -1; }
+    catch (e, st) { swallowDebug(e, tag: 'Defender.tryConnect', stack: st); return -1; }
   }
 
   Future<void> _initDefender() async {
@@ -270,26 +273,6 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
     _live.switchCamera();
   }
 
-  void _startWinToRemote() {
-    _winOn = true;
-    _winTimer = Timer.periodic(const Duration(milliseconds: 100), (_) async {
-      if (!_winOn || _remoteServerUrl == null) return;
-      try {
-        final j = await _winCap.capture();
-        if (j != null) {
-          await http.post(
-            Uri.parse('$_remoteServerUrl/frame/win'),
-            body: j,
-            headers: {'Content-Type': 'image/jpeg'},
-          ).timeout(const Duration(seconds: 2));
-        }
-      } catch (e, st) {
-        swallowDebug(e, tag: 'Defender.win', stack: st);
-      }
-    });
-    if (mounted) setState(() {});
-  }
-
   void _startCamToRemote() {
     try {
       _cameraOn = true;
@@ -326,6 +309,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
           body: jsonEncode({
             'deviceName': '答辩学生 $userId',
             'source': 'defender',
+            'studentId': userId,
           }),
           headers: {'Content-Type': 'application/json'},
         ).timeout(const Duration(seconds: 2));
@@ -515,7 +499,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
         backgroundColor: Colors.black,
         body: _role == 'presenter'
             ? _buildFullscreenPreview()
-            : _buildFullscreenDefender(),
+            : _buildDefenderPreview(),
       ),
     );
   }
@@ -552,19 +536,18 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
       const SizedBox(height: 12),
       _buildNotifyButton(),
     ],
+    if (_activeDefenderId != null && _activeDefenderId!.isNotEmpty) ...[
+      const SizedBox(height: 12),
+      DefenseProjectInfoPanel(userId: _activeDefenderId!),
+    ],
     const SizedBox(height: 12),
     Expanded(child: _buildPreview()),
   ]);
 
   Widget _buildFullscreenPreview() {
-    final winUrl = 'http://$_serverIp:$_serverPort/raw/win';
-    final phoneUrl = 'http://$_serverIp:$_serverPort/raw/phone';
+    final screenUrl = 'http://$_serverIp:$_serverPort/raw/screen';
     final cameraUrl = 'http://$_serverIp:$_serverPort/raw/camera';
-    return _buildPreviewLayout(winUrl, phoneUrl, cameraUrl);
-  }
-
-  Widget _buildFullscreenDefender() {
-    return _buildDefenderPreview();
+    return _buildPreviewLayout(screenUrl, cameraUrl);
   }
 
   Widget _buildDefender() {
@@ -591,6 +574,8 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
           Text(isScreenSharing ? '投屏中' : '已连接',
               style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12)),
         ])),
+      const SizedBox(height: 10),
+      DefenseProjectInfoPanel(userId: _auth.getCurrentUserId() ?? '', compact: true),
       const SizedBox(height: 10),
       // 主画面：摄像头（占满可用空间）
       Expanded(
@@ -739,74 +724,6 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
     );
   }
 
-  Widget _toggleBtn(String label, bool active, IconData icon, bool available, {VoidCallback? onTap}) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: !available ? Colors.grey.withValues(alpha: 0.3)
-              : active ? Colors.green.withValues(alpha: 0.3)
-                       : Colors.white.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: !available ? Colors.grey
-                : active ? Colors.green : Colors.white.withValues(alpha: 0.3))),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(!available ? Icons.not_interested : active ? Icons.check_circle : icon,
-              size: 14, color: !available ? Colors.grey : active ? Colors.green : Colors.white),
-          const SizedBox(width: 4),
-          Text(label, style: TextStyle(fontSize: 11,
-              color: !available ? Colors.grey : active ? Colors.green : Colors.white)),
-        ]),
-      ),
-    );
-  }
-
-  Widget _statusBadge(String label, bool active, bool available) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: !available
-            ? Colors.grey.withValues(alpha: 0.3)
-            : active
-                ? Colors.green.withValues(alpha: 0.3)
-                : Colors.white.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: !available
-              ? Colors.grey
-              : active
-                  ? Colors.green
-                  : Colors.white.withValues(alpha: 0.3))),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            !available
-                ? Icons.not_interested
-                : active
-                    ? Icons.check_circle
-                    : Icons.circle_outlined,
-            size: 14,
-            color: !available
-                ? Colors.grey
-                : active
-                    ? Colors.green
-                    : Colors.white),
-          const SizedBox(width: 4),
-          Text(label,
-              style: TextStyle(
-                fontSize: 11,
-                color: !available
-                    ? Colors.grey
-                    : active
-                        ? Colors.green
-                        : Colors.white)),
-        ]));
-  }
-
   Widget _buildDefenderPreview() {
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
@@ -890,29 +807,26 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
       );
     }
 
-    final winUrl = 'http://$_serverIp:$_serverPort/raw/win';
-    final phoneUrl = 'http://$_serverIp:$_serverPort/raw/phone';
+    final screenUrl = 'http://$_serverIp:$_serverPort/raw/screen';
     final cameraUrl = 'http://$_serverIp:$_serverPort/raw/camera';
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: Container(
         color: NoirTokens.inkDeep,
-        child: _buildPreviewLayout(winUrl, phoneUrl, cameraUrl),
+        child: _buildPreviewLayout(screenUrl, cameraUrl),
       ),
     );
   }
 
-  Widget _buildPreviewLayout(String winUrl, String phoneUrl, String cameraUrl) {
+  Widget _buildPreviewLayout(String screenUrl, String cameraUrl) {
     switch (_layoutMode) {
       case 'dual':
-        // 并排模式：优先显示 win/phone（取决于实际推流） + camera
-        // 左侧：尝试 phone，如果没有则显示 win
-        // 右侧：camera
+        // 并排模式：左桌面（win/phone 自动），右摄像头人脸
         return Row(children: [
           Expanded(
             child: DefenseViewerWidget(onFullscreenToggle: _toggleFullscreen, isFullscreen: _isFullscreen,
-              url: phoneUrl,
+              url: screenUrl,
               label: '学生手机/桌面',
             )),
           Container(width: 2, color: NoirTokens.paper.withValues(alpha: 0.1)),
@@ -925,13 +839,13 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
 
       case 'phoneOnly':
         return DefenseViewerWidget(onFullscreenToggle: _toggleFullscreen, isFullscreen: _isFullscreen,
-          url: phoneUrl,
+          url: screenUrl,
           label: '学生手机',
         );
 
       case 'winOnly':
         return DefenseViewerWidget(onFullscreenToggle: _toggleFullscreen, isFullscreen: _isFullscreen,
-          url: winUrl,
+          url: screenUrl,
           label: '学生桌面',
         );
 

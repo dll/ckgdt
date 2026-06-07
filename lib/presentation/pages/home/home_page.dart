@@ -222,9 +222,7 @@ class _HomePageState extends State<HomePage> {
         ref: SyncService.repoBranch,
       );
       if (json == null) {
-        if (_defenseServerIp != null && mounted) {
-          setState(() => _defenseServerIp = null);
-        }
+        _clearDefenseBanner();
         return;
       }
 
@@ -242,9 +240,7 @@ class _HomePageState extends State<HomePage> {
         final time = DateTime.tryParse(ts);
         if (time != null &&
             DateTime.now().difference(time) > const Duration(minutes: 5)) {
-          if (_defenseServerIp != null && mounted) {
-            setState(() => _defenseServerIp = null);
-          }
+          _clearDefenseBanner();
           return;
         }
       }
@@ -258,12 +254,16 @@ class _HomePageState extends State<HomePage> {
           });
         }
       } else {
-        if (_defenseServerIp != null && mounted) {
-          setState(() => _defenseServerIp = null);
-        }
+        _clearDefenseBanner();
       }
     } catch (e, st) {
       swallowDebug(e, tag: 'HomePage.pullDefense', stack: st);
+    }
+  }
+
+  void _clearDefenseBanner() {
+    if (_defenseServerIp != null && mounted) {
+      setState(() => _defenseServerIp = null);
     }
   }
 

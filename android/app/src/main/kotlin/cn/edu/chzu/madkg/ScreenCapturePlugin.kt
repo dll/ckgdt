@@ -142,35 +142,29 @@ class ScreenCapturePlugin(
     }
 
     private fun imageToJpeg(image: Image): ByteArray? {
-        val y = image.planes[0]
-        val u = image.planes[1]
-        val v = image.planes[2]
-
-        val yBuffer = y.buffer
-        val uBuffer = u.buffer
-        val vBuffer = v.buffer
+        val yBuffer = image.planes[0].buffer
+        val uBuffer = image.planes[1].buffer
+        val vBuffer = image.planes[2].buffer
 
         val ySize = yBuffer.remaining()
         val uSize = uBuffer.remaining()
         val vSize = vBuffer.remaining()
 
-        val yBytes = ByteArray(ySize)
-        val uBytes = ByteArray(uSize)
-        val vBytes = ByteArray(vSize)
+        val needed = ySize + uSize + vSize
+        var nv21 = nv21Buffer
+        if (nv21 == null || nv21.size != needed) {
+            nv21 = ByteArray(needed)
+            nv21Buffer = nv21
+        }
 
-        yBuffer.get(yBytes)
-        uBuffer.get(uBytes)
-        vBuffer.get(vBytes)
-
-        val nv21 = ByteArray(ySize + vSize + uSize)
-        System.arraycopy(yBytes, 0, nv21, 0, ySize)
+        yBuffer.get(nv21, 0, ySize)
 
         // NV21: VU interleaved (NOT separate V + U blocks)
         var pos = ySize
         val count = minOf(vSize, uSize)
         for (i in 0 until count) {
-            nv21[pos++] = vBytes[i]
-            nv21[pos++] = uBytes[i]
+            nv21[pos++] = vBuffer.get()
+            nv21[pos++] = uBuffer.get()
         }
 
         val yuvImage = YuvImage(nv21, ImageFormat.NV21, image.width, image.height, null)
