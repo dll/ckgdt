@@ -4,19 +4,22 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../core/design/noir_tokens.dart';
 
-/// MJPEG 流播放组件。连接 multipart/x-mixed-replace，自动重连。
+/// MJPEG 流播放组件。15fps 限流，无 AspectRatio 防抖动，支持全屏。
 class DefenseViewerWidget extends StatefulWidget {
   final String? url;
   final String label;
-  final double aspectRatio;
   final Widget? placeholder;
+  final VoidCallback? onFullscreenToggle;
+  final bool isFullscreen;
 
   const DefenseViewerWidget({
     super.key, this.url, this.label = '',
-    this.aspectRatio = 16 / 9, this.placeholder,
+    this.placeholder, this.onFullscreenToggle,
+    this.isFullscreen = false,
   });
 
   @override
@@ -25,6 +28,8 @@ class DefenseViewerWidget extends StatefulWidget {
 
 class _DefenseViewerWidgetState extends State<DefenseViewerWidget> {
   Uint8List? _frame;
+  DateTime _lastFrameAt = DateTime(2000);
+  static const _frameMinInterval = Duration(milliseconds: 67); // ~15fps
   bool _connected = false;
   bool _error = false;
   String _status = '等待连接…';
@@ -32,17 +37,15 @@ class _DefenseViewerWidgetState extends State<DefenseViewerWidget> {
   StreamSubscription? _sub;
   Timer? _reconnectTimer;
 
-  // MJPEG parser state
   final _buf = BytesBuilder();
-  int _state = 0; // 0=find boundary, 1=headers, 2=data
+  int _state = 0;
   int _contentLen = 0;
   int _readBytes = 0;
 
-  // Cached URI to avoid re-parsing on reconnects
   Uri? _cachedUri;
   String? _lastValidatedUrl;
 
-  static const _boundary = '--frame';
+  static const _boundary = '--FRAME';
 
   @override
   void initState() { super.initState(); _connect(); }
@@ -66,35 +69,22 @@ class _DefenseViewerWidgetState extends State<DefenseViewerWidget> {
     _lastValidatedUrl = null;
   }
 
-  void _setError(String status) {
-    if (mounted) setState(() { _error = true; _status = status; });
-  }
-
   void _connect() {
     final url = widget.url;
     if (url == null || url.isEmpty) {
       if (mounted) setState(() { _status = '未配置服务器'; });
       return;
     }
-
-    // 只在 URL 改变时重新解析
     if (url != _lastValidatedUrl) {
       final uri = Uri.tryParse(url);
       if (uri == null || !uri.hasAuthority || uri.host.isEmpty) {
-        _setError('URL 格式错误');
-        _cachedUri = null;
-        _lastValidatedUrl = null;
+        if (mounted) setState(() { _error = true; _status = 'URL 格式错误'; });
         return;
       }
       _cachedUri = uri;
       _lastValidatedUrl = url;
     }
-
-    // 确保有有效的 URI
-    if (_cachedUri == null) {
-      _setError('内部错误：URI 未初始化');
-      return;
-    }
+    if (_cachedUri == null) return;
 
     _client = HttpClient();
     _client!.getUrl(_cachedUri!).then((req) {
@@ -116,7 +106,7 @@ class _DefenseViewerWidgetState extends State<DefenseViewerWidget> {
         _schedule();
       });
     }).catchError((e) {
-      if (mounted) setState(() { _error = true; _status = '连接失败: $e'; });
+      if (mounted) setState(() { _error = true; _status = '连接失败'; });
       _schedule();
     });
   }
@@ -136,12 +126,13 @@ class _DefenseViewerWidgetState extends State<DefenseViewerWidget> {
         final idx = _indexOf(data, utf8.encode(_boundary));
         if (idx < 0) {
           if (data.length > 1024 * 1024) {
-            _buf.clear();
+            _buf.clear(); _disconnect();
             if (mounted) setState(() { _error = true; _status = '流数据损坏'; });
-            _disconnect();
             break;
           }
-          if (data.length > _boundary.length) { _buf.clear(); _buf.add(data.sublist(data.length - _boundary.length + 1)); }
+          if (data.length > _boundary.length) {
+            _buf.clear(); _buf.add(data.sublist(data.length - _boundary.length + 1));
+          }
           break;
         }
         _buf.clear();
@@ -171,7 +162,13 @@ class _DefenseViewerWidgetState extends State<DefenseViewerWidget> {
         final frame = data.sublist(0, _contentLen);
         _buf.clear();
         if (data.length > _contentLen) _buf.add(data.sublist(_contentLen));
-        if (mounted) setState(() { _frame = frame; _status = '直播中'; });
+        if (_contentLen > 0) {
+          final now = DateTime.now();
+          if (now.difference(_lastFrameAt) >= _frameMinInterval && mounted) {
+            _lastFrameAt = now;
+            setState(() { _frame = frame; _status = '直播中'; });
+          }
+        }
         _state = 0; continue;
       }
       break;
@@ -191,34 +188,67 @@ class _DefenseViewerWidgetState extends State<DefenseViewerWidget> {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(widget.isFullscreen ? 0 : 8),
       child: Container(color: NoirTokens.inkDeep,
         child: _frame != null
-          ? AspectRatio(aspectRatio: widget.aspectRatio,
-              child: Stack(fit: StackFit.expand, children: [
-                Image.memory(_frame!, fit: BoxFit.contain),
-                if (widget.label.isNotEmpty)
+          ? LayoutBuilder(builder: (context, constraints) {
+              return Stack(fit: StackFit.expand, children: [
+                Image.memory(_frame!, fit: BoxFit.contain, gaplessPlayback: true),
+                // 标签
+                if (widget.label.isNotEmpty && !widget.isFullscreen)
                   Positioned(left: 6, top: 6,
-                    child: Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(4)),
-                      child: Text(widget.label, style: const TextStyle(color: NoirTokens.accent, fontSize: 10, fontWeight: FontWeight.w600)))),
-                Positioned(right: 6, bottom: 6,
-                  child: Container(padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                    decoration: BoxDecoration(color: _connected ? Colors.green.withValues(alpha: 0.6) : Colors.red.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(4)),
-                    child: Text(_connected ? 'LIVE' : 'OFF', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)))),
-              ]))
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(4)),
+                      child: Text(widget.label,
+                          style: const TextStyle(
+                              color: NoirTokens.accent, fontSize: 10, fontWeight: FontWeight.w600)))),
+                // LIVE 指示
+                Positioned(left: 6, bottom: 6,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    decoration: BoxDecoration(
+                        color: _connected ? Colors.green.withValues(alpha: 0.6) : Colors.red.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(4)),
+                    child: Text(_connected ? 'LIVE' : 'OFF',
+                        style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)))),
+                // 全屏按钮
+                if (widget.onFullscreenToggle != null)
+                  Positioned(right: 6, top: 6,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(4),
+                        onTap: widget.onFullscreenToggle,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(4)),
+                          child: Icon(
+                            widget.isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen,
+                            color: Colors.white, size: 16),
+                        ),
+                      ),
+                    )),
+              ]);
+            })
           : widget.placeholder ?? _placeholder(),
       ),
     );
   }
 
   Widget _placeholder() {
-    return AspectRatio(aspectRatio: widget.aspectRatio,
-      child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(_error ? Icons.error_outline : Icons.hourglass_empty, size: 32, color: NoirTokens.paper.withValues(alpha: 0.3)),
+    return LayoutBuilder(builder: (context, constraints) {
+      return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Icon(_error ? Icons.error_outline : Icons.hourglass_empty,
+            size: 32, color: NoirTokens.paper.withValues(alpha: 0.3)),
         const SizedBox(height: 8),
-        Text(_status, style: TextStyle(color: NoirTokens.paper.withValues(alpha: 0.4), fontSize: 12)),
-      ])),
-    );
+        Text(_status,
+            style: TextStyle(color: NoirTokens.paper.withValues(alpha: 0.4), fontSize: 12)),
+      ]));
+    });
   }
 }

@@ -34,13 +34,21 @@ class MainActivity : FlutterActivity() {
                             result.error("UNSUPPORTED", "Android 10+ required", null)
                             return@setMethodCallHandler
                         }
-                        val intent = screenCapturePlugin!!.createCaptureIntent()
-                        startActivityForResult(intent, REQUEST_CODE_SCREEN_CAPTURE)
-                        result.success(true)
+                        try {
+                            val intent = screenCapturePlugin!!.createCaptureIntent()
+                            startActivityForResult(intent, REQUEST_CODE_SCREEN_CAPTURE)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.error("INTENT_ERROR", "无法创建屏幕捕获意图: ${e.message}", null)
+                        }
                     }
                     "stop" -> {
-                        screenCapturePlugin?.stop()
-                        result.success(true)
+                        try {
+                            screenCapturePlugin?.stop()
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.error("STOP_ERROR", e.message, null)
+                        }
                     }
                     else -> result.notImplemented()
                 }
@@ -64,6 +72,8 @@ class MainActivity : FlutterActivity() {
         if (requestCode == REQUEST_CODE_SCREEN_CAPTURE) {
             if (resultCode == RESULT_OK && data != null) {
                 screenCapturePlugin?.onCaptureResult(resultCode, data)
+                // 授权成功后最小化应用，让学生演示自己的应用
+                moveTaskToBack(true)
             } else {
                 captureEventSink?.error("PERMISSION_DENIED", "用户拒绝屏幕捕获权限", null)
             }
@@ -71,7 +81,9 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onDestroy() {
-        screenCapturePlugin?.stop()
+        try {
+            screenCapturePlugin?.stop()
+        } catch (_: Exception) {}
         super.onDestroy()
     }
 }

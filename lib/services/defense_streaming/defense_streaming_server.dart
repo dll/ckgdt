@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 
@@ -35,7 +36,44 @@ class DefenseStreamingServer {
   LayoutMode _layoutMode = LayoutMode.dual;
   LayoutMode get layoutMode => _layoutMode;
 
+  final Set<String> _authorizedStudents = {};
+  File? _authFile;
+
   void Function(String ip, int port)? onServerReady;
+
+  void authorizeStudents(Set<String> ids) {
+    _authorizedStudents.clear();
+    _authorizedStudents.addAll(ids);
+    _saveAuth();
+  }
+
+  bool isAuthorized(String studentId) => _authorizedStudents.contains(studentId);
+
+  void _saveAuth() {
+    try {
+      if (_authFile != null) {
+        _authFile!.writeAsStringSync(jsonEncode({
+          'authorized': _authorizedStudents.toList(),
+          'timestamp': DateTime.now().toIso8601String(),
+        }));
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'DefenseStreaming.saveAuth', stack: st);
+    }
+  }
+
+  void _loadAuth() {
+    try {
+      if (_authFile != null && _authFile!.existsSync()) {
+        final data = jsonDecode(_authFile!.readAsStringSync()) as Map<String, dynamic>;
+        final list = (data['authorized'] as List).cast<String>();
+        _authorizedStudents.addAll(list);
+        debugPrint('DefenseStreamingServer: loaded ${list.length} authorized students from cache');
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'DefenseStreaming.loadAuth', stack: st);
+    }
+  }
 
   Future<void> start({int port = 8766}) async {
     if (_running) {
@@ -46,6 +84,16 @@ class DefenseStreamingServer {
     _host = await _localIp();
     debugPrint('DefenseStreamingServer: local IP = $_host');
     _port = port;
+
+    // 设置授权缓存文件并加载历史授权（支持服务端重启后无需重授权）
+    try {
+      final dir = Directory.systemTemp;
+      _authFile = File('${dir.path}/mad_defense_auth.json');
+      _loadAuth();
+    } catch (e, st) {
+      swallowDebug(e, tag: 'DefenseStreaming.authFile', stack: st);
+    }
+
     for (int i = 0; i < 20; i++) {
       try {
         _server = await HttpServer.bind(InternetAddress.anyIPv4, _port, shared: true);
@@ -62,7 +110,7 @@ class DefenseStreamingServer {
     _running = true;
     _host ??= '127.0.0.1';
     debugPrint('DefenseStreamingServer: starting at http://$_host:$_port');
-    _server!.listen(_onRequest, onError: (_) {});
+    _server!.listen(_onRequest, onError: (e, st) => swallowDebug(e, tag: 'DefenseStreaming.listen', stack: st));
     debugPrint('DefenseStreamingServer: calling onServerReady callback with ip=$_host, port=$_port');
     onServerReady?.call(_host!, _port);
   }
@@ -116,6 +164,7 @@ class DefenseStreamingServer {
       else if (p == '/raw/win' && req.method == 'GET') _stream(req, 'win');
       else if (p == '/raw/phone' && req.method == 'GET') _stream(req, 'phone');
       else if (p == '/raw/camera' && req.method == 'GET') _stream(req, 'camera');
+      else if (p == '/api/authorized' && req.method == 'GET') _authorizedEndpoint(req);
       else _json(req, 404, {'error': 'unknown'});
     } catch (e) {
       _json(req, 500, {'error': '$e'});
@@ -123,8 +172,11 @@ class DefenseStreamingServer {
   }
 
   Future<void> _recvFrame(HttpRequest req, String source) async {
-    final bytes = await req.fold<Uint8List>(Uint8List(0),
-        (p, c) => Uint8List.fromList([...p, ...c]));
+    final builder = BytesBuilder(copy: false);
+    await for (final chunk in req) {
+      builder.add(chunk);
+    }
+    final bytes = builder.takeBytes();
     if (bytes.isEmpty) { _json(req, 400, {'error': 'empty'}); return; }
     if (source == 'win') pushWinFrame(bytes);
     else if (source == 'phone') pushPhoneFrame(bytes);
@@ -134,16 +186,9 @@ class DefenseStreamingServer {
 
   void _stream(HttpRequest req, [String? source]) {
     final r = req.response;
-    r.headers.contentType = ContentType.parse('multipart/x-mixed-replace; boundary=frame');
+    r.headers.contentType = ContentType.parse('multipart/x-mixed-replace; boundary=FRAME');
     r.headers.add('Cache-Control', 'no-cache');
     r.headers.add('Connection', 'keep-alive');
-
-    // 立即发送初始边界帧，避免客户端等待超时
-    try {
-      r.add(utf8.encode('\r\n--frame\r\n'));
-    } catch (e) {
-      swallowDebug(e, tag: 'DefenseStreaming.stream.init');
-    }
 
     final session = _Session(response: r, source: source);
     _sessions.add(session);
@@ -170,7 +215,7 @@ class DefenseStreamingServer {
           frame = _latestWinFrame ?? _latestPhoneFrame ?? _latestCameraFrame;
         }
         if (frame == null) continue;
-        final b = utf8.encode('\r\n--frame\r\nContent-Type: image/jpeg\r\nContent-Length: ${frame.length}\r\n\r\n');
+        final b = utf8.encode('\r\n--FRAME\r\nContent-Type: image/jpeg\r\nContent-Length: ${frame.length}\r\n\r\n');
         s.response.add(b);
         s.response.add(frame);
       } catch (e, st) { swallowDebug(e, tag: 'DefenseStreaming.bcast', stack: st); stale.add(s); }
@@ -228,6 +273,15 @@ class DefenseStreamingServer {
   void _json(HttpRequest req, int c, Map<String, dynamic> b) {
     req.response..statusCode = c..headers.contentType = ContentType.json..write(jsonEncode(b));
     req.response.close();
+  }
+
+  void _authorizedEndpoint(HttpRequest req) {
+    final studentId = req.uri.queryParameters['studentId'] ?? '';
+    _json(req, 200, {
+      'authorized': studentId.isNotEmpty ? isAuthorized(studentId) : false,
+      'host': _host,
+      'port': _port,
+    });
   }
 }
 
