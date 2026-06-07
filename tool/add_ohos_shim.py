@@ -34,10 +34,7 @@ lib/presentation/pages/repo/tabs/repo_list_tab.dart
 lib/presentation/pages/repo/tabs/repo_stats_tab.dart
 lib/presentation/pages/repo/tabs/student_detail_tab.dart
 lib/presentation/pages/repo/tabs/submission_guidelines_tab.dart
-lib/presentation/widgets/live_authorize_sheet.dart
-lib/presentation/widgets/live_stream_overlay.dart
 lib/presentation/widgets/live_stream_panel.dart
-lib/presentation/widgets/live_viewer_sheet.dart
 lib/presentation/widgets/noir_page_shell.dart
 lib/presentation/widgets/score_history_dialog.dart
 lib/services/theme_manager.dart""".strip().split("\n")

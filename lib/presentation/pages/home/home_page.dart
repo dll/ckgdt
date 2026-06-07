@@ -10,11 +10,9 @@ import '../../../services/auth_service.dart';
 import '../../../services/screenshot_service.dart';
 import '../../../services/navigation_service.dart';
 import '../../../services/unread_count_service.dart';
-import '../../../services/live_broadcast_service.dart';
 import '../../../services/sync_service.dart';
 import '../../../services/gitee_service.dart';
 import '../assessment/defense/defense_broadcast_page.dart';
-import '../../widgets/live_viewer_sheet.dart';
 import '../../../services/default_class_service.dart';
 import '../../../dev/demo_seed_service.dart';
 import '../notification/notification_list_page.dart';
@@ -134,8 +132,6 @@ class _HomePageState extends State<HomePage> {
     _pullNotifications();
     _defensePollTimer = Timer.periodic(
       const Duration(seconds: 30), (_) => _pullNotifications());
-    // 进入系统即开始轮询直播会话，全员可见正在进行的答辩直播
-    LiveBroadcastService.instance.startWatching();
     // 注册全局导航服务回调
     NavigationService.instance.onSwitchTab = (index) {
       if (mounted) {
@@ -147,60 +143,12 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _defensePollTimer?.cancel();
-    LiveBroadcastService.instance.stopWatching();
     NavigationService.instance.dispose();
     super.dispose();
   }
 
   /// 直播横幅：有正在进行的答辩直播时，顶部显示"X 正在直播"，点击进入观看。
   /// 无直播时折叠为零高度，不占位。
-  Widget _buildLiveBanner() {
-    return ValueListenableBuilder<List<LiveSession>>(
-      valueListenable: LiveBroadcastService.instance.sessionsNotifier,
-      builder: (context, sessions, _) {
-        if (sessions.isEmpty) return const SizedBox.shrink();
-        final first = sessions.first;
-        final label = sessions.length == 1
-            ? '${first.userName} 正在答辩直播'
-            : '${sessions.length} 场答辩直播进行中';
-        return Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () => LiveViewerSheet.show(context, sessions),
-            child: Container(
-              width: double.infinity,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [
-                  Colors.red.withValues(alpha: 0.85),
-                  NoirTokens.accent.withValues(alpha: 0.85),
-                ]),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.sensors, color: Colors.white, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(label,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 13)),
-                  ),
-                  const Text('点击观看',
-                      style: TextStyle(color: Colors.white, fontSize: 12)),
-                  const Icon(Icons.chevron_right,
-                      color: Colors.white, size: 18),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   /// 刷新未读计数（委托到全局 service，不再触发本页 setState）
   Future<void> _refreshUnreadCount() async {
     final userId = _authService.getCurrentUserId();
@@ -642,7 +590,6 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           children: [
             _buildDefenseBanner(),
-            _buildLiveBanner(),
             Expanded(
                 child: bodyMap[_selectedIndex]?.call() ?? _buildHome()),
           ],

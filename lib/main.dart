@@ -8,7 +8,6 @@ import 'core/app_keys.dart';
 import 'core/build_info.dart';
 import 'core/dev_paths.dart';
 import 'core/init_logger.dart';
-import 'services/live_broadcast_service.dart';
 import 'presentation/pages/assessment/defense/defense_broadcast_page.dart';
 import 'data/local/database_helper.dart';
 import 'l10n/gen/app_localizations.dart';
@@ -187,7 +186,6 @@ class _MyAppState extends State<MyApp> {
     _loadTheme();
     _loadFeedbackSetting();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      LiveBroadcastService.screenCaptureKey = broadcastCaptureKey;
       DefenseBroadcastPage.screenCaptureKey = broadcastCaptureKey;
     });
   }

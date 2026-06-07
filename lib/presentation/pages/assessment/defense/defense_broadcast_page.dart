@@ -229,8 +229,17 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
   }
 
   void _toggleDefenderPhoneShare() {
-    if (_phoneCap.isActive) { _phoneCap.stop(); setState(() {}); return; }
+    if (_phoneCap.isActive) {
+      _phoneCap.stop();
+      // 录屏停止后恢复 Dart 端摄像头采集（CameraX 已释放前置摄像头）
+      if (!_cameraOn) _startCamToRemote();
+      setState(() {});
+      return;
+    }
     if (_remoteServerUrl == null || DefenseBroadcastPage.screenCaptureKey == null) return;
+    // 前置摄像头交给前台服务的 CameraX：先停 Dart 端摄像头独占，避免冲突。
+    // 录屏期间人脸帧由原生 madkg/camera_capture_events 推送到 /frame/camera。
+    _stopCam();
     _phoneCap.start(_remoteServerUrl!, DefenseBroadcastPage.screenCaptureKey!);
     setState(() {});
   }
