@@ -29,9 +29,12 @@ class PhoneScreenCapturer {
   // 原生全屏捕获
   final MethodChannel _methodChannel = const MethodChannel('madkg/screen_capture');
   final EventChannel _eventChannel = const EventChannel('madkg/screen_capture_events');
+  final EventChannel _cameraEventChannel = const EventChannel('madkg/camera_capture_events');
   StreamSubscription? _nativeSub;
+  StreamSubscription? _cameraSub;
   bool _useNative = false;
   Uint8List? _nativeFrame;
+  bool _cameraSending = false;
 
   bool get isActive => _active;
 
@@ -83,6 +86,13 @@ class PhoneScreenCapturer {
       await _methodChannel.invokeMethod('start');
       _useNative = true;
 
+      // 订阅前台服务推送的前置摄像头帧（与屏幕帧分流），转推到 /frame/camera
+      _cameraSub = _cameraEventChannel.receiveBroadcastStream().listen((event) {
+        if (event is Uint8List) _sendCameraFrame(event);
+      }, onError: (e) {
+        swallowDebug(e, tag: 'PhoneScreenCapturer.cameraEvent');
+      });
+
       // 等待用户授权结果（通过 EventChannel 返回）
       await Future.delayed(const Duration(milliseconds: 500));
 
@@ -116,9 +126,27 @@ class PhoneScreenCapturer {
     _timer = null;
     _nativeSub?.cancel();
     _nativeSub = null;
+    _cameraSub?.cancel();
+    _cameraSub = null;
     _nativeFrame = null;
     if (_useNative) {
       try { _methodChannel.invokeMethod('stop'); } catch (e, st) { swallowDebug(e, tag: 'PhoneScreenCapturer.stop', stack: st); }
+    }
+  }
+
+  Future<void> _sendCameraFrame(Uint8List frame) async {
+    if (_cameraSending || !_active || _serverUrl == null) return;
+    _cameraSending = true;
+    try {
+      await http.post(
+        Uri.parse('$_serverUrl/frame/camera'),
+        body: frame,
+        headers: {'Content-Type': 'image/jpeg'},
+      ).timeout(const Duration(seconds: 2));
+    } catch (e, st) {
+      swallowDebug(e, tag: 'PhoneScreenCapturer.cameraSend', stack: st);
+    } finally {
+      _cameraSending = false;
     }
   }
 

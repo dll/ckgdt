@@ -31,32 +31,6 @@ class _DefenseTabState extends State<_DefenseTab> {
     }).toList();
   }
 
-  /// 开始答辩直播：校验开播权限 → 启动快照广播 + 弹摄像头浮窗。
-  /// 教师/管理员恒可开播；学生需教师在「直播授权」里授权。
-  Future<void> _startLiveBroadcast() async {
-    final allowed = await LiveBroadcastService.instance.canBroadcast();
-    if (!mounted) return;
-    if (!allowed) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('你还没有开播权限，请联系教师在「直播授权」中授权'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-    // 先弹摄像头浮窗（初始化摄像头），再启动快照广播上传循环
-    LiveStreamOverlay.show(context);
-    final ok = await LiveBroadcastService.instance.startBroadcasting();
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(ok ? '直播已开始，其他用户进入系统即可看到' : '直播启动失败，请检查网络/Gitee 配置'),
-        backgroundColor: ok ? Colors.green : Colors.red,
-      ),
-    );
-  }
-
   @override
   void initState() {
     super.initState();
@@ -338,97 +312,6 @@ class _DefenseTabState extends State<_DefenseTab> {
                       }),
                     ],
                   ]),
-                ),
-              ),
-              // 直播入口（始终可见，不依赖答辩安排是否存在）
-              Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                elevation: 2,
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    gradient: LinearGradient(
-                      colors: [
-                        NoirTokens.inkDeep,
-                        NoirTokens.ink.withValues(alpha: 0.95),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: NoirTokens.accent.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(Icons.videocam,
-                                color: NoirTokens.accent, size: 24),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('答辩直播',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 15,
-                                        color: NoirTokens.paper)),
-                                const SizedBox(height: 2),
-                                Text('摄像头 + 演示，全员可见，支持录制',
-                                    style: TextStyle(
-                                        fontSize: 11,
-                                        color: NoirTokens.paper
-                                            .withValues(alpha: 0.5))),
-                              ],
-                            ),
-                          ),
-                          FilledButton.tonalIcon(
-                            onPressed: _startLiveBroadcast,
-                            icon: const Icon(Icons.play_arrow, size: 18),
-                            label: const Text('开始直播'),
-                            style: FilledButton.styleFrom(
-                              backgroundColor:
-                                  NoirTokens.accent.withValues(alpha: 0.15),
-                              foregroundColor: NoirTokens.accent,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 10),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10)),
-                            ),
-                          ),
-                        ],
-                      ),
-                      // 教师专属：直播授权（明确标签按钮，整行可见）
-                      if (!_isStudent) ...[
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: () => LiveAuthorizeSheet.show(context),
-                            icon: const Icon(Icons.cast_connected, size: 18),
-                            label: const Text('直播授权 · 设置学生可开播'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: NoirTokens.accent,
-                              side: BorderSide(
-                                  color: NoirTokens.accent
-                                      .withValues(alpha: 0.5)),
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 10),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10)),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
                 ),
               ),
               // ── LAN 直播新入口（独立卡片） ──────────────────────────
