@@ -1,4 +1,5 @@
 ﻿import 'dart:math';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../../../../data/local/achievement_dao.dart';
 import '../../../../services/default_class_service.dart';
@@ -293,11 +294,149 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
   }
 
   Widget _buildObjectiveCharts(Color primary) {
-    return Card(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [Icon(Icons.insert_chart, color: primary, size: 22), const SizedBox(width: 8), const Text('六、各目标达成度分布', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))]),
-      const Divider(height: 20),
-      ...List.generate(4, (objIdx) => _buildSingleObjChart(objIdx)),
-    ])));
+    return Column(children: [
+      // 柱状图
+      Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Icon(Icons.bar_chart, color: primary, size: 22),
+              const SizedBox(width: 8),
+              const Text('六、课程目标达成度柱状图', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ]),
+            const Divider(height: 20),
+            SizedBox(
+              height: 250,
+              child: BarChart(
+                BarChartData(
+                  alignment: BarChartAlignment.spaceAround,
+                  maxY: 1.0,
+                  barTouchData: BarTouchData(
+                    touchTooltipData: BarTouchTooltipData(
+                      getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                        return BarTooltipItem(
+                          '${rod.toY.toStringAsFixed(3)}\n(${(rod.toY * 100).toStringAsFixed(1)}%)',
+                          TextStyle(color: rod.color, fontWeight: FontWeight.bold, fontSize: 12),
+                        );
+                      },
+                    ),
+                  ),
+                  titlesData: FlTitlesData(
+                    show: true,
+                    bottomTitles: AxisTitles(sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        final labels = ['目标1', '目标2', '目标3', '目标4', '加权总评'];
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(labels[value.toInt()], style: const TextStyle(fontSize: 11)),
+                        );
+                      },
+                    )),
+                    leftTitles: AxisTitles(sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 40,
+                      getTitlesWidget: (value, meta) => Text(
+                        '${(value * 100).toInt()}%',
+                        style: const TextStyle(fontSize: 10, color: Colors.grey),
+                      ),
+                    )),
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  barGroups: [
+                    for (int i = 0; i < 4; i++)
+                      BarChartGroupData(x: i, barRods: [
+                        BarChartRodData(
+                          toY: _classAvgAchievements[i],
+                          color: kObjectiveColors[i],
+                          width: 32,
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                        ),
+                      ]),
+                    BarChartGroupData(x: 4, barRods: [
+                      BarChartRodData(
+                        toY: _weightedAchievement,
+                        color: Colors.purple,
+                        width: 32,
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                      ),
+                    ]),
+                  ],
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    horizontalInterval: 0.2,
+                  ),
+                ),
+              ),
+            ),
+          ]),
+        ),
+      ),
+      const SizedBox(height: 16),
+      // 雷达图
+      Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Icon(Icons.radar, color: primary, size: 22),
+              const SizedBox(width: 8),
+              const Text('课程目标达成度雷达图', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ]),
+            const Divider(height: 20),
+            SizedBox(height: 280, child: RadarChart(RadarChartData(
+              radarTouchData: RadarTouchData(
+                touchCallback: (event, response) {},
+              ),
+              dataSets: [
+                RadarDataSet(
+                  fillColor: primary.withValues(alpha: 0.25),
+                  borderColor: primary,
+                  borderWidth: 2,
+                  entryRadius: 3,
+                  dataEntries: [
+                    for (int i = 0; i < 4; i++)
+                      RadarEntry(value: _classAvgAchievements[i]),
+                  ],
+                ),
+              ],
+              radarBackgroundColor: Colors.transparent,
+              borderData: FlBorderData(show: false),
+              radarBorderData: const BorderSide(color: Colors.grey, width: 1),
+              titlePositionPercentageOffset: 0.15,
+              titleTextStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+              getTitle: (index, angle) {
+                final titles = ['目标1', '目标2', '目标3', '目标4'];
+                return RadarChartTitle(text: titles[index]);
+              },
+              tickCount: 5,
+              ticksTextStyle: const TextStyle(fontSize: 9, color: Colors.grey),
+              tickBorderData: const BorderSide(color: Colors.grey, width: 0.5),
+              gridBorderData: const BorderSide(color: Colors.grey, width: 0.3),
+            ))),
+          ]),
+        ),
+      ),
+      const SizedBox(height: 16),
+      // 分布统计（保留原分布条）
+      Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('各目标达成度分布', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Divider(height: 20),
+            ...List.generate(4, (objIdx) => _buildSingleObjChart(objIdx)),
+          ]),
+        ),
+      ),
+    ]);
   }
 
   Widget _buildSingleObjChart(int objIdx) {
