@@ -1,0 +1,11 @@
+{
+  "name": "mad-kg-harness",
+  "private": true,
+  "description": "Harness/test entrypoint for the MAD-KG Flutter project (delegates to flutter test). Not an npm package — Flutter is the real build system.",
+  "scripts": {
+    "test": "flutter test",
+    "test:unit": "flutter test test/core test/models test/services",
+    "analyze": "flutter analyze lib/",
+    "eval": "node evals/run-evals.js"
+  }
+}
