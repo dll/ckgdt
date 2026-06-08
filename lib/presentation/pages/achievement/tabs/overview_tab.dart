@@ -1,5 +1,4 @@
-﻿import 'dart:convert';
-import 'package:file_picker/file_picker.dart';
+﻿import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/error_handler.dart';
 import '../../../../data/local/achievement_dao.dart';
@@ -103,84 +102,6 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
       context: context,
       builder: (ctx) => SyllabusPreviewDialog(rows: rows),
     );
-  }
-
-  /// 上传学生成绩 Excel → 解析 →（选批次/新建）→ 导入 achievement_scores。
-  Future<void> _uploadGrades() async {
-    final svc = AchievementExcelService.instance;
-    try {
-      final res = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['xlsx', 'xls'],
-        withData: true,
-      );
-      if (res == null || res.files.isEmpty) return;
-      final f = res.files.first;
-      setState(() => _importing = true);
-      List<Map<String, dynamic>> grades;
-      if (f.bytes != null) {
-        grades = svc.parseGradeBytes(f.bytes!);
-      } else if (f.path != null) {
-        grades = await svc.parseGradeFile(f.path!);
-      } else {
-        throw StateError('无法读取文件内容');
-      }
-      if (grades.isEmpty) throw StateError('未解析到学生成绩，请确认表格含「学生个体课程目标达成度」表');
-      if (!mounted) return;
-      // 导入前可编辑预览：用户确认/修正解析结果后再入库
-      setState(() => _importing = false);
-      final edited = await showModalBottomSheet<List<Map<String, dynamic>>>(
-        context: context,
-        isScrollControlled: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        ),
-        builder: (_) => GradePreviewSheet(initial: grades),
-      );
-      if (edited == null || edited.isEmpty) return; // 用户取消
-      if (!mounted) return;
-      setState(() => _importing = true);
-      grades = edited;
-      final batchName = '导入成绩 ${DateTime.now().toString().substring(0, 16)}';
-      // 快照当前大纲权重到批次，使批次自包含（即使日后大纲改动也可复现）
-      final objs = await widget.achievementDao.getCourseObjectives('移动应用开发');
-      String? weightsJson;
-      if (objs.length >= 4) {
-        weightsJson = jsonEncode({
-          for (int i = 0; i < 4; i++)
-            '目标${i + 1}': (objs[i]['weight'] as num?)?.toDouble() ?? 0,
-        });
-      }
-      final batchId = await widget.achievementDao.createBatch({
-        'batch_name': batchName,
-        'course_name': '移动应用开发',
-        'class_name': '计科22',
-        'teacher_id': widget.authService.getCurrentUserId() ?? '',
-        'status': 'draft',
-        if (weightsJson != null) 'objective_weights_json': weightsJson,
-      });
-      final count = await svc.importToDatabase(batchId, grades);
-      // 导入即算：立即计算并保存达成度，批次详情无需等用户打开报告Tab
-      await widget.achievementDao.recalculateAndSaveBatch(batchId);
-      await _loadBatches();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('成绩导入成功：$count/${grades.length} 名学生，已计算达成度'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e, st) {
-      swallowDebug(e, tag: 'Overview.uploadGrades', stack: st);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('成绩上传失败：$e'), backgroundColor: Colors.red),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _importing = false);
-    }
   }
 
   void _showCreateBatchDialog() {
@@ -332,12 +253,10 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
             onSelected: (v) {
               if (v == 'create') _showCreateBatchDialog();
               if (v == 'syllabus') _uploadSyllabus();
-              if (v == 'grades') _uploadGrades();
             },
             itemBuilder: (_) => const [
               PopupMenuItem(value: 'create', child: ListTile(leading: Icon(Icons.add), title: Text('新建批次'))),
               PopupMenuItem(value: 'syllabus', child: ListTile(leading: Icon(Icons.description_outlined), title: Text('上传课程大纲'))),
-              PopupMenuItem(value: 'grades', child: ListTile(leading: Icon(Icons.upload_file), title: Text('上传成绩 Excel'))),
             ],
             child: Container(
               width: 56,
@@ -390,11 +309,8 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
                 label: const Text('上传课程大纲（md/docx）'),
               ),
               const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: _importing ? null : _uploadGrades,
-                icon: const Icon(Icons.upload_file),
-                label: const Text('上传成绩 Excel（xlsx）'),
-              ),
+              const Text('成绩导入请在「成绩管理」标签页操作',
+                  style: TextStyle(fontSize: 12, color: Colors.grey)),
             ],
           ),
         ),
