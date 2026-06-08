@@ -2,6 +2,7 @@
 import '../../../../data/local/achievement_dao.dart';
 import '../../../../data/local/score_audit_dao.dart';
 import '../../../../services/auth_service.dart';
+import '../../../../core/error_handler.dart';
 import '../achievement_shared.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -205,7 +206,11 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
                   scorerName: AuthService().currentUser?.realName,
                   op: 'create',
                 );
-              } catch (_) {}
+              } catch (e, st) {
+                swallowDebug(e, tag: 'ScoresTab.audit', stack: st);
+              }
+              // 录入后重算批次达成度，保持详情/报告同步
+              await widget.achievementDao.recalculateAndSaveBatch(_selectedBatchId!);
               if (ctx.mounted) Navigator.pop(ctx);
               _loadScores();
             },
@@ -221,6 +226,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
     setState(() => _generating = true);
     try {
       await widget.achievementDao.generateScoresFromQuizResults(_selectedBatchId!);
+      await widget.achievementDao.recalculateAndSaveBatch(_selectedBatchId!);
       await _loadScores();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
