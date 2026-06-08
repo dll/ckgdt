@@ -2,7 +2,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../../../../data/local/achievement_dao.dart';
-import '../../../../services/default_class_service.dart';
 import '../../../../core/error_handler.dart';
 import '../achievement_shared.dart';
 
@@ -67,9 +66,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
     if (_selectedBatchId == null) return;
     setState(() => _loading = true);
     try {
-      final rawScores = await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
-      final scores = await DefaultClassService.instance.filterByDefaultClass(
-          rawScores, (s) => (s['student_id'] ?? '').toString());
+      final scores = await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
       if (scores.isNotEmpty) {
         final avgs = List<double>.filled(4, 0);
         for (final s in scores) {

@@ -241,28 +241,6 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
     }
   }
 
-  Future<void> _batchGenerateDemo() async {
-    if (_selectedBatchId == null) return;
-    setState(() => _generating = true);
-    try {
-      await widget.achievementDao.generateDemoScores(_selectedBatchId!);
-      await _loadScores();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('演示成绩已批量录入'), backgroundColor: Colors.green),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('录入失败：$e'), backgroundColor: Colors.red),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _generating = false);
-    }
-  }
-
   Future<void> _deleteScore(int scoreId) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -320,13 +298,6 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
                       label: '自动从学生成绩计算',
                       onTap: _generating ? null : _generateFromQuizResults,
                       color: Colors.green,
-                    ),
-                    const SizedBox(width: 8),
-                    _buildActionChip(
-                      icon: Icons.group_add,
-                      label: '批量录入',
-                      onTap: _generating ? null : _batchGenerateDemo,
-                      color: Colors.orange,
                     ),
                   ],
                 ),
