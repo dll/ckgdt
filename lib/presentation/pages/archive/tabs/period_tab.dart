@@ -1684,6 +1684,49 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     }
   }
 
+  /// 全期合并打包：把 期初/期中/期末/归档 四目录的 docx 打成一个 zip。
+  Future<void> _zipAllPeriods() async {
+    if (!mounted) return;
+    if (kIsWeb || !(Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('全期打包仅在桌面端可用')),
+      );
+      return;
+    }
+    final sample = _documents.where((d) => (d.content ?? '').trim().isNotEmpty).toList();
+    if (sample.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('暂无已归档内容可合并，请先在各期完成归档')),
+      );
+      return;
+    }
+    final svc = ArchivePackageService.instance;
+    try {
+      final naming = await svc.buildNaming(
+        doc: sample.first,
+        docLabel: _docLabelFor(sample.first.documentType),
+      );
+      final zipPath = await svc.zipAllPeriods(naming);
+      if (!mounted) return;
+      await Clipboard.setData(ClipboardData(text: zipPath));
+      _showArchivedDialog(
+        title: '全期已合并打包',
+        path: zipPath,
+        message: '已把全部期的归档 docx 合并为一个 zip，路径已复制到剪贴板。',
+      );
+    } on ArchivePackageException catch (e) {
+      swallowDebug(e, tag: 'ArchivePeriodTab._zipAllPeriods.pkg');
+      if (!mounted) return;
+      _showPrintErrorDialog(title: '全期打包失败', message: e.message);
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ArchivePeriodTab._zipAllPeriods', stack: st);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('全期打包失败：$e')),
+      );
+    }
+  }
+
   Widget _buildActionBar() {
     final primary = Theme.of(context).colorScheme.primary;
     final hasUnfinished = _expectedDocs.any((d) => d.needsGeneration && _findDoc(d) == null);
@@ -1734,6 +1777,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
           chip(Icons.print, '一键打印', hasUnprinted),
           const SizedBox(width: 6),
           chip(Icons.archive, '一键归档', hasUnarchived, Colors.green),
+          const SizedBox(width: 6),
+          chip(Icons.folder_zip, '全期打包', true, Colors.deepPurple),
         ],
       ),
     );
@@ -1752,6 +1797,9 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         break;
       case '一键归档':
         _archiveAll();
+        break;
+      case '全期打包':
+        _zipAllPeriods();
         break;
     }
   }
