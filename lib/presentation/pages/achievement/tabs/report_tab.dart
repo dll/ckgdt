@@ -1,4 +1,5 @@
-﻿import 'dart:math';
+﻿import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,6 +8,8 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../../../../data/local/achievement_dao.dart';
 import '../../../../services/achievement/achievement_docx_service.dart';
+import '../../../../services/archive/native_docx_service.dart';
+import '../../../../services/output_path_service.dart';
 import '../../../../services/auth_service.dart';
 import '../../../../core/error_handler.dart';
 import '../../../widgets/markdown_bubble.dart';
@@ -1636,6 +1639,40 @@ class ReportPreviewDialog extends StatefulWidget {
 
 class _ReportPreviewDialogState extends State<ReportPreviewDialog> {
   bool _showSource = false;
+  bool _exporting = false;
+  late final TextEditingController _editCtrl =
+      TextEditingController(text: widget.reportText);
+
+  @override
+  void dispose() {
+    _editCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _exportEditedDocx() async {
+    setState(() => _exporting = true);
+    try {
+      final bytes = NativeDocxService.instance.markdownToDocx(_editCtrl.text);
+      final dir = await OutputPathService.getOutputDirectory();
+      final ts = DateTime.now().toIso8601String().replaceAll(RegExp(r'[:.]'), '-').substring(0, 19);
+      final file = File('${dir.path}/达成度报告_$ts.docx');
+      await file.writeAsBytes(bytes);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Word 已导出：${file.path}'), duration: const Duration(seconds: 4)),
+        );
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ReportPreview.exportDocx', stack: st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('导出 Word 失败：$e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1660,11 +1697,11 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog> {
                     child: Text('课程达成度评价报告',
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   ),
-                  // 渲染/源码切换
+                  // 渲染/编辑切换
                   SegmentedButton<bool>(
                     segments: const [
                       ButtonSegment(value: false, label: Text('预览'), icon: Icon(Icons.visibility, size: 16)),
-                      ButtonSegment(value: true, label: Text('源码'), icon: Icon(Icons.code, size: 16)),
+                      ButtonSegment(value: true, label: Text('编辑'), icon: Icon(Icons.edit, size: 16)),
                     ],
                     selected: {_showSource},
                     onSelectionChanged: (v) => setState(() => _showSource = v.first),
@@ -1677,7 +1714,7 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog> {
                     icon: const Icon(Icons.copy, size: 18),
                     tooltip: '复制到剪贴板',
                     onPressed: () {
-                      Clipboard.setData(ClipboardData(text: widget.reportText));
+                      Clipboard.setData(ClipboardData(text: _editCtrl.text));
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('报告已复制到剪贴板'), backgroundColor: Colors.green),
                       );
@@ -1691,25 +1728,29 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog> {
               ),
             ),
             const Divider(),
-            // 内容区域
+            // 内容区域：编辑模式可改 markdown，预览模式渲染编辑后的文本
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: _showSource
-                    ? Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(8),
+              child: _showSource
+                  ? Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: TextField(
+                        controller: _editCtrl,
+                        maxLines: null,
+                        expands: true,
+                        textAlignVertical: TextAlignVertical.top,
+                        style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+                        decoration: InputDecoration(
+                          border: const OutlineInputBorder(),
+                          filled: true,
+                          fillColor: Colors.grey.withValues(alpha: 0.06),
+                          hintText: '编辑 Markdown 源码，切回「预览」查看效果，导出 Word 使用此处内容',
                         ),
-                        child: SelectableText(
-                          widget.reportText,
-                          style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
-                        ),
-                      )
-                    : MarkdownBubble(content: widget.reportText),
-              ),
+                      ),
+                    )
+                  : SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: MarkdownBubble(content: _editCtrl.text),
+                    ),
             ),
             // 底部操作栏
             Padding(
@@ -1722,16 +1763,23 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog> {
                     child: const Text('关闭'),
                   ),
                   const SizedBox(width: 8),
-                  FilledButton.icon(
+                  OutlinedButton.icon(
                     onPressed: () {
-                      Clipboard.setData(ClipboardData(text: widget.reportText));
+                      Clipboard.setData(ClipboardData(text: _editCtrl.text));
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('报告已复制到剪贴板'), backgroundColor: Colors.green),
                       );
-                      Navigator.pop(context);
                     },
                     icon: const Icon(Icons.copy, size: 16),
-                    label: const Text('复制并关闭'),
+                    label: const Text('复制'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.icon(
+                    onPressed: _exporting ? null : _exportEditedDocx,
+                    icon: _exporting
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.file_download, size: 16),
+                    label: const Text('导出 Word'),
                   ),
                 ],
               ),
