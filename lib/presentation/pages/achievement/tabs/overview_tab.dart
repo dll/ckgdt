@@ -1,6 +1,8 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
 import '../../../../core/error_handler.dart';
 import '../../../../data/local/achievement_dao.dart';
+import '../../../../services/achievement/achievement_excel_service.dart';
 import '../../../../services/auth_service.dart';
 import '../../../../services/default_class_service.dart';
 import '../achievement_shared.dart';
@@ -46,6 +48,135 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
       }
     } catch (e) {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  bool _importing = false;
+
+  /// 上传课程大纲（md/docx）→ 提取课程目标+权重 → 落库 course_objectives。
+  Future<void> _uploadSyllabus() async {
+    final svc = AchievementExcelService.instance;
+    try {
+      final res = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['md', 'docx'],
+        withData: true,
+      );
+      if (res == null || res.files.isEmpty) return;
+      final f = res.files.first;
+      final ext = (f.extension ?? '').toLowerCase();
+      setState(() => _importing = true);
+      Map<String, dynamic> parsed;
+      if (f.bytes != null) {
+        parsed = svc.parseSyllabusBytes(f.bytes!, ext);
+      } else if (f.path != null) {
+        parsed = await svc.parseSyllabus(f.path!);
+      } else {
+        throw StateError('无法读取文件内容');
+      }
+      if (parsed['error'] != null) throw StateError(parsed['error'] as String);
+      final rows = svc.syllabusToObjectiveRows(parsed);
+      if (rows.isEmpty) throw StateError('未从大纲中识别到课程目标/权重');
+      if (!mounted) return;
+      final ok = await _showSyllabusPreview(rows);
+      if (ok != true) return;
+      await widget.achievementDao.saveCourseObjectives('移动应用开发', rows);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('大纲解析成功，已保存 ${rows.length} 个课程目标'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'Overview.uploadSyllabus', stack: st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('大纲上传失败：$e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _importing = false);
+    }
+  }
+
+  Future<bool?> _showSyllabusPreview(List<Map<String, dynamic>> rows) {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('大纲解析结果'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('确认课程目标与权重无误后保存：', style: TextStyle(fontSize: 13)),
+              const SizedBox(height: 8),
+              ...rows.map((r) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Text(
+                      '目标${r['idx']} · 指标点${r['indicator'] ?? '-'} · 权重${r['weight']} · 满分${r['full_mark']}',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  )),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('保存')),
+        ],
+      ),
+    );
+  }
+
+  /// 上传学生成绩 Excel → 解析 →（选批次/新建）→ 导入 achievement_scores。
+  Future<void> _uploadGrades() async {
+    final svc = AchievementExcelService.instance;
+    try {
+      final res = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx', 'xls'],
+        withData: true,
+      );
+      if (res == null || res.files.isEmpty) return;
+      final f = res.files.first;
+      setState(() => _importing = true);
+      List<Map<String, dynamic>> grades;
+      if (f.bytes != null) {
+        grades = svc.parseGradeBytes(f.bytes!);
+      } else if (f.path != null) {
+        grades = await svc.parseGradeFile(f.path!);
+      } else {
+        throw StateError('无法读取文件内容');
+      }
+      if (grades.isEmpty) throw StateError('未解析到学生成绩，请确认表格含「学生个体课程目标达成度」表');
+      if (!mounted) return;
+      final batchName = '导入成绩 ${DateTime.now().toString().substring(0, 16)}';
+      final batchId = await widget.achievementDao.createBatch({
+        'batch_name': batchName,
+        'course_name': '移动应用开发',
+        'class_name': '计科22',
+        'teacher_id': widget.authService.getCurrentUserId() ?? '',
+        'status': 'draft',
+      });
+      final count = await svc.importToDatabase(batchId, grades);
+      await _loadBatches();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('成绩导入成功：$count/${grades.length} 名学生'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'Overview.uploadGrades', stack: st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('成绩上传失败：$e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _importing = false);
     }
   }
 
@@ -215,11 +346,27 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
         Positioned(
           right: 16,
           bottom: 16,
-          child: FloatingActionButton(
-            heroTag: 'fab_overview',
-            onPressed: _showCreateBatchDialog,
-            backgroundColor: primary,
-            child: const Icon(Icons.add, color: Colors.white),
+          child: PopupMenuButton<String>(
+            onSelected: (v) {
+              if (v == 'create') _showCreateBatchDialog();
+              if (v == 'syllabus') _uploadSyllabus();
+              if (v == 'grades') _uploadGrades();
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'create', child: ListTile(leading: Icon(Icons.add), title: Text('新建批次'))),
+              PopupMenuItem(value: 'syllabus', child: ListTile(leading: Icon(Icons.description_outlined), title: Text('上传课程大纲'))),
+              PopupMenuItem(value: 'grades', child: ListTile(leading: Icon(Icons.upload_file), title: Text('上传成绩 Excel'))),
+            ],
+            child: Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: primary,
+                shape: BoxShape.circle,
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 6, offset: const Offset(0, 3))],
+              ),
+              child: const Icon(Icons.add, color: Colors.white),
+            ),
           ),
         ),
       ],
@@ -261,6 +408,22 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
                 onPressed: _showCreateBatchDialog,
                 icon: const Icon(Icons.add),
                 label: const Text('新建批次'),
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1, indent: 40, endIndent: 40),
+              const SizedBox(height: 12),
+              const Text('从真实文档导入', style: TextStyle(fontSize: 13, color: Colors.grey)),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _importing ? null : _uploadSyllabus,
+                icon: const Icon(Icons.description_outlined),
+                label: const Text('上传课程大纲（md/docx）'),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _importing ? null : _uploadGrades,
+                icon: const Icon(Icons.upload_file),
+                label: const Text('上传成绩 Excel（xlsx）'),
               ),
             ],
           ),
