@@ -1317,6 +1317,29 @@ class DatabaseHelper {
       )
     ''');
 
+    // ── 课程目标定义表（权威源：从课程大纲导入提取）──────────────
+    // 权重/满分/指标点的单一来源；达成批次创建时可从此同步快照。
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS course_objectives(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_name TEXT NOT NULL DEFAULT '移动应用开发',
+        idx INTEGER NOT NULL,
+        name TEXT,
+        indicator TEXT,
+        weight REAL DEFAULT 0,
+        full_mark REAL DEFAULT 0,
+        pingshi_ratio REAL DEFAULT 0.20,
+        experiment_ratio REAL DEFAULT 0.30,
+        exam_ratio REAL DEFAULT 0.50,
+        chapters TEXT,
+        description TEXT,
+        assess_content TEXT,
+        created_at TEXT,
+        updated_at TEXT,
+        UNIQUE(course_name, idx)
+      )
+    ''');
+
     // ── 学生达成度分数表 ──────────────────────────────────────
     await db.execute('''
       CREATE TABLE IF NOT EXISTS achievement_scores(

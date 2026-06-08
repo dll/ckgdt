@@ -7,6 +7,49 @@ import '../../core/error_handler.dart';
 /// 课程达成度 DAO — 达成度批次管理、成绩录入、计算、报告生成
 class AchievementDao {
   // ═══════════════════════════════════════════════════════════════════════
+  // 课程目标定义（course_objectives，权威源来自大纲导入）
+  // ═══════════════════════════════════════════════════════════════════════
+
+  /// 读取某课程的目标定义行（按 idx 升序）。无则返回空列表。
+  Future<List<Map<String, dynamic>>> getCourseObjectives(
+      [String courseName = '移动应用开发']) async {
+    final db = await DatabaseHelper.instance.database;
+    return db.query('course_objectives',
+        where: 'course_name = ?', whereArgs: [courseName], orderBy: 'idx ASC');
+  }
+
+  /// 覆盖写入某课程的目标定义（先删后插，保证与大纲一致）。
+  /// [objectives] 每项含 idx/name/indicator/weight/full_mark/
+  /// pingshi_ratio/experiment_ratio/exam_ratio/chapters/description/assess_content。
+  Future<void> saveCourseObjectives(
+      String courseName, List<Map<String, dynamic>> objectives) async {
+    final db = await DatabaseHelper.instance.database;
+    final now = DateTime.now().toIso8601String();
+    await db.transaction((txn) async {
+      await txn.delete('course_objectives',
+          where: 'course_name = ?', whereArgs: [courseName]);
+      for (final o in objectives) {
+        await txn.insert('course_objectives', {
+          'course_name': courseName,
+          'idx': o['idx'],
+          'name': o['name'],
+          'indicator': o['indicator'],
+          'weight': o['weight'],
+          'full_mark': o['full_mark'],
+          'pingshi_ratio': o['pingshi_ratio'] ?? 0.20,
+          'experiment_ratio': o['experiment_ratio'] ?? 0.30,
+          'exam_ratio': o['exam_ratio'] ?? 0.50,
+          'chapters': o['chapters'],
+          'description': o['description'],
+          'assess_content': o['assess_content'],
+          'created_at': now,
+          'updated_at': now,
+        });
+      }
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
   // 批次 CRUD
   // ═══════════════════════════════════════════════════════════════════════
 
