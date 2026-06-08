@@ -3,8 +3,8 @@
   "user_id": "2023210649",
   "user_name": "赵翔",
   "role": "student",
-  "synced_at": "2026-06-08T11:31:57.571946",
-  "last_active": "2026-06-08T11:31:57.562208",
+  "synced_at": "2026-06-08T11:42:23.233580",
+  "last_active": "2026-06-08T11:42:23.233580",
   "quiz_results": [
     {
       "user_id": "2023210649",
@@ -132,7 +132,50 @@
       "teacher_confirmed": 0
     }
   ],
-  "student_reports": [],
+  "student_reports": [
+    {
+      "template_id": null,
+      "task_id": null,
+      "user_id": "2023210649",
+      "title": "第四周报告",
+      "content_json": "2023210649赵翔第四周报告.pdf",
+      "file_path": "C:\\Users\\32236\\OneDrive\\Desktop\\N个报告\\2023210649赵翔第四周报告.pdf",
+      "status": "已提交",
+      "submit_time": "2026-05-31T22:52:02.417568",
+      "score": null,
+      "feedback": null,
+      "created_at": "2026-05-31T22:52:02.417568",
+      "updated_at": null
+    },
+    {
+      "template_id": null,
+      "task_id": null,
+      "user_id": "2023210649",
+      "title": "第四周报告",
+      "content_json": "2023210649赵翔第四周报告.pdf",
+      "file_path": "C:\\Users\\lenovo\\Desktop\\2023210649赵翔第四周报告.pdf",
+      "status": "已提交",
+      "submit_time": "2026-05-31T22:56:45.541338",
+      "score": null,
+      "feedback": null,
+      "created_at": "2026-05-31T22:56:45.541338",
+      "updated_at": null
+    },
+    {
+      "template_id": null,
+      "task_id": null,
+      "user_id": "2023210649",
+      "title": "第一周报告",
+      "content_json": "2023210649赵翔第一周报告.pdf",
+      "file_path": "C:\\Users\\lenovo\\Desktop\\2023210649赵翔第一周报告.pdf",
+      "status": "已提交",
+      "submit_time": "2026-05-31T23:12:46.627124",
+      "score": null,
+      "feedback": null,
+      "created_at": "2026-05-31T23:12:46.627124",
+      "updated_at": null
+    }
+  ],
   "student_works": [
     {
       "title": "多端温控系统",
