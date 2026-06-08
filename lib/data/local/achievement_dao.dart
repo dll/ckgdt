@@ -6,6 +6,11 @@ import '../../core/error_handler.dart';
 
 /// 课程达成度 DAO — 达成度批次管理、成绩录入、计算、报告生成
 class AchievementDao {
+  /// 4 个课程目标满分（与大纲第六节、AchievementConfig.defaults 一致）。
+  /// DAO 属数据层，不能依赖 presentation 层的 AchievementConfig，故在此独立维护；
+  /// 两处数值必须同步（大纲权威值 15/25/30/30）。
+  static const List<double> _kFullMarks = [15.0, 25.0, 30.0, 30.0];
+
   // ═══════════════════════════════════════════════════════════════════════
   // 课程目标定义（course_objectives，权威源来自大纲导入）
   // ═══════════════════════════════════════════════════════════════════════
@@ -406,13 +411,13 @@ class AchievementDao {
       'student_id': studentId,
       'student_name': studentName,
       'obj1_score': objective1Score,
-      'obj1_achievement': (objective1Score / 15).clamp(0.0, 1.0),
+      'obj1_achievement': (objective1Score / _kFullMarks[0]).clamp(0.0, 1.0),
       'obj2_score': objective2Score,
-      'obj2_achievement': (objective2Score / 25).clamp(0.0, 1.0),
+      'obj2_achievement': (objective2Score / _kFullMarks[1]).clamp(0.0, 1.0),
       'obj3_score': objective3Score,
-      'obj3_achievement': (objective3Score / 30).clamp(0.0, 1.0),
+      'obj3_achievement': (objective3Score / _kFullMarks[2]).clamp(0.0, 1.0),
       'obj4_score': objective4Score,
-      'obj4_achievement': (objective4Score / 30).clamp(0.0, 1.0),
+      'obj4_achievement': (objective4Score / _kFullMarks[3]).clamp(0.0, 1.0),
       'total_score': totalScore,
     });
   }
@@ -457,6 +462,64 @@ class AchievementDao {
       return null;
     }
   }
+
+  /// 解析批次应使用的 4 个课程目标权重。
+  /// 优先级：course_objectives 表（大纲导入）> 批次 objective_weights_json 快照 > 默认。
+  Future<List<double>> resolveObjectiveWeights(int batchId) async {
+    const fallback = [0.15, 0.25, 0.30, 0.30];
+    try {
+      final batch = await getBatch(batchId);
+      // 1. course_objectives（大纲权威源）
+      final courseName = batch?['course_name'] as String? ?? '移动应用开发';
+      final objs = await getCourseObjectives(courseName);
+      if (objs.length >= 4) {
+        final w = objs
+            .take(4)
+            .map((o) => (o['weight'] as num?)?.toDouble() ?? 0)
+            .toList();
+        if (w.every((x) => x > 0)) return w;
+      }
+      // 2. 批次快照
+      final json = batch?['objective_weights_json'] as String?;
+      if (json != null && json.isNotEmpty) {
+        final m = jsonDecode(json) as Map<String, dynamic>;
+        final w = [
+          (m['目标1'] as num?)?.toDouble() ?? fallback[0],
+          (m['目标2'] as num?)?.toDouble() ?? fallback[1],
+          (m['目标3'] as num?)?.toDouble() ?? fallback[2],
+          (m['目标4'] as num?)?.toDouble() ?? fallback[3],
+        ];
+        if (w.every((x) => x > 0)) return w;
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AchievementDao.resolveObjectiveWeights', stack: st);
+    }
+    return fallback;
+  }
+
+  /// 从已导入的 achievement_scores 计算班级达成度并保存到批次。
+  /// 供「导入成绩后自动计算」与「报告生成」复用，保证两处算法一致。
+  /// 返回 {课程目标1..4, weighted}；批次无成绩返回空 Map。
+  Future<Map<String, double>> recalculateAndSaveBatch(int batchId) async {
+    final avg = await calculateClassAverage(batchId);
+    if (avg.isEmpty) return {};
+    final weights = await resolveObjectiveWeights(batchId);
+    double weighted = 0;
+    for (int i = 1; i <= 4; i++) {
+      weighted += (avg['课程目标$i'] ?? 0) * weights[i - 1];
+    }
+    await saveCalculationResults(
+      batchId: batchId,
+      objective1Achievement: avg['课程目标1'] ?? 0,
+      objective2Achievement: avg['课程目标2'] ?? 0,
+      objective3Achievement: avg['课程目标3'] ?? 0,
+      objective4Achievement: avg['课程目标4'] ?? 0,
+      weightedAchievement: weighted,
+    );
+    await updateBatchStatus(batchId, 'completed');
+    return {...avg, 'weighted': weighted};
+  }
+
 
   /// generateScoresFromQuizResults — 从测验成绩自动计算达成度
   Future<int> generateScoresFromQuizResults(int batchId) async {
@@ -504,13 +567,13 @@ class AchievementDao {
         'student_id': userId,
         'student_name': userName,
         'obj1_score': obj1Score,
-        'obj1_achievement': (obj1Score / 15).clamp(0.0, 1.0),
+        'obj1_achievement': (obj1Score / _kFullMarks[0]).clamp(0.0, 1.0),
         'obj2_score': obj2Score,
-        'obj2_achievement': (obj2Score / 25).clamp(0.0, 1.0),
+        'obj2_achievement': (obj2Score / _kFullMarks[1]).clamp(0.0, 1.0),
         'obj3_score': obj3Score,
-        'obj3_achievement': (obj3Score / 30).clamp(0.0, 1.0),
+        'obj3_achievement': (obj3Score / _kFullMarks[2]).clamp(0.0, 1.0),
         'obj4_score': obj4Score,
-        'obj4_achievement': (obj4Score / 30).clamp(0.0, 1.0),
+        'obj4_achievement': (obj4Score / _kFullMarks[3]).clamp(0.0, 1.0),
         'total_score': totalScore,
         'created_at': now,
         'updated_at': now,
@@ -767,7 +830,7 @@ class AchievementDao {
     final scores = await getScores(batchId);
     if (scores.isEmpty) return [];
 
-    const fullMarks = [15.0, 25.0, 30.0, 30.0];
+    const fullMarks = _kFullMarks;
     const objectiveChapters = [
       '第1章 + 第2章',
       '第3章 + 第4章',

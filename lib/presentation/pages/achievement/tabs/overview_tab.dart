@@ -1,4 +1,5 @@
-﻿import 'package:file_picker/file_picker.dart';
+﻿import 'dart:convert';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/error_handler.dart';
 import '../../../../data/local/achievement_dao.dart';
@@ -149,19 +150,31 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
       if (grades.isEmpty) throw StateError('未解析到学生成绩，请确认表格含「学生个体课程目标达成度」表');
       if (!mounted) return;
       final batchName = '导入成绩 ${DateTime.now().toString().substring(0, 16)}';
+      // 快照当前大纲权重到批次，使批次自包含（即使日后大纲改动也可复现）
+      final objs = await widget.achievementDao.getCourseObjectives('移动应用开发');
+      String? weightsJson;
+      if (objs.length >= 4) {
+        weightsJson = jsonEncode({
+          for (int i = 0; i < 4; i++)
+            '目标${i + 1}': (objs[i]['weight'] as num?)?.toDouble() ?? 0,
+        });
+      }
       final batchId = await widget.achievementDao.createBatch({
         'batch_name': batchName,
         'course_name': '移动应用开发',
         'class_name': '计科22',
         'teacher_id': widget.authService.getCurrentUserId() ?? '',
         'status': 'draft',
+        if (weightsJson != null) 'objective_weights_json': weightsJson,
       });
       final count = await svc.importToDatabase(batchId, grades);
+      // 导入即算：立即计算并保存达成度，批次详情无需等用户打开报告Tab
+      await widget.achievementDao.recalculateAndSaveBatch(batchId);
       await _loadBatches();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('成绩导入成功：$count/${grades.length} 名学生'),
+            content: Text('成绩导入成功：$count/${grades.length} 名学生，已计算达成度'),
             backgroundColor: Colors.green,
           ),
         );

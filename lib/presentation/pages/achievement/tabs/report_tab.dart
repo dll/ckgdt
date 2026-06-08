@@ -37,6 +37,7 @@ class _ReportTabState extends State<ReportTab> {
   // 计算结果
   Map<String, dynamic>? _calcResults;
   List<double> _objectiveAchievements = [0, 0, 0, 0];
+  List<double> _objectiveWeights = List<double>.from(kDefaultWeights);
   double _weightedAchievement = 0.0;
   Map<String, List<double>> _statistics = {}; // objectiveKey -> [mean, max, min, std]
   Map<String, dynamic>? _surveySummary;
@@ -100,18 +101,19 @@ class _ReportTabState extends State<ReportTab> {
         }).toList();
       });
 
-      // 使用与 DAO addScore() 一致的满分比计算达成度
-      const fullMarks = [15.0, 25.0, 30.0, 30.0];
+      // 使用与 DAO addScore() 一致的满分比计算达成度（满分取 SSOT 配置）
+      final fullMarks = AchievementConfig.defaults.fullMarks;
       final objAchievements = List<double>.generate(4, (i) {
         final values = objScores[i];
         final mean = values.reduce((a, b) => a + b) / values.length;
         return (mean / fullMarks[i]).clamp(0.0, 1.0);
       });
 
-      // 加权达成度
+      // 加权达成度（权重优先取大纲导入的 course_objectives，回退默认）
+      final objWeights = await widget.achievementDao.resolveObjectiveWeights(_selectedBatchId!);
       double weighted = 0;
       for (int i = 0; i < 4; i++) {
-        weighted += objAchievements[i] * kDefaultWeights[i];
+        weighted += objAchievements[i] * objWeights[i];
       }
 
       // 统计数据：mean, max, min, std
@@ -156,6 +158,7 @@ class _ReportTabState extends State<ReportTab> {
       if (mounted) {
         setState(() {
           _objectiveAchievements = objAchievements;
+          _objectiveWeights = objWeights;
           _weightedAchievement = weighted;
           _statistics = stats;
           _surveySummary = surveyData;
@@ -251,7 +254,7 @@ class _ReportTabState extends State<ReportTab> {
       buffer.writeln('| 毕业要求指标点 | 课程目标 | 权重 | 课程目标描述 |');
       buffer.writeln('|---------------|---------|------|------------|');
       for (int i = 0; i < 4; i++) {
-        buffer.writeln('| 指标点${objIndicators[i]} | ${kObjectiveNames[i]} | ${kDefaultWeights[i].toStringAsFixed(2)} | ${objDescFull[i]} |');
+        buffer.writeln('| 指标点${objIndicators[i]} | ${kObjectiveNames[i]} | ${_objectiveWeights[i].toStringAsFixed(2)} | ${objDescFull[i]} |');
       }
       buffer.writeln();
 
@@ -260,7 +263,7 @@ class _ReportTabState extends State<ReportTab> {
       buffer.writeln('| 课程目标 | 权重 | 支撑指标点 | 平时成绩（${assessFullMarks[0]}分） | 实验成绩（${assessFullMarks[1]}分） | 期末成绩（${assessFullMarks[2]}分） |');
       buffer.writeln('|----------|------|-----------|-----------------|-----------------|-----------------|');
       for (int i = 0; i < 4; i++) {
-        buffer.writeln('| ${kObjectiveNames[i]} | ${kDefaultWeights[i].toStringAsFixed(2)} | 指标点${objIndicators[i]} | ${objMarks[i]} | ${objMarks[i]} | ${objMarks[i]} |');
+        buffer.writeln('| ${kObjectiveNames[i]} | ${_objectiveWeights[i].toStringAsFixed(2)} | 指标点${objIndicators[i]} | ${objMarks[i]} | ${objMarks[i]} | ${objMarks[i]} |');
       }
       buffer.writeln('| **合计** | **1.00** | — | **${assessFullMarks[0]}** | **${assessFullMarks[1]}** | **${assessFullMarks[2]}** |');
       buffer.writeln();
@@ -324,12 +327,12 @@ class _ReportTabState extends State<ReportTab> {
           final isFirstRow = j == 0;
           if (i == 2 && j == 0) {
             // 课程目标3无平时成绩
-            buffer.writeln('| ${isFirstRow ? kObjectiveNames[i] : ''} | ${isFirstRow ? kDefaultWeights[i].toStringAsFixed(2) : ''} | ${assessNames[j]} | ${assessFullMarks[j]} | — | — | ${assessWeights[j]} | ${isFirstRow ? objCombined.toStringAsFixed(4) : ''} | ${isFirstRow ? '指标点${objIndicators[i]}' : ''} | ${isFirstRow ? objCombined.toStringAsFixed(4) : ''} |');
+            buffer.writeln('| ${isFirstRow ? kObjectiveNames[i] : ''} | ${isFirstRow ? _objectiveWeights[i].toStringAsFixed(2) : ''} | ${assessNames[j]} | ${assessFullMarks[j]} | — | — | ${assessWeights[j]} | ${isFirstRow ? objCombined.toStringAsFixed(4) : ''} | ${isFirstRow ? '指标点${objIndicators[i]}' : ''} | ${isFirstRow ? objCombined.toStringAsFixed(4) : ''} |');
             continue;
           }
           final ach = assessMaps[j]['obj${i + 1}'] ?? 0.0;
           final avgScore = ach * assessFullMarks[j];
-          buffer.writeln('| ${isFirstRow ? kObjectiveNames[i] : ''} | ${isFirstRow ? kDefaultWeights[i].toStringAsFixed(2) : ''} | ${assessNames[j]} | ${assessFullMarks[j]} | ${avgScore.toStringAsFixed(2)} | ${ach.toStringAsFixed(4)} | ${assessWeights[j]} | ${isFirstRow ? objCombined.toStringAsFixed(4) : ''} | ${isFirstRow ? '指标点${objIndicators[i]}' : ''} | ${isFirstRow ? objCombined.toStringAsFixed(4) : ''} |');
+          buffer.writeln('| ${isFirstRow ? kObjectiveNames[i] : ''} | ${isFirstRow ? _objectiveWeights[i].toStringAsFixed(2) : ''} | ${assessNames[j]} | ${assessFullMarks[j]} | ${avgScore.toStringAsFixed(2)} | ${ach.toStringAsFixed(4)} | ${assessWeights[j]} | ${isFirstRow ? objCombined.toStringAsFixed(4) : ''} | ${isFirstRow ? '指标点${objIndicators[i]}' : ''} | ${isFirstRow ? objCombined.toStringAsFixed(4) : ''} |');
         }
       }
       buffer.writeln();
@@ -339,7 +342,7 @@ class _ReportTabState extends State<ReportTab> {
       buffer.writeln('|------|--------|---------|---------|');
       for (int i = 0; i < 4; i++) {
         final a = _objectiveAchievements[i];
-        buffer.writeln('| ${kObjectiveNames[i]}（权重${(kDefaultWeights[i] * 100).toStringAsFixed(0)}%） | ${a.toStringAsFixed(4)} | 0.60 | ${a >= 0.60 ? '达成' : '未达成'} |');
+        buffer.writeln('| ${kObjectiveNames[i]}（权重${(_objectiveWeights[i] * 100).toStringAsFixed(0)}%） | ${a.toStringAsFixed(4)} | 0.60 | ${a >= 0.60 ? '达成' : '未达成'} |');
       }
       buffer.writeln('| **课程总体达成度** | **${_weightedAchievement.toStringAsFixed(4)}** | **0.60** | **${_weightedAchievement >= 0.60 ? '达成' : '未达成'}** |');
       buffer.writeln();
@@ -375,7 +378,7 @@ class _ReportTabState extends State<ReportTab> {
         final a2 = (s['obj2_achievement'] as num?)?.toDouble() ?? 0;
         final a3 = (s['obj3_achievement'] as num?)?.toDouble() ?? 0;
         final a4 = (s['obj4_achievement'] as num?)?.toDouble() ?? 0;
-        final wt = a1 * kDefaultWeights[0] + a2 * kDefaultWeights[1] + a3 * kDefaultWeights[2] + a4 * kDefaultWeights[3];
+        final wt = a1 * _objectiveWeights[0] + a2 * _objectiveWeights[1] + a3 * _objectiveWeights[2] + a4 * _objectiveWeights[3];
         buffer.writeln('| ${idx + 1} | $sid | $sname | ${a1.toStringAsFixed(4)} | ${a2.toStringAsFixed(4)} | ${a3.toStringAsFixed(4)} | ${a4.toStringAsFixed(4)} | ${wt.toStringAsFixed(4)} |');
       }
       buffer.writeln();
@@ -544,7 +547,7 @@ class _ReportTabState extends State<ReportTab> {
       for (int i = 0; i < 4; i++) {
         objectives.add({
           'objective': i + 1,
-          'weight': kDefaultWeights[i],
+          'weight': _objectiveWeights[i],
           'achievement': _objectiveAchievements[i],
           'avgScore': _objectiveAchievements[i] * 100,
         });
@@ -571,7 +574,7 @@ class _ReportTabState extends State<ReportTab> {
           for (int i = 0; i < cfg.weights.length; i++)
             {
               'objective': i + 1,
-              'weight': cfg.weights[i],
+              'weight': _objectiveWeights[i],
               'pingshi_full': cfg.fullMarks[i].toInt(),
               'experiment_full': cfg.fullMarks[i].toInt(),
               'exam_full': cfg.fullMarks[i].toInt(),
@@ -750,7 +753,7 @@ class _ReportTabState extends State<ReportTab> {
                   [
                     '指标点${objIndicators[i]}',
                     kObjectiveNames[i],
-                    kDefaultWeights[i].toStringAsFixed(2),
+                    _objectiveWeights[i].toStringAsFixed(2),
                     objDescShort[i],
                   ],
               ],
@@ -768,7 +771,7 @@ class _ReportTabState extends State<ReportTab> {
                 for (int i = 0; i < 4; i++)
                   [
                     kObjectiveNames[i],
-                    kDefaultWeights[i].toStringAsFixed(2),
+                    _objectiveWeights[i].toStringAsFixed(2),
                     '指标点${objIndicators[i]}',
                     '${objMarks[i]}',
                     '${objMarks[i]}',
@@ -851,7 +854,7 @@ class _ReportTabState extends State<ReportTab> {
                   for (int j = 0; j < 3; j++) ...[
                     [
                       j == 0 ? '课程目标${i + 1}' : '',
-                      j == 0 ? kDefaultWeights[i].toStringAsFixed(2) : '',
+                      j == 0 ? _objectiveWeights[i].toStringAsFixed(2) : '',
                       ['平时成绩', '实验成绩', '期末成绩'][j],
                       ['20', '30', '50'][j],
                       (i == 2 && j == 0) ? '—' :
@@ -876,7 +879,7 @@ class _ReportTabState extends State<ReportTab> {
               headers: ['项目', '达成度', '预期阈值', '是否达成'],
               data: [
                 for (int i = 0; i < 4; i++) [
-                  '课程目标${i + 1}（权重${(kDefaultWeights[i] * 100).toStringAsFixed(0)}%）',
+                  '课程目标${i + 1}（权重${(_objectiveWeights[i] * 100).toStringAsFixed(0)}%）',
                   _objectiveAchievements[i].toStringAsFixed(4),
                   '0.60',
                   _objectiveAchievements[i] >= 0.60 ? '达成' : '未达成',
@@ -922,7 +925,7 @@ class _ReportTabState extends State<ReportTab> {
                 final a2 = (s['obj2_achievement'] as num?)?.toDouble() ?? 0;
                 final a3 = (s['obj3_achievement'] as num?)?.toDouble() ?? 0;
                 final a4 = (s['obj4_achievement'] as num?)?.toDouble() ?? 0;
-                final wt = a1 * kDefaultWeights[0] + a2 * kDefaultWeights[1] + a3 * kDefaultWeights[2] + a4 * kDefaultWeights[3];
+                final wt = a1 * _objectiveWeights[0] + a2 * _objectiveWeights[1] + a3 * _objectiveWeights[2] + a4 * _objectiveWeights[3];
                 return [
                   '${e.key + 1}',
                   s['student_id']?.toString() ?? '',
@@ -1256,7 +1259,7 @@ class _ReportTabState extends State<ReportTab> {
                 child: _buildAchievementBar(
                   label: kObjectiveNames[i],
                   value: _objectiveAchievements[i],
-                  weight: kDefaultWeights[i],
+                  weight: _objectiveWeights[i],
                   color: kObjectiveColors[i],
                 ),
               );
