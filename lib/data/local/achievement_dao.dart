@@ -670,31 +670,34 @@ class AchievementDao {
     // 先清空已有成绩
     await clearScores(batchId);
 
-    // 获取所有学生的测验成绩汇总
-    final quizData = await db.rawQuery(
-      'SELECT user_id, COUNT(*) as quiz_count, AVG(score) as avg_score, '
-      'SUM(num_correct) as total_correct, SUM(num_total) as total_questions '
-      'FROM quiz_results GROUP BY user_id ORDER BY user_id'
-    );
+    // 以全体活跃学生为基准，LEFT JOIN 测验成绩：
+    // 没有测验数据的学生也建行（成绩按 0 计），使批次覆盖完整名单而非仅做过测验的人。
+    final rows = await db.rawQuery('''
+      SELECT u.user_id, u.real_name,
+        q.avg_score, q.total_correct, q.total_questions
+      FROM users u
+      LEFT JOIN (
+        SELECT user_id, AVG(score) AS avg_score,
+          SUM(num_correct) AS total_correct, SUM(num_total) AS total_questions
+        FROM quiz_results GROUP BY user_id
+      ) q ON q.user_id = u.user_id
+      WHERE u.role = 'student' AND u.is_active = 1
+      ORDER BY u.user_id
+    ''');
 
-    if (quizData.isEmpty) {
-      throw Exception('没有测验成绩数据，请先让学生完成章节测验，或使用「批量录入」生成演示数据');
+    if (rows.isEmpty) {
+      throw Exception('没有活跃学生，请先在班级管理中添加学生');
     }
 
     final batchOp = db.batch();
-    for (final q in quizData) {
-      final userId = q['user_id'] as String? ?? '';
-      final avgScore = (q['avg_score'] as num?)?.toDouble() ?? 0;
-      final totalCorrect = (q['total_correct'] as num?)?.toDouble() ?? 0;
-      final totalQuestions = (q['total_questions'] as num?)?.toDouble() ?? 1;
-      final correctRate = totalCorrect / totalQuestions;
-
-      // 查找用户真名
-      final userRows = await db.query('users',
-          where: 'user_id = ?', whereArgs: [userId], limit: 1);
-      final userName = userRows.isNotEmpty
-          ? (userRows.first['real_name'] as String? ?? userId)
-          : userId;
+    for (final r in rows) {
+      final userId = r['user_id'] as String? ?? '';
+      if (userId.isEmpty) continue;
+      final userName = (r['real_name'] as String?) ?? userId;
+      final avgScore = (r['avg_score'] as num?)?.toDouble() ?? 0;
+      final totalQuestions = (r['total_questions'] as num?)?.toDouble() ?? 0;
+      final totalCorrect = (r['total_correct'] as num?)?.toDouble() ?? 0;
+      final correctRate = totalQuestions > 0 ? totalCorrect / totalQuestions : 0.0;
 
       // 映射到四个课程目标
       final obj1Score = avgScore * 0.15;
@@ -722,7 +725,7 @@ class AchievementDao {
     }
 
     await batchOp.commit(noResult: true);
-    return quizData.length;
+    return rows.length;
   }
 
 
@@ -1228,7 +1231,7 @@ class AchievementDao {
 
     final students = await db.query('users',
         where: "role = 'student' AND is_active = 1",
-        orderBy: 'user_id ASC', limit: 50);
+        orderBy: 'user_id ASC');
 
     List<Map<String, String>> stuData;
     if (students.isEmpty) {
@@ -1353,7 +1356,7 @@ class AchievementDao {
 
     final students = await db.query('users',
         where: "role = 'student' AND is_active = 1",
-        orderBy: 'user_id ASC', limit: 50);
+        orderBy: 'user_id ASC');
 
     List<Map<String, String>> stuData;
     if (students.isEmpty) {
@@ -1482,7 +1485,7 @@ class AchievementDao {
 
     final students = await db.query('users',
         where: "role = 'student' AND is_active = 1",
-        orderBy: 'user_id ASC', limit: 50);
+        orderBy: 'user_id ASC');
 
     List<Map<String, String>> stuData;
     if (students.isEmpty) {
