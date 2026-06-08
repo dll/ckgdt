@@ -612,7 +612,8 @@ class _ReportTabState extends State<ReportTab> {
           SnackBar(content: Text('Word 报告已保存: $path'), duration: const Duration(seconds: 4)),
         );
       }
-    } catch (e) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ReportTab.exportDocx', stack: st);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('导出Word失败: $e'), backgroundColor: Colors.red),

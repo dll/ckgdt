@@ -5,6 +5,7 @@ import '../data/local/lab_task_dao.dart';
 import '../data/local/achievement_dao.dart';
 import '../data/local/assessment_dao.dart';
 import '../data/local/database_helper.dart';
+import '../presentation/pages/achievement/achievement_config.dart';
 import 'auth_service.dart';
 
 /// 归档生成上下文收集器。
@@ -212,12 +213,12 @@ class ArchiveContextService {
       final avg = await _achievementDao.calculateClassAverage(batchId);
       final b = StringBuffer('### 7. 成绩达成\n');
       b.writeln('- 批次：${latest['batch_name'] ?? '未命名'}');
-      const w = [0.15, 0.25, 0.30, 0.30];
+      final cfg = AchievementConfig.defaults;
       double weighted = 0;
       for (int i = 1; i <= 4; i++) {
         final a = avg['课程目标$i'] ?? 0;
-        weighted += a * w[i - 1];
-        b.writeln('- 课程目标$i 班级平均达成度：${a.toStringAsFixed(4)}（权重 ${w[i - 1]}）');
+        weighted += a * cfg.weights[i - 1];
+        b.writeln('- 课程目标$i 班级平均达成度：${a.toStringAsFixed(4)}（权重 ${cfg.weights[i - 1]}）');
       }
       b.writeln('- 加权总达成度：${weighted.toStringAsFixed(4)}');
       return b.toString();
