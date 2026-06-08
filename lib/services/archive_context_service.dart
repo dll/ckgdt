@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import '../data/local/course_dao.dart';
 import '../data/local/class_dao.dart';
 import '../data/local/lab_task_dao.dart';
+import '../data/local/achievement_dao.dart';
+import '../data/local/assessment_dao.dart';
 import '../data/local/database_helper.dart';
 import 'auth_service.dart';
 
@@ -31,6 +33,8 @@ class ArchiveContextService {
   final _courseDao = CourseDao();
   final _classDao = ClassDao();
   final _labTaskDao = LabTaskDao();
+  final _achievementDao = AchievementDao();
+  final _assessmentDao = AssessmentDao();
   final _auth = AuthService();
 
   /// 收集全部 6 类事实并打包为 prompt 段。
@@ -46,6 +50,8 @@ class ArchiveContextService {
     buf.writeln(await _section4Labs());
     buf.writeln(_section5Teacher());
     buf.writeln(await _section6StudentCount(classId: classId));
+    buf.writeln(await _section7Achievement());
+    buf.writeln(await _section8Assessment());
 
     return buf.toString();
   }
@@ -193,6 +199,50 @@ class ArchiveContextService {
           .toList();
     } catch (e) {
       return const [];
+    }
+  }
+
+  /// 7. 成绩达成：最近批次的班级加权达成度 + 各课程目标达成度。
+  Future<String> _section7Achievement() async {
+    try {
+      final batches = await _achievementDao.getAllBatches();
+      if (batches.isEmpty) return '### 7. 成绩达成\n[暂无达成度批次]\n';
+      final latest = batches.first;
+      final batchId = latest['id'] as int;
+      final avg = await _achievementDao.calculateClassAverage(batchId);
+      final b = StringBuffer('### 7. 成绩达成\n');
+      b.writeln('- 批次：${latest['batch_name'] ?? '未命名'}');
+      const w = [0.15, 0.25, 0.30, 0.30];
+      double weighted = 0;
+      for (int i = 1; i <= 4; i++) {
+        final a = avg['课程目标$i'] ?? 0;
+        weighted += a * w[i - 1];
+        b.writeln('- 课程目标$i 班级平均达成度：${a.toStringAsFixed(4)}（权重 ${w[i - 1]}）');
+      }
+      b.writeln('- 加权总达成度：${weighted.toStringAsFixed(4)}');
+      return b.toString();
+    } catch (e, st) {
+      _logErr('section7Achievement', e, st);
+      return '### 7. 成绩达成\n[采集失败：$e]\n';
+    }
+  }
+
+  /// 8. 项目考核与答辩：分组数 + 答辩记录概况。
+  Future<String> _section8Assessment() async {
+    try {
+      final groups = await _assessmentDao.getGroups();
+      final defenses = await _assessmentDao.getDefenseRecords();
+      final b = StringBuffer('### 8. 项目考核与答辩\n');
+      b.writeln('- 考核分组数：${groups.length}');
+      b.writeln('- 答辩记录数：${defenses.length}');
+      if (defenses.isNotEmpty) {
+        final done = defenses.where((d) => (d['status'] ?? '') == 'completed').length;
+        b.writeln('- 已完成答辩：$done / ${defenses.length}');
+      }
+      return b.toString();
+    } catch (e, st) {
+      _logErr('section8Assessment', e, st);
+      return '### 8. 项目考核与答辩\n[采集失败：$e]\n';
     }
   }
 
