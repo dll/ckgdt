@@ -4,6 +4,7 @@ import '../../../../data/local/score_audit_dao.dart';
 import '../../../../services/auth_service.dart';
 import '../../../../core/error_handler.dart';
 import '../achievement_shared.dart';
+import '../achievement_config.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Tab 2 — 成绩管理（录入/自动计算/批量）
@@ -70,7 +71,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
     }
   }
 
-  void _showAddScoreDialog() {
+  void _showAddScoreDialog({Map<String, dynamic>? existing}) {
     if (_selectedBatchId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('请先选择批次')),
@@ -78,17 +79,24 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
       return;
     }
 
-    final studentIdCtrl = TextEditingController();
-    final studentNameCtrl = TextEditingController();
-    final obj1Ctrl = TextEditingController(text: '80');
-    final obj2Ctrl = TextEditingController(text: '75');
-    final obj3Ctrl = TextEditingController(text: '70');
-    final obj4Ctrl = TextEditingController(text: '85');
+    final isEdit = existing != null;
+    final studentIdCtrl = TextEditingController(
+        text: isEdit ? (existing['student_id'] ?? '').toString() : '');
+    final studentNameCtrl = TextEditingController(
+        text: isEdit ? (existing['student_name'] ?? '').toString() : '');
+    final obj1Ctrl = TextEditingController(
+        text: isEdit ? ((existing['obj1_score'] ?? 0).toString()) : '80');
+    final obj2Ctrl = TextEditingController(
+        text: isEdit ? ((existing['obj2_score'] ?? 0).toString()) : '75');
+    final obj3Ctrl = TextEditingController(
+        text: isEdit ? ((existing['obj3_score'] ?? 0).toString()) : '70');
+    final obj4Ctrl = TextEditingController(
+        text: isEdit ? ((existing['obj4_score'] ?? 0).toString()) : '85');
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('添加学生成绩'),
+        title: Text(isEdit ? '编辑学生成绩' : '添加学生成绩'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -185,17 +193,34 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
                   o3 * kDefaultWeights[2] +
                   o4 * kDefaultWeights[3];
 
-              await widget.achievementDao.addScore(
-                batchId: _selectedBatchId!,
-                studentId: studentIdCtrl.text.trim(),
-                studentName: studentNameCtrl.text.trim(),
-                objective1Score: o1,
-                objective2Score: o2,
-                objective3Score: o3,
-                objective4Score: o4,
-                totalScore: total,
-              );
-              // 审计：达成度成绩录入
+              if (isEdit) {
+                final fm = AchievementConfig.defaults.fullMarks;
+                await widget.achievementDao.updateScore(existing['id'] as int, {
+                  'student_id': studentIdCtrl.text.trim(),
+                  'student_name': studentNameCtrl.text.trim(),
+                  'obj1_score': o1,
+                  'obj1_achievement': (o1 / fm[0]).clamp(0.0, 1.0),
+                  'obj2_score': o2,
+                  'obj2_achievement': (o2 / fm[1]).clamp(0.0, 1.0),
+                  'obj3_score': o3,
+                  'obj3_achievement': (o3 / fm[2]).clamp(0.0, 1.0),
+                  'obj4_score': o4,
+                  'obj4_achievement': (o4 / fm[3]).clamp(0.0, 1.0),
+                  'total_score': total,
+                });
+              } else {
+                await widget.achievementDao.addScore(
+                  batchId: _selectedBatchId!,
+                  studentId: studentIdCtrl.text.trim(),
+                  studentName: studentNameCtrl.text.trim(),
+                  objective1Score: o1,
+                  objective2Score: o2,
+                  objective3Score: o3,
+                  objective4Score: o4,
+                  totalScore: total,
+                );
+              }
+              // 审计：达成度成绩录入/编辑
               try {
                 await ScoreAuditDao.instance.logChange(
                   tableName: 'achievement_scores',
@@ -204,17 +229,17 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
                   newValue: total.toStringAsFixed(2),
                   scorerId: AuthService().getCurrentUserId() ?? '',
                   scorerName: AuthService().currentUser?.realName,
-                  op: 'create',
+                  op: isEdit ? 'update' : 'create',
                 );
               } catch (e, st) {
                 swallowDebug(e, tag: 'ScoresTab.audit', stack: st);
               }
-              // 录入后重算批次达成度，保持详情/报告同步
+              // 录入/编辑后重算批次达成度，保持详情/报告同步
               await widget.achievementDao.recalculateAndSaveBatch(_selectedBatchId!);
               if (ctx.mounted) Navigator.pop(ctx);
               _loadScores();
             },
-            child: const Text('添加'),
+            child: Text(isEdit ? '保存' : '添加'),
           ),
         ],
       ),
@@ -262,6 +287,9 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
     );
     if (confirmed == true) {
       await widget.achievementDao.deleteScore(scoreId);
+      if (_selectedBatchId != null) {
+        await widget.achievementDao.recalculateAndSaveBatch(_selectedBatchId!);
+      }
       _loadScores();
     }
   }
@@ -447,6 +475,12 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
                   ),
                 ),
                 const SizedBox(width: 4),
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.grey),
+                  onPressed: () => _showAddScoreDialog(existing: score),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey),
                   onPressed: () => _deleteScore(scoreId),
