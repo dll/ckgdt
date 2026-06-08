@@ -335,48 +335,49 @@ class AchievementExcelService {
   /// 导入学生成绩到数据库
   Future<int> importToDatabase(int batchId, List<Map<String, dynamic>> grades) async {
     final db = await DatabaseHelper.instance.database;
+    final fm = AchievementConfig.defaults.fullMarks;
+    final now = DateTime.now().toIso8601String();
     int count = 0;
 
-    for (final g in grades) {
-      final studentId = g['student_id'] as String;
-      if (studentId.isEmpty) continue;
+    // 单事务批量写入：避免每行一次 fsync/commit（N 行 → 1 次提交）
+    await db.transaction((txn) async {
+      for (final g in grades) {
+        final studentId = g['student_id'] as String;
+        if (studentId.isEmpty) continue;
 
-      // 计算达成度 (满分100)
-      final obj1 = (g['obj1_score'] as double?) ?? 0;
-      final obj2 = (g['obj2_score'] as double?) ?? 0;
-      final obj3 = (g['obj3_score'] as double?) ?? 0;
-      final obj4 = (g['obj4_score'] as double?) ?? 0;
-      final total = (g['total_score'] as double?) ?? (obj1 + obj2 + obj3 + obj4);
+        final obj1 = (g['obj1_score'] as double?) ?? 0;
+        final obj2 = (g['obj2_score'] as double?) ?? 0;
+        final obj3 = (g['obj3_score'] as double?) ?? 0;
+        final obj4 = (g['obj4_score'] as double?) ?? 0;
+        final total = (g['total_score'] as double?) ?? (obj1 + obj2 + obj3 + obj4);
 
-      // 满分读自单一来源 config（与大纲 15/25/30/30 一致），不再硬编码 100
-      final fm = AchievementConfig.defaults.fullMarks;
-
-      try {
-        await db.insert(
-          'achievement_scores',
-          {
-            'batch_id': batchId,
-            'student_id': studentId,
-            'student_name': g['student_name'] ?? '',
-            'obj1_score': obj1,
-            'obj1_achievement': (obj1 / fm[0]).clamp(0.0, 1.0),
-            'obj2_score': obj2,
-            'obj2_achievement': (obj2 / fm[1]).clamp(0.0, 1.0),
-            'obj3_score': obj3,
-            'obj3_achievement': (obj3 / fm[2]).clamp(0.0, 1.0),
-            'obj4_score': obj4,
-            'obj4_achievement': (obj4 / fm[3]).clamp(0.0, 1.0),
-            'total_score': total,
-            'created_at': DateTime.now().toIso8601String(),
-            'updated_at': DateTime.now().toIso8601String(),
-          },
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-        count++;
-      } catch (e, st) {
-        swallowDebug(e, tag: 'ExcelImport.$studentId', stack: st);
+        try {
+          await txn.insert(
+            'achievement_scores',
+            {
+              'batch_id': batchId,
+              'student_id': studentId,
+              'student_name': g['student_name'] ?? '',
+              'obj1_score': obj1,
+              'obj1_achievement': (obj1 / fm[0]).clamp(0.0, 1.0),
+              'obj2_score': obj2,
+              'obj2_achievement': (obj2 / fm[1]).clamp(0.0, 1.0),
+              'obj3_score': obj3,
+              'obj3_achievement': (obj3 / fm[2]).clamp(0.0, 1.0),
+              'obj4_score': obj4,
+              'obj4_achievement': (obj4 / fm[3]).clamp(0.0, 1.0),
+              'total_score': total,
+              'created_at': now,
+              'updated_at': now,
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+          count++;
+        } catch (e, st) {
+          swallowDebug(e, tag: 'ExcelImport.$studentId', stack: st);
+        }
       }
-    }
+    });
 
     return count;
   }
