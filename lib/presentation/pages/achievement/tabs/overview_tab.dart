@@ -77,12 +77,12 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
       final rows = svc.syllabusToObjectiveRows(parsed);
       if (rows.isEmpty) throw StateError('未从大纲中识别到课程目标/权重');
       if (!mounted) return;
-      final ok = await _showSyllabusPreview(rows);
-      if (ok != true) return;
-      await widget.achievementDao.saveCourseObjectives('移动应用开发', rows);
+      final edited = await _showSyllabusPreview(rows);
+      if (edited == null) return; // 用户取消
+      await widget.achievementDao.saveCourseObjectives('移动应用开发', edited);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('大纲解析成功，已保存 ${rows.length} 个课程目标'), backgroundColor: Colors.green),
+          SnackBar(content: Text('大纲解析成功，已保存 ${edited.length} 个课程目标'), backgroundColor: Colors.green),
         );
       }
     } catch (e, st) {
@@ -97,33 +97,11 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
     }
   }
 
-  Future<bool?> _showSyllabusPreview(List<Map<String, dynamic>> rows) {
-    return showDialog<bool>(
+  Future<List<Map<String, dynamic>>?> _showSyllabusPreview(
+      List<Map<String, dynamic>> rows) {
+    return showDialog<List<Map<String, dynamic>>>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('大纲解析结果'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('确认课程目标与权重无误后保存：', style: TextStyle(fontSize: 13)),
-              const SizedBox(height: 8),
-              ...rows.map((r) => Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Text(
-                      '目标${r['idx']} · 指标点${r['indicator'] ?? '-'} · 权重${r['weight']} · 满分${r['full_mark']}',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  )),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('保存')),
-        ],
-      ),
+      builder: (ctx) => SyllabusPreviewDialog(rows: rows),
     );
   }
 
@@ -149,6 +127,20 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
       }
       if (grades.isEmpty) throw StateError('未解析到学生成绩，请确认表格含「学生个体课程目标达成度」表');
       if (!mounted) return;
+      // 导入前可编辑预览：用户确认/修正解析结果后再入库
+      setState(() => _importing = false);
+      final edited = await showModalBottomSheet<List<Map<String, dynamic>>>(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        builder: (_) => GradePreviewSheet(initial: grades),
+      );
+      if (edited == null || edited.isEmpty) return; // 用户取消
+      if (!mounted) return;
+      setState(() => _importing = true);
+      grades = edited;
       final batchName = '导入成绩 ${DateTime.now().toString().substring(0, 16)}';
       // 快照当前大纲权重到批次，使批次自包含（即使日后大纲改动也可复现）
       final objs = await widget.achievementDao.getCourseObjectives('移动应用开发');
@@ -840,6 +832,275 @@ class _BatchDetailSheetState extends State<BatchDetailSheet> {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ── 成绩导入预览（可编辑）────────────────────────────────────────────────────
+
+/// 解析后的成绩在入库前的可编辑预览。返回编辑后的行列表；取消返回 null。
+class GradePreviewSheet extends StatefulWidget {
+  final List<Map<String, dynamic>> initial;
+  const GradePreviewSheet({super.key, required this.initial});
+
+  @override
+  State<GradePreviewSheet> createState() => _GradePreviewSheetState();
+}
+
+class _GradePreviewSheetState extends State<GradePreviewSheet> {
+  late final List<Map<String, dynamic>> _rows = widget.initial
+      .map((e) => Map<String, dynamic>.from(e))
+      .toList();
+
+  void _editRow(int index) async {
+    final r = _rows[index];
+    final idCtrl = TextEditingController(text: (r['student_id'] ?? '').toString());
+    final nameCtrl = TextEditingController(text: (r['student_name'] ?? '').toString());
+    final objCtrls = List.generate(
+        4, (i) => TextEditingController(text: ((r['obj${i + 1}_score'] ?? 0)).toString()));
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('编辑学生成绩'),
+        content: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(controller: idCtrl, decoration: const InputDecoration(labelText: '学号', border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: '姓名', border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            for (int i = 0; i < 4; i++) ...[
+              TextField(
+                controller: objCtrls[i],
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(labelText: '目标${i + 1}得分', border: const OutlineInputBorder()),
+              ),
+              const SizedBox(height: 10),
+            ],
+          ]),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('保存')),
+        ],
+      ),
+    );
+    if (ok == true) {
+      setState(() {
+        r['student_id'] = idCtrl.text.trim();
+        r['student_name'] = nameCtrl.text.trim();
+        double total = 0;
+        for (int i = 0; i < 4; i++) {
+          final v = double.tryParse(objCtrls[i].text) ?? 0;
+          r['obj${i + 1}_score'] = v;
+          total += v;
+        }
+        r['total_score'] = total;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return DraggableScrollableSheet(
+      initialChildSize: 0.8,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (_, scrollCtrl) => Column(
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 8),
+            width: 40, height: 4,
+            decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(children: [
+              Icon(Icons.preview, color: primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('导入预览（${_rows.length} 名学生）',
+                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+              ),
+              const Text('可点击编辑/删除后再导入', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            ]),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: _rows.isEmpty
+                ? const Center(child: Text('无数据', style: TextStyle(color: Colors.grey)))
+                : ListView.builder(
+                    controller: scrollCtrl,
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _rows.length,
+                    itemBuilder: (_, i) {
+                      final r = _rows[i];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          dense: true,
+                          title: Text('${r['student_name'] ?? '未知'}  ${r['student_id'] ?? ''}',
+                              style: const TextStyle(fontWeight: FontWeight.w600)),
+                          subtitle: Text(
+                            '目标: ${List.generate(4, (k) => (r['obj${k + 1}_score'] ?? 0).toStringAsFixed(1)).join(' / ')}'
+                            '   总分 ${(r['total_score'] ?? 0).toStringAsFixed(1)}',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit_outlined, size: 18),
+                              onPressed: () => _editRow(i),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey),
+                              onPressed: () => setState(() => _rows.removeAt(i)),
+                            ),
+                          ]),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+                const SizedBox(width: 8),
+                FilledButton.icon(
+                  onPressed: _rows.isEmpty ? null : () => Navigator.pop(context, _rows),
+                  icon: const Icon(Icons.check, size: 16),
+                  label: Text('确认导入 ${_rows.length} 名'),
+                ),
+              ]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── 大纲解析预览（可编辑）────────────────────────────────────────────────────
+
+/// 大纲解析出的课程目标在落库前的可编辑预览。
+/// 用户可修正权重/指标点/满分；确认后返回编辑后的行，取消返回 null。
+class SyllabusPreviewDialog extends StatefulWidget {
+  final List<Map<String, dynamic>> rows;
+  const SyllabusPreviewDialog({super.key, required this.rows});
+
+  @override
+  State<SyllabusPreviewDialog> createState() => _SyllabusPreviewDialogState();
+}
+
+class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
+  late final List<Map<String, dynamic>> _rows =
+      widget.rows.map((e) => Map<String, dynamic>.from(e)).toList();
+  late final List<TextEditingController> _weightCtrls;
+  late final List<TextEditingController> _indicatorCtrls;
+  late final List<TextEditingController> _fullMarkCtrls;
+
+  @override
+  void initState() {
+    super.initState();
+    _weightCtrls = _rows
+        .map((r) => TextEditingController(text: (r['weight'] ?? 0).toString()))
+        .toList();
+    _indicatorCtrls = _rows
+        .map((r) => TextEditingController(text: (r['indicator'] ?? '').toString()))
+        .toList();
+    _fullMarkCtrls = _rows
+        .map((r) => TextEditingController(text: (r['full_mark'] ?? 0).toString()))
+        .toList();
+  }
+
+  @override
+  void dispose() {
+    for (final c in [..._weightCtrls, ..._indicatorCtrls, ..._fullMarkCtrls]) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  double get _weightSum =>
+      _weightCtrls.fold(0.0, (s, c) => s + (double.tryParse(c.text) ?? 0));
+
+  @override
+  Widget build(BuildContext context) {
+    final sum = _weightSum;
+    final sumOk = (sum - 1.0).abs() < 0.001;
+    return AlertDialog(
+      title: const Text('大纲解析结果（可编辑）'),
+      content: SizedBox(
+        width: 420,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('确认或修正课程目标的权重/指标点/满分后保存：',
+                  style: TextStyle(fontSize: 13)),
+              const SizedBox(height: 12),
+              for (int i = 0; i < _rows.length; i++) ...[
+                Text('目标${_rows[i]['idx'] ?? i + 1}',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 6),
+                Row(children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _weightCtrls[i],
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      onChanged: (_) => setState(() {}),
+                      decoration: const InputDecoration(
+                        labelText: '权重', isDense: true, border: OutlineInputBorder()),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _indicatorCtrls[i],
+                      decoration: const InputDecoration(
+                        labelText: '指标点', isDense: true, border: OutlineInputBorder()),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _fullMarkCtrls[i],
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        labelText: '满分', isDense: true, border: OutlineInputBorder()),
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 12),
+              ],
+              Row(children: [
+                Icon(sumOk ? Icons.check_circle : Icons.warning_amber,
+                    size: 16, color: sumOk ? Colors.green : Colors.orange),
+                const SizedBox(width: 6),
+                Text('权重合计 ${sum.toStringAsFixed(2)}${sumOk ? '' : '（建议为 1.00）'}',
+                    style: TextStyle(fontSize: 12, color: sumOk ? Colors.green : Colors.orange)),
+              ]),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+        FilledButton(
+          onPressed: () {
+            for (int i = 0; i < _rows.length; i++) {
+              _rows[i]['weight'] = double.tryParse(_weightCtrls[i].text) ?? _rows[i]['weight'];
+              _rows[i]['indicator'] = _indicatorCtrls[i].text.trim();
+              _rows[i]['full_mark'] = double.tryParse(_fullMarkCtrls[i].text) ?? _rows[i]['full_mark'];
+            }
+            Navigator.pop(context, _rows);
+          },
+          child: const Text('保存'),
+        ),
+      ],
     );
   }
 }
