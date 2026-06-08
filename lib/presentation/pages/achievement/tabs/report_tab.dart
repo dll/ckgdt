@@ -13,6 +13,7 @@ import '../../../../services/auth_service.dart';
 import '../../../../core/error_handler.dart';
 import '../../../widgets/markdown_bubble.dart';
 import '../achievement_shared.dart';
+import '../achievement_config.dart';
 
 class ReportTab extends StatefulWidget {
   final AuthService authService;
@@ -564,13 +565,42 @@ class _ReportTabState extends State<ReportTab> {
         });
       }
 
+      // 从 config（含大纲导入的 course_objectives）构建 syllabus，
+      // 修复此前传空 {} 导致 docx 一/二/三表表头空白的 bug。
+      final cfg = AchievementConfig.defaults;
+      final syllabus = <String, dynamic>{
+        'info': {
+          '英文名称': batch['course_name'] ?? '移动应用开发',
+          '考核方式': '考查',
+          '开课学期': batch['semester'] ?? '',
+        },
+        'objectives': [
+          for (int i = 0; i < cfg.objectiveNames.length; i++)
+            {
+              'num': i + 1,
+              'objective': cfg.descriptions[i],
+              'requirement': cfg.indicators[i],
+            }
+        ],
+        'weights': [
+          for (int i = 0; i < cfg.weights.length; i++)
+            {
+              'objective': i + 1,
+              'weight': cfg.weights[i],
+              'pingshi_full': cfg.fullMarks[i].toInt(),
+              'experiment_full': cfg.fullMarks[i].toInt(),
+              'exam_full': cfg.fullMarks[i].toInt(),
+            }
+        ],
+      };
+
       final path = await AchievementDocxService.instance.generateReport(
         batchName: batch['batch_name'] ?? '达成评价',
         courseName: batch['course_name'] ?? '移动应用开发',
         className: batch['class_name'] ?? '班级',
         semester: batch['semester'] ?? DateTime.now().year.toString(),
         teacherName: teacherName,
-        syllabus: {},
+        syllabus: syllabus,
         objectives: objectives,
         classStats: {
           'studentCount': scores.length,
