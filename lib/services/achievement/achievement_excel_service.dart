@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import '../../core/error_handler.dart';
 import '../../data/local/database_helper.dart';
+import '../../presentation/pages/achievement/achievement_config.dart';
 
 /// 从 Excel 文件解析学生成绩并导入数据库
 class AchievementExcelService {
@@ -197,8 +198,8 @@ class AchievementExcelService {
       final obj4 = (g['obj4_score'] as double?) ?? 0;
       final total = (g['total_score'] as double?) ?? (obj1 + obj2 + obj3 + obj4);
 
-      const fullMark = 100.0;
-      const objWeights = [0.10, 0.20, 0.30, 0.40];
+      // 满分读自单一来源 config（与大纲 15/25/30/30 一致），不再硬编码 100
+      final fm = AchievementConfig.defaults.fullMarks;
 
       try {
         await db.insert(
@@ -208,13 +209,13 @@ class AchievementExcelService {
             'student_id': studentId,
             'student_name': g['student_name'] ?? '',
             'obj1_score': obj1,
-            'obj1_achievement': obj1 / fullMark,
+            'obj1_achievement': (obj1 / fm[0]).clamp(0.0, 1.0),
             'obj2_score': obj2,
-            'obj2_achievement': obj2 / fullMark,
+            'obj2_achievement': (obj2 / fm[1]).clamp(0.0, 1.0),
             'obj3_score': obj3,
-            'obj3_achievement': obj3 / fullMark,
+            'obj3_achievement': (obj3 / fm[2]).clamp(0.0, 1.0),
             'obj4_score': obj4,
-            'obj4_achievement': obj4 / fullMark,
+            'obj4_achievement': (obj4 / fm[3]).clamp(0.0, 1.0),
             'total_score': total,
             'created_at': DateTime.now().toIso8601String(),
             'updated_at': DateTime.now().toIso8601String(),
