@@ -21,22 +21,27 @@ class AchievementExcelService {
     return parseGradeBytes(bytes);
   }
 
-  /// 从字节数组解析 Excel
+  /// 从字节数组解析 Excel。优先解析「学生个体课程目标达成度」聚合表
+  /// （已按 平时0.2/实验0.3/期末0.5 算好每目标达成度），回退到首个 sheet。
   List<Map<String, dynamic>> parseGradeBytes(Uint8List bytes) {
     final excel = xl.Excel.decodeBytes(bytes);
+    if (excel.tables.isEmpty) return [];
+
+    // 优先：聚合达成度表（列布局：学号|姓名|[平时|实验|期末|课程目标达成度]×4）
+    for (final key in excel.tables.keys) {
+      if (key.contains('个体') && key.contains('达成度')) {
+        final agg = _parseAchievementSheet(excel.tables[key]!);
+        if (agg.isNotEmpty) return agg;
+      }
+    }
+
+    // 回退：首个 sheet 按 学号|姓名|目标N得分... 解析
+    final table = excel.tables[excel.tables.keys.first]!;
     final results = <Map<String, dynamic>>[];
-
-    // 读取第一个 sheet（通常是总评成绩表）
-    if (excel.tables.isEmpty) return results;
-    final sheet = excel.tables.keys.first;
-    final table = excel.tables[sheet]!;
-
-    // 跳过表头行，从第2行开始读取学生数据
     int startRow = 0;
     for (int i = 0; i < table.rows.length && i < 5; i++) {
       final row = table.rows[i];
       final cells = row.map((c) => c?.value?.toString() ?? '').toList();
-      // 查找包含"学号"或"姓名"的表头行
       if (cells.any((c) => c.contains('学号') || c.contains('姓名'))) {
         startRow = i;
         // 返回列映射信息
@@ -65,8 +70,45 @@ class AchievementExcelService {
     return results;
   }
 
+  /// 解析「学生个体课程目标达成度」聚合表。
+  /// 列布局：0=学号 1=姓名，之后每目标 4 列：平时|实验|期末|课程目标达成度。
+  /// 取每目标第 4 列（已按 0.2/0.3/0.5 加权），共 4 目标 = 列 5,9,13,17。
+  List<Map<String, dynamic>> _parseAchievementSheet(xl.Sheet table) {
+    final results = <Map<String, dynamic>>[];
+    int headerRow = -1;
+    for (int i = 0; i < table.rows.length && i < 8; i++) {
+      final cells = table.rows[i].map((c) => c?.value?.toString() ?? '').toList();
+      if (cells.isNotEmpty && cells[0].trim() == '学号') {
+        headerRow = i;
+        break;
+      }
+    }
+    if (headerRow < 0) return results;
+
+    final fm = AchievementConfig.defaults.fullMarks;
+    const achCols = [5, 9, 13, 17];
+    for (int i = headerRow + 1; i < table.rows.length; i++) {
+      final cells = table.rows[i].map((c) => c?.value?.toString() ?? '').toList();
+      if (cells.length < 18) continue;
+      final sid = cells[0].trim();
+      if (sid.isEmpty || sid.contains('合计') || sid.contains('平均') || sid.contains('备注')) continue;
+      final name = cells.length > 1 ? cells[1].trim() : '';
+      final ach = List<double>.generate(
+          4, (k) => double.tryParse(cells[achCols[k]].trim())?.clamp(0.0, 1.0) ?? 0.0);
+      results.add({
+        'student_id': sid,
+        'student_name': name,
+        'obj1_score': ach[0] * fm[0],
+        'obj2_score': ach[1] * fm[1],
+        'obj3_score': ach[2] * fm[2],
+        'obj4_score': ach[3] * fm[3],
+        'total_score': ach[0] * fm[0] + ach[1] * fm[1] + ach[2] * fm[2] + ach[3] * fm[3],
+      });
+    }
+    return results;
+  }
+
   Map<String, dynamic> _extractGrade(List<String> cells, String id, String name) {
-    // 尝试智能解析列结构
     // 列结构通常为：学号 | 姓名 | 课程目标1 | 课程目标2 | 课程目标3 | 课程目标4 | 总评 | ...
     final grade = <String, dynamic>{
       'student_id': id,
