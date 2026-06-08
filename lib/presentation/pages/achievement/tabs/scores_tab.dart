@@ -621,6 +621,7 @@ class _PingshiAchievementTabState extends State<PingshiAchievementTab> {
   int? _selectedBatchId;
   List<Map<String, dynamic>> _scores = [];
   Map<String, double> _classAvg = {};
+  ScoreSort _sort = ScoreSort.idAsc;
   bool _loading = true;
   bool _generating = false;
 
@@ -650,6 +651,7 @@ class _PingshiAchievementTabState extends State<PingshiAchievementTab> {
     final avg = await widget.achievementDao.calculatePingshiClassAverage(_selectedBatchId!);
     if (mounted) {
       setState(() {
+        sortScoresInPlace(scores, _sort);
         _scores = scores;
         _classAvg = avg;
       });
@@ -709,6 +711,22 @@ class _PingshiAchievementTabState extends State<PingshiAchievementTab> {
                     _loadScores();
                   },
                 ),
+              ),
+              const SizedBox(width: 8),
+              PopupMenuButton<ScoreSort>(
+                tooltip: '排序',
+                icon: const Icon(Icons.sort),
+                initialValue: _sort,
+                onSelected: (v) {
+                  setState(() {
+                    _sort = v;
+                    sortScoresInPlace(_scores, _sort);
+                  });
+                },
+                itemBuilder: (_) => [
+                  for (final s in ScoreSort.values)
+                    PopupMenuItem(value: s, child: Text(scoreSortLabel(s))),
+                ],
               ),
               const SizedBox(width: 8),
               ElevatedButton.icon(
@@ -868,6 +886,7 @@ class _ExperimentAchievementTabState extends State<ExperimentAchievementTab> {
   int? _selectedBatchId;
   List<Map<String, dynamic>> _scores = [];
   Map<String, double> _classAvg = {};
+  ScoreSort _sort = ScoreSort.idAsc;
   bool _loading = true;
   bool _generating = false;
 
@@ -897,6 +916,7 @@ class _ExperimentAchievementTabState extends State<ExperimentAchievementTab> {
     final avg = await widget.achievementDao.calculateExperimentClassAverage(_selectedBatchId!);
     if (mounted) {
       setState(() {
+        sortScoresInPlace(scores, _sort);
         _scores = scores;
         _classAvg = avg;
       });
@@ -956,6 +976,22 @@ class _ExperimentAchievementTabState extends State<ExperimentAchievementTab> {
                     _loadScores();
                   },
                 ),
+              ),
+              const SizedBox(width: 8),
+              PopupMenuButton<ScoreSort>(
+                tooltip: '排序',
+                icon: const Icon(Icons.sort),
+                initialValue: _sort,
+                onSelected: (v) {
+                  setState(() {
+                    _sort = v;
+                    sortScoresInPlace(_scores, _sort);
+                  });
+                },
+                itemBuilder: (_) => [
+                  for (final s in ScoreSort.values)
+                    PopupMenuItem(value: s, child: Text(scoreSortLabel(s))),
+                ],
               ),
               const SizedBox(width: 8),
               ElevatedButton.icon(
@@ -1126,6 +1162,7 @@ class _ExamAchievementTabState extends State<ExamAchievementTab> {
   int? _selectedBatchId;
   List<Map<String, dynamic>> _scores = [];
   Map<String, double> _classAvg = {};
+  ScoreSort _sort = ScoreSort.idAsc;
   bool _loading = true;
   bool _generating = false;
 
@@ -1155,6 +1192,7 @@ class _ExamAchievementTabState extends State<ExamAchievementTab> {
     final avg = await widget.achievementDao.calculateExamClassAverage(_selectedBatchId!);
     if (mounted) {
       setState(() {
+        sortScoresInPlace(scores, _sort);
         _scores = scores;
         _classAvg = avg;
       });
@@ -1214,6 +1252,22 @@ class _ExamAchievementTabState extends State<ExamAchievementTab> {
                     _loadScores();
                   },
                 ),
+              ),
+              const SizedBox(width: 8),
+              PopupMenuButton<ScoreSort>(
+                tooltip: '排序',
+                icon: const Icon(Icons.sort),
+                initialValue: _sort,
+                onSelected: (v) {
+                  setState(() {
+                    _sort = v;
+                    sortScoresInPlace(_scores, _sort);
+                  });
+                },
+                itemBuilder: (_) => [
+                  for (final s in ScoreSort.values)
+                    PopupMenuItem(value: s, child: Text(scoreSortLabel(s))),
+                ],
               ),
               const SizedBox(width: 8),
               ElevatedButton.icon(
