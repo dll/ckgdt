@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../../data/local/achievement_dao.dart';
 import '../../../../core/error_handler.dart';
 import '../achievement_shared.dart';
+import '../achievement_config.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Tab 4 — 计算过程（大纲目标 + 考核结构 + 公式 + 班级概览 + 学生表 + 分布图）
@@ -135,11 +136,16 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
   }
 
   Widget _buildSyllabusObjectives(Color primary) {
-    const objectives = [
-      {'id': '课程目标1', 'weight': 0.15, 'req': '毕业要求 1.4', 'desc': '掌握移动应用开发技术体系（原生/混合/跨平台）及主流平台特性，理解技术选型逻辑', 'ch': '第1章 + 第2章'},
-      {'id': '课程目标2', 'weight': 0.25, 'req': '毕业要求 3.2', 'desc': '运用跨平台开发框架及小程序技术，结合AI编程工具与后端API交互，设计实现跨平台应用', 'ch': '第3章 + 第4章'},
-      {'id': '课程目标3', 'weight': 0.30, 'req': '毕业要求 4.2', 'desc': '调研对比多端开发方案，分析不同技术栈在跨设备适配场景中的优劣，具备技术方案评估与选型能力', 'ch': '第5章'},
-      {'id': '课程目标4', 'weight': 0.30, 'req': '毕业要求 5.1', 'desc': '遵循软件工程规范，使用现代开发工具（含AI编程工具、Git版本控制）完成应用测试与优化', 'ch': '第6章'},
+    const cfg = AchievementConfig.defaults;
+    final objectives = [
+      for (int i = 0; i < cfg.objectiveNames.length; i++)
+        {
+          'id': cfg.objectiveNames[i],
+          'weight': cfg.weights[i],
+          'req': '毕业要求 ${cfg.indicators[i]}',
+          'desc': cfg.descriptions[i],
+          'ch': cfg.chapters[i],
+        },
     ];
     return Card(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [Icon(Icons.menu_book, color: primary, size: 22), const SizedBox(width: 8), const Text('一、大纲课程目标', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))]),
