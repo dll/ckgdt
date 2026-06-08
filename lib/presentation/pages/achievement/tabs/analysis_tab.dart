@@ -436,7 +436,121 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
           ]),
         ),
       ),
+      const SizedBox(height: 16),
+      // 散点图：学生个体加权达成度分布
+      Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('学生个体达成度散点图', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text('每点为一名学生的加权达成度，红线=达成阈值 0.60',
+                style: TextStyle(fontSize: 11, color: Colors.grey)),
+            const Divider(height: 20),
+            SizedBox(height: 220, child: ScatterChart(_buildScatterData(primary))),
+          ]),
+        ),
+      ),
+      const SizedBox(height: 16),
+      // 趋势图：四目标达成度折线
+      Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('课程目标达成度趋势', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Divider(height: 20),
+            SizedBox(height: 200, child: LineChart(_buildTrendData(primary))),
+          ]),
+        ),
+      ),
     ]);
+  }
+
+  /// 散点图数据：x=学生序号，y=该生加权达成度。
+  ScatterChartData _buildScatterData(Color primary) {
+    final w = kDefaultWeights;
+    final spots = <ScatterSpot>[];
+    for (int i = 0; i < _scores.length; i++) {
+      final s = _scores[i];
+      double wt = 0;
+      for (int k = 0; k < 4; k++) {
+        wt += ((s['obj${k + 1}_achievement'] as num?)?.toDouble() ?? 0) * w[k];
+      }
+      spots.add(ScatterSpot(
+        i.toDouble(),
+        double.parse(wt.toStringAsFixed(4)),
+        dotPainter: FlDotCirclePainter(
+          radius: 4,
+          color: wt >= 0.60 ? primary : Colors.red,
+        ),
+      ));
+    }
+    return ScatterChartData(
+      minX: 0,
+      maxX: (_scores.length - 1).clamp(1, double.infinity).toDouble(),
+      minY: 0,
+      maxY: 1,
+      scatterSpots: spots,
+      gridData: FlGridData(
+        show: true,
+        horizontalInterval: 0.2,
+        getDrawingHorizontalLine: (v) => FlLine(
+          color: (v - 0.60).abs() < 0.001 ? Colors.red : Colors.grey.withValues(alpha: 0.2),
+          strokeWidth: (v - 0.60).abs() < 0.001 ? 1.5 : 0.5,
+        ),
+      ),
+      titlesData: const FlTitlesData(
+        leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 32, interval: 0.2)),
+        bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      ),
+      borderData: FlBorderData(show: true, border: Border.all(color: Colors.grey.withValues(alpha: 0.3))),
+    );
+  }
+
+  /// 趋势折线：四目标班级平均达成度。
+  LineChartData _buildTrendData(Color primary) {
+    return LineChartData(
+      minY: 0,
+      maxY: 1,
+      gridData: const FlGridData(show: true, horizontalInterval: 0.2),
+      titlesData: FlTitlesData(
+        leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 32, interval: 0.2)),
+        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        bottomTitles: AxisTitles(sideTitles: SideTitles(
+          showTitles: true,
+          getTitlesWidget: (v, _) {
+            const labels = ['目标1', '目标2', '目标3', '目标4'];
+            final i = v.toInt();
+            return i >= 0 && i < labels.length
+                ? Text(labels[i], style: const TextStyle(fontSize: 10))
+                : const SizedBox.shrink();
+          },
+        )),
+      ),
+      borderData: FlBorderData(show: true, border: Border.all(color: Colors.grey.withValues(alpha: 0.3))),
+      lineBarsData: [
+        LineChartBarData(
+          spots: [for (int i = 0; i < 4; i++) FlSpot(i.toDouble(), _classAvgAchievements[i])],
+          isCurved: true,
+          color: primary,
+          barWidth: 3,
+          dotData: const FlDotData(show: true),
+          belowBarData: BarAreaData(show: true, color: primary.withValues(alpha: 0.1)),
+        ),
+        LineChartBarData(
+          spots: const [FlSpot(0, 0.60), FlSpot(3, 0.60)],
+          isCurved: false,
+          color: Colors.red.withValues(alpha: 0.6),
+          barWidth: 1,
+          dashArray: [5, 3],
+          dotData: const FlDotData(show: false),
+        ),
+      ],
+    );
   }
 
   Widget _buildSingleObjChart(int objIdx) {
