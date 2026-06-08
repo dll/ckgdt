@@ -1,3 +1,4 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import 'achievement_config.dart';
@@ -42,4 +43,36 @@ Color achievementLevelColor(double value) {
   if (value >= 0.70) return Colors.blue;
   if (value >= 0.60) return Colors.orange;
   return Colors.red;
+}
+
+/// 4 个课程目标达成度雷达图。[values] 为 obj1..4 达成度（0..1）。
+/// 三个达成 tab（平时/实验/考核）共用，避免重复构建。
+Widget objectiveRadarChart(List<double> values, Color color, {double size = 180}) {
+  final v = List<double>.generate(4, (i) => i < values.length ? values[i].clamp(0.0, 1.0) : 0.0);
+  return SizedBox(
+    height: size,
+    child: RadarChart(
+      RadarChartData(
+        radarShape: RadarShape.polygon,
+        tickCount: 4,
+        ticksTextStyle: const TextStyle(fontSize: 0, color: Colors.transparent),
+        radarBorderData: BorderSide(color: Colors.grey.withValues(alpha: 0.3)),
+        gridBorderData: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
+        tickBorderData: BorderSide(color: Colors.grey.withValues(alpha: 0.15)),
+        titlePositionPercentageOffset: 0.15,
+        getTitle: (index, angle) => RadarChartTitle(
+          text: index < kObjectiveNames.length ? kObjectiveNames[index] : '目标${index + 1}',
+        ),
+        dataSets: [
+          RadarDataSet(
+            fillColor: color.withValues(alpha: 0.2),
+            borderColor: color,
+            borderWidth: 2,
+            entryRadius: 3,
+            dataEntries: [for (final x in v) RadarEntry(value: x)],
+          ),
+        ],
+      ),
+    ),
+  );
 }
