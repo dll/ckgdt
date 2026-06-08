@@ -2,7 +2,6 @@
 import '../../../../data/local/achievement_dao.dart';
 import '../../../../data/local/score_audit_dao.dart';
 import '../../../../services/auth_service.dart';
-import '../../../../services/default_class_service.dart';
 import '../achievement_shared.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -59,11 +58,9 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
     setState(() => _loadingScores = true);
     try {
       final scores = await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
-      final filtered = await DefaultClassService.instance.filterByDefaultClass(
-        scores, (s) => (s['student_id'] ?? '').toString());
       if (mounted) {
         setState(() {
-          _scores = filtered;
+          _scores = scores;
           _loadingScores = false;
         });
       }
@@ -551,11 +548,9 @@ class _PingshiAchievementTabState extends State<PingshiAchievementTab> {
     if (_selectedBatchId == null) return;
     final scores = await widget.achievementDao.getPingshiScores(_selectedBatchId!);
     final avg = await widget.achievementDao.calculatePingshiClassAverage(_selectedBatchId!);
-    final filtered = await DefaultClassService.instance.filterByDefaultClass(
-        scores, (s) => (s['student_id'] ?? '').toString());
     if (mounted) {
       setState(() {
-        _scores = filtered;
+        _scores = scores;
         _classAvg = avg;
       });
     }

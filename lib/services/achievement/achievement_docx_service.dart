@@ -1,10 +1,8 @@
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:archive/archive_io.dart';
 import 'package:path_provider/path_provider.dart';
-import '../../core/error_handler.dart';
 
 /// 课程达成评价报告 DOCX 生成器
 class AchievementDocxService {
