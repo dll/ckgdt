@@ -520,6 +520,147 @@ class AchievementDao {
     return {...avg, 'weighted': weighted};
   }
 
+  /// 导入课程成绩模板的三张明细表（平时/实验/期末）到三张分项表，
+  /// 并按环节权重（平时0.2/实验0.3/期末0.5）合成 achievement_scores 总表，
+  /// 最后重算批次达成度。返回导入的学生数。
+  ///
+  /// [components] 来自 AchievementExcelService.parseComponentSheets：
+  /// {pingshi: [...], experiment: [...], exam: [...]}。
+  /// 三表按 student_id 求并集；缺某环节的学生该环节按 0 计。
+  Future<int> importComponentsToDatabase(
+      int batchId, Map<String, List<Map<String, dynamic>>> components) async {
+    final db = await DatabaseHelper.instance.database;
+    final now = DateTime.now().toIso8601String();
+    final pingshi = components['pingshi'] ?? const [];
+    final experiment = components['experiment'] ?? const [];
+    final exam = components['exam'] ?? const [];
+
+    // 按学号索引三环节，求并集
+    Map<String, Map<String, dynamic>> byId(List<Map<String, dynamic>> rows) => {
+          for (final r in rows)
+            if ((r['student_id'] as String?)?.isNotEmpty ?? false)
+              r['student_id'] as String: r
+        };
+    final pMap = byId(pingshi), eMap = byId(experiment), xMap = byId(exam);
+    final allIds = <String>{...pMap.keys, ...eMap.keys, ...xMap.keys};
+    if (allIds.isEmpty) return 0;
+
+    const envW = {'pingshi': 0.2, 'experiment': 0.3, 'exam': 0.5};
+    final fm = _kFullMarks;
+    int count = 0;
+
+    await db.transaction((txn) async {
+      // 清空该批次三分项表 + 总表
+      for (final t in [
+        'achievement_pingshi_scores',
+        'achievement_experiment_scores',
+        'achievement_exam_scores',
+        'achievement_scores',
+      ]) {
+        await txn.delete(t, where: 'batch_id = ?', whereArgs: [batchId]);
+      }
+
+      for (final sid in allIds) {
+        final p = pMap[sid], e = eMap[sid], x = xMap[sid];
+        final name = (p?['student_name'] ?? e?['student_name'] ?? x?['student_name'] ?? '') as String;
+
+        // 平时分项达成度
+        final pAch = p != null ? calculatePingshiAchievement(p) : null;
+        if (p != null) {
+          await txn.insert('achievement_pingshi_scores', {
+            'batch_id': batchId,
+            'student_id': sid,
+            'student_name': name,
+            'class_activity_score': p['class_activity_score'] ?? 0,
+            'class_activity_achievement': pAch!['obj1_achievement'],
+            'quiz_homework_score': p['quiz_homework_score'] ?? 0,
+            'quiz_homework_achievement': pAch['obj2_achievement'],
+            'extra_learning_score': p['extra_learning_score'] ?? 0,
+            'extra_learning_achievement': pAch['obj4_achievement'],
+            'total_score': pAch['total_score'],
+            'created_at': now,
+            'updated_at': now,
+          }, conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+
+        // 实验分项达成度
+        final eAch = e != null ? calculateExperimentAchievement(e) : null;
+        if (e != null) {
+          await txn.insert('achievement_experiment_scores', {
+            'batch_id': batchId,
+            'student_id': sid,
+            'student_name': name,
+            'exp1_score': e['exp1_score'] ?? 0,
+            'exp2_score': e['exp2_score'] ?? 0,
+            'exp3_score': e['exp3_score'] ?? 0,
+            'exp4_score': e['exp4_score'] ?? 0,
+            'exp5_score': e['exp5_score'] ?? 0,
+            'exp6_score': e['exp6_score'] ?? 0,
+            'exp7_score': e['exp7_score'] ?? 0,
+            'obj1_achievement': eAch!['obj1_achievement'],
+            'obj2_achievement': eAch['obj2_achievement'],
+            'obj3_achievement': eAch['obj3_achievement'],
+            'obj4_achievement': eAch['obj4_achievement'],
+            'total_score': eAch['total_score'],
+            'created_at': now,
+            'updated_at': now,
+          }, conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+
+        // 期末分项达成度
+        final xAch = x != null ? calculateExamAchievement(x) : null;
+        if (x != null) {
+          await txn.insert('achievement_exam_scores', {
+            'batch_id': batchId,
+            'student_id': sid,
+            'student_name': name,
+            'project_score': x['project_score'] ?? 0,
+            'group_score': x['group_score'] ?? 0,
+            'individual_score': x['individual_score'] ?? 0,
+            'defense_score': x['defense_score'] ?? 0,
+            'obj1_achievement': xAch!['obj1_achievement'],
+            'obj2_achievement': xAch['obj2_achievement'],
+            'obj3_achievement': xAch['obj3_achievement'],
+            'obj4_achievement': xAch['obj4_achievement'],
+            'total_score': xAch['total_score'],
+            'created_at': now,
+            'updated_at': now,
+          }, conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+
+        // 合成总表：目标i达成度 = 平时i×0.2 + 实验i×0.3 + 期末i×0.5
+        final objAch = List<double>.generate(4, (k) {
+          final key = 'obj${k + 1}_achievement';
+          final pv = pAch?[key] ?? 0;
+          final ev = eAch?[key] ?? 0;
+          final xv = xAch?[key] ?? 0;
+          return (pv * envW['pingshi']! + ev * envW['experiment']! + xv * envW['exam']!)
+              .clamp(0.0, 1.0);
+        });
+        await txn.insert('achievement_scores', {
+          'batch_id': batchId,
+          'student_id': sid,
+          'student_name': name,
+          'obj1_score': objAch[0] * fm[0],
+          'obj1_achievement': objAch[0],
+          'obj2_score': objAch[1] * fm[1],
+          'obj2_achievement': objAch[1],
+          'obj3_score': objAch[2] * fm[2],
+          'obj3_achievement': objAch[2],
+          'obj4_score': objAch[3] * fm[3],
+          'obj4_achievement': objAch[3],
+          'total_score': objAch[0] * fm[0] + objAch[1] * fm[1] + objAch[2] * fm[2] + objAch[3] * fm[3],
+          'created_at': now,
+          'updated_at': now,
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+        count++;
+      }
+    });
+
+    await recalculateAndSaveBatch(batchId);
+    return count;
+  }
+
 
   /// generateScoresFromQuizResults — 从测验成绩自动计算达成度
   Future<int> generateScoresFromQuizResults(int batchId) async {

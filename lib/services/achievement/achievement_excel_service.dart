@@ -107,6 +107,129 @@ class AchievementExcelService {
     return results;
   }
 
+  /// 解析课程成绩模板的三张明细表（平时/实验/期末成绩），返回分项原始分。
+  /// 对应模板：data/达成/计科22《移动应用开发》课程达成评价表格48.xlsx
+  ///
+  /// 返回 {pingshi: [...], experiment: [...], exam: [...]}，每项是
+  /// 与 achievement_pingshi/experiment/exam_scores 表字段对齐的行列表。
+  /// 列定位（0-indexed，数据从含学号的行之后开始）：
+  /// - 平时：学号0 姓名1 | 课堂表现最后得分13 | 期间测验平均分25 | 大作业平均分36
+  /// - 实验：学号0 姓名1 | exp1=2 exp2=3 exp3=5 exp4=6 exp5=8 exp6=9 exp7=11
+  /// - 期末：学号0 姓名1 | 项目2 小组4 个人6 答辩8
+  Map<String, List<Map<String, dynamic>>> parseComponentSheets(Uint8List bytes) {
+    final excel = xl.Excel.decodeBytes(bytes);
+    final out = <String, List<Map<String, dynamic>>>{
+      'pingshi': [],
+      'experiment': [],
+      'exam': [],
+    };
+    if (excel.tables.isEmpty) return out;
+
+    for (final key in excel.tables.keys) {
+      final table = excel.tables[key]!;
+      // 用 sheet 名识别类型（含「平时」「实验」「期末」）
+      if (key.contains('平时')) {
+        out['pingshi'] = _parsePingshiSheet(table);
+      } else if (key.contains('实验')) {
+        out['experiment'] = _parseExperimentSheet(table);
+      } else if (key.contains('期末') || key.contains('考核')) {
+        out['exam'] = _parseExamSheet(table);
+      }
+    }
+    return out;
+  }
+
+  /// 找到含「学号」的表头行索引；找不到返回 -1。
+  int _findStudentHeaderRow(xl.Sheet table) {
+    for (int i = 0; i < table.rows.length && i < 10; i++) {
+      final c0 = table.rows[i].isNotEmpty
+          ? (table.rows[i][0]?.value?.toString().trim() ?? '')
+          : '';
+      if (c0 == '学号') return i;
+    }
+    return -1;
+  }
+
+  bool _isDataRow(String sid) =>
+      sid.isNotEmpty &&
+      !sid.contains('合计') &&
+      !sid.contains('平均') &&
+      !sid.contains('备注') &&
+      !sid.contains('学号');
+
+  double _cell(List<xl.Data?> row, int i) {
+    if (i >= row.length) return 0;
+    return double.tryParse(row[i]?.value?.toString().trim() ?? '') ?? 0;
+  }
+
+  String _cellStr(List<xl.Data?> row, int i) {
+    if (i >= row.length) return '';
+    return row[i]?.value?.toString().trim() ?? '';
+  }
+
+  List<Map<String, dynamic>> _parsePingshiSheet(xl.Sheet table) {
+    final hr = _findStudentHeaderRow(table);
+    if (hr < 0) return [];
+    final rows = <Map<String, dynamic>>[];
+    for (int i = hr + 1; i < table.rows.length; i++) {
+      final row = table.rows[i];
+      final sid = _cellStr(row, 0);
+      if (!_isDataRow(sid)) continue;
+      rows.add({
+        'student_id': sid,
+        'student_name': _cellStr(row, 1),
+        'class_activity_score': _cell(row, 13), // 课堂表现最后得分
+        'quiz_homework_score': _cell(row, 25), // 期间测验平均分
+        'extra_learning_score': _cell(row, 36), // 大作业平均分
+      });
+    }
+    return rows;
+  }
+
+  List<Map<String, dynamic>> _parseExperimentSheet(xl.Sheet table) {
+    final hr = _findStudentHeaderRow(table);
+    if (hr < 0) return [];
+    final rows = <Map<String, dynamic>>[];
+    for (int i = hr + 1; i < table.rows.length; i++) {
+      final row = table.rows[i];
+      final sid = _cellStr(row, 0);
+      if (!_isDataRow(sid)) continue;
+      rows.add({
+        'student_id': sid,
+        'student_name': _cellStr(row, 1),
+        'exp1_score': _cell(row, 2),
+        'exp2_score': _cell(row, 3),
+        'exp3_score': _cell(row, 5),
+        'exp4_score': _cell(row, 6),
+        'exp5_score': _cell(row, 8),
+        'exp6_score': _cell(row, 9),
+        'exp7_score': _cell(row, 11),
+      });
+    }
+    return rows;
+  }
+
+  List<Map<String, dynamic>> _parseExamSheet(xl.Sheet table) {
+    final hr = _findStudentHeaderRow(table);
+    if (hr < 0) return [];
+    final rows = <Map<String, dynamic>>[];
+    for (int i = hr + 1; i < table.rows.length; i++) {
+      final row = table.rows[i];
+      final sid = _cellStr(row, 0);
+      if (!_isDataRow(sid)) continue;
+      rows.add({
+        'student_id': sid,
+        'student_name': _cellStr(row, 1),
+        'project_score': _cell(row, 2),
+        'group_score': _cell(row, 4),
+        'individual_score': _cell(row, 6),
+        'defense_score': _cell(row, 8),
+      });
+    }
+    return rows;
+  }
+
+
   Map<String, dynamic> _extractGrade(List<String> cells, String id, String name) {
     // 列结构通常为：学号 | 姓名 | 课程目标1 | 课程目标2 | 课程目标3 | 课程目标4 | 总评 | ...
     final grade = <String, dynamic>{
