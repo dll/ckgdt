@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 import '../../core/constants/archive_periods.dart' as periods;
 import '../../data/models/archive_document_model.dart';
 import 'document_processor.dart';
+import 'native_docx_service.dart';
 import 'pandoc_service.dart';
 
 /// 通用基类 —— 提供 toPdf / toDocx 的默认实现（pandoc 路径），
@@ -60,10 +61,20 @@ abstract class BaseDocumentProcessor extends DocumentProcessor {
     if (content.isEmpty) {
       throw StateError('文档内容为空，无法转换为 docx');
     }
-    return pandoc.markdownToDocx(
-      content,
-      referenceDocPath: referenceDocxFor(doc),
-    );
+    // pandoc 可套学校模板样式，优先；未安装时回退原生 OOXML 生成器（仅默认排版）。
+    if (await pandoc.isInstalled) {
+      try {
+        return await pandoc.markdownToDocx(
+          content,
+          referenceDocPath: referenceDocxFor(doc),
+        );
+      } on PandocException catch (e) {
+        if (kDebugMode) {
+          debugPrint('[BaseDocumentProcessor] pandoc 失败，回退原生 docx: $e');
+        }
+      }
+    }
+    return NativeDocxService.instance.markdownToDocx(content);
   }
 
   @override
