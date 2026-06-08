@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:archive/archive.dart';
 import 'package:excel/excel.dart' as xl;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:xml/xml.dart';
 import '../../core/error_handler.dart';
 import '../../data/local/database_helper.dart';
 import '../../presentation/pages/achievement/achievement_config.dart';
@@ -90,7 +92,7 @@ class AchievementExcelService {
     return grade;
   }
 
-  /// 从 Excel 解析教学大纲（支持 MD 文件和 Excel 文件）
+  /// 从文件解析教学大纲（支持 MD / Word(docx) / Excel）
   Future<Map<String, dynamic>> parseSyllabus(String filePath) async {
     final file = File(filePath);
     if (!await file.exists()) {
@@ -100,10 +102,21 @@ class AchievementExcelService {
     final ext = filePath.split('.').last.toLowerCase();
     if (ext == 'md') {
       return _parseMarkdownSyllabus(await file.readAsString());
+    } else if (ext == 'docx') {
+      return parseWordSyllabus(await file.readAsBytes());
     } else if (ext == 'xlsx' || ext == 'xls') {
       return _parseExcelSyllabus(await file.readAsBytes());
     }
 
+    return {'error': '不支持的文件格式: $ext'};
+  }
+
+  /// 从字节+扩展名解析大纲（FilePicker 在部分平台只给 bytes）。
+  Map<String, dynamic> parseSyllabusBytes(Uint8List bytes, String ext) {
+    final e = ext.toLowerCase();
+    if (e == 'md') return _parseMarkdownSyllabus(utf8.decode(bytes));
+    if (e == 'docx') return parseWordSyllabus(bytes);
+    if (e == 'xlsx' || e == 'xls') return _parseExcelSyllabus(bytes);
     return {'error': '不支持的文件格式: $ext'};
   }
 
@@ -179,7 +192,102 @@ class AchievementExcelService {
   }
 
   Map<String, dynamic> _parseExcelSyllabus(Uint8List bytes) {
-    return {'note': 'Excel 大纲解析待完善'};
+    // Excel 大纲较少见；优先支持 MD/Word。Excel 暂回退到通用提示。
+    return {'note': 'Excel 大纲解析暂未支持，请用 Markdown 或 Word 格式大纲'};
+  }
+
+  /// 解析 Word(docx) 大纲：解压 word/document.xml，提取「课程目标达成考核与评价
+  /// 方式及成绩评定对照表」——含 目标/权重/平时·实验·期末满分。
+  Map<String, dynamic> parseWordSyllabus(Uint8List bytes) {
+    try {
+      final archive = ZipDecoder().decodeBytes(bytes);
+      final docFile = archive.files.firstWhere(
+        (f) => f.name == 'word/document.xml',
+        orElse: () => throw StateError('非法 docx：缺 word/document.xml'),
+      );
+      final xmlStr = utf8.decode(docFile.content as List<int>);
+      final doc = XmlDocument.parse(xmlStr);
+
+      // docx 表格：w:tbl > w:tr > w:tc > w:p > w:r > w:t。逐行取单元格文本。
+      final objectives = <Map<String, String>>[];
+      final weights = <Map<String, dynamic>>[];
+      for (final tbl in doc.findAllElements('w:tbl')) {
+        for (final tr in tbl.findAllElements('w:tr')) {
+          final cells = <String>[];
+          for (final tc in tr.findAllElements('w:tc')) {
+            final text = tc
+                .findAllElements('w:t')
+                .map((t) => t.innerText)
+                .join()
+                .trim();
+            cells.add(text);
+          }
+          if (cells.isEmpty) continue;
+          // 权重对照表行：以「课程目标N」开头，第2列是权重小数
+          final m = RegExp(r'课程目标\s*(\d)').firstMatch(cells[0]);
+          if (m != null && cells.length >= 2) {
+            final w = double.tryParse(cells[1].replaceAll(RegExp(r'[^\d.]'), ''));
+            if (w != null && w > 0 && w <= 1) {
+              weights.add({
+                'objective': int.parse(m.group(1)!),
+                'weight': w,
+                'requirement': cells.length > 2 ? cells[2] : '',
+                'pingshi_full': _extractFull(cells, 3),
+                'experiment_full': _extractFull(cells, 4),
+                'exam_full': _extractFull(cells, 5),
+              });
+            }
+          }
+        }
+      }
+      return {'objectives': objectives, 'weights': weights};
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AchievementExcel.parseWord', stack: st);
+      return {'error': 'Word 大纲解析失败: $e'};
+    }
+  }
+
+  int _extractFull(List<String> cells, int i) {
+    if (i >= cells.length) return 0;
+    final m = RegExp(r'(\d+)').firstMatch(cells[i]);
+    return m != null ? int.parse(m.group(1)!) : 0;
+  }
+
+  /// 把 parseSyllabus / parseWordSyllabus 的结果转成 course_objectives 行。
+  /// 合并 objectives(描述/指标点) 与 weights(权重/各环节满分)。
+  List<Map<String, dynamic>> syllabusToObjectiveRows(Map<String, dynamic> parsed) {
+    final objectives = (parsed['objectives'] as List?) ?? const [];
+    final weights = (parsed['weights'] as List?) ?? const [];
+    final byIdx = <int, Map<String, dynamic>>{};
+
+    for (final w in weights) {
+      final idx = (w['objective'] as num).toInt();
+      byIdx[idx] = {
+        'idx': idx,
+        'name': '课程目标$idx',
+        'indicator': (w['requirement'] as String?)?.replaceAll(RegExp(r'[^\d.]'), '') ?? '',
+        'weight': (w['weight'] as num?)?.toDouble() ?? 0,
+        'full_mark': (w['exam_full'] as num?)?.toDouble() ??
+            (w['pingshi_full'] as num?)?.toDouble() ?? 0,
+        'pingshi_ratio': 0.20,
+        'experiment_ratio': 0.30,
+        'exam_ratio': 0.50,
+      };
+    }
+    for (final o in objectives) {
+      final idx = int.tryParse(o['num']?.toString() ?? '') ?? 0;
+      if (idx == 0) continue;
+      final row = byIdx.putIfAbsent(idx, () => {'idx': idx, 'name': '课程目标$idx'});
+      row['description'] = o['objective'];
+      if ((row['indicator'] as String?)?.isEmpty ?? true) {
+        row['indicator'] = (o['requirement'] as String?)
+                ?.replaceAll(RegExp(r'[^\d.]'), '') ??
+            '';
+      }
+    }
+    final rows = byIdx.values.toList()
+      ..sort((a, b) => (a['idx'] as int).compareTo(b['idx'] as int));
+    return rows;
   }
 
   /// 导入学生成绩到数据库
