@@ -45,6 +45,38 @@ Color achievementLevelColor(double value) {
   return Colors.red;
 }
 
+/// 学生成绩排序方式（三个达成 tab 与成绩管理共用）。
+enum ScoreSort { idAsc, totalDesc, totalAsc }
+
+String scoreSortLabel(ScoreSort s) {
+  switch (s) {
+    case ScoreSort.idAsc:
+      return '按学号';
+    case ScoreSort.totalDesc:
+      return '总评降序';
+    case ScoreSort.totalAsc:
+      return '总评升序';
+  }
+}
+
+/// 对成绩列表按 [sort] 原地排序。totalKey 默认 'total_score'。
+void sortScoresInPlace(List<Map<String, dynamic>> scores, ScoreSort sort,
+    {String totalKey = 'total_score'}) {
+  double t(Map<String, dynamic> s) => (s[totalKey] as num?)?.toDouble() ?? 0;
+  String id(Map<String, dynamic> s) => (s['student_id'] ?? '').toString();
+  switch (sort) {
+    case ScoreSort.idAsc:
+      scores.sort((a, b) => id(a).compareTo(id(b)));
+      break;
+    case ScoreSort.totalDesc:
+      scores.sort((a, b) => t(b).compareTo(t(a)));
+      break;
+    case ScoreSort.totalAsc:
+      scores.sort((a, b) => t(a).compareTo(t(b)));
+      break;
+  }
+}
+
 /// 4 个课程目标达成度雷达图。[values] 为 obj1..4 达成度（0..1）。
 /// 三个达成 tab（平时/实验/考核）共用，避免重复构建。
 Widget objectiveRadarChart(List<double> values, Color color, {double size = 180}) {
