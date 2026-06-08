@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
+import 'achievement_config.dart';
+
 /// 达成度模块共享常量与工具函数
 
 const kObjectiveColors = [Colors.red, Colors.blue, Colors.green, Colors.orange];
-const kObjectiveNames = ['课程目标1', '课程目标2', '课程目标3', '课程目标4'];
-const kDefaultWeights = [0.10, 0.20, 0.30, 0.40];
+List<String> get kObjectiveNames => AchievementConfig.defaults.objectiveNames;
+List<double> get kDefaultWeights => AchievementConfig.defaults.weights;
 
 Color statusColor(String? status) {
   switch (status) {
