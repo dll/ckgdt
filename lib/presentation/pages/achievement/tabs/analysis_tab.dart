@@ -525,10 +525,11 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
         rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         bottomTitles: AxisTitles(sideTitles: SideTitles(
           showTitles: true,
+          interval: 1,
           getTitlesWidget: (v, _) {
             const labels = ['目标1', '目标2', '目标3', '目标4'];
-            final i = v.toInt();
-            return i >= 0 && i < labels.length
+            final i = v.round();
+            return (i >= 0 && i < labels.length && (v - i).abs() < 0.01)
                 ? Text(labels[i], style: const TextStyle(fontSize: 10))
                 : const SizedBox.shrink();
           },

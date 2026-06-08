@@ -545,20 +545,54 @@ class _ReportTabState extends State<ReportTab> {
           orElse: () => <String, dynamic>{});
       final teacherName = widget.authService.currentUser?.realName ?? '教师';
       final scores = await widget.achievementDao.getScores(_selectedBatchId!);
+      const cfg = AchievementConfig.defaults;
+
+      // 分环节达成度（平时/实验/期末）用于报告表5
+      final combined =
+          await widget.achievementDao.calculateCombinedAchievement(_selectedBatchId!);
+      final pingshiAvg = combined['pingshi'] as Map<String, double>? ?? {};
+      final experimentAvg = combined['experiment'] as Map<String, double>? ?? {};
+      final examAvg = combined['exam'] as Map<String, double>? ?? {};
+      const envDefs = [
+        ('平时', 'pingshi', 0.2, 20.0),
+        ('实验', 'experiment', 0.3, 30.0),
+        ('期末考试', 'exam', 0.5, 50.0),
+      ];
 
       final objectives = <Map<String, dynamic>>[];
       for (int i = 0; i < 4; i++) {
+        final objKey = 'obj${i + 1}';
+        final envs = <Map<String, dynamic>>[];
+        for (final (label, key, w, full) in envDefs) {
+          final src = key == 'pingshi'
+              ? pingshiAvg
+              : key == 'experiment'
+                  ? experimentAvg
+                  : examAvg;
+          final ach = src[objKey] ?? 0;
+          envs.add({
+            'name': label,
+            'full': full,
+            'avg': ach * full,
+            'ach': ach,
+            'weight': w,
+          });
+        }
         objectives.add({
           'objective': i + 1,
           'weight': _objectiveWeights[i],
+          'indicator': cfg.indicators[i],
+          'description': cfg.descriptions[i],
+          'assess_content': cfg.assessContents[i],
+          'full_mark': cfg.fullMarks[i],
           'achievement': _objectiveAchievements[i],
           'avgScore': _objectiveAchievements[i] * 100,
+          'envs': envs,
         });
       }
 
       // 从 config（含大纲导入的 course_objectives）构建 syllabus，
       // 修复此前传空 {} 导致 docx 一/二/三表表头空白的 bug。
-      const cfg = AchievementConfig.defaults;
       final syllabus = <String, dynamic>{
         'info': <String, String>{
           '英文名称': (batch['course_name'] ?? '移动应用开发').toString(),
