@@ -361,90 +361,6 @@ class AchievementDao {
   }
 
   // ═══════════════════════════════════════════════════════════════════════
-  // 演示数据生成
-  // ═══════════════════════════════════════════════════════════════════════
-
-  /// 生成演示数据（模拟30名学生的达成度数据）
-  Future<int> generateDemoData({String? teacherId}) async {
-    final db = await DatabaseHelper.instance.database;
-    final now = DateTime.now().toIso8601String();
-
-    // 创建批次
-    final batchId = await db.insert('achievement_batches', {
-      'batch_name': '2025-2026学年第二学期达成度评价',
-      'course_name': '移动应用开发',
-      'class_name': '软件23',
-      'semester': '2025-2026-2',
-      'teacher_id': teacherId ?? '206004',
-      'objective_weights_json': '{"目标1":0.15,"目标2":0.25,"目标3":0.30,"目标4":0.30}',
-      'assessment_weights_json': '{"平时":0.20,"实验":0.30,"期末":0.50}',
-      'status': 'draft',
-      'created_at': now,
-      'updated_at': now,
-    });
-
-    // 从 users 表读取学生
-    final students = await db.query('users',
-        where: "role = 'student' AND is_active = 1",
-        orderBy: 'user_id ASC',
-        limit: 50);
-
-    if (students.isEmpty) {
-      // 使用模拟数据
-      final simStudents = List.generate(30, (i) => <String, String>{
-        'student_id': '2023${(i + 1).toString().padLeft(4, '0')}',
-        'student_name': '学生${i + 1}',
-      });
-      return _insertDemoScores(db, batchId, simStudents, now);
-    }
-
-    final stuData = students.map((s) => <String, String>{
-      'student_id': s['user_id'] as String? ?? '',
-      'student_name': s['real_name'] as String? ?? s['user_id'] as String? ?? '',
-    }).toList();
-
-    return _insertDemoScores(db, batchId, stuData, now);
-  }
-
-  Future<int> _insertDemoScores(Database db, int batchId,
-      List<Map<String, String>> students, String now) async {
-    final batch = db.batch();
-    int seed = 42;
-    for (final stu in students) {
-      // 伪随机生成达成度 0.55~0.95
-      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-      final obj1Ach = 0.55 + (seed % 40) / 100;
-      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-      final obj2Ach = 0.55 + (seed % 40) / 100;
-      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-      final obj3Ach = 0.55 + (seed % 40) / 100;
-      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-      final obj4Ach = 0.55 + (seed % 40) / 100;
-
-      final totalScore = obj1Ach * 15 + obj2Ach * 25 + obj3Ach * 30 + obj4Ach * 30;
-
-      batch.insert('achievement_scores', {
-        'batch_id': batchId,
-        'student_id': stu['student_id'],
-        'student_name': stu['student_name'],
-        'obj1_score': (obj1Ach * 15).toDouble(),
-        'obj1_achievement': obj1Ach,
-        'obj2_score': (obj2Ach * 25).toDouble(),
-        'obj2_achievement': obj2Ach,
-        'obj3_score': (obj3Ach * 30).toDouble(),
-        'obj3_achievement': obj3Ach,
-        'obj4_score': (obj4Ach * 30).toDouble(),
-        'obj4_achievement': obj4Ach,
-        'total_score': totalScore,
-        'created_at': now,
-        'updated_at': now,
-      }, conflictAlgorithm: ConflictAlgorithm.replace);
-    }
-    await batch.commit(noResult: true);
-    return students.length;
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════
   // 页面适配方法（别名 & 便捷方法）
   // ═══════════════════════════════════════════════════════════════════════
 
@@ -501,14 +417,6 @@ class AchievementDao {
     });
   }
 
-  /// initDemoDataIfEmpty — 仅当无批次时生成演示数据
-  Future<void> initDemoDataIfEmpty() async {
-    final batches = await getAllBatches();
-    if (batches.isEmpty) {
-      await generateDemoData();
-    }
-  }
-
   /// updateBatchStatus — 更新批次状态
   Future<int> updateBatchStatus(int batchId, String status) {
     return updateBatch(batchId, {'status': status});
@@ -548,36 +456,6 @@ class AchievementDao {
       swallowDebug(e, tag: 'AchievementDao.parseCalcResults', stack: st);
       return null;
     }
-  }
-
-  /// generateDemoScores — 为已有批次生成演示成绩
-  Future<int> generateDemoScores(int batchId) async {
-    final db = await DatabaseHelper.instance.database;
-    final now = DateTime.now().toIso8601String();
-
-    // 先清空已有成绩
-    await clearScores(batchId);
-
-    // 从 users 表读取学生
-    final students = await db.query('users',
-        where: "role = 'student' AND is_active = 1",
-        orderBy: 'user_id ASC',
-        limit: 50);
-
-    List<Map<String, String>> stuData;
-    if (students.isEmpty) {
-      stuData = List.generate(30, (i) => <String, String>{
-        'student_id': '2023${(i + 1).toString().padLeft(4, '0')}',
-        'student_name': '学生${i + 1}',
-      });
-    } else {
-      stuData = students.map((s) => <String, String>{
-        'student_id': s['user_id'] as String? ?? '',
-        'student_name': s['real_name'] as String? ?? s['user_id'] as String? ?? '',
-      }).toList();
-    }
-
-    return _insertDemoScores(db, batchId, stuData, now);
   }
 
   /// generateScoresFromQuizResults — 从测验成绩自动计算达成度
