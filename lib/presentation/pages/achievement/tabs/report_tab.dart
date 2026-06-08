@@ -569,10 +569,10 @@ class _ReportTabState extends State<ReportTab> {
       // 修复此前传空 {} 导致 docx 一/二/三表表头空白的 bug。
       final cfg = AchievementConfig.defaults;
       final syllabus = <String, dynamic>{
-        'info': {
-          '英文名称': batch['course_name'] ?? '移动应用开发',
+        'info': <String, String>{
+          '英文名称': (batch['course_name'] ?? '移动应用开发').toString(),
           '考核方式': '考查',
-          '开课学期': batch['semester'] ?? '',
+          '开课学期': (batch['semester'] ?? '').toString(),
         },
         'objectives': [
           for (int i = 0; i < cfg.objectiveNames.length; i++)
