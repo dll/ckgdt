@@ -1,7 +1,9 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
 import '../../../../data/local/achievement_dao.dart';
 import '../../../../data/local/score_audit_dao.dart';
 import '../../../../services/auth_service.dart';
+import '../../../../services/achievement/achievement_excel_service.dart';
 import '../../../../core/error_handler.dart';
 import '../achievement_shared.dart';
 import '../achievement_config.dart';
@@ -246,6 +248,57 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
     );
   }
 
+  /// 导入课程成绩模板 Excel（平时/实验/期末三明细表）到当前批次。
+  Future<void> _importGradesExcel() async {
+    if (_selectedBatchId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先选择批次')),
+      );
+      return;
+    }
+    final svc = AchievementExcelService.instance;
+    try {
+      final res = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx', 'xls'],
+        withData: true,
+      );
+      if (res == null || res.files.isEmpty) return;
+      final f = res.files.first;
+      if (f.bytes == null) throw StateError('无法读取文件内容');
+      setState(() => _generating = true);
+      final components = svc.parseComponentSheets(f.bytes!);
+      final total = (components['pingshi']?.length ?? 0) +
+          (components['experiment']?.length ?? 0) +
+          (components['exam']?.length ?? 0);
+      if (total == 0) {
+        throw StateError('未解析到平时/实验/期末成绩明细表，请确认使用课程成绩模板');
+      }
+      final count = await widget.achievementDao
+          .importComponentsToDatabase(_selectedBatchId!, components);
+      await _loadScores();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('导入成功：$count 名学生（平时${components['pingshi']?.length ?? 0}/'
+                '实验${components['experiment']?.length ?? 0}/'
+                '期末${components['exam']?.length ?? 0}），已合成达成度'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ScoresTab.importExcel', stack: st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('导入失败：$e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _generating = false);
+    }
+  }
+
   Future<void> _generateFromQuizResults() async {
     if (_selectedBatchId == null) return;
     setState(() => _generating = true);
@@ -317,6 +370,13 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
+                    _buildActionChip(
+                      icon: Icons.upload_file,
+                      label: '导入成绩 Excel',
+                      onTap: _generating ? null : _importGradesExcel,
+                      color: Colors.deepPurple,
+                    ),
+                    const SizedBox(width: 8),
                     _buildActionChip(
                       icon: Icons.person_add,
                       label: '添加成绩',
