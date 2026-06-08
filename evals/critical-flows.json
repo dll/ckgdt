@@ -1,0 +1,61 @@
+{
+  "_comment": "MAD-KG 关键流程 eval fixtures。每条是一个对纯逻辑不变量的可复现断言，由 run-evals.js 执行。重原生/DB/UI 的流程在 test/**/*_test.dart 里用 flutter test 覆盖。",
+  "fixtures": [
+    {
+      "id": "password-rule",
+      "flow": "登录密码派生",
+      "description": "所有用户密码 = userId 末 6 位，不可更改（已有数据依赖）",
+      "input": { "userId": "2023210582" },
+      "expect": { "password": "210582" }
+    },
+    {
+      "id": "password-rule-admin",
+      "flow": "登录密码派生",
+      "description": "管理员同规则",
+      "input": { "userId": "419116" },
+      "expect": { "password": "419116" }
+    },
+    {
+      "id": "defense-screen-source",
+      "flow": "答辩直播教师端分区取流",
+      "description": "/raw/screen 取 win∥phone，绝不回退到 camera（防人脸串到桌面框）",
+      "input": { "source": "screen", "win": null, "phone": "PHONE_JPEG", "camera": "CAM_JPEG" },
+      "expect": { "frame": "PHONE_JPEG" }
+    },
+    {
+      "id": "defense-screen-no-camera-fallback",
+      "flow": "答辩直播教师端分区取流",
+      "description": "screen 源在 win/phone 都没有时返回空，绝不取 camera",
+      "input": { "source": "screen", "win": null, "phone": null, "camera": "CAM_JPEG" },
+      "expect": { "frame": null }
+    },
+    {
+      "id": "defense-camera-source-isolated",
+      "flow": "答辩直播教师端分区取流",
+      "description": "camera 源只返回 camera，绝不回退",
+      "input": { "source": "camera", "win": "WIN_JPEG", "phone": "PHONE_JPEG", "camera": null },
+      "expect": { "frame": null }
+    },
+    {
+      "id": "active-defender-staleness",
+      "flow": "答辩学生活跃判定",
+      "description": "心跳超过 10 秒视为不活跃，activeDefenderId 返回 null",
+      "input": { "lastHeartbeatSecondsAgo": 12, "studentId": "2023210582" },
+      "expect": { "activeDefenderId": null }
+    },
+    {
+      "id": "active-defender-fresh",
+      "flow": "答辩学生活跃判定",
+      "description": "10 秒内心跳视为活跃",
+      "input": { "lastHeartbeatSecondsAgo": 4, "studentId": "2023210582" },
+      "expect": { "activeDefenderId": "2023210582" }
+    },
+    {
+      "id": "defense-broadcast-stale",
+      "flow": "首页答辩通知横幅",
+      "description": "Gitee teacher_server.json 时间戳超过 5 分钟视为过期广播，清除横幅",
+      "input": { "broadcastAgeMinutes": 6 },
+      "expect": { "showBanner": false }
+    }
+  ]
+}
