@@ -214,20 +214,11 @@ class _ReportTabState extends State<ReportTab> {
       final studentCount = scores.length;
 
       final buffer = StringBuffer();
-      const objDescFull = [
-        '掌握移动应用开发技术体系及主流平台特性，理解技术选型逻辑，熟悉跨平台开发框架和AI编程工具的基本使用',
-        '运用跨平台开发框架及小程序技术，结合AI编程工具与后端API交互，设计实现跨平台应用，具备需求建模与创新应用能力',
-        '调研对比多端开发方案，分析不同技术栈在跨设备适配场景中的优劣，具备技术方案评估与选型能力',
-        '遵循软件工程规范，使用现代开发工具完成应用测试与优化，具备工程实践能力',
-      ];
-      const objIndicators = ['1.4', '3.2', '4.2', '5.1'];
-      const objAssessContent = [
-        '课堂表现、实验1-2、期末项目',
-        '期间测验、实验3-4、小组评价',
-        '实验5-6、个人考核',
-        '课外学习、实验7、答辩',
-      ];
-      const objMarks = [10, 20, 30, 40];
+      const cfg = AchievementConfig.defaults;
+      final objDescFull = cfg.descriptions;
+      final objIndicators = cfg.indicators;
+      final objAssessContent = cfg.assessContents;
+      final objMarks = cfg.fullMarks.map((m) => m.toInt()).toList();
       // 各评价环节满分与权重（对齐 DOCX 表5）
       const assessNames = ['平时成绩', '实验成绩', '期末成绩'];
       const assessFullMarks = [20, 30, 50];
@@ -561,7 +552,7 @@ class _ReportTabState extends State<ReportTab> {
 
       // 从 config（含大纲导入的 course_objectives）构建 syllabus，
       // 修复此前传空 {} 导致 docx 一/二/三表表头空白的 bug。
-      final cfg = AchievementConfig.defaults;
+      const cfg = AchievementConfig.defaults;
       final syllabus = <String, dynamic>{
         'info': <String, String>{
           '英文名称': (batch['course_name'] ?? '移动应用开发').toString(),
@@ -655,6 +646,10 @@ class _ReportTabState extends State<ReportTab> {
       final semester = batch['semester'] ?? '-';
       final teacherId = batch['teacher_id'] ?? '';
       final dateStr = DateTime.now().toString().substring(0, 10);
+      const cfg = AchievementConfig.defaults;
+      final objIndicators = cfg.indicators;
+      final objDescShort = cfg.descriptions;
+      final objMarks = cfg.fullMarks.map((m) => m.toInt()).toList();
 
       // 获取三类评价分项达成度
       final combined = await widget.achievementDao.calculateCombinedAchievement(_selectedBatchId!);
@@ -751,10 +746,13 @@ class _ReportTabState extends State<ReportTab> {
               headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
               headers: ['毕业要求指标点', '课程目标', '权重', '课程目标描述'],
               data: [
-                ['指标点1.4', '课程目标1', '0.10', '掌握移动应用开发技术体系及主流平台特性，理解技术选型逻辑'],
-                ['指标点3.2', '课程目标2', '0.20', '运用跨平台开发框架及小程序技术，结合AI编程工具设计实现跨平台应用'],
-                ['指标点4.2', '课程目标3', '0.30', '调研对比多端开发方案，分析不同技术栈优劣，具备技术方案评估与选型能力'],
-                ['指标点5.1', '课程目标4', '0.40', '遵循软件工程规范，使用现代开发工具完成应用测试与优化'],
+                for (int i = 0; i < 4; i++)
+                  [
+                    '指标点${objIndicators[i]}',
+                    kObjectiveNames[i],
+                    kDefaultWeights[i].toStringAsFixed(2),
+                    objDescShort[i],
+                  ],
               ],
             ),
             pw.SizedBox(height: 12),
@@ -767,10 +765,15 @@ class _ReportTabState extends State<ReportTab> {
               headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
               headers: ['课程目标', '权重', '支撑指标点', '平时成绩(20分)', '实验成绩(30分)', '期末成绩(50分)'],
               data: [
-                ['课程目标1', '0.10', '指标点1.4', '10', '10', '10'],
-                ['课程目标2', '0.20', '指标点3.2', '20', '20', '20'],
-                ['课程目标3', '0.30', '指标点4.2', '30', '30', '30'],
-                ['课程目标4', '0.40', '指标点5.1', '40', '40', '40'],
+                for (int i = 0; i < 4; i++)
+                  [
+                    kObjectiveNames[i],
+                    kDefaultWeights[i].toStringAsFixed(2),
+                    '指标点${objIndicators[i]}',
+                    '${objMarks[i]}',
+                    '${objMarks[i]}',
+                    '${objMarks[i]}',
+                  ],
                 ['合计', '1.00', '—', '20', '30', '50'],
               ],
             ),
