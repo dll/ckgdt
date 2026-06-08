@@ -106,7 +106,10 @@ class AchievementDocxService {
 
     // 一、基本信息
     _addHeading(b, '一、课程基本信息');
-    final info = syllabus['info'] as Map<String, String>? ?? {};
+    final info = (syllabus['info'] as Map?)?.map(
+          (k, v) => MapEntry(k.toString(), v?.toString() ?? ''),
+        ) ??
+        <String, String>{};
     _addTable(b, ['项目', '内容'], [
       ['课程名称', info['英文名称'] ?? courseName],
       ['课程代码', info['课程代码'] ?? ''],
