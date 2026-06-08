@@ -32,12 +32,12 @@ class _AchievementPageState extends State<AchievementPage>
   static const _tabSpecs = <(IconData, String, String)>[
     (Icons.analytics_outlined, '达成度概览', '01'),
     (Icons.edit_note, '成绩管理', '02'),
-    (Icons.school_outlined, '平时达成', '03'),
-    (Icons.science_outlined, '实验达成', '04'),
-    (Icons.assignment_outlined, '考核达成', '05'),
-    (Icons.calculate_outlined, '计算过程', '06'),
-    (Icons.summarize_outlined, '报告生成', '07'),
-    (Icons.build_outlined, '持续改进', '08'),
+    (Icons.calculate_outlined, '计算过程', '03'),
+    (Icons.school_outlined, '平时达成', '04'),
+    (Icons.science_outlined, '实验达成', '05'),
+    (Icons.assignment_outlined, '考核达成', '06'),
+    (Icons.build_outlined, '持续改进', '07'),
+    (Icons.summarize_outlined, '报告生成', '08'),
   ];
 
   @override
@@ -141,6 +141,9 @@ class _AchievementPageState extends State<AchievementPage>
                 authService: _authService,
                 achievementDao: _achievementDao,
               ),
+              CalculationProcessTab(
+                achievementDao: _achievementDao,
+              ),
               PingshiAchievementTab(
                 achievementDao: _achievementDao,
               ),
@@ -150,14 +153,11 @@ class _AchievementPageState extends State<AchievementPage>
               ExamAchievementTab(
                 achievementDao: _achievementDao,
               ),
-              CalculationProcessTab(
+              ContinuousImprovementTab(
                 achievementDao: _achievementDao,
               ),
               ReportTab(
                 authService: _authService,
-                achievementDao: _achievementDao,
-              ),
-              ContinuousImprovementTab(
                 achievementDao: _achievementDao,
               ),
             ],
