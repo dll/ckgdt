@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import '../../../../services/default_class_service.dart';
 import '../../../../data/local/achievement_dao.dart';
 import '../../../../services/achievement/achievement_docx_service.dart';
 import '../../../../services/achievement/achievement_excel_service.dart';
@@ -81,9 +80,7 @@ class _ReportTabState extends State<ReportTab> {
 
     try {
       // 获取该批次所有成绩
-      final rawScores = await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
-      final scores = await DefaultClassService.instance.filterByDefaultClass(
-          rawScores, (s) => (s['student_id'] ?? '').toString());
+      final scores = await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
       if (scores.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -214,9 +211,7 @@ class _ReportTabState extends State<ReportTab> {
       final combinedAvg = combined['combined'] as Map<String, double>;
 
       // 获取学生个体成绩
-      final rawScores = await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
-      final scores = await DefaultClassService.instance.filterByDefaultClass(
-          rawScores, (s) => (s['student_id'] ?? '').toString());
+      final scores = await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
       final studentCount = scores.length;
 
       final buffer = StringBuffer();
@@ -654,9 +649,7 @@ class _ReportTabState extends State<ReportTab> {
         (b) => b['id'] == _selectedBatchId,
         orElse: () => <String, dynamic>{},
       );
-      final rawScores = await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
-      final scores = await DefaultClassService.instance.filterByDefaultClass(
-          rawScores, (s) => (s['student_id'] ?? '').toString());
+      final scores = await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
       final courseName = batch['course_name'] ?? '移动应用开发';
       final className = batch['class_name'] ?? '软件23';
       final semester = batch['semester'] ?? '-';

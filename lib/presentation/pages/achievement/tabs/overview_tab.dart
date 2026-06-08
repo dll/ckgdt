@@ -4,7 +4,6 @@ import '../../../../core/error_handler.dart';
 import '../../../../data/local/achievement_dao.dart';
 import '../../../../services/achievement/achievement_excel_service.dart';
 import '../../../../services/auth_service.dart';
-import '../../../../services/default_class_service.dart';
 import '../achievement_shared.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -29,7 +28,6 @@ class AchievementOverviewTab extends StatefulWidget {
 class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
   List<Map<String, dynamic>> _batches = [];
   bool _loading = true;
-  bool _generatingDemo = false;
 
   @override
   void initState() {
@@ -177,27 +175,6 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
       }
     } finally {
       if (mounted) setState(() => _importing = false);
-    }
-  }
-
-  Future<void> _generateDemoData() async {
-    setState(() => _generatingDemo = true);
-    try {
-      await widget.achievementDao.initDemoDataIfEmpty();
-      await _loadBatches();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('演示数据生成成功'), backgroundColor: Colors.green),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('生成失败：$e'), backgroundColor: Colors.red),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _generatingDemo = false);
     }
   }
 
@@ -388,22 +365,10 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
               ),
               const SizedBox(height: 8),
               const Text(
-                '创建批次或生成演示数据开始使用',
+                '上传课程大纲与成绩 Excel 开始使用',
                 style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
               const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: _generatingDemo ? null : _generateDemoData,
-                icon: _generatingDemo
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Icon(Icons.auto_awesome),
-                label: Text(_generatingDemo ? '生成中...' : '生成演示数据'),
-              ),
-              const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: _showCreateBatchDialog,
                 icon: const Icon(Icons.add),
@@ -572,9 +537,9 @@ class _BatchDetailSheetState extends State<BatchDetailSheet> {
   Future<void> _loadDetail() async {
     try {
       final batchId = widget.batch['id'] as int;
-      final rawScores = await widget.achievementDao.getScoresByBatch(batchId);
-      final scores = await DefaultClassService.instance.filterByDefaultClass(
-          rawScores, (s) => (s['student_id'] ?? '').toString());
+      // 批次本身已限定班级，不再按"默认班级"二次过滤
+      // （否则概览卡片计数与详情人数不一致：卡片用原始 COUNT，详情被默认班过滤）
+      final scores = await widget.achievementDao.getScoresByBatch(batchId);
       Map<String, dynamic>? results;
       try {
         results = await widget.achievementDao.getCalculationResults(batchId);
