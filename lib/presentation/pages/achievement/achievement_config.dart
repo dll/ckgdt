@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import '../../../core/error_handler.dart';
 
 /// 达成度配置单一来源（SSOT）。
@@ -57,33 +55,6 @@ class AchievementConfig {
     assessmentWeights: {'平时': 0.20, '实验': 0.30, '期末': 0.50},
   );
 
-  /// 课程目标 key → 权重（如 '课程目标1' → 0.15），供 calculateWeightedAchievement 使用。
-  Map<String, double> get weightsByName {
-    final m = <String, double>{};
-    for (int i = 0; i < objectiveNames.length; i++) {
-      m[objectiveNames[i]] = weights[i];
-    }
-    return m;
-  }
-
-  /// 从批次行解析配置。仅覆盖 objective_weights_json 提供的权重，
-  /// 其余字段回落默认。course_objectives 表接入后由 [fromObjectiveRows] 提供完整定义。
-  static AchievementConfig fromBatch(Map<String, dynamic>? batch) {
-    if (batch == null) return defaults;
-    final w = _parseWeights(batch['objective_weights_json'] as String?);
-    if (w == null) return defaults;
-    return AchievementConfig(
-      weights: w,
-      fullMarks: defaults.fullMarks,
-      objectiveNames: defaults.objectiveNames,
-      indicators: defaults.indicators,
-      descriptions: defaults.descriptions,
-      chapters: defaults.chapters,
-      assessContents: defaults.assessContents,
-      assessmentWeights: defaults.assessmentWeights,
-    );
-  }
-
   /// 从 course_objectives 表行（按 idx 升序）构建完整配置。缺字段回落默认。
   static AchievementConfig fromObjectiveRows(List<Map<String, dynamic>> rows) {
     if (rows.isEmpty) return defaults;
@@ -112,20 +83,4 @@ class AchievementConfig {
   }
 
   static T _at<T>(List<T> list, int i) => i < list.length ? list[i] : list.last;
-
-  static List<double>? _parseWeights(String? json) {
-    if (json == null || json.isEmpty) return null;
-    try {
-      final m = jsonDecode(json) as Map<String, dynamic>;
-      return [
-        (m['目标1'] as num?)?.toDouble() ?? defaults.weights[0],
-        (m['目标2'] as num?)?.toDouble() ?? defaults.weights[1],
-        (m['目标3'] as num?)?.toDouble() ?? defaults.weights[2],
-        (m['目标4'] as num?)?.toDouble() ?? defaults.weights[3],
-      ];
-    } catch (e, st) {
-      swallowDebug(e, tag: 'AchievementConfig.parseWeights', stack: st);
-      return null;
-    }
-  }
 }
