@@ -27,6 +27,7 @@ class AchievementOverviewTab extends StatefulWidget {
 
 class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
   List<Map<String, dynamic>> _batches = [];
+  List<Map<String, dynamic>> _objectives = [];
   bool _loading = true;
 
   @override
@@ -38,9 +39,13 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
   Future<void> _loadBatches() async {
     try {
       final batches = await widget.achievementDao.getBatches();
+      // 课程大纲(课程目标)是课程级数据，已导入则常驻显示，无需用户每次重新上传
+      final objectives =
+          await widget.achievementDao.getCourseObjectives('移动应用开发');
       if (mounted) {
         setState(() {
           _batches = batches;
+          _objectives = objectives;
           _loading = false;
         });
       }
@@ -79,6 +84,7 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
       final edited = await _showSyllabusPreview(rows);
       if (edited == null) return; // 用户取消
       await widget.achievementDao.saveCourseObjectives('移动应用开发', edited);
+      await _loadBatches(); // 刷新常驻大纲展示
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('大纲解析成功，已保存 ${edited.length} 个课程目标'), backgroundColor: Colors.green),
@@ -276,8 +282,10 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
 
   Widget _buildEmptyState(Color primary) {
     return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
       children: [
-        const SizedBox(height: 80),
+        _buildSyllabusCard(primary),
+        const SizedBox(height: 40),
         Center(
           child: Column(
             children: [
@@ -318,11 +326,98 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
     );
   }
 
+  /// 常驻显示已导入的课程大纲（课程目标）。课程为《移动应用开发》，
+  /// 大纲已导入则直接展示，无需用户操作；重新上传会刷新此卡片。
+  Widget _buildSyllabusCard(Color primary) {
+    if (_objectives.isEmpty) {
+      return Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(children: [
+            Icon(Icons.menu_book_outlined, color: primary, size: 20),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text('尚未导入课程大纲，点击右下角「上传课程大纲」导入《移动应用开发》大纲',
+                  style: TextStyle(fontSize: 12, color: Colors.grey)),
+            ),
+          ]),
+        ),
+      );
+    }
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Icon(Icons.menu_book, color: primary, size: 22),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text('课程大纲 · 移动应用开发',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+            TextButton.icon(
+              onPressed: _importing ? null : _uploadSyllabus,
+              icon: const Icon(Icons.refresh, size: 16),
+              label: const Text('重新上传', style: TextStyle(fontSize: 12)),
+            ),
+          ]),
+          const Divider(height: 16),
+          for (int i = 0; i < _objectives.length; i++) ...[
+            _buildObjectiveRow(_objectives[i], i),
+            if (i < _objectives.length - 1) const SizedBox(height: 10),
+          ],
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildObjectiveRow(Map<String, dynamic> o, int i) {
+    final color = kObjectiveColors[i % kObjectiveColors.length];
+    final weight = (o['weight'] as num?)?.toDouble() ?? 0;
+    final indicator = (o['indicator'] ?? '').toString();
+    final desc = (o['description'] ?? '').toString();
+    final assess = (o['assess_content'] ?? '').toString();
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Container(
+        width: 72,
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Column(children: [
+          Text('目标${o['idx'] ?? i + 1}',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color)),
+          Text('权重${(weight * 100).toStringAsFixed(0)}%',
+              style: const TextStyle(fontSize: 9, color: Colors.grey)),
+        ]),
+      ),
+      const SizedBox(width: 10),
+      Expanded(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if (desc.isNotEmpty)
+            Text(desc, style: const TextStyle(fontSize: 12.5, height: 1.4)),
+          const SizedBox(height: 2),
+          Text([
+            if (indicator.isNotEmpty) '支撑毕业要求 $indicator',
+            if (assess.isNotEmpty) '考核：$assess',
+          ].join(' · '), style: const TextStyle(fontSize: 10, color: Colors.grey)),
+        ]),
+      ),
+    ]);
+  }
+
   Widget _buildBatchList(Color primary) {
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-      itemCount: _batches.length,
-      itemBuilder: (context, index) {
+      itemCount: _batches.length + 1,
+      itemBuilder: (context, i) {
+        if (i == 0) return _buildSyllabusCard(primary);
+        final index = i - 1;
         final batch = _batches[index];
         final status = batch['status'] as String? ?? 'draft';
         final studentCount = batch['student_count'] ?? 0;
