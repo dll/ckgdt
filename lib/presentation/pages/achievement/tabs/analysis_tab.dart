@@ -3,6 +3,9 @@ import 'dart:math';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../../../../data/local/achievement_dao.dart';
+import '../../../../data/local/survey_dao.dart';
+import '../../../../data/local/notification_dao.dart';
+import '../../../../services/auth_service.dart';
 import '../../../../core/error_handler.dart';
 import '../achievement_shared.dart';
 import '../achievement_config.dart';
@@ -28,6 +31,75 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
   List<double> _classAvgAchievements = [0, 0, 0, 0];
   double _weightedAchievement = 0;
   Map<String, dynamic>? _surveySummary;
+  bool _creatingSurvey = false;
+
+  /// 一键创建《移动应用开发》课程满意度问卷、发布并通知全体学生。
+  /// 教师无需跳转到「管理 > 问卷管理」即可在达成页直接发起。
+  Future<void> _createAndNotifySurvey() async {
+    setState(() => _creatingSurvey = true);
+    final surveyDao = SurveyDao();
+    final notifyDao = NotificationDao();
+    final teacherId = AuthService().getCurrentUserId();
+    try {
+      final surveyId = await surveyDao.createSurvey(
+        title: '《移动应用开发》课程满意度调查',
+        description: '请对本学期《移动应用开发》课程各方面进行评价，帮助我们改进教学质量。',
+        creatorId: teacherId,
+      );
+      await surveyDao.addQuestion(
+        surveyId: surveyId,
+        question: '您对课程整体教学质量的评价？',
+        questionType: 'single_choice',
+        options: ['非常满意', '满意', '一般', '不太满意', '不满意'],
+        seq: 1,
+      );
+      await surveyDao.addQuestion(
+        surveyId: surveyId,
+        question: '您认为课程中哪些内容最有用？（可多选）',
+        questionType: 'multiple_choice',
+        options: ['Flutter开发', 'Android原生', 'React Native', '小程序开发', 'HarmonyOS', '综合实践'],
+        seq: 2,
+      );
+      await surveyDao.addQuestion(
+        surveyId: surveyId,
+        question: '请为课程教学打分',
+        questionType: 'rating',
+        seq: 3,
+      );
+      await surveyDao.addQuestion(
+        surveyId: surveyId,
+        question: '您对课程改进的建议',
+        questionType: 'text',
+        isRequired: false,
+        seq: 4,
+      );
+      await surveyDao.publishSurvey(surveyId);
+      await notifyDao.createNotification(
+        title: '课程满意度调查',
+        content: '《移动应用开发》课程满意度调查问卷已发布，请前往「问卷调查」完成填写，感谢配合！',
+        creatorId: teacherId,
+        targetType: 'all',
+        type: 'survey',
+        relatedEntityType: 'survey',
+        relatedEntityId: surveyId.toString(),
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('问卷已创建并发布，已通知全体学生填写'), backgroundColor: Colors.green),
+        );
+      }
+      await _loadBatches(); // 刷新满意度数据
+    } catch (e, st) {
+      swallowDebug(e, tag: 'CalcTab.createSurvey', stack: st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('问卷创建失败：$e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _creatingSurvey = false);
+    }
+  }
 
   @override
   void initState() {
@@ -635,11 +707,22 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                   Icon(Icons.info_outline, color: Colors.orange, size: 18),
                   SizedBox(width: 8),
                   Expanded(
-                    child: Text('暂无问卷调查数据。请在「管理 > 问卷管理」中创建并发布课程满意度调查问卷。',
+                    child: Text('暂无问卷调查数据。可点击下方按钮一键创建并发布课程满意度问卷并通知学生，'
+                        '或在「管理 > 问卷管理」中手动管理。',
                         style: TextStyle(
                             fontSize: 12, color: Colors.orange)),
                   ),
                 ]),
+              ),
+              const SizedBox(height: 12),
+              Center(
+                child: FilledButton.icon(
+                  onPressed: _creatingSurvey ? null : _createAndNotifySurvey,
+                  icon: _creatingSurvey
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.campaign, size: 18),
+                  label: Text(_creatingSurvey ? '创建中...' : '一键创建并通知问卷'),
+                ),
               ),
             ] else ...[
               // 满意度概览
