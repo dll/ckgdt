@@ -321,6 +321,15 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
       if (total == 0) {
         throw StateError('未解析到平时/实验/期末成绩明细表，请确认使用课程成绩模板');
       }
+      // 校验：对比当前批次学生名单、查异常分值/重复
+      final roster = await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
+      final report = svc.validateComponents(components, roster: roster);
+      if (!mounted) return;
+      setState(() => _generating = false);
+      final confirmed = await _showImportConfirm(components, report);
+      if (confirmed != true) return;
+      if (!mounted) return;
+      setState(() => _generating = true);
       final count = await widget.achievementDao
           .importComponentsToDatabase(_selectedBatchId!, components);
       await _loadScores();
@@ -344,6 +353,94 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
     } finally {
       if (mounted) setState(() => _generating = false);
     }
+  }
+
+  /// 导入前确认页：展示目标拆分结构 + 校验结果（计数/缺失/异常/重复）。
+  Future<bool?> _showImportConfirm(
+      Map<String, List<Map<String, dynamic>>> components,
+      Map<String, dynamic> report) {
+    final counts = (report['counts'] as Map?) ?? {};
+    final missing = (report['missing'] as Map?) ?? {};
+    final outOfRange = (report['outOfRange'] as List?) ?? [];
+    final duplicates = (report['duplicates'] as Map?) ?? {};
+    final ok = report['ok'] == true;
+    const envName = {'pingshi': '平时', 'experiment': '实验', 'exam': '期末'};
+
+    Widget section(String title, List<Widget> children) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            const SizedBox(height: 4),
+            ...children,
+            const SizedBox(height: 10),
+          ],
+        );
+
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(children: [
+          Icon(ok ? Icons.check_circle : Icons.warning_amber,
+              color: ok ? Colors.green : Colors.orange, size: 22),
+          const SizedBox(width: 8),
+          const Text('导入校验'),
+        ]),
+        content: SizedBox(
+          width: 460,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                section('识别到的成绩环节与人数', [
+                  for (final env in ['pingshi', 'experiment', 'exam'])
+                    if (counts[env] != null)
+                      Text('• ${envName[env]}成绩：${counts[env]} 名学生',
+                          style: const TextStyle(fontSize: 12)),
+                ]),
+                section('目标拆分（大纲驱动）', const [
+                  Text('• 平时：课堂→目标1 · 测验→目标2 · 大作业→目标4', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                  Text('• 实验：1,2→目标1 · 3,4→目标2 · 5,6→目标3 · 7→目标4', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                  Text('• 期末：项目→目标1 · 小组→目标2 · 个人→目标3 · 答辩→目标4', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                ]),
+                if (duplicates.isNotEmpty)
+                  section('⚠ 重复学号', [
+                    for (final e in duplicates.entries)
+                      Text('• ${envName[e.key]}：${(e.value as List).join('、')}',
+                          style: const TextStyle(fontSize: 12, color: Colors.red)),
+                  ]),
+                if (outOfRange.isNotEmpty)
+                  section('⚠ 异常分值（应在 0-100）', [
+                    for (final r in outOfRange.take(10))
+                      Text('• ${envName[r['env']]} ${r['student_id']}：${r['value']}',
+                          style: const TextStyle(fontSize: 12, color: Colors.red)),
+                    if (outOfRange.length > 10)
+                      Text('… 共 ${outOfRange.length} 处', style: const TextStyle(fontSize: 11, color: Colors.red)),
+                  ]),
+                if (missing.isNotEmpty)
+                  section('当前批次中、本次未包含的学生', [
+                    for (final e in missing.entries)
+                      Text('• ${envName[e.key]}缺 ${(e.value as List).length} 人',
+                          style: const TextStyle(fontSize: 12, color: Colors.orange)),
+                  ]),
+                if (ok)
+                  const Text('校验通过，可导入。', style: TextStyle(fontSize: 12, color: Colors.green))
+                else
+                  const Text('存在上述问题，仍可强制导入，但建议修正后重试。',
+                      style: TextStyle(fontSize: 12, color: Colors.orange)),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(ok ? '确认导入' : '仍然导入'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _generateFromQuizResults() async {
