@@ -897,6 +897,8 @@ class _ContinuousImprovementTabState
   bool _analyzing = false;
   List<Map<String, dynamic>> _suggestions = [];
   Map<String, dynamic>? _surveySummary;
+  // 各批次加权达成度对比 [{name, semester, weighted}]
+  List<Map<String, dynamic>> _comparison = [];
 
   @override
   void initState() {
@@ -907,9 +909,25 @@ class _ContinuousImprovementTabState
   Future<void> _loadBatches() async {
     try {
       final batches = await widget.achievementDao.getBatches();
+      // 收集各批次已保存的加权达成度，用于学期/批次纵向对比
+      final comparison = <Map<String, dynamic>>[];
+      for (final batch in batches) {
+        final id = batch['id'] as int?;
+        if (id == null) continue;
+        final res = await widget.achievementDao.getCalculationResults(id);
+        final weighted = (res?['weighted_achievement'] as num?)?.toDouble();
+        if (weighted != null) {
+          comparison.add({
+            'name': batch['batch_name'] ?? '未命名',
+            'semester': batch['semester'] ?? '',
+            'weighted': weighted,
+          });
+        }
+      }
       if (mounted) {
         setState(() {
           _batches = batches;
+          _comparison = comparison;
           _loading = false;
           if (_batches.isNotEmpty && _selectedBatchId == null) {
             _selectedBatchId = _batches.first['id'] as int;
@@ -962,6 +980,70 @@ class _ContinuousImprovementTabState
     }
   }
 
+  /// 学期/批次达成度对比卡片：横向条形展示各批次加权达成度，支撑持续改进的纵向分析。
+  Widget _buildSemesterComparisonCard(Color primary) {
+    if (_comparison.length < 2) {
+      return Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(children: [
+            Icon(Icons.compare_arrows, color: primary, size: 20),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text('学期对比：至少需要 2 个已计算达成度的批次才能对比',
+                  style: TextStyle(fontSize: 12, color: Colors.grey)),
+            ),
+          ]),
+        ),
+      );
+    }
+    final maxV = _comparison
+        .map((c) => (c['weighted'] as double))
+        .fold<double>(0.0, (a, b) => a > b ? a : b)
+        .clamp(0.01, 1.0);
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Icon(Icons.compare_arrows, color: primary, size: 22),
+            const SizedBox(width: 8),
+            const Text('学期/批次达成度对比',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ]),
+          const Divider(height: 20),
+          ..._comparison.map((c) {
+            final v = c['weighted'] as double;
+            final label = '${c['name']}'
+                '${(c['semester'] as String).isNotEmpty ? ' · ${c['semester']}' : ''}';
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(children: [
+                SizedBox(width: 110, child: Text(label, style: const TextStyle(fontSize: 10), overflow: TextOverflow.ellipsis)),
+                Expanded(
+                  child: Stack(children: [
+                    Container(height: 16, decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(3))),
+                    FractionallySizedBox(
+                      widthFactor: (v / maxV).clamp(0.0, 1.0),
+                      child: Container(height: 16, decoration: BoxDecoration(color: achievementLevelColor(v), borderRadius: BorderRadius.circular(3))),
+                    ),
+                  ]),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(width: 44, child: Text(v.toStringAsFixed(3), style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: achievementLevelColor(v)), textAlign: TextAlign.right)),
+              ]),
+            );
+          }),
+          const SizedBox(height: 4),
+          const Text('条形颜色按达成等级；可用于对比不同学期/班级的达成趋势。',
+              style: TextStyle(fontSize: 10, color: Colors.grey)),
+        ]),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -1003,6 +1085,10 @@ class _ContinuousImprovementTabState
               ),
             ),
           ),
+          const SizedBox(height: 16),
+
+          // 学期/批次达成度对比（持续改进的纵向视角）
+          _buildSemesterComparisonCard(primary),
           const SizedBox(height: 16),
 
           // 分析按钮
