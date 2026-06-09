@@ -1,4 +1,5 @@
-﻿import 'dart:math';
+﻿import 'dart:convert';
+import 'dart:math';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../../../../data/local/achievement_dao.dart';
@@ -600,7 +601,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
   Widget _buildSingleObjChart(int objIdx) {
     final color = kObjectiveColors[objIdx];
     final key = 'obj${objIdx + 1}_achievement';
-    final fullMark = [15.0, 25.0, 30.0, 30.0][objIdx];
+    final fullMark = AchievementConfig.defaults.fullMarks[objIdx];
     int cLow = 0, cMid = 0, cGood = 0, cExcel = 0;
     for (final s in _scores) {
       final v = (s[key] as num?)?.toDouble() ?? 0;
@@ -909,13 +910,18 @@ class _ContinuousImprovementTabState
   Future<void> _loadBatches() async {
     try {
       final batches = await widget.achievementDao.getBatches();
-      // 收集各批次已保存的加权达成度，用于学期/批次纵向对比
+      // 收集各批次已保存的加权达成度，用于学期/批次纵向对比。
+      // calc_results_json 已随 getBatches()(SELECT ab.*) 返回，直接解析，避免逐批次再查库。
       final comparison = <Map<String, dynamic>>[];
       for (final batch in batches) {
-        final id = batch['id'] as int?;
-        if (id == null) continue;
-        final res = await widget.achievementDao.getCalculationResults(id);
-        final weighted = (res?['weighted_achievement'] as num?)?.toDouble();
+        final json = batch['calc_results_json'] as String?;
+        if (json == null || json.isEmpty) continue;
+        double? weighted;
+        try {
+          weighted = (jsonDecode(json)['weighted_achievement'] as num?)?.toDouble();
+        } catch (e, st) {
+          swallowDebug(e, tag: 'CalcTab.parseCompare', stack: st);
+        }
         if (weighted != null) {
           comparison.add({
             'name': batch['batch_name'] ?? '未命名',
