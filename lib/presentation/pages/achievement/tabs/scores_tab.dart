@@ -1,9 +1,12 @@
-﻿import 'package:file_picker/file_picker.dart';
+﻿import 'dart:io';
+import 'package:file_picker/file_picker.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:flutter/material.dart';
 import '../../../../data/local/achievement_dao.dart';
 import '../../../../data/local/score_audit_dao.dart';
 import '../../../../services/auth_service.dart';
 import '../../../../services/achievement/achievement_excel_service.dart';
+import '../../../../services/output_path_service.dart';
 import '../../../../core/error_handler.dart';
 import '../achievement_shared.dart';
 import '../achievement_config.dart';
@@ -252,6 +255,46 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
     });
   }
 
+  /// 下载成绩导入模板（含大纲驱动的目标拆分表头），可预填当前批次学生名单。
+  Future<void> _downloadTemplate() async {
+    try {
+      final students = _selectedBatchId != null
+          ? await widget.achievementDao.getScoresByBatch(_selectedBatchId!)
+          : <Map<String, dynamic>>[];
+      final cfgRows =
+          await widget.achievementDao.getCourseObjectives('移动应用开发');
+      final cfg = cfgRows.isNotEmpty
+          ? AchievementConfig.fromObjectiveRows(cfgRows)
+          : AchievementConfig.defaults;
+      final bytes = AchievementExcelService.instance
+          .buildGradeTemplate(students: students, config: cfg);
+      if (bytes.isEmpty) throw StateError('模板生成失败');
+      final dir = await OutputPathService.getOutputDirectory();
+      final ts = DateTime.now()
+          .toIso8601String()
+          .replaceAll(RegExp(r'[:.]'), '-')
+          .substring(0, 19);
+      final file = File('${dir.path}/成绩导入模板_$ts.xlsx');
+      await file.writeAsBytes(bytes);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('模板已生成：${file.path}'),
+            action: SnackBarAction(label: '打开', onPressed: () => OpenFilex.open(file.path)),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ScoresTab.downloadTemplate', stack: st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('模板下载失败：$e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   /// 导入课程成绩模板 Excel（平时/实验/期末三明细表）到当前批次。
   Future<void> _importGradesExcel() async {
     if (_selectedBatchId == null) {
@@ -374,6 +417,13 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
+                    _buildActionChip(
+                      icon: Icons.download,
+                      label: '下载模板',
+                      onTap: _downloadTemplate,
+                      color: Colors.teal,
+                    ),
+                    const SizedBox(width: 8),
                     _buildActionChip(
                       icon: Icons.upload_file,
                       label: '导入成绩 Excel',
