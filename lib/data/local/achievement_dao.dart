@@ -661,6 +661,71 @@ class AchievementDao {
     return count;
   }
 
+  /// 从本系统已有数据自动获取各环节成绩，返回与 parseComponentSheets 同结构的
+  /// {pingshi, experiment, exam}，供与导入数据对比合并。
+  /// - 平时：quiz_results 按学生平均分 → 期间测验项(其余环节项缺省0)
+  /// - 实验：lab_submissions 按实验序(lab_tasks.id 升序)映射 exp1..N，归一百分制
+  /// - 期末：系统暂无对应数据源，返回空
+  Future<Map<String, List<Map<String, dynamic>>>> fetchSystemComponentScores() async {
+    final db = await DatabaseHelper.instance.database;
+    final pingshi = <Map<String, dynamic>>[];
+    final experiment = <Map<String, dynamic>>[];
+
+    final quiz = await db.rawQuery('''
+      SELECT u.user_id, u.real_name, AVG(q.score) AS avg_score
+      FROM users u
+      LEFT JOIN quiz_results q ON q.user_id = u.user_id
+      WHERE u.role = 'student' AND u.is_active = 1
+      GROUP BY u.user_id
+      HAVING avg_score IS NOT NULL
+    ''');
+    for (final r in quiz) {
+      pingshi.add({
+        'student_id': (r['user_id'] ?? '').toString(),
+        'student_name': (r['real_name'] ?? '').toString(),
+        'quiz_homework_score': (r['avg_score'] as num?)?.toDouble() ?? 0,
+      });
+    }
+
+    final labs = await db.rawQuery('''
+      SELECT s.user_id, u.real_name, s.score, t.id AS task_id, t.max_score
+      FROM lab_submissions s
+      LEFT JOIN users u ON u.user_id = s.user_id
+      LEFT JOIN lab_tasks t ON t.id = s.task_id
+      WHERE u.role = 'student' AND u.is_active = 1
+      ORDER BY t.id
+    ''');
+    final taskIds = <int>{};
+    for (final r in labs) {
+      final tid = (r['task_id'] as num?)?.toInt();
+      if (tid != null) taskIds.add(tid);
+    }
+    final sortedTaskIds = taskIds.toList()..sort();
+    final taskToExp = <int, int>{};
+    for (int i = 0; i < sortedTaskIds.length && i < 7; i++) {
+      taskToExp[sortedTaskIds[i]] = i + 1;
+    }
+    final byStu = <String, Map<String, dynamic>>{};
+    for (final r in labs) {
+      final sid = (r['user_id'] ?? '').toString();
+      if (sid.isEmpty) continue;
+      final tid = (r['task_id'] as num?)?.toInt();
+      final exp = tid != null ? taskToExp[tid] : null;
+      if (exp == null) continue;
+      final maxScore = (r['max_score'] as num?)?.toDouble() ?? 100;
+      final raw = (r['score'] as num?)?.toDouble() ?? 0;
+      final pct = maxScore > 0 ? (raw / maxScore * 100) : 0;
+      final row = byStu.putIfAbsent(sid, () => {
+            'student_id': sid,
+            'student_name': (r['real_name'] ?? '').toString(),
+          });
+      row['exp${exp}_score'] = pct;
+    }
+    experiment.addAll(byStu.values);
+
+    return {'pingshi': pingshi, 'experiment': experiment, 'exam': []};
+  }
+
 
   /// generateScoresFromQuizResults — 从测验成绩自动计算达成度
   Future<int> generateScoresFromQuizResults(int batchId) async {
