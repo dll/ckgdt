@@ -139,6 +139,82 @@ class AchievementExcelService {
     return out;
   }
 
+  /// 校验解析出的三环节成绩。返回结构化报告供导入前确认。
+  /// [roster]：班级应有学生名单 [{student_id, student_name}]，用于查缺；可空。
+  /// 报告字段：
+  ///   sheetsFound: 识别到的环节(pingshi/experiment/exam)
+  ///   counts: 各环节学生数
+  ///   missing: 各环节缺失的学号(对比 roster)
+  ///   outOfRange: 超出 0-100 的异常分值 [{env, student_id, field, value}]
+  ///   duplicates: 各环节内重复学号
+  ///   ok: 是否无阻断性问题(至少识别到一个环节且无结构错误)
+  Map<String, dynamic> validateComponents(
+    Map<String, List<Map<String, dynamic>>> components, {
+    List<Map<String, dynamic>> roster = const [],
+  }) {
+    final sheetsFound = <String>[];
+    final counts = <String, int>{};
+    final missing = <String, List<String>>{};
+    final duplicates = <String, List<String>>{};
+    final outOfRange = <Map<String, dynamic>>[];
+
+    final rosterIds = roster
+        .map((r) => (r['student_id'] ?? r['user_id'] ?? '').toString())
+        .where((s) => s.isNotEmpty)
+        .toSet();
+
+    const scoreFields = {
+      'pingshi': ['class_activity_score', 'quiz_homework_score', 'extra_learning_score'],
+      'experiment': ['exp1_score', 'exp2_score', 'exp3_score', 'exp4_score', 'exp5_score', 'exp6_score', 'exp7_score'],
+      'exam': ['project_score', 'group_score', 'individual_score', 'defense_score'],
+    };
+
+    for (final env in ['pingshi', 'experiment', 'exam']) {
+      final rows = components[env] ?? const [];
+      if (rows.isEmpty) continue;
+      sheetsFound.add(env);
+      counts[env] = rows.length;
+
+      // 重复学号
+      final seen = <String>{};
+      final dup = <String>[];
+      for (final r in rows) {
+        final id = (r['student_id'] ?? '').toString();
+        if (id.isEmpty) continue;
+        if (!seen.add(id)) dup.add(id);
+      }
+      if (dup.isNotEmpty) duplicates[env] = dup;
+
+      // 缺失学号（仅当提供了 roster）
+      if (rosterIds.isNotEmpty) {
+        final present = rows.map((r) => (r['student_id'] ?? '').toString()).toSet();
+        final miss = rosterIds.difference(present).toList()..sort();
+        if (miss.isNotEmpty) missing[env] = miss;
+      }
+
+      // 异常分值（0-100 之外）
+      for (final r in rows) {
+        final id = (r['student_id'] ?? '').toString();
+        for (final f in scoreFields[env]!) {
+          final v = (r[f] as num?)?.toDouble();
+          if (v != null && (v < 0 || v > 100)) {
+            outOfRange.add({'env': env, 'student_id': id, 'field': f, 'value': v});
+          }
+        }
+      }
+    }
+
+    final ok = sheetsFound.isNotEmpty && outOfRange.isEmpty && duplicates.isEmpty;
+    return {
+      'sheetsFound': sheetsFound,
+      'counts': counts,
+      'missing': missing,
+      'duplicates': duplicates,
+      'outOfRange': outOfRange,
+      'ok': ok,
+    };
+  }
+
   /// 找到含「学号」的表头行索引；找不到返回 -1。
   int _findStudentHeaderRow(xl.Sheet table) {
     for (int i = 0; i < table.rows.length && i < 10; i++) {
