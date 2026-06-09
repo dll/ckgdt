@@ -3,8 +3,8 @@
   "user_id": "2023210607",
   "user_name": "刘海静",
   "role": "student",
-  "synced_at": "2026-06-09T18:30:51.349554",
-  "last_active": "2026-06-09T18:30:51.349561",
+  "synced_at": "2026-06-09T18:34:12.757578",
+  "last_active": "2026-06-09T18:34:12.757606",
   "quiz_results": [
     {
       "user_id": "2023210607",
@@ -146,57 +146,12 @@
     }
   ],
   "student_reports": [],
-  "student_works": [
-    {
-      "title": "适老居家生活辅助系统",
-      "description": "【数据报表生成】自动汇总老人每日健康数据生成可视化报表，包含各项指标的正常/异常统计和变化趋势。【图表展示】使用图表组件展示血压、心率等健康数据的历史曲线，支持按日/周/月切换查看。【AI趋势分析】调用AI大模型分析老人健康数据的长期变化趋势，提前预警可能的健康风险并给出保健建议。",
-      "tech_stack": "C# + .NET + MAUI",
-      "work_type": "综合项目",
-      "group_name": "cg1-ehlas",
-      "leader_name": "刘海静",
-      "user_id": "2023210607",
-      "file_path": null,
-      "file_size": null,
-      "status": "待提交",
-      "submit_time": null,
-      "tags": "[\"C#\",\".NET\",\"MAUI\"]",
-      "created_at": "2026-05-22T23:02:53.870476",
-      "updated_at": "2026-05-22T23:02:53.870482",
-      "related_node_ids": null,
-      "ai_suspicion": 0.0,
-      "teacher_confirmed": 0,
-      "project_id": null,
-      "group_id": null,
-      "video_url": null,
-      "thumbnail_url": null,
-      "video_duration": null,
-      "view_count": 0,
-      "like_count": 0,
-      "comment_count": 0,
-      "repo": "cg1-ehlas",
-      "class_group": "cg1",
-      "project": "适老居家生活辅助系统",
-      "student_role": "MAUI开发工程师",
-      "student_name": "刘海静"
-    }
-  ],
+  "student_works": [],
   "survey_responses": [],
   "checkin_records": [],
   "work_comments": [],
   "work_likes": [],
-  "notification_recipients": [],
-  "work_views": [
-    {
-      "work_id": 66,
-      "user_id": "2023210607",
-      "viewed_at": "2026-05-31T23:34:31.394247"
-    },
-    {
-      "work_id": 94,
-      "user_id": "2023210607",
-      "viewed_at": "2026-05-31T23:30:51.228444"
-    }
-  ],
+  "work_views": [],
   "peer_reviews": [],
   "collaboration_messages": [],
   "contribution_scores": [],
