@@ -441,61 +441,56 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
         ),
       ),
       const SizedBox(height: 16),
-      // 散点图：学生个体加权达成度分布
-      Card(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('学生个体达成度散点图', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const Text('每点为一名学生的加权达成度',
-                style: TextStyle(fontSize: 11, color: Colors.grey)),
-            const SizedBox(height: 6),
-            _scatterLegend(primary),
-            const Divider(height: 20),
-            SizedBox(height: 220, child: ScatterChart(_buildScatterData(primary))),
-          ]),
+      // 四个课程目标：每个单独绘制学生个体达成度散点图（个体/平均/期望0.60）
+      for (int obj = 0; obj < 4; obj++) ...[
+        Card(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('学生个体课程目标${obj + 1}达成评价结果',
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              _objScatterLegend(obj),
+              const Divider(height: 20),
+              SizedBox(height: 200, child: ScatterChart(_buildObjScatterData(obj))),
+            ]),
+          ),
         ),
-      ),
-      const SizedBox(height: 16),
-      // 趋势图：四目标达成度折线
-      Card(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('课程目标达成度趋势', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const Divider(height: 20),
-            SizedBox(height: 200, child: LineChart(_buildTrendData(primary))),
-          ]),
-        ),
-      ),
+        const SizedBox(height: 16),
+      ],
     ]);
   }
 
-  /// 散点图数据：x=学生序号，y=该生加权达成度。
-  /// 网格线在 0.60(期望，红实线) 与班级均值(蓝实线) 处高亮，对齐参考报告样式。
-  ScatterChartData _buildScatterData(Color primary) {
-    final w = kDefaultWeights;
-    final spots = <ScatterSpot>[];
+  /// 计算某课程目标的班级平均达成度（obj: 0..3）。
+  double _objMean(int obj) {
+    if (_scores.isEmpty) return 0;
+    final key = 'obj${obj + 1}_achievement';
     double sum = 0;
+    for (final s in _scores) {
+      sum += (s[key] as num?)?.toDouble() ?? 0;
+    }
+    return sum / _scores.length;
+  }
+
+  /// 单个课程目标的学生个体散点图：x=学生序号，y=该生该目标达成度，
+  /// 红线=期望 0.60，彩色线=该目标班级平均。对齐参考报告"学生个体课程目标N达成评价结果"。
+  ScatterChartData _buildObjScatterData(int obj) {
+    final color = kObjectiveColors[obj];
+    final key = 'obj${obj + 1}_achievement';
+    final spots = <ScatterSpot>[];
     for (int i = 0; i < _scores.length; i++) {
-      final s = _scores[i];
-      double wt = 0;
-      for (int k = 0; k < 4; k++) {
-        wt += ((s['obj${k + 1}_achievement'] as num?)?.toDouble() ?? 0) * w[k];
-      }
-      sum += wt;
+      final v = (_scores[i][key] as num?)?.toDouble() ?? 0;
       spots.add(ScatterSpot(
         i.toDouble(),
-        double.parse(wt.toStringAsFixed(4)),
+        double.parse(v.toStringAsFixed(4)),
         dotPainter: FlDotCirclePainter(
-          radius: 4,
-          color: wt >= 0.60 ? primary : Colors.red,
+          radius: 3.5,
+          color: v >= 0.60 ? color : Colors.red,
         ),
       ));
     }
-    final mean = _scores.isEmpty ? 0.0 : sum / _scores.length;
+    final mean = _objMean(obj);
     return ScatterChartData(
       minX: 0,
       maxX: (_scores.length - 1).clamp(1, double.infinity).toDouble(),
@@ -510,7 +505,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
             return const FlLine(color: Colors.red, strokeWidth: 1.5);
           }
           if ((v - mean).abs() < 0.05) {
-            return FlLine(color: primary.withValues(alpha: 0.7), strokeWidth: 1.5);
+            return FlLine(color: color, strokeWidth: 1.5);
           }
           return FlLine(color: Colors.grey.withValues(alpha: 0.15), strokeWidth: 0.5);
         },
@@ -525,16 +520,10 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
     );
   }
 
-  /// 散点图图例（个体/平均/期望），对齐参考报告。
-  Widget _scatterLegend(Color primary) {
-    double sum = 0;
-    final w = kDefaultWeights;
-    for (final s in _scores) {
-      for (int k = 0; k < 4; k++) {
-        sum += ((s['obj${k + 1}_achievement'] as num?)?.toDouble() ?? 0) * w[k];
-      }
-    }
-    final mean = _scores.isEmpty ? 0.0 : sum / _scores.length;
+  /// 单目标散点图图例（个体/平均/期望）。
+  Widget _objScatterLegend(int obj) {
+    final color = kObjectiveColors[obj];
+    final mean = _objMean(obj);
     Widget item(Color c, String label, {bool line = false}) => Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -548,54 +537,10 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
           ],
         );
     return Wrap(spacing: 16, runSpacing: 4, children: [
-      item(primary, '个体达成度'),
-      item(primary.withValues(alpha: 0.7), '平均达成度(${mean.toStringAsFixed(2)})', line: true),
+      item(color, '个体达成度'),
+      item(color, '平均达成度(${mean.toStringAsFixed(2)})', line: true),
       item(Colors.red, '期望达成度(0.60)', line: true),
     ]);
-  }
-
-  /// 趋势折线：四目标班级平均达成度。
-  LineChartData _buildTrendData(Color primary) {
-    return LineChartData(
-      minY: 0,
-      maxY: 1,
-      gridData: const FlGridData(show: true, horizontalInterval: 0.2),
-      titlesData: FlTitlesData(
-        leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 32, interval: 0.2)),
-        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        bottomTitles: AxisTitles(sideTitles: SideTitles(
-          showTitles: true,
-          interval: 1,
-          getTitlesWidget: (v, _) {
-            const labels = ['目标1', '目标2', '目标3', '目标4'];
-            final i = v.round();
-            return (i >= 0 && i < labels.length && (v - i).abs() < 0.01)
-                ? Text(labels[i], style: const TextStyle(fontSize: 10))
-                : const SizedBox.shrink();
-          },
-        )),
-      ),
-      borderData: FlBorderData(show: true, border: Border.all(color: Colors.grey.withValues(alpha: 0.3))),
-      lineBarsData: [
-        LineChartBarData(
-          spots: [for (int i = 0; i < 4; i++) FlSpot(i.toDouble(), _classAvgAchievements[i])],
-          isCurved: true,
-          color: primary,
-          barWidth: 3,
-          dotData: const FlDotData(show: true),
-          belowBarData: BarAreaData(show: true, color: primary.withValues(alpha: 0.1)),
-        ),
-        LineChartBarData(
-          spots: const [FlSpot(0, 0.60), FlSpot(3, 0.60)],
-          isCurved: false,
-          color: Colors.red.withValues(alpha: 0.6),
-          barWidth: 1,
-          dashArray: [5, 3],
-          dotData: const FlDotData(show: false),
-        ),
-      ],
-    );
   }
 
   Widget _buildSingleObjChart(int objIdx) {
