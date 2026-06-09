@@ -352,6 +352,30 @@ class AchievementExcelService {
     }
     result['weights'] = weightItems;
 
+    // 解析期末考核评价内容表（| 基本要求 | 评价内容 | 比例 |），供报告表4。
+    final assessItems = <Map<String, dynamic>>[];
+    var inAssessTable = false;
+    for (final line in lines) {
+      if (line.contains('基本要求') && line.contains('评价内容')) {
+        inAssessTable = true;
+        continue;
+      }
+      if (inAssessTable) {
+        final m = RegExp(r'\|\s*课程目标\s*(\d)[^|]*\|\s*([^|]+?)\s*\|')
+            .firstMatch(line);
+        if (m != null) {
+          assessItems.add({
+            'objective': int.parse(m.group(1)!),
+            'content': m.group(2)!.trim(),
+          });
+        }
+        if (line.trim().isEmpty && assessItems.isNotEmpty) {
+          inAssessTable = false;
+        }
+      }
+    }
+    result['assessContents'] = assessItems;
+
     return result;
   }
 
@@ -448,6 +472,14 @@ class AchievementExcelService {
                 ?.replaceAll(RegExp(r'[^\d.]'), '') ??
             '';
       }
+    }
+    // 合并期末考核评价内容 → assess_content
+    final assessContents = (parsed['assessContents'] as List?) ?? const [];
+    for (final a in assessContents) {
+      final idx = (a['objective'] as num?)?.toInt() ?? 0;
+      if (idx == 0) continue;
+      final row = byIdx.putIfAbsent(idx, () => {'idx': idx, 'name': '课程目标$idx'});
+      row['assess_content'] = a['content'];
     }
     final rows = byIdx.values.toList()
       ..sort((a, b) => (a['idx'] as int).compareTo(b['idx'] as int));

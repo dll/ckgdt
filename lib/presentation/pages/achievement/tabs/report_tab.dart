@@ -44,11 +44,25 @@ class _ReportTabState extends State<ReportTab> {
   double _weightedAchievement = 0.0;
   Map<String, List<double>> _statistics = {}; // objectiveKey -> [mean, max, min, std]
   Map<String, dynamic>? _surveySummary;
+  // 课程目标配置：优先取大纲导入的 course_objectives，回退默认。
+  AchievementConfig _config = AchievementConfig.defaults;
 
   @override
   void initState() {
     super.initState();
     _loadBatches();
+    _loadConfig();
+  }
+
+  Future<void> _loadConfig() async {
+    try {
+      final rows = await widget.achievementDao.getCourseObjectives('移动应用开发');
+      if (mounted && rows.isNotEmpty) {
+        setState(() => _config = AchievementConfig.fromObjectiveRows(rows));
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ReportTab.loadConfig', stack: st);
+    }
   }
 
   Future<void> _loadBatches() async {
@@ -104,8 +118,8 @@ class _ReportTabState extends State<ReportTab> {
         }).toList();
       });
 
-      // 使用与 DAO addScore() 一致的满分比计算达成度（满分取 SSOT 配置）
-      final fullMarks = AchievementConfig.defaults.fullMarks;
+      // 使用与 DAO addScore() 一致的满分比计算达成度（满分取大纲/SSOT 配置）
+      final fullMarks = _config.fullMarks;
       final objAchievements = List<double>.generate(4, (i) {
         final values = objScores[i];
         final mean = values.reduce((a, b) => a + b) / values.length;
@@ -220,7 +234,7 @@ class _ReportTabState extends State<ReportTab> {
       final studentCount = scores.length;
 
       final buffer = StringBuffer();
-      const cfg = AchievementConfig.defaults;
+      final cfg = _config;
       final objDescFull = cfg.descriptions;
       final objIndicators = cfg.indicators;
       final objAssessContent = cfg.assessContents;
@@ -545,7 +559,7 @@ class _ReportTabState extends State<ReportTab> {
           orElse: () => <String, dynamic>{});
       final teacherName = widget.authService.currentUser?.realName ?? '教师';
       final scores = await widget.achievementDao.getScores(_selectedBatchId!);
-      const cfg = AchievementConfig.defaults;
+      final cfg = _config;
 
       // 分环节达成度（平时/实验/期末）用于报告表5
       final combined =
@@ -686,7 +700,7 @@ class _ReportTabState extends State<ReportTab> {
       final semester = batch['semester'] ?? '-';
       final teacherId = batch['teacher_id'] ?? '';
       final dateStr = DateTime.now().toString().substring(0, 10);
-      const cfg = AchievementConfig.defaults;
+      final cfg = _config;
       final objIndicators = cfg.indicators;
       final objDescShort = cfg.descriptions;
       final objMarks = cfg.fullMarks.map((m) => m.toInt()).toList();
