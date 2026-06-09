@@ -295,6 +295,56 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
     }
   }
 
+  /// 从本系统(测验/实验提交)自动获取成绩，经校验确认后导入当前批次。
+  Future<void> _importFromSystem() async {
+    if (_selectedBatchId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先选择批次')),
+      );
+      return;
+    }
+    final svc = AchievementExcelService.instance;
+    try {
+      setState(() => _generating = true);
+      final components =
+          await widget.achievementDao.fetchSystemComponentScores();
+      final total = (components['pingshi']?.length ?? 0) +
+          (components['experiment']?.length ?? 0);
+      if (total == 0) {
+        throw StateError('系统暂无可用的测验/实验数据');
+      }
+      final roster = await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
+      final report = svc.validateComponents(components, roster: roster);
+      if (!mounted) return;
+      setState(() => _generating = false);
+      final confirmed = await _showImportConfirm(components, report);
+      if (confirmed != true) return;
+      if (!mounted) return;
+      setState(() => _generating = true);
+      final count = await widget.achievementDao
+          .importComponentsToDatabase(_selectedBatchId!, components);
+      await _loadScores();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('已从系统获取并导入：$count 名学生（平时${components['pingshi']?.length ?? 0}/'
+                '实验${components['experiment']?.length ?? 0}），已合成达成度'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ScoresTab.importFromSystem', stack: st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('从系统获取失败：$e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _generating = false);
+    }
+  }
+
   /// 导入课程成绩模板 Excel（平时/实验/期末三明细表）到当前批次。
   Future<void> _importGradesExcel() async {
     if (_selectedBatchId == null) {
@@ -526,6 +576,13 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
                       label: '导入成绩 Excel',
                       onTap: _generating ? null : _importGradesExcel,
                       color: Colors.deepPurple,
+                    ),
+                    const SizedBox(width: 8),
+                    _buildActionChip(
+                      icon: Icons.cloud_download,
+                      label: '从系统获取',
+                      onTap: _generating ? null : _importFromSystem,
+                      color: Colors.indigo,
                     ),
                     const SizedBox(width: 8),
                     _buildActionChip(
