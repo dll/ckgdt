@@ -170,6 +170,13 @@ class AchievementExcelService {
   List<Map<String, dynamic>> _parsePingshiSheet(xl.Sheet table) {
     final hr = _findStudentHeaderRow(table);
     if (hr < 0) return [];
+    // 布局识别：本系统模板把 课堂/测验/大作业 放在第 2/3/4 列；
+    // 学校原始模板(表格48)是复杂多列，达成度子列在 13/25/36。
+    final headerC2 = _cellStr(table.rows[hr], 2);
+    final simple = headerC2.contains('课堂');
+    final cActivity = simple ? 2 : 13;
+    final cQuiz = simple ? 3 : 25;
+    final cExtra = simple ? 4 : 36;
     final rows = <Map<String, dynamic>>[];
     for (int i = hr + 1; i < table.rows.length; i++) {
       final row = table.rows[i];
@@ -178,9 +185,9 @@ class AchievementExcelService {
       rows.add({
         'student_id': sid,
         'student_name': _cellStr(row, 1),
-        'class_activity_score': _cell(row, 13), // 课堂表现最后得分
-        'quiz_homework_score': _cell(row, 25), // 期间测验平均分
-        'extra_learning_score': _cell(row, 36), // 大作业平均分
+        'class_activity_score': _cell(row, cActivity),
+        'quiz_homework_score': _cell(row, cQuiz),
+        'extra_learning_score': _cell(row, cExtra),
       });
     }
     return rows;
@@ -189,6 +196,11 @@ class AchievementExcelService {
   List<Map<String, dynamic>> _parseExperimentSheet(xl.Sheet table) {
     final hr = _findStudentHeaderRow(table);
     if (hr < 0) return [];
+    // 布局识别：本系统模板 exp1-7 连续在第 2..8 列；
+    // 学校原始模板每两实验后插一列"指标点达成度"，得分在 2,3,5,6,8,9,11。
+    final headerC4 = _cellStr(table.rows[hr], 4);
+    final simple = headerC4.contains('实验');
+    final cols = simple ? [2, 3, 4, 5, 6, 7, 8] : [2, 3, 5, 6, 8, 9, 11];
     final rows = <Map<String, dynamic>>[];
     for (int i = hr + 1; i < table.rows.length; i++) {
       final row = table.rows[i];
@@ -197,13 +209,7 @@ class AchievementExcelService {
       rows.add({
         'student_id': sid,
         'student_name': _cellStr(row, 1),
-        'exp1_score': _cell(row, 2),
-        'exp2_score': _cell(row, 3),
-        'exp3_score': _cell(row, 5),
-        'exp4_score': _cell(row, 6),
-        'exp5_score': _cell(row, 8),
-        'exp6_score': _cell(row, 9),
-        'exp7_score': _cell(row, 11),
+        for (int k = 0; k < 7; k++) 'exp${k + 1}_score': _cell(row, cols[k]),
       });
     }
     return rows;
@@ -534,5 +540,71 @@ class AchievementExcelService {
     });
 
     return count;
+  }
+
+  /// 生成成绩导入模板（.xlsx，3 个 sheet：平时成绩/实验成绩/期末成绩）。
+  /// 列布局与 parseComponentSheets 的简洁模板分支严格对齐，表头标注每列支撑的
+  /// 课程目标，体现大纲驱动的目标拆分。可选传入 [students] 预填学号/姓名名单。
+  ///
+  /// 目标拆分（与大纲一致）：
+  /// - 平时：课堂表现→目标1，期间测验→目标2，大作业/课外→目标4
+  /// - 实验：实验1,2→目标1，实验3,4→目标2，实验5,6→目标3，实验7→目标4
+  /// - 期末：项目→目标1，小组→目标2，个人→目标3，答辩→目标4
+  List<int> buildGradeTemplate({
+    List<Map<String, dynamic>> students = const [],
+    AchievementConfig? config,
+  }) {
+    final cfg = config ?? AchievementConfig.defaults;
+    final excel = xl.Excel.createExcel();
+    excel.delete('Sheet1');
+
+    String ind(int i) => i < cfg.indicators.length ? cfg.indicators[i] : '';
+
+    // ── 平时成绩：课堂表现(目标1)/期间测验(目标2)/大作业(目标4) ──
+    final ps = excel['平时成绩'];
+    ps.appendRow([
+      xl.TextCellValue('学号'),
+      xl.TextCellValue('姓名'),
+      xl.TextCellValue('课堂表现得分（目标1·满分100·支撑${ind(0)}）'),
+      xl.TextCellValue('期间测验平均分（目标2·满分100·支撑${ind(1)}）'),
+      xl.TextCellValue('大作业平均分（目标4·满分100·支撑${ind(3)}）'),
+    ]);
+
+    // ── 实验成绩：实验1-7，按 1,2→目标1 / 3,4→目标2 / 5,6→目标3 / 7→目标4 ──
+    final es = excel['实验成绩'];
+    es.appendRow([
+      xl.TextCellValue('学号'),
+      xl.TextCellValue('姓名'),
+      xl.TextCellValue('实验1得分（目标1）'),
+      xl.TextCellValue('实验2得分（目标1）'),
+      xl.TextCellValue('实验3得分（目标2）'),
+      xl.TextCellValue('实验4得分（目标2）'),
+      xl.TextCellValue('实验5得分（目标3）'),
+      xl.TextCellValue('实验6得分（目标3）'),
+      xl.TextCellValue('实验7得分（目标4）'),
+    ]);
+
+    // ── 期末成绩：项目(目标1)/小组(目标2)/个人(目标3)/答辩(目标4) ──
+    final xs = excel['期末成绩'];
+    xs.appendRow([
+      xl.TextCellValue('学号'),
+      xl.TextCellValue('姓名'),
+      xl.TextCellValue('项目得分（目标1·满分100）'),
+      xl.TextCellValue('小组得分（目标2·满分100）'),
+      xl.TextCellValue('个人得分（目标3·满分100）'),
+      xl.TextCellValue('答辩得分（目标4·满分100）'),
+    ]);
+
+    // 预填学生名单（学号/姓名），成绩列留空待教师填写
+    for (final s in students) {
+      final id = (s['student_id'] ?? s['user_id'] ?? '').toString();
+      final name = (s['student_name'] ?? s['real_name'] ?? '').toString();
+      if (id.isEmpty) continue;
+      ps.appendRow([xl.TextCellValue(id), xl.TextCellValue(name)]);
+      es.appendRow([xl.TextCellValue(id), xl.TextCellValue(name)]);
+      xs.appendRow([xl.TextCellValue(id), xl.TextCellValue(name)]);
+    }
+
+    return excel.save() ?? <int>[];
   }
 }
