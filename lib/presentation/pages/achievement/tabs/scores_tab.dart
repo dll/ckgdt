@@ -245,7 +245,11 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
           ),
         ],
       ),
-    );
+    ).then((_) {
+      for (final c in [studentIdCtrl, studentNameCtrl, obj1Ctrl, obj2Ctrl, obj3Ctrl, obj4Ctrl]) {
+        c.dispose();
+      }
+    });
   }
 
   /// 导入课程成绩模板 Excel（平时/实验/期末三明细表）到当前批次。
