@@ -809,12 +809,22 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('确认或修正课程目标的权重/指标点/满分后保存：',
+              const Text('解析得到以下课程目标，确认或修正后保存：',
                   style: TextStyle(fontSize: 13)),
               const SizedBox(height: 12),
               for (int i = 0; i < _rows.length; i++) ...[
-                Text('目标${_rows[i]['idx'] ?? i + 1}',
+                Text('课程目标${_rows[i]['idx'] ?? i + 1}',
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                if ((_rows[i]['description'] as String?)?.isNotEmpty ?? false) ...[
+                  const SizedBox(height: 4),
+                  Text(_rows[i]['description'].toString(),
+                      style: const TextStyle(fontSize: 12, height: 1.4)),
+                ],
+                if ((_rows[i]['assess_content'] as String?)?.isNotEmpty ?? false) ...[
+                  const SizedBox(height: 2),
+                  Text('考核内容：${_rows[i]['assess_content']}',
+                      style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                ],
                 const SizedBox(height: 6),
                 Row(children: [
                   Expanded(
