@@ -447,8 +447,10 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
           padding: const EdgeInsets.all(16),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Text('学生个体达成度散点图', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const Text('每点为一名学生的加权达成度，红线=达成阈值 0.60',
+            const Text('每点为一名学生的加权达成度',
                 style: TextStyle(fontSize: 11, color: Colors.grey)),
+            const SizedBox(height: 6),
+            _scatterLegend(primary),
             const Divider(height: 20),
             SizedBox(height: 220, child: ScatterChart(_buildScatterData(primary))),
           ]),
@@ -471,15 +473,18 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
   }
 
   /// 散点图数据：x=学生序号，y=该生加权达成度。
+  /// 网格线在 0.60(期望，红实线) 与班级均值(蓝实线) 处高亮，对齐参考报告样式。
   ScatterChartData _buildScatterData(Color primary) {
     final w = kDefaultWeights;
     final spots = <ScatterSpot>[];
+    double sum = 0;
     for (int i = 0; i < _scores.length; i++) {
       final s = _scores[i];
       double wt = 0;
       for (int k = 0; k < 4; k++) {
         wt += ((s['obj${k + 1}_achievement'] as num?)?.toDouble() ?? 0) * w[k];
       }
+      sum += wt;
       spots.add(ScatterSpot(
         i.toDouble(),
         double.parse(wt.toStringAsFixed(4)),
@@ -489,6 +494,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
         ),
       ));
     }
+    final mean = _scores.isEmpty ? 0.0 : sum / _scores.length;
     return ScatterChartData(
       minX: 0,
       maxX: (_scores.length - 1).clamp(1, double.infinity).toDouble(),
@@ -497,11 +503,16 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
       scatterSpots: spots,
       gridData: FlGridData(
         show: true,
-        horizontalInterval: 0.2,
-        getDrawingHorizontalLine: (v) => FlLine(
-          color: (v - 0.60).abs() < 0.001 ? Colors.red : Colors.grey.withValues(alpha: 0.2),
-          strokeWidth: (v - 0.60).abs() < 0.001 ? 1.5 : 0.5,
-        ),
+        horizontalInterval: 0.1,
+        getDrawingHorizontalLine: (v) {
+          if ((v - 0.60).abs() < 0.001) {
+            return const FlLine(color: Colors.red, strokeWidth: 1.5);
+          }
+          if ((v - mean).abs() < 0.05) {
+            return FlLine(color: primary.withValues(alpha: 0.7), strokeWidth: 1.5);
+          }
+          return FlLine(color: Colors.grey.withValues(alpha: 0.15), strokeWidth: 0.5);
+        },
       ),
       titlesData: const FlTitlesData(
         leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 32, interval: 0.2)),
@@ -511,6 +522,35 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
       ),
       borderData: FlBorderData(show: true, border: Border.all(color: Colors.grey.withValues(alpha: 0.3))),
     );
+  }
+
+  /// 散点图图例（个体/平均/期望），对齐参考报告。
+  Widget _scatterLegend(Color primary) {
+    double sum = 0;
+    final w = kDefaultWeights;
+    for (final s in _scores) {
+      for (int k = 0; k < 4; k++) {
+        sum += ((s['obj${k + 1}_achievement'] as num?)?.toDouble() ?? 0) * w[k];
+      }
+    }
+    final mean = _scores.isEmpty ? 0.0 : sum / _scores.length;
+    Widget item(Color c, String label, {bool line = false}) => Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: line ? 16 : 10,
+              height: line ? 2 : 10,
+              decoration: BoxDecoration(color: c, shape: line ? BoxShape.rectangle : BoxShape.circle),
+            ),
+            const SizedBox(width: 4),
+            Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+          ],
+        );
+    return Wrap(spacing: 16, runSpacing: 4, children: [
+      item(primary, '个体达成度'),
+      item(primary.withValues(alpha: 0.7), '平均达成度(${mean.toStringAsFixed(2)})', line: true),
+      item(Colors.red, '期望达成度(0.60)', line: true),
+    ]);
   }
 
   /// 趋势折线：四目标班级平均达成度。
