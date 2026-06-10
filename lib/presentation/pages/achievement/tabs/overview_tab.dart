@@ -68,7 +68,11 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
       if (raw.trim().isEmpty) return;
       setState(() => _importing = true);
       final svc = AchievementExcelService.instance;
-      final rows = await svc.aiExtractSyllabus(raw);
+      var rows = await svc.aiExtractSyllabus(raw);
+      // AI 不可用(无网络/超时)时回退正则解析，确保首次启动就有大纲数据
+      if (rows.isEmpty) {
+        rows = svc.syllabusToObjectiveRows(svc.parseSyllabusBytes(raw.codeUnits, 'md'));
+      }
       if (rows.isNotEmpty) {
         await widget.achievementDao.saveCourseObjectives('移动应用开发', rows);
         final objectives = (await widget.achievementDao.getCourseObjectives('移动应用开发'))
