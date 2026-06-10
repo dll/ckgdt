@@ -1,11 +1,16 @@
 ﻿import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import '../../../../data/local/achievement_dao.dart';
 import '../../../../data/local/survey_dao.dart';
 import '../../../../data/local/notification_dao.dart';
 import '../../../../services/auth_service.dart';
+import '../../../../services/output_path_service.dart';
 import '../../../../core/error_handler.dart';
 import '../achievement_shared.dart';
 import '../achievement_config.dart';
@@ -99,6 +104,45 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
     } finally {
       if (mounted) setState(() => _creatingSurvey = false);
     }
+  }
+
+  /// 将 [key] 标记的 Widget 截图保存为 PNG 到输出目录。
+  final Map<String, GlobalKey> _chartKeys = {};
+  GlobalKey _chartKey(String id) => _chartKeys.putIfAbsent(id, () => GlobalKey());
+
+  Future<void> _saveChartAsPng(String id, String name) async {
+    final key = _chartKeys[id];
+    if (key?.currentContext == null) return;
+    try {
+      final boundary = key!.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      final image = await boundary.toImage(pixelRatio: 2.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return;
+      final dir = await OutputPathService.getOutputDirectory();
+      final ts = DateTime.now().toIso8601String().replaceAll(RegExp(r'[:.]'), '-').substring(0, 19);
+      final file = File('${dir.path}/${name}_$ts.png');
+      await file.writeAsBytes(byteData.buffer.asUint8List());
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('图表已保存：${file.path}'), duration: const Duration(seconds: 3)));
+    } catch (e, st) {
+      swallowDebug(e, tag: 'CalcTab.savePng', stack: st);
+    }
+  }
+
+  /// 带 PNG 保存按钮的图表容器
+  Widget _chartWithSaveBtn(String chartId, String chartName, Widget chart) {
+    return Column(children: [
+      Align(
+        alignment: Alignment.topRight,
+        child: IconButton(
+          icon: const Icon(Icons.download, size: 16),
+          tooltip: '另存为PNG',
+          onPressed: () => _saveChartAsPng(chartId, chartName),
+          visualDensity: VisualDensity.compact,
+        ),
+      ),
+      RepaintBoundary(key: _chartKey(chartId), child: chart),
+    ]);
   }
 
   @override
@@ -533,7 +577,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
               const SizedBox(height: 6),
               _objScatterLegend(obj),
               const Divider(height: 20),
-              SizedBox(height: 200, child: ScatterChart(_buildObjScatterData(obj))),
+              SizedBox(height: 200, child: _chartWithSaveBtn('scatter$obj', '目标${obj + 1}散点图', ScatterChart(_buildObjScatterData(obj)))),
             ]),
           ),
         ),
@@ -733,6 +777,28 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                 ),
               ),
             ] else ...[
+              // 已有问卷：显示数据 + 可再发通知提醒学生填写
+              Row(children: [
+                Expanded(child: Text('问卷调查数据', style: TextStyle(fontSize: 12, color: Colors.grey.shade600))),
+                TextButton.icon(
+                  onPressed: () async {
+                    try {
+                      await NotificationDao().createNotification(
+                        title: '课程满意度调查提醒',
+                        content: '《移动应用开发》课程满意度调查正在进行中，请尚未填写的同学尽快完成。',
+                        creatorId: AuthService().getCurrentUserId(),
+                        targetType: 'all', type: 'survey', relatedEntityType: 'survey');
+                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('已通知全体学生填写问卷'), backgroundColor: Colors.green));
+                    } catch (e, st) {
+                      swallowDebug(e, tag: 'CalcTab.notifySurvey', stack: st);
+                    }
+                  },
+                  icon: const Icon(Icons.campaign, size: 14),
+                  label: const Text('发送问卷通知', style: TextStyle(fontSize: 11)),
+                ),
+              ]),
+              const SizedBox(height: 4),
               // 满意度概览
               Row(children: [
                 Expanded(
