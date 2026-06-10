@@ -579,24 +579,10 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
                     ),
                     const SizedBox(width: 8),
                     _buildActionChip(
-                      icon: Icons.cloud_download,
-                      label: '从系统获取',
-                      onTap: _generating ? null : _importFromSystem,
-                      color: Colors.indigo,
-                    ),
-                    const SizedBox(width: 8),
-                    _buildActionChip(
                       icon: Icons.person_add,
                       label: '添加成绩',
                       onTap: _showAddScoreDialog,
                       color: primary,
-                    ),
-                    const SizedBox(width: 8),
-                    _buildActionChip(
-                      icon: Icons.auto_fix_high,
-                      label: '自动从学生成绩计算',
-                      onTap: _generating ? null : _generateFromQuizResults,
-                      color: Colors.green,
                     ),
                   ],
                 ),
@@ -936,14 +922,6 @@ class _PingshiAchievementTabState extends State<PingshiAchievementTab> {
                     PopupMenuItem(value: s, child: Text(scoreSortLabel(s))),
                 ],
               ),
-              const SizedBox(width: 8),
-              ElevatedButton.icon(
-                onPressed: _generating ? null : _generateDemo,
-                icon: _generating
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.auto_fix_high, size: 18),
-                label: const Text('生成演示'),
-              ),
             ],
           ),
         ),
@@ -1029,7 +1007,7 @@ class _PingshiAchievementTabState extends State<PingshiAchievementTab> {
                       const SizedBox(height: 16),
                       const Text('暂无平时成绩数据', style: TextStyle(color: Colors.grey)),
                       const SizedBox(height: 8),
-                      const Text('点击「生成演示」按钮创建示例数据', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      const Text('请在成绩管理中导入或录入成绩数据', style: TextStyle(color: Colors.grey, fontSize: 12)),
                     ],
                   ),
                 )
@@ -1201,14 +1179,6 @@ class _ExperimentAchievementTabState extends State<ExperimentAchievementTab> {
                     PopupMenuItem(value: s, child: Text(scoreSortLabel(s))),
                 ],
               ),
-              const SizedBox(width: 8),
-              ElevatedButton.icon(
-                onPressed: _generating ? null : _generateDemo,
-                icon: _generating
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.auto_fix_high, size: 18),
-                label: const Text('生成演示'),
-              ),
             ],
           ),
         ),
@@ -1294,7 +1264,7 @@ class _ExperimentAchievementTabState extends State<ExperimentAchievementTab> {
                       const SizedBox(height: 16),
                       const Text('暂无实验成绩数据', style: TextStyle(color: Colors.grey)),
                       const SizedBox(height: 8),
-                      const Text('点击「生成演示」按钮创建示例数据', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      const Text('请在成绩管理中导入或录入成绩数据', style: TextStyle(color: Colors.grey, fontSize: 12)),
                     ],
                   ),
                 )
@@ -1477,14 +1447,6 @@ class _ExamAchievementTabState extends State<ExamAchievementTab> {
                     PopupMenuItem(value: s, child: Text(scoreSortLabel(s))),
                 ],
               ),
-              const SizedBox(width: 8),
-              ElevatedButton.icon(
-                onPressed: _generating ? null : _generateDemo,
-                icon: _generating
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.auto_fix_high, size: 18),
-                label: const Text('生成演示'),
-              ),
             ],
           ),
         ),
@@ -1570,7 +1532,7 @@ class _ExamAchievementTabState extends State<ExamAchievementTab> {
                       const SizedBox(height: 16),
                       const Text('暂无期末考核数据', style: TextStyle(color: Colors.grey)),
                       const SizedBox(height: 8),
-                      const Text('点击「生成演示」按钮创建示例数据', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      const Text('请在成绩管理中导入或录入成绩数据', style: TextStyle(color: Colors.grey, fontSize: 12)),
                     ],
                   ),
                 )
