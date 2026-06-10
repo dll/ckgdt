@@ -78,7 +78,16 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
         throw StateError('无法读取文件内容');
       }
       if (parsed['error'] != null) throw StateError(parsed['error'] as String);
-      final rows = svc.syllabusToObjectiveRows(parsed);
+      // 优先用 AI 全面解析(目标描述/指标点/权重/满分/章节/实验/三类评价标准)，
+      // 失败再回退正则解析。
+      List<Map<String, dynamic>> rows = const [];
+      if (f.bytes != null) {
+        final raw = svc.syllabusRawText(f.bytes!, ext);
+        rows = await svc.aiExtractSyllabus(raw);
+      }
+      if (rows.isEmpty) {
+        rows = svc.syllabusToObjectiveRows(parsed);
+      }
       if (rows.isEmpty) throw StateError('未从大纲中识别到课程目标/权重');
       if (!mounted) return;
       final edited = await _showSyllabusPreview(rows);
@@ -416,8 +425,9 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
       itemCount: _batches.length + 1,
       itemBuilder: (context, i) {
-        if (i == 0) return _buildSyllabusCard(primary);
-        final index = i - 1;
+        // 批次列表在上，课程大纲卡片在末尾（上下互换）
+        if (i == _batches.length) return _buildSyllabusCard(primary);
+        final index = i;
         final batch = _batches[index];
         final status = batch['status'] as String? ?? 'draft';
         final studentCount = batch['student_count'] ?? 0;
