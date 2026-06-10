@@ -744,7 +744,7 @@ class _PingshiAchievementTabState extends State<PingshiAchievementTab> {
   Map<String, double> _classAvg = {};
   ScoreSort _sort = ScoreSort.idAsc;
   bool _loading = true;
-  bool _generating = false;
+  bool 
 
   @override
   void initState() {
@@ -776,28 +776,6 @@ class _PingshiAchievementTabState extends State<PingshiAchievementTab> {
         _scores = scores;
         _classAvg = avg;
       });
-    }
-  }
-
-  Future<void> _generateDemo() async {
-    if (_selectedBatchId == null) return;
-    setState(() => _generating = true);
-    try {
-      await widget.achievementDao.generatePingshiDemoScores(_selectedBatchId!);
-      await _loadScores();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('平时成绩演示数据已生成'), backgroundColor: Colors.green),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('生成失败：$e'), backgroundColor: Colors.red),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _generating = false);
     }
   }
 
@@ -1001,7 +979,7 @@ class _ExperimentAchievementTabState extends State<ExperimentAchievementTab> {
   Map<String, double> _classAvg = {};
   ScoreSort _sort = ScoreSort.idAsc;
   bool _loading = true;
-  bool _generating = false;
+  bool 
 
   @override
   void initState() {
@@ -1033,28 +1011,6 @@ class _ExperimentAchievementTabState extends State<ExperimentAchievementTab> {
         _scores = scores;
         _classAvg = avg;
       });
-    }
-  }
-
-  Future<void> _generateDemo() async {
-    if (_selectedBatchId == null) return;
-    setState(() => _generating = true);
-    try {
-      await widget.achievementDao.generateExperimentDemoScores(_selectedBatchId!);
-      await _loadScores();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('实验成绩演示数据已生成'), backgroundColor: Colors.green),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('生成失败：$e'), backgroundColor: Colors.red),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _generating = false);
     }
   }
 
@@ -1269,7 +1225,7 @@ class _ExamAchievementTabState extends State<ExamAchievementTab> {
   Map<String, double> _classAvg = {};
   ScoreSort _sort = ScoreSort.idAsc;
   bool _loading = true;
-  bool _generating = false;
+  bool 
 
   @override
   void initState() {
@@ -1301,28 +1257,6 @@ class _ExamAchievementTabState extends State<ExamAchievementTab> {
         _scores = scores;
         _classAvg = avg;
       });
-    }
-  }
-
-  Future<void> _generateDemo() async {
-    if (_selectedBatchId == null) return;
-    setState(() => _generating = true);
-    try {
-      await widget.achievementDao.generateExamDemoScores(_selectedBatchId!);
-      await _loadScores();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('期末考核演示数据已生成'), backgroundColor: Colors.green),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('生成失败：$e'), backgroundColor: Colors.red),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _generating = false);
     }
   }
 
