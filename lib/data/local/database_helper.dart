@@ -828,6 +828,7 @@ class DatabaseHelper {
     await _migrateToV24(db);
     await _migrateToV26(db);
     await _ensureAchievementColumns(db);
+    await _ensureCourseObjectivesColumns(db);
   }
 
   /// 补齐 achievement_batches 表可能缺少的 calc_results_json 列
@@ -841,21 +842,25 @@ class DatabaseHelper {
         debugPrint('=== DatabaseHelper: Added calc_results_json column to achievement_batches');
       } catch (e2) {
         swallow(e2, tag: 'DatabaseHelper.alterAchievement');
-            // 大纲 AI 解析新增字段
-            try {
-              await db.execute('ALTER TABLE course_objectives ADD COLUMN experiments TEXT');
-            } catch (_) {}
-            try {
-              await db.execute('ALTER TABLE course_objectives ADD COLUMN pingshi_standard TEXT');
-            } catch (_) {}
-            try {
-              await db.execute('ALTER TABLE course_objectives ADD COLUMN experiment_standard TEXT');
-            } catch (_) {}
-      } catch (e2) {
-        swallow(e2, tag: 'DatabaseHelper.alterAchievement');
       }
     }
   }
+
+  /// 补齐 course_objectives 表可能缺少的 AI 解析列
+  Future<void> _ensureCourseObjectivesColumns(Database db) async {
+    for (final col in ['experiments', 'pingshi_standard', 'experiment_standard']) {
+      try {
+        await db.rawQuery('SELECT $col FROM course_objectives LIMIT 1');
+      } catch (_) {
+        try {
+          await db.execute('ALTER TABLE course_objectives ADD COLUMN $col TEXT');
+        } catch (e2) {
+          swallow(e2, tag: 'DatabaseHelper.alterCourseObjectives.$col');
+        }
+      }
+    }
+  }
+
 
   /// 补齐 users 表可能缺少的列（V10: repository_url）
   Future<void> _ensureUsersColumns(Database db) async {
