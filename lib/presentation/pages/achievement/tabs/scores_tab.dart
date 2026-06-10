@@ -1546,7 +1546,7 @@ class _ComponentExpandTileState extends State<_ComponentExpandTile> {
     setState(() { _expanded = true; _loading = true; });
     final tableName = widget.env == 'pingshi' ? 'achievement_pingshi_scores' : widget.env == 'experiment' ? 'achievement_experiment_scores' : 'achievement_exam_scores';
     final db = await DatabaseHelper.instance.database;
-    final r = await db.query(tableName, where: 'batch_id=?', whereArgs: [widget.batchId], orderBy: 'student_id ASC', limit: 30);
+    final r = await db.query(tableName, where: 'batch_id=?', whereArgs: [widget.batchId], orderBy: 'student_id ASC');
     if (mounted) setState(() { _rows = r; _loading = false; });
   }
   @override Widget build(BuildContext context) {
