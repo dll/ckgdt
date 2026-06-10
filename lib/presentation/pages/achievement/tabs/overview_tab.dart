@@ -914,18 +914,123 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
   Widget build(BuildContext context) {
     final sum = _weightSum;
     final sumOk = (sum - 1.0).abs() < 0.001;
+    // 合成三个汇总表
+    final hasExp = _rows.any((r) => (r['experiments'] ?? '').toString().isNotEmpty);
+    final hasCh = _rows.any((r) => (r['chapters'] ?? '').toString().isNotEmpty);
+
     return AlertDialog(
-      title: const Text('大纲解析结果（可编辑）'),
+      title: const Text('大纲 AI 解析结果'),
       content: SizedBox(
-        width: 420,
+        width: 520,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('解析得到以下课程目标，确认或修正后保存：',
-                  style: TextStyle(fontSize: 13)),
-              const SizedBox(height: 12),
+              // ═══ 表1：课程目标达成考核与评价方式及成绩评定对照表 ═══
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.blue.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.withValues(alpha: 0.15)),
+                ),
+                padding: const EdgeInsets.all(10),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('课程目标达成考核与评价方式及成绩评定对照表',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  const SizedBox(height: 8),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      columnSpacing: 12,
+                      headingRowHeight: 32,
+                      dataRowMinHeight: 28,
+                      columns: const [
+                        DataColumn(label: Text('课程目标', style: TextStyle(fontSize: 11))),
+                        DataColumn(label: Text('权重', style: TextStyle(fontSize: 11))),
+                        DataColumn(label: Text('平时(20%)', style: TextStyle(fontSize: 11))),
+                        DataColumn(label: Text('实验(30%)', style: TextStyle(fontSize: 11))),
+                        DataColumn(label: Text('期末(50%)', style: TextStyle(fontSize: 11))),
+                        DataColumn(label: Text('指标点', style: TextStyle(fontSize: 11))),
+                      ],
+                      rows: _rows.map((r) {
+                        final fm = (r['full_mark'] as num?)?.toDouble() ?? 0;
+                        return DataRow(cells: [
+                          DataCell(Text('目标${r['idx']}', style: const TextStyle(fontSize: 11))),
+                          DataCell(Text((r['weight'] ?? 0).toString(), style: const TextStyle(fontSize: 11))),
+                          DataCell(Text('${fm.toInt()}分', style: const TextStyle(fontSize: 11))),
+                          DataCell(Text('${fm.toInt()}分', style: const TextStyle(fontSize: 11))),
+                          DataCell(Text('${fm.toInt()}分', style: const TextStyle(fontSize: 11))),
+                          DataCell(Text('${r['indicator'] ?? ''}', style: const TextStyle(fontSize: 11))),
+                        ]);
+                      }).toList(),
+                    ),
+                  ),
+                ]),
+              ),
+
+              // ═══ 表2：实验→目标分配 ═══
+              if (hasExp) ...[
+                const SizedBox(height: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.teal.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.teal.withValues(alpha: 0.15)),
+                  ),
+                  padding: const EdgeInsets.all(10),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Text('实验项目与目标对应表',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    const SizedBox(height: 6),
+                    Wrap(spacing: 8, runSpacing: 4, children: _rows.where((r) => (r['experiments'] ?? '').toString().isNotEmpty).map((r) => Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: kObjectiveColors[((r['idx'] as num?)?.toInt() ?? 1) - 1].withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text('目标${r['idx']} → ${r['experiments']}',
+                          style: const TextStyle(fontSize: 11)),
+                    )).toList()),
+                  ]),
+                ),
+              ],
+
+              // ═══ 表3：章节→目标分配 ═══
+              if (hasCh) ...[
+                const SizedBox(height: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.withValues(alpha: 0.15)),
+                  ),
+                  padding: const EdgeInsets.all(10),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Text('章节与教学安排→目标对应表',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    const SizedBox(height: 6),
+                    Wrap(spacing: 8, runSpacing: 4, children: _rows.where((r) => (r['chapters'] ?? '').toString().isNotEmpty).map((r) => Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: kObjectiveColors[((r['idx'] as num?)?.toInt() ?? 1) - 1].withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text('目标${r['idx']} → ${r['chapters']}',
+                          style: const TextStyle(fontSize: 11)),
+                    )).toList()),
+                  ]),
+                ),
+              ],
+
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 8),
+
+              // 以下：每个课程目标的详细信息（可编辑权重/指标点/满分）
+              Text('各目标详情（确认或修正）',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
+              const SizedBox(height: 10),
               for (int i = 0; i < _rows.length; i++) ...[
                 Text('课程目标${_rows[i]['idx'] ?? i + 1}',
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
@@ -959,7 +1064,7 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
                   Text('实验标准：${_rows[i]['experiment_standard']}',
                       style: const TextStyle(fontSize: 10, color: Colors.grey)),
                 ],
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Row(children: [
                   Expanded(
                     child: TextField(
