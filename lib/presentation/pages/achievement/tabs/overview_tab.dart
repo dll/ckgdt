@@ -46,7 +46,7 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
       if (mounted) {
         setState(() {
           _batches = batches;
-          _objectives = objectives;
+          _objectives = objectives.where((o) => ((o['idx'] as num?)?.toInt() ?? 0) <= 4).toList();
           _loading = false;
         });
       }
@@ -71,8 +71,8 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
       final rows = await svc.aiExtractSyllabus(raw);
       if (rows.isNotEmpty) {
         await widget.achievementDao.saveCourseObjectives('移动应用开发', rows);
-        final objectives =
-            await widget.achievementDao.getCourseObjectives('移动应用开发');
+        final objectives = (await widget.achievementDao.getCourseObjectives('移动应用开发'))
+            .where((o) => ((o['idx'] as num?)?.toInt() ?? 0) <= 4).toList();
         if (mounted) setState(() => _objectives = objectives);
       }
     } catch (e, st) {
@@ -1014,7 +1014,7 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
                     Wrap(spacing: 8, runSpacing: 4, children: _rows.where((r) => (r['experiments'] ?? '').toString().isNotEmpty).map((r) => Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: kObjectiveColors[((r['idx'] as num?)?.toInt() ?? 1) - 1].withValues(alpha: 0.08),
+                        color: kObjectiveColors[(((r['idx'] as num?)?.toInt() ?? 1) - 1).clamp(0, 3)].withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text('目标${r['idx']} → ${r['experiments']}',
@@ -1041,7 +1041,7 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
                     Wrap(spacing: 8, runSpacing: 4, children: _rows.where((r) => (r['chapters'] ?? '').toString().isNotEmpty).map((r) => Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: kObjectiveColors[((r['idx'] as num?)?.toInt() ?? 1) - 1].withValues(alpha: 0.08),
+                        color: kObjectiveColors[(((r['idx'] as num?)?.toInt() ?? 1) - 1).clamp(0, 3)].withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text('目标${r['idx']} → ${r['chapters']}',
