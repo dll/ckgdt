@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:flutter/material.dart';
 import '../../../../data/local/achievement_dao.dart';
+import '../../../../data/local/database_helper.dart';
 import '../../../../data/local/score_audit_dao.dart';
 import '../../../../services/auth_service.dart';
 import '../../../../services/achievement/achievement_excel_service.dart';
@@ -540,17 +541,65 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
                         ],
                       ),
                     )
-                  : RefreshIndicator(
-                      onRefresh: _loadScores,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(12),
-                        itemCount: _scores.length,
-                        itemBuilder: (_, index) => _buildScoreCard(_scores[index]),
-                      ),
-                    ),
+                  : _buildScoreSummary(),
         ),
       ],
     );
+  }
+
+  Widget _buildScoreSummary() {
+    return FutureBuilder<Map<String, int>>(
+      future: _loadComponentCounts(),
+      builder: (ctx, snapshot) {
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        final counts = snapshot.data!;
+        if (counts.values.every((c) => c == 0)) {
+          return const Center(child: Text('暂无成绩数据', style: TextStyle(color: Colors.grey)));
+        }
+        return ListView(padding: const EdgeInsets.all(16), children: [
+          Card(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Padding(padding: const EdgeInsets.all(20), child: Column(children: [
+              const Text('成绩导入概况', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Divider(height: 24),
+              Row(children: [
+                _countCard(Icons.school_outlined, '平时成绩', counts['pingshi'] ?? 0, Colors.blue),
+                const SizedBox(width: 12),
+                _countCard(Icons.science_outlined, '实验成绩', counts['experiment'] ?? 0, Colors.green),
+                const SizedBox(width: 12),
+                _countCard(Icons.assignment_outlined, '期末成绩', counts['exam'] ?? 0, Colors.orange),
+              ]),
+              const SizedBox(height: 16),
+              const Text('各环节详情请查看对应Tab', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            ])),
+          ),
+        ]);
+      },
+    );
+  }
+
+  Future<Map<String, int>> _loadComponentCounts() async {
+    if (_selectedBatchId == null) return {};
+    try {
+      final db = await DatabaseHelper.instance.database;
+      final p = await db.rawQuery('SELECT COUNT(*) as c FROM achievement_pingshi_scores WHERE batch_id=?', [_selectedBatchId]);
+      final e = await db.rawQuery('SELECT COUNT(*) as c FROM achievement_experiment_scores WHERE batch_id=?', [_selectedBatchId]);
+      final x = await db.rawQuery('SELECT COUNT(*) as c FROM achievement_exam_scores WHERE batch_id=?', [_selectedBatchId]);
+      return {'pingshi': (p.first['c'] as int?) ?? 0, 'experiment': (e.first['c'] as int?) ?? 0, 'exam': (x.first['c'] as int?) ?? 0};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Widget _countCard(IconData icon, String label, int count, Color color) {
+    return Expanded(child: Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(10)),
+      child: Column(children: [
+        Icon(icon, color: color, size: 28), const SizedBox(height: 8),
+        Text('$count', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: color)),
+        const SizedBox(height: 4), Text(label, style: TextStyle(fontSize: 12, color: color)),
+      ]),
+    ));
   }
 
   Widget _buildBatchDropdown(Color primary) {
@@ -744,7 +793,7 @@ class _PingshiAchievementTabState extends State<PingshiAchievementTab> {
   Map<String, double> _classAvg = {};
   ScoreSort _sort = ScoreSort.idAsc;
   bool _loading = true;
-  bool 
+  bool _generating = false;
 
   @override
   void initState() {
@@ -979,7 +1028,7 @@ class _ExperimentAchievementTabState extends State<ExperimentAchievementTab> {
   Map<String, double> _classAvg = {};
   ScoreSort _sort = ScoreSort.idAsc;
   bool _loading = true;
-  bool 
+  bool _generating = false;
 
   @override
   void initState() {
@@ -1225,7 +1274,7 @@ class _ExamAchievementTabState extends State<ExamAchievementTab> {
   Map<String, double> _classAvg = {};
   ScoreSort _sort = ScoreSort.idAsc;
   bool _loading = true;
-  bool 
+  bool _generating = false;
 
   @override
   void initState() {
