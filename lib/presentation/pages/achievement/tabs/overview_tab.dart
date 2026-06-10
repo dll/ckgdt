@@ -1,5 +1,6 @@
 ﻿import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import '../../../../core/error_handler.dart';
 import '../../../../data/local/achievement_dao.dart';
 import '../../../../services/achievement/achievement_excel_service.dart';
@@ -39,7 +40,7 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
   Future<void> _loadBatches() async {
     try {
       final batches = await widget.achievementDao.getBatches();
-      // 课程大纲(课程目标)是课程级数据，已导入则常驻显示，无需用户每次重新上传
+      // 课程大纲(课程目标)是课程级数据，已导入则常驻显示
       final objectives =
           await widget.achievementDao.getCourseObjectives('移动应用开发');
       if (mounted) {
@@ -49,8 +50,35 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
           _loading = false;
         });
       }
+      // 数据不完整(chapters/experiments为空)时自动用内置大纲AI解析补全
+      final needsAi = objectives.isEmpty ||
+          objectives.every((o) => (o['chapters'] ?? '').toString().isEmpty);
+      if (needsAi) {
+        _autoParseBundledSyllabus();
+      }
     } catch (e) {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// 从内置资源自动 AI 解析大纲（数据不完整时自动触发，无需用户操作）
+  Future<void> _autoParseBundledSyllabus() async {
+    try {
+      final raw = await rootBundle.loadString('assets/syllabus/软件+6+《移动应用开发》+教学大纲+刘东良+new.md');
+      if (raw.trim().isEmpty) return;
+      setState(() => _importing = true);
+      final svc = AchievementExcelService.instance;
+      final rows = await svc.aiExtractSyllabus(raw);
+      if (rows.isNotEmpty) {
+        await widget.achievementDao.saveCourseObjectives('移动应用开发', rows);
+        final objectives =
+            await widget.achievementDao.getCourseObjectives('移动应用开发');
+        if (mounted) setState(() => _objectives = objectives);
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'Overview.autoParse', stack: st);
+    } finally {
+      if (mounted) setState(() => _importing = false);
     }
   }
 
