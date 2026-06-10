@@ -7,7 +7,6 @@ import 'archive_constants.dart';
 import 'tabs/period_tab.dart';
 import 'tabs/midterm_tab.dart';
 import 'tabs/final_tab.dart';
-import 'tabs/archive_content_tab.dart';
 
 class ArchivePage extends StatefulWidget {
   const ArchivePage({super.key});
@@ -121,7 +120,13 @@ class _ArchivePageState extends State<ArchivePage>
                 dao: _dao,
                 agent: _agent,
               ),
-              const ArchiveContentTab(),
+              ArchivePeriodTab(
+                periodKey: 'archive',
+                courseType: _detectedCourseType,
+                dao: _dao,
+                agent: _agent,
+                onSyllabusChanged: _detectCourseTypeFromSyllabus,
+              ),
             ],
           ),
         ),
