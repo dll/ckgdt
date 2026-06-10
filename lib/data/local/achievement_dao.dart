@@ -1373,10 +1373,10 @@ class AchievementDao {
         where: 'batch_id = ?', whereArgs: [batchId]);
   }
 
-  /// 计算实验成绩的分项达成度
-  /// 实验1-2平均/100→目标1, 实验3-4平均/100→目标2,
-  /// 实验5-6平均/100→目标3, 实验7/100→目标4
-  /// 总评 = 七次实验平均分
+  /// 计算实验成绩的分项达成度（以大纲为准：6次实验）
+  /// 实验1,2平均/100→目标1, 实验3,4平均/100→目标2,
+  /// 实验5/100→目标3, 实验6/100→目标4(综合,支撑目标1-4)
+  /// exp7_score 为兼容旧数据保留，计算忽略
   Map<String, double> calculateExperimentAchievement(Map<String, dynamic> score) {
     final e1 = (score['exp1_score'] as num?)?.toDouble() ?? 0;
     final e2 = (score['exp2_score'] as num?)?.toDouble() ?? 0;
@@ -1384,13 +1384,12 @@ class AchievementDao {
     final e4 = (score['exp4_score'] as num?)?.toDouble() ?? 0;
     final e5 = (score['exp5_score'] as num?)?.toDouble() ?? 0;
     final e6 = (score['exp6_score'] as num?)?.toDouble() ?? 0;
-    final e7 = (score['exp7_score'] as num?)?.toDouble() ?? 0;
 
     final obj1Ach = ((e1 + e2) / 2 / 100).clamp(0.0, 1.0);
     final obj2Ach = ((e3 + e4) / 2 / 100).clamp(0.0, 1.0);
-    final obj3Ach = ((e5 + e6) / 2 / 100).clamp(0.0, 1.0);
-    final obj4Ach = (e7 / 100).clamp(0.0, 1.0);
-    final total = (e1 + e2 + e3 + e4 + e5 + e6 + e7) / 7;
+    final obj3Ach = (e5 / 100).clamp(0.0, 1.0);
+    final obj4Ach = (e6 / 100).clamp(0.0, 1.0);
+    final total = (e1 + e2 + e3 + e4 + e5 + e6) / 6;
 
     return {
       'obj1_achievement': obj1Ach,
