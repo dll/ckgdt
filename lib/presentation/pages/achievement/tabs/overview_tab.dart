@@ -390,6 +390,8 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
     final indicator = (o['indicator'] ?? '').toString();
     final desc = (o['description'] ?? '').toString();
     final assess = (o['assess_content'] ?? '').toString();
+    final chapters = (o['chapters'] ?? '').toString();
+    final experiments = (o['experiments'] ?? '').toString();
     return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Container(
         width: 72,
@@ -415,6 +417,13 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
             if (indicator.isNotEmpty) '支撑毕业要求 $indicator',
             if (assess.isNotEmpty) '考核：$assess',
           ].join(' · '), style: const TextStyle(fontSize: 10, color: Colors.grey)),
+          if (chapters.isNotEmpty || experiments.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text([
+              if (chapters.isNotEmpty) '章节：$chapters',
+              if (experiments.isNotEmpty) '实验：$experiments',
+            ].join(' ｜ '), style: const TextStyle(fontSize: 10, color: Colors.blueGrey)),
+          ],
         ]),
       ),
     ]);
@@ -929,6 +938,26 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
                   const SizedBox(height: 2),
                   Text('考核内容：${_rows[i]['assess_content']}',
                       style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                ],
+                if ((_rows[i]['chapters'] as String?)?.isNotEmpty ?? false) ...[
+                  const SizedBox(height: 2),
+                  Text('支撑章节：${_rows[i]['chapters']}',
+                      style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
+                ],
+                if ((_rows[i]['experiments'] as String?)?.isNotEmpty ?? false) ...[
+                  const SizedBox(height: 2),
+                  Text('支撑实验：${_rows[i]['experiments']}',
+                      style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
+                ],
+                if ((_rows[i]['pingshi_standard'] as String?)?.isNotEmpty ?? false) ...[
+                  const SizedBox(height: 2),
+                  Text('平时标准：${_rows[i]['pingshi_standard']}',
+                      style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                ],
+                if ((_rows[i]['experiment_standard'] as String?)?.isNotEmpty ?? false) ...[
+                  const SizedBox(height: 2),
+                  Text('实验标准：${_rows[i]['experiment_standard']}',
+                      style: const TextStyle(fontSize: 10, color: Colors.grey)),
                 ],
                 const SizedBox(height: 6),
                 Row(children: [

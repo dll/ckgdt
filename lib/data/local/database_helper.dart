@@ -841,6 +841,18 @@ class DatabaseHelper {
         debugPrint('=== DatabaseHelper: Added calc_results_json column to achievement_batches');
       } catch (e2) {
         swallow(e2, tag: 'DatabaseHelper.alterAchievement');
+            // 大纲 AI 解析新增字段
+            try {
+              await db.execute('ALTER TABLE course_objectives ADD COLUMN experiments TEXT');
+            } catch (_) {}
+            try {
+              await db.execute('ALTER TABLE course_objectives ADD COLUMN pingshi_standard TEXT');
+            } catch (_) {}
+            try {
+              await db.execute('ALTER TABLE course_objectives ADD COLUMN experiment_standard TEXT');
+            } catch (_) {}
+      } catch (e2) {
+        swallow(e2, tag: 'DatabaseHelper.alterAchievement');
       }
     }
   }
@@ -1334,6 +1346,9 @@ class DatabaseHelper {
         chapters TEXT,
         description TEXT,
         assess_content TEXT,
+        experiments TEXT,
+        pingshi_standard TEXT,
+        experiment_standard TEXT,
         created_at TEXT,
         updated_at TEXT,
         UNIQUE(course_name, idx)
