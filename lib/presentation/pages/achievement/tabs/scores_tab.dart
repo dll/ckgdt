@@ -569,9 +569,12 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
                 _countCard(Icons.assignment_outlined, '期末成绩', counts['exam'] ?? 0, Colors.orange),
               ]),
               const SizedBox(height: 16),
-              const Text('各环节详情请查看对应Tab', style: TextStyle(fontSize: 12, color: Colors.grey)),
+              const Text('点击展开查看/管理各环节成绩：', style: TextStyle(fontSize: 12, color: Colors.grey)),
             ])),
           ),
+          _buildComponentPreview('pingshi', '平时成绩', Icons.school_outlined, Colors.blue),
+          _buildComponentPreview('experiment', '实验成绩', Icons.science_outlined, Colors.green),
+          _buildComponentPreview('exam', '期末成绩', Icons.assignment_outlined, Colors.orange),
         ]);
       },
     );
@@ -600,6 +603,41 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
         const SizedBox(height: 4), Text(label, style: TextStyle(fontSize: 12, color: color)),
       ]),
     ));
+  }
+
+  Widget _buildComponentPreview(String env, String title, IconData icon, Color color) {
+    final colLabels = _envColLabels(env); final colKeys = _envColKeys(env);
+    return Card(margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: _ComponentExpandTile(
+        title: title, icon: icon, color: color,
+        batchId: _selectedBatchId!, env: env,
+        colLabels: colLabels, colKeys: colKeys,
+      ),
+    );
+  }
+
+  List<String> _envColLabels(String env) {
+    switch (env) {
+      case 'pingshi': return ['课堂表现', '期间测验', '课外学习', '总评'];
+      case 'experiment': return ['实验1','实验2','实验3','实验4','实验5','实验6','总评'];
+      default: return ['项目','小组','个人','答辩','总评'];
+    }
+  }
+
+  List<String> _envColKeys(String env) {
+    switch (env) {
+      case 'pingshi': return ['class_activity_score','quiz_homework_score','extra_learning_score','total_score'];
+      case 'experiment': return ['exp1_score','exp2_score','exp3_score','exp4_score','exp5_score','exp6_score','total_score'];
+      default: return ['project_score','group_score','individual_score','defense_score','total_score'];
+    }
+  }
+
+  List<String> _envCols(String env) {
+    switch (env) {
+      case 'pingshi': return ['class_activity_score', 'quiz_homework_score', 'extra_learning_score', 'total_score'];
+      case 'experiment': return ['exp1_score','exp2_score','exp3_score','exp4_score','exp5_score','exp6_score','total_score'];
+      default: return ['project_score', 'group_score', 'individual_score', 'defense_score', 'total_score'];
+    }
   }
 
   Widget _buildBatchDropdown(Color primary) {
@@ -1492,5 +1530,31 @@ class _ExamAchievementTabState extends State<ExamAchievementTab> {
         ),
       ],
     );
+  }
+}
+
+class _ComponentExpandTile extends StatefulWidget {
+  final String title, env; final IconData icon; final Color color;
+  final int batchId; final List<String> colLabels, colKeys;
+  const _ComponentExpandTile({required this.title, required this.icon, required this.color, required this.batchId, required this.env, required this.colLabels, required this.colKeys});
+  @override State<_ComponentExpandTile> createState() => _ComponentExpandTileState();
+}
+class _ComponentExpandTileState extends State<_ComponentExpandTile> {
+  bool _expanded = false; List<Map<String, dynamic>> _rows = []; bool _loading = false;
+  Future<void> _load() async {
+    if (_expanded) { setState(() => _expanded = false); return; }
+    setState(() { _expanded = true; _loading = true; });
+    final tableName = widget.env == 'pingshi' ? 'achievement_pingshi_scores' : widget.env == 'experiment' ? 'achievement_experiment_scores' : 'achievement_exam_scores';
+    final db = await DatabaseHelper.instance.database;
+    final r = await db.query(tableName, where: 'batch_id=?', whereArgs: [widget.batchId], orderBy: 'student_id ASC', limit: 30);
+    if (mounted) setState(() { _rows = r; _loading = false; });
+  }
+  @override Widget build(BuildContext context) {
+    return Column(children: [
+      ListTile(leading: Icon(widget.icon, color: widget.color), title: Text('${widget.title}${_expanded?' (${_rows.length})':''}'), trailing: Icon(_expanded?Icons.expand_less:Icons.expand_more), onTap: _load),
+      if (_loading) const LinearProgressIndicator(),
+      if (_expanded && !_loading) SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(columnSpacing:10, headingRowHeight:30, dataRowMinHeight:26,
+        columns: [const DataColumn(label: Text('学号',style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))), const DataColumn(label: Text('姓名',style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))), for(final l in widget.colLabels) DataColumn(label: Text(l,style:const TextStyle(fontSize:10,fontWeight:FontWeight.bold)))],
+        rows: _rows.map((r)=>DataRow(cells:[DataCell(Text('${r['student_id']??''}',style:const TextStyle(fontSize:10))), DataCell(Text('${r['student_name']??''}',style:const TextStyle(fontSize:10))), for(final k in widget.colKeys) DataCell(Text(((r[k] as num?)?.toDouble()??0).toStringAsFixed(1),style:const TextStyle(fontSize:10)))])).toList()))]);
   }
 }
