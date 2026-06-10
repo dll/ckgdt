@@ -204,7 +204,7 @@ class _ReportTabState extends State<ReportTab> {
   Future<void> _generateMarkdownReport() async {
     if (_calcResults == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请先计算达成度')),
+        const SnackBar(content: Text('请先生成报告')),
       );
       return;
     }
@@ -1220,7 +1220,7 @@ class _ReportTabState extends State<ReportTab> {
                     Icon(Icons.bar_chart, size: 80, color: Colors.grey.withValues(alpha: 0.3)),
                     const SizedBox(height: 16),
                     const Text(
-                      '选择批次后点击"计算达成度"查看结果',
+                      '选择批次后点击"生成报告"查看结果',
                       style: TextStyle(color: Colors.grey, fontSize: 14),
                     ),
                   ],
@@ -1287,8 +1287,8 @@ class _ReportTabState extends State<ReportTab> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                 )
-              : const Icon(Icons.calculate, size: 18),
-          label: Text(_calculating ? '计算中...' : '计算达成度'),
+              : const Icon(Icons.auto_awesome, size: 18),
+          label: Text(_calculating ? '生成中...' : '生成报告'),
         ),
         OutlinedButton.icon(
           onPressed: (_calcResults != null && !_generatingReport)
