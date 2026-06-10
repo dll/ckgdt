@@ -824,13 +824,6 @@ $rawText
       xl.TextCellValue('期间测验 满分30（目标2·${ind(1)}）'),
       xl.TextCellValue('课外学习 满分50（目标3·${ind(2)}、目标4·${ind(3)}）'),
     ]);
-    ps.appendRow([
-      xl.TextCellValue(''),
-      xl.TextCellValue('得分(百分制)'),
-      xl.TextCellValue(''),
-      xl.TextCellValue(''),
-      xl.TextCellValue(''),
-    ]);
 
     // ── 实验：6次实验 1,2→目标1 / 3,4→目标2 / 5→目标3 / 6→目标1-4 ──
     final es = excel['实验成绩'];
