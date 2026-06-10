@@ -47,6 +47,9 @@ class AchievementDao {
           'chapters': o['chapters'],
           'description': o['description'],
           'assess_content': o['assess_content'],
+          'experiments': o['experiments'],
+          'pingshi_standard': o['pingshi_standard'],
+          'experiment_standard': o['experiment_standard'],
           'created_at': now,
           'updated_at': now,
         });
