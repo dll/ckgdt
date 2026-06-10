@@ -1,8 +1,10 @@
 ﻿import 'dart:io';
 import 'dart:math';
 
+import 'package:excel/excel.dart' as xl;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -666,6 +668,51 @@ class _ReportTabState extends State<ReportTab> {
     }
   }
 
+  /// 导出 Excel 报告（学生个体达成度+课程目标点达成度+分环节达成度），对齐计科22模板。
+  Future<void> _exportExcel() async {
+    if (_calcResults == null || _selectedBatchId == null) return;
+    try {
+      final scores = await widget.achievementDao.getScores(_selectedBatchId!);
+      final combined = await widget.achievementDao.calculateCombinedAchievement(_selectedBatchId!);
+      final excel = xl.Excel.createExcel();
+      excel.delete('Sheet1');
+
+      final s1 = excel['学生个体课程目标达成度'];
+      s1.appendRow([xl.TextCellValue('学号'), xl.TextCellValue('姓名'),
+        for (int i = 1; i <= 4; i++) xl.TextCellValue('课程目标${i}达成度'), xl.TextCellValue('加权总达成度'), xl.TextCellValue('评价等级')]);
+      for (final s in scores) {
+        final ach = List.generate(4, (k) => (s['obj${k + 1}_achievement'] as num?)?.toDouble() ?? 0);
+        double wt = 0; for (int k = 0; k < 4; k++) wt += ach[k] * _objectiveWeights[k];
+        s1.appendRow([xl.TextCellValue('${s['student_id'] ?? ''}'), xl.TextCellValue('${s['student_name'] ?? ''}'),
+          for (final a in ach) xl.TextCellValue(a.toStringAsFixed(4)), xl.TextCellValue(wt.toStringAsFixed(4)), xl.TextCellValue(achievementLevel(wt))]);
+      }
+
+      final s2 = excel['课程目标点达成度'];
+      s2.appendRow([xl.TextCellValue('指标'), xl.TextCellValue('数值')]);
+      for (int i = 0; i < 4; i++) s2.appendRow([xl.TextCellValue('课程目标${i + 1}达成度'), xl.TextCellValue(_objectiveAchievements[i].toStringAsFixed(4))]);
+      s2.appendRow([xl.TextCellValue('加权总达成度'), xl.TextCellValue(_weightedAchievement.toStringAsFixed(4))]);
+      s2.appendRow([xl.TextCellValue('学生人数'), xl.IntCellValue(scores.length)]);
+
+      final s3 = excel['分环节达成度'];
+      s3.appendRow([xl.TextCellValue('课程目标'), xl.TextCellValue('平时达成度'), xl.TextCellValue('实验达成度'), xl.TextCellValue('期末达成度'), xl.TextCellValue('综合达成度')]);
+      final ps = combined['pingshi'] as Map? ?? {}, es = combined['experiment'] as Map? ?? {}, xs = combined['exam'] as Map? ?? {};
+      for (int i = 1; i <= 4; i++) {
+        s3.appendRow([xl.TextCellValue('目标$i'), xl.TextCellValue(((ps['obj$i'] ?? 0) as double).toStringAsFixed(4)), xl.TextCellValue(((es['obj$i'] ?? 0) as double).toStringAsFixed(4)), xl.TextCellValue(((xs['obj$i'] ?? 0) as double).toStringAsFixed(4)), xl.TextCellValue(_objectiveAchievements[i - 1].toStringAsFixed(4))]);
+      }
+
+      final dir = await OutputPathService.getOutputDirectory();
+      final bytes = excel.save(); if (bytes == null) throw StateError('Excel生成失败');
+      final ts = DateTime.now().toIso8601String().replaceAll(RegExp(r'[:.]'), '-').substring(0, 19);
+      final file = File('${dir.path}/达成度计算结果_$ts.xlsx');
+      await file.writeAsBytes(bytes);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Excel已导出：${file.path}'), duration: const Duration(seconds: 4),
+          action: SnackBarAction(label: '打开', onPressed: () => OpenFilex.open(file.path))));
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ReportTab.exportExcel', stack: st);
+    }
+  }
+
   double _maxOf(List<Map<String, dynamic>> items, double Function(Map<String, dynamic>) getter) {
     if (items.isEmpty) return 0;
     return items.map(getter).reduce((a, b) => a > b ? a : b);
@@ -1265,6 +1312,11 @@ class _ReportTabState extends State<ReportTab> {
           onPressed: (_calcResults != null && !_generatingReport) ? _exportDocx : null,
           icon: const Icon(Icons.description, size: 18),
           label: const Text('导出Word报告'),
+        ),
+        OutlinedButton.icon(
+          onPressed: (_calcResults != null && !_generatingReport) ? _exportExcel : null,
+          icon: const Icon(Icons.table_chart_outlined, size: 18),
+          label: const Text('导出Excel结果'),
         ),
       ],
     );
