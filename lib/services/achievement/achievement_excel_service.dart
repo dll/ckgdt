@@ -798,9 +798,9 @@ $rawText
   /// 列布局与 parseComponentSheets 的简洁模板分支严格对齐，表头标注每列支撑的
   /// 课程目标，体现大纲驱动的目标拆分。可选传入 [students] 预填学号/姓名名单。
   ///
-  /// 目标拆分（与大纲一致）：
-  /// - 平时：课堂表现→目标1，期间测验→目标2，大作业/课外→目标4
-  /// - 实验：实验1,2→目标1，实验3,4→目标2，实验5,6→目标3，实验7→目标4
+  /// 目标拆分（以大纲为准）：
+  /// - 平时：课堂表现→目标1，期间测验→目标2，课外学习→目标3+4
+  /// - 实验：实验1,2→目标1，实验3,4→目标2，实验5→目标3，实验6→目标1-4
   /// - 期末：项目→目标1，小组→目标2，个人→目标3，答辩→目标4
   List<int> buildGradeTemplate({
     List<Map<String, dynamic>> students = const [],
@@ -808,20 +808,22 @@ $rawText
   }) {
     final cfg = config ?? AchievementConfig.defaults;
     final excel = xl.Excel.createExcel();
-    excel.delete('Sheet1');
+    // 删除默认 Sheet1，最终输出 3 个 sheet
+    for (final name in excel.tables.keys.toList()) {
+      excel.delete(name);
+    }
 
     String ind(int i) => i < cfg.indicators.length ? cfg.indicators[i] : '';
 
-    // ── 平时成绩：课堂表现(满分20→目标1)/期间测验(满分30→目标2)/课外学习(满分50→目标4) ──
+    // ── 平时：课堂表现(20→目标1) / 期间测验(30→目标2) / 课外学习(50→目标3,4) ──
     final ps = excel['平时成绩'];
     ps.appendRow([
       xl.TextCellValue('学号'),
       xl.TextCellValue('姓名'),
       xl.TextCellValue('课堂表现 满分20（目标1·${ind(0)}）'),
       xl.TextCellValue('期间测验 满分30（目标2·${ind(1)}）'),
-      xl.TextCellValue('课外学习 满分50（目标4·${ind(3)}）'),
+      xl.TextCellValue('课外学习 满分50（目标3·${ind(2)}、目标4·${ind(3)}）'),
     ]);
-    // 说明行：子项由教师自定义
     ps.appendRow([
       xl.TextCellValue(''),
       xl.TextCellValue('得分(百分制)'),
@@ -830,7 +832,7 @@ $rawText
       xl.TextCellValue(''),
     ]);
 
-    // ── 实验成绩：6次实验(大纲为准) 1,2→目标1 / 3,4→目标2 / 5→目标3 / 6→目标4(综合) ──
+    // ── 实验：6次实验 1,2→目标1 / 3,4→目标2 / 5→目标3 / 6→目标1-4 ──
     final es = excel['实验成绩'];
     es.appendRow([
       xl.TextCellValue('学号'),
@@ -840,7 +842,7 @@ $rawText
       xl.TextCellValue('实验3得分（目标2）'),
       xl.TextCellValue('实验4得分（目标2）'),
       xl.TextCellValue('实验5得分（目标3）'),
-      xl.TextCellValue('实验6得分（目标4·综合）'),
+      xl.TextCellValue('实验6得分（目标1-4·综合）'),
     ]);
 
     // ── 期末成绩：项目(目标1)/小组(目标2)/个人(目标3)/答辩(目标4) ──
