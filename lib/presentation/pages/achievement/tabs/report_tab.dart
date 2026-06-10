@@ -668,49 +668,75 @@ class _ReportTabState extends State<ReportTab> {
     }
   }
 
-  /// 导出 Excel 报告（学生个体达成度+课程目标点达成度+分环节达成度），对齐计科22模板。
+  /// 导出 Excel 报告（对齐计科22模板：5sheet—平时/实验/期末明细+学生个体达成度+课程目标点达成度）。
   Future<void> _exportExcel() async {
     if (_calcResults == null || _selectedBatchId == null) return;
     try {
+      final batch = _batches.firstWhere((b) => b['id'] == _selectedBatchId, orElse: () => <String, dynamic>{});
       final scores = await widget.achievementDao.getScores(_selectedBatchId!);
-      final combined = await widget.achievementDao.calculateCombinedAchievement(_selectedBatchId!);
+      final comb = await widget.achievementDao.calculateCombinedAchievement(_selectedBatchId!);
+      final pingshi = await widget.achievementDao.getPingshiScores(_selectedBatchId!);
+      final experiment = await widget.achievementDao.getExperimentScores(_selectedBatchId!);
+      final exam = await widget.achievementDao.getExamScores(_selectedBatchId!);
       final excel = xl.Excel.createExcel();
-      excel.delete('Sheet1');
+      for (final n in excel.tables.keys.toList()) { excel.delete(n); }
+      String t(String s) => s;
 
-      final s1 = excel['学生个体课程目标达成度'];
-      s1.appendRow([xl.TextCellValue('学号'), xl.TextCellValue('姓名'),
-        for (int i = 1; i <= 4; i++) xl.TextCellValue('课程目标${i}达成度'), xl.TextCellValue('加权总达成度'), xl.TextCellValue('评价等级')]);
+      final s1 = excel['平时成绩'];
+      s1.appendRow([xl.TextCellValue('学号'), xl.TextCellValue('姓名'), xl.TextCellValue('课堂表现得分'), xl.TextCellValue('目标1达成度'), xl.TextCellValue('期间测验得分'), xl.TextCellValue('目标2达成度'), xl.TextCellValue('课外学习得分'), xl.TextCellValue('目标4达成度'), xl.TextCellValue('总评')]);
+      for (final r in pingshi) s1.appendRow([
+        xl.TextCellValue('${r['student_id']??''}'), xl.TextCellValue('${r['student_name']??''}'),
+        d(r,'class_activity_score',1), d(r,'class_activity_achievement',4),
+        d(r,'quiz_homework_score',1), d(r,'quiz_homework_achievement',4),
+        d(r,'extra_learning_score',1), d(r,'extra_learning_achievement',4),
+        d(r,'total_score',1)],);
+
+      final s2 = excel['实验成绩'];
+      s2.appendRow([xl.TextCellValue('学号'), xl.TextCellValue('姓名'), for (int i=1;i<=6;i++) xl.TextCellValue('实验$i得分'), xl.TextCellValue('目标1达成度'), xl.TextCellValue('目标2达成度'), xl.TextCellValue('目标3达成度'), xl.TextCellValue('目标4达成度'), xl.TextCellValue('总评')]);
+      for (final r in experiment) s2.appendRow([
+        xl.TextCellValue('${r['student_id']??''}'), xl.TextCellValue('${r['student_name']??''}'),
+        for (int i=1;i<=6;i++) d(r,'exp${i}_score',1),
+        d(r,'obj1_achievement',4), d(r,'obj2_achievement',4), d(r,'obj3_achievement',4), d(r,'obj4_achievement',4), d(r,'total_score',1)],);
+
+      final s3 = excel['期末成绩'];
+      s3.appendRow([xl.TextCellValue('学号'), xl.TextCellValue('姓名'), xl.TextCellValue('项目得分'), xl.TextCellValue('目标1达成度'), xl.TextCellValue('小组得分'), xl.TextCellValue('目标2达成度'), xl.TextCellValue('个人得分'), xl.TextCellValue('目标3达成度'), xl.TextCellValue('答辩得分'), xl.TextCellValue('目标4达成度'), xl.TextCellValue('总评')]);
+      for (final r in exam) s3.appendRow([
+        xl.TextCellValue('${r['student_id']??''}'), xl.TextCellValue('${r['student_name']??''}'),
+        d(r,'project_score',1), d(r,'obj1_achievement',4), d(r,'group_score',1), d(r,'obj2_achievement',4),
+        d(r,'individual_score',1), d(r,'obj3_achievement',4), d(r,'defense_score',1), d(r,'obj4_achievement',4),
+        d(r,'total_score',1)],);
+
+      final s4 = excel['学生个体课程目标达成度'];
+      s4.appendRow([xl.TextCellValue('学号'), xl.TextCellValue('姓名'), for (int i=1;i<=4;i++) xl.TextCellValue('课程目标${i}达成度'), xl.TextCellValue('加权总达成度'), xl.TextCellValue('评价等级')]);
       for (final s in scores) {
-        final ach = List.generate(4, (k) => (s['obj${k + 1}_achievement'] as num?)?.toDouble() ?? 0);
-        double wt = 0; for (int k = 0; k < 4; k++) wt += ach[k] * _objectiveWeights[k];
-        s1.appendRow([xl.TextCellValue('${s['student_id'] ?? ''}'), xl.TextCellValue('${s['student_name'] ?? ''}'),
-          for (final a in ach) xl.TextCellValue(a.toStringAsFixed(4)), xl.TextCellValue(wt.toStringAsFixed(4)), xl.TextCellValue(achievementLevel(wt))]);
+        final ach = List.generate(4, (k) => (s['obj${k+1}_achievement'] as num?)?.toDouble()??0);
+        double wt=0; for(int k=0;k<4;k++) wt+=ach[k]*_objectiveWeights[k];
+        s4.appendRow([xl.TextCellValue('${s['student_id']??''}'), xl.TextCellValue('${s['student_name']??''}'), for(final a in ach) xl.TextCellValue(a.toStringAsFixed(4)), xl.TextCellValue(wt.toStringAsFixed(4)), xl.TextCellValue(achievementLevel(wt))],);
       }
 
-      final s2 = excel['课程目标点达成度'];
-      s2.appendRow([xl.TextCellValue('指标'), xl.TextCellValue('数值')]);
-      for (int i = 0; i < 4; i++) s2.appendRow([xl.TextCellValue('课程目标${i + 1}达成度'), xl.TextCellValue(_objectiveAchievements[i].toStringAsFixed(4))]);
-      s2.appendRow([xl.TextCellValue('加权总达成度'), xl.TextCellValue(_weightedAchievement.toStringAsFixed(4))]);
-      s2.appendRow([xl.TextCellValue('学生人数'), xl.IntCellValue(scores.length)]);
-
-      final s3 = excel['分环节达成度'];
-      s3.appendRow([xl.TextCellValue('课程目标'), xl.TextCellValue('平时达成度'), xl.TextCellValue('实验达成度'), xl.TextCellValue('期末达成度'), xl.TextCellValue('综合达成度')]);
-      final ps = combined['pingshi'] as Map? ?? {}, es = combined['experiment'] as Map? ?? {}, xs = combined['exam'] as Map? ?? {};
-      for (int i = 1; i <= 4; i++) {
-        s3.appendRow([xl.TextCellValue('目标$i'), xl.TextCellValue(((ps['obj$i'] ?? 0) as double).toStringAsFixed(4)), xl.TextCellValue(((es['obj$i'] ?? 0) as double).toStringAsFixed(4)), xl.TextCellValue(((xs['obj$i'] ?? 0) as double).toStringAsFixed(4)), xl.TextCellValue(_objectiveAchievements[i - 1].toStringAsFixed(4))]);
-      }
+      final s5 = excel['课程目标点达成度'];
+      final ps = comb['pingshi'] as Map? ?? {}, es = comb['experiment'] as Map? ?? {}, xs = comb['exam'] as Map? ?? {};
+      const cf = AchievementConfig.defaults;
+      s5.appendRow([xl.TextCellValue('课程目标'), xl.TextCellValue('权重'), xl.TextCellValue('平时达成度'), xl.TextCellValue('实验达成度'), xl.TextCellValue('期末达成度'), xl.TextCellValue('课程目标达成度'), xl.TextCellValue('指标点')]);
+      for (int i = 0; i < 4; i++) s5.appendRow([
+        xl.TextCellValue(cf.objectiveNames[i]), xl.TextCellValue(_objectiveWeights[i].toStringAsFixed(2)),
+        xl.TextCellValue(((ps['obj${i+1}'] ?? 0) as double).toStringAsFixed(4)), xl.TextCellValue(((es['obj${i+1}'] ?? 0) as double).toStringAsFixed(4)),
+        xl.TextCellValue(((xs['obj${i+1}'] ?? 0) as double).toStringAsFixed(4)), xl.TextCellValue(_objectiveAchievements[i].toStringAsFixed(4)),
+        xl.TextCellValue(cf.indicators[i]),],);
+      s5.appendRow([xl.TextCellValue('加权总达成度'), xl.TextCellValue('1.00'), xl.TextCellValue(''), xl.TextCellValue(''), xl.TextCellValue(''), xl.TextCellValue(_weightedAchievement.toStringAsFixed(4)), xl.TextCellValue('')],);
 
       final dir = await OutputPathService.getOutputDirectory();
-      final bytes = excel.save(); if (bytes == null) throw StateError('Excel生成失败');
-      final ts = DateTime.now().toIso8601String().replaceAll(RegExp(r'[:.]'), '-').substring(0, 19);
-      final file = File('${dir.path}/达成度计算结果_$ts.xlsx');
+      final safeName = '${batch['class_name']??'班级'}《${batch['course_name']??'移动应用开发'}》课程达成度评价表格.xlsx';
+      final file = File('${dir.path}/$safeName');
+      final bytes = excel.save(); if(bytes==null) throw StateError('Excel生成失败');
       await file.writeAsBytes(bytes);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Excel已导出：${file.path}'), duration: const Duration(seconds: 4),
-          action: SnackBarAction(label: '打开', onPressed: () => OpenFilex.open(file.path))));
-    } catch (e, st) {
-      swallowDebug(e, tag: 'ReportTab.exportExcel', stack: st);
-    }
+      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Excel已导出:${file.path}'),duration:const Duration(seconds:4),action:SnackBarAction(label:'打开',onPressed:()=>OpenFilex.open(file.path))));
+    } catch(e,st){swallowDebug(e,tag:'ReportTab.exportExcel',stack:st);}
+  }
+
+  xl.TextCellValue d(Map<String,dynamic> r, String key, int digits) {
+    final v = (r[key] as num?)?.toDouble()??0;
+    return xl.TextCellValue(v.toStringAsFixed(digits));
   }
 
   double _maxOf(List<Map<String, dynamic>> items, double Function(Map<String, dynamic>) getter) {

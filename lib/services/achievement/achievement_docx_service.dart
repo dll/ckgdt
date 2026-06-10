@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:archive/archive_io.dart';
-import 'package:path_provider/path_provider.dart';
+import '../output_path_service.dart';
 
 /// 课程达成评价报告 DOCX 生成器。
 ///
@@ -61,13 +61,10 @@ class AchievementDocxService {
     archive.addFile(ArchiveFile.string('word/document.xml', documentXml));
     archive.addFile(ArchiveFile.string('word/_rels/document.xml.rels', _buildDocRels()));
 
-    final dir = await getApplicationDocumentsDirectory();
-    final outputDir = Directory('${dir.path}/achievement_reports');
-    if (!await outputDir.exists()) await outputDir.create(recursive: true);
-
+    final dir = await OutputPathService.getOutputDirectory();
     final safeName = '${courseName}_${className}_达成评价报告'
         .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
-    final filePath = '${outputDir.path}/$safeName.docx';
+    final filePath = '${dir.path}/$safeName.docx';
 
     final zipBytes = ZipEncoder().encode(archive) ?? <int>[];
     await File(filePath).writeAsBytes(Uint8List.fromList(zipBytes));
