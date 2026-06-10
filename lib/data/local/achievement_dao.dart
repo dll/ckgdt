@@ -1253,10 +1253,9 @@ class AchievementDao {
         where: 'batch_id = ?', whereArgs: [batchId]);
   }
 
-  /// 计算平时成绩的分项达成度
-  /// 课堂表现(20%) → 目标1达成度 = score/100
-  /// 期间测验(30%) → 目标2达成度 = score/100
-  /// 课外学习(50%) → 目标4达成度 = score/100
+  /// 计算平时成绩的分项达成度（以大纲为准）
+  /// 课堂表现(20%) → 目标1, 期间测验(30%) → 目标2,
+  /// 课外学习(50%) → 目标3 + 目标4（大作业/综合实践同时支撑两个目标）
   /// 总评 = 课堂×0.2 + 测验×0.3 + 课外×0.5
   Map<String, double> calculatePingshiAchievement(Map<String, dynamic> score) {
     final classScore = (score['class_activity_score'] as num?)?.toDouble() ?? 0;
@@ -1265,14 +1264,15 @@ class AchievementDao {
 
     final obj1Ach = (classScore / 100).clamp(0.0, 1.0);
     final obj2Ach = (quizScore / 100).clamp(0.0, 1.0);
-    final obj4Ach = (extraScore / 100).clamp(0.0, 1.0);
+    final obj3Ach = (extraScore / 100).clamp(0.0, 1.0); // 课外→目标3
+    final obj4Ach = (extraScore / 100).clamp(0.0, 1.0); // 课外→目标4
     final total = classScore * 0.2 + quizScore * 0.3 + extraScore * 0.5;
 
     return {
-      'obj1_achievement': obj1Ach,  // 课堂表现→目标1
-      'obj2_achievement': obj2Ach,  // 期间测验→目标2
-      'obj3_achievement': 0.0,      // 平时无目标3
-      'obj4_achievement': obj4Ach,  // 课外学习→目标4
+      'obj1_achievement': obj1Ach,
+      'obj2_achievement': obj2Ach,
+      'obj3_achievement': obj3Ach,
+      'obj4_achievement': obj4Ach,
       'total_score': total,
     };
   }
@@ -1282,13 +1282,14 @@ class AchievementDao {
     final scores = await getPingshiScores(batchId);
     if (scores.isEmpty) return {'obj1': 0, 'obj2': 0, 'obj3': 0, 'obj4': 0};
     final n = scores.length.toDouble();
-    double s1 = 0, s2 = 0, s4 = 0;
+    double s1 = 0, s2 = 0, s3 = 0, s4 = 0;
     for (final s in scores) {
       s1 += (s['class_activity_achievement'] as num?)?.toDouble() ?? 0;
       s2 += (s['quiz_homework_achievement'] as num?)?.toDouble() ?? 0;
+      s3 += (s['extra_learning_achievement'] as num?)?.toDouble() ?? 0;
       s4 += (s['extra_learning_achievement'] as num?)?.toDouble() ?? 0;
     }
-    return {'obj1': s1 / n, 'obj2': s2 / n, 'obj3': 0.0, 'obj4': s4 / n};
+    return {'obj1': s1 / n, 'obj2': s2 / n, 'obj3': s3 / n, 'obj4': s4 / n};
   }
 
   /// 生成平时演示数据
