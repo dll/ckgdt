@@ -273,11 +273,20 @@ class AchievementExcelService {
   List<Map<String, dynamic>> _parseExperimentSheet(xl.Sheet table) {
     final hr = _findStudentHeaderRow(table);
     if (hr < 0) return [];
-    // 布局识别：本系统模板 exp1-7 连续在第 2..8 列；
-    // 学校原始模板每两实验后插一列"指标点达成度"，得分在 2,3,5,6,8,9,11。
+    // 布局识别：本系统模板 exp1-N 连续列；学校原始模板有达成度列间隔
     final headerC4 = _cellStr(table.rows[hr], 4);
     final simple = headerC4.contains('实验');
-    final cols = simple ? [2, 3, 4, 5, 6, 7, 8] : [2, 3, 5, 6, 8, 9, 11];
+    List<int> cols;
+    int nExp;
+    if (simple) {
+      // 6实验(大纲) vs 7实验(旧模板)：按第8列是否为实验名判断
+      final hasExp7 = _cellStr(table.rows[hr], 8).contains('实验');
+      nExp = hasExp7 ? 7 : 6;
+      cols = [for (int c = 2; c < 2 + nExp; c++) c];
+    } else {
+      nExp = 7; // 学校原始模板固定7
+      cols = [2, 3, 5, 6, 8, 9, 11];
+    }
     final rows = <Map<String, dynamic>>[];
     for (int i = hr + 1; i < table.rows.length; i++) {
       final row = table.rows[i];
@@ -286,7 +295,8 @@ class AchievementExcelService {
       rows.add({
         'student_id': sid,
         'student_name': _cellStr(row, 1),
-        for (int k = 0; k < 7; k++) 'exp${k + 1}_score': _cell(row, cols[k]),
+        for (int k = 0; k < nExp; k++) 'exp${k + 1}_score': _cell(row, cols[k]),
+        for (int k = nExp; k < 7; k++) 'exp${k + 1}_score': 0.0, // 补齐exp7=0
       });
     }
     return rows;
@@ -814,7 +824,7 @@ $rawText
       xl.TextCellValue('大作业平均分（目标4·满分100·支撑${ind(3)}）'),
     ]);
 
-    // ── 实验成绩：实验1-7，按 1,2→目标1 / 3,4→目标2 / 5,6→目标3 / 7→目标4 ──
+    // ── 实验成绩：6次实验(大纲为准) 1,2→目标1 / 3,4→目标2 / 5→目标3 / 6→目标4(综合) ──
     final es = excel['实验成绩'];
     es.appendRow([
       xl.TextCellValue('学号'),
@@ -824,8 +834,7 @@ $rawText
       xl.TextCellValue('实验3得分（目标2）'),
       xl.TextCellValue('实验4得分（目标2）'),
       xl.TextCellValue('实验5得分（目标3）'),
-      xl.TextCellValue('实验6得分（目标3）'),
-      xl.TextCellValue('实验7得分（目标4）'),
+      xl.TextCellValue('实验6得分（目标4·综合）'),
     ]);
 
     // ── 期末成绩：项目(目标1)/小组(目标2)/个人(目标3)/答辩(目标4) ──
