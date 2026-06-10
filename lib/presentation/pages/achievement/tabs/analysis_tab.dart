@@ -176,6 +176,14 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
         const SizedBox(height: 16),
         _buildFormula(primary),
         const SizedBox(height: 16),
+        Center(
+          child: FilledButton.icon(
+            onPressed: _loading ? null : _loadScoresAndCalc,
+            icon: const Icon(Icons.calculate, size: 18),
+            label: const Text('触发达成度计算'),
+          ),
+        ),
+        const SizedBox(height: 16),
         if (_scores.isNotEmpty) ...[
           _buildClassOverview(primary),
           const SizedBox(height: 16),
