@@ -290,10 +290,15 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
 
     return Stack(
       children: [
-        RefreshIndicator(
-          onRefresh: _loadBatches,
-          child: _batches.isEmpty ? _buildEmptyState(primary) : _buildBatchList(primary),
-        ),
+        Column(children: [
+          if (_importing) LinearProgressIndicator(color: primary),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _loadBatches,
+              child: _batches.isEmpty ? _buildEmptyState(primary) : _buildBatchList(primary),
+            ),
+          ),
+        ]),
         Positioned(
           right: 16,
           bottom: 16,
@@ -920,24 +925,22 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
   late final List<TextEditingController> _weightCtrls;
   late final List<TextEditingController> _indicatorCtrls;
   late final List<TextEditingController> _fullMarkCtrls;
+  late final List<TextEditingController> _chaptersCtrls;
+  late final List<TextEditingController> _experimentsCtrls;
 
   @override
   void initState() {
     super.initState();
-    _weightCtrls = _rows
-        .map((r) => TextEditingController(text: (r['weight'] ?? 0).toString()))
-        .toList();
-    _indicatorCtrls = _rows
-        .map((r) => TextEditingController(text: (r['indicator'] ?? '').toString()))
-        .toList();
-    _fullMarkCtrls = _rows
-        .map((r) => TextEditingController(text: (r['full_mark'] ?? 0).toString()))
-        .toList();
+    _weightCtrls = _rows.map((r) => TextEditingController(text: (r['weight'] ?? 0).toString())).toList();
+    _indicatorCtrls = _rows.map((r) => TextEditingController(text: (r['indicator'] ?? '').toString())).toList();
+    _fullMarkCtrls = _rows.map((r) => TextEditingController(text: (r['full_mark'] ?? 0).toString())).toList();
+    _chaptersCtrls = _rows.map((r) => TextEditingController(text: (r['chapters'] ?? '').toString())).toList();
+    _experimentsCtrls = _rows.map((r) => TextEditingController(text: (r['experiments'] ?? '').toString())).toList();
   }
 
   @override
   void dispose() {
-    for (final c in [..._weightCtrls, ..._indicatorCtrls, ..._fullMarkCtrls]) {
+    for (final c in [..._weightCtrls, ..._indicatorCtrls, ..._fullMarkCtrls, ..._chaptersCtrls, ..._experimentsCtrls]) {
       c.dispose();
     }
     super.dispose();
@@ -1080,16 +1083,18 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
                   Text('考核内容：${_rows[i]['assess_content']}',
                       style: const TextStyle(fontSize: 11, color: Colors.grey)),
                 ],
-                if ((_rows[i]['chapters'] as String?)?.isNotEmpty ?? false) ...[
-                  const SizedBox(height: 2),
-                  Text('支撑章节：${_rows[i]['chapters']}',
-                      style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
-                ],
-                if ((_rows[i]['experiments'] as String?)?.isNotEmpty ?? false) ...[
-                  const SizedBox(height: 2),
-                  Text('支撑实验：${_rows[i]['experiments']}',
-                      style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
-                ],
+                const SizedBox(height: 4),
+                TextField(
+                  controller: _chaptersCtrls[i],
+                  decoration: const InputDecoration(
+                    labelText: '支撑章节', isDense: true, border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 4),
+                TextField(
+                  controller: _experimentsCtrls[i],
+                  decoration: const InputDecoration(
+                    labelText: '支撑实验', isDense: true, border: OutlineInputBorder()),
+                ),
                 if ((_rows[i]['pingshi_standard'] as String?)?.isNotEmpty ?? false) ...[
                   const SizedBox(height: 2),
                   Text('平时标准：${_rows[i]['pingshi_standard']}',
@@ -1150,6 +1155,8 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
               _rows[i]['weight'] = double.tryParse(_weightCtrls[i].text) ?? _rows[i]['weight'];
               _rows[i]['indicator'] = _indicatorCtrls[i].text.trim();
               _rows[i]['full_mark'] = double.tryParse(_fullMarkCtrls[i].text) ?? _rows[i]['full_mark'];
+              _rows[i]['chapters'] = _chaptersCtrls[i].text.trim();
+              _rows[i]['experiments'] = _experimentsCtrls[i].text.trim();
             }
             Navigator.pop(context, _rows);
           },
