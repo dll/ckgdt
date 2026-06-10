@@ -725,22 +725,18 @@ $rawText
       final row = byIdx.putIfAbsent(idx, () => {'idx': idx, 'name': '课程目标$idx'});
       row['assess_content'] = a['content'];
     }
-    // 合并 实验→目标 映射（从实验项目与学时分配表）
-    final experimentMap = (parsed['experimentMap'] as Map<String, dynamic>?) ?? {};
-    for (final e in experimentMap.entries) {
-      final idx = int.tryParse(e.key) ?? 0;
-      if (idx == 0) continue;
-      final row = byIdx.putIfAbsent(idx, () => {'idx': idx, 'name': '课程目标$idx'});
-      row['experiments'] = e.value.toString();
+    // 合并映射表字段（实验/章节→目标）
+    void mergeMapToField(String mapKey, String field) {
+      final m = (parsed[mapKey] as Map<String, dynamic>?) ?? {};
+      for (final e in m.entries) {
+        final idx = int.tryParse(e.key) ?? 0;
+        if (idx == 0) continue;
+        final row = byIdx.putIfAbsent(idx, () => {'idx': idx, 'name': '课程目标$idx'});
+        row[field] = e.value.toString();
+      }
     }
-    // 合并 章节→目标 映射（从教学安排表）
-    final chapterMap = (parsed['chapterMap'] as Map<String, dynamic>?) ?? {};
-    for (final e in chapterMap.entries) {
-      final idx = int.tryParse(e.key) ?? 0;
-      if (idx == 0) continue;
-      final row = byIdx.putIfAbsent(idx, () => {'idx': idx, 'name': '课程目标$idx'});
-      row['chapters'] = e.value.toString();
-    }
+    mergeMapToField('experimentMap', 'experiments');
+    mergeMapToField('chapterMap', 'chapters');
     final rows = byIdx.values.toList()
       ..sort((a, b) => (a['idx'] as int).compareTo(b['idx'] as int));
     return rows;
