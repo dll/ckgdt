@@ -556,6 +556,60 @@ $rawText
     }
     result['assessContents'] = assessItems;
 
+    // 实验项目与学时分配表（|序号|...|对应课程目标|）
+    final expMap = <int, List<String>>{};
+    var inExpTable = false;
+    for (final line in lines) {
+      if (line.contains('实验项目') && line.contains('对应课程目标')) {
+        inExpTable = true; continue;
+      }
+      if (inExpTable) {
+        final m = RegExp(r'\|\s*(\d+)\s*\|.+?\|\s*(\d+(?:[-]\d+)?)\s*\|').firstMatch(line);
+        if (m != null) {
+          final expNum = int.tryParse(m.group(1)!) ?? 0;
+          final targetStr = m.group(2)!;
+          if (targetStr.contains('-')) {
+            final range = targetStr.split('-');
+            final start = int.tryParse(range[0]) ?? 0;
+            final end = int.tryParse(range[1]) ?? start;
+            for (int t = start; t <= end; t++) expMap.putIfAbsent(t, () => []).add('实验$expNum');
+          } else {
+            final t = int.tryParse(targetStr) ?? 0;
+            if (t > 0) expMap.putIfAbsent(t, () => []).add('实验$expNum');
+          }
+        }
+        if (line.trim().isEmpty && expMap.isNotEmpty) inExpTable = false;
+      }
+    }
+    result['experimentMap'] = expMap.map((k, v) => MapEntry(k.toString(), v.join('、')));
+
+    // 章节/教学安排表（|章节|...|对应课程目标|）
+    final chMap = <int, List<String>>{};
+    var inChTable = false;
+    for (final line in lines) {
+      if (line.contains('章节') && (line.contains('教学内容') || line.contains('对应课程目标'))) {
+        inChTable = true; continue;
+      }
+      if (inChTable) {
+        final m = RegExp(r'\|\s*(\d+)\s*\|.+?\|\s*目标\s*(\d+(?:[-]\d+)?)\s*\|').firstMatch(line);
+        if (m != null) {
+          final chNum = int.tryParse(m.group(1)!) ?? 0;
+          final targetStr = m.group(2)!;
+          if (targetStr.contains('-')) {
+            final range = targetStr.split('-');
+            final start = int.tryParse(range[0]) ?? 0;
+            final end = int.tryParse(range[1]) ?? start;
+            for (int t = start; t <= end; t++) chMap.putIfAbsent(t, () => []).add('第${chNum}章');
+          } else {
+            final t = int.tryParse(targetStr) ?? 0;
+            if (t > 0) chMap.putIfAbsent(t, () => []).add('第${chNum}章');
+          }
+        }
+        if (line.trim().isEmpty && chMap.isNotEmpty) inChTable = false;
+      }
+    }
+    result['chapterMap'] = chMap.map((k, v) => MapEntry(k.toString(), v.join('、')));
+
     return result;
   }
 
@@ -660,6 +714,22 @@ $rawText
       if (idx == 0) continue;
       final row = byIdx.putIfAbsent(idx, () => {'idx': idx, 'name': '课程目标$idx'});
       row['assess_content'] = a['content'];
+    }
+    // 合并 实验→目标 映射（从实验项目与学时分配表）
+    final experimentMap = (parsed['experimentMap'] as Map<String, dynamic>?) ?? {};
+    for (final e in experimentMap.entries) {
+      final idx = int.tryParse(e.key) ?? 0;
+      if (idx == 0) continue;
+      final row = byIdx.putIfAbsent(idx, () => {'idx': idx, 'name': '课程目标$idx'});
+      row['experiments'] = e.value.toString();
+    }
+    // 合并 章节→目标 映射（从教学安排表）
+    final chapterMap = (parsed['chapterMap'] as Map<String, dynamic>?) ?? {};
+    for (final e in chapterMap.entries) {
+      final idx = int.tryParse(e.key) ?? 0;
+      if (idx == 0) continue;
+      final row = byIdx.putIfAbsent(idx, () => {'idx': idx, 'name': '课程目标$idx'});
+      row['chapters'] = e.value.toString();
     }
     final rows = byIdx.values.toList()
       ..sort((a, b) => (a['idx'] as int).compareTo(b['idx'] as int));
