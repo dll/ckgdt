@@ -814,14 +814,22 @@ $rawText
 
     String ind(int i) => i < cfg.indicators.length ? cfg.indicators[i] : '';
 
-    // ── 平时成绩：课堂表现(目标1)/期间测验(目标2)/大作业(目标4) ──
+    // ── 平时成绩：课堂表现(满分20→目标1)/期间测验(满分30→目标2)/课外学习(满分50→目标4) ──
     final ps = excel['平时成绩'];
     ps.appendRow([
       xl.TextCellValue('学号'),
       xl.TextCellValue('姓名'),
-      xl.TextCellValue('课堂表现得分（目标1·满分100·支撑${ind(0)}）'),
-      xl.TextCellValue('期间测验平均分（目标2·满分100·支撑${ind(1)}）'),
-      xl.TextCellValue('大作业平均分（目标4·满分100·支撑${ind(3)}）'),
+      xl.TextCellValue('课堂表现 满分20（目标1·${ind(0)}）'),
+      xl.TextCellValue('期间测验 满分30（目标2·${ind(1)}）'),
+      xl.TextCellValue('课外学习 满分50（目标4·${ind(3)}）'),
+    ]);
+    // 说明行：子项由教师自定义
+    ps.appendRow([
+      xl.TextCellValue(''),
+      xl.TextCellValue('得分(百分制)'),
+      xl.TextCellValue(''),
+      xl.TextCellValue(''),
+      xl.TextCellValue(''),
     ]);
 
     // ── 实验成绩：6次实验(大纲为准) 1,2→目标1 / 3,4→目标2 / 5→目标3 / 6→目标4(综合) ──
