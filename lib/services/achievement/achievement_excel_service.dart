@@ -8,6 +8,7 @@ import 'package:xml/xml.dart';
 import '../../core/error_handler.dart';
 import '../../data/local/database_helper.dart';
 import '../../presentation/pages/achievement/achievement_config.dart';
+import '../ai_service.dart';
 
 /// 从 Excel 文件解析学生成绩并导入数据库
 class AchievementExcelService {
@@ -365,6 +366,103 @@ class AchievementExcelService {
     if (e == 'xlsx' || e == 'xls') return _parseExcelSyllabus(bytes);
     return {'error': '不支持的文件格式: $ext'};
   }
+
+  /// 提取大纲原始纯文本（MD 直接 utf8；docx 抽 word/document.xml 的所有 w:t）。
+  /// 供 AI 全面解析使用。
+  String syllabusRawText(Uint8List bytes, String ext) {
+    final e = ext.toLowerCase();
+    if (e == 'md') return utf8.decode(bytes);
+    if (e == 'docx') {
+      try {
+        final archive = ZipDecoder().decodeBytes(bytes);
+        final doc = archive.files.firstWhere((f) => f.name == 'word/document.xml');
+        final xmlStr = utf8.decode(doc.content as List<int>);
+        final d = XmlDocument.parse(xmlStr);
+        final buf = StringBuffer();
+        for (final p in d.findAllElements('w:p')) {
+          final line = p.findAllElements('w:t').map((t) => t.innerText).join();
+          buf.writeln(line);
+        }
+        return buf.toString();
+      } catch (e, st) {
+        swallowDebug(e, tag: 'AchievementExcel.syllabusRawText', stack: st);
+        return '';
+      }
+    }
+    return '';
+  }
+
+  /// 用 AI 全面解析大纲原始文本，提取课程目标的完整信息：
+  /// 描述、指标点、权重、满分、章节支撑、实验支撑、平时/实验/期末三类评价标准。
+  /// 返回 4 个目标的行（与 course_objectives 字段对齐，含 standards JSON）。
+  /// AI 不可用或解析失败时返回空列表，由调用方回退到正则解析。
+  Future<List<Map<String, dynamic>>> aiExtractSyllabus(String rawText) async {
+    if (rawText.trim().isEmpty) return [];
+    const system = '你是高校课程达成度评价专家，精通工程教育认证。'
+        '请仔细阅读课程教学大纲，提取 4 个课程目标的完整结构化信息，只返回 JSON，不要任何解释文字。';
+    final prompt = '''
+阅读以下《移动应用开发》课程教学大纲，提取每个课程目标的信息。
+重点全面解析：
+1. 课程目标的描述、支撑的毕业要求指标点(如 1.4)、权重(小数)、满分；
+2. 哪些章节支撑该目标(章节号)；
+3. 哪些实验项目支撑该目标(实验序号)；
+4. 平时成绩评价标准、实验成绩评价标准、期末考核评价内容中该目标对应的考核要点。
+
+返回 JSON 数组，4 个元素，格式：
+[{
+  "idx": 1,
+  "name": "课程目标1",
+  "indicator": "1.4",
+  "weight": 0.15,
+  "full_mark": 15,
+  "description": "目标描述全文",
+  "chapters": "第1章、第2章",
+  "experiments": "实验1、实验2",
+  "assess_content": "期末考核该目标的评价内容",
+  "pingshi_standard": "平时成绩该目标的评价标准要点",
+  "experiment_standard": "实验成绩该目标的评价标准要点"
+}]
+权重之和应为 1。仅返回 JSON 数组。
+
+大纲全文：
+$rawText
+''';
+    try {
+      final raw = await AiService().chat(
+        [{'role': 'user', 'content': prompt}],
+        systemPrompt: system,
+      );
+      final match = RegExp(r'\[[\s\S]*\]').firstMatch(raw);
+      if (match == null) return [];
+      final list = (jsonDecode(match.group(0)!) as List).cast<Map<String, dynamic>>();
+      // 规范化字段
+      return list.map((o) {
+        final idx = (o['idx'] as num?)?.toInt() ?? 0;
+        return {
+          'idx': idx,
+          'name': (o['name'] as String?) ?? '课程目标$idx',
+          'indicator': (o['indicator'] ?? '').toString(),
+          'weight': (o['weight'] as num?)?.toDouble() ?? 0,
+          'full_mark': (o['full_mark'] as num?)?.toDouble() ?? 0,
+          'description': (o['description'] ?? '').toString(),
+          'chapters': (o['chapters'] ?? '').toString(),
+          'assess_content': (o['assess_content'] ?? '').toString(),
+          'pingshi_ratio': 0.20,
+          'experiment_ratio': 0.30,
+          'exam_ratio': 0.50,
+          // 额外信息打包进 standards（course_objectives 未必有这些列，调用方自取）
+          'experiments': (o['experiments'] ?? '').toString(),
+          'pingshi_standard': (o['pingshi_standard'] ?? '').toString(),
+          'experiment_standard': (o['experiment_standard'] ?? '').toString(),
+        };
+      }).where((o) => (o['idx'] as int) > 0).toList()
+        ..sort((a, b) => (a['idx'] as int).compareTo(b['idx'] as int));
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AchievementExcel.aiExtractSyllabus', stack: st);
+      return [];
+    }
+  }
+
 
   Map<String, dynamic> _parseMarkdownSyllabus(String content) {
     final result = <String, dynamic>{};
