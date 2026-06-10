@@ -1,4 +1,5 @@
-﻿import 'package:file_picker/file_picker.dart';
+﻿import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import '../../../../core/error_handler.dart';
@@ -71,7 +72,7 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
       var rows = await svc.aiExtractSyllabus(raw);
       // AI 不可用(无网络/超时)时回退正则解析，确保首次启动就有大纲数据
       if (rows.isEmpty) {
-        rows = svc.syllabusToObjectiveRows(svc.parseSyllabusBytes(raw.codeUnits, 'md'));
+        rows = svc.syllabusToObjectiveRows(svc.parseSyllabusBytes(Uint8List.fromList(raw.codeUnits), 'md'));
       }
       if (rows.isNotEmpty) {
         await widget.achievementDao.saveCourseObjectives('移动应用开发', rows);
