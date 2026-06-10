@@ -908,7 +908,10 @@ class SyllabusPreviewDialog extends StatefulWidget {
 
 class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
   late final List<Map<String, dynamic>> _rows =
-      widget.rows.map((e) => Map<String, dynamic>.from(e)).toList();
+      widget.rows
+          .map((e) => Map<String, dynamic>.from(e))
+          .where((o) => ((o['idx'] as num?)?.toInt() ?? 0) >= 1 && ((o['idx'] as num?)?.toInt() ?? 0) <= 4)
+          .toList();
   late final List<TextEditingController> _weightCtrls;
   late final List<TextEditingController> _indicatorCtrls;
   late final List<TextEditingController> _fullMarkCtrls;

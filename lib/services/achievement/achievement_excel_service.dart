@@ -737,7 +737,9 @@ $rawText
     }
     mergeMapToField('experimentMap', 'experiments');
     mergeMapToField('chapterMap', 'chapters');
-    final rows = byIdx.values.toList()
+    final rows = byIdx.values
+        .where((r) => ((r['idx'] as int?) ?? 0) >= 1 && ((r['idx'] as int?) ?? 0) <= 4)
+        .toList()
       ..sort((a, b) => (a['idx'] as int).compareTo(b['idx'] as int));
     return rows;
   }
