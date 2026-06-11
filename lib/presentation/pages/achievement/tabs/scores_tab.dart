@@ -29,18 +29,27 @@ class ScoreManagementTab extends StatefulWidget {
   State<ScoreManagementTab> createState() => _ScoreManagementTabState();
 }
 
-class _ScoreManagementTabState extends State<ScoreManagementTab> {
+class _ScoreManagementTabState extends State<ScoreManagementTab>
+    with SingleTickerProviderStateMixin {
   List<Map<String, dynamic>> _batches = [];
-  List<Map<String, dynamic>> _scores = [];
   int? _selectedBatchId;
   bool _loadingBatches = true;
-  bool _loadingScores = false;
   bool _generating = false;
+  bool _loadingComponents = false;
+  late TabController _tabCtrl;
+  List<Map<String, dynamic>> _ps = [], _es = [], _xs = [];
 
   @override
   void initState() {
     super.initState();
+    _tabCtrl = TabController(length: 3, vsync: this);
     _loadBatches();
+  }
+
+  @override
+  void dispose() {
+    _tabCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _loadBatches() async {
@@ -52,28 +61,12 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
           _loadingBatches = false;
           if (_batches.isNotEmpty && _selectedBatchId == null) {
             _selectedBatchId = _batches.first['id'] as int;
-            _loadScores();
+            _loadComponentScores();
           }
         });
       }
     } catch (e) {
       if (mounted) setState(() => _loadingBatches = false);
-    }
-  }
-
-  Future<void> _loadScores() async {
-    if (_selectedBatchId == null) return;
-    setState(() => _loadingScores = true);
-    try {
-      final scores = await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
-      if (mounted) {
-        setState(() {
-          _scores = scores;
-          _loadingScores = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) setState(() => _loadingScores = false);
     }
   }
 
@@ -243,7 +236,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
               // 录入/编辑后重算批次达成度，保持详情/报告同步
               await widget.achievementDao.recalculateAndSaveBatch(_selectedBatchId!);
               if (ctx.mounted) Navigator.pop(ctx);
-              _loadScores();
+              _loadComponentScores();
             },
             child: Text(isEdit ? '保存' : '添加'),
           ),
@@ -333,7 +326,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
       setState(() => _generating = true);
       final count = await widget.achievementDao
           .importComponentsToDatabase(_selectedBatchId!, components);
-      await _loadScores();
+      _loadComponentScores();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -465,7 +458,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
       if (_selectedBatchId != null) {
         await widget.achievementDao.recalculateAndSaveBatch(_selectedBatchId!);
       }
-      _loadScores();
+      _loadComponentScores();
     }
   }
 
@@ -521,122 +514,80 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
         if (_generating)
           const LinearProgressIndicator(),
         const Divider(height: 1),
-        // 成绩列表
-        Expanded(
-          child: _loadingScores
-              ? const Center(child: CircularProgressIndicator())
-              : _scores.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.edit_note, size: 64, color: Colors.grey.withValues(alpha: 0.5)),
-                          const SizedBox(height: 12),
-                          const Text('暂无成绩数据', style: TextStyle(color: Colors.grey)),
-                          const SizedBox(height: 8),
-                          const Text(
-                            '点击上方按钮添加或自动生成',
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    )
-                  : _buildScoreSummary(),
-        ),
+        // 子Tab: 平时/实验/期末成绩管理(可编辑)
+        Container(color: primary, margin: const EdgeInsets.only(top: 4),
+            child: TabBar(controller: _tabCtrl, labelColor: Colors.white, unselectedLabelColor: Colors.white60,
+              indicatorColor: Colors.white, labelStyle: const TextStyle(fontSize: 13),
+              tabs: const [Tab(text:'平时成绩'), Tab(text:'实验成绩'), Tab(text:'期末成绩')])),
+        if (_loadingComponents) const LinearProgressIndicator(),
+        Expanded(child: TabBarView(controller: _tabCtrl, children: [
+          _buildComponentTable('pingshi', _ps), _buildComponentTable('experiment', _es), _buildComponentTable('exam', _xs),
+        ])),
       ],
     );
   }
 
-  Widget _buildScoreSummary() {
-    return FutureBuilder<Map<String, int>>(
-      future: _loadComponentCounts(),
-      builder: (ctx, snapshot) {
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-        final counts = snapshot.data!;
-        if (counts.values.every((c) => c == 0)) {
-          return const Center(child: Text('暂无成绩数据', style: TextStyle(color: Colors.grey)));
-        }
-        return ListView(padding: const EdgeInsets.all(16), children: [
-          Card(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Padding(padding: const EdgeInsets.all(20), child: Column(children: [
-              const Text('成绩导入概况', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const Divider(height: 24),
-              Row(children: [
-                _countCard(Icons.school_outlined, '平时成绩', counts['pingshi'] ?? 0, Colors.blue),
-                const SizedBox(width: 12),
-                _countCard(Icons.science_outlined, '实验成绩', counts['experiment'] ?? 0, Colors.green),
-                const SizedBox(width: 12),
-                _countCard(Icons.assignment_outlined, '期末成绩', counts['exam'] ?? 0, Colors.orange),
-              ]),
-              const SizedBox(height: 16),
-              const Text('点击展开查看/管理各环节成绩：', style: TextStyle(fontSize: 12, color: Colors.grey)),
-            ])),
-          ),
-          _buildComponentPreview('pingshi', '平时成绩', Icons.school_outlined, Colors.blue),
-          _buildComponentPreview('experiment', '实验成绩', Icons.science_outlined, Colors.green),
-          _buildComponentPreview('exam', '期末成绩', Icons.assignment_outlined, Colors.orange),
-        ]);
-      },
-    );
+  void _loadComponentScores() {
+    if (_selectedBatchId == null) return;
+    setState(() => _loadingComponents = true);
+    Future.wait([
+      widget.achievementDao.getPingshiScores(_selectedBatchId!),
+      widget.achievementDao.getExperimentScores(_selectedBatchId!),
+      widget.achievementDao.getExamScores(_selectedBatchId!),
+    ]).then((r) {
+      if (mounted) setState(() { _ps = r[0] as List<Map<String, dynamic>>; _es = r[1] as List<Map<String, dynamic>>; _xs = r[2] as List<Map<String, dynamic>>; _loadingComponents = false; });
+    }).catchError((_) { if (mounted) setState(() => _loadingComponents = false); });
   }
 
-  Future<Map<String, int>> _loadComponentCounts() async {
-    if (_selectedBatchId == null) return {};
-    try {
-      final db = await DatabaseHelper.instance.database;
-      final p = await db.rawQuery('SELECT COUNT(*) as c FROM achievement_pingshi_scores WHERE batch_id=?', [_selectedBatchId]);
-      final e = await db.rawQuery('SELECT COUNT(*) as c FROM achievement_experiment_scores WHERE batch_id=?', [_selectedBatchId]);
-      final x = await db.rawQuery('SELECT COUNT(*) as c FROM achievement_exam_scores WHERE batch_id=?', [_selectedBatchId]);
-      return {'pingshi': (p.first['c'] as int?) ?? 0, 'experiment': (e.first['c'] as int?) ?? 0, 'exam': (x.first['c'] as int?) ?? 0};
-    } catch (_) {
-      return {};
-    }
+  Widget _buildComponentTable(String env, List<Map<String, dynamic>> rows) {
+    if (rows.isEmpty) return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+      const Icon(Icons.info_outline, size: 48, color: Colors.grey), const SizedBox(height: 12),
+      const Text('暂无数据，请先导入成绩', style: TextStyle(color: Colors.grey)),]));
+    final cols = _envCols(env);
+    return RefreshIndicator(onRefresh: () async => _loadComponentScores(), child: ListView(children: [
+      SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(columnSpacing:10,headingRowHeight:34,dataRowMinHeight:30,
+        columns: [const DataColumn(label:Text('学号',style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),const DataColumn(label:Text('姓名',style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),
+          ...cols.map((c)=>DataColumn(label:Text(_colLabel(c),style:const TextStyle(fontSize:10,fontWeight:FontWeight.bold)))),
+          const DataColumn(label:Text('操作',style:TextStyle(fontSize:10,fontWeight:FontWeight.bold)))],
+        rows: rows.map((r)=>DataRow(cells:[
+          DataCell(Text(r['student_id']?.toString()??'',style:const TextStyle(fontSize:10))),DataCell(Text(r['student_name']?.toString()??'',style:const TextStyle(fontSize:10))),
+          ...cols.map((k)=>DataCell(Text(((r[k] as num?)?.toDouble()??0).toStringAsFixed(1),style:const TextStyle(fontSize:10)))),
+          DataCell(IconButton(icon:const Icon(Icons.edit,size:14),onPressed:()=>_editRow(env,r),padding:EdgeInsets.zero,constraints:const BoxConstraints(minWidth:28,minHeight:28),tooltip:'编辑')),
+        ])).toList(),
+      )),
+    ]));
   }
 
-  Widget _countCard(IconData icon, String label, int count, Color color) {
-    return Expanded(child: Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(10)),
-      child: Column(children: [
-        Icon(icon, color: color, size: 28), const SizedBox(height: 8),
-        Text('$count', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: color)),
-        const SizedBox(height: 4), Text(label, style: TextStyle(fontSize: 12, color: color)),
-      ]),
-    ));
+  void _editRow(String env, Map<String, dynamic> row) {
+    final cols=_envCols(env);final ctrls=cols.map((k)=>TextEditingController(text:((row[k] as num?)?.toDouble()??0).toString())).toList();
+    showDialog(context:context,builder:(ctx)=>AlertDialog(
+      title:Text('编辑 ${row['student_name']??''}'),content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,
+        children:[for(int i=0;i<cols.length;i++) Padding(padding:const EdgeInsets.only(bottom:8),child:TextField(controller:ctrls[i],keyboardType:TextInputType.number,decoration:InputDecoration(labelText:_colLabel(cols[i]),border:const OutlineInputBorder(),isDense:true)))])),
+      actions:[
+        TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('取消')),
+        FilledButton(onPressed:()async{
+          Navigator.pop(ctx);for(int i=0;i<cols.length;i++) row[cols[i]]=double.tryParse(ctrls[i].text)??0;
+          String tn=env=='pingshi'?'achievement_pingshi_scores':env=='experiment'?'achievement_experiment_scores':'achievement_exam_scores';
+          final db=await DatabaseHelper.instance.database;
+          final data=<String,dynamic>{};for(final c in cols) data[c]=row[c];data['updated_at']=DateTime.now().toIso8601String();
+          await db.update(tn,data,where:'id=?',whereArgs:[row['id']]);
+          await widget.achievementDao.recalculateAndSaveBatch(_selectedBatchId!);
+          _loadComponentScores();if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('已保存并重算达成度'),backgroundColor:Colors.green));
+        },child:const Text('保存')),
+      ]));
   }
 
-  Widget _buildComponentPreview(String env, String title, IconData icon, Color color) {
-    final colLabels = _envColLabels(env); final colKeys = _envColKeys(env);
-    return Card(margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: _ComponentExpandTile(
-        title: title, icon: icon, color: color,
-        batchId: _selectedBatchId!, env: env,
-        colLabels: colLabels, colKeys: colKeys,
-      ),
-    );
-  }
+  static const _colLabelMap={
+    'class_activity_score':'课堂表现','quiz_homework_score':'期间测验','extra_learning_score':'课外学习','total_score':'总评',
+    'exp1_score':'实验1','exp2_score':'实验2','exp3_score':'实验3','exp4_score':'实验4','exp5_score':'实验5','exp6_score':'实验6',
+    'project_score':'项目得分','group_score':'小组得分','individual_score':'个人得分','defense_score':'答辩得分'};
+  String _colLabel(String k)=>_colLabelMap[k]??k;
 
-  List<String> _envColLabels(String env) {
-    switch (env) {
-      case 'pingshi': return ['课堂表现', '期间测验', '课外学习', '总评'];
-      case 'experiment': return ['实验1','实验2','实验3','实验4','实验5','实验6','总评'];
-      default: return ['项目','小组','个人','答辩','总评'];
-    }
-  }
-
-  List<String> _envColKeys(String env) {
+  List<String> _envCols(String env) {
     switch (env) {
       case 'pingshi': return ['class_activity_score','quiz_homework_score','extra_learning_score','total_score'];
       case 'experiment': return ['exp1_score','exp2_score','exp3_score','exp4_score','exp5_score','exp6_score','total_score'];
       default: return ['project_score','group_score','individual_score','defense_score','total_score'];
-    }
-  }
-
-  List<String> _envCols(String env) {
-    switch (env) {
-      case 'pingshi': return ['class_activity_score', 'quiz_homework_score', 'extra_learning_score', 'total_score'];
-      case 'experiment': return ['exp1_score','exp2_score','exp3_score','exp4_score','exp5_score','exp6_score','total_score'];
-      default: return ['project_score', 'group_score', 'individual_score', 'defense_score', 'total_score'];
     }
   }
 
@@ -660,7 +611,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab> {
           }).toList(),
           onChanged: (v) {
             setState(() => _selectedBatchId = v);
-            _loadScores();
+            _loadComponentScores();
           },
         ),
       ),
