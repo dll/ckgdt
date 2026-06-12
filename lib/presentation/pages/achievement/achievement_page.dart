@@ -29,6 +29,9 @@ class _AchievementPageState extends State<AchievementPage>
   final _authService = AuthService();
   final _achievementDao = AchievementDao();
 
+  /// 数据变更通知器：成绩导入/删除时 +1，子 tab 监听后刷新
+  final ValueNotifier<int> dataRevision = ValueNotifier(0);
+
   static const _tabSpecs = <(IconData, String, String)>[
     (Icons.analytics_outlined, '达成度概览', '01'),
     (Icons.edit_note, '成绩管理', '02'),
@@ -61,6 +64,7 @@ class _AchievementPageState extends State<AchievementPage>
   void dispose() {
     unbindInnerTabRequest();
     _tabController.dispose();
+    dataRevision.dispose();
     super.dispose();
   }
 
@@ -140,18 +144,23 @@ class _AchievementPageState extends State<AchievementPage>
               ScoreManagementTab(
                 authService: _authService,
                 achievementDao: _achievementDao,
+                dataRevision: dataRevision,
               ),
               CalculationProcessTab(
                 achievementDao: _achievementDao,
+                dataRevision: dataRevision,
               ),
               PingshiAchievementTab(
                 achievementDao: _achievementDao,
+                dataRevision: dataRevision,
               ),
               ExperimentAchievementTab(
                 achievementDao: _achievementDao,
+                dataRevision: dataRevision,
               ),
               ExamAchievementTab(
                 achievementDao: _achievementDao,
+                dataRevision: dataRevision,
               ),
               ContinuousImprovementTab(
                 achievementDao: _achievementDao,

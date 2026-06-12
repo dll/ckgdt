@@ -17,6 +17,10 @@ class DatabaseHelper {
 
   DatabaseHelper._init();
 
+  /// 仅供单元/集成测试注入内存库，绕过种子 DB 拷贝与启动迁移。
+  @visibleForTesting
+  static set databaseForTest(Database? db) => _database = db;
+
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await _initDB();

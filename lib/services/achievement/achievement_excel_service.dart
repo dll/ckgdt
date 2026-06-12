@@ -116,7 +116,7 @@ class AchievementExcelService {
   /// 列定位（0-indexed，数据从含学号的行之后开始）：
   /// - 平时：学号0 姓名1 | 课堂表现最后得分13 | 期间测验平均分25 | 大作业平均分36
   /// - 实验：学号0 姓名1 | exp1=2 exp2=3 exp3=5 exp4=6 exp5=8 exp6=9 exp7=11
-  /// - 期末：学号0 姓名1 | 项目2 小组4 个人6 答辩8
+  /// - 期末：学号0 姓名1 | 项目2 小组3 个人4 答辩5
   Map<String, List<Map<String, dynamic>>> parseComponentSheets(Uint8List bytes) {
     final excel = xl.Excel.decodeBytes(bytes);
     final out = <String, List<Map<String, dynamic>>>{
@@ -314,9 +314,9 @@ class AchievementExcelService {
         'student_id': sid,
         'student_name': _cellStr(row, 1),
         'project_score': _cell(row, 2),
-        'group_score': _cell(row, 4),
-        'individual_score': _cell(row, 6),
-        'defense_score': _cell(row, 8),
+        'group_score': _cell(row, 3),
+        'individual_score': _cell(row, 4),
+        'defense_score': _cell(row, 5),
       });
     }
     return rows;

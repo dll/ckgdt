@@ -782,7 +782,7 @@ class _BatchDetailSheetState extends State<BatchDetailSheet> {
                   ),
                 ),
                 Text(
-                  '总分: ${score['total_score'] ?? 0}',
+                  '总分: ${(score['total_score'] as num?)?.toDouble().toStringAsFixed(3) ?? '0.000'}',
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                 ),
               ],
@@ -800,7 +800,7 @@ class _BatchDetailSheetState extends State<BatchDetailSheet> {
                         style: TextStyle(fontSize: 11, color: kObjectiveColors[i]),
                       ),
                       Text(
-                        val.toStringAsFixed(1),
+                        val.toStringAsFixed(3),
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,

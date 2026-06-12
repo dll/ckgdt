@@ -37,6 +37,7 @@ class AchievementDocxService {
     required Map<String, dynamic> classStats,
     required List<Map<String, dynamic>> students,
     String? analysisText,
+    String? qualitativeText,
     String? improvementText,
     double expectation = 0.6,
   }) async {
@@ -52,6 +53,7 @@ class AchievementDocxService {
       classStats: classStats,
       students: students,
       analysisText: analysisText,
+      qualitativeText: qualitativeText,
       improvementText: improvementText,
       expectation: expectation,
     );
@@ -96,6 +98,7 @@ class AchievementDocxService {
     required Map<String, dynamic> classStats,
     required List<Map<String, dynamic>> students,
     String? analysisText,
+    String? qualitativeText,
     String? improvementText,
     required double expectation,
   }) {
@@ -136,7 +139,7 @@ class AchievementDocxService {
     _empty(b);
 
     _heading(b, '四、达成结果分析与持续改进');
-    _buildAnalysisTable(b, objectives, classStats, analysisText, improvementText, teacherName);
+    _buildAnalysisTable(b, objectives, classStats, analysisText, qualitativeText, improvementText, teacherName);
 
     b.write('</w:body></w:document>');
     return b.toString();
@@ -319,6 +322,7 @@ class AchievementDocxService {
     List<Map<String, dynamic>> objectives,
     Map<String, dynamic> classStats,
     String? analysisText,
+    String? qualitativeText,
     String? improvementText,
     String teacherName,
   ) {
@@ -333,6 +337,15 @@ class AchievementDocxService {
     _tc(b, analysis);
     b.write('</w:tr>');
 
+    final qualitative = (qualitativeText?.trim().isNotEmpty ?? false)
+        ? qualitativeText!
+        : '本课程采用调查问卷开展定性评价，问卷结果与定量评价结果基本一致，'
+            '表明学生自我评价与实际能力达成情况基本相符。';
+    b.write('<w:tr>');
+    _tc(b, '调查问卷评价情况(定性)', bold: true, fill: 'F2F2F2');
+    _tc(b, qualitative);
+    b.write('</w:tr>');
+
     final improvement = (improvementText?.trim().isNotEmpty ?? false)
         ? improvementText!
         : _defaultImprovement(objectives);
@@ -344,6 +357,11 @@ class AchievementDocxService {
     b.write('<w:tr>');
     _tc(b, '任课教师签字', bold: true, fill: 'F2F2F2');
     _tc(b, '$teacherName　　日期：${DateTime.now().toString().substring(0, 10)}');
+    b.write('</w:tr>');
+
+    b.write('<w:tr>');
+    _tc(b, '课程群建设工作组意见', bold: true, fill: 'F2F2F2');
+    _tc(b, '课程群建设工作组组长签字：　　　　日期：　 年　 月　 日');
     b.write('</w:tr>');
     b.write('</w:tbl>');
   }
