@@ -1064,50 +1064,19 @@ class _PingshiAchievementTabState extends State<PingshiAchievementTab> {
                     ],
                   ),
                 )
-              : SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: SingleChildScrollView(
-                    child: DataTable(
-                      columnSpacing: 16,
-                      headingRowHeight: 42,
-                      dataRowMinHeight: 38,
-                      dataRowMaxHeight: 42,
-                      headingRowColor: WidgetStateProperty.all(Theme.of(context).colorScheme.surface),
-                      columns: const [
-                        DataColumn(label: Text('学号', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                        DataColumn(label: Text('姓名', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                        DataColumn(label: Text('课堂表现', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                        DataColumn(label: Text('目标1达成', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                        DataColumn(label: Text('期间测验', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                        DataColumn(label: Text('目标2达成', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                        DataColumn(label: Text('课外学习', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                        DataColumn(label: Text('目标4达成', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                        DataColumn(label: Text('总评', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                      ],
-                      rows: List.generate(_scores.length, (index) {
-                        final s = _scores[index];
-                        final classAch = (s['class_activity_achievement'] as num?)?.toDouble() ?? 0;
-                        final quizAch = (s['quiz_homework_achievement'] as num?)?.toDouble() ?? 0;
-                        final extraAch = (s['extra_learning_achievement'] as num?)?.toDouble() ?? 0;
-                        return DataRow(
-                          color: WidgetStateProperty.all(
-                            index.isEven ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.surface.withValues(alpha: 0.6),
-                          ),
-                          cells: [
-                            DataCell(Text(s['student_id']?.toString() ?? '', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85)))),
-                            DataCell(Text(s['student_name']?.toString() ?? '', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85)))),
-                            DataCell(Text(((s['class_activity_score'] as num?)?.toDouble() ?? 0).toStringAsFixed(1), style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85)))),
-                            DataCell(Text(classAch.toStringAsFixed(2), style: TextStyle(fontSize: 12, color: achievementLevelColor(classAch)))),
-                            DataCell(Text(((s['quiz_homework_score'] as num?)?.toDouble() ?? 0).toStringAsFixed(1), style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85)))),
-                            DataCell(Text(quizAch.toStringAsFixed(2), style: TextStyle(fontSize: 12, color: achievementLevelColor(quizAch)))),
-                            DataCell(Text(((s['extra_learning_score'] as num?)?.toDouble() ?? 0).toStringAsFixed(1), style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85)))),
-                            DataCell(Text(extraAch.toStringAsFixed(2), style: TextStyle(fontSize: 12, color: achievementLevelColor(extraAch)))),
-                            DataCell(Text(((s['total_score'] as num?)?.toDouble() ?? 0).toStringAsFixed(1), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface))),
-                          ],
-                        );
-                      }),
-                    ),
-                  ),
+              : achievementScoreTable(
+                  context,
+                  rows: _scores,
+                  onRefresh: () async => _loadScores(),
+                  columns: [
+                    ScoreColumn('课堂表现', (s) => (s['class_activity_score'] as num?)?.toDouble() ?? 0),
+                    ScoreColumn('目标1', (s) => (s['class_activity_achievement'] as num?)?.toDouble() ?? 0, isAchievement: true, digits: 2, headerColor: kObjectiveColors[0]),
+                    ScoreColumn('期间测验', (s) => (s['quiz_homework_score'] as num?)?.toDouble() ?? 0),
+                    ScoreColumn('目标2', (s) => (s['quiz_homework_achievement'] as num?)?.toDouble() ?? 0, isAchievement: true, digits: 2, headerColor: kObjectiveColors[1]),
+                    ScoreColumn('课外学习', (s) => (s['extra_learning_score'] as num?)?.toDouble() ?? 0),
+                    ScoreColumn('目标4', (s) => (s['extra_learning_achievement'] as num?)?.toDouble() ?? 0, isAchievement: true, digits: 2, headerColor: kObjectiveColors[3]),
+                    ScoreColumn('总评', (s) => (s['total_score'] as num?)?.toDouble() ?? 0, bold: true),
+                  ],
                 ),
         ),
       ],
@@ -1318,61 +1287,24 @@ class _ExperimentAchievementTabState extends State<ExperimentAchievementTab> {
                     ],
                   ),
                 )
-              : SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: SingleChildScrollView(
-                    child: DataTable(
-                      columnSpacing: 16,
-                      headingRowHeight: 42,
-                      dataRowMinHeight: 38,
-                      dataRowMaxHeight: 42,
-                      headingRowColor: WidgetStateProperty.all(Theme.of(context).colorScheme.surface),
-                      columns: const [
-                        DataColumn(label: Text('学号', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                        DataColumn(label: Text('姓名', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                        DataColumn(label: Text('实验1', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                        DataColumn(label: Text('实验2', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                        DataColumn(label: Text('目标1', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.red))),
-                        DataColumn(label: Text('实验3', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                        DataColumn(label: Text('实验4', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                        DataColumn(label: Text('目标2', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.blue))),
-                        DataColumn(label: Text('实验5', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                        DataColumn(label: Text('实验6', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                        DataColumn(label: Text('目标3', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.green))),
-                        DataColumn(label: Text('实验7', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                        DataColumn(label: Text('目标4', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.orange))),
-                        DataColumn(label: Text('总评', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                      ],
-                      rows: List.generate(_scores.length, (index) {
-                        final s = _scores[index];
-                        final o1 = (s['obj1_achievement'] as num?)?.toDouble() ?? 0;
-                        final o2 = (s['obj2_achievement'] as num?)?.toDouble() ?? 0;
-                        final o3 = (s['obj3_achievement'] as num?)?.toDouble() ?? 0;
-                        final o4 = (s['obj4_achievement'] as num?)?.toDouble() ?? 0;
-                        return DataRow(
-                          color: WidgetStateProperty.all(
-                            index.isEven ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.surface.withValues(alpha: 0.6),
-                          ),
-                          cells: [
-                            DataCell(Text(s['student_id']?.toString() ?? '', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85)))),
-                            DataCell(Text(s['student_name']?.toString() ?? '', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85)))),
-                            DataCell(Text(((s['exp1_score'] as num?)?.toDouble() ?? 0).toStringAsFixed(1), style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85)))),
-                            DataCell(Text(((s['exp2_score'] as num?)?.toDouble() ?? 0).toStringAsFixed(1), style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85)))),
-                            DataCell(Text(o1.toStringAsFixed(2), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: achievementLevelColor(o1)))),
-                            DataCell(Text(((s['exp3_score'] as num?)?.toDouble() ?? 0).toStringAsFixed(1), style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85)))),
-                            DataCell(Text(((s['exp4_score'] as num?)?.toDouble() ?? 0).toStringAsFixed(1), style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85)))),
-                            DataCell(Text(o2.toStringAsFixed(2), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: achievementLevelColor(o2)))),
-                            DataCell(Text(((s['exp5_score'] as num?)?.toDouble() ?? 0).toStringAsFixed(1), style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85)))),
-                            DataCell(Text(((s['exp6_score'] as num?)?.toDouble() ?? 0).toStringAsFixed(1), style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85)))),
-                            DataCell(Text(o3.toStringAsFixed(2), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: achievementLevelColor(o3)))),
-                            DataCell(Text(((s['exp7_score'] as num?)?.toDouble() ?? 0).toStringAsFixed(1), style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85)))),
-                            DataCell(Text(o4.toStringAsFixed(2), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: achievementLevelColor(o4)))),
-                            DataCell(Text(((s['total_score'] as num?)?.toDouble() ?? 0).toStringAsFixed(1), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface))),
-                          ],
-                        );
-                      }),
-                    ),
-                  ),
+              : achievementScoreTable(
+                  context,
+                  rows: _scores,
+                  onRefresh: () async => _loadScores(),
+                  columns: [
+                    ScoreColumn('实验1', (s) => (s['exp1_score'] as num?)?.toDouble() ?? 0),
+                    ScoreColumn('实验2', (s) => (s['exp2_score'] as num?)?.toDouble() ?? 0),
+                    ScoreColumn('目标1', (s) => (s['obj1_achievement'] as num?)?.toDouble() ?? 0, isAchievement: true, digits: 2, headerColor: kObjectiveColors[0]),
+                    ScoreColumn('实验3', (s) => (s['exp3_score'] as num?)?.toDouble() ?? 0),
+                    ScoreColumn('实验4', (s) => (s['exp4_score'] as num?)?.toDouble() ?? 0),
+                    ScoreColumn('目标2', (s) => (s['obj2_achievement'] as num?)?.toDouble() ?? 0, isAchievement: true, digits: 2, headerColor: kObjectiveColors[1]),
+                    ScoreColumn('实验5', (s) => (s['exp5_score'] as num?)?.toDouble() ?? 0),
+                    ScoreColumn('实验6', (s) => (s['exp6_score'] as num?)?.toDouble() ?? 0),
+                    ScoreColumn('目标3', (s) => (s['obj3_achievement'] as num?)?.toDouble() ?? 0, isAchievement: true, digits: 2, headerColor: kObjectiveColors[2]),
+                    ScoreColumn('实验7', (s) => (s['exp7_score'] as num?)?.toDouble() ?? 0),
+                    ScoreColumn('目标4', (s) => (s['obj4_achievement'] as num?)?.toDouble() ?? 0, isAchievement: true, digits: 2, headerColor: kObjectiveColors[3]),
+                    ScoreColumn('总评', (s) => (s['total_score'] as num?)?.toDouble() ?? 0, bold: true),
+                  ],
                 ),
         ),
       ],
@@ -1583,55 +1515,21 @@ class _ExamAchievementTabState extends State<ExamAchievementTab> {
                     ],
                   ),
                 )
-              : SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: SingleChildScrollView(
-                    child: DataTable(
-                      columnSpacing: 16,
-                      headingRowHeight: 42,
-                      dataRowMinHeight: 38,
-                      dataRowMaxHeight: 42,
-                      headingRowColor: WidgetStateProperty.all(Theme.of(context).colorScheme.surface),
-                      columns: const [
-                        DataColumn(label: Text('学号', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                        DataColumn(label: Text('姓名', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                        DataColumn(label: Text('项目(30%)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                        DataColumn(label: Text('目标1达成', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.red))),
-                        DataColumn(label: Text('小组(20%)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                        DataColumn(label: Text('目标2达成', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.blue))),
-                        DataColumn(label: Text('个人(20%)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                        DataColumn(label: Text('目标3达成', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.green))),
-                        DataColumn(label: Text('答辩(30%)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                        DataColumn(label: Text('目标4达成', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.orange))),
-                        DataColumn(label: Text('总评', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-                      ],
-                      rows: List.generate(_scores.length, (index) {
-                        final s = _scores[index];
-                        final o1 = (s['obj1_achievement'] as num?)?.toDouble() ?? 0;
-                        final o2 = (s['obj2_achievement'] as num?)?.toDouble() ?? 0;
-                        final o3 = (s['obj3_achievement'] as num?)?.toDouble() ?? 0;
-                        final o4 = (s['obj4_achievement'] as num?)?.toDouble() ?? 0;
-                        return DataRow(
-                          color: WidgetStateProperty.all(
-                            index.isEven ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.surface.withValues(alpha: 0.6),
-                          ),
-                          cells: [
-                            DataCell(Text(s['student_id']?.toString() ?? '', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85)))),
-                            DataCell(Text(s['student_name']?.toString() ?? '', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85)))),
-                            DataCell(Text(((s['project_score'] as num?)?.toDouble() ?? 0).toStringAsFixed(1), style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85)))),
-                            DataCell(Text(o1.toStringAsFixed(2), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: achievementLevelColor(o1)))),
-                            DataCell(Text(((s['group_score'] as num?)?.toDouble() ?? 0).toStringAsFixed(1), style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85)))),
-                            DataCell(Text(o2.toStringAsFixed(2), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: achievementLevelColor(o2)))),
-                            DataCell(Text(((s['individual_score'] as num?)?.toDouble() ?? 0).toStringAsFixed(1), style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85)))),
-                            DataCell(Text(o3.toStringAsFixed(2), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: achievementLevelColor(o3)))),
-                            DataCell(Text(((s['defense_score'] as num?)?.toDouble() ?? 0).toStringAsFixed(1), style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85)))),
-                            DataCell(Text(o4.toStringAsFixed(2), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: achievementLevelColor(o4)))),
-                            DataCell(Text(((s['total_score'] as num?)?.toDouble() ?? 0).toStringAsFixed(1), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface))),
-                          ],
-                        );
-                      }),
-                    ),
-                  ),
+              : achievementScoreTable(
+                  context,
+                  rows: _scores,
+                  onRefresh: () async => _loadScores(),
+                  columns: [
+                    ScoreColumn('项目', (s) => (s['project_score'] as num?)?.toDouble() ?? 0),
+                    ScoreColumn('目标1', (s) => (s['obj1_achievement'] as num?)?.toDouble() ?? 0, isAchievement: true, digits: 2, headerColor: kObjectiveColors[0]),
+                    ScoreColumn('小组', (s) => (s['group_score'] as num?)?.toDouble() ?? 0),
+                    ScoreColumn('目标2', (s) => (s['obj2_achievement'] as num?)?.toDouble() ?? 0, isAchievement: true, digits: 2, headerColor: kObjectiveColors[1]),
+                    ScoreColumn('个人', (s) => (s['individual_score'] as num?)?.toDouble() ?? 0),
+                    ScoreColumn('目标3', (s) => (s['obj3_achievement'] as num?)?.toDouble() ?? 0, isAchievement: true, digits: 2, headerColor: kObjectiveColors[2]),
+                    ScoreColumn('答辩', (s) => (s['defense_score'] as num?)?.toDouble() ?? 0),
+                    ScoreColumn('目标4', (s) => (s['obj4_achievement'] as num?)?.toDouble() ?? 0, isAchievement: true, digits: 2, headerColor: kObjectiveColors[3]),
+                    ScoreColumn('总评', (s) => (s['total_score'] as num?)?.toDouble() ?? 0, bold: true),
+                  ],
                 ),
         ),
       ],

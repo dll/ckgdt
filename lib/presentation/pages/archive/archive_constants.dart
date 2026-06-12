@@ -28,6 +28,7 @@ const examCourseDocs = {
     DocumentTypeDef(key: 'teacher_guide', label: '教师教学指导手册', iconCodePoint: '0xe869', canImport: true, canPrint: true),
     DocumentTypeDef(key: 'student_guide', label: '学生学习指导手册', iconCodePoint: '0xe8b1', canImport: true, canPrint: true),
     DocumentTypeDef(key: 'assessment_plan', label: '综合考核方案', iconCodePoint: '0xe8b1', canImport: true, canPrint: true),
+    DocumentTypeDef(key: 'survey', label: '问卷', iconCodePoint: '0xe8b1', canImport: true, canPrint: true),
   ],
   'midterm': [
     DocumentTypeDef(key: 'midterm_exam', label: '期中试卷', iconCodePoint: '0xe869', needsGeneration: true),
@@ -62,6 +63,7 @@ const assessCourseDocs = {
     DocumentTypeDef(key: 'teacher_guide', label: '教师教学指导手册', iconCodePoint: '0xe869', canImport: true, canPrint: true),
     DocumentTypeDef(key: 'student_guide', label: '学生学习指导手册', iconCodePoint: '0xe8b1', canImport: true, canPrint: true),
     DocumentTypeDef(key: 'assessment_plan', label: '综合考核方案', iconCodePoint: '0xe8b1', canImport: true, canPrint: true),
+    DocumentTypeDef(key: 'survey', label: '问卷', iconCodePoint: '0xe8b1', canImport: true, canPrint: true),
   ],
   'midterm': [
     DocumentTypeDef(key: 'midterm_check', label: '期中检查表', iconCodePoint: '0xe8b1', needsGeneration: true),

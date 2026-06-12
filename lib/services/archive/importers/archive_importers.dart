@@ -472,6 +472,53 @@ class ArchiveImporters {
     return buf.toString();
   }
 
+  /// 教学问卷（MHTML）→ Markdown。从教务系统"打印教学任务书"页面提取课程评价问卷数据。
+  /// 解析不出可用的内容行返回 null。
+  static String? parseSurvey(String raw, {DateTime? now}) {
+    String html = extractHtmlFromMhtml(raw);
+    html = decodeQuotedPrintable(html);
+
+    final tagStrip = RegExp(r'<[^>]*>', dotAll: true);
+
+    // 提取页面标题
+    final titleMatch = RegExp(r'<title>(.*?)</title>', dotAll: true, caseSensitive: false)
+        .firstMatch(html);
+    final pageTitle = titleMatch?.group(1)?.trim() ?? '教学任务书';
+
+    // 提取所有表格内容
+    final tableRows = <List<String>>[];
+    final tableRegex = RegExp(r'<tr[^>]*>(.*?)</tr>', dotAll: true, caseSensitive: false);
+    for (final rowMatch in tableRegex.allMatches(html)) {
+      final rowHtml = rowMatch.group(1)!;
+      final cells = <String>[];
+      final cellRegex = RegExp(r'<t[dh][^>]*>(.*?)</t[dh]>', dotAll: true, caseSensitive: false);
+      for (final cellMatch in cellRegex.allMatches(rowHtml)) {
+        var text = cellMatch.group(1)!.replaceAll(tagStrip, '').trim();
+        text = text.replaceAll(RegExp(r'\s+'), ' ');
+        if (text.isNotEmpty) cells.add(text);
+      }
+      if (cells.isNotEmpty) tableRows.add(cells);
+    }
+
+    if (tableRows.isEmpty) return null;
+
+    final buf = StringBuffer();
+    buf.writeln('# 教学问卷：$pageTitle\n');
+    buf.writeln('**来源**：教务系统（courseTableForTeacher!printLessonBook.mhtml）\n');
+
+    for (var i = 0; i < tableRows.length; i++) {
+      final row = tableRows[i];
+      buf.writeln('| ${row.join(' | ')} |');
+    }
+
+    buf.writeln('');
+    buf.writeln('---');
+    buf.writeln('> 数据来源：教务管理系统（jwgl.chzu.edu.cn）');
+    buf.writeln('> 文件来源：courseTableForTeacher!printLessonBook.mhtml');
+    buf.writeln('> 导入时间：${(now ?? DateTime.now()).toString().substring(0, 16)}');
+    return buf.toString();
+  }
+
   /// 从 docx（zip）提取纯文本。解析失败返回 null（调用方记录日志）。
   static String? extractDocxText(List<int> bytes) {
     final archive = ZipDecoder().decodeBytes(bytes);
