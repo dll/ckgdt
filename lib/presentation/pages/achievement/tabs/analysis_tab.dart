@@ -21,8 +21,9 @@ import '../achievement_config.dart';
 
 class CalculationProcessTab extends StatefulWidget {
   final AchievementDao achievementDao;
+  final ValueNotifier<int>? dataRevision;
 
-  const CalculationProcessTab({super.key, required this.achievementDao});
+  const CalculationProcessTab({super.key, required this.achievementDao, this.dataRevision});
 
   @override
   State<CalculationProcessTab> createState() => _CalculationProcessTabState();
@@ -37,6 +38,23 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
   double _weightedAchievement = 0;
   Map<String, dynamic>? _surveySummary;
   bool _creatingSurvey = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBatches();
+    widget.dataRevision?.addListener(_onDataChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.dataRevision?.removeListener(_onDataChanged);
+    super.dispose();
+  }
+
+  void _onDataChanged() {
+    _loadBatches();
+  }
 
   /// 一键创建《移动应用开发》课程满意度问卷、发布并通知全体学生。
   /// 教师无需跳转到「管理 > 问卷管理」即可在达成页直接发起。
@@ -141,14 +159,8 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
           visualDensity: VisualDensity.compact,
         ),
       ),
-      RepaintBoundary(key: _chartKey(chartId), child: chart),
+      Expanded(child: RepaintBoundary(key: _chartKey(chartId), child: SizedBox.expand(child: chart))),
     ]);
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _loadBatches();
   }
 
   Future<void> _loadBatches() async {
@@ -170,9 +182,9 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
           _loading = false;
           if (_batches.isNotEmpty && _selectedBatchId == null) {
             _selectedBatchId = _batches.first['id'] as int;
-            _loadScoresAndCalc();
           }
         });
+        if (_selectedBatchId != null) _loadScoresAndCalc();
       }
     } catch (e, st) {
       swallowDebug(e, tag: 'CalcTab.loadBatches', stack: st);
@@ -224,7 +236,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
           child: FilledButton.icon(
             onPressed: _loading ? null : _loadScoresAndCalc,
             icon: const Icon(Icons.calculate, size: 18),
-            label: const Text('触发达成度计算'),
+            label: const Text('计算达成度'),
           ),
         ),
         const SizedBox(height: 16),
@@ -477,7 +489,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                   borderData: FlBorderData(show: false),
                   barGroups: [
                     for (int i = 0; i < 4; i++)
-                      BarChartGroupData(x: i, barRods: [
+                      BarChartGroupData(x: i, showingTooltipIndicators: const [0], barRods: [
                         BarChartRodData(
                           toY: _classAvgAchievements[i],
                           color: kObjectiveColors[i],
@@ -485,7 +497,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                           borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
                         ),
                       ]),
-                    BarChartGroupData(x: 4, barRods: [
+                    BarChartGroupData(x: 4, showingTooltipIndicators: const [0], barRods: [
                       BarChartRodData(
                         toY: _weightedAchievement,
                         color: Colors.purple,
@@ -523,6 +535,15 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                 touchCallback: (event, response) {},
               ),
               dataSets: [
+                // 透明基准集：四个顶点恒为 1.0，强制雷达半径固定到 0~1，
+                // 否则 fl_chart 会把最大数据点拉到最外环（自动缩放），
+                // 导致与固定 0~1 的柱状图形状不一致。
+                RadarDataSet(
+                  fillColor: Colors.transparent,
+                  borderColor: Colors.transparent,
+                  entryRadius: 0,
+                  dataEntries: [for (int i = 0; i < 4; i++) const RadarEntry(value: 1.0)],
+                ),
                 RadarDataSet(
                   fillColor: primary.withValues(alpha: 0.25),
                   borderColor: primary,
@@ -541,13 +562,20 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
               titleTextStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
               getTitle: (index, angle) {
                 final titles = ['目标1', '目标2', '目标3', '目标4'];
-                return RadarChartTitle(text: titles[index]);
+                final v = index < 4 ? _classAvgAchievements[index] : 0;
+                return RadarChartTitle(text: '${titles[index]}\n${(v * 100).toStringAsFixed(1)}%');
               },
               tickCount: 5,
               ticksTextStyle: const TextStyle(fontSize: 9, color: Colors.grey),
               tickBorderData: const BorderSide(color: Colors.grey, width: 0.5),
               gridBorderData: const BorderSide(color: Colors.grey, width: 0.3),
             ))),
+            const SizedBox(height: 8),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+              for (int i = 0; i < 4; i++)
+                Text('目标${i + 1}: ${(_classAvgAchievements[i] * 100).toStringAsFixed(1)}%',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: kObjectiveColors[i])),
+            ]),
           ]),
         ),
       ),
