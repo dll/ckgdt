@@ -344,7 +344,7 @@ class _HomePageState extends State<HomePage> {
       destinations.add(const NavigationDestination(
         icon: Icon(Icons.school_outlined),
         selectedIcon: Icon(Icons.school),
-        label: '结课',
+        label: '归档',
       ));
       bodyMap[destinations.length - 1] = () => const ArchivePage();
 

@@ -1,12 +1,30 @@
 import 'dart:async';
 import 'dart:ffi';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'package:win32/win32.dart';
+
+/// JPEG 编码参数 — 传入 compute isolate
+class _JpegEncodeParams {
+  final Uint8List rgb;
+  final int width;
+  final int height;
+  final int quality;
+  const _JpegEncodeParams(this.rgb, this.width, this.height, this.quality);
+}
+
+Uint8List _encodeJpegIsolate(_JpegEncodeParams p) {
+  final image = img.Image.fromBytes(
+    width: p.width,
+    height: p.height,
+    bytes: p.rgb.buffer,
+    numChannels: 3,
+  );
+  return img.encodeJpg(image, quality: p.quality);
+}
 
 /// Windows 桌面抓取 — GDI `BitBlt` + `image` 包 JPEG 编码。
 ///
@@ -108,17 +126,8 @@ class WinScreenCapturer {
     free(pixels);
     free(bmi);
 
-    return _encodeJpeg(rgb);
-  }
-
-  Uint8List _encodeJpeg(Uint8List rgb) {
-    final image = img.Image.fromBytes(
-      width: _captureW,
-      height: _captureH,
-      bytes: rgb.buffer,
-      numChannels: 3,
-    );
-    return img.encodeJpg(image, quality: _quality);
+    return compute(_encodeJpegIsolate,
+        _JpegEncodeParams(rgb, _captureW, _captureH, _quality));
   }
 
   void updateSize({int? width, int? height, int? quality}) {

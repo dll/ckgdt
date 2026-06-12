@@ -1,14 +1,14 @@
 import os, sys, requests
 TOKEN = os.environ['GITEE_TOKEN']
-RELEASE_ID = 699231
+RELEASE_ID = 705199
 REPO = 'osgisOne/mad-fd'
 URL = f'https://gitee.com/api/v5/repos/{REPO}/releases/{RELEASE_ID}/attach_files'
 def safe_name(name): return name.replace('+', '%2B')
 ASSETS = [
-	(r'D:\FlutterProjects\knowledge_graph_app\dist\移动图谱与数字孪生+windows+v1.18.0.zip',   '移动图谱与数字孪生+windows+v1.18.0.zip'),
-	(r'D:\FlutterProjects\knowledge_graph_app\dist\移动图谱与数字孪生+android+v1.18.0.zip',   '移动图谱与数字孪生+android+v1.18.0.zip'),
-	(r'D:\FlutterProjects\knowledge_graph_app\dist\移动图谱与数字孪生+web+v1.18.0.zip',       '移动图谱与数字孪生+web+v1.18.0.zip'),
-	(r'D:\FlutterProjects\knowledge_graph_app\dist\移动图谱与数字孪生+harmonyos+v1.18.0.zip', '移动图谱与数字孪生+harmonyos+v1.18.0.zip'),
+	(r'D:\FlutterProjects\knowledge_graph_app\dist\移动图谱与数字孪生+windows+v1.20.0.zip',   '移动图谱与数字孪生+windows+v1.20.0.zip'),
+	(r'D:\FlutterProjects\knowledge_graph_app\dist\移动图谱与数字孪生+android+v1.20.0.zip',   '移动图谱与数字孪生+android+v1.20.0.zip'),
+	(r'D:\FlutterProjects\knowledge_graph_app\dist\移动图谱与数字孪生+web+v1.20.0.zip',       '移动图谱与数字孪生+web+v1.20.0.zip'),
+	(r'D:\FlutterProjects\knowledge_graph_app\dist\移动图谱与数字孪生+harmonyos+v1.20.0.zip', '移动图谱与数字孪生+harmonyos+v1.20.0.zip'),
 ]
 session = requests.Session()
 for path, display in ASSETS:
