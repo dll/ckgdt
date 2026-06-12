@@ -9,10 +9,10 @@ const Map<String, String> _periodLabels = {
   'beginning': '期初',
   'midterm': '期中',
   'final': '期末',
-  'archive': '归档',
+  'archive': '结课',
 };
 
 const List<String> archivePeriodKeys = ['beginning', 'midterm', 'final', 'archive'];
-const List<String> archivePeriodLabels = ['期初', '期中', '期末', '归档'];
+const List<String> archivePeriodLabels = ['期初', '期中', '期末', '结课'];
 
 String periodLabel(String key) => _periodLabels[key] ?? key;

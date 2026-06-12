@@ -820,6 +820,50 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       return;
     }
 
+    if (def.key == 'survey') {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['mhtml', 'mht', 'htm', 'html'],
+        dialogTitle: '选择问卷文件（从教务系统另存为.mhtml）',
+      );
+      if (result == null || result.files.isEmpty) return;
+      final file = File(result.files.single.path!);
+      if (!await file.exists()) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('文件不存在'), backgroundColor: Colors.red),
+          );
+        }
+        return;
+      }
+      final raw = await file.readAsString();
+      final parsed = ArchiveImporters.parseSurvey(raw);
+      if (parsed == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('问卷解析失败，请确认文件为完整的MHTML格式'), backgroundColor: Colors.red),
+          );
+        }
+        return;
+      }
+      final doc = ArchiveDocument(
+        title: title,
+        documentType: def.key,
+        period: widget.periodKey,
+        courseType: widget.courseType,
+        content: parsed,
+        isGenerated: true,
+      );
+      await widget.dao.saveDocument(doc);
+      _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已导入问卷：${doc.title}')),
+        );
+      }
+      return;
+    }
+
     final doc = ArchiveDocument(
       title: title,
       documentType: def.key,
@@ -955,6 +999,11 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         return {
           'system': '学院',
           'description': '学院编制的综合考核方案docx文档（V1.0版），以SmartCampus智慧校园项目为载体，含4种技术栈的团队项目考核（每组6人，15天）',
+        };
+      case 'survey':
+        return {
+          'system': '教务管理系统（jwgl.chzu.edu.cn/eams/）',
+          'description': '课表查询 → 课表查询（实时课表）→ 打印教学任务书 → 浏览器另存为MHTML文件。URL: courseTableForTeacher!printLessonBook.mhtml，含课程教学问卷数据',
         };
       default:
         return {
@@ -1404,6 +1453,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       case 'teacher_guide': return '学院';
       case 'student_guide': return '学院';
       case 'assessment_plan': return '学院';
+      case 'survey': return '教务系统';
       default: return '外部系统';
     }
   }

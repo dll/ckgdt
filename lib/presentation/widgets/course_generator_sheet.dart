@@ -1,11 +1,21 @@
-﻿import 'dart:convert';
+﻿// ignore_for_file: unnecessary_brace_in_string_interps
+
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../data/local/course_dao.dart';
 import '../../data/local/database_helper.dart';
+import '../../data/local/graph_dao.dart';
+import '../../data/local/knowledge_graph_dao.dart';
+import '../../data/local/lab_task_dao.dart';
 import '../../data/models/course_model.dart';
+import '../../data/models/edge_model.dart';
+import '../../data/models/graph_model.dart';
+import '../../data/models/node_model.dart';
+import '../../data/models/syllabus_data.dart';
 import '../../services/ai_service.dart';
+import '../../services/syllabus_parser.dart';
 
 /// 一键生课 — 底部弹出表单
 class CourseGeneratorSheet extends StatefulWidget {
@@ -23,6 +33,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
   final List<String> _logs = [];
   String? _outlineContent;
   String? _outlineFileName;
+  SyllabusData? _parsedSyllabus;
 
   @override
   void dispose() {
@@ -93,7 +104,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
             ),
             const SizedBox(height: 16),
 
-            // 课程大纲（文件上传）
+              // 课程大纲（文件上传，支持 .docx / .txt / .md）
             InkWell(
               onTap: _isGenerating ? null : _pickOutlineFile,
               borderRadius: BorderRadius.circular(12),
@@ -101,25 +112,33 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   border: Border.all(
-                    color: _outlineContent != null
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.outline,
-                    width: _outlineContent != null ? 2 : 1,
+                    color: _parsedSyllabus != null
+                        ? Colors.green
+                        : (_outlineContent != null
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.outline),
+                    width: _parsedSyllabus != null || _outlineContent != null ? 2 : 1,
                   ),
                   borderRadius: BorderRadius.circular(12),
-                  color: _outlineContent != null
-                      ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
-                      : null,
+                  color: _parsedSyllabus != null
+                      ? Colors.green.withValues(alpha: 0.1)
+                      : (_outlineContent != null
+                          ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
+                          : null),
                 ),
                 child: Row(
                   children: [
                     Icon(
-                      _outlineContent != null
-                          ? Icons.check_circle
-                          : Icons.upload_file,
-                      color: _outlineContent != null
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                      _parsedSyllabus != null
+                          ? Icons.description
+                          : (_outlineContent != null
+                              ? Icons.check_circle
+                              : Icons.upload_file),
+                      color: _parsedSyllabus != null
+                          ? Colors.green
+                          : (_outlineContent != null
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurface.withValues(alpha: 0.5)),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -127,29 +146,33 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _outlineFileName ?? '上传课程大纲',
+                            _outlineFileName ?? '上传教学大纲',
                             style: theme.textTheme.bodyMedium?.copyWith(
-                              fontWeight: _outlineContent != null
-                                  ? FontWeight.w600
-                                  : FontWeight.normal,
-                              color: _outlineContent != null
-                                  ? theme.colorScheme.primary
-                                  : null,
+                              fontWeight: FontWeight.w600,
+                              color: _parsedSyllabus != null
+                                  ? Colors.green.shade700
+                                  : (_outlineContent != null
+                                      ? theme.colorScheme.primary
+                                      : null),
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            _outlineContent != null
-                                ? '已加载 ${_outlineContent!.length} 字'
-                                : '可选：上传 .txt / .md 大纲文件，不上传则 AI 自动生成',
+                            _parsedSyllabus != null
+                                ? '已解析：${_parsedSyllabus!.chapters.length}章 · ${_parsedSyllabus!.labs.length}个实验 · ${_parsedSyllabus!.objectives.length}个目标'
+                                : (_outlineContent != null
+                                    ? '已加载 ${_outlineContent!.length} 字'
+                                    : '上传 .docx 教学大纲文件（推荐），不传则 AI 自动生成'),
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                              color: _parsedSyllabus != null
+                                  ? Colors.green.shade600
+                                  : theme.colorScheme.onSurface.withValues(alpha: 0.5),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    if (_outlineContent != null)
+                    if (_outlineContent != null || _parsedSyllabus != null)
                       IconButton(
                         icon: const Icon(Icons.close, size: 18),
                         onPressed: _isGenerating
@@ -157,6 +180,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                             : () => setState(() {
                                   _outlineContent = null;
                                   _outlineFileName = null;
+                                  _parsedSyllabus = null;
                                 }),
                         tooltip: '移除大纲',
                       ),
@@ -164,6 +188,19 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                 ),
               ),
             ),
+            if (_parsedSyllabus != null) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  _chip(theme, '${_parsedSyllabus!.chapters.length} 章', Icons.menu_book),
+                  _chip(theme, '${_parsedSyllabus!.labs.length} 个实验', Icons.science),
+                  _chip(theme, '${_parsedSyllabus!.lectureHours}+${_parsedSyllabus!.labHours} 学时', Icons.schedule),
+                  _chip(theme, '${(_parsedSyllabus!.assessment.dailyWeight * 100).toInt()}%平时/${(_parsedSyllabus!.assessment.labWeight * 100).toInt()}%实验/${(_parsedSyllabus!.assessment.examWeight * 100).toInt()}%期末', Icons.balance),
+                ],
+              ),
+            ],
             const SizedBox(height: 16),
 
             // 章节数量
@@ -291,11 +328,30 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
     );
   }
 
+  Widget _chip(ThemeData theme, String label, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.green.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: Colors.green.shade700),
+          const SizedBox(width: 4),
+          Text(label, style: theme.textTheme.labelSmall?.copyWith(color: Colors.green.shade700)),
+        ],
+      ),
+    );
+  }
+
   Future<void> _pickOutlineFile() async {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['txt', 'md'],
+        allowedExtensions: ['txt', 'md', 'docx'],
         withData: false,
       );
       if (result == null || result.files.isEmpty) return;
@@ -303,22 +359,42 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
       final filePath = result.files.single.path;
       if (filePath == null) return;
 
+      final fileName = result.files.single.name;
       final file = File(filePath);
-      final content = await file.readAsString();
 
-      if (content.trim().isEmpty) {
+      if (fileName.endsWith('.docx')) {
+        final parser = SyllabusParser();
+        final syllabus = await parser.parseFile(filePath);
+        setState(() {
+          _parsedSyllabus = syllabus;
+          _outlineFileName = fileName;
+          _outlineContent = syllabus.description;
+          _chapterCount = syllabus.chapters.length;
+        });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('文件内容为空，请选择包含大纲内容的文件')),
+            SnackBar(
+              content: Text('已解析教学大纲：${syllabus.chapters.length}章 · ${syllabus.labs.length}个实验'),
+              backgroundColor: Colors.green,
+            ),
           );
         }
-        return;
+      } else {
+        final content = await file.readAsString();
+        if (content.trim().isEmpty) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('文件内容为空，请选择包含大纲内容的文件')),
+            );
+          }
+          return;
+        }
+        setState(() {
+          _outlineContent = content;
+          _outlineFileName = fileName;
+          _parsedSyllabus = null;
+        });
       }
-
-      setState(() {
-        _outlineContent = content;
-        _outlineFileName = result.files.single.name;
-      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -343,10 +419,6 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
       );
       return;
     }
-    if (_outlineContent == null || _outlineContent!.trim().isEmpty) {
-      // 大纲可选：无大纲时让 AI 自由生成
-      _log('未上传大纲，AI 将自动生成章节...');
-    }
 
     setState(() {
       _isGenerating = true;
@@ -355,15 +427,35 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
 
     try {
       final aiService = AiService();
-      // 大纲可选：未上传时为空字符串，让 AI 自由生成（_outlineContent 可能为 null）
-      final outline = _outlineContent?.trim() ?? '';
+      final db = await DatabaseHelper.instance.database;
 
-      // ── 步骤 1：生成课程章节 ──
-      final hasOutline = outline.isNotEmpty;
-      _log(hasOutline ? '正在基于大纲生成课程章节...' : '正在由 AI 生成课程章节...');
+      // ═══ 步骤 1：确定章节列表 ═══
+      // 当上传了 DOCX 大纲时直接用解析结果，否则靠 AI 生成
+      List<String> chapters;
+      List<SyllabusChapter> syllabusChapters;
+      List<SyllabusLab> syllabusLabs;
+      AssessmentStructure assessment;
 
-      final outlinePrompt = hasOutline
-          ? '''
+      if (_parsedSyllabus != null) {
+        _log('使用教学大纲中的 ${_parsedSyllabus!.chapters.length} 个章节');
+        syllabusChapters = _parsedSyllabus!.chapters;
+        syllabusLabs = _parsedSyllabus!.labs;
+        assessment = _parsedSyllabus!.assessment;
+        if (assessment.dailyWeight > 0 || assessment.labWeight > 0 || assessment.examWeight > 0) {
+          _log('考核方式：平时${(assessment.dailyWeight * 100).toInt()}% · 实验${(assessment.labWeight * 100).toInt()}% · 期末${(assessment.examWeight * 100).toInt()}%');
+        }
+        chapters = syllabusChapters.map((c) => '第${c.index}章 ${c.title}').toList();
+      } else {
+        syllabusChapters = [];
+        syllabusLabs = [];
+        assessment = const AssessmentStructure();
+
+        final outline = _outlineContent?.trim() ?? '';
+        final hasOutline = outline.isNotEmpty;
+        _log(hasOutline ? '正在基于大纲生成课程章节...' : '正在由 AI 生成课程章节...');
+
+        final prompt = hasOutline
+            ? '''
 请基于以下课程大纲，为《$name》课程提取或整理出 $_chapterCount 个章节标题。
 
 === 课程大纲 ===
@@ -379,7 +471,7 @@ $outline
 请严格按以下 JSON 格式输出（不要包含其他文字）：
 {"chapters": ["第1章标题", "第2章标题", ...]}
 '''
-          : '''
+            : '''
 为《$name》课程设计 $_chapterCount 个章节标题。
 
 要求：
@@ -392,24 +484,24 @@ $outline
 {"chapters": ["第1章标题", "第2章标题", ...]}
 ''';
 
-      final outlineResponse = await aiService.chat(
-        [{'role': 'user', 'content': outlinePrompt}],
-      );
+        final resp = await aiService.chat([{'role': 'user', 'content': prompt}]);
+        chapters = _parseChapters(resp, _chapterCount);
+        _log('大纲生成完成：${chapters.length} 个章节');
+      }
 
-      // 解析章节列表
-      final chapters = _parseChapters(outlineResponse, _chapterCount);
-      _log('大纲生成完成：${chapters.length} 个章节');
-
-      // ── 步骤 2：保存课程到数据库 ──
+      // ═══ 步骤 2：保存课程到数据库 ═══
       _log('正在保存课程...');
       final courseId = name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_');
       final now = DateTime.now().toIso8601String();
+      final hasSyllabus = _parsedSyllabus != null;
 
       final course = CourseModel(
         id: courseId.isEmpty ? 'course_${DateTime.now().millisecondsSinceEpoch}' : courseId,
         name: name,
-        description: hasOutline
-            ? '基于上传大纲生成的$name课程'
+        description: hasSyllabus
+            ? _parsedSyllabus!.description.isNotEmpty
+                ? _parsedSyllabus!.description
+                : '基于教学大纲生成的$name课程'
             : 'AI 自动生成的$name课程',
         chapterCount: chapters.length,
         chapters: chapters,
@@ -421,15 +513,28 @@ $outline
       await courseDao.addCourse(course);
       _log('课程保存成功');
 
-      // ── 步骤 3：生成各章节测验题 ──
+      // ═══ 步骤 3：生成各章节测验题 ═══
       _log('正在生成章节测验题（每章5题）...');
-      final db = await DatabaseHelper.instance.database;
       int totalQuestions = 0;
 
       for (var i = 0; i < chapters.length; i++) {
         final chapter = chapters[i];
+        final chContent = i < syllabusChapters.length
+            ? syllabusChapters[i].content
+            : '';
+        final chObjectives = i < syllabusChapters.length
+            ? syllabusChapters[i].teachingObjectives
+            : '';
+        final chKeyPoints = i < syllabusChapters.length
+            ? syllabusChapters[i].keyPoints
+            : '';
+
+        final extraContext = hasSyllabus && chContent.isNotEmpty
+            ? '\n\n章节教学内容：$chContent\n章节目标：$chObjectives\n教学重点：$chKeyPoints'
+            : '';
+
         final quizPrompt =
-            '为《$name》课程的"$chapter"章节生成5道选择题。\n\n'
+            '为《$name》课程的"$chapter"章节生成5道选择题。$extraContext\n\n'
             '请严格按以下JSON格式输出（不要包含其他文字）：\n'
             '[{"question":"题目","option_a":"A","option_b":"B","option_c":"C","option_d":"D","answer_index":0}]\n\n'
             '要求：answer_index 为正确答案索引（0=A,1=B,2=C,3=D），题目难度适中。';
@@ -466,25 +571,202 @@ $outline
       }
       _log('测验题生成完成：共 $totalQuestions 题');
 
-      // ── 步骤 4：生成预制学习资源条目 ──
+      // ═══ 步骤 4：生成预制学习资源条目 ═══
       _log('正在生成课程资源条目...');
       final resBatch = db.batch();
-      for (var i = 0; i < chapters.length; i++) {
-        final chapter = chapters[i];
+      for (final ch in chapters) {
         for (final type in ['pdf', 'ppt', 'video']) {
           final ext = type == 'video' ? 'mp4' : (type == 'ppt' ? 'pptx' : 'pdf');
           resBatch.insert('resource_files', {
-            'file_name': '$chapter.$ext',
+            'file_name': '$ch.$ext',
             'file_path': '',
             'file_type': type,
-            'chapter': chapter,
-            'description': '$name - $chapter',
+            'chapter': ch,
+            'description': '$name - $ch',
             'source_type': 'preset',
           });
         }
       }
       await resBatch.commit(noResult: true);
       _log('资源条目生成完成：${chapters.length * 3} 条');
+
+      // ═══ 步骤 5：创建实验任务（如果大纲包含实验） ═══
+      if (syllabusLabs.isNotEmpty) {
+        _log('正在创建实验任务（${syllabusLabs.length} 个）...');
+        final labDao = LabTaskDao();
+        int labCreated = 0;
+        for (final lab in syllabusLabs) {
+          try {
+            await labDao.addTask(
+              title: lab.title,
+              chapter: '实验${lab.index}',
+              description: lab.content.isNotEmpty ? lab.content : '详见实验指导书',
+              requirements: lab.objectives.isNotEmpty ? lab.objectives : null,
+              deliverables: lab.notes.isNotEmpty ? lab.notes : null,
+              difficulty: '中等',
+              maxScore: 100,
+            );
+            labCreated++;
+          } catch (e) {
+            _log('实验"${lab.title}"创建失败');
+          }
+        }
+        _log('实验任务创建完成：$labCreated 个');
+      }
+
+      // ═══ 步骤 6：生成知识图谱 ═══
+      _log('正在生成知识图谱...');
+      try {
+        final graphDao = GraphDao();
+        final graphId = 'g_${course.id}';
+        // Use courseTitle from syllabus if available, else course name
+        final graphTitle = hasSyllabus
+            ? (_parsedSyllabus!.courseName.isNotEmpty ? _parsedSyllabus!.courseName : name)
+            : name;
+
+        await graphDao.createGraph(GraphModel(
+          id: graphId,
+          title: graphTitle,
+          graphType: 'knowledge',
+          layout: 'force',
+        ));
+
+        final nodes = <NodeModel>[];
+        final edges = <EdgeModel>[];
+        int nIdx = 0;
+        const colors = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b',
+                         '#fa709a', '#a18cd1', '#fbc2eb', '#84fab0', '#8fd3f4',
+                         '#ffecd2', '#fcb69f'];
+
+        for (var i = 0; i < chapters.length; i++) {
+          final chTitle = chapters[i];
+          final ch = i < syllabusChapters.length ? syllabusChapters[i] : null;
+          nIdx++;
+
+          // Chapter main node
+          nodes.add(NodeModel(
+            id: '${graphId}_n${nIdx}',
+            graphId: graphId,
+            title: chTitle,
+            content: ch?.content.isNotEmpty == true ? ch!.content : '',
+            nodeType: 'chapter',
+            level: 0,
+            x: 80.0 + (i % 3) * 250.0,
+            y: 80.0 + (i ~/ 3) * 200.0,
+            color: colors[i % colors.length],
+            visible: true,
+          ));
+
+          // Link to previous chapter
+          if (i > 0) {
+            edges.add(EdgeModel(
+              id: '${graphId}_e${i}',
+              graphId: graphId,
+              sourceId: '${graphId}_n${i}',
+              targetId: '${graphId}_n${i + 1}',
+              edgeType: 'prerequisite',
+              label: '前置',
+              weight: 1.0,
+              visible: true,
+            ));
+          }
+
+          // Sub-nodes: key points
+          if (ch?.keyPoints.isNotEmpty == true) {
+            nIdx++;
+            nodes.add(NodeModel(
+              id: '${graphId}_n${nIdx}',
+              graphId: graphId,
+              title: '教学重点',
+              content: ch!.keyPoints,
+              nodeType: 'keypoint',
+              level: 1,
+              parentId: '${graphId}_n${i + 1}',
+              x: 80.0 + (i % 3) * 250.0,
+              y: 80.0 + (i ~/ 3) * 200.0 + 60.0,
+              color: '#ff6b6b',
+              visible: true,
+            ));
+            edges.add(EdgeModel(
+              id: '${graphId}_e_kp${i}',
+              graphId: graphId,
+              sourceId: '${graphId}_n${i + 1}',
+              targetId: '${graphId}_n${nIdx}',
+              edgeType: 'contains',
+              label: '重点',
+              visible: true,
+            ));
+          }
+
+          // Sub-nodes: difficult points
+          if (ch?.difficultPoints.isNotEmpty == true) {
+            nIdx++;
+            nodes.add(NodeModel(
+              id: '${graphId}_n${nIdx}',
+              graphId: graphId,
+              title: '教学难点',
+              content: ch!.difficultPoints,
+              nodeType: 'difficult',
+              level: 1,
+              parentId: '${graphId}_n${i + 1}',
+              x: 80.0 + (i % 3) * 250.0 + 120.0,
+              y: 80.0 + (i ~/ 3) * 200.0 + 60.0,
+              color: '#feca57',
+              visible: true,
+            ));
+            edges.add(EdgeModel(
+              id: '${graphId}_e_dp${i}',
+              graphId: graphId,
+              sourceId: '${graphId}_n${i + 1}',
+              targetId: '${graphId}_n${nIdx}',
+              edgeType: 'contains',
+              label: '难点',
+              visible: true,
+            ));
+          }
+        }
+
+        await graphDao.insertNodes(nodes);
+        await graphDao.insertEdges(edges);
+        _log('知识图谱生成完成：${nodes.length} 节点 · ${edges.length} 关系线');
+
+        // Also create knowledge_concepts entries
+        if (hasSyllabus) {
+          try {
+            final kgDao = KnowledgeGraphDao();
+            for (var i = 0; i < syllabusChapters.length; i++) {
+              final sc = syllabusChapters[i];
+              await kgDao.addConcept({
+                'concept_name': sc.title,
+                'concept_type': 'chapter',
+                'chapter': sc.index,
+                'description': sc.content.isNotEmpty ? sc.content : '',
+                'importance': 'core',
+              });
+              if (sc.keyPoints.isNotEmpty) {
+                await kgDao.addConcept({
+                  'concept_name': '${sc.title}·重点',
+                  'concept_type': 'keypoint',
+                  'chapter': sc.index,
+                  'description': sc.keyPoints,
+                  'importance': 'important',
+                });
+              }
+              if (sc.difficultPoints.isNotEmpty) {
+                await kgDao.addConcept({
+                  'concept_name': '${sc.title}·难点',
+                  'concept_type': 'difficult',
+                  'chapter': sc.index,
+                  'description': sc.difficultPoints,
+                  'importance': 'important',
+                });
+              }
+            }
+          } catch (_) {}
+        }
+      } catch (e) {
+        _log('知识图谱生成失败：$e');
+      }
 
       _log('课程《$name》生成完成！');
 
