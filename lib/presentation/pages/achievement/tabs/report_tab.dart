@@ -1,5 +1,6 @@
 ﻿import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:excel/excel.dart' as xl;
 import 'package:flutter/material.dart';
@@ -10,6 +11,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../../../../data/local/achievement_dao.dart';
 import '../../../../services/achievement/achievement_docx_service.dart';
+import '../../../../services/achievement/excel_chart_injector.dart';
 import '../../../../services/archive/native_docx_service.dart';
 import '../../../../services/output_path_service.dart';
 import '../../../../services/auth_service.dart';
@@ -643,6 +645,7 @@ class _ReportTabState extends State<ReportTab> {
         teacherName: teacherName,
         syllabus: syllabus,
         objectives: objectives,
+        qualitativeText: _qualitativeFromSurvey(),
         classStats: {
           'studentCount': scores.length,
           'avgTotal': _weightedAchievement * 100,
@@ -668,6 +671,17 @@ class _ReportTabState extends State<ReportTab> {
     }
   }
 
+  /// 把问卷满意度汇总转成 Word 报告「定性评价」段文字；无问卷数据返回 null
+  /// 由 docx 服务回退到通用模板文案。
+  String? _qualitativeFromSurvey() {
+    if (_surveySummary?['hasSurveyData'] != true) return null;
+    final totalResp = _surveySummary!['totalResponses'] as int? ?? 0;
+    final overallSat = (_surveySummary!['overallSatisfaction'] as double?) ?? 0;
+    return '共回收有效问卷 $totalResp 份，综合满意度为 '
+        '${(overallSat * 100).toStringAsFixed(1)}%。问卷结果与定量评价结果基本一致，'
+        '表明学生自我评价与实际能力达成情况基本相符。';
+  }
+
   /// 导出 Excel 报告（对齐计科22模板：5sheet—平时/实验/期末明细+学生个体达成度+课程目标点达成度）。
   Future<void> _exportExcel() async {
     if (_calcResults == null || _selectedBatchId == null) return;
@@ -680,7 +694,6 @@ class _ReportTabState extends State<ReportTab> {
       final exam = await widget.achievementDao.getExamScores(_selectedBatchId!);
       final excel = xl.Excel.createExcel();
       for (final n in excel.tables.keys.toList()) { excel.delete(n); }
-      String t(String s) => s;
 
       final s1 = excel['平时成绩'];
       s1.appendRow([xl.TextCellValue('学号'), xl.TextCellValue('姓名'), xl.TextCellValue('课堂表现得分'), xl.TextCellValue('目标1达成度'), xl.TextCellValue('期间测验得分'), xl.TextCellValue('目标2达成度'), xl.TextCellValue('课外学习得分'), xl.TextCellValue('目标4达成度'), xl.TextCellValue('总评')]);
@@ -716,7 +729,7 @@ class _ReportTabState extends State<ReportTab> {
 
       final s5 = excel['课程目标点达成度'];
       final ps = comb['pingshi'] as Map? ?? {}, es = comb['experiment'] as Map? ?? {}, xs = comb['exam'] as Map? ?? {};
-      const cf = AchievementConfig.defaults;
+      final cf = _config;
       s5.appendRow([xl.TextCellValue('课程目标'), xl.TextCellValue('权重'), xl.TextCellValue('平时达成度'), xl.TextCellValue('实验达成度'), xl.TextCellValue('期末达成度'), xl.TextCellValue('课程目标达成度'), xl.TextCellValue('指标点')]);
       for (int i = 0; i < 4; i++) s5.appendRow([
         xl.TextCellValue(cf.objectiveNames[i]), xl.TextCellValue(_objectiveWeights[i].toStringAsFixed(2)),
@@ -725,10 +738,42 @@ class _ReportTabState extends State<ReportTab> {
         xl.TextCellValue(cf.indicators[i]),],);
       s5.appendRow([xl.TextCellValue('加权总达成度'), xl.TextCellValue('1.00'), xl.TextCellValue(''), xl.TextCellValue(''), xl.TextCellValue(''), xl.TextCellValue(_weightedAchievement.toStringAsFixed(4)), xl.TextCellValue('')],);
 
+      // 条形图 + 4 张散点趋势图数据页（对齐模板的 课程目标条形图 / 目标N散点趋势图）
+      // 数值列用 DoubleCellValue，否则注入的图表无法把文本当数据绘制。
+      final bar = excel['课程目标条形图'];
+      for (int i = 0; i < 4; i++) {
+        bar.appendRow([
+          xl.TextCellValue(cf.objectiveNames[i]),
+          xl.DoubleCellValue(double.parse(_objectiveAchievements[i].toStringAsFixed(4))),
+        ]);
+      }
+      for (int i = 0; i < 4; i++) {
+        final sh = excel['目标${i + 1}散点趋势图'];
+        for (int k = 0; k < scores.length; k++) {
+          final a = (scores[k]['obj${i + 1}_achievement'] as num?)?.toDouble() ?? 0;
+          sh.appendRow([
+            xl.DoubleCellValue((k + 1).toDouble()),
+            xl.DoubleCellValue(double.parse(a.toStringAsFixed(4))),
+            xl.DoubleCellValue(double.parse(_objectiveAchievements[i].toStringAsFixed(4))),
+            xl.DoubleCellValue(0.6),
+          ]);
+        }
+      }
+
       final dir = await OutputPathService.getOutputDirectory();
       final safeName = '${batch['class_name']??'班级'}《${batch['course_name']??'移动应用开发'}》课程达成度评价表格.xlsx';
       final file = File('${dir.path}/$safeName');
-      final bytes = excel.save(); if(bytes==null) throw StateError('Excel生成失败');
+      var bytes = excel.save(); if(bytes==null) throw StateError('Excel生成失败');
+      // 注入原生 OOXML 图表：条形图(4目标) + 每目标散点+趋势线+参考线
+      final specs = <ChartSpec>[
+        ChartSpec.bar(sheetName: '课程目标条形图', title: '课程目标达成度', rowCount: 4),
+        for (int i = 0; i < 4; i++)
+          ChartSpec.scatter(
+              sheetName: '目标${i + 1}散点趋势图',
+              title: '学生个体课程目标${i + 1}达成评价结果',
+              rowCount: scores.length),
+      ];
+      bytes = ExcelChartInjector.inject(Uint8List.fromList(bytes), specs);
       await file.writeAsBytes(bytes);
       if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Excel已导出:${file.path}'),duration:const Duration(seconds:4),action:SnackBarAction(label:'打开',onPressed:()=>OpenFilex.open(file.path))));
     } catch(e,st){swallowDebug(e,tag:'ReportTab.exportExcel',stack:st);}

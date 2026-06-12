@@ -113,10 +113,13 @@ class AchievementDao {
   /// 获取批次内所有学生成绩
   Future<List<Map<String, dynamic>>> getScores(int batchId) async {
     final db = await DatabaseHelper.instance.database;
-    return db.query('achievement_scores',
-        where: 'batch_id = ?',
-        whereArgs: [batchId],
-        orderBy: 'student_id ASC');
+    // .toList() 把 sqflite 只读的 QueryResultSet 转成可变 List，
+    // 否则调用方 sortScoresInPlace() 原地排序会抛 "Unsupported operation: read-only"。
+    return (await db.query('achievement_scores',
+            where: 'batch_id = ?',
+            whereArgs: [batchId],
+            orderBy: 'student_id ASC'))
+        .toList();
   }
 
   /// 添加学生成绩
@@ -1170,13 +1173,94 @@ class AchievementDao {
   // 三类评价分项成绩 — 平时 / 实验 / 期末
   // ═══════════════════════════════════════════════════════════════════════
 
+  /// 分项表为空但聚合表 achievement_scores 有数据时，从聚合反推三张分项表。
+  ///
+  /// 背景：成绩有两条录入路径——课程成绩模板导入(importComponentsToDatabase)
+  /// 会同时写分项表+聚合表；而手动录入/编辑/演示/聚合 Excel 导入只写聚合表
+  /// (addScore/insertScore)。后者下平时/实验/考核三个 tab 读分项表会显示"暂无数据"，
+  /// 尽管达成度已算出。此处用聚合的 objN_achievement 作为各环节该目标达成度回填
+  /// （与报告 _defaultEnvs 的回退口径一致），保证三个 tab 不再空白。
+  ///
+  /// 幂等：分项表已有该批次数据则直接返回，不覆盖真实分项录入。
+  Future<void> _ensureComponentScoresFromAggregate(int batchId) async {
+    final db = await DatabaseHelper.instance.database;
+
+    Future<bool> hasRows(String table) async {
+      final c = Sqflite.firstIntValue(await db.rawQuery(
+              'SELECT COUNT(*) FROM $table WHERE batch_id = ?', [batchId])) ??
+          0;
+      return c > 0;
+    }
+
+    final pHas = await hasRows('achievement_pingshi_scores');
+    final eHas = await hasRows('achievement_experiment_scores');
+    final xHas = await hasRows('achievement_exam_scores');
+    if (pHas && eHas && xHas) return;
+
+    final agg = await db.query('achievement_scores',
+        where: 'batch_id = ?', whereArgs: [batchId], orderBy: 'student_id ASC');
+    if (agg.isEmpty) return;
+
+    final now = DateTime.now().toIso8601String();
+    await db.transaction((txn) async {
+      for (final s in agg) {
+        final sid = s['student_id'] as String? ?? '';
+        if (sid.isEmpty) continue;
+        final name = s['student_name'] ?? '';
+        final a1 = (s['obj1_achievement'] as num?)?.toDouble() ?? 0;
+        final a2 = (s['obj2_achievement'] as num?)?.toDouble() ?? 0;
+        final a3 = (s['obj3_achievement'] as num?)?.toDouble() ?? 0;
+        final a4 = (s['obj4_achievement'] as num?)?.toDouble() ?? 0;
+
+        if (!pHas) {
+          // 平时：课堂→目标1, 测验→目标2, 课外→目标4（目标3无平时项）
+          await txn.insert('achievement_pingshi_scores', {
+            'batch_id': batchId, 'student_id': sid, 'student_name': name,
+            'class_activity_score': a1 * 100, 'class_activity_achievement': a1,
+            'quiz_homework_score': a2 * 100, 'quiz_homework_achievement': a2,
+            'extra_learning_score': a4 * 100, 'extra_learning_achievement': a4,
+            'total_score': (a1 + a2 + a4) / 3 * 100,
+            'created_at': now, 'updated_at': now,
+          }, conflictAlgorithm: ConflictAlgorithm.ignore);
+        }
+        if (!eHas) {
+          // 实验：1,2→目标1, 3,4→目标2, 5→目标3, 6→目标4
+          await txn.insert('achievement_experiment_scores', {
+            'batch_id': batchId, 'student_id': sid, 'student_name': name,
+            'exp1_score': a1 * 100, 'exp2_score': a1 * 100,
+            'exp3_score': a2 * 100, 'exp4_score': a2 * 100,
+            'exp5_score': a3 * 100, 'exp6_score': a4 * 100, 'exp7_score': 0,
+            'obj1_achievement': a1, 'obj2_achievement': a2,
+            'obj3_achievement': a3, 'obj4_achievement': a4,
+            'total_score': (a1 + a2 + a3 + a4) / 4 * 100,
+            'created_at': now, 'updated_at': now,
+          }, conflictAlgorithm: ConflictAlgorithm.ignore);
+        }
+        if (!xHas) {
+          // 期末：项目→目标1, 小组→目标2, 个人→目标3, 答辩→目标4
+          await txn.insert('achievement_exam_scores', {
+            'batch_id': batchId, 'student_id': sid, 'student_name': name,
+            'project_score': a1 * 100, 'group_score': a2 * 100,
+            'individual_score': a3 * 100, 'defense_score': a4 * 100,
+            'obj1_achievement': a1, 'obj2_achievement': a2,
+            'obj3_achievement': a3, 'obj4_achievement': a4,
+            'total_score': a1 * 30 + a2 * 20 + a3 * 20 + a4 * 30,
+            'created_at': now, 'updated_at': now,
+          }, conflictAlgorithm: ConflictAlgorithm.ignore);
+        }
+      }
+    });
+  }
+
   // ── 平时成绩 ─────────────────────────────────────────────────────────
   /// 课堂表现→目标1, 期间测验→目标2, 课外学习→目标4; 目标3无平时成绩
 
   Future<List<Map<String, dynamic>>> getPingshiScores(int batchId) async {
     final db = await DatabaseHelper.instance.database;
-    return db.query('achievement_pingshi_scores',
-        where: 'batch_id = ?', whereArgs: [batchId], orderBy: 'student_id ASC');
+    await _ensureComponentScoresFromAggregate(batchId);
+    return (await db.query('achievement_pingshi_scores',
+            where: 'batch_id = ?', whereArgs: [batchId], orderBy: 'student_id ASC'))
+        .toList();
   }
 
   Future<int> insertPingshiScore(Map<String, dynamic> score) async {
@@ -1240,8 +1324,10 @@ class AchievementDao {
 
   Future<List<Map<String, dynamic>>> getExperimentScores(int batchId) async {
     final db = await DatabaseHelper.instance.database;
-    return db.query('achievement_experiment_scores',
-        where: 'batch_id = ?', whereArgs: [batchId], orderBy: 'student_id ASC');
+    await _ensureComponentScoresFromAggregate(batchId);
+    return (await db.query('achievement_experiment_scores',
+            where: 'batch_id = ?', whereArgs: [batchId], orderBy: 'student_id ASC'))
+        .toList();
   }
 
   Future<int> insertExperimentScore(Map<String, dynamic> score) async {
@@ -1308,8 +1394,10 @@ class AchievementDao {
 
   Future<List<Map<String, dynamic>>> getExamScores(int batchId) async {
     final db = await DatabaseHelper.instance.database;
-    return db.query('achievement_exam_scores',
-        where: 'batch_id = ?', whereArgs: [batchId], orderBy: 'student_id ASC');
+    await _ensureComponentScoresFromAggregate(batchId);
+    return (await db.query('achievement_exam_scores',
+            where: 'batch_id = ?', whereArgs: [batchId], orderBy: 'student_id ASC'))
+        .toList();
   }
 
   Future<int> insertExamScore(Map<String, dynamic> score) async {
