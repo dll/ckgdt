@@ -3,8 +3,8 @@
   "user_id": "2023210600",
   "user_name": "金翔宇",
   "role": "student",
-  "synced_at": "2026-06-12T19:57:17.921954",
-  "last_active": "2026-06-12T19:57:17.921965",
+  "synced_at": "2026-06-12T19:57:36.718887",
+  "last_active": "2026-06-12T19:57:36.718914",
   "quiz_results": [
     {
       "user_id": "2023210600",
@@ -47,6 +47,24 @@
   "learning_paths": [],
   "lab_submissions": [
     {
+      "task_id": 1,
+      "user_id": "2023210600",
+      "content": "PDF实验报告：2023210600金翔宇实验一 开发环境搭建.pdf\n",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/cache/file_picker/1777252706078/2023210600金翔宇实验一 开发环境搭建.pdf",
+      "file_names": "2023210600金翔宇实验一 开发环境搭建.pdf",
+      "submit_time": "2026-06-12T19:57:36.674692",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-04-27T09:18:27.697019",
+      "updated_at": "2026-06-12T19:57:36.674692",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
+    {
       "task_id": 4,
       "user_id": "2023210600",
       "content": "PDF实验报告：2023210600金翔宇实验四 微信小程序开发.pdf\n",
@@ -78,24 +96,6 @@
       "scored_at": null,
       "created_at": "2026-04-28T20:08:47.762612",
       "updated_at": "2026-06-01T11:38:39.756022",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 1,
-      "user_id": "2023210600",
-      "content": "PDF实验报告：2023210600金翔宇实验一 开发环境搭建.pdf\n",
-      "file_paths": "/data/user/0/cn.edu.chzu.madkg/cache/file_picker/1777252706078/2023210600金翔宇实验一 开发环境搭建.pdf",
-      "file_names": "2023210600金翔宇实验一 开发环境搭建.pdf",
-      "submit_time": "2026-06-01T11:11:08.033989",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-04-27T09:18:27.697019",
-      "updated_at": "2026-06-01T11:11:08.033989",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
