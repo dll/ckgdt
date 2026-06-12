@@ -3,8 +3,8 @@
   "user_id": "2023210580",
   "user_name": "陈琪琪",
   "role": "student",
-  "synced_at": "2026-06-12T23:50:26.521349",
-  "last_active": "2026-06-12T23:50:26.521361",
+  "synced_at": "2026-06-12T23:52:29.879065",
+  "last_active": "2026-06-12T23:52:29.879065",
   "quiz_results": [
     {
       "user_id": "2023210580",
@@ -98,7 +98,7 @@
       "task_id": 3,
       "user_id": "2023210580",
       "content": "PDF实验报告：2023210580陈琪琪实验三 跨平台应用开发.pdf",
-      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2023210580/2023210580陈琪琪实验三 跨平台应用开发.pdf",
+      "file_paths": "D:\\/sync_files/2023210580/2023210580陈琪琪实验三 跨平台应用开发.pdf",
       "file_names": "2023210580陈琪琪实验三 跨平台应用开发.pdf",
       "submit_time": "2026-04-24T15:16:35.143845",
       "status": "已提交",
@@ -116,7 +116,7 @@
       "task_id": 2,
       "user_id": "2023210580",
       "content": "PDF实验报告：2023210580陈琪琪实验二 原生应用开发.pdf",
-      "file_paths": "/data/user/0/cn.edu.chzu.madkg/app_flutter/sync_files/2023210580/2023210580陈琪琪实验二 原生应用开发.pdf",
+      "file_paths": "D:\\/sync_files/2023210580/2023210580陈琪琪实验二 原生应用开发.pdf",
       "file_names": "2023210580陈琪琪实验二 原生应用开发.pdf",
       "submit_time": "2026-04-24T15:16:15.267001",
       "status": "已提交",
@@ -155,20 +155,6 @@
   "checkin_records": [],
   "work_comments": [],
   "work_likes": [],
-  "notification_recipients": [
-    {
-      "notification_id": 1,
-      "user_id": "2023210580",
-      "is_read": 0,
-      "read_at": null
-    },
-    {
-      "notification_id": 2,
-      "user_id": "2023210580",
-      "is_read": 0,
-      "read_at": null
-    }
-  ],
   "work_views": [],
   "peer_reviews": [],
   "collaboration_messages": [],
