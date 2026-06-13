@@ -62,7 +62,9 @@ class AchievementExcelService {
 
       // 跳过空行和汇总行
       if (studentId.isEmpty) continue;
-      if (studentId.contains('合计') || studentId.contains('平均') || studentId.contains('备注')) continue;
+      if (studentId.contains('合计') ||
+          studentId.contains('平均') ||
+          studentId.contains('备注')) continue;
 
       results.add(_extractGrade(cells, studentId, studentName));
     }
@@ -77,7 +79,8 @@ class AchievementExcelService {
     final results = <Map<String, dynamic>>[];
     int headerRow = -1;
     for (int i = 0; i < table.rows.length && i < 8; i++) {
-      final cells = table.rows[i].map((c) => c?.value?.toString() ?? '').toList();
+      final cells =
+          table.rows[i].map((c) => c?.value?.toString() ?? '').toList();
       if (cells.isNotEmpty && cells[0].trim() == '学号') {
         headerRow = i;
         break;
@@ -88,21 +91,33 @@ class AchievementExcelService {
     final fm = AchievementConfig.defaults.fullMarks;
     const achCols = [5, 9, 13, 17];
     for (int i = headerRow + 1; i < table.rows.length; i++) {
-      final cells = table.rows[i].map((c) => c?.value?.toString() ?? '').toList();
+      final cells =
+          table.rows[i].map((c) => c?.value?.toString() ?? '').toList();
       if (cells.length < 18) continue;
       final sid = cells[0].trim();
-      if (sid.isEmpty || sid.contains('合计') || sid.contains('平均') || sid.contains('备注')) continue;
+      if (sid.isEmpty ||
+          sid.contains('合计') ||
+          sid.contains('平均') ||
+          sid.contains('备注')) continue;
       final name = cells.length > 1 ? cells[1].trim() : '';
       final ach = List<double>.generate(
-          4, (k) => double.tryParse(cells[achCols[k]].trim())?.clamp(0.0, 1.0) ?? 0.0);
+          4,
+          (k) =>
+              double.tryParse(cells[achCols[k]].trim())?.clamp(0.0, 1.0) ??
+              0.0);
       results.add({
         'student_id': sid,
         'student_name': name,
         'obj1_score': ach[0] * fm[0],
+        'obj1_achievement': ach[0],
         'obj2_score': ach[1] * fm[1],
+        'obj2_achievement': ach[1],
         'obj3_score': ach[2] * fm[2],
+        'obj3_achievement': ach[2],
         'obj4_score': ach[3] * fm[3],
-        'total_score': ach[0] * fm[0] + ach[1] * fm[1] + ach[2] * fm[2] + ach[3] * fm[3],
+        'obj4_achievement': ach[3],
+        'total_score':
+            ach[0] * fm[0] + ach[1] * fm[1] + ach[2] * fm[2] + ach[3] * fm[3],
       });
     }
     return results;
@@ -117,13 +132,29 @@ class AchievementExcelService {
   /// - 平时：学号0 姓名1 | 课堂表现最后得分13 | 期间测验平均分25 | 大作业平均分36
   /// - 实验：学号0 姓名1 | exp1=2 exp2=3 exp3=5 exp4=6 exp5=8 exp6=9 exp7=11
   /// - 期末：学号0 姓名1 | 项目2 小组3 个人4 答辩5
-  Map<String, List<Map<String, dynamic>>> parseComponentSheets(Uint8List bytes) {
-    final excel = xl.Excel.decodeBytes(bytes);
+  Map<String, List<Map<String, dynamic>>> parseComponentSheets(
+      Uint8List bytes) {
+    // Prefer direct OOXML parsing. It only reads worksheet cell values and
+    // avoids the excel package style parser, which rejects some school-owned
+    // templates with non-standard numFmtId values.
+    final ooxml = _parseComponentSheetsFromOoxml(bytes);
+    if (_hasComponentRows(ooxml)) return ooxml;
+
     final out = <String, List<Map<String, dynamic>>>{
       'pingshi': [],
       'experiment': [],
       'exam': [],
     };
+    late final xl.Excel excel;
+    try {
+      excel = xl.Excel.decodeBytes(bytes);
+    } catch (e, st) {
+      // 部分学校模板包含非标准内置 numFmtId，excel 包会在样式解析阶段抛错。
+      // 明细导入只依赖单元格文本/数值，回退到轻量 OOXML 解析可保留导入能力。
+      swallowDebug(e,
+          tag: 'AchievementExcel.parseComponentSheets.decode', stack: st);
+      return _parseComponentSheetsFromOoxml(bytes);
+    }
     if (excel.tables.isEmpty) return out;
 
     for (final key in excel.tables.keys) {
@@ -138,6 +169,125 @@ class AchievementExcelService {
       }
     }
     return out;
+  }
+
+  bool _hasComponentRows(Map<String, List<Map<String, dynamic>>> components) {
+    return components.values.any((rows) => rows.isNotEmpty);
+  }
+
+  Map<String, List<Map<String, dynamic>>> _parseComponentSheetsFromOoxml(
+      Uint8List bytes) {
+    final out = <String, List<Map<String, dynamic>>>{
+      'pingshi': [],
+      'experiment': [],
+      'exam': [],
+    };
+    try {
+      final sheets = _readXlsxRows(bytes);
+      for (final entry in sheets.entries) {
+        final key = entry.key;
+        final rows = entry.value;
+        if (key.contains('平时')) {
+          out['pingshi'] = _parsePingshiRows(rows);
+        } else if (key.contains('实验')) {
+          out['experiment'] = _parseExperimentRows(rows);
+        } else if (key.contains('期末') || key.contains('考核')) {
+          out['exam'] = _parseExamRows(rows);
+        }
+      }
+    } catch (e, st) {
+      swallowDebug(e,
+          tag: 'AchievementExcel.parseComponentSheets.ooxml', stack: st);
+    }
+    return out;
+  }
+
+  Map<String, List<List<String>>> _readXlsxRows(Uint8List bytes) {
+    final archive = ZipDecoder().decodeBytes(bytes);
+
+    List<int> file(String name) =>
+        archive.files.firstWhere((f) => f.name == name).content as List<int>;
+
+    final sharedStrings = <String>[];
+    if (archive.files.any((f) => f.name == 'xl/sharedStrings.xml')) {
+      final ssDoc =
+          XmlDocument.parse(utf8.decode(file('xl/sharedStrings.xml')));
+      for (final si in ssDoc.findAllElements('si')) {
+        sharedStrings
+            .add(si.findAllElements('t').map((t) => t.innerText).join());
+      }
+    }
+
+    final wb = XmlDocument.parse(utf8.decode(file('xl/workbook.xml')));
+    final relDoc =
+        XmlDocument.parse(utf8.decode(file('xl/_rels/workbook.xml.rels')));
+    final relTargets = <String, String>{};
+    for (final rel in relDoc.findAllElements('Relationship')) {
+      final id = rel.getAttribute('Id');
+      final target = rel.getAttribute('Target');
+      if (id == null || target == null) continue;
+      relTargets[id] = target.startsWith('/') ? target.substring(1) : target;
+    }
+
+    final result = <String, List<List<String>>>{};
+    for (final sheet in wb.findAllElements('sheet')) {
+      final name = sheet.getAttribute('name') ?? '';
+      final rid = sheet.getAttribute('r:id') ??
+          sheet.getAttribute('id',
+              namespace:
+                  'http://schemas.openxmlformats.org/officeDocument/2006/relationships');
+      final target = rid == null ? null : relTargets[rid];
+      if (name.isEmpty || target == null) continue;
+      final sheetPath = target.startsWith('xl/') ? target : 'xl/$target';
+      final doc = XmlDocument.parse(utf8.decode(file(sheetPath)));
+      final rows = <List<String>>[];
+
+      for (final rowEl in doc.findAllElements('row')) {
+        final rowIndex = int.tryParse(rowEl.getAttribute('r') ?? '') ?? 0;
+        if (rowIndex <= 0) continue;
+        while (rows.length < rowIndex) {
+          rows.add(<String>[]);
+        }
+        final row = rows[rowIndex - 1];
+        for (final cell in rowEl.findElements('c')) {
+          final col = _columnIndex(cell.getAttribute('r') ?? '');
+          if (col < 0) continue;
+          while (row.length <= col) {
+            row.add('');
+          }
+          row[col] = _readXlsxCell(cell, sharedStrings);
+        }
+      }
+      result[name] = rows;
+    }
+    return result;
+  }
+
+  String _readXlsxCell(XmlElement cell, List<String> sharedStrings) {
+    final type = cell.getAttribute('t');
+    var value = '';
+    final vEls = cell.findElements('v');
+    if (vEls.isNotEmpty) value = vEls.first.innerText;
+    if (type == 's') {
+      final idx = int.tryParse(value);
+      return idx != null && idx >= 0 && idx < sharedStrings.length
+          ? sharedStrings[idx]
+          : value;
+    }
+    if (type == 'inlineStr') {
+      return cell.findAllElements('t').map((t) => t.innerText).join();
+    }
+    return value;
+  }
+
+  int _columnIndex(String cellRef) {
+    final match = RegExp(r'^([A-Z]+)').firstMatch(cellRef);
+    if (match == null) return -1;
+    var index = 0;
+    for (final code in match.group(1)!.codeUnits) {
+      index = index * 26 + code - 64;
+    }
+    return index - 1;
   }
 
   /// 校验解析出的三环节成绩。返回结构化报告供导入前确认。
@@ -165,9 +315,26 @@ class AchievementExcelService {
         .toSet();
 
     const scoreFields = {
-      'pingshi': ['class_activity_score', 'quiz_homework_score', 'extra_learning_score'],
-      'experiment': ['exp1_score', 'exp2_score', 'exp3_score', 'exp4_score', 'exp5_score', 'exp6_score', 'exp7_score'],
-      'exam': ['project_score', 'group_score', 'individual_score', 'defense_score'],
+      'pingshi': [
+        'class_activity_score',
+        'quiz_homework_score',
+        'extra_learning_score'
+      ],
+      'experiment': [
+        'exp1_score',
+        'exp2_score',
+        'exp3_score',
+        'exp4_score',
+        'exp5_score',
+        'exp6_score',
+        'exp7_score'
+      ],
+      'exam': [
+        'project_score',
+        'group_score',
+        'individual_score',
+        'defense_score'
+      ],
     };
 
     for (final env in ['pingshi', 'experiment', 'exam']) {
@@ -188,7 +355,8 @@ class AchievementExcelService {
 
       // 缺失学号（仅当提供了 roster）
       if (rosterIds.isNotEmpty) {
-        final present = rows.map((r) => (r['student_id'] ?? '').toString()).toSet();
+        final present =
+            rows.map((r) => (r['student_id'] ?? '').toString()).toSet();
         final miss = rosterIds.difference(present).toList()..sort();
         if (miss.isNotEmpty) missing[env] = miss;
       }
@@ -199,13 +367,15 @@ class AchievementExcelService {
         for (final f in scoreFields[env]!) {
           final v = (r[f] as num?)?.toDouble();
           if (v != null && (v < 0 || v > 100)) {
-            outOfRange.add({'env': env, 'student_id': id, 'field': f, 'value': v});
+            outOfRange
+                .add({'env': env, 'student_id': id, 'field': f, 'value': v});
           }
         }
       }
     }
 
-    final ok = sheetsFound.isNotEmpty && outOfRange.isEmpty && duplicates.isEmpty;
+    final ok =
+        sheetsFound.isNotEmpty && outOfRange.isEmpty && duplicates.isEmpty;
     return {
       'sheetsFound': sheetsFound,
       'counts': counts,
@@ -322,8 +492,103 @@ class AchievementExcelService {
     return rows;
   }
 
+  int _findStudentHeaderRowRows(List<List<String>> rows) {
+    for (int i = 0; i < rows.length && i < 10; i++) {
+      final c0 = _rowCellStr(rows[i], 0);
+      if (c0 == '学号') return i;
+    }
+    return -1;
+  }
 
-  Map<String, dynamic> _extractGrade(List<String> cells, String id, String name) {
+  String _rowCellStr(List<String> row, int i) {
+    if (i >= row.length) return '';
+    return row[i].trim();
+  }
+
+  double _rowCell(List<String> row, int i) {
+    if (i >= row.length) return 0;
+    return double.tryParse(row[i].trim()) ?? 0;
+  }
+
+  List<Map<String, dynamic>> _parsePingshiRows(List<List<String>> tableRows) {
+    final hr = _findStudentHeaderRowRows(tableRows);
+    if (hr < 0) return [];
+    final headerC2 = _rowCellStr(tableRows[hr], 2);
+    final simple = headerC2.contains('课堂');
+    final cActivity = simple ? 2 : 13;
+    final cQuiz = simple ? 3 : 25;
+    final cExtra = simple ? 4 : 36;
+    final rows = <Map<String, dynamic>>[];
+    for (int i = hr + 1; i < tableRows.length; i++) {
+      final row = tableRows[i];
+      final sid = _rowCellStr(row, 0);
+      if (!_isDataRow(sid)) continue;
+      rows.add({
+        'student_id': sid,
+        'student_name': _rowCellStr(row, 1),
+        'class_activity_score': _rowCell(row, cActivity),
+        'quiz_homework_score': _rowCell(row, cQuiz),
+        'extra_learning_score': _rowCell(row, cExtra),
+      });
+    }
+    return rows;
+  }
+
+  List<Map<String, dynamic>> _parseExperimentRows(
+      List<List<String>> tableRows) {
+    final hr = _findStudentHeaderRowRows(tableRows);
+    if (hr < 0) return [];
+    final headerC4 = _rowCellStr(tableRows[hr], 4);
+    final simple = headerC4.contains('实验');
+    List<int> cols;
+    int nExp;
+    if (simple) {
+      final hasExp7 = _rowCellStr(tableRows[hr], 8).contains('实验');
+      nExp = hasExp7 ? 7 : 6;
+      cols = [for (int c = 2; c < 2 + nExp; c++) c];
+    } else {
+      nExp = 7;
+      cols = [2, 3, 5, 6, 8, 9, 11];
+    }
+
+    final rows = <Map<String, dynamic>>[];
+    for (int i = hr + 1; i < tableRows.length; i++) {
+      final row = tableRows[i];
+      final sid = _rowCellStr(row, 0);
+      if (!_isDataRow(sid)) continue;
+      rows.add({
+        'student_id': sid,
+        'student_name': _rowCellStr(row, 1),
+        for (int k = 0; k < nExp; k++)
+          'exp${k + 1}_score': _rowCell(row, cols[k]),
+        for (int k = nExp; k < 7; k++) 'exp${k + 1}_score': 0.0,
+      });
+    }
+    return rows;
+  }
+
+  List<Map<String, dynamic>> _parseExamRows(List<List<String>> tableRows) {
+    final hr = _findStudentHeaderRowRows(tableRows);
+    if (hr < 0) return [];
+    final rows = <Map<String, dynamic>>[];
+    for (int i = hr + 1; i < tableRows.length; i++) {
+      final row = tableRows[i];
+      final sid = _rowCellStr(row, 0);
+      if (!_isDataRow(sid)) continue;
+      rows.add({
+        'student_id': sid,
+        'student_name': _rowCellStr(row, 1),
+        'project_score': _rowCell(row, 2),
+        'group_score': _rowCell(row, 3),
+        'individual_score': _rowCell(row, 4),
+        'defense_score': _rowCell(row, 5),
+      });
+    }
+    return rows;
+  }
+
+  Map<String, dynamic> _extractGrade(
+      List<String> cells, String id, String name) {
     // 列结构通常为：学号 | 姓名 | 课程目标1 | 课程目标2 | 课程目标3 | 课程目标4 | 总评 | ...
     final grade = <String, dynamic>{
       'student_id': id,
@@ -385,7 +650,8 @@ class AchievementExcelService {
     if (e == 'docx') {
       try {
         final archive = ZipDecoder().decodeBytes(bytes);
-        final doc = archive.files.firstWhere((f) => f.name == 'word/document.xml');
+        final doc =
+            archive.files.firstWhere((f) => f.name == 'word/document.xml');
         final xmlStr = utf8.decode(doc.content as List<int>);
         final d = XmlDocument.parse(xmlStr);
         final buf = StringBuffer();
@@ -439,40 +705,46 @@ $rawText
 ''';
     try {
       final raw = await AiService().chat(
-        [{'role': 'user', 'content': prompt}],
+        [
+          {'role': 'user', 'content': prompt}
+        ],
         systemPrompt: system,
       );
       final match = RegExp(r'\[[\s\S]*\]').firstMatch(raw);
       if (match == null) return [];
-      final list = (jsonDecode(match.group(0)!) as List).cast<Map<String, dynamic>>();
+      final list =
+          (jsonDecode(match.group(0)!) as List).cast<Map<String, dynamic>>();
       // 规范化字段
-      return list.map((o) {
-        final idx = (o['idx'] as num?)?.toInt() ?? 0;
-        return {
-          'idx': idx,
-          'name': (o['name'] as String?) ?? '课程目标$idx',
-          'indicator': (o['indicator'] ?? '').toString(),
-          'weight': (o['weight'] as num?)?.toDouble() ?? 0,
-          'full_mark': (o['full_mark'] as num?)?.toDouble() ?? 0,
-          'description': (o['description'] ?? '').toString(),
-          'chapters': (o['chapters'] ?? '').toString(),
-          'assess_content': (o['assess_content'] ?? '').toString(),
-          'pingshi_ratio': 0.20,
-          'experiment_ratio': 0.30,
-          'exam_ratio': 0.50,
-          // 额外信息打包进 standards（course_objectives 未必有这些列，调用方自取）
-          'experiments': (o['experiments'] ?? '').toString(),
-          'pingshi_standard': (o['pingshi_standard'] ?? '').toString(),
-          'experiment_standard': (o['experiment_standard'] ?? '').toString(),
-        };
-      }).where((o) => (o['idx'] as int) > 0).toList()
+      return list
+          .map((o) {
+            final idx = (o['idx'] as num?)?.toInt() ?? 0;
+            return {
+              'idx': idx,
+              'name': (o['name'] as String?) ?? '课程目标$idx',
+              'indicator': (o['indicator'] ?? '').toString(),
+              'weight': (o['weight'] as num?)?.toDouble() ?? 0,
+              'full_mark': (o['full_mark'] as num?)?.toDouble() ?? 0,
+              'description': (o['description'] ?? '').toString(),
+              'chapters': (o['chapters'] ?? '').toString(),
+              'assess_content': (o['assess_content'] ?? '').toString(),
+              'pingshi_ratio': 0.20,
+              'experiment_ratio': 0.30,
+              'exam_ratio': 0.50,
+              // 额外信息打包进 standards（course_objectives 未必有这些列，调用方自取）
+              'experiments': (o['experiments'] ?? '').toString(),
+              'pingshi_standard': (o['pingshi_standard'] ?? '').toString(),
+              'experiment_standard':
+                  (o['experiment_standard'] ?? '').toString(),
+            };
+          })
+          .where((o) => (o['idx'] as int) > 0)
+          .toList()
         ..sort((a, b) => (a['idx'] as int).compareTo(b['idx'] as int));
     } catch (e, st) {
       swallowDebug(e, tag: 'AchievementExcel.aiExtractSyllabus', stack: st);
       return [];
     }
   }
-
 
   Map<String, dynamic> _parseMarkdownSyllabus(String content) {
     final result = <String, dynamic>{};
@@ -500,7 +772,8 @@ $rawText
         continue;
       }
       if (inObjTable) {
-        final match = RegExp(r'\|\s*(\d)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|').firstMatch(line);
+        final match = RegExp(r'\|\s*(\d)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|')
+            .firstMatch(line);
         if (match != null) {
           objectives.add({
             'num': match.group(1)!,
@@ -525,7 +798,8 @@ $rawText
       }
       if (inWeightTable) {
         final match = RegExp(
-          r'\|\s*课程目标\s*(\d)\s*\|\s*([\d.]+)\s*\|.*?\|\s*(\d+)\s*.*?\|\s*(\d+)\s*.*?\|\s*(\d+)\s*.*?\|').firstMatch(line);
+                r'\|\s*课程目标\s*(\d)\s*\|\s*([\d.]+)\s*\|.*?\|\s*(\d+)\s*.*?\|\s*(\d+)\s*.*?\|\s*(\d+)\s*.*?\|')
+            .firstMatch(line);
         if (match != null) {
           weightItems.add({
             'objective': int.parse(match.group(1)!),
@@ -551,8 +825,8 @@ $rawText
         continue;
       }
       if (inAssessTable) {
-        final m = RegExp(r'\|\s*课程目标\s*(\d)[^|]*\|\s*([^|]+?)\s*\|')
-            .firstMatch(line);
+        final m =
+            RegExp(r'\|\s*课程目标\s*(\d)[^|]*\|\s*([^|]+?)\s*\|').firstMatch(line);
         if (m != null) {
           assessItems.add({
             'objective': int.parse(m.group(1)!),
@@ -571,10 +845,12 @@ $rawText
     var inExpTable = false;
     for (final line in lines) {
       if (line.contains('实验项目') && line.contains('对应课程目标')) {
-        inExpTable = true; continue;
+        inExpTable = true;
+        continue;
       }
       if (inExpTable) {
-        final m = RegExp(r'\|\s*(\d+)\s*\|.+?\|\s*(\d+(?:[-]\d+)?)\s*\|').firstMatch(line);
+        final m = RegExp(r'\|\s*(\d+)\s*\|.+?\|\s*(\d+(?:[-]\d+)?)\s*\|')
+            .firstMatch(line);
         if (m != null) {
           final expNum = int.tryParse(m.group(1)!) ?? 0;
           final targetStr = m.group(2)!;
@@ -582,7 +858,8 @@ $rawText
             final range = targetStr.split('-');
             final start = int.tryParse(range[0]) ?? 0;
             final end = int.tryParse(range[1]) ?? start;
-            for (int t = start; t <= end; t++) expMap.putIfAbsent(t, () => []).add('实验$expNum');
+            for (int t = start; t <= end; t++)
+              expMap.putIfAbsent(t, () => []).add('实验$expNum');
           } else {
             final t = int.tryParse(targetStr) ?? 0;
             if (t > 0) expMap.putIfAbsent(t, () => []).add('实验$expNum');
@@ -591,17 +868,21 @@ $rawText
         if (line.trim().isEmpty && expMap.isNotEmpty) inExpTable = false;
       }
     }
-    result['experimentMap'] = expMap.map((k, v) => MapEntry(k.toString(), v.join('、')));
+    result['experimentMap'] =
+        expMap.map((k, v) => MapEntry(k.toString(), v.join('、')));
 
     // 章节/教学安排表（|章节|...|对应课程目标|）
     final chMap = <int, List<String>>{};
     var inChTable = false;
     for (final line in lines) {
-      if (line.contains('章节') && (line.contains('教学内容') || line.contains('对应课程目标'))) {
-        inChTable = true; continue;
+      if (line.contains('章节') &&
+          (line.contains('教学内容') || line.contains('对应课程目标'))) {
+        inChTable = true;
+        continue;
       }
       if (inChTable) {
-        final m = RegExp(r'\|\s*(\d+)\s*\|.+?\|\s*目标\s*(\d+(?:[-]\d+)?)\s*\|').firstMatch(line);
+        final m = RegExp(r'\|\s*(\d+)\s*\|.+?\|\s*目标\s*(\d+(?:[-]\d+)?)\s*\|')
+            .firstMatch(line);
         if (m != null) {
           final chNum = int.tryParse(m.group(1)!) ?? 0;
           final targetStr = m.group(2)!;
@@ -609,7 +890,8 @@ $rawText
             final range = targetStr.split('-');
             final start = int.tryParse(range[0]) ?? 0;
             final end = int.tryParse(range[1]) ?? start;
-            for (int t = start; t <= end; t++) chMap.putIfAbsent(t, () => []).add('第${chNum}章');
+            for (int t = start; t <= end; t++)
+              chMap.putIfAbsent(t, () => []).add('第${chNum}章');
           } else {
             final t = int.tryParse(targetStr) ?? 0;
             if (t > 0) chMap.putIfAbsent(t, () => []).add('第${chNum}章');
@@ -618,7 +900,8 @@ $rawText
         if (line.trim().isEmpty && chMap.isNotEmpty) inChTable = false;
       }
     }
-    result['chapterMap'] = chMap.map((k, v) => MapEntry(k.toString(), v.join('、')));
+    result['chapterMap'] =
+        chMap.map((k, v) => MapEntry(k.toString(), v.join('、')));
 
     return result;
   }
@@ -643,22 +926,51 @@ $rawText
       // docx 表格：w:tbl > w:tr > w:tc > w:p > w:r > w:t。逐行取单元格文本。
       final objectives = <Map<String, String>>[];
       final weights = <Map<String, dynamic>>[];
+      final assessContents = <Map<String, dynamic>>[];
       for (final tbl in doc.findAllElements('w:tbl')) {
         for (final tr in tbl.findAllElements('w:tr')) {
           final cells = <String>[];
           for (final tc in tr.findAllElements('w:tc')) {
-            final text = tc
-                .findAllElements('w:t')
-                .map((t) => t.innerText)
-                .join()
-                .trim();
+            final text =
+                tc.findAllElements('w:t').map((t) => t.innerText).join().trim();
             cells.add(text);
           }
           if (cells.isEmpty) continue;
+          // 课程目标表：序号|课程目标|支撑的毕业要求
+          final numOnly = RegExp(r'^\d+$').firstMatch(cells[0]);
+          if (numOnly != null &&
+              cells.length >= 3 &&
+              cells[1].length > 8 &&
+              RegExp(r'\d\.\d').hasMatch(cells[2])) {
+            objectives.add({
+              'num': numOnly.group(0)!,
+              'objective': cells[1],
+              'requirement': cells[2],
+            });
+            continue;
+          }
+          // 学校达成报告表0：课程目标描述|毕业要求指标点|考核内容
+          if (objectives.length < 4 &&
+              cells.length >= 3 &&
+              cells[0].length > 8 &&
+              RegExp(r'\d\.\d').hasMatch(cells[1])) {
+            final idx = objectives.length + 1;
+            objectives.add({
+              'num': '$idx',
+              'objective': cells[0],
+              'requirement': cells[1],
+            });
+            assessContents.add({
+              'objective': idx,
+              'content': cells[2],
+            });
+            continue;
+          }
           // 权重对照表行：以「课程目标N」开头，第2列是权重小数
           final m = RegExp(r'课程目标\s*(\d)').firstMatch(cells[0]);
           if (m != null && cells.length >= 2) {
-            final w = double.tryParse(cells[1].replaceAll(RegExp(r'[^\d.]'), ''));
+            final w =
+                double.tryParse(cells[1].replaceAll(RegExp(r'[^\d.]'), ''));
             if (w != null && w > 0 && w <= 1) {
               weights.add({
                 'objective': int.parse(m.group(1)!),
@@ -672,7 +984,11 @@ $rawText
           }
         }
       }
-      return {'objectives': objectives, 'weights': weights};
+      return {
+        'objectives': objectives,
+        'weights': weights,
+        'assessContents': assessContents
+      };
     } catch (e, st) {
       swallowDebug(e, tag: 'AchievementExcel.parseWord', stack: st);
       return {'error': 'Word 大纲解析失败: $e'};
@@ -687,7 +1003,8 @@ $rawText
 
   /// 把 parseSyllabus / parseWordSyllabus 的结果转成 course_objectives 行。
   /// 合并 objectives(描述/指标点) 与 weights(权重/各环节满分)。
-  List<Map<String, dynamic>> syllabusToObjectiveRows(Map<String, dynamic> parsed) {
+  List<Map<String, dynamic>> syllabusToObjectiveRows(
+      Map<String, dynamic> parsed) {
     final objectives = (parsed['objectives'] as List?) ?? const [];
     final weights = (parsed['weights'] as List?) ?? const [];
     final byIdx = <int, Map<String, dynamic>>{};
@@ -697,10 +1014,13 @@ $rawText
       byIdx[idx] = {
         'idx': idx,
         'name': '课程目标$idx',
-        'indicator': (w['requirement'] as String?)?.replaceAll(RegExp(r'[^\d.]'), '') ?? '',
+        'indicator':
+            (w['requirement'] as String?)?.replaceAll(RegExp(r'[^\d.]'), '') ??
+                '',
         'weight': (w['weight'] as num?)?.toDouble() ?? 0,
         'full_mark': (w['exam_full'] as num?)?.toDouble() ??
-            (w['pingshi_full'] as num?)?.toDouble() ?? 0,
+            (w['pingshi_full'] as num?)?.toDouble() ??
+            0,
         'pingshi_ratio': 0.20,
         'experiment_ratio': 0.30,
         'exam_ratio': 0.50,
@@ -709,12 +1029,13 @@ $rawText
     for (final o in objectives) {
       final idx = int.tryParse(o['num']?.toString() ?? '') ?? 0;
       if (idx == 0) continue;
-      final row = byIdx.putIfAbsent(idx, () => {'idx': idx, 'name': '课程目标$idx'});
+      final row =
+          byIdx.putIfAbsent(idx, () => {'idx': idx, 'name': '课程目标$idx'});
       row['description'] = o['objective'];
       if ((row['indicator'] as String?)?.isEmpty ?? true) {
-        row['indicator'] = (o['requirement'] as String?)
-                ?.replaceAll(RegExp(r'[^\d.]'), '') ??
-            '';
+        row['indicator'] =
+            (o['requirement'] as String?)?.replaceAll(RegExp(r'[^\d.]'), '') ??
+                '';
       }
     }
     // 合并期末考核评价内容 → assess_content
@@ -722,7 +1043,8 @@ $rawText
     for (final a in assessContents) {
       final idx = (a['objective'] as num?)?.toInt() ?? 0;
       if (idx == 0) continue;
-      final row = byIdx.putIfAbsent(idx, () => {'idx': idx, 'name': '课程目标$idx'});
+      final row =
+          byIdx.putIfAbsent(idx, () => {'idx': idx, 'name': '课程目标$idx'});
       row['assess_content'] = a['content'];
     }
     // 合并映射表字段（实验/章节→目标）
@@ -731,23 +1053,45 @@ $rawText
       for (final e in m.entries) {
         final idx = int.tryParse(e.key) ?? 0;
         if (idx == 0) continue;
-        final row = byIdx.putIfAbsent(idx, () => {'idx': idx, 'name': '课程目标$idx'});
+        final row =
+            byIdx.putIfAbsent(idx, () => {'idx': idx, 'name': '课程目标$idx'});
         row[field] = e.value.toString();
       }
     }
+
     mergeMapToField('experimentMap', 'experiments');
     mergeMapToField('chapterMap', 'chapters');
     final rows = byIdx.values
-        .where((r) => ((r['idx'] as int?) ?? 0) >= 1 && ((r['idx'] as int?) ?? 0) <= 4)
+        .where((r) =>
+            ((r['idx'] as int?) ?? 0) >= 1 && ((r['idx'] as int?) ?? 0) <= 4)
         .toList()
       ..sort((a, b) => (a['idx'] as int).compareTo(b['idx'] as int));
     return rows;
   }
 
+  Future<List<double>> _resolveFullMarks(Database db, int batchId) async {
+    final batch = await db.query('achievement_batches',
+        columns: ['course_name'], where: 'id = ?', whereArgs: [batchId]);
+    final courseName = batch.isNotEmpty
+        ? (batch.first['course_name'] ?? '移动应用开发').toString()
+        : '移动应用开发';
+    final rows = await db.query('course_objectives',
+        where: 'course_name = ?', whereArgs: [courseName], orderBy: 'idx ASC');
+    if (rows.length >= 4) {
+      final marks = rows
+          .take(4)
+          .map((r) => (r['full_mark'] as num?)?.toDouble() ?? 0)
+          .toList();
+      if (marks.every((m) => m > 0)) return marks;
+    }
+    return AchievementConfig.defaults.fullMarks;
+  }
+
   /// 导入学生成绩到数据库
-  Future<int> importToDatabase(int batchId, List<Map<String, dynamic>> grades) async {
+  Future<int> importToDatabase(
+      int batchId, List<Map<String, dynamic>> grades) async {
     final db = await DatabaseHelper.instance.database;
-    final fm = AchievementConfig.defaults.fullMarks;
+    final fm = await _resolveFullMarks(db, batchId);
     final now = DateTime.now().toIso8601String();
     int count = 0;
 
@@ -757,11 +1101,20 @@ $rawText
         final studentId = g['student_id'] as String;
         if (studentId.isEmpty) continue;
 
-        final obj1 = (g['obj1_score'] as double?) ?? 0;
-        final obj2 = (g['obj2_score'] as double?) ?? 0;
-        final obj3 = (g['obj3_score'] as double?) ?? 0;
-        final obj4 = (g['obj4_score'] as double?) ?? 0;
-        final total = (g['total_score'] as double?) ?? (obj1 + obj2 + obj3 + obj4);
+        final obj1 = (g['obj1_score'] as num?)?.toDouble() ?? 0;
+        final obj2 = (g['obj2_score'] as num?)?.toDouble() ?? 0;
+        final obj3 = (g['obj3_score'] as num?)?.toDouble() ?? 0;
+        final obj4 = (g['obj4_score'] as num?)?.toDouble() ?? 0;
+        final total = (g['total_score'] as num?)?.toDouble() ??
+            (obj1 + obj2 + obj3 + obj4);
+        final ach1 = (g['obj1_achievement'] as num?)?.toDouble() ??
+            (obj1 / fm[0]).clamp(0.0, 1.0);
+        final ach2 = (g['obj2_achievement'] as num?)?.toDouble() ??
+            (obj2 / fm[1]).clamp(0.0, 1.0);
+        final ach3 = (g['obj3_achievement'] as num?)?.toDouble() ??
+            (obj3 / fm[2]).clamp(0.0, 1.0);
+        final ach4 = (g['obj4_achievement'] as num?)?.toDouble() ??
+            (obj4 / fm[3]).clamp(0.0, 1.0);
 
         try {
           await txn.insert(
@@ -771,13 +1124,13 @@ $rawText
               'student_id': studentId,
               'student_name': g['student_name'] ?? '',
               'obj1_score': obj1,
-              'obj1_achievement': (obj1 / fm[0]).clamp(0.0, 1.0),
+              'obj1_achievement': ach1.clamp(0.0, 1.0),
               'obj2_score': obj2,
-              'obj2_achievement': (obj2 / fm[1]).clamp(0.0, 1.0),
+              'obj2_achievement': ach2.clamp(0.0, 1.0),
               'obj3_score': obj3,
-              'obj3_achievement': (obj3 / fm[2]).clamp(0.0, 1.0),
+              'obj3_achievement': ach3.clamp(0.0, 1.0),
               'obj4_score': obj4,
-              'obj4_achievement': (obj4 / fm[3]).clamp(0.0, 1.0),
+              'obj4_achievement': ach4.clamp(0.0, 1.0),
               'total_score': total,
               'created_at': now,
               'updated_at': now,
@@ -799,8 +1152,8 @@ $rawText
   /// 课程目标，体现大纲驱动的目标拆分。可选传入 [students] 预填学号/姓名名单。
   ///
   /// 目标拆分（以大纲为准）：
-  /// - 平时：课堂表现→目标1，期间测验→目标2，课外学习→目标3+4
-  /// - 实验：实验1,2→目标1，实验3,4→目标2，实验5→目标3，实验6→目标1-4
+  /// - 平时：课堂表现→目标1，期间测验→目标2，课外学习→目标4
+  /// - 实验：实验1,2→目标1，实验3,4→目标2，实验5,6→目标3，实验7→目标4
   /// - 期末：项目→目标1，小组→目标2，个人→目标3，答辩→目标4
   List<int> buildGradeTemplate({
     List<Map<String, dynamic>> students = const [],
@@ -815,17 +1168,17 @@ $rawText
 
     String ind(int i) => i < cfg.indicators.length ? cfg.indicators[i] : '';
 
-    // ── 平时：课堂表现(20→目标1) / 期间测验(30→目标2) / 课外学习(50→目标3,4) ──
+    // ── 平时：课堂表现(20→目标1) / 期间测验(30→目标2) / 课外学习(50→目标4) ──
     final ps = excel['平时成绩'];
     ps.appendRow([
       xl.TextCellValue('学号'),
       xl.TextCellValue('姓名'),
       xl.TextCellValue('课堂表现 满分20（目标1·${ind(0)}）'),
       xl.TextCellValue('期间测验 满分30（目标2·${ind(1)}）'),
-      xl.TextCellValue('课外学习 满分50（目标3·${ind(2)}、目标4·${ind(3)}）'),
+      xl.TextCellValue('课外学习 满分50（目标4·${ind(3)}）'),
     ]);
 
-    // ── 实验：6次实验 1,2→目标1 / 3,4→目标2 / 5→目标3 / 6→目标1-4 ──
+    // ── 实验：学校表格48为7次实验；1,2→目标1 / 3,4→目标2 / 5,6→目标3 / 7→目标4 ──
     final es = excel['实验成绩'];
     es.appendRow([
       xl.TextCellValue('学号'),
@@ -835,7 +1188,8 @@ $rawText
       xl.TextCellValue('实验3得分（目标2）'),
       xl.TextCellValue('实验4得分（目标2）'),
       xl.TextCellValue('实验5得分（目标3）'),
-      xl.TextCellValue('实验6得分（目标1-4·综合）'),
+      xl.TextCellValue('实验6得分（目标3）'),
+      xl.TextCellValue('实验7得分（目标4）'),
     ]);
 
     // ── 期末成绩：项目(目标1)/小组(目标2)/个人(目标3)/答辩(目标4) ──
