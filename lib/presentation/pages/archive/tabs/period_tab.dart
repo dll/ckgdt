@@ -518,8 +518,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     if (def.key == 'teaching_task') {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['htm', 'html'],
-        dialogTitle: '选择教学任务书HTML文件',
+        allowedExtensions: ['mhtml', 'mht', 'htm', 'html'],
+        dialogTitle: '选择教学任务书文件（教务系统 MHTML 或 HTML）',
       );
       if (result == null || result.files.isEmpty) return;
       final file = File(result.files.single.path!);

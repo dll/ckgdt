@@ -130,7 +130,39 @@ class AchievementAgent extends BaseAgent {
   @override
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
+    // 动态加载课程目标，注入 AI prompt（支持任意课程）
+    String objectivesContext = '';
+    try {
+      final batches = await AchievementDao().getBatches();
+      if (batches.isNotEmpty) {
+        final courseName = batches.first['course_name']?.toString() ?? '';
+        if (courseName.isNotEmpty) {
+          final objectives = await AchievementDao().getCourseObjectives(courseName);
+          if (objectives.isNotEmpty) {
+            final buf = StringBuffer('当前课程：$courseName\n课程目标：\n');
+            for (final o in objectives) {
+              final idx = o['idx'] ?? '?';
+              final weight = o['weight'] ?? 0;
+              final desc = o['description'] ?? '';
+              final indicator = o['indicator'] ?? '';
+              buf.writeln('- 目标$idx（权重$weight，指标点$indicator）：$desc');
+            }
+            objectivesContext = buf.toString();
+          }
+        }
+      }
+    } catch (e) {
+      // 加载失败时使用通用 prompt，不阻塞对话
+    }
+
     final messages = buildAiMessages(userMessage, session);
+    if (objectivesContext.isNotEmpty) {
+      // 在系统消息中注入课程目标上下文
+      messages.insert(1, {
+        'role': 'system',
+        'content': objectivesContext,
+      });
+    }
     final result = await safeAiChatWithTools(userMessage, messages, aiService: _ai);
     return buildReplyFromResult(result);
   }

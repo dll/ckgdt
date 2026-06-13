@@ -36,23 +36,54 @@ class WinScreenCapturer {
 
   int _screenW = 0;
   int _screenH = 0;
+  int _screenX = 0;
+  int _screenY = 0;
   int _captureW = 1280;
   int _captureH = 720;
   int _quality = 80;
   bool _ready = false;
+  bool _lastFrameLooksBlack = false;
 
   void initialize({int width = 1280, int height = 720, int quality = 80}) {
     if (!Platform.isWindows) return;
-    _screenW = GetSystemMetrics(SM_CXSCREEN);
-    _screenH = GetSystemMetrics(SM_CYSCREEN);
+    _screenX = GetSystemMetrics(SM_XVIRTUALSCREEN);
+    _screenY = GetSystemMetrics(SM_YVIRTUALSCREEN);
+    _screenW = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+    _screenH = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+    if (_screenW <= 0 || _screenH <= 0) {
+      _screenX = 0;
+      _screenY = 0;
+      _screenW = GetSystemMetrics(SM_CXSCREEN);
+      _screenH = GetSystemMetrics(SM_CYSCREEN);
+    }
     _captureW = width.clamp(320, _screenW);
     _captureH = height.clamp(240, _screenH);
     _quality = quality.clamp(10, 100);
+    _lastFrameLooksBlack = false;
     _ready = true;
-    debugPrint('WinScreenCapturer: ${_screenW}x$_screenH → $_captureW x$_captureH q$_quality');
+    debugPrint(
+        'WinScreenCapturer: virtual=$_screenX,$_screenY ${_screenW}x$_screenH -> $_captureW x$_captureH q$_quality');
   }
 
   bool get isReady => _ready;
+  bool get lastFrameLooksBlack => _lastFrameLooksBlack;
+
+  void minimizeForegroundWindow() {
+    if (!Platform.isWindows) return;
+    final hwnd = GetForegroundWindow();
+    if (hwnd != 0) {
+      // Do not minimize: some Flutter desktop builds throttle Dart timers when
+      // minimized, which freezes the capture loop. Keep the window alive but
+      // move it to a small corner so it no longer covers the demonstrated app.
+      ShowWindowAsync(hwnd, SW_RESTORE);
+      const w = 360;
+      const h = 220;
+      final x = _screenX + _screenW - w - 24;
+      final y = _screenY + _screenH - h - 72;
+      MoveWindow(hwnd, x, y, w, h, 1);
+      SetWindowPos(hwnd, HWND_BOTTOM, x, y, w, h, SWP_NOACTIVATE);
+    }
+  }
 
   /// 抓一帧桌面 → JPEG bytes。失败返回 null。
   Future<Uint8List?> capture() async {
@@ -67,64 +98,89 @@ class WinScreenCapturer {
       return null;
     }
 
-    final hBmp = CreateCompatibleBitmap(hdcScreen, _captureW, _captureH);
+    final bmi = calloc<BITMAPINFO>();
+    final bits = calloc<Pointer>();
+    bmi.ref.bmiHeader.biSize = 40;
+    bmi.ref.bmiHeader.biWidth = _captureW;
+    // Top-down DIB: memory order matches the screen's top-to-bottom order.
+    bmi.ref.bmiHeader.biHeight = -_captureH;
+    bmi.ref.bmiHeader.biPlanes = 1;
+    bmi.ref.bmiHeader.biBitCount = 32;
+    bmi.ref.bmiHeader.biCompression = BI_RGB;
+
+    final hBmp = CreateDIBSection(
+      hdcScreen,
+      bmi,
+      0, // DIB_RGB_COLORS
+      bits,
+      0,
+      0,
+    );
     if (hBmp == 0) {
+      free(bits);
+      free(bmi);
       DeleteDC(hdcMem);
       ReleaseDC(0, hdcScreen);
       return null;
     }
 
-    SelectObject(hdcMem, hBmp);
-    SetStretchBltMode(hdcMem, 4); // HALFTONE
-    StretchBlt(
-      hdcMem, 0, 0, _captureW, _captureH,
-      hdcScreen, 0, 0, _screenW, _screenH,
-      SRCCOPY,
-    );
-
-    // 分配 BITMAPINFO
-    final bmi = calloc<BITMAPINFO>();
-    bmi.ref.bmiHeader.biSize = 40;
-    bmi.ref.bmiHeader.biWidth = _captureW;
-    bmi.ref.bmiHeader.biHeight = -_captureH;
-    bmi.ref.bmiHeader.biPlanes = 1;
-    bmi.ref.bmiHeader.biBitCount = 32;
-    bmi.ref.bmiHeader.biCompression = 0; // BI_RGB
-
-    final pixelLen = _captureW * _captureH * 4;
-    final pixels = calloc<Uint8>(pixelLen);
-
-    final got = GetDIBits(
-      hdcMem, hBmp,
-      0, _captureH,
-      pixels.cast<Void>(),
-      bmi,
+    final oldObj = SelectObject(hdcMem, hBmp);
+    SetStretchBltMode(hdcMem, HALFTONE);
+    final copied = StretchBlt(
+      hdcMem,
       0,
+      0,
+      _captureW,
+      _captureH,
+      hdcScreen,
+      _screenX,
+      _screenY,
+      _screenW,
+      _screenH,
+      SRCCOPY | CAPTUREBLT,
     );
 
-    // 清理
-    DeleteObject(hBmp);
-    DeleteDC(hdcMem);
-    ReleaseDC(0, hdcScreen);
-
-    if (got == 0) {
-      free(pixels);
+    if (copied == 0 || bits.value == nullptr) {
+      if (oldObj != 0) SelectObject(hdcMem, oldObj);
+      DeleteObject(hBmp);
+      free(bits);
       free(bmi);
+      DeleteDC(hdcMem);
+      ReleaseDC(0, hdcScreen);
       return null;
     }
 
     // BGRA → RGB
     final rgb = Uint8List(_captureW * _captureH * 3);
+    final pixels = bits.value.cast<Uint8>();
+    var brightSamples = 0;
+    final sampleStep = (_captureW * _captureH ~/ 4096).clamp(1, 4096);
     for (int i = 0; i < _captureW * _captureH; i++) {
       final off = i * 4;
       final rgbOff = i * 3;
-      rgb[rgbOff] = pixels[off + 2];
-      rgb[rgbOff + 1] = pixels[off + 1];
-      rgb[rgbOff + 2] = pixels[off];
+      final b = pixels[off];
+      final g = pixels[off + 1];
+      final r = pixels[off + 2];
+      rgb[rgbOff] = r;
+      rgb[rgbOff + 1] = g;
+      rgb[rgbOff + 2] = b;
+      if (i % sampleStep == 0 && (r > 12 || g > 12 || b > 12)) {
+        brightSamples++;
+      }
     }
 
-    free(pixels);
+    if (oldObj != 0) SelectObject(hdcMem, oldObj);
+    DeleteObject(hBmp);
+    free(bits);
     free(bmi);
+    DeleteDC(hdcMem);
+    ReleaseDC(0, hdcScreen);
+
+    _lastFrameLooksBlack = brightSamples == 0;
+    if (_lastFrameLooksBlack) {
+      debugPrint('WinScreenCapturer: captured a fully black frame');
+      return null;
+    }
 
     return compute(_encodeJpegIsolate,
         _JpegEncodeParams(rgb, _captureW, _captureH, _quality));

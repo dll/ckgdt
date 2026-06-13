@@ -2,6 +2,7 @@
 import '../../../core/error_handler.dart';
 import '../../../services/agent/agents/archive_agent.dart';
 import '../../../data/local/archive_dao.dart';
+import '../../widgets/agent_entry_button.dart';
 import '../../widgets/inner_tab_request_mixin.dart';
 import 'archive_constants.dart';
 import 'tabs/period_tab.dart';
@@ -85,17 +86,27 @@ class _ArchivePageState extends State<ArchivePage>
         ),
         Container(
           color: primary.withValues(alpha: 0.05),
-          child: TabBar(
-            controller: _tabController,
-            isScrollable: false,
-            tabAlignment: TabAlignment.fill,
-            labelColor: primary,
-            unselectedLabelColor: Colors.grey,
-            indicatorColor: primary,
-            tabs: List.generate(archivePeriodLabels.length, (i) => Tab(
-              icon: Icon(archivePeriodIcons[i], size: 20),
-              text: archivePeriodLabels[i],
-            )),
+          child: Row(
+            children: [
+              Expanded(
+                child: TabBar(
+                  controller: _tabController,
+                  isScrollable: false,
+                  tabAlignment: TabAlignment.fill,
+                  labelColor: primary,
+                  unselectedLabelColor: Colors.grey,
+                  indicatorColor: primary,
+                  tabs: List.generate(archivePeriodLabels.length, (i) => Tab(
+                    icon: Icon(archivePeriodIcons[i], size: 20),
+                    text: archivePeriodLabels[i],
+                  )),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                child: AgentEntryButton(agentId: 'archive'),
+              ),
+            ],
           ),
         ),
         Expanded(

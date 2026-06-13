@@ -1040,19 +1040,30 @@ class AchievementDao {
     final scores = await getScores(batchId);
     if (scores.isEmpty) return [];
 
+    // 从批次获取课程名，加载对应的课程目标配置
+    final batch = await getBatch(batchId);
+    final courseName = batch?['course_name']?.toString() ?? '移动应用开发';
+    final objectives = await getCourseObjectives(courseName);
+    final cfg = objectives.isNotEmpty
+        ? objectives
+        : [
+            {'idx': 1, 'chapters': '第1章 + 第2章', 'description': '课程目标1'},
+            {'idx': 2, 'chapters': '第3章 + 第4章', 'description': '课程目标2'},
+            {'idx': 3, 'chapters': '第5章', 'description': '课程目标3'},
+            {'idx': 4, 'chapters': '第6章', 'description': '课程目标4'},
+          ];
+
     const fullMarks = _kFullMarks;
-    const objectiveChapters = [
-      '第1章 + 第2章',
-      '第3章 + 第4章',
-      '第5章',
-      '第6章',
-    ];
-    const objectiveTopics = [
-      ['移动应用开发技术体系', '原生/混合/跨平台技术', 'Android原生开发', 'iOS开发基础'],
-      ['Flutter框架', 'React Native', '小程序开发', 'AI编程工具'],
-      ['HarmonyOS多端开发', '跨设备适配', '技术方案评估', 'ArkUI/ArkTS'],
-      ['Git版本控制', '软件工程规范', '应用测试与优化', '综合开发实践'],
-    ];
+    // 从课程目标动态构建章节和主题列表
+    final objectiveChapters = List<String>.generate(4, (i) {
+      return (cfg.length > i ? cfg[i]['chapters']?.toString() : null) ?? '第${i + 1}章';
+    });
+    final objectiveTopics = List<List<String>>.generate(4, (i) {
+      final desc = (cfg.length > i ? cfg[i]['description']?.toString() : null) ?? '课程目标${i + 1}';
+      // 从描述中提取关键主题（取前4个逗号/顿号分隔的短语）
+      final parts = desc.split(RegExp(r'[、，,]')).where((s) => s.trim().isNotEmpty).toList();
+      return parts.take(4).toList();
+    });
 
     // 计算每个目标的平均达成度
     final objAchievements = List<double>.generate(4, (i) {

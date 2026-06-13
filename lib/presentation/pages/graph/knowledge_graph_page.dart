@@ -1,4 +1,4 @@
-﻿import 'dart:math' as math;
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../core/constants/chapter_helper.dart';
 import '../../../core/constants/mask_shapes.dart';
@@ -10,6 +10,7 @@ import '../../../data/models/learning_path_model.dart';
 import '../../../services/ai_service.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/knowledge_seed_service.dart';
+import '../../../services/node_achievement_service.dart';
 import '../../../data/local/user_dao.dart';
 import '../../../services/default_class_service.dart';
 import '../../../data/models/user_model.dart';
@@ -57,7 +58,6 @@ const _conceptTypeLabels = {
 // ══════════════════════════════════════════════════════════════════════════════
 // 关系类型样式映射
 // ══════════════════════════════════════════════════════════════════════════════
-
 
 class KnowledgeGraphPage extends StatefulWidget {
   const KnowledgeGraphPage({super.key});
@@ -115,17 +115,19 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
 
   // ── 达成度 ─────────────────────────────────────────────────────────────
   final _learningRecordDao = LearningRecordDao();
+  final _nodeAchievementService = NodeAchievementService();
   Map<int, String> _conceptProgress = {}; // conceptId → status
   int _progressCompleted = 0;
   int _progressInProgress = 0;
   int _progressNotStarted = 0;
+  double _achievementAverageRatio = 0;
 
   // ── 教师达成度视图 ─────────────────────────────────────────────────────
   bool _teacherAchievementMode = false; // 是否处于教师查看模式
-  String? _selectedStudentId;           // null = 全体学生
+  String? _selectedStudentId; // null = 全体学生
   List<UserModel> _studentList = [];
-  String _studentSearchQuery = '';      // 学生搜索关键词
-  Map<int, double> _allStudentsRatio = {}; // conceptId → 完成比率 0.0~1.0
+  String _studentSearchQuery = ''; // 学生搜索关键词
+  Map<int, double> _allStudentsRatio = {}; // conceptId → 达成度/完成比率 0.0~1.0
 
   // ── 画布参数 ─────────────────────────────────────────────────────────────
   static const double _canvasWidth = 2400;
@@ -254,8 +256,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
       final userId = _authService.currentUser?.userId;
       if (userId == null) return;
 
-      final isTeacherOrAdmin =
-          _authService.isTeacher || _authService.isAdmin;
+      final isTeacherOrAdmin = _authService.isTeacher || _authService.isAdmin;
 
       // 把 _nodes 转为 knowledge_concepts 行格式供 autoSync 使用
       final conceptMaps = _nodes
@@ -263,8 +264,22 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                 'id': n.id,
                 'concept_name': n.name,
                 'chapter': n.chapter,
+                'description': n.description,
+                'keywords': n.keywords,
               })
           .toList();
+
+      if (_viewMode == _ViewMode.achievement) {
+        final loaded = await _loadNodeAchievementProgress(
+          userId: userId,
+          isTeacherOrAdmin: isTeacherOrAdmin,
+          conceptMaps: conceptMaps,
+        );
+        if (loaded) {
+          if (mounted) setState(() {});
+          return;
+        }
+      }
 
       if (isTeacherOrAdmin) {
         _teacherAchievementMode = true;
@@ -278,73 +293,135 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
 
         if (_selectedStudentId == null) {
           // 全体学生聚合视图
-          _allStudentsRatio = await _learningRecordDao
-              .getAllStudentsConceptRatio(conceptMaps);
+          _allStudentsRatio =
+              await _learningRecordDao.getAllStudentsConceptRatio(conceptMaps);
 
-          // 从 ratio 推导统计
-          _progressCompleted = 0;
-          _progressInProgress = 0;
-          _progressNotStarted = 0;
-          for (final node in _nodes) {
-            final r = _allStudentsRatio[node.id] ?? 0.0;
-            if (r >= 0.8) {
-              _progressCompleted++;
-            } else if (r > 0.0) {
-              _progressInProgress++;
-            } else {
-              _progressNotStarted++;
-            }
-          }
+          _applyLearningRatioProgress(_allStudentsRatio);
           // 清空个人进度（使用 ratio 模式）
           _conceptProgress = {};
         } else {
           // 查看某个学生
-          _conceptProgress = await _learningRecordDao
-              .autoSyncConceptProgress(_selectedStudentId!, conceptMaps);
+          _conceptProgress = await _learningRecordDao.autoSyncConceptProgress(
+              _selectedStudentId!, conceptMaps);
           _allStudentsRatio = {};
 
-          _progressCompleted = 0;
-          _progressInProgress = 0;
-          _progressNotStarted = 0;
-          for (final node in _nodes) {
-            final s = _conceptProgress[node.id] ?? 'not_started';
-            switch (s) {
-              case 'completed':
-                _progressCompleted++;
-                break;
-              case 'in_progress':
-                _progressInProgress++;
-                break;
-              default:
-                _progressNotStarted++;
-            }
-          }
+          _applyStatusProgress(_conceptProgress);
         }
       } else {
         _teacherAchievementMode = false;
         _conceptProgress = await _learningRecordDao.autoSyncConceptProgress(
             userId, conceptMaps);
+        _allStudentsRatio = {};
 
-        // 统计
-        _progressCompleted = 0;
-        _progressInProgress = 0;
-        _progressNotStarted = 0;
-        for (final node in _nodes) {
-          final s = _conceptProgress[node.id] ?? 'not_started';
-          switch (s) {
-            case 'completed':
-              _progressCompleted++;
-              break;
-            case 'in_progress':
-              _progressInProgress++;
-              break;
-            default:
-              _progressNotStarted++;
-          }
-        }
+        _applyStatusProgress(_conceptProgress);
       }
       if (mounted) setState(() {});
     } catch (_) {}
+  }
+
+  Future<bool> _loadNodeAchievementProgress({
+    required String userId,
+    required bool isTeacherOrAdmin,
+    required List<Map<String, dynamic>> conceptMaps,
+  }) async {
+    final syncedRows = await _nodeAchievementService.syncFromAchievementScores(
+      concepts: conceptMaps,
+    );
+    if (syncedRows == 0) return false;
+
+    if (isTeacherOrAdmin) {
+      _teacherAchievementMode = true;
+
+      if (_studentList.isEmpty) {
+        final all = await UserDao().getStudents();
+        _studentList = await DefaultClassService.instance
+            .filterByDefaultClass(all, (u) => u.userId);
+      }
+
+      final heatmap = await _nodeAchievementService.getHeatmap(
+        userId: _selectedStudentId,
+      );
+      _applyAchievementHeatmap(heatmap);
+    } else {
+      _teacherAchievementMode = false;
+      final heatmap = await _nodeAchievementService.getHeatmap(userId: userId);
+      _applyAchievementHeatmap(heatmap);
+    }
+
+    return true;
+  }
+
+  void _applyAchievementHeatmap(Map<int, double> heatmap) {
+    _conceptProgress = {};
+    _allStudentsRatio = {};
+    _progressCompleted = 0;
+    _progressInProgress = 0;
+    _progressNotStarted = 0;
+
+    var sum = 0.0;
+    for (final node in _nodes) {
+      final ratio = _achievementScoreToRatio(heatmap[node.id]);
+      _allStudentsRatio[node.id] = ratio;
+      sum += ratio;
+
+      if (ratio >= 0.8) {
+        _progressCompleted++;
+      } else if (ratio >= 0.6) {
+        _progressInProgress++;
+      } else {
+        _progressNotStarted++;
+      }
+    }
+
+    _achievementAverageRatio = _nodes.isEmpty ? 0 : sum / _nodes.length;
+  }
+
+  void _applyLearningRatioProgress(Map<int, double> ratioMap) {
+    _progressCompleted = 0;
+    _progressInProgress = 0;
+    _progressNotStarted = 0;
+
+    var sum = 0.0;
+    for (final node in _nodes) {
+      final ratio = (ratioMap[node.id] ?? 0.0).clamp(0.0, 1.0);
+      sum += ratio;
+      if (ratio >= 0.8) {
+        _progressCompleted++;
+      } else if (ratio > 0.0) {
+        _progressInProgress++;
+      } else {
+        _progressNotStarted++;
+      }
+    }
+    _achievementAverageRatio = _nodes.isEmpty ? 0 : sum / _nodes.length;
+  }
+
+  void _applyStatusProgress(Map<int, String> progressMap) {
+    _progressCompleted = 0;
+    _progressInProgress = 0;
+    _progressNotStarted = 0;
+
+    for (final node in _nodes) {
+      final s = progressMap[node.id] ?? 'not_started';
+      switch (s) {
+        case 'completed':
+          _progressCompleted++;
+          break;
+        case 'in_progress':
+          _progressInProgress++;
+          break;
+        default:
+          _progressNotStarted++;
+      }
+    }
+    _achievementAverageRatio =
+        _nodes.isEmpty ? 0 : _progressCompleted / math.max(_nodes.length, 1);
+  }
+
+  double _achievementScoreToRatio(double? score) {
+    final value = score ?? 0;
+    if (value <= 1) return value.clamp(0.0, 1.0).toDouble();
+    return (value / 100).clamp(0.0, 1.0).toDouble();
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -508,8 +585,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
     for (final entry in byChapter.entries) {
       final center = clusterCenters[entry.key]!;
       final clusterNodes = entry.value;
-      final clusterRadius =
-          math.min(cellW, cellH) * 0.35;
+      final clusterRadius = math.min(cellW, cellH) * 0.35;
 
       // 初始化
       for (final node in clusterNodes) {
@@ -597,11 +673,9 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
 
         // 约束在集群范围内
         final distFromCenter = math.sqrt(
-            math.pow(node.x - center.dx, 2) +
-                math.pow(node.y - center.dy, 2));
+            math.pow(node.x - center.dx, 2) + math.pow(node.y - center.dy, 2));
         if (distFromCenter > maxRadius) {
-          final angle =
-              math.atan2(node.y - center.dy, node.x - center.dx);
+          final angle = math.atan2(node.y - center.dy, node.x - center.dx);
           node.x = center.dx + maxRadius * math.cos(angle);
           node.y = center.dy + maxRadius * math.sin(angle);
         }
@@ -620,7 +694,9 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
     // 收集 N 跳内的节点
     final visited = <int>{focus.id};
     var frontier = <int>{focus.id};
-    final layerNodes = <int, Set<int>>{0: {focus.id}};
+    final layerNodes = <int, Set<int>>{
+      0: {focus.id}
+    };
 
     for (int depth = 1; depth <= _focusDepth; depth++) {
       final nextFrontier = <int>{};
@@ -629,8 +705,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
           int? neighbor;
           if (edge.sourceId == nid && !visited.contains(edge.targetId)) {
             neighbor = edge.targetId;
-          } else if (edge.targetId == nid &&
-              !visited.contains(edge.sourceId)) {
+          } else if (edge.targetId == nid && !visited.contains(edge.sourceId)) {
             neighbor = edge.sourceId;
           }
           if (neighbor != null) {
@@ -673,13 +748,18 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
     }
 
     final maskPath = MaskShapeBuilder.getPath(
-      _selectedMask, _canvasWidth, _canvasHeight,
+      _selectedMask,
+      _canvasWidth,
+      _canvasHeight,
     );
     _currentMaskPath = maskPath;
 
     // 初始化：在蒙版内采样节点位置
     final initPositions = MaskShapeBuilder.samplePoints(
-      _selectedMask, _canvasWidth, _canvasHeight, _nodes.length,
+      _selectedMask,
+      _canvasWidth,
+      _canvasHeight,
+      _nodes.length,
     );
 
     for (int i = 0; i < _nodes.length; i++) {
@@ -765,7 +845,9 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
         final pos = Offset(node.x, node.y);
         if (!maskPath.contains(pos)) {
           final constrained = MaskShapeBuilder.constrainToMask(
-            pos, maskPath, bounds,
+            pos,
+            maskPath,
+            bounds,
           );
           node.x = constrained.dx;
           node.y = constrained.dy;
@@ -900,9 +982,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                 (n.description ?? '')
                     .toLowerCase()
                     .contains(query.toLowerCase()) ||
-                (n.keywords ?? '')
-                    .toLowerCase()
-                    .contains(query.toLowerCase()))
+                (n.keywords ?? '').toLowerCase().contains(query.toLowerCase()))
             .map((n) => n.id)
             .toSet();
       }
@@ -996,15 +1076,13 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                             width: 8,
                             height: 8,
                             decoration: BoxDecoration(
-                              color: _conceptTypeColors[e.key] ??
-                                  Colors.grey,
+                              color: _conceptTypeColors[e.key] ?? Colors.grey,
                               shape: BoxShape.circle,
                             ),
                           ),
                           const SizedBox(width: 6),
                           Expanded(
-                            child: Text(
-                                _conceptTypeLabels[e.key] ?? e.key,
+                            child: Text(_conceptTypeLabels[e.key] ?? e.key,
                                 style: const TextStyle(fontSize: 13)),
                           ),
                           Text('${e.value}',
@@ -1016,8 +1094,8 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                 if (chapterDistribution.isNotEmpty) ...[
                   const SizedBox(height: 10),
                   const Text('章节分布',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 12)),
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                   const SizedBox(height: 4),
                   ...chapterDistribution.entries.map((e) => Padding(
                         padding: const EdgeInsets.only(bottom: 2),
@@ -1026,8 +1104,9 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                             const Icon(Icons.book,
                                 size: 12, color: Colors.grey),
                             const SizedBox(width: 6),
-                            Expanded(child: Text('第 ${e.key} 章',
-                                style: const TextStyle(fontSize: 13))),
+                            Expanded(
+                                child: Text('第 ${e.key} 章',
+                                    style: const TextStyle(fontSize: 13))),
                             Text('${e.value} 个',
                                 style: const TextStyle(
                                     fontWeight: FontWeight.bold, fontSize: 13)),
@@ -1096,8 +1175,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                 return ChoiceChip(
                   label: Text(labels[i]),
                   selected: isSelected,
-                  selectedColor:
-                      primary.withValues(alpha: 0.2),
+                  selectedColor: primary.withValues(alpha: 0.2),
                   onSelected: (_) {
                     Navigator.pop(ctx);
                     _setChapterFilter(chapters[i]);
@@ -1219,8 +1297,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                           Row(
                             children: [
                               _buildBadge(
-                                _conceptTypeLabels[node.type] ??
-                                    node.type,
+                                _conceptTypeLabels[node.type] ?? node.type,
                                 node.color,
                               ),
                               const SizedBox(width: 6),
@@ -1273,8 +1350,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                 ],
 
                 // 关键词
-                if (node.keywords != null &&
-                    node.keywords!.isNotEmpty) ...[
+                if (node.keywords != null && node.keywords!.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 6,
@@ -1284,12 +1360,10 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: primary
-                              .withValues(alpha: 0.08),
+                          color: primary.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: primary
-                                .withValues(alpha: 0.2),
+                            color: primary.withValues(alpha: 0.2),
                           ),
                         ),
                         child: Text(
@@ -1309,8 +1383,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                   const SizedBox(height: 20),
                   const Text(
                     '关联概念',
-                    style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   ...groupedRelations.entries.map((entry) {
@@ -1318,8 +1391,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Padding(
-                          padding:
-                              const EdgeInsets.only(top: 8, bottom: 4),
+                          padding: const EdgeInsets.only(top: 8, bottom: 4),
                           child: Text(
                             entry.key,
                             style: TextStyle(
@@ -1359,8 +1431,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                                   Expanded(
                                     child: Text(
                                       rel['name'] as String,
-                                      style: const TextStyle(
-                                          fontSize: 14),
+                                      style: const TextStyle(fontSize: 14),
                                     ),
                                   ),
                                   const Icon(
@@ -1382,8 +1453,8 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                 if (node.chapter != null) ...[
                   const SizedBox(height: 16),
                   const Text('相关资源',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 14)),
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -1519,15 +1590,13 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                 // ── 达成度标记按钮 ─────────────────────────────────────
                 const SizedBox(height: 12),
                 Builder(builder: (_) {
-                  final curStatus =
-                      _conceptProgress[node.id] ?? 'not_started';
+                  final curStatus = _conceptProgress[node.id] ?? 'not_started';
                   final isCompleted = curStatus == 'completed';
                   return SizedBox(
                     width: double.infinity,
                     child: FilledButton.icon(
                       onPressed: () async {
-                        final userId =
-                            _authService.currentUser?.userId;
+                        final userId = _authService.currentUser?.userId;
                         if (userId == null) return;
                         final newStatus =
                             isCompleted ? 'not_started' : 'completed';
@@ -1546,8 +1615,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                       style: FilledButton.styleFrom(
                         backgroundColor:
                             isCompleted ? Colors.grey : const Color(0xFF4CAF50),
-                        padding:
-                            const EdgeInsets.symmetric(vertical: 10),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10)),
                       ),
@@ -1614,7 +1682,8 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
       ),
       child: Text(
         text,
-        style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w500),
+        style:
+            TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w500),
       ),
     );
   }
@@ -1676,8 +1745,8 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
           child: reversedChain.length <= 1
               ? const Padding(
                   padding: EdgeInsets.all(16),
-                  child: Text('该概念没有前置依赖',
-                      style: TextStyle(color: Colors.grey)),
+                  child:
+                      Text('该概念没有前置依赖', style: TextStyle(color: Colors.grey)),
                 )
               : ListView.builder(
                   shrinkWrap: true,
@@ -1723,8 +1792,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                           child: Padding(
                             padding: const EdgeInsets.only(bottom: 8),
                             child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   node.name,
@@ -1736,8 +1804,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                                   ),
                                 ),
                                 Text(
-                                  _conceptTypeLabels[node.type] ??
-                                      node.type,
+                                  _conceptTypeLabels[node.type] ?? node.type,
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Colors.grey.shade500,
@@ -1887,8 +1954,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
     }
 
     // 找到所有核心概念
-    final coreNodes =
-        _nodes.where((n) => n.importance == 'core').toList();
+    final coreNodes = _nodes.where((n) => n.importance == 'core').toList();
     if (coreNodes.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1954,9 +2020,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(created > 0
-              ? '已生成 $created 条推荐学习路径'
-              : '所有推荐路径已存在'),
+          content: Text(created > 0 ? '已生成 $created 条推荐学习路径' : '所有推荐路径已存在'),
         ),
       );
     }
@@ -1982,9 +2046,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
               const SizedBox(height: 4),
               Text(label,
                   style: TextStyle(
-                      fontSize: 12,
-                      color: color,
-                      fontWeight: FontWeight.w500)),
+                      fontSize: 12, color: color, fontWeight: FontWeight.w500)),
             ],
           ),
         ),
@@ -2039,7 +2101,8 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
               decoration: InputDecoration(
                 hintText: '搜索概念...',
                 border: InputBorder.none,
-                hintStyle: TextStyle(color: NoirTokens.paper.withValues(alpha: 0.7)),
+                hintStyle:
+                    TextStyle(color: NoirTokens.paper.withValues(alpha: 0.7)),
               ),
               style: const TextStyle(color: NoirTokens.paper),
               onChanged: _performSearch,
@@ -2060,7 +2123,8 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
         if (onGraphTab) ...[
           // 搜索
           IconButton(
-            icon: Icon(_showSearch ? Icons.close : Icons.search, color: NoirTokens.paper),
+            icon: Icon(_showSearch ? Icons.close : Icons.search,
+                color: NoirTokens.paper),
             tooltip: '搜索概念',
             onPressed: () {
               setState(() {
@@ -2076,9 +2140,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
           IconButton(
             icon: Badge(
               isLabelVisible: _chapterFilter != null,
-              label: _chapterFilter != null
-                  ? Text('${_chapterFilter}')
-                  : null,
+              label: _chapterFilter != null ? Text('${_chapterFilter}') : null,
               child: const Icon(Icons.filter_list),
             ),
             tooltip: '章节筛选',
@@ -2143,7 +2205,8 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
           SizedBox(height: 16),
           Text(
             '正在加载知识图谱...',
-            style: TextStyle(color: NoirTokens.paper.withValues(alpha: 0.7), fontSize: 14),
+            style: TextStyle(
+                color: NoirTokens.paper.withValues(alpha: 0.7), fontSize: 14),
           ),
         ],
       ),
@@ -2195,7 +2258,8 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
           const SizedBox(height: 8),
           Text(
             '点击下方按钮初始化知识图谱',
-            style: TextStyle(fontSize: 14, color: NoirTokens.paper.withValues(alpha: 0.4)),
+            style: TextStyle(
+                fontSize: 14, color: NoirTokens.paper.withValues(alpha: 0.4)),
           ),
           const SizedBox(height: 24),
           FilledButton.icon(
@@ -2204,11 +2268,11 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
             label: const Text('初始化知识图谱'),
             style: FilledButton.styleFrom(
               backgroundColor: NoirTokens.ink,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(NoirTokens.radius),
-                side: BorderSide(color: NoirTokens.paper.withValues(alpha: 0.15)),
+                side:
+                    BorderSide(color: NoirTokens.paper.withValues(alpha: 0.15)),
               ),
             ),
           ),
@@ -2300,7 +2364,8 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   // ── 蒙版形状选择器（当前选中 + 下拉弹出网格） ──────────────────────────
 
   Widget _buildMaskSelector() {
-    final allShapes = MaskShape.values.where((s) => s != MaskShape.none).toList();
+    final allShapes =
+        MaskShape.values.where((s) => s != MaskShape.none).toList();
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -2484,9 +2549,8 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
               padding: const EdgeInsets.all(4),
               child: Icon(Icons.remove_circle_outline,
                   size: 18,
-                  color: _focusDepth > 1
-                      ? const Color(0xFF9C27B0)
-                      : Colors.grey),
+                  color:
+                      _focusDepth > 1 ? const Color(0xFF9C27B0) : Colors.grey),
             ),
           ),
           Text('$_focusDepth',
@@ -2506,9 +2570,8 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
               padding: const EdgeInsets.all(4),
               child: Icon(Icons.add_circle_outline,
                   size: 18,
-                  color: _focusDepth < 4
-                      ? const Color(0xFF9C27B0)
-                      : Colors.grey),
+                  color:
+                      _focusDepth < 4 ? const Color(0xFF9C27B0) : Colors.grey),
             ),
           ),
           const SizedBox(width: 8),
@@ -2523,8 +2586,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
             },
             child: const Padding(
               padding: EdgeInsets.all(4),
-              child:
-                  Icon(Icons.close, size: 16, color: Color(0xFF9C27B0)),
+              child: Icon(Icons.close, size: 16, color: Color(0xFF9C27B0)),
             ),
           ),
         ],
@@ -2535,10 +2597,8 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   // ── 达成度信息条 ────────────────────────────────────────────────────────
 
   Widget _buildAchievementInfoBar() {
-    final total = _nodes.length;
-    final pct = total > 0 ? (_progressCompleted / total * 100) : 0.0;
-    final isAllStudents =
-        _teacherAchievementMode && _selectedStudentId == null;
+    final pct = _achievementAverageRatio * 100;
+    final isAllStudents = _teacherAchievementMode && _selectedStudentId == null;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -2563,8 +2623,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
               children: [
                 Icon(Icons.people, size: 15, color: primary),
                 const SizedBox(width: 6),
-                Text('查看：',
-                    style: TextStyle(fontSize: 12, color: primary)),
+                Text('查看：', style: TextStyle(fontSize: 12, color: primary)),
                 const SizedBox(width: 4),
                 // 搜索框
                 Expanded(
@@ -2582,15 +2641,13 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(15),
                           borderSide: BorderSide(
-                            color: primary
-                                .withValues(alpha: 0.3),
+                            color: primary.withValues(alpha: 0.3),
                           ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(15),
                           borderSide: BorderSide(
-                            color: primary
-                                .withValues(alpha: 0.2),
+                            color: primary.withValues(alpha: 0.2),
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
@@ -2602,11 +2659,9 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 0),
                         filled: true,
-                        fillColor: primary
-                            .withValues(alpha: 0.04),
+                        fillColor: primary.withValues(alpha: 0.04),
                       ),
-                      onChanged: (v) =>
-                          setState(() => _studentSearchQuery = v),
+                      onChanged: (v) => setState(() => _studentSearchQuery = v),
                     ),
                   ),
                 ),
@@ -2614,8 +2669,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                 // 学生总数标签
                 Text(
                   '${_studentList.length}人',
-                  style: TextStyle(
-                      fontSize: 11, color: Colors.grey.shade500),
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
                 ),
               ],
             ),
@@ -2631,21 +2685,18 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                     runSpacing: 4,
                     children: [
                       _studentChip('全体学生', null),
-                      ..._studentList
-                          .where((s) {
-                            // 过滤掉没有姓名的无效学生记录
-                            if (s.realName == null || s.realName!.isEmpty) {
-                              return false;
-                            }
-                            if (_studentSearchQuery.isEmpty) return true;
-                            final q = _studentSearchQuery.toLowerCase();
-                            final name =
-                                (s.realName ?? '').toLowerCase();
-                            final id = s.userId.toLowerCase();
-                            return name.contains(q) || id.contains(q);
-                          })
-                          .map((s) => _studentChip(
-                              s.realName ?? s.userId, s.userId)),
+                      ..._studentList.where((s) {
+                        // 过滤掉没有姓名的无效学生记录
+                        if (s.realName == null || s.realName!.isEmpty) {
+                          return false;
+                        }
+                        if (_studentSearchQuery.isEmpty) return true;
+                        final q = _studentSearchQuery.toLowerCase();
+                        final name = (s.realName ?? '').toLowerCase();
+                        final id = s.userId.toLowerCase();
+                        return name.contains(q) || id.contains(q);
+                      }).map((s) =>
+                          _studentChip(s.realName ?? s.userId, s.userId)),
                     ],
                   ),
                 ),
@@ -2662,8 +2713,8 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
               const SizedBox(width: 6),
               Text(
                 isAllStudents
-                    ? '全体达成度 ${pct.toStringAsFixed(1)}%'
-                    : '达成度 ${pct.toStringAsFixed(1)}%',
+                    ? '全体平均达成度 ${pct.toStringAsFixed(1)}%'
+                    : '平均达成度 ${pct.toStringAsFixed(1)}%',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
@@ -2673,29 +2724,18 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
               if (isAllStudents) ...[
                 const SizedBox(width: 6),
                 Text('(${_studentList.length}人)',
-                    style: TextStyle(
-                        fontSize: 11, color: Colors.grey.shade500)),
+                    style:
+                        TextStyle(fontSize: 11, color: Colors.grey.shade500)),
               ],
               const Spacer(),
-              if (isAllStudents) ...[
-                _achievementChip(
-                    '≥80%', _progressCompleted, const Color(0xFF4CAF50)),
-                const SizedBox(width: 6),
-                _achievementChip(
-                    '部分', _progressInProgress, const Color(0xFFFF9800)),
-                const SizedBox(width: 6),
-                _achievementChip(
-                    '0%', _progressNotStarted, const Color(0xFFE53935)),
-              ] else ...[
-                _achievementChip(
-                    '已掌握', _progressCompleted, const Color(0xFF4CAF50)),
-                const SizedBox(width: 6),
-                _achievementChip(
-                    '学习中', _progressInProgress, const Color(0xFFFF9800)),
-                const SizedBox(width: 6),
-                _achievementChip(
-                    '未开始', _progressNotStarted, const Color(0xFFE53935)),
-              ],
+              _achievementChip(
+                  '≥80%', _progressCompleted, const Color(0xFF4CAF50)),
+              const SizedBox(width: 6),
+              _achievementChip(
+                  '60-79%', _progressInProgress, const Color(0xFFFF9800)),
+              const SizedBox(width: 6),
+              _achievementChip(
+                  '<60%', _progressNotStarted, const Color(0xFFE53935)),
               if (!_teacherAchievementMode) ...[
                 const SizedBox(width: 8),
                 // AI 推荐按钮
@@ -2715,9 +2755,8 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.auto_awesome,
-                            size: 13, color: primary),
-                        SizedBox(width: 3),
+                        Icon(Icons.auto_awesome, size: 13, color: primary),
+                        const SizedBox(width: 3),
                         Text('AI推荐',
                             style: TextStyle(
                                 fontSize: 10,
@@ -2775,9 +2814,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: isSelected
-                ? primary
-                : primary.withValues(alpha: 0.08),
+            color: isSelected ? primary : primary.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: primary.withValues(alpha: 0.3),
@@ -2831,13 +2868,24 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
     final inProgress = <String>[];
     final completed = <String>[];
     for (final node in _nodes) {
-      final s = _conceptProgress[node.id] ?? 'not_started';
-      if (s == 'not_started') {
-        notStarted.add(node.name);
-      } else if (s == 'in_progress') {
-        inProgress.add(node.name);
+      if (_allStudentsRatio.isNotEmpty) {
+        final ratio = _allStudentsRatio[node.id] ?? 0.0;
+        if (ratio >= 0.8) {
+          completed.add(node.name);
+        } else if (ratio >= 0.6) {
+          inProgress.add(node.name);
+        } else {
+          notStarted.add(node.name);
+        }
       } else {
-        completed.add(node.name);
+        final s = _conceptProgress[node.id] ?? 'not_started';
+        if (s == 'not_started') {
+          notStarted.add(node.name);
+        } else if (s == 'in_progress') {
+          inProgress.add(node.name);
+        } else {
+          completed.add(node.name);
+        }
       }
     }
 
@@ -2911,17 +2959,16 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                 Row(
                   children: [
                     Icon(Icons.auto_awesome, color: primary),
-                    SizedBox(width: 8),
-                    Text('AI 学习推荐',
+                    const SizedBox(width: 8),
+                    const Text('AI 学习推荐',
                         style: TextStyle(
                             fontSize: 18, fontWeight: FontWeight.bold)),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '基于你的达成度 ${(_progressCompleted / math.max(_nodes.length, 1) * 100).toStringAsFixed(0)}% 生成',
-                  style: TextStyle(
-                      fontSize: 12, color: Colors.grey.shade500),
+                  '基于你的达成度 ${(_achievementAverageRatio * 100).toStringAsFixed(0)}% 生成',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                 ),
                 const SizedBox(height: 16),
                 Container(
@@ -2930,9 +2977,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                   decoration: BoxDecoration(
                     color: Colors.grey.shade50,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                        color: primary
-                            .withValues(alpha: 0.15)),
+                    border: Border.all(color: primary.withValues(alpha: 0.15)),
                   ),
                   child: MarkdownBubble(
                     content: result.content,
@@ -2988,8 +3033,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
       visibleNodes = _nodes.where((n) => reachable.contains(n.id)).toList();
       visibleEdges = _edges
           .where((e) =>
-              reachable.contains(e.sourceId) &&
-              reachable.contains(e.targetId))
+              reachable.contains(e.sourceId) && reachable.contains(e.targetId))
           .toList();
     } else {
       visibleNodes = _nodes;
@@ -3025,12 +3069,12 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                       ? (_authService.currentUser?.realName ??
                           _authService.currentUser?.userId)
                       : null,
-                  progressMap: _viewMode == _ViewMode.achievement
+                  progressMap: _viewMode == _ViewMode.achievement &&
+                          _allStudentsRatio.isEmpty
                       ? _conceptProgress
                       : null,
                   progressRatioMap: _viewMode == _ViewMode.achievement &&
-                          _teacherAchievementMode &&
-                          _selectedStudentId == null
+                          _allStudentsRatio.isNotEmpty
                       ? _allStudentsRatio
                       : null,
                 ),
@@ -3295,13 +3339,11 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                 tooltip: '居中选中节点',
                 onTap: () {
                   if (_selectedNode != null) {
-                    _animateCenterOnNode(
-                        _selectedNode!.x, _selectedNode!.y,
+                    _animateCenterOnNode(_selectedNode!.x, _selectedNode!.y,
                         scale: 1.2);
                   } else {
                     // 未选中节点时居中到画布中心
-                    _animateCenterOnNode(
-                        _canvasWidth / 2, _canvasHeight / 2,
+                    _animateCenterOnNode(_canvasWidth / 2, _canvasHeight / 2,
                         scale: 0.6);
                   }
                 },
@@ -3401,7 +3443,8 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                   canvasWidth: _canvasWidth,
                   canvasHeight: _canvasHeight,
                   viewportRect: Rect.fromLTRB(vpLeft, vpTop, vpRight, vpBottom),
-                  maskPath: _viewMode == _ViewMode.mask ? _currentMaskPath : null,
+                  maskPath:
+                      _viewMode == _ViewMode.mask ? _currentMaskPath : null,
                 ),
                 size: const Size(mapW, mapH),
               ),
@@ -3445,21 +3488,10 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                             color: Colors.grey,
                             fontWeight: FontWeight.w600)),
                   ),
-                  if (_teacherAchievementMode && _selectedStudentId == null) ...[
-                    _legendItem(const Color(0xFFE53935), '0%',
-                        isCircle: true),
-                    _legendItem(const Color(0xFFFF9800), '50%',
-                        isCircle: true),
-                    _legendItem(const Color(0xFF4CAF50), '100%',
-                        isCircle: true),
-                  ] else ...[
-                    _legendItem(const Color(0xFF4CAF50), '已掌握',
-                        isCircle: true),
-                    _legendItem(const Color(0xFFFF9800), '学习中',
-                        isCircle: true),
-                    _legendItem(const Color(0xFFE53935), '未开始',
-                        isCircle: true),
-                  ],
+                  _legendItem(const Color(0xFF4CAF50), '≥80%', isCircle: true),
+                  _legendItem(const Color(0xFFFF9800), '60-79%',
+                      isCircle: true),
+                  _legendItem(const Color(0xFFE53935), '<60%', isCircle: true),
                   const SizedBox(width: 16),
                   const Padding(
                     padding: EdgeInsets.only(right: 6),
@@ -3470,51 +3502,49 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                             fontWeight: FontWeight.w600)),
                   ),
                   Padding(
-                    padding: EdgeInsets.only(right: 8),
-                    child: Text('点击节点 → 标记掌握',
-                        style: TextStyle(
-                            fontSize: 9,
-                            color: primary)),
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Text('点击节点 → 查看详情',
+                        style: TextStyle(fontSize: 9, color: primary)),
                   ),
                 ],
               ),
             )
           else ...[
-          // 概念类型
-          SizedBox(
-            height: 24,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                const Padding(
-                  padding: EdgeInsets.only(right: 6),
-                  child: Text('概念:',
+            // 概念类型
+            SizedBox(
+              height: 24,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(right: 6),
+                    child: Text('概念:',
+                        style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                  ..._conceptTypeColors.entries.map((e) => _legendItem(
+                        e.value,
+                        _conceptTypeLabels[e.key] ?? e.key,
+                        isCircle: true,
+                      )),
+                  const SizedBox(width: 12),
+                  const Text('关系:',
                       style: TextStyle(
                           fontSize: 10,
                           color: Colors.grey,
                           fontWeight: FontWeight.w600)),
-                ),
-                ..._conceptTypeColors.entries.map((e) => _legendItem(
-                      e.value,
-                      _conceptTypeLabels[e.key] ?? e.key,
-                      isCircle: true,
-                    )),
-                const SizedBox(width: 12),
-                const Text('关系:',
-                    style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.grey,
-                        fontWeight: FontWeight.w600)),
-                const SizedBox(width: 4),
-                ..._relationStyles.entries.take(5).map((e) => _legendItem(
-                      e.value.color,
-                      e.value.label,
-                      isCircle: false,
-                      dashed: e.value.dashed,
-                    )),
-              ],
+                  const SizedBox(width: 4),
+                  ..._relationStyles.entries.take(5).map((e) => _legendItem(
+                        e.value.color,
+                        e.value.label,
+                        isCircle: false,
+                        dashed: e.value.dashed,
+                      )),
+                ],
+              ),
             ),
-          ),
           ], // end else
         ],
       ),
@@ -3544,8 +3574,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
             ),
           const SizedBox(width: 3),
           Text(label,
-              style: TextStyle(
-                  fontSize: 9, color: Colors.grey.shade600)),
+              style: TextStyle(fontSize: 9, color: Colors.grey.shade600)),
         ],
       ),
     );
@@ -3555,4 +3584,3 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
 // ══════════════════════════════════════════════════════════════════════════════
 // 图例线条绘制器
 // ══════════════════════════════════════════════════════════════════════════════
-

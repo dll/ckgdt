@@ -1,4 +1,4 @@
-﻿part of '../assessment_page.dart';
+part of '../assessment_page.dart';
 
 class _DefenseTab extends StatefulWidget {
   final AuthService authService;
@@ -44,20 +44,27 @@ class _DefenseTabState extends State<_DefenseTab> {
       // 班级映射：group_id → class_name（通过 class_members 查找）
       final db = await DatabaseHelper.instance.database;
       final classes = await db.query('classes');
-      final classNames = classes.map((c) => c['name'] as String).where((n) => n.isNotEmpty).toList();
+      final classNames = classes
+          .map((c) => c['name'] as String)
+          .where((n) => n.isNotEmpty)
+          .toList();
       final groupClassMap = <int, String?>{};
       for (final r in records) {
         final gid = r['group_id'] as int?;
         if (gid == null || groupClassMap.containsKey(gid)) continue;
         try {
           final members = await db.query('class_members',
-            where: 'user_id IN (SELECT user_id FROM assessment_group_members WHERE group_id = ?)',
-            whereArgs: [gid], limit: 1);
+              where:
+                  'user_id IN (SELECT user_id FROM assessment_group_members WHERE group_id = ?)',
+              whereArgs: [gid],
+              limit: 1);
           if (members.isNotEmpty) {
             final classId = members.first['class_id'] as int?;
             if (classId != null) {
-              final cls = await db.query('classes', where: 'id = ?', whereArgs: [classId], limit: 1);
-              if (cls.isNotEmpty) groupClassMap[gid] = cls.first['name'] as String?;
+              final cls = await db.query('classes',
+                  where: 'id = ?', whereArgs: [classId], limit: 1);
+              if (cls.isNotEmpty)
+                groupClassMap[gid] = cls.first['name'] as String?;
             }
           }
         } catch (_) {}
@@ -261,69 +268,99 @@ class _DefenseTabState extends State<_DefenseTab> {
               const SizedBox(height: 16),
               // 答辩资格条件说明
               Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
                 elevation: 1,
                 child: Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
                     gradient: LinearGradient(
-                      colors: [Colors.indigo.shade50, Colors.blue.shade50.withValues(alpha: 0.3)],
-                      begin: Alignment.topLeft, end: Alignment.bottomRight,
+                      colors: [
+                        Colors.indigo.shade50,
+                        Colors.blue.shade50.withValues(alpha: 0.3)
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
                   ),
                   padding: const EdgeInsets.all(16),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(children: [
-                      Icon(Icons.shield_outlined, size: 18, color: Colors.indigo[700]),
-                      const SizedBox(width: 8),
-                      Text('答辩资格条件',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold,
-                              color: Colors.indigo[800])),
-                    ]),
-                    const SizedBox(height: 10),
-                    _buildEligibilityCondition('①', '所有实验成绩 ≥ 95分', Colors.blue),
-                    _buildEligibilityCondition('②', '过程报告 + 最终报告得分 ≥ 95分', Colors.teal),
-                    _buildEligibilityCondition('③', '报告内容匹配小组技术栈和特色功能', Colors.deepOrange),
-                    const SizedBox(height: 8),
-                    // 各小组答辩资格状态
-                    if (_groupEligibility.isNotEmpty) ...[
-                      const Divider(height: 16),
-                      ..._groupEligibility.entries.map((e) {
-                        final gid = e.key;
-                        final info = e.value;
-                        final eligible = info['eligible'] == true;
-                        final groupName = info['groupName'] ?? '小组#$gid';
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Row(children: [
-                            Icon(eligible ? Icons.check_circle : Icons.cancel,
-                                size: 16, color: eligible ? Colors.green : Colors.red),
-                            const SizedBox(width: 6),
-                            Text(groupName,
-                                style: TextStyle(fontSize: 13,
-                                    color: eligible ? Colors.green[800] : Colors.red[800],
-                                    fontWeight: FontWeight.w500)),
-                            const Spacer(),
-                            Text(eligible ? '已达标' : '未达标',
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold,
-                                    color: eligible ? Colors.green : Colors.red)),
-                          ]),
-                        );
-                      }),
-                    ],
-                  ]),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(children: [
+                          Icon(Icons.shield_outlined,
+                              size: 18, color: Colors.indigo[700]),
+                          const SizedBox(width: 8),
+                          Text('答辩资格条件',
+                              style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.indigo[800])),
+                        ]),
+                        const SizedBox(height: 10),
+                        _buildEligibilityCondition(
+                            '①', '所有实验成绩 ≥ 95分', Colors.blue),
+                        _buildEligibilityCondition(
+                            '②', '过程报告 + 最终报告得分 ≥ 95分', Colors.teal),
+                        _buildEligibilityCondition(
+                            '③', '报告内容匹配小组技术栈和特色功能', Colors.deepOrange),
+                        const SizedBox(height: 8),
+                        // 各小组答辩资格状态
+                        if (_groupEligibility.isNotEmpty) ...[
+                          const Divider(height: 16),
+                          ..._groupEligibility.entries.map((e) {
+                            final gid = e.key;
+                            final info = e.value;
+                            final eligible = info['eligible'] == true;
+                            final groupName = info['groupName'] ?? '小组#$gid';
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Row(children: [
+                                Icon(
+                                    eligible
+                                        ? Icons.check_circle
+                                        : Icons.cancel,
+                                    size: 16,
+                                    color:
+                                        eligible ? Colors.green : Colors.red),
+                                const SizedBox(width: 6),
+                                Text(groupName,
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        color: eligible
+                                            ? Colors.green[800]
+                                            : Colors.red[800],
+                                        fontWeight: FontWeight.w500)),
+                                const Spacer(),
+                                Text(eligible ? '已达标' : '未达标',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: eligible
+                                            ? Colors.green
+                                            : Colors.red)),
+                              ]),
+                            );
+                          }),
+                        ],
+                      ]),
                 ),
               ),
               // ── LAN 直播新入口（独立卡片） ──────────────────────────
               Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
                 elevation: 2,
                 child: Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
                     gradient: LinearGradient(
-                      colors: [NoirTokens.accent.withValues(alpha: 0.08), NoirTokens.inkDeep],
-                      begin: Alignment.topLeft, end: Alignment.bottomRight,
+                      colors: [
+                        NoirTokens.accent.withValues(alpha: 0.08),
+                        NoirTokens.inkDeep
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
                   ),
                   padding: const EdgeInsets.all(16),
@@ -335,45 +372,140 @@ class _DefenseTabState extends State<_DefenseTab> {
                           color: Colors.green.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.wifi_tethering, color: Colors.green, size: 24),
+                        child: const Icon(Icons.wifi_tethering,
+                            color: Colors.green, size: 24),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('LAN 直播（新）',
-                                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: NoirTokens.paper)),
+                            const Text('答辩直播',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 15,
+                                    color: NoirTokens.paper)),
                             const SizedBox(height: 2),
                             Text('桌面/手机三路流 · 局域网直连 · 无需 Gitee',
-                                style: TextStyle(fontSize: 11, color: NoirTokens.paper.withValues(alpha: 0.5))),
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: NoirTokens.paper
+                                        .withValues(alpha: 0.5))),
                           ],
                         ),
                       ),
-                      FilledButton.tonalIcon(
-                        onPressed: () => Navigator.push(context, MaterialPageRoute(
-                          builder: (_) => const DefenseBroadcastPage(initialRole: 'presenter'))),
-                        icon: const Icon(Icons.live_tv, size: 18),
-                        label: const Text('主播'),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: Colors.green.withValues(alpha: 0.15),
-                          foregroundColor: Colors.green,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      OutlinedButton(
-                        onPressed: () => Navigator.push(context, MaterialPageRoute(
-                          builder: (_) => const DefenseBroadcastPage(initialRole: 'viewer'))),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: NoirTokens.paper.withValues(alpha: 0.7),
-                          side: BorderSide(color: NoirTokens.paper.withValues(alpha: 0.2)),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        child: const Text('观看'),
-                      ),
+                      Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _isStudent
+                              ? [
+                                  OutlinedButton.icon(
+                                    onPressed: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) =>
+                                                const DefenseBroadcastPage(
+                                                    initialRole: 'viewer'))),
+                                    icon:
+                                        const Icon(Icons.visibility, size: 16),
+                                    label: const Text('观看'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.blue,
+                                      side: BorderSide(
+                                          color: Colors.blue
+                                              .withValues(alpha: 0.4)),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16, vertical: 10),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10)),
+                                    ),
+                                  ),
+                                  FilledButton.tonalIcon(
+                                    onPressed: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) =>
+                                                const DefenseBroadcastPage(
+                                                    initialRole: 'defender'))),
+                                    icon: const Icon(Icons.record_voice_over,
+                                        size: 16),
+                                    label: const Text('答辩'),
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor:
+                                          Colors.green.withValues(alpha: 0.15),
+                                      foregroundColor: Colors.green,
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16, vertical: 10),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10)),
+                                    ),
+                                  ),
+                                ]
+                              : [
+                                  FilledButton.tonalIcon(
+                                    onPressed: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) =>
+                                                const DefenseBroadcastPage(
+                                                    initialRole: 'presenter'))),
+                                    icon: const Icon(Icons.live_tv, size: 18),
+                                    label: const Text('主播'),
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor:
+                                          Colors.green.withValues(alpha: 0.15),
+                                      foregroundColor: Colors.green,
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16, vertical: 10),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10)),
+                                    ),
+                                  ),
+                                  OutlinedButton(
+                                    onPressed: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) =>
+                                                const DefenseBroadcastPage(
+                                                    initialRole: 'viewer'))),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: NoirTokens.paper
+                                          .withValues(alpha: 0.7),
+                                      side: BorderSide(
+                                          color: NoirTokens.paper
+                                              .withValues(alpha: 0.2)),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16, vertical: 10),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10)),
+                                    ),
+                                    child: const Text('观看'),
+                                  ),
+                                  OutlinedButton(
+                                    onPressed: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) =>
+                                                const DefenseBroadcastPage(
+                                                    initialRole: 'present'))),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: Colors.blue,
+                                      side: BorderSide(
+                                          color: Colors.blue
+                                              .withValues(alpha: 0.4)),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16, vertical: 10),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10)),
+                                    ),
+                                    child: const Text('演示'),
+                                  ),
+                                ]),
                     ],
                   ),
                 ),
@@ -384,27 +516,38 @@ class _DefenseTabState extends State<_DefenseTab> {
                 children: [
                   Icon(Icons.filter_alt, size: 16, color: Colors.grey[500]),
                   const SizedBox(width: 6),
-                  Text('班级筛选：', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                  Text('班级筛选：',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                   const SizedBox(width: 6),
                   Expanded(
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(children: [
-                        ChoiceChip(label: const Text('全部', style: TextStyle(fontSize: 12)),
-                          selected: _selectedClass == 'all',
-                          selectedColor: NoirTokens.accent.withValues(alpha: 0.3),
-                          onSelected: (_) => setState(() => _selectedClass = 'all'),
-                          visualDensity: VisualDensity.compact,
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                        ..._classNames.map((cn) => Padding(
-                          padding: const EdgeInsets.only(left: 6),
-                          child: ChoiceChip(label: Text(cn, style: const TextStyle(fontSize: 12)),
-                            selected: _selectedClass == cn,
-                            selectedColor: NoirTokens.accent.withValues(alpha: 0.3),
-                            onSelected: (_) => setState(() => _selectedClass = cn),
+                        ChoiceChip(
+                            label: const Text('全部',
+                                style: TextStyle(fontSize: 12)),
+                            selected: _selectedClass == 'all',
+                            selectedColor:
+                                NoirTokens.accent.withValues(alpha: 0.3),
+                            onSelected: (_) =>
+                                setState(() => _selectedClass = 'all'),
                             visualDensity: VisualDensity.compact,
-                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                        )),
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap),
+                        ..._classNames.map((cn) => Padding(
+                              padding: const EdgeInsets.only(left: 6),
+                              child: ChoiceChip(
+                                  label: Text(cn,
+                                      style: const TextStyle(fontSize: 12)),
+                                  selected: _selectedClass == cn,
+                                  selectedColor:
+                                      NoirTokens.accent.withValues(alpha: 0.3),
+                                  onSelected: (_) =>
+                                      setState(() => _selectedClass = cn),
+                                  visualDensity: VisualDensity.compact,
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap),
+                            )),
                       ]),
                     ),
                   ),
@@ -412,12 +555,14 @@ class _DefenseTabState extends State<_DefenseTab> {
               ),
               const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: Colors.grey.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(10),
                   border: Border(
-                    left: BorderSide(color: Colors.indigo.withValues(alpha: 0.5), width: 3),
+                    left: BorderSide(
+                        color: Colors.indigo.withValues(alpha: 0.5), width: 3),
                   ),
                 ),
                 child: Row(
@@ -510,17 +655,14 @@ class _DefenseTabState extends State<_DefenseTab> {
                       fontSize: 13, fontWeight: FontWeight.w500)),
             ),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(time,
                   style: TextStyle(
-                      fontSize: 11,
-                      color: color,
-                      fontWeight: FontWeight.w600)),
+                      fontSize: 11, color: color, fontWeight: FontWeight.w600)),
             ),
           ],
         ),
@@ -533,9 +675,17 @@ class _DefenseTabState extends State<_DefenseTab> {
       padding: const EdgeInsets.only(top: 4),
       child: Row(children: [
         Container(
-          width: 22, height: 22,
-          decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
-          child: Center(child: Text(num, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color))),
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(6)),
+          child: Center(
+              child: Text(num,
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: color))),
         ),
         const SizedBox(width: 8),
         Text(desc, style: TextStyle(fontSize: 12, color: Colors.grey[700])),
@@ -639,8 +789,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.schedule,
-                          size: 14, color: Colors.indigo[300]),
+                      Icon(Icons.schedule, size: 14, color: Colors.indigo[300]),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(scheduledTime,
@@ -657,8 +806,8 @@ class _DefenseTabState extends State<_DefenseTab> {
                           size: 14, color: Colors.indigo[300]),
                       const SizedBox(width: 4),
                       Text(location,
-                          style: TextStyle(
-                              fontSize: 12, color: Colors.grey[700])),
+                          style:
+                              TextStyle(fontSize: 12, color: Colors.grey[700])),
                       const SizedBox(width: 8),
                       Container(
                           width: 1,
@@ -669,16 +818,16 @@ class _DefenseTabState extends State<_DefenseTab> {
                           size: 14, color: Colors.indigo[300]),
                       const SizedBox(width: 4),
                       Text('${duration}min',
-                          style: TextStyle(
-                              fontSize: 12, color: Colors.grey[700])),
+                          style:
+                              TextStyle(fontSize: 12, color: Colors.grey[700])),
                     ],
                   ),
                 ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -686,4 +835,3 @@ class _DefenseTabState extends State<_DefenseTab> {
 // ══════════════════════════════════════════════════════════════════════════════
 // 报告 Tab — 4周过程性报告 + 4份考核报告 → 整合为考核大作业
 // ══════════════════════════════════════════════════════════════════════════════
-

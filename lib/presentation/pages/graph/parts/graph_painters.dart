@@ -1,4 +1,4 @@
-﻿part of '../knowledge_graph_page.dart';
+part of '../knowledge_graph_page.dart';
 
 class _LegendLinePainter extends CustomPainter {
   final Color color;
@@ -173,8 +173,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
       if (isAdjacentEdge || (!_hasSelection() && !_hasHighlight())) {
         final labelText = edge.label ?? rStyle.label;
         if (labelText.isNotEmpty) {
-          final labelBg = Paint()
-            ..color = Colors.white.withValues(alpha: 0.85);
+          final labelBg = Paint()..color = Colors.white.withValues(alpha: 0.85);
           final tp = TextPainter(
             text: TextSpan(
               text: labelText,
@@ -217,27 +216,13 @@ class _KnowledgeGraphPainter extends CustomPainter {
       // 达成度模式：根据进度着色
       final Color nodeColor;
       if (progressRatioMap != null && progressRatioMap!.containsKey(node.id)) {
-        // 教师全体学生视图：渐变色 红→黄→绿
+        // 达成度热力图：<60% 红，60-79% 橙，≥80% 绿
         final ratio = (progressRatioMap![node.id] ?? 0.0).clamp(0.0, 1.0);
-        if (ratio <= 0.0) {
-          nodeColor = const Color(0xFFE53935); // 纯红
-        } else if (ratio < 0.5) {
-          // 红→黄渐变
-          nodeColor = Color.lerp(
-            const Color(0xFFE53935),
-            const Color(0xFFFF9800),
-            ratio * 2,
-          )!;
-        } else if (ratio < 1.0) {
-          // 黄→绿渐变
-          nodeColor = Color.lerp(
-            const Color(0xFFFF9800),
-            const Color(0xFF4CAF50),
-            (ratio - 0.5) * 2,
-          )!;
-        } else {
-          nodeColor = const Color(0xFF4CAF50); // 纯绿
-        }
+        nodeColor = ratio >= 0.8
+            ? const Color(0xFF4CAF50)
+            : ratio >= 0.6
+                ? const Color(0xFFFF9800)
+                : const Color(0xFFE53935);
       } else if (progressMap != null) {
         final status = progressMap![node.id] ?? 'not_started';
         switch (status) {
@@ -313,8 +298,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
       }
 
       // 节点圆
-      final fillColor =
-          dimmed ? nodeColor.withValues(alpha: 0.2) : nodeColor;
+      final fillColor = dimmed ? nodeColor.withValues(alpha: 0.2) : nodeColor;
       final nodePaint = Paint()
         ..color = fillColor
         ..style = PaintingStyle.fill;
@@ -405,7 +389,10 @@ class _KnowledgeGraphPainter extends CustomPainter {
       );
 
       // 章节标注（章节视图下不显示，因为有背景标注）
-      if (viewMode != _ViewMode.chapter && viewMode != _ViewMode.achievement && node.chapter != null && !dimmed) {
+      if (viewMode != _ViewMode.chapter &&
+          viewMode != _ViewMode.achievement &&
+          node.chapter != null &&
+          !dimmed) {
         final chTp = TextPainter(
           text: TextSpan(
             text: 'Ch${node.chapter}',
@@ -426,8 +413,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
 
   // ── 章节背景绘制 ────────────────────────────────────────────────────────
 
-  void _drawChapterBackgrounds(
-      Canvas canvas, Map<int, _ConceptNode> nodeMap) {
+  void _drawChapterBackgrounds(Canvas canvas, Map<int, _ConceptNode> nodeMap) {
     // 按章节分组
     final byChapter = <int, List<_ConceptNode>>{};
     for (final node in nodes) {
@@ -438,14 +424,11 @@ class _KnowledgeGraphPainter extends CustomPainter {
     for (final entry in byChapter.entries) {
       if (entry.value.isEmpty) continue;
       final ch = entry.key;
-      final color = ChapterHelper.chapterColors[ch] ??
-          const Color(0xFF1677FF);
+      final color = ChapterHelper.chapterColors[ch] ?? const Color(0xFF1677FF);
 
       // 找边界
-      double minX = double.infinity,
-          minY = double.infinity;
-      double maxX = double.negativeInfinity,
-          maxY = double.negativeInfinity;
+      double minX = double.infinity, minY = double.infinity;
+      double maxX = double.negativeInfinity, maxY = double.negativeInfinity;
       for (final n in entry.value) {
         if (n.x - n.radius < minX) minX = n.x - n.radius;
         if (n.y - n.radius < minY) minY = n.y - n.radius;
@@ -479,9 +462,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
 
       // 章节标题（含简称）
       final shortName = ChapterHelper.chapterShortNames[ch] ?? '';
-      final titleText = ch == 0
-          ? '未分类'
-          : '第 $ch 章 $shortName';
+      final titleText = ch == 0 ? '未分类' : '第 $ch 章 $shortName';
       final tp = TextPainter(
         text: TextSpan(
           text: titleText,
@@ -521,9 +502,13 @@ class _KnowledgeGraphPainter extends CustomPainter {
       final cellW = areaW / 2;
       final cellH = areaH / math.max(((logos.length + 1) ~/ 2), 1);
 
-      final cx = rect.left + cellW * col + cellW * 0.5 +
+      final cx = rect.left +
+          cellW * col +
+          cellW * 0.5 +
           (rng.nextDouble() - 0.5) * cellW * 0.4;
-      final cy = rect.top + cellH * row + cellH * 0.5 +
+      final cy = rect.top +
+          cellH * row +
+          cellH * 0.5 +
           (rng.nextDouble() - 0.5) * cellH * 0.3;
 
       // 旋转角度（轻微倾斜）
@@ -534,7 +519,8 @@ class _KnowledgeGraphPainter extends CustomPainter {
       canvas.rotate(angle);
 
       // 绘制文字水印
-      final fontSize = logo.length <= 3 ? 42.0 : (logo.length <= 5 ? 34.0 : 26.0);
+      final fontSize =
+          logo.length <= 3 ? 42.0 : (logo.length <= 5 ? 34.0 : 26.0);
       final textPainter = TextPainter(
         text: TextSpan(
           text: logo,
@@ -606,8 +592,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
     // 在每个章节质心附近绘制1-2个主Logo
     for (final ch in chapterCenters.keys) {
       final center = chapterCenters[ch]!;
-      final color = ChapterHelper.chapterColors[ch] ??
-          const Color(0xFF1677FF);
+      final color = ChapterHelper.chapterColors[ch] ?? const Color(0xFF1677FF);
       final logos = ChapterHelper.chapterLogos[ch];
       if (logos == null || logos.isEmpty) continue;
 
@@ -790,7 +775,9 @@ class _KnowledgeGraphPainter extends CustomPainter {
       old.focusedNode != focusedNode ||
       old.viewMode != viewMode ||
       old.maskShape != maskShape ||
-      old.userName != userName;
+      old.userName != userName ||
+      old.progressMap != progressMap ||
+      old.progressRatioMap != progressRatioMap;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -904,4 +891,3 @@ class _MinimapPainter extends CustomPainter {
 // ══════════════════════════════════════════════════════════════════════════════
 // _MaskDropdownButton — 蒙版下拉选择按钮（点击弹出网格浮层）
 // ══════════════════════════════════════════════════════════════════════════════
-

@@ -3,6 +3,7 @@ import '../agent/agents/archive_agent.dart';
 import 'ai_audit_processor.dart';
 import 'ai_draft_processor.dart';
 import 'document_processor.dart';
+import 'teaching_task_processor.dart';
 
 /// 归档文档处理器注册表（单例）。
 ///
@@ -52,6 +53,9 @@ class ProcessorRegistry {
   /// 系统导入类（教学任务书 / 课表 / 学生名单）不在这里注册——它们的入口是
   /// period_tab 内的 mhtml/xlsx 解析器，按 docType=null 兜底走 PandocService。
   void registerAll() {
+    // ── 系统导入处理器（教务导入，打印走原生官方版式）─────────────────
+    register(TeachingTaskProcessor());
+
     // ── AI 审核处理器 ─────────────────────────────────────────────────
     register(AiAuditProcessor(
       targetDocType: 'syllabus',
