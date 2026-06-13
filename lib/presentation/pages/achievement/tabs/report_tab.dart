@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -11,6 +11,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../../../../data/local/achievement_dao.dart';
 import '../../../../services/achievement/achievement_docx_service.dart';
+import '../../../../services/achievement/achievement_template_excel_service.dart';
 import '../../../../services/achievement/excel_chart_injector.dart';
 import '../../../../services/archive/native_docx_service.dart';
 import '../../../../services/output_path_service.dart';
@@ -46,7 +47,8 @@ class _ReportTabState extends State<ReportTab> {
   List<double> _objectiveAchievements = [0, 0, 0, 0];
   List<double> _objectiveWeights = List<double>.from(kDefaultWeights);
   double _weightedAchievement = 0.0;
-  Map<String, List<double>> _statistics = {}; // objectiveKey -> [mean, max, min, std]
+  Map<String, List<double>> _statistics =
+      {}; // objectiveKey -> [mean, max, min, std]
   Map<String, dynamic>? _surveySummary;
   // 课程目标配置：优先取大纲导入的 course_objectives，回退默认。
   AchievementConfig _config = AchievementConfig.defaults;
@@ -101,7 +103,8 @@ class _ReportTabState extends State<ReportTab> {
 
     try {
       // 获取该批次所有成绩
-      final scores = await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
+      final scores =
+          await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
       if (scores.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -131,7 +134,8 @@ class _ReportTabState extends State<ReportTab> {
       });
 
       // 加权达成度（权重优先取大纲导入的 course_objectives，回退默认）
-      final objWeights = await widget.achievementDao.resolveObjectiveWeights(_selectedBatchId!);
+      final objWeights = await widget.achievementDao
+          .resolveObjectiveWeights(_selectedBatchId!);
       double weighted = 0;
       for (int i = 0; i < 4; i++) {
         weighted += objAchievements[i] * objWeights[i];
@@ -144,7 +148,9 @@ class _ReportTabState extends State<ReportTab> {
         final mean = values.reduce((a, b) => a + b) / values.length;
         final maxVal = values.reduce(max<double>);
         final minVal = values.reduce(min<double>);
-        final variance = values.map((v) => (v - mean) * (v - mean)).reduce((a, b) => a + b) / values.length;
+        final variance =
+            values.map((v) => (v - mean) * (v - mean)).reduce((a, b) => a + b) /
+                values.length;
         final std = sqrt(variance);
         stats['objective${i + 1}'] = [mean, maxVal, minVal, std];
       }
@@ -165,13 +171,13 @@ class _ReportTabState extends State<ReportTab> {
       }
 
       // 同时更新批次状态
-      await widget.achievementDao.updateBatchStatus(_selectedBatchId!, 'completed');
+      await widget.achievementDao
+          .updateBatchStatus(_selectedBatchId!, 'completed');
 
       // 加载问卷满意度数据
       Map<String, dynamic>? surveyData;
       try {
-        surveyData =
-            await widget.achievementDao.getSurveySatisfactionSummary();
+        surveyData = await widget.achievementDao.getSurveySatisfactionSummary();
       } catch (e, st) {
         swallowDebug(e, tag: 'ReportTab.surveySatisfaction', stack: st);
       }
@@ -220,21 +226,24 @@ class _ReportTabState extends State<ReportTab> {
       );
 
       final now = DateTime.now();
-      final dateStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+      final dateStr =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
       final courseName = batch['course_name'] ?? '移动应用开发';
       final className = batch['class_name'] ?? '软件23';
       final semester = batch['semester'] ?? '-';
       final teacherId = batch['teacher_id'] ?? '';
 
       // 获取三类评价分项达成度（班级平均）
-      final combined = await widget.achievementDao.calculateCombinedAchievement(_selectedBatchId!);
+      final combined = await widget.achievementDao
+          .calculateCombinedAchievement(_selectedBatchId!);
       final pingshiAvg = combined['pingshi'] as Map<String, double>;
       final experimentAvg = combined['experiment'] as Map<String, double>;
       final examAvg = combined['exam'] as Map<String, double>;
       final combinedAvg = combined['combined'] as Map<String, double>;
 
       // 获取学生个体成绩
-      final scores = await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
+      final scores =
+          await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
       final studentCount = scores.length;
 
       final buffer = StringBuffer();
@@ -275,18 +284,23 @@ class _ReportTabState extends State<ReportTab> {
       buffer.writeln('| 毕业要求指标点 | 课程目标 | 权重 | 课程目标描述 |');
       buffer.writeln('|---------------|---------|------|------------|');
       for (int i = 0; i < 4; i++) {
-        buffer.writeln('| 指标点${objIndicators[i]} | ${kObjectiveNames[i]} | ${_objectiveWeights[i].toStringAsFixed(2)} | ${objDescFull[i]} |');
+        buffer.writeln(
+            '| 指标点${objIndicators[i]} | ${kObjectiveNames[i]} | ${_objectiveWeights[i].toStringAsFixed(2)} | ${objDescFull[i]} |');
       }
       buffer.writeln();
 
       buffer.writeln('### 3. 评价方式及成绩评定对照表');
       buffer.writeln();
-      buffer.writeln('| 课程目标 | 权重 | 支撑指标点 | 平时成绩（${assessFullMarks[0]}分） | 实验成绩（${assessFullMarks[1]}分） | 期末成绩（${assessFullMarks[2]}分） |');
-      buffer.writeln('|----------|------|-----------|-----------------|-----------------|-----------------|');
+      buffer.writeln(
+          '| 课程目标 | 权重 | 支撑指标点 | 平时成绩（${assessFullMarks[0]}分） | 实验成绩（${assessFullMarks[1]}分） | 期末成绩（${assessFullMarks[2]}分） |');
+      buffer.writeln(
+          '|----------|------|-----------|-----------------|-----------------|-----------------|');
       for (int i = 0; i < 4; i++) {
-        buffer.writeln('| ${kObjectiveNames[i]} | ${_objectiveWeights[i].toStringAsFixed(2)} | 指标点${objIndicators[i]} | ${objMarks[i]} | ${objMarks[i]} | ${objMarks[i]} |');
+        buffer.writeln(
+            '| ${kObjectiveNames[i]} | ${_objectiveWeights[i].toStringAsFixed(2)} | 指标点${objIndicators[i]} | ${objMarks[i]} | ${objMarks[i]} | ${objMarks[i]} |');
       }
-      buffer.writeln('| **合计** | **1.00** | — | **${assessFullMarks[0]}** | **${assessFullMarks[1]}** | **${assessFullMarks[2]}** |');
+      buffer.writeln(
+          '| **合计** | **1.00** | — | **${assessFullMarks[0]}** | **${assessFullMarks[1]}** | **${assessFullMarks[2]}** |');
       buffer.writeln();
 
       // ══════════════════════════════════════════════════
@@ -297,23 +311,29 @@ class _ReportTabState extends State<ReportTab> {
 
       buffer.writeln('### 1. 平时成绩评价标准（满分${assessFullMarks[0]}分）');
       buffer.writeln();
-      buffer.writeln('| 课程目标 | 考核内容 | 优秀（90-100%） | 良好（70-89%） | 合格（60-69%） | 不合格（0-59%） |');
-      buffer.writeln('|----------|---------|----------------|---------------|---------------|----------------|');
+      buffer.writeln(
+          '| 课程目标 | 考核内容 | 优秀（90-100%） | 良好（70-89%） | 合格（60-69%） | 不合格（0-59%） |');
+      buffer.writeln(
+          '|----------|---------|----------------|---------------|---------------|----------------|');
       for (int i = 0; i < 4; i++) {
         if (i == 2) continue; // 课程目标3无平时考核
         final content = objAssessContent[i].split('、').first;
-        buffer.writeln('| ${kObjectiveNames[i]} | $content | 全面掌握，表现突出 | 较好掌握，表现良好 | 基本掌握，表现一般 | 未能掌握，需要改进 |');
+        buffer.writeln(
+            '| ${kObjectiveNames[i]} | $content | 全面掌握，表现突出 | 较好掌握，表现良好 | 基本掌握，表现一般 | 未能掌握，需要改进 |');
       }
       buffer.writeln();
 
       buffer.writeln('### 2. 实验成绩评价标准（满分${assessFullMarks[1]}分）');
       buffer.writeln();
-      buffer.writeln('| 课程目标 | 考核内容 | 优秀（90-100%） | 良好（70-89%） | 合格（60-69%） | 不合格（0-59%） |');
-      buffer.writeln('|----------|---------|----------------|---------------|---------------|----------------|');
+      buffer.writeln(
+          '| 课程目标 | 考核内容 | 优秀（90-100%） | 良好（70-89%） | 合格（60-69%） | 不合格（0-59%） |');
+      buffer.writeln(
+          '|----------|---------|----------------|---------------|---------------|----------------|');
       for (int i = 0; i < 4; i++) {
         final parts = objAssessContent[i].split('、');
         final expItem = parts.length > 1 ? parts[1] : parts[0];
-        buffer.writeln('| ${kObjectiveNames[i]} | $expItem | 独立完成，结果正确 | 基本完成，结果较好 | 能够完成，有少量错误 | 无法完成或错误较多 |');
+        buffer.writeln(
+            '| ${kObjectiveNames[i]} | $expItem | 独立完成，结果正确 | 基本完成，结果较好 | 能够完成，有少量错误 | 无法完成或错误较多 |');
       }
       buffer.writeln();
 
@@ -323,7 +343,8 @@ class _ReportTabState extends State<ReportTab> {
       buffer.writeln('|----------|---------|------|');
       for (int i = 0; i < 4; i++) {
         final examContent = objAssessContent[i].split('、').last;
-        buffer.writeln('| ${kObjectiveNames[i]} | $examContent | ${objMarks[i]} |');
+        buffer.writeln(
+            '| ${kObjectiveNames[i]} | $examContent | ${objMarks[i]} |');
       }
       buffer.writeln('| **合计** | — | **${assessFullMarks[2]}** |');
       buffer.writeln();
@@ -338,8 +359,10 @@ class _ReportTabState extends State<ReportTab> {
 
       buffer.writeln('### 1. 课程目标达成度计算');
       buffer.writeln();
-      buffer.writeln('| 课程目标 | 权重 | 评价环节 | 满分 | 班级平均分 | 达成度 | 环节权重 | 课程目标达成度 | 支撑指标点 | 指标点达成度 |');
-      buffer.writeln('|----------|------|---------|------|-----------|--------|---------|--------------|-----------|------------|');
+      buffer.writeln(
+          '| 课程目标 | 权重 | 评价环节 | 满分 | 班级平均分 | 达成度 | 环节权重 | 课程目标达成度 | 支撑指标点 | 指标点达成度 |');
+      buffer.writeln(
+          '|----------|------|---------|------|-----------|--------|---------|--------------|-----------|------------|');
 
       final assessMaps = [pingshiAvg, experimentAvg, examAvg];
       for (int i = 0; i < 4; i++) {
@@ -348,12 +371,14 @@ class _ReportTabState extends State<ReportTab> {
           final isFirstRow = j == 0;
           if (i == 2 && j == 0) {
             // 课程目标3无平时成绩
-            buffer.writeln('| ${isFirstRow ? kObjectiveNames[i] : ''} | ${isFirstRow ? _objectiveWeights[i].toStringAsFixed(2) : ''} | ${assessNames[j]} | ${assessFullMarks[j]} | — | — | ${assessWeights[j]} | ${isFirstRow ? objCombined.toStringAsFixed(4) : ''} | ${isFirstRow ? '指标点${objIndicators[i]}' : ''} | ${isFirstRow ? objCombined.toStringAsFixed(4) : ''} |');
+            buffer.writeln(
+                '| ${isFirstRow ? kObjectiveNames[i] : ''} | ${isFirstRow ? _objectiveWeights[i].toStringAsFixed(2) : ''} | ${assessNames[j]} | ${assessFullMarks[j]} | — | — | ${assessWeights[j]} | ${isFirstRow ? objCombined.toStringAsFixed(4) : ''} | ${isFirstRow ? '指标点${objIndicators[i]}' : ''} | ${isFirstRow ? objCombined.toStringAsFixed(4) : ''} |');
             continue;
           }
           final ach = assessMaps[j]['obj${i + 1}'] ?? 0.0;
           final avgScore = ach * assessFullMarks[j];
-          buffer.writeln('| ${isFirstRow ? kObjectiveNames[i] : ''} | ${isFirstRow ? _objectiveWeights[i].toStringAsFixed(2) : ''} | ${assessNames[j]} | ${assessFullMarks[j]} | ${avgScore.toStringAsFixed(2)} | ${ach.toStringAsFixed(4)} | ${assessWeights[j]} | ${isFirstRow ? objCombined.toStringAsFixed(4) : ''} | ${isFirstRow ? '指标点${objIndicators[i]}' : ''} | ${isFirstRow ? objCombined.toStringAsFixed(4) : ''} |');
+          buffer.writeln(
+              '| ${isFirstRow ? kObjectiveNames[i] : ''} | ${isFirstRow ? _objectiveWeights[i].toStringAsFixed(2) : ''} | ${assessNames[j]} | ${assessFullMarks[j]} | ${avgScore.toStringAsFixed(2)} | ${ach.toStringAsFixed(4)} | ${assessWeights[j]} | ${isFirstRow ? objCombined.toStringAsFixed(4) : ''} | ${isFirstRow ? '指标点${objIndicators[i]}' : ''} | ${isFirstRow ? objCombined.toStringAsFixed(4) : ''} |');
         }
       }
       buffer.writeln();
@@ -363,9 +388,11 @@ class _ReportTabState extends State<ReportTab> {
       buffer.writeln('|------|--------|---------|---------|');
       for (int i = 0; i < 4; i++) {
         final a = _objectiveAchievements[i];
-        buffer.writeln('| ${kObjectiveNames[i]}（权重${(_objectiveWeights[i] * 100).toStringAsFixed(0)}%） | ${a.toStringAsFixed(4)} | 0.60 | ${a >= 0.60 ? '达成' : '未达成'} |');
+        buffer.writeln(
+            '| ${kObjectiveNames[i]}（权重${(_objectiveWeights[i] * 100).toStringAsFixed(0)}%） | ${a.toStringAsFixed(4)} | 0.60 | ${a >= 0.60 ? '达成' : '未达成'} |');
       }
-      buffer.writeln('| **课程总体达成度** | **${_weightedAchievement.toStringAsFixed(4)}** | **0.60** | **${_weightedAchievement >= 0.60 ? '达成' : '未达成'}** |');
+      buffer.writeln(
+          '| **课程总体达成度** | **${_weightedAchievement.toStringAsFixed(4)}** | **0.60** | **${_weightedAchievement >= 0.60 ? '达成' : '未达成'}** |');
       buffer.writeln();
 
       // 成绩统计
@@ -389,8 +416,10 @@ class _ReportTabState extends State<ReportTab> {
       buffer.writeln();
       buffer.writeln('共有 $studentCount 名学生参与评价。');
       buffer.writeln();
-      buffer.writeln('| 序号 | 学号 | 姓名 | 目标1达成度 | 目标2达成度 | 目标3达成度 | 目标4达成度 | 综合达成度 |');
-      buffer.writeln('|------|------|------|-----------|-----------|-----------|-----------|-----------|');
+      buffer.writeln(
+          '| 序号 | 学号 | 姓名 | 目标1达成度 | 目标2达成度 | 目标3达成度 | 目标4达成度 | 综合达成度 |');
+      buffer.writeln(
+          '|------|------|------|-----------|-----------|-----------|-----------|-----------|');
       for (int idx = 0; idx < scores.length; idx++) {
         final s = scores[idx];
         final sid = s['student_id']?.toString() ?? '';
@@ -399,8 +428,12 @@ class _ReportTabState extends State<ReportTab> {
         final a2 = (s['obj2_achievement'] as num?)?.toDouble() ?? 0;
         final a3 = (s['obj3_achievement'] as num?)?.toDouble() ?? 0;
         final a4 = (s['obj4_achievement'] as num?)?.toDouble() ?? 0;
-        final wt = a1 * _objectiveWeights[0] + a2 * _objectiveWeights[1] + a3 * _objectiveWeights[2] + a4 * _objectiveWeights[3];
-        buffer.writeln('| ${idx + 1} | $sid | $sname | ${a1.toStringAsFixed(4)} | ${a2.toStringAsFixed(4)} | ${a3.toStringAsFixed(4)} | ${a4.toStringAsFixed(4)} | ${wt.toStringAsFixed(4)} |');
+        final wt = a1 * _objectiveWeights[0] +
+            a2 * _objectiveWeights[1] +
+            a3 * _objectiveWeights[2] +
+            a4 * _objectiveWeights[3];
+        buffer.writeln(
+            '| ${idx + 1} | $sid | $sname | ${a1.toStringAsFixed(4)} | ${a2.toStringAsFixed(4)} | ${a3.toStringAsFixed(4)} | ${a4.toStringAsFixed(4)} | ${wt.toStringAsFixed(4)} |');
       }
       buffer.writeln();
 
@@ -439,7 +472,8 @@ class _ReportTabState extends State<ReportTab> {
         } else {
           perf = '未达标，需要重点关注和改进';
         }
-        buffer.writeln('**${kObjectiveNames[i]}**（达成度：${a.toStringAsFixed(4)}，$perf）');
+        buffer.writeln(
+            '**${kObjectiveNames[i]}**（达成度：${a.toStringAsFixed(4)}，$perf）');
         buffer.writeln();
         buffer.writeln(objAnalysisDesc[i]);
         buffer.writeln();
@@ -462,10 +496,14 @@ class _ReportTabState extends State<ReportTab> {
       buffer.writeln();
       if (_surveySummary?['hasSurveyData'] == true) {
         final totalResp = _surveySummary!['totalResponses'] as int? ?? 0;
-        final overallSat = (_surveySummary!['overallSatisfaction'] as double?) ?? 0;
-        buffer.writeln('共回收有效问卷 **$totalResp** 份，综合满意度为 **${(overallSat * 100).toStringAsFixed(1)}%**。');
+        final overallSat =
+            (_surveySummary!['overallSatisfaction'] as double?) ?? 0;
+        buffer.writeln(
+            '共回收有效问卷 **$totalResp** 份，综合满意度为 **${(overallSat * 100).toStringAsFixed(1)}%**。');
         buffer.writeln();
-        final qStats = (_surveySummary!['questionStats'] as List<Map<String, dynamic>>?) ?? [];
+        final qStats =
+            (_surveySummary!['questionStats'] as List<Map<String, dynamic>>?) ??
+                [];
         for (final qs in qStats) {
           final question = qs['question'] as String? ?? '';
           buffer.writeln('**$question**');
@@ -473,21 +511,27 @@ class _ReportTabState extends State<ReportTab> {
             final counts = qs['counts'] as Map<String, int>? ?? {};
             final total = (qs['total'] as int?) ?? 1;
             for (final entry in counts.entries) {
-              final pct = total > 0 ? (entry.value / total * 100).toStringAsFixed(1) : '0';
+              final pct = total > 0
+                  ? (entry.value / total * 100).toStringAsFixed(1)
+                  : '0';
               buffer.writeln('- ${entry.key}：${entry.value}人（$pct%）');
             }
           } else if (qs['type'] == 'rating') {
-            buffer.writeln('- 平均评分：${(qs['average'] as double? ?? 0).toStringAsFixed(2)} / 5.0');
+            buffer.writeln(
+                '- 平均评分：${(qs['average'] as double? ?? 0).toStringAsFixed(2)} / 5.0');
           }
           buffer.writeln();
         }
       } else {
         final sortedIdx = List.generate(4, (i) => i)
-          ..sort((a, b) => _objectiveAchievements[b].compareTo(_objectiveAchievements[a]));
+          ..sort((a, b) =>
+              _objectiveAchievements[b].compareTo(_objectiveAchievements[a]));
         buffer.writeln('从评价结果可以看出：');
         buffer.writeln();
-        buffer.writeln('- 学生在${kObjectiveNames[sortedIdx[0]]}方面表现最好（${_objectiveAchievements[sortedIdx[0]].toStringAsFixed(4)}）');
-        buffer.writeln('- ${kObjectiveNames[sortedIdx[3]]}方面相对较弱（${_objectiveAchievements[sortedIdx[3]].toStringAsFixed(4)}）');
+        buffer.writeln(
+            '- 学生在${kObjectiveNames[sortedIdx[0]]}方面表现最好（${_objectiveAchievements[sortedIdx[0]].toStringAsFixed(4)}）');
+        buffer.writeln(
+            '- ${kObjectiveNames[sortedIdx[3]]}方面相对较弱（${_objectiveAchievements[sortedIdx[3]].toStringAsFixed(4)}）');
         buffer.writeln();
         buffer.writeln('主要原因可能是：');
         buffer.writeln();
@@ -504,8 +548,10 @@ class _ReportTabState extends State<ReportTab> {
       buffer.writeln();
       buffer.writeln('针对上一轮该课程教学持续改进意见，在本轮教学中持续改进的措施执行情况如下：');
       buffer.writeln();
-      buffer.writeln('1. 在平时作业中加大关于运用移动应用开发技术体系分析实际应用问题的题目训练，实现期末考核内容与平时训练内容相一致');
-      buffer.writeln('2. 在每一章结束后，在作业中增加与该章知识点相关的英文期刊文献阅读培训，扩展学生的知识面并提高其英文文献的阅读与总结能力');
+      buffer
+          .writeln('1. 在平时作业中加大关于运用移动应用开发技术体系分析实际应用问题的题目训练，实现期末考核内容与平时训练内容相一致');
+      buffer.writeln(
+          '2. 在每一章结束后，在作业中增加与该章知识点相关的英文期刊文献阅读培训，扩展学生的知识面并提高其英文文献的阅读与总结能力');
       buffer.writeln('3. 调整平时、实验以及期末的课程成绩比例，增加实验成绩比例，降低平时和期末的课程比例，注重学生的过程性考核');
       buffer.writeln();
       buffer.writeln('#### 后续教学持续改进措施');
@@ -515,11 +561,14 @@ class _ReportTabState extends State<ReportTab> {
       for (int i = 0; i < 4; i++) {
         final a = _objectiveAchievements[i];
         if (a < 0.60) {
-          buffer.writeln('${i + 1}. **${kObjectiveNames[i]}（${a.toStringAsFixed(4)}，未达标）**：大幅增加相关课时和实践环节，增设单元测验，对低分学生进行一对一辅导');
+          buffer.writeln(
+              '${i + 1}. **${kObjectiveNames[i]}（${a.toStringAsFixed(4)}，未达标）**：大幅增加相关课时和实践环节，增设单元测验，对低分学生进行一对一辅导');
         } else if (a < 0.70) {
-          buffer.writeln('${i + 1}. ${kObjectiveNames[i]}（${a.toStringAsFixed(4)}）：加大跨平台开发方案的对比分析训练，增加知识图谱创建，补充测验题目');
+          buffer.writeln(
+              '${i + 1}. ${kObjectiveNames[i]}（${a.toStringAsFixed(4)}）：加大跨平台开发方案的对比分析训练，增加知识图谱创建，补充测验题目');
         } else {
-          buffer.writeln('${i + 1}. ${kObjectiveNames[i]}（${a.toStringAsFixed(4)}）：保持现有教学节奏，适当提高考核难度，培养学生创新能力');
+          buffer.writeln(
+              '${i + 1}. ${kObjectiveNames[i]}（${a.toStringAsFixed(4)}）：保持现有教学节奏，适当提高考核难度，培养学生创新能力');
         }
       }
       buffer.writeln();
@@ -566,10 +615,11 @@ class _ReportTabState extends State<ReportTab> {
       final cfg = _config;
 
       // 分环节达成度（平时/实验/期末）用于报告表5
-      final combined =
-          await widget.achievementDao.calculateCombinedAchievement(_selectedBatchId!);
+      final combined = await widget.achievementDao
+          .calculateCombinedAchievement(_selectedBatchId!);
       final pingshiAvg = combined['pingshi'] as Map<String, double>? ?? {};
-      final experimentAvg = combined['experiment'] as Map<String, double>? ?? {};
+      final experimentAvg =
+          combined['experiment'] as Map<String, double>? ?? {};
       final examAvg = combined['exam'] as Map<String, double>? ?? {};
       const envDefs = [
         ('平时', 'pingshi', 0.2, 20.0),
@@ -651,14 +701,17 @@ class _ReportTabState extends State<ReportTab> {
           'avgTotal': _weightedAchievement * 100,
           'maxTotal': _maxOf(scores, (s) => (s['total_score'] as double?) ?? 0),
           'minTotal': _minOf(scores, (s) => (s['total_score'] as double?) ?? 0),
-          'stdDev': _stdDevOf(scores, (s) => (s['total_score'] as double?) ?? 0),
+          'stdDev':
+              _stdDevOf(scores, (s) => (s['total_score'] as double?) ?? 0),
         },
         students: scores,
       );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Word 报告已保存: $path'), duration: const Duration(seconds: 4)),
+          SnackBar(
+              content: Text('Word 报告已保存: $path'),
+              duration: const Duration(seconds: 4)),
         );
       }
     } catch (e, st) {
@@ -682,88 +735,394 @@ class _ReportTabState extends State<ReportTab> {
         '表明学生自我评价与实际能力达成情况基本相符。';
   }
 
-  /// 导出 Excel 报告（对齐计科22模板：5sheet—平时/实验/期末明细+学生个体达成度+课程目标点达成度）。
+  /// 导出 Excel 报告（对齐计科22模板：平时/实验/期末明细 + 个体达成度 + 目标点达成度 + 图表数据页）。
   Future<void> _exportExcel() async {
     if (_calcResults == null || _selectedBatchId == null) return;
     try {
-      final batch = _batches.firstWhere((b) => b['id'] == _selectedBatchId, orElse: () => <String, dynamic>{});
+      final batch = _batches.firstWhere((b) => b['id'] == _selectedBatchId,
+          orElse: () => <String, dynamic>{});
+      final courseName = (batch['course_name'] ?? '移动应用开发').toString();
+      final className = (batch['class_name'] ?? '班级').toString();
+      final semester = (batch['semester'] ?? '').toString();
       final scores = await widget.achievementDao.getScores(_selectedBatchId!);
-      final comb = await widget.achievementDao.calculateCombinedAchievement(_selectedBatchId!);
-      final pingshi = await widget.achievementDao.getPingshiScores(_selectedBatchId!);
-      final experiment = await widget.achievementDao.getExperimentScores(_selectedBatchId!);
+      final comb = await widget.achievementDao
+          .calculateCombinedAchievement(_selectedBatchId!);
+      final pingshi =
+          await widget.achievementDao.getPingshiScores(_selectedBatchId!);
+      final experiment =
+          await widget.achievementDao.getExperimentScores(_selectedBatchId!);
       final exam = await widget.achievementDao.getExamScores(_selectedBatchId!);
+      final cf = _config;
+      final fullMarks = cf.fullMarks;
+      final ps = comb['pingshi'] as Map? ?? {};
+      final es = comb['experiment'] as Map? ?? {};
+      final xs = comb['exam'] as Map? ?? {};
+      final pById = {for (final r in pingshi) '${r['student_id']}': r};
+      final eById = {for (final r in experiment) '${r['student_id']}': r};
+      final xById = {for (final r in exam) '${r['student_id']}': r};
+
+      Map<String, double> avgMap(Map source) => {
+            for (int i = 1; i <= 4; i++)
+              'obj$i': (source['obj$i'] as num?)?.toDouble() ?? 0,
+          };
+
+      final dir = await OutputPathService.getOutputDirectory();
+      final safeName = '$className《$courseName》课程达成度评价表格.xlsx';
+      final file = File('${dir.path}/$safeName');
+      final templateFile =
+          await AchievementTemplateExcelService.instance.findTemplateForCourse(
+        courseName,
+      );
+      if (templateFile != null) {
+        final payload = AchievementExcelTemplatePayload(
+          courseName: courseName,
+          className: className,
+          semester: semester,
+          objectiveWeights: _objectiveWeights,
+          objectiveAchievements: _objectiveAchievements,
+          objectiveNames: cf.objectiveNames,
+          indicators: cf.indicators,
+          scores: scores,
+          pingshi: pingshi,
+          experiment: experiment,
+          exam: exam,
+          pingshiAverage: avgMap(ps),
+          experimentAverage: avgMap(es),
+          examAverage: avgMap(xs),
+          weightedAchievement: _weightedAchievement,
+        );
+        final bytes = AchievementTemplateExcelService.instance.fillTemplate(
+          Uint8List.fromList(await templateFile.readAsBytes()),
+          payload,
+        );
+        await file.writeAsBytes(bytes);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Excel模板已填充:${file.path}'),
+              duration: const Duration(seconds: 4),
+              action: SnackBarAction(
+                  label: '打开', onPressed: () => OpenFilex.open(file.path))));
+        }
+        return;
+      }
+
       final excel = xl.Excel.createExcel();
-      for (final n in excel.tables.keys.toList()) { excel.delete(n); }
+      for (final n in excel.tables.keys.toList()) {
+        excel.delete(n);
+      }
+
+      xl.TextCellValue t(Object? v) => xl.TextCellValue(v?.toString() ?? '');
+      xl.DoubleCellValue n(num? v, [int digits = 4]) {
+        final d = (v ?? 0).toDouble();
+        return xl.DoubleCellValue(double.parse(d.toStringAsFixed(digits)));
+      }
+
+      double val(Map? r, String key) => (r?[key] as num?)?.toDouble() ?? 0;
+      double mapVal(Map m, int objectiveIndex) =>
+          (m['obj${objectiveIndex + 1}'] as num?)?.toDouble() ?? 0;
+      List<xl.CellValue?> rowOf(int len) =>
+          List<xl.CellValue?>.filled(len, null);
 
       final s1 = excel['平时成绩'];
-      s1.appendRow([xl.TextCellValue('学号'), xl.TextCellValue('姓名'), xl.TextCellValue('课堂表现得分'), xl.TextCellValue('目标1达成度'), xl.TextCellValue('期间测验得分'), xl.TextCellValue('目标2达成度'), xl.TextCellValue('课外学习得分'), xl.TextCellValue('目标4达成度'), xl.TextCellValue('总评')]);
-      for (final r in pingshi) s1.appendRow([
-        xl.TextCellValue('${r['student_id']??''}'), xl.TextCellValue('${r['student_name']??''}'),
-        d(r,'class_activity_score',1), d(r,'class_activity_achievement',4),
-        d(r,'quiz_homework_score',1), d(r,'quiz_homework_achievement',4),
-        d(r,'extra_learning_score',1), d(r,'extra_learning_achievement',4),
-        d(r,'total_score',1)],);
+      s1.appendRow([t('$semester$className《$courseName》课程目标达成度计算表（平时）')]);
+      var r = rowOf(39);
+      r[0] = t('班级：$className');
+      r[2] = t('评价方式:平时');
+      r[38] = t('满分值：100分');
+      s1.appendRow(r);
+      r = rowOf(39);
+      r[0] = t('课程目标');
+      r[2] = t('1');
+      r[15] = t('2');
+      r[27] = t('4');
+      r[38] = t('总评');
+      s1.appendRow(r);
+      r = rowOf(39);
+      r[0] = t('学号');
+      r[1] = t('姓名');
+      r[2] = t('课堂表现 满分20');
+      r[15] = t('期间测验 满分30');
+      r[27] = t('课外学习 满分50');
+      s1.appendRow(r);
+      r = rowOf(39);
+      r[13] = t('最后得分');
+      r[14] = t('指标点达成度');
+      r[25] = t('平均分');
+      r[26] = t('指标点达成度');
+      r[36] = t('平均分');
+      r[37] = t('指标点达成度');
+      r[38] = t('得分');
+      s1.appendRow(r);
+      for (final row in pingshi) {
+        r = rowOf(39);
+        r[0] = t(row['student_id']);
+        r[1] = t(row['student_name']);
+        r[13] = n(val(row, 'class_activity_score'), 1);
+        r[14] = n(val(row, 'class_activity_achievement'), 4);
+        r[25] = n(val(row, 'quiz_homework_score'), 1);
+        r[26] = n(val(row, 'quiz_homework_achievement'), 4);
+        r[36] = n(val(row, 'extra_learning_score'), 1);
+        r[37] = n(val(row, 'extra_learning_achievement'), 4);
+        r[38] = n(val(row, 'total_score'), 1);
+        s1.appendRow(r);
+      }
 
       final s2 = excel['实验成绩'];
-      s2.appendRow([xl.TextCellValue('学号'), xl.TextCellValue('姓名'), for (int i=1;i<=6;i++) xl.TextCellValue('实验$i得分'), xl.TextCellValue('目标1达成度'), xl.TextCellValue('目标2达成度'), xl.TextCellValue('目标3达成度'), xl.TextCellValue('目标4达成度'), xl.TextCellValue('总评')]);
-      for (final r in experiment) s2.appendRow([
-        xl.TextCellValue('${r['student_id']??''}'), xl.TextCellValue('${r['student_name']??''}'),
-        for (int i=1;i<=6;i++) d(r,'exp${i}_score',1),
-        d(r,'obj1_achievement',4), d(r,'obj2_achievement',4), d(r,'obj3_achievement',4), d(r,'obj4_achievement',4), d(r,'total_score',1)],);
+      s2.appendRow([t('$semester$className《$courseName》课程目标达成度计算表（实验）')]);
+      r = rowOf(14);
+      r[0] = t('班级：$className');
+      r[2] = t('评价方式:实验');
+      r[13] = t('满分值：100分');
+      s2.appendRow(r);
+      r = rowOf(14);
+      r[0] = t('课程目标');
+      r[2] = t('1');
+      r[5] = t('2');
+      r[8] = t('3');
+      r[11] = t('4');
+      r[13] = t('总评');
+      s2.appendRow(r);
+      r = rowOf(14);
+      r[0] = t('学号');
+      r[1] = t('姓名');
+      r[2] = t('满分${fullMarks[0].toInt()}');
+      r[5] = t('满分${fullMarks[1].toInt()}');
+      r[8] = t('满分${fullMarks[2].toInt()}');
+      r[11] = t('满分${fullMarks[3].toInt()}');
+      s2.appendRow(r);
+      r = rowOf(14);
+      r[2] = t('实验1得分（满分5分）');
+      r[3] = t('实验2得分（满分5分）');
+      r[4] = t('指标点达成度');
+      r[5] = t('实验3得分（满分10分）');
+      r[6] = t('实验4得分（满分10分）');
+      r[7] = t('指标点达成度');
+      r[8] = t('实验5得分（满分15分）');
+      r[9] = t('实验6得分（满分15分）');
+      r[10] = t('指标点达成度');
+      r[11] = t('实验7得分（满分40分）');
+      r[12] = t('指标点达成度');
+      r[13] = t('得分');
+      s2.appendRow(r);
+      for (final row in experiment) {
+        r = rowOf(14);
+        r[0] = t(row['student_id']);
+        r[1] = t(row['student_name']);
+        r[2] = n(val(row, 'exp1_score'), 1);
+        r[3] = n(val(row, 'exp2_score'), 1);
+        r[4] = n(val(row, 'obj1_achievement'), 4);
+        r[5] = n(val(row, 'exp3_score'), 1);
+        r[6] = n(val(row, 'exp4_score'), 1);
+        r[7] = n(val(row, 'obj2_achievement'), 4);
+        r[8] = n(val(row, 'exp5_score'), 1);
+        r[9] = n(val(row, 'exp6_score'), 1);
+        r[10] = n(val(row, 'obj3_achievement'), 4);
+        r[11] = n(val(row, 'exp7_score'), 1);
+        r[12] = n(val(row, 'obj4_achievement'), 4);
+        r[13] = n(val(row, 'total_score'), 1);
+        s2.appendRow(r);
+      }
 
       final s3 = excel['期末成绩'];
-      s3.appendRow([xl.TextCellValue('学号'), xl.TextCellValue('姓名'), xl.TextCellValue('项目得分'), xl.TextCellValue('目标1达成度'), xl.TextCellValue('小组得分'), xl.TextCellValue('目标2达成度'), xl.TextCellValue('个人得分'), xl.TextCellValue('目标3达成度'), xl.TextCellValue('答辩得分'), xl.TextCellValue('目标4达成度'), xl.TextCellValue('总评')]);
-      for (final r in exam) s3.appendRow([
-        xl.TextCellValue('${r['student_id']??''}'), xl.TextCellValue('${r['student_name']??''}'),
-        d(r,'project_score',1), d(r,'obj1_achievement',4), d(r,'group_score',1), d(r,'obj2_achievement',4),
-        d(r,'individual_score',1), d(r,'obj3_achievement',4), d(r,'defense_score',1), d(r,'obj4_achievement',4),
-        d(r,'total_score',1)],);
+      s3.appendRow([t('$semester$className《$courseName》课程目标达成度计算表（期末考核）')]);
+      r = rowOf(11);
+      r[0] = t('班级：$className');
+      r[2] = t('评价方式:期末考核（大作业）');
+      r[10] = t('满分值：100分');
+      s3.appendRow(r);
+      r = rowOf(11);
+      r[0] = t('课程目标');
+      r[2] = t('1');
+      r[4] = t('2');
+      r[6] = t('3');
+      r[8] = t('4');
+      r[10] = t('总评');
+      s3.appendRow(r);
+      r = rowOf(11);
+      r[0] = t('学号');
+      r[1] = t('姓名');
+      r[2] = t('满分${fullMarks[0].toInt()}');
+      r[4] = t('满分${fullMarks[1].toInt()}');
+      r[6] = t('满分${fullMarks[2].toInt()}');
+      r[8] = t('满分${fullMarks[3].toInt()}');
+      s3.appendRow(r);
+      r = rowOf(11);
+      r[2] = t('项目（30%）');
+      r[3] = t('指标点达成度');
+      r[4] = t('小组（20%）');
+      r[5] = t('指标点达成度');
+      r[6] = t('个人（20%）');
+      r[7] = t('指标点达成度');
+      r[8] = t('答辩（30%）');
+      r[9] = t('指标点达成度');
+      r[10] = t('得分');
+      s3.appendRow(r);
+      for (final row in exam) {
+        r = rowOf(11);
+        r[0] = t(row['student_id']);
+        r[1] = t(row['student_name']);
+        r[2] = n(val(row, 'project_score'), 1);
+        r[3] = n(val(row, 'obj1_achievement'), 4);
+        r[4] = n(val(row, 'group_score'), 1);
+        r[5] = n(val(row, 'obj2_achievement'), 4);
+        r[6] = n(val(row, 'individual_score'), 1);
+        r[7] = n(val(row, 'obj3_achievement'), 4);
+        r[8] = n(val(row, 'defense_score'), 1);
+        r[9] = n(val(row, 'obj4_achievement'), 4);
+        r[10] = n(val(row, 'total_score'), 1);
+        s3.appendRow(r);
+      }
 
       final s4 = excel['学生个体课程目标达成度'];
-      s4.appendRow([xl.TextCellValue('学号'), xl.TextCellValue('姓名'), for (int i=1;i<=4;i++) xl.TextCellValue('课程目标${i}达成度'), xl.TextCellValue('加权总达成度'), xl.TextCellValue('评价等级')]);
+      s4.appendRow([t('$semester$className《$courseName》学生个体课程目标达成度计算表')]);
+      s4.appendRow([t('班级：$className')]);
+      r = rowOf(18);
+      r[0] = t('课程目标');
+      r[2] = t('1');
+      r[6] = t('2');
+      r[10] = t('3');
+      r[14] = t('4');
+      s4.appendRow(r);
+      r = rowOf(18);
+      r[0] = t('支撑的毕业要求指标点');
+      r[2] = t(cf.indicators[0]);
+      r[6] = t(cf.indicators[1]);
+      r[10] = t(cf.indicators[2]);
+      r[14] = t(cf.indicators[3]);
+      s4.appendRow(r);
+      r = rowOf(18);
+      r[0] = t('权重');
+      for (final offset in [2, 6, 10, 14]) {
+        r[offset] = n(0.2, 1);
+        r[offset + 1] = n(0.3, 1);
+        r[offset + 2] = n(0.5, 1);
+        r[offset + 3] = n(1, 0);
+      }
+      s4.appendRow(r);
+      r = rowOf(18);
+      r[0] = t('学号');
+      r[1] = t('姓名');
+      for (final offset in [2, 6, 10, 14]) {
+        r[offset] = t('平时评价达成度');
+        r[offset + 1] = t('实验评价达成度');
+        r[offset + 2] = t('期末考核评价达成度');
+        r[offset + 3] = t('课程目标达成度');
+      }
+      s4.appendRow(r);
       for (final s in scores) {
-        final ach = List.generate(4, (k) => (s['obj${k+1}_achievement'] as num?)?.toDouble()??0);
-        double wt=0; for(int k=0;k<4;k++) wt+=ach[k]*_objectiveWeights[k];
-        s4.appendRow([xl.TextCellValue('${s['student_id']??''}'), xl.TextCellValue('${s['student_name']??''}'), for(final a in ach) xl.TextCellValue(a.toStringAsFixed(4)), xl.TextCellValue(wt.toStringAsFixed(4)), xl.TextCellValue(achievementLevel(wt))],);
+        final sid = '${s['student_id'] ?? ''}';
+        final p = pById[sid], e = eById[sid], x = xById[sid];
+        r = rowOf(18);
+        r[0] = t(sid);
+        r[1] = t(s['student_name']);
+        for (int i = 0; i < 4; i++) {
+          final offset = 2 + i * 4;
+          final pAch = i == 0
+              ? val(p, 'class_activity_achievement')
+              : i == 1
+                  ? val(p, 'quiz_homework_achievement')
+                  : i == 2
+                      ? 0.0
+                      : val(p, 'extra_learning_achievement');
+          final eAch = val(e, 'obj${i + 1}_achievement');
+          final xAch = val(x, 'obj${i + 1}_achievement');
+          final objAch =
+              (s['obj${i + 1}_achievement'] as num?)?.toDouble() ?? 0;
+          r[offset] = n(pAch, 4);
+          r[offset + 1] = n(eAch, 4);
+          r[offset + 2] = n(xAch, 4);
+          r[offset + 3] = n(objAch, 4);
+        }
+        s4.appendRow(r);
       }
 
       final s5 = excel['课程目标点达成度'];
-      final ps = comb['pingshi'] as Map? ?? {}, es = comb['experiment'] as Map? ?? {}, xs = comb['exam'] as Map? ?? {};
-      final cf = _config;
-      s5.appendRow([xl.TextCellValue('课程目标'), xl.TextCellValue('权重'), xl.TextCellValue('平时达成度'), xl.TextCellValue('实验达成度'), xl.TextCellValue('期末达成度'), xl.TextCellValue('课程目标达成度'), xl.TextCellValue('指标点')]);
-      for (int i = 0; i < 4; i++) s5.appendRow([
-        xl.TextCellValue(cf.objectiveNames[i]), xl.TextCellValue(_objectiveWeights[i].toStringAsFixed(2)),
-        xl.TextCellValue(((ps['obj${i+1}'] ?? 0) as double).toStringAsFixed(4)), xl.TextCellValue(((es['obj${i+1}'] ?? 0) as double).toStringAsFixed(4)),
-        xl.TextCellValue(((xs['obj${i+1}'] ?? 0) as double).toStringAsFixed(4)), xl.TextCellValue(_objectiveAchievements[i].toStringAsFixed(4)),
-        xl.TextCellValue(cf.indicators[i]),],);
-      s5.appendRow([xl.TextCellValue('加权总达成度'), xl.TextCellValue('1.00'), xl.TextCellValue(''), xl.TextCellValue(''), xl.TextCellValue(''), xl.TextCellValue(_weightedAchievement.toStringAsFixed(4)), xl.TextCellValue('')],);
+      s5.appendRow([t('$semester$className《$courseName》课程目标达成度计算表')]);
+      s5.appendRow([
+        t('课程目标及权重'),
+        null,
+        t('评价方式'),
+        null,
+        null,
+        null,
+        null,
+        t('课成目标达成度'),
+        t('毕业要求指标点达成度')
+      ]);
+      s5.appendRow([
+        t('课程目标i'),
+        t('权重'),
+        t('评价环节j'),
+        t('满分'),
+        t('平均分'),
+        t('达成度'),
+        t('权重'),
+        t('课程目标达成度'),
+        t('指标点'),
+        t('达成度')
+      ]);
+      const envNames = ['平时', '实验', '期末考试'];
+      const envWeights = [0.2, 0.3, 0.5];
+      const envFull = [20.0, 30.0, 50.0];
+      for (int i = 0; i < 4; i++) {
+        final envAch = [mapVal(ps, i), mapVal(es, i), mapVal(xs, i)];
+        for (int j = 0; j < 3; j++) {
+          r = rowOf(10);
+          if (j == 0) {
+            r[0] = t('目标${i + 1}');
+            r[1] = n(_objectiveWeights[i], 2);
+            r[7] = n(_objectiveAchievements[i], 4);
+            r[8] = t(cf.indicators[i]);
+            r[9] = n(_objectiveAchievements[i], 4);
+          }
+          r[2] = t(envNames[j]);
+          r[3] = n(envFull[j], 0);
+          r[4] = n(envAch[j] * envFull[j], 2);
+          r[5] = n(envAch[j], 4);
+          r[6] = n(envWeights[j], 1);
+          s5.appendRow(r);
+        }
+      }
+      s5.appendRow([
+        t('课程总体目标期望值'),
+        n(0.6, 1),
+        null,
+        null,
+        null,
+        null,
+        t('课程总体目标达成度(cc)'),
+        n(_weightedAchievement, 4),
+        null,
+        null
+      ]);
 
       // 条形图 + 4 张散点趋势图数据页（对齐模板的 课程目标条形图 / 目标N散点趋势图）
       // 数值列用 DoubleCellValue，否则注入的图表无法把文本当数据绘制。
       final bar = excel['课程目标条形图'];
       for (int i = 0; i < 4; i++) {
         bar.appendRow([
-          xl.TextCellValue(cf.objectiveNames[i]),
-          xl.DoubleCellValue(double.parse(_objectiveAchievements[i].toStringAsFixed(4))),
+          t(cf.objectiveNames[i]),
+          xl.DoubleCellValue(
+              double.parse(_objectiveAchievements[i].toStringAsFixed(4))),
         ]);
       }
       for (int i = 0; i < 4; i++) {
         final sh = excel['目标${i + 1}散点趋势图'];
         for (int k = 0; k < scores.length; k++) {
-          final a = (scores[k]['obj${i + 1}_achievement'] as num?)?.toDouble() ?? 0;
+          final a =
+              (scores[k]['obj${i + 1}_achievement'] as num?)?.toDouble() ?? 0;
           sh.appendRow([
             xl.DoubleCellValue((k + 1).toDouble()),
             xl.DoubleCellValue(double.parse(a.toStringAsFixed(4))),
-            xl.DoubleCellValue(double.parse(_objectiveAchievements[i].toStringAsFixed(4))),
+            xl.DoubleCellValue(
+                double.parse(_objectiveAchievements[i].toStringAsFixed(4))),
             xl.DoubleCellValue(0.6),
           ]);
         }
       }
 
-      final dir = await OutputPathService.getOutputDirectory();
-      final safeName = '${batch['class_name']??'班级'}《${batch['course_name']??'移动应用开发'}》课程达成度评价表格.xlsx';
-      final file = File('${dir.path}/$safeName');
-      var bytes = excel.save(); if(bytes==null) throw StateError('Excel生成失败');
+      var bytes = excel.save();
+      if (bytes == null) throw StateError('Excel生成失败');
       // 注入原生 OOXML 图表：条形图(4目标) + 每目标散点+趋势线+参考线
       final specs = <ChartSpec>[
         ChartSpec.bar(sheetName: '课程目标条形图', title: '课程目标达成度', rowCount: 4),
@@ -775,30 +1134,37 @@ class _ReportTabState extends State<ReportTab> {
       ];
       bytes = ExcelChartInjector.inject(Uint8List.fromList(bytes), specs);
       await file.writeAsBytes(bytes);
-      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Excel已导出:${file.path}'),duration:const Duration(seconds:4),action:SnackBarAction(label:'打开',onPressed:()=>OpenFilex.open(file.path))));
-    } catch(e,st){swallowDebug(e,tag:'ReportTab.exportExcel',stack:st);}
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Excel已导出:${file.path}'),
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+                label: '打开', onPressed: () => OpenFilex.open(file.path))));
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ReportTab.exportExcel', stack: st);
+    }
   }
 
-  xl.TextCellValue d(Map<String,dynamic> r, String key, int digits) {
-    final v = (r[key] as num?)?.toDouble()??0;
-    return xl.TextCellValue(v.toStringAsFixed(digits));
-  }
-
-  double _maxOf(List<Map<String, dynamic>> items, double Function(Map<String, dynamic>) getter) {
+  double _maxOf(List<Map<String, dynamic>> items,
+      double Function(Map<String, dynamic>) getter) {
     if (items.isEmpty) return 0;
     return items.map(getter).reduce((a, b) => a > b ? a : b);
   }
 
-  double _minOf(List<Map<String, dynamic>> items, double Function(Map<String, dynamic>) getter) {
+  double _minOf(List<Map<String, dynamic>> items,
+      double Function(Map<String, dynamic>) getter) {
     if (items.isEmpty) return 0;
     return items.map(getter).reduce((a, b) => a < b ? a : b);
   }
 
-  double _stdDevOf(List<Map<String, dynamic>> items, double Function(Map<String, dynamic>) getter) {
+  double _stdDevOf(List<Map<String, dynamic>> items,
+      double Function(Map<String, dynamic>) getter) {
     if (items.isEmpty) return 0;
     final values = items.map(getter).toList();
     final mean = values.reduce((a, b) => a + b) / values.length;
-    final variance = values.map((v) => (v - mean) * (v - mean)).reduce((a, b) => a + b) / values.length;
+    final variance =
+        values.map((v) => (v - mean) * (v - mean)).reduce((a, b) => a + b) /
+            values.length;
     return sqrt(variance);
   }
 
@@ -812,7 +1178,8 @@ class _ReportTabState extends State<ReportTab> {
         (b) => b['id'] == _selectedBatchId,
         orElse: () => <String, dynamic>{},
       );
-      final scores = await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
+      final scores =
+          await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
       final courseName = batch['course_name'] ?? '移动应用开发';
       final className = batch['class_name'] ?? '软件23';
       final semester = batch['semester'] ?? '-';
@@ -824,7 +1191,8 @@ class _ReportTabState extends State<ReportTab> {
       final objMarks = cfg.fullMarks.map((m) => m.toInt()).toList();
 
       // 获取三类评价分项达成度
-      final combined = await widget.achievementDao.calculateCombinedAchievement(_selectedBatchId!);
+      final combined = await widget.achievementDao
+          .calculateCombinedAchievement(_selectedBatchId!);
       final pingshiAvg = combined['pingshi'] as Map<String, double>;
       final experimentAvg = combined['experiment'] as Map<String, double>;
       final examAvg = combined['exam'] as Map<String, double>;
@@ -855,7 +1223,8 @@ class _ReportTabState extends State<ReportTab> {
       }
 
       final theme = chineseFont != null
-          ? pw.ThemeData.withFont(base: chineseFont, bold: chineseBoldFont ?? chineseFont)
+          ? pw.ThemeData.withFont(
+              base: chineseFont, bold: chineseBoldFont ?? chineseFont)
           : null;
       final pdf = pw.Document(theme: theme);
 
@@ -873,7 +1242,8 @@ class _ReportTabState extends State<ReportTab> {
 
       // 满意度数据
       final hasSurvey = _surveySummary?['hasSurveyData'] == true;
-      final overallSat = (_surveySummary?['overallSatisfaction'] as double?) ?? 0;
+      final overallSat =
+          (_surveySummary?['overallSatisfaction'] as double?) ?? 0;
       final totalResp = _surveySummary?['totalResponses'] as int? ?? 0;
 
       pdf.addPage(
@@ -881,7 +1251,8 @@ class _ReportTabState extends State<ReportTab> {
           pageFormat: PdfPageFormat.a4,
           build: (context) => [
             // 标题
-            pw.Center(child: pw.Text(
+            pw.Center(
+                child: pw.Text(
               '$className《$courseName》课程目标达成评价报告',
               style: titleStyle,
             )),
@@ -896,7 +1267,8 @@ class _ReportTabState extends State<ReportTab> {
             pw.TableHelper.fromTextArray(
               headerStyle: boldStyle,
               cellStyle: baseStyle,
-              headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
+              headerDecoration:
+                  const pw.BoxDecoration(color: PdfColors.grey300),
               headers: ['项目', '内容', '项目', '内容'],
               data: [
                 ['课程名称', courseName, '授课班级', className],
@@ -915,7 +1287,8 @@ class _ReportTabState extends State<ReportTab> {
             pw.TableHelper.fromTextArray(
               headerStyle: boldStyle,
               cellStyle: baseStyle.copyWith(fontSize: 8),
-              headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
+              headerDecoration:
+                  const pw.BoxDecoration(color: PdfColors.grey300),
               headers: ['毕业要求指标点', '课程目标', '权重', '课程目标描述'],
               data: [
                 for (int i = 0; i < 4; i++)
@@ -934,8 +1307,16 @@ class _ReportTabState extends State<ReportTab> {
             pw.TableHelper.fromTextArray(
               headerStyle: boldStyle,
               cellStyle: baseStyle,
-              headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
-              headers: ['课程目标', '权重', '支撑指标点', '平时成绩(20分)', '实验成绩(30分)', '期末成绩(50分)'],
+              headerDecoration:
+                  const pw.BoxDecoration(color: PdfColors.grey300),
+              headers: [
+                '课程目标',
+                '权重',
+                '支撑指标点',
+                '平时成绩(20分)',
+                '实验成绩(30分)',
+                '期末成绩(50分)'
+              ],
               data: [
                 for (int i = 0; i < 4; i++)
                   [
@@ -960,12 +1341,41 @@ class _ReportTabState extends State<ReportTab> {
             pw.TableHelper.fromTextArray(
               headerStyle: boldStyle,
               cellStyle: baseStyle.copyWith(fontSize: 8),
-              headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
-              headers: ['课程目标', '考核内容', '优秀(90-100%)', '良好(70-89%)', '合格(60-69%)', '不合格(0-59%)'],
+              headerDecoration:
+                  const pw.BoxDecoration(color: PdfColors.grey300),
+              headers: [
+                '课程目标',
+                '考核内容',
+                '优秀(90-100%)',
+                '良好(70-89%)',
+                '合格(60-69%)',
+                '不合格(0-59%)'
+              ],
               data: [
-                ['课程目标1', '课堂表现', '全面掌握，表现突出', '较好掌握，表现良好', '基本掌握，表现一般', '未能掌握，需要改进'],
-                ['课程目标2', '期间测验', '全面掌握，表现突出', '较好掌握，表现良好', '基本掌握，表现一般', '未能掌握，需要改进'],
-                ['课程目标4', '课外学习', '全面掌握，表现突出', '较好掌握，表现良好', '基本掌握，表现一般', '未能掌握，需要改进'],
+                [
+                  '课程目标1',
+                  '课堂表现',
+                  '全面掌握，表现突出',
+                  '较好掌握，表现良好',
+                  '基本掌握，表现一般',
+                  '未能掌握，需要改进'
+                ],
+                [
+                  '课程目标2',
+                  '期间测验',
+                  '全面掌握，表现突出',
+                  '较好掌握，表现良好',
+                  '基本掌握，表现一般',
+                  '未能掌握，需要改进'
+                ],
+                [
+                  '课程目标4',
+                  '课外学习',
+                  '全面掌握，表现突出',
+                  '较好掌握，表现良好',
+                  '基本掌握，表现一般',
+                  '未能掌握，需要改进'
+                ],
               ],
             ),
             pw.SizedBox(height: 10),
@@ -975,13 +1385,49 @@ class _ReportTabState extends State<ReportTab> {
             pw.TableHelper.fromTextArray(
               headerStyle: boldStyle,
               cellStyle: baseStyle.copyWith(fontSize: 8),
-              headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
-              headers: ['课程目标', '考核内容', '优秀(90-100%)', '良好(70-89%)', '合格(60-69%)', '不合格(0-59%)'],
+              headerDecoration:
+                  const pw.BoxDecoration(color: PdfColors.grey300),
+              headers: [
+                '课程目标',
+                '考核内容',
+                '优秀(90-100%)',
+                '良好(70-89%)',
+                '合格(60-69%)',
+                '不合格(0-59%)'
+              ],
               data: [
-                ['课程目标1', '实验1-2', '独立完成，结果正确', '基本完成，结果较好', '能够完成，有少量错误', '无法完成或错误较多'],
-                ['课程目标2', '实验3-4', '独立完成，结果正确', '基本完成，结果较好', '能够完成，有少量错误', '无法完成或错误较多'],
-                ['课程目标3', '实验5-6', '独立完成，结果正确', '基本完成，结果较好', '能够完成，有少量错误', '无法完成或错误较多'],
-                ['课程目标4', '实验7', '独立完成，结果正确', '基本完成，结果较好', '能够完成，有少量错误', '无法完成或错误较多'],
+                [
+                  '课程目标1',
+                  '实验1-2',
+                  '独立完成，结果正确',
+                  '基本完成，结果较好',
+                  '能够完成，有少量错误',
+                  '无法完成或错误较多'
+                ],
+                [
+                  '课程目标2',
+                  '实验3-4',
+                  '独立完成，结果正确',
+                  '基本完成，结果较好',
+                  '能够完成，有少量错误',
+                  '无法完成或错误较多'
+                ],
+                [
+                  '课程目标3',
+                  '实验5-6',
+                  '独立完成，结果正确',
+                  '基本完成，结果较好',
+                  '能够完成，有少量错误',
+                  '无法完成或错误较多'
+                ],
+                [
+                  '课程目标4',
+                  '实验7',
+                  '独立完成，结果正确',
+                  '基本完成，结果较好',
+                  '能够完成，有少量错误',
+                  '无法完成或错误较多'
+                ],
               ],
             ),
             pw.SizedBox(height: 10),
@@ -991,7 +1437,8 @@ class _ReportTabState extends State<ReportTab> {
             pw.TableHelper.fromTextArray(
               headerStyle: boldStyle,
               cellStyle: baseStyle,
-              headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
+              headerDecoration:
+                  const pw.BoxDecoration(color: PdfColors.grey300),
               headers: ['课程目标', '考核内容', '分值'],
               data: [
                 ['课程目标1', '期末项目', '10'],
@@ -1007,7 +1454,8 @@ class _ReportTabState extends State<ReportTab> {
             pw.Text('三、达成度计算（定量评价）', style: headerStyle),
             pw.SizedBox(height: 4),
             pw.Text('计算公式：达成度 = 班级平均分 ÷ 满分；课程目标达成度 = Σ(达成度 × 环节权重)',
-                style: baseStyle.copyWith(fontSize: 8, color: PdfColors.grey700)),
+                style:
+                    baseStyle.copyWith(fontSize: 8, color: PdfColors.grey700)),
             pw.SizedBox(height: 8),
 
             pw.Text('1. 课程目标达成度计算', style: subHeaderStyle),
@@ -1016,8 +1464,20 @@ class _ReportTabState extends State<ReportTab> {
             pw.TableHelper.fromTextArray(
               headerStyle: boldStyle.copyWith(fontSize: 7),
               cellStyle: baseStyle.copyWith(fontSize: 7),
-              headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
-              headers: ['课程目标', '权重', '评价环节', '满分', '平均分', '达成度', '环节权重', '目标达成度', '指标点', '指标点达成度'],
+              headerDecoration:
+                  const pw.BoxDecoration(color: PdfColors.grey300),
+              headers: [
+                '课程目标',
+                '权重',
+                '评价环节',
+                '满分',
+                '平均分',
+                '达成度',
+                '环节权重',
+                '目标达成度',
+                '指标点',
+                '指标点达成度'
+              ],
               data: [
                 for (int i = 0; i < 4; i++)
                   for (int j = 0; j < 3; j++) ...[
@@ -1026,14 +1486,28 @@ class _ReportTabState extends State<ReportTab> {
                       j == 0 ? _objectiveWeights[i].toStringAsFixed(2) : '',
                       ['平时成绩', '实验成绩', '期末成绩'][j],
                       ['20', '30', '50'][j],
-                      (i == 2 && j == 0) ? '—' :
-                          (([pingshiAvg, experimentAvg, examAvg][j]['obj${i + 1}'] ?? 0.0) * [20, 30, 50][j]).toDouble().toStringAsFixed(2),
-                      (i == 2 && j == 0) ? '—' :
-                          ([pingshiAvg, experimentAvg, examAvg][j]['obj${i + 1}'] ?? 0.0).toStringAsFixed(4),
+                      (i == 2 && j == 0)
+                          ? '—'
+                          : (([pingshiAvg, experimentAvg, examAvg][j]
+                                          ['obj${i + 1}'] ??
+                                      0.0) *
+                                  [20, 30, 50][j])
+                              .toDouble()
+                              .toStringAsFixed(2),
+                      (i == 2 && j == 0)
+                          ? '—'
+                          : ([pingshiAvg, experimentAvg, examAvg][j]
+                                      ['obj${i + 1}'] ??
+                                  0.0)
+                              .toStringAsFixed(4),
                       ['0.2', '0.3', '0.5'][j],
-                      j == 0 ? (combinedAvg['obj${i + 1}'] ?? 0).toStringAsFixed(4) : '',
+                      j == 0
+                          ? (combinedAvg['obj${i + 1}'] ?? 0).toStringAsFixed(4)
+                          : '',
                       j == 0 ? '指标点${['1.4', '3.2', '4.2', '5.1'][i]}' : '',
-                      j == 0 ? (combinedAvg['obj${i + 1}'] ?? 0).toStringAsFixed(4) : '',
+                      j == 0
+                          ? (combinedAvg['obj${i + 1}'] ?? 0).toStringAsFixed(4)
+                          : '',
                     ],
                   ],
               ],
@@ -1044,17 +1518,23 @@ class _ReportTabState extends State<ReportTab> {
             pw.TableHelper.fromTextArray(
               headerStyle: boldStyle,
               cellStyle: baseStyle,
-              headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
+              headerDecoration:
+                  const pw.BoxDecoration(color: PdfColors.grey300),
               headers: ['项目', '达成度', '预期阈值', '是否达成'],
               data: [
-                for (int i = 0; i < 4; i++) [
-                  '课程目标${i + 1}（权重${(_objectiveWeights[i] * 100).toStringAsFixed(0)}%）',
-                  _objectiveAchievements[i].toStringAsFixed(4),
+                for (int i = 0; i < 4; i++)
+                  [
+                    '课程目标${i + 1}（权重${(_objectiveWeights[i] * 100).toStringAsFixed(0)}%）',
+                    _objectiveAchievements[i].toStringAsFixed(4),
+                    '0.60',
+                    _objectiveAchievements[i] >= 0.60 ? '达成' : '未达成',
+                  ],
+                [
+                  '课程总体达成度',
+                  _weightedAchievement.toStringAsFixed(4),
                   '0.60',
-                  _objectiveAchievements[i] >= 0.60 ? '达成' : '未达成',
+                  _weightedAchievement >= 0.60 ? '达成' : '未达成'
                 ],
-                ['课程总体达成度', _weightedAchievement.toStringAsFixed(4), '0.60',
-                  _weightedAchievement >= 0.60 ? '达成' : '未达成'],
               ],
             ),
             pw.SizedBox(height: 12),
@@ -1066,13 +1546,15 @@ class _ReportTabState extends State<ReportTab> {
               pw.TableHelper.fromTextArray(
                 headerStyle: boldStyle,
                 cellStyle: baseStyle,
-                headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
+                headerDecoration:
+                    const pw.BoxDecoration(color: PdfColors.grey300),
                 headers: ['统计指标', '目标1', '目标2', '目标3', '目标4'],
                 data: ['平均分', '最高分', '最低分', '标准差'].asMap().entries.map((e) {
                   return [
                     e.value,
                     for (int i = 0; i < 4; i++)
-                      (_statistics['objective${i + 1}']?[e.key] ?? 0).toStringAsFixed(2),
+                      (_statistics['objective${i + 1}']?[e.key] ?? 0)
+                          .toStringAsFixed(2),
                   ];
                 }).toList(),
               ),
@@ -1086,15 +1568,28 @@ class _ReportTabState extends State<ReportTab> {
             pw.TableHelper.fromTextArray(
               headerStyle: boldStyle.copyWith(fontSize: 7),
               cellStyle: baseStyle.copyWith(fontSize: 7),
-              headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
-              headers: ['序号', '学号', '姓名', '目标1达成度', '目标2达成度', '目标3达成度', '目标4达成度', '综合达成度'],
+              headerDecoration:
+                  const pw.BoxDecoration(color: PdfColors.grey300),
+              headers: [
+                '序号',
+                '学号',
+                '姓名',
+                '目标1达成度',
+                '目标2达成度',
+                '目标3达成度',
+                '目标4达成度',
+                '综合达成度'
+              ],
               data: scores.asMap().entries.map((e) {
                 final s = e.value;
                 final a1 = (s['obj1_achievement'] as num?)?.toDouble() ?? 0;
                 final a2 = (s['obj2_achievement'] as num?)?.toDouble() ?? 0;
                 final a3 = (s['obj3_achievement'] as num?)?.toDouble() ?? 0;
                 final a4 = (s['obj4_achievement'] as num?)?.toDouble() ?? 0;
-                final wt = a1 * _objectiveWeights[0] + a2 * _objectiveWeights[1] + a3 * _objectiveWeights[2] + a4 * _objectiveWeights[3];
+                final wt = a1 * _objectiveWeights[0] +
+                    a2 * _objectiveWeights[1] +
+                    a3 * _objectiveWeights[2] +
+                    a4 * _objectiveWeights[3];
                 return [
                   '${e.key + 1}',
                   s['student_id']?.toString() ?? '',
@@ -1120,28 +1615,37 @@ class _ReportTabState extends State<ReportTab> {
               final pA = pingshiAvg['obj${i + 1}'] ?? 0;
               final eA = experimentAvg['obj${i + 1}'] ?? 0;
               final xA = examAvg['obj${i + 1}'] ?? 0;
-              final perf = a >= 0.85 ? '优秀，学生整体掌握良好'
-                  : a >= 0.70 ? '良好，大部分学生达到预期'
-                  : a >= 0.60 ? '达标但有提升空间'
-                  : '未达标，需要重点关注和改进';
+              final perf = a >= 0.85
+                  ? '优秀，学生整体掌握良好'
+                  : a >= 0.70
+                      ? '良好，大部分学生达到预期'
+                      : a >= 0.60
+                          ? '达标但有提升空间'
+                          : '未达标，需要重点关注和改进';
               final lowCount = scores.where((s) {
-                final ach = (s['obj${i + 1}_achievement'] as num?)?.toDouble() ?? 0;
+                final ach =
+                    (s['obj${i + 1}_achievement'] as num?)?.toDouble() ?? 0;
                 return ach < 0.6;
               }).length;
               return pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  pw.Text('课程目标${i + 1}（达成度：${a.toStringAsFixed(4)}，$perf）', style: boldStyle),
+                  pw.Text('课程目标${i + 1}（达成度：${a.toStringAsFixed(4)}，$perf）',
+                      style: boldStyle),
                   pw.SizedBox(height: 3),
                   if (i != 2)
-                    pw.Text('  平时环节达成度：${pA.toStringAsFixed(4)}', style: baseStyle),
-                  pw.Text('  实验环节达成度：${eA.toStringAsFixed(4)}', style: baseStyle),
-                  pw.Text('  期末环节达成度：${xA.toStringAsFixed(4)}', style: baseStyle),
+                    pw.Text('  平时环节达成度：${pA.toStringAsFixed(4)}',
+                        style: baseStyle),
+                  pw.Text('  实验环节达成度：${eA.toStringAsFixed(4)}',
+                      style: baseStyle),
+                  pw.Text('  期末环节达成度：${xA.toStringAsFixed(4)}',
+                      style: baseStyle),
                   if (a < 0.60)
                     pw.Text('  低于预期阈值0.60，建议增加该方向的教学课时和实践练习。',
                         style: baseStyle.copyWith(color: PdfColors.red)),
                   if (lowCount > 0)
-                    pw.Text('  有 $lowCount 名学生该目标达成度低于0.60，需个别辅导。', style: baseStyle),
+                    pw.Text('  有 $lowCount 名学生该目标达成度低于0.60，需个别辅导。',
+                        style: baseStyle),
                   pw.SizedBox(height: 6),
                 ],
               );
@@ -1160,8 +1664,10 @@ class _ReportTabState extends State<ReportTab> {
               pw.SizedBox(height: 2),
               pw.Text('1. 混合开发框架版本更新较快，学生对新特性掌握不及时', style: baseStyle),
               pw.Text('2. 华为多端开发工具操作复杂度较高，实验课时不足导致实操能力薄弱', style: baseStyle),
-              pw.Text('3. 期末项目考核中跨设备适配场景设计占比过高，学生在多终端兼容性调试方面失分较多', style: baseStyle),
-              pw.Text('4. 本课程在过程性考核中增加了AI工具应用能力的评分项，标准较上届更为严格', style: baseStyle),
+              pw.Text('3. 期末项目考核中跨设备适配场景设计占比过高，学生在多终端兼容性调试方面失分较多',
+                  style: baseStyle),
+              pw.Text('4. 本课程在过程性考核中增加了AI工具应用能力的评分项，标准较上届更为严格',
+                  style: baseStyle),
             ],
             pw.SizedBox(height: 12),
 
@@ -1214,7 +1720,9 @@ class _ReportTabState extends State<ReportTab> {
             pw.SizedBox(height: 20),
             pw.Divider(),
             pw.SizedBox(height: 4),
-            pw.Text('报告由知识图谱教学系统自动生成  $dateStr', style: baseStyle.copyWith(fontSize: 8, color: PdfColors.grey600)),
+            pw.Text('报告由知识图谱教学系统自动生成  $dateStr',
+                style:
+                    baseStyle.copyWith(fontSize: 8, color: PdfColors.grey600)),
           ],
         ),
       );
@@ -1288,7 +1796,8 @@ class _ReportTabState extends State<ReportTab> {
               child: Center(
                 child: Column(
                   children: [
-                    Icon(Icons.bar_chart, size: 80, color: Colors.grey.withValues(alpha: 0.3)),
+                    Icon(Icons.bar_chart,
+                        size: 80, color: Colors.grey.withValues(alpha: 0.3)),
                     const SizedBox(height: 16),
                     const Text(
                       '选择批次后点击"生成报告"查看结果',
@@ -1356,7 +1865,8 @@ class _ReportTabState extends State<ReportTab> {
               ? const SizedBox(
                   width: 16,
                   height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white),
                 )
               : const Icon(Icons.auto_awesome, size: 18),
           label: Text(_calculating ? '生成中...' : '生成报告'),
@@ -1375,17 +1885,22 @@ class _ReportTabState extends State<ReportTab> {
           label: const Text('生成Markdown报告'),
         ),
         OutlinedButton.icon(
-          onPressed: (_calcResults != null && !_generatingReport) ? _exportReport : null,
+          onPressed: (_calcResults != null && !_generatingReport)
+              ? _exportReport
+              : null,
           icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
           label: const Text('导出PDF报告'),
         ),
         OutlinedButton.icon(
-          onPressed: (_calcResults != null && !_generatingReport) ? _exportDocx : null,
+          onPressed:
+              (_calcResults != null && !_generatingReport) ? _exportDocx : null,
           icon: const Icon(Icons.description, size: 18),
           label: const Text('导出Word报告'),
         ),
         OutlinedButton.icon(
-          onPressed: (_calcResults != null && !_generatingReport) ? _exportExcel : null,
+          onPressed: (_calcResults != null && !_generatingReport)
+              ? _exportExcel
+              : null,
           icon: const Icon(Icons.table_chart_outlined, size: 18),
           label: const Text('导出Excel结果'),
         ),
@@ -1412,14 +1927,18 @@ class _ReportTabState extends State<ReportTab> {
                 ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     '${_calcResults!['student_count']}人',
-                    style: TextStyle(fontSize: 12, color: primary, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: primary,
+                        fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
@@ -1460,24 +1979,30 @@ class _ReportTabState extends State<ReportTab> {
             // 达成等级徽章
             Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      achievementLevelColor(_weightedAchievement).withValues(alpha: 0.15),
-                      achievementLevelColor(_weightedAchievement).withValues(alpha: 0.05),
+                      achievementLevelColor(_weightedAchievement)
+                          .withValues(alpha: 0.15),
+                      achievementLevelColor(_weightedAchievement)
+                          .withValues(alpha: 0.05),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: achievementLevelColor(_weightedAchievement).withValues(alpha: 0.3),
+                    color: achievementLevelColor(_weightedAchievement)
+                        .withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      _weightedAchievement >= 0.7 ? Icons.emoji_events : Icons.info_outline,
+                      _weightedAchievement >= 0.7
+                          ? Icons.emoji_events
+                          : Icons.info_outline,
                       color: achievementLevelColor(_weightedAchievement),
                       size: 22,
                     ),
@@ -1621,15 +2146,40 @@ class _ReportTabState extends State<ReportTab> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 color: primary.withValues(alpha: 0.08),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(8)),
               ),
               child: const Row(
                 children: [
-                  Expanded(flex: 3, child: Text('课程目标', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
-                  Expanded(flex: 2, child: Text('平均分', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13), textAlign: TextAlign.center)),
-                  Expanded(flex: 2, child: Text('最高分', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13), textAlign: TextAlign.center)),
-                  Expanded(flex: 2, child: Text('最低分', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13), textAlign: TextAlign.center)),
-                  Expanded(flex: 2, child: Text('标准差', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13), textAlign: TextAlign.center)),
+                  Expanded(
+                      flex: 3,
+                      child: Text('课程目标',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 13))),
+                  Expanded(
+                      flex: 2,
+                      child: Text('平均分',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 13),
+                          textAlign: TextAlign.center)),
+                  Expanded(
+                      flex: 2,
+                      child: Text('最高分',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 13),
+                          textAlign: TextAlign.center)),
+                  Expanded(
+                      flex: 2,
+                      child: Text('最低分',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 13),
+                          textAlign: TextAlign.center)),
+                  Expanded(
+                      flex: 2,
+                      child: Text('标准差',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 13),
+                          textAlign: TextAlign.center)),
                 ],
               ),
             ),
@@ -1639,12 +2189,17 @@ class _ReportTabState extends State<ReportTab> {
               if (s == null) return const SizedBox.shrink();
 
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
-                  color: i.isEven ? Colors.transparent : Colors.grey.withValues(alpha: 0.04),
+                  color: i.isEven
+                      ? Colors.transparent
+                      : Colors.grey.withValues(alpha: 0.04),
                   border: i == 3
                       ? null
-                      : Border(bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.1))),
+                      : Border(
+                          bottom: BorderSide(
+                              color: Colors.grey.withValues(alpha: 0.1))),
                 ),
                 child: Row(
                   children: [
@@ -1661,7 +2216,8 @@ class _ReportTabState extends State<ReportTab> {
                             ),
                           ),
                           const SizedBox(width: 6),
-                          Text(kObjectiveNames[i], style: const TextStyle(fontSize: 13)),
+                          Text(kObjectiveNames[i],
+                              style: const TextStyle(fontSize: 13)),
                         ],
                       ),
                     ),
@@ -1670,7 +2226,8 @@ class _ReportTabState extends State<ReportTab> {
                       child: Text(
                         s[0].toStringAsFixed(1),
                         textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                        style: const TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w500),
                       ),
                     ),
                     Expanded(
@@ -1678,7 +2235,8 @@ class _ReportTabState extends State<ReportTab> {
                       child: Text(
                         s[1].toStringAsFixed(1),
                         textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 13, color: Colors.green),
+                        style:
+                            const TextStyle(fontSize: 13, color: Colors.green),
                       ),
                     ),
                     Expanded(
@@ -1707,7 +2265,8 @@ class _ReportTabState extends State<ReportTab> {
               height: 8,
               decoration: BoxDecoration(
                 color: Colors.grey.withValues(alpha: 0.04),
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(8)),
+                borderRadius:
+                    const BorderRadius.vertical(bottom: Radius.circular(8)),
               ),
             ),
 
@@ -1753,7 +2312,8 @@ class _ReportTabState extends State<ReportTab> {
                               CircularProgressIndicator(
                                 value: achievement.clamp(0.0, 1.0),
                                 strokeWidth: 4,
-                                backgroundColor: Colors.grey.withValues(alpha: 0.15),
+                                backgroundColor:
+                                    Colors.grey.withValues(alpha: 0.15),
                                 color: kObjectiveColors[i],
                               ),
                               Text(
@@ -1769,9 +2329,11 @@ class _ReportTabState extends State<ReportTab> {
                         ),
                         const SizedBox(height: 4),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4, vertical: 1),
                           decoration: BoxDecoration(
-                            color: achievementLevelColor(achievement).withValues(alpha: 0.15),
+                            color: achievementLevelColor(achievement)
+                                .withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -1825,12 +2387,17 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog> {
     try {
       final bytes = NativeDocxService.instance.markdownToDocx(_editCtrl.text);
       final dir = await OutputPathService.getOutputDirectory();
-      final ts = DateTime.now().toIso8601String().replaceAll(RegExp(r'[:.]'), '-').substring(0, 19);
+      final ts = DateTime.now()
+          .toIso8601String()
+          .replaceAll(RegExp(r'[:.]'), '-')
+          .substring(0, 19);
       final file = File('${dir.path}/达成度报告_$ts.docx');
       await file.writeAsBytes(bytes);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Word 已导出：${file.path}'), duration: const Duration(seconds: 4)),
+          SnackBar(
+              content: Text('Word 已导出：${file.path}'),
+              duration: const Duration(seconds: 4)),
         );
       }
     } catch (e, st) {
@@ -1866,16 +2433,24 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog> {
                   const SizedBox(width: 8),
                   const Expanded(
                     child: Text('课程达成度评价报告',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
                   ),
                   // 渲染/编辑切换
                   SegmentedButton<bool>(
                     segments: const [
-                      ButtonSegment(value: false, label: Text('预览'), icon: Icon(Icons.visibility, size: 16)),
-                      ButtonSegment(value: true, label: Text('编辑'), icon: Icon(Icons.edit, size: 16)),
+                      ButtonSegment(
+                          value: false,
+                          label: Text('预览'),
+                          icon: Icon(Icons.visibility, size: 16)),
+                      ButtonSegment(
+                          value: true,
+                          label: Text('编辑'),
+                          icon: Icon(Icons.edit, size: 16)),
                     ],
                     selected: {_showSource},
-                    onSelectionChanged: (v) => setState(() => _showSource = v.first),
+                    onSelectionChanged: (v) =>
+                        setState(() => _showSource = v.first),
                     style: ButtonStyle(
                       visualDensity: VisualDensity.compact,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -1887,7 +2462,9 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog> {
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: _editCtrl.text));
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('报告已复制到剪贴板'), backgroundColor: Colors.green),
+                        const SnackBar(
+                            content: Text('报告已复制到剪贴板'),
+                            backgroundColor: Colors.green),
                       );
                     },
                   ),
@@ -1909,7 +2486,8 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog> {
                         maxLines: null,
                         expands: true,
                         textAlignVertical: TextAlignVertical.top,
-                        style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+                        style: const TextStyle(
+                            fontSize: 13, fontFamily: 'monospace'),
                         decoration: InputDecoration(
                           border: const OutlineInputBorder(),
                           filled: true,
@@ -1938,7 +2516,9 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog> {
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: _editCtrl.text));
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('报告已复制到剪贴板'), backgroundColor: Colors.green),
+                        const SnackBar(
+                            content: Text('报告已复制到剪贴板'),
+                            backgroundColor: Colors.green),
                       );
                     },
                     icon: const Icon(Icons.copy, size: 16),
@@ -1948,7 +2528,10 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog> {
                   FilledButton.icon(
                     onPressed: _exporting ? null : _exportEditedDocx,
                     icon: _exporting
-                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2))
                         : const Icon(Icons.file_download, size: 16),
                     label: const Text('导出 Word'),
                   ),
