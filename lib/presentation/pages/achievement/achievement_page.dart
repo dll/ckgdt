@@ -1,10 +1,11 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import '../../../core/design/noir_tokens.dart';
 import '../../../data/local/achievement_dao.dart';
 import '../../../services/auth_service.dart';
-import '../../../services/output_path_service.dart';
+import '../../../services/sync_service.dart';
 import '../../widgets/agent_entry_button.dart';
 import '../../widgets/inner_tab_request_mixin.dart';
 import '../../pages/learning/video_player_page.dart';
@@ -73,20 +74,40 @@ class _AchievementPageState extends State<AchievementPage>
     super.dispose();
   }
 
+  /// 视频文件名
+  static const _videoFileName = '达成度评价系统操作指南.mp4';
+
+  /// Gitee 仓库中的视频路径
+  static const _videoGiteePath = 'data/视频/$_videoFileName';
+
   Future<void> _playGuideVideo() async {
     try {
-      // 从 asset 复制到临时目录供 media_kit 播放
-      final data = await rootBundle.load('assets/help/achievement_guide.mp4');
-      final bytes = data.buffer.asUint8List();
-      final tempDir = Directory.systemTemp.createTempSync('achievement_video_');
-      final file = File('${tempDir.path}${Platform.pathSeparator}achievement_guide.mp4');
-      await file.writeAsBytes(bytes, flush: true);
+      // 1. 先找本地 data/视频/ 目录
+      String? videoPath = await _findLocalVideo();
+
+      // 2. 本地没有则从 Gitee 下载
+      if (videoPath == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('正在从云端下载视频，请稍候...')),
+        );
+        videoPath = await _downloadVideoFromGitee();
+      }
+
+      if (videoPath == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('视频下载失败，请检查网络后重试')),
+        );
+        return;
+      }
+
       if (!mounted) return;
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => InAppVideoPlayerPage(
-            filePath: file.path,
+            filePath: videoPath!,
             title: '达成度评价系统操作指南',
           ),
         ),
@@ -96,6 +117,102 @@ class _AchievementPageState extends State<AchievementPage>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('视频加载失败: $e')),
       );
+    }
+  }
+
+  /// 在本地 data/视频/ 目录查找视频文件
+  Future<String?> _findLocalVideo() async {
+    for (final file in await _localVideoCandidates()) {
+      if (await file.exists()) return file.path;
+    }
+    return null;
+  }
+
+  Future<List<File>> _localVideoCandidates() async {
+    final candidates = <File>[];
+
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      final exeDir = File(Platform.resolvedExecutable).parent;
+      var dir = exeDir;
+      for (var i = 0; i < 6; i++) {
+        candidates.add(File(_joinPath(dir.path, 'data', '视频', _videoFileName)));
+        final parent = dir.parent;
+        if (parent.path == dir.path) break;
+        dir = parent;
+      }
+    }
+
+    final cacheDir = await _localVideoDirectory();
+    candidates.add(File(_joinPath(cacheDir.path, _videoFileName)));
+    return candidates;
+  }
+
+  Future<Directory> _localVideoDirectory() async {
+    final appDir = await getApplicationDocumentsDirectory();
+    return Directory(_joinPath(appDir.path, 'data', '视频'));
+  }
+
+  String _joinPath(String part1, String part2, [String? part3, String? part4]) {
+    final parts = [
+      part1,
+      part2,
+      if (part3 != null) part3,
+      if (part4 != null) part4,
+    ];
+    return parts.join(Platform.pathSeparator);
+  }
+
+  /// 从 Gitee 仓库下载视频到本地 data/视频/ 目录
+  Future<String?> _downloadVideoFromGitee() async {
+    File? tempFile;
+    try {
+      final localDir = await _localVideoDirectory();
+      if (!localDir.existsSync()) localDir.createSync(recursive: true);
+      final file = File(_joinPath(localDir.path, _videoFileName));
+      tempFile = File('${file.path}.download');
+      if (await tempFile.exists()) await tempFile.delete();
+
+      final token = await SyncService().getSyncToken();
+      final uri = Uri.parse(
+        'https://gitee.com/api/v5/repos/${SyncService.repoOwner}/${SyncService.repoName}/raw/$_videoGiteePath',
+      ).replace(
+        queryParameters: {
+          'ref': SyncService.repoBranch,
+          if (token != null && token.isNotEmpty) 'access_token': token,
+        },
+      );
+
+      final request = http.Request('GET', uri);
+      final response =
+          await request.send().timeout(const Duration(minutes: 10));
+      if (response.statusCode != 200) {
+        return null;
+      }
+
+      final sink = tempFile.openWrite();
+      await for (final chunk in response.stream) {
+        sink.add(chunk);
+      }
+      await sink.flush();
+      await sink.close();
+
+      final fileSize = await tempFile.length();
+      if (fileSize < 1024 * 1024) {
+        await tempFile.delete();
+        return null;
+      }
+
+      if (await file.exists()) await file.delete();
+      await tempFile.rename(file.path);
+      return file.path;
+    } catch (e) {
+      debugPrint('AchievementPage: 下载视频失败: $e');
+      try {
+        if (tempFile != null && await tempFile.exists()) {
+          await tempFile.delete();
+        }
+      } catch (_) {}
+      return null;
     }
   }
 
@@ -140,7 +257,8 @@ class _AchievementPageState extends State<AchievementPage>
                           children: [
                             Text(serial,
                                 style: NoirTokens.serial(
-                                    color: Colors.white.withValues(alpha: 0.85))),
+                                    color:
+                                        Colors.white.withValues(alpha: 0.85))),
                             const SizedBox(width: 8),
                             Icon(icon, size: 16),
                             const SizedBox(width: 6),
@@ -170,7 +288,8 @@ class _AchievementPageState extends State<AchievementPage>
                         tooltip: '达成度帮助',
                         onPressed: () => Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const AchievementHelpPage()),
+                          MaterialPageRoute(
+                              builder: (_) => const AchievementHelpPage()),
                         ),
                       ),
                       const AgentEntryButton(agentId: 'achievement'),
