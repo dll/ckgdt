@@ -1,0 +1,75 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:1920px;height:1080px;overflow:hidden;font-family:'Microsoft YaHei','PingFang SC','Noto Sans CJK SC',sans-serif;
+  color:#EAF2FF;background:#0A1428;}
+.stage{position:relative;width:1920px;height:1080px;
+  background:
+    radial-gradient(1100px 700px at 78% 12%, rgba(34,211,238,0.10), transparent 60%),
+    radial-gradient(900px 700px at 12% 92%, rgba(56,189,248,0.08), transparent 60%),
+    linear-gradient(135deg,#070D1B 0%,#0A1428 45%,#0E1C38 100%);
+  overflow:hidden;}
+.grid{position:absolute;inset:0;
+  background-image:linear-gradient(rgba(120,170,230,0.16) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(120,170,230,0.16) 1px,transparent 1px);
+  background-size:60px 60px;opacity:.55;}
+.scan{position:absolute;inset:0;background:repeating-linear-gradient(
+  0deg,transparent 0 3px,rgba(0,0,0,0.10) 3px 4px);opacity:.25;}
+.corner{position:absolute;width:54px;height:54px;border:2px solid #22D3EE;opacity:.5;}
+.corner.tl{top:40px;left:40px;border-right:none;border-bottom:none;}
+.corner.tr{top:40px;right:40px;border-left:none;border-bottom:none;}
+.corner.bl{bottom:40px;left:40px;border-right:none;border-top:none;}
+.corner.br{bottom:40px;right:40px;border-left:none;border-top:none;}
+.head{position:absolute;top:54px;left:96px;right:96px;display:flex;
+  align-items:center;justify-content:space-between;z-index:5;}
+.kicker{display:flex;align-items:center;gap:18px;}
+.kdot{width:13px;height:13px;border-radius:50%;background:#22D3EE;
+  box-shadow:0 0 16px #22D3EE;}
+.ktext{font-size:23px;letter-spacing:6px;color:#22D3EE;font-weight:700;}
+.kid{font-size:19px;letter-spacing:3px;color:#5C7290;font-family:Consolas,monospace;}
+.title{position:absolute;left:96px;top:118px;z-index:5;}
+.title h1{font-size:60px;font-weight:800;letter-spacing:2px;line-height:1.15;}
+.title .bar{width:120px;height:6px;margin-top:24px;border-radius:3px;
+  background:linear-gradient(90deg,#22D3EE,#38BDF8);box-shadow:0 0 22px rgba(34,211,238,.6);}
+.foot{position:absolute;bottom:50px;left:96px;right:96px;display:flex;
+  justify-content:space-between;align-items:center;color:#5C7290;
+  font-size:19px;letter-spacing:2px;z-index:5;}
+.foot .fr{font-family:Consolas,monospace;}
+.accent{color:#22D3EE;} .amber{color:#FBBF24;}
+.green{color:#34D399;} .red{color:#F8717A;}
+
+.dt{width:100%;border-collapse:collapse;font-size:21px;}
+.dt th{background:rgba(34,211,238,.14);color:#22D3EE;font-weight:800;
+  padding:18px 18px;text-align:center;letter-spacing:1px;border-bottom:2px solid #22D3EE;}
+.dt td{padding:16px 18px;text-align:center;color:#CFE8FF;
+  border-bottom:1px solid #1B3258;}
+.dt td:first-child{text-align:left;color:#8FA8C8;font-weight:700;}
+.dt tr.hl td{background:rgba(52,211,153,.14);color:#fff;font-weight:800;}
+.dt tr.hl td:first-child{color:#34D399;}
+.dt td.hlc{color:#34D399;font-weight:800;}
+
+.tt-figs{position:absolute;top:296px;left:96px;right:96px;display:grid;
+  grid-template-columns:repeat(3,1fr);gap:26px;z-index:5;}
+.fg-box{background:#fff;border-radius:14px;padding:14px;box-shadow:0 16px 40px rgba(0,0,0,.4);}
+.fg-box img{width:100%;display:block;border-radius:6px;}
+.fg-cap{display:none;}
+.tt-cap{position:absolute;top:660px;left:96px;right:96px;text-align:center;
+  font-size:19px;color:#8FA8C8;z-index:5;letter-spacing:1px;}
+.tt-tbl{position:absolute;bottom:96px;left:96px;right:96px;border-radius:16px;
+  padding:24px 30px;background:linear-gradient(160deg,#101F3D,rgba(14,28,56,.6));
+  border:1px solid #1B3258;box-shadow:0 14px 36px rgba(0,0,0,.32);z-index:5;}
+</style></head><body>
+<div class="stage"><div class="grid"></div><div class="scan"></div>
+<div class="corner tl"></div><div class="corner tr"></div>
+<div class="corner bl"></div><div class="corner br"></div>
+<div class="head"><div class="kicker">
+      <div class="kdot"></div><div class="ktext">仿真验证 · 结果分析</div></div>
+      <div class="kid">MAD-FORM · 17 / 19</div></div><div class="title"><h1>综合效能评估结果</h1><div class="bar"></div></div><div class="tt-figs"><div class="fg-box">
+      <img src="file:///D:/FlutterProjects/knowledge_graph_app/docs/刘畅/build/figs/fig6_1.png">
+      <div class="fg-cap"></div></div><div class="fg-box">
+      <img src="file:///D:/FlutterProjects/knowledge_graph_app/docs/刘畅/build/figs/fig6_2.png">
+      <div class="fg-cap"></div></div><div class="fg-box">
+      <img src="file:///D:/FlutterProjects/knowledge_graph_app/docs/刘畅/build/figs/fig6_3.png">
+      <div class="fg-cap"></div></div></div><div class="tt-cap">图6-1 全程位置误差 · 图6-2 全程燃油消耗 · 图6-3 综合效能对比</div><div class="tt-tbl"><table class='dt'><thead><tr><th>指标</th><th>传统策略</th><th>本文策略</th><th>提升</th></tr></thead><tbody><tr><td>稳态编队精度</td><td>±3.5 m</td><td>±1.2 m</td><td class="hlc">66%</td></tr><tr><td>重组最大扰动</td><td>28 m</td><td>11 m</td><td class="hlc">61%</td></tr><tr><td>全程燃油消耗</td><td>4250 kg</td><td>3588 kg</td><td class="hlc">15.6%</td></tr><tr><td>任务成功率</td><td>82%</td><td>91%</td><td class="hlc">+11%</td></tr></tbody></table></div><div class="foot"><div>刘 畅 · 无人机运用与指挥</div>
+      <div class="fr">面向异构飞行器协同作战的编队策略研究</div></div>
+</div></body></html>

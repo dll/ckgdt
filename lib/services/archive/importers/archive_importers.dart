@@ -14,63 +14,83 @@ import 'package:xml/xml.dart';
 class ArchiveImporters {
   ArchiveImporters._();
 
-  /// 教学任务书（HTML）→ Markdown。找不到"移动应用开发"行返回 null。
-  static String? parseTeachingTask(String html, {DateTime? now}) {
-    final match = RegExp(
-      r'经学校批准聘请(.+?)老师担任(.+?)以下教学任务',
-    ).firstMatch(html);
-    final teacher = match?.group(1) ?? '未知';
-    final semester = match?.group(2) ?? '未知学期';
-
-    final courseRows = RegExp(
-      r'<tr>\s*<td>(.*?)</td>\s*<td>(.*?)</td>\s*<td>(.*?)</td>\s*<td>(.*?)</td>\s*<td>(.*?)</td>\s*<td>(.*?)</td>\s*<td>(.*?)</td>\s*<td>(.*?)</td>\s*<td>(.*?)</td>\s*<td>(.*?)</td>\s*</tr>',
-      dotAll: true,
-    ).allMatches(html);
-
-    Map<String, String>? courseData;
-    for (final row in courseRows) {
-      final name = row.group(1)?.trim() ?? '';
-      if (name.contains('移动应用开发')) {
-        courseData = {
-          'course_name': name,
-          'course_type': row.group(2)?.trim() ?? '',
-          'total_hours': row.group(3)?.trim() ?? '',
-          'lecture_hours': row.group(4)?.trim() ?? '',
-          'lab_hours': row.group(5)?.trim() ?? '',
-          'practice_hours': row.group(6)?.trim() ?? '',
-          'self_study_hours': row.group(7)?.trim() ?? '',
-          'class_info': row.group(8)?.trim() ?? '',
-          'student_count': row.group(9)?.trim() ?? '',
-          'notes': row.group(10)?.trim() ?? '',
-        };
-        break;
-      }
+  /// 教学任务书 → Markdown（官方横排 10 列，含全部课程）。
+  ///
+  /// 兼容三种来源：
+  /// 1. 教务系统 MHTML 导出（multipart + quoted-printable）；
+  /// 2. 浏览器另存的纯 HTML；
+  /// 3. 教师手改的 HTML 模板（单元格用 `<input value="…">` 或直接填文本）。
+  ///
+  /// 解析不出任何课程行返回 null。
+  static String? parseTeachingTask(String raw, {DateTime? now}) {
+    // MHTML 包裹先解包 + quoted-printable 解码（与点名册/校历一致）。
+    String html = raw;
+    if (raw.contains('boundary=') && raw.contains('Content-Type:')) {
+      html = decodeQuotedPrintable(extractHtmlFromMhtml(raw));
+    } else if (raw.contains('=3D')) {
+      // 裸 quoted-printable（无 multipart 包裹）也解一下。
+      html = decodeQuotedPrintable(raw);
     }
-    if (courseData == null) return null;
+
+    // <input value="X"> → X，便于读取教师手填的模板。
+    html = html.replaceAllMapped(
+      RegExp(r'<input\b[^>]*\bvalue="([^"]*)"[^>]*>', caseSensitive: false),
+      (m) => m.group(1) ?? '',
+    );
+    final tagStrip = RegExp(r'<[^>]*>', dotAll: true);
+    final wsCollapse = RegExp(r'\s+');
+    String clean(String s) => s
+        .replaceAll(tagStrip, '')
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll(wsCollapse, ' ')
+        .trim();
+
+    final headerMatch = RegExp(r'经学校批准聘请(.*?)老师担任(.*?)以下教学任务')
+        .firstMatch(clean(html));
+    final teacher = (headerMatch?.group(1)?.trim().isNotEmpty ?? false)
+        ? headerMatch!.group(1)!.trim()
+        : '未知';
+    final semester = (headerMatch?.group(2)?.trim().isNotEmpty ?? false)
+        ? headerMatch!.group(2)!.trim()
+        : '未知学期';
+
+    // 逐 <tr> 取单元格，跳过表头与空行，收集全部课程行（去重：mhtml 含存根+正本两份）。
+    final rowRegex = RegExp(r'<tr[^>]*>(.*?)</tr>', dotAll: true, caseSensitive: false);
+    final cellRegex = RegExp(r'<t[dh][^>]*>(.*?)</t[dh]>', dotAll: true, caseSensitive: false);
+    final courses = <List<String>>[];
+    final seen = <String>{};
+    for (final rm in rowRegex.allMatches(html)) {
+      final cells = cellRegex
+          .allMatches(rm.group(1)!)
+          .map((c) => clean(c.group(1)!))
+          .toList();
+      if (cells.length < 10) continue;
+      final name = cells[0];
+      if (name.isEmpty || name == '课程名称') continue; // 表头/空行
+      // 班级单元格去掉「班级:」前缀（教务系统导出带，样表不含）。
+      cells[7] = cells[7].replaceFirst(RegExp(r'^班级[:：]\s*'), '');
+      final row = cells.take(10).toList();
+      final sig = row.join('');
+      if (!seen.add(sig)) continue; // 存根/正本重复行去重
+      courses.add(row);
+    }
+    if (courses.isEmpty) return null;
 
     final stamp = (now ?? DateTime.now()).toString().substring(0, 16);
-    return '''# 教 学 任 务 书
-
-**教师**：$teacher
-**学期**：$semester
-
-| 项目 | 内容 |
-|------|------|
-| 课程名称 | ${courseData['course_name']} |
-| 课程类别 | ${courseData['course_type']} |
-| 总学时 | ${courseData['total_hours']} |
-| 讲授 | ${courseData['lecture_hours']} |
-| 实验 | ${courseData['practice_hours']} |
-| 实践 | ${courseData['lab_hours']} |
-| 课外自主学时 | ${courseData['self_study_hours']} |
-| 教学班级 | ${courseData['class_info']} |
-| 计划人数 | ${courseData['student_count']} |
-| 备注 | ${courseData['notes']} |
-
----
-> 数据来源：教务系统（jwgl.chzu.edu.cn）
-> 导入时间：$stamp
-''';
+    final buf = StringBuffer();
+    buf.writeln('# 教 学 任 务 书\n');
+    buf.writeln('经学校批准聘请$teacher老师担任$semester以下教学任务：\n');
+    buf.writeln('| 课程名称 | 课程类别 | 总学时 | 讲授 | 实验 | 实践 | 课外自主学时 | 教学班级 | 计划人数 | 备注 |');
+    buf.writeln('|------|------|------|------|------|------|------|------|------|------|');
+    for (final c in courses) {
+      buf.writeln('| ${c[0]} | ${c[1]} | ${c[2]} | ${c[3]} | ${c[4]} | ${c[5]} | ${c[6]} | ${c[7]} | ${c[8]} | ${c[9]} |');
+    }
+    buf.writeln('');
+    buf.writeln('---');
+    buf.writeln('> 教师：$teacher ｜ 学期：$semester');
+    buf.writeln('> 数据来源：教务系统（jwgl.chzu.edu.cn）');
+    buf.writeln('> 导入时间：$stamp');
+    return buf.toString();
   }
 
   /// 学生点名册（MHTML 考勤表）→ Markdown。非"移动应用开发"或无学生返回 null。

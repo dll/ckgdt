@@ -1,0 +1,16 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BackColour, Bold, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV
+Style: Def,Microsoft YaHei,46,&H00FFFFFF,&H00401B0A,&H96000000,1,3,3,1,2,170,170,72
+
+[Events]
+Format: Layer, Start, End, Style, Text
+Dialogue: 0,0:00:00.00,0:00:02.47,Def,,这是第三章的对比仿真结果。
+Dialogue: 0,0:00:02.47,0:00:06.46,Def,,设置五机编队、阵风扰动与五十毫秒通信时延。
+Dialogue: 0,0:00:06.46,0:00:14.62,Def,,从误差曲线可以看到,在干扰区间内,传统PID误差峰值高达八米以上,而本文方法仅约三米。
+Dialogue: 0,0:00:14.62,0:00:27.34,Def,,定量对比中,本文方法平均位置误差零点九二米,较纯PID降低百分之六十八;最大误差仅为纯PID的百分之二十六;稳定时间缩短百分之五十五。
+Dialogue: 0,0:00:27.34,0:00:32.47,Def,,结果充分验证了一致性协议与干扰观测器联合设计的有效性。

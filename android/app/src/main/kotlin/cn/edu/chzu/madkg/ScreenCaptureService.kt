@@ -7,7 +7,11 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
+import android.graphics.Matrix
+import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.graphics.YuvImage
 import android.hardware.display.DisplayManager
@@ -32,6 +36,8 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import io.flutter.plugin.common.EventChannel
 import java.io.ByteArrayOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
 import java.lang.ref.WeakReference
 import java.util.concurrent.Executors
 
@@ -51,8 +57,11 @@ class ScreenCaptureService : Service(), LifecycleOwner {
         const val ACTION_STOP = "cn.edu.chzu.madkg.action.STOP_CAPTURE"
         const val EXTRA_RESULT_CODE = "resultCode"
         const val EXTRA_RESULT_DATA = "resultData"
+        const val EXTRA_SERVER_URL = "serverUrl"
         private const val CHANNEL_ID = "defense_capture"
         private const val NOTIFICATION_ID = 0x5AD
+        private const val SCREEN_MIN_INTERVAL_MS = 180L
+        private const val CAMERA_MIN_INTERVAL_MS = 330L
     }
 
     private val lifecycleRegistry = LifecycleRegistry(this)
@@ -63,12 +72,17 @@ class ScreenCaptureService : Service(), LifecycleOwner {
     private var imageReader: ImageReader? = null
     private var handlerThread: HandlerThread? = null
     private var backgroundHandler: Handler? = null
+    private var serverUrl: String = ""
+    private var lastScreenPostAt = 0L
+    private var lastCameraPostAt = 0L
 
     private var cameraProvider: ProcessCameraProvider? = null
     private val cameraExecutor = Executors.newSingleThreadExecutor()
+    private val networkExecutor = Executors.newFixedThreadPool(2)
+    @Volatile private var screenPostInFlight = false
+    @Volatile private var cameraPostInFlight = false
 
     // 复用缓冲，避免每帧分配
-    private var screenNv21: ByteArray? = null
     private val screenJpeg = ByteArrayOutputStream()
     private var cameraNv21: ByteArray? = null
     private val cameraJpeg = ByteArrayOutputStream()
@@ -96,6 +110,7 @@ class ScreenCaptureService : Service(), LifecycleOwner {
             else -> {
                 val resultCode = intent?.getIntExtra(EXTRA_RESULT_CODE, 0) ?: 0
                 val data = intent?.getParcelableExtra<Intent>(EXTRA_RESULT_DATA)
+                serverUrl = intent?.getStringExtra(EXTRA_SERVER_URL)?.trimEnd('/') ?: ""
                 startCapture(resultCode, data)
             }
         }
@@ -121,6 +136,8 @@ class ScreenCaptureService : Service(), LifecycleOwner {
         }
 
         try {
+            lastScreenPostAt = 0L
+            lastCameraPostAt = 0L
             val mgr = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
             mediaProjection = mgr.getMediaProjection(resultCode, data)
             // createVirtualDisplay 前必须注册回调（targetSdk 34+ 不注册抛异常）
@@ -146,25 +163,21 @@ class ScreenCaptureService : Service(), LifecycleOwner {
         handlerThread = HandlerThread("DefenseScreenCapture").apply { start() }
         backgroundHandler = Handler(handlerThread!!.looper)
 
-        var reader: ImageReader? = try {
-            ImageReader.newInstance(width, height, ImageFormat.JPEG, 4)
-        } catch (e: Exception) { null }
-        if (reader == null) {
-            reader = ImageReader.newInstance(width, height, ImageFormat.YUV_420_888, 4)
-        }
+        val reader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
         imageReader = reader
-        val isJpeg = reader.imageFormat == ImageFormat.JPEG
 
         reader.setOnImageAvailableListener({ r ->
             val image: Image = try { r.acquireLatestImage() } catch (e: Exception) { null } ?: return@setOnImageAvailableListener
             try {
-                val bytes = if (isJpeg) {
-                    val buf = image.planes[0].buffer
-                    val b = ByteArray(buf.remaining()); buf.get(b); b
-                } else {
-                    yuvToJpeg(image, ::screenBufFor, screenJpeg)
+                if (!shouldSendScreen()) return@setOnImageAvailableListener
+                val bytes = rgbaToJpeg(image, screenJpeg)
+                if (bytes != null) {
+                    if (serverUrl.isNotEmpty()) {
+                        postFrameAsync("/frame/phone", bytes, isScreen = true)
+                    } else {
+                        CaptureSinks.screenSink?.get()?.success(bytes)
+                    }
                 }
-                if (bytes != null) CaptureSinks.screenSink?.get()?.success(bytes)
             } catch (e: Exception) {
                 // 单帧失败忽略，继续下一帧
             } finally {
@@ -201,10 +214,13 @@ class ScreenCaptureService : Service(), LifecycleOwner {
 
     private fun onCameraFrame(proxy: ImageProxy) {
         try {
-            val image = proxy.image
-            if (image != null) {
-                val bytes = yuvToJpeg(image, ::cameraBufFor, cameraJpeg)
-                if (bytes != null) CaptureSinks.cameraSink?.get()?.success(bytes)
+            val bytes = imageProxyToJpeg(proxy)
+            if (bytes != null && shouldSendCamera()) {
+                if (serverUrl.isNotEmpty()) {
+                    postFrameAsync("/frame/camera", bytes, isScreen = false)
+                } else {
+                    CaptureSinks.cameraSink?.get()?.success(bytes)
+                }
             }
         } catch (e: Exception) {
             // 忽略单帧
@@ -214,38 +230,186 @@ class ScreenCaptureService : Service(), LifecycleOwner {
     }
 
     // ── YUV_420_888 → NV21 → JPEG（复用缓冲） ─────────────────────────
-    private fun screenBufFor(size: Int): ByteArray {
-        var b = screenNv21
-        if (b == null || b.size != size) { b = ByteArray(size); screenNv21 = b }
-        return b
-    }
-
     private fun cameraBufFor(size: Int): ByteArray {
         var b = cameraNv21
         if (b == null || b.size != size) { b = ByteArray(size); cameraNv21 = b }
         return b
     }
 
-    private fun yuvToJpeg(image: Image, bufFor: (Int) -> ByteArray, out: ByteArrayOutputStream): ByteArray? {
-        val yBuffer = image.planes[0].buffer
-        val uBuffer = image.planes[1].buffer
-        val vBuffer = image.planes[2].buffer
-        val ySize = yBuffer.remaining()
-        val uSize = uBuffer.remaining()
-        val vSize = vBuffer.remaining()
-        val nv21 = bufFor(ySize + uSize + vSize)
-        yBuffer.get(nv21, 0, ySize)
-        // NV21: VU 交错
-        var pos = ySize
-        val count = minOf(vSize, uSize)
-        for (i in 0 until count) {
-            nv21[pos++] = vBuffer.get()
-            nv21[pos++] = uBuffer.get()
+    private fun shouldSendScreen(): Boolean {
+        val now = System.currentTimeMillis()
+        if (now - lastScreenPostAt < SCREEN_MIN_INTERVAL_MS) return false
+        lastScreenPostAt = now
+        return true
+    }
+
+    private fun shouldSendCamera(): Boolean {
+        val now = System.currentTimeMillis()
+        if (now - lastCameraPostAt < CAMERA_MIN_INTERVAL_MS) return false
+        lastCameraPostAt = now
+        return true
+    }
+
+    private fun postFrame(path: String, bytes: ByteArray) {
+        var conn: HttpURLConnection? = null
+        try {
+            conn = URL("$serverUrl$path").openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.connectTimeout = 1200
+            conn.readTimeout = 1200
+            conn.doOutput = true
+            conn.setRequestProperty("Content-Type", "image/jpeg")
+            conn.outputStream.use { it.write(bytes) }
+            val code = conn.responseCode
+            val stream = if (code >= 400) conn.errorStream else conn.inputStream
+            try { stream?.close() } catch (e: Exception) {}
+        } catch (e: Exception) {
+            // 单帧上传失败忽略，后续帧继续尝试。
+        } finally {
+            try { conn?.disconnect() } catch (e: Exception) {}
         }
+    }
+
+    private fun postFrameAsync(path: String, bytes: ByteArray, isScreen: Boolean) {
+        if (isScreen) {
+            if (screenPostInFlight) return
+            screenPostInFlight = true
+        } else {
+            if (cameraPostInFlight) return
+            cameraPostInFlight = true
+        }
+        networkExecutor.execute {
+            try {
+                postFrame(path, bytes)
+            } finally {
+                if (isScreen) {
+                    screenPostInFlight = false
+                } else {
+                    cameraPostInFlight = false
+                }
+            }
+        }
+    }
+
+    private fun rgbaToJpeg(image: Image, out: ByteArrayOutputStream): ByteArray? {
+        val plane = image.planes.firstOrNull() ?: return null
+        val buffer = plane.buffer
+        val pixelStride = plane.pixelStride
+        val rowStride = plane.rowStride
+        if (pixelStride <= 0 || rowStride <= 0) return null
+        val rowWidth = rowStride / pixelStride
+        if (rowWidth < image.width) return null
+        val bitmap = Bitmap.createBitmap(rowWidth, image.height, Bitmap.Config.ARGB_8888)
+        bitmap.copyPixelsFromBuffer(buffer)
+        val cropped = if (rowWidth == image.width) {
+            bitmap
+        } else {
+            Bitmap.createBitmap(bitmap, 0, 0, image.width, image.height)
+        }
+        val maxWidth = 720
+        val encoded = if (cropped.width > maxWidth) {
+            val scaledHeight = (cropped.height * (maxWidth.toFloat() / cropped.width)).toInt()
+            val scaled = Bitmap.createScaledBitmap(cropped, maxWidth, scaledHeight, true)
+            out.reset()
+            scaled.compress(Bitmap.CompressFormat.JPEG, 55, out)
+            scaled.recycle()
+            out.toByteArray()
+        } else {
+            out.reset()
+            cropped.compress(Bitmap.CompressFormat.JPEG, 55, out)
+            out.toByteArray()
+        }
+        if (cropped !== bitmap) cropped.recycle()
+        bitmap.recycle()
+        return encoded
+    }
+
+    private fun imageProxyToJpeg(proxy: ImageProxy): ByteArray? {
+        val image = proxy.image ?: return null
+        val nv21 = yuv420ToNv21(image, ::cameraBufFor)
         val yuv = YuvImage(nv21, ImageFormat.NV21, image.width, image.height, null)
-        out.reset()
-        yuv.compressToJpeg(Rect(0, 0, image.width, image.height), 70, out)
-        return out.toByteArray()
+        cameraJpeg.reset()
+        yuv.compressToJpeg(Rect(0, 0, image.width, image.height), 70, cameraJpeg)
+        val raw = cameraJpeg.toByteArray()
+        val rotation = proxy.imageInfo.rotationDegrees
+        if (rotation == 0) return raw
+
+        val bitmap = BitmapFactory.decodeByteArray(raw, 0, raw.size) ?: return raw
+        val matrix = Matrix().apply { postRotate(rotation.toFloat()) }
+        val rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+        cameraJpeg.reset()
+        rotated.compress(Bitmap.CompressFormat.JPEG, 70, cameraJpeg)
+        if (rotated !== bitmap) rotated.recycle()
+        bitmap.recycle()
+        return cameraJpeg.toByteArray()
+    }
+
+    private fun yuv420ToNv21(image: Image, bufFor: (Int) -> ByteArray): ByteArray {
+        val width = image.width
+        val height = image.height
+        val frameSize = width * height
+        val output = bufFor(frameSize + frameSize / 2)
+
+        val yPlane = image.planes[0]
+        val uPlane = image.planes[1]
+        val vPlane = image.planes[2]
+
+        copyPlane(
+            yPlane.buffer,
+            yPlane.rowStride,
+            yPlane.pixelStride,
+            width,
+            height,
+            output,
+            0,
+            1
+        )
+
+        val uBuffer = uPlane.buffer.duplicate()
+        val vBuffer = vPlane.buffer.duplicate()
+        val chromaWidth = width / 2
+        val chromaHeight = height / 2
+        var offset = frameSize
+        for (row in 0 until chromaHeight) {
+            val uRow = row * uPlane.rowStride
+            val vRow = row * vPlane.rowStride
+            for (col in 0 until chromaWidth) {
+                val uIndex = uRow + col * uPlane.pixelStride
+                val vIndex = vRow + col * vPlane.pixelStride
+                if (offset + 1 >= output.size ||
+                    uIndex >= uBuffer.limit() ||
+                    vIndex >= vBuffer.limit()
+                ) {
+                    return output
+                }
+                output[offset++] = vBuffer.get(vIndex)
+                output[offset++] = uBuffer.get(uIndex)
+            }
+        }
+        return output
+    }
+
+    private fun copyPlane(
+        buffer: java.nio.ByteBuffer,
+        rowStride: Int,
+        pixelStride: Int,
+        width: Int,
+        height: Int,
+        output: ByteArray,
+        outputOffset: Int,
+        outputPixelStride: Int
+    ) {
+        val src = buffer.duplicate()
+        var out = outputOffset
+        for (row in 0 until height) {
+            val rowStart = row * rowStride
+            for (col in 0 until width) {
+                val index = rowStart + col * pixelStride
+                if (index >= src.limit() || out >= output.size) return
+                output[out] = src.get(index)
+                out += outputPixelStride
+            }
+        }
     }
 
     private fun stopEverything() {
@@ -268,6 +432,7 @@ class ScreenCaptureService : Service(), LifecycleOwner {
         stopEverything()
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
         try { cameraExecutor.shutdown() } catch (e: Exception) {}
+        try { networkExecutor.shutdownNow() } catch (e: Exception) {}
         super.onDestroy()
     }
 

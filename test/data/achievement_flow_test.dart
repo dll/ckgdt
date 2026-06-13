@@ -98,20 +98,33 @@ void main() {
 
   test('聚合录入后，平时/实验/考核三个分项 tab 不再"暂无数据"', () async {
     final batchId = await dao.addBatch(
-      batchName: '计科22达成', courseName: '移动应用开发',
-      className: '计科22', semester: '2025-2026-1', teacherId: 't1',
+      batchName: '计科22达成',
+      courseName: '移动应用开发',
+      className: '计科22',
+      semester: '2025-2026-1',
+      teacherId: 't1',
     );
 
     // 模拟"成绩管理"手动录入：仅写聚合表（addScore 路径），不写分项表
     await dao.addScore(
-      batchId: batchId, studentId: '2022210332', studentName: '陈晨',
-      objective1Score: 13, objective2Score: 22,
-      objective3Score: 24, objective4Score: 27, totalScore: 86,
+      batchId: batchId,
+      studentId: '2022210332',
+      studentName: '陈晨',
+      objective1Score: 13,
+      objective2Score: 22,
+      objective3Score: 24,
+      objective4Score: 27,
+      totalScore: 86,
     );
     await dao.addScore(
-      batchId: batchId, studentId: '2022210333', studentName: '陈创东',
-      objective1Score: 12, objective2Score: 20,
-      objective3Score: 21, objective4Score: 24, totalScore: 77,
+      batchId: batchId,
+      studentId: '2022210333',
+      studentName: '陈创东',
+      objective1Score: 12,
+      objective2Score: 20,
+      objective3Score: 21,
+      objective4Score: 24,
+      totalScore: 77,
     );
 
     // 修复前：分项表为空 → 三个 getter 返回 []（tab 显示"暂无数据"）
@@ -142,11 +155,14 @@ void main() {
 
     // 回归：三个 getter 返回的列表必须可原地排序（修复前 sqflite 只读列表
     // 会抛 "Unsupported operation: read-only"，导致 tab 显示"暂无数据"）。
-    expect(() => sortScoresInPlace(pingshi, ScoreSort.totalDesc), returnsNormally);
-    expect(() => sortScoresInPlace(experiment, ScoreSort.idAsc), returnsNormally);
+    expect(
+        () => sortScoresInPlace(pingshi, ScoreSort.totalDesc), returnsNormally);
+    expect(
+        () => sortScoresInPlace(experiment, ScoreSort.idAsc), returnsNormally);
     expect(() => sortScoresInPlace(exam, ScoreSort.totalAsc), returnsNormally);
     final aggList = await dao.getScoresByBatch(batchId);
-    expect(() => sortScoresInPlace(aggList, ScoreSort.totalDesc), returnsNormally);
+    expect(
+        () => sortScoresInPlace(aggList, ScoreSort.totalDesc), returnsNormally);
   });
 
   test('幂等：真实分项导入后，再读不会被聚合回填覆盖', () async {
@@ -208,6 +224,23 @@ void main() {
 
     final experiments = await dao.getExperimentScores(batchId);
     final row = experiments.firstWhere((r) => r['student_id'] == '2022210333');
+    final pingshi = await dao.getPingshiScores(batchId);
+    final psRow = pingshi.firstWhere((r) => r['student_id'] == '2022210333');
+    expect(
+      (psRow['class_activity_achievement'] as num).toDouble(),
+      closeTo(0.81, 0.0001),
+      reason: '平时目标1应读取学校模板 N 列最后得分，而不是 C 列原始小项',
+    );
+    expect(
+      (psRow['quiz_homework_achievement'] as num).toDouble(),
+      closeTo(0.85, 0.0001),
+      reason: '平时目标2应读取学校模板 Z 列平均分',
+    );
+    expect(
+      (psRow['extra_learning_achievement'] as num).toDouble(),
+      closeTo(0.90, 0.0001),
+      reason: '平时目标4应读取学校模板 AK 列平均分',
+    );
     expect(
       (row['obj3_achievement'] as num).toDouble(),
       closeTo(0.925, 0.0001),
@@ -217,6 +250,45 @@ void main() {
       (row['obj4_achievement'] as num).toDouble(),
       closeTo(0.6, 0.0001),
       reason: '实验7=60，应支撑目标4',
+    );
+  });
+
+  test('软件23三表数据导入：平时不丢分，6实验模板目标4不为0', () async {
+    final file = File('data/达成/软件23《移动应用开发》课程达成评价表格86.xlsx');
+    expect(await file.exists(), isTrue, reason: '软件23达成数据文件必须存在');
+
+    final batchId = await dao.addBatch(
+      batchName: '软件23三表导入',
+      courseName: '移动应用开发',
+      className: '软件23',
+      semester: '2025-2026-2',
+      teacherId: 't1',
+    );
+
+    final components = AchievementExcelService.instance
+        .parseComponentSheets(await file.readAsBytes());
+    expect(components['pingshi']?.length, 85);
+    expect(components['experiment']?.length, 85);
+    expect(components['exam']?.length, 85);
+
+    await dao.importComponentsToDatabase(batchId, components);
+
+    final pingshi = await dao.getPingshiScores(batchId);
+    final psRow = pingshi.firstWhere((r) => r['student_id'] == '2020210158');
+    expect(
+        (psRow['class_activity_score'] as num).toDouble(), closeTo(71, 0.01));
+    expect((psRow['quiz_homework_score'] as num).toDouble(), closeTo(72, 0.01));
+    expect(
+        (psRow['extra_learning_score'] as num).toDouble(), closeTo(68, 0.01));
+
+    final experiments = await dao.getExperimentScores(batchId);
+    final expRow =
+        experiments.firstWhere((r) => r['student_id'] == '2020210158');
+    expect((expRow['exp7_score'] as num).toDouble(), closeTo(0, 0.01));
+    expect(
+      (expRow['obj4_achievement'] as num).toDouble(),
+      closeTo(0.68, 0.0001),
+      reason: '6实验模板中实验6应支撑目标4，不能因为 exp7 为空导出/计算为0',
     );
   });
 }

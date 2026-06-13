@@ -1,0 +1,76 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:1920px;height:1080px;overflow:hidden;font-family:'Microsoft YaHei','PingFang SC','Noto Sans CJK SC',sans-serif;
+  color:#EAF2FF;background:#0A1428;}
+.stage{position:relative;width:1920px;height:1080px;
+  background:
+    radial-gradient(1100px 700px at 78% 12%, rgba(34,211,238,0.10), transparent 60%),
+    radial-gradient(900px 700px at 12% 92%, rgba(56,189,248,0.08), transparent 60%),
+    linear-gradient(135deg,#070D1B 0%,#0A1428 45%,#0E1C38 100%);
+  overflow:hidden;}
+.grid{position:absolute;inset:0;
+  background-image:linear-gradient(rgba(120,170,230,0.16) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(120,170,230,0.16) 1px,transparent 1px);
+  background-size:60px 60px;opacity:.55;}
+.scan{position:absolute;inset:0;background:repeating-linear-gradient(
+  0deg,transparent 0 3px,rgba(0,0,0,0.10) 3px 4px);opacity:.25;}
+.corner{position:absolute;width:54px;height:54px;border:2px solid #22D3EE;opacity:.5;}
+.corner.tl{top:40px;left:40px;border-right:none;border-bottom:none;}
+.corner.tr{top:40px;right:40px;border-left:none;border-bottom:none;}
+.corner.bl{bottom:40px;left:40px;border-right:none;border-top:none;}
+.corner.br{bottom:40px;right:40px;border-left:none;border-top:none;}
+.head{position:absolute;top:54px;left:96px;right:96px;display:flex;
+  align-items:center;justify-content:space-between;z-index:5;}
+.kicker{display:flex;align-items:center;gap:18px;}
+.kdot{width:13px;height:13px;border-radius:50%;background:#22D3EE;
+  box-shadow:0 0 16px #22D3EE;}
+.ktext{font-size:23px;letter-spacing:6px;color:#22D3EE;font-weight:700;}
+.kid{font-size:19px;letter-spacing:3px;color:#5C7290;font-family:Consolas,monospace;}
+.title{position:absolute;left:96px;top:118px;z-index:5;}
+.title h1{font-size:60px;font-weight:800;letter-spacing:2px;line-height:1.15;}
+.title .bar{width:120px;height:6px;margin-top:24px;border-radius:3px;
+  background:linear-gradient(90deg,#22D3EE,#38BDF8);box-shadow:0 0 22px rgba(34,211,238,.6);}
+.foot{position:absolute;bottom:50px;left:96px;right:96px;display:flex;
+  justify-content:space-between;align-items:center;color:#5C7290;
+  font-size:19px;letter-spacing:2px;z-index:5;}
+.foot .fr{font-family:Consolas,monospace;}
+.accent{color:#22D3EE;} .amber{color:#FBBF24;}
+.green{color:#34D399;} .red{color:#F8717A;}
+
+.gp-cols{position:absolute;top:298px;left:96px;right:96px;display:grid;
+  grid-template-columns:1fr 1fr;gap:40px;z-index:5;}
+.gp-col h3{font-size:30px;font-weight:800;margin-bottom:24px;display:flex;
+  align-items:center;gap:16px;}
+.gp-col h3 .pill{font-size:18px;padding:5px 16px;border-radius:20px;letter-spacing:2px;}
+.gp-item{padding:24px 30px;border-radius:14px;margin-bottom:20px;
+  background:linear-gradient(160deg,#101F3D,rgba(14,28,56,.55));
+  border:1px solid #1B3258;}
+.gp-item .t{font-size:23px;font-weight:700;margin-bottom:8px;color:#CFE8FF;}
+.gp-item .d{font-size:19px;line-height:1.5;color:#8FA8C8;}
+.gp-gaps{position:absolute;bottom:96px;left:96px;right:96px;display:grid;
+  grid-template-columns:repeat(3,1fr);gap:28px;z-index:5;}
+.gp-gap{padding:26px 30px;border-radius:14px;border:1px solid rgba(248,113,122,.45);
+  background:rgba(248,113,122,.08);}
+.gp-gap .gt{font-size:24px;font-weight:800;color:#F8717A;margin-bottom:10px;}
+.gp-gap .gd{font-size:19px;line-height:1.5;color:#CFE8FF;}
+</style></head><body>
+<div class="stage"><div class="grid"></div><div class="scan"></div>
+<div class="corner tl"></div><div class="corner tr"></div>
+<div class="corner bl"></div><div class="corner br"></div>
+<div class="head"><div class="kicker">
+      <div class="kdot"></div><div class="ktext">第二部分 · 研究现状评述</div></div>
+      <div class="kid">MAD-FORM · 04 / 19</div></div><div class="title"><h1>研究现状与关键问题</h1><div class="bar"></div></div>
+      <div class="gp-cols">
+        <div class="gp-col"><h3>国内研究 <span class="pill" style="background:rgba(34,211,238,.15);color:#22D3EE">DOMESTIC</span></h3><div class="gp-item"><div class="t">编队控制理论</div>
+      <div class="d">段海滨·鸽群行为 / 朱战霞·协同编队综述 / 郭继峰·角色转换重构</div></div>
+      <div class="gp-item"><div class="t">任务分配与燃油经济</div>
+      <div class="d">周锐·分布式MPC / 刘树光·涡流节能机理 / 李杰·燃油最优轨迹</div></div></div>
+        <div class="gp-col"><h3>国外研究 <span class="pill" style="background:rgba(56,189,248,.15);color:#38BDF8">GLOBAL</span></h3><div class="gp-item"><div class="t">美国 · 世界领先</div>
+      <div class="d">“小精灵”空中回收 / “拒止环境协同” / “天空博格人”忠诚僚机</div></div>
+      <div class="gp-item"><div class="t">欧洲 · 未来空战系统</div>
+      <div class="d">有人/无人协同为核心，德国DLR涡流利用节能研究</div></div></div>
+      </div>
+      <div class="gp-gaps"><div class="gp-gap"><div class="gt">不足 1</div><div class="gd">控制与优化分离<br>控制聚焦稳定与精度，管理与优化各自独立，缺乏一体化设计</div></div><div class="gp-gap"><div class="gt">不足 2</div><div class="gd">动态适应性不足<br>多针对静态/预设场景，对成员动态加入退出应对乏力</div></div><div class="gp-gap"><div class="gt">不足 3</div><div class="gd">异构特性考虑不足<br>对平台异质性带来的控制与优化问题缺乏深入分析</div></div></div><div class="foot"><div>刘 畅 · 无人机运用与指挥</div>
+      <div class="fr">面向异构飞行器协同作战的编队策略研究</div></div>
+</div></body></html>

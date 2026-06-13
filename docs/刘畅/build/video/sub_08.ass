@@ -1,0 +1,14 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BackColour, Bold, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV
+Style: Def,Microsoft YaHei,46,&H00FFFFFF,&H00401B0A,&H96000000,1,3,3,1,2,170,170,72
+
+[Events]
+Format: Layer, Start, End, Style, Text
+Dialogue: 0,0:00:00.00,0:00:06.15,Def,,在统一架构下,本文将编队策略凝练为三大核心问题并进行数学描述。
+Dialogue: 0,0:00:06.15,0:00:25.61,Def,,第一,编队位置控制,目标是使各僚机相对长机的位置误差收敛至零;第二,动态加入退出,要在成员变更过程中保障编队稳定与任务连续;第三,经济巡航优化,在安全与速度约束下求解使总油耗最小的编队构型与速度。
+Dialogue: 0,0:00:25.61,0:00:28.39,Def,,下面分章汇报这三项关键技术。

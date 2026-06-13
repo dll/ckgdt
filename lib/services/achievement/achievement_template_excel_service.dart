@@ -132,6 +132,7 @@ class AchievementTemplateExcelService {
   /// xlsx whose filename contains the course name and "达成", without changing
   /// the calculation code.
   Future<File?> findTemplateForCourse(String courseName) async {
+    final profile = AchievementExcelTemplateProfile.schoolMobile48();
     final roots = <Directory>[
       Directory('data/达成'),
       Directory('${Directory.current.path}/data/达成'),
@@ -153,14 +154,46 @@ class AchievementTemplateExcelService {
         candidates.add(entity);
       }
     }
-    if (candidates.isEmpty) return null;
-    candidates.sort((a, b) {
+    final templates = <File>[];
+    for (final file in candidates) {
+      if (await _isSupportedTemplate(file, profile)) {
+        templates.add(file);
+      }
+    }
+    if (templates.isEmpty) return null;
+    templates.sort((a, b) {
       final an = a.path.contains('表格') ? 0 : 1;
       final bn = b.path.contains('表格') ? 0 : 1;
       if (an != bn) return an.compareTo(bn);
       return a.path.length.compareTo(b.path.length);
     });
-    return candidates.first;
+    return templates.first;
+  }
+
+  Future<bool> _isSupportedTemplate(
+    File file,
+    AchievementExcelTemplateProfile profile,
+  ) async {
+    try {
+      final archive = ZipDecoder().decodeBytes(await file.readAsBytes());
+      final files = <String, List<int>>{};
+      for (final f in archive.files) {
+        files[f.name] = f.content as List<int>;
+      }
+      final sheets = _sheetPaths(files).keys.toSet();
+      final requiredSheets = <String>{
+        profile.examSheet,
+        profile.experimentSheet,
+        profile.pingshiSheet,
+        profile.individualSheet,
+        profile.objectiveSheet,
+        profile.barSheet,
+        ...profile.scatterSheets,
+      };
+      return sheets.containsAll(requiredSheets);
+    } catch (_) {
+      return false;
+    }
   }
 
   Uint8List fillTemplate(
@@ -210,13 +243,19 @@ class AchievementTemplateExcelService {
       for (int i = 0; i < p.pingshi.length; i++) {
         final row = p.pingshi[i];
         final r = profile.componentDataStartRow + i;
+        final classActivity = _num(row, 'class_activity_score');
+        final quizHomework = _num(row, 'quiz_homework_score');
+        final extraLearning = _num(row, 'extra_learning_score');
         ws.text(r, 0, row['student_id']);
         ws.text(r, 1, row['student_name']);
-        ws.number(r, 13, _num(row, 'class_activity_score'), 1);
+        ws.number(r, 2, classActivity, 1);
+        ws.number(r, 13, classActivity, 1);
         ws.number(r, 14, _num(row, 'class_activity_achievement'), 4);
-        ws.number(r, 25, _num(row, 'quiz_homework_score'), 1);
+        ws.number(r, 15, quizHomework, 1);
+        ws.number(r, 25, quizHomework, 1);
         ws.number(r, 26, _num(row, 'quiz_homework_achievement'), 4);
-        ws.number(r, 36, _num(row, 'extra_learning_score'), 1);
+        ws.number(r, 27, extraLearning, 1);
+        ws.number(r, 36, extraLearning, 1);
         ws.number(r, 37, _num(row, 'extra_learning_achievement'), 4);
         ws.number(r, 38, _num(row, 'total_score'), 1);
       }
@@ -255,7 +294,7 @@ class AchievementTemplateExcelService {
         ws.number(r, 8, _num(row, 'exp5_score'), 1);
         ws.number(r, 9, _num(row, 'exp6_score'), 1);
         ws.number(r, 10, _num(row, 'obj3_achievement'), 4);
-        ws.number(r, 11, _num(row, 'exp7_score'), 1);
+        ws.number(r, 11, _experimentTarget4Score(row), 1);
         ws.number(r, 12, _num(row, 'obj4_achievement'), 4);
         ws.number(r, 13, _num(row, 'total_score'), 1);
       }
@@ -517,6 +556,13 @@ class AchievementTemplateExcelService {
     if (objective == 1) return _num(row, 'quiz_homework_achievement');
     if (objective == 2) return 0;
     return _num(row, 'extra_learning_achievement');
+  }
+
+  static double _experimentTarget4Score(Map<String, dynamic>? row) {
+    final exp7 = _num(row, 'exp7_score');
+    if (exp7 > 0) return exp7;
+    final obj4 = _num(row, 'obj4_achievement');
+    return obj4 > 0 ? obj4 * 100 : 0;
   }
 
   static double _averageTotal(List<Map<String, dynamic>> rows, String key) {

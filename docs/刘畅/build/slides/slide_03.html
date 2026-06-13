@@ -1,0 +1,85 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:1920px;height:1080px;overflow:hidden;font-family:'Microsoft YaHei','PingFang SC','Noto Sans CJK SC',sans-serif;
+  color:#EAF2FF;background:#0A1428;}
+.stage{position:relative;width:1920px;height:1080px;
+  background:
+    radial-gradient(1100px 700px at 78% 12%, rgba(34,211,238,0.10), transparent 60%),
+    radial-gradient(900px 700px at 12% 92%, rgba(56,189,248,0.08), transparent 60%),
+    linear-gradient(135deg,#070D1B 0%,#0A1428 45%,#0E1C38 100%);
+  overflow:hidden;}
+.grid{position:absolute;inset:0;
+  background-image:linear-gradient(rgba(120,170,230,0.16) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(120,170,230,0.16) 1px,transparent 1px);
+  background-size:60px 60px;opacity:.55;}
+.scan{position:absolute;inset:0;background:repeating-linear-gradient(
+  0deg,transparent 0 3px,rgba(0,0,0,0.10) 3px 4px);opacity:.25;}
+.corner{position:absolute;width:54px;height:54px;border:2px solid #22D3EE;opacity:.5;}
+.corner.tl{top:40px;left:40px;border-right:none;border-bottom:none;}
+.corner.tr{top:40px;right:40px;border-left:none;border-bottom:none;}
+.corner.bl{bottom:40px;left:40px;border-right:none;border-top:none;}
+.corner.br{bottom:40px;right:40px;border-left:none;border-top:none;}
+.head{position:absolute;top:54px;left:96px;right:96px;display:flex;
+  align-items:center;justify-content:space-between;z-index:5;}
+.kicker{display:flex;align-items:center;gap:18px;}
+.kdot{width:13px;height:13px;border-radius:50%;background:#22D3EE;
+  box-shadow:0 0 16px #22D3EE;}
+.ktext{font-size:23px;letter-spacing:6px;color:#22D3EE;font-weight:700;}
+.kid{font-size:19px;letter-spacing:3px;color:#5C7290;font-family:Consolas,monospace;}
+.title{position:absolute;left:96px;top:118px;z-index:5;}
+.title h1{font-size:60px;font-weight:800;letter-spacing:2px;line-height:1.15;}
+.title .bar{width:120px;height:6px;margin-top:24px;border-radius:3px;
+  background:linear-gradient(90deg,#22D3EE,#38BDF8);box-shadow:0 0 22px rgba(34,211,238,.6);}
+.foot{position:absolute;bottom:50px;left:96px;right:96px;display:flex;
+  justify-content:space-between;align-items:center;color:#5C7290;
+  font-size:19px;letter-spacing:2px;z-index:5;}
+.foot .fr{font-family:Consolas,monospace;}
+.accent{color:#22D3EE;} .amber{color:#FBBF24;}
+.green{color:#34D399;} .red{color:#F8717A;}
+
+.bl-wrap{position:absolute;top:296px;left:96px;right:720px;
+  display:flex;flex-direction:column;gap:26px;z-index:5;}
+.bl-row{display:flex;align-items:flex-start;gap:26px;padding:26px 32px;
+  background:linear-gradient(160deg,#101F3D,rgba(14,28,56,.55));
+  border:1px solid #1B3258;border-left:5px solid #22D3EE;
+  border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,.3);}
+.bl-ic{flex:none;width:62px;height:62px;border-radius:14px;
+  background:rgba(34,211,238,.12);border:1px solid rgba(34,211,238,.4);
+  display:flex;align-items:center;justify-content:center;font-size:30px;
+  color:#22D3EE;font-weight:800;}
+.bl-t{font-size:27px;font-weight:800;margin-bottom:8px;}
+.bl-d{font-size:20px;line-height:1.55;color:#8FA8C8;}
+
+.bg-side{position:absolute;right:96px;top:300px;width:560px;z-index:5;}
+.bg-stat{padding:34px 38px;border-radius:18px;margin-bottom:26px;
+  background:linear-gradient(160deg,#101F3D,rgba(14,28,56,.6));
+  border:1px solid #1B3258;box-shadow:0 14px 36px rgba(0,0,0,.34);}
+.bg-stat .big{font-size:64px;font-weight:900;color:#22D3EE;font-family:Consolas,monospace;
+  text-shadow:0 0 26px rgba(34,211,238,.5);}
+.bg-stat .lab{font-size:21px;color:#8FA8C8;margin-top:6px;letter-spacing:2px;}
+.bg-q{padding:32px 36px;border-radius:18px;border:1px dashed rgba(251,191,36,.5);
+  background:rgba(251,191,36,.06);}
+.bg-q .qt{font-size:24px;font-weight:800;color:#FBBF24;margin-bottom:12px;letter-spacing:2px;}
+.bg-q p{font-size:20px;line-height:1.6;color:#CFE8FF;}
+</style></head><body>
+<div class="stage"><div class="grid"></div><div class="scan"></div>
+<div class="corner tl"></div><div class="corner tr"></div>
+<div class="corner bl"></div><div class="corner br"></div>
+<div class="head"><div class="kicker">
+      <div class="kdot"></div><div class="ktext">第一部分 · 研究背景与意义</div></div>
+      <div class="kid">MAD-FORM · 03 / 19</div></div><div class="title"><h1>研究背景与意义</h1><div class="bar"></div></div><div class="bl-wrap"><div class="bl-row">
+          <div class="bl-ic">演</div>
+          <div><div class="bl-t">作战形态演进</div><div class="bl-d">智能化、无人化、体系化加速发展，异构协同成战略制高点</div></div></div><div class="bl-row">
+          <div class="bl-ic">研</div>
+          <div><div class="bl-t">世界竞相布局</div><div class="bl-d">美军“忠诚僚机”、DARPA“蜂群”，我国“十四五”加快无人作战力量建设</div></div></div><div class="bl-row">
+          <div class="bl-ic">挑</div>
+          <div><div class="bl-t">四大技术挑战</div><div class="bl-d">平台异质 · 环境动态 · 任务多样 · 资源有限</div></div></div><div class="bl-row">
+          <div class="bl-ic">需</div>
+          <div><div class="bl-t">传统方法失效</div><div class="bl-d">静态、同构、单目标的编队方法难以满足复杂战场需求</div></div></div></div><div class="bg-side">
+      <div class="bg-stat"><div class="big">3 类</div><div class="lab">异构平台 · 有人机 / 攻击无人机 / 侦察无人机</div></div>
+      <div class="bg-stat"><div class="big">4 重</div><div class="lab">核心挑战 · 异质 · 动态 · 多样 · 受限</div></div>
+      <div class="bg-q"><div class="qt">▶ 研究切入点</div>
+        <p>面向动态、异构、强对抗、资源约束环境，重构编队策略体系</p></div></div><div class="foot"><div>刘 畅 · 无人机运用与指挥</div>
+      <div class="fr">面向异构飞行器协同作战的编队策略研究</div></div>
+</div></body></html>

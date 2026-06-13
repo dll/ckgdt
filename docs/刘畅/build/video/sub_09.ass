@@ -1,0 +1,16 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BackColour, Bold, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV
+Style: Def,Microsoft YaHei,46,&H00FFFFFF,&H00401B0A,&H96000000,1,3,3,1,2,170,170,72
+
+[Events]
+Format: Layer, Start, End, Style, Text
+Dialogue: 0,0:00:00.00,0:00:04.66,Def,,第一项关键技术,基于干扰观测的编队位置鲁棒控制。
+Dialogue: 0,0:00:04.66,0:00:11.44,Def,,传统PID是被动纠偏,必须等偏差产生后才能修正,对持续强干扰响应滞后。
+Dialogue: 0,0:00:11.44,0:00:17.26,Def,,本文在一致性协议的基础上引入干扰观测器,实现先补偿、后纠偏。
+Dialogue: 0,0:00:17.26,0:00:24.25,Def,,通过残差观测、干扰估计、前馈补偿三步,在干扰造成显著位偏之前就将其抵消。
+Dialogue: 0,0:00:24.25,0:00:32.98,Def,,同时采用李雅普诺夫-克拉索夫斯基泛函方法处理通信时延,把时延从事后处理转变为事前设计约束。

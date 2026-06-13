@@ -1,0 +1,68 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:1920px;height:1080px;overflow:hidden;font-family:'Microsoft YaHei','PingFang SC','Noto Sans CJK SC',sans-serif;
+  color:#EAF2FF;background:#0A1428;}
+.stage{position:relative;width:1920px;height:1080px;
+  background:
+    radial-gradient(1100px 700px at 78% 12%, rgba(34,211,238,0.10), transparent 60%),
+    radial-gradient(900px 700px at 12% 92%, rgba(56,189,248,0.08), transparent 60%),
+    linear-gradient(135deg,#070D1B 0%,#0A1428 45%,#0E1C38 100%);
+  overflow:hidden;}
+.grid{position:absolute;inset:0;
+  background-image:linear-gradient(rgba(120,170,230,0.16) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(120,170,230,0.16) 1px,transparent 1px);
+  background-size:60px 60px;opacity:.55;}
+.scan{position:absolute;inset:0;background:repeating-linear-gradient(
+  0deg,transparent 0 3px,rgba(0,0,0,0.10) 3px 4px);opacity:.25;}
+.corner{position:absolute;width:54px;height:54px;border:2px solid #22D3EE;opacity:.5;}
+.corner.tl{top:40px;left:40px;border-right:none;border-bottom:none;}
+.corner.tr{top:40px;right:40px;border-left:none;border-bottom:none;}
+.corner.bl{bottom:40px;left:40px;border-right:none;border-top:none;}
+.corner.br{bottom:40px;right:40px;border-left:none;border-top:none;}
+.head{position:absolute;top:54px;left:96px;right:96px;display:flex;
+  align-items:center;justify-content:space-between;z-index:5;}
+.kicker{display:flex;align-items:center;gap:18px;}
+.kdot{width:13px;height:13px;border-radius:50%;background:#22D3EE;
+  box-shadow:0 0 16px #22D3EE;}
+.ktext{font-size:23px;letter-spacing:6px;color:#22D3EE;font-weight:700;}
+.kid{font-size:19px;letter-spacing:3px;color:#5C7290;font-family:Consolas,monospace;}
+.title{position:absolute;left:96px;top:118px;z-index:5;}
+.title h1{font-size:60px;font-weight:800;letter-spacing:2px;line-height:1.15;}
+.title .bar{width:120px;height:6px;margin-top:24px;border-radius:3px;
+  background:linear-gradient(90deg,#22D3EE,#38BDF8);box-shadow:0 0 22px rgba(34,211,238,.6);}
+.foot{position:absolute;bottom:50px;left:96px;right:96px;display:flex;
+  justify-content:space-between;align-items:center;color:#5C7290;
+  font-size:19px;letter-spacing:2px;z-index:5;}
+.foot .fr{font-family:Consolas,monospace;}
+.accent{color:#22D3EE;} .amber{color:#FBBF24;}
+.green{color:#34D399;} .red{color:#F8717A;}
+
+.pb{position:absolute;top:308px;left:96px;right:96px;display:grid;
+  grid-template-columns:repeat(3,1fr);gap:36px;z-index:5;}
+.pb-card{position:relative;border-radius:20px;padding:44px 38px;overflow:hidden;
+  background:linear-gradient(165deg,#101F3D,rgba(14,28,56,.6));
+  border:1px solid #1B3258;box-shadow:0 18px 46px rgba(0,0,0,.36);height:520px;}
+.pb-q{font-family:Consolas,monospace;font-size:30px;font-weight:900;color:#22D3EE;
+  margin-bottom:20px;}
+.pb-card h3{font-size:32px;font-weight:900;margin-bottom:20px;line-height:1.25;}
+.pb-goal{font-size:21px;line-height:1.6;color:#8FA8C8;margin-bottom:24px;}
+.pb-eq{margin-top:auto;padding:20px 24px;border-radius:12px;font-family:Consolas,monospace;
+  font-size:21px;color:#CFE8FF;background:rgba(0,0,0,.28);border:1px solid #1B3258;
+  position:absolute;bottom:38px;left:38px;right:38px;}
+.pb-eq .lab{font-size:16px;color:#5C7290;display:block;margin-bottom:6px;}
+</style></head><body>
+<div class="stage"><div class="grid"></div><div class="scan"></div>
+<div class="corner tl"></div><div class="corner tr"></div>
+<div class="corner bl"></div><div class="corner br"></div>
+<div class="head"><div class="kicker">
+      <div class="kdot"></div><div class="ktext">系统建模 · 三大核心问题</div></div>
+      <div class="kid">MAD-FORM · 08 / 19</div></div><div class="title"><h1>三大核心问题数学描述</h1><div class="bar"></div></div><div class="pb"><div class="pb-card"><div class="pb-q">Q1</div>
+          <h3>编队位置精确控制</h3><div class="pb-goal">使各僚机相对长机的位置误差收敛至零，克服外部扰动、平台差异与通信时延。</div>
+          <div class="pb-eq"><span class="lab">目标</span>lim‖pᵢ−p₀−dᵢ‖ → 0</div></div><div class="pb-card"><div class="pb-q">Q2</div>
+          <h3>成员动态加入/退出</h3><div class="pb-goal">在战损、燃油告警、任务变更时，保障编队整体稳定性与任务连续性。</div>
+          <div class="pb-eq"><span class="lab">原则</span>渐进式交接 · 平滑过渡</div></div><div class="pb-card"><div class="pb-q">Q3</div>
+          <h3>经济巡航协同优化</h3><div class="pb-goal">在安全间距与速度约束下，求解使编队总油耗最小的构型与巡航速度。</div>
+          <div class="pb-eq"><span class="lab">目标</span>min Σ mᵢ(构型, 速度)</div></div></div><div class="foot"><div>刘 畅 · 无人机运用与指挥</div>
+      <div class="fr">面向异构飞行器协同作战的编队策略研究</div></div>
+</div></body></html>

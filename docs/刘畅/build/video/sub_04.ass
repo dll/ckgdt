@@ -1,0 +1,14 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BackColour, Bold, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV
+Style: Def,Microsoft YaHei,46,&H00FFFFFF,&H00401B0A,&H96000000,1,3,3,1,2,170,170,72
+
+[Events]
+Format: Layer, Start, End, Style, Text
+Dialogue: 0,0:00:00.00,0:00:13.71,Def,,在研究现状方面,国内段海滨、朱战霞、郭继峰等团队在编队控制、任务分配、燃油经济性上已有系统积累;国外美国的小精灵、天空博格人项目处于领先地位。
+Dialogue: 0,0:00:13.71,0:00:28.97,Def,,但综合来看,现有研究存在三点不足:一是控制与优化相互分离,缺乏一体化设计;二是动态适应性不足,对成员动态加入退出等突发情况应对乏力;三是对异构特性考虑不充分。
+Dialogue: 0,0:00:28.97,0:00:31.87,Def,,本研究正是针对这三点不足展开。

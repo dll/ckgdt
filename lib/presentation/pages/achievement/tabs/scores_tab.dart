@@ -265,7 +265,16 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
       final students = _selectedBatchId != null
           ? await widget.achievementDao.getScoresByBatch(_selectedBatchId!)
           : <Map<String, dynamic>>[];
-      final cfgRows = await widget.achievementDao.getCourseObjectives('移动应用开发');
+      // 从当前批次获取课程名，加载对应课程目标配置
+      String courseName = '移动应用开发';
+      if (_selectedBatchId != null) {
+        final batch = _batches.firstWhere(
+          (b) => b['id'] == _selectedBatchId,
+          orElse: () => {},
+        );
+        courseName = batch['course_name']?.toString() ?? courseName;
+      }
+      final cfgRows = await widget.achievementDao.getCourseObjectives(courseName);
       final cfg = cfgRows.isNotEmpty
           ? AchievementConfig.fromObjectiveRows(cfgRows)
           : AchievementConfig.defaults;

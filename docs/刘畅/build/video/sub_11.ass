@@ -1,0 +1,15 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BackColour, Bold, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV
+Style: Def,Microsoft YaHei,46,&H00FFFFFF,&H00401B0A,&H96000000,1,3,3,1,2,170,170,72
+
+[Events]
+Format: Layer, Start, End, Style, Text
+Dialogue: 0,0:00:00.00,0:00:02.93,Def,,这是五架飞行器的二维飞行轨迹。
+Dialogue: 0,0:00:02.93,0:00:08.78,Def,,红色三角为长机,蓝色方块为攻击无人机,绿色圆点为侦察无人机。
+Dialogue: 0,0:00:08.78,0:00:20.67,Def,,可以清楚看到编队形成的全过程:初始时刻各机分散,过渡阶段快速向期望位置收敛,稳态阶段形成规整编队,位置误差维持在一米以内。
+Dialogue: 0,0:00:20.67,0:00:27.70,Def,,即使遭遇阵风,队形也仅轻微波动并迅速恢复,直观验证了方法的抗干扰鲁棒性。
