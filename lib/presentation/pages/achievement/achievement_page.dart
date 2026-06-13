@@ -1,13 +1,18 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../core/design/noir_tokens.dart';
 import '../../../data/local/achievement_dao.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/output_path_service.dart';
 import '../../widgets/agent_entry_button.dart';
 import '../../widgets/inner_tab_request_mixin.dart';
+import '../../pages/learning/video_player_page.dart';
 import 'tabs/overview_tab.dart';
 import 'tabs/scores_tab.dart';
 import 'tabs/report_tab.dart';
 import 'tabs/analysis_tab.dart';
+import 'tabs/achievement_help_page.dart';
 
 /// 课程达成度计算系统 — 8 Tab 壳页面
 ///
@@ -68,6 +73,32 @@ class _AchievementPageState extends State<AchievementPage>
     super.dispose();
   }
 
+  Future<void> _playGuideVideo() async {
+    try {
+      // 从 asset 复制到临时目录供 media_kit 播放
+      final data = await rootBundle.load('assets/help/achievement_guide.mp4');
+      final bytes = data.buffer.asUint8List();
+      final tempDir = Directory.systemTemp.createTempSync('achievement_video_');
+      final file = File('${tempDir.path}${Platform.pathSeparator}achievement_guide.mp4');
+      await file.writeAsBytes(bytes, flush: true);
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => InAppVideoPlayerPage(
+            filePath: file.path,
+            title: '达成度评价系统操作指南',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('视频加载失败: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final accent = Theme.of(context).colorScheme.primary;
@@ -123,11 +154,28 @@ class _AchievementPageState extends State<AchievementPage>
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Theme(
-                  // 顶栏入口在黑底上要可见，反转图标颜色
                   data: Theme.of(context).copyWith(
                     iconTheme: const IconThemeData(color: Colors.white),
                   ),
-                  child: const AgentEntryButton(agentId: 'achievement'),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.play_circle_outline, size: 20),
+                        tooltip: '播放操作视频',
+                        onPressed: _playGuideVideo,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.menu_book_outlined, size: 20),
+                        tooltip: '达成度帮助',
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const AchievementHelpPage()),
+                        ),
+                      ),
+                      const AgentEntryButton(agentId: 'achievement'),
+                    ],
+                  ),
                 ),
               ),
             ],

@@ -420,7 +420,11 @@ class AchievementExcelService {
     // 布局识别：本系统模板把 课堂/测验/大作业 放在第 2/3/4 列；
     // 学校原始模板(表格48)是复杂多列，达成度子列在 13/25/36。
     final headerC2 = _cellStr(table.rows[hr], 2);
-    final simple = headerC2.contains('课堂');
+    final headerD = _cellStr(table.rows[hr], 3);
+    final headerE = _cellStr(table.rows[hr], 4);
+    final simple = headerC2.contains('课堂') &&
+        headerD.contains('测验') &&
+        (headerE.contains('课外') || headerE.contains('大作业'));
     final cActivity = simple ? 2 : 13;
     final cQuiz = simple ? 3 : 25;
     final cExtra = simple ? 4 : 36;
@@ -514,7 +518,11 @@ class AchievementExcelService {
     final hr = _findStudentHeaderRowRows(tableRows);
     if (hr < 0) return [];
     final headerC2 = _rowCellStr(tableRows[hr], 2);
-    final simple = headerC2.contains('课堂');
+    final headerD = _rowCellStr(tableRows[hr], 3);
+    final headerE = _rowCellStr(tableRows[hr], 4);
+    final simple = headerC2.contains('课堂') &&
+        headerD.contains('测验') &&
+        (headerE.contains('课外') || headerE.contains('大作业'));
     final cActivity = simple ? 2 : 13;
     final cQuiz = simple ? 3 : 25;
     final cExtra = simple ? 4 : 36;
@@ -677,7 +685,7 @@ class AchievementExcelService {
     const system = '你是高校课程达成度评价专家，精通工程教育认证。'
         '请仔细阅读课程教学大纲，提取 4 个课程目标的完整结构化信息，只返回 JSON，不要任何解释文字。';
     final prompt = '''
-阅读以下《移动应用开发》课程教学大纲，提取每个课程目标的信息。
+阅读以下课程教学大纲，提取每个课程目标的信息。
 重点全面解析：
 1. 课程目标的描述、支撑的毕业要求指标点(如 1.4)、权重(小数)、满分；
 2. 哪些章节支撑该目标(章节号)；

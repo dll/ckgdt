@@ -31,6 +31,7 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
   List<Map<String, dynamic>> _batches = [];
   List<Map<String, dynamic>> _objectives = [];
   bool _loading = true;
+  String _currentCourseName = '移动应用开发';
 
   @override
   void initState() {
@@ -41,9 +42,13 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
   Future<void> _loadBatches() async {
     try {
       final batches = await widget.achievementDao.getBatches();
+      // 从已有批次推断当前课程名；无批次时保留默认
+      if (batches.isNotEmpty) {
+        _currentCourseName = batches.first['course_name']?.toString() ?? '移动应用开发';
+      }
       // 课程大纲(课程目标)是课程级数据，已导入则常驻显示
       final objectives =
-          await widget.achievementDao.getCourseObjectives('移动应用开发');
+          await widget.achievementDao.getCourseObjectives(_currentCourseName);
       if (mounted) {
         setState(() {
           _batches = batches;
@@ -51,10 +56,10 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
           _loading = false;
         });
       }
-      // 数据不完整(chapters/experiments为空)时自动用内置大纲AI解析补全
+      // 数据不完整(chapters/experiments为空)时自动用内置大纲AI解析补全（仅默认课程）
       final needsAi = objectives.isEmpty ||
           objectives.every((o) => (o['chapters'] ?? '').toString().isEmpty);
-      if (needsAi) {
+      if (needsAi && _currentCourseName == '移动应用开发') {
         _autoParseBundledSyllabus();
       }
     } catch (e) {
@@ -75,8 +80,8 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
         rows = svc.syllabusToObjectiveRows(svc.parseSyllabusBytes(Uint8List.fromList(raw.codeUnits), 'md'));
       }
       if (rows.isNotEmpty) {
-        await widget.achievementDao.saveCourseObjectives('移动应用开发', rows);
-        final objectives = (await widget.achievementDao.getCourseObjectives('移动应用开发'))
+        await widget.achievementDao.saveCourseObjectives(_currentCourseName, rows);
+        final objectives = (await widget.achievementDao.getCourseObjectives(_currentCourseName))
             .where((o) => ((o['idx'] as num?)?.toInt() ?? 0) <= 4).toList();
         if (mounted) setState(() => _objectives = objectives);
       }
@@ -122,10 +127,15 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
         rows = svc.syllabusToObjectiveRows(parsed);
       }
       if (rows.isEmpty) throw StateError('未从大纲中识别到课程目标/权重');
+      // 尝试从解析结果推断课程名（parsed 中可能含 'courseName' 字段）
+      final parsedCourseName = parsed['courseName']?.toString().trim();
+      if (parsedCourseName != null && parsedCourseName.isNotEmpty) {
+        _currentCourseName = parsedCourseName;
+      }
       if (!mounted) return;
       final edited = await _showSyllabusPreview(rows);
       if (edited == null) return; // 用户取消
-      await widget.achievementDao.saveCourseObjectives('移动应用开发', edited);
+      await widget.achievementDao.saveCourseObjectives(_currentCourseName, edited);
       await _loadBatches(); // 刷新常驻大纲展示
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -154,7 +164,7 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
 
   void _showCreateBatchDialog() {
     final nameCtrl = TextEditingController();
-    final courseCtrl = TextEditingController(text: '移动应用开发');
+    final courseCtrl = TextEditingController(text: _currentCourseName);
     final classCtrl = TextEditingController();
     final semesterCtrl = TextEditingController(text: '2024-2025-2');
 
@@ -373,7 +383,7 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
     );
   }
 
-  /// 常驻显示已导入的课程大纲（课程目标）。课程为《移动应用开发》，
+  /// 常驻显示已导入的课程大纲（课程目标）。大纲已导入则直接展示，
   /// 大纲已导入则直接展示，无需用户操作；重新上传会刷新此卡片。
   Widget _buildSyllabusCard(Color primary) {
     if (_objectives.isEmpty) {
@@ -386,7 +396,7 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
             Icon(Icons.menu_book_outlined, color: primary, size: 20),
             const SizedBox(width: 8),
             const Expanded(
-              child: Text('尚未导入课程大纲，点击右下角「上传课程大纲」导入《移动应用开发》大纲',
+              child: Text('尚未导入课程大纲，点击右下角「上传课程大纲」导入大纲',
                   style: TextStyle(fontSize: 12, color: Colors.grey)),
             ),
           ]),
@@ -402,8 +412,8 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
           Row(children: [
             Icon(Icons.menu_book, color: primary, size: 22),
             const SizedBox(width: 8),
-            const Expanded(
-              child: Text('课程大纲 · 移动应用开发',
+            Expanded(
+              child: Text('课程大纲 · $_currentCourseName',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
             TextButton.icon(

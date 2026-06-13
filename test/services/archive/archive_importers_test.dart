@@ -49,11 +49,12 @@ Content-Location: http://x/
   });
 
   group('ArchiveImporters.parseTeachingTask', () {
-    test('命中移动应用开发行 → 生成任务书 Markdown', () {
+    test('命中课程行 → 生成任务书 Markdown（横排 10 列）', () {
       const html = '''
 经学校批准聘请张三老师担任2025-2026学年第二学期以下教学任务
 <table>
-<tr><td>移动应用开发</td><td>必修</td><td>48</td><td>32</td><td>0</td><td>16</td><td>16</td><td>软件231</td><td>45</td><td>无</td></tr>
+<tr><td>课程名称</td><td>课程类别</td><td>总学时</td><td>讲授</td><td>实验</td><td>实践</td><td>课外自主</td><td>教学班级</td><td>计划人数</td><td>备注</td></tr>
+<tr><td>移动应用开发</td><td>必修</td><td>48</td><td>32</td><td>16</td><td>0</td><td>0</td><td>软件231</td><td>45</td><td>无</td></tr>
 </table>''';
       final md = ArchiveImporters.parseTeachingTask(html, now: fixedNow);
       expect(md, isNotNull);
@@ -61,14 +62,42 @@ Content-Location: http://x/
       expect(md, contains('张三'));
       expect(md, contains('移动应用开发'));
       expect(md, contains('2026-05-30 10:00'));
+      // 列序：实验=16 在「实验」列、实践=0 在「实践」列
+      expect(md, contains('| 移动应用开发 | 必修 | 48 | 32 | 16 | 0 | 0 | 软件231 | 45 | 无 |'));
+      // 表头不应被当作课程行
+      expect('| 课程名称 | 课程类别 |'.allMatches(md!).length, 1);
     });
 
-    test('无移动应用开发行 → 返回 null', () {
+    test('解析全部课程行（不再只留"移动应用开发"）', () {
       const html = '''
-经学校批准聘请李四老师担任本学期以下教学任务
+经学校批准聘请刘东良老师担任2026-2027学年第1学期以下教学任务
 <table>
-<tr><td>大学英语</td><td>必修</td><td>64</td><td>64</td><td>0</td><td>0</td><td>0</td><td>英语1班</td><td>50</td><td>无</td></tr>
+<tr><th>课程名称</th><th>课程类别</th><th>总学时</th><th>讲授</th><th>实验</th><th>实践</th><th>课外自主</th><th>教学班级</th><th>计划人数</th><th>备注</th></tr>
+<tr><td>办公软件高级应用</td><td>专业选修课</td><td>32</td><td>0</td><td>32</td><td>0</td><td>0</td><td>智能1班</td><td>50</td><td></td></tr>
+<tr><td>软件工程基础</td><td>专业基础课</td><td>48</td><td>32</td><td>16</td><td>0</td><td>0</td><td>软件231</td><td>66</td><td></td></tr>
 </table>''';
+      final md = ArchiveImporters.parseTeachingTask(html, now: fixedNow);
+      expect(md, isNotNull);
+      expect(md, contains('刘东良'));
+      expect(md, contains('办公软件高级应用'));
+      expect(md, contains('软件工程基础'));
+    });
+
+    test('教师手改 HTML 模板（<input value>）也能解析', () {
+      const html = '''
+<p>经学校批准聘请<input type="text" value="王老师">老师担任<input type="text" value="2026-2027学年第1学期">学期以下教学任务：</p>
+<table>
+<tr><th>课程名称</th><th>课程类别</th><th>总学时</th><th>讲授</th><th>实验</th><th>实践</th><th>课外自主</th><th>教学班级</th><th>计划人数</th><th>备注</th></tr>
+<tr><td>移动应用开发</td><td>考试</td><td>64</td><td>32</td><td>16</td><td>8</td><td>8</td><td>计科22</td><td>40</td><td></td></tr>
+</table>''';
+      final md = ArchiveImporters.parseTeachingTask(html, now: fixedNow);
+      expect(md, isNotNull);
+      expect(md, contains('王老师'));
+      expect(md, contains('| 移动应用开发 | 考试 | 64 | 32 | 16 | 8 | 8 | 计科22 | 40 |'));
+    });
+
+    test('无任何课程行 → 返回 null', () {
+      const html = '<p>经学校批准聘请李四老师担任本学期以下教学任务</p><table></table>';
       expect(ArchiveImporters.parseTeachingTask(html), isNull);
     });
   });

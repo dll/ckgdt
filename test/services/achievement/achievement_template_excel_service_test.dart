@@ -10,9 +10,17 @@ import 'package:knowledge_graph_app/services/achievement/achievement_template_ex
 import 'package:xml/xml.dart';
 
 void main() {
-  test('学校 Excel 模板填充：保留图表结构并替换关键数据单元格', () async {
+  test('模板查找跳过只有三张成绩表的数据源文件', () async {
     final template =
-        File('data/达成/计科22《移动应用开发》课程达成评价表格48.xlsx');
+        await AchievementTemplateExcelService.instance.findTemplateForCourse(
+      '移动应用开发',
+    );
+    expect(template, isNotNull);
+    expect(template!.path, isNot(contains('软件23《移动应用开发》课程达成评价表格86.xlsx')));
+  });
+
+  test('学校 Excel 模板填充：保留图表结构并替换关键数据单元格', () async {
+    final template = File('data/达成/计科22《移动应用开发》课程达成评价表格48.xlsx');
     expect(await template.exists(), isTrue);
     final sourceBytes = await template.readAsBytes();
 
@@ -66,6 +74,22 @@ void main() {
             'obj4_achievement': 0.40,
             'total_score': 70,
           },
+          {
+            'student_id': 'S002',
+            'student_name': '李四',
+            'exp1_score': 80,
+            'exp2_score': 70,
+            'exp3_score': 60,
+            'exp4_score': 50,
+            'exp5_score': 90,
+            'exp6_score': 83.3,
+            'exp7_score': 0,
+            'obj1_achievement': 0.75,
+            'obj2_achievement': 0.55,
+            'obj3_achievement': 0.90,
+            'obj4_achievement': 0.833,
+            'total_score': 72.2,
+          },
         ],
         exam: [
           {
@@ -96,15 +120,20 @@ void main() {
 
     final originalNames = _archiveNames(sourceBytes);
     final outputNames = _archiveNames(output);
-    expect(outputNames.containsAll(originalNames.where((n) =>
-        n.startsWith('xl/charts/') || n.startsWith('xl/drawings/'))), isTrue);
+    expect(
+        outputNames.containsAll(originalNames.where(
+            (n) => n.startsWith('xl/charts/') || n.startsWith('xl/drawings/'))),
+        isTrue);
 
     final pingshi = _sheetCells(output, '平时成绩');
     expect(pingshi['A1'], contains('2026-2027学年第1学期计科22《移动应用开发》'));
     expect(pingshi['A6'], 'S001');
     expect(pingshi['B6'], '张三');
+    expect(pingshi['C6'], '88.0');
     expect(pingshi['N6'], '88.0');
     expect(pingshi['O6'], '0.88');
+    expect(pingshi['P6'], '77.0');
+    expect(pingshi['AB6'], '99.0');
     expect(pingshi['AM6'], '88.9');
     expect(pingshi['A7'], isEmpty, reason: '旧模板学生数据应被清空');
 
@@ -112,6 +141,7 @@ void main() {
     expect(experiment['A6'], 'S001');
     expect(experiment['C6'], '100.0');
     expect(experiment['E6'], '0.95');
+    expect(experiment['L7'], '83.3', reason: '6实验数据导出到学校模板时，目标4得分不能显示为0');
     expect(experiment['N6'], '70.0');
 
     final individual = _sheetCells(output, '学生个体课程目标达成度');
@@ -147,8 +177,7 @@ Map<String, String> _sheetCells(Uint8List bytes, String sheetName) {
   if (files.containsKey('xl/sharedStrings.xml')) {
     final ss = XmlDocument.parse(text('xl/sharedStrings.xml'));
     for (final si in ss.findAllElements('si')) {
-      sharedStrings
-          .add(si.findAllElements('t').map((t) => t.innerText).join());
+      sharedStrings.add(si.findAllElements('t').map((t) => t.innerText).join());
     }
   }
 

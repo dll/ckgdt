@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:math';
-import 'dart:typed_data';
 
 import 'package:excel/excel.dart' as xl;
 import 'package:flutter/material.dart';
@@ -60,9 +59,9 @@ class _ReportTabState extends State<ReportTab> {
     _loadConfig();
   }
 
-  Future<void> _loadConfig() async {
+  Future<void> _loadConfig([String? courseName]) async {
     try {
-      final rows = await widget.achievementDao.getCourseObjectives('移动应用开发');
+      final rows = await widget.achievementDao.getCourseObjectives(courseName ?? '移动应用开发');
       if (mounted && rows.isNotEmpty) {
         setState(() => _config = AchievementConfig.fromObjectiveRows(rows));
       }
@@ -446,16 +445,18 @@ class _ReportTabState extends State<ReportTab> {
       buffer.writeln('### 1. 定量评价情况分析');
       buffer.writeln();
 
-      const objAnalysisDesc = [
-        '课程目标1主要考核学生掌握移动应用开发技术体系（原生/混合/跨平台）及主流平台特性，理解技术选型逻辑。'
-            '该目标通过平时课堂表现（20%）、实验1-2（30%）、期末项目（50%）三个环节综合评定。',
-        '课程目标2主要考核学生运用跨平台开发框架及小程序技术，结合AI编程工具与后端API交互，设计实现跨平台应用。'
-            '该目标通过平时测验（20%）、实验3-4（30%）、期末小组评价（50%）三个环节综合评定。',
-        '课程目标3主要考核学生调研对比多端开发方案，分析不同技术栈在跨设备适配场景中的优劣，具备技术方案评估与选型能力。'
-            '该目标通过实验5-6（30%）和期末个人考核（50%）两个环节评定（平时无该目标考核项）。',
-        '课程目标4主要考核学生遵循软件工程规范，使用现代开发工具完成应用测试与优化，具备工程实践能力。'
-            '该目标通过平时课外学习（20%）、实验7（30%）、期末答辩（50%）三个环节综合评定。',
-      ];
+      // 从课程配置动态生成分析描述（不再硬编码课程内容）
+      final objAnalysisDesc = List<String>.generate(4, (i) {
+        final desc = cfg.descriptions[i];
+        final assess = cfg.assessContents[i];
+        final parts = assess.split('、');
+        final envList = <String>[];
+        if (i != 2) envList.add('平时${parts.isNotEmpty ? "（${parts[0]}）" : ""}（20%）');
+        if (parts.length > 1) envList.add('实验（${parts[1]}）（30%）');
+        if (parts.length > 2) envList.add('期末（${parts[2]}）（50%）');
+        return '课程目标${i + 1}主要考核${desc.substring(0, desc.length.clamp(0, 30))}。'
+            '该目标通过${envList.join("、")}综合评定。';
+      });
 
       for (int i = 0; i < 4; i++) {
         final a = _objectiveAchievements[i];
@@ -548,10 +549,9 @@ class _ReportTabState extends State<ReportTab> {
       buffer.writeln();
       buffer.writeln('针对上一轮该课程教学持续改进意见，在本轮教学中持续改进的措施执行情况如下：');
       buffer.writeln();
-      buffer
-          .writeln('1. 在平时作业中加大关于运用移动应用开发技术体系分析实际应用问题的题目训练，实现期末考核内容与平时训练内容相一致');
+      buffer.writeln('1. 在平时作业中加大与课程目标相关的分析应用问题的题目训练，实现期末考核内容与平时训练内容相一致');
       buffer.writeln(
-          '2. 在每一章结束后，在作业中增加与该章知识点相关的英文期刊文献阅读培训，扩展学生的知识面并提高其英文文献的阅读与总结能力');
+          '2. 在每一章结束后，在作业中增加与该章知识点相关的文献阅读培训，扩展学生的知识面并提高其文献阅读与总结能力');
       buffer.writeln('3. 调整平时、实验以及期末的课程成绩比例，增加实验成绩比例，降低平时和期末的课程比例，注重学生的过程性考核');
       buffer.writeln();
       buffer.writeln('#### 后续教学持续改进措施');
@@ -560,12 +560,15 @@ class _ReportTabState extends State<ReportTab> {
       buffer.writeln();
       for (int i = 0; i < 4; i++) {
         final a = _objectiveAchievements[i];
+        final objDesc = cfg.descriptions[i].length > 20
+            ? cfg.descriptions[i].substring(0, 20)
+            : cfg.descriptions[i];
         if (a < 0.60) {
           buffer.writeln(
-              '${i + 1}. **${kObjectiveNames[i]}（${a.toStringAsFixed(4)}，未达标）**：大幅增加相关课时和实践环节，增设单元测验，对低分学生进行一对一辅导');
+              '${i + 1}. **${kObjectiveNames[i]}（${a.toStringAsFixed(4)}，未达标）**：大幅增加与「$objDesc」相关的课时和实践环节，增设单元测验，对低分学生进行一对一辅导');
         } else if (a < 0.70) {
           buffer.writeln(
-              '${i + 1}. ${kObjectiveNames[i]}（${a.toStringAsFixed(4)}）：加大跨平台开发方案的对比分析训练，增加知识图谱创建，补充测验题目');
+              '${i + 1}. ${kObjectiveNames[i]}（${a.toStringAsFixed(4)}）：加大「$objDesc」相关的对比分析训练，补充测验题目');
         } else {
           buffer.writeln(
               '${i + 1}. ${kObjectiveNames[i]}（${a.toStringAsFixed(4)}）：保持现有教学节奏，适当提高考核难度，培养学生创新能力');
@@ -820,6 +823,13 @@ class _ReportTabState extends State<ReportTab> {
       double val(Map? r, String key) => (r?[key] as num?)?.toDouble() ?? 0;
       double mapVal(Map m, int objectiveIndex) =>
           (m['obj${objectiveIndex + 1}'] as num?)?.toDouble() ?? 0;
+      double experimentTarget4Score(Map? row) {
+        final exp7 = val(row, 'exp7_score');
+        if (exp7 > 0) return exp7;
+        final obj4 = val(row, 'obj4_achievement');
+        return obj4 > 0 ? obj4 * 100 : 0;
+      }
+
       List<xl.CellValue?> rowOf(int len) =>
           List<xl.CellValue?>.filled(len, null);
 
@@ -855,13 +865,19 @@ class _ReportTabState extends State<ReportTab> {
       s1.appendRow(r);
       for (final row in pingshi) {
         r = rowOf(39);
+        final classActivity = val(row, 'class_activity_score');
+        final quizHomework = val(row, 'quiz_homework_score');
+        final extraLearning = val(row, 'extra_learning_score');
         r[0] = t(row['student_id']);
         r[1] = t(row['student_name']);
-        r[13] = n(val(row, 'class_activity_score'), 1);
+        r[2] = n(classActivity, 1);
+        r[13] = n(classActivity, 1);
         r[14] = n(val(row, 'class_activity_achievement'), 4);
-        r[25] = n(val(row, 'quiz_homework_score'), 1);
+        r[15] = n(quizHomework, 1);
+        r[25] = n(quizHomework, 1);
         r[26] = n(val(row, 'quiz_homework_achievement'), 4);
-        r[36] = n(val(row, 'extra_learning_score'), 1);
+        r[27] = n(extraLearning, 1);
+        r[36] = n(extraLearning, 1);
         r[37] = n(val(row, 'extra_learning_achievement'), 4);
         r[38] = n(val(row, 'total_score'), 1);
         s1.appendRow(r);
@@ -917,7 +933,7 @@ class _ReportTabState extends State<ReportTab> {
         r[8] = n(val(row, 'exp5_score'), 1);
         r[9] = n(val(row, 'exp6_score'), 1);
         r[10] = n(val(row, 'obj3_achievement'), 4);
-        r[11] = n(val(row, 'exp7_score'), 1);
+        r[11] = n(experimentTarget4Score(row), 1);
         r[12] = n(val(row, 'obj4_achievement'), 4);
         r[13] = n(val(row, 'total_score'), 1);
         s2.appendRow(r);
@@ -1675,7 +1691,7 @@ class _ReportTabState extends State<ReportTab> {
             pw.SizedBox(height: 4),
             pw.Text('本轮教学改进措施执行情况：', style: boldStyle),
             pw.SizedBox(height: 2),
-            pw.Text('(1) 在平时作业中加大运用移动应用开发技术体系分析实际应用问题的题目训练', style: baseStyle),
+            pw.Text('(1) 在平时作业中加大与课程目标相关的分析应用问题的题目训练', style: baseStyle),
             pw.Text('(2) 在每一章结束后增加知识图谱创建和英文文献阅读培训', style: baseStyle),
             pw.Text('(3) 调整平时、实验以及期末的课程成绩比例，增加实验成绩比例', style: baseStyle),
             pw.SizedBox(height: 6),
@@ -1848,6 +1864,12 @@ class _ReportTabState extends State<ReportTab> {
               _selectedBatchId = v;
               _calcResults = null;
             });
+            // 切换批次时重新加载该课程的配置
+            if (v != null) {
+              final batch = _batches.firstWhere((b) => b['id'] == v, orElse: () => {});
+              final cn = batch['course_name']?.toString();
+              if (cn != null && cn.isNotEmpty) _loadConfig(cn);
+            }
           },
         ),
       ),

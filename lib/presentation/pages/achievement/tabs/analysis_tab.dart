@@ -1,7 +1,6 @@
 ﻿import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -38,6 +37,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
   double _weightedAchievement = 0;
   Map<String, dynamic>? _surveySummary;
   bool _creatingSurvey = false;
+  String _currentCourseName = '移动应用开发';
 
   @override
   void initState() {
@@ -56,7 +56,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
     _loadBatches();
   }
 
-  /// 一键创建《移动应用开发》课程满意度问卷、发布并通知全体学生。
+  /// 一键创建课程满意度问卷、发布并通知全体学生。
   /// 教师无需跳转到「管理 > 问卷管理」即可在达成页直接发起。
   Future<void> _createAndNotifySurvey() async {
     setState(() => _creatingSurvey = true);
@@ -65,8 +65,8 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
     final teacherId = AuthService().getCurrentUserId();
     try {
       final surveyId = await surveyDao.createSurvey(
-        title: '《移动应用开发》课程满意度调查',
-        description: '请对本学期《移动应用开发》课程各方面进行评价，帮助我们改进教学质量。',
+        title: '《$_currentCourseName》课程满意度调查',
+        description: '请对本学期《$_currentCourseName》课程各方面进行评价，帮助我们改进教学质量。',
         creatorId: teacherId,
       );
       await surveyDao.addQuestion(
@@ -99,7 +99,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
       await surveyDao.publishSurvey(surveyId);
       await notifyDao.createNotification(
         title: '课程满意度调查',
-        content: '《移动应用开发》课程满意度调查问卷已发布，请前往「问卷调查」完成填写，感谢配合！',
+        content: '《$_currentCourseName》课程满意度调查问卷已发布，请前往「问卷调查」完成填写，感谢配合！',
         creatorId: teacherId,
         targetType: 'all',
         type: 'survey',
@@ -182,6 +182,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
           _loading = false;
           if (_batches.isNotEmpty && _selectedBatchId == null) {
             _selectedBatchId = _batches.first['id'] as int;
+            _currentCourseName = _batches.first['course_name']?.toString() ?? '移动应用开发';
           }
         });
         if (_selectedBatchId != null) _loadScoresAndCalc();
@@ -267,7 +268,17 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
       child: DropdownButtonHideUnderline(child: DropdownButton<int>(
         isExpanded: true, value: _selectedBatchId, hint: const Text('选择批次'),
         items: _batches.map((b) => DropdownMenuItem<int>(value: b['id'] as int, child: Text(b['batch_name'] ?? '未命名'))).toList(),
-        onChanged: (v) { setState(() { _selectedBatchId = v; _scores = []; }); _loadScoresAndCalc(); },
+        onChanged: (v) {
+          setState(() {
+            _selectedBatchId = v;
+            _scores = [];
+            if (v != null) {
+              final batch = _batches.firstWhere((b) => b['id'] == v, orElse: () => {});
+              _currentCourseName = batch['course_name']?.toString() ?? '移动应用开发';
+            }
+          });
+          _loadScoresAndCalc();
+        },
       )),
     );
   }
@@ -813,7 +824,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                     try {
                       await NotificationDao().createNotification(
                         title: '课程满意度调查提醒',
-                        content: '《移动应用开发》课程满意度调查正在进行中，请尚未填写的同学尽快完成。',
+                        content: '《$_currentCourseName》课程满意度调查正在进行中，请尚未填写的同学尽快完成。',
                         creatorId: AuthService().getCurrentUserId(),
                         targetType: 'all', type: 'survey', relatedEntityType: 'survey');
                       if (mounted) ScaffoldMessenger.of(context).showSnackBar(
@@ -1319,7 +1330,7 @@ class _ContinuousImprovementTabState
             const Divider(height: 20),
             _previousItem(
                 '1',
-                '加大运用移动应用开发技术体系分析实际应用问题的题目训练',
+                '加大与课程目标相关的分析应用问题的题目训练',
                 '已执行。平时作业中增设了技术选型分析题，学生对技术体系理解有明显提升。',
                 Colors.green),
             _previousItem(

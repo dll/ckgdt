@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <base-config cleartextTrafficPermitted="false">
+    <!-- LAN defense streaming uses http://teacher-ip:8766 MJPEG/POST.
+         Android domain-config does not support CIDR ranges such as 192.168.0.0,
+         so keep cleartext enabled for local classroom networks. -->
+    <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
