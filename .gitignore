@@ -44,6 +44,7 @@ docs/video/**/slides/
 docs/video/**/temp/
 docs/video/**/crops/
 docs/video/**/assets/
+scripts/achievement_video/work/
 
 # ── 课件大文件 ──
 # 视频/PPT 文件超出 Gitee 免费仓库 1GB 限制，不推送
