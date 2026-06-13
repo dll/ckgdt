@@ -5,12 +5,15 @@
 /// 从聚合表回填分项表，保证三个 tab 都有数据，且综合达成度计算自洽。
 library;
 
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:knowledge_graph_app/data/local/database_helper.dart';
 import 'package:knowledge_graph_app/data/local/achievement_dao.dart';
 import 'package:knowledge_graph_app/presentation/pages/achievement/achievement_shared.dart';
+import 'package:knowledge_graph_app/services/achievement/achievement_excel_service.dart';
 
 Future<Database> _createAchievementDb() async {
   final db = await databaseFactory.openDatabase(
@@ -148,15 +151,22 @@ void main() {
 
   test('幂等：真实分项导入后，再读不会被聚合回填覆盖', () async {
     final batchId = await dao.addBatch(
-      batchName: 'b', courseName: '移动应用开发',
-      className: '计科22', semester: '2025-2026-1', teacherId: 't1',
+      batchName: 'b',
+      courseName: '移动应用开发',
+      className: '计科22',
+      semester: '2025-2026-1',
+      teacherId: 't1',
     );
     // 真实分项导入：课堂 90 → 课堂达成度 0.9
     await dao.importComponentsToDatabase(batchId, {
       'pingshi': [
-        {'student_id': '2022210332', 'student_name': '陈晨',
-         'class_activity_score': 90.0, 'quiz_homework_score': 80.0,
-         'extra_learning_score': 70.0},
+        {
+          'student_id': '2022210332',
+          'student_name': '陈晨',
+          'class_activity_score': 90.0,
+          'quiz_homework_score': 80.0,
+          'extra_learning_score': 70.0,
+        },
       ],
       'experiment': const [],
       'exam': const [],
@@ -167,5 +177,46 @@ void main() {
     // 应保留真实导入值 0.9，不被聚合回填覆盖
     expect((pingshi.first['class_activity_achievement'] as num).toDouble(),
         closeTo(0.9, 0.001));
+  });
+
+  test('学校表格48导入：平时目标3为0，实验按7实验模板映射', () async {
+    final file = File('data/达成/计科22《移动应用开发》课程达成评价表格48.xlsx');
+    expect(await file.exists(), isTrue, reason: '学校达成评价 Excel 模板必须存在');
+
+    final batchId = await dao.addBatch(
+      batchName: '计科22模板导入',
+      courseName: '移动应用开发',
+      className: '计科22',
+      semester: '2025-2026-1',
+      teacherId: 't1',
+    );
+
+    final components = AchievementExcelService.instance
+        .parseComponentSheets(await file.readAsBytes());
+    expect(components['pingshi'], isNotEmpty);
+    expect(components['experiment'], isNotEmpty);
+    expect(components['exam'], isNotEmpty);
+
+    await dao.importComponentsToDatabase(batchId, components);
+
+    final pAvg = await dao.calculatePingshiClassAverage(batchId);
+    expect(
+      pAvg['obj3'],
+      closeTo(0, 0.0001),
+      reason: '学校模板中课程目标3无平时评价项',
+    );
+
+    final experiments = await dao.getExperimentScores(batchId);
+    final row = experiments.firstWhere((r) => r['student_id'] == '2022210333');
+    expect(
+      (row['obj3_achievement'] as num).toDouble(),
+      closeTo(0.925, 0.0001),
+      reason: '实验5=95、实验6=90，应按7实验模板平均支撑目标3',
+    );
+    expect(
+      (row['obj4_achievement'] as num).toDouble(),
+      closeTo(0.6, 0.0001),
+      reason: '实验7=60，应支撑目标4',
+    );
   });
 }

@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:flutter/material.dart';
@@ -236,7 +236,8 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
                 swallowDebug(e, tag: 'ScoresTab.audit', stack: st);
               }
               // 录入/编辑后重算批次达成度，保持详情/报告同步
-              await widget.achievementDao.recalculateAndSaveBatch(_selectedBatchId!);
+              await widget.achievementDao
+                  .recalculateAndSaveBatch(_selectedBatchId!);
               if (ctx.mounted) Navigator.pop(ctx);
               _loadComponentScores();
             },
@@ -245,7 +246,14 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
         ],
       ),
     ).then((_) {
-      for (final c in [studentIdCtrl, studentNameCtrl, obj1Ctrl, obj2Ctrl, obj3Ctrl, obj4Ctrl]) {
+      for (final c in [
+        studentIdCtrl,
+        studentNameCtrl,
+        obj1Ctrl,
+        obj2Ctrl,
+        obj3Ctrl,
+        obj4Ctrl
+      ]) {
         c.dispose();
       }
     });
@@ -257,8 +265,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
       final students = _selectedBatchId != null
           ? await widget.achievementDao.getScoresByBatch(_selectedBatchId!)
           : <Map<String, dynamic>>[];
-      final cfgRows =
-          await widget.achievementDao.getCourseObjectives('移动应用开发');
+      final cfgRows = await widget.achievementDao.getCourseObjectives('移动应用开发');
       final cfg = cfgRows.isNotEmpty
           ? AchievementConfig.fromObjectiveRows(cfgRows)
           : AchievementConfig.defaults;
@@ -276,7 +283,8 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('模板已生成：${file.path}'),
-            action: SnackBarAction(label: '打开', onPressed: () => OpenFilex.open(file.path)),
+            action: SnackBarAction(
+                label: '打开', onPressed: () => OpenFilex.open(file.path)),
             duration: const Duration(seconds: 5),
           ),
         );
@@ -318,7 +326,8 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
         throw StateError('未解析到平时/实验/期末成绩明细表，请确认使用课程成绩模板');
       }
       // 校验：对比当前批次学生名单、查异常分值/重复
-      final roster = await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
+      final roster =
+          await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
       final report = svc.validateComponents(components, roster: roster);
       if (!mounted) return;
       setState(() => _generating = false);
@@ -333,9 +342,10 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('导入成功：$count 名学生（平时${components['pingshi']?.length ?? 0}/'
-                '实验${components['experiment']?.length ?? 0}/'
-                '期末${components['exam']?.length ?? 0}），已合成达成度'),
+            content:
+                Text('导入成功：$count 名学生（平时${components['pingshi']?.length ?? 0}/'
+                    '实验${components['experiment']?.length ?? 0}/'
+                    '期末${components['exam']?.length ?? 0}），已合成达成度'),
             backgroundColor: Colors.green,
           ),
         );
@@ -366,7 +376,9 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
     Widget section(String title, List<Widget> children) => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            Text(title,
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
             const SizedBox(height: 4),
             ...children,
             const SizedBox(height: 10),
@@ -396,32 +408,42 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
                           style: const TextStyle(fontSize: 12)),
                 ]),
                 section('目标拆分（大纲驱动）', const [
-                  Text('• 平时：课堂→目标1 · 测验→目标2 · 大作业→目标4', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                  Text('• 实验：1,2→目标1 · 3,4→目标2 · 5,6→目标3 · 7→目标4', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                  Text('• 期末：项目→目标1 · 小组→目标2 · 个人→目标3 · 答辩→目标4', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                  Text('• 平时：课堂→目标1 · 测验→目标2 · 大作业→目标4',
+                      style: TextStyle(fontSize: 11, color: Colors.grey)),
+                  Text('• 实验：兼容 7 实验模板（5,6→目标3 · 7→目标4）与 6 实验模板（5→目标3 · 6→目标4）',
+                      style: TextStyle(fontSize: 11, color: Colors.grey)),
+                  Text('• 期末：项目→目标1 · 小组→目标2 · 个人→目标3 · 答辩→目标4',
+                      style: TextStyle(fontSize: 11, color: Colors.grey)),
                 ]),
                 if (duplicates.isNotEmpty)
                   section('⚠ 重复学号', [
                     for (final e in duplicates.entries)
                       Text('• ${envName[e.key]}：${(e.value as List).join('、')}',
-                          style: const TextStyle(fontSize: 12, color: Colors.red)),
+                          style:
+                              const TextStyle(fontSize: 12, color: Colors.red)),
                   ]),
                 if (outOfRange.isNotEmpty)
                   section('⚠ 异常分值（应在 0-100）', [
                     for (final r in outOfRange.take(10))
-                      Text('• ${envName[r['env']]} ${r['student_id']}：${r['value']}',
-                          style: const TextStyle(fontSize: 12, color: Colors.red)),
+                      Text(
+                          '• ${envName[r['env']]} ${r['student_id']}：${r['value']}',
+                          style:
+                              const TextStyle(fontSize: 12, color: Colors.red)),
                     if (outOfRange.length > 10)
-                      Text('… 共 ${outOfRange.length} 处', style: const TextStyle(fontSize: 11, color: Colors.red)),
+                      Text('… 共 ${outOfRange.length} 处',
+                          style:
+                              const TextStyle(fontSize: 11, color: Colors.red)),
                   ]),
                 if (missing.isNotEmpty)
                   section('当前批次中、本次未包含的学生', [
                     for (final e in missing.entries)
                       Text('• ${envName[e.key]}缺 ${(e.value as List).length} 人',
-                          style: const TextStyle(fontSize: 12, color: Colors.orange)),
+                          style: const TextStyle(
+                              fontSize: 12, color: Colors.orange)),
                   ]),
                 if (ok)
-                  const Text('校验通过，可导入。', style: TextStyle(fontSize: 12, color: Colors.green))
+                  const Text('校验通过，可导入。',
+                      style: TextStyle(fontSize: 12, color: Colors.green))
                 else
                   const Text('存在上述问题，仍可强制导入，但建议修正后重试。',
                       style: TextStyle(fontSize: 12, color: Colors.orange)),
@@ -430,7 +452,9 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('取消')),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(ok ? '确认导入' : '仍然导入'),
@@ -438,32 +462,6 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
         ],
       ),
     );
-  }
-
-  Future<void> _deleteScore(int scoreId) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('确认删除'),
-        content: const Text('确定要删除这条成绩记录吗？'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('删除'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      await widget.achievementDao.deleteScore(scoreId);
-      if (_selectedBatchId != null) {
-        await widget.achievementDao.recalculateAndSaveBatch(_selectedBatchId!);
-      }
-      _loadComponentScores();
-      widget.dataRevision?.value++;
-    }
   }
 
   @override
@@ -515,17 +513,29 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
             ],
           ),
         ),
-        if (_generating)
-          const LinearProgressIndicator(),
+        if (_generating) const LinearProgressIndicator(),
         const Divider(height: 1),
         // 子Tab: 平时/实验/期末成绩管理(可编辑)
-        Container(color: primary, margin: const EdgeInsets.only(top: 4),
-            child: TabBar(controller: _tabCtrl, labelColor: Colors.white, unselectedLabelColor: Colors.white60,
-              indicatorColor: Colors.white, labelStyle: const TextStyle(fontSize: 13),
-              tabs: const [Tab(text:'平时成绩'), Tab(text:'实验成绩'), Tab(text:'期末成绩')])),
+        Container(
+            color: primary,
+            margin: const EdgeInsets.only(top: 4),
+            child: TabBar(
+                controller: _tabCtrl,
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.white60,
+                indicatorColor: Colors.white,
+                labelStyle: const TextStyle(fontSize: 13),
+                tabs: const [
+                  Tab(text: '平时成绩'),
+                  Tab(text: '实验成绩'),
+                  Tab(text: '期末成绩')
+                ])),
         if (_loadingComponents) const LinearProgressIndicator(),
-        Expanded(child: TabBarView(controller: _tabCtrl, children: [
-          _buildComponentTable('pingshi', _ps), _buildComponentTable('experiment', _es), _buildComponentTable('exam', _xs),
+        Expanded(
+            child: TabBarView(controller: _tabCtrl, children: [
+          _buildComponentTable('pingshi', _ps),
+          _buildComponentTable('experiment', _es),
+          _buildComponentTable('exam', _xs),
         ])),
       ],
     );
@@ -539,8 +549,17 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
       widget.achievementDao.getExperimentScores(_selectedBatchId!),
       widget.achievementDao.getExamScores(_selectedBatchId!),
     ]).then((r) {
-      if (mounted) setState(() { _ps = r[0] as List<Map<String, dynamic>>; _es = r[1] as List<Map<String, dynamic>>; _xs = r[2] as List<Map<String, dynamic>>; _loadingComponents = false; });
-    }).catchError((_) { if (mounted) setState(() => _loadingComponents = false); });
+      if (mounted) {
+        setState(() {
+          _ps = r[0];
+          _es = r[1];
+          _xs = r[2];
+          _loadingComponents = false;
+        });
+      }
+    }).catchError((_) {
+      if (mounted) setState(() => _loadingComponents = false);
+    });
   }
 
   Widget _buildComponentTable(String env, List<Map<String, dynamic>> rows) {
@@ -549,10 +568,20 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.info_outline, size: 48, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
+            Icon(Icons.info_outline,
+                size: 48,
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.3)),
             const SizedBox(height: 12),
             Text('暂无数据，请先导入成绩',
-              style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))),
+                style: TextStyle(
+                    fontSize: 14,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.5))),
           ],
         ),
       );
@@ -597,8 +626,13 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
                   SizedBox(width: 100, child: Text('学号', style: headerStyle)),
                   SizedBox(width: 80, child: Text('姓名', style: headerStyle)),
                   for (final c in cols)
-                    Expanded(child: Text(_colLabel(c), style: headerStyle, textAlign: TextAlign.center)),
-                  SizedBox(width: 60, child: Text('操作', style: headerStyle, textAlign: TextAlign.center)),
+                    Expanded(
+                        child: Text(_colLabel(c),
+                            style: headerStyle, textAlign: TextAlign.center)),
+                  SizedBox(
+                      width: 60,
+                      child: Text('操作',
+                          style: headerStyle, textAlign: TextAlign.center)),
                 ],
               ),
             ),
@@ -613,32 +647,40 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
                   final isEven = index.isEven;
                   return Container(
                     color: isEven ? surface : surface.withValues(alpha: 0.7),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Row(
                       children: [
                         SizedBox(
                           width: 100,
-                          child: Text(r['student_id']?.toString() ?? '', style: cellStyle),
+                          child: Text(r['student_id']?.toString() ?? '',
+                              style: cellStyle),
                         ),
                         SizedBox(
                           width: 80,
-                          child: Text(r['student_name']?.toString() ?? '', style: cellStyle),
+                          child: Text(r['student_name']?.toString() ?? '',
+                              style: cellStyle),
                         ),
                         for (final k in cols)
                           Expanded(
                             child: Text(
-                              ((r[k] as num?)?.toDouble() ?? 0).toStringAsFixed(1),
-                              style: cellStyle.copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
+                              ((r[k] as num?)?.toDouble() ?? 0)
+                                  .toStringAsFixed(1),
+                              style: cellStyle.copyWith(fontFeatures: const [
+                                FontFeature.tabularFigures()
+                              ]),
                               textAlign: TextAlign.center,
                             ),
                           ),
                         SizedBox(
                           width: 60,
                           child: IconButton(
-                            icon: Icon(Icons.edit_rounded, size: 16, color: primary),
+                            icon: Icon(Icons.edit_rounded,
+                                size: 16, color: primary),
                             onPressed: () => _editRow(env, r),
                             padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                            constraints: const BoxConstraints(
+                                minWidth: 32, minHeight: 32),
                             tooltip: '编辑',
                           ),
                         ),
@@ -655,37 +697,107 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
   }
 
   void _editRow(String env, Map<String, dynamic> row) {
-    final cols=_envCols(env);final ctrls=cols.map((k)=>TextEditingController(text:((row[k] as num?)?.toDouble()??0).toString())).toList();
-    showDialog(context:context,builder:(ctx)=>AlertDialog(
-      title:Text('编辑 ${row['student_name']??''}'),content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,
-        children:[for(int i=0;i<cols.length;i++) Padding(padding:const EdgeInsets.only(bottom:8),child:TextField(controller:ctrls[i],keyboardType:TextInputType.number,decoration:InputDecoration(labelText:_colLabel(cols[i]),border:const OutlineInputBorder(),isDense:true)))])),
-      actions:[
-        TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('取消')),
-        FilledButton(onPressed:()async{
-          Navigator.pop(ctx);
-          // 不直接写 row[...]：row 来自 sqflite 只读 Map，赋值会抛 read-only。
-          // 直接从输入框收集到 data 落库，再 _loadComponentScores() 刷新。
-          String tn=env=='pingshi'?'achievement_pingshi_scores':env=='experiment'?'achievement_experiment_scores':'achievement_exam_scores';
-          final db=await DatabaseHelper.instance.database;
-          final data=<String,dynamic>{};for(int i=0;i<cols.length;i++) data[cols[i]]=double.tryParse(ctrls[i].text)??0;data['updated_at']=DateTime.now().toIso8601String();
-          await db.update(tn,data,where:'id=?',whereArgs:[row['id']]);
-          await widget.achievementDao.recalculateAndSaveBatch(_selectedBatchId!);
-          _loadComponentScores();if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('已保存并重算达成度'),backgroundColor:Colors.green));
-        },child:const Text('保存')),
-      ]));
+    final cols = _envCols(env);
+    final ctrls = cols
+        .map((k) => TextEditingController(
+            text: ((row[k] as num?)?.toDouble() ?? 0).toString()))
+        .toList();
+    showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+                title: Text('编辑 ${row['student_name'] ?? ''}'),
+                content: SingleChildScrollView(
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  for (int i = 0; i < cols.length; i++)
+                    Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: TextField(
+                            controller: ctrls[i],
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                                labelText: _colLabel(cols[i]),
+                                border: const OutlineInputBorder(),
+                                isDense: true)))
+                ])),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('取消')),
+                  FilledButton(
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        // 不直接写 row[...]：row 来自 sqflite 只读 Map，赋值会抛 read-only。
+                        // 直接从输入框收集到 data 落库，再 _loadComponentScores() 刷新。
+                        String tn = env == 'pingshi'
+                            ? 'achievement_pingshi_scores'
+                            : env == 'experiment'
+                                ? 'achievement_experiment_scores'
+                                : 'achievement_exam_scores';
+                        final db = await DatabaseHelper.instance.database;
+                        final data = <String, dynamic>{};
+                        for (int i = 0; i < cols.length; i++)
+                          data[cols[i]] = double.tryParse(ctrls[i].text) ?? 0;
+                        data['updated_at'] = DateTime.now().toIso8601String();
+                        await db.update(tn, data,
+                            where: 'id=?', whereArgs: [row['id']]);
+                        await widget.achievementDao
+                            .recalculateAndSaveBatch(_selectedBatchId!);
+                        _loadComponentScores();
+                        if (mounted)
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('已保存并重算达成度'),
+                                  backgroundColor: Colors.green));
+                      },
+                      child: const Text('保存')),
+                ]));
   }
 
-  static const _colLabelMap={
-    'class_activity_score':'课堂表现','quiz_homework_score':'期间测验','extra_learning_score':'课外学习','total_score':'总评',
-    'exp1_score':'实验1','exp2_score':'实验2','exp3_score':'实验3','exp4_score':'实验4','exp5_score':'实验5','exp6_score':'实验6',
-    'project_score':'项目得分','group_score':'小组得分','individual_score':'个人得分','defense_score':'答辩得分'};
-  String _colLabel(String k)=>_colLabelMap[k]??k;
+  static const _colLabelMap = {
+    'class_activity_score': '课堂表现',
+    'quiz_homework_score': '期间测验',
+    'extra_learning_score': '课外学习',
+    'total_score': '总评',
+    'exp1_score': '实验1',
+    'exp2_score': '实验2',
+    'exp3_score': '实验3',
+    'exp4_score': '实验4',
+    'exp5_score': '实验5',
+    'exp6_score': '实验6',
+    'project_score': '项目得分',
+    'group_score': '小组得分',
+    'individual_score': '个人得分',
+    'defense_score': '答辩得分'
+  };
+  String _colLabel(String k) => _colLabelMap[k] ?? k;
 
   List<String> _envCols(String env) {
     switch (env) {
-      case 'pingshi': return ['class_activity_score','quiz_homework_score','extra_learning_score','total_score'];
-      case 'experiment': return ['exp1_score','exp2_score','exp3_score','exp4_score','exp5_score','exp6_score','total_score'];
-      default: return ['project_score','group_score','individual_score','defense_score','total_score'];
+      case 'pingshi':
+        return [
+          'class_activity_score',
+          'quiz_homework_score',
+          'extra_learning_score',
+          'total_score'
+        ];
+      case 'experiment':
+        return [
+          'exp1_score',
+          'exp2_score',
+          'exp3_score',
+          'exp4_score',
+          'exp5_score',
+          'exp6_score',
+          'total_score'
+        ];
+      default:
+        return [
+          'project_score',
+          'group_score',
+          'individual_score',
+          'defense_score',
+          'total_score'
+        ];
     }
   }
 
@@ -730,135 +842,6 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
       onPressed: onTap,
     );
   }
-
-  Widget _buildScoreCard(Map<String, dynamic> score) {
-    final scoreId = score['id'] as int? ?? 0;
-    final totalScore = (score['total_score'] ?? 0).toDouble();
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 学生信息头
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                  child: Text(
-                    (score['student_name'] ?? '?').toString().characters.first,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        score['student_name'] ?? '未知',
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-                      ),
-                      Text(
-                        score['student_id'] ?? '',
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: totalScore >= 60
-                        ? Colors.green.withValues(alpha: 0.1)
-                        : Colors.red.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '总分 ${totalScore.toStringAsFixed(1)}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: totalScore >= 60 ? Colors.green : Colors.red,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.grey),
-                  onPressed: () => _showAddScoreDialog(existing: score),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey),
-                  onPressed: () => _deleteScore(scoreId),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            // 四个目标分数 + 达成度
-            Row(
-              children: List.generate(4, (i) {
-                final scoreKey = 'obj${i + 1}_score';
-                final achieveKey = 'obj${i + 1}_achievement';
-                final scoreVal = (score[scoreKey] ?? 0).toDouble();
-                final achieveVal = (score[achieveKey] ?? 0).toDouble();
-                return Expanded(
-                  child: Container(
-                    margin: EdgeInsets.only(right: i < 3 ? 6 : 0),
-                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                    decoration: BoxDecoration(
-                      color: kObjectiveColors[i].withValues(alpha: 0.06),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      children: [
-                        Text(
-                          '目标${i + 1}',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: kObjectiveColors[i],
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          scoreVal.toStringAsFixed(1),
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: kObjectiveColors[i],
-                          ),
-                        ),
-                        if (achieveVal > 0) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            '达成 ${(achieveVal * 100).toStringAsFixed(0)}%',
-                            style: TextStyle(fontSize: 9, color: kObjectiveColors[i]),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                );
-              }),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -868,7 +851,8 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
 class PingshiAchievementTab extends StatefulWidget {
   final AchievementDao achievementDao;
   final ValueNotifier<int>? dataRevision;
-  const PingshiAchievementTab({required this.achievementDao, this.dataRevision});
+  const PingshiAchievementTab(
+      {required this.achievementDao, this.dataRevision});
 
   @override
   State<PingshiAchievementTab> createState() => _PingshiAchievementTabState();
@@ -881,7 +865,6 @@ class _PingshiAchievementTabState extends State<PingshiAchievementTab> {
   Map<String, double> _classAvg = {};
   ScoreSort _sort = ScoreSort.idAsc;
   bool _loading = true;
-  bool _generating = false;
 
   @override
   void initState() {
@@ -916,8 +899,10 @@ class _PingshiAchievementTabState extends State<PingshiAchievementTab> {
 
   Future<void> _loadScores() async {
     if (_selectedBatchId == null) return;
-    final scores = await widget.achievementDao.getPingshiScores(_selectedBatchId!);
-    final avg = await widget.achievementDao.calculatePingshiClassAverage(_selectedBatchId!);
+    final scores =
+        await widget.achievementDao.getPingshiScores(_selectedBatchId!);
+    final avg = await widget.achievementDao
+        .calculatePingshiClassAverage(_selectedBatchId!);
     if (mounted) {
       setState(() {
         sortScoresInPlace(scores, _sort);
@@ -947,12 +932,16 @@ class _PingshiAchievementTabState extends State<PingshiAchievementTab> {
                     labelText: '选择批次',
                     border: OutlineInputBorder(),
                     isDense: true,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
-                  items: _batches.map((b) => DropdownMenuItem<int>(
-                    value: b['id'] as int,
-                    child: Text(b['batch_name']?.toString() ?? '', overflow: TextOverflow.ellipsis),
-                  )).toList(),
+                  items: _batches
+                      .map((b) => DropdownMenuItem<int>(
+                            value: b['id'] as int,
+                            child: Text(b['batch_name']?.toString() ?? '',
+                                overflow: TextOverflow.ellipsis),
+                          ))
+                      .toList(),
                   onChanged: (v) {
                     setState(() => _selectedBatchId = v);
                     _loadScores();
@@ -979,75 +968,49 @@ class _PingshiAchievementTabState extends State<PingshiAchievementTab> {
           ),
         ),
 
-        // 说明卡片
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Card(
+        // 标题 + 说明卡片(左) + 班级平均(右)，水平排布以给下方数据表让出空间
+        achievementTabHeader(
+          context,
+          title: '平时达成',
+          classAvg: _classAvg,
+          infoCard: Card(
+            margin: EdgeInsets.zero,
             color: Colors.blue.shade50,
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Row(
                     children: [
                       Icon(Icons.info_outline, color: primary, size: 18),
                       const SizedBox(width: 8),
-                      const Text('平时成绩评价结构（权重20%）', style: TextStyle(fontWeight: FontWeight.bold)),
+                      const Expanded(
+                          child: Text('平时成绩评价结构（权重20%）',
+                              style: TextStyle(fontWeight: FontWeight.bold))),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  const Text('• 课堂表现(20%) → 课程目标1 ｜ 达成度 = 得分/100', style: TextStyle(fontSize: 12)),
-                  const Text('• 期间测验(30%) → 课程目标2 ｜ 达成度 = 得分/100', style: TextStyle(fontSize: 12)),
-                  const Text('• 课外学习(50%) → 课程目标4 ｜ 达成度 = 得分/100', style: TextStyle(fontSize: 12)),
-                  const Text('• 目标3：平时成绩不涉及', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  const Text('• 课堂表现(20%) → 课程目标1 ｜ 达成度 = 得分/100',
+                      style: TextStyle(fontSize: 12)),
+                  const Text('• 期间测验(30%) → 课程目标2 ｜ 达成度 = 得分/100',
+                      style: TextStyle(fontSize: 12)),
+                  const Text('• 课外学习(50%) → 课程目标4 ｜ 达成度 = 得分/100',
+                      style: TextStyle(fontSize: 12)),
+                  const Text('• 目标3：平时成绩不涉及',
+                      style: TextStyle(fontSize: 12, color: Colors.grey)),
                   const SizedBox(height: 4),
-                  const Text('总评 = 课堂×0.2 + 测验×0.3 + 课外×0.5', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blue)),
+                  const Text('总评 = 课堂×0.2 + 测验×0.3 + 课外×0.5',
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue)),
                 ],
               ),
             ),
           ),
         ),
-
-        // 班级平均达成度
-        if (_classAvg.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('班级平均指标点达成度', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        for (int i = 0; i < 4; i++)
-                          Expanded(
-                            child: Column(
-                              children: [
-                                Text('目标${i + 1}', style: TextStyle(fontSize: 11, color: kObjectiveColors[i])),
-                                const SizedBox(height: 4),
-                                Text(
-                                  (_classAvg['obj${i + 1}'] ?? 0).toStringAsFixed(2),
-                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: achievementLevelColor(_classAvg['obj${i + 1}'] ?? 0)),
-                                ),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    objectiveRadarChart(
-                      [for (int i = 0; i < 4; i++) _classAvg['obj${i + 1}'] ?? 0],
-                      Theme.of(context).colorScheme.primary,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
 
         // 学生成绩表
         Expanded(
@@ -1056,11 +1019,14 @@ class _PingshiAchievementTabState extends State<PingshiAchievementTab> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.school_outlined, size: 64, color: Colors.grey),
+                      const Icon(Icons.school_outlined,
+                          size: 64, color: Colors.grey),
                       const SizedBox(height: 16),
-                      const Text('暂无平时成绩数据', style: TextStyle(color: Colors.grey)),
+                      const Text('暂无平时成绩数据',
+                          style: TextStyle(color: Colors.grey)),
                       const SizedBox(height: 8),
-                      const Text('请在成绩管理中导入或录入成绩数据', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      const Text('请在成绩管理中导入或录入成绩数据',
+                          style: TextStyle(color: Colors.grey, fontSize: 12)),
                     ],
                   ),
                 )
@@ -1069,13 +1035,51 @@ class _PingshiAchievementTabState extends State<PingshiAchievementTab> {
                   rows: _scores,
                   onRefresh: () async => _loadScores(),
                   columns: [
-                    ScoreColumn('课堂表现', (s) => (s['class_activity_score'] as num?)?.toDouble() ?? 0),
-                    ScoreColumn('目标1', (s) => (s['class_activity_achievement'] as num?)?.toDouble() ?? 0, isAchievement: true, digits: 2, headerColor: kObjectiveColors[0]),
-                    ScoreColumn('期间测验', (s) => (s['quiz_homework_score'] as num?)?.toDouble() ?? 0),
-                    ScoreColumn('目标2', (s) => (s['quiz_homework_achievement'] as num?)?.toDouble() ?? 0, isAchievement: true, digits: 2, headerColor: kObjectiveColors[1]),
-                    ScoreColumn('课外学习', (s) => (s['extra_learning_score'] as num?)?.toDouble() ?? 0),
-                    ScoreColumn('目标4', (s) => (s['extra_learning_achievement'] as num?)?.toDouble() ?? 0, isAchievement: true, digits: 2, headerColor: kObjectiveColors[3]),
-                    ScoreColumn('总评', (s) => (s['total_score'] as num?)?.toDouble() ?? 0, bold: true),
+                    ScoreColumn(
+                        '课堂表现',
+                        (s) =>
+                            (s['class_activity_score'] as num?)?.toDouble() ??
+                            0),
+                    ScoreColumn(
+                        '目标1',
+                        (s) =>
+                            (s['class_activity_achievement'] as num?)
+                                ?.toDouble() ??
+                            0,
+                        isAchievement: true,
+                        digits: 2,
+                        headerColor: kObjectiveColors[0]),
+                    ScoreColumn(
+                        '期间测验',
+                        (s) =>
+                            (s['quiz_homework_score'] as num?)?.toDouble() ??
+                            0),
+                    ScoreColumn(
+                        '目标2',
+                        (s) =>
+                            (s['quiz_homework_achievement'] as num?)
+                                ?.toDouble() ??
+                            0,
+                        isAchievement: true,
+                        digits: 2,
+                        headerColor: kObjectiveColors[1]),
+                    ScoreColumn(
+                        '课外学习',
+                        (s) =>
+                            (s['extra_learning_score'] as num?)?.toDouble() ??
+                            0),
+                    ScoreColumn(
+                        '目标4',
+                        (s) =>
+                            (s['extra_learning_achievement'] as num?)
+                                ?.toDouble() ??
+                            0,
+                        isAchievement: true,
+                        digits: 2,
+                        headerColor: kObjectiveColors[3]),
+                    ScoreColumn('总评',
+                        (s) => (s['total_score'] as num?)?.toDouble() ?? 0,
+                        bold: true),
                   ],
                 ),
         ),
@@ -1085,16 +1089,18 @@ class _PingshiAchievementTabState extends State<PingshiAchievementTab> {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Tab 4 — 实验达成（实验1-2→目标1, 实验3-4→目标2, 实验5-6→目标3, 实验7→目标4）
+// Tab 4 — 实验达成（兼容 7 实验学校模板与 6 实验简洁模板）
 // ══════════════════════════════════════════════════════════════════════════════
 
 class ExperimentAchievementTab extends StatefulWidget {
   final AchievementDao achievementDao;
   final ValueNotifier<int>? dataRevision;
-  const ExperimentAchievementTab({required this.achievementDao, this.dataRevision});
+  const ExperimentAchievementTab(
+      {required this.achievementDao, this.dataRevision});
 
   @override
-  State<ExperimentAchievementTab> createState() => _ExperimentAchievementTabState();
+  State<ExperimentAchievementTab> createState() =>
+      _ExperimentAchievementTabState();
 }
 
 class _ExperimentAchievementTabState extends State<ExperimentAchievementTab> {
@@ -1104,7 +1110,6 @@ class _ExperimentAchievementTabState extends State<ExperimentAchievementTab> {
   Map<String, double> _classAvg = {};
   ScoreSort _sort = ScoreSort.idAsc;
   bool _loading = true;
-  bool _generating = false;
 
   @override
   void initState() {
@@ -1139,8 +1144,10 @@ class _ExperimentAchievementTabState extends State<ExperimentAchievementTab> {
 
   Future<void> _loadScores() async {
     if (_selectedBatchId == null) return;
-    final scores = await widget.achievementDao.getExperimentScores(_selectedBatchId!);
-    final avg = await widget.achievementDao.calculateExperimentClassAverage(_selectedBatchId!);
+    final scores =
+        await widget.achievementDao.getExperimentScores(_selectedBatchId!);
+    final avg = await widget.achievementDao
+        .calculateExperimentClassAverage(_selectedBatchId!);
     if (mounted) {
       setState(() {
         sortScoresInPlace(scores, _sort);
@@ -1170,12 +1177,16 @@ class _ExperimentAchievementTabState extends State<ExperimentAchievementTab> {
                     labelText: '选择批次',
                     border: OutlineInputBorder(),
                     isDense: true,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
-                  items: _batches.map((b) => DropdownMenuItem<int>(
-                    value: b['id'] as int,
-                    child: Text(b['batch_name']?.toString() ?? '', overflow: TextOverflow.ellipsis),
-                  )).toList(),
+                  items: _batches
+                      .map((b) => DropdownMenuItem<int>(
+                            value: b['id'] as int,
+                            child: Text(b['batch_name']?.toString() ?? '',
+                                overflow: TextOverflow.ellipsis),
+                          ))
+                      .toList(),
                   onChanged: (v) {
                     setState(() => _selectedBatchId = v);
                     _loadScores();
@@ -1202,75 +1213,49 @@ class _ExperimentAchievementTabState extends State<ExperimentAchievementTab> {
           ),
         ),
 
-        // 说明卡片
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Card(
+        // 标题 + 说明卡片(左) + 班级平均(右)，水平排布以给下方数据表让出空间
+        achievementTabHeader(
+          context,
+          title: '实验达成',
+          classAvg: _classAvg,
+          infoCard: Card(
+            margin: EdgeInsets.zero,
             color: Colors.green.shade50,
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Row(
                     children: [
                       Icon(Icons.info_outline, color: primary, size: 18),
                       const SizedBox(width: 8),
-                      const Text('实验成绩评价结构（权重30%）', style: TextStyle(fontWeight: FontWeight.bold)),
+                      const Expanded(
+                          child: Text('实验成绩评价结构（权重30%）',
+                              style: TextStyle(fontWeight: FontWeight.bold))),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  const Text('• 实验1-2 → 课程目标1 ｜ 达成度 = avg(实验1,实验2)/100', style: TextStyle(fontSize: 12)),
-                  const Text('• 实验3-4 → 课程目标2 ｜ 达成度 = avg(实验3,实验4)/100', style: TextStyle(fontSize: 12)),
-                  const Text('• 实验5-6 → 课程目标3 ｜ 达成度 = avg(实验5,实验6)/100', style: TextStyle(fontSize: 12)),
-                  const Text('• 实验7   → 课程目标4 ｜ 达成度 = 实验7/100', style: TextStyle(fontSize: 12)),
+                  const Text('• 实验1-2 → 课程目标1 ｜ 达成度 = avg(实验1,实验2)/100',
+                      style: TextStyle(fontSize: 12)),
+                  const Text('• 实验3-4 → 课程目标2 ｜ 达成度 = avg(实验3,实验4)/100',
+                      style: TextStyle(fontSize: 12)),
+                  const Text('• 学校模板：实验5-6 → 目标3，实验7 → 目标4',
+                      style: TextStyle(fontSize: 12)),
+                  const Text('• 6实验模板：实验5 → 目标3，实验6 → 目标4',
+                      style: TextStyle(fontSize: 12)),
                   const SizedBox(height: 4),
-                  const Text('总评 = (实验1+…+实验7) / 7', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green)),
+                  const Text('总评按导入模板自动采用 6 次或 7 次实验平均',
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green)),
                 ],
               ),
             ),
           ),
         ),
-
-        // 班级平均
-        if (_classAvg.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('班级平均指标点达成度', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        for (int i = 0; i < 4; i++)
-                          Expanded(
-                            child: Column(
-                              children: [
-                                Text('目标${i + 1}', style: TextStyle(fontSize: 11, color: kObjectiveColors[i])),
-                                const SizedBox(height: 4),
-                                Text(
-                                  (_classAvg['obj${i + 1}'] ?? 0).toStringAsFixed(2),
-                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: achievementLevelColor(_classAvg['obj${i + 1}'] ?? 0)),
-                                ),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    objectiveRadarChart(
-                      [for (int i = 0; i < 4; i++) _classAvg['obj${i + 1}'] ?? 0],
-                      Theme.of(context).colorScheme.primary,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
 
         // 学生成绩表
         Expanded(
@@ -1279,11 +1264,14 @@ class _ExperimentAchievementTabState extends State<ExperimentAchievementTab> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.science_outlined, size: 64, color: Colors.grey),
+                      const Icon(Icons.science_outlined,
+                          size: 64, color: Colors.grey),
                       const SizedBox(height: 16),
-                      const Text('暂无实验成绩数据', style: TextStyle(color: Colors.grey)),
+                      const Text('暂无实验成绩数据',
+                          style: TextStyle(color: Colors.grey)),
                       const SizedBox(height: 8),
-                      const Text('请在成绩管理中导入或录入成绩数据', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      const Text('请在成绩管理中导入或录入成绩数据',
+                          style: TextStyle(color: Colors.grey, fontSize: 12)),
                     ],
                   ),
                 )
@@ -1292,18 +1280,43 @@ class _ExperimentAchievementTabState extends State<ExperimentAchievementTab> {
                   rows: _scores,
                   onRefresh: () async => _loadScores(),
                   columns: [
-                    ScoreColumn('实验1', (s) => (s['exp1_score'] as num?)?.toDouble() ?? 0),
-                    ScoreColumn('实验2', (s) => (s['exp2_score'] as num?)?.toDouble() ?? 0),
-                    ScoreColumn('目标1', (s) => (s['obj1_achievement'] as num?)?.toDouble() ?? 0, isAchievement: true, digits: 2, headerColor: kObjectiveColors[0]),
-                    ScoreColumn('实验3', (s) => (s['exp3_score'] as num?)?.toDouble() ?? 0),
-                    ScoreColumn('实验4', (s) => (s['exp4_score'] as num?)?.toDouble() ?? 0),
-                    ScoreColumn('目标2', (s) => (s['obj2_achievement'] as num?)?.toDouble() ?? 0, isAchievement: true, digits: 2, headerColor: kObjectiveColors[1]),
-                    ScoreColumn('实验5', (s) => (s['exp5_score'] as num?)?.toDouble() ?? 0),
-                    ScoreColumn('实验6', (s) => (s['exp6_score'] as num?)?.toDouble() ?? 0),
-                    ScoreColumn('目标3', (s) => (s['obj3_achievement'] as num?)?.toDouble() ?? 0, isAchievement: true, digits: 2, headerColor: kObjectiveColors[2]),
-                    ScoreColumn('实验7', (s) => (s['exp7_score'] as num?)?.toDouble() ?? 0),
-                    ScoreColumn('目标4', (s) => (s['obj4_achievement'] as num?)?.toDouble() ?? 0, isAchievement: true, digits: 2, headerColor: kObjectiveColors[3]),
-                    ScoreColumn('总评', (s) => (s['total_score'] as num?)?.toDouble() ?? 0, bold: true),
+                    ScoreColumn('实验1',
+                        (s) => (s['exp1_score'] as num?)?.toDouble() ?? 0),
+                    ScoreColumn('实验2',
+                        (s) => (s['exp2_score'] as num?)?.toDouble() ?? 0),
+                    ScoreColumn('目标1',
+                        (s) => (s['obj1_achievement'] as num?)?.toDouble() ?? 0,
+                        isAchievement: true,
+                        digits: 2,
+                        headerColor: kObjectiveColors[0]),
+                    ScoreColumn('实验3',
+                        (s) => (s['exp3_score'] as num?)?.toDouble() ?? 0),
+                    ScoreColumn('实验4',
+                        (s) => (s['exp4_score'] as num?)?.toDouble() ?? 0),
+                    ScoreColumn('目标2',
+                        (s) => (s['obj2_achievement'] as num?)?.toDouble() ?? 0,
+                        isAchievement: true,
+                        digits: 2,
+                        headerColor: kObjectiveColors[1]),
+                    ScoreColumn('实验5',
+                        (s) => (s['exp5_score'] as num?)?.toDouble() ?? 0),
+                    ScoreColumn('实验6',
+                        (s) => (s['exp6_score'] as num?)?.toDouble() ?? 0),
+                    ScoreColumn('目标3',
+                        (s) => (s['obj3_achievement'] as num?)?.toDouble() ?? 0,
+                        isAchievement: true,
+                        digits: 2,
+                        headerColor: kObjectiveColors[2]),
+                    ScoreColumn('实验7',
+                        (s) => (s['exp7_score'] as num?)?.toDouble() ?? 0),
+                    ScoreColumn('目标4',
+                        (s) => (s['obj4_achievement'] as num?)?.toDouble() ?? 0,
+                        isAchievement: true,
+                        digits: 2,
+                        headerColor: kObjectiveColors[3]),
+                    ScoreColumn('总评',
+                        (s) => (s['total_score'] as num?)?.toDouble() ?? 0,
+                        bold: true),
                   ],
                 ),
         ),
@@ -1332,7 +1345,6 @@ class _ExamAchievementTabState extends State<ExamAchievementTab> {
   Map<String, double> _classAvg = {};
   ScoreSort _sort = ScoreSort.idAsc;
   bool _loading = true;
-  bool _generating = false;
 
   @override
   void initState() {
@@ -1368,7 +1380,8 @@ class _ExamAchievementTabState extends State<ExamAchievementTab> {
   Future<void> _loadScores() async {
     if (_selectedBatchId == null) return;
     final scores = await widget.achievementDao.getExamScores(_selectedBatchId!);
-    final avg = await widget.achievementDao.calculateExamClassAverage(_selectedBatchId!);
+    final avg = await widget.achievementDao
+        .calculateExamClassAverage(_selectedBatchId!);
     if (mounted) {
       setState(() {
         sortScoresInPlace(scores, _sort);
@@ -1398,12 +1411,16 @@ class _ExamAchievementTabState extends State<ExamAchievementTab> {
                     labelText: '选择批次',
                     border: OutlineInputBorder(),
                     isDense: true,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
-                  items: _batches.map((b) => DropdownMenuItem<int>(
-                    value: b['id'] as int,
-                    child: Text(b['batch_name']?.toString() ?? '', overflow: TextOverflow.ellipsis),
-                  )).toList(),
+                  items: _batches
+                      .map((b) => DropdownMenuItem<int>(
+                            value: b['id'] as int,
+                            child: Text(b['batch_name']?.toString() ?? '',
+                                overflow: TextOverflow.ellipsis),
+                          ))
+                      .toList(),
                   onChanged: (v) {
                     setState(() => _selectedBatchId = v);
                     _loadScores();
@@ -1430,75 +1447,49 @@ class _ExamAchievementTabState extends State<ExamAchievementTab> {
           ),
         ),
 
-        // 说明卡片
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Card(
+        // 标题 + 说明卡片(左) + 班级平均(右)，水平排布以给下方数据表让出空间
+        achievementTabHeader(
+          context,
+          title: '考核达成',
+          classAvg: _classAvg,
+          infoCard: Card(
+            margin: EdgeInsets.zero,
             color: Colors.orange.shade50,
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Row(
                     children: [
                       Icon(Icons.info_outline, color: primary, size: 18),
                       const SizedBox(width: 8),
-                      const Text('期末考核评价结构（权重50%）', style: TextStyle(fontWeight: FontWeight.bold)),
+                      const Expanded(
+                          child: Text('期末考核评价结构（权重50%）',
+                              style: TextStyle(fontWeight: FontWeight.bold))),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  const Text('• 项目(30%) → 课程目标1 ｜ 达成度 = 项目得分/100', style: TextStyle(fontSize: 12)),
-                  const Text('• 小组(20%) → 课程目标2 ｜ 达成度 = 小组得分/100', style: TextStyle(fontSize: 12)),
-                  const Text('• 个人(20%) → 课程目标3 ｜ 达成度 = 个人得分/100', style: TextStyle(fontSize: 12)),
-                  const Text('• 答辩(30%) → 课程目标4 ｜ 达成度 = 答辩得分/100', style: TextStyle(fontSize: 12)),
+                  const Text('• 项目(30%) → 课程目标1 ｜ 达成度 = 项目得分/100',
+                      style: TextStyle(fontSize: 12)),
+                  const Text('• 小组(20%) → 课程目标2 ｜ 达成度 = 小组得分/100',
+                      style: TextStyle(fontSize: 12)),
+                  const Text('• 个人(20%) → 课程目标3 ｜ 达成度 = 个人得分/100',
+                      style: TextStyle(fontSize: 12)),
+                  const Text('• 答辩(30%) → 课程目标4 ｜ 达成度 = 答辩得分/100',
+                      style: TextStyle(fontSize: 12)),
                   const SizedBox(height: 4),
-                  const Text('总评 = 项目×0.3 + 小组×0.2 + 个人×0.2 + 答辩×0.3', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange)),
+                  const Text('总评 = 项目×0.3 + 小组×0.2 + 个人×0.2 + 答辩×0.3',
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange)),
                 ],
               ),
             ),
           ),
         ),
-
-        // 班级平均
-        if (_classAvg.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('班级平均指标点达成度', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        for (int i = 0; i < 4; i++)
-                          Expanded(
-                            child: Column(
-                              children: [
-                                Text('目标${i + 1}', style: TextStyle(fontSize: 11, color: kObjectiveColors[i])),
-                                const SizedBox(height: 4),
-                                Text(
-                                  (_classAvg['obj${i + 1}'] ?? 0).toStringAsFixed(2),
-                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: achievementLevelColor(_classAvg['obj${i + 1}'] ?? 0)),
-                                ),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    objectiveRadarChart(
-                      [for (int i = 0; i < 4; i++) _classAvg['obj${i + 1}'] ?? 0],
-                      Theme.of(context).colorScheme.primary,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
 
         // 学生成绩表
         Expanded(
@@ -1507,11 +1498,14 @@ class _ExamAchievementTabState extends State<ExamAchievementTab> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.assignment_outlined, size: 64, color: Colors.grey),
+                      const Icon(Icons.assignment_outlined,
+                          size: 64, color: Colors.grey),
                       const SizedBox(height: 16),
-                      const Text('暂无期末考核数据', style: TextStyle(color: Colors.grey)),
+                      const Text('暂无期末考核数据',
+                          style: TextStyle(color: Colors.grey)),
                       const SizedBox(height: 8),
-                      const Text('请在成绩管理中导入或录入成绩数据', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      const Text('请在成绩管理中导入或录入成绩数据',
+                          style: TextStyle(color: Colors.grey, fontSize: 12)),
                     ],
                   ),
                 )
@@ -1520,15 +1514,39 @@ class _ExamAchievementTabState extends State<ExamAchievementTab> {
                   rows: _scores,
                   onRefresh: () async => _loadScores(),
                   columns: [
-                    ScoreColumn('项目', (s) => (s['project_score'] as num?)?.toDouble() ?? 0),
-                    ScoreColumn('目标1', (s) => (s['obj1_achievement'] as num?)?.toDouble() ?? 0, isAchievement: true, digits: 2, headerColor: kObjectiveColors[0]),
-                    ScoreColumn('小组', (s) => (s['group_score'] as num?)?.toDouble() ?? 0),
-                    ScoreColumn('目标2', (s) => (s['obj2_achievement'] as num?)?.toDouble() ?? 0, isAchievement: true, digits: 2, headerColor: kObjectiveColors[1]),
-                    ScoreColumn('个人', (s) => (s['individual_score'] as num?)?.toDouble() ?? 0),
-                    ScoreColumn('目标3', (s) => (s['obj3_achievement'] as num?)?.toDouble() ?? 0, isAchievement: true, digits: 2, headerColor: kObjectiveColors[2]),
-                    ScoreColumn('答辩', (s) => (s['defense_score'] as num?)?.toDouble() ?? 0),
-                    ScoreColumn('目标4', (s) => (s['obj4_achievement'] as num?)?.toDouble() ?? 0, isAchievement: true, digits: 2, headerColor: kObjectiveColors[3]),
-                    ScoreColumn('总评', (s) => (s['total_score'] as num?)?.toDouble() ?? 0, bold: true),
+                    ScoreColumn('项目',
+                        (s) => (s['project_score'] as num?)?.toDouble() ?? 0),
+                    ScoreColumn('目标1',
+                        (s) => (s['obj1_achievement'] as num?)?.toDouble() ?? 0,
+                        isAchievement: true,
+                        digits: 2,
+                        headerColor: kObjectiveColors[0]),
+                    ScoreColumn('小组',
+                        (s) => (s['group_score'] as num?)?.toDouble() ?? 0),
+                    ScoreColumn('目标2',
+                        (s) => (s['obj2_achievement'] as num?)?.toDouble() ?? 0,
+                        isAchievement: true,
+                        digits: 2,
+                        headerColor: kObjectiveColors[1]),
+                    ScoreColumn(
+                        '个人',
+                        (s) =>
+                            (s['individual_score'] as num?)?.toDouble() ?? 0),
+                    ScoreColumn('目标3',
+                        (s) => (s['obj3_achievement'] as num?)?.toDouble() ?? 0,
+                        isAchievement: true,
+                        digits: 2,
+                        headerColor: kObjectiveColors[2]),
+                    ScoreColumn('答辩',
+                        (s) => (s['defense_score'] as num?)?.toDouble() ?? 0),
+                    ScoreColumn('目标4',
+                        (s) => (s['obj4_achievement'] as num?)?.toDouble() ?? 0,
+                        isAchievement: true,
+                        digits: 2,
+                        headerColor: kObjectiveColors[3]),
+                    ScoreColumn('总评',
+                        (s) => (s['total_score'] as num?)?.toDouble() ?? 0,
+                        bold: true),
                   ],
                 ),
         ),
@@ -1538,38 +1556,122 @@ class _ExamAchievementTabState extends State<ExamAchievementTab> {
 }
 
 class _ComponentExpandTile extends StatefulWidget {
-  final String title, env; final IconData icon; final Color color;
-  final int batchId; final List<String> colLabels, colKeys;
-  const _ComponentExpandTile({required this.title, required this.icon, required this.color, required this.batchId, required this.env, required this.colLabels, required this.colKeys});
-  @override State<_ComponentExpandTile> createState() => _ComponentExpandTileState();
+  final String title, env;
+  final IconData icon;
+  final Color color;
+  final int batchId;
+  final List<String> colLabels, colKeys;
+  const _ComponentExpandTile(
+      {required this.title,
+      required this.icon,
+      required this.color,
+      required this.batchId,
+      required this.env,
+      required this.colLabels,
+      required this.colKeys});
+  @override
+  State<_ComponentExpandTile> createState() => _ComponentExpandTileState();
 }
+
 class _ComponentExpandTileState extends State<_ComponentExpandTile> {
-  bool _expanded = false; List<Map<String, dynamic>> _rows = []; bool _loading = false;
+  bool _expanded = false;
+  List<Map<String, dynamic>> _rows = [];
+  bool _loading = false;
   Future<void> _load() async {
-    if (_expanded) { setState(() => _expanded = false); return; }
-    setState(() { _expanded = true; _loading = true; });
-    final tableName = widget.env == 'pingshi' ? 'achievement_pingshi_scores' : widget.env == 'experiment' ? 'achievement_experiment_scores' : 'achievement_exam_scores';
+    if (_expanded) {
+      setState(() => _expanded = false);
+      return;
+    }
+    setState(() {
+      _expanded = true;
+      _loading = true;
+    });
+    final tableName = widget.env == 'pingshi'
+        ? 'achievement_pingshi_scores'
+        : widget.env == 'experiment'
+            ? 'achievement_experiment_scores'
+            : 'achievement_exam_scores';
     final db = await DatabaseHelper.instance.database;
-    final r = await db.query(tableName, where: 'batch_id=?', whereArgs: [widget.batchId], orderBy: 'student_id ASC');
-    if (mounted) setState(() { _rows = r; _loading = false; });
+    final r = await db.query(tableName,
+        where: 'batch_id=?',
+        whereArgs: [widget.batchId],
+        orderBy: 'student_id ASC');
+    if (mounted)
+      setState(() {
+        _rows = r;
+        _loading = false;
+      });
   }
-  @override Widget build(BuildContext context) {
+
+  @override
+  Widget build(BuildContext context) {
     return Column(children: [
-      ListTile(leading: Icon(widget.icon, color: widget.color), title: Text('${widget.title}${_expanded?' (${_rows.length})':''}'), trailing: Icon(_expanded?Icons.expand_less:Icons.expand_more), onTap: _load),
+      ListTile(
+          leading: Icon(widget.icon, color: widget.color),
+          title:
+              Text('${widget.title}${_expanded ? ' (${_rows.length})' : ''}'),
+          trailing: Icon(_expanded ? Icons.expand_less : Icons.expand_more),
+          onTap: _load),
       if (_loading) const LinearProgressIndicator(),
-      if (_expanded && !_loading) SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(columnSpacing:14, headingRowHeight:36, dataRowMinHeight:32,
-        columns: [const DataColumn(label: Text('学号',style:TextStyle(fontSize:11,fontWeight:FontWeight.bold))), const DataColumn(label: Text('姓名',style:TextStyle(fontSize:11,fontWeight:FontWeight.bold))), for(final l in widget.colLabels) DataColumn(label: Text(l,style:const TextStyle(fontSize:11,fontWeight:FontWeight.bold)))],
-        rows: List.generate(_rows.length, (i) {
-          final r = _rows[i];
-          return DataRow(
-            color: WidgetStateProperty.all(i.isEven ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.surface.withValues(alpha: 0.6)),
-            cells: [
-              DataCell(Text('${r['student_id']??''}',style:TextStyle(fontSize:11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85)))),
-              DataCell(Text('${r['student_name']??''}',style:TextStyle(fontSize:11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85)))),
-              for(final k in widget.colKeys) DataCell(Text(((r[k] as num?)?.toDouble()??0).toStringAsFixed(1),style:TextStyle(fontSize:11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85)))),
-            ],
-          );
-        }),
-      ))]);
+      if (_expanded && !_loading)
+        SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              columnSpacing: 14,
+              headingRowHeight: 36,
+              dataRowMinHeight: 32,
+              columns: [
+                const DataColumn(
+                    label: Text('学号',
+                        style: TextStyle(
+                            fontSize: 11, fontWeight: FontWeight.bold))),
+                const DataColumn(
+                    label: Text('姓名',
+                        style: TextStyle(
+                            fontSize: 11, fontWeight: FontWeight.bold))),
+                for (final l in widget.colLabels)
+                  DataColumn(
+                      label: Text(l,
+                          style: const TextStyle(
+                              fontSize: 11, fontWeight: FontWeight.bold)))
+              ],
+              rows: List.generate(_rows.length, (i) {
+                final r = _rows[i];
+                return DataRow(
+                  color: WidgetStateProperty.all(i.isEven
+                      ? Theme.of(context).colorScheme.surface
+                      : Theme.of(context)
+                          .colorScheme
+                          .surface
+                          .withValues(alpha: 0.6)),
+                  cells: [
+                    DataCell(Text('${r['student_id'] ?? ''}',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.85)))),
+                    DataCell(Text('${r['student_name'] ?? ''}',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.85)))),
+                    for (final k in widget.colKeys)
+                      DataCell(Text(
+                          ((r[k] as num?)?.toDouble() ?? 0).toStringAsFixed(1),
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.85)))),
+                  ],
+                );
+              }),
+            ))
+    ]);
   }
 }
