@@ -24,16 +24,15 @@ class AppUrls {
 /// 如果泄漏到课程外，作废重发即可（去 Gitee 后台 revoke 旧 token，把 [syncToken]
 /// 改为新值，重新构建发版给学生）。
 ///
-/// 上一次旧 Token: `17d6948aabc0764e4f18bb7b215fa32c`（已 revoke，仅用于检测旧
+/// 上一次旧 Token: `64a07762f8a3ab4415b8c943651bfb91`（已 revoke，仅用于检测旧
 /// SharedPreferences 缓存值并自动覆盖更新）。
 class GiteeCredentials {
   GiteeCredentials._();
 
   /// 当前预置同步 Token（osgisOne/mad-fd 仓库读写权限）。
-  static const String syncToken = '64a07762f8a3ab4415b8c943651bfb91';
+  static const String syncToken = '17d6948aabc0764e4f18bb7b215fa32c';
 
   /// 已作废的旧 Token — 检测到学生本地仍存这个值时自动替换为 [syncToken]。
   static const String legacyTokenForMigration =
-      '17d6948aabc0764e4f18bb7b215fa32c';
+      '64a07762f8a3ab4415b8c943651bfb91';
 }
-
