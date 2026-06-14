@@ -3,6 +3,7 @@ class ArchiveDocument {
   final String title;
   final String documentType;
   final String period;
+  final String? courseId;
   final String courseType;
   final String status;
   final String? content;
@@ -28,6 +29,7 @@ class ArchiveDocument {
     required this.title,
     required this.documentType,
     required this.period,
+    this.courseId,
     required this.courseType,
     this.status = 'draft',
     this.content,
@@ -46,6 +48,7 @@ class ArchiveDocument {
         'title': title,
         'document_type': documentType,
         'period': period,
+        'course_id': courseId,
         'course_type': courseType,
         'status': status,
         'content': content,
@@ -63,6 +66,7 @@ class ArchiveDocument {
         title: map['title'] as String? ?? '',
         documentType: map['document_type'] as String? ?? '',
         period: map['period'] as String? ?? '',
+        courseId: map['course_id'] as String?,
         courseType: map['course_type'] as String? ?? '',
         status: map['status'] as String? ?? 'draft',
         content: map['content'] as String?,
@@ -80,6 +84,7 @@ class ArchiveDocument {
     String? title,
     String? documentType,
     String? period,
+    String? courseId,
     String? courseType,
     String? status,
     String? content,
@@ -96,6 +101,7 @@ class ArchiveDocument {
         title: title ?? this.title,
         documentType: documentType ?? this.documentType,
         period: period ?? this.period,
+        courseId: courseId ?? this.courseId,
         courseType: courseType ?? this.courseType,
         status: status ?? this.status,
         content: content ?? this.content,

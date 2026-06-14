@@ -18,6 +18,7 @@ import '../../../../services/archive/teaching_task_pdf.dart';
 import '../../../../services/archive/teaching_task_source_service.dart';
 import '../../../../services/archive/importers/archive_importers.dart';
 import '../../../../services/archive_package_service.dart';
+import '../../../../data/local/course_dao.dart';
 import '../../../../data/local/archive_dao.dart';
 import '../../../../data/models/archive_document_model.dart';
 import '../../../../presentation/widgets/markdown_bubble.dart';
@@ -51,6 +52,7 @@ class ArchivePeriodTab extends StatefulWidget {
 }
 
 class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
+  final _courseDao = CourseDao();
   List<ArchiveDocument> _documents = [];
   bool _loading = true;
 
@@ -74,7 +76,6 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     try {
       final docs = await widget.dao.getDocuments(
         period: widget.periodKey,
-        courseType: widget.courseType,
       );
       if (mounted) {
         setState(() {
@@ -101,6 +102,15 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
   bool _canAutoGenerate(DocumentTypeDef def) {
     if (def.needsGeneration) return true;
     return ArchiveTemplateSourceService.supportsDocument(def.key);
+  }
+
+  Future<String?> _activeCourseName() async {
+    try {
+      return (await _courseDao.getActiveCourse())?.name;
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ArchivePeriodTab.activeCourseName', stack: st);
+      return null;
+    }
   }
 
   String _ordinalFor(DocumentTypeDef def, int index) {
@@ -566,13 +576,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
   }
 
   String _docLabelFor(String docType) {
-    final defs = docsForCourseType(widget.courseType);
-    for (final list in defs.values) {
-      for (final d in list) {
-        if (d.key == docType) return d.label;
-      }
-    }
-    return docType;
+    return documentLabelForCourseType(widget.courseType, docType);
   }
 
   /// 归档完成提示：显示文件路径 + 「打开文件夹 / 复制路径 / 关闭」三个动作
@@ -676,7 +680,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-                content: Text('未找到"移动应用开发"课程数据，请确认HTML文件内容'),
+                content: Text('未找到课程任务数据，请确认HTML文件内容'),
                 backgroundColor: Colors.red),
           );
         }
@@ -718,10 +722,14 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         return;
       }
       final bytes = await file.readAsBytes();
+      final targetCourseName = await _activeCourseName();
       String? parsed;
       Set<String> foundNames = {};
       try {
-        final result = ArchiveImporters.parseCourseSchedule(bytes);
+        final result = ArchiveImporters.parseCourseSchedule(
+          bytes,
+          targetCourseName: targetCourseName,
+        );
         parsed = result.markdown;
         foundNames = result.allCourseNames;
       } catch (e, st) {
@@ -730,9 +738,12 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       if (parsed == null) {
         if (mounted) {
           final found = foundNames.take(10).join('、');
+          final courseName = targetCourseName?.trim().isNotEmpty == true
+              ? targetCourseName!.trim()
+              : '当前课程';
           final msg = found.isNotEmpty
-              ? '课表中未找到"移动应用开发"课程。找到的课程：$found'
-              : '未在课表中找到"移动应用开发"课程，请确认Excel文件包含"课程名称"列';
+              ? '课表中未找到"$courseName"。找到的课程：$found'
+              : '未在课表中找到"$courseName"，请确认Excel文件包含"课程名称"列';
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
                 content: Text(msg),
@@ -825,12 +836,19 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         return;
       }
       final raw = await file.readAsString();
-      final parsed = ArchiveImporters.parseRollCall(raw);
+      final targetCourseName = await _activeCourseName();
+      final parsed = ArchiveImporters.parseRollCall(
+        raw,
+        targetCourseName: targetCourseName,
+      );
       if (parsed == null) {
         if (mounted) {
+          final courseName = targetCourseName?.trim().isNotEmpty == true
+              ? targetCourseName!.trim()
+              : '当前课程';
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('未找到"移动应用开发"点名册数据，请确认MHTML文件内容'),
+            SnackBar(
+                content: Text('未找到"$courseName"点名册数据，请确认MHTML文件内容'),
                 backgroundColor: Colors.red),
           );
         }
@@ -2177,8 +2195,10 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       );
       return;
     }
-    final sample =
-        _documents.where((d) => (d.content ?? '').trim().isNotEmpty).toList();
+    final sample = (await widget.dao.getDocuments())
+        .where((d) => (d.content ?? '').trim().isNotEmpty)
+        .toList();
+    if (!mounted) return;
     if (sample.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('暂无已归档内容可合并，请先在各期完成归档')),

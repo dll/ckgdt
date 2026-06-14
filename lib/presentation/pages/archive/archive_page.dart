@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../core/error_handler.dart';
 import '../../../services/agent/agents/archive_agent.dart';
 import '../../../data/local/archive_dao.dart';
@@ -8,6 +8,7 @@ import 'archive_constants.dart';
 import 'tabs/period_tab.dart';
 import 'tabs/midterm_tab.dart';
 import 'tabs/final_tab.dart';
+import 'widgets/archive_materials_checklist.dart';
 
 class ArchivePage extends StatefulWidget {
   const ArchivePage({super.key});
@@ -35,7 +36,8 @@ class _ArchivePageState extends State<ArchivePage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: archivePeriodLabels.length, vsync: this);
+    _tabController =
+        TabController(length: archivePeriodLabels.length, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) setState(() {});
     });
@@ -96,10 +98,12 @@ class _ArchivePageState extends State<ArchivePage>
                   labelColor: primary,
                   unselectedLabelColor: Colors.grey,
                   indicatorColor: primary,
-                  tabs: List.generate(archivePeriodLabels.length, (i) => Tab(
-                    icon: Icon(archivePeriodIcons[i], size: 20),
-                    text: archivePeriodLabels[i],
-                  )),
+                  tabs: List.generate(
+                      archivePeriodLabels.length,
+                      (i) => Tab(
+                            icon: Icon(archivePeriodIcons[i], size: 20),
+                            text: archivePeriodLabels[i],
+                          )),
                 ),
               ),
               const Padding(
@@ -137,6 +141,12 @@ class _ArchivePageState extends State<ArchivePage>
                 dao: _dao,
                 agent: _agent,
                 onSyllabusChanged: _detectCourseTypeFromSyllabus,
+                extraHeader: [
+                  ArchiveMaterialsChecklist(
+                    dao: _dao,
+                    courseType: _detectedCourseType,
+                  ),
+                ],
               ),
             ],
           ),

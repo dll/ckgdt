@@ -328,6 +328,16 @@ List<DocumentTypeDef> docsForPeriod(String courseType, String period) {
   return all[period] ?? [];
 }
 
+String documentLabelForCourseType(String courseType, String docType) {
+  final defs = docsForCourseType(courseType);
+  for (final list in defs.values) {
+    for (final d in list) {
+      if (d.key == docType) return d.label;
+    }
+  }
+  return docType;
+}
+
 /// Detect course type from syllabus content.
 /// Returns 'assess' (考查) by default; 'exam' (考试) if syllabus explicitly contains 考试 and no 考查.
 String detectCourseTypeFromSyllabus(String? content) {

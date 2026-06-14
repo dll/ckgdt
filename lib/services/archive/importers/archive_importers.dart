@@ -105,8 +105,9 @@ class ArchiveImporters {
     return buf.toString();
   }
 
-  /// 学生点名册（MHTML 考勤表）→ Markdown。非"移动应用开发"或无学生返回 null。
-  static String? parseRollCall(String raw, {DateTime? now}) {
+  /// 学生点名册（MHTML 考勤表）→ Markdown。指定 [targetCourseName] 时仅解析该课程。
+  static String? parseRollCall(String raw,
+      {DateTime? now, String? targetCourseName}) {
     String html = raw;
     final boundaryMatch = RegExp(r'boundary="(.*?)"').firstMatch(raw);
     if (boundaryMatch != null) {
@@ -134,7 +135,10 @@ class ArchiveImporters {
     final teacher = teacherMatch?.group(1)?.trim() ?? '未知';
     final schedule = scheduleMatch?.group(1)?.trim() ?? '';
 
-    if (!courseName.contains('移动应用开发')) return null;
+    final target = targetCourseName?.trim();
+    if (target != null && target.isNotEmpty && !courseName.contains(target)) {
+      return null;
+    }
 
     final students = <Map<String, String>>[];
     final rowRegex = RegExp(
@@ -157,7 +161,8 @@ class ArchiveImporters {
 
     final buf = StringBuffer();
     buf.writeln('# 学生点名册\n');
-    buf.writeln('**课程**：移动应用开发');
+    buf.writeln(
+        '**课程**：${courseName.isNotEmpty ? courseName : target ?? '当前课程'}');
     buf.writeln('**授课教师**：$teacher');
     buf.writeln('**课程安排**：$schedule');
     buf.writeln('**学生人数**：${students.length}人\n');
@@ -178,7 +183,7 @@ class ArchiveImporters {
   /// 课程课表（Excel）→ [CourseScheduleResult]。
   /// markdown 为 null 时 allCourseNames 含表中实际发现的课程名（供 UI 提示）。
   static CourseScheduleResult parseCourseSchedule(List<int> bytes,
-      {DateTime? now}) {
+      {DateTime? now, String? targetCourseName}) {
     Excel excel;
     try {
       excel = Excel.decodeBytes(bytes);
@@ -214,12 +219,16 @@ class ArchiveImporters {
 
     final rows = <Map<String, String>>[];
     final allCourseNames = <String>{};
+    final target = targetCourseName?.trim();
     for (var i = 1; i < sheet.rows.length; i++) {
       final r = sheet.rows[i];
       final courseName = cell(r, courseIdx);
       if (courseName.isNotEmpty) allCourseNames.add(courseName);
-      if (!courseName.contains('移动应用开发')) continue;
+      if (target != null && target.isNotEmpty && !courseName.contains(target)) {
+        continue;
+      }
       rows.add({
+        'course': courseName,
         'type': cell(r, typeIdx),
         'class': cell(r, classIdx),
         'date': cell(r, dateIdx),
@@ -247,6 +256,16 @@ class ArchiveImporters {
       (r) => r['teacher']!.isNotEmpty,
       orElse: () => {'teacher': '未知'},
     )['teacher']!;
+    final displayCourseName = (target != null && target.isNotEmpty)
+        ? target
+        : rows.first['course'] ?? '当前课程';
+    final displayClasses = rows
+        .map((r) => r['class'] ?? '')
+        .where((v) => v.trim().isNotEmpty)
+        .map((v) => v.replaceAll(RegExp(r'班组\d[：:].*'), '').trim())
+        .where((v) => v.isNotEmpty)
+        .toSet()
+        .join('、');
 
     String semester = '未知学期';
     if (rows.isNotEmpty && rows[0]['date']!.isNotEmpty) {
@@ -263,10 +282,12 @@ class ArchiveImporters {
     int? w(Map<String, String> r) => int.tryParse(r['week']!);
 
     final buf = StringBuffer();
-    buf.writeln('# 课程课表：移动应用开发\n');
+    buf.writeln('# 课程课表：$displayCourseName\n');
     buf.writeln('**教师**：$teacher');
     buf.writeln('**学期**：$semester');
-    buf.writeln('**班级**：软件231,软件232（85人）\n');
+    if (displayClasses.isNotEmpty) {
+      buf.writeln('**班级**：$displayClasses\n');
+    }
 
     theory.sort((a, b) => (w(a) ?? 0).compareTo(w(b) ?? 0));
     buf.writeln('## 一、理论课\n');
