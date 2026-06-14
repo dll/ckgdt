@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -13,12 +13,15 @@ import '../../../../services/archive/base_document_processor.dart';
 import '../../../../services/archive/pandoc_service.dart';
 import '../../../../services/archive/processor_registry.dart';
 import '../../../../services/archive/review_result.dart';
+import '../../../../services/archive/teaching_task_pdf.dart';
+import '../../../../services/archive/teaching_task_source_service.dart';
 import '../../../../services/archive/importers/archive_importers.dart';
 import '../../../../services/archive_package_service.dart';
 import '../../../../data/local/archive_dao.dart';
 import '../../../../data/models/archive_document_model.dart';
 import '../../../../presentation/widgets/markdown_bubble.dart';
 import '../archive_constants.dart';
+import '../teaching_task_authorized_fetch_page.dart';
 import '../widgets/review_result_dialog.dart';
 
 class ArchivePeriodTab extends StatefulWidget {
@@ -59,7 +62,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
   @override
   void didUpdateWidget(ArchivePeriodTab old) {
     super.didUpdateWidget(old);
-    if (old.courseType != widget.courseType || old.periodKey != widget.periodKey) {
+    if (old.courseType != widget.courseType ||
+        old.periodKey != widget.periodKey) {
       _load();
     }
   }
@@ -71,7 +75,12 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         period: widget.periodKey,
         courseType: widget.courseType,
       );
-      if (mounted) setState(() { _documents = docs; _loading = false; });
+      if (mounted) {
+        setState(() {
+          _documents = docs;
+          _loading = false;
+        });
+      }
     } catch (e, st) {
       swallowDebug(e, tag: 'ArchivePeriodTab._load', stack: st);
       if (mounted) setState(() => _loading = false);
@@ -103,7 +112,22 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       // 没注册的 docType（系统导入类不会有 needsGeneration）回退原路径。
       final processor = ProcessorRegistry.instance.find(def.key);
       ArchiveDocument doc;
-      if (processor is AiDraftProcessor) {
+      if (def.key == 'teaching_task') {
+        final generated = await _generateTeachingTaskFromSource();
+        if (generated == null) {
+          if (mounted) {
+            Navigator.of(context).pop();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('未获取到可解析的教学任务书。请在教务网页登录后进入任务书打印页，或使用手动导入兜底。'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+          return;
+        }
+        doc = generated;
+      } else if (processor is AiDraftProcessor) {
         doc = await processor.generateAsDocument(
           period: widget.periodKey,
           courseType: widget.courseType,
@@ -139,7 +163,10 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (_) => _DocumentPreviewSheet(doc: doc),
+      builder: (_) => _DocumentPreviewSheet(
+        doc: doc,
+        pdfBuilder: _renderPdfBytes,
+      ),
     );
   }
 
@@ -147,7 +174,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     if (!mounted) return;
 
     // 跨平台守门：移动端 / web 不支持 pandoc + libreoffice 子进程
-    if (kIsWeb || !(Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
+    if (kIsWeb ||
+        !(Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('一键打印仅在 Windows/macOS/Linux 桌面端可用')),
       );
@@ -162,18 +190,25 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       return;
     }
 
-    // loading 提示（pandoc + soffice 两步通常 5-15 秒）
+    final loadingText = doc.documentType == 'teaching_task'
+        ? '正在生成学校版式 PDF...'
+        : '正在生成 PDF（pandoc + LibreOffice）...';
+
+    // loading 提示（普通文档 pandoc + soffice 两步通常 5-15 秒）
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const AlertDialog(
+      builder: (_) => AlertDialog(
         content: SizedBox(
           height: 80,
           child: Row(
             children: [
-              SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
-              SizedBox(width: 16),
-              Expanded(child: Text('正在生成 PDF（pandoc + LibreOffice）...')),
+              const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2)),
+              const SizedBox(width: 16),
+              Expanded(child: Text(loadingText)),
             ],
           ),
         ),
@@ -230,14 +265,17 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       builder: (_) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error),
+            Icon(Icons.error_outline,
+                color: Theme.of(context).colorScheme.error),
             const SizedBox(width: 8),
             Expanded(child: Text(title)),
           ],
         ),
         content: SingleChildScrollView(child: SelectableText(message)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('知道了')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('知道了')),
         ],
       ),
     );
@@ -245,6 +283,11 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
 
   Future<void> _reviewDoc(ArchiveDocument doc) async {
     if (!mounted) return;
+
+    if (doc.documentType == 'teaching_task') {
+      await _reviewTeachingTask(doc);
+      return;
+    }
 
     // 优先走 Processor 路径（结构化审核 + 自动创建审核表卡片）。
     // 一个目标文档可能对应多个审核处理器（如教学大纲 → 合理性审核表 + 评价表），
@@ -270,7 +313,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
           builder: (_) => AlertDialog(
             title: Row(
               children: [
-                Icon(Icons.rate_review, color: Theme.of(context).colorScheme.primary),
+                Icon(Icons.rate_review,
+                    color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 8),
                 const Text('AI 审核结果'),
               ],
@@ -280,7 +324,9 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
               child: MarkdownBubble(content: review),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('关闭')),
+              TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('关闭')),
             ],
           ),
         );
@@ -294,6 +340,31 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         );
       }
     }
+  }
+
+  Future<ReviewResult> _reviewTeachingTask(
+    ArchiveDocument doc, {
+    bool showResult = true,
+  }) async {
+    final result = TeachingTaskPdf.review(doc.content ?? '');
+    final updated = doc.copyWith(
+      status: result.isApproved ? 'approved' : 'reviewing',
+      reviewJson: result.toJson(),
+      reviewedAt: DateTime.now().toIso8601String(),
+    );
+    await widget.dao.saveDocument(updated);
+    if (showResult && mounted) {
+      await showDialog(
+        context: context,
+        builder: (_) => ReviewResultDialog(
+          target: updated,
+          initial: result,
+          onUpdated: (_) => _load(),
+        ),
+      );
+      if (mounted) await _load();
+    }
+    return result;
   }
 
   /// 查找该 doc.documentType 对应的全部 AiAuditProcessor。
@@ -347,7 +418,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       // 对话框关闭后再刷一次（覆盖再审/忽略后的状态）
       if (mounted) await _load();
     } catch (e, st) {
-      swallowDebug(e, tag: 'ArchivePeriodTab._reviewDocViaProcessors', stack: st);
+      swallowDebug(e,
+          tag: 'ArchivePeriodTab._reviewDocViaProcessors', stack: st);
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -360,7 +432,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
   Future<void> _archiveDoc(ArchiveDocument doc) async {
     if (!mounted) return;
 
-    if (kIsWeb || !(Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
+    if (kIsWeb ||
+        !(Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('一键归档仅在桌面端可用')),
       );
@@ -384,7 +457,10 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
           height: 80,
           child: Row(
             children: [
-              SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
+              SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2)),
               SizedBox(width: 16),
               Expanded(child: Text('正在归档（pandoc 生成 docx 并落盘）...')),
             ],
@@ -408,7 +484,9 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       _showArchivedDialog(
         title: '已归档',
         path: outPath,
-        message: 'docx 已保存，文件路径已复制到剪贴板，可直接粘贴到 QQ 群发送。',
+        message: doc.documentType == 'teaching_task'
+            ? 'docx 与学校版式 PDF 已保存，文件路径已复制到剪贴板，可直接粘贴到 QQ 群发送。'
+            : 'docx 已保存，文件路径已复制到剪贴板，可直接粘贴到 QQ 群发送。',
       );
     } on ArchivePackageException catch (e) {
       swallowDebug(e, tag: 'ArchivePeriodTab._archiveDoc.pkg');
@@ -499,8 +577,12 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         title: const Text('确认删除'),
         content: Text('确定删除"${doc.title}"？'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('删除', style: TextStyle(color: Colors.red))),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('取消')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('删除', style: TextStyle(color: Colors.red))),
         ],
       ),
     );
@@ -536,7 +618,9 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       if (parsed == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('未找到"移动应用开发"课程数据，请确认HTML文件内容'), backgroundColor: Colors.red),
+            const SnackBar(
+                content: Text('未找到"移动应用开发"课程数据，请确认HTML文件内容'),
+                backgroundColor: Colors.red),
           );
         }
         return;
@@ -547,7 +631,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         period: widget.periodKey,
         courseType: widget.courseType,
         content: parsed,
-        isGenerated: true,
+        filePath: file.path,
+        isGenerated: false,
       );
       await widget.dao.saveDocument(doc);
       _load();
@@ -592,7 +677,10 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
               ? '课表中未找到"移动应用开发"课程。找到的课程：$found'
               : '未在课表中找到"移动应用开发"课程，请确认Excel文件包含"课程名称"列';
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(msg), backgroundColor: Colors.red, duration: const Duration(seconds: 5)),
+            SnackBar(
+                content: Text(msg),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 5)),
           );
         }
         return;
@@ -636,7 +724,9 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       if (parsed == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('校历解析失败，请确认文件为完整的MHTML格式'), backgroundColor: Colors.red),
+            const SnackBar(
+                content: Text('校历解析失败，请确认文件为完整的MHTML格式'),
+                backgroundColor: Colors.red),
           );
         }
         return;
@@ -680,7 +770,9 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       if (parsed == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('未找到"移动应用开发"点名册数据，请确认MHTML文件内容'), backgroundColor: Colors.red),
+            const SnackBar(
+                content: Text('未找到"移动应用开发"点名册数据，请确认MHTML文件内容'),
+                backgroundColor: Colors.red),
           );
         }
         return;
@@ -774,9 +866,11 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       return;
     }
 
-    if (def.key == 'syllabus_evaluation' || def.key == 'syllabus_review'
-        || def.key == 'teacher_guide' || def.key == 'student_guide'
-        || def.key == 'assessment_plan') {
+    if (def.key == 'syllabus_evaluation' ||
+        def.key == 'syllabus_review' ||
+        def.key == 'teacher_guide' ||
+        def.key == 'student_guide' ||
+        def.key == 'assessment_plan') {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['docx'],
@@ -797,7 +891,9 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       if (text == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('解析docx文件失败，请确认文件格式'), backgroundColor: Colors.red),
+            const SnackBar(
+                content: Text('解析docx文件失败，请确认文件格式'),
+                backgroundColor: Colors.red),
           );
         }
         return;
@@ -841,7 +937,9 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       if (parsed == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('问卷解析失败，请确认文件为完整的MHTML格式'), backgroundColor: Colors.red),
+            const SnackBar(
+                content: Text('问卷解析失败，请确认文件为完整的MHTML格式'),
+                backgroundColor: Colors.red),
           );
         }
         return;
@@ -880,6 +978,84 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     }
   }
 
+  Future<ArchiveDocument?> _generateTeachingTaskFromSource() async {
+    final teachingDef =
+        _expectedDocs.where((d) => d.key == 'teaching_task').firstOrNull;
+    if (teachingDef == null) return null;
+    final stored = await TeachingTaskSourceService.parseBestStoredSource(
+      periodKey: widget.periodKey,
+    );
+    if (stored != null) {
+      return _saveTeachingTaskDocument(teachingDef, stored);
+    }
+    final fetched = await _captureTeachingTaskFromWeb();
+    if (fetched == null) return null;
+    return _saveTeachingTaskDocument(teachingDef, fetched);
+  }
+
+  Future<TeachingTaskParseResult?> _captureTeachingTaskFromWeb() async {
+    if (!mounted) return null;
+    final result =
+        await Navigator.of(context).push<TeachingTaskAuthorizedFetchResult>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => const TeachingTaskAuthorizedFetchPage(),
+      ),
+    );
+    if (result == null) return null;
+
+    final sourceFile = await TeachingTaskSourceService.saveFetchedHtml(
+      periodKey: widget.periodKey,
+      html: result.html,
+    );
+    final parsed = ArchiveImporters.parseTeachingTask(result.html);
+    if (parsed == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('当前网页未解析出教学任务书课程行，原始页面已保存：${sourceFile.path}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 6),
+          ),
+        );
+      }
+      return null;
+    }
+    return TeachingTaskParseResult(
+      markdown: parsed,
+      sourcePath: sourceFile.path,
+      sourceLabel: '网页登录授权获取',
+    );
+  }
+
+  Future<ArchiveDocument> _saveTeachingTaskDocument(
+    DocumentTypeDef def,
+    TeachingTaskParseResult source,
+  ) async {
+    final doc = ArchiveDocument(
+      title: '${periodLabel(widget.periodKey)}${def.label}',
+      documentType: def.key,
+      period: widget.periodKey,
+      courseType: widget.courseType,
+      content: source.markdown,
+      filePath: source.sourcePath,
+      isGenerated: false,
+    );
+    final id = await widget.dao.saveDocument(doc);
+    return doc.copyWith(id: id);
+  }
+
+  Future<void> _fetchLatestTeachingTaskFromWeb(DocumentTypeDef def) async {
+    final source = await _captureTeachingTaskFromWeb();
+    if (source == null) return;
+    final doc = await _saveTeachingTaskDocument(def, source);
+    await _load();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('已通过教务网页登录获取：${doc.title}')),
+    );
+    _previewDoc(doc);
+  }
 
   Future<void> _showSourceInfo(DocumentTypeDef def) async {
     final detail = _sourceDetail(def.key);
@@ -891,7 +1067,9 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
           children: [
             const Icon(Icons.info_outline, size: 20),
             const SizedBox(width: 8),
-            Expanded(child: Text('${def.label} — 来源说明', style: const TextStyle(fontSize: 16))),
+            Expanded(
+                child: Text('${def.label} — 来源说明',
+                    style: const TextStyle(fontSize: 16))),
           ],
         ),
         content: SingleChildScrollView(
@@ -914,7 +1092,18 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('知道了')),
+          if (def.key == 'teaching_task')
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                _fetchLatestTeachingTaskFromWeb(def);
+              },
+              icon: const Icon(Icons.public, size: 18),
+              label: const Text('网页登录获取'),
+            ),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('知道了')),
         ],
       ),
     );
@@ -926,7 +1115,9 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       children: [
         SizedBox(
           width: 72,
-          child: Text('$label：', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
+          child: Text('$label：',
+              style:
+                  const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
         ),
         Expanded(child: Text(value, style: const TextStyle(fontSize: 13))),
       ],
@@ -938,37 +1129,45 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       case 'teaching_task':
         return {
           'system': '教务管理系统（jwgl.chzu.edu.cn/eams/）',
-          'description': '课表查询 → 课表查询（实时课表）→ 打印教学任务书 → 浏览器另存为HTML文件。Beangle教务管理系统，打印页面URL: courseTableForTeacher!printLessonBook.action',
+          'url': TeachingTaskSourceService.printLessonBookUrl,
+          'description':
+              '主流程为网页登录授权后读取“打印教学任务书”页面 HTML，自动结构化生成学校版式归档件；手动导入仅作为无网络或 WebView 不可用时的兜底。',
         };
       case 'syllabus':
         return {
           'system': '学院 / 教师编写（Markdown）',
-          'description': '教师根据学院规范编写的Markdown教学大纲，课程编码 d203010351/d203010092，含7章教学内容、4项课程目标及考核标准',
+          'description':
+              '教师根据学院规范编写的Markdown教学大纲，课程编码 d203010351/d203010092，含7章教学内容、4项课程目标及考核标准',
         };
       case 'syllabus_evaluation':
         return {
           'system': '学院课程群建设工作组',
-          'description': '计算机与信息工程学院课程教学大纲合理性评价表，含10项评价指标、课程群建设工作组意见、学院教学指导委员会意见，docx格式',
+          'description':
+              '计算机与信息工程学院课程教学大纲合理性评价表，含10项评价指标、课程群建设工作组意见、学院教学指导委员会意见，docx格式',
         };
       case 'syllabus_review':
         return {
           'system': '学院教学指导委员会',
-          'description': '移动应用开发课程过程性考核合理性审核表，依据2023版人才培养方案，含课程目标-毕业要求对应关系、考核方式及成绩评定对照表（平时20%+实验30%+期末50%），docx格式',
+          'description':
+              '移动应用开发课程过程性考核合理性审核表，依据2023版人才培养方案，含课程目标-毕业要求对应关系、考核方式及成绩评定对照表（平时20%+实验30%+期末50%），docx格式',
         };
       case 'calendar':
         return {
           'system': '校历系统（webvpn.chzu.edu.cn）',
-          'description': '滁州学院校历（2025-2026第二学期），通过学校WebVPN网关访问的React SPA页面，从浏览器保存为MHTML/HTML文件',
+          'description':
+              '滁州学院校历（2025-2026第二学期），通过学校WebVPN网关访问的React SPA页面，从浏览器保存为MHTML/HTML文件',
         };
       case 'course_schedule':
         return {
           'system': '实验教学服务平台',
-          'description': '实验教学服务平台 → 实践教学 → 课表查询 → 我的课表 导出XLSX文件。含★教务（排课）和○实验两种类型标记',
+          'description':
+              '实验教学服务平台 → 实践教学 → 课表查询 → 我的课表 导出XLSX文件。含★教务（排课）和○实验两种类型标记',
         };
       case 'teaching_schedule':
         return {
           'system': '教师编写（Markdown）',
-          'description': '教师根据教学大纲编写的16周教学进度表（2026年3月2日-6月21日），含6个实验项目及平时20%+实验30%+期末50%考核比例',
+          'description':
+              '教师根据教学大纲编写的16周教学进度表（2026年3月2日-6月21日），含6个实验项目及平时20%+实验30%+期末50%考核比例',
         };
       case 'lesson_plan':
         return {
@@ -983,7 +1182,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       case 'roll_call':
         return {
           'system': '教务管理系统（jwgl.chzu.edu.cn/eams/）',
-          'description': '从 homeExt.action# 进入 → 打印点名册 → 浏览器另存为MHTML文件。URL路径: courseTableForTeacher!printAttendanceCheckList.action，含85名学生（软件231/232）考勤记录',
+          'description':
+              '从 homeExt.action# 进入 → 打印点名册 → 浏览器另存为MHTML文件。URL路径: courseTableForTeacher!printAttendanceCheckList.action，含85名学生（软件231/232）考勤记录',
         };
       case 'teacher_guide':
         return {
@@ -998,12 +1198,14 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       case 'assessment_plan':
         return {
           'system': '学院',
-          'description': '学院编制的综合考核方案docx文档（V1.0版），以SmartCampus智慧校园项目为载体，含4种技术栈的团队项目考核（每组6人，15天）',
+          'description':
+              '学院编制的综合考核方案docx文档（V1.0版），以SmartCampus智慧校园项目为载体，含4种技术栈的团队项目考核（每组6人，15天）',
         };
       case 'survey':
         return {
           'system': '教务管理系统（jwgl.chzu.edu.cn/eams/）',
-          'description': '课表查询 → 课表查询（实时课表）→ 打印教学任务书 → 浏览器另存为MHTML文件。URL: courseTableForTeacher!printLessonBook.mhtml，含课程教学问卷数据',
+          'description':
+              '课表查询 → 课表查询（实时课表）→ 打印教学任务书 → 浏览器另存为MHTML文件。URL: courseTableForTeacher!printLessonBook.mhtml，含课程教学问卷数据',
         };
       default:
         return {
@@ -1440,21 +1642,36 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
 
   String _importSource(String key) {
     switch (key) {
-      case 'teaching_task': return '教务系统';
-      case 'syllabus': return '学院';
-      case 'syllabus_evaluation': return '学院';
-      case 'syllabus_review': return '学院';
-      case 'calendar': return '校历';
-      case 'course_schedule': return '实验教学服务平台';
-      case 'teaching_schedule': return '外部系统';
-      case 'lesson_plan': return '外部系统';
-      case 'courseware': return '课件库';
-      case 'roll_call': return '教务系统';
-      case 'teacher_guide': return '学院';
-      case 'student_guide': return '学院';
-      case 'assessment_plan': return '学院';
-      case 'survey': return '教务系统';
-      default: return '外部系统';
+      case 'teaching_task':
+        return '教务系统';
+      case 'syllabus':
+        return '学院';
+      case 'syllabus_evaluation':
+        return '学院';
+      case 'syllabus_review':
+        return '学院';
+      case 'calendar':
+        return '校历';
+      case 'course_schedule':
+        return '实验教学服务平台';
+      case 'teaching_schedule':
+        return '外部系统';
+      case 'lesson_plan':
+        return '外部系统';
+      case 'courseware':
+        return '课件库';
+      case 'roll_call':
+        return '教务系统';
+      case 'teacher_guide':
+        return '学院';
+      case 'student_guide':
+        return '学院';
+      case 'assessment_plan':
+        return '学院';
+      case 'survey':
+        return '教务系统';
+      default:
+        return '外部系统';
     }
   }
 
@@ -1490,8 +1707,11 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
-          FilledButton(onPressed: () => Navigator.pop(context, controller.text), child: const Text('保存')),
+          TextButton(
+              onPressed: () => Navigator.pop(context), child: const Text('取消')),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, controller.text),
+              child: const Text('保存')),
         ],
       ),
     );
@@ -1518,6 +1738,9 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     final label = periodLabel(widget.periodKey);
     final title = '$label${def.label}';
     try {
+      if (def.key == 'teaching_task') {
+        return _generateTeachingTaskFromSource();
+      }
       return await widget.agent.generateDocument(
         title: title,
         documentType: def.key,
@@ -1531,15 +1754,21 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
   }
 
   Future<void> _generateAll() async {
+    int fetched = 0;
     final order = widget.periodKey == 'beginning'
-        ? ['calendar', 'teaching_schedule', 'lesson_plan']
-        : _expectedDocs.where((d) => d.needsGeneration).map((d) => d.key).toList();
+        ? ['teaching_task', 'calendar', 'teaching_schedule', 'lesson_plan']
+        : _expectedDocs
+            .where((d) => d.needsGeneration)
+            .map((d) => d.key)
+            .toList();
     final toGenerate = order
         .map((key) => _expectedDocs.where((d) => d.key == key).firstOrNull)
         .whereType<DocumentTypeDef>()
         .where((d) => _findDoc(d) == null)
         .toList();
-    if (toGenerate.isEmpty) return;
+    if (toGenerate.isEmpty) {
+      return;
+    }
     if (!mounted) return;
     showDialog(
       context: context,
@@ -1549,20 +1778,26 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     int success = 0;
     for (final def in toGenerate) {
       final doc = await _doGenerate(def);
-      if (doc != null) success++;
+      if (doc != null) {
+        success++;
+        if (def.key == 'teaching_task') fetched++;
+      }
     }
     if (mounted) {
       Navigator.of(context).pop();
       _load();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已生成 $success/${toGenerate.length} 份文档')),
+        SnackBar(
+            content: Text(
+                '已获取 $fetched 份教务源材料，生成 $success/${toGenerate.length} 份文档')),
       );
     }
   }
 
   Future<void> _reviewAll() async {
-    final toReview =
-        _documents.where((d) => d.content != null && d.content!.isNotEmpty).toList();
+    final toReview = _documents
+        .where((d) => d.content != null && d.content!.isNotEmpty)
+        .toList();
     if (toReview.isEmpty) return;
     if (!mounted) return;
     showDialog(
@@ -1573,8 +1808,10 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     final results = <String>[];
     for (final doc in toReview) {
       try {
-        final review = await widget.agent.reviewDocument(doc);
-        results.add('### ${doc.title}\n\n$review');
+        final review = await _reviewDocForBatch(doc);
+        if (review != null && review.trim().isNotEmpty) {
+          results.add('### ${doc.title}\n\n$review');
+        }
       } catch (e, st) {
         swallowDebug(e, tag: 'ArchivePeriodTab._reviewAll', stack: st);
       }
@@ -1587,7 +1824,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
           builder: (_) => AlertDialog(
             title: Row(
               children: [
-                Icon(Icons.rate_review, color: Theme.of(context).colorScheme.primary),
+                Icon(Icons.rate_review,
+                    color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 8),
                 Text('审核结果 (${results.length}/${toReview.length})'),
               ],
@@ -1599,7 +1837,9 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('关闭')),
+              TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('关闭')),
             ],
           ),
         );
@@ -1607,10 +1847,27 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     }
   }
 
+  Future<String?> _reviewDocForBatch(ArchiveDocument doc) async {
+    if (doc.documentType == 'teaching_task') {
+      final result = await _reviewTeachingTask(doc, showResult: false);
+      return result.toMarkdown(title: '教学任务单结构化审核');
+    }
+
+    final processors = _findAuditProcessorsFor(doc);
+    if (processors.isNotEmpty) {
+      ReviewResult? result;
+      for (final processor in processors) {
+        result = await processor.reviewTarget(doc);
+      }
+      return result?.toMarkdown(title: '${doc.title}审核结果');
+    }
+
+    return widget.agent.reviewDocument(doc);
+  }
+
   Future<void> _printAll() async {
-    final toPrint = _expectedDocs
-        .where((d) => d.canPrint && _findDoc(d) != null)
-        .toList();
+    final toPrint =
+        _expectedDocs.where((d) => d.canPrint && _findDoc(d) != null).toList();
     if (toPrint.isEmpty) return;
     // 顺序触发，每次都唤起系统打印框；用户可在框内取消跳过该份
     for (final def in toPrint) {
@@ -1623,7 +1880,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
   Future<void> _archiveAll() async {
     if (!mounted) return;
 
-    if (kIsWeb || !(Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
+    if (kIsWeb ||
+        !(Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('一键归档仅在桌面端可用')),
       );
@@ -1647,7 +1905,10 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
           height: 80,
           child: Row(
             children: [
-              SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
+              SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2)),
               SizedBox(width: 16),
               Expanded(child: Text('正在归档当前期所有文档并打包 zip...')),
             ],
@@ -1712,7 +1973,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         title: '本期已归档（$success/${toArchive.length}）',
         path: zipPath,
         message: failures.isEmpty
-            ? 'zip 已生成，路径已复制。粘贴到 QQ 群即可分享，或拖动文件到群窗口。'
+            ? 'zip 已生成，路径已复制。教学任务单等官方版式 PDF 会随包归档，粘贴到 QQ 群即可分享，或拖动文件到群窗口。'
             : '$success 份归档成功，${failures.length} 份失败。zip 已生成，路径已复制。\n\n失败列表：\n${failures.join('\n')}',
       );
     } on ArchivePackageException catch (e) {
@@ -1737,13 +1998,15 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
   /// 全期合并打包：把 期初/期中/期末/归档 四目录的 docx 打成一个 zip。
   Future<void> _zipAllPeriods() async {
     if (!mounted) return;
-    if (kIsWeb || !(Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
+    if (kIsWeb ||
+        !(Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('全期打包仅在桌面端可用')),
       );
       return;
     }
-    final sample = _documents.where((d) => (d.content ?? '').trim().isNotEmpty).toList();
+    final sample =
+        _documents.where((d) => (d.content ?? '').trim().isNotEmpty).toList();
     if (sample.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('暂无已归档内容可合并，请先在各期完成归档')),
@@ -1779,8 +2042,10 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
 
   Widget _buildActionBar() {
     final primary = Theme.of(context).colorScheme.primary;
-    final hasUnfinished = _expectedDocs.any((d) => d.needsGeneration && _findDoc(d) == null);
-    final hasUnreviewed = _documents.any((d) => d.content != null && d.content!.isNotEmpty);
+    final hasUnfinished =
+        _expectedDocs.any((d) => d.needsGeneration && _findDoc(d) == null);
+    final hasUnreviewed =
+        _documents.any((d) => d.content != null && d.content!.isNotEmpty);
     final hasUnprinted =
         _expectedDocs.any((d) => d.canPrint && _findDoc(d) != null);
     final hasUnarchived = _documents.any((d) => d.status != 'archived');
@@ -1886,8 +2151,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         ? const [
             SizedBox(height: 80),
             Center(
-                child: Text('暂无配置的文档类型',
-                    style: TextStyle(color: Colors.grey))),
+                child: Text('暂无配置的文档类型', style: TextStyle(color: Colors.grey))),
           ]
         : cards;
 
@@ -1951,6 +2215,7 @@ class DocCard extends StatelessWidget {
     // 桌面才允许打印 / 归档（PandocService + LibreOffice 子进程依赖）
     final canDesktopOps =
         !kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux);
+    final isTeachingTask = def.key == 'teaching_task';
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
@@ -1965,11 +2230,14 @@ class DocCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Text(def.label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                      Text(def.label,
+                          style: const TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w500)),
                       const SizedBox(width: 4),
                       GestureDetector(
                         onTap: onShowSource,
-                        child: Icon(Icons.info_outline, size: 14, color: Colors.grey.shade500),
+                        child: Icon(Icons.info_outline,
+                            size: 14, color: Colors.grey.shade500),
                       ),
                       const SizedBox(width: 6),
                       badge.build(),
@@ -1977,22 +2245,45 @@ class DocCard extends StatelessWidget {
                   ),
                   if (badge.subtitle != null)
                     Text(badge.subtitle!,
-                        style: TextStyle(fontSize: 11, color: badge.subtitleColor ?? Colors.grey)),
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: badge.subtitleColor ?? Colors.grey)),
                 ],
               ),
             ),
             if (onDownloadTemplate != null)
-              ActionBtn(icon: Icons.download, tooltip: '下载模板', color: Colors.orange, onTap: onDownloadTemplate),
+              ActionBtn(
+                  icon: Icons.download,
+                  tooltip: '下载模板',
+                  color: Colors.orange,
+                  onTap: onDownloadTemplate),
             if (onImport != null)
-              ActionBtn(icon: Icons.file_download_outlined, tooltip: '导入', color: Colors.blue, onTap: onImport),
+              ActionBtn(
+                  icon: Icons.file_download_outlined,
+                  tooltip: isTeachingTask ? '手动导入(兜底)' : '导入',
+                  color: Colors.blue,
+                  onTap: onImport),
             if (onCreate != null)
-              ActionBtn(icon: Icons.add_circle_outline, tooltip: '新建', color: Colors.deepPurple, onTap: onCreate),
+              ActionBtn(
+                  icon: Icons.add_circle_outline,
+                  tooltip: '新建',
+                  color: Colors.deepPurple,
+                  onTap: onCreate),
             if (onGenerate != null)
-              ActionBtn(icon: Icons.auto_awesome, tooltip: '生成', color: Colors.deepPurple, onTap: onGenerate),
+              ActionBtn(
+                  icon: Icons.auto_awesome,
+                  tooltip: isTeachingTask ? '自动获取/生成' : '生成',
+                  color: Colors.deepPurple,
+                  onTap: onGenerate),
             if (onReview != null)
-              ActionBtn(icon: Icons.rate_review_outlined, tooltip: '审核', color: Colors.teal, onTap: onReview),
+              ActionBtn(
+                  icon: Icons.rate_review_outlined,
+                  tooltip: '审核',
+                  color: Colors.teal,
+                  onTap: onReview),
             if (onPreview != null)
-              ActionBtn(icon: Icons.visibility, tooltip: '预览', onTap: onPreview),
+              ActionBtn(
+                  icon: Icons.visibility, tooltip: '预览', onTap: onPreview),
             if (onPrint != null)
               ActionBtn(
                 icon: Icons.print,
@@ -2007,7 +2298,11 @@ class DocCard extends StatelessWidget {
                 onTap: canDesktopOps ? onArchive : null,
               ),
             if (onDelete != null)
-              ActionBtn(icon: Icons.delete_outline, tooltip: '删除', color: Colors.red.shade300, onTap: onDelete),
+              ActionBtn(
+                  icon: Icons.delete_outline,
+                  tooltip: '删除',
+                  color: Colors.red.shade300,
+                  onTap: onDelete),
           ],
         ),
       ),
@@ -2080,19 +2375,33 @@ class _StatusBadge {
           label: warnCount > 0 ? '建议改进' : '审核中',
           color: Colors.orange,
           icon: Icons.hourglass_top,
-          subtitle: warnCount > 0
-              ? '$warnCount 项建议（可忽略）'
-              : '等待审核',
+          subtitle: warnCount > 0 ? '$warnCount 项建议（可忽略）' : '等待审核',
           subtitleColor: Colors.orange.shade700,
         );
       default: // draft
+        if ((doc.filePath ?? '').isNotEmpty) {
+          if (doc.documentType == 'teaching_task') {
+            return _StatusBadge(
+              label: '已获取',
+              color: Colors.blue,
+              icon: Icons.public,
+              subtitle: '来自教务系统源文件，待审核',
+              subtitleColor: Colors.blue.shade700,
+            );
+          }
+          return _StatusBadge(
+            label: '已导入',
+            color: Colors.blue,
+            icon: Icons.file_download_done_outlined,
+            subtitle: '来自教务/模板文件，待审核',
+            subtitleColor: Colors.blue.shade700,
+          );
+        }
         return _StatusBadge(
           label: doc.isGenerated ? '已生成' : '草稿',
           color: Colors.blue,
           icon: doc.isGenerated ? Icons.auto_awesome : Icons.edit_note,
-          subtitle: doc.isGenerated
-              ? '由 AI 起草，待审核'
-              : '已创建，待审核',
+          subtitle: doc.isGenerated ? '由 AI 起草，待审核' : '已创建，待审核',
           subtitleColor: Colors.blue.shade700,
         );
     }
@@ -2130,7 +2439,12 @@ class ActionBtn extends StatelessWidget {
   final String tooltip;
   final Color? color;
   final VoidCallback? onTap;
-  const ActionBtn({super.key, required this.icon, required this.tooltip, this.color, this.onTap});
+  const ActionBtn(
+      {super.key,
+      required this.icon,
+      required this.tooltip,
+      this.color,
+      this.onTap});
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -2149,7 +2463,12 @@ class ActionBtn extends StatelessWidget {
 
 class _DocumentPreviewSheet extends StatelessWidget {
   final ArchiveDocument doc;
-  const _DocumentPreviewSheet({required this.doc});
+  final Future<Uint8List> Function(ArchiveDocument doc) pdfBuilder;
+
+  const _DocumentPreviewSheet({
+    required this.doc,
+    required this.pdfBuilder,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -2168,8 +2487,13 @@ class _DocumentPreviewSheet extends StatelessWidget {
             ),
             child: Row(
               children: [
-                IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
-                Expanded(child: Text(doc.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
+                IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context)),
+                Expanded(
+                    child: Text(doc.title,
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold))),
                 // 注：审核 / 打印 / 归档 操作请在卡片上的快捷按钮处发起，
                 //    走 ArchivePackageService 完整路径（生成 docx/PDF + 打包 + 复制路径）。
                 //    预览面板只负责"看内容"，不再提供伪操作按钮。
@@ -2177,13 +2501,23 @@ class _DocumentPreviewSheet extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: SingleChildScrollView(
-              controller: scrollCtrl,
-              padding: const EdgeInsets.all(16),
-              child: doc.content != null
-                  ? MarkdownBubble(content: doc.content!)
-                  : const Center(child: Text('暂无内容')),
-            ),
+            child: doc.documentType == 'teaching_task'
+                ? PdfPreview(
+                    build: (_) => pdfBuilder(doc),
+                    canChangeOrientation: false,
+                    canChangePageFormat: false,
+                    canDebug: false,
+                    allowPrinting: false,
+                    allowSharing: false,
+                    pdfFileName: '${doc.title}.pdf',
+                  )
+                : SingleChildScrollView(
+                    controller: scrollCtrl,
+                    padding: const EdgeInsets.all(16),
+                    child: doc.content != null
+                        ? MarkdownBubble(content: doc.content!)
+                        : const Center(child: Text('暂无内容')),
+                  ),
           ),
         ],
       ),

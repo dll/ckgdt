@@ -45,18 +45,23 @@ class ArchiveImporters {
         .replaceAll(wsCollapse, ' ')
         .trim();
 
-    final headerMatch = RegExp(r'经学校批准聘请(.*?)老师担任(.*?)以下教学任务')
-        .firstMatch(clean(html));
+    final pageText = clean(html);
+    final headerMatch =
+        RegExp(r'经学校批准聘请(.*?)老师担任(.*?)以下教学任务').firstMatch(pageText);
     final teacher = (headerMatch?.group(1)?.trim().isNotEmpty ?? false)
         ? headerMatch!.group(1)!.trim()
         : '未知';
     final semester = (headerMatch?.group(2)?.trim().isNotEmpty ?? false)
         ? headerMatch!.group(2)!.trim()
         : '未知学期';
+    final issueDate =
+        RegExp(r'\d{4}年\d{1,2}月\d{1,2}日').firstMatch(pageText)?.group(0) ?? '';
 
     // 逐 <tr> 取单元格，跳过表头与空行，收集全部课程行（去重：mhtml 含存根+正本两份）。
-    final rowRegex = RegExp(r'<tr[^>]*>(.*?)</tr>', dotAll: true, caseSensitive: false);
-    final cellRegex = RegExp(r'<t[dh][^>]*>(.*?)</t[dh]>', dotAll: true, caseSensitive: false);
+    final rowRegex =
+        RegExp(r'<tr[^>]*>(.*?)</tr>', dotAll: true, caseSensitive: false);
+    final cellRegex = RegExp(r'<t[dh][^>]*>(.*?)</t[dh]>',
+        dotAll: true, caseSensitive: false);
     final courses = <List<String>>[];
     final seen = <String>{};
     for (final rm in rowRegex.allMatches(html)) {
@@ -80,14 +85,21 @@ class ArchiveImporters {
     final buf = StringBuffer();
     buf.writeln('# 教 学 任 务 书\n');
     buf.writeln('经学校批准聘请$teacher老师担任$semester以下教学任务：\n');
-    buf.writeln('| 课程名称 | 课程类别 | 总学时 | 讲授 | 实验 | 实践 | 课外自主学时 | 教学班级 | 计划人数 | 备注 |');
-    buf.writeln('|------|------|------|------|------|------|------|------|------|------|');
+    buf.writeln(
+        '| 课程名称 | 课程类别 | 总学时 | 讲授 | 实验 | 实践 | 课外自主学时 | 教学班级 | 计划人数 | 备注 |');
+    buf.writeln(
+        '|------|------|------|------|------|------|------|------|------|------|');
     for (final c in courses) {
-      buf.writeln('| ${c[0]} | ${c[1]} | ${c[2]} | ${c[3]} | ${c[4]} | ${c[5]} | ${c[6]} | ${c[7]} | ${c[8]} | ${c[9]} |');
+      buf.writeln(
+          '| ${c[0]} | ${c[1]} | ${c[2]} | ${c[3]} | ${c[4]} | ${c[5]} | ${c[6]} | ${c[7]} | ${c[8]} | ${c[9]} |');
     }
     buf.writeln('');
     buf.writeln('---');
     buf.writeln('> 教师：$teacher ｜ 学期：$semester');
+    if (issueDate.isNotEmpty) {
+      buf.writeln('> 签发日期：$issueDate');
+    }
+    buf.writeln('> 课程行数：${courses.length}');
     buf.writeln('> 数据来源：教务系统（jwgl.chzu.edu.cn）');
     buf.writeln('> 导入时间：$stamp');
     return buf.toString();
@@ -152,18 +164,21 @@ class ArchiveImporters {
     buf.writeln('| 序号 | 学号 | 姓名 | 性别 |');
     buf.writeln('|------|------|------|------|');
     for (final s in students) {
-      buf.writeln('| ${s['seq']} | ${s['student_id']} | ${s['name']} | ${s['gender']} |');
+      buf.writeln(
+          '| ${s['seq']} | ${s['student_id']} | ${s['name']} | ${s['gender']} |');
     }
     buf.writeln('');
     buf.writeln('---');
     buf.writeln('> 数据来源：教务系统考勤表');
-    buf.writeln('> 导入时间：${(now ?? DateTime.now()).toString().substring(0, 16)}');
+    buf.writeln(
+        '> 导入时间：${(now ?? DateTime.now()).toString().substring(0, 16)}');
     return buf.toString();
   }
 
   /// 课程课表（Excel）→ [CourseScheduleResult]。
   /// markdown 为 null 时 allCourseNames 含表中实际发现的课程名（供 UI 提示）。
-  static CourseScheduleResult parseCourseSchedule(List<int> bytes, {DateTime? now}) {
+  static CourseScheduleResult parseCourseSchedule(List<int> bytes,
+      {DateTime? now}) {
     Excel excel;
     try {
       excel = Excel.decodeBytes(bytes);
@@ -177,9 +192,8 @@ class ArchiveImporters {
     final sheet = excel.sheets.values.first;
     if (sheet.rows.isEmpty) return const CourseScheduleResult(null, {});
 
-    final header = sheet.rows[0]
-        .map((c) => (c?.value?.toString() ?? '').trim())
-        .toList();
+    final header =
+        sheet.rows[0].map((c) => (c?.value?.toString() ?? '').trim()).toList();
     final typeIdx = header.indexOf('类型');
     final classIdx = header.indexOf('班级');
     final courseIdx = header.indexOf('课程名称');
@@ -194,7 +208,9 @@ class ArchiveImporters {
     }
 
     String cell(List<dynamic> r, int idx) =>
-        (r.length > idx && r[idx]?.value != null) ? r[idx]!.value.toString().trim() : '';
+        (r.length > idx && r[idx]?.value != null)
+            ? r[idx]!.value.toString().trim()
+            : '';
 
     final rows = <Map<String, String>>[];
     final allCourseNames = <String>{};
@@ -216,7 +232,15 @@ class ArchiveImporters {
     }
     if (rows.isEmpty) return CourseScheduleResult(null, allCourseNames);
 
-    const dayNames = {1: '星期一', 2: '星期二', 3: '星期三', 4: '星期四', 5: '星期五', 6: '星期六', 7: '星期日'};
+    const dayNames = {
+      1: '星期一',
+      2: '星期二',
+      3: '星期三',
+      4: '星期四',
+      5: '星期五',
+      6: '星期六',
+      7: '星期日'
+    };
     final theory = rows.where((r) => r['type']!.contains('教务')).toList();
     final lab = rows.where((r) => r['type']!.contains('实验')).toList();
     final teacher = rows.firstWhere(
@@ -250,8 +274,11 @@ class ArchiveImporters {
     buf.writeln('|------|------|------|------|------|');
     for (final r in theory) {
       final dayNum = int.tryParse(r['day']!);
-      final dayName = (dayNum != null && dayNames.containsKey(dayNum)) ? dayNames[dayNum]! : r['day']!;
-      buf.writeln('| ${r['week']} | ${r['date']} | $dayName | ${r['period']} | ${r['location']} |');
+      final dayName = (dayNum != null && dayNames.containsKey(dayNum))
+          ? dayNames[dayNum]!
+          : r['day']!;
+      buf.writeln(
+          '| ${r['week']} | ${r['date']} | $dayName | ${r['period']} | ${r['location']} |');
     }
     buf.writeln('');
 
@@ -265,7 +292,8 @@ class ArchiveImporters {
     buf.writeln('## 二、实验课\n');
     for (final entry in groups.entries) {
       entry.value.sort((a, b) => (w(a) ?? 0).compareTo(w(b) ?? 0));
-      final peopleMatch = RegExp(r'班组\d[：:](\d+)人').firstMatch(entry.value.first['class']!);
+      final peopleMatch =
+          RegExp(r'班组\d[：:](\d+)人').firstMatch(entry.value.first['class']!);
       final people = peopleMatch?.group(1) ?? '';
       final dayNum = int.tryParse(entry.value.first['day']!);
       final dayName = (dayNum != null && dayNames.containsKey(dayNum))
@@ -287,12 +315,15 @@ class ArchiveImporters {
     final groupCount = groups.length;
     final totalTheoryHours = theory.length * 2;
     final totalLabHours = lab.length * 2;
-    buf.writeln('- 理论课：$theoryWeeks周 × 2学时 = ${theoryWeeks * 2}学时（实际$totalTheoryHours课时）');
-    buf.writeln('- 实验课：$groupCount组 × $labWeeks周 × 2学时 = ${groupCount * labWeeks * 2}学时（实际$totalLabHours课时）');
+    buf.writeln(
+        '- 理论课：$theoryWeeks周 × 2学时 = ${theoryWeeks * 2}学时（实际$totalTheoryHours课时）');
+    buf.writeln(
+        '- 实验课：$groupCount组 × $labWeeks周 × 2学时 = ${groupCount * labWeeks * 2}学时（实际$totalLabHours课时）');
     buf.writeln('- 总学时：${totalTheoryHours + totalLabHours}课时\n');
     buf.writeln('---');
     buf.writeln('> 数据来源：教务系统课表（Excel）');
-    buf.writeln('> 导入时间：${(now ?? DateTime.now()).toString().substring(0, 16)}');
+    buf.writeln(
+        '> 导入时间：${(now ?? DateTime.now()).toString().substring(0, 16)}');
     return CourseScheduleResult(buf.toString(), allCourseNames);
   }
 
@@ -348,8 +379,10 @@ class ArchiveImporters {
     String html = extractHtmlFromMhtml(raw);
     html = decodeQuotedPrintable(html);
 
-    final rowRegex = RegExp(r'<tr[^>]*>(.*?)</tr>', dotAll: true, caseSensitive: false);
-    final cellTextRegex = RegExp(r'<td[^>]*>(.*?)</td>', dotAll: true, caseSensitive: false);
+    final rowRegex =
+        RegExp(r'<tr[^>]*>(.*?)</tr>', dotAll: true, caseSensitive: false);
+    final cellTextRegex =
+        RegExp(r'<td[^>]*>(.*?)</td>', dotAll: true, caseSensitive: false);
     final tagStrip = RegExp(r'<[^>]*>', dotAll: true);
 
     final parsedRows = <List<String>>[];
@@ -359,11 +392,19 @@ class ArchiveImporters {
       for (final cellMatch in cellTextRegex.allMatches(rowHtml)) {
         final cellContent = cellMatch.group(1)!;
         final dp1 = RegExp(r'class="dp1"[^>]*>(.*?)</p>', dotAll: true)
-            .firstMatch(cellContent)?.group(1)?.trim() ?? '';
+                .firstMatch(cellContent)
+                ?.group(1)
+                ?.trim() ??
+            '';
         final dp2 = RegExp(r'class="dp2"[^>]*>(.*?)</p>', dotAll: true)
-            .firstMatch(cellContent)?.group(1)?.trim() ?? '';
+                .firstMatch(cellContent)
+                ?.group(1)
+                ?.trim() ??
+            '';
         final combined = (dp1 + dp2).trim();
-        final text = combined.isNotEmpty ? combined : cellContent.replaceAll(tagStrip, '').trim();
+        final text = combined.isNotEmpty
+            ? combined
+            : cellContent.replaceAll(tagStrip, '').trim();
         if (text.isNotEmpty) cells.add(text);
       }
       if (cells.isNotEmpty) parsedRows.add(cells);
@@ -378,7 +419,8 @@ class ArchiveImporters {
     final weeks = <List<CalDay>>[];
     for (final cells in parsedRows) {
       if (cells.length <= 2) continue;
-      final dayCells = cells.length >= 8 ? cells.sublist(cells.length - 7) : cells;
+      final dayCells =
+          cells.length >= 8 ? cells.sublist(cells.length - 7) : cells;
       if (dayCells.length != 7) continue;
 
       final currentWeek = <CalDay>[];
@@ -418,18 +460,22 @@ class ArchiveImporters {
     buf.writeln('**起始日期：** ${startDate.toString().substring(0, 10)}（周一）\n');
     buf.writeln('## 校历总览\n');
     buf.writeln('| 周次 | 起止日期 | 周一 | 周二 | 周三 | 周四 | 周五 | 周六 | 周日 | 备注 |');
-    buf.writeln('|------|----------|------|------|------|------|------|------|------|------|');
+    buf.writeln(
+        '|------|----------|------|------|------|------|------|------|------|------|');
 
     for (var wk = 0; wk < uniqueWeeks.length; wk++) {
       final week = uniqueWeeks[wk];
       final monDate = startDate.add(Duration(days: wk * 7));
       final sunDate = monDate.add(const Duration(days: 6));
-      final dateRange = '${monDate.month}/${monDate.day}-${sunDate.month}/${sunDate.day}';
+      final dateRange =
+          '${monDate.month}/${monDate.day}-${sunDate.month}/${sunDate.day}';
 
       String weekLabel = '';
       final holidays = <String>[];
       for (final day in week) {
-        if (day.label.isNotEmpty && !day.label.contains('周')) holidays.add(day.label);
+        if (day.label.isNotEmpty && !day.label.contains('周')) {
+          holidays.add(day.label);
+        }
         if (day.label == '缓补考试周') weekLabel = '缓补';
         if (day.label == '期末考试周') weekLabel = '期末';
         if (day.label == '暑假') weekLabel = '暑假';
@@ -445,7 +491,9 @@ class ArchiveImporters {
         final day = week[d];
         if (day.label == '清明节' || day.label == '劳动节' || day.label == '端午节') {
           dayCols.add('🎉${day.date}');
-        } else if (day.label == '缓补考试周' || day.label == '期末考试周' || day.label == '暑假') {
+        } else if (day.label == '缓补考试周' ||
+            day.label == '期末考试周' ||
+            day.label == '暑假') {
           dayCols.add('📌${day.date}');
         } else {
           dayCols.add('${day.date}');
@@ -487,7 +535,8 @@ class ArchiveImporters {
     buf.writeln('');
     buf.writeln('---');
     buf.writeln('> 数据来源：滁州学院校历系统');
-    buf.writeln('> 导入时间：${(now ?? DateTime.now()).toString().substring(0, 16)}');
+    buf.writeln(
+        '> 导入时间：${(now ?? DateTime.now()).toString().substring(0, 16)}');
     buf.writeln('> 注：本日历为全校通用校历，具体教学安排以课表为准');
     return buf.toString();
   }
@@ -501,17 +550,20 @@ class ArchiveImporters {
     final tagStrip = RegExp(r'<[^>]*>', dotAll: true);
 
     // 提取页面标题
-    final titleMatch = RegExp(r'<title>(.*?)</title>', dotAll: true, caseSensitive: false)
-        .firstMatch(html);
+    final titleMatch =
+        RegExp(r'<title>(.*?)</title>', dotAll: true, caseSensitive: false)
+            .firstMatch(html);
     final pageTitle = titleMatch?.group(1)?.trim() ?? '教学任务书';
 
     // 提取所有表格内容
     final tableRows = <List<String>>[];
-    final tableRegex = RegExp(r'<tr[^>]*>(.*?)</tr>', dotAll: true, caseSensitive: false);
+    final tableRegex =
+        RegExp(r'<tr[^>]*>(.*?)</tr>', dotAll: true, caseSensitive: false);
     for (final rowMatch in tableRegex.allMatches(html)) {
       final rowHtml = rowMatch.group(1)!;
       final cells = <String>[];
-      final cellRegex = RegExp(r'<t[dh][^>]*>(.*?)</t[dh]>', dotAll: true, caseSensitive: false);
+      final cellRegex = RegExp(r'<t[dh][^>]*>(.*?)</t[dh]>',
+          dotAll: true, caseSensitive: false);
       for (final cellMatch in cellRegex.allMatches(rowHtml)) {
         var text = cellMatch.group(1)!.replaceAll(tagStrip, '').trim();
         text = text.replaceAll(RegExp(r'\s+'), ' ');
@@ -535,7 +587,8 @@ class ArchiveImporters {
     buf.writeln('---');
     buf.writeln('> 数据来源：教务管理系统（jwgl.chzu.edu.cn）');
     buf.writeln('> 文件来源：courseTableForTeacher!printLessonBook.mhtml');
-    buf.writeln('> 导入时间：${(now ?? DateTime.now()).toString().substring(0, 16)}');
+    buf.writeln(
+        '> 导入时间：${(now ?? DateTime.now()).toString().substring(0, 16)}');
     return buf.toString();
   }
 

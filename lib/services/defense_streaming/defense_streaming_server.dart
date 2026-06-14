@@ -290,52 +290,79 @@ class DefenseStreamingServer {
 
   void _stream(HttpRequest req, [String? source]) {
     final r = req.response;
+    r.bufferOutput = false;
     r.headers.contentType =
         ContentType.parse('multipart/x-mixed-replace; boundary=FRAME');
     r.headers.add('Cache-Control', 'no-cache');
+    r.headers.add('Pragma', 'no-cache');
+    r.headers.add('Expires', '0');
     r.headers.add('Connection', 'keep-alive');
 
     final session = _Session(response: r, source: source);
     _sessions.add(session);
-    r.done.then((_) => _sessions.remove(session));
+    r.done.then((_) => _removeSession(session));
+    _queueLatestFrameToSession(session);
   }
 
   void _broadcast() {
     if (_sessions.isEmpty) return;
-    final stale = <_Session>[];
-    for (final s in _sessions) {
-      try {
-        Uint8List? frame;
-        if (s.source != null) {
-          // 特定源请求：只返回对应源，绝不回退到摄像头（否则桌面分区会串到人脸画面）
-          if (s.source == 'win') {
-            frame = _latestWinFrame;
-          } else if (s.source == 'phone') {
-            frame = _latestPhoneFrame;
-          } else if (s.source == 'screen') {
-            // 桌面分区：Windows/手机谁更新取谁，避免历史 win 帧压住当前 phone 帧。
-            frame = _latestScreenFrame;
-          } else {
-            frame = _latestCameraFrame;
-          }
-        } else {
-          // 通用流：返回最近更新的任意帧，避免旧屏幕帧压住摄像头/手机帧。
-          frame = _latestAnyFrame;
-        }
-        if (frame == null) continue;
-        final b = utf8.encode(
+    for (final s in List<_Session>.of(_sessions)) {
+      _queueLatestFrameToSession(s);
+    }
+  }
+
+  Uint8List? _frameForSource(String? source) {
+    if (source != null) {
+      // 特定源请求：只返回对应源，绝不回退到摄像头（否则桌面分区会串到人脸画面）
+      if (source == 'win') return _latestWinFrame;
+      if (source == 'phone') return _latestPhoneFrame;
+      if (source == 'screen') {
+        // 桌面分区：Windows/手机谁更新取谁，避免历史 win 帧压住当前 phone 帧。
+        return _latestScreenFrame;
+      }
+      return _latestCameraFrame;
+    }
+    // 通用流：返回最近更新的任意帧，避免旧屏幕帧压住摄像头/手机帧。
+    return _latestAnyFrame;
+  }
+
+  void _queueLatestFrameToSession(_Session s) {
+    if (!_sessions.contains(s) || s.closed) return;
+    final frame = _frameForSource(s.source);
+    if (frame == null) return;
+    s.pendingFrame = frame;
+    if (s.sending) return;
+    s.sending = true;
+    unawaited(_drainSession(s));
+  }
+
+  Future<void> _drainSession(_Session s) async {
+    try {
+      while (_sessions.contains(s) && !s.closed) {
+        final frame = s.pendingFrame;
+        if (frame == null) break;
+        s.pendingFrame = null;
+        final header = utf8.encode(
             '\r\n--FRAME\r\nContent-Type: image/jpeg\r\nContent-Length: ${frame.length}\r\n\r\n');
-        s.response.add(b);
+        s.response.add(header);
         s.response.add(frame);
-        unawaited(s.response.flush());
-      } catch (e, st) {
-        swallowDebug(e, tag: 'DefenseStreaming.bcast', stack: st);
-        stale.add(s);
+        await s.response.flush();
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'DefenseStreaming.bcast', stack: st);
+      _removeSession(s);
+    } finally {
+      s.sending = false;
+      if (_sessions.contains(s) && !s.closed && s.pendingFrame != null) {
+        _queueLatestFrameToSession(s);
       }
     }
-    for (final s in stale) {
-      _sessions.remove(s);
-    }
+  }
+
+  void _removeSession(_Session s) {
+    _sessions.remove(s);
+    s.pendingFrame = null;
+    s.closed = true;
   }
 
   void _status(HttpRequest req) {
@@ -444,5 +471,8 @@ class DefenseStreamingServer {
 class _Session {
   final HttpResponse response;
   final String? source;
+  Uint8List? pendingFrame;
+  bool sending = false;
+  bool closed = false;
   _Session({required this.response, this.source});
 }

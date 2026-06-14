@@ -133,11 +133,19 @@ class ArchivePackageService {
     }
 
     // 2) 写盘
-    final dir = Directory(p.join(outRoot, n.semester, n.course, _periodLabel(doc.period)));
+    final dir = Directory(
+        p.join(outRoot, n.semester, n.course, _periodLabel(doc.period)));
     if (!dir.existsSync()) dir.createSync(recursive: true);
     final fileName = '${n.fileBase(docLabel: n.docLabel)}.docx';
     final outFile = File(p.join(dir.path, fileName));
     await outFile.writeAsBytes(bytes, flush: true);
+
+    if (_shouldArchivePdf(doc, processor)) {
+      final pdfBytes = await processor!.toPdf(doc);
+      final pdfFile =
+          File(p.join(dir.path, '${n.fileBase(docLabel: n.docLabel)}.pdf'));
+      await pdfFile.writeAsBytes(pdfBytes, flush: true);
+    }
     return outFile.path;
   }
 
@@ -157,10 +165,13 @@ class ArchivePackageService {
     if (!periodDir.existsSync()) {
       throw ArchivePackageException('未找到归档目录：${periodDir.path}');
     }
-    final docxFiles =
-        periodDir.listSync().whereType<File>().where((f) => f.path.endsWith('.docx')).toList();
-    if (docxFiles.isEmpty) {
-      throw ArchivePackageException('期内无 docx 可打包：${periodDir.path}');
+    final archiveFiles = periodDir
+        .listSync()
+        .whereType<File>()
+        .where(_isArchiveOutputFile)
+        .toList();
+    if (archiveFiles.isEmpty) {
+      throw ArchivePackageException('期内无归档文件可打包：${periodDir.path}');
     }
 
     final encoder = ZipFileEncoder();
@@ -169,7 +180,7 @@ class ArchivePackageService {
       '${_periodLabel(period)}_${naming.department}+${naming.course}+${naming.teacher}+${naming.semester}.zip',
     );
     encoder.create(zipPath);
-    for (final f in docxFiles) {
+    for (final f in archiveFiles) {
       encoder.addFile(f);
     }
     encoder.close();
@@ -182,7 +193,8 @@ class ArchivePackageService {
     if (outRoot == null) {
       throw const ArchivePackageException('归档输出目录未注入');
     }
-    final courseDir = Directory(p.join(outRoot, naming.semester, naming.course));
+    final courseDir =
+        Directory(p.join(outRoot, naming.semester, naming.course));
     if (!courseDir.existsSync()) {
       throw ArchivePackageException('未找到课程归档目录：${courseDir.path}');
     }
@@ -195,9 +207,9 @@ class ArchivePackageService {
     encoder.create(zipPath);
     for (final entity in courseDir.listSync(recursive: false)) {
       if (entity is Directory) {
-        // 仅打 docx，跳过已生成的 .zip
+        // 仅打正式归档文件，跳过已生成的 .zip
         for (final f in entity.listSync().whereType<File>()) {
-          if (!f.path.endsWith('.docx')) continue;
+          if (!_isArchiveOutputFile(f)) continue;
           final rel = p.relative(f.path, from: courseDir.path);
           encoder.addArchiveFile(_fileToArchiveFile(f, rel));
         }
@@ -217,7 +229,8 @@ class ArchivePackageService {
       } else if (Platform.isMacOS) {
         await Process.start('open', ['-R', path], runInShell: false);
       } else if (Platform.isLinux) {
-        await Process.start('xdg-open', [File(path).parent.path], runInShell: false);
+        await Process.start('xdg-open', [File(path).parent.path],
+            runInShell: false);
       }
     } catch (e, st) {
       swallowDebug(e, tag: 'ArchivePackageService.reveal', stack: st);
@@ -229,6 +242,14 @@ class ArchivePackageService {
   ArchiveFile _fileToArchiveFile(File f, String relPath) {
     final bytes = f.readAsBytesSync();
     return ArchiveFile(relPath, bytes.length, bytes);
+  }
+
+  bool _shouldArchivePdf(ArchiveDocument doc, Object? processor) =>
+      doc.documentType == 'teaching_task' && processor != null;
+
+  bool _isArchiveOutputFile(File f) {
+    final lower = f.path.toLowerCase();
+    return lower.endsWith('.docx') || lower.endsWith('.pdf');
   }
 
   String _periodLabel(String key) => periods.periodLabel(key);

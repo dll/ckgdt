@@ -5,6 +5,7 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   camera_windows
   flutter_tts
+  fullscreen_window
   media_kit_libs_windows_video
   media_kit_video
   printing
@@ -12,6 +13,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   screen_brightness_windows
   sqlite3_flutter_libs
   url_launcher_windows
+  webview_win_floating
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
