@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import '../../../../core/error_handler.dart';
 import '../../../../data/local/achievement_dao.dart';
+import '../../../../data/local/course_dao.dart';
 import '../../../../services/achievement/achievement_excel_service.dart';
 import '../../../../services/auth_service.dart';
 import '../achievement_shared.dart';
@@ -41,9 +42,13 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
 
   Future<void> _loadBatches() async {
     try {
+      final activeCourse = await CourseDao().getActiveCourse();
+      if (activeCourse != null && activeCourse.name.trim().isNotEmpty) {
+        _currentCourseName = activeCourse.name.trim();
+      }
       final batches = await widget.achievementDao.getBatches();
-      // 从已有批次推断当前课程名；无批次时保留默认
-      if (batches.isNotEmpty) {
+      // 从已有批次推断当前课程名；无批次时使用课程管理中的激活课程
+      if (batches.isNotEmpty && activeCourse == null) {
         _currentCourseName =
             batches.first['course_name']?.toString() ?? '移动应用开发';
       }
@@ -1011,8 +1016,10 @@ class _BatchDetailSheetState extends State<BatchDetailSheet> {
               children: [
                 CircleAvatar(
                   radius: 16,
-                  backgroundColor:
-                      Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                  backgroundColor: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.1),
                   child: Text(
                     (score['student_name'] ?? '?').toString().substring(0, 1),
                     style: TextStyle(
@@ -1693,7 +1700,8 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
                 decoration: BoxDecoration(
                   color: Colors.blue.withValues(alpha: 0.04),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.withValues(alpha: 0.15)),
+                  border:
+                      Border.all(color: Colors.blue.withValues(alpha: 0.15)),
                 ),
                 padding: const EdgeInsets.all(10),
                 child: Column(
@@ -1749,7 +1757,8 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
                   decoration: BoxDecoration(
                     color: Colors.teal.withValues(alpha: 0.04),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.teal.withValues(alpha: 0.15)),
+                    border:
+                        Border.all(color: Colors.teal.withValues(alpha: 0.15)),
                   ),
                   padding: const EdgeInsets.all(10),
                   child: Column(
@@ -1794,7 +1803,8 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
                   decoration: BoxDecoration(
                     color: Colors.orange.withValues(alpha: 0.04),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange.withValues(alpha: 0.15)),
+                    border: Border.all(
+                        color: Colors.orange.withValues(alpha: 0.15)),
                   ),
                   padding: const EdgeInsets.all(10),
                   child: Column(

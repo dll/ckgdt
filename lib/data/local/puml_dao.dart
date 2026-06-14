@@ -1,24 +1,42 @@
 import '../models/puml_file_model.dart';
+import '../../services/course_context_service.dart';
 import 'database_helper.dart';
 
 class PumlDao {
   final _db = DatabaseHelper.instance;
+  final CourseContextService _courseContext = CourseContextService();
 
   Future<int> insert(PumlFileModel p) async {
     final db = await _db.database;
-    return db.insert('puml_files', p.toMap());
+    final row = p.toMap();
+    row['course_id'] ??= await _courseContext.activeCourseId();
+    return db.insert('puml_files', row);
   }
 
   Future<List<PumlFileModel>> getAll() async {
     final db = await _db.database;
-    final rows = await db.query('puml_files', orderBy: 'updated_at DESC');
+    final scope = await _courseContext.scopedWhere();
+    final rows = await db.query(
+      'puml_files',
+      where: scope.where,
+      whereArgs: scope.args,
+      orderBy: 'updated_at DESC',
+    );
     return rows.map(PumlFileModel.fromMap).toList();
   }
 
   Future<List<PumlFileModel>> getByChapter(String chapter) async {
     final db = await _db.database;
-    final rows = await db.query('puml_files',
-        where: 'chapter = ?', whereArgs: [chapter], orderBy: 'updated_at DESC');
+    final scope = await _courseContext.scopedWhere(
+      extraWhere: 'chapter = ?',
+      extraArgs: [chapter],
+    );
+    final rows = await db.query(
+      'puml_files',
+      where: scope.where,
+      whereArgs: scope.args,
+      orderBy: 'updated_at DESC',
+    );
     return rows.map(PumlFileModel.fromMap).toList();
   }
 
@@ -31,8 +49,9 @@ class PumlDao {
 
   Future<int> update(PumlFileModel p) async {
     final db = await _db.database;
-    return db
-        .update('puml_files', p.toMap(), where: 'id = ?', whereArgs: [p.id]);
+    final row = p.toMap();
+    row['course_id'] ??= await _courseContext.activeCourseId();
+    return db.update('puml_files', row, where: 'id = ?', whereArgs: [p.id]);
   }
 
   Future<int> delete(int id) async {
@@ -42,7 +61,11 @@ class PumlDao {
 
   Future<int> count() async {
     final db = await _db.database;
-    final result = await db.rawQuery('SELECT COUNT(*) as c FROM puml_files');
+    final scope = await _courseContext.scopedWhere();
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as c FROM puml_files WHERE ${scope.where}',
+      scope.args,
+    );
     return result.first['c'] as int? ?? 0;
   }
 

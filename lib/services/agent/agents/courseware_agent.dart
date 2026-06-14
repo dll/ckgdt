@@ -1,6 +1,7 @@
 import '../../ai_service.dart';
 import '../agent_model.dart';
 import '../base_agent.dart';
+import '../special_agent_tools.dart';
 
 /// 📚 课程管家智能体 — 课件生成 + 一键生课
 class CoursewareAgent extends BaseAgent {
@@ -119,10 +120,28 @@ class CoursewareAgent extends BaseAgent {
 - 质量把关：生成后自查目标覆盖率和难度分布''',
         priority: 6,
         keywords: [
-          '课件', '课程', '生课', '教案', '章节', '大纲', '教学计划',
-          'PPT', '幻灯片', 'UML', '脚本', '视频制作', '讲义',
-          '课程生成', '生成课程', '新课程', '课程模板', '课程建设',
-          '教学大纲', '培养方案', '课程设计', '创建课程',
+          '课件',
+          '课程',
+          '生课',
+          '教案',
+          '章节',
+          '大纲',
+          '教学计划',
+          'PPT',
+          '幻灯片',
+          'UML',
+          '脚本',
+          '视频制作',
+          '讲义',
+          '课程生成',
+          '生成课程',
+          '新课程',
+          '课程模板',
+          '课程建设',
+          '教学大纲',
+          '培养方案',
+          '课程设计',
+          '创建课程',
         ],
         capabilities: ['课件生成', '一键生课', '教案设计', '课程管理'],
         requiresAi: true,
@@ -134,8 +153,16 @@ class CoursewareAgent extends BaseAgent {
           '可继续调整和完善生成结果',
         ],
         classicCases: [
-          AgentCase(title: '生成教案', userInput: '帮我生成 Flutter Widget 体系的教案', agentReply: '## Flutter Widget 体系 教案\n\n**教学目标**：掌握 Widget 分类和常用组件\n**重点**：StatelessWidget vs StatefulWidget\n**难点**：Widget 树的构建和更新机制\n\n**教学过程**：\n1. 导入（5分钟）：展示一个 Flutter 应用截图\n2. 讲授（25分钟）：Widget 分类和生命周期\n3. 实践（15分钟）：编写计数器应用'),
-          AgentCase(title: '生成新课程', userInput: '帮我生成一门《Web 前端开发》课程大纲', agentReply: '## 《Web 前端开发》课程大纲\n\n**学时**：48学时（理论32 + 实验16）\n\n| 章节 | 主题 | 学时 |\n|------|------|------|\n| 第1章 | Web 技术体系全景 | 4 |\n| 第2章 | HTML5 + CSS3 基础 | 8 |\n| 第3章 | JavaScript 核心 | 8 |\n| 第4章 | Vue.js 框架开发 | 8 |\n| 第5章 | React 框架开发 | 8 |\n| 第6章 | 综合项目实践 | 12 |'),
+          AgentCase(
+              title: '生成教案',
+              userInput: '帮我生成 Flutter Widget 体系的教案',
+              agentReply:
+                  '## Flutter Widget 体系 教案\n\n**教学目标**：掌握 Widget 分类和常用组件\n**重点**：StatelessWidget vs StatefulWidget\n**难点**：Widget 树的构建和更新机制\n\n**教学过程**：\n1. 导入（5分钟）：展示一个 Flutter 应用截图\n2. 讲授（25分钟）：Widget 分类和生命周期\n3. 实践（15分钟）：编写计数器应用'),
+          AgentCase(
+              title: '生成新课程',
+              userInput: '帮我生成一门《Web 前端开发》课程大纲',
+              agentReply:
+                  '## 《Web 前端开发》课程大纲\n\n**学时**：48学时（理论32 + 实验16）\n\n| 章节 | 主题 | 学时 |\n|------|------|------|\n| 第1章 | Web 技术体系全景 | 4 |\n| 第2章 | HTML5 + CSS3 基础 | 8 |\n| 第3章 | JavaScript 核心 | 8 |\n| 第4章 | Vue.js 框架开发 | 8 |\n| 第5章 | React 框架开发 | 8 |\n| 第6章 | 综合项目实践 | 12 |'),
         ],
       );
 
@@ -146,6 +173,18 @@ class CoursewareAgent extends BaseAgent {
   @override
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
+    final tools = SpecialAgentTools.instance;
+    if (tools.isCoursewareGenerationIntent(userMessage)) {
+      try {
+        final reply = await tools.generateCourseware(
+          userRequest: userMessage,
+        );
+        return buildReply(reply);
+      } catch (e) {
+        return buildReply('课件生成失败：$e');
+      }
+    }
+
     final messages = buildAiMessages(userMessage, session);
     final result = await safeAiChatWithMeta(messages, aiService: _ai);
     return buildReplyFromResult(result);

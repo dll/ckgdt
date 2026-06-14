@@ -1,7 +1,8 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../data/local/ai_config_dao.dart';
 import '../../../services/ai_service.dart';
+import '../../../services/course_context_service.dart';
 import '../../../services/slide_generator_service.dart';
 import '../../../data/models/material_model.dart';
 import 'ai_settings_page.dart';
@@ -14,31 +15,24 @@ class SlideGeneratorPage extends StatefulWidget {
 }
 
 class _SlideGeneratorPageState extends State<SlideGeneratorPage> {
-  static const _chapters = [
-    '全部/自定义',
-    '第1章',
-    '第2章',
-    '第3章',
-    '第4章',
-    '第5章',
-    '第6章',
-  ];
-
   final _topicController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   String _selectedChapter = '全部/自定义';
+  List<String> _chapters = const ['全部/自定义'];
   double _slideCount = 8;
   bool _generating = false;
   bool _hasApiKey = false;
   bool _checkingKey = true;
 
   final AiConfigDao _configDao = AiConfigDao();
+  final CourseContextService _courseContext = CourseContextService();
   final SlideGeneratorService _slideService = SlideGeneratorService();
 
   @override
   void initState() {
     super.initState();
+    _loadCourseChapters();
     _checkApiKey();
   }
 
@@ -57,11 +51,21 @@ class _SlideGeneratorPageState extends State<SlideGeneratorPage> {
     });
   }
 
+  Future<void> _loadCourseChapters() async {
+    final chapters = await _courseContext.chapterTitles(includeAll: true);
+    if (!mounted) return;
+    setState(() {
+      _chapters = chapters;
+      if (!_chapters.contains(_selectedChapter)) {
+        _selectedChapter = _chapters.first;
+      }
+    });
+  }
+
   Future<void> _generate() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final topic = _topicController.text.trim();
-    final chapter =
-        _selectedChapter == '全部/自定义' ? null : _selectedChapter;
+    final chapter = _selectedChapter == '全部/自定义' ? null : _selectedChapter;
 
     setState(() => _generating = true);
 
@@ -103,14 +107,14 @@ class _SlideGeneratorPageState extends State<SlideGeneratorPage> {
           children: [
             _infoRow('标题', material.title),
             const SizedBox(height: 8),
-            if (material.chapter != null)
-              _infoRow('章节', material.chapter!),
+            if (material.chapter != null) _infoRow('章节', material.chapter!),
             if (material.chapter != null) const SizedBox(height: 8),
             if (material.filePath != null)
               _infoRow('路径', material.filePath!, wrap: true),
             if (material.filePath != null) const SizedBox(height: 8),
             if (material.size > 0)
-              _infoRow('大小', '约 ${(material.size / 1024).toStringAsFixed(1)} KB'),
+              _infoRow(
+                  '大小', '约 ${(material.size / 1024).toStringAsFixed(1)} KB'),
           ],
         ),
         actions: [
@@ -142,14 +146,12 @@ class _SlideGeneratorPageState extends State<SlideGeneratorPage> {
       children: [
         Text(
           '$label：',
-          style: const TextStyle(
-              fontWeight: FontWeight.w600, fontSize: 13),
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
         ),
         wrap
             ? Expanded(
                 child: Text(value,
-                    style: const TextStyle(fontSize: 12),
-                    softWrap: true))
+                    style: const TextStyle(fontSize: 12), softWrap: true))
             : Expanded(
                 child: Text(value, style: const TextStyle(fontSize: 13))),
       ],
@@ -172,8 +174,7 @@ class _SlideGeneratorPageState extends State<SlideGeneratorPage> {
     final topic = _topicController.text.trim();
     if (topic.isEmpty) return [];
     final count = _slideCount.round();
-    final chapter =
-        _selectedChapter == '全部/自定义' ? '' : ' · $_selectedChapter';
+    final chapter = _selectedChapter == '全部/自定义' ? '' : ' · $_selectedChapter';
     return [
       '封面：$topic$chapter',
       '目录：课程内容概览',
@@ -228,8 +229,8 @@ class _SlideGeneratorPageState extends State<SlideGeneratorPage> {
                         ]),
                         SizedBox(height: 6),
                         Text('输入主题，AI 自动生成结构完整的教学 PDF 幻灯片',
-                            style: TextStyle(
-                                color: Colors.white70, fontSize: 13)),
+                            style:
+                                TextStyle(color: Colors.white70, fontSize: 13)),
                       ],
                     ),
                   ),
@@ -243,8 +244,8 @@ class _SlideGeneratorPageState extends State<SlideGeneratorPage> {
 
                   // 章节选择
                   const Text('选择章节',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 14)),
+                      style:
+                          TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                   const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -274,13 +275,13 @@ class _SlideGeneratorPageState extends State<SlideGeneratorPage> {
 
                   // 主题输入
                   const Text('课件主题',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 14)),
+                      style:
+                          TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: _topicController,
                     decoration: InputDecoration(
-                      hintText: '如：Flutter 混合开发技术对比',
+                      hintText: '如：需求分析方法、结构化设计、核心概念辨析',
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10)),
                       prefixIcon: const Icon(Icons.topic_outlined),
@@ -354,12 +355,10 @@ class _SlideGeneratorPageState extends State<SlideGeneratorPage> {
                   // 生成进度
                   if (_generating) ...[
                     const Text('正在调用 AI 生成课件内容，请稍候…',
-                        style:
-                            TextStyle(color: Colors.grey, fontSize: 13)),
+                        style: TextStyle(color: Colors.grey, fontSize: 13)),
                     const SizedBox(height: 8),
                     LinearProgressIndicator(
-                        borderRadius: BorderRadius.circular(4),
-                        color: primary),
+                        borderRadius: BorderRadius.circular(4), color: primary),
                     const SizedBox(height: 20),
                   ],
 
@@ -372,8 +371,7 @@ class _SlideGeneratorPageState extends State<SlideGeneratorPage> {
                               width: 18,
                               height: 18,
                               child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white),
+                                  strokeWidth: 2, color: Colors.white),
                             )
                           : const Icon(Icons.auto_awesome),
                       label: Text(
@@ -385,9 +383,8 @@ class _SlideGeneratorPageState extends State<SlideGeneratorPage> {
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                       ),
-                      onPressed: (!_hasApiKey || _generating)
-                          ? null
-                          : _generate,
+                      onPressed:
+                          (!_hasApiKey || _generating) ? null : _generate,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -396,8 +393,7 @@ class _SlideGeneratorPageState extends State<SlideGeneratorPage> {
                   Text(
                     '提示：生成过程约需 10-30 秒，完成后 PDF 文件自动保存到素材库',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                        fontSize: 12, color: Colors.grey.shade500),
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                   ),
                   const SizedBox(height: 20),
                 ],
@@ -426,20 +422,18 @@ class _SlideGeneratorPageState extends State<SlideGeneratorPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('尚未配置 AI API Key',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 14)),
+                    style:
+                        TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                 SizedBox(height: 2),
                 Text('需要先配置 API Key 才能使用 AI 生成功能',
-                    style:
-                        TextStyle(fontSize: 12, color: Colors.grey)),
+                    style: TextStyle(fontSize: 12, color: Colors.grey)),
               ],
             ),
           ),
           TextButton(
             onPressed: () => Navigator.push(
               context,
-              MaterialPageRoute(
-                  builder: (_) => const AiSettingsPage()),
+              MaterialPageRoute(builder: (_) => const AiSettingsPage()),
             ).then((_) => _checkApiKey()),
             child: const Text('去配置'),
           ),
@@ -460,12 +454,10 @@ class _SlideGeneratorPageState extends State<SlideGeneratorPage> {
             Icon(Icons.preview_outlined, size: 18, color: primary),
             const SizedBox(width: 6),
             const Text('预览结构',
-                style: TextStyle(
-                    fontWeight: FontWeight.w600, fontSize: 14)),
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
             const Spacer(),
             Text('${slides.length} 张幻灯片',
-                style: TextStyle(
-                    fontSize: 12, color: Colors.grey.shade500)),
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
           ],
         ),
         const SizedBox(height: 10),
@@ -503,8 +495,7 @@ class _SlideGeneratorPageState extends State<SlideGeneratorPage> {
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: Text(title,
-                          style: const TextStyle(fontSize: 13)),
+                      child: Text(title, style: const TextStyle(fontSize: 13)),
                     ),
                   ],
                 ),

@@ -5,6 +5,7 @@ import 'package:sqflite/sqflite.dart';
 import '../core/error_handler.dart';
 import '../data/local/database_helper.dart';
 import '../data/models/twin_profile_model.dart';
+import 'course_context_service.dart';
 
 /// 数字孪生画像服务 — 高保真教育教学数字镜像
 ///
@@ -12,6 +13,7 @@ import '../data/models/twin_profile_model.dart';
 /// 实现数据驱动、智能诊断与个性化教学，贯穿教学练评研全流程。
 class TwinService {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+  final CourseContextService _courseContext = CourseContextService();
 
   // ══════════════════════════════════════════════════════════════════════════
   // 学生画像 — 全维度映射
@@ -23,70 +25,120 @@ class TwinService {
     // 1. 测验均分
     double quizAvg = 0;
     try {
+      final scope = await _courseContext.scopedWhere(
+        extraWhere: 'user_id = ?',
+        extraArgs: [userId],
+      );
       final r = await db.rawQuery(
-        'SELECT AVG(score) as avg FROM quiz_results WHERE user_id = ?',
-        [userId],
+        'SELECT AVG(score) as avg FROM quiz_results WHERE ${scope.where}',
+        scope.args,
       );
       quizAvg = (r.first['avg'] as num?)?.toDouble() ?? 0;
-    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TwinService', stack: st);
+    }
 
     // 2. 实验完成率
     double labRate = 0;
     int totalTasks = 0;
     int doneTasks = 0;
     try {
+      final taskScope = await _courseContext.scopedWhere(
+        extraWhere: 'status = ?',
+        extraArgs: ['active'],
+      );
       final total = await db.rawQuery(
-        'SELECT COUNT(*) as c FROM lab_tasks WHERE status = ?',
-        ['active'],
+        'SELECT COUNT(*) as c FROM lab_tasks WHERE ${taskScope.where}',
+        taskScope.args,
+      );
+      final doneScope = await _courseContext.scopedWhere(
+        column: 'lt.course_id',
+        extraWhere: "ls.user_id = ? AND ls.status IN ('已提交','已批改')",
+        extraArgs: [userId],
       );
       final done = await db.rawQuery(
-        "SELECT COUNT(*) as c FROM lab_submissions WHERE user_id = ? AND status IN ('已提交','已批改')",
-        [userId],
+        '''
+        SELECT COUNT(*) as c
+        FROM lab_submissions ls
+        JOIN lab_tasks lt ON ls.task_id = lt.id
+        WHERE ${doneScope.where}
+        ''',
+        doneScope.args,
       );
       totalTasks = (total.first['c'] as int?) ?? 0;
       doneTasks = (done.first['c'] as int?) ?? 0;
-      labRate = totalTasks > 0 ? (doneTasks / totalTasks * 100).clamp(0, 100) : 0;
-    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
+      labRate =
+          totalTasks > 0 ? (doneTasks / totalTasks * 100).clamp(0, 100) : 0;
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TwinService', stack: st);
+    }
 
     // 3. 错题消化率
     double wrongDigest = 0;
     try {
+      final allScope = await _courseContext.scopedWhere(
+        extraWhere: 'user_id = ?',
+        extraArgs: [userId],
+      );
       final allWrong = await db.rawQuery(
-        'SELECT COUNT(*) as c FROM wrong_answers WHERE user_id = ?',
-        [userId],
+        'SELECT COUNT(*) as c FROM wrong_answers WHERE ${allScope.where}',
+        allScope.args,
+      );
+      final explainedScope = await _courseContext.scopedWhere(
+        extraWhere:
+            "user_id = ? AND explanation IS NOT NULL AND explanation != ''",
+        extraArgs: [userId],
       );
       final explained = await db.rawQuery(
-        "SELECT COUNT(*) as c FROM wrong_answers WHERE user_id = ? AND explanation IS NOT NULL AND explanation != ''",
-        [userId],
+        'SELECT COUNT(*) as c FROM wrong_answers WHERE ${explainedScope.where}',
+        explainedScope.args,
       );
       final a = (allWrong.first['c'] as int?) ?? 0;
       final e = (explained.first['c'] as int?) ?? 0;
       wrongDigest = a > 0 ? (e / a * 100).clamp(0, 100) : 100;
-    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TwinService', stack: st);
+    }
 
     // 4. 概念覆盖率
     double conceptCov = 0;
     int totalNodes = 0;
     try {
-      final tn = await db.rawQuery('SELECT COUNT(*) as c FROM nodes');
+      final graphScope =
+          await _courseContext.scopedWhere(column: 'g.course_id');
+      final tn = await db.rawQuery('''
+        SELECT COUNT(*) as c
+        FROM nodes n
+        JOIN graphs g ON n.graph_id = g.id
+        WHERE ${graphScope.where}
+      ''', graphScope.args);
       final ln = await db.rawQuery(
         "SELECT COUNT(DISTINCT concept_id) as c FROM concept_progress WHERE user_id = ? AND status != 'not_started'",
         [userId],
       );
       totalNodes = (tn.first['c'] as int?) ?? 0;
       final learnedNodes = (ln.first['c'] as int?) ?? 0;
-      conceptCov = totalNodes > 0 ? (learnedNodes / totalNodes * 100).clamp(0, 100) : 0;
-    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
+      conceptCov =
+          totalNodes > 0 ? (learnedNodes / totalNodes * 100).clamp(0, 100) : 0;
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TwinService', stack: st);
+    }
 
     // 5. 总学习时长（分钟）
     int studyMin = 0;
     try {
+      final scope = await _courseContext.scopedWhere(
+        extraWhere: 'user_id = ?',
+        extraArgs: [userId],
+      );
       final r = await db.rawQuery(
-        'SELECT SUM(study_time) as total FROM learning_records WHERE user_id = ?',
-        [userId],
+        'SELECT SUM(study_time) as total FROM learning_records WHERE ${scope.where}',
+        scope.args,
       );
       studyMin = (r.first['total'] as num?)?.toInt() ?? 0;
-    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TwinService', stack: st);
+    }
 
     // 6. 近 8 周每周学习时长
     final weeklyMinutes = <double>[];
@@ -94,9 +146,13 @@ class TwinService {
       for (int i = 7; i >= 0; i--) {
         final start = DateTime.now().subtract(Duration(days: (i + 1) * 7));
         final end = DateTime.now().subtract(Duration(days: i * 7));
+        final scope = await _courseContext.scopedWhere(
+          extraWhere: 'user_id = ? AND created_at >= ? AND created_at < ?',
+          extraArgs: [userId, start.toIso8601String(), end.toIso8601String()],
+        );
         final r = await db.rawQuery(
-          "SELECT COALESCE(SUM(study_time),0) as total FROM learning_records WHERE user_id = ? AND created_at >= ? AND created_at < ?",
-          [userId, start.toIso8601String(), end.toIso8601String()],
+          'SELECT COALESCE(SUM(study_time),0) as total FROM learning_records WHERE ${scope.where}',
+          scope.args,
         );
         weeklyMinutes.add((r.first['total'] as num?)?.toDouble() ?? 0);
       }
@@ -108,17 +164,26 @@ class TwinService {
     // 7. 章节掌握度（按章测验正确率）
     final chapterMastery = <int, double>{};
     try {
-      for (int ch = 1; ch <= 6; ch++) {
+      final chapters = await _courseContext.chapterTitles();
+      for (int ch = 1; ch <= chapters.length; ch++) {
+        final patterns = await _courseContext.chapterQueryPatterns(ch);
+        final scope = await _courseContext.scopedWhere(
+          extraWhere:
+              'user_id = ? AND (${List.filled(patterns.length, 'chapter LIKE ?').join(' OR ')})',
+          extraArgs: [userId, ...patterns],
+        );
         final r = await db.rawQuery(
-          "SELECT AVG(score) as avg FROM quiz_results WHERE user_id = ? AND chapter = ?",
-          [userId, ch],
+          'SELECT AVG(score) as avg FROM quiz_results WHERE ${scope.where}',
+          scope.args,
         );
         final avg = (r.first['avg'] as num?)?.toDouble();
         if (avg != null) {
           chapterMastery[ch] = avg.clamp(0, 100);
         }
       }
-    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TwinService', stack: st);
+    }
 
     // 8. 每日活跃热力图（近 30 天）
     final dailyActivity = <double>[];
@@ -127,9 +192,17 @@ class TwinService {
         final day = DateTime.now().subtract(Duration(days: i));
         final dayStart = DateTime(day.year, day.month, day.day);
         final dayEnd = dayStart.add(const Duration(days: 1));
+        final scope = await _courseContext.scopedWhere(
+          extraWhere: 'user_id = ? AND created_at >= ? AND created_at < ?',
+          extraArgs: [
+            userId,
+            dayStart.toIso8601String(),
+            dayEnd.toIso8601String()
+          ],
+        );
         final r = await db.rawQuery(
-          "SELECT COALESCE(SUM(study_time),0) as total FROM learning_records WHERE user_id = ? AND created_at >= ? AND created_at < ?",
-          [userId, dayStart.toIso8601String(), dayEnd.toIso8601String()],
+          'SELECT COALESCE(SUM(study_time),0) as total FROM learning_records WHERE ${scope.where}',
+          scope.args,
         );
         dailyActivity.add((r.first['total'] as num?)?.toDouble() ?? 0);
       }
@@ -139,7 +212,8 @@ class TwinService {
     }
 
     // 9. 学习行为模式分析
-    final learningPattern = await _analyzeLearningPattern(db, userId, weeklyMinutes, dailyActivity);
+    final learningPattern =
+        await _analyzeLearningPattern(db, userId, weeklyMinutes, dailyActivity);
 
     // 10. 5 维能力雷达
     final radar = <String, double>{
@@ -184,7 +258,8 @@ class TwinService {
     );
 
     // 14. 趋势对比
-    final trend = await _buildStudentTrend(db, userId, quizAvg, labRate, conceptCov, weeklyMinutes);
+    final trend = await _buildStudentTrend(
+        db, userId, quizAvg, labRate, conceptCov, weeklyMinutes);
 
     final profile = StudentTwinProfile(
       quizAvg: quizAvg,
@@ -224,16 +299,25 @@ class TwinService {
         "SELECT COUNT(*) as c FROM users WHERE role = 'student' AND is_active = 1",
       );
       classSize = (r.first['c'] as int?) ?? 0;
-    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TwinService', stack: st);
+    }
 
     // 班级均分（测验）
     double classAvg = 0;
     try {
+      final scope = await _courseContext.scopedWhere(
+        extraWhere:
+            "user_id IN (SELECT user_id FROM users WHERE role = 'student')",
+      );
       final r = await db.rawQuery(
-        "SELECT AVG(score) as avg FROM quiz_results WHERE user_id IN (SELECT user_id FROM users WHERE role = 'student')",
+        'SELECT AVG(score) as avg FROM quiz_results WHERE ${scope.where}',
+        scope.args,
       );
       classAvg = (r.first['avg'] as num?)?.toDouble() ?? 0;
-    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TwinService', stack: st);
+    }
 
     // 节点覆盖率（全班均值）
     final nodeCov = <int, double>{};
@@ -244,10 +328,11 @@ class TwinService {
         GROUP BY node_id
       ''');
       for (final r in rows) {
-        nodeCov[(r['node_id'] as int)] =
-            (r['avg'] as num?)?.toDouble() ?? 0;
+        nodeCov[(r['node_id'] as int)] = (r['avg'] as num?)?.toDouble() ?? 0;
       }
-    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TwinService', stack: st);
+    }
 
     // 薄弱节点 Top 5
     final weakSpots = <WeakSpot>[];
@@ -267,7 +352,9 @@ class TwinService {
           avgScore: (r['avg_score'] as num?)?.toDouble() ?? 0,
         ));
       }
-    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TwinService', stack: st);
+    }
 
     // 待批阅数
     int pending = 0;
@@ -276,15 +363,24 @@ class TwinService {
         "SELECT COUNT(*) as c FROM lab_submissions WHERE status = '已提交'",
       );
       pending = (r.first['c'] as int?) ?? 0;
-    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TwinService', stack: st);
+    }
 
     // ── 新增维度 ──
 
     // 班级成绩分布
     final classDistribution = <String, int>{
-      'excellent': 0, 'good': 0, 'average': 0, 'atRisk': 0
+      'excellent': 0,
+      'good': 0,
+      'average': 0,
+      'atRisk': 0
     };
     try {
+      final scope = await _courseContext.scopedWhere(
+        extraWhere:
+            "user_id IN (SELECT user_id FROM users WHERE role = 'student')",
+      );
       final rows = await db.rawQuery('''
         SELECT
           CASE
@@ -297,16 +393,18 @@ class TwinService {
         FROM (
           SELECT user_id, AVG(score) as avg_score
           FROM quiz_results
-          WHERE user_id IN (SELECT user_id FROM users WHERE role = 'student')
+          WHERE ${scope.where}
           GROUP BY user_id
         )
         GROUP BY tier
-      ''');
+      ''', scope.args);
       for (final r in rows) {
         final tier = r['tier'] as String;
         classDistribution[tier] = (r['cnt'] as int?) ?? 0;
       }
-    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TwinService', stack: st);
+    }
 
     // 教学进度（教学大纲执行率）
     double teachingProgress = 0;
@@ -320,19 +418,29 @@ class TwinService {
       final t = (total.first['c'] as int?) ?? 0;
       final d = (done.first['c'] as int?) ?? 0;
       teachingProgress = t > 0 ? (d / t * 100).clamp(0, 100) : 0;
-    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TwinService', stack: st);
+    }
 
     // 班级参与度（近7天有学习记录的学生占比）
     double classEngagement = 0;
     try {
-      final weekAgo = DateTime.now().subtract(const Duration(days: 7)).toIso8601String();
+      final weekAgo =
+          DateTime.now().subtract(const Duration(days: 7)).toIso8601String();
+      final scope = await _courseContext.scopedWhere(
+        extraWhere: 'created_at >= ?',
+        extraArgs: [weekAgo],
+      );
       final r = await db.rawQuery(
-        "SELECT COUNT(DISTINCT user_id) as c FROM learning_records WHERE created_at >= ?",
-        [weekAgo],
+        'SELECT COUNT(DISTINCT user_id) as c FROM learning_records WHERE ${scope.where}',
+        scope.args,
       );
       final active = (r.first['c'] as int?) ?? 0;
-      classEngagement = classSize > 0 ? (active / classSize * 100).clamp(0, 100) : 0;
-    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
+      classEngagement =
+          classSize > 0 ? (active / classSize * 100).clamp(0, 100) : 0;
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TwinService', stack: st);
+    }
 
     // 批阅及时性（3天内批完的占比）
     double gradingTimeliness = 0;
@@ -346,19 +454,24 @@ class TwinService {
       final tg = (totalGraded.first['c'] as int?) ?? 0;
       final tl = (timelyGraded.first['c'] as int?) ?? 0;
       gradingTimeliness = tg > 0 ? (tl / tg * 100).clamp(0, 100) : 100;
-    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TwinService', stack: st);
+    }
 
     // 截止日期预警
     int deadlineWarnings = 0;
     try {
-      final threeDaysLater = DateTime.now().add(const Duration(days: 3)).toIso8601String();
+      final threeDaysLater =
+          DateTime.now().add(const Duration(days: 3)).toIso8601String();
       final now = DateTime.now().toIso8601String();
       final r = await db.rawQuery(
         "SELECT COUNT(*) as c FROM lab_tasks WHERE status = 'active' AND due_date IS NOT NULL AND due_date >= ? AND due_date <= ?",
         [now, threeDaysLater],
       );
       deadlineWarnings = (r.first['c'] as int?) ?? 0;
-    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TwinService', stack: st);
+    }
 
     // 学生预警
     final alerts = await _buildStudentAlerts(db, classSize);
@@ -398,22 +511,31 @@ class TwinService {
     // 高峰学习时段
     final peakHours = <int>[];
     try {
+      final scope = await _courseContext.scopedWhere(
+        extraWhere: 'user_id = ?',
+        extraArgs: [userId],
+      );
       final rows = await db.rawQuery(
         "SELECT CAST(strftime('%H', created_at) AS INTEGER) as hour, SUM(study_time) as total "
-        "FROM learning_records WHERE user_id = ? GROUP BY hour ORDER BY total DESC LIMIT 3",
-        [userId],
+        "FROM learning_records WHERE ${scope.where} GROUP BY hour ORDER BY total DESC LIMIT 3",
+        scope.args,
       );
       for (final r in rows) {
         peakHours.add((r['hour'] as int?) ?? 0);
       }
-    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TwinService', stack: st);
+    }
 
     // 学习稳定度（weeklyMinutes 的变异系数取反）
     double consistency = 50;
     if (weeklyMinutes.isNotEmpty) {
-      final mean = weeklyMinutes.fold(0.0, (s, v) => s + v) / weeklyMinutes.length;
+      final mean =
+          weeklyMinutes.fold(0.0, (s, v) => s + v) / weeklyMinutes.length;
       if (mean > 0) {
-        final variance = weeklyMinutes.fold(0.0, (s, v) => s + (v - mean) * (v - mean)) / weeklyMinutes.length;
+        final variance =
+            weeklyMinutes.fold(0.0, (s, v) => s + (v - mean) * (v - mean)) /
+                weeklyMinutes.length;
         final cv = sqrt(variance) / mean; // 变异系数
         consistency = ((1 - cv.clamp(0, 2) / 2) * 100).clamp(0, 100);
       }
@@ -437,7 +559,10 @@ class TwinService {
 
     // 近7天活跃天数
     final activeDays7 = dailyActivity.length >= 7
-        ? dailyActivity.sublist(dailyActivity.length - 7).where((d) => d > 0).length
+        ? dailyActivity
+            .sublist(dailyActivity.length - 7)
+            .where((d) => d > 0)
+            .length
         : 0;
 
     // 连续学习天数（从今天往回数）
@@ -513,7 +638,8 @@ class TwinService {
       final prevWeek = weeklyMinutes[weeklyMinutes.length - 2];
       if (prevWeek > 30 && lastWeek < prevWeek * 0.3) {
         score += 2;
-        reasons.add('学习时长骤降 ${((1 - lastWeek / prevWeek) * 100).toStringAsFixed(0)}%');
+        reasons.add(
+            '学习时长骤降 ${((1 - lastWeek / prevWeek) * 100).toStringAsFixed(0)}%');
       }
     }
 
@@ -628,20 +754,26 @@ class TwinService {
   // 教师端：学生预警列表
   // ══════════════════════════════════════════════════════════════════════════
 
-  Future<List<StudentAlert>> _buildStudentAlerts(Database db, int classSize) async {
+  Future<List<StudentAlert>> _buildStudentAlerts(
+      Database db, int classSize) async {
     final alerts = <StudentAlert>[];
     try {
       // 预警1：超过7天未学习的学生
-      final weekAgo = DateTime.now().subtract(const Duration(days: 7)).toIso8601String();
+      final weekAgo =
+          DateTime.now().subtract(const Duration(days: 7)).toIso8601String();
+      final activeScope = await _courseContext.scopedWhere(
+        extraWhere: 'created_at >= ?',
+        extraArgs: [weekAgo],
+      );
       final inactiveStudents = await db.rawQuery('''
         SELECT u.user_id, u.real_name
         FROM users u
         WHERE u.role = 'student' AND u.is_active = 1
         AND u.user_id NOT IN (
-          SELECT DISTINCT user_id FROM learning_records WHERE created_at >= ?
+          SELECT DISTINCT user_id FROM learning_records WHERE ${activeScope.where}
         )
         LIMIT 10
-      ''', [weekAgo]);
+      ''', activeScope.args);
       for (final s in inactiveStudents) {
         alerts.add(StudentAlert(
           userId: s['user_id'] as String? ?? '',
@@ -652,15 +784,18 @@ class TwinService {
       }
 
       // 预警2：测验平均分低于50的学生
+      final quizScope = await _courseContext.scopedWhere(
+        column: 'qr.course_id',
+      );
       final lowScoreStudents = await db.rawQuery('''
         SELECT qr.user_id, u.real_name, AVG(qr.score) as avg_score
         FROM quiz_results qr
         LEFT JOIN users u ON qr.user_id = u.user_id
-        WHERE u.role = 'student'
+        WHERE u.role = 'student' AND ${quizScope.where}
         GROUP BY qr.user_id
         HAVING avg_score < 50
         LIMIT 10
-      ''');
+      ''', quizScope.args);
       for (final s in lowScoreStudents) {
         final avg = (s['avg_score'] as num?)?.toDouble() ?? 0;
         alerts.add(StudentAlert(
@@ -672,15 +807,21 @@ class TwinService {
       }
 
       // 预警3：实验未提交的学生（有active任务但0提交）
+      final labTaskScope = await _courseContext.scopedWhere(
+        column: 'lt.course_id',
+      );
       final noSubStudents = await db.rawQuery('''
         SELECT u.user_id, u.real_name
         FROM users u
         WHERE u.role = 'student' AND u.is_active = 1
         AND u.user_id NOT IN (
-          SELECT DISTINCT user_id FROM lab_submissions
+          SELECT DISTINCT ls.user_id
+          FROM lab_submissions ls
+          JOIN lab_tasks lt ON ls.task_id = lt.id
+          WHERE ${labTaskScope.where}
         )
         LIMIT 10
-      ''');
+      ''', labTaskScope.args);
       for (final s in noSubStudents) {
         alerts.add(StudentAlert(
           userId: s['user_id'] as String? ?? '',
@@ -713,9 +854,10 @@ class TwinService {
       if (prevSnapshot == null) return null;
 
       final prev = StudentTwinProfile.fromJson(prevSnapshot);
-      final studyTimeDelta = weeklyMinutes.isNotEmpty && weeklyMinutes.length >= 2
-          ? weeklyMinutes.last - weeklyMinutes[weeklyMinutes.length - 2]
-          : 0.0;
+      final studyTimeDelta =
+          weeklyMinutes.isNotEmpty && weeklyMinutes.length >= 2
+              ? weeklyMinutes.last - weeklyMinutes[weeklyMinutes.length - 2]
+              : 0.0;
 
       final quizDelta = currentQuizAvg - prev.quizAvg;
       final labDelta = currentLabRate - prev.labCompletionRate;
@@ -724,13 +866,16 @@ class TwinService {
       // 生成趋势摘要
       final parts = <String>[];
       if (quizDelta.abs() > 1) {
-        parts.add('测验${quizDelta > 0 ? "↑" : "↓"}${quizDelta.abs().toStringAsFixed(1)}');
+        parts.add(
+            '测验${quizDelta > 0 ? "↑" : "↓"}${quizDelta.abs().toStringAsFixed(1)}');
       }
       if (labDelta.abs() > 1) {
-        parts.add('实验${labDelta > 0 ? "↑" : "↓"}${labDelta.abs().toStringAsFixed(1)}%');
+        parts.add(
+            '实验${labDelta > 0 ? "↑" : "↓"}${labDelta.abs().toStringAsFixed(1)}%');
       }
       if (covDelta.abs() > 1) {
-        parts.add('覆盖${covDelta > 0 ? "↑" : "↓"}${covDelta.abs().toStringAsFixed(1)}%');
+        parts.add(
+            '覆盖${covDelta > 0 ? "↑" : "↓"}${covDelta.abs().toStringAsFixed(1)}%');
       }
 
       return TrendComparison(
@@ -740,7 +885,9 @@ class TwinService {
         studyTimeDelta: studyTimeDelta,
         summary: parts.isEmpty ? '整体保持稳定' : parts.join('，'),
       );
-    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TwinService', stack: st);
+    }
     return null;
   }
 
@@ -760,10 +907,12 @@ class TwinService {
 
       final parts = <String>[];
       if (avgDelta.abs() > 0.5) {
-        parts.add('班级均分${avgDelta > 0 ? "↑" : "↓"}${avgDelta.abs().toStringAsFixed(1)}');
+        parts.add(
+            '班级均分${avgDelta > 0 ? "↑" : "↓"}${avgDelta.abs().toStringAsFixed(1)}');
       }
       if (pendingDelta.abs() > 0) {
-        parts.add('待批${pendingDelta > 0 ? "增加" : "减少"}${pendingDelta.abs().toInt()}份');
+        parts.add(
+            '待批${pendingDelta > 0 ? "增加" : "减少"}${pendingDelta.abs().toInt()}份');
       }
 
       return TrendComparison(
@@ -771,7 +920,9 @@ class TwinService {
         studyTimeDelta: pendingDelta,
         summary: parts.isEmpty ? '教学状态稳定' : parts.join('，'),
       );
-    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TwinService', stack: st);
+    }
     return null;
   }
 
@@ -790,13 +941,16 @@ class TwinService {
         'generated_at': DateTime.now().toIso8601String(),
       });
       // 清理超过30天的旧快照
-      final cutoff = DateTime.now().subtract(const Duration(days: 30)).toIso8601String();
+      final cutoff =
+          DateTime.now().subtract(const Duration(days: 30)).toIso8601String();
       await db.delete(
         'twin_snapshots',
         where: 'user_id = ? AND generated_at < ?',
         whereArgs: [userId, cutoff],
       );
-    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TwinService', stack: st);
+    }
   }
 
   /// 获取上一次的快照（跳过最新的，取前一个）
@@ -814,7 +968,9 @@ class TwinService {
       if (rows.isEmpty) return null;
       return jsonDecode(rows.first['snapshot_json'] as String)
           as Map<String, dynamic>;
-    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TwinService', stack: st);
+    }
     return null;
   }
 
@@ -839,7 +995,9 @@ class TwinService {
         return jsonDecode(rows.first['snapshot_json'] as String)
             as Map<String, dynamic>;
       }
-    } catch (e, st) { swallowDebug(e, tag: 'TwinService', stack: st); }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TwinService', stack: st);
+    }
     return null;
   }
 

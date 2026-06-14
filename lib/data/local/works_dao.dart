@@ -1,10 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'database_helper.dart';
+import '../../services/course_context_service.dart';
 import '../../services/notification_service.dart';
 
 /// 作品管理 DAO — 每位同学一个作品（视频演示）/ 视频互动 / 多维排行
 class WorksDao {
+  final CourseContextService _courseContext = CourseContextService();
+
   // ══════════════════════════════════════════════════════════
   //  表结构保障（懒迁移，不修改 database_helper）
   // ══════════════════════════════════════════════════════════
@@ -23,6 +26,7 @@ class WorksDao {
 
     // student_works 新增列（已存在则静默跳过）
     const newColumns = [
+      'ALTER TABLE student_works ADD COLUMN course_id TEXT',
       'ALTER TABLE student_works ADD COLUMN project_id INTEGER',
       'ALTER TABLE student_works ADD COLUMN group_id INTEGER',
       'ALTER TABLE student_works ADD COLUMN video_url TEXT',
@@ -43,6 +47,13 @@ class WorksDao {
         await db.execute(sql);
       } catch (_) {} // 列已存在则静默跳过
     }
+    try {
+      await db.update(
+        'student_works',
+        {'course_id': CourseContextService.defaultCourseId},
+        where: "course_id IS NULL OR course_id = ''",
+      );
+    } catch (_) {}
 
     // 评论表
     await db.execute('''
@@ -82,6 +93,18 @@ class WorksDao {
     _tableEnsured = true;
   }
 
+  Future<({String where, List<Object?> args})> _studentWorksScope({
+    String column = 'course_id',
+    String? extraWhere,
+    List<Object?> extraArgs = const [],
+  }) {
+    return _courseContext.scopedWhere(
+      column: column,
+      extraWhere: extraWhere,
+      extraArgs: extraArgs,
+    );
+  }
+
   // ══════════════════════════════════════════════════════════
   //  作品 CRUD
   // ══════════════════════════════════════════════════════════
@@ -95,6 +118,7 @@ class WorksDao {
   }) async {
     await _ensureWorksTable();
     final db = await DatabaseHelper.instance.database;
+    final scope = await _studentWorksScope(column: 'w.course_id');
     // 教师评分优先展示；同时计算同学互评均分
     String sql = '''
       SELECT w.*,
@@ -118,9 +142,9 @@ class WorksDao {
         WHERE u2.role IS NULL OR u2.role = 'student'
         GROUP BY work_id
       ) peer ON peer.work_id = w.id
-      WHERE 1=1
+      WHERE ${scope.where}
     ''';
-    final args = <dynamic>[];
+    final args = <Object?>[...scope.args];
     if (workType != null && workType != '全部') {
       sql += ' AND w.work_type = ?';
       args.add(workType);
@@ -143,6 +167,11 @@ class WorksDao {
   Future<Map<String, dynamic>?> getWork(int id) async {
     await _ensureWorksTable();
     final db = await DatabaseHelper.instance.database;
+    final scope = await _studentWorksScope(
+      column: 'w.course_id',
+      extraWhere: 'w.id = ?',
+      extraArgs: [id],
+    );
     final list = await db.rawQuery('''
       SELECT w.*,
              ts.total_score as score, ts.comment as score_comment,
@@ -164,8 +193,8 @@ class WorksDao {
         WHERE u2.role IS NULL OR u2.role = 'student'
         GROUP BY work_id
       ) peer ON peer.work_id = w.id
-      WHERE w.id = ?
-    ''', [id]);
+      WHERE ${scope.where}
+    ''', scope.args);
     return list.isNotEmpty ? list.first : null;
   }
 
@@ -198,7 +227,9 @@ class WorksDao {
   }) async {
     await _ensureWorksTable();
     final db = await DatabaseHelper.instance.database;
+    final courseId = await _courseContext.activeCourseId();
     return db.insert('student_works', {
+      'course_id': courseId,
       'title': title,
       'description': description,
       'tech_stack': techStack,
@@ -232,8 +263,7 @@ class WorksDao {
     await _ensureWorksTable();
     final db = await DatabaseHelper.instance.database;
     data['updated_at'] = DateTime.now().toIso8601String();
-    return db.update('student_works', data,
-        where: 'id = ?', whereArgs: [id]);
+    return db.update('student_works', data, where: 'id = ?', whereArgs: [id]);
   }
 
   Future<int> submitWork(int id) async {
@@ -247,7 +277,9 @@ class WorksDao {
       if (work != null) {
         NotificationService().notifyWorkSubmission(
           studentId: work['user_id'] as String? ?? '',
-          studentName: work['student_name'] as String? ?? work['leader_name'] as String? ?? '',
+          studentName: work['student_name'] as String? ??
+              work['leader_name'] as String? ??
+              '',
           workTitle: work['title'] as String? ?? '未命名作品',
         );
       }
@@ -287,13 +319,11 @@ class WorksDao {
     await _ensureWorksTable();
     final db = await DatabaseHelper.instance.database;
     final existing = await db.query('work_likes',
-        where: 'work_id = ? AND user_id = ?',
-        whereArgs: [workId, userId]);
+        where: 'work_id = ? AND user_id = ?', whereArgs: [workId, userId]);
     if (existing.isNotEmpty) {
       // 取消点赞
       await db.delete('work_likes',
-          where: 'work_id = ? AND user_id = ?',
-          whereArgs: [workId, userId]);
+          where: 'work_id = ? AND user_id = ?', whereArgs: [workId, userId]);
       await db.rawUpdate(
         'UPDATE student_works SET like_count = MAX(0, like_count - 1) WHERE id = ?',
         [workId],
@@ -319,8 +349,7 @@ class WorksDao {
     await _ensureWorksTable();
     final db = await DatabaseHelper.instance.database;
     final result = await db.query('work_likes',
-        where: 'work_id = ? AND user_id = ?',
-        whereArgs: [workId, userId]);
+        where: 'work_id = ? AND user_id = ?', whereArgs: [workId, userId]);
     return result.isNotEmpty;
   }
 
@@ -356,17 +385,14 @@ class WorksDao {
     await _ensureWorksTable();
     final db = await DatabaseHelper.instance.database;
     return db.query('work_comments',
-        where: 'work_id = ?',
-        whereArgs: [workId],
-        orderBy: 'created_at ASC');
+        where: 'work_id = ?', whereArgs: [workId], orderBy: 'created_at ASC');
   }
 
   /// 删除评论
   Future<void> deleteComment(int commentId, int workId) async {
     await _ensureWorksTable();
     final db = await DatabaseHelper.instance.database;
-    await db.delete('work_comments',
-        where: 'id = ?', whereArgs: [commentId]);
+    await db.delete('work_comments', where: 'id = ?', whereArgs: [commentId]);
     await db.rawUpdate(
       'UPDATE student_works SET comment_count = MAX(0, comment_count - 1) WHERE id = ?',
       [workId],
@@ -436,13 +462,15 @@ class WorksDao {
 
   Future<List<Map<String, dynamic>>> getScoreRecords() async {
     final db = await DatabaseHelper.instance.database;
+    final scope = await _studentWorksScope(column: 'sw.course_id');
     return db.rawQuery('''
       SELECT ws.*, sw.title as work_title, sw.group_name, sw.work_type,
              sw.student_name, sw.repo
       FROM work_scores ws
       JOIN student_works sw ON ws.work_id = sw.id
+      WHERE ${scope.where}
       ORDER BY ws.scored_at DESC
-    ''');
+    ''', scope.args);
   }
 
   /// 获取某个作品的所有评分记录（教师 + 同学互评）
@@ -461,8 +489,7 @@ class WorksDao {
   Future<bool> hasScored(int workId, String scorerId) async {
     final db = await DatabaseHelper.instance.database;
     final result = await db.query('work_scores',
-        where: 'work_id = ? AND scorer_id = ?',
-        whereArgs: [workId, scorerId]);
+        where: 'work_id = ? AND scorer_id = ?', whereArgs: [workId, scorerId]);
     return result.isNotEmpty;
   }
 
@@ -477,6 +504,7 @@ class WorksDao {
   }) async {
     await _ensureWorksTable();
     final db = await DatabaseHelper.instance.database;
+    final scope = await _studentWorksScope(column: 'sw.course_id');
 
     if (dimension == 'score') {
       return db.rawQuery('''
@@ -488,8 +516,9 @@ class WorksDao {
           SELECT ws.* FROM work_scores ws
           INNER JOIN users u ON u.user_id = ws.scorer_id AND u.role IN ('teacher','admin')
         ) ts ON ts.work_id = sw.id
+        WHERE ${scope.where}
         ORDER BY ts.total_score DESC
-      ''');
+      ''', scope.args);
     }
 
     if (dimension == 'views') {
@@ -502,9 +531,9 @@ class WorksDao {
           SELECT ws.* FROM work_scores ws
           INNER JOIN users u ON u.user_id = ws.scorer_id AND u.role IN ('teacher','admin')
         ) ts ON ts.work_id = sw.id
-        WHERE sw.status IN ('已提交', '已评分')
+        WHERE ${scope.where} AND sw.status IN ('已提交', '已评分')
         ORDER BY sw.view_count DESC
-      ''');
+      ''', scope.args);
     }
 
     if (dimension == 'likes') {
@@ -517,9 +546,9 @@ class WorksDao {
           SELECT ws.* FROM work_scores ws
           INNER JOIN users u ON u.user_id = ws.scorer_id AND u.role IN ('teacher','admin')
         ) ts ON ts.work_id = sw.id
-        WHERE sw.status IN ('已提交', '已评分')
+        WHERE ${scope.where} AND sw.status IN ('已提交', '已评分')
         ORDER BY sw.like_count DESC
-      ''');
+      ''', scope.args);
     }
 
     if (dimension == 'comments') {
@@ -532,9 +561,9 @@ class WorksDao {
           SELECT ws.* FROM work_scores ws
           INNER JOIN users u ON u.user_id = ws.scorer_id AND u.role IN ('teacher','admin')
         ) ts ON ts.work_id = sw.id
-        WHERE sw.status IN ('已提交', '已评分')
+        WHERE ${scope.where} AND sw.status IN ('已提交', '已评分')
         ORDER BY sw.comment_count DESC
-      ''');
+      ''', scope.args);
     }
 
     // comprehensive: 加权综合排行
@@ -548,8 +577,8 @@ class WorksDao {
         SELECT ws.* FROM work_scores ws
         INNER JOIN users u ON u.user_id = ws.scorer_id AND u.role IN ('teacher','admin')
       ) ts ON ts.work_id = sw.id
-      WHERE sw.status IN ('已提交', '已评分')
-    ''');
+      WHERE ${scope.where} AND sw.status IN ('已提交', '已评分')
+    ''', scope.args);
 
     if (allWorks.isEmpty) return [];
 
@@ -594,18 +623,26 @@ class WorksDao {
   Future<Map<String, dynamic>> getOverview() async {
     await _ensureWorksTable();
     final db = await DatabaseHelper.instance.database;
+    final scope = await _studentWorksScope();
+    final aliasScope = await _studentWorksScope(column: 'sw.course_id');
     final totalWorks = await db.rawQuery(
-        'SELECT COUNT(*) as c FROM student_works');
+        'SELECT COUNT(*) as c FROM student_works WHERE ${scope.where}',
+        scope.args);
     final scored = await db.rawQuery('''
       SELECT COUNT(*) as c, AVG(total_score) as avg, MAX(total_score) as max_s
-      FROM work_scores
-    ''');
+      FROM work_scores ws
+      JOIN student_works sw ON ws.work_id = sw.id
+      WHERE ${aliasScope.where}
+    ''', aliasScope.args);
     final viewSum = await db.rawQuery(
-        'SELECT COALESCE(SUM(view_count), 0) as s FROM student_works');
+        'SELECT COALESCE(SUM(view_count), 0) as s FROM student_works WHERE ${scope.where}',
+        scope.args);
     final likeSum = await db.rawQuery(
-        'SELECT COALESCE(SUM(like_count), 0) as s FROM student_works');
+        'SELECT COALESCE(SUM(like_count), 0) as s FROM student_works WHERE ${scope.where}',
+        scope.args);
     final commentSum = await db.rawQuery(
-        'SELECT COALESCE(SUM(comment_count), 0) as s FROM student_works');
+        'SELECT COALESCE(SUM(comment_count), 0) as s FROM student_works WHERE ${scope.where}',
+        scope.args);
     final count = (totalWorks.first['c'] as int?) ?? 0;
     final scoredCount = (scored.first['c'] as int?) ?? 0;
     return {
@@ -627,8 +664,7 @@ class WorksDao {
 
   /// 从学生列表同步作品。每位同学一个作品，以 user_id 为键幂等。
   /// 会主动清理不属于真实学生的旧虚拟数据。
-  Future<void> syncStudentWorks(
-      List<Map<String, dynamic>> students) async {
+  Future<void> syncStudentWorks(List<Map<String, dynamic>> students) async {
     await _ensureWorksTable();
     final db = await DatabaseHelper.instance.database;
 
@@ -637,23 +673,24 @@ class WorksDao {
         .map((s) => s['userId'] as String?)
         .where((id) => id != null && id.isNotEmpty)
         .toSet();
-    final allWorks = await db.query('student_works');
+    final scope = await _studentWorksScope();
+    final allWorks = await db.query(
+      'student_works',
+      where: scope.where,
+      whereArgs: scope.args,
+    );
     for (final w in allWorks) {
       final wUserId = w['user_id'] as String?;
       if (wUserId == null ||
           wUserId.isEmpty ||
           !validUserIds.contains(wUserId)) {
         final wId = w['id'] as int;
-        await db.delete('work_comments',
-            where: 'work_id = ?', whereArgs: [wId]);
-        await db.delete('work_likes',
-            where: 'work_id = ?', whereArgs: [wId]);
-        await db.delete('work_views',
-            where: 'work_id = ?', whereArgs: [wId]);
-        await db.delete('work_scores',
-            where: 'work_id = ?', whereArgs: [wId]);
-        await db.delete('student_works',
-            where: 'id = ?', whereArgs: [wId]);
+        await db
+            .delete('work_comments', where: 'work_id = ?', whereArgs: [wId]);
+        await db.delete('work_likes', where: 'work_id = ?', whereArgs: [wId]);
+        await db.delete('work_views', where: 'work_id = ?', whereArgs: [wId]);
+        await db.delete('work_scores', where: 'work_id = ?', whereArgs: [wId]);
+        await db.delete('student_works', where: 'id = ?', whereArgs: [wId]);
       }
     }
 
@@ -662,8 +699,15 @@ class WorksDao {
       if (sUserId == null || sUserId.isEmpty) continue;
 
       // 已存在则跳过
-      final existing = await db.query('student_works',
-          where: 'user_id = ?', whereArgs: [sUserId]);
+      final existingScope = await _studentWorksScope(
+        extraWhere: 'user_id = ?',
+        extraArgs: [sUserId],
+      );
+      final existing = await db.query(
+        'student_works',
+        where: existingScope.where,
+        whereArgs: existingScope.args,
+      );
       if (existing.isNotEmpty) continue;
 
       // 从技术栈拆出标签
@@ -678,9 +722,8 @@ class WorksDao {
 
       await addWork(
         title: s['project'] as String? ?? '未命名项目',
-        description: s['feature_detail'] as String? ??
-            s['features'] as String? ??
-            '',
+        description:
+            s['feature_detail'] as String? ?? s['features'] as String? ?? '',
         techStack: techStr,
         workType: '综合项目',
         groupName: s['repo'] as String?,
@@ -737,8 +780,15 @@ class WorksDao {
     ''');
     for (final p in projects) {
       final projectId = p['id'] as int;
-      final existing = await db.query('student_works',
-          where: 'project_id = ?', whereArgs: [projectId]);
+      final existingScope = await _studentWorksScope(
+        extraWhere: 'project_id = ?',
+        extraArgs: [projectId],
+      );
+      final existing = await db.query(
+        'student_works',
+        where: existingScope.where,
+        whereArgs: existingScope.args,
+      );
       if (existing.isEmpty) {
         await addWork(
           title: p['name'] as String? ?? '未命名项目',
@@ -759,8 +809,15 @@ class WorksDao {
   Future<Map<String, dynamic>?> getWorkByProjectId(int projectId) async {
     await _ensureWorksTable();
     final db = await DatabaseHelper.instance.database;
-    final list = await db.query('student_works',
-        where: 'project_id = ?', whereArgs: [projectId]);
+    final scope = await _studentWorksScope(
+      extraWhere: 'project_id = ?',
+      extraArgs: [projectId],
+    );
+    final list = await db.query(
+      'student_works',
+      where: scope.where,
+      whereArgs: scope.args,
+    );
     return list.isNotEmpty ? list.first : null;
   }
 
@@ -768,8 +825,15 @@ class WorksDao {
   Future<Map<String, dynamic>?> getWorkByUserId(String userId) async {
     await _ensureWorksTable();
     final db = await DatabaseHelper.instance.database;
-    final list = await db.query('student_works',
-        where: 'user_id = ?', whereArgs: [userId]);
+    final scope = await _studentWorksScope(
+      extraWhere: 'user_id = ?',
+      extraArgs: [userId],
+    );
+    final list = await db.query(
+      'student_works',
+      where: scope.where,
+      whereArgs: scope.args,
+    );
     return list.isNotEmpty ? list.first : null;
   }
 }

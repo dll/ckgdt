@@ -1,4 +1,4 @@
-﻿import 'dart:math' as math;
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../core/constants/chapter_helper.dart';
 import '../../../core/constants/mask_shapes.dart';
@@ -9,6 +9,7 @@ import '../../../data/local/learning_record_dao.dart';
 import '../../../data/models/learning_path_model.dart';
 import '../../../services/ai_service.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/course_context_service.dart';
 import '../../../services/knowledge_seed_service.dart';
 import '../../../services/node_achievement_service.dart';
 import '../../../data/local/user_dao.dart';
@@ -69,6 +70,7 @@ class KnowledgeGraphPage extends StatefulWidget {
 class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
     with TickerProviderStateMixin {
   final _dao = KnowledgeGraphDao();
+  final _courseContext = CourseContextService();
   final _transformationController = TransformationController();
 
   /// 顶部双 Tab：0=知识图谱（概念画布）/ 1=结构图谱（层级树）
@@ -1150,8 +1152,17 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   }
 
   void _showChapterFilterMenu() {
-    final chapters = [null, 1, 2, 3, 4, 5, 6];
-    final labels = ['全部', '第1章', '第2章', '第3章', '第4章', '第5章', '第6章'];
+    final actualChapters = _nodes
+        .map((n) => n.chapter)
+        .whereType<int>()
+        .where((ch) => ch > 0)
+        .toSet()
+        .toList()
+      ..sort();
+    final chapters = <int?>[
+      null,
+      ...actualChapters,
+    ];
 
     showModalBottomSheet(
       context: context,
@@ -1172,8 +1183,9 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
               runSpacing: 8,
               children: List.generate(chapters.length, (i) {
                 final isSelected = _chapterFilter == chapters[i];
+                final chapter = chapters[i];
                 return ChoiceChip(
-                  label: Text(labels[i]),
+                  label: Text(chapter == null ? '全部' : '第$chapter章'),
                   selected: isSelected,
                   selectedColor: primary.withValues(alpha: 0.2),
                   onSelected: (_) {
@@ -2907,7 +2919,8 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
 
     try {
       final aiService = AiService();
-      final prompt = '''你是一个移动应用开发课程的智能学习顾问。
+      final courseName = await _courseContext.activeCourseName();
+      final prompt = '''你是一个《$courseName》课程的智能学习顾问。
 学生当前的知识掌握情况如下：
 - 已掌握 (${completed.length}个): ${completed.take(15).join('、')}${completed.length > 15 ? '...' : ''}
 - 学习中 (${inProgress.length}个): ${inProgress.take(10).join('、')}${inProgress.length > 10 ? '...' : ''}
@@ -2922,7 +2935,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
 
       final result = await aiService.chatWithMeta([
         {'role': 'user', 'content': prompt}
-      ], systemPrompt: '你是移动应用开发课程的AI学习助手，帮助学生规划学习路径。');
+      ], systemPrompt: '你是《$courseName》课程的AI学习助手，帮助学生规划学习路径。');
 
       if (!mounted) return;
       Navigator.of(context).pop(); // 关闭加载对话框

@@ -3,18 +3,21 @@ import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'database_helper.dart';
 import '../../services/course_resource_service.dart';
+import '../../services/course_context_service.dart';
 
 /// 实验任务 DAO — 任务发布 / 学生提交 / 评分 / 报告
 class LabTaskDao {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+  final CourseContextService _courseContext = CourseContextService();
 
   // ═══════════ 实验任务 CRUD ═══════════
 
   Future<List<Map<String, dynamic>>> getTasks(
       {String? chapter, String? status}) async {
     final db = await _dbHelper.database;
-    String sql = 'SELECT * FROM lab_tasks WHERE 1=1';
-    final args = <dynamic>[];
+    final scope = await _courseContext.scopedWhere();
+    String sql = 'SELECT * FROM lab_tasks WHERE ${scope.where}';
+    final args = <dynamic>[...scope.args];
     if (chapter != null) {
       sql += ' AND chapter = ?';
       args.add(chapter);
@@ -29,7 +32,15 @@ class LabTaskDao {
 
   Future<Map<String, dynamic>?> getTask(int id) async {
     final db = await _dbHelper.database;
-    final list = await db.query('lab_tasks', where: 'id = ?', whereArgs: [id]);
+    final scope = await _courseContext.scopedWhere(
+      extraWhere: 'id = ?',
+      extraArgs: [id],
+    );
+    final list = await db.query(
+      'lab_tasks',
+      where: scope.where,
+      whereArgs: scope.args,
+    );
     return list.isNotEmpty ? list.first : null;
   }
 
@@ -46,6 +57,7 @@ class LabTaskDao {
   }) async {
     final db = await _dbHelper.database;
     return db.insert('lab_tasks', {
+      'course_id': await _courseContext.activeCourseId(),
       'title': title,
       'chapter': chapter,
       'description': description,
@@ -77,13 +89,14 @@ class LabTaskDao {
   Future<List<Map<String, dynamic>>> getSubmissions(
       {int? taskId, String? userId}) async {
     final db = await _dbHelper.database;
+    final scope = await _courseContext.scopedWhere(column: 't.course_id');
     String sql = '''
       SELECT s.*, t.title as task_title, t.chapter, t.max_score, t.difficulty
       FROM lab_submissions s
       LEFT JOIN lab_tasks t ON t.id = s.task_id
-      WHERE 1=1
+      WHERE ${scope.where}
     ''';
-    final args = <dynamic>[];
+    final args = <dynamic>[...scope.args];
     if (taskId != null) {
       sql += ' AND s.task_id = ?';
       args.add(taskId);
@@ -203,21 +216,26 @@ class LabTaskDao {
 
   Future<Map<String, dynamic>> getStudentLabStats(String userId) async {
     final db = await _dbHelper.database;
+    final scope = await _courseContext.scopedWhere(column: 't.course_id');
+    final taskScope = await _courseContext.scopedWhere(column: 'lt.course_id');
     final result = await db.rawQuery('''
       SELECT
         COUNT(DISTINCT s.task_id) as submitted_tasks,
-        (SELECT COUNT(*) FROM lab_tasks WHERE status = 'active') as total_tasks,
+        (SELECT COUNT(*) FROM lab_tasks lt WHERE ${taskScope.where} AND status = 'active') as total_tasks,
         AVG(s.score) as avg_score,
         SUM(CASE WHEN s.status = '已批改' THEN 1 ELSE 0 END) as graded_count
       FROM lab_submissions s
+      LEFT JOIN lab_tasks t ON t.id = s.task_id
       WHERE s.user_id = ?
-    ''', [userId]);
+        AND ${scope.where}
+    ''', [...taskScope.args, userId, ...scope.args]);
     return result.isNotEmpty ? result.first : {};
   }
 
   /// 获取所有学生所有实验任务的得分详情（教师总览用）
   Future<List<Map<String, dynamic>>> getAllStudentLabScores() async {
     final db = await _dbHelper.database;
+    final scope = await _courseContext.scopedWhere(column: 't.course_id');
     return db.rawQuery('''
       SELECT
         s.user_id,
@@ -233,13 +251,16 @@ class LabTaskDao {
       LEFT JOIN users u ON u.user_id = s.user_id
       LEFT JOIN lab_tasks t ON t.id = s.task_id
       WHERE u.role = 'student' AND u.is_active = 1
+        AND ${scope.where}
       ORDER BY u.user_id, t.chapter, t.id
-    ''');
+    ''', scope.args);
   }
 
   /// 获取单个学生所有实验任务得分详情
-  Future<List<Map<String, dynamic>>> getStudentLabScoreDetail(String userId) async {
+  Future<List<Map<String, dynamic>>> getStudentLabScoreDetail(
+      String userId) async {
     final db = await _dbHelper.database;
+    final scope = await _courseContext.scopedWhere(column: 't.course_id');
     return db.rawQuery('''
       SELECT
         s.task_id,
@@ -254,13 +275,15 @@ class LabTaskDao {
       FROM lab_submissions s
       LEFT JOIN lab_tasks t ON t.id = s.task_id
       WHERE s.user_id = ?
+        AND ${scope.where}
       ORDER BY t.chapter, t.id
-    ''', [userId]);
+    ''', [userId, ...scope.args]);
   }
 
   /// 班级实验总览统计（教师用）
   Future<Map<String, dynamic>> getClassLabOverview() async {
     final db = await _dbHelper.database;
+    final scope = await _courseContext.scopedWhere(column: 't.course_id');
     final result = await db.rawQuery('''
       SELECT
         COUNT(DISTINCT s.user_id) as student_count,
@@ -274,10 +297,14 @@ class LabTaskDao {
         SUM(CASE WHEN s.score IS NULL THEN 1 ELSE 0 END) as ungraded_count
       FROM lab_submissions s
       INNER JOIN users u ON u.user_id = s.user_id
+      LEFT JOIN lab_tasks t ON t.id = s.task_id
       WHERE u.role = 'student' AND u.is_active = 1
-    ''');
+        AND ${scope.where}
+    ''', scope.args);
     final row = result.isNotEmpty ? result.first : {};
-    final total = (row['excellent_count'] ?? 0) + (row['pass_count'] ?? 0) + (row['fail_count'] ?? 0);
+    final total = (row['excellent_count'] ?? 0) +
+        (row['pass_count'] ?? 0) +
+        (row['fail_count'] ?? 0);
     return {
       ...row,
       'total_graded': total,
@@ -480,10 +507,24 @@ class LabTaskDao {
   Future<void> initDemoDataIfEmpty() async {
     final db = await _dbHelper.database;
     try {
-      final count = await db.rawQuery('SELECT COUNT(*) as c FROM lab_tasks');
+      final scope = await _courseContext.scopedWhere();
+      final count = await db.rawQuery(
+        'SELECT COUNT(*) as c FROM lab_tasks WHERE ${scope.where}',
+        scope.args,
+      );
       if ((count.first['c'] as int? ?? 0) > 0) return;
 
-      // 1. 尝试从 Gitee 远程获取实验任务定义
+      final course = await _courseContext.getActiveCourse();
+      final isDefaultMobile =
+          CourseContextService.isDefaultMobileCourseName(course.name);
+
+      if (!isDefaultMobile) {
+        await _insertGenericTasksForActiveCourse(db);
+        await _initReportTemplates(db);
+        return;
+      }
+
+      // 1. 默认移动应用课程：尝试从 Gitee 远程获取实验任务定义
       bool remoteDone = false;
       try {
         final resource = CourseResourceService();
@@ -516,9 +557,11 @@ class LabTaskDao {
   Future<void> _insertTasksFromRemote(
       Database db, List<Map<String, dynamic>> remoteTasks) async {
     final now = DateTime.now().toIso8601String();
+    final courseId = await _courseContext.activeCourseId();
     for (final task in remoteTasks) {
       final dueOffset = task['due_days_offset'] as int? ?? 14;
       await db.insert('lab_tasks', {
+        'course_id': courseId,
         'title': task['title'] ?? '',
         'chapter': task['chapter'] ?? '',
         'description': task['description'] ?? '',
@@ -575,6 +618,7 @@ class LabTaskDao {
   /// 硬编码实验任务（离线兜底）
   Future<void> _insertHardcodedTasks(Database db) async {
     final now = DateTime.now().toIso8601String();
+    final courseId = await _courseContext.activeCourseId();
     final tasks = [
       {
         'title': '实验一 开发环境搭建',
@@ -689,6 +733,38 @@ class LabTaskDao {
     for (final task in tasks) {
       await db.insert('lab_tasks', {
         ...task,
+        'course_id': courseId,
+        'status': 'active',
+        'creator_id': '206004',
+        'created_at': now,
+        'updated_at': now,
+      });
+    }
+  }
+
+  Future<void> _insertGenericTasksForActiveCourse(Database db) async {
+    final course = await _courseContext.getActiveCourse();
+    final courseId = course.id;
+    final chapters = await _courseContext.chapterTitles();
+    final now = DateTime.now().toIso8601String();
+
+    for (var i = 0; i < chapters.length; i++) {
+      final chapter = chapters[i];
+      await db.insert('lab_tasks', {
+        'course_id': courseId,
+        'title': '实验${i + 1} ${chapter}实践任务',
+        'chapter': chapter,
+        'description':
+            '围绕《${course.name}》$chapter 设计一次课程实践任务，要求学生完成资料查阅、问题分析、过程记录和结果展示。',
+        'requirements': '1. 明确本章核心概念和任务目标；\n'
+            '2. 结合课程案例完成分析、设计或验证；\n'
+            '3. 保留关键过程证据、截图、数据或文档；\n'
+            '4. 说明遇到的问题、解决方法和改进方向。',
+        'deliverables': '实验报告、过程记录、结果材料或演示文件',
+        'difficulty': i == chapters.length - 1 ? '较难' : '中等',
+        'max_score': 100,
+        'due_date':
+            DateTime.now().add(Duration(days: 14 + i * 7)).toIso8601String(),
         'status': 'active',
         'creator_id': '206004',
         'created_at': now,

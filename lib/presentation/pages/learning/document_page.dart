@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../core/constants/chapter_sorter.dart';
 import '../../../data/local/database_helper.dart';
-import '../../../data/local/course_dao.dart';
+import '../../../services/course_context_service.dart';
 import '../../../services/courseware_service.dart';
 import '../../../services/file_opener_service.dart';
 import '../../../services/courseware_download_service.dart';
@@ -20,6 +20,7 @@ class _DocumentListPageState extends State<DocumentListPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+  final CourseContextService _courseContext = CourseContextService();
 
   List<Map<String, dynamic>> _pdfs = [];
   List<Map<String, dynamic>> _ppts = [];
@@ -38,19 +39,40 @@ class _DocumentListPageState extends State<DocumentListPage>
       final db = await _dbHelper.database;
 
       // 构建 source_type 过滤条件
-      String sourceFilter = '';
+      final sourceParts = <String>[];
       if (_resourceMode == 'preset') {
-        sourceFilter = " AND (source_type = 'preset' OR source_type IS NULL)";
+        sourceParts.add("(source_type = 'preset' OR source_type IS NULL)");
       } else if (_resourceMode == 'extended') {
-        sourceFilter = " AND source_type = 'extended'";
+        sourceParts.add("source_type = 'extended'");
       }
 
-      final pdfs = await db.rawQuery(
-        "SELECT * FROM resource_files WHERE file_type = 'pdf'$sourceFilter ORDER BY chapter",
+      final pdfScope = await _courseContext.scopedWhere(
+        extraWhere: [
+          'file_type = ?',
+          ...sourceParts,
+        ].join(' AND '),
+        extraArgs: ['pdf'],
+      );
+      final pptScope = await _courseContext.scopedWhere(
+        extraWhere: [
+          'file_type = ?',
+          ...sourceParts,
+        ].join(' AND '),
+        extraArgs: ['ppt'],
       );
 
-      final ppts = await db.rawQuery(
-        "SELECT * FROM resource_files WHERE file_type = 'ppt'$sourceFilter ORDER BY chapter",
+      final pdfs = await db.query(
+        'resource_files',
+        where: pdfScope.where,
+        whereArgs: pdfScope.args,
+        orderBy: 'chapter',
+      );
+
+      final ppts = await db.query(
+        'resource_files',
+        where: pptScope.where,
+        whereArgs: pptScope.args,
+        orderBy: 'chapter',
       );
 
       final sortedPdfs = List<Map<String, dynamic>>.from(pdfs);
@@ -150,9 +172,7 @@ class _DocumentListPageState extends State<DocumentListPage>
             Icon(icon, size: 80, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
-              _resourceMode == 'extended'
-                  ? '暂无扩展$type文档'
-                  : '暂无$type文档',
+              _resourceMode == 'extended' ? '暂无扩展$type文档' : '暂无$type文档',
               style: TextStyle(fontSize: 18, color: Colors.grey[600]),
             ),
             const SizedBox(height: 8),
@@ -198,12 +218,11 @@ class _DocumentListPageState extends State<DocumentListPage>
             subtitle: Row(
               children: [
                 if (isExtended) ...[
-                  Icon(Icons.auto_awesome,
-                      size: 12, color: Colors.purple[300]),
+                  Icon(Icons.auto_awesome, size: 12, color: Colors.purple[300]),
                   const SizedBox(width: 4),
                   Text('AI 生成',
-                      style: TextStyle(
-                          fontSize: 11, color: Colors.purple[300])),
+                      style:
+                          TextStyle(fontSize: 11, color: Colors.purple[300])),
                   const SizedBox(width: 8),
                 ],
                 Flexible(child: Text(doc['file_name'] ?? '')),
@@ -223,13 +242,8 @@ class _DocumentListPageState extends State<DocumentListPage>
     final extraCtrl = TextEditingController();
 
     // 获取课程信息
-    String courseName = '移动应用开发';
-    try {
-      final course = await CourseDao().getActiveCourse();
-      if (course != null) {
-        courseName = course.name;
-      }
-    } catch (_) {}
+    final courseName = await _courseContext.activeCourseName();
+    final courseId = await _courseContext.activeCourseId();
 
     if (!mounted) return;
 
@@ -247,7 +261,10 @@ class _DocumentListPageState extends State<DocumentListPage>
           final bottomPadding = MediaQuery.of(ctx).viewInsets.bottom;
           return Padding(
             padding: EdgeInsets.only(
-              left: 20, right: 20, top: 16, bottom: bottomPadding + 20,
+              left: 20,
+              right: 20,
+              top: 16,
+              bottom: bottomPadding + 20,
             ),
             child: SingleChildScrollView(
               child: Column(
@@ -256,7 +273,8 @@ class _DocumentListPageState extends State<DocumentListPage>
                 children: [
                   Center(
                     child: Container(
-                      width: 40, height: 4,
+                      width: 40,
+                      height: 4,
                       decoration: BoxDecoration(
                         color: Colors.grey[400],
                         borderRadius: BorderRadius.circular(2),
@@ -270,8 +288,7 @@ class _DocumentListPageState extends State<DocumentListPage>
                       textAlign: TextAlign.center),
                   const SizedBox(height: 8),
                   Text('AI 将根据您的需求生成实际的课件文件',
-                      style: TextStyle(
-                          fontSize: 13, color: Colors.grey[600]),
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                       textAlign: TextAlign.center),
                   const SizedBox(height: 24),
                   TextField(
@@ -279,7 +296,7 @@ class _DocumentListPageState extends State<DocumentListPage>
                     enabled: !generating,
                     decoration: InputDecoration(
                       labelText: '课件主题 *',
-                      hintText: '例如：Flutter 状态管理最佳实践',
+                      hintText: '例如：需求分析方法、结构化设计、核心概念辨析',
                       prefixIcon: const Icon(Icons.topic),
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12)),
@@ -309,7 +326,8 @@ class _DocumentListPageState extends State<DocumentListPage>
                         children: [
                           if (generating)
                             const SizedBox(
-                              width: 16, height: 16,
+                              width: 16,
+                              height: 16,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             ),
                           if (generating) const SizedBox(width: 8),
@@ -317,9 +335,8 @@ class _DocumentListPageState extends State<DocumentListPage>
                             child: Text(progress,
                                 style: TextStyle(
                                   fontSize: 13,
-                                  color: generating
-                                      ? Colors.purple
-                                      : Colors.green,
+                                  color:
+                                      generating ? Colors.purple : Colors.green,
                                 )),
                           ),
                         ],
@@ -328,7 +345,8 @@ class _DocumentListPageState extends State<DocumentListPage>
                   FilledButton.icon(
                     icon: generating
                         ? const SizedBox(
-                            width: 18, height: 18,
+                            width: 18,
+                            height: 18,
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: Colors.white),
                           )
@@ -340,8 +358,7 @@ class _DocumentListPageState extends State<DocumentListPage>
                             final topic = topicCtrl.text.trim();
                             if (topic.isEmpty) {
                               ScaffoldMessenger.of(ctx).showSnackBar(
-                                const SnackBar(
-                                    content: Text('请输入课件主题')),
+                                const SnackBar(content: Text('请输入课件主题')),
                               );
                               return;
                             }
@@ -364,8 +381,7 @@ class _DocumentListPageState extends State<DocumentListPage>
                                     ? '课程：$courseName。$extra'
                                     : '课程：$courseName。请确保内容专业、实用。',
                               );
-                              setSheetState(() =>
-                                  progress = '正在生成 PDF 课件...');
+                              setSheetState(() => progress = '正在生成 PDF 课件...');
 
                               // Step 2: 生成 PDF
                               final pdfPath =
@@ -377,17 +393,15 @@ class _DocumentListPageState extends State<DocumentListPage>
                                 throw Exception('PDF 生成失败');
                               }
 
-                              setSheetState(() =>
-                                  progress = '正在保存到资源库...');
+                              setSheetState(() => progress = '正在保存到资源库...');
 
                               // Step 3: 保存到 resource_files
                               final safeName = topic.replaceAll(
                                   RegExp(r'[/\\:*?"<>|]'), '_');
-                              final fileType =
-                                  docType == 'PPT' ? 'ppt' : 'pdf';
-                              final ext =
-                                  docType == 'PPT' ? 'pptx' : 'pdf';
+                              final fileType = docType == 'PPT' ? 'ppt' : 'pdf';
+                              final ext = docType == 'PPT' ? 'pptx' : 'pdf';
                               await db.insert('resource_files', {
+                                'course_id': courseId,
                                 'file_name': '扩展-$safeName.$ext',
                                 'file_path': pdfPath,
                                 'file_type': fileType,
@@ -470,7 +484,8 @@ class _DocumentListPageState extends State<DocumentListPage>
     if (!CoursewareDownloadService.isRemoteAvailable(fileType)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(CoursewareDownloadService.getLocalOnlyMessage(fileType)),
+          content:
+              Text(CoursewareDownloadService.getLocalOnlyMessage(fileType)),
           backgroundColor: Colors.orange,
           duration: const Duration(seconds: 4),
         ),

@@ -1,9 +1,11 @@
 import 'package:sqflite/sqflite.dart';
 import '../../core/text_utils.dart';
+import '../../services/course_context_service.dart';
 import 'database_helper.dart';
 
 class LearningRecordDao {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+  final CourseContextService _courseContext = CourseContextService();
   bool _conceptTableReady = false;
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -57,9 +59,8 @@ class LearningRecordDao {
         'user_id': userId,
         'concept_id': conceptId,
         'status': status,
-        'learned_at': status == 'completed'
-            ? DateTime.now().toIso8601String()
-            : null,
+        'learned_at':
+            status == 'completed' ? DateTime.now().toIso8601String() : null,
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
@@ -76,10 +77,14 @@ class LearningRecordDao {
     final existing = await getConceptProgress(userId);
 
     // ── 2. 章节维度：quiz 成绩 ──
+    final quizScope = await _courseContext.scopedWhere(
+      extraWhere: 'user_id = ?',
+      extraArgs: [userId],
+    );
     final quizRows = await db.rawQuery(
       'SELECT chapter, AVG(score) as avg_score, COUNT(*) as cnt '
-      'FROM quiz_results WHERE user_id = ? GROUP BY chapter',
-      [userId],
+      'FROM quiz_results WHERE ${quizScope.where} GROUP BY chapter',
+      quizScope.args,
     );
     final chapterQuiz = <int, double>{}; // chapter → avgScore
     for (final r in quizRows) {
@@ -93,11 +98,15 @@ class LearningRecordDao {
 
     // ── 3. 学习记录中学过的节点标题集合 ──
     final learnedTitles = <String>{};
+    final recordScope = await _courseContext.scopedWhere(
+      extraWhere: 'user_id = ?',
+      extraArgs: [userId],
+    );
     final lrRows = await db.query(
       'learning_records',
       columns: ['node_title'],
-      where: 'user_id = ?',
-      whereArgs: [userId],
+      where: recordScope.where,
+      whereArgs: recordScope.args,
     );
     for (final r in lrRows) {
       final t = r['node_title'] as String?;
@@ -189,8 +198,7 @@ class LearningRecordDao {
     );
     if (studentRows.isEmpty) return {};
 
-    final studentIds =
-        studentRows.map((r) => r['user_id'] as String).toList();
+    final studentIds = studentRows.map((r) => r['user_id'] as String).toList();
     final totalStudents = studentIds.length;
 
     // 为每个学生同步达成度（确保数据最新）
@@ -214,8 +222,7 @@ class LearningRecordDao {
         }
       }
       // 完成=1.0权重, 学习中=0.5权重
-      ratioMap[cId] =
-          (completedCount + inProgressCount * 0.5) / totalStudents;
+      ratioMap[cId] = (completedCount + inProgressCount * 0.5) / totalStudents;
     }
     return ratioMap;
   }
@@ -258,6 +265,7 @@ class LearningRecordDao {
   }) async {
     final db = await _dbHelper.database;
     return await db.insert('learning_records', {
+      'course_id': await _courseContext.activeCourseId(),
       'user_id': userId,
       'node_id': nodeId,
       'node_title': nodeTitle,
@@ -268,38 +276,54 @@ class LearningRecordDao {
 
   Future<List<Map<String, dynamic>>> getRecords(String userId) async {
     final db = await _dbHelper.database;
+    final scope = await _courseContext.scopedWhere(
+      extraWhere: 'user_id = ?',
+      extraArgs: [userId],
+    );
     return await db.query(
       'learning_records',
-      where: 'user_id = ?',
-      whereArgs: [userId],
+      where: scope.where,
+      whereArgs: scope.args,
       orderBy: 'completed_at DESC',
     );
   }
 
   Future<int> getTotalTime(String userId) async {
     final db = await _dbHelper.database;
+    final scope = await _courseContext.scopedWhere(
+      extraWhere: 'user_id = ?',
+      extraArgs: [userId],
+    );
     final result = await db.rawQuery(
-      'SELECT COUNT(*) as count FROM learning_records WHERE user_id = ?',
-      [userId],
+      'SELECT COUNT(*) as count FROM learning_records WHERE ${scope.where}',
+      scope.args,
     );
     return (result.first['count'] as int?) ?? 0;
   }
 
   Future<int> getCompletedNodes(String userId) async {
     final db = await _dbHelper.database;
+    final scope = await _courseContext.scopedWhere(
+      extraWhere: 'user_id = ?',
+      extraArgs: [userId],
+    );
     final result = await db.rawQuery(
-      'SELECT COUNT(DISTINCT node_id) as count FROM learning_records WHERE user_id = ?',
-      [userId],
+      'SELECT COUNT(DISTINCT node_id) as count FROM learning_records WHERE ${scope.where}',
+      scope.args,
     );
     return (result.first['count'] as int?) ?? 0;
   }
 
   Future<bool> hasLearned(String userId, String nodeId) async {
     final db = await _dbHelper.database;
+    final scope = await _courseContext.scopedWhere(
+      extraWhere: 'user_id = ? AND node_id = ?',
+      extraArgs: [userId, nodeId],
+    );
     final result = await db.query(
       'learning_records',
-      where: 'user_id = ? AND node_id = ?',
-      whereArgs: [userId, nodeId],
+      where: scope.where,
+      whereArgs: scope.args,
       limit: 1,
     );
     return result.isNotEmpty;
@@ -307,32 +331,40 @@ class LearningRecordDao {
 
   Future<void> deleteRecord(int id, String userId) async {
     final db = await _dbHelper.database;
+    final scope = await _courseContext.scopedWhere(
+      extraWhere: 'id = ? AND user_id = ?',
+      extraArgs: [id, userId],
+    );
     await db.delete(
       'learning_records',
-      where: 'id = ? AND user_id = ?',
-      whereArgs: [id, userId],
+      where: scope.where,
+      whereArgs: scope.args,
     );
   }
 
   Future<Map<String, dynamic>> getStatistics(String userId) async {
     final db = await _dbHelper.database;
-    
+    final scope = await _courseContext.scopedWhere(
+      extraWhere: 'user_id = ?',
+      extraArgs: [userId],
+    );
+
     final totalRecords = await db.rawQuery(
-      'SELECT COUNT(*) as count FROM learning_records WHERE user_id = ?',
-      [userId],
+      'SELECT COUNT(*) as count FROM learning_records WHERE ${scope.where}',
+      scope.args,
     );
-    
+
     final uniqueNodes = await db.rawQuery(
-      'SELECT COUNT(DISTINCT node_id) as count FROM learning_records WHERE user_id = ?',
-      [userId],
+      'SELECT COUNT(DISTINCT node_id) as count FROM learning_records WHERE ${scope.where}',
+      scope.args,
     );
-    
+
     final thisWeek = await db.rawQuery(
       '''SELECT COUNT(*) as count FROM learning_records 
-      WHERE user_id = ? AND completed_at >= date('now', '-7 days')''',
-      [userId],
+      WHERE ${scope.where} AND completed_at >= date('now', '-7 days')''',
+      scope.args,
     );
-    
+
     return {
       'total_records': totalRecords.first['count'] ?? 0,
       'unique_nodes': uniqueNodes.first['count'] ?? 0,

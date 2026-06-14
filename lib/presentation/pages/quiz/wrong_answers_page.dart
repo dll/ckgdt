@@ -1,8 +1,9 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../data/local/wrong_answer_dao.dart';
 import '../../../data/local/learning_path_dao.dart';
 import '../../../services/ai_service.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/course_context_service.dart';
 import '../../../services/tts_flutter_service.dart';
 import '../../widgets/back_button_bar.dart';
 
@@ -16,6 +17,7 @@ class WrongAnswersPage extends StatefulWidget {
 class _WrongAnswersPageState extends State<WrongAnswersPage> {
   final _wrongAnswerDao = WrongAnswerDao();
   final _authService = AuthService();
+  final _courseContext = CourseContextService();
 
   List<Map<String, dynamic>> _wrongAnswers = [];
   bool _isLoading = true;
@@ -47,6 +49,7 @@ class _WrongAnswersPageState extends State<WrongAnswersPage> {
   Future<void> _generateExplanation(Map<String, dynamic> wrong) async {
     try {
       final aiService = AiService();
+      final courseName = await _courseContext.activeCourseName();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -59,8 +62,10 @@ class _WrongAnswersPageState extends State<WrongAnswersPage> {
           '请用 2-3 句话简明解释为什么正确答案是对的，以及学生答案错在哪里。';
 
       final explanation = await aiService.chat(
-        [{'role': 'user', 'content': prompt}],
-        systemPrompt: '你是移动应用开发课程的教学助手，专门为学生解释测验错题。回答简洁精准。',
+        [
+          {'role': 'user', 'content': prompt}
+        ],
+        systemPrompt: '你是《$courseName》课程的教学助手，专门为学生解释测验错题。回答简洁精准。',
       );
 
       if (explanation.isNotEmpty) {
@@ -92,11 +97,14 @@ class _WrongAnswersPageState extends State<WrongAnswersPage> {
     final user = _authService.currentUser;
     if (user == null) return;
     try {
-      final pathId = await LearningPathDao().generateRemediationPath(user.userId);
+      final pathId =
+          await LearningPathDao().generateRemediationPath(user.userId);
       if (!mounted) return;
       if (pathId > 0) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('已生成补强路径，可在学习路径中查看'), backgroundColor: Colors.green),
+          const SnackBar(
+              content: Text('已生成补强路径，可在学习路径中查看'),
+              backgroundColor: Colors.green),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -172,7 +180,8 @@ class _WrongAnswersPageState extends State<WrongAnswersPage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.check_circle, size: 64, color: Colors.green[300]),
+                      Icon(Icons.check_circle,
+                          size: 64, color: Colors.green[300]),
                       const SizedBox(height: 16),
                       const Text(
                         '太棒了！没有错题',
@@ -195,7 +204,9 @@ class _WrongAnswersPageState extends State<WrongAnswersPage> {
                             backgroundColor: Colors.red[100],
                             child: Text(
                               '${wrong['times'] ?? 1}',
-                              style: TextStyle(color: Colors.red[700], fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                  color: Colors.red[700],
+                                  fontWeight: FontWeight.bold),
                             ),
                           ),
                           title: Text(
@@ -215,7 +226,8 @@ class _WrongAnswersPageState extends State<WrongAnswersPage> {
                                 children: [
                                   Text(
                                     '题目：${wrong['question']}',
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold),
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
@@ -229,18 +241,18 @@ class _WrongAnswersPageState extends State<WrongAnswersPage> {
                                   ),
                                   // AI 解释区域
                                   if (wrong['explanation'] != null &&
-                                      (wrong['explanation'] as String).isNotEmpty) ...[
+                                      (wrong['explanation'] as String)
+                                          .isNotEmpty) ...[
                                     const SizedBox(height: 12),
                                     Container(
                                       width: double.infinity,
                                       padding: const EdgeInsets.all(12),
                                       decoration: BoxDecoration(
-                                        color: primary
-                                            .withValues(alpha: 0.06),
+                                        color: primary.withValues(alpha: 0.06),
                                         borderRadius: BorderRadius.circular(10),
                                         border: Border.all(
-                                          color: primary
-                                              .withValues(alpha: 0.15),
+                                          color:
+                                              primary.withValues(alpha: 0.15),
                                         ),
                                       ),
                                       child: Column(
@@ -265,9 +277,9 @@ class _WrongAnswersPageState extends State<WrongAnswersPage> {
                                               InkWell(
                                                 onTap: () {
                                                   TtsFlutterService.instance
-                                                      .speak(wrong[
-                                                              'explanation']
-                                                          as String);
+                                                      .speak(
+                                                          wrong['explanation']
+                                                              as String);
                                                 },
                                                 child: Icon(Icons.volume_up,
                                                     size: 18,
@@ -296,8 +308,7 @@ class _WrongAnswersPageState extends State<WrongAnswersPage> {
                                           size: 16),
                                       label: const Text('生成 AI 解析'),
                                       style: OutlinedButton.styleFrom(
-                                        foregroundColor:
-                                            primary,
+                                        foregroundColor: primary,
                                       ),
                                     ),
                                   ],
@@ -311,15 +322,15 @@ class _WrongAnswersPageState extends State<WrongAnswersPage> {
                                           Navigator.pop(context, 'go_learn');
                                         },
                                         icon: Icon(Icons.menu_book,
-                                            size: 18,
-                                            color: primary),
+                                            size: 18, color: primary),
                                         label: Text('去学习',
-                                            style: TextStyle(
-                                                color: primary)),
+                                            style: TextStyle(color: primary)),
                                       ),
                                       TextButton.icon(
-                                        onPressed: () => _removeWrongAnswer(wrong['id']),
-                                        icon: const Icon(Icons.remove_circle_outline),
+                                        onPressed: () =>
+                                            _removeWrongAnswer(wrong['id']),
+                                        icon: const Icon(
+                                            Icons.remove_circle_outline),
                                         label: const Text('移除'),
                                       ),
                                     ],

@@ -1,9 +1,11 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../data/local/course_dao.dart';
 import '../../../data/models/course_model.dart';
+import '../../../services/knowledge_seed_service.dart';
 import '../../widgets/course_generator_sheet.dart';
 
 import '../../widgets/back_button_bar.dart';
+
 /// 课程管理页面 — 查看、切换、删除课程
 class CourseManagePage extends StatefulWidget {
   const CourseManagePage({super.key});
@@ -69,7 +71,8 @@ class _CourseManagePageState extends State<CourseManagePage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.school_outlined, size: 64, color: theme.colorScheme.outline),
+          Icon(Icons.school_outlined,
+              size: 64, color: theme.colorScheme.outline),
           const SizedBox(height: 16),
           Text('暂无课程', style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
@@ -174,8 +177,10 @@ class _CourseManagePageState extends State<CourseManagePage> {
                         const PopupMenuItem(
                           value: 'delete',
                           child: ListTile(
-                            leading: Icon(Icons.delete_outline, color: Colors.red),
-                            title: Text('删除', style: TextStyle(color: Colors.red)),
+                            leading:
+                                Icon(Icons.delete_outline, color: Colors.red),
+                            title:
+                                Text('删除', style: TextStyle(color: Colors.red)),
                             contentPadding: EdgeInsets.zero,
                           ),
                         ),
@@ -336,6 +341,7 @@ class _CourseManagePageState extends State<CourseManagePage> {
     switch (action) {
       case 'activate':
         await _courseDao.setActiveCourse(course.id);
+        await KnowledgeSeedService().seedIfEmpty();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

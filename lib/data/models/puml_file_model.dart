@@ -1,16 +1,19 @@
 class PumlFileModel {
   final int? id;
+  final String? courseId;
   final String title;
   final String content;
   final String? filePath;
   final String? renderedUrl;
-  final String diagramType; // 'class','sequence','activity','component','usecase','flowchart'
+  final String
+      diagramType; // 'class','sequence','activity','component','usecase','flowchart'
   final String? chapter;
   final String? createdAt;
   final String? updatedAt;
 
   const PumlFileModel({
     this.id,
+    this.courseId,
     required this.title,
     required this.content,
     this.filePath,
@@ -23,6 +26,7 @@ class PumlFileModel {
 
   factory PumlFileModel.fromMap(Map<String, dynamic> map) => PumlFileModel(
         id: map['id'] as int?,
+        courseId: map['course_id'] as String?,
         title: map['title'] as String? ?? '',
         content: map['content'] as String? ?? '',
         filePath: map['file_path'] as String?,
@@ -35,6 +39,7 @@ class PumlFileModel {
 
   Map<String, dynamic> toMap() => {
         if (id != null) 'id': id,
+        if (courseId != null) 'course_id': courseId,
         'title': title,
         'content': content,
         'file_path': filePath,
@@ -66,6 +71,7 @@ class PumlFileModel {
   }) =>
       PumlFileModel(
         id: id,
+        courseId: courseId,
         title: title ?? this.title,
         content: content ?? this.content,
         filePath: filePath,

@@ -1,8 +1,11 @@
 import '../../core/error_handler.dart';
+import '../../services/course_context_service.dart';
 import 'database_helper.dart';
 
 /// 课堂管理 DAO — 在线状态 / 签到管理 / 课堂互动
 class ClassroomDao {
+  final CourseContextService _courseContext = CourseContextService();
+
   // ══════════════════════════════════════════════════════════════════════════
   //  表结构保障（懒迁移，WorksDao 模式）
   // ══════════════════════════════════════════════════════════════════════════
@@ -93,6 +96,7 @@ class ClassroomDao {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS classroom_questions(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT,
         source_type TEXT NOT NULL DEFAULT 'quiz',
         source_id INTEGER,
         chapter TEXT,
@@ -111,8 +115,33 @@ class ClassroomDao {
         class_id INTEGER
       )
     ''');
+    try {
+      await db
+          .execute('ALTER TABLE classroom_questions ADD COLUMN course_id TEXT');
+    } catch (e) {
+      swallow(e, tag: 'ClassroomDao.migrate.classroom_questions_course_id');
+    }
+    try {
+      await db.update(
+        'classroom_questions',
+        {'course_id': CourseContextService.defaultCourseId},
+        where: "course_id IS NULL OR course_id = ''",
+      );
+    } catch (_) {}
 
     _tableEnsured = true;
+  }
+
+  Future<({String where, List<Object?> args})> _scope({
+    String column = 'course_id',
+    String? extraWhere,
+    List<Object?> extraArgs = const [],
+  }) {
+    return _courseContext.scopedWhere(
+      column: column,
+      extraWhere: extraWhere,
+      extraArgs: extraArgs,
+    );
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -244,8 +273,8 @@ class ClassroomDao {
         WHERE cm.class_id = ? AND u.role = 'student' AND u.is_active = 1
       ''', [classId]);
     } else {
-      students = await db.query('users',
-          where: "role = 'student' AND is_active = 1");
+      students =
+          await db.query('users', where: "role = 'student' AND is_active = 1");
     }
 
     // 批量插入签到记录
@@ -306,9 +335,7 @@ class ClassroomDao {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
     return await db.query('checkin_records',
-        where: 'session_id = ?',
-        whereArgs: [sessionId],
-        orderBy: 'user_name');
+        where: 'session_id = ?', whereArgs: [sessionId], orderBy: 'user_name');
   }
 
   /// 教师手动标记学生签到状态
@@ -396,7 +423,7 @@ class ClassroomDao {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
     final conditions = <String>[];
-    final args = <dynamic>[];
+    final args = <Object?>[];
     if (classId != null) {
       conditions.add('class_id = ?');
       args.add(classId);
@@ -420,8 +447,8 @@ class ClassroomDao {
     // 同时删除子回复
     await db.delete('classroom_messages',
         where: 'parent_id = ?', whereArgs: [messageId]);
-    await db.delete('classroom_messages',
-        where: 'id = ?', whereArgs: [messageId]);
+    await db
+        .delete('classroom_messages', where: 'id = ?', whereArgs: [messageId]);
   }
 
   /// 获取消息统计
@@ -447,7 +474,8 @@ class ClassroomDao {
   // ══════════════════════════════════════════════════════════════════════════
 
   /// 创建点名会话
-  Future<int> createRollCallSession({int? classId, required String createdBy}) async {
+  Future<int> createRollCallSession(
+      {int? classId, required String createdBy}) async {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
     return await db.insert('roll_call_sessions', {
@@ -482,7 +510,8 @@ class ClassroomDao {
   }
 
   /// 获取某班级的点名历史（按会话）
-  Future<List<Map<String, dynamic>>> getRollCallSessions({int? classId, int limit = 20}) async {
+  Future<List<Map<String, dynamic>>> getRollCallSessions(
+      {int? classId, int limit = 20}) async {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
     final classWhere = classId != null ? 'WHERE class_id = ?' : '';
@@ -503,12 +532,14 @@ class ClassroomDao {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
     return await db.query('roll_call_records',
-        where: 'session_id = ?', whereArgs: [sessionId],
+        where: 'session_id = ?',
+        whereArgs: [sessionId],
         orderBy: 'created_at ASC');
   }
 
   /// 获取学生的点名累计得分排行
-  Future<List<Map<String, dynamic>>> getRollCallScoreboard({int? classId}) async {
+  Future<List<Map<String, dynamic>>> getRollCallScoreboard(
+      {int? classId}) async {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
     final classWhere = classId != null
@@ -528,7 +559,8 @@ class ClassroomDao {
   }
 
   /// 根据测验成绩对学生分层（优/中/差）
-  Future<Map<String, List<Map<String, dynamic>>>> classifyStudentsByPerformance({
+  Future<Map<String, List<Map<String, dynamic>>>>
+      classifyStudentsByPerformance({
     int? classId,
   }) async {
     await _ensureTable();
@@ -562,10 +594,14 @@ class ClassroomDao {
     for (final s in students) {
       final uid = s['user_id'] as String;
       final name = s['real_name'] as String? ?? uid;
+      final quizScope = await _scope(
+        extraWhere: 'user_id = ?',
+        extraArgs: [uid],
+      );
       final result = await db.rawQuery('''
         SELECT AVG(score) as avg_score, COUNT(*) as quiz_count
-        FROM quiz_results WHERE user_id = ?
-      ''', [uid]);
+        FROM quiz_results WHERE ${quizScope.where}
+      ''', quizScope.args);
       final avgScore = (result.first['avg_score'] as num?)?.toDouble() ?? 0;
       final quizCount = (result.first['quiz_count'] as int?) ?? 0;
       scored.add({
@@ -577,7 +613,8 @@ class ClassroomDao {
     }
 
     // 按平均分排序后三等分
-    scored.sort((a, b) => (b['avg_score'] as double).compareTo(a['avg_score'] as double));
+    scored.sort((a, b) =>
+        (b['avg_score'] as double).compareTo(a['avg_score'] as double));
     final total = scored.length;
     final third = (total / 3).ceil();
     final high = scored.take(third).toList();
@@ -596,12 +633,22 @@ class ClassroomDao {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
 
-    final existing = await db.query('classroom_questions',
-        columns: ['source_id'],
-        where: "source_type = 'quiz'");
+    final existingScope = await _scope(extraWhere: "source_type = 'quiz'");
+    final existing = await db.query(
+      'classroom_questions',
+      columns: ['source_id'],
+      where: existingScope.where,
+      whereArgs: existingScope.args,
+    );
     final existingIds = existing.map((e) => e['source_id'] as int?).toSet();
 
-    final questions = await db.query('questions');
+    final questionScope = await _scope();
+    final questions = await db.query(
+      'questions',
+      where: questionScope.where,
+      whereArgs: questionScope.args,
+    );
+    final courseId = await _courseContext.activeCourseId();
     int imported = 0;
     final batch = db.batch();
     for (final q in questions) {
@@ -619,6 +666,7 @@ class ClassroomDao {
       final refAnswer = '$letter. ${options[answerIndex.clamp(0, 3)]}';
 
       batch.insert('classroom_questions', {
+        'course_id': courseId,
         'source_type': 'quiz',
         'source_id': qId,
         'chapter': q['source'],
@@ -644,14 +692,23 @@ class ClassroomDao {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
 
-    final existing = await db.query('classroom_questions',
-        columns: ['source_id'],
-        where: "source_type = 'lab'");
+    final existingScope = await _scope(extraWhere: "source_type = 'lab'");
+    final existing = await db.query(
+      'classroom_questions',
+      columns: ['source_id'],
+      where: existingScope.where,
+      whereArgs: existingScope.args,
+    );
     final existingIds = existing.map((e) => e['source_id'] as int?).toSet();
 
     List<Map<String, dynamic>> tasks;
     try {
-      tasks = await db.query('lab_tasks');
+      final taskScope = await _scope();
+      tasks = await db.query(
+        'lab_tasks',
+        where: taskScope.where,
+        whereArgs: taskScope.args,
+      );
     } catch (e) {
       // 表不存在是预期路径（首次启动 / 旧 schema），不需打日志
       swallow(e, tag: 'ClassroomDao.importLabTasks');
@@ -659,6 +716,7 @@ class ClassroomDao {
     }
 
     int imported = 0;
+    final courseId = await _courseContext.activeCourseId();
     final batch = db.batch();
     for (final t in tasks) {
       final tId = t['id'] as int?;
@@ -681,6 +739,7 @@ class ClassroomDao {
       }
 
       batch.insert('classroom_questions', {
+        'course_id': courseId,
         'source_type': 'lab',
         'source_id': tId,
         'chapter': chapter,
@@ -702,20 +761,31 @@ class ClassroomDao {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
 
-    final existing = await db.query('classroom_questions',
-        columns: ['source_id'],
-        where: "source_type = 'courseware'");
+    final existingScope =
+        await _scope(extraWhere: "source_type = 'courseware'");
+    final existing = await db.query(
+      'classroom_questions',
+      columns: ['source_id'],
+      where: existingScope.where,
+      whereArgs: existingScope.args,
+    );
     final existingIds = existing.map((e) => e['source_id'] as int?).toSet();
 
     List<Map<String, dynamic>> resources;
     try {
-      resources = await db.query('resource_files');
+      final resourceScope = await _scope();
+      resources = await db.query(
+        'resource_files',
+        where: resourceScope.where,
+        whereArgs: resourceScope.args,
+      );
     } catch (e) {
       swallow(e, tag: 'ClassroomDao.importCourseware');
       return 0;
     }
 
     int imported = 0;
+    final courseId = await _courseContext.activeCourseId();
     final batch = db.batch();
     for (final r in resources) {
       final rId = r['id'] as int?;
@@ -734,7 +804,11 @@ class ClassroomDao {
       final chNum = chapter.replaceAll(RegExp(r'[^0-9]'), '');
       if (chNum.isNotEmpty && int.tryParse(chNum) != null) {
         final ci = int.parse(chNum);
-        diff = ci <= 2 ? 'easy' : ci <= 4 ? 'medium' : 'hard';
+        diff = ci <= 2
+            ? 'easy'
+            : ci <= 4
+                ? 'medium'
+                : 'hard';
       } else {
         diff = 'medium';
       }
@@ -762,6 +836,7 @@ class ClassroomDao {
       }
 
       batch.insert('classroom_questions', {
+        'course_id': courseId,
         'source_type': 'courseware',
         'source_id': rId,
         'chapter': chapter,
@@ -783,9 +858,14 @@ class ClassroomDao {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
 
-    final existing = await db.query('classroom_questions',
-        columns: ['source_id'],
-        where: "source_type = 'assessment'");
+    final existingScope =
+        await _scope(extraWhere: "source_type = 'assessment'");
+    final existing = await db.query(
+      'classroom_questions',
+      columns: ['source_id'],
+      where: existingScope.where,
+      whereArgs: existingScope.args,
+    );
     final existingIds = existing.map((e) => e['source_id'] as int?).toSet();
 
     List<Map<String, dynamic>> projects;
@@ -798,6 +878,7 @@ class ClassroomDao {
     }
 
     int imported = 0;
+    final courseId = await _courseContext.activeCourseId();
     final batch = db.batch();
     for (final p in projects) {
       final pId = p['id'] as int?;
@@ -808,6 +889,7 @@ class ClassroomDao {
       final requirements = p['requirements'] as String? ?? desc;
 
       batch.insert('classroom_questions', {
+        'course_id': courseId,
         'source_type': 'assessment',
         'source_id': pId,
         'difficulty': 'hard',
@@ -852,10 +934,13 @@ class ClassroomDao {
       conditions.add(isAsked ? 'asked_at IS NOT NULL' : 'asked_at IS NULL');
     }
 
-    final where = conditions.isNotEmpty ? conditions.join(' AND ') : null;
+    final scope = await _scope(
+      extraWhere: conditions.isNotEmpty ? conditions.join(' AND ') : null,
+      extraArgs: args,
+    );
     return await db.query('classroom_questions',
-        where: where,
-        whereArgs: args.isNotEmpty ? args : null,
+        where: scope.where,
+        whereArgs: scope.args,
         orderBy: 'asked_at DESC, created_at DESC',
         limit: limit);
   }
@@ -864,11 +949,15 @@ class ClassroomDao {
   Future<List<String>> getQuestionChapters() async {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
+    final scope = await _scope(
+      extraWhere: "chapter IS NOT NULL AND chapter != ''",
+    );
     final result = await db.rawQuery(
         // SQL 标准：双引号是标识符，空字符串必须用单引号（'' 而非 ""）。
         // sqflite_common_ffi (桌面/Web) 严格按标准；不要回写 ""。
         'SELECT DISTINCT chapter FROM classroom_questions '
-        "WHERE chapter IS NOT NULL AND chapter != '' ORDER BY chapter");
+        'WHERE ${scope.where} ORDER BY chapter',
+        scope.args);
     return result.map((r) => r['chapter'] as String).toList();
   }
 
@@ -876,10 +965,13 @@ class ClassroomDao {
   Future<Map<String, int>> getQuestionSourceStats() async {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
+    final scope = await _scope();
     final result = await db.rawQuery('''
       SELECT source_type, COUNT(*) as count
-      FROM classroom_questions GROUP BY source_type
-    ''');
+      FROM classroom_questions
+      WHERE ${scope.where}
+      GROUP BY source_type
+    ''', scope.args);
     return {
       for (var r in result)
         r['source_type'] as String: (r['count'] as int?) ?? 0
@@ -890,8 +982,11 @@ class ClassroomDao {
   Future<int> getClassroomQuestionCount() async {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
-    final r = await db
-        .rawQuery('SELECT COUNT(*) as c FROM classroom_questions');
+    final scope = await _scope();
+    final r = await db.rawQuery(
+      'SELECT COUNT(*) as c FROM classroom_questions WHERE ${scope.where}',
+      scope.args,
+    );
     return (r.first['c'] as int?) ?? 0;
   }
 
@@ -912,7 +1007,9 @@ class ClassroomDao {
   }) async {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
+    final courseId = await _courseContext.activeCourseId();
     return await db.insert('classroom_questions', {
+      'course_id': courseId,
       'source_type': sourceType,
       'chapter': chapter,
       'difficulty': difficulty,
@@ -934,16 +1031,15 @@ class ClassroomDao {
       int id, Map<String, dynamic> data) async {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
-    await db.update('classroom_questions', data,
-        where: 'id = ?', whereArgs: [id]);
+    await db
+        .update('classroom_questions', data, where: 'id = ?', whereArgs: [id]);
   }
 
   /// 删除课堂提问
   Future<void> deleteClassroomQuestion(int id) async {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
-    await db.delete('classroom_questions',
-        where: 'id = ?', whereArgs: [id]);
+    await db.delete('classroom_questions', where: 'id = ?', whereArgs: [id]);
   }
 
   /// 标记已提问
@@ -964,10 +1060,7 @@ class ClassroomDao {
   Future<void> unmarkQuestionAsked(int id) async {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
-    await db.update(
-        'classroom_questions',
-        {'asked_at': null, 'class_id': null},
-        where: 'id = ?',
-        whereArgs: [id]);
+    await db.update('classroom_questions', {'asked_at': null, 'class_id': null},
+        where: 'id = ?', whereArgs: [id]);
   }
 }

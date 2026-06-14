@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../core/init_logger.dart';
 import '../../../data/local/database_helper.dart';
@@ -8,6 +8,7 @@ import '../../../data/models/question_model.dart';
 import '../../../data/models/quiz_result_model.dart';
 import '../../../services/ai_service.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/course_context_service.dart';
 import '../../../services/tts_flutter_service.dart';
 import '../../widgets/agent_entry_button.dart';
 import '../admin/question_manage_page.dart';
@@ -30,6 +31,7 @@ class _QuizPageState extends State<QuizPage> {
   final _quizDao = QuizDao();
   final _wrongAnswerDao = WrongAnswerDao();
   final _authService = AuthService();
+  final _courseContext = CourseContextService();
 
   List<String> _chapters = [];
   String? _selectedChapter;
@@ -47,8 +49,7 @@ class _QuizPageState extends State<QuizPage> {
   List<Map<String, dynamic>> _recentResults = [];
   List<Map<String, dynamic>> _chapterStats = [];
 
-  bool get _isTeacherOrAdmin =>
-      _authService.isTeacher || _authService.isAdmin;
+  bool get _isTeacherOrAdmin => _authService.isTeacher || _authService.isAdmin;
 
   @override
   void initState() {
@@ -175,6 +176,7 @@ class _QuizPageState extends State<QuizPage> {
   }) async {
     try {
       final aiService = AiService();
+      final courseName = await _courseContext.activeCourseName();
 
       final prompt =
           '题目：$questionText\n学生答案：$userAnswer\n正确答案：$correctAnswer\n章节：$chapter\n\n'
@@ -182,8 +184,10 @@ class _QuizPageState extends State<QuizPage> {
           '语言要通俗易懂，适合大学生阅读。不要重复题目内容。';
 
       final explanation = await aiService.chat(
-        [{'role': 'user', 'content': prompt}],
-        systemPrompt: '你是一位移动应用开发课程的教学助手，专门为学生解释测验错题。回答要简洁精准。',
+        [
+          {'role': 'user', 'content': prompt}
+        ],
+        systemPrompt: '你是一位《$courseName》课程的教学助手，专门为学生解释测验错题。回答要简洁精准。',
       );
 
       if (explanation.isNotEmpty) {
@@ -387,10 +391,8 @@ class _QuizPageState extends State<QuizPage> {
 
     final studentCount =
         (_classOverview['student_count'] as num?)?.toInt() ?? 0;
-    final avgScore =
-        (_classOverview['avg_score'] as num?)?.toDouble() ?? 0.0;
-    final passRate =
-        (_classOverview['pass_rate'] as num?)?.toDouble() ?? 0.0;
+    final avgScore = (_classOverview['avg_score'] as num?)?.toDouble() ?? 0.0;
+    final passRate = (_classOverview['pass_rate'] as num?)?.toDouble() ?? 0.0;
 
     // 题库统计
     int totalQuestions = 0;
@@ -714,10 +716,8 @@ class _QuizPageState extends State<QuizPage> {
           hasPerf ? (perf['attempt_count'] as num?)?.toInt() ?? 0 : 0;
       final students =
           hasPerf ? (perf['student_count'] as num?)?.toInt() ?? 0 : 0;
-      final maxScore =
-          hasPerf ? (perf['max_score'] as num?)?.toInt() ?? 0 : 0;
-      final minScore =
-          hasPerf ? (perf['min_score'] as num?)?.toInt() ?? 0 : 0;
+      final maxScore = hasPerf ? (perf['max_score'] as num?)?.toInt() ?? 0 : 0;
+      final minScore = hasPerf ? (perf['min_score'] as num?)?.toInt() ?? 0 : 0;
 
       // 平均分对应颜色
       Color scoreColor;
@@ -748,8 +748,10 @@ class _QuizPageState extends State<QuizPage> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color:
-                          Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -774,8 +776,7 @@ class _QuizPageState extends State<QuizPage> {
                   children: [
                     _buildMiniStat(
                         '平均分', avgScore.toStringAsFixed(1), scoreColor),
-                    _buildMiniStat(
-                        '及格率', '${passRate.toStringAsFixed(0)}%',
+                    _buildMiniStat('及格率', '${passRate.toStringAsFixed(0)}%',
                         passRate >= 60 ? Colors.green : Colors.red),
                     _buildMiniStat('参加', '$students人', Colors.blue),
                     _buildMiniStat('测验', '$attempts次', Colors.purple),
@@ -839,9 +840,8 @@ class _QuizPageState extends State<QuizPage> {
   Widget _buildRecentResultTile(Map<String, dynamic> result) {
     final userId = result['user_id'] as String? ?? '';
     final realName = result['real_name'] as String?;
-    final displayName = (realName != null && realName.isNotEmpty)
-        ? realName
-        : userId;
+    final displayName =
+        (realName != null && realName.isNotEmpty) ? realName : userId;
     final score = (result['score'] as num?)?.toInt() ?? 0;
     final chapter = result['chapter'] as String? ?? '未知章节';
     final numCorrect = (result['num_correct'] as num?)?.toInt() ?? 0;
@@ -993,7 +993,8 @@ class _QuizPageState extends State<QuizPage> {
                       messenger.showSnackBar(
                         const SnackBar(content: Text('正在重新导入题库...')),
                       );
-                      final ok = await DatabaseHelper.instance.forceReimportSeed();
+                      final ok =
+                          await DatabaseHelper.instance.forceReimportSeed();
                       if (!mounted) return;
                       messenger.showSnackBar(
                         SnackBar(
@@ -1211,8 +1212,7 @@ class _QuizPageState extends State<QuizPage> {
                         ? _nextQuestion
                         : (_selectedAnswer != null ? _submitAnswer : null),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          Theme.of(context).colorScheme.primary,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
                       foregroundColor: Colors.white,
                     ),
                     child: Text(_answered

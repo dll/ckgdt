@@ -8,6 +8,7 @@ import '../data/local/puml_dao.dart';
 import 'graph_import_service.dart';
 import 'gitee_service.dart';
 import 'course_resource_service.dart';
+import 'course_context_service.dart';
 import 'rag_bootstrap_service.dart';
 
 /// 统一数据加载服务 — 启动时一次性初始化所有预置数据
@@ -19,6 +20,7 @@ class DataLoadingService {
   final QuizDao _quizDao = QuizDao();
   final PumlDao _pumlDao = PumlDao();
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+  final CourseContextService _courseContext = CourseContextService();
 
   bool _isInitialized = false;
 
@@ -72,21 +74,15 @@ class DataLoadingService {
       const timeout = Duration(seconds: 10);
       // 并行预取所有配置，缓存到 SharedPreferences；任一失败不影响其他
       await Future.wait([
-        resource
-            .getLabTasks()
-            .timeout(timeout, onTimeout: () => null)
-            .then((_) => debugPrint(
-                '=== DataLoadingService: Lab tasks config cached')),
-        resource
-            .getChapters()
-            .timeout(timeout, onTimeout: () => null)
-            .then((_) =>
+        resource.getLabTasks().timeout(timeout, onTimeout: () => null).then(
+            (_) =>
+                debugPrint('=== DataLoadingService: Lab tasks config cached')),
+        resource.getChapters().timeout(timeout, onTimeout: () => null).then(
+            (_) =>
                 debugPrint('=== DataLoadingService: Chapters config cached')),
-        resource
-            .getAssessment()
-            .timeout(timeout, onTimeout: () => null)
-            .then((_) => debugPrint(
-                '=== DataLoadingService: Assessment config cached')),
+        resource.getAssessment().timeout(timeout, onTimeout: () => null).then(
+            (_) =>
+                debugPrint('=== DataLoadingService: Assessment config cached')),
         resource
             .getReportTemplates()
             .timeout(timeout, onTimeout: () => null)
@@ -95,7 +91,8 @@ class DataLoadingService {
       ]);
       debugPrint('=== DataLoadingService: Remote configs pre-fetched');
     } catch (e) {
-      debugPrint('=== DataLoadingService: Remote config prefetch error (non-fatal): $e');
+      debugPrint(
+          '=== DataLoadingService: Remote config prefetch error (non-fatal): $e');
     }
   }
 
@@ -123,6 +120,13 @@ class DataLoadingService {
   Future<void> _loadResourceFiles() async {
     try {
       final db = await _dbHelper.database;
+      final course = await _courseContext.getActiveCourse();
+      final courseId = course.id;
+      if (!CourseContextService.isDefaultMobileCourseName(course.name)) {
+        debugPrint(
+            '=== DataLoadingService: Skip default mobile resources for ${course.name}');
+        return;
+      }
 
       // 计算课件根目录：基于可执行文件所在目录向上查找 data/ 文件夹
       final dataDir = _resolveDataDir();
@@ -135,32 +139,48 @@ class DataLoadingService {
 
       // 检查是否已有数据 且 路径正确（包含当前 dataDir 前缀）
       final existing = await db.rawQuery(
-          'SELECT COUNT(*) as c FROM resource_files');
+          "SELECT COUNT(*) as c FROM resource_files WHERE course_id = ? OR course_id IS NULL OR course_id = ''",
+          [courseId]);
       final count = existing.first['c'] as int? ?? 0;
 
       if (count > 0) {
         // 取一行样本检查路径是否和当前 dataDir 一致
         final sample = await db.rawQuery(
-            "SELECT file_path FROM resource_files LIMIT 1");
+            "SELECT file_path FROM resource_files WHERE (course_id = ? OR course_id IS NULL OR course_id = '') AND file_path IS NOT NULL AND file_path != '' LIMIT 1",
+            [courseId]);
         final samplePath = sample.isNotEmpty
             ? (sample.first['file_path'] as String? ?? '')
             : '';
-        if (samplePath.startsWith(dataDir)) {
-          debugPrint('=== DataLoadingService: resource_files paths OK ($count rows, prefix=$dataDir)');
+        if (samplePath.isEmpty) {
+          debugPrint(
+              '=== DataLoadingService: resource_files has $count generated rows without local paths, keep as-is');
           return;
         }
-        debugPrint('=== DataLoadingService: Paths mismatch! sample=$samplePath, expected prefix=$dataDir');
+        if (samplePath.startsWith(dataDir)) {
+          debugPrint(
+              '=== DataLoadingService: resource_files paths OK ($count rows, prefix=$dataDir)');
+          return;
+        }
+        debugPrint(
+            '=== DataLoadingService: Paths mismatch! sample=$samplePath, expected prefix=$dataDir');
       }
 
-      // 清空旧数据（无论是 assets/ 前缀还是其他错误路径）
-      await db.delete('resource_files');
-      debugPrint('=== DataLoadingService: Cleared old resource_files, re-inserting with correct paths');
+      // 仅清理旧版预置资源的本地路径，不删除其它课程由 AI/大纲生成的资源条目。
+      await db.delete(
+        'resource_files',
+        where:
+            "source_type = 'preset' AND (course_id = ? OR course_id IS NULL OR course_id = '') AND file_path IS NOT NULL AND file_path != ''",
+        whereArgs: [courseId],
+      );
+      debugPrint(
+          '=== DataLoadingService: Cleared stale preset resource paths, preserving generated course resources');
 
       final batch = db.batch();
 
       for (final chapter in _chapterNames) {
         // 视频
         batch.insert('resource_files', {
+          'course_id': courseId,
           'file_name': '$chapter.mp4',
           'file_path': '$videoDir/$chapter.mp4',
           'file_type': 'video',
@@ -171,6 +191,7 @@ class DataLoadingService {
 
         // PDF
         batch.insert('resource_files', {
+          'course_id': courseId,
           'file_name': '$chapter.pdf',
           'file_path': '$pdfDir/$chapter.pdf',
           'file_type': 'pdf',
@@ -181,6 +202,7 @@ class DataLoadingService {
 
         // PPT
         batch.insert('resource_files', {
+          'course_id': courseId,
           'file_name': '$chapter.pptx',
           'file_path': '$pptDir/$chapter.pptx',
           'file_type': 'ppt',
@@ -191,13 +213,16 @@ class DataLoadingService {
       }
 
       await batch.commit(noResult: true);
-      debugPrint('=== DataLoadingService: Inserted ${_chapterNames.length * 3} resource files');
+      debugPrint(
+          '=== DataLoadingService: Inserted ${_chapterNames.length * 3} resource files');
 
       // 验证插入结果
       final verify = await db.rawQuery(
-          "SELECT file_path FROM resource_files LIMIT 1");
+          "SELECT file_path FROM resource_files WHERE course_id = ? LIMIT 1",
+          [courseId]);
       if (verify.isNotEmpty) {
-        debugPrint('=== DataLoadingService: Verify → ${verify.first['file_path']}');
+        debugPrint(
+            '=== DataLoadingService: Verify → ${verify.first['file_path']}');
       }
     } catch (e) {
       debugPrint('=== DataLoadingService: Error loading resource files: $e');
@@ -210,8 +235,8 @@ class DataLoadingService {
     if (kIsWeb) return 'data';
     try {
       // 可执行文件所在目录
-      final exeDir = File(Platform.resolvedExecutable).parent.path
-          .replaceAll('\\', '/');
+      final exeDir =
+          File(Platform.resolvedExecutable).parent.path.replaceAll('\\', '/');
 
       // 策略 1: 开发模式 — 项目根目录/data
       // 从 exe 目录向上查找 data/ 文件夹
@@ -220,7 +245,7 @@ class DataLoadingService {
         final candidate = '$dir/data';
         if (Directory(candidate).existsSync() &&
             (Directory('$candidate/视频').existsSync() ||
-             Directory('$candidate/课件').existsSync())) {
+                Directory('$candidate/课件').existsSync())) {
           debugPrint('=== DataLoadingService: Found data dir: $candidate');
           return candidate;
         }
@@ -283,7 +308,9 @@ class DataLoadingService {
       // 2) 删除非 md_import 类型的旧图谱（保留 md_import 图谱为唯一数据源）
       final oldGraphs = await db.rawQuery('''
         SELECT g.id FROM graphs g
-        WHERE g.graph_type != 'md_import' OR g.graph_type IS NULL
+        WHERE (g.graph_type != 'md_import' OR g.graph_type IS NULL)
+          AND (g.course_id = 'mad' OR g.course_id IS NULL OR g.course_id = '')
+          AND g.id NOT LIKE 'g_%'
       ''');
       if (oldGraphs.isNotEmpty) {
         final ids = oldGraphs.map((r) => r['id']).toList();
@@ -295,7 +322,8 @@ class DataLoadingService {
             'DELETE FROM nodes WHERE graph_id IN ($placeholders)', ids);
         final deleted = await db.rawDelete(
             'DELETE FROM graphs WHERE id IN ($placeholders)', ids);
-        debugPrint('=== DataLoadingService: Cleaned $deleted old non-md_import graphs');
+        debugPrint(
+            '=== DataLoadingService: Cleaned $deleted old non-md_import graphs');
       }
     } catch (e) {
       debugPrint('=== DataLoadingService: Error cleaning graphs: $e');
@@ -306,10 +334,14 @@ class DataLoadingService {
 
   Future<List<Map<String, dynamic>>> getVideos() async {
     final db = await _dbHelper.database;
+    final scope = await _courseContext.scopedWhere(
+      extraWhere: 'file_type = ?',
+      extraArgs: ['video'],
+    );
     return await db.query(
       'resource_files',
-      where: 'file_type = ?',
-      whereArgs: ['video'],
+      where: scope.where,
+      whereArgs: scope.args,
       orderBy: 'chapter',
     );
   }
@@ -317,17 +349,25 @@ class DataLoadingService {
   Future<List<Map<String, dynamic>>> getDocuments({String? type}) async {
     final db = await _dbHelper.database;
     if (type != null) {
+      final scope = await _courseContext.scopedWhere(
+        extraWhere: 'file_type = ?',
+        extraArgs: [type],
+      );
       return await db.query(
         'resource_files',
-        where: 'file_type = ?',
-        whereArgs: [type],
+        where: scope.where,
+        whereArgs: scope.args,
         orderBy: 'chapter',
       );
     }
+    final scope = await _courseContext.scopedWhere(
+      extraWhere: 'file_type IN (?, ?)',
+      extraArgs: ['pdf', 'ppt'],
+    );
     return await db.query(
       'resource_files',
-      where: 'file_type IN (?, ?)',
-      whereArgs: ['pdf', 'ppt'],
+      where: scope.where,
+      whereArgs: scope.args,
       orderBy: 'file_type, chapter',
     );
   }

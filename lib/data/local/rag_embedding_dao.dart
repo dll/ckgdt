@@ -48,16 +48,24 @@ class RagEmbeddingDao {
     List<double> queryEmbedding, {
     int topK = 6,
     String? docIdFilter,
+    String? docIdPrefix,
   }) async {
     try {
       final db = await _dbHelper.database;
+      final where = StringBuffer('dim = ?');
+      final args = <Object?>[queryEmbedding.length];
+      if (docIdFilter != null) {
+        where.write(' AND doc_id = ?');
+        args.add(docIdFilter);
+      }
+      if (docIdPrefix != null) {
+        where.write(' AND doc_id LIKE ?');
+        args.add('$docIdPrefix%');
+      }
       final rows = await db.query(
         'rag_embeddings',
-        where: 'dim = ?${docIdFilter != null ? ' AND doc_id = ?' : ''}',
-        whereArgs: [
-          queryEmbedding.length,
-          if (docIdFilter != null) docIdFilter,
-        ],
+        where: where.toString(),
+        whereArgs: args,
       );
       // 计算余弦相似度
       final qNorm = _norm(queryEmbedding);
@@ -99,8 +107,7 @@ class RagEmbeddingDao {
   Future<int> count() async {
     try {
       final db = await _dbHelper.database;
-      final r =
-          await db.rawQuery('SELECT COUNT(*) as c FROM rag_embeddings');
+      final r = await db.rawQuery('SELECT COUNT(*) as c FROM rag_embeddings');
       return (r.first['c'] as int?) ?? 0;
     } catch (e) {
       swallowDebug(e, tag: 'RagEmbeddingDao.count');

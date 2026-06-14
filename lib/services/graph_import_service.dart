@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:sqflite/sqflite.dart';
 import '../data/local/database_helper.dart';
+import 'course_context_service.dart';
 
 /// 从 assets/graphs/ 目录导入 Markdown 图谱文件到 SQLite
 class GraphImportService {
@@ -10,6 +11,7 @@ class GraphImportService {
   GraphImportService._();
 
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+  final CourseContextService _courseContext = CourseContextService();
 
   /// 6 大分类目录
   static const _categories = [
@@ -32,14 +34,22 @@ class GraphImportService {
   /// 入口方法：检查并导入全部图谱
   Future<void> importAll() async {
     final db = await _dbHelper.database;
+    final course = await _courseContext.getActiveCourse();
+    if (!CourseContextService.isDefaultMobileCourseName(course.name)) {
+      debugPrint(
+          '=== GraphImportService: Skip default MD graphs for ${course.name}');
+      return;
+    }
 
     // 检查是否已导入（用 graph_type='md_import' 标记）
     final existing = await db.rawQuery(
-      "SELECT COUNT(*) as c FROM graphs WHERE graph_type = 'md_import'",
+      "SELECT COUNT(*) as c FROM graphs WHERE graph_type = 'md_import' AND (course_id = ? OR course_id IS NULL OR course_id = '')",
+      [CourseContextService.defaultCourseId],
     );
     final count = (existing.first['c'] as int?) ?? 0;
     if (count > 0) {
-      debugPrint('=== GraphImportService: Already imported $count MD graphs, skip');
+      debugPrint(
+          '=== GraphImportService: Already imported $count MD graphs, skip');
       return;
     }
 
@@ -63,12 +73,16 @@ class GraphImportService {
     const rootId = 'node_root_main';
 
     // 插入图谱记录
-    await db.insert('graphs', {
-      'id': graphId,
-      'title': '移动应用开发课程总图谱',
-      'graph_type': 'md_import',
-      'layout': 'tree',
-    }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    await db.insert(
+        'graphs',
+        {
+          'id': graphId,
+          'title': '移动应用开发课程总图谱',
+          'course_id': CourseContextService.defaultCourseId,
+          'graph_type': 'md_import',
+          'layout': 'tree',
+        },
+        conflictAlgorithm: ConflictAlgorithm.ignore);
 
     // 根节点
     await _insertNode(db, rootId, graphId, '课程：移动应用开发', '', 'root', 0,
@@ -80,8 +94,8 @@ class GraphImportService {
       final catNodeId = 'node_cat_${cat.dir}';
       await _insertNode(db, catNodeId, graphId, cat.label, '', 'category', 1,
           color: cat.color, parentId: rootId);
-      await _insertEdge(db, 'edge_main_${i}', graphId, rootId, catNodeId,
-          'contains', '包含');
+      await _insertEdge(
+          db, 'edge_main_${i}', graphId, rootId, catNodeId, 'contains', '包含');
 
       // 加载该分类下的 MD 文件名作为子节点
       final fileNames = await _listMdFiles(cat.dir);
@@ -120,12 +134,16 @@ class GraphImportService {
   Future<void> _importCategoryGraph(Database db, _Category cat) async {
     final graphId = 'graph_detail_${cat.dir}';
 
-    await db.insert('graphs', {
-      'id': graphId,
-      'title': '${cat.label}详细图谱',
-      'graph_type': 'md_import',
-      'layout': 'tree',
-    }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    await db.insert(
+        'graphs',
+        {
+          'id': graphId,
+          'title': '${cat.label}详细图谱',
+          'course_id': CourseContextService.defaultCourseId,
+          'graph_type': 'md_import',
+          'layout': 'tree',
+        },
+        conflictAlgorithm: ConflictAlgorithm.ignore);
 
     // 分类根节点
     final catRootId = 'node_${cat.dir}_root';
@@ -140,8 +158,8 @@ class GraphImportService {
       final fileNodeId = 'node_${cat.dir}_f$fi';
 
       try {
-        final content = await rootBundle.loadString(
-            'assets/graphs/${cat.dir}/$fileName');
+        final content =
+            await rootBundle.loadString('assets/graphs/${cat.dir}/$fileName');
         final sections = _parseMdSections(content);
 
         // 文件节点
@@ -165,25 +183,20 @@ class GraphImportService {
                   : fileNodeId);
 
           final nodeLevel = sec.level; // 2 or 3
-          await _insertNode(db, secNodeId, graphId, sec.title,
-              sec.content, 'section', nodeLevel,
+          await _insertNode(db, secNodeId, graphId, sec.title, sec.content,
+              'section', nodeLevel,
               color: _lightenColor(cat.color, nodeLevel),
               parentId: parentForSec);
-          await _insertEdge(
-              db,
-              'edge_${cat.dir}_f${fi}_s$secIdx',
-              graphId,
-              parentForSec,
-              secNodeId,
-              'contains',
-              '包含');
+          await _insertEdge(db, 'edge_${cat.dir}_f${fi}_s$secIdx', graphId,
+              parentForSec, secNodeId, 'contains', '包含');
           secIdx++;
         }
 
         debugPrint(
             '=== GraphImportService: ${cat.dir}/$fileName → $secIdx sections');
       } catch (e) {
-        debugPrint('=== GraphImportService: Error loading ${cat.dir}/$fileName: $e');
+        debugPrint(
+            '=== GraphImportService: Error loading ${cat.dir}/$fileName: $e');
       }
     }
   }
@@ -238,7 +251,10 @@ class GraphImportService {
   String _cleanTitle(String title) {
     // 移除常见 emoji 前缀
     return title
-        .replaceAll(RegExp(r'^[📚📖🎯🔄💡🏗️✅📋🔍💻🌐📱🎓🧪⚡🛠️📊📝🎨🔧⭐🏆📦🔑💡🎪🌟🎯✨🔬📐🎭💎🔮🎲🎸🎺🎻🎹🎵]\s*'), '')
+        .replaceAll(
+            RegExp(
+                r'^[📚📖🎯🔄💡🏗️✅📋🔍💻🌐📱🎓🧪⚡🛠️📊📝🎨🔧⭐🏆📦🔑💡🎪🌟🎯✨🔬📐🎭💎🔮🎲🎸🎺🎻🎹🎵]\s*'),
+            '')
         .trim();
   }
 
@@ -322,20 +338,23 @@ class GraphImportService {
     String color = '#667eea',
     String? parentId,
   }) async {
-    await db.insert('nodes', {
-      'id': id,
-      'graph_id': graphId,
-      'title': title,
-      'content': content.length > 500 ? content.substring(0, 500) : content,
-      'node_type': nodeType,
-      'level': level,
-      'x': 0.0,
-      'y': 0.0,
-      'color': color,
-      'parent_id': parentId,
-      'visible': 1,
-      'metadata_json': null,
-    }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    await db.insert(
+        'nodes',
+        {
+          'id': id,
+          'graph_id': graphId,
+          'title': title,
+          'content': content.length > 500 ? content.substring(0, 500) : content,
+          'node_type': nodeType,
+          'level': level,
+          'x': 0.0,
+          'y': 0.0,
+          'color': color,
+          'parent_id': parentId,
+          'visible': 1,
+          'metadata_json': null,
+        },
+        conflictAlgorithm: ConflictAlgorithm.ignore);
   }
 
   Future<void> _insertEdge(
@@ -349,19 +368,22 @@ class GraphImportService {
     String color = '#888888',
     String style = 'solid',
   }) async {
-    await db.insert('edges', {
-      'id': id,
-      'graph_id': graphId,
-      'source_id': sourceId,
-      'target_id': targetId,
-      'edge_type': edgeType,
-      'label': label,
-      'weight': 1.0,
-      'color': color,
-      'width': edgeType == 'contains' ? 1.0 : 1.5,
-      'style': style,
-      'visible': 1,
-    }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    await db.insert(
+        'edges',
+        {
+          'id': id,
+          'graph_id': graphId,
+          'source_id': sourceId,
+          'target_id': targetId,
+          'edge_type': edgeType,
+          'label': label,
+          'weight': 1.0,
+          'color': color,
+          'width': edgeType == 'contains' ? 1.0 : 1.5,
+          'style': style,
+          'visible': 1,
+        },
+        conflictAlgorithm: ConflictAlgorithm.ignore);
   }
 
   /// 根据层级调浅颜色

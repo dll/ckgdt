@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/local/database_helper.dart';
 import '../data/local/rag_embedding_dao.dart';
+import 'course_context_service.dart';
 import 'rag_service.dart';
 
 /// 向量 RAG 启动初始化器。
@@ -29,6 +30,7 @@ class RagBootstrapService {
   static const _indexedVersion = 1;
 
   bool _running = false;
+  final CourseContextService _courseContext = CourseContextService();
 
   /// 入口：首次启动 / 版本号升级时构建向量索引；其余情况直接返回。
   ///
@@ -39,7 +41,9 @@ class RagBootstrapService {
     _running = true;
     try {
       final prefs = await SharedPreferences.getInstance();
-      final lastIndexed = prefs.getInt(_prefIndexedVersion) ?? 0;
+      final courseId = await _courseContext.activeCourseId();
+      final prefKey = '$_prefIndexedVersion.$courseId';
+      final lastIndexed = prefs.getInt(prefKey) ?? 0;
       final existing = await RagEmbeddingDao.instance.count();
 
       // 已有数据 + 版本一致 → 跳过
@@ -48,7 +52,8 @@ class RagBootstrapService {
         return;
       }
 
-      debugPrint('=== RagBootstrap: indexing (v$lastIndexed → v$_indexedVersion)…');
+      debugPrint(
+          '=== RagBootstrap: indexing (v$lastIndexed → v$_indexedVersion)…');
       final rag = RagService();
 
       // 三类源相互独立 + embedBatch 是 HTTP 瓶颈 → 并行起跑，整体耗时从串行 ~2min
@@ -60,7 +65,7 @@ class RagBootstrapService {
       ]);
       final totalChunks = counts.fold<int>(0, (a, b) => a + b);
 
-      await prefs.setInt(_prefIndexedVersion, _indexedVersion);
+      await prefs.setInt(prefKey, _indexedVersion);
       debugPrint('=== RagBootstrap: indexed $totalChunks chunks total');
     } catch (e) {
       debugPrint('=== RagBootstrap: failed (non-fatal): $e');
@@ -75,9 +80,14 @@ class RagBootstrapService {
   /// - 调试时验证向量检索效果
   Future<int> bumpVersionToReindex() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_prefIndexedVersion);
+    final courseId = await _courseContext.activeCourseId();
+    await prefs.remove('$_prefIndexedVersion.$courseId');
     final db = await DatabaseHelper.instance.database;
-    await db.delete('rag_embeddings');
+    await db.delete(
+      'rag_embeddings',
+      where: 'doc_id LIKE ?',
+      whereArgs: ['$courseId:%'],
+    );
     await ensureIndexed();
     return await RagEmbeddingDao.instance.count();
   }
@@ -87,20 +97,27 @@ class RagBootstrapService {
   Future<int> _indexConcepts(RagService rag) async {
     try {
       final db = await DatabaseHelper.instance.database;
-      final rows = await db.query('knowledge_concepts',
-          orderBy: 'chapter, id', limit: 500);
+      final scope = await _courseContext.scopedWhere();
+      final rows = await db.query(
+        'knowledge_concepts',
+        where: scope.where,
+        whereArgs: scope.args,
+        orderBy: 'chapter, id',
+        limit: 500,
+      );
       if (rows.isEmpty) return 0;
       final buf = StringBuffer();
       for (final r in rows) {
-        final name = r['name'] ?? '';
-        final desc = r['description'] ?? '';
+        final name = r['concept_name'] ?? r['name'] ?? '';
+        final desc = r['description']?.toString() ?? '';
         final ch = r['chapter'];
         buf.writeln('## $name${ch != null ? '（第$ch章）' : ''}');
-        if ((desc as String).isNotEmpty) buf.writeln(desc);
+        if (desc.isNotEmpty) buf.writeln(desc);
         buf.writeln();
       }
+      final courseId = await _courseContext.activeCourseId();
       return await rag.indexDocument(
-        docId: 'concepts',
+        docId: '$courseId:concepts',
         content: buf.toString(),
         chunkSize: 500,
         overlap: 50,
@@ -115,11 +132,18 @@ class RagBootstrapService {
   Future<int> _indexResources(RagService rag) async {
     try {
       final db = await DatabaseHelper.instance.database;
-      final rows = await db.query('resource_files',
-          // SQL 标准：双引号是标识符，空字符串必须用单引号（'' 而非 ""）。
-          // sqflite_common_ffi (桌面/Web) 严格按标准；不要回写 ""。
-          where: "description IS NOT NULL AND description != ''",
-          orderBy: 'chapter, file_type', limit: 500);
+      final scope = await _courseContext.scopedWhere(
+        // SQL 标准：双引号是标识符，空字符串必须用单引号（'' 而非 ""）。
+        // sqflite_common_ffi (桌面/Web) 严格按标准；不要回写 ""。
+        extraWhere: "description IS NOT NULL AND description != ''",
+      );
+      final rows = await db.query(
+        'resource_files',
+        where: scope.where,
+        whereArgs: scope.args,
+        orderBy: 'chapter, file_type',
+        limit: 500,
+      );
       if (rows.isEmpty) return 0;
       final buf = StringBuffer();
       for (final r in rows) {
@@ -131,8 +155,9 @@ class RagBootstrapService {
         buf.writeln(desc);
         buf.writeln();
       }
+      final courseId = await _courseContext.activeCourseId();
       return await rag.indexDocument(
-        docId: 'resources',
+        docId: '$courseId:resources',
         content: buf.toString(),
         chunkSize: 400,
         overlap: 40,
@@ -147,7 +172,14 @@ class RagBootstrapService {
   Future<int> _indexQuestions(RagService rag) async {
     try {
       final db = await DatabaseHelper.instance.database;
-      final rows = await db.query('questions', orderBy: 'source, id', limit: 500);
+      final scope = await _courseContext.scopedWhere();
+      final rows = await db.query(
+        'questions',
+        where: scope.where,
+        whereArgs: scope.args,
+        orderBy: 'source, id',
+        limit: 500,
+      );
       if (rows.isEmpty) return 0;
       final buf = StringBuffer();
       for (final r in rows) {
@@ -164,8 +196,9 @@ class RagBootstrapService {
         buf.writeln('正确答案: $correct');
         buf.writeln();
       }
+      final courseId = await _courseContext.activeCourseId();
       return await rag.indexDocument(
-        docId: 'questions',
+        docId: '$courseId:questions',
         content: buf.toString(),
         chunkSize: 600,
         overlap: 60,

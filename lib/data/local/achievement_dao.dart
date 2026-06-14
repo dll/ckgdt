@@ -3,9 +3,12 @@ import 'dart:math' show sqrt;
 import 'package:sqflite/sqflite.dart';
 import 'database_helper.dart';
 import '../../core/error_handler.dart';
+import '../../services/course_context_service.dart';
 
 /// 课程达成度 DAO — 达成度批次管理、成绩录入、计算、报告生成
 class AchievementDao {
+  final CourseContextService _courseContext = CourseContextService();
+
   /// 4 个课程目标满分（与大纲第六节、AchievementConfig.defaults 一致）。
   /// DAO 属数据层，不能依赖 presentation 层的 AchievementConfig，故在此独立维护；
   /// 两处数值必须同步（大纲权威值 15/25/30/30）。
@@ -851,6 +854,7 @@ class AchievementDao {
 
     // 以全体活跃学生为基准，LEFT JOIN 测验成绩：
     // 没有测验数据的学生也建行（成绩按 0 计），使批次覆盖完整名单而非仅做过测验的人。
+    final quizScope = await _courseContext.scopedWhere();
     final rows = await db.rawQuery('''
       SELECT u.user_id, u.real_name,
         q.avg_score, q.total_correct, q.total_questions
@@ -858,11 +862,13 @@ class AchievementDao {
       LEFT JOIN (
         SELECT user_id, AVG(score) AS avg_score,
           SUM(num_correct) AS total_correct, SUM(num_total) AS total_questions
-        FROM quiz_results GROUP BY user_id
+        FROM quiz_results
+        WHERE ${quizScope.where}
+        GROUP BY user_id
       ) q ON q.user_id = u.user_id
       WHERE u.role = 'student' AND u.is_active = 1
       ORDER BY u.user_id
-    ''');
+    ''', quizScope.args);
 
     if (rows.isEmpty) {
       throw Exception('没有活跃学生，请先在班级管理中添加学生');
@@ -919,19 +925,29 @@ class AchievementDao {
   Future<List<Map<String, dynamic>>> getResourcesForChapter(
       int chapterNumber) async {
     final db = await DatabaseHelper.instance.database;
+    final scope = await _courseContext.scopedWhere(
+      column: 'r.course_id',
+      extraWhere: 'm.chapter_number = ?',
+      extraArgs: [chapterNumber],
+    );
     return db.rawQuery('''
       SELECT r.*, m.match_confidence
       FROM resource_chapter_mapping m
       JOIN resource_files r ON m.resource_id = r.id
-      WHERE m.chapter_number = ?
+      WHERE ${scope.where}
       ORDER BY r.file_type, r.file_name
-    ''', [chapterNumber]);
+    ''', scope.args);
   }
 
   /// 自动建立资源-章节关联（基于关键词匹配）
   Future<int> autoMapResources() async {
     final db = await DatabaseHelper.instance.database;
-    final resources = await db.query('resource_files');
+    final scope = await _courseContext.scopedWhere();
+    final resources = await db.query(
+      'resource_files',
+      where: scope.where,
+      whereArgs: scope.args,
+    );
 
     // 章节关键词映射
     final chapterKeywords = {

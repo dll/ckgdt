@@ -1,4 +1,4 @@
-﻿// ignore_for_file: unnecessary_brace_in_string_interps
+// ignore_for_file: unnecessary_brace_in_string_interps
 
 import 'dart:convert';
 import 'dart:io';
@@ -15,6 +15,7 @@ import '../../data/models/graph_model.dart';
 import '../../data/models/node_model.dart';
 import '../../data/models/syllabus_data.dart';
 import '../../services/ai_service.dart';
+import '../../services/course_context_service.dart';
 import '../../services/syllabus_parser.dart';
 
 /// 一键生课 — 底部弹出表单
@@ -104,7 +105,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
             ),
             const SizedBox(height: 16),
 
-              // 课程大纲（文件上传，支持 .docx / .txt / .md）
+            // 课程大纲（文件上传，支持 .docx / .txt / .md）
             InkWell(
               onTap: _isGenerating ? null : _pickOutlineFile,
               borderRadius: BorderRadius.circular(12),
@@ -117,13 +118,16 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                         : (_outlineContent != null
                             ? theme.colorScheme.primary
                             : theme.colorScheme.outline),
-                    width: _parsedSyllabus != null || _outlineContent != null ? 2 : 1,
+                    width: _parsedSyllabus != null || _outlineContent != null
+                        ? 2
+                        : 1,
                   ),
                   borderRadius: BorderRadius.circular(12),
                   color: _parsedSyllabus != null
                       ? Colors.green.withValues(alpha: 0.1)
                       : (_outlineContent != null
-                          ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
+                          ? theme.colorScheme.primaryContainer
+                              .withValues(alpha: 0.3)
                           : null),
                 ),
                 child: Row(
@@ -138,7 +142,8 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                           ? Colors.green
                           : (_outlineContent != null
                               ? theme.colorScheme.primary
-                              : theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                              : theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.5)),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -166,7 +171,8 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: _parsedSyllabus != null
                                   ? Colors.green.shade600
-                                  : theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                                  : theme.colorScheme.onSurface
+                                      .withValues(alpha: 0.5),
                             ),
                           ),
                         ],
@@ -194,10 +200,18 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                 spacing: 8,
                 runSpacing: 4,
                 children: [
-                  _chip(theme, '${_parsedSyllabus!.chapters.length} 章', Icons.menu_book),
-                  _chip(theme, '${_parsedSyllabus!.labs.length} 个实验', Icons.science),
-                  _chip(theme, '${_parsedSyllabus!.lectureHours}+${_parsedSyllabus!.labHours} 学时', Icons.schedule),
-                  _chip(theme, '${(_parsedSyllabus!.assessment.dailyWeight * 100).toInt()}%平时/${(_parsedSyllabus!.assessment.labWeight * 100).toInt()}%实验/${(_parsedSyllabus!.assessment.examWeight * 100).toInt()}%期末', Icons.balance),
+                  _chip(theme, '${_parsedSyllabus!.chapters.length} 章',
+                      Icons.menu_book),
+                  _chip(theme, '${_parsedSyllabus!.labs.length} 个实验',
+                      Icons.science),
+                  _chip(
+                      theme,
+                      '${_parsedSyllabus!.lectureHours}+${_parsedSyllabus!.labHours} 学时',
+                      Icons.schedule),
+                  _chip(
+                      theme,
+                      '${(_parsedSyllabus!.assessment.dailyWeight * 100).toInt()}%平时/${(_parsedSyllabus!.assessment.labWeight * 100).toInt()}%实验/${(_parsedSyllabus!.assessment.examWeight * 100).toInt()}%期末',
+                      Icons.balance),
                 ],
               ),
             ],
@@ -222,7 +236,8 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.primaryContainer,
                     borderRadius: BorderRadius.circular(8),
@@ -287,7 +302,8 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                             child: Text(
                               _logs[_logs.length - 1 - i],
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                color: theme.colorScheme.onSurface
+                                    .withValues(alpha: 0.6),
                                 fontSize: 11,
                               ),
                             ),
@@ -341,7 +357,9 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
         children: [
           Icon(icon, size: 14, color: Colors.green.shade700),
           const SizedBox(width: 4),
-          Text(label, style: theme.textTheme.labelSmall?.copyWith(color: Colors.green.shade700)),
+          Text(label,
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: Colors.green.shade700)),
         ],
       ),
     );
@@ -374,7 +392,8 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('已解析教学大纲：${syllabus.chapters.length}章 · ${syllabus.labs.length}个实验'),
+              content: Text(
+                  '已解析教学大纲：${syllabus.chapters.length}章 · ${syllabus.labs.length}个实验'),
               backgroundColor: Colors.green,
             ),
           );
@@ -441,10 +460,14 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
         syllabusChapters = _parsedSyllabus!.chapters;
         syllabusLabs = _parsedSyllabus!.labs;
         assessment = _parsedSyllabus!.assessment;
-        if (assessment.dailyWeight > 0 || assessment.labWeight > 0 || assessment.examWeight > 0) {
-          _log('考核方式：平时${(assessment.dailyWeight * 100).toInt()}% · 实验${(assessment.labWeight * 100).toInt()}% · 期末${(assessment.examWeight * 100).toInt()}%');
+        if (assessment.dailyWeight > 0 ||
+            assessment.labWeight > 0 ||
+            assessment.examWeight > 0) {
+          _log(
+              '考核方式：平时${(assessment.dailyWeight * 100).toInt()}% · 实验${(assessment.labWeight * 100).toInt()}% · 期末${(assessment.examWeight * 100).toInt()}%');
         }
-        chapters = syllabusChapters.map((c) => '第${c.index}章 ${c.title}').toList();
+        chapters =
+            syllabusChapters.map((c) => '第${c.index}章 ${c.title}').toList();
       } else {
         syllabusChapters = [];
         syllabusLabs = [];
@@ -484,19 +507,28 @@ $outline
 {"chapters": ["第1章标题", "第2章标题", ...]}
 ''';
 
-        final resp = await aiService.chat([{'role': 'user', 'content': prompt}]);
+        final resp = await aiService.chat([
+          {'role': 'user', 'content': prompt}
+        ]);
         chapters = _parseChapters(resp, _chapterCount);
         _log('大纲生成完成：${chapters.length} 个章节');
       }
 
       // ═══ 步骤 2：保存课程到数据库 ═══
       _log('正在保存课程...');
-      final courseId = name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_');
+      final courseDao = CourseDao();
+      final baseCourseId = CourseContextService.buildStableCourseId(name);
+      var courseId = baseCourseId;
+      var suffix = 2;
+      while (await courseDao.getCourse(courseId) != null) {
+        courseId = '${baseCourseId}_$suffix';
+        suffix++;
+      }
       final now = DateTime.now().toIso8601String();
       final hasSyllabus = _parsedSyllabus != null;
 
       final course = CourseModel(
-        id: courseId.isEmpty ? 'course_${DateTime.now().millisecondsSinceEpoch}' : courseId,
+        id: courseId,
         name: name,
         description: hasSyllabus
             ? _parsedSyllabus!.description.isNotEmpty
@@ -505,12 +537,12 @@ $outline
             : 'AI 自动生成的$name课程',
         chapterCount: chapters.length,
         chapters: chapters,
-        isActive: false,
+        isActive: true,
         createdAt: now,
       );
 
-      final courseDao = CourseDao();
       await courseDao.addCourse(course);
+      await courseDao.setActiveCourse(course.id);
       _log('课程保存成功');
 
       // ═══ 步骤 3：生成各章节测验题 ═══
@@ -519,29 +551,28 @@ $outline
 
       for (var i = 0; i < chapters.length; i++) {
         final chapter = chapters[i];
-        final chContent = i < syllabusChapters.length
-            ? syllabusChapters[i].content
-            : '';
+        final chContent =
+            i < syllabusChapters.length ? syllabusChapters[i].content : '';
         final chObjectives = i < syllabusChapters.length
             ? syllabusChapters[i].teachingObjectives
             : '';
-        final chKeyPoints = i < syllabusChapters.length
-            ? syllabusChapters[i].keyPoints
-            : '';
+        final chKeyPoints =
+            i < syllabusChapters.length ? syllabusChapters[i].keyPoints : '';
 
         final extraContext = hasSyllabus && chContent.isNotEmpty
             ? '\n\n章节教学内容：$chContent\n章节目标：$chObjectives\n教学重点：$chKeyPoints'
             : '';
 
-        final quizPrompt =
-            '为《$name》课程的"$chapter"章节生成5道选择题。$extraContext\n\n'
+        final quizPrompt = '为《$name》课程的"$chapter"章节生成5道选择题。$extraContext\n\n'
             '请严格按以下JSON格式输出（不要包含其他文字）：\n'
             '[{"question":"题目","option_a":"A","option_b":"B","option_c":"C","option_d":"D","answer_index":0}]\n\n'
             '要求：answer_index 为正确答案索引（0=A,1=B,2=C,3=D），题目难度适中。';
 
         try {
           final quizRaw = await aiService.chat(
-            [{'role': 'user', 'content': quizPrompt}],
+            [
+              {'role': 'user', 'content': quizPrompt}
+            ],
             systemPrompt: '你是$name课程的出题专家，请用中文回复，仅返回合法JSON数组。',
           );
 
@@ -552,6 +583,7 @@ $outline
             final batch = db.batch();
             for (final q in questions) {
               batch.insert('questions', {
+                'course_id': course.id,
                 'source': chapter,
                 'question': q['question'] ?? '',
                 'option_a': q['option_a'] ?? '',
@@ -576,8 +608,10 @@ $outline
       final resBatch = db.batch();
       for (final ch in chapters) {
         for (final type in ['pdf', 'ppt', 'video']) {
-          final ext = type == 'video' ? 'mp4' : (type == 'ppt' ? 'pptx' : 'pdf');
+          final ext =
+              type == 'video' ? 'mp4' : (type == 'ppt' ? 'pptx' : 'pdf');
           resBatch.insert('resource_files', {
+            'course_id': course.id,
             'file_name': '$ch.$ext',
             'file_path': '',
             'file_type': type,
@@ -621,12 +655,15 @@ $outline
         final graphId = 'g_${course.id}';
         // Use courseTitle from syllabus if available, else course name
         final graphTitle = hasSyllabus
-            ? (_parsedSyllabus!.courseName.isNotEmpty ? _parsedSyllabus!.courseName : name)
+            ? (_parsedSyllabus!.courseName.isNotEmpty
+                ? _parsedSyllabus!.courseName
+                : name)
             : name;
 
         await graphDao.createGraph(GraphModel(
           id: graphId,
           title: graphTitle,
+          courseId: course.id,
           graphType: 'knowledge',
           layout: 'force',
         ));
@@ -634,9 +671,20 @@ $outline
         final nodes = <NodeModel>[];
         final edges = <EdgeModel>[];
         int nIdx = 0;
-        const colors = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b',
-                         '#fa709a', '#a18cd1', '#fbc2eb', '#84fab0', '#8fd3f4',
-                         '#ffecd2', '#fcb69f'];
+        const colors = [
+          '#667eea',
+          '#764ba2',
+          '#f093fb',
+          '#4facfe',
+          '#43e97b',
+          '#fa709a',
+          '#a18cd1',
+          '#fbc2eb',
+          '#84fab0',
+          '#8fd3f4',
+          '#ffecd2',
+          '#fcb69f'
+        ];
 
         for (var i = 0; i < chapters.length; i++) {
           final chTitle = chapters[i];
@@ -814,8 +862,9 @@ $outline
       if (jsonStart >= 0 && jsonEnd > jsonStart) {
         final jsonStr = cleaned.substring(jsonStart, jsonEnd + 1);
         // 简易解析 chapters 数组
-        final chaptersMatch = RegExp(r'"chapters"\s*:\s*\[(.*?)\]', dotAll: true)
-            .firstMatch(jsonStr);
+        final chaptersMatch =
+            RegExp(r'"chapters"\s*:\s*\[(.*?)\]', dotAll: true)
+                .firstMatch(jsonStr);
         if (chaptersMatch != null) {
           final arrContent = chaptersMatch.group(1)!;
           final items = RegExp(r'"([^"]+)"')
@@ -832,7 +881,10 @@ $outline
         .split('\n')
         .map((l) => l.trim())
         .where((l) => l.isNotEmpty && !l.startsWith('{') && !l.startsWith('}'))
-        .map((l) => l.replaceAll(RegExp(r'^[\d]+[.、)\]]\s*'), '').replaceAll('"', '').trim())
+        .map((l) => l
+            .replaceAll(RegExp(r'^[\d]+[.、)\]]\s*'), '')
+            .replaceAll('"', '')
+            .trim())
         .where((l) => l.isNotEmpty && l.length > 2)
         .toList();
 

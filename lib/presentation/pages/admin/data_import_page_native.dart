@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../data/local/class_dao.dart';
+import '../../../services/course_context_service.dart';
 
 Future<String?> saveStringToFile(String content, String prefix) async {
   try {
@@ -35,14 +36,14 @@ Future<Map<String, dynamic>> importStudentsFromFile(String filePath) async {
     final headers =
         headerRow.map((cell) => cell?.value?.toString() ?? '').toList();
 
-    int idCol =
-        headers.indexWhere((h) => h.contains('学号') || h.contains('工号'));
+    int idCol = headers.indexWhere((h) => h.contains('学号') || h.contains('工号'));
     int nameCol = headers.indexWhere((h) => h == '姓名');
     int roleCol = headers.indexWhere((h) => h == '角色');
     int classCol = headers.indexWhere((h) => h.contains('班级'));
-    int teacherCol = headers.indexWhere((h) => h.contains('教师') || h.contains('任课'));
-    int repoCol = headers.indexWhere((h) =>
-        h.contains('仓库') || h.contains('Gitee') || h.contains('gitee'));
+    int teacherCol =
+        headers.indexWhere((h) => h.contains('教师') || h.contains('任课'));
+    int repoCol = headers.indexWhere(
+        (h) => h.contains('仓库') || h.contains('Gitee') || h.contains('gitee'));
 
     if (idCol < 0 || nameCol < 0) {
       return {'success': false, 'message': '表头格式不匹配，需包含「学号」和「姓名」列'};
@@ -59,9 +60,7 @@ Future<Map<String, dynamic>> importStudentsFromFile(String filePath) async {
     if (classCol < 0) {
       final baseName = p.basenameWithoutExtension(filePath);
       // 尝试从文件名中提取班级名（去掉"学生名单"等后缀）
-      final cleaned = baseName
-          .replaceAll(RegExp(r'学生名单|名单|学生|_|-'), '')
-          .trim();
+      final cleaned = baseName.replaceAll(RegExp(r'学生名单|名单|学生|_|-'), '').trim();
       if (cleaned.isNotEmpty) {
         defaultClassName = cleaned;
       }
@@ -80,7 +79,8 @@ Future<Map<String, dynamic>> importStudentsFromFile(String filePath) async {
         if (teacherName != null && teacherName.isNotEmpty) {
           final classId = classCache[className]!;
           final cls = await classDao.getClass(classId);
-          if (cls != null && (cls['teacher_name'] == null || cls['teacher_name'] == '')) {
+          if (cls != null &&
+              (cls['teacher_name'] == null || cls['teacher_name'] == '')) {
             await classDao.updateClass(classId, {'teacher_name': teacherName});
           }
         }
@@ -143,8 +143,8 @@ Future<Map<String, dynamic>> importStudentsFromFile(String filePath) async {
       }
 
       // 检查用户是否已存在
-      final existing = await db.query('users',
-          where: 'user_id = ?', whereArgs: [userId]);
+      final existing =
+          await db.query('users', where: 'user_id = ?', whereArgs: [userId]);
       if (existing.isNotEmpty) {
         // 更新已有用户的姓名和仓库地址
         final updateData = <String, dynamic>{};
@@ -157,8 +157,8 @@ Future<Map<String, dynamic>> importStudentsFromFile(String filePath) async {
 
         // 仍然需要绑定班级
         if (className != null && role == 'student') {
-          final classId = await getOrCreateClass(className,
-              teacherName: teacherName);
+          final classId =
+              await getOrCreateClass(className, teacherName: teacherName);
           if (classId != null) {
             await classDao.addMember(classId, userId);
           }
@@ -225,13 +225,14 @@ Future<Map<String, dynamic>> uploadResourceFiles(
     List<PlatformFile> files, String fileType) async {
   try {
     final docDir = await getApplicationDocumentsDirectory();
-    final resourceDir =
-        Directory(p.join(docDir.path, 'resources', fileType));
+    final resourceDir = Directory(p.join(docDir.path, 'resources', fileType));
     if (!await resourceDir.exists()) {
       await resourceDir.create(recursive: true);
     }
 
     final db = await DatabaseHelper.instance.database;
+    final courseContext = CourseContextService();
+    final courseId = await courseContext.activeCourseId();
     int addedCount = 0;
 
     for (final file in files) {
@@ -248,18 +249,19 @@ Future<Map<String, dynamic>> uploadResourceFiles(
 
       // 检查是否已存在同名记录
       final existing = await db.query('resource_files',
-          where: 'file_name = ? AND file_type = ?',
-          whereArgs: [fileName, fileType]);
+          where: 'course_id = ? AND file_name = ? AND file_type = ?',
+          whereArgs: [courseId, fileName, fileType]);
 
       if (existing.isNotEmpty) {
         await db.update(
           'resource_files',
           {'file_path': destPath},
-          where: 'file_name = ? AND file_type = ?',
-          whereArgs: [fileName, fileType],
+          where: 'course_id = ? AND file_name = ? AND file_type = ?',
+          whereArgs: [courseId, fileName, fileType],
         );
       } else {
         await db.insert('resource_files', {
+          'course_id': courseId,
           'file_name': fileName,
           'file_path': destPath,
           'file_type': fileType,

@@ -1,5 +1,6 @@
 class LearningPathModel {
   final int? id;
+  final String? courseId;
   final String userId;
   final String title;
   final String? description;
@@ -11,6 +12,7 @@ class LearningPathModel {
 
   LearningPathModel({
     this.id,
+    this.courseId,
     required this.userId,
     required this.title,
     this.description,
@@ -24,6 +26,7 @@ class LearningPathModel {
   factory LearningPathModel.fromMap(Map<String, dynamic> map) {
     return LearningPathModel(
       id: map['id'],
+      courseId: map['course_id'] as String?,
       userId: map['user_id'] ?? '',
       title: map['title'] ?? '',
       description: map['description'],
@@ -41,6 +44,7 @@ class LearningPathModel {
   Map<String, dynamic> toMap() {
     return {
       if (id != null) 'id': id,
+      if (courseId != null) 'course_id': courseId,
       'user_id': userId,
       'title': title,
       'description': description,
@@ -56,6 +60,7 @@ class LearningPathModel {
 
   LearningPathModel copyWith({
     int? id,
+    String? courseId,
     String? userId,
     String? title,
     String? description,
@@ -67,6 +72,7 @@ class LearningPathModel {
   }) {
     return LearningPathModel(
       id: id ?? this.id,
+      courseId: courseId ?? this.courseId,
       userId: userId ?? this.userId,
       title: title ?? this.title,
       description: description ?? this.description,

@@ -3,15 +3,22 @@ import 'package:sqflite/sqflite.dart';
 import '../models/graph_model.dart';
 import '../models/node_model.dart';
 import '../models/edge_model.dart';
+import '../../services/course_context_service.dart';
 import 'database_helper.dart';
 
 class GraphDao {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+  final CourseContextService _courseContext = CourseContextService();
 
   Future<List<GraphModel>> getAllGraphs() async {
     final db = await _dbHelper.database;
     debugPrint('=== GraphDao: Querying graphs...');
-    final maps = await db.query('graphs');
+    final scope = await _courseContext.scopedWhere();
+    final maps = await db.query(
+      'graphs',
+      where: scope.where,
+      whereArgs: scope.args,
+    );
     debugPrint('=== GraphDao: Got ${maps.length} maps');
     if (maps.isNotEmpty) {
       debugPrint('=== GraphDao: First record: ${maps.first}');
@@ -86,14 +93,15 @@ class GraphDao {
   }
 
   /// 批量获取多个图谱的统计数据
-  Future<Map<String, Map<String, int>>> getGraphStats(List<String> graphIds) async {
+  Future<Map<String, Map<String, int>>> getGraphStats(
+      List<String> graphIds) async {
     final db = await _dbHelper.database;
     final stats = <String, Map<String, int>>{};
     for (final gid in graphIds) {
       final nodeResult = await db.rawQuery(
-        'SELECT COUNT(*) as c FROM nodes WHERE graph_id = ?', [gid]);
+          'SELECT COUNT(*) as c FROM nodes WHERE graph_id = ?', [gid]);
       final edgeResult = await db.rawQuery(
-        'SELECT COUNT(*) as c FROM edges WHERE graph_id = ?', [gid]);
+          'SELECT COUNT(*) as c FROM edges WHERE graph_id = ?', [gid]);
       stats[gid] = {
         'nodes': (nodeResult.first['c'] as int?) ?? 0,
         'edges': (edgeResult.first['c'] as int?) ?? 0,
@@ -115,7 +123,9 @@ class GraphDao {
   /// 创建新图谱，返回插入行 ID
   Future<int> createGraph(GraphModel graph) async {
     final db = await _dbHelper.database;
-    return await db.insert('graphs', graph.toMap(),
+    final row = graph.toMap();
+    row['course_id'] ??= await _courseContext.activeCourseId();
+    return await db.insert('graphs', row,
         conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
@@ -147,8 +157,8 @@ class GraphDao {
   /// 更新节点
   Future<void> updateNode(NodeModel node) async {
     final db = await _dbHelper.database;
-    await db.update('nodes', node.toMap(),
-        where: 'id = ?', whereArgs: [node.id]);
+    await db
+        .update('nodes', node.toMap(), where: 'id = ?', whereArgs: [node.id]);
   }
 
   /// 删除节点
@@ -180,8 +190,8 @@ class GraphDao {
   /// 更新边
   Future<void> updateEdge(EdgeModel edge) async {
     final db = await _dbHelper.database;
-    await db.update('edges', edge.toMap(),
-        where: 'id = ?', whereArgs: [edge.id]);
+    await db
+        .update('edges', edge.toMap(), where: 'id = ?', whereArgs: [edge.id]);
   }
 
   /// 删除边

@@ -4,6 +4,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import '../data/local/material_dao.dart';
 import '../data/models/material_model.dart';
+import 'course_context_service.dart';
 import 'ai_service.dart';
 
 // 条件导入
@@ -12,6 +13,7 @@ import 'slide_generator_service_stub.dart'
 
 class SlideGeneratorService {
   final MaterialDao _materialDao = MaterialDao();
+  final CourseContextService _courseContext = CourseContextService();
 
   // ── 从 AI 生成内容并保存为 PDF ──────────────────────────────────────────
   Future<MaterialModel?> generateFromAI({
@@ -20,10 +22,12 @@ class SlideGeneratorService {
     String? chapter,
     int slideCount = 8,
   }) async {
+    final courseName = await _courseContext.activeCourseName();
     final slides = await aiService.generateSlides(
       topic,
       chapter: chapter,
       slideCount: slideCount,
+      courseName: courseName,
     );
     return generatePdf(
       title: topic,
@@ -45,8 +49,7 @@ class SlideGeneratorService {
       // 尝试加载中文字体（优先微软雅黑，回退 NotoSansSC）
       pw.Font? font;
       try {
-        final fontData =
-            await rootBundle.load('assets/fonts/msyh.ttc');
+        final fontData = await rootBundle.load('assets/fonts/msyh.ttc');
         font = pw.Font.ttf(fontData);
       } catch (_) {
         try {
@@ -94,6 +97,7 @@ class SlideGeneratorService {
 
       final material = MaterialModel(
         title: '$title - 课件',
+        courseId: await _courseContext.activeCourseId(),
         type: 'pdf',
         filePath: filePath,
         chapter: chapter,
@@ -105,6 +109,7 @@ class SlideGeneratorService {
       return MaterialModel(
         id: id,
         title: material.title,
+        courseId: material.courseId,
         type: material.type,
         filePath: material.filePath,
         chapter: material.chapter,
@@ -125,6 +130,7 @@ class SlideGeneratorService {
     try {
       final material = MaterialModel(
         title: '$title - 讲解脚本',
+        courseId: await _courseContext.activeCourseId(),
         type: 'script',
         content: script,
         chapter: chapter,
@@ -134,6 +140,7 @@ class SlideGeneratorService {
       return MaterialModel(
         id: id,
         title: material.title,
+        courseId: material.courseId,
         type: material.type,
         content: material.content,
         chapter: material.chapter,
@@ -188,7 +195,7 @@ class SlideGeneratorService {
             ],
             pw.SizedBox(height: 32),
             pw.Text(
-              '移动应用开发知识图谱教学系统',
+              '课程知识图谱与数字孪生平台',
               style: pw.TextStyle(
                 font: font,
                 fontSize: 14,
@@ -285,8 +292,7 @@ class SlideGeneratorService {
               padding: const pw.EdgeInsets.all(8),
               decoration: pw.BoxDecoration(
                 color: PdfColor.fromInt(0xFFF5F7FA),
-                borderRadius:
-                    const pw.BorderRadius.all(pw.Radius.circular(4)),
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
               ),
               child: pw.Text(
                 '备注：${slide['notes']}',

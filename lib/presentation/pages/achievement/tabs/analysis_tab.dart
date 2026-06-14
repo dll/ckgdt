@@ -9,6 +9,7 @@ import '../../../../data/local/achievement_dao.dart';
 import '../../../../data/local/survey_dao.dart';
 import '../../../../data/local/notification_dao.dart';
 import '../../../../services/auth_service.dart';
+import '../../../../services/course_context_service.dart';
 import '../../../../services/output_path_service.dart';
 import '../../../../core/error_handler.dart';
 import '../achievement_shared.dart';
@@ -38,7 +39,8 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
   double _weightedAchievement = 0;
   Map<String, dynamic>? _surveySummary;
   bool _creatingSurvey = false;
-  String _currentCourseName = '移动应用开发';
+  final CourseContextService _courseContext = CourseContextService();
+  String _currentCourseName = '课程';
   AchievementConfig _config = AchievementConfig.defaults;
   List<Map<String, double>> _envWeightsByObjective = const [
     {'pingshi': 0.2, 'experiment': 0.3, 'exam': 0.5},
@@ -88,14 +90,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
         surveyId: surveyId,
         question: '您认为课程中哪些内容最有用？（可多选）',
         questionType: 'multiple_choice',
-        options: [
-          'Flutter开发',
-          'Android原生',
-          'React Native',
-          '小程序开发',
-          'HarmonyOS',
-          '综合实践'
-        ],
+        options: _surveyContentOptions(),
         seq: 2,
       );
       await surveyDao.addQuestion(
@@ -145,6 +140,18 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
   final Map<String, GlobalKey> _chartKeys = {};
   GlobalKey _chartKey(String id) =>
       _chartKeys.putIfAbsent(id, () => GlobalKey());
+
+  List<String> _surveyContentOptions() {
+    final fromObjectives = [
+      for (final desc in _config.descriptions)
+        if (desc.trim().isNotEmpty)
+          desc.trim().length > 18
+              ? '${desc.trim().substring(0, 18)}…'
+              : desc.trim(),
+    ];
+    if (fromObjectives.isNotEmpty) return fromObjectives.take(6).toList();
+    return const ['课程理论', '课堂案例', '实践训练', '项目任务', '测验反馈', '综合复习'];
+  }
 
   List<int> get _activeObjectiveIndexes {
     final indexes = [
@@ -216,9 +223,13 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
           if (_batches.isNotEmpty && _selectedBatchId == null) {
             _selectedBatchId = _batches.first['id'] as int;
             _currentCourseName =
-                _batches.first['course_name']?.toString() ?? '移动应用开发';
+                _batches.first['course_name']?.toString() ?? '课程';
           }
         });
+        if (_batches.isEmpty) {
+          final activeName = await _courseContext.activeCourseName();
+          if (mounted) setState(() => _currentCourseName = activeName);
+        }
         if (_selectedBatchId != null) _loadScoresAndCalc();
       }
     } catch (e, st) {
@@ -339,7 +350,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
             if (v != null) {
               final batch =
                   _batches.firstWhere((b) => b['id'] == v, orElse: () => {});
-              _currentCourseName = batch['course_name']?.toString() ?? '移动应用开发';
+              _currentCourseName = batch['course_name']?.toString() ?? '课程';
             }
           });
           _loadScoresAndCalc();
@@ -387,7 +398,8 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                               padding: const EdgeInsets.symmetric(
                                   vertical: 2, horizontal: 6),
                               decoration: BoxDecoration(
-                                  color: kObjectiveColors[i].withValues(alpha: 0.1),
+                                  color: kObjectiveColors[i]
+                                      .withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(6)),
                               child: Column(children: [
                                 Text(o['id'] as String,
@@ -457,11 +469,12 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
               Container(
                   decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey.withValues(alpha: 0.2))),
+                      border: Border.all(
+                          color: Colors.grey.withValues(alpha: 0.2))),
                   child: Table(
                       border: TableBorder.symmetric(
-                          inside:
-                              BorderSide(color: Colors.grey.withValues(alpha: 0.15))),
+                          inside: BorderSide(
+                              color: Colors.grey.withValues(alpha: 0.15))),
                       columnWidths: const {
                         0: FlexColumnWidth(2),
                         1: FlexColumnWidth(1.5),
@@ -549,7 +562,8 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                   decoration: BoxDecoration(
                       color: Colors.blue.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.blue.withValues(alpha: 0.15))),
+                      border: Border.all(
+                          color: Colors.blue.withValues(alpha: 0.15))),
                   child: Row(children: [
                     const Icon(Icons.info_outline,
                         size: 16, color: Colors.blue),
@@ -636,7 +650,8 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                             child: Container(
                                 height: 22,
                                 decoration: BoxDecoration(
-                                    color: kObjectiveColors[i].withValues(alpha: 0.7),
+                                    color: kObjectiveColors[i]
+                                        .withValues(alpha: 0.7),
                                     borderRadius: BorderRadius.circular(4)))),
                       ])),
                       const SizedBox(width: 8),
@@ -1094,7 +1109,8 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
           if ((v - mean).abs() < 0.05) {
             return FlLine(color: color, strokeWidth: 1.5);
           }
-          return FlLine(color: Colors.grey.withValues(alpha: 0.15), strokeWidth: 0.5);
+          return FlLine(
+              color: Colors.grey.withValues(alpha: 0.15), strokeWidth: 0.5);
         },
       ),
       titlesData: const FlTitlesData(
@@ -1106,7 +1122,8 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
         rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
       ),
       borderData: FlBorderData(
-          show: true, border: Border.all(color: Colors.grey.withValues(alpha: 0.3))),
+          show: true,
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.3))),
     );
   }
 
@@ -1253,7 +1270,8 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                 decoration: BoxDecoration(
                   color: Colors.orange.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
+                  border:
+                      Border.all(color: Colors.orange.withValues(alpha: 0.2)),
                 ),
                 child: const Row(children: [
                   Icon(Icons.info_outline, color: Colors.orange, size: 18),
@@ -1318,8 +1336,8 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color:
-                          achievementLevelColor(overallSat).withValues(alpha: 0.08),
+                      color: achievementLevelColor(overallSat)
+                          .withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Column(children: [
@@ -2090,8 +2108,8 @@ class _ContinuousImprovementTabState extends State<ContinuousImprovementTab> {
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color:
-                          achievementLevelColor(overallSat).withValues(alpha: 0.08),
+                      color: achievementLevelColor(overallSat)
+                          .withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Column(children: [

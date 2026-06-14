@@ -1,9 +1,10 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../data/local/wrong_answer_dao.dart';
 import '../../../data/local/quiz_dao.dart';
 import '../../../data/local/learning_record_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/ai_service.dart';
+import '../../../services/course_context_service.dart';
 import '../../widgets/markdown_bubble.dart';
 import '../../widgets/back_button_bar.dart';
 
@@ -23,6 +24,7 @@ class _WeaknessDiagnosisPageState extends State<WeaknessDiagnosisPage> {
   final _learningRecordDao = LearningRecordDao();
   final _authService = AuthService();
   final _aiService = AiService();
+  final _courseContext = CourseContextService();
 
   bool _isLoading = true;
   bool _isDiagnosing = false;
@@ -86,10 +88,12 @@ class _WeaknessDiagnosisPageState extends State<WeaknessDiagnosisPage> {
       // ── 按章节统计测验数据 ──────────────────────────────────────────
       final chapterQuizMap = <String, _ChapterQuizStats>{};
       for (final r in quizResults) {
-        final map = r is Map<String, dynamic> ? r : (r as dynamic).toMap() as Map<String, dynamic>;
+        final map = r is Map<String, dynamic>
+            ? r
+            : (r as dynamic).toMap() as Map<String, dynamic>;
         final chapter = (map['chapter'] as String?) ?? '综合测验';
-        final stats = chapterQuizMap.putIfAbsent(
-            chapter, () => _ChapterQuizStats());
+        final stats =
+            chapterQuizMap.putIfAbsent(chapter, () => _ChapterQuizStats());
         stats.totalCorrect += (map['num_correct'] as int?) ?? 0;
         stats.totalQuestions += (map['num_total'] as int?) ?? 0;
         stats.attempts += 1;
@@ -133,12 +137,10 @@ class _WeaknessDiagnosisPageState extends State<WeaknessDiagnosisPage> {
       final worstChapter = analyses.isNotEmpty ? analyses.first.chapter : '—';
       final totalQuestions =
           (quizSummary['total_questions'] as num?)?.toInt() ?? 0;
-      final totalCorrect =
-          (quizSummary['total_correct'] as num?)?.toInt() ?? 0;
+      final totalCorrect = (quizSummary['total_correct'] as num?)?.toInt() ?? 0;
       final mastery =
           totalQuestions > 0 ? (totalCorrect / totalQuestions) * 100 : 100.0;
-      final attempts =
-          (quizSummary['total_count'] as num?)?.toInt() ?? 0;
+      final attempts = (quizSummary['total_count'] as num?)?.toInt() ?? 0;
 
       if (!mounted) return;
       setState(() {
@@ -203,8 +205,7 @@ class _WeaknessDiagnosisPageState extends State<WeaknessDiagnosisPage> {
     // 构建数据摘要发送给 AI
     final wrongSummary = StringBuffer();
     for (final analysis in _chapterAnalyses) {
-      wrongSummary.writeln(
-          '- ${analysis.chapter}：${analysis.wrongCount} 道错题，'
+      wrongSummary.writeln('- ${analysis.chapter}：${analysis.wrongCount} 道错题，'
           '错误率 ${(analysis.errorRate * 100).toStringAsFixed(1)}%');
       for (final m in analysis.topMistakes) {
         final q = m['question'] ?? '';
@@ -242,11 +243,12 @@ $wrongSummary
 请用中文回答，条理清晰，使用编号列表。
 ''';
 
+    final courseName = await _courseContext.activeCourseName(fallback: '课程');
     return await _aiService.chatWithMeta(
       [
         {'role': 'user', 'content': dataPrompt},
       ],
-      systemPrompt: '你是一位经验丰富的移动应用开发课程教师，擅长分析学生的学习数据，'
+      systemPrompt: '你是一位经验丰富的$courseName课程教师，擅长分析学生的学习数据，'
           '找出知识薄弱环节并提供有针对性的学习建议。请根据数据给出专业分析。',
     );
   }
@@ -272,8 +274,7 @@ $wrongSummary
           : a.errorRate > 0.3
               ? '中等'
               : '轻微';
-      buffer.writeln(
-          '${i + 1}. ${a.chapter}（$severity）'
+      buffer.writeln('${i + 1}. ${a.chapter}（$severity）'
           '— 错题 ${a.wrongCount} 道，'
           '错误率 ${(a.errorRate * 100).toStringAsFixed(1)}%');
     }
@@ -284,8 +285,8 @@ $wrongSummary
     for (final a in _chapterAnalyses) {
       allMistakes.addAll(a.topMistakes);
     }
-    allMistakes
-        .sort((a, b) => ((b['times'] as int?) ?? 1).compareTo((a['times'] as int?) ?? 1));
+    allMistakes.sort((a, b) =>
+        ((b['times'] as int?) ?? 1).compareTo((a['times'] as int?) ?? 1));
     final topRepeated = allMistakes.take(5);
     if (topRepeated.isEmpty) {
       buffer.writeln('暂无重复错题数据。');
@@ -890,7 +891,6 @@ $wrongSummary
       ],
     );
   }
-
 }
 
 // ══════════════════════════════════════════════════════════════════════════

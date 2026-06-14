@@ -1,5 +1,6 @@
 class QuestionModel {
   final int? id;
+  final String? courseId;
   final String? source;
   final String question;
   final String optionA;
@@ -10,6 +11,7 @@ class QuestionModel {
 
   QuestionModel({
     this.id,
+    this.courseId,
     this.source,
     required this.question,
     required this.optionA,
@@ -22,6 +24,7 @@ class QuestionModel {
   factory QuestionModel.fromMap(Map<String, dynamic> map) {
     return QuestionModel(
       id: map['id'],
+      courseId: map['course_id'],
       source: map['source'],
       question: map['question'] ?? '',
       optionA: map['option_a'] ?? '',
@@ -34,6 +37,7 @@ class QuestionModel {
 
   Map<String, dynamic> toMap() {
     return {
+      if (courseId != null) 'course_id': courseId,
       'source': source,
       'question': question,
       'option_a': optionA,

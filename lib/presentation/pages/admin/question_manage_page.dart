@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../data/local/quiz_dao.dart';
 import '../../../data/models/question_model.dart';
 import '../../../services/auth_service.dart';
@@ -96,8 +96,8 @@ class _QuestionManagePageState extends State<QuestionManagePage> {
 
     final primary = Theme.of(context).colorScheme.primary;
     final filtered = _filteredQuestions;
-    final totalCount =
-        _chapterStats.fold<int>(0, (sum, s) => sum + ((s['count'] as int?) ?? 0));
+    final totalCount = _chapterStats.fold<int>(
+        0, (sum, s) => sum + ((s['count'] as int?) ?? 0));
 
     return Scaffold(
       appBar: AppBar(
@@ -134,10 +134,7 @@ class _QuestionManagePageState extends State<QuestionManagePage> {
                 _statChip(
                     '章节数', '${_chapters.length}', Icons.book, Colors.teal),
                 const SizedBox(width: 10),
-                _statChip(
-                    '当前筛选',
-                    '${filtered.length}',
-                    Icons.filter_list,
+                _statChip('当前筛选', '${filtered.length}', Icons.filter_list,
                     Colors.orange),
               ],
             ),
@@ -175,8 +172,7 @@ class _QuestionManagePageState extends State<QuestionManagePage> {
                 // 获取该章节题目数
                 int chapterCount = totalCount;
                 if (label != '全部') {
-                  final stat = _chapterStats.where(
-                      (s) => s['source'] == label);
+                  final stat = _chapterStats.where((s) => s['source'] == label);
                   chapterCount = stat.isNotEmpty
                       ? ((stat.first['count'] as int?) ?? 0)
                       : 0;
@@ -273,8 +269,7 @@ class _QuestionManagePageState extends State<QuestionManagePage> {
   // 题目卡片
   // ─────────────────────────────────────────────────────────────────────────
 
-  Widget _buildQuestionCard(
-      BuildContext context, QuestionModel q, int index) {
+  Widget _buildQuestionCard(BuildContext context, QuestionModel q, int index) {
     final optionLabels = ['A', 'B', 'C', 'D'];
     final correctLabel = optionLabels[q.answerIndex];
 
@@ -352,27 +347,27 @@ class _QuestionManagePageState extends State<QuestionManagePage> {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: Colors.teal.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(q.source ?? '未分类',
-                        style: const TextStyle(
-                            fontSize: 11, color: Colors.teal)),
+                        style:
+                            const TextStyle(fontSize: 11, color: Colors.teal)),
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: Colors.green.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text('正确答案: $correctLabel',
-                        style: const TextStyle(
-                            fontSize: 11, color: Colors.green)),
+                        style:
+                            const TextStyle(fontSize: 11, color: Colors.green)),
                   ),
                 ],
               ),
@@ -417,8 +412,7 @@ class _QuestionManagePageState extends State<QuestionManagePage> {
             const SizedBox(height: 16),
             // 章节
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: Colors.teal.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
@@ -432,8 +426,8 @@ class _QuestionManagePageState extends State<QuestionManagePage> {
             const SizedBox(height: 12),
             // 题目
             Text(q.question,
-                style: const TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.w600)),
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             const SizedBox(height: 16),
             // 选项
             ...List.generate(4, (i) {
@@ -471,8 +465,7 @@ class _QuestionManagePageState extends State<QuestionManagePage> {
                       child: Text(q.options[i],
                           style: TextStyle(
                               fontSize: 14,
-                              color:
-                                  isCorrect ? Colors.green[800] : null)),
+                              color: isCorrect ? Colors.green[800] : null)),
                     ),
                     if (isCorrect)
                       const Icon(Icons.check_circle,
@@ -537,8 +530,7 @@ class _QuestionManagePageState extends State<QuestionManagePage> {
     final optBCtrl = TextEditingController(text: existing?.optionB ?? '');
     final optCCtrl = TextEditingController(text: existing?.optionC ?? '');
     final optDCtrl = TextEditingController(text: existing?.optionD ?? '');
-    final sourceCtrl =
-        TextEditingController(text: existing?.source ?? '');
+    final sourceCtrl = TextEditingController(text: existing?.source ?? '');
     int selectedAnswer = existing?.answerIndex ?? 0;
 
     showDialog(
@@ -557,7 +549,7 @@ class _QuestionManagePageState extends State<QuestionManagePage> {
                     controller: sourceCtrl,
                     decoration: InputDecoration(
                       labelText: '所属章节 *',
-                      hintText: '如: 第1章-移动应用开发技术体系全景',
+                      hintText: '如: 第1章-课程导论与知识体系',
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10)),
                       contentPadding: const EdgeInsets.symmetric(
@@ -643,8 +635,7 @@ class _QuestionManagePageState extends State<QuestionManagePage> {
                       const DropdownMenuItem(value: 2, child: Text('C')),
                       const DropdownMenuItem(value: 3, child: Text('D')),
                     ],
-                    onChanged: (v) =>
-                        setDialogState(() => selectedAnswer = v!),
+                    onChanged: (v) => setDialogState(() => selectedAnswer = v!),
                   ),
                 ],
               ),
@@ -721,7 +712,8 @@ class _QuestionManagePageState extends State<QuestionManagePage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('确认删除'),
-        content: Text('确定要删除题目"${q.question.length > 30 ? '${q.question.substring(0, 30)}...' : q.question}"吗？'),
+        content: Text(
+            '确定要删除题目"${q.question.length > 30 ? '${q.question.substring(0, 30)}...' : q.question}"吗？'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -792,9 +784,7 @@ class _QuestionManagePageState extends State<QuestionManagePage> {
             const SizedBox(height: 16),
             Text('题库章节统计',
                 style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: primary)),
+                    fontSize: 18, fontWeight: FontWeight.bold, color: primary)),
             const SizedBox(height: 4),
             Text('共 $totalCount 道题目，覆盖 ${_chapterStats.length} 个章节',
                 style: TextStyle(fontSize: 13, color: Colors.grey[600])),

@@ -1,7 +1,9 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../data/local/graph_dao.dart';
 import '../../../data/models/graph_model.dart';
+import '../../../services/course_context_service.dart';
 import 'graph_detail_page.dart';
+
 /// 图谱列表页 — 层级树形展示
 /// 根节点: "移动应用开发图谱" (graph_main_overview)
 /// 子节点: 6 个分类图谱 (graph_detail_XX-...)
@@ -18,6 +20,7 @@ class GraphListPage extends StatefulWidget {
 class _GraphListPageState extends State<GraphListPage>
     with SingleTickerProviderStateMixin {
   final GraphDao _graphDao = GraphDao();
+  final CourseContextService _courseContext = CourseContextService();
 
   bool _isLoading = true;
   GraphModel? _mainGraph; // 总图谱
@@ -29,6 +32,7 @@ class _GraphListPageState extends State<GraphListPage>
   // 总统计
   int _totalNodes = 0;
   int _totalEdges = 0;
+  String _courseName = '课程';
 
   // 分类颜色映射
   static const _categoryColors = <String, Color>{
@@ -60,11 +64,12 @@ class _GraphListPageState extends State<GraphListPage>
     setState(() => _isLoading = true);
     try {
       final allGraphs = await _graphDao.getAllGraphs();
+      _courseName = await _courseContext.activeCourseName();
 
       // 分离总图谱和分类图谱
-      _mainGraph = allGraphs
-          .where((g) => g.id == 'graph_main_overview')
-          .firstOrNull;
+      _mainGraph =
+          allGraphs.where((g) => g.id == 'graph_main_overview').firstOrNull;
+      _mainGraph ??= allGraphs.isNotEmpty ? allGraphs.first : null;
       _categoryGraphs = allGraphs
           .where((g) =>
               g.id.startsWith('graph_detail_') && g.graphType == 'md_import')
@@ -147,8 +152,7 @@ class _GraphListPageState extends State<GraphListPage>
             const Text('暂无图谱数据',
                 style: TextStyle(fontSize: 16, color: Colors.grey)),
             const SizedBox(height: 16),
-            ElevatedButton(
-                onPressed: _loadData, child: const Text('刷新')),
+            ElevatedButton(onPressed: _loadData, child: const Text('刷新')),
           ],
         ),
       );
@@ -184,7 +188,19 @@ class _GraphListPageState extends State<GraphListPage>
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () {
-          setState(() => _isExpanded = !_isExpanded);
+          if (_categoryGraphs.isEmpty && _mainGraph != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => GraphDetailPage(
+                  graphId: _mainGraph!.id,
+                  graphTitle: _mainGraph!.title,
+                ),
+              ),
+            );
+          } else {
+            setState(() => _isExpanded = !_isExpanded);
+          }
         },
         child: Container(
           decoration: BoxDecoration(
@@ -216,8 +232,10 @@ class _GraphListPageState extends State<GraphListPage>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          '移动应用开发图谱',
+                        Text(
+                          _mainGraph?.title.isNotEmpty == true
+                              ? _mainGraph!.title
+                              : '$_courseName图谱',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 20,
@@ -226,7 +244,9 @@ class _GraphListPageState extends State<GraphListPage>
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '6大分类 · ${_categoryGraphs.length}个子图谱',
+                          _categoryGraphs.isEmpty
+                              ? '${mainStats['nodes'] ?? 0}个节点 · ${mainStats['edges'] ?? 0}条关系'
+                              : '${_categoryGraphs.length}个子图谱 · $_totalNodes个节点',
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.8),
                             fontSize: 13,
@@ -261,11 +281,11 @@ class _GraphListPageState extends State<GraphListPage>
                   const SizedBox(width: 10),
                   _miniStatCard(Icons.timeline, '总关系', '$_totalEdges'),
                   const SizedBox(width: 10),
-                  _miniStatCard(Icons.category, '子图谱',
-                      '${_categoryGraphs.length}'),
+                  _miniStatCard(
+                      Icons.category, '子图谱', '${_categoryGraphs.length}'),
                   const SizedBox(width: 10),
-                  _miniStatCard(Icons.account_tree, '总图谱',
-                      '${mainStats['nodes']}节点'),
+                  _miniStatCard(
+                      Icons.account_tree, '总图谱', '${mainStats['nodes']}节点'),
                 ],
               ),
               const SizedBox(height: 12),
@@ -315,8 +335,7 @@ class _GraphListPageState extends State<GraphListPage>
                     fontWeight: FontWeight.bold)),
             Text(label,
                 style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.7),
-                    fontSize: 10)),
+                    color: Colors.white.withValues(alpha: 0.7), fontSize: 10)),
           ],
         ),
       ),
@@ -422,17 +441,14 @@ class _GraphListPageState extends State<GraphListPage>
                           children: [
                             Text(shortName,
                                 style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600)),
+                                    fontSize: 15, fontWeight: FontWeight.w600)),
                             const SizedBox(height: 4),
                             Row(
                               children: [
-                                _statBadge(
-                                    Icons.circle, '$nodeCount', color),
+                                _statBadge(Icons.circle, '$nodeCount', color),
                                 const SizedBox(width: 8),
                                 _statBadge(
-                                    Icons.timeline, '$edgeCount',
-                                    Colors.grey),
+                                    Icons.timeline, '$edgeCount', Colors.grey),
                               ],
                             ),
                           ],
@@ -465,8 +481,8 @@ class _GraphListPageState extends State<GraphListPage>
           Icon(icon, size: 10, color: color),
           const SizedBox(width: 3),
           Text(text,
-              style: TextStyle(fontSize: 11, color: color,
-                  fontWeight: FontWeight.w500)),
+              style: TextStyle(
+                  fontSize: 11, color: color, fontWeight: FontWeight.w500)),
         ],
       ),
     );

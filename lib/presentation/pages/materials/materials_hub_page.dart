@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../core/constants/chapter_sorter.dart';
 import '../../../data/local/database_helper.dart';
@@ -7,6 +7,7 @@ import '../../../data/models/material_model.dart';
 import '../../../data/models/puml_file_model.dart';
 import '../../../services/file_opener_service.dart';
 import '../../../services/material_service.dart';
+import '../../../services/course_context_service.dart';
 import 'ai_assist_page.dart';
 import 'ai_settings_page.dart';
 import 'puml_manager_page.dart';
@@ -36,6 +37,7 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
 
   final PumlDao _pumlDao = PumlDao();
   final MaterialService _materialService = MaterialService();
+  final CourseContextService _courseContext = CourseContextService();
 
   @override
   void initState() {
@@ -56,15 +58,23 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
   Future<void> _loadResourceFiles() async {
     try {
       final db = await DatabaseHelper.instance.database;
+      final pdfScope = await _courseContext.scopedWhere(
+        extraWhere: 'file_type = ?',
+        extraArgs: ['pdf'],
+      );
+      final pptScope = await _courseContext.scopedWhere(
+        extraWhere: 'file_type = ?',
+        extraArgs: ['ppt'],
+      );
       final pdfs = await db.query(
         'resource_files',
-        where: 'file_type = ?',
-        whereArgs: ['pdf'],
+        where: pdfScope.where,
+        whereArgs: pdfScope.args,
       );
       final ppts = await db.query(
         'resource_files',
-        where: 'file_type = ?',
-        whereArgs: ['ppt'],
+        where: pptScope.where,
+        whereArgs: pptScope.args,
       );
       if (!mounted) return;
       final sortedPdfs = List<Map<String, dynamic>>.from(pdfs);

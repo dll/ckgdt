@@ -1,5 +1,6 @@
 class QuizResultModel {
   final int? id;
+  final String? courseId;
   final String userId;
   final String? quizTimestamp;
   final int score;
@@ -11,6 +12,7 @@ class QuizResultModel {
 
   QuizResultModel({
     this.id,
+    this.courseId,
     required this.userId,
     this.quizTimestamp,
     required this.score,
@@ -24,6 +26,7 @@ class QuizResultModel {
   factory QuizResultModel.fromMap(Map<String, dynamic> map) {
     return QuizResultModel(
       id: map['id'],
+      courseId: map['course_id'],
       userId: map['user_id'] ?? '',
       quizTimestamp: map['quiz_timestamp'],
       score: map['score'] ?? 0,
@@ -37,6 +40,7 @@ class QuizResultModel {
 
   Map<String, dynamic> toMap() {
     return {
+      if (courseId != null) 'course_id': courseId,
       'user_id': userId,
       'quiz_timestamp': quizTimestamp,
       'score': score,
