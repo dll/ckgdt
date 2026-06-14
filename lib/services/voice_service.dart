@@ -420,6 +420,8 @@ class VoiceService {
   /// `AudioRecorder.dispose()` 会与页面跳转/HomePage 构建并发，触发 record
   /// 包原生层崩溃（表现为整个应用闪退）。awaited 确保原生句柄先释放再跳转。
   Future<void> forceStop() async {
+    if (_cleaningUp) return;
+    _cleaningUp = true; // 占用清理锁，挡住 _cleanup 在 await 间隙重入造成二次释放
     _cleanupTimer?.cancel();
     _cleanupTimer = null;
     _isListening = false;

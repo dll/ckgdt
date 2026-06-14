@@ -207,13 +207,16 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
         widget.onSentence?.call(sentence);
         _restartListening();
       } else {
-        // 单句模式：dialog pop 返回这句
+        // 单句模式：先同步释放原生录音器，再 pop 返回这句。
+        // 必须在导航前 forceStop——dispose 里的 forceStop 是 fire-and-forget，
+        // 不能保证"跳转主页前句柄已释放"，会与 HomePage 构建并发触发 record 原生崩溃。
         setState(() {
           _recognizedText = sentence;
           _isListening = false;
         });
         _pulseController.stop();
-        Navigator.of(context).maybePop(sentence);
+        final navigator = Navigator.of(context);
+        _voiceService.forceStop().whenComplete(() => navigator.maybePop(sentence));
       }
     };
     _voiceService.onError = (error) {
