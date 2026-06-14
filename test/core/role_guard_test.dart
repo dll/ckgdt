@@ -135,6 +135,12 @@ void main() {
       );
       expect(RoleGuard.canAccessSubPage('student', 'class_token'), isFalse);
       expect(RoleGuard.canAccessSubPage('student', 'agent_calls'), isFalse);
+      expect(RoleGuard.canAccessSubPage('student', 'data_import'), isFalse);
+      expect(RoleGuard.canAccessSubPage('student', 'grade_entry'), isFalse);
+      expect(
+        RoleGuard.canAccessSubPage('student', 'notification_manage'),
+        isFalse,
+      );
     });
 
     test('teacher can access teacher sub pages but not admin-only pages', () {
@@ -143,10 +149,18 @@ void main() {
         RoleGuard.canAccessSubPage('teacher', 'teacher_workspace'),
         isTrue,
       );
+      expect(RoleGuard.canAccessSubPage('teacher', 'lab_manage'), isTrue);
+      expect(RoleGuard.canAccessSubPage('teacher', 'grade_entry'), isTrue);
+      expect(
+        RoleGuard.canAccessSubPage('teacher', 'notification_manage'),
+        isTrue,
+      );
       expect(
         RoleGuard.canAccessSubPage('teacher', 'teacher_application_manage'),
         isFalse,
       );
+      expect(RoleGuard.canAccessSubPage('teacher', 'repo_analytics'), isFalse);
+      expect(RoleGuard.canAccessSubPage('teacher', 'release_center'), isFalse);
     });
 
     test('admin can access admin-only sub pages', () {
@@ -155,6 +169,30 @@ void main() {
         isTrue,
       );
       expect(RoleGuard.canAccessSubPage('admin', 'student_manage'), isTrue);
+      expect(RoleGuard.canAccessSubPage('admin', 'teacher_manage'), isTrue);
+      expect(RoleGuard.canAccessSubPage('admin', 'class_manage'), isTrue);
+      expect(RoleGuard.canAccessSubPage('admin', 'repo_analytics'), isTrue);
+      expect(RoleGuard.canAccessSubPage('admin', 'release_center'), isTrue);
+    });
+
+    test('admin can access teaching management workflow sub pages', () {
+      const routes = [
+        'question_manage',
+        'data_import',
+        'data_export',
+        'survey_manage',
+        'teaching_manage',
+        'lab_manage',
+        'grade_entry',
+        'notification_manage',
+      ];
+      for (final route in routes) {
+        expect(
+          RoleGuard.canAccessSubPage('admin', route),
+          isTrue,
+          reason: 'admin should access $route',
+        );
+      }
     });
 
     test('public learning sub pages remain available to students', () {

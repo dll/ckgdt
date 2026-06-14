@@ -62,6 +62,8 @@ class RoleGuard {
     'student_manage',
     'teacher_manage',
     'class_manage',
+    'repo_analytics',
+    'release_center',
   };
 
   static const Set<String> _teacherOnlySubPages = {
@@ -73,6 +75,9 @@ class RoleGuard {
     'question_manage',
     'survey_manage',
     'teaching_manage',
+    'lab_manage',
+    'grade_entry',
+    'notification_manage',
     'teacher_workspace',
     'class_token',
     'agent_calls',
