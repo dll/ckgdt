@@ -39,6 +39,53 @@ class RoleGuard {
   static bool isTeacherOrAdmin(String role) =>
       role == 'admin' || role == 'teacher';
 
+  /// 子页面路由是否允许当前角色访问。
+  ///
+  /// 这里守住语音助手 / 智能体的 Navigator.push 入口，避免学生绕过底部导航
+  /// 直接进入教师评价、归档、统计或系统管理页面。
+  static bool canAccessSubPage(String role, String routeId) {
+    final route = routeId.toLowerCase();
+    if (_adminOnlySubPages.contains(route)) return role == 'admin';
+    if (_teacherOnlySubPages.contains(route)) return isTeacherOrAdmin(role);
+    return true;
+  }
+
+  /// 内层 Tab 总线 pageKey 是否允许当前角色访问。
+  static bool canAccessInnerPage(String role, String pageKey) {
+    final page = pageKey.toLowerCase();
+    if (_teacherOnlyInnerPages.contains(page)) return isTeacherOrAdmin(role);
+    return true;
+  }
+
+  static const Set<String> _adminOnlySubPages = {
+    'teacher_application_manage',
+    'student_manage',
+    'teacher_manage',
+    'class_manage',
+  };
+
+  static const Set<String> _teacherOnlySubPages = {
+    'archive',
+    'course_manage',
+    'data_export',
+    'data_import',
+    'feedback',
+    'question_manage',
+    'survey_manage',
+    'teaching_manage',
+    'teacher_workspace',
+    'class_token',
+    'agent_calls',
+  };
+
+  static const Set<String> _teacherOnlyInnerPages = {
+    'achievement',
+    'archive',
+    'classroom',
+    'teaching',
+    'evaluation',
+  };
+
   // ── UI 层路由守卫 ──────────────────────────────────────────────────
 
   /// 检查当前用户是否拥有指定角色，无权限时弹出提示并返回 false

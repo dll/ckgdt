@@ -126,6 +126,65 @@ void main() {
     });
   });
 
+  group('RoleGuard - canAccessSubPage', () {
+    test('student cannot access teacher archive or workspace pages', () {
+      expect(RoleGuard.canAccessSubPage('student', 'archive'), isFalse);
+      expect(
+        RoleGuard.canAccessSubPage('student', 'teacher_workspace'),
+        isFalse,
+      );
+      expect(RoleGuard.canAccessSubPage('student', 'class_token'), isFalse);
+      expect(RoleGuard.canAccessSubPage('student', 'agent_calls'), isFalse);
+    });
+
+    test('teacher can access teacher sub pages but not admin-only pages', () {
+      expect(RoleGuard.canAccessSubPage('teacher', 'archive'), isTrue);
+      expect(
+        RoleGuard.canAccessSubPage('teacher', 'teacher_workspace'),
+        isTrue,
+      );
+      expect(
+        RoleGuard.canAccessSubPage('teacher', 'teacher_application_manage'),
+        isFalse,
+      );
+    });
+
+    test('admin can access admin-only sub pages', () {
+      expect(
+        RoleGuard.canAccessSubPage('admin', 'teacher_application_manage'),
+        isTrue,
+      );
+      expect(RoleGuard.canAccessSubPage('admin', 'student_manage'), isTrue);
+    });
+
+    test('public learning sub pages remain available to students', () {
+      expect(RoleGuard.canAccessSubPage('student', 'quiz'), isTrue);
+      expect(RoleGuard.canAccessSubPage('student', 'video'), isTrue);
+      expect(RoleGuard.canAccessSubPage('student', 'student_token'), isTrue);
+    });
+  });
+
+  group('RoleGuard - canAccessInnerPage', () {
+    test('student cannot request teacher-only inner pages', () {
+      expect(RoleGuard.canAccessInnerPage('student', 'achievement'), isFalse);
+      expect(RoleGuard.canAccessInnerPage('student', 'archive'), isFalse);
+      expect(RoleGuard.canAccessInnerPage('student', 'evaluation'), isFalse);
+    });
+
+    test('student can request student workflow inner pages', () {
+      expect(RoleGuard.canAccessInnerPage('student', 'learning'), isTrue);
+      expect(RoleGuard.canAccessInnerPage('student', 'lab'), isTrue);
+      expect(RoleGuard.canAccessInnerPage('student', 'assessment'), isTrue);
+      expect(RoleGuard.canAccessInnerPage('student', 'works'), isTrue);
+    });
+
+    test('teacher can request teacher-only inner pages', () {
+      expect(RoleGuard.canAccessInnerPage('teacher', 'achievement'), isTrue);
+      expect(RoleGuard.canAccessInnerPage('teacher', 'archive'), isTrue);
+      expect(RoleGuard.canAccessInnerPage('teacher', 'evaluation'), isTrue);
+    });
+  });
+
   // ═══════════════════════════════════════════════════════════════════════════
   // 权限矩阵交叉验证
   // ═══════════════════════════════════════════════════════════════════════════
