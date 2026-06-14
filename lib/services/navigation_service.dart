@@ -32,8 +32,23 @@ import '../presentation/pages/skill/ai_skill_page.dart';
 import '../presentation/pages/feedback/feedback_manage_page.dart';
 import '../presentation/pages/settings/voice_settings_page.dart';
 import '../presentation/pages/settings/course_manage_page.dart';
+import '../presentation/pages/admin/class_manage_page.dart';
+import '../presentation/pages/admin/data_export_page.dart';
+import '../presentation/pages/admin/data_import_page.dart';
+import '../presentation/pages/admin/grade_entry_center_page.dart';
+import '../presentation/pages/admin/lab_task_manage_page.dart';
+import '../presentation/pages/admin/question_manage_page.dart';
+import '../presentation/pages/admin/release_center_page.dart';
+import '../presentation/pages/admin/repo_analytics_page.dart';
+import '../presentation/pages/admin/student_manage_page.dart';
+import '../presentation/pages/admin/survey_manage_page.dart';
+import '../presentation/pages/admin/teacher_manage_page.dart';
+import '../presentation/pages/admin/teaching_manage_page.dart';
 import '../presentation/pages/admin/teacher_application_page.dart';
 import '../presentation/pages/admin/teacher_application_manage_page.dart';
+import '../presentation/pages/notification/notification_manage_page.dart';
+import '../presentation/pages/repo/git_repo_page.dart';
+import '../presentation/pages/repo/student_repo_page.dart';
 import '../presentation/pages/hot/hot_videos_page.dart';
 import '../presentation/pages/analytics/token_stats_page.dart';
 import '../presentation/pages/analytics/student_token_page.dart';
@@ -330,6 +345,7 @@ class NavigationService {
     '三端': 'crossplatform', '四端': 'crossplatform', '多端': 'crossplatform',
     '互通': 'crossplatform', '跨平台': 'crossplatform',
     '通知': 'notification', '消息': 'notification',
+    '通知管理': 'notification_manage',
     '仓库': 'repo', 'git': 'repo',
     '反馈': 'feedback',
     '帮助': 'handbook', '使用手册': 'handbook',
@@ -347,12 +363,20 @@ class NavigationService {
     '教师管理': 'teacher_manage',
     '班级管理': 'class_manage',
     '题目管理': 'question_manage',
+    '题库管理': 'question_manage',
     '数据导出': 'data_export',
     '数据导入': 'data_import',
     '问卷管理': 'survey_manage',
     '教学管理': 'teaching_manage',
+    '实验管理': 'lab_manage',
+    '仓库分析': 'repo_analytics',
+    '成绩录入': 'grade_entry',
+    '成绩录入中心': 'grade_entry',
+    '构建发布': 'release_center',
+    '发布中心': 'release_center',
     '教师申请': 'teacher_application',
     '申请审核': 'teacher_application_manage',
+    '教师申请审核': 'teacher_application_manage',
 
     // ── 推荐 ──
     '推荐': 'hot_videos', '推荐视频': 'hot_videos',
@@ -429,6 +453,30 @@ class NavigationService {
         return const VoiceSettingsPage();
       case 'course_manage':
         return const CourseManagePage();
+      case 'student_manage':
+        return const StudentManagePage();
+      case 'teacher_manage':
+        return const TeacherManagePage();
+      case 'class_manage':
+        return const ClassManagePage();
+      case 'question_manage':
+        return const QuestionManagePage();
+      case 'data_import':
+        return const DataImportPage();
+      case 'data_export':
+        return const DataExportPage();
+      case 'survey_manage':
+        return const SurveyManagePage();
+      case 'teaching_manage':
+        return const TeachingManagePage();
+      case 'lab_manage':
+        return const LabTaskManagePage();
+      case 'repo_analytics':
+        return const RepoAnalyticsPage();
+      case 'grade_entry':
+        return const GradeEntryCenterPage();
+      case 'release_center':
+        return const ReleaseCenterPage();
       case 'search':
         return const SearchPage();
       case 'favorites':
@@ -439,6 +487,10 @@ class NavigationService {
         return const CrossPlatformHubPage();
       case 'notification':
         return const NotificationListPage();
+      case 'notification_manage':
+        return const NotificationManagePage();
+      case 'repo':
+        return isTeacherOrAdmin ? const GitRepoPage() : const StudentRepoPage();
       case 'handbook':
         final role = AuthService().currentUser?.role ?? 'student';
         return HandbookPage(role: role);
