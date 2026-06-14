@@ -63,7 +63,9 @@ class ArchivePackageService {
     // 课程
     String courseName;
     try {
-      final c = await _courseDao.getActiveCourse();
+      final c = (doc.courseId != null && doc.courseId!.trim().isNotEmpty)
+          ? await _courseDao.getCourse(doc.courseId!)
+          : await _courseDao.getActiveCourse();
       courseName = c?.name ?? '[未知课程]';
       if (c == null) warnings.add('未找到激活课程');
     } catch (e, st) {
@@ -126,12 +128,13 @@ class ArchivePackageService {
         p.join(outRoot, n.semester, n.course, _periodLabel(doc.period)));
     if (!dir.existsSync()) dir.createSync(recursive: true);
 
-    final sourcePdf = _sourcePdfFile(doc);
-    if (sourcePdf != null) {
+    final sourceOriginal = _sourceOriginalFile(doc);
+    if (sourceOriginal != null) {
+      final ext = p.extension(sourceOriginal.path);
       final outFile = File(
-        p.join(dir.path, '${n.fileBase(docLabel: n.docLabel)}.pdf'),
+        p.join(dir.path, '${n.fileBase(docLabel: n.docLabel)}$ext'),
       );
-      await sourcePdf.copy(outFile.path);
+      await sourceOriginal.copy(outFile.path);
       return outFile.path;
     }
 
@@ -220,10 +223,47 @@ class ArchivePackageService {
         // 仅打正式归档文件，跳过已生成的 .zip
         for (final f in entity.listSync().whereType<File>()) {
           if (!_isArchiveOutputFile(f)) continue;
-          final rel = p.relative(f.path, from: courseDir.path);
+          final rel =
+              p.relative(f.path, from: courseDir.path).replaceAll('\\', '/');
           encoder.addArchiveFile(_fileToArchiveFile(f, rel));
         }
       }
+    }
+    encoder.close();
+    return zipPath;
+  }
+
+  /// 将指定归档产物打成一个 zip。用于结课清单中勾选部分材料后打包。
+  Future<String> zipSelectedFiles({
+    required ArchiveNaming naming,
+    required List<String> filePaths,
+    String prefix = '结课所选',
+  }) async {
+    final outRoot = outputRoot;
+    if (outRoot == null) {
+      throw const ArchivePackageException('归档输出目录未注入');
+    }
+    if (filePaths.isEmpty) {
+      throw const ArchivePackageException('未选择可打包文件');
+    }
+    final courseDir =
+        Directory(p.join(outRoot, naming.semester, naming.course));
+    if (!courseDir.existsSync()) courseDir.createSync(recursive: true);
+
+    final encoder = ZipFileEncoder();
+    final zipPath = p.join(
+      courseDir.path,
+      '${prefix}_${naming.department}+${naming.course}+${naming.teacher}+${naming.semester}.zip',
+    );
+    encoder.create(zipPath);
+    for (final path in filePaths) {
+      final file = File(path);
+      if (!file.existsSync() || !_isArchiveOutputFile(file)) continue;
+      final rel = p.isWithin(courseDir.path, file.path)
+          ? p.relative(file.path, from: courseDir.path)
+          : p.basename(file.path);
+      encoder
+          .addArchiveFile(_fileToArchiveFile(file, rel.replaceAll('\\', '/')));
     }
     encoder.close();
     return zipPath;
@@ -257,16 +297,43 @@ class ArchivePackageService {
   bool _shouldArchivePdf(ArchiveDocument doc, Object? processor) =>
       doc.documentType == 'teaching_task' && processor != null;
 
-  File? _sourcePdfFile(ArchiveDocument doc) {
+  File? _sourceOriginalFile(ArchiveDocument doc) {
     final path = doc.filePath;
-    if (path == null || !path.toLowerCase().endsWith('.pdf')) return null;
+    if (path == null) return null;
+    final ext = p.extension(path).toLowerCase();
+    const preserved = {
+      '.pdf',
+      '.doc',
+      '.docx',
+      '.xls',
+      '.xlsx',
+      '.ppt',
+      '.pptx',
+      '.png',
+      '.jpg',
+      '.jpeg',
+      '.webp',
+      '.bmp',
+    };
+    if (!preserved.contains(ext)) return null;
     final file = File(path);
     return file.existsSync() ? file : null;
   }
 
   bool _isArchiveOutputFile(File f) {
     final lower = f.path.toLowerCase();
-    return lower.endsWith('.docx') || lower.endsWith('.pdf');
+    return lower.endsWith('.docx') ||
+        lower.endsWith('.doc') ||
+        lower.endsWith('.pdf') ||
+        lower.endsWith('.xlsx') ||
+        lower.endsWith('.xls') ||
+        lower.endsWith('.pptx') ||
+        lower.endsWith('.ppt') ||
+        lower.endsWith('.png') ||
+        lower.endsWith('.jpg') ||
+        lower.endsWith('.jpeg') ||
+        lower.endsWith('.webp') ||
+        lower.endsWith('.bmp');
   }
 
   String _periodLabel(String key) => periods.periodLabel(key);

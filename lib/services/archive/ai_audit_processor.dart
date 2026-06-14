@@ -133,8 +133,7 @@ class AiAuditProcessor extends BaseDocumentProcessor {
     final messages = [
       {
         'role': 'system',
-        'content':
-            '你是教学归档审核专家。**只输出 JSON**，不输出额外文字。JSON schema 在用户消息末尾。',
+        'content': '你是教学归档审核专家。**只输出 JSON**，不输出额外文字。JSON schema 在用户消息末尾。',
       },
       {'role': 'user', 'content': prompt},
     ];
@@ -150,11 +149,13 @@ class AiAuditProcessor extends BaseDocumentProcessor {
     final review = _parseReviewJson(result, latencyMs: latencyMs);
 
     // 把 ignoredKeys 继承下来（教师之前忽略的，本次仍视作忽略）
-    final mergedIgnored = <String>{...review.ignoredKeys, ...ignoredKeys}.toList();
+    final mergedIgnored =
+        <String>{...review.ignoredKeys, ...ignoredKeys}.toList();
     final finalReview = ReviewResult(
       overall: review.overall,
       errors: review.errors,
-      warnings: review.warnings.where((w) => !mergedIgnored.contains(w.key)).toList(),
+      warnings:
+          review.warnings.where((w) => !mergedIgnored.contains(w.key)).toList(),
       passed: review.passed,
       confidence: review.confidence,
       ignoredKeys: mergedIgnored,
@@ -233,6 +234,7 @@ class AiAuditProcessor extends BaseDocumentProcessor {
         title: auditTitle,
         documentType: auditDocType,
         period: target.period,
+        courseId: target.courseId,
         courseType: target.courseType,
         content: auditMd,
         isGenerated: true,
@@ -323,7 +325,8 @@ class AiAuditProcessor extends BaseDocumentProcessor {
     buf.writeln();
     buf.writeln('硬性要求：');
     buf.writeln('- 必须是合法 JSON，UTF-8，无尾随逗号，无注释');
-    buf.writeln('- key 字段用 `<docType>.<dimension_snake>` 格式，如 `syllabus.hours_total`');
+    buf.writeln(
+        '- key 字段用 `<docType>.<dimension_snake>` 格式，如 `syllabus.hours_total`');
     buf.writeln('- level 必须是这三个字符串之一：`✅ 通过` / `⚠️ 建议` / `❌ 错误`');
     buf.writeln('- layer 必须是 `structural` 或 `numerical` 之一');
     buf.writeln('- evidence 引用文档原文具体片段或数字（不少于 10 字符）');
@@ -393,7 +396,8 @@ class AiAuditProcessor extends BaseDocumentProcessor {
             key: 'audit.parse_failed',
             dimension: 'AI 审核响应',
             level: '❌ 错误',
-            evidence: 'LLM 输出无法解析为 JSON：${raw.substring(0, raw.length.clamp(0, 200))}',
+            evidence:
+                'LLM 输出无法解析为 JSON：${raw.substring(0, raw.length.clamp(0, 200))}',
             suggestion: '检查 AI provider 配置或重试一次',
           ),
         ],
@@ -414,7 +418,8 @@ class AiAuditProcessor extends BaseDocumentProcessor {
             key: 'audit.json_decode_failed',
             dimension: 'AI 审核响应',
             level: '❌ 错误',
-            evidence: 'JSON 解析异常：$e。原始响应前 200 字符：${raw.substring(0, raw.length.clamp(0, 200))}',
+            evidence:
+                'JSON 解析异常：$e。原始响应前 200 字符：${raw.substring(0, raw.length.clamp(0, 200))}',
             suggestion: '换 AI provider 或修订 prompt',
           ),
         ],

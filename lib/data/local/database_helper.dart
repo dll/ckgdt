@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:excel/excel.dart' as xl;
@@ -71,7 +70,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 27,
+      version: 28,
       singleInstance: true, // 启用单例模式
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
@@ -130,7 +129,7 @@ class DatabaseHelper {
         // 重新打开（版本号必须与主初始化一致）
         final db2 = await openDatabase(
           dbName,
-          version: 27,
+          version: 28,
           singleInstance: true, // 启用单例模式
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
@@ -213,7 +212,7 @@ class DatabaseHelper {
     Database db;
     db = await openDatabase(
       dbPath,
-      version: 27,
+      version: 28,
       singleInstance: true, // 启用单例模式，防止多实例同时访问
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
@@ -918,6 +917,9 @@ class DatabaseHelper {
     if (oldVersion < 27) {
       await _migrateToV27(db);
     }
+    if (oldVersion < 28) {
+      await _migrateToV28(db);
+    }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
   }
@@ -988,6 +990,7 @@ class DatabaseHelper {
     await _migrateToV23(db);
     await _migrateToV24(db);
     await _migrateToV26(db);
+    await _migrateToV28(db);
     await _ensureAchievementColumns(db);
     await _ensureCourseObjectivesColumns(db);
   }
@@ -1301,6 +1304,7 @@ class DatabaseHelper {
         title TEXT NOT NULL,
         document_type TEXT NOT NULL,
         period TEXT NOT NULL,
+        course_id TEXT,
         course_type TEXT,
         status TEXT DEFAULT 'draft',
         content TEXT,
@@ -2374,6 +2378,25 @@ class DatabaseHelper {
       InitLogger.log('db', 'V27 purge ghost: users=$u class_members=$cm');
     } catch (e, st) {
       swallowDebug(e, tag: 'V27.purge_ghost', stack: st);
+    }
+  }
+
+  /// V28: archive_documents 绑定统一课程 ID，归档资料不再靠考试/考查类型识别。
+  Future<void> _migrateToV28(Database db) async {
+    try {
+      await db
+          .execute('ALTER TABLE archive_documents ADD COLUMN course_id TEXT');
+    } catch (e) {
+      swallow(e, tag: 'V28.add_archive_course_id');
+    }
+    try {
+      await db.execute('''
+        UPDATE archive_documents
+        SET course_id = (SELECT id FROM courses WHERE is_active = 1 LIMIT 1)
+        WHERE course_id IS NULL OR course_id = ''
+      ''');
+    } catch (e, st) {
+      swallowDebug(e, tag: 'V28.backfill_archive_course_id', stack: st);
     }
   }
 

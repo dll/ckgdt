@@ -111,7 +111,6 @@ class ArchiveAgent extends BaseAgent {
         context['lesson_plans'] = rows;
         final teachingDocs = await _dao.getDocuments(
           period: 'beginning',
-          courseType: courseType,
           documentType: 'teaching_schedule',
         );
         if (teachingDocs.isNotEmpty) {
@@ -128,7 +127,6 @@ class ArchiveAgent extends BaseAgent {
         context['syllabus_items'] = syllabusRows;
         final taskDocs = await _dao.getDocuments(
           period: 'beginning',
-          courseType: courseType,
           documentType: 'teaching_task',
         );
         if (taskDocs.isNotEmpty) {
@@ -136,7 +134,6 @@ class ArchiveAgent extends BaseAgent {
         }
         final scheduleDocs = await _dao.getDocuments(
           period: 'beginning',
-          courseType: courseType,
           documentType: 'course_schedule',
         );
         if (scheduleDocs.isNotEmpty) {
