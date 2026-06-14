@@ -34,6 +34,31 @@ class ArchiveTemplateSourceService {
     );
   }
 
+  static Future<ArchiveTemplateDocument?> parseFile({
+    required File file,
+    required String documentType,
+    required String label,
+    DateTime? now,
+  }) async {
+    final spec = _specs[documentType];
+    if (spec == null || !await file.exists()) return null;
+    final ext = p.extension(file.path).toLowerCase();
+    if (spec.extensionPriority(ext) == null) return null;
+    final match = ArchiveTemplateMatch(
+      entity: file,
+      score: 0,
+      name: p.basename(file.path),
+      documentType: spec.documentType,
+    );
+    final content = await _parse(match, label: label, now: now);
+    if (content == null || content.trim().isEmpty) return null;
+    return ArchiveTemplateDocument(
+      content: content.trim(),
+      sourcePath: file.path,
+      sourceName: p.basename(file.path),
+    );
+  }
+
   static ArchiveTemplateMatch? bestMatch({
     required String periodKey,
     required String documentType,
@@ -125,9 +150,116 @@ class ArchiveTemplateSourceService {
         if (!_isTextLike(ext)) return null;
         return ArchiveImporters.parseSurvey(readText(), now: now) ??
             _fileContent(entity, label: label);
+      case 'midterm_progress_check':
+        return _midtermProgressCheckContent(entity, label: label);
+      case 'midterm_homework_review':
+        return _midtermHomeworkReviewContent(entity, label: label);
+      case 'midterm_exam':
+      case 'midterm_check':
+      case 'midterm_analysis':
+        return _midtermExamContent(entity, label: label);
       default:
         return _readPlainFile(entity, label: label);
     }
+  }
+
+  static Future<String?> _midtermProgressCheckContent(
+    File file, {
+    required String label,
+  }) async {
+    final sourceText = await _readPlainFile(file, label: label);
+    if (sourceText == null || sourceText.trim().isEmpty) return null;
+    return '''
+# $label
+
+**资料来源**：期中模板目录
+**原始文件**：${file.path}
+
+## 检查目标
+
+- 依据教学进度表核对课程当前执行情况。
+- 检查已完成周次、章节、实验/实践任务是否与计划一致。
+- 标识滞后、超前、调课、补课和需说明事项。
+
+## 检查要点
+
+| 项目 | 审核要求 | 结论 |
+|------|----------|------|
+| 周次覆盖 | 期中前应覆盖教学进度表中已到周次 | 待核对 |
+| 内容一致 | 实际授课内容应与进度表章节、实验项目对应 | 待核对 |
+| 学时执行 | 理论、实验/实践学时应与计划匹配 | 待核对 |
+| 调整说明 | 进度偏差应记录原因和补救安排 | 待核对 |
+
+## 原始进度资料
+
+$sourceText
+''';
+  }
+
+  static Future<String?> _midtermHomeworkReviewContent(
+    File file, {
+    required String label,
+  }) async {
+    final sourceText = await _readPlainFile(file, label: label);
+    if (sourceText == null || sourceText.trim().isEmpty) return null;
+    return '''
+# $label
+
+**资料来源**：期中模板目录
+**原始文件**：${file.path}
+
+## 统计目标
+
+- 统计期中前布置作业次数、应批阅次数和实际批阅次数。
+- 核对作业批阅是否满足学校过程性教学检查要求。
+- 对未批、迟批、反馈不足等情况形成改进说明。
+
+## 检查表
+
+| 项目 | 口径 | 结论 |
+|------|------|------|
+| 作业布置次数 | 期中前已布置的课程作业、测验或训练 | 待核对 |
+| 批阅次数 | 教师已完成批阅并给出反馈的次数 | 待核对 |
+| 批阅覆盖 | 是否覆盖全部教学班级和主要学生提交 | 待核对 |
+| 反馈质量 | 是否有分数、评语或改进建议 | 待核对 |
+
+## 原始统计资料
+
+$sourceText
+''';
+  }
+
+  static Future<String?> _midtermExamContent(
+    File file, {
+    required String label,
+  }) async {
+    final sourceText = await _readPlainFile(file, label: label);
+    if (sourceText == null || sourceText.trim().isEmpty) return null;
+    return '''
+# $label
+
+**资料来源**：期中模板目录
+**原始文件**：${file.path}
+
+## 材料要求
+
+- 期中考试或阶段考核材料应体现课程阶段性学习目标。
+- 题目、评分标准、成绩记录或质量分析应完整。
+- 若课程不单独组织期中考试，应说明采用阶段测验、项目检查或作业检查替代。
+
+## 审核要点
+
+| 项目 | 审核要求 | 结论 |
+|------|----------|------|
+| 考核内容 | 覆盖期中前核心知识点和能力目标 | 待核对 |
+| 评分标准 | 有明确分值、评分点或等级标准 | 待核对 |
+| 结果记录 | 有成绩、分析或学生表现记录 | 待核对 |
+| 改进措施 | 对薄弱环节提出后续教学调整 | 待核对 |
+
+## 原始期中考试资料
+
+$sourceText
+''';
   }
 
   static Future<String?> _readPlainFile(File file,
@@ -167,7 +299,7 @@ class ArchiveTemplateSourceService {
     final buf = StringBuffer()
       ..writeln('# $label')
       ..writeln()
-      ..writeln('**资料来源**：期初模板目录')
+      ..writeln('**资料来源**：模板目录')
       ..writeln('**原始目录**：${dir.path}')
       ..writeln()
       ..writeln('## 文件清单')
@@ -208,7 +340,7 @@ class ArchiveTemplateSourceService {
     return '''
 # $label
 
-**资料来源**：期初模板目录
+**资料来源**：模板目录
 **原始文件**：${file.path}
 **文件类型**：$ext 原件
 **文件大小**：${file.lengthSync()} 字节
@@ -314,6 +446,31 @@ class ArchiveTemplateSourceService {
       documentType: 'survey',
       tokens: ['问卷', 'courseTableForTeacher!printLessonBook', '教学任务书'],
       extensions: ['.mhtml', '.mht', '.html', '.htm'],
+    ),
+    'midterm_progress_check': _TemplateSpec(
+      documentType: 'midterm_progress_check',
+      tokens: ['教学进度表', '进度表', '教学进度', '课程进度'],
+      extensions: ['.docx', '.md', '.txt', '.html', '.htm', '.pdf'],
+    ),
+    'midterm_homework_review': _TemplateSpec(
+      documentType: 'midterm_homework_review',
+      tokens: ['作业次数和批阅次数', '作业次数', '批阅次数', '作业', '批阅'],
+      extensions: ['.docx', '.md', '.txt', '.html', '.htm', '.pdf'],
+    ),
+    'midterm_exam': _TemplateSpec(
+      documentType: 'midterm_exam',
+      tokens: ['期中考试', '期中试卷', '期中考核', '期中'],
+      extensions: ['.docx', '.pdf', '.md', '.txt', '.html', '.htm'],
+    ),
+    'midterm_check': _TemplateSpec(
+      documentType: 'midterm_check',
+      tokens: ['期中检查', '期中'],
+      extensions: ['.docx', '.pdf', '.md', '.txt', '.html', '.htm'],
+    ),
+    'midterm_analysis': _TemplateSpec(
+      documentType: 'midterm_analysis',
+      tokens: ['期中成绩分析', '成绩分析', '期中分析'],
+      extensions: ['.docx', '.pdf', '.md', '.txt', '.html', '.htm'],
     ),
   };
 }

@@ -84,6 +84,8 @@ class ProcessorRegistry {
       ['teaching_schedule', '教学进度表'],
       ['lesson_plan', '教学教案'],
       ['courseware', '教学课件'],
+      ['midterm_progress_check', '课程进度执行检查'],
+      ['midterm_homework_review', '作业与批阅次数统计'],
       ['midterm_exam', '期中试卷'],
       ['midterm_analysis', '期中成绩分析'],
       ['midterm_check', '期中检查表'],
