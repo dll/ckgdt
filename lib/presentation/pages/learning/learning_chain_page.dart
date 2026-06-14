@@ -1,8 +1,9 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../core/constants/chapter_helper.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../data/local/learning_record_dao.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/course_context_service.dart';
 import '../quiz/quiz_page.dart';
 import 'video_page.dart';
 import '../materials/resource_viewer_page.dart';
@@ -32,6 +33,7 @@ class _LearningChainPageState extends State<LearningChainPage>
     with SingleTickerProviderStateMixin {
   final _authService = AuthService();
   final _recordDao = LearningRecordDao();
+  final _courseContext = CourseContextService();
 
   bool _isLoading = true;
 
@@ -71,11 +73,28 @@ class _LearningChainPageState extends State<LearningChainPage>
   }
 
   String _chapterFilter(int chapter) {
-    const names = {
-      1: '第一章', 2: '第二章', 3: '第三章',
-      4: '第四章', 5: '第五章', 6: '第六章',
-    };
-    return names[chapter] ?? '第$chapter章';
+    return ChapterHelper.shortTitle(chapter);
+  }
+
+  String _likeClause(String column, int count) {
+    return List.filled(count, '$column LIKE ?').join(' OR ');
+  }
+
+  Future<int> _countScoped({
+    required String table,
+    required String extraWhere,
+    required List<Object?> extraArgs,
+  }) async {
+    final db = await DatabaseHelper.instance.database;
+    final scope = await _courseContext.scopedWhere(
+      extraWhere: extraWhere,
+      extraArgs: extraArgs,
+    );
+    final rows = await db.rawQuery(
+      'SELECT COUNT(*) as c FROM $table WHERE ${scope.where}',
+      scope.args,
+    );
+    return (rows.first['c'] as int?) ?? 0;
   }
 
   Future<void> _loadData() async {
@@ -86,62 +105,82 @@ class _LearningChainPageState extends State<LearningChainPage>
       final userId = user?.userId ?? '';
       final ch = widget.chapter;
 
+      _videoCount = 0;
+      _pptCount = 0;
+      _pdfCount = 0;
+      _quizCount = 0;
+      _quizDoneCount = 0;
+      _videoWatched = false;
+      _coursewareRead = false;
+      _quizPassed = false;
+
       if (ch != null) {
-        final chFilter = _chapterFilter(ch);
+        final chapterPatterns = await _courseContext.chapterQueryPatterns(ch);
+        final chapterWhere = _likeClause('chapter', chapterPatterns.length);
+        final sourceWhere = _likeClause('source', chapterPatterns.length);
 
         // 统计资源数量
-        final videos = await db.rawQuery(
-          "SELECT COUNT(*) as c FROM resource_files WHERE file_type='video' AND chapter LIKE ?",
-          ['%$chFilter%'],
+        _videoCount = await _countScoped(
+          table: 'resource_files',
+          extraWhere: "file_type = 'video' AND ($chapterWhere)",
+          extraArgs: chapterPatterns,
         );
-        _videoCount = (videos.first['c'] as int?) ?? 0;
 
-        final ppts = await db.rawQuery(
-          "SELECT COUNT(*) as c FROM resource_files WHERE file_type='ppt' AND chapter LIKE ?",
-          ['%$chFilter%'],
+        _pptCount = await _countScoped(
+          table: 'resource_files',
+          extraWhere: "file_type = 'ppt' AND ($chapterWhere)",
+          extraArgs: chapterPatterns,
         );
-        _pptCount = (ppts.first['c'] as int?) ?? 0;
 
-        final pdfs = await db.rawQuery(
-          "SELECT COUNT(*) as c FROM resource_files WHERE file_type='pdf' AND chapter LIKE ?",
-          ['%$chFilter%'],
+        _pdfCount = await _countScoped(
+          table: 'resource_files',
+          extraWhere: "file_type = 'pdf' AND ($chapterWhere)",
+          extraArgs: chapterPatterns,
         );
-        _pdfCount = (pdfs.first['c'] as int?) ?? 0;
 
         // 查询该章节题目数量
-        final questions = await db.rawQuery(
-          "SELECT COUNT(*) as c FROM questions WHERE source LIKE ?",
-          ['%$chFilter%'],
+        _quizCount = await _countScoped(
+          table: 'questions',
+          extraWhere: sourceWhere,
+          extraArgs: chapterPatterns,
         );
-        _quizCount = (questions.first['c'] as int?) ?? 0;
 
         // 查询该章节已完成的测验
         if (userId.isNotEmpty) {
-          final quizResults = await db.rawQuery(
-            "SELECT COUNT(*) as c FROM quiz_results WHERE user_id = ? AND chapter LIKE ?",
-            [userId, '%$chFilter%'],
+          _quizDoneCount = await _countScoped(
+            table: 'quiz_results',
+            extraWhere: 'user_id = ? AND ($chapterWhere)',
+            extraArgs: [userId, ...chapterPatterns],
           );
-          _quizDoneCount = (quizResults.first['c'] as int?) ?? 0;
         }
       }
 
       // 检查概念学习状态
       if (userId.isNotEmpty) {
         _conceptLearned = await _recordDao.hasLearned(
-          userId, 'c_${widget.conceptId}',
+          userId,
+          'c_${widget.conceptId}',
         );
 
         // 检查是否有该章节相关的学习记录（视频/课件）
         if (ch != null) {
+          final videoScope = await _courseContext.scopedWhere(
+            extraWhere: 'user_id = ? AND node_id LIKE ?',
+            extraArgs: [userId, 'video_ch$ch%'],
+          );
           final videoRecords = await db.rawQuery(
-            "SELECT COUNT(*) as c FROM learning_records WHERE user_id = ? AND node_id LIKE ?",
-            [userId, 'video_ch$ch%'],
+            'SELECT COUNT(*) as c FROM learning_records WHERE ${videoScope.where}',
+            videoScope.args,
           );
           _videoWatched = ((videoRecords.first['c'] as int?) ?? 0) > 0;
 
+          final coursewareScope = await _courseContext.scopedWhere(
+            extraWhere: 'user_id = ? AND (node_id LIKE ? OR node_id LIKE ?)',
+            extraArgs: [userId, 'ppt_ch$ch%', 'pdf_ch$ch%'],
+          );
           final coursewareRecords = await db.rawQuery(
-            "SELECT COUNT(*) as c FROM learning_records WHERE user_id = ? AND (node_id LIKE ? OR node_id LIKE ?)",
-            [userId, 'ppt_ch$ch%', 'pdf_ch$ch%'],
+            'SELECT COUNT(*) as c FROM learning_records WHERE ${coursewareScope.where}',
+            coursewareScope.args,
           );
           _coursewareRead = ((coursewareRecords.first['c'] as int?) ?? 0) > 0;
 
@@ -193,7 +232,8 @@ class _LearningChainPageState extends State<LearningChainPage>
   Widget build(BuildContext context) {
     final ch = widget.chapter;
     final chColor = ch != null
-        ? (ChapterHelper.chapterColors[ch] ?? Theme.of(context).colorScheme.primary)
+        ? (ChapterHelper.chapterColors[ch] ??
+            Theme.of(context).colorScheme.primary)
         : Theme.of(context).colorScheme.primary;
 
     return Scaffold(
@@ -241,9 +281,8 @@ class _LearningChainPageState extends State<LearningChainPage>
     final icon = ch != null
         ? (ChapterHelper.chapterIcons[ch] ?? Icons.school)
         : Icons.school;
-    final logos = ch != null
-        ? (ChapterHelper.chapterLogos[ch] ?? [])
-        : <String>[];
+    final logos =
+        ch != null ? (ChapterHelper.chapterLogos[ch] ?? []) : <String>[];
 
     return Card(
       elevation: 4,
@@ -325,7 +364,8 @@ class _LearningChainPageState extends State<LearningChainPage>
                 children: logos.map((logo) {
                   return Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 3,
+                      horizontal: 10,
+                      vertical: 3,
                     ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.2),
@@ -449,9 +489,8 @@ class _LearningChainPageState extends State<LearningChainPage>
         icon: Icons.menu_book,
         isCompleted: _coursewareRead,
         resourceInfo: '$_pptCount 个PPT · $_pdfCount 个PDF',
-        action: (_pptCount + _pdfCount) > 0
-            ? () => _navigateToCourseware()
-            : null,
+        action:
+            (_pptCount + _pdfCount) > 0 ? () => _navigateToCourseware() : null,
         actionLabel: '去阅读',
       ),
       _StepData(
@@ -476,8 +515,7 @@ class _LearningChainPageState extends State<LearningChainPage>
     );
   }
 
-  Widget _buildStepItem(
-      _StepData step, int index, bool isLast, Color chColor) {
+  Widget _buildStepItem(_StepData step, int index, bool isLast, Color chColor) {
     final isActive = index <= _completedSteps;
 
     return IntrinsicHeight(
@@ -503,9 +541,7 @@ class _LearningChainPageState extends State<LearningChainPage>
                     boxShadow: step.isCompleted || isActive
                         ? [
                             BoxShadow(
-                              color: (step.isCompleted
-                                      ? Colors.green
-                                      : chColor)
+                              color: (step.isCompleted ? Colors.green : chColor)
                                   .withValues(alpha: 0.3),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
@@ -587,7 +623,8 @@ class _LearningChainPageState extends State<LearningChainPage>
                         if (step.isCompleted)
                           Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2,
+                              horizontal: 8,
+                              vertical: 2,
                             ),
                             decoration: BoxDecoration(
                               color: Colors.green.withValues(alpha: 0.1),

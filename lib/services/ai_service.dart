@@ -41,6 +41,8 @@ class AiChatResult {
 }
 
 class AiService {
+  static const String defaultCourseName = '课程';
+
   final AiConfigDao _configDao = AiConfigDao();
 
   // ── 核心：发送 chat completion 请求（返回含模型信息的结果）─────────────────
@@ -82,7 +84,8 @@ class AiService {
             'max_tokens': maxTokens,
           }),
         )
-        .timeout(Duration(seconds: config.timeout < 120 ? 120 : config.timeout));
+        .timeout(
+            Duration(seconds: config.timeout < 120 ? 120 : config.timeout));
 
     if (response.statusCode != 200) {
       throw 'AI 请求失败 (${response.statusCode})，请检查网络连接和 API 配置。';
@@ -116,8 +119,10 @@ class AiService {
     AiConfigModel? configOverride,
     double? temperature,
   }) async {
-    final result = await chatWithMeta(messages, systemPrompt: systemPrompt,
-        configOverride: configOverride, temperature: temperature);
+    final result = await chatWithMeta(messages,
+        systemPrompt: systemPrompt,
+        configOverride: configOverride,
+        temperature: temperature);
     _autoSaveTokenHistory(result);
     return result.content;
   }
@@ -147,8 +152,7 @@ class AiService {
         [
           {
             'role': 'user',
-            'content':
-                '$textPrompt\n\n[注：未提供视频帧 / 图片，仅按上述文字材料评判。]'
+            'content': '$textPrompt\n\n[注：未提供视频帧 / 图片，仅按上述文字材料评判。]'
           }
         ],
         systemPrompt: systemPrompt,
@@ -228,7 +232,8 @@ class AiService {
   void _autoSaveTokenHistory(AiChatResult result) {
     try {
       final userId = AuthService().currentUser?.userId;
-      AiHistoryDao().saveMessage(
+      AiHistoryDao()
+          .saveMessage(
         sessionId: 'auto_${DateTime.now().millisecondsSinceEpoch}',
         role: 'assistant',
         content: result.content.length > 200
@@ -240,7 +245,8 @@ class AiService {
         provider: result.provider,
         model: result.model,
         userId: userId,
-      ).catchError((e) {
+      )
+          .catchError((e) {
         debugPrint('Token history save failed: $e');
         return 0;
       });
@@ -252,7 +258,8 @@ class AiService {
   // ── 查询账户余额 ─────────────────────────────────────────────────────────
   /// 返回 {'available': '12.34', 'currency': 'CNY'} 或 null（不支持/失败）
   /// 目前支持 DeepSeek（/user/balance）
-  Future<Map<String, String>?> queryBalance({AiConfigModel? configOverride}) async {
+  Future<Map<String, String>?> queryBalance(
+      {AiConfigModel? configOverride}) async {
     final config = configOverride ?? await _configDao.getConfig();
     final effectiveKey = config.effectiveApiKey;
     if (effectiveKey == null || effectiveKey.isEmpty) return null;
@@ -295,8 +302,9 @@ class AiService {
     String topic, {
     String? chapter,
     int slideCount = 8,
+    String courseName = defaultCourseName,
   }) async {
-    const system = '你是一位专业的移动应用开发课程讲师，擅长制作清晰、结构化的教学课件。'
+    final system = '你是一位专业的《$courseName》课程讲师，擅长制作清晰、结构化的教学课件。'
         '请用中文回复，回复必须是合法的 JSON 数组。';
     final prompt = '''
 请为"$topic"${chapter != null ? '（第 $chapter 章）' : ''}生成 $slideCount 张幻灯片的内容。
@@ -328,9 +336,12 @@ class AiService {
   }
 
   // ── 生成视频讲解脚本 ─────────────────────────────────────────────────────
-  Future<String> generateScript(String topic, {String? chapter}) async {
-    const system =
-        '你是一位专业的移动应用开发课程讲师，负责录制教学视频。请用中文、口语化、清晰的语言生成视频讲解脚本。';
+  Future<String> generateScript(
+    String topic, {
+    String? chapter,
+    String courseName = defaultCourseName,
+  }) async {
+    final system = '你是一位专业的《$courseName》课程讲师，负责录制教学视频。请用中文、口语化、清晰的语言生成视频讲解脚本。';
     final prompt = '''
 请为"$topic"${chapter != null ? '（第 $chapter 章）' : ''}生成一份完整的教学视频讲解脚本。
 要求：
@@ -353,8 +364,9 @@ class AiService {
     String topic, {
     int count = 5,
     String? chapter,
+    String courseName = defaultCourseName,
   }) async {
-    const system = '你是移动应用开发课程出题专家，擅长设计选择题。请用中文，只返回 JSON。';
+    final system = '你是《$courseName》课程出题专家，擅长设计选择题。请用中文，只返回 JSON。';
     final prompt = '''
 为"$topic"${chapter != null ? '（$chapter 章）' : ''}出 $count 道单选题。
 返回 JSON 数组，格式：
@@ -382,11 +394,12 @@ answer_index 为 0-3（对应 A-D），仅返回 JSON，不要其他文字。
   }
 
   // ── 生成学习路径 ─────────────────────────────────────────────────────────
-  Future<String> generateLearningPath(String topic) async {
-    const system =
-        '你是移动应用开发课程设计专家，擅长制定学习路径。请用中文 Markdown 格式回复。';
-    final prompt =
-        '请为"$topic"生成一份详细的学习路径，包含：前置知识、核心步骤（带时间估计）、推荐资源、评估方式。';
+  Future<String> generateLearningPath(
+    String topic, {
+    String courseName = defaultCourseName,
+  }) async {
+    final system = '你是《$courseName》课程设计专家，擅长制定学习路径。请用中文 Markdown 格式回复。';
+    final prompt = '请为"$topic"生成一份详细的学习路径，包含：前置知识、核心步骤（带时间估计）、推荐资源、评估方式。';
     return chat(
       [
         {'role': 'user', 'content': prompt}
@@ -429,9 +442,9 @@ answer_index 为 0-3（对应 A-D），仅返回 JSON，不要其他文字。
   Future<Map<String, dynamic>> recommendGraphElements({
     required List<Map<String, dynamic>> existingConcepts,
     required List<Map<String, dynamic>> existingRelations,
-    String courseTopic = '移动应用开发',
+    String courseTopic = defaultCourseName,
   }) async {
-    const system = '你是一位移动应用开发课程的知识图谱专家。'
+    final system = '你是一位《$courseTopic》课程的知识图谱专家。'
         '根据现有的知识概念和关系，推荐补充的新概念节点和关系边，帮助完善知识图谱。'
         '只返回 JSON，不要其他文字。';
 
@@ -478,25 +491,35 @@ answer_index 为 0-3（对应 A-D），仅返回 JSON，不要其他文字。
 ''';
 
     final raw = await chat(
-      [{'role': 'user', 'content': prompt}],
+      [
+        {'role': 'user', 'content': prompt}
+      ],
       systemPrompt: system,
     );
 
     // 提取 JSON 对象
     final match = RegExp(r'\{[\s\S]*\}').firstMatch(raw);
     if (match == null) {
-      return {'concepts': <Map<String, dynamic>>[], 'relations': <Map<String, dynamic>>[]};
+      return {
+        'concepts': <Map<String, dynamic>>[],
+        'relations': <Map<String, dynamic>>[]
+      };
     }
     try {
       final parsed = jsonDecode(match.group(0)!) as Map<String, dynamic>;
       return {
-        'concepts': (parsed['concepts'] as List?)?.cast<Map<String, dynamic>>() ?? [],
-        'relations': (parsed['relations'] as List?)?.cast<Map<String, dynamic>>() ?? [],
+        'concepts':
+            (parsed['concepts'] as List?)?.cast<Map<String, dynamic>>() ?? [],
+        'relations':
+            (parsed['relations'] as List?)?.cast<Map<String, dynamic>>() ?? [],
       };
     } catch (e) {
       // AI 输出非合法 JSON 属预期，回退空结构
       swallow(e, tag: 'AiService.parseConceptGraph');
-      return {'concepts': <Map<String, dynamic>>[], 'relations': <Map<String, dynamic>>[]};
+      return {
+        'concepts': <Map<String, dynamic>>[],
+        'relations': <Map<String, dynamic>>[]
+      };
     }
   }
 

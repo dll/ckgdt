@@ -10,12 +10,14 @@ import '../data/models/ai_config_model.dart';
 import '../data/models/material_model.dart';
 import '../core/error_handler.dart';
 import 'ai_service.dart';
+import 'course_context_service.dart';
 import 'plantuml_service.dart';
 
 /// 课件工坊服务 — 教案→MD→PDF/UML/语音/视频 全流水线
 class CoursewareService {
   final AiService _aiService = AiService();
   final MaterialDao _materialDao = MaterialDao();
+  final CourseContextService _courseContext = CourseContextService();
 
   // ═══════════════════════════════════════════════════════════════════════════
   // Step 1: 教案生成
@@ -34,17 +36,18 @@ class CoursewareService {
     AiConfigModel? configOverride,
   }) async {
     final isEnhanced = configOverride != null;
+    final courseName = await _courseContext.activeCourseName();
     final system = isEnhanced
-        ? '''你是一位拥有15年教学经验的资深移动应用开发课程教授，精通 ADDIE 教学设计模型和布鲁姆认知层次理论。
+        ? '''你是一位拥有15年教学经验的资深《$courseName》课程教授，精通 ADDIE 教学设计模型和布鲁姆认知层次理论。
 请用中文回复，回复必须是合法的 JSON 对象。
 你的教案应：
 - 教学目标按布鲁姆认知层次（记忆→理解→应用→分析→评价→创造）递进
 - 每个教学环节的 content 字段需包含至少 200 字的详细内容描述，含关键概念解释、示例说明
-- 代码示例必须完整可运行，含注释
-- 实验步骤须精确到每个操作，含预期结果
-- 至少包含 2 个 UML 图表（类图 + 时序图/活动图）
+- 如课程内容涉及代码、模型、公式或流程，应给出完整示例并含注释或说明
+- 实验/实践步骤须精确到每个操作，含预期结果
+- 软件类课程至少包含 2 个 UML 图表；非软件类课程可改为结构图、流程图或评价表
 - 重点难点要有突破策略说明'''
-        : '''你是一位资深的移动应用开发课程教师，擅长制定教学教案。
+        : '''你是一位资深的《$courseName》课程教师，擅长制定教学教案。
 请用中文回复，回复必须是合法的 JSON 对象。
 你的教案应结构清晰、内容专业、可操作性强。''';
 
@@ -92,7 +95,9 @@ ${additionalRequirements != null ? '额外要求: $additionalRequirements' : ''}
 仅返回 JSON，不要包含其他文字。''';
 
     final raw = await _aiService.chat(
-      [{'role': 'user', 'content': prompt}],
+      [
+        {'role': 'user', 'content': prompt}
+      ],
       systemPrompt: system,
       configOverride: configOverride,
     );
@@ -279,7 +284,9 @@ ${context != null ? '上下文说明: $context' : ''}
 ''';
 
     final raw = await _aiService.chat(
-      [{'role': 'user', 'content': prompt}],
+      [
+        {'role': 'user', 'content': prompt}
+      ],
       systemPrompt: system,
       configOverride: configOverride,
     );
@@ -358,8 +365,8 @@ ${context != null ? '上下文说明: $context' : ''}
       final fontCandidates = <String>[
         // Windows 系统字体（优先选择纯 .ttf 格式）
         if (Platform.isWindows) ...[
-          'C:\\Windows\\Fonts\\simhei.ttf',   // 黑体（纯 TTF，兼容性最好）
-          'C:\\Windows\\Fonts\\msyh.ttf',     // 微软雅黑（部分系统有 ttf 版）
+          'C:\\Windows\\Fonts\\simhei.ttf', // 黑体（纯 TTF，兼容性最好）
+          'C:\\Windows\\Fonts\\msyh.ttf', // 微软雅黑（部分系统有 ttf 版）
         ],
         if (Platform.isMacOS) ...[
           '/System/Library/Fonts/PingFang.ttc',
@@ -391,7 +398,8 @@ ${context != null ? '上下文说明: $context' : ''}
           final fontData =
               await rootBundle.load('assets/fonts/NotoSansSC-Regular.ttf');
           font = pw.Font.ttf(fontData);
-          debugPrint('CoursewareService: PDF font loaded from NotoSansSC asset');
+          debugPrint(
+              'CoursewareService: PDF font loaded from NotoSansSC asset');
         } catch (e) {
           debugPrint('CoursewareService: NotoSansSC asset failed: $e');
         }
@@ -400,8 +408,7 @@ ${context != null ? '上下文说明: $context' : ''}
       // 最后尝试 assets 中的 ttc（可能在某些平台/pdf版本中可用）
       if (font == null) {
         try {
-          final fontData =
-              await rootBundle.load('assets/fonts/msyh.ttc');
+          final fontData = await rootBundle.load('assets/fonts/msyh.ttc');
           font = pw.Font.ttf(fontData);
           debugPrint('CoursewareService: PDF font loaded from msyh.ttc asset');
         } catch (e) {
@@ -412,8 +419,8 @@ ${context != null ? '上下文说明: $context' : ''}
       // 加载粗体字体
       if (Platform.isWindows) {
         for (final boldPath in [
-          'C:\\Windows\\Fonts\\simhei.ttf',  // 黑体可同时作粗体
-          'C:\\Windows\\Fonts\\msyhbd.ttf',  // 微软雅黑粗体（可能不存在）
+          'C:\\Windows\\Fonts\\simhei.ttf', // 黑体可同时作粗体
+          'C:\\Windows\\Fonts\\msyhbd.ttf', // 微软雅黑粗体（可能不存在）
         ]) {
           if (boldFont != null) break;
           try {
@@ -471,14 +478,13 @@ ${context != null ? '上下文说明: $context' : ''}
                           color: const PdfColor(1, 1, 1, 0.7))),
                 ],
                 pw.SizedBox(height: 8),
-                pw.Text(
-                    '${lessonPlan['classHours'] ?? 2} 课时',
+                pw.Text('${lessonPlan['classHours'] ?? 2} 课时',
                     style: pw.TextStyle(
                         font: font,
                         fontSize: 16,
                         color: const PdfColor(1, 1, 1, 0.5))),
                 pw.SizedBox(height: 32),
-                pw.Text('移动应用开发知识图谱教学系统',
+                pw.Text('课程知识图谱与数字孪生平台',
                     style: pw.TextStyle(
                         font: font,
                         fontSize: 14,
@@ -501,10 +507,8 @@ ${context != null ? '上下文说明: $context' : ''}
           title: '教学目标',
           items: objectives.map((o) => '• $o').toList().cast<String>(),
           extras: [
-            if (keyPoints.isNotEmpty)
-              '重点: ${keyPoints.join(', ')}',
-            if (difficulties.isNotEmpty)
-              '难点: ${difficulties.join(', ')}',
+            if (keyPoints.isNotEmpty) '重点: ${keyPoints.join(', ')}',
+            if (difficulties.isNotEmpty) '难点: ${difficulties.join(', ')}',
           ],
           slideNum: 2,
         ));
@@ -519,7 +523,8 @@ ${context != null ? '上下文说明: $context' : ''}
           // 按行拆分内容，每行作为独立条目
           final contentStr = s['content'].toString().trim();
           if (contentStr.isNotEmpty) {
-            final lines = contentStr.split('\n')
+            final lines = contentStr
+                .split('\n')
                 .map((l) => l.trim())
                 .where((l) => l.isNotEmpty)
                 .toList();
@@ -652,17 +657,14 @@ ${context != null ? '上下文说明: $context' : ''}
       // ─── 保存 ──────────────────────────────────────────────────────
       final pdfBytes = await pdf.save();
       final dir = await getApplicationDocumentsDirectory();
-      final coursewareDir =
-          Directory('${dir.path}/courseware');
+      final coursewareDir = Directory('${dir.path}/courseware');
       if (!coursewareDir.existsSync()) {
         coursewareDir.createSync(recursive: true);
       }
 
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final safeTitle =
-          title.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
-      final filePath =
-          '${coursewareDir.path}/${safeTitle}_$timestamp.pdf';
+      final safeTitle = title.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
+      final filePath = '${coursewareDir.path}/${safeTitle}_$timestamp.pdf';
       final file = File(filePath);
       await file.writeAsBytes(pdfBytes);
 
@@ -704,10 +706,8 @@ ${context != null ? '上下文说明: $context' : ''}
       }
 
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final safeTitle =
-          title.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
-      final filePath =
-          '${coursewareDir.path}/${safeTitle}_$timestamp.md';
+      final safeTitle = title.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
+      final filePath = '${coursewareDir.path}/${safeTitle}_$timestamp.md';
       final file = File(filePath);
       await file.writeAsString(markdown, encoding: utf8);
 
@@ -740,23 +740,23 @@ ${context != null ? '上下文说明: $context' : ''}
     AiConfigModel? configOverride,
   }) async {
     final isEnhanced = configOverride != null;
+    final courseName = await _courseContext.activeCourseName();
     final system = isEnhanced
-        ? '''你是一位极具感染力的移动应用开发课程讲师，正在录制高品质教学视频。
+        ? '''你是一位极具感染力的《$courseName》课程讲师，正在录制高品质教学视频。
 请用中文、口语化、清晰的语言生成教学视频旁白脚本。回复必须是合法的 JSON 数组。
 要求：
 - 语言自然生动，像与学生面对面交流
 - 适当使用过渡句（"接下来让我们看看…"、"这里要特别注意…"）
 - 关键概念要用通俗易懂的比喻解释
 - 每段旁白 150-250 字，节奏适中'''
-        : '''你是一位专业的移动应用开发课程讲师，正在录制教学视频。
+        : '''你是一位专业的《$courseName》课程讲师，正在录制教学视频。
 请用中文、口语化、清晰的语言生成教学视频旁白脚本。
 回复必须是合法的 JSON 数组。''';
 
     final title = lessonPlan['title'] ?? '';
     final sections = lessonPlan['sections'] as List? ?? [];
-    final sectionTitles = sections
-        .map((s) => (s as Map)['title']?.toString() ?? '')
-        .join(', ');
+    final sectionTitles =
+        sections.map((s) => (s as Map)['title']?.toString() ?? '').join(', ');
 
     final prompt = '''
 为教案"$title"生成视频旁白脚本。教案包含以下教学环节: $sectionTitles
@@ -776,7 +776,9 @@ ${context != null ? '上下文说明: $context' : ''}
 ''';
 
     final raw = await _aiService.chat(
-      [{'role': 'user', 'content': prompt}],
+      [
+        {'role': 'user', 'content': prompt}
+      ],
       systemPrompt: system,
       configOverride: configOverride,
     );
@@ -814,8 +816,7 @@ ${context != null ? '上下文说明: $context' : ''}
         umlDir.createSync(recursive: true);
       }
 
-      final safeTitle =
-          title.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
+      final safeTitle = title.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final filePath = '${umlDir.path}/${safeTitle}_$timestamp.png';
       final file = File(filePath);
@@ -880,16 +881,13 @@ ${context != null ? '上下文说明: $context' : ''}
                   const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: const pw.BoxDecoration(
                 color: PdfColor.fromInt(0xFF424242),
-                borderRadius:
-                    pw.BorderRadius.only(
-                      topLeft: pw.Radius.circular(4),
-                      topRight: pw.Radius.circular(4)),
+                borderRadius: pw.BorderRadius.only(
+                    topLeft: pw.Radius.circular(4),
+                    topRight: pw.Radius.circular(4)),
               ),
               child: pw.Text('Code',
                   style: pw.TextStyle(
-                      font: font,
-                      fontSize: 9,
-                      color: PdfColors.white)),
+                      font: font, fontSize: 9, color: PdfColors.white)),
             ),
             pw.Container(
               width: double.infinity,
@@ -917,8 +915,7 @@ ${context != null ? '上下文说明: $context' : ''}
 
     // ── 教学活动：带强调色前缀 ──
     if (trimmed.startsWith('教学活动:') || trimmed.startsWith('教学活动：')) {
-      final activity =
-          trimmed.replaceFirst(RegExp(r'^教学活动[：:]'), '').trim();
+      final activity = trimmed.replaceFirst(RegExp(r'^教学活动[：:]'), '').trim();
       return pw.Padding(
         padding: const pw.EdgeInsets.only(bottom: 12),
         child: pw.Row(
@@ -930,15 +927,12 @@ ${context != null ? '上下文说明: $context' : ''}
               height: 18,
               decoration: pw.BoxDecoration(
                 color: PdfColor.fromInt(0xFFFF9800),
-                borderRadius:
-                    const pw.BorderRadius.all(pw.Radius.circular(9)),
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(9)),
               ),
               child: pw.Center(
                 child: pw.Text('▶',
                     style: pw.TextStyle(
-                        font: font,
-                        fontSize: 9,
-                        color: PdfColors.white)),
+                        font: font, fontSize: 9, color: PdfColors.white)),
               ),
             ),
             pw.Expanded(
@@ -970,7 +964,9 @@ ${context != null ? '上下文说明: $context' : ''}
     }
 
     // ── 表格内容：检测以 "|" 开头的行并渲染为 Table ──
-    if (trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.split('|').length >= 4) {
+    if (trimmed.startsWith('|') &&
+        trimmed.endsWith('|') &&
+        trimmed.split('|').length >= 4) {
       final cells = trimmed
           .split('|')
           .map((c) => c.trim())
@@ -1077,9 +1073,7 @@ ${context != null ? '上下文说明: $context' : ''}
                   ),
                   pw.Text('$slideNum',
                       style: pw.TextStyle(
-                          font: font,
-                          fontSize: 12,
-                          color: PdfColors.grey)),
+                          font: font, fontSize: 12, color: PdfColors.grey)),
                 ],
               ),
             ),
@@ -1087,24 +1081,20 @@ ${context != null ? '上下文说明: $context' : ''}
               pw.SizedBox(height: 10),
               pw.Text(subtitle,
                   style: pw.TextStyle(
-                      font: font,
-                      fontSize: 14,
-                      color: PdfColors.grey700)),
+                      font: font, fontSize: 14, color: PdfColors.grey700)),
             ],
             pw.SizedBox(height: 20),
             // 内容（智能样式渲染），限制条目数防溢出
             ...safeItems.map((item) {
               // 截断过长文本（单个条目限制 500 字）
-              final truncated = item.length > 500
-                  ? '${item.substring(0, 500)}...'
-                  : item;
+              final truncated =
+                  item.length > 500 ? '${item.substring(0, 500)}...' : item;
               return _buildContentItem(truncated, font);
             }),
             pw.SizedBox(height: 8),
             // 额外信息
             if (extras != null) ...[
-              pw.Divider(
-                  color: PdfColor.fromInt(0xFFE0E0E0), thickness: 0.5),
+              pw.Divider(color: PdfColor.fromInt(0xFFE0E0E0), thickness: 0.5),
               pw.SizedBox(height: 6),
               ...extras.map((e) => pw.Padding(
                     padding: const pw.EdgeInsets.only(bottom: 6),
@@ -1133,9 +1123,7 @@ ${context != null ? '上下文说明: $context' : ''}
                 ),
                 child: pw.Text('💡 $notes',
                     style: pw.TextStyle(
-                        font: font,
-                        fontSize: 10,
-                        color: PdfColors.grey700)),
+                        font: font, fontSize: 10, color: PdfColors.grey700)),
               ),
           ],
         ),
@@ -1372,8 +1360,7 @@ ${context != null ? '上下文说明: $context' : ''}
           if (currentSubtitle != null) 'subtitle': currentSubtitle,
           'bullets':
               List<String>.from(currentBullets.where((b) => b.isNotEmpty)),
-          if (currentCode.isNotEmpty)
-            'code': currentCode.join('\n'),
+          if (currentCode.isNotEmpty) 'code': currentCode.join('\n'),
           if (codeLanguage.isNotEmpty) 'codeLanguage': codeLanguage,
           if (currentNotes != null) 'notes': currentNotes,
         };
@@ -1397,9 +1384,7 @@ ${context != null ? '上下文说明: $context' : ''}
           inCodeBlock = false;
         } else {
           inCodeBlock = true;
-          codeLanguage = trimmed.length > 3
-              ? trimmed.substring(3).trim()
-              : '';
+          codeLanguage = trimmed.length > 3 ? trimmed.substring(3).trim() : '';
         }
         continue;
       }
@@ -1467,8 +1452,7 @@ ${context != null ? '上下文说明: $context' : ''}
       }
 
       // 普通列表项
-      final bulletMatch =
-          RegExp(r'^[-*]\s+(.+)$').firstMatch(trimmed);
+      final bulletMatch = RegExp(r'^[-*]\s+(.+)$').firstMatch(trimmed);
       if (bulletMatch != null && currentTitle != null) {
         var text = bulletMatch.group(1)!;
         // 清理 Markdown 加粗
@@ -1478,8 +1462,7 @@ ${context != null ? '上下文说明: $context' : ''}
       }
 
       // 缩进列表项
-      final indentMatch =
-          RegExp(r'^\s{2,}[-*]\s+(.+)$').firstMatch(line);
+      final indentMatch = RegExp(r'^\s{2,}[-*]\s+(.+)$').firstMatch(line);
       if (indentMatch != null && currentTitle != null) {
         var text = indentMatch.group(1)!;
         text = text.replaceAll(RegExp(r'\*\*(.+?)\*\*'), '\$1');
@@ -1586,7 +1569,8 @@ ${context != null ? '上下文说明: $context' : ''}
     if (kIsWeb) return false;
     try {
       final result = await Process.run(
-        'pip', ['show', 'python-pptx'],
+        'pip',
+        ['show', 'python-pptx'],
         runInShell: true,
       );
       return result.exitCode == 0;
@@ -1613,10 +1597,8 @@ ${context != null ? '上下文说明: $context' : ''}
       }
 
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final safeTitle =
-          title.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
-      final outputPath =
-          '${coursewareDir.path}/${safeTitle}_$timestamp.pptx';
+      final safeTitle = title.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
+      final outputPath = '${coursewareDir.path}/${safeTitle}_$timestamp.pptx';
 
       // 将幻灯片数据写为 JSON 临时文件
       final tempDir = await getTemporaryDirectory();
@@ -2239,7 +2221,8 @@ if __name__ == '__main__':
     if (kIsWeb) return false;
     try {
       final result = await Process.run(
-        'python', ['-c', 'from PIL import Image; print("OK")'],
+        'python',
+        ['-c', 'from PIL import Image; print("OK")'],
         runInShell: true,
       );
       return result.exitCode == 0;
@@ -2282,7 +2265,8 @@ if __name__ == '__main__':
       await scriptFile.writeAsString(_slideImagesPythonScript());
 
       final result = await Process.run(
-        'python', [scriptFile.path, dataFile.path],
+        'python',
+        [scriptFile.path, dataFile.path],
         runInShell: true,
       ).timeout(const Duration(seconds: 120));
 
@@ -2298,10 +2282,12 @@ if __name__ == '__main__':
             .map((l) => l.trim())
             .where((l) => l.isNotEmpty && l.endsWith('.png'))
             .toList();
-        debugPrint('CoursewareService: generateSlideImages → ${paths.length} images');
+        debugPrint(
+            'CoursewareService: generateSlideImages → ${paths.length} images');
         return paths;
       }
-      debugPrint('CoursewareService: render_slides.py failed: ${result.stderr}');
+      debugPrint(
+          'CoursewareService: render_slides.py failed: ${result.stderr}');
       return [];
     } catch (e) {
       debugPrint('CoursewareService: generateSlideImages error: $e');
@@ -2422,7 +2408,7 @@ def main():
         draw.text(((W - tw)//2, H//2 + 10), chapter, font=ft_ch, fill='#BBCCFF')
 
     # 底部
-    bot = '移动应用开发知识图谱教学系统'
+    bot = '课程知识图谱与数字孪生平台'
     try:
         bbox = draw.textbbox((0,0), bot, font=ft_small)
         tw = bbox[2] - bbox[0]

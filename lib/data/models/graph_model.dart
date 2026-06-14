@@ -1,12 +1,14 @@
 class GraphModel {
   final String id;
   final String title;
+  final String? courseId;
   final String? graphType;
   final String? layout;
 
   GraphModel({
     required this.id,
     required this.title,
+    this.courseId,
     this.graphType,
     this.layout,
   });
@@ -15,6 +17,7 @@ class GraphModel {
     return GraphModel(
       id: map['id'] ?? '',
       title: map['title'] ?? '',
+      courseId: map['course_id'],
       graphType: map['graph_type'],
       layout: map['layout'],
     );
@@ -24,6 +27,7 @@ class GraphModel {
     return {
       'id': id,
       'title': title,
+      'course_id': courseId,
       'graph_type': graphType,
       'layout': layout,
     };

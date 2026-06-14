@@ -1,8 +1,22 @@
 import '../models/learning_path_model.dart';
+import '../../services/course_context_service.dart';
 import 'database_helper.dart';
 
 class LearningPathDao {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+  final CourseContextService _courseContext = CourseContextService();
+
+  Future<({String where, List<Object?> args})> _scope({
+    String column = 'course_id',
+    String? extraWhere,
+    List<Object?> extraArgs = const [],
+  }) {
+    return _courseContext.scopedWhere(
+      column: column,
+      extraWhere: extraWhere,
+      extraArgs: extraArgs,
+    );
+  }
 
   /// 基于最近错题反向推导薄弱节点，生成"补强路径"
   /// 返回新建路径的 id，若无错题则返回 -1
@@ -10,14 +24,19 @@ class LearningPathDao {
     final db = await _dbHelper.database;
 
     // 1. 查错题 → 按章节聚合
+    final wrongScope = await _scope(
+      column: 'w.course_id',
+      extraWhere: 'w.user_id = ?',
+      extraArgs: [userId],
+    );
     final wrongRows = await db.rawQuery('''
       SELECT w.chapter, COUNT(*) as cnt
       FROM wrong_answers w
-      WHERE w.user_id = ?
+      WHERE ${wrongScope.where}
       GROUP BY w.chapter
       ORDER BY cnt DESC
       LIMIT 5
-    ''', [userId]);
+    ''', wrongScope.args);
 
     if (wrongRows.isEmpty) return -1;
 
@@ -26,13 +45,18 @@ class LearningPathDao {
     for (final r in wrongRows) {
       final chapter = r['chapter'] as String? ?? '';
       if (chapter.isEmpty) continue;
+      final graphScope = await _scope(
+        column: 'g.course_id',
+        extraWhere: 'g.title LIKE ?',
+        extraArgs: ['%$chapter%'],
+      );
       final nodes = await db.rawQuery('''
         SELECT CAST(id AS TEXT) as nid FROM nodes
         WHERE graph_id IN (
-          SELECT id FROM graphs WHERE title LIKE ?
+          SELECT id FROM graphs g WHERE ${graphScope.where}
         )
         LIMIT 10
-      ''', ['%$chapter%']);
+      ''', graphScope.args);
       for (final n in nodes) {
         final nid = n['nid'] as String? ?? '';
         if (nid.isNotEmpty && !nodeIds.contains(nid)) nodeIds.add(nid);
@@ -44,6 +68,7 @@ class LearningPathDao {
     // 3. 创建补强路径
     final now = DateTime.now().toIso8601String();
     final pathId = await db.insert('learning_paths', {
+      'course_id': await _courseContext.activeCourseId(),
       'user_id': userId,
       'title': '错题补强 ${DateTime.now().toString().substring(0, 10)}',
       'description': '基于错题本自动生成的薄弱知识补强路径',
@@ -70,10 +95,14 @@ class LearningPathDao {
 
   Future<List<LearningPathModel>> getPathsByUser(String userId) async {
     final db = await _dbHelper.database;
+    final scope = await _scope(
+      extraWhere: 'user_id = ?',
+      extraArgs: [userId],
+    );
     final maps = await db.query(
       'learning_paths',
-      where: 'user_id = ?',
-      whereArgs: [userId],
+      where: scope.where,
+      whereArgs: scope.args,
       orderBy: 'created_at DESC',
     );
     return maps.map((map) {
@@ -86,10 +115,14 @@ class LearningPathDao {
 
   Future<LearningPathModel?> getPath(int pathId) async {
     final db = await _dbHelper.database;
+    final scope = await _scope(
+      extraWhere: 'id = ?',
+      extraArgs: [pathId],
+    );
     final maps = await db.query(
       'learning_paths',
-      where: 'id = ?',
-      whereArgs: [pathId],
+      where: scope.where,
+      whereArgs: scope.args,
     );
     if (maps.isEmpty) return null;
     final map = maps.first;
@@ -101,7 +134,9 @@ class LearningPathDao {
 
   Future<int> createPath(LearningPathModel path) async {
     final db = await _dbHelper.database;
-    return await db.insert('learning_paths', path.toMap());
+    final map = path.toMap();
+    map['course_id'] ??= await _courseContext.activeCourseId();
+    return await db.insert('learning_paths', map);
   }
 
   Future<int> updatePath(LearningPathModel path) async {
@@ -172,10 +207,14 @@ class LearningPathDao {
 
   Future<List<LearningPathModel>> getPresetPaths() async {
     final db = await _dbHelper.database;
+    final scope = await _scope(
+      extraWhere: 'user_id = ?',
+      extraArgs: ['system'],
+    );
     final maps = await db.query(
       'learning_paths',
-      where: 'user_id = ?',
-      whereArgs: ['system'],
+      where: scope.where,
+      whereArgs: scope.args,
     );
     return maps.map((map) {
       final nodeIdsStr = map['node_ids'] as String?;

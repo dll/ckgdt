@@ -1,6 +1,8 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import '../../../core/constants/chapter_helper.dart';
 import '../../../core/constants/chapter_sorter.dart';
 import '../../../data/local/database_helper.dart';
+import '../../../services/course_context_service.dart';
 import '../../../services/file_opener_service.dart';
 
 /// 资源查看页面 — 按章节过滤显示 PDF/PPT 课件
@@ -25,6 +27,7 @@ class ResourceViewerPage extends StatefulWidget {
 class _ResourceViewerPageState extends State<ResourceViewerPage>
     with SingleTickerProviderStateMixin {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+  final CourseContextService _courseContext = CourseContextService();
 
   // 双 Tab 模式
   TabController? _tabController;
@@ -37,6 +40,33 @@ class _ResourceViewerPageState extends State<ResourceViewerPage>
   bool _isLoading = true;
 
   bool get _isAllMode => widget.fileType == 'all';
+
+  Future<({String where, List<Object?> args})> _resourceScope(
+    String fileType,
+  ) async {
+    final whereParts = <String>['file_type = ?'];
+    final whereArgs = <Object?>[fileType];
+    final chFilter = widget.filterChapter;
+
+    if (chFilter != null && chFilter.isNotEmpty) {
+      final chapter = ChapterHelper.parseChapter(chFilter);
+      if (chapter == null) {
+        whereParts.add('chapter LIKE ?');
+        whereArgs.add('%$chFilter%');
+      } else {
+        final patterns = await _courseContext.chapterQueryPatterns(chapter);
+        whereParts.add(
+          '(${List.filled(patterns.length, 'chapter LIKE ?').join(' OR ')})',
+        );
+        whereArgs.addAll(patterns);
+      }
+    }
+
+    return _courseContext.scopedWhere(
+      extraWhere: whereParts.join(' AND '),
+      extraArgs: whereArgs,
+    );
+  }
 
   @override
   void initState() {
@@ -59,37 +89,23 @@ class _ResourceViewerPageState extends State<ResourceViewerPage>
 
       if (_isAllMode) {
         // 同时加载 PPT 和 PDF
-        final chFilter = widget.filterChapter;
         List<Map<String, dynamic>> pptResult;
         List<Map<String, dynamic>> pdfResult;
 
-        if (chFilter != null && chFilter.isNotEmpty) {
-          pptResult = await db.query(
-            'resource_files',
-            where: 'file_type = ? AND chapter LIKE ?',
-            whereArgs: ['ppt', '%$chFilter%'],
-            orderBy: 'chapter',
-          );
-          pdfResult = await db.query(
-            'resource_files',
-            where: 'file_type = ? AND chapter LIKE ?',
-            whereArgs: ['pdf', '%$chFilter%'],
-            orderBy: 'chapter',
-          );
-        } else {
-          pptResult = await db.query(
-            'resource_files',
-            where: 'file_type = ?',
-            whereArgs: ['ppt'],
-            orderBy: 'chapter',
-          );
-          pdfResult = await db.query(
-            'resource_files',
-            where: 'file_type = ?',
-            whereArgs: ['pdf'],
-            orderBy: 'chapter',
-          );
-        }
+        final pptScope = await _resourceScope('ppt');
+        final pdfScope = await _resourceScope('pdf');
+        pptResult = await db.query(
+          'resource_files',
+          where: pptScope.where,
+          whereArgs: pptScope.args,
+          orderBy: 'chapter',
+        );
+        pdfResult = await db.query(
+          'resource_files',
+          where: pdfScope.where,
+          whereArgs: pdfScope.args,
+          orderBy: 'chapter',
+        );
 
         final sortedPpt = List<Map<String, dynamic>>.from(pptResult);
         final sortedPdf = List<Map<String, dynamic>>.from(pdfResult);
@@ -103,23 +119,13 @@ class _ResourceViewerPageState extends State<ResourceViewerPage>
         });
       } else {
         // 单类型模式（向后兼容）
-        List<Map<String, dynamic>> result;
-        if (widget.filterChapter != null &&
-            widget.filterChapter!.isNotEmpty) {
-          result = await db.query(
-            'resource_files',
-            where: 'file_type = ? AND chapter LIKE ?',
-            whereArgs: [widget.fileType, '%${widget.filterChapter}%'],
-            orderBy: 'chapter',
-          );
-        } else {
-          result = await db.query(
-            'resource_files',
-            where: 'file_type = ?',
-            whereArgs: [widget.fileType],
-            orderBy: 'chapter',
-          );
-        }
+        final scope = await _resourceScope(widget.fileType);
+        final result = await db.query(
+          'resource_files',
+          where: scope.where,
+          whereArgs: scope.args,
+          orderBy: 'chapter',
+        );
 
         final sorted = List<Map<String, dynamic>>.from(result);
         ChapterSorter.sortByChapter(sorted);
@@ -199,8 +205,7 @@ class _ResourceViewerPageState extends State<ResourceViewerPage>
   }
 
   /// 资源列表
-  Widget _buildResourceList(
-      List<Map<String, dynamic>> resources, String type) {
+  Widget _buildResourceList(List<Map<String, dynamic>> resources, String type) {
     final icon = type == 'pdf' ? Icons.picture_as_pdf : Icons.slideshow;
     final color = type == 'pdf' ? Colors.red : Colors.orange;
     final label = type == 'pdf' ? 'PDF文档' : 'PPT课件';

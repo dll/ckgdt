@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../services/ai_service.dart';
 import '../../../services/auth_service.dart';
 import '../../widgets/markdown_bubble.dart';
@@ -43,13 +43,13 @@ class _AiHelpDialogState extends State<AiHelpDialog> {
     '系统支持哪些功能？',
   ];
 
-  static const _systemPrompt = '''你是"移动应用开发知识图谱教学系统"的 AI 助手助手。
+  static const _systemPrompt = '''你是"知识图谱教学平台"的 AI 助手。
 请用简洁友好的中文回答用户关于本系统的使用问题。
 
 本系统的主要功能包括：
-1. 知识图谱：可视化浏览移动开发知识体系，支持全局视图、章节视图、关系视图、掩码视图、达成视图
+1. 知识图谱：可视化浏览当前课程知识体系，支持全局视图、章节视图、关系视图、掩码视图、达成视图
 2. 学习路径：从知识图谱中生成推荐学习路径，按顺序学习知识点
-3. 学习资源：包含视频教程、PPT课件、PDF文档，按6个章节组织
+3. 学习资源：包含视频教程、PPT课件、PDF文档，按课程章节组织
 4. 章节测验：选择题测验，支持错题本复习
 5. 实验任务：实验作业提交和评分
 6. 考核评估：课程考核和成绩管理
@@ -196,8 +196,7 @@ class _AiHelpDialogState extends State<AiHelpDialog> {
                                       color: primary)),
                               Text('有什么问题都可以问我哦~',
                                   style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[500])),
+                                      fontSize: 12, color: Colors.grey[500])),
                             ],
                           ),
                         ),
@@ -416,8 +415,8 @@ class _AiHelpDialogState extends State<AiHelpDialog> {
             SizedBox(
                 width: 16,
                 height: 16,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2, color: primary)),
+                child:
+                    CircularProgressIndicator(strokeWidth: 2, color: primary)),
             const SizedBox(width: 8),
             Text('正在思考...',
                 style: TextStyle(fontSize: 13, color: Colors.grey[600])),
@@ -433,5 +432,6 @@ class _HelpMessage {
   final bool isUser;
   final String? modelProvider;
   final String? modelName;
-  const _HelpMessage(this.text, this.isUser, {this.modelProvider, this.modelName});
+  const _HelpMessage(this.text, this.isUser,
+      {this.modelProvider, this.modelName});
 }

@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
@@ -26,8 +26,7 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage>
-    with TickerProviderStateMixin {
+class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _userIdController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -138,8 +137,7 @@ class _LoginPageState extends State<LoginPage>
       if (success) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-              builder: (_) => const HomePage(initialTabIndex: 0)),
+          MaterialPageRoute(builder: (_) => const HomePage(initialTabIndex: 0)),
         );
         return;
       }
@@ -155,14 +153,14 @@ class _LoginPageState extends State<LoginPage>
       if (mounted) {
         final errorMsg = e.toString();
         String userMsg = '登录出错: $e';
-        
-        if (errorMsg.contains('locked') || 
+
+        if (errorMsg.contains('locked') ||
             errorMsg.contains('database is locked') ||
             errorMsg.contains('SQLiteException') ||
             errorMsg.contains('singleInstance')) {
           userMsg = '应用已在运行，请勿同时打开多个实例';
         }
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(userMsg),
@@ -240,9 +238,8 @@ class _LoginPageState extends State<LoginPage>
 
       // 自动填充表单并登录
       _userIdController.text = digits;
-      _passwordController.text = digits.length >= 6
-          ? digits.substring(digits.length - 6)
-          : digits;
+      _passwordController.text =
+          digits.length >= 6 ? digits.substring(digits.length - 6) : digits;
       _login();
       return;
     }
@@ -260,14 +257,18 @@ class _LoginPageState extends State<LoginPage>
           children: [
             Icon(Icons.graphic_eq, color: _accent, size: 20),
             SizedBox(width: 8),
-            Text('语音未识别', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: _ink)),
+            Text('语音未识别',
+                style: TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.w600, color: _ink)),
           ],
         ),
-        content: const Text('未识别到学号，请选择操作：', style: TextStyle(color: _ink, fontSize: 13)),
+        content: const Text('未识别到学号，请选择操作：',
+            style: TextStyle(color: _ink, fontSize: 13)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, 'cancel'),
-            child: Text('取消', style: TextStyle(color: _ink.withValues(alpha: 0.6))),
+            child: Text('取消',
+                style: TextStyle(color: _ink.withValues(alpha: 0.6))),
           ),
           OutlinedButton(
             onPressed: () => Navigator.pop(ctx, 'retry'),
@@ -296,24 +297,32 @@ class _LoginPageState extends State<LoginPage>
           children: [
             Icon(Icons.person, color: _accent, size: 20),
             SizedBox(width: 8),
-            Text('手动输入学号', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: _ink)),
+            Text('手动输入学号',
+                style: TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.w600, color: _ink)),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('语音识别失败，请手动输入学号/工号：', style: TextStyle(color: _ink, fontSize: 13)),
+            const Text('语音识别失败，请手动输入学号/工号：',
+                style: TextStyle(color: _ink, fontSize: 13)),
             const SizedBox(height: 14),
             TextField(
               controller: idCtrl,
               autofocus: true,
-              style: const TextStyle(color: _ink, fontSize: 16, letterSpacing: 2),
+              style:
+                  const TextStyle(color: _ink, fontSize: 16, letterSpacing: 2),
               decoration: InputDecoration(
                 hintText: '输入学号/工号',
                 hintStyle: TextStyle(color: _ink.withValues(alpha: 0.3)),
-                prefixIcon: Icon(Icons.badge, color: _ink.withValues(alpha: 0.5)),
-                border: OutlineInputBorder(borderSide: BorderSide(color: _ink.withValues(alpha: 0.25))),
-                focusedBorder: OutlineInputBorder(borderSide: const BorderSide(color: _ink, width: 1.5)),
+                prefixIcon:
+                    Icon(Icons.badge, color: _ink.withValues(alpha: 0.5)),
+                border: OutlineInputBorder(
+                    borderSide:
+                        BorderSide(color: _ink.withValues(alpha: 0.25))),
+                focusedBorder: OutlineInputBorder(
+                    borderSide: const BorderSide(color: _ink, width: 1.5)),
               ),
             ),
           ],
@@ -321,7 +330,8 @@ class _LoginPageState extends State<LoginPage>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('取消', style: TextStyle(color: _ink.withValues(alpha: 0.6))),
+            child: Text('取消',
+                style: TextStyle(color: _ink.withValues(alpha: 0.6))),
           ),
           FilledButton(
             onPressed: () {
@@ -415,8 +425,7 @@ class _LoginPageState extends State<LoginPage>
         await _syncServer?.stop();
         if (!mounted) return;
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-              builder: (_) => const HomePage(initialTabIndex: 0)),
+          MaterialPageRoute(builder: (_) => const HomePage(initialTabIndex: 0)),
         );
       } else {
         setState(() => _scanStatus = '用户 $userId 不存在，登录失败');
@@ -520,8 +529,7 @@ class _LoginPageState extends State<LoginPage>
       if (!mounted) return;
       // 移动端登录成功，跳转首页
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-            builder: (_) => const HomePage(initialTabIndex: 0)),
+        MaterialPageRoute(builder: (_) => const HomePage(initialTabIndex: 0)),
       );
     } catch (e) {
       setState(() => _scanStatus = null);
@@ -561,8 +569,7 @@ class _LoginPageState extends State<LoginPage>
                   prefixIcon: Icon(Icons.person),
                   border: OutlineInputBorder(),
                 ),
-                validator: (v) =>
-                    (v == null || v.isEmpty) ? '请输入学号/工号' : null,
+                validator: (v) => (v == null || v.isEmpty) ? '请输入学号/工号' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -573,8 +580,7 @@ class _LoginPageState extends State<LoginPage>
                   prefixIcon: Icon(Icons.lock),
                   border: OutlineInputBorder(),
                 ),
-                validator: (v) =>
-                    (v == null || v.isEmpty) ? '请输入密码' : null,
+                validator: (v) => (v == null || v.isEmpty) ? '请输入密码' : null,
               ),
             ],
           ),
@@ -793,9 +799,8 @@ class _LoginPageState extends State<LoginPage>
           SizedBox(
             width: wide ? 200 : 140,
             child: Column(
-              crossAxisAlignment: wide
-                  ? CrossAxisAlignment.start
-                  : CrossAxisAlignment.center,
+              crossAxisAlignment:
+                  wide ? CrossAxisAlignment.start : CrossAxisAlignment.center,
               children: [
                 Container(
                     width: double.infinity,
@@ -814,7 +819,7 @@ class _LoginPageState extends State<LoginPage>
         const SizedBox(height: 18),
         animated(
           Text(
-            'Knowledge Graph & Digital Twin Platform\nfor Mobile Application Development',
+            'Knowledge Graph & Digital Twin Platform\nfor Course Teaching and Learning',
             textAlign: wide ? TextAlign.left : TextAlign.center,
             style: TextStyle(
               color: _paper.withValues(alpha: 0.62),
@@ -831,7 +836,7 @@ class _LoginPageState extends State<LoginPage>
           animated(
             Row(
               children: [
-                _buildPillar('01', '六章', '课程图谱体系'),
+                _buildPillar('01', '多课', '课程图谱体系'),
                 const SizedBox(width: 28),
                 _buildPillar('02', '24', '协作智能体'),
                 const SizedBox(width: 28),
@@ -1072,9 +1077,8 @@ class _LoginPageState extends State<LoginPage>
                     Text(
                       num,
                       style: TextStyle(
-                        color: selected
-                            ? _accent
-                            : _ink.withValues(alpha: 0.35),
+                        color:
+                            selected ? _accent : _ink.withValues(alpha: 0.35),
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 1.5,
@@ -1084,9 +1088,7 @@ class _LoginPageState extends State<LoginPage>
                     Text(
                       label,
                       style: TextStyle(
-                        color: selected
-                            ? _ink
-                            : _ink.withValues(alpha: 0.45),
+                        color: selected ? _ink : _ink.withValues(alpha: 0.45),
                         fontSize: 13,
                         fontWeight:
                             selected ? FontWeight.w700 : FontWeight.w500,
@@ -1141,8 +1143,7 @@ class _LoginPageState extends State<LoginPage>
               controller: _userIdController,
               label: '学号 / 工号',
               hint: 'e.g. 2023210001',
-              validator: (v) =>
-                  (v == null || v.isEmpty) ? '请输入学号 / 工号' : null,
+              validator: (v) => (v == null || v.isEmpty) ? '请输入学号 / 工号' : null,
               suffix: VoiceInputButton(
                 controller: _userIdController,
                 tooltip: '语音输入学号',
@@ -1155,8 +1156,7 @@ class _LoginPageState extends State<LoginPage>
               label: '密  码',
               hint: '账号后 6 位',
               obscure: _obscurePassword,
-              validator: (v) =>
-                  (v == null || v.isEmpty) ? '请输入密码' : null,
+              validator: (v) => (v == null || v.isEmpty) ? '请输入密码' : null,
               suffix: IconButton(
                 visualDensity: VisualDensity.compact,
                 splashRadius: 18,
@@ -1388,7 +1388,6 @@ class _LoginPageState extends State<LoginPage>
     );
   }
 
-
   /// Tab2：扫码登录
   Widget _buildQrScanTab() {
     return Padding(
@@ -1427,7 +1426,8 @@ class _LoginPageState extends State<LoginPage>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.qr_code_2, size: 56, color: _ink.withValues(alpha: 0.3)),
+              Icon(Icons.qr_code_2,
+                  size: 56, color: _ink.withValues(alpha: 0.3)),
               const SizedBox(height: 16),
               Text('使用手机 APP 扫描以登录桌面端',
                   style: TextStyle(
@@ -1507,7 +1507,8 @@ class _LoginPageState extends State<LoginPage>
         const SizedBox(height: 6),
         TextButton.icon(
           onPressed: _generateQrCode,
-          icon: Icon(Icons.refresh, size: 13, color: _ink.withValues(alpha: 0.6)),
+          icon:
+              Icon(Icons.refresh, size: 13, color: _ink.withValues(alpha: 0.6)),
           label: Text('刷新二维码',
               style: TextStyle(
                   fontSize: 11,
@@ -1623,4 +1624,3 @@ class _LoginPageState extends State<LoginPage>
     }
   }
 }
-

@@ -24,7 +24,7 @@ void main() {
     await tester.pump();
     await tester.pumpAndSettle();
 
-    expect(find.text('移动应用开发\n知识图谱教学系统'), findsOneWidget);
+    expect(find.text('知识图谱 · 数字孪生'), findsOneWidget);
     expect(find.text('学号/工号'), findsOneWidget);
     expect(find.text('密码'), findsOneWidget);
     expect(find.text('登录'), findsOneWidget);
@@ -38,7 +38,8 @@ void main() {
     expect(find.byIcon(Icons.lock), findsOneWidget);
   }, skip: _skipLoginPageTests);
 
-  testWidgets('Login page hides quick login when disabled', (WidgetTester tester) async {
+  testWidgets('Login page hides quick login when disabled',
+      (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({
       'quick_login_enabled': false,
     });
@@ -47,7 +48,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // 基础 UI 仍存在
-    expect(find.text('移动应用开发\n知识图谱教学系统'), findsOneWidget);
+    expect(find.text('知识图谱 · 数字孪生'), findsOneWidget);
     expect(find.text('登录'), findsOneWidget);
 
     // 快速登录按钮应被隐藏

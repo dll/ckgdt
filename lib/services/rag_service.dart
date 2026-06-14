@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../data/local/database_helper.dart';
 import '../data/local/knowledge_graph_dao.dart';
 import '../data/local/rag_embedding_dao.dart';
+import 'course_context_service.dart';
 import 'embedding_service.dart';
 
 /// 检索增强生成（RAG）服务
@@ -20,6 +21,7 @@ import 'embedding_service.dart';
 /// - `questions` — 测验题库
 class RagService {
   final KnowledgeGraphDao _kgDao = KnowledgeGraphDao();
+  final CourseContextService _courseContext = CourseContextService();
 
   // ── TF-IDF 索引数据结构 ──────────────────────────────────────────────
 
@@ -41,23 +43,116 @@ class RagService {
 
   /// 索引是否已构建
   bool _indexBuilt = false;
+  String? _indexedCourseId;
 
   // ── 中文停用词 ──────────────────────────────────────────────────────
 
   static const _stopWords = {
-    '的', '了', '吗', '呢', '啊', '吧', '是', '在', '有', '和', '与',
-    '或', '对', '从', '到', '把', '被', '让', '给', '用', '以',
-    '什么', '怎么', '如何', '为什么', '哪些', '哪个', '多少',
-    '能', '可以', '请', '帮', '我', '你', '他', '她', '它', '们',
-    '这', '那', '些', '个', '一', '不', '也', '都', '还', '就',
-    '想', '要', '知道', '了解', '学习', '看看', '介绍', '说说',
-    '一个', '一种', '这个', '那个', '我们', '他们', '自己',
-    '其中', '通过', '以及', '使用', '进行', '基于', '需要',
-    '包括', '主要', '不同', '之间', '相关', '用于', '提供',
-    '实现', '开发', '应用', '技术', '移动', '系统', '设计',
-    '方式', '方法', '过程', '内容', '功能', '特点', '作用',
-    '什么是', '是指', '称为', '属于', '具有', '能够', '必须',
-    '因此', '所以', '但是', '虽然', '如果', '因为', '并且',
+    '的',
+    '了',
+    '吗',
+    '呢',
+    '啊',
+    '吧',
+    '是',
+    '在',
+    '有',
+    '和',
+    '与',
+    '或',
+    '对',
+    '从',
+    '到',
+    '把',
+    '被',
+    '让',
+    '给',
+    '用',
+    '以',
+    '什么',
+    '怎么',
+    '如何',
+    '为什么',
+    '哪些',
+    '哪个',
+    '多少',
+    '能',
+    '可以',
+    '请',
+    '帮',
+    '我',
+    '你',
+    '他',
+    '她',
+    '它',
+    '们',
+    '这',
+    '那',
+    '些',
+    '个',
+    '一',
+    '不',
+    '也',
+    '都',
+    '还',
+    '就',
+    '想',
+    '要',
+    '知道',
+    '了解',
+    '学习',
+    '看看',
+    '介绍',
+    '说说',
+    '一个',
+    '一种',
+    '这个',
+    '那个',
+    '我们',
+    '他们',
+    '自己',
+    '其中',
+    '通过',
+    '以及',
+    '使用',
+    '进行',
+    '基于',
+    '需要',
+    '包括',
+    '主要',
+    '不同',
+    '之间',
+    '相关',
+    '用于',
+    '提供',
+    '实现',
+    '开发',
+    '应用',
+    '技术',
+    '移动',
+    '系统',
+    '设计',
+    '方式',
+    '方法',
+    '过程',
+    '内容',
+    '功能',
+    '特点',
+    '作用',
+    '什么是',
+    '是指',
+    '称为',
+    '属于',
+    '具有',
+    '能够',
+    '必须',
+    '因此',
+    '所以',
+    '但是',
+    '虽然',
+    '如果',
+    '因为',
+    '并且',
   };
 
   // ── 公共 API ───────────────────────────────────────────────────────
@@ -73,7 +168,10 @@ class RagService {
     if (query.trim().isEmpty) return '';
 
     // 首次调用时构建索引
-    if (!_indexBuilt) await _buildIndex();
+    final activeCourseId = await _courseContext.activeCourseId();
+    if (!_indexBuilt || _indexedCourseId != activeCourseId) {
+      await rebuildIndex();
+    }
 
     final sections = <String>[];
 
@@ -148,9 +246,17 @@ class RagService {
   Future<void> _buildIndex() async {
     try {
       final db = await DatabaseHelper.instance.database;
+      final conceptScope = await _courseContext.scopedWhere();
+      final graphScope =
+          await _courseContext.scopedWhere(column: 'g.course_id');
+      final resourceScope = await _courseContext.scopedWhere();
 
       // 1. 索引 knowledge_concepts
-      final concepts = await db.query('knowledge_concepts');
+      final concepts = await db.query(
+        'knowledge_concepts',
+        where: conceptScope.where,
+        whereArgs: conceptScope.args,
+      );
       for (final c in concepts) {
         final id = c['id'];
         if (id == null) continue;
@@ -165,7 +271,12 @@ class RagService {
       }
 
       // 2. 索引 nodes 表
-      final nodes = await db.query('nodes');
+      final nodes = await db.rawQuery('''
+        SELECT n.*
+        FROM nodes n
+        INNER JOIN graphs g ON g.id = n.graph_id
+        WHERE ${graphScope.where}
+      ''', graphScope.args);
       for (final n in nodes) {
         final gid = n['graph_id'] ?? '0';
         final nid = n['id'] ?? '';
@@ -180,7 +291,11 @@ class RagService {
       }
 
       // 3. 索引 resource_files
-      final resources = await db.query('resource_files');
+      final resources = await db.query(
+        'resource_files',
+        where: resourceScope.where,
+        whereArgs: resourceScope.args,
+      );
       for (final r in resources) {
         final id = r['id'];
         if (id == null) continue;
@@ -195,6 +310,7 @@ class RagService {
       }
 
       _indexBuilt = true;
+      _indexedCourseId = await _courseContext.activeCourseId();
       debugPrint('RagService: index built — $_docCount docs, '
           '${_vocabulary.length} terms');
     } catch (e) {
@@ -265,8 +381,7 @@ class RagService {
         }
         tokens.add(buf.toString());
       } else if (ch.trim().isNotEmpty &&
-          !RegExp(r'[，。！？、；：""''（）[\]{}【】,.!?;:()-]')
-              .hasMatch(ch)) {
+          !RegExp(r'[，。！？、；：""' '（）[\]{}【】,.!?;:()-]').hasMatch(ch)) {
         // 中文字符：uni-gram
         final uni = ch.toLowerCase();
         if (!_stopWords.contains(uni)) {
@@ -276,7 +391,7 @@ class RagService {
         if (i > 0) {
           final prev = chars[i - 1];
           if (prev.trim().isNotEmpty &&
-              !RegExp(r'[a-zA-Z0-9，。！？、；：""''（）[\]{}【】,.!?;:()-]')
+              !RegExp(r'[a-zA-Z0-9，。！？、；：""' '（）[\]{}【】,.!?;:()-]')
                   .hasMatch(prev)) {
             final bi = '${prev.toLowerCase()}$uni';
             tokens.add(bi);
@@ -388,8 +503,7 @@ class RagService {
 
   // ── 语义搜索（TF-IDF） ────────────────────────────────────────────
 
-  List<Map<String, dynamic>> _searchConceptsSemantic(
-      String query, int limit) {
+  List<Map<String, dynamic>> _searchConceptsSemantic(String query, int limit) {
     final qVec = _queryVector(query);
     if (qVec.isEmpty) return [];
 
@@ -470,7 +584,7 @@ class RagService {
   /// 从用户查询中提取搜索关键词
   List<String> _extractKeywords(String query) {
     final words = query
-        .replaceAll(RegExp(r'[，。！？、；：""''（）[\]{}【】]'), ' ')
+        .replaceAll(RegExp(r'[，。！？、；：""' '（）[\]{}【】]'), ' ')
         .split(RegExp(r'\s+'))
         .where((w) => w.length >= 2 && !_stopWords.contains(w))
         .toList();
@@ -541,12 +655,18 @@ class RagService {
 
     for (final kw in keywords) {
       try {
-        final hits = await db.query(
-          'nodes',
-          where: 'title LIKE ? OR content LIKE ?',
-          whereArgs: ['%$kw%', '%$kw%'],
-          limit: limit,
+        final graphScope = await _courseContext.scopedWhere(
+          column: 'g.course_id',
+          extraWhere: 'n.title LIKE ? OR n.content LIKE ?',
+          extraArgs: ['%$kw%', '%$kw%'],
         );
+        final hits = await db.rawQuery('''
+          SELECT n.*
+          FROM nodes n
+          INNER JOIN graphs g ON g.id = n.graph_id
+          WHERE ${graphScope.where}
+          LIMIT ?
+        ''', [...graphScope.args, limit]);
         for (final hit in hits) {
           final id = hit['id'] as String? ?? '';
           if (id.isNotEmpty && seen.add(id)) results.add(hit);
@@ -567,10 +687,14 @@ class RagService {
 
     for (final kw in keywords) {
       try {
+        final scope = await _courseContext.scopedWhere(
+          extraWhere: 'file_name LIKE ? OR description LIKE ?',
+          extraArgs: ['%$kw%', '%$kw%'],
+        );
         final hits = await db.query(
           'resource_files',
-          where: 'file_name LIKE ? OR description LIKE ?',
-          whereArgs: ['%$kw%', '%$kw%'],
+          where: scope.where,
+          whereArgs: scope.args,
           limit: 5,
         );
         for (final hit in hits) {
@@ -593,10 +717,14 @@ class RagService {
 
     for (final kw in keywords) {
       try {
+        final scope = await _courseContext.scopedWhere(
+          extraWhere: 'question LIKE ?',
+          extraArgs: ['%$kw%'],
+        );
         final hits = await db.query(
           'questions',
-          where: 'question LIKE ?',
-          whereArgs: ['%$kw%'],
+          where: scope.where,
+          whereArgs: scope.args,
           limit: 3,
         );
         for (final hit in hits) {
@@ -718,11 +846,13 @@ class RagService {
         // 向量索引未建立 → 回退
         return retrieveContext(userMessage, maxConcepts: topK);
       }
+      final courseId = await _courseContext.activeCourseId();
       final qEmb = await EmbeddingService.instance.embed(userMessage);
       final hits = await RagEmbeddingDao.instance.search(
         qEmb,
         topK: topK,
         docIdFilter: docIdFilter,
+        docIdPrefix: docIdFilter == null ? '$courseId:' : null,
       );
       if (hits.isEmpty) {
         return retrieveContext(userMessage, maxConcepts: topK);
@@ -760,7 +890,8 @@ class RagService {
     // 切片
     final chunks = <String>[];
     for (var i = 0; i < content.length; i += chunkSize - overlap) {
-      final end = (i + chunkSize) < content.length ? i + chunkSize : content.length;
+      final end =
+          (i + chunkSize) < content.length ? i + chunkSize : content.length;
       chunks.add(content.substring(i, end));
       if (end >= content.length) break;
     }

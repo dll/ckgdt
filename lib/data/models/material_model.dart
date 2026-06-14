@@ -1,5 +1,6 @@
 class MaterialModel {
   final int? id;
+  final String? courseId;
   final String title;
   final String type; // 'pdf', 'slide', 'script', 'uml', 'video_script'
   final String? filePath;
@@ -10,6 +11,7 @@ class MaterialModel {
 
   const MaterialModel({
     this.id,
+    this.courseId,
     required this.title,
     required this.type,
     this.filePath,
@@ -21,6 +23,7 @@ class MaterialModel {
 
   factory MaterialModel.fromMap(Map<String, dynamic> map) => MaterialModel(
         id: map['id'] as int?,
+        courseId: map['course_id'] as String?,
         title: map['title'] as String? ?? '',
         type: map['type'] as String? ?? 'script',
         filePath: map['file_path'] as String?,
@@ -32,6 +35,7 @@ class MaterialModel {
 
   Map<String, dynamic> toMap() => {
         if (id != null) 'id': id,
+        if (courseId != null) 'course_id': courseId,
         'title': title,
         'type': type,
         'file_path': filePath,

@@ -2,10 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import '../core/error_handler.dart';
 import '../data/local/database_helper.dart';
+import 'course_context_service.dart';
 
 /// 节点级达成度服务 — 聚合 quiz/lab/work 分数到图谱节点
 class NodeAchievementService {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+  final CourseContextService _courseContext = CourseContextService();
 
   /// 检查表是否存在
   Future<bool> _tableExists(Database db, String tableName) async {
@@ -179,7 +181,13 @@ class NodeAchievementService {
 
   Future<List<Map<String, dynamic>>> _loadKnowledgeConcepts(Database db) async {
     if (!await _tableExists(db, 'knowledge_concepts')) return const [];
-    return db.query('knowledge_concepts', orderBy: 'id ASC');
+    final scope = await _courseContext.scopedWhere();
+    return db.query(
+      'knowledge_concepts',
+      where: scope.where,
+      whereArgs: scope.args,
+      orderBy: 'id ASC',
+    );
   }
 
   Map<int, Set<int>> _mapConceptsToObjectives(
@@ -405,12 +413,17 @@ class NodeAchievementService {
         try {
           final hasNodeId = await _columnExists(db, 'questions', 'node_id');
           if (hasNodeId) {
+            final scope = await _courseContext.scopedWhere(
+              column: 'qr.course_id',
+              extraWhere: 'qr.user_id = ? AND q.node_id = ?',
+              extraArgs: [userId, nodeId],
+            );
             final qr = await db.rawQuery('''
               SELECT AVG(qr.score) as avg_score
               FROM quiz_results qr
               JOIN questions q ON qr.chapter = q.source
-              WHERE qr.user_id = ? AND q.node_id = ?
-            ''', [userId, nodeId]);
+              WHERE ${scope.where}
+            ''', scope.args);
             quizScore = (qr.first['avg_score'] as num?)?.toDouble() ?? 0;
           }
         } catch (e, st) {
@@ -423,13 +436,18 @@ class NodeAchievementService {
           final hasRelatedNodeIds =
               await _columnExists(db, 'lab_tasks', 'related_node_ids');
           if (hasRelatedNodeIds) {
+            final scope = await _courseContext.scopedWhere(
+              column: 'lt.course_id',
+              extraWhere:
+                  'ls.user_id = ? AND ls.score IS NOT NULL AND lt.related_node_ids LIKE ?',
+              extraArgs: [userId, '%$nodeId%'],
+            );
             final lr = await db.rawQuery('''
               SELECT AVG(ls.score) as avg_score
               FROM lab_submissions ls
               JOIN lab_tasks lt ON ls.task_id = lt.id
-              WHERE ls.user_id = ? AND ls.score IS NOT NULL
-                AND lt.related_node_ids LIKE ?
-            ''', [userId, '%$nodeId%']);
+              WHERE ${scope.where}
+            ''', scope.args);
             labScore = (lr.first['avg_score'] as num?)?.toDouble() ?? 0;
           }
         } catch (e, st) {
@@ -442,12 +460,17 @@ class NodeAchievementService {
           final hasRelatedNodeIds =
               await _columnExists(db, 'student_works', 'related_node_ids');
           if (hasRelatedNodeIds) {
+            final scope = await _courseContext.scopedWhere(
+              column: 'sw.course_id',
+              extraWhere: 'sw.user_id = ? AND sw.related_node_ids LIKE ?',
+              extraArgs: [userId, '%$nodeId%'],
+            );
             final wr = await db.rawQuery('''
               SELECT AVG(ws.total_score) as avg_score
               FROM work_scores ws
               JOIN student_works sw ON ws.work_id = sw.id
-              WHERE sw.user_id = ? AND sw.related_node_ids LIKE ?
-            ''', [userId, '%$nodeId%']);
+              WHERE ${scope.where}
+            ''', scope.args);
             workScore = (wr.first['avg_score'] as num?)?.toDouble() ?? 0;
           }
         } catch (e, st) {

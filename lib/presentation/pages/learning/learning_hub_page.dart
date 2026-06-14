@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -7,9 +7,9 @@ import '../../../core/design/noir_tokens.dart';
 import '../../widgets/noir_page_shell.dart';
 import '../../../core/constants/chapter_sorter.dart';
 import '../../../data/local/database_helper.dart';
-import '../../../data/local/course_dao.dart';
 import '../../../services/ai_service.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/course_context_service.dart';
 import '../../../services/courseware_service.dart';
 import '../../../services/slide_generator_service.dart';
 import '../../../services/file_opener_service.dart';
@@ -43,9 +43,9 @@ class _LearningHubPageState extends State<LearningHubPage>
     with TickerProviderStateMixin, InnerTabRequestMixin {
   late TabController _tabController;
   final _authService = AuthService();
+  final _courseContext = CourseContextService();
 
-  bool get _isTeacherOrAdmin =>
-      _authService.isTeacher || _authService.isAdmin;
+  bool get _isTeacherOrAdmin => _authService.isTeacher || _authService.isAdmin;
 
   // 数据
   List<Map<String, dynamic>> _videos = [];
@@ -70,6 +70,7 @@ class _LearningHubPageState extends State<LearningHubPage>
   bool _aiLoading = false;
   String _aiProviderLabel = 'DeepSeek';
   String _aiModel = 'deepseek-v4-pro';
+  String _courseName = '课程';
 
   @override
   void initState() {
@@ -103,6 +104,7 @@ class _LearningHubPageState extends State<LearningHubPage>
 
   Future<void> _loadAllData() async {
     await Future.wait([
+      _loadCourseContext(),
       _loadVideos(),
       _loadPPTs(),
       _loadPDFs(),
@@ -110,20 +112,34 @@ class _LearningHubPageState extends State<LearningHubPage>
     ]);
   }
 
+  Future<void> _loadCourseContext() async {
+    try {
+      final courseName = await _courseContext.activeCourseName(fallback: '课程');
+      if (!mounted) return;
+      setState(() => _courseName = courseName);
+    } catch (e, st) {
+      swallowDebug(e, tag: 'LearningHub.loadCourseContext', stack: st);
+    }
+  }
+
   Future<void> _loadVideos() async {
     try {
       final db = await DatabaseHelper.instance.database;
-      String where = 'file_type = ?';
-      List<Object?> whereArgs = ['video'];
+      final whereParts = <String>['file_type = ?'];
+      final whereArgs = <Object?>['video'];
       if (_resourceMode == 'preset') {
-        where += " AND (source_type = 'preset' OR source_type IS NULL)";
+        whereParts.add("(source_type = 'preset' OR source_type IS NULL)");
       } else if (_resourceMode == 'extended') {
-        where += " AND source_type = 'extended'";
+        whereParts.add("source_type = 'extended'");
       }
+      final scope = await _courseContext.scopedWhere(
+        extraWhere: whereParts.join(' AND '),
+        extraArgs: whereArgs,
+      );
       final result = await db.query(
         'resource_files',
-        where: where,
-        whereArgs: whereArgs,
+        where: scope.where,
+        whereArgs: scope.args,
         orderBy: 'chapter',
       );
       final sorted = List<Map<String, dynamic>>.from(result);
@@ -143,17 +159,21 @@ class _LearningHubPageState extends State<LearningHubPage>
   Future<void> _loadPPTs() async {
     try {
       final db = await DatabaseHelper.instance.database;
-      String where = 'file_type = ?';
-      List<Object?> whereArgs = ['ppt'];
+      final whereParts = <String>['file_type = ?'];
+      final whereArgs = <Object?>['ppt'];
       if (_resourceMode == 'preset') {
-        where += " AND (source_type = 'preset' OR source_type IS NULL)";
+        whereParts.add("(source_type = 'preset' OR source_type IS NULL)");
       } else if (_resourceMode == 'extended') {
-        where += " AND source_type = 'extended'";
+        whereParts.add("source_type = 'extended'");
       }
+      final scope = await _courseContext.scopedWhere(
+        extraWhere: whereParts.join(' AND '),
+        extraArgs: whereArgs,
+      );
       final result = await db.query(
         'resource_files',
-        where: where,
-        whereArgs: whereArgs,
+        where: scope.where,
+        whereArgs: scope.args,
         orderBy: 'chapter',
       );
       final sorted = List<Map<String, dynamic>>.from(result);
@@ -173,17 +193,21 @@ class _LearningHubPageState extends State<LearningHubPage>
   Future<void> _loadPDFs() async {
     try {
       final db = await DatabaseHelper.instance.database;
-      String where = 'file_type = ?';
-      List<Object?> whereArgs = ['pdf'];
+      final whereParts = <String>['file_type = ?'];
+      final whereArgs = <Object?>['pdf'];
       if (_resourceMode == 'preset') {
-        where += " AND (source_type = 'preset' OR source_type IS NULL)";
+        whereParts.add("(source_type = 'preset' OR source_type IS NULL)");
       } else if (_resourceMode == 'extended') {
-        where += " AND source_type = 'extended'";
+        whereParts.add("source_type = 'extended'");
       }
+      final scope = await _courseContext.scopedWhere(
+        extraWhere: whereParts.join(' AND '),
+        extraArgs: whereArgs,
+      );
       final result = await db.query(
         'resource_files',
-        where: where,
-        whereArgs: whereArgs,
+        where: scope.where,
+        whereArgs: scope.args,
         orderBy: 'chapter',
       );
       final sorted = List<Map<String, dynamic>>.from(result);
@@ -246,7 +270,11 @@ class _LearningHubPageState extends State<LearningHubPage>
       final dao = HotVideoDao();
       final allVideos = await dao.getVideos(sortBy: 'latest', limit: 50);
       if (allVideos.isEmpty) {
-        if (mounted) setState(() { _recommendLoading = false; _recommendError = '视频池为空，请先添加视频'; });
+        if (mounted)
+          setState(() {
+            _recommendLoading = false;
+            _recommendError = '视频池为空，请先添加视频';
+          });
         return;
       }
 
@@ -261,27 +289,35 @@ class _LearningHubPageState extends State<LearningHubPage>
         buffer.writeln('   平台：${v.platform}');
       }
 
-      // 3. AI从视频池中筛选最相关的移动应用开发视频
+      final courseName = await _courseContext.activeCourseName(fallback: '课程');
+
+      // 3. AI从视频池中筛选最相关的当前课程视频
       final aiService = AiService();
       final result = await aiService.chat(
         [
           {
             'role': 'user',
-            'content': '以下是视频池中的所有视频。请从中选出与"移动应用开发"最相关的8个高质量教学视频，'
+            'content': '以下是视频池中的所有视频。请从中选出与"$courseName"最相关的8个高质量教学视频，'
                 '返回所选视频的索引号JSON数组（仅返回数组，不要其他文字）：\n\n${buffer.toString()}'
           },
         ],
-        systemPrompt: '你是移动应用开发课程的教学助手。请从视频池中选择最相关的教学视频。只返回JSON数组，如[0,3,5,7,2,9,1,4]。',
+        systemPrompt:
+            '你是$courseName课程的教学助手。请从视频池中选择最相关的教学视频。只返回JSON数组，如[0,3,5,7,2,9,1,4]。',
       );
 
       // 4. 解析AI返回的索引
       final match = RegExp(r'\[[\d,\s]*\]').firstMatch(result);
       if (match == null) {
-        if (mounted) setState(() { _recommendLoading = false; _recommendError = 'AI 未返回有效筛选结果'; });
+        if (mounted)
+          setState(() {
+            _recommendLoading = false;
+            _recommendError = 'AI 未返回有效筛选结果';
+          });
         return;
       }
 
-      final List<dynamic> indices = jsonDecode(match.group(0)!) as List<dynamic>;
+      final List<dynamic> indices =
+          jsonDecode(match.group(0)!) as List<dynamic>;
       final allMaps = allVideos.map((v) => v.toMap()).toList();
       final filtered = <Map<String, dynamic>>[];
       for (final idx in indices) {
@@ -317,7 +353,8 @@ class _LearningHubPageState extends State<LearningHubPage>
           children: [
             Icon(Icons.error_outline, size: 48, color: Colors.grey.shade400),
             const SizedBox(height: 8),
-            Text(_recommendError!, style: TextStyle(color: Colors.grey.shade500)),
+            Text(_recommendError!,
+                style: TextStyle(color: Colors.grey.shade500)),
             const SizedBox(height: 16),
             FilledButton.icon(
               onPressed: _loadRecommendedVideos,
@@ -333,11 +370,14 @@ class _LearningHubPageState extends State<LearningHubPage>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.video_library_outlined, size: 48, color: Colors.grey.shade400),
+            Icon(Icons.video_library_outlined,
+                size: 48, color: Colors.grey.shade400),
             const SizedBox(height: 8),
-            Text('还没有推荐视频', style: TextStyle(fontSize: 14, color: Colors.grey.shade500)),
+            Text('还没有推荐视频',
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade500)),
             const SizedBox(height: 4),
-            Text('点击右下角按钮让 AI 为你推荐', style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
+            Text('点击右下角按钮让 AI 为你推荐',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
           ],
         ),
       );
@@ -346,8 +386,11 @@ class _LearningHubPageState extends State<LearningHubPage>
     final colorScheme = Theme.of(context).colorScheme;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final crossAxisCount = constraints.maxWidth > 900 ? 4 : (constraints.maxWidth > 600 ? 3 : 2);
-        final cardWidth = (constraints.maxWidth - (crossAxisCount + 1) * 12) / crossAxisCount;
+        final crossAxisCount = constraints.maxWidth > 900
+            ? 4
+            : (constraints.maxWidth > 600 ? 3 : 2);
+        final cardWidth =
+            (constraints.maxWidth - (crossAxisCount + 1) * 12) / crossAxisCount;
         final cardHeight = cardWidth * 0.85 + 56;
 
         return Column(
@@ -357,15 +400,22 @@ class _LearningHubPageState extends State<LearningHubPage>
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(
                 children: [
-                  Icon(Icons.auto_awesome, size: 16, color: Colors.purple.shade400),
+                  Icon(Icons.auto_awesome,
+                      size: 16, color: Colors.purple.shade400),
                   const SizedBox(width: 6),
-                  Text('推荐视频', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
+                  Text('推荐视频',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: colorScheme.onSurface)),
                   const Spacer(),
                   TextButton.icon(
                     icon: const Icon(Icons.auto_awesome, size: 14),
-                    label: const Text('AI 智能推荐', style: TextStyle(fontSize: 12)),
+                    label:
+                        const Text('AI 智能推荐', style: TextStyle(fontSize: 12)),
                     style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
@@ -407,7 +457,8 @@ class _LearningHubPageState extends State<LearningHubPage>
         elevation: 0,
         scrolledUnderElevation: 0,
         iconTheme: const IconThemeData(color: NoirTokens.paper),
-        title: Text(_isTeacherOrAdmin ? '教学资源管理' : '学习', style: const TextStyle(color: NoirTokens.paper)),
+        title: Text(_isTeacherOrAdmin ? '教学资源管理' : '学习',
+            style: const TextStyle(color: NoirTokens.paper)),
         actions: [
           if (_isTeacherOrAdmin) ...[
             IconButton(
@@ -447,13 +498,21 @@ class _LearningHubPageState extends State<LearningHubPage>
           indicatorColor: NoirTokens.accent,
           indicatorWeight: 2,
           labelColor: NoirTokens.paper,
-          labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 1.5),
+          labelStyle: const TextStyle(
+              fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 1.5),
           unselectedLabelColor: NoirTokens.paper.withValues(alpha: 0.5),
-          unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+          unselectedLabelStyle:
+              const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
           tabs: [
-            Tab(icon: const Icon(Icons.play_circle_outline), text: '视频 (${_videoLoading ? "..." : _videos.length})'),
-            Tab(icon: const Icon(Icons.slideshow_outlined), text: 'PPT (${_pptLoading ? "..." : _pptFiles.length})'),
-            Tab(icon: const Icon(Icons.picture_as_pdf_outlined), text: 'PDF (${_pdfLoading ? "..." : _pdfFiles.length})'),
+            Tab(
+                icon: const Icon(Icons.play_circle_outline),
+                text: '视频 (${_videoLoading ? "..." : _videos.length})'),
+            Tab(
+                icon: const Icon(Icons.slideshow_outlined),
+                text: 'PPT (${_pptLoading ? "..." : _pptFiles.length})'),
+            Tab(
+                icon: const Icon(Icons.picture_as_pdf_outlined),
+                text: 'PDF (${_pdfLoading ? "..." : _pdfFiles.length})'),
             const Tab(icon: Icon(Icons.quiz_outlined), text: '测验'),
             const Tab(icon: Icon(Icons.assistant_outlined), text: '助手'),
           ],
@@ -472,8 +531,10 @@ class _LearningHubPageState extends State<LearningHubPage>
                   controller: _tabController,
                   children: [
                     _buildVideoTab(),
-                    _buildFileListTab(_pptFiles, _pptLoading, '🖼️', 'PPT', _loadPPTs),
-                    _buildFileListTab(_pdfFiles, _pdfLoading, '📄', 'PDF', _loadPDFs),
+                    _buildFileListTab(
+                        _pptFiles, _pptLoading, '🖼️', 'PPT', _loadPPTs),
+                    _buildFileListTab(
+                        _pdfFiles, _pdfLoading, '📄', 'PDF', _loadPDFs),
                     const QuizPage(embedded: true),
                     _buildAiAssistTab(),
                   ],
@@ -499,12 +560,14 @@ class _LearningHubPageState extends State<LearningHubPage>
           decoration: BoxDecoration(
             color: NoirTokens.inkAlpha(0.08),
             border: Border(
-              bottom: BorderSide(color: NoirTokens.paper.withValues(alpha: 0.08)),
+              bottom:
+                  BorderSide(color: NoirTokens.paper.withValues(alpha: 0.08)),
             ),
           ),
           child: Row(
             children: [
-              Icon(Icons.filter_list, size: 16, color: NoirTokens.paper.withValues(alpha: 0.5)),
+              Icon(Icons.filter_list,
+                  size: 16, color: NoirTokens.paper.withValues(alpha: 0.5)),
               const SizedBox(width: 8),
               SegmentedButton<String>(
                 segments: const [
@@ -571,8 +634,13 @@ class _LearningHubPageState extends State<LearningHubPage>
   /// 清理空路径的扩展资源条目
   Future<void> _cleanupEmptyExtended() async {
     final db = await DatabaseHelper.instance.database;
+    final scope = await _courseContext.scopedWhere(
+      extraWhere:
+          "source_type = 'extended' AND (file_path IS NULL OR file_path = '')",
+    );
     final count = await db.rawQuery(
-      "SELECT COUNT(*) as c FROM resource_files WHERE source_type = 'extended' AND (file_path IS NULL OR file_path = '')",
+      'SELECT COUNT(*) as c FROM resource_files WHERE ${scope.where}',
+      scope.args,
     );
     final emptyCount = count.first['c'] as int? ?? 0;
 
@@ -607,7 +675,8 @@ class _LearningHubPageState extends State<LearningHubPage>
 
     await db.delete(
       'resource_files',
-      where: "source_type = 'extended' AND (file_path IS NULL OR file_path = '')",
+      where: scope.where,
+      whereArgs: scope.args,
     );
 
     if (!mounted) return;
@@ -732,12 +801,14 @@ class _LearningHubPageState extends State<LearningHubPage>
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: isExtended ? Colors.purple.shade50 : Colors.grey.shade100,
+                color:
+                    isExtended ? Colors.purple.shade50 : Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Center(
                 child: isExtended
-                    ? const Icon(Icons.auto_awesome, size: 22, color: Colors.purple)
+                    ? const Icon(Icons.auto_awesome,
+                        size: 22, color: Colors.purple)
                     : Text(emoji, style: const TextStyle(fontSize: 24)),
               ),
             ),
@@ -853,7 +924,10 @@ class _LearningHubPageState extends State<LearningHubPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        color: Theme.of(context)
+            .colorScheme
+            .surfaceContainerHighest
+            .withValues(alpha: 0.3),
         border: Border(
           bottom: BorderSide(color: Colors.grey.shade200),
         ),
@@ -864,14 +938,15 @@ class _LearningHubPageState extends State<LearningHubPage>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+              color:
+                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.smart_toy, size: 14,
-                    color: Theme.of(context).colorScheme.primary),
+                Icon(Icons.smart_toy,
+                    size: 14, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 4),
                 Text(
                   _aiProviderLabel,
@@ -938,13 +1013,13 @@ class _LearningHubPageState extends State<LearningHubPage>
 
   /// 快捷提问条（对话进行中时显示）
   Widget _buildQuickPromptBar() {
-    const prompts = [
-      'Android和iOS的区别',
-      'React Native优势',
-      'Flutter特点',
-      '小程序开发要点',
-      '鸿蒙应用架构',
-      '跨平台方案对比',
+    final prompts = [
+      '${_courseName}核心知识点',
+      '${_courseName}学习路线',
+      '${_courseName}常见难点',
+      '${_courseName}案例分析',
+      '${_courseName}复习提纲',
+      '${_courseName}章节测验建议',
     ];
 
     return Container(
@@ -998,7 +1073,8 @@ class _LearningHubPageState extends State<LearningHubPage>
               mainAxisSize: MainAxisSize.min,
               children: [
                 SizedBox(
-                  width: 16, height: 16,
+                  width: 16,
+                  height: 16,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
                     color: Theme.of(context).colorScheme.primary,
@@ -1042,8 +1118,8 @@ class _LearningHubPageState extends State<LearningHubPage>
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          const Text(
-            '随时向我提问关于移动应用开发的问题',
+          Text(
+            '随时向我提问关于$_courseName的问题',
             style: TextStyle(color: Colors.grey, fontSize: 14),
           ),
           const SizedBox(height: 32),
@@ -1053,12 +1129,12 @@ class _LearningHubPageState extends State<LearningHubPage>
             runSpacing: 8,
             alignment: WrapAlignment.center,
             children: [
-              _buildQuickQuestion('移动开发有哪些主流框架？'),
-              _buildQuickQuestion('Flutter和React Native的区别？'),
-              _buildQuickQuestion('如何搭建Android开发环境？'),
-              _buildQuickQuestion('鸿蒙开发入门指南'),
-              _buildQuickQuestion('跨平台开发的优缺点？'),
-              _buildQuickQuestion('微信小程序开发流程'),
+              _buildQuickQuestion('${_courseName}的核心知识体系是什么？'),
+              _buildQuickQuestion('${_courseName}有哪些常见难点？'),
+              _buildQuickQuestion('请生成$_courseName复习提纲'),
+              _buildQuickQuestion('请设计$_courseName实践任务'),
+              _buildQuickQuestion('如何准备$_courseName章节测验？'),
+              _buildQuickQuestion('请举例说明$_courseName典型应用'),
             ],
           ),
         ],
@@ -1099,7 +1175,8 @@ class _LearningHubPageState extends State<LearningHubPage>
                   isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     color: isUser
                         ? Theme.of(context).colorScheme.primary
@@ -1173,10 +1250,11 @@ class _LearningHubPageState extends State<LearningHubPage>
         });
       }
 
+      final courseName = await _courseContext.activeCourseName(fallback: '课程');
       final result = await aiService.chatWithMeta(
         history,
-        systemPrompt: '你是一个移动应用开发课程的AI学习助手，帮助学生解答关于Android、iOS、Flutter、'
-            'React Native、微信小程序、鸿蒙等移动开发技术的问题。请用中文简洁回答。'
+        systemPrompt:
+            '你是$courseName课程的AI学习助手，帮助学生围绕该课程的概念、案例、实践和测验进行学习。请用中文简洁回答。'
             '回答时可使用 Markdown 格式（标题、列表、代码块等）使内容更清晰。',
       );
       if (!mounted) return;
@@ -1291,7 +1369,8 @@ class _LearningHubPageState extends State<LearningHubPage>
       // 该类型不支持远程下载
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(CoursewareDownloadService.getLocalOnlyMessage(fileType)),
+          content:
+              Text(CoursewareDownloadService.getLocalOnlyMessage(fileType)),
           backgroundColor: Colors.orange,
           duration: const Duration(seconds: 4),
         ),
@@ -1353,8 +1432,7 @@ class _LearningHubPageState extends State<LearningHubPage>
                   if (progress > 0)
                     Text(
                       '${(progress * 100).toStringAsFixed(0)}%',
-                      style:
-                          const TextStyle(fontSize: 12, color: Colors.grey),
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                 ],
               ),
@@ -1486,8 +1564,7 @@ class _LearningHubPageState extends State<LearningHubPage>
           children: [
             const CircularProgressIndicator(),
             const SizedBox(height: 16),
-            Text('正在为「$chapter」生成课件...',
-                style: const TextStyle(fontSize: 14)),
+            Text('正在为「$chapter」生成课件...', style: const TextStyle(fontSize: 14)),
             const SizedBox(height: 8),
             const Text('AI 正在生成内容，请稍候',
                 style: TextStyle(fontSize: 12, color: Colors.grey)),
@@ -1500,14 +1577,7 @@ class _LearningHubPageState extends State<LearningHubPage>
       final aiService = AiService();
       final slideGen = SlideGeneratorService();
 
-      // 获取当前课程名称
-      String courseName = '移动应用开发';
-      try {
-        final course = await CourseDao().getActiveCourse();
-        if (course != null) courseName = course.name;
-      } catch (e) {
-        swallow(e, tag: 'LearningHub.getCourseName');
-      }
+      final courseName = await _courseContext.activeCourseName(fallback: '课程');
 
       // 使用 SlideGeneratorService 生成 PDF
       final material = await slideGen.generateFromAI(
@@ -1595,7 +1665,12 @@ class _ChatMessage {
   final String? modelProvider;
   final String? modelName;
 
-  _ChatMessage({required this.text, required this.isUser, DateTime? time, this.modelProvider, this.modelName})
+  _ChatMessage(
+      {required this.text,
+      required this.isUser,
+      DateTime? time,
+      this.modelProvider,
+      this.modelName})
       : time = time ?? DateTime.now();
 
   String get timeLabel {
@@ -1624,6 +1699,7 @@ class _ExtendedCoursewareSheet extends StatefulWidget {
 }
 
 class _ExtendedCoursewareSheetState extends State<_ExtendedCoursewareSheet> {
+  final _courseContext = CourseContextService();
   final _topicCtrl = TextEditingController();
   final _extraCtrl = TextEditingController();
   late String _selectedType;
@@ -1635,6 +1711,7 @@ class _ExtendedCoursewareSheetState extends State<_ExtendedCoursewareSheet> {
 
   // 当前课程信息
   String _courseName = '';
+  String _courseId = '';
   List<String> _chapters = [];
 
   @override
@@ -1653,13 +1730,14 @@ class _ExtendedCoursewareSheetState extends State<_ExtendedCoursewareSheet> {
 
   Future<void> _loadCourseInfo() async {
     try {
-      final course = await CourseDao().getActiveCourse();
-      if (course != null && mounted) {
-        setState(() {
-          _courseName = course.name;
-          _chapters = course.chapters;
-        });
-      }
+      final course = await _courseContext.getActiveCourse();
+      final chapters = await _courseContext.chapterTitles();
+      if (!mounted) return;
+      setState(() {
+        _courseName = course.name;
+        _courseId = course.id;
+        _chapters = chapters;
+      });
     } catch (e, st) {
       swallowDebug(e, tag: 'LearningHub.loadCourseInfo', stack: st);
     }
@@ -1680,7 +1758,9 @@ class _ExtendedCoursewareSheetState extends State<_ExtendedCoursewareSheet> {
 
     return Padding(
       padding: EdgeInsets.only(
-        left: 20, right: 20, top: 16,
+        left: 20,
+        right: 20,
+        top: 16,
         bottom: bottomPadding + 20,
       ),
       child: SingleChildScrollView(
@@ -1691,7 +1771,8 @@ class _ExtendedCoursewareSheetState extends State<_ExtendedCoursewareSheet> {
             // 拖拽手柄
             Center(
               child: Container(
-                width: 40, height: 4,
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
@@ -1719,10 +1800,10 @@ class _ExtendedCoursewareSheetState extends State<_ExtendedCoursewareSheet> {
               controller: _topicCtrl,
               decoration: InputDecoration(
                 labelText: '课件主题 *',
-                hintText: '例如：Flutter 状态管理最佳实践',
+                hintText: '例如：需求分析方法与建模实践',
                 prefixIcon: const Icon(Icons.topic),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
               enabled: !_isGenerating,
             ),
@@ -1734,8 +1815,8 @@ class _ExtendedCoursewareSheetState extends State<_ExtendedCoursewareSheet> {
               decoration: InputDecoration(
                 labelText: '关联章节（可选）',
                 prefixIcon: const Icon(Icons.bookmark),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
               items: [
                 const DropdownMenuItem(value: null, child: Text('不关联章节')),
@@ -1745,8 +1826,9 @@ class _ExtendedCoursewareSheetState extends State<_ExtendedCoursewareSheet> {
                           maxLines: 1, overflow: TextOverflow.ellipsis),
                     )),
               ],
-              onChanged:
-                  _isGenerating ? null : (v) => setState(() => _selectedChapter = v),
+              onChanged: _isGenerating
+                  ? null
+                  : (v) => setState(() => _selectedChapter = v),
             ),
             const SizedBox(height: 16),
 
@@ -1792,8 +1874,8 @@ class _ExtendedCoursewareSheetState extends State<_ExtendedCoursewareSheet> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.primaryContainer,
                     borderRadius: BorderRadius.circular(8),
@@ -1819,8 +1901,8 @@ class _ExtendedCoursewareSheetState extends State<_ExtendedCoursewareSheet> {
                   padding: EdgeInsets.only(bottom: 40),
                   child: Icon(Icons.edit_note),
                 ),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
               enabled: !_isGenerating,
             ),
@@ -1842,7 +1924,8 @@ class _ExtendedCoursewareSheetState extends State<_ExtendedCoursewareSheet> {
                     if (_isGenerating)
                       Row(children: [
                         SizedBox(
-                          width: 16, height: 16,
+                          width: 16,
+                          height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             color: theme.colorScheme.primary,
@@ -1888,7 +1971,8 @@ class _ExtendedCoursewareSheetState extends State<_ExtendedCoursewareSheet> {
             FilledButton.icon(
               icon: _isGenerating
                   ? const SizedBox(
-                      width: 18, height: 18,
+                      width: 18,
+                      height: 18,
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: Colors.white),
                     )
@@ -1924,8 +2008,7 @@ class _ExtendedCoursewareSheetState extends State<_ExtendedCoursewareSheet> {
     try {
       final aiService = AiService();
       final db = await DatabaseHelper.instance.database;
-      final courseName =
-          _courseName.isNotEmpty ? _courseName : '移动应用开发';
+      final courseName = _courseName.isNotEmpty ? _courseName : '课程';
       final chapter = _selectedChapter ?? topic;
       final extra = _extraCtrl.text.trim();
 
@@ -2003,10 +2086,13 @@ class _ExtendedCoursewareSheetState extends State<_ExtendedCoursewareSheet> {
     _log('正在保存到资源库...');
     final safeName = topic.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
     await db.insert('resource_files', {
+      'course_id': _courseId.isNotEmpty
+          ? _courseId
+          : await _courseContext.activeCourseId(),
       'file_name': '扩展-$safeName.pdf',
       'file_path': pdfPath,
       'file_type': 'pdf',
-      'chapter': '扩展-$topic',
+      'chapter': chapter,
       'description': '${lessonPlan['objectives']?.take(2).join('；') ?? topic}',
       'source_type': 'extended',
     });
@@ -2053,7 +2139,9 @@ ${extra.isNotEmpty ? '额外要求：$extra' : ''}''';
 - 仅返回 JSON，不要包含其他文字''';
 
     final raw = await aiService.chat(
-      [{'role': 'user', 'content': slidePrompt}],
+      [
+        {'role': 'user', 'content': slidePrompt}
+      ],
       systemPrompt: systemPrompt,
     );
 
@@ -2061,9 +2149,8 @@ ${extra.isNotEmpty ? '额外要求：$extra' : ''}''';
     final jsonMatch = RegExp(r'\[[\s\S]*\]').firstMatch(raw);
     if (jsonMatch == null) throw Exception('AI 返回格式不正确');
 
-    final slides =
-        (jsonDecode(jsonMatch.group(0)!) as List<dynamic>)
-            .cast<Map<String, dynamic>>();
+    final slides = (jsonDecode(jsonMatch.group(0)!) as List<dynamic>)
+        .cast<Map<String, dynamic>>();
     _log('幻灯片内容生成完成：${slides.length} 页');
 
     // Step 2: 生成 PDF
@@ -2083,10 +2170,13 @@ ${extra.isNotEmpty ? '额外要求：$extra' : ''}''';
     _log('正在保存到资源库...');
     final safeName = topic.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
     await db.insert('resource_files', {
+      'course_id': _courseId.isNotEmpty
+          ? _courseId
+          : await _courseContext.activeCourseId(),
       'file_name': '扩展-$safeName.pptx',
       'file_path': material.filePath,
       'file_type': 'ppt',
-      'chapter': '扩展-$topic',
+      'chapter': chapter,
       'description': slides.isNotEmpty
           ? (slides.first['title'] as String? ?? topic)
           : topic,
@@ -2140,7 +2230,8 @@ class _RecommendVideoCard extends StatelessWidget {
         onTap: () async {
           if (url.isNotEmpty) {
             try {
-              await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+              await launchUrl(Uri.parse(url),
+                  mode: LaunchMode.externalApplication);
             } catch (e, st) {
               swallowDebug(e, tag: 'LearningHub.launchUrl', stack: st);
             }
@@ -2157,16 +2248,20 @@ class _RecommendVideoCard extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.play_circle_fill, size: 32, color: accent.withValues(alpha: 0.6)),
+                      Icon(Icons.play_circle_fill,
+                          size: 32, color: accent.withValues(alpha: 0.6)),
                       if (isAi) ...[
                         const SizedBox(height: 4),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: Colors.purple.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: const Text('AI推荐', style: TextStyle(fontSize: 9, color: Colors.purple)),
+                          child: const Text('AI推荐',
+                              style:
+                                  TextStyle(fontSize: 9, color: Colors.purple)),
                         ),
                       ],
                     ],
@@ -2184,18 +2279,23 @@ class _RecommendVideoCard extends StatelessWidget {
                     video['title'] ?? '',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colorScheme.onSurface),
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface),
                   ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4, vertical: 1),
                         decoration: BoxDecoration(
                           color: accent.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(3),
                         ),
-                        child: Text(platformName, style: TextStyle(fontSize: 9, color: accent)),
+                        child: Text(platformName,
+                            style: TextStyle(fontSize: 9, color: accent)),
                       ),
                       const SizedBox(width: 6),
                       Expanded(
@@ -2203,7 +2303,8 @@ class _RecommendVideoCard extends StatelessWidget {
                           video['source'] ?? '',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                          style: TextStyle(
+                              fontSize: 10, color: Colors.grey.shade500),
                         ),
                       ),
                     ],

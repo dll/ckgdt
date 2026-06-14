@@ -1,9 +1,10 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../data/local/puml_dao.dart';
 import '../../../data/models/puml_file_model.dart';
 import '../../../services/ai_service.dart';
+import '../../../services/course_context_service.dart';
 import '../../../services/slide_generator_service.dart';
 import '../../widgets/markdown_bubble.dart';
 
@@ -16,12 +17,12 @@ class AiAssistPage extends StatefulWidget {
 }
 
 class _AiAssistPageState extends State<AiAssistPage> {
-  static const _chapters = [
-    '第1章', '第2章', '第3章', '第4章', '第5章', '第6章',
-  ];
-
   static const _diagramTypes = [
-    'class', 'sequence', 'activity', 'component', 'usecase',
+    'class',
+    'sequence',
+    'activity',
+    'component',
+    'usecase',
   ];
 
   static const _diagramTypeLabels = {
@@ -46,12 +47,15 @@ class _AiAssistPageState extends State<AiAssistPage> {
   // 状态
   bool _loading = false;
   String? _lastAiReply;
+  String _courseName = '课程';
+  List<String> _chapters = const ['第1章'];
 
   // 脚本/UML 模式参数
   String _selectedChapter = '第1章';
   String _selectedDiagramType = 'class';
 
   final AiService _aiService = AiService();
+  final CourseContextService _courseContext = CourseContextService();
   final SlideGeneratorService _slideService = SlideGeneratorService();
   final PumlDao _pumlDao = PumlDao();
 
@@ -59,7 +63,23 @@ class _AiAssistPageState extends State<AiAssistPage> {
   void initState() {
     super.initState();
     _mode = widget.mode;
+    _loadCourseContext();
     _addWelcomeMessage();
+  }
+
+  Future<void> _loadCourseContext() async {
+    final courseName = await _courseContext.activeCourseName();
+    final chapters = await _courseContext.shortChapterTitles();
+    if (!mounted) return;
+    setState(() {
+      _courseName = courseName;
+      _chapters = chapters.isEmpty ? const ['第1章'] : chapters;
+      if (!_chapters.contains(_selectedChapter)) {
+        _selectedChapter = _chapters.first;
+      }
+      _messages.clear();
+      _addWelcomeMessage();
+    });
   }
 
   @override
@@ -74,9 +94,11 @@ class _AiAssistPageState extends State<AiAssistPage> {
 
   void _addWelcomeMessage() {
     final welcome = switch (_mode) {
-      'script' => '👋 你好！我是 AI 教学脚本助手。\n\n请选择章节并输入主题，我会为你生成适合视频讲解的教学脚本，包含时间节点标注，约 8-10 分钟讲解内容。',
-      'uml'    => '👋 你好！我是 AI UML 助手。\n\n请选择图类型和章节，描述你想要绘制的内容，我将生成 PlantUML 代码供你直接渲染使用。',
-      _        => '👋 你好！我是移动应用开发课程 AI 助手。\n\n你可以问我 Flutter / Dart / Android / iOS 相关问题，也可以让我出题、解题或解释代码。',
+      'script' =>
+        '👋 你好！我是 AI 教学脚本助手。\n\n请选择章节并输入主题，我会为你生成适合视频讲解的教学脚本，包含时间节点标注，约 8-10 分钟讲解内容。',
+      'uml' =>
+        '👋 你好！我是 AI UML 助手。\n\n请选择图类型和章节，描述你想要绘制的内容，我将生成 PlantUML 代码供你直接渲染使用。',
+      _ => '👋 你好！我是《$_courseName》课程 AI 助手。\n\n你可以问我课程概念、教学设计、题目解析、案例分析或学习建议。',
     };
     _messages.add(_ChatMessage(role: 'ai', content: welcome));
   }
@@ -84,16 +106,16 @@ class _AiAssistPageState extends State<AiAssistPage> {
   // ── 模式标题 ─────────────────────────────────────────────────────────────
 
   String get _modeTitle => switch (_mode) {
-    'script' => '生成脚本',
-    'uml'    => '生成 UML',
-    _        => 'AI 问答',
-  };
+        'script' => '生成脚本',
+        'uml' => '生成 UML',
+        _ => 'AI 问答',
+      };
 
   String get _modePlaceholder => switch (_mode) {
-    'script' => '输入补充要求，或直接点击"生成脚本"…',
-    'uml'    => '描述图的具体内容（可选），或直接点击"生成 UML"…',
-    _        => '输入你的问题…',
-  };
+        'script' => '输入补充要求，或直接点击"生成脚本"…',
+        'uml' => '描述图的具体内容（可选），或直接点击"生成 UML"…',
+        _ => '输入你的问题…',
+      };
 
   // ── 发送消息 ──────────────────────────────────────────────────────────────
 
@@ -108,16 +130,20 @@ class _AiAssistPageState extends State<AiAssistPage> {
     try {
       final history = _messages
           .where((m) => m.role != 'loading')
-          .map((m) => {'role': m.role == 'user' ? 'user' : 'assistant', 'content': m.content})
+          .map((m) => {
+                'role': m.role == 'user' ? 'user' : 'assistant',
+                'content': m.content
+              })
           .toList();
 
-      const systemPrompt =
-          '你是一位移动应用开发课程助手，擅长解答 Flutter/Dart/Android/iOS 相关问题，'
-          '回答清晰简洁，适当使用代码示例。';
+      final systemPrompt = '你是一位《$_courseName》课程助手，回答必须围绕当前课程，'
+          '表达清晰简洁；如课程内容涉及代码、模型、公式或流程，可给出适当示例。';
 
-      final result = await _aiService.chatWithMeta(history, systemPrompt: systemPrompt);
+      final result =
+          await _aiService.chatWithMeta(history, systemPrompt: systemPrompt);
       if (!mounted) return;
-      _addAiMessage(result.content, modelProvider: result.provider, modelName: result.model);
+      _addAiMessage(result.content,
+          modelProvider: result.provider, modelName: result.model);
       _lastAiReply = result.content;
     } catch (e) {
       if (!mounted) return;
@@ -139,7 +165,8 @@ class _AiAssistPageState extends State<AiAssistPage> {
     final extra = _inputController.text.trim();
     _inputController.clear();
 
-    final displayMsg = '生成脚本：$topic（$_selectedChapter）${extra.isNotEmpty ? '\n补充：$extra' : ''}';
+    final displayMsg =
+        '生成脚本：$topic（$_selectedChapter）${extra.isNotEmpty ? '\n补充：$extra' : ''}';
     _addUserMessage(displayMsg);
 
     setState(() => _loading = true);
@@ -147,6 +174,7 @@ class _AiAssistPageState extends State<AiAssistPage> {
       final result = await _aiService.generateScript(
         topic,
         chapter: _selectedChapter,
+        courseName: _courseName,
       );
       if (!mounted) return;
       _addAiMessage(result);
@@ -168,7 +196,8 @@ class _AiAssistPageState extends State<AiAssistPage> {
       return;
     }
 
-    final displayMsg = '生成 ${_diagramTypeLabels[_selectedDiagramType]}：$topic（$_selectedChapter）';
+    final displayMsg =
+        '生成 ${_diagramTypeLabels[_selectedDiagramType]}：$topic（$_selectedChapter）';
     _addUserMessage(displayMsg);
 
     setState(() => _loading = true);
@@ -248,9 +277,15 @@ class _AiAssistPageState extends State<AiAssistPage> {
     _scrollToBottom();
   }
 
-  void _addAiMessage(String text, {bool isCode = false, String? modelProvider, String? modelName}) {
+  void _addAiMessage(String text,
+      {bool isCode = false, String? modelProvider, String? modelName}) {
     setState(() {
-      _messages.add(_ChatMessage(role: 'ai', content: text, isCode: isCode, modelProvider: modelProvider, modelName: modelName));
+      _messages.add(_ChatMessage(
+          role: 'ai',
+          content: text,
+          isCode: isCode,
+          modelProvider: modelProvider,
+          modelName: modelName));
     });
     _scrollToBottom();
   }
@@ -302,9 +337,9 @@ class _AiAssistPageState extends State<AiAssistPage> {
               });
             },
             itemBuilder: (_) => const [
-              PopupMenuItem(value: 'chat',   child: Text('🤖  AI 问答')),
+              PopupMenuItem(value: 'chat', child: Text('🤖  AI 问答')),
               PopupMenuItem(value: 'script', child: Text('📝  生成脚本')),
-              PopupMenuItem(value: 'uml',    child: Text('🔷  生成 UML')),
+              PopupMenuItem(value: 'uml', child: Text('🔷  生成 UML')),
             ],
           ),
           // 保存/复制按钮
@@ -319,7 +354,7 @@ class _AiAssistPageState extends State<AiAssistPage> {
         children: [
           // 模式参数栏（脚本/UML专用）
           if (_mode == 'script') _buildScriptParamBar(primary, gradient),
-          if (_mode == 'uml')    _buildUmlParamBar(primary, gradient),
+          if (_mode == 'uml') _buildUmlParamBar(primary, gradient),
 
           // 消息列表
           Expanded(child: _buildMessageList(primary)),
@@ -338,7 +373,8 @@ class _AiAssistPageState extends State<AiAssistPage> {
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
       decoration: BoxDecoration(
         color: primary.withValues(alpha: 0.05),
-        border: Border(bottom: BorderSide(color: primary.withValues(alpha: 0.15))),
+        border:
+            Border(bottom: BorderSide(color: primary.withValues(alpha: 0.15))),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -364,8 +400,8 @@ class _AiAssistPageState extends State<AiAssistPage> {
                   decoration: InputDecoration(
                     hintText: '输入主题',
                     isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 8),
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8)),
                   ),
@@ -378,8 +414,8 @@ class _AiAssistPageState extends State<AiAssistPage> {
                 label: const Text('生成脚本', style: TextStyle(fontSize: 12)),
                 onPressed: _loading ? null : _generateScript,
                 style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8)),
                 ),
@@ -398,7 +434,8 @@ class _AiAssistPageState extends State<AiAssistPage> {
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
       decoration: BoxDecoration(
         color: primary.withValues(alpha: 0.05),
-        border: Border(bottom: BorderSide(color: primary.withValues(alpha: 0.15))),
+        border:
+            Border(bottom: BorderSide(color: primary.withValues(alpha: 0.15))),
       ),
       child: Row(
         children: [
@@ -435,8 +472,8 @@ class _AiAssistPageState extends State<AiAssistPage> {
                 isDense: true,
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               ),
             ),
           ),
@@ -447,8 +484,7 @@ class _AiAssistPageState extends State<AiAssistPage> {
             label: const Text('生成', style: TextStyle(fontSize: 12)),
             onPressed: _loading ? null : _generateUml,
             style: FilledButton.styleFrom(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),
             ),
@@ -531,8 +567,8 @@ class _AiAssistPageState extends State<AiAssistPage> {
                   isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     color: isUser
                         ? primary
@@ -566,7 +602,8 @@ class _AiAssistPageState extends State<AiAssistPage> {
                               content: msg.content,
                               provider: msg.modelProvider,
                               model: msg.modelName,
-                              textColor: Theme.of(context).colorScheme.onSurface,
+                              textColor:
+                                  Theme.of(context).colorScheme.onSurface,
                               compact: true,
                             ),
                 ),
@@ -610,9 +647,8 @@ class _AiAssistPageState extends State<AiAssistPage> {
             fontFamily: 'monospace',
             fontSize: 12,
             height: 1.5,
-            color: isUser
-                ? Colors.white
-                : Theme.of(context).colorScheme.onSurface,
+            color:
+                isUser ? Colors.white : Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ),
@@ -624,10 +660,14 @@ class _AiAssistPageState extends State<AiAssistPage> {
       width: 32,
       height: 32,
       decoration: BoxDecoration(
-        color: isUser ? primary.withValues(alpha: 0.15) : primary.withValues(alpha: 0.12),
+        color: isUser
+            ? primary.withValues(alpha: 0.15)
+            : primary.withValues(alpha: 0.12),
         shape: BoxShape.circle,
         border: Border.all(
-          color: isUser ? primary.withValues(alpha: 0.3) : primary.withValues(alpha: 0.2),
+          color: isUser
+              ? primary.withValues(alpha: 0.3)
+              : primary.withValues(alpha: 0.2),
         ),
       ),
       child: Center(
@@ -650,8 +690,7 @@ class _AiAssistPageState extends State<AiAssistPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildAvatar(
-              isUser: false,
-              primary: Theme.of(context).colorScheme.primary),
+              isUser: false, primary: Theme.of(context).colorScheme.primary),
           const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

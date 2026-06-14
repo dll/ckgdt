@@ -2,6 +2,7 @@ import '../../ai_service.dart';
 import '../../../data/local/achievement_dao.dart';
 import '../agent_model.dart';
 import '../base_agent.dart';
+import '../special_agent_tools.dart';
 
 /// 🏆 达成智能体 — 达成度计算/报告
 class AchievementAgent extends BaseAgent {
@@ -64,7 +65,8 @@ class AchievementAgent extends BaseAgent {
               final batches = await AchievementDao().getAllBatches();
               if (batches.isEmpty) return '暂无达成度批次，请教师先在"达成"页创建批次并录入成绩';
               return batches
-                  .map((b) => '- id=${b['id']} 《${b['name'] ?? b['batch_name'] ?? '未命名'}》'
+                  .map((b) =>
+                      '- id=${b['id']} 《${b['name'] ?? b['batch_name'] ?? '未命名'}》'
                       '（${b['student_count'] ?? 0} 名学生，状态：${b['status'] ?? '进行中'}）')
                   .join('\n');
             },
@@ -75,7 +77,9 @@ class AchievementAgent extends BaseAgent {
             parameters: {'batch_id': '批次 id（数字，来自 list_achievement_batches）'},
             execute: (params) async {
               final id = int.tryParse('${params['batch_id']}');
-              if (id == null) return '请提供有效的批次 id（先用 list_achievement_batches 查询）';
+              if (id == null) {
+                return '请提供有效的批次 id（先用 list_achievement_batches 查询）';
+              }
               final avg = await AchievementDao().calculateClassAverage(id);
               if (avg.isEmpty) return '批次 #$id 暂无成绩数据';
               final buf = StringBuffer('批次 #$id 班级平均达成度：\n');
@@ -92,15 +96,18 @@ class AchievementAgent extends BaseAgent {
             execute: (params) async {
               final id = int.tryParse('${params['batch_id']}');
               if (id == null) return '请提供有效的批次 id';
-              final list = await AchievementDao().generateImprovementSuggestions(id);
+              final list =
+                  await AchievementDao().generateImprovementSuggestions(id);
               if (list.isEmpty) return '批次 #$id 暂无成绩，无法生成改进建议';
               final buf = StringBuffer();
               for (final s in list) {
                 final ach = (s['achievement'] as num?)?.toDouble() ?? 0;
-                buf.writeln('### ${s['objectiveName']}（达成度 ${ach.toStringAsFixed(3)}，'
+                buf.writeln(
+                    '### ${s['objectiveName']}（达成度 ${ach.toStringAsFixed(3)}，'
                     '${s['level'] ?? ''}）');
                 if (s['lowStudentCount'] != null) {
-                  buf.writeln('未达标学生：${s['lowStudentCount']}/${s['totalStudents'] ?? '?'} 名');
+                  buf.writeln(
+                      '未达标学生：${s['lowStudentCount']}/${s['totalStudents'] ?? '?'} 名');
                 }
                 final actions = (s['actions'] as List?)?.cast<String>() ?? [];
                 for (final a in actions.take(4)) {
@@ -119,17 +126,31 @@ class AchievementAgent extends BaseAgent {
           '了解改进建议和提升方向',
         ],
         classicCases: [
-          AgentCase(title: '达成度概览', userInput: '我的课程目标达成情况如何？', agentReply: '## 课程目标达成度\n\n| 目标 | 权重 | 达成度 | 等级 |\n|------|------|--------|------|\n| 目标1 | 0.15 | 0.88 | 优秀 |\n| 目标2 | 0.25 | 0.72 | 良好 |\n| 目标3 | 0.30 | 0.65 | 中等 |\n| 目标4 | 0.30 | 0.58 | 未达成 |\n\n**综合达成度：0.68（良好）**'),
+          const AgentCase(
+              title: '达成度概览',
+              userInput: '我的课程目标达成情况如何？',
+              agentReply:
+                  '## 课程目标达成度\n\n| 目标 | 权重 | 达成度 | 等级 |\n|------|------|--------|------|\n| 目标1 | 0.15 | 0.88 | 优秀 |\n| 目标2 | 0.25 | 0.72 | 良好 |\n| 目标3 | 0.30 | 0.65 | 中等 |\n| 目标4 | 0.30 | 0.58 | 未达成 |\n\n**综合达成度：0.68（良好）**'),
         ],
       );
 
   @override
-  List<String> get quickCommands =>
-      ['达成度概览', '改进建议', '课程目标', '评价标准'];
+  List<String> get quickCommands => ['达成度概览', '改进建议', '课程目标', '评价标准'];
 
   @override
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
+    final tools = SpecialAgentTools.instance;
+    if (tools.isAchievementReportIntent(userMessage)) {
+      try {
+        final batchId = _extractBatchId(userMessage);
+        final reply = await tools.generateAchievementReport(batchId: batchId);
+        return buildReply(reply);
+      } catch (e) {
+        return buildReply('达成度报告生成失败：$e');
+      }
+    }
+
     // 动态加载课程目标，注入 AI prompt（支持任意课程）
     String objectivesContext = '';
     try {
@@ -137,7 +158,8 @@ class AchievementAgent extends BaseAgent {
       if (batches.isNotEmpty) {
         final courseName = batches.first['course_name']?.toString() ?? '';
         if (courseName.isNotEmpty) {
-          final objectives = await AchievementDao().getCourseObjectives(courseName);
+          final objectives =
+              await AchievementDao().getCourseObjectives(courseName);
           if (objectives.isNotEmpty) {
             final buf = StringBuffer('当前课程：$courseName\n课程目标：\n');
             for (final o in objectives) {
@@ -163,7 +185,15 @@ class AchievementAgent extends BaseAgent {
         'content': objectivesContext,
       });
     }
-    final result = await safeAiChatWithTools(userMessage, messages, aiService: _ai);
+    final result =
+        await safeAiChatWithTools(userMessage, messages, aiService: _ai);
     return buildReplyFromResult(result);
+  }
+
+  int? _extractBatchId(String text) {
+    final match = RegExp(r'(批次|batch|#)\s*#?\s*(\d+)', caseSensitive: false)
+        .firstMatch(text);
+    if (match == null) return null;
+    return int.tryParse(match.group(2)!);
   }
 }

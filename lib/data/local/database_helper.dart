@@ -70,7 +70,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 28,
+      version: 30,
       singleInstance: true, // 启用单例模式
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
@@ -129,7 +129,7 @@ class DatabaseHelper {
         // 重新打开（版本号必须与主初始化一致）
         final db2 = await openDatabase(
           dbName,
-          version: 28,
+          version: 30,
           singleInstance: true, // 启用单例模式
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
@@ -212,7 +212,7 @@ class DatabaseHelper {
     Database db;
     db = await openDatabase(
       dbPath,
-      version: 28,
+      version: 30,
       singleInstance: true, // 启用单例模式，防止多实例同时访问
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
@@ -387,6 +387,11 @@ class DatabaseHelper {
           if (targetColNames.contains(entry.key)) {
             filtered[entry.key] = entry.value;
           }
+        }
+        if (targetColNames.contains('course_id') &&
+            _isDefaultSeedCourseTable(table) &&
+            ((filtered['course_id']?.toString().trim().isEmpty) ?? true)) {
+          filtered['course_id'] = 'mad';
         }
         if (filtered.isNotEmpty) {
           batch.insert(table, filtered,
@@ -641,6 +646,7 @@ class DatabaseHelper {
       CREATE TABLE IF NOT EXISTS graphs(
         id TEXT PRIMARY KEY,
         title TEXT,
+        course_id TEXT,
         graph_type TEXT,
         layout TEXT
       )
@@ -682,6 +688,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS questions(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT,
         source TEXT,
         question TEXT,
         option_a TEXT,
@@ -695,6 +702,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS quiz_results(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT,
         user_id TEXT,
         quiz_timestamp TEXT,
         score INTEGER,
@@ -709,6 +717,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS learning_records(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT,
         user_id TEXT NOT NULL,
         node_id TEXT NOT NULL,
         node_title TEXT NOT NULL,
@@ -721,6 +730,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS wrong_answers(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT,
         user_id TEXT NOT NULL,
         question_id INTEGER NOT NULL,
         question TEXT,
@@ -737,6 +747,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS favorites(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT,
         user_id TEXT NOT NULL,
         node_id TEXT NOT NULL,
         node_title TEXT,
@@ -747,6 +758,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS resource_files(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT,
         file_name TEXT,
         file_path TEXT,
         file_type TEXT,
@@ -920,6 +932,12 @@ class DatabaseHelper {
     if (oldVersion < 28) {
       await _migrateToV28(db);
     }
+    if (oldVersion < 29) {
+      await _migrateToV29(db);
+    }
+    if (oldVersion < 30) {
+      await _migrateToV30(db);
+    }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
   }
@@ -929,6 +947,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS wrong_answers(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT,
         user_id TEXT NOT NULL,
         question_id INTEGER NOT NULL,
         question TEXT,
@@ -945,6 +964,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS favorites(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT,
         user_id TEXT NOT NULL,
         node_id TEXT NOT NULL,
         node_title TEXT,
@@ -955,6 +975,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS resource_files(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT,
         file_name TEXT,
         file_path TEXT,
         file_type TEXT,
@@ -991,6 +1012,8 @@ class DatabaseHelper {
     await _migrateToV24(db);
     await _migrateToV26(db);
     await _migrateToV28(db);
+    await _migrateToV29(db);
+    await _migrateToV30(db);
     await _ensureAchievementColumns(db);
     await _ensureCourseObjectivesColumns(db);
   }
@@ -1051,6 +1074,19 @@ class DatabaseHelper {
 
   /// 补齐 resource_files 表可能缺少的列
   Future<void> _ensureResourceFileColumns(Database db) async {
+    try {
+      await db.rawQuery('SELECT course_id FROM resource_files LIMIT 1');
+    } catch (e) {
+      try {
+        await db
+            .execute('ALTER TABLE resource_files ADD COLUMN course_id TEXT');
+        debugPrint(
+            '=== DatabaseHelper: Added course_id column to resource_files');
+      } catch (e2) {
+        swallow(e2, tag: 'DatabaseHelper.alterResourceCourseId');
+      }
+    }
+
     try {
       await db.rawQuery('SELECT chapter FROM resource_files LIMIT 1');
     } catch (e) {
@@ -1162,6 +1198,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS student_works(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT,
         title TEXT NOT NULL,
         description TEXT,
         tech_stack TEXT,
@@ -1389,6 +1426,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS lab_tasks(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT,
         title TEXT NOT NULL,
         chapter TEXT,
         description TEXT,
@@ -1585,6 +1623,7 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         concept_name TEXT NOT NULL,
         concept_type TEXT DEFAULT 'concept',
+        course_id TEXT,
         chapter INTEGER,
         description TEXT,
         importance TEXT DEFAULT 'important',
@@ -1601,6 +1640,7 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         source_concept_id INTEGER NOT NULL,
         target_concept_id INTEGER NOT NULL,
+        course_id TEXT,
         relation_type TEXT NOT NULL,
         relation_label TEXT,
         weight REAL DEFAULT 1.0,
@@ -1733,6 +1773,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS feedback(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT,
         user_id TEXT NOT NULL,
         user_name TEXT,
         user_role TEXT,
@@ -2400,6 +2441,317 @@ class DatabaseHelper {
     }
   }
 
+  bool _isDefaultSeedCourseTable(String table) {
+    return const {
+      'graphs',
+      'questions',
+      'resource_files',
+      'generated_materials',
+      'puml_files',
+    }.contains(table);
+  }
+
+  /// V29: 知识概念图谱绑定统一课程 ID。
+  ///
+  /// 平台从单一《移动应用开发》扩展为多课程后，`knowledge_concepts` 不能再
+  /// 全局共用。旧种子数据回填到当前激活课程；后续新课程会按 course_id 隔离。
+  Future<void> _migrateToV29(Database db) async {
+    try {
+      await db
+          .execute('ALTER TABLE knowledge_concepts ADD COLUMN course_id TEXT');
+    } catch (e) {
+      swallow(e, tag: 'V29.add_concept_course_id');
+    }
+    try {
+      await db
+          .execute('ALTER TABLE concept_relations ADD COLUMN course_id TEXT');
+    } catch (e) {
+      swallow(e, tag: 'V29.add_relation_course_id');
+    }
+    try {
+      await db.execute('''
+        UPDATE knowledge_concepts
+        SET course_id = (SELECT id FROM courses WHERE is_active = 1 LIMIT 1)
+        WHERE course_id IS NULL OR course_id = ''
+      ''');
+    } catch (e, st) {
+      swallowDebug(e, tag: 'V29.backfill_concept_course_id', stack: st);
+    }
+    try {
+      await db.execute('''
+        UPDATE concept_relations
+        SET course_id = (
+          SELECT kc.course_id
+          FROM knowledge_concepts kc
+          WHERE kc.id = concept_relations.source_concept_id
+          LIMIT 1
+        )
+        WHERE course_id IS NULL OR course_id = ''
+      ''');
+    } catch (e, st) {
+      swallowDebug(e, tag: 'V29.backfill_relation_course_id', stack: st);
+    }
+    try {
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_knowledge_concepts_course ON knowledge_concepts(course_id, chapter)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_concept_relations_course ON concept_relations(course_id)');
+    } catch (e) {
+      swallow(e, tag: 'V29.index_course_graph');
+    }
+  }
+
+  /// V30: 平台化课程作用域。
+  ///
+  /// 题库、学习记录、错题、收藏、资源、实验、生成课件和文档式图谱都绑定课程。
+  /// 可识别的历史数据按课程回填；无法识别的旧种子数据归入默认 `mad`。
+  Future<void> _migrateToV30(Database db) async {
+    for (final table in const [
+      'graphs',
+      'questions',
+      'quiz_results',
+      'learning_records',
+      'wrong_answers',
+      'favorites',
+      'resource_files',
+      'lab_tasks',
+      'generated_materials',
+      'puml_files',
+      'student_works',
+      'learning_paths',
+    ]) {
+      await _addTextColumnIfMissing(db, table, 'course_id', 'V30.$table');
+    }
+
+    await _backfillGraphsByCourseId(db);
+    await _backfillCourseTablesByKnownChapters(db);
+    await _backfillResourcesByCourseName(db);
+
+    for (final table in const [
+      'graphs',
+      'questions',
+      'quiz_results',
+      'learning_records',
+      'wrong_answers',
+      'favorites',
+      'resource_files',
+      'lab_tasks',
+      'generated_materials',
+      'puml_files',
+      'student_works',
+      'learning_paths',
+    ]) {
+      await _backfillDefaultCourseId(db, table);
+    }
+
+    try {
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_graphs_course ON graphs(course_id)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_questions_course_source ON questions(course_id, source)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_quiz_results_course_user ON quiz_results(course_id, user_id)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_learning_records_course_user ON learning_records(course_id, user_id)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_wrong_answers_course_user ON wrong_answers(course_id, user_id)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_favorites_course_user ON favorites(course_id, user_id)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_resource_files_course_chapter ON resource_files(course_id, chapter)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_lab_tasks_course ON lab_tasks(course_id, chapter)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_generated_materials_course ON generated_materials(course_id, chapter)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_puml_files_course ON puml_files(course_id, chapter)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_student_works_course_user ON student_works(course_id, user_id)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_learning_paths_course_user ON learning_paths(course_id, user_id)');
+    } catch (e) {
+      swallow(e, tag: 'V30.index_course_scope');
+    }
+  }
+
+  Future<void> _addTextColumnIfMissing(
+    Database db,
+    String table,
+    String column,
+    String tag,
+  ) async {
+    try {
+      await db.execute('ALTER TABLE $table ADD COLUMN $column TEXT');
+    } catch (e) {
+      swallow(e, tag: '$tag.add_$column');
+    }
+  }
+
+  Future<void> _backfillDefaultCourseId(Database db, String table) async {
+    try {
+      await db.execute('''
+        UPDATE $table
+        SET course_id = 'mad'
+        WHERE course_id IS NULL OR course_id = ''
+      ''');
+    } catch (e, st) {
+      swallowDebug(e, tag: 'V30.backfill_default_$table', stack: st);
+    }
+  }
+
+  Future<void> _backfillGraphsByCourseId(Database db) async {
+    try {
+      await db.execute('''
+        UPDATE graphs
+        SET course_id = (
+          SELECT c.id FROM courses c WHERE graphs.id = 'g_' || c.id LIMIT 1
+        )
+        WHERE course_id IS NULL OR course_id = ''
+      ''');
+    } catch (e, st) {
+      swallowDebug(e, tag: 'V30.backfill_graphs_by_course_id', stack: st);
+    }
+  }
+
+  Future<void> _backfillResourcesByCourseName(Database db) async {
+    try {
+      final courses = await db.query('courses');
+      for (final course in courses) {
+        final id = course['id']?.toString() ?? '';
+        final name = course['name']?.toString().trim() ?? '';
+        if (id.isEmpty || name.isEmpty) continue;
+        await db.update(
+          'resource_files',
+          {'course_id': id},
+          where:
+              "(course_id IS NULL OR course_id = '') AND (description LIKE ? OR file_name LIKE ?)",
+          whereArgs: ['$name - %', '%$name%'],
+        );
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'V30.backfill_resources_by_name', stack: st);
+    }
+  }
+
+  Future<void> _backfillCourseTablesByKnownChapters(Database db) async {
+    try {
+      final courses = await db.query('courses');
+      for (final course in courses) {
+        final courseId = course['id']?.toString() ?? '';
+        if (courseId.isEmpty) continue;
+        final chapters = _parseCourseChaptersForMigration(course);
+        for (var i = 0; i < chapters.length; i++) {
+          final chapterNo = i + 1;
+          final variants = <String>{
+            chapters[i],
+            _formatChapterForMigration(chapters[i], chapterNo),
+            if (courseId == 'mad') '第$chapterNo章',
+          }..removeWhere((s) => s.trim().isEmpty);
+
+          for (final source in variants) {
+            await _backfillByTextMatch(
+              db,
+              table: 'questions',
+              column: 'source',
+              courseId: courseId,
+              value: source,
+            );
+            await _backfillByTextMatch(
+              db,
+              table: 'quiz_results',
+              column: 'chapter',
+              courseId: courseId,
+              value: source,
+            );
+            await _backfillByTextMatch(
+              db,
+              table: 'generated_materials',
+              column: 'chapter',
+              courseId: courseId,
+              value: source,
+            );
+            await _backfillByTextMatch(
+              db,
+              table: 'puml_files',
+              column: 'chapter',
+              courseId: courseId,
+              value: source,
+            );
+            await _backfillByTextMatch(
+              db,
+              table: 'lab_tasks',
+              column: 'chapter',
+              courseId: courseId,
+              value: source,
+            );
+            await _backfillByTextMatch(
+              db,
+              table: 'resource_files',
+              column: 'chapter',
+              courseId: courseId,
+              value: source,
+            );
+          }
+        }
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'V30.backfill_by_chapters', stack: st);
+    }
+  }
+
+  Future<void> _backfillByTextMatch(
+    Database db, {
+    required String table,
+    required String column,
+    required String courseId,
+    required String value,
+  }) async {
+    try {
+      await db.update(
+        table,
+        {'course_id': courseId},
+        where: "(course_id IS NULL OR course_id = '') AND $column = ?",
+        whereArgs: [value],
+      );
+    } catch (e) {
+      swallow(e, tag: 'V30.backfill_${table}_$column');
+    }
+  }
+
+  List<String> _parseCourseChaptersForMigration(Map<String, Object?> course) {
+    final raw = course['chapters']?.toString().trim() ?? '';
+    if (raw.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          final chapters = decoded
+              .map((e) => e.toString().trim())
+              .where((s) => s.isNotEmpty)
+              .toList();
+          if (chapters.isNotEmpty) return chapters;
+        }
+      } catch (_) {
+        final chapters = raw
+            .split(',')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
+        if (chapters.isNotEmpty) return chapters;
+      }
+    }
+    final count = (course['chapter_count'] as int?) ?? 6;
+    return List.generate(count, (i) => '第${i + 1}章');
+  }
+
+  String _formatChapterForMigration(String raw, int index) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return '第$index章';
+    if (RegExp(r'^第\s*[一二三四五六七八九十百\d]+\s*章').hasMatch(trimmed)) {
+      return trimmed;
+    }
+    return '第$index章 $trimmed';
+  }
+
   /// V24: ai_chat_history 性能索引（Token 统计查询用）
   Future<void> _migrateToV24(Database db) async {
     try {
@@ -2451,6 +2803,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS learning_paths(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT,
         user_id TEXT NOT NULL,
         title TEXT NOT NULL,
         description TEXT,
@@ -2490,6 +2843,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS generated_materials(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT,
         title TEXT NOT NULL,
         type TEXT NOT NULL,
         file_path TEXT,
@@ -2504,6 +2858,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS puml_files(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT,
         title TEXT NOT NULL,
         content TEXT NOT NULL,
         file_path TEXT,

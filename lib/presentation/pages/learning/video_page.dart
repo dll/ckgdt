@@ -1,9 +1,10 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../../core/constants/chapter_helper.dart';
 import '../../../core/constants/chapter_sorter.dart';
 import '../../../data/local/database_helper.dart';
-import '../../../data/local/course_dao.dart';
+import '../../../services/course_context_service.dart';
 import '../../../services/courseware_service.dart';
 import '../../../services/file_opener_service.dart';
 import '../../../services/courseware_download_service.dart';
@@ -23,10 +24,32 @@ class VideoListPage extends StatefulWidget {
 
 class _VideoListPageState extends State<VideoListPage> {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+  final CourseContextService _courseContext = CourseContextService();
   List<Map<String, dynamic>> _videos = [];
   bool _isLoading = true;
   String _resourceMode = 'all'; // 'all', 'preset', 'extended'
   String? _selectedPlatformId;
+
+  Future<void> _appendChapterFilter(
+    List<String> whereParts,
+    List<Object?> whereArgs,
+  ) async {
+    final filter = widget.filterChapter;
+    if (filter == null || filter.isEmpty) return;
+
+    final chapter = ChapterHelper.parseChapter(filter);
+    if (chapter == null) {
+      whereParts.add('chapter LIKE ?');
+      whereArgs.add('%$filter%');
+      return;
+    }
+
+    final patterns = await _courseContext.chapterQueryPatterns(chapter);
+    whereParts.add(
+      '(${List.filled(patterns.length, 'chapter LIKE ?').join(' OR ')})',
+    );
+    whereArgs.addAll(patterns);
+  }
 
   @override
   void initState() {
@@ -44,12 +67,9 @@ class _VideoListPageState extends State<VideoListPage> {
       final db = await _dbHelper.database;
 
       final whereParts = <String>['file_type = ?'];
-      final whereArgs = <dynamic>['video'];
+      final whereArgs = <Object?>['video'];
 
-      if (widget.filterChapter != null && widget.filterChapter!.isNotEmpty) {
-        whereParts.add('chapter LIKE ?');
-        whereArgs.add('%${widget.filterChapter}%');
-      }
+      await _appendChapterFilter(whereParts, whereArgs);
 
       if (_resourceMode == 'preset') {
         whereParts.add("(source_type = 'preset' OR source_type IS NULL)");
@@ -66,10 +86,14 @@ class _VideoListPageState extends State<VideoListPage> {
         }
       }
 
+      final scope = await _courseContext.scopedWhere(
+        extraWhere: whereParts.join(' AND '),
+        extraArgs: whereArgs,
+      );
       final result = await db.query(
         'resource_files',
-        where: whereParts.join(' AND '),
-        whereArgs: whereArgs,
+        where: scope.where,
+        whereArgs: scope.args,
         orderBy: 'chapter',
       );
 
@@ -89,9 +113,8 @@ class _VideoListPageState extends State<VideoListPage> {
 
   @override
   Widget build(BuildContext context) {
-    final title = widget.filterChapter != null
-        ? '视频: ${widget.filterChapter}'
-        : '视频教程';
+    final title =
+        widget.filterChapter != null ? '视频: ${widget.filterChapter}' : '视频教程';
 
     return Scaffold(
       appBar: BackButtonBar(
@@ -232,11 +255,8 @@ class _VideoListPageState extends State<VideoListPage> {
     final topicCtrl = TextEditingController();
 
     // 获取课程信息
-    String courseName = '移动应用开发';
-    try {
-      final course = await CourseDao().getActiveCourse();
-      if (course != null) courseName = course.name;
-    } catch (_) {}
+    final courseName = await _courseContext.activeCourseName();
+    final courseId = await _courseContext.activeCourseId();
 
     if (!mounted) return;
 
@@ -254,7 +274,10 @@ class _VideoListPageState extends State<VideoListPage> {
           final bottomPadding = MediaQuery.of(ctx).viewInsets.bottom;
           return Padding(
             padding: EdgeInsets.only(
-              left: 20, right: 20, top: 16, bottom: bottomPadding + 20,
+              left: 20,
+              right: 20,
+              top: 16,
+              bottom: bottomPadding + 20,
             ),
             child: SingleChildScrollView(
               child: Column(
@@ -263,7 +286,8 @@ class _VideoListPageState extends State<VideoListPage> {
                 children: [
                   Center(
                     child: Container(
-                      width: 40, height: 4,
+                      width: 40,
+                      height: 4,
                       decoration: BoxDecoration(
                         color: Colors.grey[400],
                         borderRadius: BorderRadius.circular(2),
@@ -272,7 +296,8 @@ class _VideoListPageState extends State<VideoListPage> {
                   ),
                   const SizedBox(height: 16),
                   const Text('生成扩展视频课件',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center),
                   const SizedBox(height: 8),
                   Text('AI 将生成视频教学脚本 PDF，可通过课件工坊合成视频',
@@ -284,7 +309,7 @@ class _VideoListPageState extends State<VideoListPage> {
                     enabled: !generating,
                     decoration: InputDecoration(
                       labelText: '视频主题 *',
-                      hintText: '例如：Flutter 动画系统详解',
+                      hintText: '例如：重点概念讲解、案例分析、实践过程演示',
                       prefixIcon: const Icon(Icons.topic),
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12)),
@@ -298,7 +323,8 @@ class _VideoListPageState extends State<VideoListPage> {
                         children: [
                           if (generating)
                             const SizedBox(
-                              width: 16, height: 16,
+                              width: 16,
+                              height: 16,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             ),
                           if (generating) const SizedBox(width: 8),
@@ -306,7 +332,8 @@ class _VideoListPageState extends State<VideoListPage> {
                             child: Text(progress,
                                 style: TextStyle(
                                   fontSize: 13,
-                                  color: generating ? Colors.purple : Colors.green,
+                                  color:
+                                      generating ? Colors.purple : Colors.green,
                                 )),
                           ),
                         ],
@@ -315,7 +342,8 @@ class _VideoListPageState extends State<VideoListPage> {
                   FilledButton.icon(
                     icon: generating
                         ? const SizedBox(
-                            width: 18, height: 18,
+                            width: 18,
+                            height: 18,
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: Colors.white),
                           )
@@ -348,8 +376,7 @@ class _VideoListPageState extends State<VideoListPage> {
                                 additionalRequirements:
                                     '课程：$courseName。请生成适合视频教学的内容，包含演示步骤和代码示例。',
                               );
-                              setSheetState(() =>
-                                  progress = '正在生成 PDF 讲义...');
+                              setSheetState(() => progress = '正在生成 PDF 讲义...');
 
                               // Step 2: 生成 PDF 讲义
                               final pdfPath =
@@ -367,6 +394,7 @@ class _VideoListPageState extends State<VideoListPage> {
                               final safeName = topic.replaceAll(
                                   RegExp(r'[/\\:*?"<>|]'), '_');
                               await db.insert('resource_files', {
+                                'course_id': courseId,
                                 'file_name': '扩展-$safeName.mp4',
                                 'file_path': pdfPath,
                                 'file_type': 'video',
@@ -412,8 +440,7 @@ class _VideoListPageState extends State<VideoListPage> {
 
   void _playVideo(Map<String, dynamic> video) async {
     final filePath = video['file_path'] as String? ?? '';
-    final fileName =
-        video['file_name'] as String? ?? '${video['chapter']}.mp4';
+    final fileName = video['file_name'] as String? ?? '${video['chapter']}.mp4';
     final fileType = video['file_type'] as String? ?? 'video';
     final chapter = video['chapter'] as String? ?? '';
     final isExtended = video['source_type'] == 'extended';
@@ -450,7 +477,8 @@ class _VideoListPageState extends State<VideoListPage> {
     if (!CoursewareDownloadService.isRemoteAvailable(fileType)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(CoursewareDownloadService.getLocalOnlyMessage(fileType)),
+          content:
+              Text(CoursewareDownloadService.getLocalOnlyMessage(fileType)),
           backgroundColor: Colors.orange,
           duration: const Duration(seconds: 4),
         ),
@@ -471,9 +499,16 @@ class _VideoListPageState extends State<VideoListPage> {
   /// 非视频后缀（如扩展课件实际为 PDF）回退到系统打开。
   void _openVideoFile(String filePath, String fileName, String chapter) {
     final ext = fileName.split('.').last.toLowerCase();
-    final isVideoExt =
-        const ['mp4', 'mkv', 'mov', 'avi', 'wmv', 'flv', 'webm', 'm4v']
-            .contains(ext);
+    final isVideoExt = const [
+      'mp4',
+      'mkv',
+      'mov',
+      'avi',
+      'wmv',
+      'flv',
+      'webm',
+      'm4v'
+    ].contains(ext);
 
     if (!isVideoExt) {
       // 非视频文件（例如扩展视频实际是 PDF 课件）→ 系统应用打开
@@ -482,7 +517,8 @@ class _VideoListPageState extends State<VideoListPage> {
     }
 
     // 桌面端 → app 内 media_kit 播放器（带错误处理 / 一键回退按钮）
-    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+    if (!kIsWeb &&
+        (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       Navigator.push(
         context,
         MaterialPageRoute(

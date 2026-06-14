@@ -1,5 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/course_context_service.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../core/constants/app_theme.dart';
 import '../admin/student_manage_page.dart';
@@ -25,6 +26,7 @@ import '../sync/data_sync_page.dart';
 import '../../../core/constants/role_guard.dart';
 
 import '../../widgets/back_button_bar.dart';
+
 class TeacherWorkspacePage extends StatefulWidget {
   const TeacherWorkspacePage({super.key});
 
@@ -34,6 +36,7 @@ class TeacherWorkspacePage extends StatefulWidget {
 
 class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
   final _authService = AuthService();
+  final _courseContext = CourseContextService();
 
   bool _isLoading = true;
 
@@ -70,14 +73,20 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
       final studentResult = await db.rawQuery(
         "SELECT COUNT(*) as count FROM users WHERE role='student'",
       );
+      final graphScope = await _courseContext.scopedWhere();
+      final questionScope = await _courseContext.scopedWhere();
+      final resourceScope = await _courseContext.scopedWhere();
       final graphResult = await db.rawQuery(
-        'SELECT COUNT(*) as count FROM graphs',
+        'SELECT COUNT(*) as count FROM graphs WHERE ${graphScope.where}',
+        graphScope.args,
       );
       final questionResult = await db.rawQuery(
-        'SELECT COUNT(*) as count FROM questions',
+        'SELECT COUNT(*) as count FROM questions WHERE ${questionScope.where}',
+        questionScope.args,
       );
       final resourceResult = await db.rawQuery(
-        'SELECT COUNT(*) as count FROM resource_files',
+        'SELECT COUNT(*) as count FROM resource_files WHERE ${resourceScope.where}',
+        resourceScope.args,
       );
 
       setState(() {
@@ -270,8 +279,8 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
                   ),
                   const SizedBox(height: 4),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
@@ -477,8 +486,7 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
         color: Colors.deepPurple,
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(
-              builder: (_) => const AgentCallsDashboardPage()),
+          MaterialPageRoute(builder: (_) => const AgentCallsDashboardPage()),
         ),
       ),
       _ToolItem(
@@ -577,8 +585,7 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
         color: Colors.deepOrange[600]!,
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(
-              builder: (_) => const CoursewareWorkshopPage()),
+          MaterialPageRoute(builder: (_) => const CoursewareWorkshopPage()),
         ),
       ),
       _ToolItem(

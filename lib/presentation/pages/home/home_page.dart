@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -131,7 +131,7 @@ class _HomePageState extends State<HomePage> {
     // 学生登录后自动拉取 Gitee 答辩通知（每 30 秒轮询，降低 Gitee 配额压力）
     _pullNotifications();
     _defensePollTimer = Timer.periodic(
-      const Duration(seconds: 30), (_) => _pullNotifications());
+        const Duration(seconds: 30), (_) => _pullNotifications());
     // 注册全局导航服务回调
     NavigationService.instance.onSwitchTab = (index) {
       if (mounted) {
@@ -217,7 +217,9 @@ class _HomePageState extends State<HomePage> {
 
   /// 答辩广播横幅：检测到教师开播且当前用户在授权名单中时显示
   Widget _buildDefenseBanner() {
-    if (_defenseServerIp == null || _authService.isTeacher || _authService.isAdmin) {
+    if (_defenseServerIp == null ||
+        _authService.isTeacher ||
+        _authService.isAdmin) {
       return const SizedBox.shrink();
     }
     return Material(
@@ -285,7 +287,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   /// 当前平台显示名称：AppBar 内部居中标题（完整名称，无版本号）
-  String get _platformTitle => '移动应用开发知识图谱与数字孪生平台';
+  String get _platformTitle => '课程知识图谱与数字孪生平台';
 
   @override
   Widget build(BuildContext context) {
@@ -412,7 +414,8 @@ class _HomePageState extends State<HomePage> {
         elevation: 0,
         scrolledUnderElevation: 0,
         iconTheme: const IconThemeData(color: NoirTokens.paper),
-        title: Text(_platformTitle, style: const TextStyle(color: NoirTokens.paper)),
+        title: Text(_platformTitle,
+            style: const TextStyle(color: NoirTokens.paper)),
         actions: [
           IconButton(
             icon: const Icon(Icons.search, color: NoirTokens.paper),
@@ -435,7 +438,8 @@ class _HomePageState extends State<HomePage> {
                     unread > 99 ? '99+' : '$unread',
                     style: const TextStyle(fontSize: 10),
                   ),
-                  child: const Icon(Icons.notifications_outlined, color: NoirTokens.paper),
+                  child: const Icon(Icons.notifications_outlined,
+                      color: NoirTokens.paper),
                 ),
                 tooltip: '通知',
                 onPressed: () async {
@@ -474,8 +478,7 @@ class _HomePageState extends State<HomePage> {
               } else if (value == 'learning_center') {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                      builder: (_) => const StudentCenterPage()),
+                  MaterialPageRoute(builder: (_) => const StudentCenterPage()),
                 );
               } else if (value == 'teacher_workspace') {
                 Navigator.push(
@@ -509,8 +512,11 @@ class _HomePageState extends State<HomePage> {
                 child: ListTile(
                   leading: const Icon(Icons.person),
                   title: Text(user?.realName ?? user?.userId ?? '用户'),
-                  subtitle: Text(user?.role == 'admin' ? '管理员' :
-                                 user?.role == 'teacher' ? '教师' : '学生'),
+                  subtitle: Text(user?.role == 'admin'
+                      ? '管理员'
+                      : user?.role == 'teacher'
+                          ? '教师'
+                          : '学生'),
                 ),
               ),
               const PopupMenuDivider(),
@@ -590,8 +596,7 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           children: [
             _buildDefenseBanner(),
-            Expanded(
-                child: bodyMap[_selectedIndex]?.call() ?? _buildHome()),
+            Expanded(child: bodyMap[_selectedIndex]?.call() ?? _buildHome()),
           ],
         ),
       ),
@@ -735,7 +740,9 @@ class _HomePageState extends State<HomePage> {
                 _buildMenuCard(
                   icon: Icons.source,
                   title: 'Git仓库',
-                  destinationPage: isTeacherOrAdmin ? const GitRepoPage() : const StudentRepoPage(),
+                  destinationPage: isTeacherOrAdmin
+                      ? const GitRepoPage()
+                      : const StudentRepoPage(),
                   cardColor: _cardColors['Git仓库'],
                   description: '代码版本管理',
                 ),
@@ -901,7 +908,8 @@ class _HomePageState extends State<HomePage> {
                         context: context,
                         isScrollControlled: true,
                         shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.vertical(top: Radius.circular(2)),
+                          borderRadius:
+                              BorderRadius.vertical(top: Radius.circular(2)),
                         ),
                         builder: (_) => const CourseGeneratorSheet(),
                       );
@@ -917,8 +925,10 @@ class _HomePageState extends State<HomePage> {
                     icon: Icons.school_outlined,
                     title: '课程管理',
                     onTap: () async {
-                      await Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const CourseManagePage()));
+                      await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const CourseManagePage()));
                       _loadActiveCourse();
                     },
                     cardColor: _cardColors['课程管理'],
@@ -989,14 +999,26 @@ class _HomePageState extends State<HomePage> {
     final steps = [
       _FlowStep(Icons.account_tree, '图谱', '01',
           () => setState(() => _selectedIndex = 1)),
-      _FlowStep(Icons.route, '路径', '02', () => Navigator.push(context,
-          MaterialPageRoute(builder: (_) => const LearningPlanPage()))),
+      _FlowStep(
+          Icons.route,
+          '路径',
+          '02',
+          () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const LearningPlanPage()))),
       _FlowStep(Icons.menu_book, isTeacherOrAdmin ? '教学' : '学习', '03',
           () => setState(() => _selectedIndex = 2)),
-      _FlowStep(Icons.biotech, '实践', '04', () => Navigator.push(context,
-          MaterialPageRoute(builder: (_) => const DeepPracticePage()))),
-      _FlowStep(Icons.quiz, '测验', '05', () => Navigator.push(context,
-          MaterialPageRoute(builder: (_) => const QuizPage()))),
+      _FlowStep(
+          Icons.biotech,
+          '实践',
+          '04',
+          () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const DeepPracticePage()))),
+      _FlowStep(
+          Icons.quiz,
+          '测验',
+          '05',
+          () => Navigator.push(
+              context, MaterialPageRoute(builder: (_) => const QuizPage()))),
     ];
 
     return NoirCard(
@@ -1010,7 +1032,8 @@ class _HomePageState extends State<HomePage> {
                 borderRadius: BorderRadius.circular(NoirTokens.radius),
                 onTap: steps[i].onTap,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -1022,10 +1045,11 @@ class _HomePageState extends State<HomePage> {
                         height: 36,
                         decoration: BoxDecoration(
                           color: accent,
-                          borderRadius: BorderRadius.circular(NoirTokens.radius),
+                          borderRadius:
+                              BorderRadius.circular(NoirTokens.radius),
                         ),
-                        child: Icon(steps[i].icon,
-                            color: Colors.white, size: 18),
+                        child:
+                            Icon(steps[i].icon, color: Colors.white, size: 18),
                       ),
                       const SizedBox(height: 8),
                       Text(steps[i].label,
@@ -1175,7 +1199,8 @@ class _HomePageState extends State<HomePage> {
         builder: (ctx, setDialogState) => AlertDialog(
           title: Row(
             children: [
-              Icon(Icons.lock_outline, color: Theme.of(ctx).colorScheme.primary),
+              Icon(Icons.lock_outline,
+                  color: Theme.of(ctx).colorScheme.primary),
               SizedBox(width: 8),
               Text('修改密码', style: TextStyle(fontSize: 18)),
             ],
@@ -1216,7 +1241,8 @@ class _HomePageState extends State<HomePage> {
                 ),
                 if (errorMsg != null) ...[
                   const SizedBox(height: 8),
-                  Text(errorMsg!, style: const TextStyle(color: Colors.red, fontSize: 13)),
+                  Text(errorMsg!,
+                      style: const TextStyle(color: Colors.red, fontSize: 13)),
                 ],
               ],
             ),
@@ -1284,41 +1310,94 @@ class _AdminToolsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent = Theme.of(context).colorScheme.primary;
     final tools = <_AdminTool>[
-      _AdminTool(Icons.people, '学生管理',
-          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StudentManagePage()))),
-      _AdminTool(Icons.person_add, '教师管理',
-          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherManagePage()))),
-      _AdminTool(Icons.how_to_reg, '申请审核',
-          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherApplicationManagePage()))),
-      _AdminTool(Icons.class_, '班级管理',
-          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ClassManagePage()))),
-      _AdminTool(Icons.school, '教学管理',
-          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TeachingManagePage()))),
-      _AdminTool(Icons.science, '实验管理',
-          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LabTaskManagePage()))),
-      _AdminTool(Icons.quiz_outlined, '题库管理',
-          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuestionManagePage()))),
-      _AdminTool(Icons.poll, '问卷管理',
-          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SurveyManagePage()))),
-      _AdminTool(Icons.feedback, '反馈管理',
-          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FeedbackManagePage()))),
-      _AdminTool(Icons.upload, '数据导入',
-          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DataImportPage()))),
-      _AdminTool(Icons.download, '数据导出',
-          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DataExportPage()))),
-      _AdminTool(Icons.analytics, '仓库分析',
-          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RepoAnalyticsPage()))),
-      _AdminTool(Icons.sync, '数据同步',
-          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DataSyncPage()))),
-      _AdminTool(Icons.devices, '多端互通',
-          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CrossPlatformHubPage()))),
-      _AdminTool(Icons.fact_check, '成绩录入中心',
-          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GradeEntryCenterPage()))),
-      _AdminTool(Icons.settings, '系统设置',
-          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()))),
+      _AdminTool(
+          Icons.people,
+          '学生管理',
+          () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const StudentManagePage()))),
+      _AdminTool(
+          Icons.person_add,
+          '教师管理',
+          () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const TeacherManagePage()))),
+      _AdminTool(
+          Icons.how_to_reg,
+          '申请审核',
+          () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => const TeacherApplicationManagePage()))),
+      _AdminTool(
+          Icons.class_,
+          '班级管理',
+          () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const ClassManagePage()))),
+      _AdminTool(
+          Icons.school,
+          '教学管理',
+          () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const TeachingManagePage()))),
+      _AdminTool(
+          Icons.science,
+          '实验管理',
+          () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const LabTaskManagePage()))),
+      _AdminTool(
+          Icons.quiz_outlined,
+          '题库管理',
+          () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const QuestionManagePage()))),
+      _AdminTool(
+          Icons.poll,
+          '问卷管理',
+          () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const SurveyManagePage()))),
+      _AdminTool(
+          Icons.feedback,
+          '反馈管理',
+          () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const FeedbackManagePage()))),
+      _AdminTool(
+          Icons.upload,
+          '数据导入',
+          () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const DataImportPage()))),
+      _AdminTool(
+          Icons.download,
+          '数据导出',
+          () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const DataExportPage()))),
+      _AdminTool(
+          Icons.analytics,
+          '仓库分析',
+          () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const RepoAnalyticsPage()))),
+      _AdminTool(
+          Icons.sync,
+          '数据同步',
+          () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const DataSyncPage()))),
+      _AdminTool(
+          Icons.devices,
+          '多端互通',
+          () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const CrossPlatformHubPage()))),
+      _AdminTool(
+          Icons.fact_check,
+          '成绩录入中心',
+          () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const GradeEntryCenterPage()))),
+      _AdminTool(
+          Icons.settings,
+          '系统设置',
+          () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const SettingsPage()))),
       // 仅 dev 机可用：4 端构建 + 双仓库 Release 一键发布
-      _AdminTool(Icons.rocket_launch, '构建发布中心',
-          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReleaseCenterPage()))),
+      _AdminTool(
+          Icons.rocket_launch,
+          '构建发布中心',
+          () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const ReleaseCenterPage()))),
       // Demo 录制专用 — 仅管理员可见（kDebugMode 守卫已撤，评比时也能演示）
       _AdminTool(Icons.movie_creation_outlined, 'Demo 数据种子',
           () => _showDemoSeedSheet(context)),
@@ -1405,54 +1484,58 @@ class _AdminToolsPage extends StatelessWidget {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   crossAxisCount: cols,
-                childAspectRatio: 0.9,
+                  childAspectRatio: 0.9,
                   mainAxisSpacing: 10,
                   crossAxisSpacing: 10,
-                  children: tools.map((t) => NoirCard(
-                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-                    onTap: t.onTap,
-                    child: Stack(
-                      children: [
-                        Align(
-                          alignment: Alignment.topRight,
-                          child: Container(
-                            width: 38,
-                            height: 38,
-                            decoration: BoxDecoration(
-                              color: accent,
-                              borderRadius:
-                                  BorderRadius.circular(NoirTokens.radius),
-                            ),
-                            child: Icon(t.icon,
-                                size: 18, color: Colors.white),
-                          ),
-                        ),
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(width: 22, height: 2, color: accent),
-                              const SizedBox(height: 8),
-                              Text(t.title,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 0.4,
-                                    color: NoirTokens.ink,
-                                    height: 1.1,
+                  children: tools
+                      .map((t) => NoirCard(
+                            padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                            onTap: t.onTap,
+                            child: Stack(
+                              children: [
+                                Align(
+                                  alignment: Alignment.topRight,
+                                  child: Container(
+                                    width: 38,
+                                    height: 38,
+                                    decoration: BoxDecoration(
+                                      color: accent,
+                                      borderRadius: BorderRadius.circular(
+                                          NoirTokens.radius),
+                                    ),
+                                    child: Icon(t.icon,
+                                        size: 18, color: Colors.white),
                                   ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  )).toList(),
+                                ),
+                                Positioned(
+                                  left: 0,
+                                  right: 0,
+                                  bottom: 0,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                          width: 22, height: 2, color: accent),
+                                      const SizedBox(height: 8),
+                                      Text(t.title,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w800,
+                                            letterSpacing: 0.4,
+                                            color: NoirTokens.ink,
+                                            height: 1.1,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ))
+                      .toList(),
                 );
               },
             ),
@@ -1480,7 +1563,8 @@ Future<void> _showDemoSeedSheet(BuildContext context) async {
               const SizedBox(width: 8),
               const Expanded(
                 child: Text('Demo 录制 — 数据种子',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
               IconButton(
                   onPressed: () => Navigator.pop(ctx),
@@ -1506,8 +1590,8 @@ Future<void> _showDemoSeedSheet(BuildContext context) async {
                     final result = await DemoSeedService.instance.seedAll();
                     if (!ctx.mounted) return;
                     Navigator.pop(ctx);
-                    ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-                        content: Text('已种入 $result')));
+                    ScaffoldMessenger.of(ctx)
+                        .showSnackBar(SnackBar(content: Text('已种入 $result')));
                   },
                   icon: const Icon(Icons.add),
                   label: const Text('一键种入'),
@@ -1517,12 +1601,11 @@ Future<void> _showDemoSeedSheet(BuildContext context) async {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () async {
-                    final result =
-                        await DemoSeedService.instance.revertSeed();
+                    final result = await DemoSeedService.instance.revertSeed();
                     if (!ctx.mounted) return;
                     Navigator.pop(ctx);
-                    ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-                        content: Text('已清除 $result')));
+                    ScaffoldMessenger.of(ctx)
+                        .showSnackBar(SnackBar(content: Text('已清除 $result')));
                   },
                   icon: const Icon(Icons.delete_outline),
                   label: const Text('撤销'),

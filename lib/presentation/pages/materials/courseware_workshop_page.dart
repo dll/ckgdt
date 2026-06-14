@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import '../../../services/courseware_service.dart';
 import '../../../services/ai_service.dart';
+import '../../../services/course_context_service.dart';
 import '../../../services/tts_service.dart';
 import '../../../services/video_service.dart';
 import '../../../data/local/ai_config_dao.dart';
@@ -17,14 +18,15 @@ import 'ai_settings_page.dart';
 
 import '../../../core/error_handler.dart';
 import '../../widgets/back_button_bar.dart';
+
 /// 可选的 AI 模型选项
 class _ModelOption {
-  final String label;        // 显示名称（如 "DeepSeek - deepseek-chat"）
-  final String providerId;   // provider id
-  final String modelId;      // model id
-  final String baseUrl;      // base url
-  final String? apiKey;      // 如果是当前全局配置的 provider，带上 key
-  final bool isDefault;      // 是否为当前全局配置
+  final String label; // 显示名称（如 "DeepSeek - deepseek-chat"）
+  final String providerId; // provider id
+  final String modelId; // model id
+  final String baseUrl; // base url
+  final String? apiKey; // 如果是当前全局配置的 provider，带上 key
+  final bool isDefault; // 是否为当前全局配置
 
   const _ModelOption({
     required this.label,
@@ -36,13 +38,13 @@ class _ModelOption {
   });
 
   AiConfigModel toConfig() => AiConfigModel(
-    provider: providerId,
-    model: modelId,
-    baseUrl: baseUrl,
-    apiKey: apiKey,
-    maxTokens: 4096,
-    timeout: 120,
-  );
+        provider: providerId,
+        model: modelId,
+        baseUrl: baseUrl,
+        apiKey: apiKey,
+        maxTokens: 4096,
+        timeout: 120,
+      );
 }
 
 /// 课件工坊 — 教案→MD→PDF→UML→语音→视频 一站式课件生成
@@ -55,6 +57,7 @@ class CoursewareWorkshopPage extends StatefulWidget {
 
 class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
   final _coursewareService = CoursewareService();
+  final _courseContext = CourseContextService();
   final _ttsService = TtsService();
   final _videoService = VideoService();
   final _configDao = AiConfigDao();
@@ -73,10 +76,10 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
   int _classHours = 2;
   bool _generatingPlan = false;
   Map<String, dynamic>? _lessonPlan;
-  bool _reviewingPlan = false;         // 教案审核中
-  String? _planReviewResult;           // 教案审核结果
-  int? _planReviewScore;               // 教案审核分数
-  bool _applyingFix = false;           // AI 自动修改中
+  bool _reviewingPlan = false; // 教案审核中
+  String? _planReviewResult; // 教案审核结果
+  int? _planReviewScore; // 教案审核分数
+  bool _applyingFix = false; // AI 自动修改中
 
   // ── Step 2: 内容 ──
   String? _markdownContent;
@@ -86,11 +89,11 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
 
   // ── MD 导入 ──
   String? _importedMdPath;
-  String? _rawMdContent;              // 原始 MD 文本（可编辑）
+  String? _rawMdContent; // 原始 MD 文本（可编辑）
   final _mdEditCtrl = TextEditingController();
-  bool _mdEditing = false;            // 是否处于编辑模式
-  bool _aiReviewing = false;          // AI 审核中
-  String? _aiReviewResult;            // AI 审核建议
+  bool _mdEditing = false; // 是否处于编辑模式
+  bool _aiReviewing = false; // AI 审核中
+  String? _aiReviewResult; // AI 审核建议
   List<Map<String, dynamic>> _parsedSlides = [];
   bool _fromMdImport = false; // 标记是否从 MD 导入模式
 
@@ -98,7 +101,7 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
   bool _mdGeneratingAll = false;
   String _mdProgressMsg = '';
   double _mdProgress = 0;
-  String? _mdVideoPath;  // MD 流程生成的视频路径
+  String? _mdVideoPath; // MD 流程生成的视频路径
   List<String> _mdAudioPaths = []; // MD 流程的音频路径
 
   // ── Step 3: 导出 ──
@@ -125,30 +128,34 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
   String? _sessionDir;
 
   // ── 发布状态 ──
-  bool _published = false;       // AI 流程是否已发布
-  bool _mdPublished = false;     // MD 导入流程是否已发布
+  bool _published = false; // AI 流程是否已发布
+  bool _mdPublished = false; // MD 导入流程是否已发布
   bool _publishing = false;
 
   // ── AI 模型选择 ──
-  AiConfigModel? _selectedModelConfig;   // null = 使用全局默认配置
-  String _selectedModelLabel = '默认';   // 当前模型显示名称
-  List<_ModelOption> _availableModels = [];  // 可选模型列表
-  String? _balanceText;                  // 账户余额显示文本
+  AiConfigModel? _selectedModelConfig; // null = 使用全局默认配置
+  String _selectedModelLabel = '默认'; // 当前模型显示名称
+  List<_ModelOption> _availableModels = []; // 可选模型列表
+  String? _balanceText; // 账户余额显示文本
 
-  static const _chapters = [
-    '全部/自定义',
-    '第1章 移动应用开发技术体系全景',
-    '第2章 Android与iOS原生开发基础',
-    '第3章 Flutter与跨平台开发',
-    '第4章 微信小程序开发',
-    '第5章 HarmonyOS鸿蒙开发',
-    '第6章 综合开发实践',
-  ];
+  List<String> _chapters = const ['全部/自定义'];
 
   @override
   void initState() {
     super.initState();
+    _loadCourseChapters();
     _checkEnvironment();
+  }
+
+  Future<void> _loadCourseChapters() async {
+    final chapters = await _courseContext.chapterTitles(includeAll: true);
+    if (!mounted) return;
+    setState(() {
+      _chapters = chapters;
+      if (!_chapters.contains(_selectedChapter)) {
+        _selectedChapter = _chapters.first;
+      }
+    });
   }
 
   @override
@@ -172,7 +179,8 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
     // 当前全局配置作为默认选项
     final currentPreset = currentConfig.providerPreset;
     models.add(_ModelOption(
-      label: '${currentPreset?.name ?? currentConfig.provider} - ${currentConfig.model}（当前默认）',
+      label:
+          '${currentPreset?.name ?? currentConfig.provider} - ${currentConfig.model}（当前默认）',
       providerId: currentConfig.provider,
       modelId: currentConfig.model,
       baseUrl: currentConfig.effectiveBaseUrl,
@@ -188,7 +196,8 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
         final key = testConfig.effectiveApiKey;
         if (key == null || key.isEmpty) continue;
         // 跳过与全局配置完全相同的
-        if (preset.id == currentConfig.provider && modelId == currentConfig.model) continue;
+        if (preset.id == currentConfig.provider &&
+            modelId == currentConfig.model) continue;
         models.add(_ModelOption(
           label: '${preset.name} - $modelId',
           providerId: preset.id,
@@ -287,7 +296,10 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
       child: Row(
         children: [
           ChoiceChip(
-            avatar: Icon(_fromMdImport ? Icons.auto_awesome_outlined : Icons.auto_awesome,
+            avatar: Icon(
+                _fromMdImport
+                    ? Icons.auto_awesome_outlined
+                    : Icons.auto_awesome,
                 size: 18),
             label: const Text('AI 生成教案'),
             selected: !_fromMdImport,
@@ -297,18 +309,20 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
           ),
           const SizedBox(width: 12),
           ChoiceChip(
-            avatar: Icon(_fromMdImport ? Icons.upload_file : Icons.upload_file_outlined,
+            avatar: Icon(
+                _fromMdImport ? Icons.upload_file : Icons.upload_file_outlined,
                 size: 18),
             label: const Text('导入 MD 文件'),
             selected: _fromMdImport,
             onSelected: (s) {
-              if (s) setState(() {
-                _fromMdImport = true;
-                // 清除 AI 流程的旧数据，避免状态污染
-                _pdfPath = null;
-                _pptxPath = null;
-                _mdVideoPath = null;
-              });
+              if (s)
+                setState(() {
+                  _fromMdImport = true;
+                  // 清除 AI 流程的旧数据，避免状态污染
+                  _pdfPath = null;
+                  _pptxPath = null;
+                  _mdVideoPath = null;
+                });
             },
           ),
         ],
@@ -323,7 +337,9 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
     // 当前生效的配置
     final active = _selectedModelConfig;
     final activeModel = _availableModels.firstWhere(
-      (m) => active == null ? m.isDefault : m.providerId == active.provider && m.modelId == active.model,
+      (m) => active == null
+          ? m.isDefault
+          : m.providerId == active.provider && m.modelId == active.model,
       orElse: () => _availableModels.first,
     );
 
@@ -336,9 +352,11 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
           // ── 第一行：模型下拉选择器 ──
           Row(
             children: [
-              Icon(Icons.smart_toy, size: 18, color: Colors.deepPurple.shade400),
+              Icon(Icons.smart_toy,
+                  size: 18, color: Colors.deepPurple.shade400),
               const SizedBox(width: 8),
-              const Text('AI 模型：', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+              const Text('AI 模型：',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
               const SizedBox(width: 8),
               Expanded(
                 child: DropdownButtonHideUnderline(
@@ -347,7 +365,8 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                     isExpanded: true,
                     isDense: true,
                     style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
-                    icon: Icon(Icons.expand_more, size: 20, color: Colors.deepPurple.shade400),
+                    icon: Icon(Icons.expand_more,
+                        size: 20, color: Colors.deepPurple.shade400),
                     items: _availableModels.asMap().entries.map((entry) {
                       final i = entry.key;
                       final m = entry.value;
@@ -357,9 +376,15 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                         child: Row(
                           children: [
                             Icon(
-                              m.isDefault ? Icons.check_circle : (hasKey ? Icons.circle : Icons.circle_outlined),
+                              m.isDefault
+                                  ? Icons.check_circle
+                                  : (hasKey
+                                      ? Icons.circle
+                                      : Icons.circle_outlined),
                               size: 14,
-                              color: m.isDefault ? Colors.green : (hasKey ? Colors.blue : Colors.grey),
+                              color: m.isDefault
+                                  ? Colors.green
+                                  : (hasKey ? Colors.blue : Colors.grey),
                             ),
                             const SizedBox(width: 8),
                             Expanded(
@@ -372,15 +397,20 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                                 ),
                               ),
                             ),
-                            if (m.providerId == 'openrouter' || m.modelId.contains('claude'))
+                            if (m.providerId == 'openrouter' ||
+                                m.modelId.contains('claude'))
                               Container(
                                 margin: const EdgeInsets.only(left: 4),
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 1),
                                 decoration: BoxDecoration(
                                   color: Colors.deepPurple.shade50,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: Text('高质量', style: TextStyle(fontSize: 10, color: Colors.deepPurple.shade700)),
+                                child: Text('高质量',
+                                    style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.deepPurple.shade700)),
                               ),
                           ],
                         ),
@@ -393,11 +423,16 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text('请先在「AI 设置」中配置 ${m.label} 的 API Key'),
-                            action: SnackBarAction(label: '去设置', onPressed: () async {
-                              await Navigator.push(context,
-                                  MaterialPageRoute(builder: (_) => const AiSettingsPage()));
-                              _checkEnvironment();
-                            }),
+                            action: SnackBarAction(
+                                label: '去设置',
+                                onPressed: () async {
+                                  await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (_) =>
+                                              const AiSettingsPage()));
+                                  _checkEnvironment();
+                                }),
                           ),
                         );
                         return;
@@ -433,17 +468,21 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
               if (activeModel.isDefault)
                 Container(
                   margin: const EdgeInsets.only(left: 6),
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                   decoration: BoxDecoration(
                     color: Colors.green.shade50,
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: Text('默认', style: TextStyle(fontSize: 10, color: Colors.green.shade700)),
+                  child: Text('默认',
+                      style: TextStyle(
+                          fontSize: 10, color: Colors.green.shade700)),
                 ),
               const Spacer(),
               if (_balanceText != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.orange.shade50,
                     borderRadius: BorderRadius.circular(8),
@@ -451,11 +490,15 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.account_balance_wallet, size: 13, color: Colors.orange.shade700),
+                      Icon(Icons.account_balance_wallet,
+                          size: 13, color: Colors.orange.shade700),
                       const SizedBox(width: 4),
                       Text(
                         '余额 $_balanceText',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.orange.shade800),
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.orange.shade800),
                       ),
                     ],
                   ),
@@ -466,9 +509,12 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.refresh, size: 13, color: Colors.grey.shade500),
+                      Icon(Icons.refresh,
+                          size: 13, color: Colors.grey.shade500),
                       const SizedBox(width: 2),
-                      Text('查询余额', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                      Text('查询余额',
+                          style: TextStyle(
+                              fontSize: 11, color: Colors.grey.shade500)),
                     ],
                   ),
                 ),
@@ -491,14 +537,16 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
         children: [
           // ── 文件选择 + 模板下载 ──
           Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('选择 Markdown 课件文件',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   const Text('支持按 "### 幻灯片N：标题" 格式拆分为独立幻灯片',
                       style: TextStyle(fontSize: 13, color: Colors.grey)),
@@ -512,7 +560,8 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                       ),
                       const SizedBox(width: 12),
                       OutlinedButton.icon(
-                        onPressed: _mdGeneratingAll ? null : _doDownloadTemplate,
+                        onPressed:
+                            _mdGeneratingAll ? null : _doDownloadTemplate,
                         icon: const Icon(Icons.download, size: 18),
                         label: const Text('下载模板'),
                       ),
@@ -521,7 +570,8 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                         Expanded(
                           child: Text(
                             _importedMdPath!.split(Platform.pathSeparator).last,
-                            style: TextStyle(fontSize: 13, color: Colors.green[700]),
+                            style: TextStyle(
+                                fontSize: 13, color: Colors.green[700]),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -543,7 +593,8 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
           // ── MD 内容预览/编辑 ──
           if (_rawMdContent != null) ...[
             Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -555,26 +606,30 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                         const SizedBox(width: 8),
                         const Expanded(
                           child: Text('MD 内容预览与编辑',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold)),
                         ),
                         // 编辑/预览切换
                         TextButton.icon(
-                          onPressed: _mdGeneratingAll ? null : () {
-                            if (_mdEditing) {
-                              // 保存编辑
-                              setState(() {
-                                _rawMdContent = _mdEditCtrl.text;
-                                _mdEditing = false;
-                              });
-                              _reparseCurrentMd();
-                            } else {
-                              setState(() {
-                                _mdEditCtrl.text = _rawMdContent!;
-                                _mdEditing = true;
-                              });
-                            }
-                          },
-                          icon: Icon(_mdEditing ? Icons.check : Icons.edit, size: 18),
+                          onPressed: _mdGeneratingAll
+                              ? null
+                              : () {
+                                  if (_mdEditing) {
+                                    // 保存编辑
+                                    setState(() {
+                                      _rawMdContent = _mdEditCtrl.text;
+                                      _mdEditing = false;
+                                    });
+                                    _reparseCurrentMd();
+                                  } else {
+                                    setState(() {
+                                      _mdEditCtrl.text = _rawMdContent!;
+                                      _mdEditing = true;
+                                    });
+                                  }
+                                },
+                          icon: Icon(_mdEditing ? Icons.check : Icons.edit,
+                              size: 18),
                           label: Text(_mdEditing ? '保存' : '编辑'),
                         ),
                         // AI 审核按钮
@@ -584,8 +639,10 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                               : _doAiReview,
                           icon: _aiReviewing
                               ? const SizedBox(
-                                  width: 16, height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  width: 16,
+                                  height: 16,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
                                 )
                               : const Icon(Icons.rate_review, size: 18),
                           label: Text(_aiReviewing ? '审核中...' : 'AI 审核'),
@@ -645,10 +702,11 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
           if (_aiReviewResult != null) ...[
             Builder(builder: (_) {
               // 解析分数
-              final scoreMatch =
-                  RegExp(r'评分[：:]\s*(\d+)\s*/\s*100').firstMatch(_aiReviewResult!);
-              final score =
-                  scoreMatch != null ? int.tryParse(scoreMatch.group(1)!) : null;
+              final scoreMatch = RegExp(r'评分[：:]\s*(\d+)\s*/\s*100')
+                  .firstMatch(_aiReviewResult!);
+              final score = scoreMatch != null
+                  ? int.tryParse(scoreMatch.group(1)!)
+                  : null;
               final scoreColor = score != null
                   ? (score >= 90
                       ? Colors.green
@@ -710,8 +768,7 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                         child: SingleChildScrollView(
                           child: SelectableText(
                             _aiReviewResult!,
-                            style:
-                                const TextStyle(fontSize: 13, height: 1.6),
+                            style: const TextStyle(fontSize: 13, height: 1.6),
                           ),
                         ),
                       ),
@@ -720,9 +777,8 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                         Row(
                           children: [
                             ElevatedButton.icon(
-                              onPressed: _aiReviewing
-                                  ? null
-                                  : () => _doAiAutoFixMd(),
+                              onPressed:
+                                  _aiReviewing ? null : () => _doAiAutoFixMd(),
                               icon: const Icon(Icons.auto_fix_high, size: 18),
                               label: const Text('AI 自动修改'),
                               style: ElevatedButton.styleFrom(
@@ -751,7 +807,8 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
           // ── 解析结果预览 ──
           if (_parsedSlides.isNotEmpty) ...[
             Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               color: Colors.blue.shade50,
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -778,7 +835,8 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                         final slide = _parsedSlides[i];
                         final title = slide['title'] ?? '幻灯片 ${i + 1}';
                         final bullets = slide['bullets'] as List? ?? [];
-                        final hasCode = (slide['code'] ?? '').toString().isNotEmpty;
+                        final hasCode =
+                            (slide['code'] ?? '').toString().isNotEmpty;
                         return ListTile(
                           dense: true,
                           leading: CircleAvatar(
@@ -788,8 +846,8 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                                 style: TextStyle(
                                     fontSize: 12, color: Colors.blue[800])),
                           ),
-                          title: Text(title,
-                              style: const TextStyle(fontSize: 14)),
+                          title:
+                              Text(title, style: const TextStyle(fontSize: 14)),
                           subtitle: Text(
                             '${bullets.length} 要点${hasCode ? ' + 代码' : ''}',
                             style: const TextStyle(fontSize: 12),
@@ -805,7 +863,8 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
 
             // ── ★ 一键生成全部 ── ★
             Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               color: Colors.deepOrange.shade50,
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -863,8 +922,8 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                       ),
                       const SizedBox(height: 6),
                       Text(_mdProgressMsg,
-                          style: TextStyle(
-                              fontSize: 12, color: Colors.grey[700])),
+                          style:
+                              TextStyle(fontSize: 12, color: Colors.grey[700])),
                     ],
                   ],
                 ),
@@ -874,7 +933,8 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
 
             // ── 分步导出按钮组 ──
             Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -891,7 +951,9 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                       title: 'PPTX 课件',
                       path: _pptxPath,
                       enabled: _hasPythonPptx,
-                      hint: _hasPythonPptx ? '使用 python-pptx 生成' : '需安装: pip install python-pptx',
+                      hint: _hasPythonPptx
+                          ? '使用 python-pptx 生成'
+                          : '需安装: pip install python-pptx',
                       onGenerate: _doExportPptxFromMd,
                     ),
                     const Divider(),
@@ -923,12 +985,11 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                     // 环境信息
                     _buildEnvCheck('python-pptx', _hasPythonPptx,
                         '运行: pip install python-pptx'),
-                    _buildEnvCheck('edge_tts', _hasEdgeTts,
-                        '运行: pip install edge-tts'),
-                    _buildEnvCheck('FFmpeg', _hasFfmpeg,
-                        '下载: ffmpeg.org/download.html'),
-                    _buildEnvCheck('PyMuPDF', true,
-                        '运行: pip install PyMuPDF'),
+                    _buildEnvCheck(
+                        'edge_tts', _hasEdgeTts, '运行: pip install edge-tts'),
+                    _buildEnvCheck(
+                        'FFmpeg', _hasFfmpeg, '下载: ffmpeg.org/download.html'),
+                    _buildEnvCheck('PyMuPDF', true, '运行: pip install PyMuPDF'),
                   ],
                 ),
               ),
@@ -936,11 +997,14 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
           ],
 
           // ── 已生成的课件结果 ──
-          if (_pptxPath != null || _pdfPath != null || _mdVideoPath != null) ...[
+          if (_pptxPath != null ||
+              _pdfPath != null ||
+              _mdVideoPath != null) ...[
             const SizedBox(height: 16),
             Card(
               color: Colors.green.shade50,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -969,7 +1033,8 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                       child: _mdPublished
                           ? OutlinedButton.icon(
                               onPressed: null,
-                              icon: const Icon(Icons.check, color: Colors.green),
+                              icon:
+                                  const Icon(Icons.check, color: Colors.green),
                               label: const Text('已发布为扩展课件',
                                   style: TextStyle(color: Colors.green)),
                             )
@@ -979,7 +1044,8 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                                   : () => _doPublish(isMdFlow: true),
                               icon: _publishing
                                   ? const SizedBox(
-                                      width: 16, height: 16,
+                                      width: 16,
+                                      height: 16,
                                       child: CircularProgressIndicator(
                                           strokeWidth: 2, color: Colors.white),
                                     )
@@ -1023,9 +1089,7 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                     style: const TextStyle(
                         fontSize: 14, fontWeight: FontWeight.w500)),
                 Text(
-                  path != null
-                      ? path.split(Platform.pathSeparator).last
-                      : hint,
+                  path != null ? path.split(Platform.pathSeparator).last : hint,
                   style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1057,7 +1121,9 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
           children: [
             Icon(icon, size: 20),
             const SizedBox(width: 8),
-            Text('$label: ', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+            Text('$label: ',
+                style:
+                    const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
             Expanded(
               child: Text(
                 path.split(Platform.pathSeparator).last,
@@ -1172,7 +1238,9 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
       // 使用 AiService 进行审核
       final AiService ai = AiService();
       final review = await ai.chat(
-        [{'role': 'user', 'content': content}],
+        [
+          {'role': 'user', 'content': content}
+        ],
         systemPrompt: '''你是一位课件质量审核专家。请对以下 Markdown 课件内容进行评审，从以下维度给出具体修改建议：
 
 1. **结构完整性**：是否包含封面、目录、各章节、总结等必要部分
@@ -1379,7 +1447,8 @@ class Example {
 
     try {
       // 提取标题
-      final fileName = _importedMdPath?.split(Platform.pathSeparator).last ?? '';
+      final fileName =
+          _importedMdPath?.split(Platform.pathSeparator).last ?? '';
       final title = fileName.replaceAll(RegExp(r'\.(md|markdown|txt)$'), '');
 
       final path = await _coursewareService.generatePptx(
@@ -1417,7 +1486,8 @@ class Example {
     setState(() => _exporting = true);
 
     try {
-      final fileName = _importedMdPath?.split(Platform.pathSeparator).last ?? '';
+      final fileName =
+          _importedMdPath?.split(Platform.pathSeparator).last ?? '';
       final title = fileName.replaceAll(RegExp(r'\.(md|markdown|txt)$'), '');
 
       // 构建教案结构以复用 PDF 生成逻辑
@@ -1464,8 +1534,7 @@ class Example {
     try {
       final fileName =
           _importedMdPath?.split(Platform.pathSeparator).last ?? '';
-      final title =
-          fileName.replaceAll(RegExp(r'\.(md|markdown|txt)$'), '');
+      final title = fileName.replaceAll(RegExp(r'\.(md|markdown|txt)$'), '');
       final safeTitle = title.isNotEmpty ? title : '课件';
 
       // ── 1/5 生成 PPTX ──
@@ -1511,8 +1580,7 @@ class Example {
             if (!mounted) return;
             setState(() {
               _mdProgress = 0.25 + 0.35 * (current / total);
-              _mdProgressMsg =
-                  '(3/5) TTS 语音 $current/$total...';
+              _mdProgressMsg = '(3/5) TTS 语音 $current/$total...';
             });
           },
         );
@@ -1545,13 +1613,10 @@ class Example {
           });
 
           final timestamp = DateTime.now().millisecondsSinceEpoch;
-          final safeName =
-              safeTitle.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
+          final safeName = safeTitle.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
           final coursewareDir = await _coursewareService.getCoursewareDir();
-          final rawVideoPath =
-              '$coursewareDir/${safeName}_raw_$timestamp.mp4';
-          videoPath =
-              '$coursewareDir/${safeName}_$timestamp.mp4';
+          final rawVideoPath = '$coursewareDir/${safeName}_raw_$timestamp.mp4';
+          videoPath = '$coursewareDir/${safeName}_$timestamp.mp4';
 
           await _videoService.generateVideo(
             slides: slideImages,
@@ -1591,15 +1656,23 @@ class Example {
                 outputPath: videoPath,
               );
               if (burned != null) {
-                try { File(rawVideoPath).deleteSync(); } catch (e) { swallow(e, tag: 'CoursewareWorkshop.delRaw'); }
+                try {
+                  File(rawVideoPath).deleteSync();
+                } catch (e) {
+                  swallow(e, tag: 'CoursewareWorkshop.delRaw');
+                }
               } else {
-                try { File(rawVideoPath).renameSync(videoPath); } catch (e) {
+                try {
+                  File(rawVideoPath).renameSync(videoPath);
+                } catch (e) {
                   swallow(e, tag: 'CoursewareWorkshop.renRaw');
                   videoPath = rawVideoPath;
                 }
               }
             } else {
-              try { File(rawVideoPath).renameSync(videoPath); } catch (_) {
+              try {
+                File(rawVideoPath).renameSync(videoPath);
+              } catch (_) {
                 videoPath = rawVideoPath;
               }
             }
@@ -1699,12 +1772,9 @@ class Example {
 
       // 合成视频
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final safeName =
-          safeTitle.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
-      final rawVideoPath =
-          '$coursewareDir/${safeName}_raw_$timestamp.mp4';
-      final videoPath =
-          '$coursewareDir/${safeName}_$timestamp.mp4';
+      final safeName = safeTitle.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
+      final rawVideoPath = '$coursewareDir/${safeName}_raw_$timestamp.mp4';
+      final videoPath = '$coursewareDir/${safeName}_$timestamp.mp4';
 
       final success = await _videoService.generateVideo(
         slides: slideImages,
@@ -1733,16 +1803,24 @@ class Example {
             outputPath: videoPath,
           );
           if (burned != null) {
-            try { File(rawVideoPath).deleteSync(); } catch (e) { swallow(e, tag: 'CoursewareWorkshop.delRaw'); }
+            try {
+              File(rawVideoPath).deleteSync();
+            } catch (e) {
+              swallow(e, tag: 'CoursewareWorkshop.delRaw');
+            }
             finalVideoPath = videoPath;
           } else {
-            try { File(rawVideoPath).renameSync(videoPath); } catch (e) {
+            try {
+              File(rawVideoPath).renameSync(videoPath);
+            } catch (e) {
               swallow(e, tag: 'CoursewareWorkshop.renFinalRaw');
               finalVideoPath = rawVideoPath;
             }
           }
         } else {
-          try { File(rawVideoPath).renameSync(videoPath); } catch (_) {
+          try {
+            File(rawVideoPath).renameSync(videoPath);
+          } catch (_) {
             finalVideoPath = rawVideoPath;
           }
         }
@@ -1785,21 +1863,21 @@ class Example {
       'keyPoints': [],
       'difficulties': [],
       'sections': _parsedSlides.map((s) {
-            final bullets = (s['bullets'] as List? ?? []);
-            // 每条 bullet 独立一行，保留原始结构（不再合并为一个大字符串）
-            final items = <String>[];
-            for (final b in bullets) {
-              final text = b.toString().trim();
-              if (text.isNotEmpty) items.add(text);
-            }
-            return {
-              'title': s['title'] ?? '',
-              'duration': '',
-              'content': items.isNotEmpty ? items.join('\n') : '',
-              'codeExample': s['code'] ?? '',
-              'notes': s['notes'] ?? '',
-            };
-          }).toList(),
+        final bullets = (s['bullets'] as List? ?? []);
+        // 每条 bullet 独立一行，保留原始结构（不再合并为一个大字符串）
+        final items = <String>[];
+        for (final b in bullets) {
+          final text = b.toString().trim();
+          if (text.isNotEmpty) items.add(text);
+        }
+        return {
+          'title': s['title'] ?? '',
+          'duration': '',
+          'content': items.isNotEmpty ? items.join('\n') : '',
+          'codeExample': s['code'] ?? '',
+          'notes': s['notes'] ?? '',
+        };
+      }).toList(),
       'experiments': [],
       'umlDiagrams': [],
       'homework': '',
@@ -1834,7 +1912,9 @@ class Example {
         buf.write('$title。');
         if (subtitle.isNotEmpty) buf.write('$subtitle。');
         buf.write(notes);
-        if (!notes.endsWith('。') && !notes.endsWith('！') && !notes.endsWith('？')) {
+        if (!notes.endsWith('。') &&
+            !notes.endsWith('！') &&
+            !notes.endsWith('？')) {
           buf.write('。');
         }
       } else {
@@ -1921,9 +2001,8 @@ class Example {
           child: Stepper(
             currentStep: _currentStep,
             onStepContinue: _onStepContinue,
-            onStepCancel: _currentStep > 0
-                ? () => setState(() => _currentStep--)
-                : null,
+            onStepCancel:
+                _currentStep > 0 ? () => setState(() => _currentStep--) : null,
             onStepTapped: (step) {
               if (step <= _currentStep || _canGoToStep(step)) {
                 setState(() => _currentStep = step);
@@ -2031,10 +2110,12 @@ class Example {
                             ? Colors.deepPurple
                             : Colors.grey.shade300,
                     boxShadow: isCurrent
-                        ? [BoxShadow(
-                            color: Colors.deepPurple.withValues(alpha: 0.3),
-                            blurRadius: 8,
-                          )]
+                        ? [
+                            BoxShadow(
+                              color: Colors.deepPurple.withValues(alpha: 0.3),
+                              blurRadius: 8,
+                            )
+                          ]
                         : null,
                   ),
                   child: Center(
@@ -2156,14 +2237,16 @@ class Example {
           // ── 教案导入 ──
           Card(
             color: Colors.blue.shade50,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('或者导入已有教案',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                   const SizedBox(height: 4),
                   const Text('支持 JSON / Markdown 格式的教案文件',
                       style: TextStyle(fontSize: 12, color: Colors.grey)),
@@ -2361,7 +2444,8 @@ class Example {
                     decoration: BoxDecoration(
                       color: scoreColor.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: scoreColor.withValues(alpha: 0.3)),
+                      border:
+                          Border.all(color: scoreColor.withValues(alpha: 0.3)),
                     ),
                     child: Text(
                       '$score 分 · $scoreLabel',
@@ -2465,12 +2549,11 @@ class Example {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _featureChip(Icons.description, 'Markdown 文档',
-                    _markdownContent != null),
-                _featureChip(Icons.account_tree, 'UML 图表',
-                    _pumlResults.isNotEmpty),
-                _featureChip(Icons.image, 'UML 图片',
-                    _umlImages.isNotEmpty),
+                _featureChip(
+                    Icons.description, 'Markdown 文档', _markdownContent != null),
+                _featureChip(
+                    Icons.account_tree, 'UML 图表', _pumlResults.isNotEmpty),
+                _featureChip(Icons.image, 'UML 图片', _umlImages.isNotEmpty),
               ],
             ),
             if (_markdownContent != null) ...[
@@ -2487,8 +2570,8 @@ class Example {
                 child: SingleChildScrollView(
                   child: Text(
                     _markdownContent!,
-                    style: const TextStyle(
-                        fontSize: 12, fontFamily: 'monospace'),
+                    style:
+                        const TextStyle(fontSize: 12, fontFamily: 'monospace'),
                   ),
                 ),
               ),
@@ -2515,8 +2598,7 @@ class Example {
                                   ? _pumlResults[i]['title'] ?? 'UML'
                                   : 'UML ${i + 1}',
                               style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold),
+                                  fontSize: 12, fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 4),
                             Expanded(
@@ -2558,8 +2640,7 @@ class Example {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (_markdownContent == null)
-            const Text('⚠️ 请先生成内容',
-                style: TextStyle(color: Colors.orange))
+            const Text('⚠️ 请先生成内容', style: TextStyle(color: Colors.orange))
           else ...[
             // 生成产物预览卡片
             _buildFileCard(
@@ -2572,7 +2653,8 @@ class Example {
                       ? '渐变背景 + 动画入场 + 卡片式布局'
                       : '需安装: pip install python-pptx lxml'),
               isReady: _pptxPath != null,
-              onOpen: _pptxPath != null ? () => OpenFilex.open(_pptxPath!) : null,
+              onOpen:
+                  _pptxPath != null ? () => OpenFilex.open(_pptxPath!) : null,
             ),
             const SizedBox(height: 8),
             _buildFileCard(
@@ -2623,8 +2705,7 @@ class Example {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 环境检查
-          _buildEnvCheck('edge_tts', _hasEdgeTts,
-              '运行: pip install edge-tts'),
+          _buildEnvCheck('edge_tts', _hasEdgeTts, '运行: pip install edge-tts'),
           const SizedBox(height: 12),
 
           // 语音选择
@@ -2636,8 +2717,8 @@ class Example {
               prefixIcon: Icon(Icons.record_voice_over),
             ),
             items: TtsService.voices.entries
-                .map((e) => DropdownMenuItem(
-                    value: e.key, child: Text(e.value)))
+                .map(
+                    (e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
                 .toList(),
             onChanged: (v) => setState(() => _ttsVoice = v!),
           ),
@@ -2701,7 +2782,8 @@ class Example {
                 const Icon(Icons.check_circle, color: Colors.green, size: 20),
                 const SizedBox(width: 8),
                 Text('语音合成完成（${_audioPaths.length}段）',
-                    style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                    style: const TextStyle(
+                        color: Colors.green, fontWeight: FontWeight.bold)),
               ],
             ),
             const SizedBox(height: 12),
@@ -2729,18 +2811,16 @@ class Example {
   Step _buildStep5() {
     return Step(
       title: const Text('视频合成'),
-      subtitle: _videoPath != null
-          ? const Text('视频已生成')
-          : const Text('合成教学视频 (MP4)'),
+      subtitle:
+          _videoPath != null ? const Text('视频已生成') : const Text('合成教学视频 (MP4)'),
       isActive: _currentStep >= 4,
       state: _videoPath != null ? StepState.complete : StepState.indexed,
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildEnvCheck('FFmpeg', _hasFfmpeg,
-              '下载: https://ffmpeg.org/download.html'),
-          _buildEnvCheck('Python + PyMuPDF', true,
-              '运行: pip install PyMuPDF'),
+          _buildEnvCheck(
+              'FFmpeg', _hasFfmpeg, '下载: https://ffmpeg.org/download.html'),
+          _buildEnvCheck('Python + PyMuPDF', true, '运行: pip install PyMuPDF'),
           const SizedBox(height: 12),
 
           if (_pdfPath == null && _pptxPath == null)
@@ -2748,11 +2828,11 @@ class Example {
                 style: TextStyle(color: Colors.orange)),
 
           if (_audioPaths.isEmpty)
-            const Text('⚠️ 建议先生成语音',
-                style: TextStyle(color: Colors.orange)),
+            const Text('⚠️ 建议先生成语音', style: TextStyle(color: Colors.orange)),
 
           // ── 合成视频按钮（独立、醒目）──
-          if (_videoPath == null && !_generatingVideo &&
+          if (_videoPath == null &&
+              !_generatingVideo &&
               (_pdfPath != null || _pptxPath != null)) ...[
             const SizedBox(height: 16),
             SizedBox(
@@ -2760,9 +2840,8 @@ class Example {
               child: FilledButton.icon(
                 onPressed: _hasFfmpeg ? _doGenerateVideo : null,
                 icon: const Icon(Icons.videocam, size: 24),
-                label: Text(_audioPaths.isNotEmpty
-                    ? '合成视频（含语音旁白）'
-                    : '合成视频（无语音）'),
+                label:
+                    Text(_audioPaths.isNotEmpty ? '合成视频（含语音旁白）' : '合成视频（无语音）'),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   textStyle: const TextStyle(fontSize: 16),
@@ -2778,8 +2857,8 @@ class Example {
               child: ListTile(
                 leading: const Icon(Icons.videocam, color: Colors.green),
                 title: const Text('教学视频已生成'),
-                subtitle: Text(_videoPath!,
-                    style: const TextStyle(fontSize: 11)),
+                subtitle:
+                    Text(_videoPath!, style: const TextStyle(fontSize: 11)),
                 trailing: IconButton(
                   icon: const Icon(Icons.play_circle_filled,
                       color: Colors.green, size: 36),
@@ -2814,7 +2893,8 @@ class Example {
                           : () => _doPublish(isMdFlow: false),
                       icon: _publishing
                           ? const SizedBox(
-                              width: 16, height: 16,
+                              width: 16,
+                              height: 16,
                               child: CircularProgressIndicator(
                                   strokeWidth: 2, color: Colors.white),
                             )
@@ -2838,6 +2918,7 @@ class Example {
 
     try {
       final db = await DatabaseHelper.instance.database;
+      final courseId = await _courseContext.activeCourseId();
 
       // 确定标题和章节
       final title = isMdFlow
@@ -2857,37 +2938,49 @@ class Example {
 
       // 发布 PDF
       if (pdfPath != null && File(pdfPath).existsSync()) {
-        await db.insert('resource_files', {
-          'file_name': '$title.pdf',
-          'file_path': pdfPath,
-          'file_type': 'pdf',
-          'chapter': chapter,
-          'description': '[AI生成] $title 课件',
-        }, conflictAlgorithm: ConflictAlgorithm.replace);
+        await db.insert(
+            'resource_files',
+            {
+              'course_id': courseId,
+              'file_name': '$title.pdf',
+              'file_path': pdfPath,
+              'file_type': 'pdf',
+              'chapter': chapter,
+              'description': '[AI生成] $title 课件',
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace);
         publishedCount++;
       }
 
       // 发布 PPT/PPTX
       if (pptxPath != null && File(pptxPath).existsSync()) {
-        await db.insert('resource_files', {
-          'file_name': '$title.pptx',
-          'file_path': pptxPath,
-          'file_type': 'ppt',
-          'chapter': chapter,
-          'description': '[AI生成] $title 课件',
-        }, conflictAlgorithm: ConflictAlgorithm.replace);
+        await db.insert(
+            'resource_files',
+            {
+              'course_id': courseId,
+              'file_name': '$title.pptx',
+              'file_path': pptxPath,
+              'file_type': 'ppt',
+              'chapter': chapter,
+              'description': '[AI生成] $title 课件',
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace);
         publishedCount++;
       }
 
       // 发布视频
       if (videoPath != null && File(videoPath).existsSync()) {
-        await db.insert('resource_files', {
-          'file_name': '$title.mp4',
-          'file_path': videoPath,
-          'file_type': 'video',
-          'chapter': chapter,
-          'description': '[AI生成] $title 教学视频',
-        }, conflictAlgorithm: ConflictAlgorithm.replace);
+        await db.insert(
+            'resource_files',
+            {
+              'course_id': courseId,
+              'file_name': '$title.mp4',
+              'file_path': videoPath,
+              'file_type': 'video',
+              'chapter': chapter,
+              'description': '[AI生成] $title 教学视频',
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace);
         publishedCount++;
       }
 
@@ -2932,19 +3025,16 @@ class Example {
           size: 18,
         ),
         const SizedBox(width: 8),
-        Text('$name: ',
-            style: const TextStyle(fontWeight: FontWeight.w500)),
+        Text('$name: ', style: const TextStyle(fontWeight: FontWeight.w500)),
         Text(
           installed ? '已安装' : '未安装',
           style: TextStyle(
-              color: installed ? Colors.green : Colors.orange,
-              fontSize: 13),
+              color: installed ? Colors.green : Colors.orange, fontSize: 13),
         ),
         if (!installed) ...[
           const SizedBox(width: 8),
           Text(installCmd,
-              style: TextStyle(
-                  fontSize: 11, color: Colors.grey.shade600)),
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
         ],
       ],
     );
@@ -2982,14 +3072,16 @@ class Example {
       ),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: isReady ? Colors.green : color.withValues(alpha: 0.15),
+          backgroundColor:
+              isReady ? Colors.green : color.withValues(alpha: 0.15),
           child: Icon(
             isReady ? Icons.check : icon,
             color: isReady ? Colors.white : color,
             size: 22,
           ),
         ),
-        title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+        title: Text(title,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
         subtitle: Text(subtitle, style: const TextStyle(fontSize: 11)),
         trailing: isReady
             ? FilledButton.tonalIcon(
@@ -3063,9 +3155,14 @@ class Example {
       case 2:
         return _markdownContent != null;
       case 3:
-        return _pdfPath != null || _pptxPath != null || _markdownContent != null;
+        return _pdfPath != null ||
+            _pptxPath != null ||
+            _markdownContent != null;
       case 4:
-        return _markdownContent != null || _pdfPath != null || _pptxPath != null || _audioPaths.isNotEmpty;
+        return _markdownContent != null ||
+            _pdfPath != null ||
+            _pptxPath != null ||
+            _audioPaths.isNotEmpty;
       default:
         return false;
     }
@@ -3099,7 +3196,9 @@ class Example {
       case 3:
         return _hasEdgeTts ? _doGenerateTts : null;
       case 4:
-        return _hasFfmpeg && (_pdfPath != null || _pptxPath != null) ? _doGenerateVideo : null;
+        return _hasFfmpeg && (_pdfPath != null || _pptxPath != null)
+            ? _doGenerateVideo
+            : null;
       default:
         return null;
     }
@@ -3298,9 +3397,7 @@ class Example {
     setState(() => _generatingPlan = true);
 
     try {
-      final chapter = _selectedChapter == '全部/自定义'
-          ? null
-          : _selectedChapter;
+      final chapter = _selectedChapter == '全部/自定义' ? null : _selectedChapter;
       final plan = await _coursewareService.generateLessonPlan(
         topic: topic,
         chapter: chapter,
@@ -3362,7 +3459,9 @@ class Example {
       final ai = AiService();
       final planJson = jsonEncode(_lessonPlan);
       final review = await ai.chat(
-        [{'role': 'user', 'content': planJson}],
+        [
+          {'role': 'user', 'content': planJson}
+        ],
         systemPrompt: '''你是一位课程设计审核专家。请对以下教案 JSON 进行评审，从以下维度给出分数和建议：
 
 1. **教学目标**：是否明确、可衡量、符合布鲁姆认知层次
@@ -3416,7 +3515,8 @@ class Example {
         [
           {
             'role': 'user',
-            'content': '原始教案:\n${jsonEncode(_lessonPlan)}\n\n审核建议:\n$_planReviewResult'
+            'content':
+                '原始教案:\n${jsonEncode(_lessonPlan)}\n\n审核建议:\n$_planReviewResult'
           },
         ],
         systemPrompt: '''你是一位课程设计专家。根据审核建议修改教案。
@@ -3489,9 +3589,8 @@ class Example {
       final md = _coursewareService.generateMarkdown(_lessonPlan!);
 
       // 生成 UML 图表
-      final pumlResults =
-          await _coursewareService.generateAllPuml(_lessonPlan!,
-              configOverride: _selectedModelConfig);
+      final pumlResults = await _coursewareService.generateAllPuml(_lessonPlan!,
+          configOverride: _selectedModelConfig);
 
       // 渲染 UML 图片
       final images = <Uint8List>[];
@@ -3557,8 +3656,7 @@ class Example {
       if (_hasPythonPptx) {
         try {
           // 直接从教案生成幻灯片数据（不经过 Markdown 解析）
-          final slides =
-              _coursewareService.lessonPlanToSlides(_lessonPlan!);
+          final slides = _coursewareService.lessonPlanToSlides(_lessonPlan!);
           if (slides.isNotEmpty) {
             pptxPath = await _coursewareService.generatePptx(
               title: _lessonPlan!['title']?.toString() ?? '教案',
@@ -3589,8 +3687,7 @@ class Example {
             content: Text(results.isNotEmpty
                 ? '✅ ${results.join(" + ")} 已导出'
                 : '⚠️ 导出失败'),
-            backgroundColor:
-                results.isNotEmpty ? Colors.green : Colors.orange,
+            backgroundColor: results.isNotEmpty ? Colors.green : Colors.orange,
           ),
         );
       }
@@ -3616,9 +3713,9 @@ class Example {
     try {
       // 1. AI 生成旁白脚本
       if (_narrationScripts.isEmpty) {
-        final scripts =
-            await _coursewareService.generateNarrationScripts(_lessonPlan!,
-                configOverride: _selectedModelConfig);
+        final scripts = await _coursewareService.generateNarrationScripts(
+            _lessonPlan!,
+            configOverride: _selectedModelConfig);
         setState(() => _narrationScripts = scripts);
       }
 
@@ -3695,7 +3792,8 @@ class Example {
 
       // PDF 转图片失败或没有 PDF → 尝试用 PIL 直接渲染幻灯片
       if (slideImages.isEmpty && _markdownContent != null) {
-        final slides = _coursewareService.parseMarkdownToSlides(_markdownContent!);
+        final slides =
+            _coursewareService.parseMarkdownToSlides(_markdownContent!);
         if (slides.isNotEmpty) {
           final title = _lessonPlan?['title']?.toString() ?? '教案';
           slideImages = await _coursewareService.generateSlideImages(
@@ -3722,12 +3820,9 @@ class Example {
       // 2. 图片 + 音频 → 视频
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final title = _lessonPlan?['title']?.toString() ?? '教案';
-      final safeTitle =
-          title.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
-      final rawOutputPath =
-          '$coursewareDir/${safeTitle}_raw_$timestamp.mp4';
-      final outputPath =
-          '$coursewareDir/${safeTitle}_$timestamp.mp4';
+      final safeTitle = title.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
+      final rawOutputPath = '$coursewareDir/${safeTitle}_raw_$timestamp.mp4';
+      final outputPath = '$coursewareDir/${safeTitle}_$timestamp.mp4';
 
       final success = await _videoService.generateVideo(
         slides: slideImages,
@@ -3750,9 +3845,8 @@ class Example {
           _videoStatus = '正在生成字幕...';
         });
 
-        final narrations = _narrationScripts
-            .map((s) => s['narration'] ?? '')
-            .toList();
+        final narrations =
+            _narrationScripts.map((s) => s['narration'] ?? '').toList();
         final srtPath = '$coursewareDir/${safeTitle}_$timestamp.srt';
         final srtResult = await _videoService.generateSrt(
           narrations: narrations,
@@ -3771,16 +3865,24 @@ class Example {
             outputPath: outputPath,
           );
           if (burned != null) {
-            try { File(rawOutputPath).deleteSync(); } catch (e) { swallow(e, tag: 'CoursewareWorkshop.delOutput'); }
+            try {
+              File(rawOutputPath).deleteSync();
+            } catch (e) {
+              swallow(e, tag: 'CoursewareWorkshop.delOutput');
+            }
             finalVideoPath = outputPath;
           } else {
-            try { File(rawOutputPath).renameSync(outputPath); } catch (e) {
+            try {
+              File(rawOutputPath).renameSync(outputPath);
+            } catch (e) {
               swallow(e, tag: 'CoursewareWorkshop.renOutput');
               finalVideoPath = rawOutputPath;
             }
           }
         } else {
-          try { File(rawOutputPath).renameSync(outputPath); } catch (_) {
+          try {
+            File(rawOutputPath).renameSync(outputPath);
+          } catch (_) {
             finalVideoPath = rawOutputPath;
           }
         }

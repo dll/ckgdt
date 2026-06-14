@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 /// 课程数据模型
 class CourseModel {
   final String id;
@@ -27,15 +29,19 @@ class CourseModel {
         final trimmed = raw.trim();
         if (trimmed.startsWith('[')) {
           try {
-            // 简易解析：去掉 [] 后按 "," 分割
-            final inner = trimmed.substring(1, trimmed.length - 1);
-            return inner
-                .split(RegExp(r'"\s*,\s*"'))
-                .map((s) => s.replaceAll('"', '').trim())
+            final decoded = jsonDecode(trimmed);
+            if (decoded is List) {
+              return decoded
+                  .map((e) => e.toString().trim())
+                  .where((s) => s.isNotEmpty)
+                  .toList();
+            }
+          } catch (_) {
+            return raw
+                .split(',')
+                .map((s) => s.trim())
                 .where((s) => s.isNotEmpty)
                 .toList();
-          } catch (_) {
-            return [raw];
           }
         }
         return raw.split(',').map((s) => s.trim()).toList();
@@ -60,7 +66,7 @@ class CourseModel {
       'name': name,
       'description': description,
       'chapter_count': chapterCount,
-      'chapters': '["${chapters.join('","')}"]',
+      'chapters': jsonEncode(chapters),
       'is_active': isActive ? 1 : 0,
       'created_at': createdAt,
     };

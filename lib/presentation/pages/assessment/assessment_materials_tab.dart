@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import '../../../services/course_context_service.dart';
 import '../lab/lab_material_preview_page.dart';
 
 /// 考核材料 Tab — 展示 4 份过程报告材料 + 4 份最终报告材料 + 制度说明
@@ -101,23 +102,50 @@ class AssessmentMaterialsTab extends StatelessWidget {
     ),
   ];
 
+  static const _genericReferences = [
+    _AssessmentMaterial(
+      title: '考核报告体系说明',
+      assetPath: 'data/考核/考核报告体系说明.md',
+      week: '体系',
+      icon: Icons.account_tree,
+      color: Colors.teal,
+    ),
+    _AssessmentMaterial(
+      title: '课程考核大作业',
+      assetPath: 'data/考核/课程考核大作业.md',
+      week: '大作业',
+      icon: Icons.assignment_turned_in,
+      color: Colors.deepPurple,
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(12),
-      children: [
-        _buildHeader(context),
-        const SizedBox(height: 16),
-        _buildSection(context, '过程报告材料', '四周开发周期，每周一份过程性报告', Icons.timeline,
-            Colors.indigo, _processMaterials),
-        const SizedBox(height: 16),
-        _buildSection(context, '最终报告材料', '考核大作业的四份核心报告', Icons.assignment,
-            Colors.deepPurple, _finalMaterials),
-        const SizedBox(height: 16),
-        _buildSection(context, '考核制度说明', '考核方案、报告体系、大作业要求', Icons.menu_book,
-            Colors.teal, _references),
-        const SizedBox(height: 24),
-      ],
+    return FutureBuilder<String>(
+      future: CourseContextService().activeCourseName(),
+      builder: (context, snapshot) {
+        final courseName = snapshot.data ?? '';
+        final references =
+            CourseContextService.isDefaultMobileCourseName(courseName)
+                ? _references
+                : _genericReferences;
+        return ListView(
+          padding: const EdgeInsets.all(12),
+          children: [
+            _buildHeader(context),
+            const SizedBox(height: 16),
+            _buildSection(context, '过程报告材料', '四周开发周期，每周一份过程性报告', Icons.timeline,
+                Colors.indigo, _processMaterials),
+            const SizedBox(height: 16),
+            _buildSection(context, '最终报告材料', '考核大作业的四份核心报告', Icons.assignment,
+                Colors.deepPurple, _finalMaterials),
+            const SizedBox(height: 16),
+            _buildSection(context, '考核制度说明', '考核方案、报告体系、大作业要求', Icons.menu_book,
+                Colors.teal, references),
+            const SizedBox(height: 24),
+          ],
+        );
+      },
     );
   }
 
@@ -152,7 +180,8 @@ class AssessmentMaterialsTab extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               '提供四份过程报告 + 四份最终报告的撰写说明，以及考核方案与体系文档。点击任意材料查看完整 Markdown 内容，支持下载到本地。',
-              style: TextStyle(fontSize: 12, color: Colors.grey[600], height: 1.6),
+              style:
+                  TextStyle(fontSize: 12, color: Colors.grey[600], height: 1.6),
             ),
           ],
         ),

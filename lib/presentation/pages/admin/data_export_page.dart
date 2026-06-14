@@ -1,6 +1,7 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../data/local/database_helper.dart';
+import '../../../services/course_context_service.dart';
 
 class DataExportPage extends StatefulWidget {
   const DataExportPage({super.key});
@@ -10,6 +11,7 @@ class DataExportPage extends StatefulWidget {
 }
 
 class _DataExportPageState extends State<DataExportPage> {
+  final _courseContext = CourseContextService();
 
   // Summary counts
   int _totalStudents = 0;
@@ -35,14 +37,20 @@ class _DataExportPageState extends State<DataExportPage> {
       final studentCount = await db.rawQuery(
         "SELECT COUNT(*) as c FROM users WHERE role = 'student'",
       );
+      final quizScope = await _courseContext.scopedWhere();
+      final learningScope = await _courseContext.scopedWhere();
       final quizCount = await db.rawQuery(
-        'SELECT COUNT(*) as c FROM quiz_results',
+        'SELECT COUNT(*) as c FROM quiz_results WHERE ${quizScope.where}',
+        quizScope.args,
       );
       final learningCount = await db.rawQuery(
-        'SELECT COUNT(*) as c FROM learning_records',
+        'SELECT COUNT(*) as c FROM learning_records WHERE ${learningScope.where}',
+        learningScope.args,
       );
+      final workScope = await _courseContext.scopedWhere();
       final workCount = await db.rawQuery(
-        'SELECT COUNT(*) as c FROM student_works',
+        'SELECT COUNT(*) as c FROM student_works WHERE ${workScope.where}',
+        workScope.args,
       );
 
       if (!mounted) return;
@@ -109,6 +117,7 @@ class _DataExportPageState extends State<DataExportPage> {
 
   Future<String> _generateGradeSummary() async {
     final db = await DatabaseHelper.instance.database;
+    final quizScope = await _courseContext.scopedWhere(column: 'qr.course_id');
 
     // Get per-student average scores, sorted descending
     final results = await db.rawQuery('''
@@ -123,9 +132,10 @@ class _DataExportPageState extends State<DataExportPage> {
         SUM(qr.num_total) AS total_questions
       FROM quiz_results qr
       LEFT JOIN users u ON qr.user_id = u.user_id
+      WHERE ${quizScope.where}
       GROUP BY qr.user_id
       ORDER BY avg_score DESC
-    ''');
+    ''', quizScope.args);
 
     if (results.isEmpty) {
       return '暂无测验成绩数据。';
@@ -158,7 +168,16 @@ class _DataExportPageState extends State<DataExportPage> {
           '${r['max_score']}',
           '${r['min_score']}',
           accuracy,
-        ], [4, 12, 10, 4, 8, 8, 8, 8]),
+        ], [
+          4,
+          12,
+          10,
+          4,
+          8,
+          8,
+          8,
+          8
+        ]),
       );
     }
 
@@ -166,6 +185,9 @@ class _DataExportPageState extends State<DataExportPage> {
     buf.writeln('共 ${results.length} 名学生参加测验');
 
     // Per-chapter breakdown
+    final chapterScope = await _courseContext.scopedWhere(
+      extraWhere: "chapter IS NOT NULL AND chapter != ''",
+    );
     final chapterResults = await db.rawQuery('''
       SELECT
         chapter,
@@ -175,18 +197,17 @@ class _DataExportPageState extends State<DataExportPage> {
         SUM(num_correct) AS total_correct,
         SUM(num_total) AS total_questions
       FROM quiz_results
-      WHERE chapter IS NOT NULL AND chapter != ''
+      WHERE ${chapterScope.where}
       GROUP BY chapter
       ORDER BY chapter
-    ''');
+    ''', chapterScope.args);
 
     if (chapterResults.isNotEmpty) {
       buf.writeln('');
       buf.writeln('各章节成绩概览');
       buf.writeln('${'=' * 60}');
       buf.writeln(
-        _padRow(['章节', '参与人数', '测验次数', '平均分', '正确率'],
-            [16, 10, 10, 10, 10]),
+        _padRow(['章节', '参与人数', '测验次数', '平均分', '正确率'], [16, 10, 10, 10, 10]),
       );
       buf.writeln('${'-' * 60}');
 
@@ -203,7 +224,13 @@ class _DataExportPageState extends State<DataExportPage> {
             '${r['attempt_count']}',
             '${r['avg_score']}',
             accuracy,
-          ], [16, 10, 10, 10, 10]),
+          ], [
+            16,
+            10,
+            10,
+            10,
+            10
+          ]),
         );
       }
     }
@@ -213,6 +240,9 @@ class _DataExportPageState extends State<DataExportPage> {
 
   Future<String> _generateLearningAlert() async {
     final db = await DatabaseHelper.instance.database;
+    final lowScoreScope = await _courseContext.scopedWhere(
+      column: 'qr.course_id',
+    );
 
     final buf = StringBuffer();
     buf.writeln('学情预警报告');
@@ -229,10 +259,11 @@ class _DataExportPageState extends State<DataExportPage> {
         SUM(qr.num_total) AS total_questions
       FROM quiz_results qr
       LEFT JOIN users u ON qr.user_id = u.user_id
+      WHERE ${lowScoreScope.where}
       GROUP BY qr.user_id
       HAVING avg_score < 60
       ORDER BY avg_score ASC
-    ''');
+    ''', lowScoreScope.args);
 
     buf.writeln('');
     buf.writeln('一、成绩预警（平均分 < 60）');
@@ -242,8 +273,7 @@ class _DataExportPageState extends State<DataExportPage> {
       buf.writeln('  无预警学生，所有学生平均分均达标。');
     } else {
       buf.writeln(
-        _padRow(['学号', '姓名', '测验次数', '平均分', '正确率'],
-            [12, 10, 10, 10, 10]),
+        _padRow(['学号', '姓名', '测验次数', '平均分', '正确率'], [12, 10, 10, 10, 10]),
       );
       buf.writeln('${'-' * 60}');
       for (final r in lowScoreStudents) {
@@ -259,13 +289,22 @@ class _DataExportPageState extends State<DataExportPage> {
             '${r['attempts']}',
             '${r['avg_score']}',
             accuracy,
-          ], [12, 10, 10, 10, 10]),
+          ], [
+            12,
+            10,
+            10,
+            10,
+            10
+          ]),
         );
       }
       buf.writeln('  共 ${lowScoreStudents.length} 名学生成绩预警');
     }
 
     // 2. Students with many wrong answers
+    final wrongScope = await _courseContext.scopedWhere(
+      column: 'wa.course_id',
+    );
     final highWrongStudents = await db.rawQuery('''
       SELECT
         wa.user_id,
@@ -274,10 +313,11 @@ class _DataExportPageState extends State<DataExportPage> {
         SUM(wa.times) AS total_wrong_times
       FROM wrong_answers wa
       LEFT JOIN users u ON wa.user_id = u.user_id
+      WHERE ${wrongScope.where}
       GROUP BY wa.user_id
       HAVING total_wrong_times >= 5
       ORDER BY total_wrong_times DESC
-    ''');
+    ''', wrongScope.args);
 
     buf.writeln('');
     buf.writeln('二、错题频次预警（累计错误 ≥ 5 次）');
@@ -287,8 +327,7 @@ class _DataExportPageState extends State<DataExportPage> {
       buf.writeln('  无预警学生。');
     } else {
       buf.writeln(
-        _padRow(['学号', '姓名', '错题数', '累计错误次数'],
-            [12, 10, 10, 14]),
+        _padRow(['学号', '姓名', '错题数', '累计错误次数'], [12, 10, 10, 14]),
       );
       buf.writeln('${'-' * 50}');
       for (final r in highWrongStudents) {
@@ -298,22 +337,35 @@ class _DataExportPageState extends State<DataExportPage> {
             '${r['name']}',
             '${r['wrong_count']}',
             '${r['total_wrong_times']}',
-          ], [12, 10, 10, 14]),
+          ], [
+            12,
+            10,
+            10,
+            14
+          ]),
         );
       }
     }
 
     // 3. Inactive students (registered but no quiz or learning records)
+    final inactiveQuizScope = await _courseContext.scopedWhere();
+    final inactiveLearningScope = await _courseContext.scopedWhere();
     final inactiveStudents = await db.rawQuery('''
       SELECT
         u.user_id,
         COALESCE(u.real_name, u.user_id) AS name
       FROM users u
       WHERE u.role = 'student' AND u.is_active = 1
-        AND u.user_id NOT IN (SELECT DISTINCT user_id FROM quiz_results)
-        AND u.user_id NOT IN (SELECT DISTINCT user_id FROM learning_records)
+        AND u.user_id NOT IN (
+          SELECT DISTINCT user_id FROM quiz_results
+          WHERE ${inactiveQuizScope.where}
+        )
+        AND u.user_id NOT IN (
+          SELECT DISTINCT user_id FROM learning_records
+          WHERE ${inactiveLearningScope.where}
+        )
       ORDER BY u.user_id
-    ''');
+    ''', [...inactiveQuizScope.args, ...inactiveLearningScope.args]);
 
     buf.writeln('');
     buf.writeln('三、零活跃预警（无测验记录且无学习记录）');
@@ -337,6 +389,9 @@ class _DataExportPageState extends State<DataExportPage> {
 
   Future<String> _generateChapterMastery() async {
     final db = await DatabaseHelper.instance.database;
+    final quizScope = await _courseContext.scopedWhere(
+      extraWhere: "chapter IS NOT NULL AND chapter != ''",
+    );
 
     final buf = StringBuffer();
     buf.writeln('章节掌握度分析');
@@ -354,10 +409,10 @@ class _DataExportPageState extends State<DataExportPage> {
         MAX(score) AS max_score,
         MIN(score) AS min_score
       FROM quiz_results
-      WHERE chapter IS NOT NULL AND chapter != ''
+      WHERE ${quizScope.where}
       GROUP BY chapter
       ORDER BY chapter
-    ''');
+    ''', quizScope.args);
 
     if (chapterStats.isEmpty) {
       buf.writeln('暂无按章节分类的测验数据。');
@@ -387,7 +442,15 @@ class _DataExportPageState extends State<DataExportPage> {
           '${r['min_score']}',
           accuracy,
           level,
-        ], [16, 6, 8, 6, 6, 10, 10]),
+        ], [
+          16,
+          6,
+          8,
+          6,
+          6,
+          10,
+          10
+        ]),
       );
     }
 
@@ -396,6 +459,10 @@ class _DataExportPageState extends State<DataExportPage> {
     buf.writeln('掌握等级标准: 优秀(≥90%) | 良好(≥75%) | 中等(≥60%) | 待加强(<60%)');
 
     // Per-chapter wrong answer hotspots
+    final wrongScope = await _courseContext.scopedWhere(
+      column: 'wa.course_id',
+      extraWhere: "wa.chapter IS NOT NULL AND wa.chapter != ''",
+    );
     final wrongHotspots = await db.rawQuery('''
       SELECT
         wa.chapter,
@@ -403,12 +470,12 @@ class _DataExportPageState extends State<DataExportPage> {
         SUM(wa.times) AS total_times,
         COUNT(DISTINCT wa.user_id) AS affected_students
       FROM wrong_answers wa
-      WHERE wa.chapter IS NOT NULL AND wa.chapter != ''
+      WHERE ${wrongScope.where}
       GROUP BY wa.chapter, wa.question_id
       HAVING total_times >= 2
       ORDER BY total_times DESC
       LIMIT 10
-    ''');
+    ''', wrongScope.args);
 
     if (wrongHotspots.isNotEmpty) {
       buf.writeln('');
@@ -421,7 +488,7 @@ class _DataExportPageState extends State<DataExportPage> {
         final displayQuestion =
             question.length > 40 ? '${question.substring(0, 40)}...' : question;
         buf.writeln(
-          '  ${i + 1}. [${ r['chapter']}] $displayQuestion',
+          '  ${i + 1}. [${r['chapter']}] $displayQuestion',
         );
         buf.writeln(
           '     错误人数: ${r['affected_students']}  累计错误: ${r['total_times']} 次',
@@ -434,6 +501,7 @@ class _DataExportPageState extends State<DataExportPage> {
 
   Future<String> _generateWorkScores() async {
     final db = await DatabaseHelper.instance.database;
+    final workScope = await _courseContext.scopedWhere(column: 'sw.course_id');
 
     final buf = StringBuffer();
     buf.writeln('作品评分汇总');
@@ -470,8 +538,9 @@ class _DataExportPageState extends State<DataExportPage> {
         FROM work_scores
         GROUP BY work_id
       ) ws_agg ON sw.id = ws_agg.work_id
+      WHERE ${workScope.where}
       ORDER BY ws_agg.avg_total DESC, sw.title ASC
-    ''');
+    ''', workScope.args);
 
     if (works.isEmpty) {
       buf.writeln('暂无学生作品数据。');
@@ -503,13 +572,23 @@ class _DataExportPageState extends State<DataExportPage> {
           '${r['score_count'] ?? 0}',
           '${r['avg_total_score'] ?? '未评'}',
           '${r['status'] ?? '-'}',
-        ], [4, 18, 10, 12, 8, 10, 8]),
+        ], [
+          4,
+          18,
+          10,
+          12,
+          8,
+          10,
+          8
+        ]),
       );
     }
 
     // Detailed score breakdown for scored works
-    final scoredWorks =
-        works.where((w) => (w['score_count'] as int?) != null && (w['score_count'] as int) > 0).toList();
+    final scoredWorks = works
+        .where((w) =>
+            (w['score_count'] as int?) != null && (w['score_count'] as int) > 0)
+        .toList();
 
     if (scoredWorks.isNotEmpty) {
       buf.writeln('');
@@ -534,7 +613,15 @@ class _DataExportPageState extends State<DataExportPage> {
             '${r['avg_qual_score'] ?? '-'}',
             '${r['avg_doc_score'] ?? '-'}',
             '${r['avg_total_score'] ?? '-'}',
-          ], [18, 10, 10, 10, 10, 10, 10]),
+          ], [
+            18,
+            10,
+            10,
+            10,
+            10,
+            10,
+            10
+          ]),
         );
       }
     }
@@ -548,32 +635,40 @@ class _DataExportPageState extends State<DataExportPage> {
   Future<String> _generateComprehensiveReport() async {
     final buf = StringBuffer();
     final now = DateTime.now();
+    final courseName = await _courseContext.activeCourseName();
     final timestamp =
         '${now.year}-${_pad2(now.month)}-${_pad2(now.day)} ${_pad2(now.hour)}:${_pad2(now.minute)}';
 
     buf.writeln('╔${'═' * 68}╗');
-    buf.writeln('║${_center('《移动应用开发》课程教学效果综合报告', 68)}║');
+    buf.writeln('║${_center('《$courseName》课程教学效果综合报告', 68)}║');
     buf.writeln('║${_center('生成时间: $timestamp', 68)}║');
     buf.writeln('╚${'═' * 68}╝');
     buf.writeln('');
 
     // Section 1: Overview
     final db = await DatabaseHelper.instance.database;
+    final quizScope = await _courseContext.scopedWhere();
+    final learningScope = await _courseContext.scopedWhere();
 
     final studentCount = await db.rawQuery(
       "SELECT COUNT(*) as c FROM users WHERE role = 'student' AND is_active = 1",
     );
     final quizCount = await db.rawQuery(
-      'SELECT COUNT(*) as c FROM quiz_results',
+      'SELECT COUNT(*) as c FROM quiz_results WHERE ${quizScope.where}',
+      quizScope.args,
     );
     final learningCount = await db.rawQuery(
-      'SELECT COUNT(*) as c FROM learning_records',
+      'SELECT COUNT(*) as c FROM learning_records WHERE ${learningScope.where}',
+      learningScope.args,
     );
+    final workScope = await _courseContext.scopedWhere();
     final workCount = await db.rawQuery(
-      'SELECT COUNT(*) as c FROM student_works',
+      'SELECT COUNT(*) as c FROM student_works WHERE ${workScope.where}',
+      workScope.args,
     );
     final avgScore = await db.rawQuery(
-      'SELECT ROUND(AVG(score), 1) as avg FROM quiz_results',
+      'SELECT ROUND(AVG(score), 1) as avg FROM quiz_results WHERE ${quizScope.where}',
+      quizScope.args,
     );
 
     final students = (studentCount.first['c'] as int?) ?? 0;
