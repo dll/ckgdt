@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../core/constants/role_guard.dart';
 import '../core/init_logger.dart';
 
 import '../presentation/pages/quiz/quiz_page.dart';
 import '../presentation/pages/archive/archive_page.dart';
 import '../presentation/pages/quiz/wrong_answers_page.dart';
 import '../presentation/pages/class_qa/class_qa_page.dart';
+import '../presentation/pages/learning/learning_hub_page.dart';
 import '../presentation/pages/learning/video_page.dart';
 import '../presentation/pages/learning/document_page.dart';
 import '../presentation/pages/learning/progress_page.dart';
@@ -92,6 +94,12 @@ class NavigationService {
   /// [pageKeyword]：父页面标识（'assessment' / 'works' / ...）
   /// [tabKeyword]：内层 tab 关键词（如 '报告' / 'AI批阅'），由 page 自己解析为 idx
   void requestInnerTab(String pageKeyword, String tabKeyword) {
+    final role = AuthService().currentUser?.role ?? 'student';
+    if (!RoleGuard.canAccessInnerPage(role, pageKeyword)) {
+      InitLogger.log('nav',
+          'requestInnerTab denied role=$role page=$pageKeyword tab=$tabKeyword');
+      return;
+    }
     _pendingInnerTab = PendingInnerTabRequest(pageKeyword, tabKeyword);
     innerTabSeq.value = innerTabSeq.value + 1;
   }
@@ -117,6 +125,7 @@ class NavigationService {
   static String? pageKeyToTabLabel(String pageKey, {required bool isTeacher}) {
     if (isTeacher) {
       switch (pageKey) {
+        case 'evaluation':
         case 'assessment':
         case 'works':
         case 'lab':
@@ -126,6 +135,7 @@ class NavigationService {
           return '达成';
         case 'archive':
           return '归档';
+        case 'teaching':
         case 'classroom':
         case 'learning':
           return '教学';
@@ -140,11 +150,8 @@ class NavigationService {
         case 'lab':
         case 'experiment':
           return '实验';
-        case 'classroom':
         case 'learning':
           return '学习';
-        case 'archive':
-          return '归档';
       }
     }
     return null;
@@ -182,7 +189,8 @@ class NavigationService {
   /// 返回 true 表示成功匹配并导航
   bool navigateByKeyword(String keyword) {
     final normalized = keyword.toLowerCase();
-    InitLogger.log('nav', 'navigateByKeyword keyword=$keyword normalized=$normalized tabMapping keys=${_tabMapping.keys.toList()}');
+    InitLogger.log('nav',
+        'navigateByKeyword keyword=$keyword normalized=$normalized tabMapping keys=${_tabMapping.keys.toList()}');
 
     // 0) 英文 keyword（VoiceAgent AI 输出）→ 中文 Tab label
     final labels = _voiceKeywordToLabel[normalized];
@@ -190,12 +198,14 @@ class NavigationService {
       for (final label in labels) {
         final idx = _tabMapping[label];
         if (idx != null) {
-          InitLogger.log('nav', 'navigateByKeyword voiceKey $normalized → label=$label → idx=$idx');
+          InitLogger.log('nav',
+              'navigateByKeyword voiceKey $normalized → label=$label → idx=$idx');
           switchToTab(idx);
           return true;
         }
       }
-      InitLogger.log('nav', 'navigateByKeyword voiceKey $normalized labels=$labels none found in tabMapping');
+      InitLogger.log('nav',
+          'navigateByKeyword voiceKey $normalized labels=$labels none found in tabMapping');
     }
 
     // 1) 先在动态 Tab 映射中精确查找（角色感知）
@@ -208,14 +218,18 @@ class NavigationService {
 
     // 2) 别名 → 标准 Tab 名映射（解析后查动态映射）
     const aliasMap = <String, String>{
-      '首页': '首页', '主页': '首页', '回家': '首页',
+      '首页': '首页',
+      '主页': '首页',
+      '回家': '首页',
       '知识图谱': '图谱',
       '学习中心': '学习',
       '课堂管理': '课堂',
       '实验任务': '实验',
-      '考核管理': '考核', '考试': '考核',
+      '考核管理': '考核',
+      '考试': '考核',
       '作品展评': '作品',
-      '成就': '达成', '达成度': '达成',
+      '成就': '达成',
+      '达成度': '达成',
       '管理面板': '管理',
     };
 
@@ -233,7 +247,8 @@ class NavigationService {
       }
     }
 
-    InitLogger.log('nav', 'navigateByKeyword FAILED keyword=$keyword normalized=$normalized');
+    InitLogger.log('nav',
+        'navigateByKeyword FAILED keyword=$keyword normalized=$normalized');
     return false;
   }
 
@@ -380,6 +395,13 @@ class NavigationService {
   /// 根据路由 ID 创建对应的子页面 Widget
   /// 返回 null 表示路由 ID 无对应页面
   Widget? resolveSubPage(String routeId) {
+    final role = AuthService().currentUser?.role ?? 'student';
+    final isTeacherOrAdmin = RoleGuard.isTeacherOrAdmin(role);
+    if (!RoleGuard.canAccessSubPage(role, routeId)) {
+      InitLogger.log('nav', 'resolveSubPage denied role=$role route=$routeId');
+      return null;
+    }
+
     switch (routeId) {
       case 'quiz':
         return const QuizPage();
@@ -390,7 +412,9 @@ class NavigationService {
       case 'document':
         return const DocumentListPage();
       case 'courseware':
-        return const CoursewareWorkshopPage();
+        return isTeacherOrAdmin
+            ? const CoursewareWorkshopPage()
+            : const LearningHubPage(initialTab: 1);
       case 'progress':
         return const ProgressPage();
       case 'plan':
