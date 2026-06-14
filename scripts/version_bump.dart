@@ -124,8 +124,8 @@ class Version {
   static const int patch = $p;
   static const int build = $b;
 
-  /// Display version: "$M.$m.$p.$b"
-  static const String display = '$M.$m.$p.$b';
+  /// Display version: "$M.$m.$p"
+  static const String display = '$M.$m.$p';
 
   /// Flutter pubspec version: "$M.$m.$p+$b"
   static const String pubspec = '$M.$m.$p+$b';

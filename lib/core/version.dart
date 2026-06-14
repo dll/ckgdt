@@ -5,8 +5,8 @@ class Version {
   static const int patch = 2;
   static const int build = 2;
 
-  /// Display version: "1.21.2.2"
-  static const String display = '1.21.2.2';
+  /// Display version: "1.21.2"
+  static const String display = '1.21.2';
 
   /// Flutter pubspec version: "1.21.2+2"
   static const String pubspec = '1.21.2+2';
