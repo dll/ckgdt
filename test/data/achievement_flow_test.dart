@@ -6,9 +6,10 @@
 library;
 
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:excel/excel.dart' as xl;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:knowledge_graph_app/data/local/database_helper.dart';
 import 'package:knowledge_graph_app/data/local/achievement_dao.dart';
@@ -26,6 +27,7 @@ Future<Database> _createAchievementDb() async {
       batch_name TEXT, course_name TEXT, class_name TEXT, semester TEXT,
       teacher_id TEXT, status TEXT DEFAULT 'draft',
       objective_weights_json TEXT, calc_results_json TEXT,
+      report_content TEXT,
       created_at TEXT, updated_at TEXT)''');
   await db.execute('''
     CREATE TABLE achievement_scores(
@@ -73,6 +75,7 @@ Future<Database> _createAchievementDb() async {
       name TEXT, indicator TEXT, weight REAL, full_mark REAL,
       description TEXT, chapters TEXT, assess_content TEXT,
       pingshi_ratio REAL, experiment_ratio REAL, exam_ratio REAL,
+      assessment_items_json TEXT,
       created_at TEXT, updated_at TEXT, UNIQUE(course_name, idx))''');
   return db;
 }
@@ -94,6 +97,114 @@ void main() {
   tearDown(() async {
     DatabaseHelper.databaseForTest = null;
     await db.close();
+  });
+
+  test('无实验课程动态成绩模板不生成实验列，并按大纲比例合成达成度', () {
+    final objectiveRows = [
+      for (var i = 1; i <= 3; i++)
+        {
+          'idx': i,
+          'name': '课程目标$i',
+          'indicator': '$i.1',
+          'weight': i == 1 ? 0.3 : (i == 2 ? 0.3 : 0.4),
+          'full_mark': 100.0,
+          'description': '目标$i',
+          'pingshi_ratio': 0.4,
+          'experiment_ratio': 0.0,
+          'exam_ratio': 0.6,
+        }
+    ];
+
+    final templateBytes = AchievementExcelService.instance.buildGradeTemplate(
+      objectiveRows: objectiveRows,
+      students: const [
+        {'student_id': '2023001', 'student_name': '张三'}
+      ],
+    );
+    final workbook = xl.Excel.decodeBytes(templateBytes);
+    final sheet = workbook.tables['成绩录入']!;
+    final headers =
+        sheet.rows.first.map((cell) => cell?.value?.toString() ?? '').toList();
+
+    expect(headers.any((h) => h.contains('实验')), isFalse,
+        reason: '无实验课程的成绩录入模板不能出现实验列');
+    expect(headers.where((h) => h.contains('平时成绩')).length, 3);
+    expect(headers.where((h) => h.contains('考核成绩')).length, 3);
+
+    for (var c = 2; c < headers.length; c++) {
+      final score = headers[c].contains('平时成绩') ? 80.0 : 90.0;
+      sheet.updateCell(
+        xl.CellIndex.indexByColumnRow(columnIndex: c, rowIndex: 1),
+        xl.DoubleCellValue(score),
+      );
+    }
+
+    final filled = workbook.save()!;
+    final parsed = AchievementExcelService.instance.parseDynamicGradeTemplate(
+      Uint8List.fromList(filled),
+      objectiveRows: objectiveRows,
+    );
+    expect(parsed.length, 1);
+    for (var i = 1; i <= 3; i++) {
+      expect((parsed.first['obj${i}_achievement'] as num).toDouble(),
+          closeTo(0.86, 0.0001));
+    }
+    expect((parsed.first['obj4_achievement'] as num).toDouble(), 0);
+  });
+
+  test('无实验三目标课程不输出实验建议，也不暴露目标4', () async {
+    const courseName = '大学英语';
+    for (var i = 1; i <= 3; i++) {
+      await db.insert('course_objectives', {
+        'course_name': courseName,
+        'idx': i,
+        'name': '课程目标$i',
+        'indicator': '$i.1',
+        'weight': i == 1 ? 0.3 : (i == 2 ? 0.3 : 0.4),
+        'full_mark': 100.0,
+        'description': '英语课程目标$i',
+        'chapters': '单元$i',
+        'assess_content': '平时表现、期末考核',
+        'pingshi_ratio': 0.4,
+        'experiment_ratio': 0.0,
+        'exam_ratio': 0.6,
+      });
+    }
+    final batchId = await dao.addBatch(
+      batchName: '英语无实验达成',
+      courseName: courseName,
+      className: '英语23',
+      semester: '2025-2026-2',
+      teacherId: 't1',
+    );
+    await dao.addScore(
+      batchId: batchId,
+      studentId: '2023001',
+      studentName: '张三',
+      objective1Score: 86,
+      objective2Score: 82,
+      objective3Score: 78,
+      objective4Score: 0,
+      totalScore: 82,
+    );
+
+    final avg = await dao.calculateClassAverage(batchId);
+    expect(avg.keys, containsAll(['课程目标1', '课程目标2', '课程目标3']));
+    expect(avg.containsKey('课程目标4'), isFalse);
+
+    final combined = await dao.calculateCombinedAchievement(batchId);
+    expect((combined['experiment'] as Map), isEmpty);
+
+    final suggestions = await dao.generateImprovementSuggestions(batchId);
+    expect(suggestions.where((s) => s['objectiveIndex'] != -1).length, 3);
+    final suggestionText = suggestions
+        .expand((s) => ((s['actions'] as List?) ?? const []).cast<String>())
+        .join('\n');
+    expect(suggestionText.contains('实验课时'), isFalse);
+    expect(suggestionText.contains('实验项目'), isFalse);
+
+    final report = await dao.generateMarkdownReport(batchId);
+    expect(report.contains('课程目标4'), isFalse);
   });
 
   test('聚合录入后，平时/实验/考核三个分项 tab 不再"暂无数据"', () async {

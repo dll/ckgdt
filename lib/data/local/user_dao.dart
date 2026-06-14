@@ -34,9 +34,7 @@ class UserDao {
     final db = await _dbHelper.database;
     final maps = await db.query(
       'users',
-      where: includeInactive
-          ? 'role = ?'
-          : 'role = ? AND is_active = 1',
+      where: includeInactive ? 'role = ?' : 'role = ? AND is_active = 1',
       whereArgs: ['student'],
       orderBy: 'user_id',
     );
@@ -139,28 +137,23 @@ class UserDao {
 
       if (userId == '419116') {
         role = 'admin';
-        realName = '刘畅';
-      } else if (userId == '206004') {
-        role = 'teacher';
-        realName = '刘东良';
-      } else if (userId == '203014') {
-        role = 'teacher';
-        realName = '徐志红';
+        realName = '刘老师';
       } else {
         // 必须在 students.json 名单中才允许登录
         realName = await _getStudentRealName(userId);
         if (realName == null) {
-          debugPrint('=== UserDao: Login rejected — $userId not in students.json');
+          debugPrint(
+              '=== UserDao: Login rejected — $userId not in allowed user lists');
           return false;
         }
       }
 
       // 验证密码（后 6 位 或 完整学号）
-      final last6 = userId.length >= 6
-          ? userId.substring(userId.length - 6)
-          : userId;
+      final last6 =
+          userId.length >= 6 ? userId.substring(userId.length - 6) : userId;
       if (password != last6 && password != userId) {
-        debugPrint('=== UserDao: Login rejected — wrong password for new user $userId');
+        debugPrint(
+            '=== UserDao: Login rejected — wrong password for new user $userId');
         return false;
       }
 
@@ -184,35 +177,23 @@ class UserDao {
     // 非名单内的学生也禁止登录（防止旧数据库有脏记录）
     if (user.role == 'student') {
       final nameCheck = await _getStudentRealName(userId);
-      if (nameCheck == null &&
-          userId != '419116' && userId != '206004' && userId != '203014') {
-        debugPrint('=== UserDao: Existing user $userId not in students.json, rejecting');
+      if (nameCheck == null) {
+        debugPrint(
+            '=== UserDao: Existing user $userId not in students.json, rejecting');
         return false;
       }
     }
 
-    // Update real name for existing users (including admin and teacher)
+    // Update real name for existing students from students.json. Teacher/admin
+    // names and roles are synchronized from data/用户/管理员教师名单.xlsx during
+    // database initialization, so login does not overwrite the roster source.
     String? realNameUpdate;
-    if (userId == '419116') {
-      realNameUpdate = '刘畅';
-    } else if (userId == '206004') {
-      realNameUpdate = '刘东良';
-    } else if (userId == '203014') {
-      realNameUpdate = '徐志红';
-    } else {
+    if (user.role == 'student') {
       realNameUpdate = await _getStudentRealName(userId);
     }
 
     if (realNameUpdate != null && user.realName != realNameUpdate) {
-      final updatedUser = UserModel(
-        userId: user.userId,
-        realName: realNameUpdate,
-        machineCode: user.machineCode,
-        role: user.role,
-        createdAt: user.createdAt,
-        lastLogin: user.lastLogin,
-        isActive: user.isActive,
-      );
+      final updatedUser = user.copyWith(realName: realNameUpdate);
       await updateUser(updatedUser);
       user = updatedUser;
       debugPrint(
@@ -223,23 +204,14 @@ class UserDao {
       return false;
     }
 
-    // 纠正特殊账号的角色（数据库中可能是旧数据）
+    // 纠正管理员账号的角色（数据库中可能是旧数据）。教师角色来源于
+    // data/用户/管理员教师名单.xlsx 的初始化同步。
     String? expectedRole;
     if (userId == '419116') {
       expectedRole = 'admin';
-    } else if (userId == '206004' || userId == '203014') {
-      expectedRole = 'teacher';
     }
     if (expectedRole != null && user.role != expectedRole) {
-      final corrected = UserModel(
-        userId: user.userId,
-        realName: user.realName,
-        machineCode: user.machineCode,
-        role: expectedRole,
-        createdAt: user.createdAt,
-        lastLogin: user.lastLogin,
-        isActive: user.isActive,
-      );
+      final corrected = user.copyWith(role: expectedRole);
       await updateUser(corrected);
       user = corrected;
       debugPrint('=== UserDao: Corrected role for $userId to $expectedRole');
@@ -255,22 +227,12 @@ class UserDao {
         debugPrint('=== UserDao: Login success (custom password) for $userId');
         return true;
       }
-      debugPrint('=== UserDao: Login failed — wrong custom password for $userId');
+      debugPrint(
+          '=== UserDao: Login failed — wrong custom password for $userId');
       return false;
     }
 
     // ── 默认密码验证（后6位或完整userId） ──
-
-    // Teacher login: userId=206004 or 203014, password=账号 or 后6位
-    if ((userId == '206004' || userId == '203014') &&
-        (password == userId ||
-            password == userId.substring(userId.length - 6))) {
-      await setCurrentUser(userId, '');
-      await _updateLastLogin(userId);
-      debugPrint(
-          '=== UserDao: Teacher login success for $userId, role=${user.role}');
-      return true;
-    }
 
     // Admin login: userId=419116, password=419116 or last 6 digits (9116)
     if (userId == '419116' && (password == '419116' || password == '9116')) {

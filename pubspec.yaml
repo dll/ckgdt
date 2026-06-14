@@ -1,7 +1,7 @@
 name: knowledge_graph_app
 description: 移动图谱与数字孪生教学系统
 publish_to: "none"
-version: 1.21.0+0
+version: 1.21.2+2
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -63,6 +63,7 @@ flutter:
     - assets/
     - assets/fonts/
     - assets/help/
+    - assets/achievement_templates/
     - assets/graphs/01-课程图谱/
     - assets/graphs/02-技术栈图谱/
     - assets/graphs/03-实验图谱/
@@ -77,4 +78,5 @@ flutter:
     - assets/archive_templates/beginning/_ref/student_guide/
     - assets/archive_templates/beginning/_ref/teacher_guide/
     - data/考核/
+    - data/用户/管理员教师名单.xlsx
     - assets/syllabus/

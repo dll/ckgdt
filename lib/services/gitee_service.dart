@@ -463,9 +463,10 @@ class GiteeService {
     final params = <String, String>{
       if (token != null && token.isNotEmpty) 'access_token': token,
       'ref': ref,
+      if (path.isNotEmpty) 'path': path,
     };
     final uri = Uri.parse(
-            '$_baseUrl/repos/$owner/$repo/contents/$path')
+            '$_baseUrl/repos/$owner/$repo/contents')
         .replace(queryParameters: params);
 
     final resp = await http.get(uri).timeout(const Duration(seconds: 30));
@@ -759,16 +760,31 @@ class GiteeService {
     final token = await getToken();
     if (token == null || token.isEmpty) return null;
 
-    final uri = Uri.parse(
-        '$_baseUrl/repos/$owner/$repo/contents/$path?ref=$branch&access_token=$token');
     try {
-      final resp = await http.get(uri).timeout(const Duration(seconds: 30));
+      final tree = await getTree(owner, repo, sha: branch);
+      Map<String, dynamic>? entry;
+      for (final item in tree) {
+        if (item['path'] == path && item['type'] == 'blob') {
+          entry = item;
+          break;
+        }
+      }
+      final sha = entry?['sha'] as String?;
+      if (sha == null || sha.isEmpty) return null;
+
+      final uri = Uri.parse('$_baseUrl/repos/$owner/$repo/git/blobs/$sha')
+          .replace(queryParameters: {'access_token': token});
+      final resp = await http.get(uri).timeout(const Duration(minutes: 3));
       if (resp.statusCode != 200) return null;
       final data = jsonDecode(utf8.decode(resp.bodyBytes));
       final content = data['content'] as String?;
       if (content == null) return null;
       // Gitee 返回的 base64 可能包含换行符
-      return base64Decode(content.replaceAll('\n', ''));
+      final bytes = base64Decode(content.replaceAll(RegExp(r'\s+'), ''));
+      final expectedSize =
+          (entry?['size'] as num?)?.toInt() ?? (data['size'] as num?)?.toInt();
+      if (expectedSize != null && bytes.length != expectedSize) return null;
+      return bytes;
     } catch (e) {
       debugPrint('GiteeService: downloadBinary($path) 失败: $e');
       return null;

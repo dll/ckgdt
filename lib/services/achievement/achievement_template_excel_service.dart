@@ -6,6 +6,8 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:xml/xml.dart';
 
+import 'achievement_template_assets.dart';
+
 /// Data used to fill a school-owned achievement Excel template.
 ///
 /// The filler clones the original xlsx package and only rewrites worksheet cell
@@ -133,10 +135,7 @@ class AchievementTemplateExcelService {
   /// the calculation code.
   Future<File?> findTemplateForCourse(String courseName) async {
     final profile = AchievementExcelTemplateProfile.schoolMobile48();
-    final roots = <Directory>[
-      Directory('data/达成'),
-      Directory('${Directory.current.path}/data/达成'),
-    ];
+    final roots = await AchievementTemplateAssets.templateRoots();
     final seen = <String>{};
     final candidates = <File>[];
     for (final root in roots) {

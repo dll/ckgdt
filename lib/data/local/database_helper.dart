@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:excel/excel.dart' as xl;
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
 import '../../core/init_logger.dart';
@@ -56,9 +58,11 @@ class DatabaseHelper {
       try {
         debugPrint('=== DatabaseHelper [Web]: Loading database from assets...');
         final data = await rootBundle.load('assets/learning_data.db');
-        final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+        final bytes =
+            data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
         await databaseFactory.writeDatabaseBytes(dbName, bytes);
-        debugPrint('=== DatabaseHelper [Web]: Loaded database from assets (${bytes.length} bytes)');
+        debugPrint(
+            '=== DatabaseHelper [Web]: Loaded database from assets (${bytes.length} bytes)');
       } catch (e) {
         debugPrint('=== DatabaseHelper [Web]: Failed to load from assets: $e');
         // 将在 openDatabase 的 onCreate 中创建空表
@@ -86,7 +90,8 @@ class DatabaseHelper {
 
       // 检查 graphs 表
       if (tableNames.contains('graphs')) {
-        final graphCount = await db.rawQuery('SELECT COUNT(*) as c FROM graphs');
+        final graphCount =
+            await db.rawQuery('SELECT COUNT(*) as c FROM graphs');
         final count = (graphCount.first['c'] as int?) ?? 0;
         debugPrint('=== DatabaseHelper [Web]: Graphs count: $count');
         if (count == 0) needsDataImport = true;
@@ -105,16 +110,19 @@ class DatabaseHelper {
       }
 
       if (needsDataImport) {
-        debugPrint('=== DatabaseHelper [Web]: Data is empty, trying to reimport from assets...');
+        debugPrint(
+            '=== DatabaseHelper [Web]: Data is empty, trying to reimport from assets...');
         // 关闭现有数据库，删除后重新尝试导入
         await db.close();
         await databaseFactory.deleteDatabase(dbName);
 
         try {
           final data = await rootBundle.load('assets/learning_data.db');
-          final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+          final bytes =
+              data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
           await databaseFactory.writeDatabaseBytes(dbName, bytes);
-          debugPrint('=== DatabaseHelper [Web]: Reimported from assets (${bytes.length} bytes)');
+          debugPrint(
+              '=== DatabaseHelper [Web]: Reimported from assets (${bytes.length} bytes)');
         } catch (e) {
           debugPrint('=== DatabaseHelper [Web]: Reimport failed: $e');
         }
@@ -131,12 +139,14 @@ class DatabaseHelper {
         // 确保新表存在
         await _ensureAllTables(db2);
         await _importStudents(db2);
+        await _importTeacherRoster(db2);
 
         // 最终验证
         try {
           final gc = await db2.rawQuery('SELECT COUNT(*) as c FROM graphs');
           final qc = await db2.rawQuery('SELECT COUNT(*) as c FROM questions');
-          debugPrint('=== DatabaseHelper [Web]: After reimport - Graphs: ${gc.first['c']}, Questions: ${qc.first['c']}');
+          debugPrint(
+              '=== DatabaseHelper [Web]: After reimport - Graphs: ${gc.first['c']}, Questions: ${qc.first['c']}');
         } catch (e, st) {
           swallowDebug(e, tag: 'DatabaseHelper.verifyWeb', stack: st);
         }
@@ -150,6 +160,7 @@ class DatabaseHelper {
     // 补齐缺失的表和列（防御：正常路径未经过 _ensureAllTables）
     await _ensureAllTables(db);
     await _importStudents(db);
+    await _importTeacherRoster(db);
 
     return db;
   }
@@ -219,6 +230,7 @@ class DatabaseHelper {
 
     // Import students if needed
     await _importStudents(db);
+    await _importTeacherRoster(db);
 
     return db;
   }
@@ -234,8 +246,7 @@ class DatabaseHelper {
       final gc = await db.rawQuery('SELECT COUNT(*) as c FROM graphs');
       final qCount = (qc.first['c'] as int?) ?? 0;
       final gCount = (gc.first['c'] as int?) ?? 0;
-      InitLogger.log(
-          'db', 'seed-check questions=$qCount graphs=$gCount');
+      InitLogger.log('db', 'seed-check questions=$qCount graphs=$gCount');
 
       // 题目阈值：种子 52 道，< 30 视为异常（容忍少量删除 / 同步差异）
       // 图谱阈值：种子 23 个，< 20 视为异常（学生反馈 graphs=7 也通过了旧阈值 5
@@ -321,8 +332,8 @@ class DatabaseHelper {
       try {
         seedDb = await openReadOnlyDatabase(tempPath);
       } catch (e, st) {
-        InitLogger.error('db',
-            'openReadOnlyDatabase failed, trying openDatabase: $e', st);
+        InitLogger.error(
+            'db', 'openReadOnlyDatabase failed, trying openDatabase: $e', st);
         // FFI 后端可能不支持 openReadOnlyDatabase，回退到普通 open
         seedDb = await openDatabase(tempPath, readOnly: true);
       }
@@ -367,8 +378,7 @@ class DatabaseHelper {
 
       // 获取目标表的列名
       final targetCols = await targetDb.rawQuery('PRAGMA table_info($table)');
-      final targetColNames =
-          targetCols.map((c) => c['name'] as String).toSet();
+      final targetColNames = targetCols.map((c) => c['name'] as String).toSet();
 
       final batch = targetDb.batch();
       for (final row in rows) {
@@ -414,7 +424,8 @@ class DatabaseHelper {
               conflictAlgorithm: ConflictAlgorithm.ignore);
         }
         await batch.commit(noResult: true);
-        debugPrint('=== DatabaseHelper: Students import completed (new entries merged)');
+        debugPrint(
+            '=== DatabaseHelper: Students import completed (new entries merged)');
 
         // ── reconcile：按 students.json 校正已存在行的 is_active / real_name ──
         // ConflictAlgorithm.ignore 不会更新已存在行，导致旧库/同步里被错置成
@@ -428,11 +439,147 @@ class DatabaseHelper {
     }
   }
 
+  Future<void> _importTeacherRoster(Database db) async {
+    try {
+      final bytes = await _loadTeacherRosterBytes();
+      if (bytes == null || bytes.isEmpty) {
+        InitLogger.log(
+            'db', 'teacher roster not found, keep existing teachers');
+        return;
+      }
+
+      final excel = xl.Excel.decodeBytes(bytes);
+      if (excel.tables.isEmpty) return;
+
+      var imported = 0;
+      final now = DateTime.now().toIso8601String();
+      final batch = db.batch();
+
+      for (final sheet in excel.tables.values) {
+        var idCol = -1;
+        var nameCol = -1;
+        var roleCol = -1;
+        var headerRow = -1;
+
+        for (var r = 0; r < sheet.rows.length && r < 20; r++) {
+          final cells = sheet.rows[r].map(_excelText).toList();
+          for (var c = 0; c < cells.length; c++) {
+            final text = cells[c];
+            if (text.contains('工号') || text.contains('账号')) idCol = c;
+            if (text == '姓名' || text.contains('教师姓名')) nameCol = c;
+            if (text.contains('角色') || text.contains('权限')) roleCol = c;
+          }
+          if (idCol >= 0 && nameCol >= 0) {
+            headerRow = r;
+            break;
+          }
+        }
+
+        if (headerRow < 0) continue;
+        for (var r = headerRow + 1; r < sheet.rows.length; r++) {
+          final row = sheet.rows[r];
+          final userId = _normalizeRosterUserId(_cellAt(row, idCol));
+          final realName = _cellAt(row, nameCol).trim();
+          final roleText = roleCol >= 0 ? _cellAt(row, roleCol) : '';
+          if (userId.isEmpty || realName.isEmpty) continue;
+          if (!RegExp(r'^\d{3,}$').hasMatch(userId)) continue;
+
+          final role = roleText.contains('管理') ? 'admin' : 'teacher';
+          final existing = await db.query(
+            'users',
+            columns: ['user_id'],
+            where: 'user_id = ?',
+            whereArgs: [userId],
+            limit: 1,
+          );
+          final values = {
+            'user_id': userId,
+            'real_name': realName,
+            'role': role,
+            'is_active': 1,
+            'created_at': now,
+          };
+          if (existing.isEmpty) {
+            batch.insert('users', values,
+                conflictAlgorithm: ConflictAlgorithm.ignore);
+          } else {
+            batch.update(
+              'users',
+              {
+                'real_name': realName,
+                'role': role,
+                'is_active': 1,
+              },
+              where: 'user_id = ?',
+              whereArgs: [userId],
+            );
+          }
+          imported++;
+        }
+      }
+
+      if (imported > 0) {
+        await batch.commit(noResult: true);
+      }
+      InitLogger.log('db', 'teacher roster imported/updated=$imported');
+    } catch (e, st) {
+      InitLogger.error('db', 'importing teacher roster failed: $e', st);
+    }
+  }
+
+  Future<Uint8List?> _loadTeacherRosterBytes() async {
+    const relative = ['data', '用户', '管理员教师名单.xlsx'];
+    final candidates = <String>{
+      p.joinAll(relative),
+      p.joinAll([Directory.current.path, ...relative]),
+      p.joinAll([p.dirname(Platform.resolvedExecutable), ...relative]),
+    };
+
+    for (final path in candidates) {
+      try {
+        final file = File(path);
+        if (await file.exists()) {
+          InitLogger.log('db', 'loading teacher roster from $path');
+          return Uint8List.fromList(await file.readAsBytes());
+        }
+      } catch (e) {
+        swallow(e, tag: 'DatabaseHelper.teacherRosterFile');
+      }
+    }
+
+    try {
+      final data = await rootBundle.load('data/用户/管理员教师名单.xlsx');
+      InitLogger.log('db', 'loading teacher roster from bundled asset');
+      return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    } catch (e) {
+      swallow(e, tag: 'DatabaseHelper.teacherRosterAsset');
+      return null;
+    }
+  }
+
+  static String _cellAt(List<xl.Data?> row, int index) {
+    if (index < 0 || index >= row.length) return '';
+    return _excelText(row[index]);
+  }
+
+  static String _excelText(xl.Data? cell) {
+    final raw = cell?.value?.toString().trim() ?? '';
+    if (raw.endsWith('.0')) {
+      return raw.substring(0, raw.length - 2);
+    }
+    return raw;
+  }
+
+  static String _normalizeRosterUserId(String raw) {
+    var value = raw.trim().replaceAll(RegExp(r'\s+'), '');
+    if (value.endsWith('.0')) value = value.substring(0, value.length - 2);
+    return value;
+  }
+
   /// 按 students.json 名单对账已存在的 users 行（幂等）：
   /// 1. 校正 is_active / real_name（仅当与名单不一致时更新）；
   /// 2. 删除 `student_` 前缀幽灵行（覆盖 DB 已是最新 version、不再触发 onUpgrade 的场景）。
-  Future<void> _reconcileStudents(
-      Database db, List<dynamic> students) async {
+  Future<void> _reconcileStudents(Database db, List<dynamic> students) async {
     try {
       var fixed = 0;
       final batch = db.batch();
@@ -450,11 +597,8 @@ class DatabaseHelper {
         final curActive = existing.first['is_active'] as int?;
         final curName = existing.first['real_name'] as String?;
         if (curActive != desiredActive || (name != null && curName != name)) {
-          batch.update(
-              'users',
-              {'is_active': desiredActive, 'real_name': name},
-              where: 'user_id = ?',
-              whereArgs: [uid]);
+          batch.update('users', {'is_active': desiredActive, 'real_name': name},
+              where: 'user_id = ?', whereArgs: [uid]);
           fixed++;
         }
       }
@@ -637,13 +781,16 @@ class DatabaseHelper {
     await _ensureResourceFileColumns(db);
 
     // Add admin user (ignore if already exists from asset DB)
-    await db.insert('users', {
-      'user_id': '419116',
-      'real_name': '刘老师',
-      'role': 'admin',
-      'created_at': DateTime.now().toIso8601String(),
-      'is_active': 1,
-    }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    await db.insert(
+        'users',
+        {
+          'user_id': '419116',
+          'real_name': '刘老师',
+          'role': 'admin',
+          'created_at': DateTime.now().toIso8601String(),
+          'is_active': 1,
+        },
+        conflictAlgorithm: ConflictAlgorithm.ignore);
 
     // Add teacher users (ignore if already exists)
     for (final t in [
@@ -651,38 +798,48 @@ class DatabaseHelper {
       {'user_id': '203014', 'real_name': '徐志红', 'role': 'teacher'},
       {'user_id': '203045', 'real_name': '黄晓玲', 'role': 'teacher'},
     ]) {
-      await db.insert('users', {
-        ...t,
-        'created_at': DateTime.now().toIso8601String(),
-        'is_active': 1,
-      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+      await db.insert(
+          'users',
+          {
+            ...t,
+            'created_at': DateTime.now().toIso8601String(),
+            'is_active': 1,
+          },
+          conflictAlgorithm: ConflictAlgorithm.ignore);
     }
 
     // 测试学生账号（ignore if already exists）
-    await db.insert('users', {
-      'user_id': '2023211985',
-      'real_name': '测试学生',
-      'role': 'student',
-      'created_at': DateTime.now().toIso8601String(),
-      'is_active': 1,
-    }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    await db.insert(
+        'users',
+        {
+          'user_id': '2023211985',
+          'real_name': '测试学生',
+          'role': 'student',
+          'created_at': DateTime.now().toIso8601String(),
+          'is_active': 1,
+        },
+        conflictAlgorithm: ConflictAlgorithm.ignore);
 
     // 插入默认 AI 配置（DeepSeek），用户无需手动填写 API Key
-    await db.insert('ai_configs', {
-      'id': 1,
-      'provider': 'deepseek',
-      'api_key': 'sk-717ef9146311424daa2fbead8ed4682b',
-      'model': 'deepseek-v4-pro',
-      'base_url': 'https://api.deepseek.com',
-      'temperature': 0.7,
-      'max_tokens': 2048,
-      'timeout': 60,
-      'updated_at': DateTime.now().toIso8601String(),
-    }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    await db.insert(
+        'ai_configs',
+        {
+          'id': 1,
+          'provider': 'deepseek',
+          'api_key': 'sk-717ef9146311424daa2fbead8ed4682b',
+          'model': 'deepseek-v4-pro',
+          'base_url': 'https://api.deepseek.com',
+          'temperature': 0.7,
+          'max_tokens': 2048,
+          'timeout': 60,
+          'updated_at': DateTime.now().toIso8601String(),
+        },
+        conflictAlgorithm: ConflictAlgorithm.ignore);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    debugPrint('=== DatabaseHelper: Upgrading from v$oldVersion to v$newVersion');
+    debugPrint(
+        '=== DatabaseHelper: Upgrading from v$oldVersion to v$newVersion');
     if (oldVersion < 2) {
       await _createNewTablesV2(db);
     }
@@ -838,12 +995,15 @@ class DatabaseHelper {
   /// 补齐 achievement_batches 表可能缺少的 calc_results_json 列
   Future<void> _ensureAchievementColumns(Database db) async {
     try {
-      await db.rawQuery('SELECT calc_results_json FROM achievement_batches LIMIT 1');
+      await db.rawQuery(
+          'SELECT calc_results_json FROM achievement_batches LIMIT 1');
     } catch (e) {
       swallow(e, tag: 'DatabaseHelper.ensureAchievement');
       try {
-        await db.execute('ALTER TABLE achievement_batches ADD COLUMN calc_results_json TEXT');
-        debugPrint('=== DatabaseHelper: Added calc_results_json column to achievement_batches');
+        await db.execute(
+            'ALTER TABLE achievement_batches ADD COLUMN calc_results_json TEXT');
+        debugPrint(
+            '=== DatabaseHelper: Added calc_results_json column to achievement_batches');
       } catch (e2) {
         swallow(e2, tag: 'DatabaseHelper.alterAchievement');
       }
@@ -852,19 +1012,24 @@ class DatabaseHelper {
 
   /// 补齐 course_objectives 表可能缺少的 AI 解析列
   Future<void> _ensureCourseObjectivesColumns(Database db) async {
-    for (final col in ['experiments', 'pingshi_standard', 'experiment_standard']) {
+    for (final col in [
+      'experiments',
+      'pingshi_standard',
+      'experiment_standard',
+      'assessment_items_json',
+    ]) {
       try {
         await db.rawQuery('SELECT $col FROM course_objectives LIMIT 1');
       } catch (_) {
         try {
-          await db.execute('ALTER TABLE course_objectives ADD COLUMN $col TEXT');
+          await db
+              .execute('ALTER TABLE course_objectives ADD COLUMN $col TEXT');
         } catch (e2) {
           swallow(e2, tag: 'DatabaseHelper.alterCourseObjectives.$col');
         }
       }
     }
   }
-
 
   /// 补齐 users 表可能缺少的列（V10: repository_url）
   Future<void> _ensureUsersColumns(Database db) async {
@@ -889,7 +1054,8 @@ class DatabaseHelper {
       swallow(e, tag: 'DatabaseHelper.ensureResChapter');
       try {
         await db.execute('ALTER TABLE resource_files ADD COLUMN chapter TEXT');
-        debugPrint('=== DatabaseHelper: Added chapter column to resource_files');
+        debugPrint(
+            '=== DatabaseHelper: Added chapter column to resource_files');
       } catch (e2) {
         swallow(e2, tag: 'DatabaseHelper.alterResChapter');
       }
@@ -899,8 +1065,10 @@ class DatabaseHelper {
     } catch (e) {
       swallow(e, tag: 'DatabaseHelper.ensureResDesc');
       try {
-        await db.execute('ALTER TABLE resource_files ADD COLUMN description TEXT');
-        debugPrint('=== DatabaseHelper: Added description column to resource_files');
+        await db
+            .execute('ALTER TABLE resource_files ADD COLUMN description TEXT');
+        debugPrint(
+            '=== DatabaseHelper: Added description column to resource_files');
       } catch (e2) {
         swallow(e2, tag: 'DatabaseHelper.alterResDesc');
       }
@@ -910,8 +1078,10 @@ class DatabaseHelper {
     } catch (e) {
       swallow(e, tag: 'DatabaseHelper.ensureResSourceType');
       try {
-        await db.execute("ALTER TABLE resource_files ADD COLUMN source_type TEXT DEFAULT 'preset'");
-        debugPrint('=== DatabaseHelper: Added source_type column to resource_files');
+        await db.execute(
+            "ALTER TABLE resource_files ADD COLUMN source_type TEXT DEFAULT 'preset'");
+        debugPrint(
+            '=== DatabaseHelper: Added source_type column to resource_files');
       } catch (e2) {
         swallow(e2, tag: 'DatabaseHelper.alterResSourceType');
       }
@@ -1358,6 +1528,7 @@ class DatabaseHelper {
         experiments TEXT,
         pingshi_standard TEXT,
         experiment_standard TEXT,
+        assessment_items_json TEXT,
         created_at TEXT,
         updated_at TEXT,
         UNIQUE(course_name, idx)
@@ -1655,7 +1826,8 @@ class DatabaseHelper {
       final cols = await db.rawQuery('PRAGMA table_info(agent_call_logs)');
       final names = cols.map((r) => r['name'] as String).toSet();
       if (!names.contains('chain_id')) {
-        await db.execute('ALTER TABLE agent_call_logs ADD COLUMN chain_id TEXT');
+        await db
+            .execute('ALTER TABLE agent_call_logs ADD COLUMN chain_id TEXT');
       }
       if (!names.contains('chain_step')) {
         await db.execute(
@@ -1764,19 +1936,23 @@ class DatabaseHelper {
     ''');
 
     // 如果 ai_configs 为空，插入默认 DeepSeek 配置
-    final existing = await db.query('ai_configs', where: 'id = ?', whereArgs: [1]);
+    final existing =
+        await db.query('ai_configs', where: 'id = ?', whereArgs: [1]);
     if (existing.isEmpty) {
-      await db.insert('ai_configs', {
-        'id': 1,
-        'provider': 'deepseek',
-        'api_key': 'sk-717ef9146311424daa2fbead8ed4682b',
-        'model': 'deepseek-v4-pro',
-        'base_url': 'https://api.deepseek.com',
-        'temperature': 0.7,
-        'max_tokens': 2048,
-        'timeout': 60,
-        'updated_at': DateTime.now().toIso8601String(),
-      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+      await db.insert(
+          'ai_configs',
+          {
+            'id': 1,
+            'provider': 'deepseek',
+            'api_key': 'sk-717ef9146311424daa2fbead8ed4682b',
+            'model': 'deepseek-v4-pro',
+            'base_url': 'https://api.deepseek.com',
+            'temperature': 0.7,
+            'max_tokens': 2048,
+            'timeout': 60,
+            'updated_at': DateTime.now().toIso8601String(),
+          },
+          conflictAlgorithm: ConflictAlgorithm.ignore);
     }
 
     // 确保 V22 Token 列存在（防御：_ensureAllTables 可能跳过 _onUpgrade）
@@ -1799,17 +1975,22 @@ class DatabaseHelper {
     ''');
 
     // 插入默认课程（移动应用开发）
-    final existing = await db.query('courses', where: 'id = ?', whereArgs: ['mad']);
+    final existing =
+        await db.query('courses', where: 'id = ?', whereArgs: ['mad']);
     if (existing.isEmpty) {
-      await db.insert('courses', {
-        'id': 'mad',
-        'name': '移动应用开发',
-        'description': '涵盖 Android、iOS、Flutter、小程序、HarmonyOS 等移动应用开发技术',
-        'chapter_count': 6,
-        'chapters': '["移动应用开发技术体系全景","Android 与 iOS 原生开发基础","Flutter、React Native 等混合开发技术","微信小程序开发流程","华为 HarmonyOS 多端应用开发","综合开发实践"]',
-        'is_active': 1,
-        'created_at': DateTime.now().toIso8601String(),
-      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+      await db.insert(
+          'courses',
+          {
+            'id': 'mad',
+            'name': '移动应用开发',
+            'description': '涵盖 Android、iOS、Flutter、小程序、HarmonyOS 等移动应用开发技术',
+            'chapter_count': 6,
+            'chapters':
+                '["移动应用开发技术体系全景","Android 与 iOS 原生开发基础","Flutter、React Native 等混合开发技术","微信小程序开发流程","华为 HarmonyOS 多端应用开发","综合开发实践"]',
+            'is_active': 1,
+            'created_at': DateTime.now().toIso8601String(),
+          },
+          conflictAlgorithm: ConflictAlgorithm.ignore);
     }
   }
 
@@ -1907,8 +2088,7 @@ class DatabaseHelper {
     // 为查询性能添加索引
     try {
       await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_twin_snap_user ON twin_snapshots(user_id, generated_at DESC)'
-      );
+          'CREATE INDEX IF NOT EXISTS idx_twin_snap_user ON twin_snapshots(user_id, generated_at DESC)');
     } catch (e) {
       swallow(e, tag: 'DatabaseHelper.v20TwinIndex');
     }
@@ -1987,15 +2167,13 @@ class DatabaseHelper {
     ''');
     try {
       await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_hot_videos_platform ON hot_videos(platform)'
-      );
+          'CREATE INDEX IF NOT EXISTS idx_hot_videos_platform ON hot_videos(platform)');
     } catch (e) {
       swallow(e, tag: 'DatabaseHelper.v21IdxPlatform');
     }
     try {
       await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_hot_video_fav_user ON hot_video_favorites(user_id)'
-      );
+          'CREATE INDEX IF NOT EXISTS idx_hot_video_fav_user ON hot_video_favorites(user_id)');
     } catch (e) {
       swallow(e, tag: 'DatabaseHelper.v21IdxFavUser');
     }
@@ -2005,46 +2183,106 @@ class DatabaseHelper {
     {
       final now = DateTime.now().toIso8601String();
       final seeds = [
-        ['system', 'bilibili', 'https://www.bilibili.com/video/BV1BFCsBrEy7',
-          '【2025重置版】一小时从零基础到精通Flutter基础入门教程', '技术UP主',
+        [
+          'system',
+          'bilibili',
+          'https://www.bilibili.com/video/BV1BFCsBrEy7',
+          '【2025重置版】一小时从零基础到精通Flutter基础入门教程',
+          '技术UP主',
           '54集系统教程：Dart语法→Widget→路由→动画→项目实战，2025年全新录制',
-          '25万', '10:00:00'],
-        ['system', 'bilibili', 'https://www.bilibili.com/video/BV1Qb421Y7SV',
-          '《2025 Flutter实战开发》从环境搭建到打包发布', 'Flutter实战派',
+          '25万',
+          '10:00:00'
+        ],
+        [
+          'system',
+          'bilibili',
+          'https://www.bilibili.com/video/BV1Qb421Y7SV',
+          '《2025 Flutter实战开发》从环境搭建到打包发布',
+          'Flutter实战派',
           '33集完整实战：Dio网络请求、Provider状态管理、路由封装、登录注册、WebView',
-          '18万', '8:00:00'],
-        ['system', 'bilibili', 'https://www.bilibili.com/video/BV1Cyx7ziE3v',
-          'Jetpack Compose 构建Android应用（2025最新版）', 'Android开发者',
+          '18万',
+          '8:00:00'
+        ],
+        [
+          'system',
+          'bilibili',
+          'https://www.bilibili.com/video/BV1Cyx7ziE3v',
+          'Jetpack Compose 构建Android应用（2025最新版）',
+          'Android开发者',
           'Kotlin+Jetpack Compose声明式UI开发，从零构建完整Android应用',
-          '12万', '6:00:00'],
-        ['system', 'bilibili', 'https://www.bilibili.com/video/BV1Sa4y1Z7B1',
-          '黑马程序员HarmonyOS4+NEXT星河版入门到企业级实战教程', '黑马程序员',
+          '12万',
+          '6:00:00'
+        ],
+        [
+          'system',
+          'bilibili',
+          'https://www.bilibili.com/video/BV1Sa4y1Z7B1',
+          '黑马程序员HarmonyOS4+NEXT星河版入门到企业级实战教程',
+          '黑马程序员',
           '50节课覆盖ArkTS语法、ArkUI组件、状态管理、动画、网络、数据库、实战案例',
-          '42万', '20:00:00'],
-        ['system', 'bilibili', 'https://www.bilibili.com/video/BV12gYxz7Ews',
-          '【提供真实接口】2026 React Native + Expo 零基础到项目实战教程', '长乐未央',
+          '42万',
+          '20:00:00'
+        ],
+        [
+          'system',
+          'bilibili',
+          'https://www.bilibili.com/video/BV12gYxz7Ews',
+          '【提供真实接口】2026 React Native + Expo 零基础到项目实战教程',
+          '长乐未央',
           '68+集全栈教程：Expo Router、登录认证、视频播放器、iOS 26适配、打包上架',
-          '8万', '15:00:00'],
-        ['system', 'bilibili', 'https://www.bilibili.com/video/BV1834y1676P',
-          '黑马程序员微信小程序从基础到发布全流程（含uni-app多端部署）', '黑马程序员',
+          '8万',
+          '15:00:00'
+        ],
+        [
+          'system',
+          'bilibili',
+          'https://www.bilibili.com/video/BV1834y1676P',
+          '黑马程序员微信小程序从基础到发布全流程（含uni-app多端部署）',
+          '黑马程序员',
           '422万播放：小程序基础→组件→API→云开发→企业级商城实战→uni-app多端部署',
-          '422万', '30:00:00'],
-        ['system', 'bilibili', 'https://www.bilibili.com/video/BV1Bp4y1379L',
-          '黑马程序员uniapp小兔鲜儿微信小程序项目（Vue3+TS+Pinia+uni-app）', '黑马程序员',
+          '422万',
+          '30:00:00'
+        ],
+        [
+          'system',
+          'bilibili',
+          'https://www.bilibili.com/video/BV1Bp4y1379L',
+          '黑马程序员uniapp小兔鲜儿微信小程序项目（Vue3+TS+Pinia+uni-app）',
+          '黑马程序员',
           '最新技术栈：Vue3+TypeScript+Pinia+uni-app开发电商全流程',
-          '15万', '12:00:00'],
-        ['system', 'bilibili', 'https://www.bilibili.com/video/BV1S4411E7LY',
-          'Flutter从入门到精通全套（Dart+Flutter 3.x+GetX+仿小米商城）', 'IT营大地老师',
+          '15万',
+          '12:00:00'
+        ],
+        [
+          'system',
+          'bilibili',
+          'https://www.bilibili.com/video/BV1S4411E7LY',
+          'Flutter从入门到精通全套（Dart+Flutter 3.x+GetX+仿小米商城）',
+          'IT营大地老师',
           '全网最全Flutter教程之一：Dart基础+Widget+GetX状态管理+真实API项目实战',
-          '35万', '40:00:00'],
-        ['system', 'bilibili', 'https://www.bilibili.com/video/BV1er421G7TV',
-          '鸿蒙NEXT教程：ArkTS/ArkUI全套 零基础入门到项目实战', '鸿蒙开发讲师',
+          '35万',
+          '40:00:00'
+        ],
+        [
+          'system',
+          'bilibili',
+          'https://www.bilibili.com/video/BV1er421G7TV',
+          '鸿蒙NEXT教程：ArkTS/ArkUI全套 零基础入门到项目实战',
+          '鸿蒙开发讲师',
           'ArkTS基础+ArkUI组件+3个实战项目，零基础也能学会鸿蒙开发',
-          '20万', '16:00:00'],
-        ['system', 'bilibili', 'https://www.bilibili.com/video/BV1CG4tzAEc6',
-          'Flutter从零开始开发旅游APP（135集实战）', 'Flutter旅游实战',
+          '20万',
+          '16:00:00'
+        ],
+        [
+          'system',
+          'bilibili',
+          'https://www.bilibili.com/video/BV1CG4tzAEc6',
+          'Flutter从零开始开发旅游APP（135集实战）',
+          'Flutter旅游实战',
           '135集大体量：Dart语法→网络请求→混合开发→AI语音搜索→打包发布',
-          '22万', '30:00:00'],
+          '22万',
+          '30:00:00'
+        ],
       ];
       for (final s in seeds) {
         await db.insert('hot_videos', {
@@ -2065,12 +2303,14 @@ class DatabaseHelper {
   /// V22: ai_chat_history 新增 prompt_tokens / completion_tokens / provider / model 列
   Future<void> _migrateToV22(Database db) async {
     try {
-      await db.execute('ALTER TABLE ai_chat_history ADD COLUMN prompt_tokens INTEGER DEFAULT 0');
+      await db.execute(
+          'ALTER TABLE ai_chat_history ADD COLUMN prompt_tokens INTEGER DEFAULT 0');
     } catch (e) {
       swallow(e, tag: 'DatabaseHelper.v22PromptTokens');
     }
     try {
-      await db.execute('ALTER TABLE ai_chat_history ADD COLUMN completion_tokens INTEGER DEFAULT 0');
+      await db.execute(
+          'ALTER TABLE ai_chat_history ADD COLUMN completion_tokens INTEGER DEFAULT 0');
     } catch (e) {
       swallow(e, tag: 'DatabaseHelper.v22CompletionTokens');
     }
@@ -2113,7 +2353,8 @@ class DatabaseHelper {
   /// V26: current_session 增加 default_class_id（默认班级）
   Future<void> _migrateToV26(Database db) async {
     try {
-      await db.execute('ALTER TABLE current_session ADD COLUMN default_class_id INTEGER');
+      await db.execute(
+          'ALTER TABLE current_session ADD COLUMN default_class_id INTEGER');
     } catch (e) {
       swallow(e, tag: 'V26.add_default_class_id');
     }
@@ -2139,12 +2380,14 @@ class DatabaseHelper {
   /// V24: ai_chat_history 性能索引（Token 统计查询用）
   Future<void> _migrateToV24(Database db) async {
     try {
-      await db.execute('CREATE INDEX IF NOT EXISTS idx_ai_chat_role_date ON ai_chat_history(role, created_at DESC)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_ai_chat_role_date ON ai_chat_history(role, created_at DESC)');
     } catch (e) {
       swallow(e, tag: 'DatabaseHelper.v24IdxRoleDate');
     }
     try {
-      await db.execute('CREATE INDEX IF NOT EXISTS idx_ai_chat_role_user ON ai_chat_history(role, user_id)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_ai_chat_role_user ON ai_chat_history(role, user_id)');
     } catch (e) {
       swallow(e, tag: 'DatabaseHelper.v24IdxRoleUser');
     }
@@ -2153,7 +2396,8 @@ class DatabaseHelper {
   /// V23: ai_chat_history 新增 user_id 列 + grading_results 表
   Future<void> _migrateToV23(Database db) async {
     try {
-      await db.execute('ALTER TABLE ai_chat_history ADD COLUMN user_id TEXT DEFAULT \'\'');
+      await db.execute(
+          'ALTER TABLE ai_chat_history ADD COLUMN user_id TEXT DEFAULT \'\'');
     } catch (e) {
       swallow(e, tag: 'DatabaseHelper.v23UserId');
     }

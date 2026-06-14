@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../services/video_source/video_source_manager.dart';
 
 class VideoSourceSelector extends StatelessWidget {
@@ -27,7 +27,7 @@ class VideoSourceSelector extends StatelessWidget {
             label: '全部',
             icon: Icons.all_inclusive,
             selected: selectedPlatformId == null,
-            themeColor: colorScheme.primary.toARGB32(),
+            themeColor: colorScheme.primary.value,
             onTap: () => onPlatformChanged(null),
           ),
           const SizedBox(width: 8),

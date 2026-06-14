@@ -241,7 +241,10 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
     _voiceService.onError = null;
     _voiceService.onStateChanged = null;
     _pulseController.dispose();
-    if (_isListening) _voiceService.stopListening();
+    // 同步强制释放原生录音器：识别成功后 _isListening 已为 false，
+    // 不能只靠 stopListening 的 1s 延迟清理——它会与登录跳转并发触发
+    // record 包原生崩溃（语音登录成功即闪退的根因）。
+    _voiceService.forceStop();
     super.dispose();
   }
 
@@ -499,8 +502,12 @@ class _VoiceRecordDialogState extends State<_VoiceRecordDialog>
 
   @override
   void dispose() {
+    _voiceService.onResult = null;
+    _voiceService.onComplete = null;
+    _voiceService.onError = null;
+    _voiceService.onStateChanged = null;
     _pulseController.dispose();
-    if (_isListening) _voiceService.stopListening();
+    _voiceService.forceStop();
     super.dispose();
   }
 

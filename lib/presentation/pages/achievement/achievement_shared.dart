@@ -79,8 +79,11 @@ void sortScoresInPlace(List<Map<String, dynamic>> scores, ScoreSort sort,
 
 /// 4 个课程目标达成度雷达图。[values] 为 obj1..4 达成度（0..1）。
 /// 三个达成 tab（平时/实验/考核）共用，避免重复构建。
-Widget objectiveRadarChart(List<double> values, Color color, {double size = 180}) {
-  final v = List<double>.generate(4, (i) => i < values.length ? values[i].clamp(0.0, 1.0) : 0.0);
+Widget objectiveRadarChart(List<double> values, Color color,
+    {double size = 180}) {
+  final count = values.length < 3 ? 3 : values.length;
+  final v = List<double>.generate(
+      count, (i) => i < values.length ? values[i].clamp(0.0, 1.0) : 0.0);
   return SizedBox(
     height: size,
     child: RadarChart(
@@ -92,9 +95,7 @@ Widget objectiveRadarChart(List<double> values, Color color, {double size = 180}
         gridBorderData: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
         tickBorderData: BorderSide(color: Colors.grey.withValues(alpha: 0.15)),
         titlePositionPercentageOffset: 0.15,
-        getTitle: (index, angle) => RadarChartTitle(
-          text: index < kObjectiveNames.length ? kObjectiveNames[index] : '目标${index + 1}',
-        ),
+        getTitle: (index, angle) => RadarChartTitle(text: '目标${index + 1}'),
         dataSets: [
           RadarDataSet(
             fillColor: color.withValues(alpha: 0.2),
@@ -119,6 +120,11 @@ Widget achievementTabHeader(
   required Map<String, double> classAvg,
 }) {
   final primary = Theme.of(context).colorScheme.primary;
+  final activeIndexes = [
+    for (var i = 0; i < 4; i++)
+      if (classAvg.containsKey('obj${i + 1}')) i
+  ];
+  if (activeIndexes.isEmpty) activeIndexes.addAll([0, 1, 2, 3]);
 
   final avgCard = Card(
     margin: EdgeInsets.zero,
@@ -133,30 +139,37 @@ Widget achievementTabHeader(
           const SizedBox(height: 8),
           Row(
             children: [
-              for (int i = 0; i < 4; i++)
+              for (final i in activeIndexes)
                 Expanded(
                   child: Column(
                     children: [
-                      Text('目标${i + 1}', style: TextStyle(fontSize: 11, color: kObjectiveColors[i])),
+                      Text('目标${i + 1}',
+                          style: TextStyle(
+                              fontSize: 11, color: kObjectiveColors[i])),
                       const SizedBox(height: 4),
                       Text(
                         (classAvg['obj${i + 1}'] ?? 0).toStringAsFixed(2),
                         style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: achievementLevelColor(classAvg['obj${i + 1}'] ?? 0)),
+                            color: achievementLevelColor(
+                                classAvg['obj${i + 1}'] ?? 0)),
                       ),
                     ],
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 8),
-          objectiveRadarChart(
-            [for (int i = 0; i < 4; i++) classAvg['obj${i + 1}'] ?? 0],
-            primary,
-            size: 150,
-          ),
+          if (activeIndexes.length >= 3) ...[
+            const SizedBox(height: 8),
+            objectiveRadarChart(
+              [
+                for (final i in activeIndexes) classAvg['obj${i + 1}'] ?? 0,
+              ],
+              primary,
+              size: 150,
+            ),
+          ],
         ],
       ),
     ),
@@ -243,7 +256,8 @@ Widget achievementScoreTable(
   final card = LayoutBuilder(builder: (context, constraints) {
     // 卡片左右各 12 margin + 行内左右 padding 12。
     final avail = constraints.maxWidth - 24 - 24;
-    final fixedMin = idMin + nameMin + colMin * columns.length + (onEdit != null ? opW : 0);
+    final fixedMin =
+        idMin + nameMin + colMin * columns.length + (onEdit != null ? opW : 0);
     // 可用宽度有余则把多出的宽度按比例分给「学号/姓名/数据列」，铺满整行。
     final extra = (avail - fixedMin).clamp(0.0, double.infinity);
     final flexUnits = idMin + nameMin + colMin * columns.length; // 操作列不拉伸
@@ -251,37 +265,57 @@ Widget achievementScoreTable(
     final idW = idMin + idMin * scale;
     final nameW = nameMin + nameMin * scale;
     final colW = colMin + colMin * scale;
-    final totalW = idW + nameW + colW * columns.length + (onEdit != null ? opW : 0);
+    final totalW =
+        idW + nameW + colW * columns.length + (onEdit != null ? opW : 0);
 
     final header = Container(
       color: primary.withValues(alpha: 0.06),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Row(children: [
-        SizedBox(width: idW, child: Text('学号', style: headerStyle, textAlign: TextAlign.center)),
-        SizedBox(width: nameW, child: Text('姓名', style: headerStyle, textAlign: TextAlign.center)),
+        SizedBox(
+            width: idW,
+            child: Text('学号', style: headerStyle, textAlign: TextAlign.center)),
+        SizedBox(
+            width: nameW,
+            child: Text('姓名', style: headerStyle, textAlign: TextAlign.center)),
         for (final c in columns)
           SizedBox(
             width: colW,
             child: Text(c.label,
-                style: c.headerColor != null ? headerStyle.copyWith(color: c.headerColor) : headerStyle,
+                style: c.headerColor != null
+                    ? headerStyle.copyWith(color: c.headerColor)
+                    : headerStyle,
                 textAlign: TextAlign.center),
           ),
-        if (onEdit != null) SizedBox(width: opW, child: Text('操作', style: headerStyle, textAlign: TextAlign.center)),
+        if (onEdit != null)
+          SizedBox(
+              width: opW,
+              child:
+                  Text('操作', style: headerStyle, textAlign: TextAlign.center)),
       ]),
     );
 
     final body = ListView.separated(
       shrinkWrap: true,
       itemCount: rows.length,
-      separatorBuilder: (_, __) => Divider(height: 1, color: hairline.withValues(alpha: 0.5)),
+      separatorBuilder: (_, __) =>
+          Divider(height: 1, color: hairline.withValues(alpha: 0.5)),
       itemBuilder: (context, index) {
         final r = rows[index];
         return Container(
           color: index.isEven ? surface : primary.withValues(alpha: 0.025),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
           child: Row(children: [
-            SizedBox(width: idW, child: Text(r['student_id']?.toString() ?? '', style: cellStyle, textAlign: TextAlign.center)),
-            SizedBox(width: nameW, child: Text(r['student_name']?.toString() ?? '', style: cellStyle, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis)),
+            SizedBox(
+                width: idW,
+                child: Text(r['student_id']?.toString() ?? '',
+                    style: cellStyle, textAlign: TextAlign.center)),
+            SizedBox(
+                width: nameW,
+                child: Text(r['student_name']?.toString() ?? '',
+                    style: cellStyle,
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis)),
             for (final c in columns)
               SizedBox(
                 width: colW,
@@ -289,8 +323,12 @@ Widget achievementScoreTable(
                   c.get(r).toStringAsFixed(c.digits),
                   textAlign: TextAlign.center,
                   style: cellStyle.copyWith(
-                    color: c.isAchievement ? achievementLevelColor(c.get(r)) : (c.bold ? onSurface : null),
-                    fontWeight: (c.bold || c.isAchievement) ? FontWeight.bold : FontWeight.normal,
+                    color: c.isAchievement
+                        ? achievementLevelColor(c.get(r))
+                        : (c.bold ? onSurface : null),
+                    fontWeight: (c.bold || c.isAchievement)
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                   ),
                 ),
               ),
@@ -301,7 +339,8 @@ Widget achievementScoreTable(
                   icon: Icon(Icons.edit_rounded, size: 16, color: primary),
                   onPressed: () => onEdit(r),
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  constraints:
+                      const BoxConstraints(minWidth: 32, minHeight: 32),
                   tooltip: '编辑',
                 ),
               ),
@@ -312,7 +351,11 @@ Widget achievementScoreTable(
 
     final table = Column(
       mainAxisSize: MainAxisSize.min,
-      children: [header, Divider(height: 1, color: hairline), Flexible(child: body)],
+      children: [
+        header,
+        Divider(height: 1, color: hairline),
+        Flexible(child: body)
+      ],
     );
 
     return Container(
@@ -332,5 +375,8 @@ Widget achievementScoreTable(
     );
   });
 
-  return onRefresh == null ? card : RefreshIndicator(onRefresh: onRefresh, child: ListView(children: [card]));
+  return onRefresh == null
+      ? card
+      : RefreshIndicator(
+          onRefresh: onRefresh, child: ListView(children: [card]));
 }

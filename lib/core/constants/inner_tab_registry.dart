@@ -39,8 +39,8 @@ const Map<String, List<String>> kInnerTabRegistry = <String, List<String>>{
   ],
   // 学习中心
   'learning': ['视频', 'PPT', 'PDF', '测验', '助手'],
-  // 归档（教师）：四个学期阶段
-  'archive': ['期初', '期中', '期末', '归档'],
+  // 归档（教师）：四个学期阶段（末阶段已更名 归档→结课）
+  'archive': ['期初', '期中', '期末', '结课'],
 };
 
 /// 供 AI prompt 引用的中文页面名（pageKey → 朗读友好名）。
