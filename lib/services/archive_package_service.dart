@@ -122,6 +122,19 @@ class ArchivePackageService {
     }
     final n = naming ?? await buildNaming(doc: doc, docLabel: docLabel);
 
+    final dir = Directory(
+        p.join(outRoot, n.semester, n.course, _periodLabel(doc.period)));
+    if (!dir.existsSync()) dir.createSync(recursive: true);
+
+    final sourcePdf = _sourcePdfFile(doc);
+    if (sourcePdf != null) {
+      final outFile = File(
+        p.join(dir.path, '${n.fileBase(docLabel: n.docLabel)}.pdf'),
+      );
+      await sourcePdf.copy(outFile.path);
+      return outFile.path;
+    }
+
     // 1) 拿 docx 字节：优先 Processor 路径（继承 reference-doc 样式），
     //    没注册就 PandocService 默认。
     Uint8List bytes;
@@ -133,9 +146,6 @@ class ArchivePackageService {
     }
 
     // 2) 写盘
-    final dir = Directory(
-        p.join(outRoot, n.semester, n.course, _periodLabel(doc.period)));
-    if (!dir.existsSync()) dir.createSync(recursive: true);
     final fileName = '${n.fileBase(docLabel: n.docLabel)}.docx';
     final outFile = File(p.join(dir.path, fileName));
     await outFile.writeAsBytes(bytes, flush: true);
@@ -246,6 +256,13 @@ class ArchivePackageService {
 
   bool _shouldArchivePdf(ArchiveDocument doc, Object? processor) =>
       doc.documentType == 'teaching_task' && processor != null;
+
+  File? _sourcePdfFile(ArchiveDocument doc) {
+    final path = doc.filePath;
+    if (path == null || !path.toLowerCase().endsWith('.pdf')) return null;
+    final file = File(path);
+    return file.existsSync() ? file : null;
+  }
 
   bool _isArchiveOutputFile(File f) {
     final lower = f.path.toLowerCase();
