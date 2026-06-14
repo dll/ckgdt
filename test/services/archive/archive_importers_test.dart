@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:knowledge_graph_app/services/archive/importers/archive_importers.dart';
 
@@ -23,7 +25,8 @@ void main() {
     });
 
     test('纯 ASCII 原样返回', () {
-      expect(ArchiveImporters.decodeQuotedPrintable('hello world'), 'hello world');
+      expect(
+          ArchiveImporters.decodeQuotedPrintable('hello world'), 'hello world');
     });
   });
 
@@ -55,15 +58,19 @@ Content-Location: http://x/
 <table>
 <tr><td>课程名称</td><td>课程类别</td><td>总学时</td><td>讲授</td><td>实验</td><td>实践</td><td>课外自主</td><td>教学班级</td><td>计划人数</td><td>备注</td></tr>
 <tr><td>移动应用开发</td><td>必修</td><td>48</td><td>32</td><td>16</td><td>0</td><td>0</td><td>软件231</td><td>45</td><td>无</td></tr>
-</table>''';
+</table>
+2026年06月13日''';
       final md = ArchiveImporters.parseTeachingTask(html, now: fixedNow);
       expect(md, isNotNull);
       expect(md, contains('# 教 学 任 务 书'));
       expect(md, contains('张三'));
       expect(md, contains('移动应用开发'));
+      expect(md, contains('签发日期：2026年06月13日'));
+      expect(md, contains('课程行数：1'));
       expect(md, contains('2026-05-30 10:00'));
       // 列序：实验=16 在「实验」列、实践=0 在「实践」列
-      expect(md, contains('| 移动应用开发 | 必修 | 48 | 32 | 16 | 0 | 0 | 软件231 | 45 | 无 |'));
+      expect(md,
+          contains('| 移动应用开发 | 必修 | 48 | 32 | 16 | 0 | 0 | 软件231 | 45 | 无 |'));
       // 表头不应被当作课程行
       expect('| 课程名称 | 课程类别 |'.allMatches(md!).length, 1);
     });
@@ -93,12 +100,30 @@ Content-Location: http://x/
       final md = ArchiveImporters.parseTeachingTask(html, now: fixedNow);
       expect(md, isNotNull);
       expect(md, contains('王老师'));
-      expect(md, contains('| 移动应用开发 | 考试 | 64 | 32 | 16 | 8 | 8 | 计科22 | 40 |'));
+      expect(
+          md, contains('| 移动应用开发 | 考试 | 64 | 32 | 16 | 8 | 8 | 计科22 | 40 |'));
     });
 
     test('无任何课程行 → 返回 null', () {
       const html = '<p>经学校批准聘请李四老师担任本学期以下教学任务</p><table></table>';
       expect(ArchiveImporters.parseTeachingTask(html), isNull);
+    });
+
+    test('真实期初教学任务书模板可解析出多行课程', () {
+      final file =
+          File('data/归档/期初/模板/01-courseTableForTeacher!printLessonBook.mhtml');
+      if (!file.existsSync()) return;
+      final md = ArchiveImporters.parseTeachingTask(file.readAsStringSync(),
+          now: fixedNow);
+      expect(md, isNotNull);
+      expect(md, contains('刘东良'));
+      expect(md, contains('移动应用开发'));
+      expect(md, contains('签发日期：'));
+      expect(
+          RegExp(r'^\| .* \| .* \| .* \|', multiLine: true)
+              .allMatches(md!)
+              .length,
+          greaterThanOrEqualTo(4));
     });
   });
 
@@ -141,7 +166,7 @@ Content-Location: http://x/
     });
 
     test('CourseScheduleResult 持有 markdown + names', () {
-      final r = CourseScheduleResult('md', {'A', 'B'});
+      const r = CourseScheduleResult('md', {'A', 'B'});
       expect(r.markdown, 'md');
       expect(r.allCourseNames, {'A', 'B'});
     });

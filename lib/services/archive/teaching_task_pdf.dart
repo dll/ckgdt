@@ -4,6 +4,8 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
+import 'review_result.dart';
+
 /// 教学任务书官方版式 PDF 构建器（原生 pdf 包，零外部依赖 —— 不需 LibreOffice/pandoc）。
 ///
 /// 复刻学校样式：标题「教 学 任 务 书」+（存根）+「经学校批准聘请…」抬头 +
@@ -17,10 +19,20 @@ class TeachingTaskPdf {
   static pw.Font? _fontBold;
 
   static const _columns = [
-    '课程名称', '课程类别', '总学时', '讲授', '实验', '实践', '课外自主学时', '教学班级', '计划人数', '备注',
+    '课程名称',
+    '课程类别',
+    '总学时',
+    '讲授',
+    '实验',
+    '实践',
+    '课外自主学时',
+    '教学班级',
+    '计划人数',
+    '备注',
   ];
   // 各列宽权重（与样图比例接近：课程名/班级宽，学时列窄）。须与 _columns 等长。
   static const _weights = [3.2, 2.0, 1.0, 0.9, 0.9, 0.9, 1.3, 2.6, 1.0, 1.6];
+  static const _minDataRows = 8;
 
   static int get _colCount {
     assert(_columns.length == _weights.length,
@@ -30,22 +42,165 @@ class TeachingTaskPdf {
 
   /// 从导入文档的 markdown 解析出抬头与课程行。
   static TeachingTaskData parse(String markdown) {
-    final header = RegExp(r'经学校批准聘请(.*?)老师担任(.*?)以下教学任务')
-        .firstMatch(markdown);
+    final header = RegExp(r'经学校批准聘请(.*?)老师担任(.*?)以下教学任务').firstMatch(markdown);
     final teacher = header?.group(1)?.trim() ?? '';
     final semester = header?.group(2)?.trim() ?? '';
+    final issueDate = RegExp(r'签发日期[：:]\s*(\d{4}年\d{1,2}月\d{1,2}日)')
+            .firstMatch(markdown)
+            ?.group(1)
+            ?.trim() ??
+        '';
 
     final rows = <List<String>>[];
     for (final line in markdown.split(RegExp(r'\r?\n'))) {
       final t = line.trim();
       if (!t.startsWith('|') || !t.endsWith('|')) continue;
-      final cells = t.substring(1, t.length - 1).split('|').map((c) => c.trim()).toList();
+      final cells =
+          t.substring(1, t.length - 1).split('|').map((c) => c.trim()).toList();
       if (cells.length < 10) continue;
       if (cells[0] == '课程名称') continue; // 表头
-      if (cells.every((c) => c.isEmpty || RegExp(r'^-+$').hasMatch(c))) continue; // 分隔行
+      if (cells.every((c) => c.isEmpty || RegExp(r'^-+$').hasMatch(c))) {
+        continue; // 分隔行
+      }
       rows.add(cells.take(_colCount).toList());
     }
-    return TeachingTaskData(teacher: teacher, semester: semester, rows: rows);
+    return TeachingTaskData(
+      teacher: teacher,
+      semester: semester,
+      issueDate: issueDate,
+      rows: rows,
+    );
+  }
+
+  /// 教学任务书不走泛化 AI 审核；这里按学校打印件的硬约束做本地校验。
+  static ReviewResult review(String markdown) {
+    final started = DateTime.now();
+    final data = parse(markdown);
+    final errors = <Finding>[];
+    final warnings = <Finding>[];
+    final passed = <Finding>[];
+
+    void err(String key, String dimension, String evidence, String suggestion) {
+      errors.add(Finding(
+        key: 'teaching_task.$key',
+        dimension: dimension,
+        level: '❌ 错误',
+        evidence: evidence,
+        suggestion: suggestion,
+        layer: 'structural',
+      ));
+    }
+
+    void warn(
+        String key, String dimension, String evidence, String suggestion) {
+      warnings.add(Finding(
+        key: 'teaching_task.$key',
+        dimension: dimension,
+        level: '⚠️ 建议',
+        evidence: evidence,
+        suggestion: suggestion,
+        layer: 'numerical',
+      ));
+    }
+
+    void ok(String key, String dimension, String evidence) {
+      passed.add(Finding(
+        key: 'teaching_task.$key',
+        dimension: dimension,
+        level: '✅ 通过',
+        evidence: evidence,
+        suggestion: '无需修改',
+        layer: 'structural',
+      ));
+    }
+
+    if (data.teacher.isEmpty || data.teacher == '未知') {
+      err('teacher', '教师姓名', '未解析到教师姓名', '请重新导入教务系统教学任务书，或补全抬头中的教师姓名。');
+    } else {
+      ok('teacher', '教师姓名', data.teacher);
+    }
+
+    if (data.semester.isEmpty || data.semester == '未知学期') {
+      err('semester', '学期信息', '未解析到学年学期',
+          '请确认导入文件为“打印教学任务书”页面导出的完整 MHTML/HTML。');
+    } else {
+      ok('semester', '学期信息', data.semester);
+    }
+
+    if (data.issueDate.isEmpty) {
+      warn('issue_date', '签发日期', '未解析到页面底部日期',
+          '打印时将使用当前日期；若学校要求固定日期，请从教务系统原始打印页重新导入。');
+    } else {
+      ok('issue_date', '签发日期', data.issueDate);
+    }
+
+    if (data.rows.isEmpty) {
+      err('rows', '课程任务行', '未解析到任何课程行', '请确认表格包含课程名称、课程类别、总学时、教学班级、计划人数等列。');
+    } else {
+      ok('rows', '课程任务行', '共 ${data.rows.length} 行');
+    }
+
+    if (data.rows.length > _minDataRows) {
+      warn(
+        'row_count',
+        '版式容量',
+        '课程行数 ${data.rows.length} 行，超过官方单页表格的 $_minDataRows 行数据区',
+        '建议打印前预览确认是否需要分页或调整字号。',
+      );
+    }
+
+    for (var i = 0; i < data.rows.length; i++) {
+      final row = data.rows[i];
+      final rowNo = i + 1;
+      if (row.length != _colCount) {
+        err('row_${rowNo}_columns', '第 $rowNo 行列数',
+            '实际 ${row.length} 列，要求 $_colCount 列', '请重新导入完整表格。');
+        continue;
+      }
+      if (row[0].trim().isEmpty) {
+        err('row_${rowNo}_course', '第 $rowNo 行课程名称', '课程名称为空', '请补全课程名称。');
+      }
+      if (row[1].trim().isEmpty) {
+        err('row_${rowNo}_category', '第 $rowNo 行课程类别', '课程类别为空', '请补全课程类别。');
+      }
+      if (row[7].trim().isEmpty) {
+        err('row_${rowNo}_class', '第 $rowNo 行教学班级', '教学班级为空', '请补全教学班级。');
+      }
+
+      final total = _toInt(row[2]);
+      final lecture = _toInt(row[3]);
+      final experiment = _toInt(row[4]);
+      final practice = _toInt(row[5]);
+      final students = _toInt(row[8]);
+      if ([total, lecture, experiment, practice, students]
+          .any((v) => v == null)) {
+        err('row_${rowNo}_numbers', '第 $rowNo 行数字字段', row.join(' / '),
+            '总学时、讲授、实验、实践、计划人数必须为数字。');
+      } else {
+        final inClass = lecture! + experiment! + practice!;
+        if (total != inClass) {
+          err(
+            'row_${rowNo}_hours',
+            '第 $rowNo 行学时合计',
+            '总学时 $total，讲授+实验+实践=$inClass',
+            '请核对教务系统课程任务，确保总学时等于讲授、实验、实践学时之和。',
+          );
+        }
+        if (students! <= 0) {
+          err('row_${rowNo}_students', '第 $rowNo 行计划人数', '计划人数 $students',
+              '计划人数必须大于 0。');
+        }
+      }
+    }
+
+    return ReviewResult(
+      overall: errors.isEmpty ? 'approved' : 'needs_revision',
+      errors: errors,
+      warnings: warnings,
+      passed: passed,
+      confidence: 1.0,
+      latencyMs: DateTime.now().difference(started).inMilliseconds,
+    );
   }
 
   /// 生成 PDF 字节。中文字体内嵌（仿宋正文 + 黑体标题），跨平台不依赖系统字体。
@@ -53,8 +208,9 @@ class TeachingTaskPdf {
     final data = parse(markdown);
     await _ensureFonts();
     final date = now ?? DateTime.now();
-    final dateStr =
-        '${date.year}年${date.month.toString().padLeft(2, '0')}月${date.day.toString().padLeft(2, '0')}日';
+    final dateStr = data.issueDate.isNotEmpty
+        ? data.issueDate
+        : '${date.year}年${date.month.toString().padLeft(2, '0')}月${date.day.toString().padLeft(2, '0')}日';
 
     final doc = pw.Document();
     final theme = pw.ThemeData.withFont(base: _fontRegular!, bold: _fontBold!);
@@ -62,7 +218,10 @@ class TeachingTaskPdf {
     doc.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4.copyWith(
-          marginLeft: 28, marginRight: 28, marginTop: 28, marginBottom: 28,
+          marginLeft: 28,
+          marginRight: 28,
+          marginTop: 28,
+          marginBottom: 28,
         ),
         theme: theme,
         build: (context) => pw.Column(
@@ -81,17 +240,22 @@ class TeachingTaskPdf {
   }
 
   /// 一份任务书（存根或正本）。[isStub] 为真时显示「（存根）」与「领取签名」。
-  static pw.Widget _copy(TeachingTaskData data, String dateStr, {required bool isStub}) {
+  static pw.Widget _copy(TeachingTaskData data, String dateStr,
+      {required bool isStub}) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.stretch,
       children: [
         pw.Center(
           child: pw.Text('教 学 任 务 书',
-              style: pw.TextStyle(font: _fontBold, fontSize: 17, fontWeight: pw.FontWeight.bold)),
+              style: pw.TextStyle(
+                  font: _fontBold,
+                  fontSize: 17,
+                  fontWeight: pw.FontWeight.bold)),
         ),
         if (isStub) ...[
           pw.SizedBox(height: 6),
-          pw.Center(child: pw.Text('（存根）', style: const pw.TextStyle(fontSize: 12))),
+          pw.Center(
+              child: pw.Text('（存根）', style: const pw.TextStyle(fontSize: 12))),
         ],
         pw.SizedBox(height: 10),
         pw.Text(
@@ -108,7 +272,8 @@ class TeachingTaskPdf {
 
   static pw.Widget _table(List<List<String>> rows) {
     final widths = <int, pw.TableColumnWidth>{
-      for (var i = 0; i < _weights.length; i++) i: pw.FlexColumnWidth(_weights[i]),
+      for (var i = 0; i < _weights.length; i++)
+        i: pw.FlexColumnWidth(_weights[i]),
     };
     const border = pw.TableBorder(
       top: pw.BorderSide(width: 0.5),
@@ -127,7 +292,8 @@ class TeachingTaskPdf {
               style: pw.TextStyle(
                   font: header ? _fontBold : _fontRegular,
                   fontSize: header ? 8.5 : 8,
-                  fontWeight: header ? pw.FontWeight.bold : pw.FontWeight.normal)),
+                  fontWeight:
+                      header ? pw.FontWeight.bold : pw.FontWeight.normal)),
         );
 
     final bodyRows = <pw.TableRow>[
@@ -137,9 +303,10 @@ class TeachingTaskPdf {
       bodyRows.add(pw.TableRow(children: [for (final c in r) cell(c)]));
     }
     // 样图空表也保留若干空行，至少 6 行数据区。
-    final padTo = rows.length < 6 ? 6 - rows.length : 0;
+    final padTo = rows.length < _minDataRows ? _minDataRows - rows.length : 0;
     for (var i = 0; i < padTo; i++) {
-      bodyRows.add(pw.TableRow(children: [for (var j = 0; j < _colCount; j++) cell('')]));
+      bodyRows.add(pw.TableRow(
+          children: [for (var j = 0; j < _colCount; j++) cell('')]));
     }
 
     return pw.Table(border: border, columnWidths: widths, children: bodyRows);
@@ -152,26 +319,33 @@ class TeachingTaskPdf {
         if (isStub)
           pw.Expanded(
             flex: 3,
-            child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-              pw.Text('教学任务书', style: const pw.TextStyle(fontSize: 10)),
-              pw.SizedBox(height: 12),
-              pw.Text('领取签名：', style: const pw.TextStyle(fontSize: 10)),
-            ]),
+            child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text('教学任务书', style: const pw.TextStyle(fontSize: 10)),
+                  pw.SizedBox(height: 12),
+                  pw.Text('领取签名：', style: const pw.TextStyle(fontSize: 10)),
+                ]),
           ),
+        if (!isStub) pw.Spacer(flex: 3),
         pw.Expanded(
           flex: 3,
-          child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.center, children: [
-            pw.Text('院长', style: const pw.TextStyle(fontSize: 10)),
-            pw.SizedBox(height: 12),
-            pw.Text('签章', style: const pw.TextStyle(fontSize: 10)),
-          ]),
+          child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              children: [
+                pw.Text('院长', style: const pw.TextStyle(fontSize: 10)),
+                pw.SizedBox(height: 12),
+                pw.Text('签章', style: const pw.TextStyle(fontSize: 10)),
+              ]),
         ),
         pw.Expanded(
           flex: 3,
-          child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
-            pw.SizedBox(height: 14),
-            pw.Text(dateStr, style: const pw.TextStyle(fontSize: 10)),
-          ]),
+          child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.end,
+              children: [
+                pw.SizedBox(height: 14),
+                pw.Text(dateStr, style: const pw.TextStyle(fontSize: 10)),
+              ]),
         ),
       ],
     );
@@ -200,12 +374,24 @@ class TeachingTaskPdf {
     _fontRegular = pw.Font.ttf(data);
     _fontBold = _fontRegular;
   }
+
+  static int? _toInt(String value) {
+    final normalized = value.replaceAll(RegExp(r'[^0-9-]'), '');
+    if (normalized.isEmpty) return null;
+    return int.tryParse(normalized);
+  }
 }
 
 /// 解析后的任务书数据。
 class TeachingTaskData {
   final String teacher;
   final String semester;
+  final String issueDate;
   final List<List<String>> rows;
-  const TeachingTaskData({required this.teacher, required this.semester, required this.rows});
+  const TeachingTaskData({
+    required this.teacher,
+    required this.semester,
+    this.issueDate = '',
+    required this.rows,
+  });
 }
