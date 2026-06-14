@@ -108,20 +108,26 @@ const examCourseDocs = {
   ],
   'midterm': [
     DocumentTypeDef(
-        key: 'midterm_exam',
-        label: '期中试卷',
-        iconCodePoint: '0xe869',
-        needsGeneration: true),
-    DocumentTypeDef(
-        key: 'midterm_analysis',
-        label: '期中成绩分析',
+        key: 'midterm_progress_check',
+        label: '课程进度执行检查',
         iconCodePoint: '0xe872',
-        needsGeneration: true),
+        canImport: true,
+        needsGeneration: true,
+        canPrint: true),
     DocumentTypeDef(
-        key: 'teaching_log',
-        label: '教学日志',
+        key: 'midterm_homework_review',
+        label: '作业与批阅次数统计',
         iconCodePoint: '0xe8b1',
-        sourceTable: 'teaching_progress'),
+        canImport: true,
+        needsGeneration: true,
+        canPrint: true),
+    DocumentTypeDef(
+        key: 'midterm_exam',
+        label: '期中考试',
+        iconCodePoint: '0xe869',
+        canImport: true,
+        needsGeneration: true,
+        canPrint: true),
   ],
   'final': [
     DocumentTypeDef(
@@ -258,15 +264,26 @@ const assessCourseDocs = {
   ],
   'midterm': [
     DocumentTypeDef(
-        key: 'midterm_check',
-        label: '期中检查表',
-        iconCodePoint: '0xe8b1',
-        needsGeneration: true),
+        key: 'midterm_progress_check',
+        label: '课程进度执行检查',
+        iconCodePoint: '0xe872',
+        canImport: true,
+        needsGeneration: true,
+        canPrint: true),
     DocumentTypeDef(
-        key: 'teaching_log',
-        label: '教学日志',
+        key: 'midterm_homework_review',
+        label: '作业与批阅次数统计',
         iconCodePoint: '0xe8b1',
-        sourceTable: 'teaching_progress'),
+        canImport: true,
+        needsGeneration: true,
+        canPrint: true),
+    DocumentTypeDef(
+        key: 'midterm_exam',
+        label: '期中考试',
+        iconCodePoint: '0xe869',
+        canImport: true,
+        needsGeneration: true,
+        canPrint: true),
   ],
   'final': [
     DocumentTypeDef(

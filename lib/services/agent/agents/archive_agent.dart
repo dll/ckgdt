@@ -17,26 +17,32 @@ class ArchiveAgent extends BaseAgent {
 
   @override
   AgentConfig get config => const AgentConfig(
-    id: 'archive',
-    name: '归档助手',
-    emoji: '📦',
-    description: '辅助生成教学归档材料，支持一键归档与打印。',
-    allowedRoles: ['teacher', 'admin'],
-    persona: '''你是一位经验丰富的教学归档专家，熟悉课程教学文档的规范与格式。
+        id: 'archive',
+        name: '归档助手',
+        emoji: '📦',
+        description: '辅助生成教学归档材料，支持一键归档与打印。',
+        allowedRoles: ['teacher', 'admin'],
+        persona: '''你是一位经验丰富的教学归档专家，熟悉课程教学文档的规范与格式。
 你可以根据课程类型（考试/考查）和教学阶段（期初/期中/期末），
 参考学校模板，生成规范的教学归档文档。
 
 请根据用户需求生成相应文档内容，使用 Markdown 格式输出。''',
-    priority: 6,
-    keywords: ['归档', '存档', '教学材料', '文档生成', '打印'],
-    capabilities: ['教学文档生成', '归档管理', '模板参考', '一键打印'],
-    requiresAi: true,
-    usageSteps: ['在归档页面选择教学阶段和文档类型', '点击"生成"按钮调用归档助手', '预览并确认内容，然后打印或归档'],
-    classicCases: [
-      AgentCase(title: '生成期末课程总结', userInput: '请生成期末课程总结', agentReply: '生成包含教学概况、成绩分析、经验反思的课程总结报告'),
-      AgentCase(title: '生成试卷审核表', userInput: '请生成试卷审核表', agentReply: '生成包含命题质量、难度分布、审核意见的试卷审核表'),
-    ],
-  );
+        priority: 6,
+        keywords: ['归档', '存档', '教学材料', '文档生成', '打印'],
+        capabilities: ['教学文档生成', '归档管理', '模板参考', '一键打印'],
+        requiresAi: true,
+        usageSteps: ['在归档页面选择教学阶段和文档类型', '点击"生成"按钮调用归档助手', '预览并确认内容，然后打印或归档'],
+        classicCases: [
+          AgentCase(
+              title: '生成期末课程总结',
+              userInput: '请生成期末课程总结',
+              agentReply: '生成包含教学概况、成绩分析、经验反思的课程总结报告'),
+          AgentCase(
+              title: '生成试卷审核表',
+              userInput: '请生成试卷审核表',
+              agentReply: '生成包含命题质量、难度分布、审核意见的试卷审核表'),
+        ],
+      );
 
   @override
   Future<AgentMessage> handleMessage(
@@ -54,7 +60,8 @@ class ArchiveAgent extends BaseAgent {
     String? templateRef,
   }) async {
     final db = await DatabaseHelper.instance.database;
-    final contextData = await _collectContext(db, documentType, courseType: courseType);
+    final contextData =
+        await _collectContext(db, documentType, courseType: courseType);
 
     // 三段式增强：[REFERENCE] 历届模板（few-shot 风格学习材料）+ [SYSTEM_FACTS] 系统事实
     // 这两段只在能拿到时才注入；拿不到（assets 缺 / DB 没数据）走原有 prompt 逻辑不变。
@@ -92,8 +99,8 @@ class ArchiveAgent extends BaseAgent {
     return doc.copyWith(id: id);
   }
 
-  Future<Map<String, dynamic>> _collectContext(
-      Database db, String documentType, {String courseType = 'assess'}) async {
+  Future<Map<String, dynamic>> _collectContext(Database db, String documentType,
+      {String courseType = 'assess'}) async {
     final context = <String, dynamic>{};
     try {
       if (documentType == 'syllabus') {
@@ -148,7 +155,8 @@ class ArchiveAgent extends BaseAgent {
   Future<String> reviewDocument(ArchiveDocument doc) async {
     final checklist = _reviewChecklist(doc.documentType);
     final courseTypeLabel = doc.courseType == 'exam' ? '考试' : '考查';
-    final prompt = '''你是一位严谨的教学归档审核专家。请严格按照以下标准逐项审核，每项给出 ✅ 通过 / ⚠️ 建议修改 / ❌ 不通过 并说明理由。
+    final prompt =
+        '''你是一位严谨的教学归档审核专家。请严格按照以下标准逐项审核，每项给出 ✅ 通过 / ⚠️ 建议修改 / ❌ 不通过 并说明理由。
 
 === 文档基本信息 ===
 - **标题**：${doc.title}
@@ -183,15 +191,28 @@ ${doc.content ?? '（文档无内容）'}''';
 
   String _docTypeLabel(String dt) {
     const labels = {
-      'teaching_task': '教学任务书', 'syllabus': '教学大纲', 'calendar': '校历',
-      'course_schedule': '课程课表', 'teaching_schedule': '教学进度表',
-      'lesson_plan': '教学教案', 'courseware': '教学课件', 'roll_call': '学生点名册',
-      'midterm_exam': '期中试卷', 'midterm_analysis': '期中成绩分析',
-      'midterm_check': '期中检查表', 'teaching_log': '教学日志',
-      'final_exam': '期末试卷', 'final_analysis': '期末成绩分析',
-      'course_summary': '课程总结', 'exam_review_form': '试卷审核表',
-      'final_assessment': '期末考核材料', 'assessment_review_form': '考核审核表',
-      'print_report': '印刷审批表', 'archive_form': '归档确认表',
+      'teaching_task': '教学任务书',
+      'syllabus': '教学大纲',
+      'calendar': '校历',
+      'course_schedule': '课程课表',
+      'teaching_schedule': '教学进度表',
+      'lesson_plan': '教学教案',
+      'courseware': '教学课件',
+      'roll_call': '学生点名册',
+      'midterm_progress_check': '课程进度执行检查',
+      'midterm_homework_review': '作业与批阅次数统计',
+      'midterm_exam': '期中试卷',
+      'midterm_analysis': '期中成绩分析',
+      'midterm_check': '期中检查表',
+      'teaching_log': '教学日志',
+      'final_exam': '期末试卷',
+      'final_analysis': '期末成绩分析',
+      'course_summary': '课程总结',
+      'exam_review_form': '试卷审核表',
+      'final_assessment': '期末考核材料',
+      'assessment_review_form': '考核审核表',
+      'print_report': '印刷审批表',
+      'archive_form': '归档确认表',
     };
     return labels[dt] ?? dt;
   }
@@ -234,8 +255,24 @@ ${doc.content ?? '（文档无内容）'}''';
 - 课件清单是否覆盖全部章节
 - 资源类型标注是否清晰（PPT/视频/文档等）
 - 是否与教学进度表章节对应''',
+      'midterm_progress_check': '''
+- 是否明确依据教学进度表核对期中前课程执行情况
+- 是否覆盖周次、章节、理论/实验学时和实践任务
+- 是否标明进度滞后、超前、调课或补课情况
+- 对进度偏差是否给出原因和后续改进安排''',
+      'midterm_homework_review': '''
+- 是否列出期中前作业布置次数和批阅次数
+- 批阅记录是否覆盖教学班级和主要学生提交
+- 是否说明未批、迟批或反馈不足情况
+- 是否有后续批阅改进措施''',
+      'midterm_exam': '''
+- 期中考试或阶段考核材料是否完整
+- 考核内容是否覆盖期中前核心知识点和能力目标
+- 是否有评分标准、成绩记录或质量分析
+- 是否说明阶段考核结果对后续教学的改进作用''',
     };
-    return checklists[dt] ?? '''
+    return checklists[dt] ??
+        '''
 - 文档结构是否完整，各要素是否齐全
 - 内容是否与教学阶段、课程类型匹配
 - 各项数据是否合理、具体''';
@@ -295,15 +332,13 @@ ${doc.content ?? '（文档无内容）'}''';
       if (tMatch != null) teacherName = tMatch.group(1)!.trim();
       final cMatch = RegExp(r'课程名称[：:]\s*(.+?)[\n|]').firstMatch(task);
       if (cMatch != null) courseName = cMatch.group(1)!.trim();
-      final clsMatch =
-          RegExp(r'教学班级[：:]\s*(.+?)[\n|]').firstMatch(task);
+      final clsMatch = RegExp(r'教学班级[：:]\s*(.+?)[\n|]').firstMatch(task);
       if (clsMatch != null) classInfo = clsMatch.group(1)!.trim();
       final hMatch = RegExp(r'总学时[：:]\s*(\d+)').firstMatch(task);
       if (hMatch != null) totalHours = hMatch.group(1)!.trim();
       final lecMatch = RegExp(r'讲授[：:]\s*(\d+)').firstMatch(task);
       if (lecMatch != null) theoryHours = lecMatch.group(1)!.trim();
-      final labMatch =
-          RegExp(r'(?:实验|实践)[：:]\s*(\d+)').firstMatch(task);
+      final labMatch = RegExp(r'(?:实验|实践)[：:]\s*(\d+)').firstMatch(task);
       if (labMatch != null) labHours = labMatch.group(1)!.trim();
     } else if (context != null &&
         context.containsKey('course_schedule_content')) {
@@ -319,7 +354,7 @@ ${doc.content ?? '（文档无内容）'}''';
       buf.writeln('班级：$classInfo');
       buf.writeln('教师：$teacherName');
       buf.writeln('学期：$semesterLabel');
-      buf.writeln('总学时：${totalHours}（理论${theoryHours}/实验${labHours}）');
+      buf.writeln('总学时：$totalHours（理论$theoryHours/实验$labHours）');
       buf.writeln('课程类型：$courseTypeLabel（考试或考查，与选择的类型一致）');
     }
 
@@ -361,7 +396,7 @@ ${doc.content ?? '（文档无内容）'}''';
 **课程名称：** $courseName
 **教师：** $teacherName（必须与参考数据一致！）
 **班级：** $classInfo
-**总学时：** $totalHours学时 （理论${theoryHours}学时 / 实验${labHours}学时）
+**总学时：** $totalHours学时 （理论$theoryHours学时 / 实验$labHours学时）
 **课程类型：** $courseTypeLabel
 
 ### 理论教学进度
@@ -400,7 +435,7 @@ ${doc.content ?? '（文档无内容）'}''';
 **课程名称：** $courseName
 **课程编号：** ________
 **课程类别：** ________
-**学时/学分：** ${totalHours}学时 / ____学分
+**学时/学分：** $totalHours学时 / ____学分
 **课程类型：** $courseTypeLabel
 
 ### 一、课程简介
@@ -452,10 +487,14 @@ ${doc.content ?? '（文档无内容）'}''';
 
     buf.writeln('\n=== 输出要求（必须遵守）===');
     buf.writeln('1. 用 Markdown 格式输出完整的文档内容，包含标题和正式表格。');
-    buf.writeln('2. **教师姓名 / 班级 / 专业 / 学期 / 学时 / 学分 / 课程类型** —— 必须使用 [SYSTEM_FACTS] 段的真实数据，与 [REFERENCE] 不一致时**优先用 [SYSTEM_FACTS]**，禁止照抄历届模板里的旧值。');
-    buf.writeln('3. **章节标题 / 章节数 / 实验项目编号** —— 必须使用 [SYSTEM_FACTS] 第 3、4 段的真实数据，禁止编造。');
-    buf.writeln('4. **课程目标条数 / 毕业要求映射** —— 沿用 [REFERENCE] 模板的 OBE 框架（教育部规范），不可改条数。');
-    buf.writeln('5. **章节内容详细描述 / 教学重难点 / 思政元素** —— 你可以发挥专业判断创作，但必须与本章主题契合（如鸿蒙章谈民族品牌 ✓，跨平台章谈民族品牌 ✗）。');
+    buf.writeln(
+        '2. **教师姓名 / 班级 / 专业 / 学期 / 学时 / 学分 / 课程类型** —— 必须使用 [SYSTEM_FACTS] 段的真实数据，与 [REFERENCE] 不一致时**优先用 [SYSTEM_FACTS]**，禁止照抄历届模板里的旧值。');
+    buf.writeln(
+        '3. **章节标题 / 章节数 / 实验项目编号** —— 必须使用 [SYSTEM_FACTS] 第 3、4 段的真实数据，禁止编造。');
+    buf.writeln(
+        '4. **课程目标条数 / 毕业要求映射** —— 沿用 [REFERENCE] 模板的 OBE 框架（教育部规范），不可改条数。');
+    buf.writeln(
+        '5. **章节内容详细描述 / 教学重难点 / 思政元素** —— 你可以发挥专业判断创作，但必须与本章主题契合（如鸿蒙章谈民族品牌 ✓，跨平台章谈民族品牌 ✗）。');
     buf.writeln('6. **教学日历是全校校历，不涉及任何课程、教师或班级**。');
     buf.writeln('7. 系统数据缺失时，**用专业判断补全并标 [推断]**，禁止编造数字（学时 / 分数 / 题量等）。');
     return buf.toString();

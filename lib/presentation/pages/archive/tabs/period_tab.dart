@@ -100,8 +100,21 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
 
   bool _canAutoGenerate(DocumentTypeDef def) {
     if (def.needsGeneration) return true;
-    return widget.periodKey == 'beginning' &&
-        ArchiveTemplateSourceService.supportsDocument(def.key);
+    return ArchiveTemplateSourceService.supportsDocument(def.key);
+  }
+
+  String _ordinalFor(DocumentTypeDef def, int index) {
+    if (widget.periodKey == 'midterm') {
+      switch (def.key) {
+        case 'midterm_progress_check':
+          return '08';
+        case 'midterm_homework_review':
+          return '15';
+        case 'midterm_exam':
+          return '16';
+      }
+    }
+    return (index + 1).toString().padLeft(2, '0');
   }
 
   Future<void> _generateDoc(DocumentTypeDef def) async {
@@ -134,7 +147,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
           return;
         }
         doc = generated;
-      } else if (widget.periodKey == 'beginning') {
+      } else if (ArchiveTemplateSourceService.supportsDocument(def.key)) {
         final generated = await _generateFromTemplate(def);
         if (generated != null) {
           doc = generated;
@@ -143,7 +156,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
             Navigator.of(context).pop();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('未在期初/模板中找到可解析的${def.label}资料'),
+                content: Text(
+                    '未在${periodLabel(widget.periodKey)}/模板中找到可解析的${def.label}资料'),
                 backgroundColor: Colors.orange,
               ),
             );
@@ -1012,6 +1026,67 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       return;
     }
 
+    if (ArchiveTemplateSourceService.supportsDocument(def.key)) {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: [
+          'docx',
+          'pdf',
+          'md',
+          'txt',
+          'html',
+          'htm',
+          'mhtml',
+          'mht',
+          'xlsx',
+          'xls'
+        ],
+        dialogTitle: '选择${def.label}文件',
+      );
+      if (result == null || result.files.isEmpty) return;
+      final file = File(result.files.single.path!);
+      if (!await file.exists()) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('文件不存在'), backgroundColor: Colors.red),
+          );
+        }
+        return;
+      }
+      final parsed = await ArchiveTemplateSourceService.parseFile(
+        file: file,
+        documentType: def.key,
+        label: def.label,
+      );
+      if (parsed == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text('${def.label}解析失败，请确认文件与资料类型匹配'),
+                backgroundColor: Colors.red),
+          );
+        }
+        return;
+      }
+      final doc = ArchiveDocument(
+        title: title,
+        documentType: def.key,
+        period: widget.periodKey,
+        courseType: widget.courseType,
+        content: parsed.content,
+        filePath: parsed.sourcePath,
+        isGenerated: false,
+      );
+      await widget.dao.saveDocument(doc);
+      _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已导入${def.label}：${doc.title}')),
+        );
+      }
+      return;
+    }
+
     final doc = ArchiveDocument(
       title: title,
       documentType: def.key,
@@ -1277,6 +1352,24 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
           'system': '教务管理系统（jwgl.chzu.edu.cn/eams/）',
           'description':
               '课表查询 → 课表查询（实时课表）→ 打印教学任务书 → 浏览器另存为MHTML文件。URL: courseTableForTeacher!printLessonBook.mhtml，含课程教学问卷数据',
+        };
+      case 'midterm_progress_check':
+        return {
+          'system': '期中归档模板 / 教学执行记录',
+          'description':
+              '读取期中/模板中的教学进度表（通常为08-开头资料），用于核对期中前课程进度、学时执行、实验/实践安排与计划的一致性。',
+        };
+      case 'midterm_homework_review':
+        return {
+          'system': '期中归档模板 / 作业批阅记录',
+          'description':
+              '读取期中/模板中的作业次数和批阅次数统计（通常为15-开头资料），检查作业布置、批阅覆盖、反馈质量和未批/迟批情况。',
+        };
+      case 'midterm_exam':
+        return {
+          'system': '期中归档模板 / 阶段考核材料',
+          'description':
+              '读取期中/模板中的期中考试或阶段考核资料（通常为16-开头资料），可包含试题、评分标准、成绩记录和质量分析。',
         };
       default:
         return {
@@ -1741,6 +1834,12 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         return '学院';
       case 'survey':
         return '教务系统';
+      case 'midterm_progress_check':
+        return '期中模板';
+      case 'midterm_homework_review':
+        return '期中模板';
+      case 'midterm_exam':
+        return '期中模板';
       default:
         return '外部系统';
     }
@@ -1812,7 +1911,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       if (def.key == 'teaching_task') {
         return _generateTeachingTaskFromSource();
       }
-      if (widget.periodKey == 'beginning') {
+      if (ArchiveTemplateSourceService.supportsDocument(def.key)) {
         final fromTemplate = await _generateFromTemplate(def);
         if (fromTemplate != null || !def.needsGeneration) {
           return fromTemplate;
@@ -1832,9 +1931,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
 
   Future<void> _generateAll() async {
     int sourced = 0;
-    final order = widget.periodKey == 'beginning'
-        ? _expectedDocs.map((d) => d.key).toList()
-        : _expectedDocs.where(_canAutoGenerate).map((d) => d.key).toList();
+    final order = _expectedDocs.map((d) => d.key).toList();
     final toGenerate = order
         .map((key) => _expectedDocs.where((d) => d.key == key).firstOrNull)
         .whereType<DocumentTypeDef>()
@@ -2207,7 +2304,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       final doc = _findDoc(def);
       cards.add(DocCard(
         def: def,
-        ordinal: i + 1,
+        ordinal: _ordinalFor(def, i),
         doc: doc,
         source: _importSource(def.key),
         onShowSource: () => _showSourceInfo(def),
@@ -2256,7 +2353,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
 
 class DocCard extends StatelessWidget {
   final DocumentTypeDef def;
-  final int ordinal;
+  final String ordinal;
   final ArchiveDocument? doc;
   final String source;
   final VoidCallback? onShowSource;
@@ -2393,7 +2490,7 @@ class DocCard extends StatelessWidget {
 }
 
 class _OrdinalBadge extends StatelessWidget {
-  final int number;
+  final String number;
 
   const _OrdinalBadge({required this.number});
 
@@ -2410,7 +2507,7 @@ class _OrdinalBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
-        number.toString().padLeft(2, '0'),
+        number,
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w700,

@@ -118,4 +118,27 @@ void main() {
       expect(doc!.content.trim(), isNotEmpty);
     }
   });
+
+  test('real midterm template directory resolves progress homework and exam',
+      () async {
+    final realRoot = Directory('data/归档').absolute;
+    if (!realRoot.existsSync()) return;
+    BaseDocumentProcessor.archiveDataRoot = realRoot.path;
+
+    const docs = {
+      'midterm_progress_check': '课程进度执行检查',
+      'midterm_homework_review': '作业与批阅次数统计',
+      'midterm_exam': '期中考试',
+    };
+
+    for (final entry in docs.entries) {
+      final doc = await ArchiveTemplateSourceService.parseBestSource(
+        periodKey: 'midterm',
+        documentType: entry.key,
+        label: entry.value,
+      );
+      expect(doc, isNotNull, reason: '${entry.key} should resolve');
+      expect(doc!.content.trim(), isNotEmpty);
+    }
+  });
 }
