@@ -13,6 +13,7 @@ import '../../../../services/archive/base_document_processor.dart';
 import '../../../../services/archive/pandoc_service.dart';
 import '../../../../services/archive/processor_registry.dart';
 import '../../../../services/archive/review_result.dart';
+import '../../../../services/archive/archive_template_source_service.dart';
 import '../../../../services/archive/teaching_task_pdf.dart';
 import '../../../../services/archive/teaching_task_source_service.dart';
 import '../../../../services/archive/importers/archive_importers.dart';
@@ -97,6 +98,12 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     return null;
   }
 
+  bool _canAutoGenerate(DocumentTypeDef def) {
+    if (def.needsGeneration) return true;
+    return widget.periodKey == 'beginning' &&
+        ArchiveTemplateSourceService.supportsDocument(def.key);
+  }
+
   Future<void> _generateDoc(DocumentTypeDef def) async {
     final label = periodLabel(widget.periodKey);
     final title = '$label${def.label}';
@@ -127,6 +134,35 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
           return;
         }
         doc = generated;
+      } else if (widget.periodKey == 'beginning') {
+        final generated = await _generateFromTemplate(def);
+        if (generated != null) {
+          doc = generated;
+        } else if (!def.needsGeneration) {
+          if (mounted) {
+            Navigator.of(context).pop();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('未在期初/模板中找到可解析的${def.label}资料'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+          return;
+        } else if (processor is AiDraftProcessor) {
+          doc = await processor.generateAsDocument(
+            period: widget.periodKey,
+            courseType: widget.courseType,
+            title: title,
+          );
+        } else {
+          doc = await widget.agent.generateDocument(
+            title: title,
+            documentType: def.key,
+            period: widget.periodKey,
+            courseType: widget.courseType,
+          );
+        }
       } else if (processor is AiDraftProcessor) {
         doc = await processor.generateAsDocument(
           period: widget.periodKey,
@@ -246,6 +282,11 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
   /// 走 ProcessorRegistry 拿 toPdf；未注册则用 PandocService 默认路径，
   /// 自动从 `data/归档/<期>/模板/<docType>.docx` 找 reference-doc 继承样式。
   Future<Uint8List> _renderPdfBytes(ArchiveDocument doc) async {
+    final sourcePath = doc.filePath;
+    if (sourcePath != null && sourcePath.toLowerCase().endsWith('.pdf')) {
+      final sourceFile = File(sourcePath);
+      if (await sourceFile.exists()) return sourceFile.readAsBytes();
+    }
     final processor = ProcessorRegistry.instance.find(doc.documentType);
     if (processor != null && processor.supportsPrint) {
       return processor.toPdf(doc);
@@ -484,9 +525,11 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       _showArchivedDialog(
         title: '已归档',
         path: outPath,
-        message: doc.documentType == 'teaching_task'
-            ? 'docx 与学校版式 PDF 已保存，文件路径已复制到剪贴板，可直接粘贴到 QQ 群发送。'
-            : 'docx 已保存，文件路径已复制到剪贴板，可直接粘贴到 QQ 群发送。',
+        message: outPath.toLowerCase().endsWith('.pdf')
+            ? '原始 PDF 已按学校命名保存，文件路径已复制到剪贴板，可直接粘贴到 QQ 群发送。'
+            : doc.documentType == 'teaching_task'
+                ? 'docx 与学校版式 PDF 已保存，文件路径已复制到剪贴板，可直接粘贴到 QQ 群发送。'
+                : 'docx 已保存，文件路径已复制到剪贴板，可直接粘贴到 QQ 群发送。',
       );
     } on ArchivePackageException catch (e) {
       swallowDebug(e, tag: 'ArchivePeriodTab._archiveDoc.pkg');
@@ -691,7 +734,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         period: widget.periodKey,
         courseType: widget.courseType,
         content: parsed,
-        isGenerated: true,
+        filePath: file.path,
+        isGenerated: false,
       );
       await widget.dao.saveDocument(doc);
       _load();
@@ -737,7 +781,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         period: widget.periodKey,
         courseType: widget.courseType,
         content: parsed,
-        isGenerated: true,
+        filePath: file.path,
+        isGenerated: false,
       );
       await widget.dao.saveDocument(doc);
       _load();
@@ -783,7 +828,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         period: widget.periodKey,
         courseType: widget.courseType,
         content: parsed,
-        isGenerated: true,
+        filePath: file.path,
+        isGenerated: false,
       );
       await widget.dao.saveDocument(doc);
       _load();
@@ -818,7 +864,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         period: widget.periodKey,
         courseType: widget.courseType,
         content: parsed.trim(),
-        isGenerated: true,
+        filePath: file.path,
+        isGenerated: false,
       );
       await widget.dao.saveDocument(doc);
       _load();
@@ -854,7 +901,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         period: widget.periodKey,
         courseType: widget.courseType,
         content: parsed.trim(),
-        isGenerated: true,
+        filePath: file.path,
+        isGenerated: false,
       );
       await widget.dao.saveDocument(doc);
       _load();
@@ -904,7 +952,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         period: widget.periodKey,
         courseType: widget.courseType,
         content: text.trim(),
-        isGenerated: true,
+        filePath: file.path,
+        isGenerated: false,
       );
       await widget.dao.saveDocument(doc);
       _load();
@@ -950,7 +999,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         period: widget.periodKey,
         courseType: widget.courseType,
         content: parsed,
-        isGenerated: true,
+        filePath: file.path,
+        isGenerated: false,
       );
       await widget.dao.saveDocument(doc);
       _load();
@@ -976,6 +1026,27 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         SnackBar(content: Text('已从${_importSource(def.key)}导入：${def.label}')),
       );
     }
+  }
+
+  Future<ArchiveDocument?> _generateFromTemplate(DocumentTypeDef def) async {
+    final parsed = await ArchiveTemplateSourceService.parseBestSource(
+      periodKey: widget.periodKey,
+      documentType: def.key,
+      label: def.label,
+    );
+    if (parsed == null) return null;
+    final doc = ArchiveDocument(
+      title: '${periodLabel(widget.periodKey)}${def.label}',
+      documentType: def.key,
+      period: widget.periodKey,
+      courseType: widget.courseType,
+      content: parsed.content,
+      filePath: parsed.sourcePath,
+      isGenerated: false,
+    );
+    final id = await widget.dao.saveDocument(doc);
+    if (def.key == 'syllabus') widget.onSyllabusChanged?.call();
+    return doc.copyWith(id: id);
   }
 
   Future<ArchiveDocument?> _generateTeachingTaskFromSource() async {
@@ -1741,6 +1812,12 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       if (def.key == 'teaching_task') {
         return _generateTeachingTaskFromSource();
       }
+      if (widget.periodKey == 'beginning') {
+        final fromTemplate = await _generateFromTemplate(def);
+        if (fromTemplate != null || !def.needsGeneration) {
+          return fromTemplate;
+        }
+      }
       return await widget.agent.generateDocument(
         title: title,
         documentType: def.key,
@@ -1754,16 +1831,14 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
   }
 
   Future<void> _generateAll() async {
-    int fetched = 0;
+    int sourced = 0;
     final order = widget.periodKey == 'beginning'
-        ? ['teaching_task', 'calendar', 'teaching_schedule', 'lesson_plan']
-        : _expectedDocs
-            .where((d) => d.needsGeneration)
-            .map((d) => d.key)
-            .toList();
+        ? _expectedDocs.map((d) => d.key).toList()
+        : _expectedDocs.where(_canAutoGenerate).map((d) => d.key).toList();
     final toGenerate = order
         .map((key) => _expectedDocs.where((d) => d.key == key).firstOrNull)
         .whereType<DocumentTypeDef>()
+        .where(_canAutoGenerate)
         .where((d) => _findDoc(d) == null)
         .toList();
     if (toGenerate.isEmpty) {
@@ -1780,7 +1855,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       final doc = await _doGenerate(def);
       if (doc != null) {
         success++;
-        if (def.key == 'teaching_task') fetched++;
+        if ((doc.filePath ?? '').isNotEmpty) sourced++;
       }
     }
     if (mounted) {
@@ -1788,8 +1863,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       _load();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text(
-                '已获取 $fetched 份教务源材料，生成 $success/${toGenerate.length} 份文档')),
+            content:
+                Text('已获取 $sourced 份源材料，生成 $success/${toGenerate.length} 份文档')),
       );
     }
   }
@@ -2043,7 +2118,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
   Widget _buildActionBar() {
     final primary = Theme.of(context).colorScheme.primary;
     final hasUnfinished =
-        _expectedDocs.any((d) => d.needsGeneration && _findDoc(d) == null);
+        _expectedDocs.any((d) => _canAutoGenerate(d) && _findDoc(d) == null);
     final hasUnreviewed =
         _documents.any((d) => d.content != null && d.content!.isNotEmpty);
     final hasUnprinted =
@@ -2126,17 +2201,20 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     }
     final docs = _expectedDocs;
     final hasHeader = widget.extraHeader.isNotEmpty;
-    final cards = docs.map((def) {
+    final cards = <Widget>[];
+    for (var i = 0; i < docs.length; i++) {
+      final def = docs[i];
       final doc = _findDoc(def);
-      return DocCard(
+      cards.add(DocCard(
         def: def,
+        ordinal: i + 1,
         doc: doc,
         source: _importSource(def.key),
         onShowSource: () => _showSourceInfo(def),
         onDownloadTemplate: def.canImport ? () => _downloadTemplate(def) : null,
         onImport: def.canImport ? () => _importDoc(def) : null,
         onCreate: def.canCreate ? () => _createDoc(def) : null,
-        onGenerate: def.needsGeneration ? () => _generateDoc(def) : null,
+        onGenerate: _canAutoGenerate(def) ? () => _generateDoc(def) : null,
         onReview: doc != null ? () => _reviewDoc(doc) : null,
         onPreview: doc != null ? () => _previewDoc(doc) : null,
         onPrint: (doc != null && def.canPrint) ? () => _printDoc(doc) : null,
@@ -2144,8 +2222,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
             ? () => _archiveDoc(doc)
             : null,
         onDelete: doc != null ? () => _deleteDoc(doc) : null,
-      );
-    }).toList();
+      ));
+    }
 
     final body = cards.isEmpty && !hasHeader
         ? const [
@@ -2178,6 +2256,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
 
 class DocCard extends StatelessWidget {
   final DocumentTypeDef def;
+  final int ordinal;
   final ArchiveDocument? doc;
   final String source;
   final VoidCallback? onShowSource;
@@ -2194,6 +2273,7 @@ class DocCard extends StatelessWidget {
   const DocCard({
     super.key,
     required this.def,
+    required this.ordinal,
     this.doc,
     required this.source,
     this.onShowSource,
@@ -2222,6 +2302,8 @@ class DocCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         child: Row(
           children: [
+            _OrdinalBadge(number: ordinal),
+            const SizedBox(width: 10),
             Icon(Icons.description_outlined, size: 26, color: primary),
             const SizedBox(width: 12),
             Expanded(
@@ -2304,6 +2386,35 @@ class DocCard extends StatelessWidget {
                   color: Colors.red.shade300,
                   onTap: onDelete),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OrdinalBadge extends StatelessWidget {
+  final int number;
+
+  const _OrdinalBadge({required this.number});
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return Container(
+      width: 34,
+      height: 26,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: primary.withValues(alpha: 0.10),
+        border: Border.all(color: primary.withValues(alpha: 0.35), width: 0.8),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        number.toString().padLeft(2, '0'),
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: primary,
         ),
       ),
     );
@@ -2472,6 +2583,9 @@ class _DocumentPreviewSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sourcePath = doc.filePath;
+    final usePdfPreview = doc.documentType == 'teaching_task' ||
+        (sourcePath != null && sourcePath.toLowerCase().endsWith('.pdf'));
     return DraggableScrollableSheet(
       initialChildSize: 0.85,
       minChildSize: 0.5,
@@ -2501,7 +2615,7 @@ class _DocumentPreviewSheet extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: doc.documentType == 'teaching_task'
+            child: usePdfPreview
                 ? PdfPreview(
                     build: (_) => pdfBuilder(doc),
                     canChangeOrientation: false,

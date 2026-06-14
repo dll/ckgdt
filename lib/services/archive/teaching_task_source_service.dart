@@ -20,6 +20,12 @@ class TeachingTaskSourceService {
       'https://jwgl.chzu.edu.cn/eams/courseTableForTeacher!printLessonBook.action?';
 
   static const _sourceNameToken = 'courseTableForTeacher!printLessonBook';
+  static const _sourceNameTokens = [
+    'courseTableForTeacher!printLessonBook',
+    '教学任务单',
+    '教学任务书',
+    '教学任务',
+  ];
   static const _sourcePrefix = '01-';
   static const _sourceExtensions = ['.mhtml', '.mht', '.html', '.htm'];
 
@@ -56,7 +62,8 @@ class TeachingTaskSourceService {
       final name = p.basename(file.path).toLowerCase();
       final ext = p.extension(name);
       if (!_sourceExtensions.contains(ext)) return;
-      final isLessonBook = name.contains(_sourceNameToken.toLowerCase());
+      final isLessonBook =
+          _sourceNameTokens.any((token) => name.contains(token.toLowerCase()));
       final isNumberedSource = name.startsWith(_sourcePrefix);
       if (!isLessonBook && !isNumberedSource) return;
       final fullPath = p.normalize(file.absolute.path);
