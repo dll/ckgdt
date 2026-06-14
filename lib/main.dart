@@ -2,6 +2,7 @@
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:path/path.dart' as p;
 import 'core/app_keys.dart';
@@ -10,7 +11,6 @@ import 'core/dev_paths.dart';
 import 'core/init_logger.dart';
 import 'presentation/pages/assessment/defense/defense_broadcast_page.dart';
 import 'data/local/database_helper.dart';
-import 'l10n/gen/app_localizations.dart';
 import 'services/data_loading_service.dart';
 import 'services/theme_manager.dart';
 import 'services/settings_service.dart';
@@ -293,8 +293,12 @@ class _MyAppState extends State<MyApp> {
       darkTheme: ThemeManager.dark(_colorIndex),
       navigatorKey: _navigatorKey,
       locale: _locale,
-      supportedLocales: AppL10n.supportedLocales,
-      localizationsDelegates: AppL10n.localizationsDelegates,
+      supportedLocales: const [Locale("zh"), Locale("en")],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       home: const LoginPage(),
       builder: (context, child) {
         // 用 RepaintBoundary 包裹，供截图用

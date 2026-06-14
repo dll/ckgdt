@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'dart:ui' as ui;
@@ -22,7 +22,8 @@ class CalculationProcessTab extends StatefulWidget {
   final AchievementDao achievementDao;
   final ValueNotifier<int>? dataRevision;
 
-  const CalculationProcessTab({super.key, required this.achievementDao, this.dataRevision});
+  const CalculationProcessTab(
+      {super.key, required this.achievementDao, this.dataRevision});
 
   @override
   State<CalculationProcessTab> createState() => _CalculationProcessTabState();
@@ -38,6 +39,13 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
   Map<String, dynamic>? _surveySummary;
   bool _creatingSurvey = false;
   String _currentCourseName = '移动应用开发';
+  AchievementConfig _config = AchievementConfig.defaults;
+  List<Map<String, double>> _envWeightsByObjective = const [
+    {'pingshi': 0.2, 'experiment': 0.3, 'exam': 0.5},
+    {'pingshi': 0.2, 'experiment': 0.3, 'exam': 0.5},
+    {'pingshi': 0.2, 'experiment': 0.3, 'exam': 0.5},
+    {'pingshi': 0.2, 'experiment': 0.3, 'exam': 0.5},
+  ];
 
   @override
   void initState() {
@@ -80,7 +88,14 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
         surveyId: surveyId,
         question: '您认为课程中哪些内容最有用？（可多选）',
         questionType: 'multiple_choice',
-        options: ['Flutter开发', 'Android原生', 'React Native', '小程序开发', 'HarmonyOS', '综合实践'],
+        options: [
+          'Flutter开发',
+          'Android原生',
+          'React Native',
+          '小程序开发',
+          'HarmonyOS',
+          '综合实践'
+        ],
         seq: 2,
       );
       await surveyDao.addQuestion(
@@ -108,7 +123,9 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('问卷已创建并发布，已通知全体学生填写'), backgroundColor: Colors.green),
+          const SnackBar(
+              content: Text('问卷已创建并发布，已通知全体学生填写'),
+              backgroundColor: Colors.green),
         );
       }
       await _loadBatches(); // 刷新满意度数据
@@ -126,22 +143,37 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
 
   /// 将 [key] 标记的 Widget 截图保存为 PNG 到输出目录。
   final Map<String, GlobalKey> _chartKeys = {};
-  GlobalKey _chartKey(String id) => _chartKeys.putIfAbsent(id, () => GlobalKey());
+  GlobalKey _chartKey(String id) =>
+      _chartKeys.putIfAbsent(id, () => GlobalKey());
+
+  List<int> get _activeObjectiveIndexes {
+    final indexes = [
+      for (var i = 0; i < 4; i++)
+        if (_config.weights[i] > 0 || _config.fullMarks[i] > 0) i
+    ];
+    return indexes.isEmpty ? [0, 1, 2, 3] : indexes;
+  }
 
   Future<void> _saveChartAsPng(String id, String name) async {
     final key = _chartKeys[id];
     if (key?.currentContext == null) return;
     try {
-      final boundary = key!.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      final boundary =
+          key!.currentContext!.findRenderObject() as RenderRepaintBoundary;
       final image = await boundary.toImage(pixelRatio: 2.0);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) return;
       final dir = await OutputPathService.getOutputDirectory();
-      final ts = DateTime.now().toIso8601String().replaceAll(RegExp(r'[:.]'), '-').substring(0, 19);
+      final ts = DateTime.now()
+          .toIso8601String()
+          .replaceAll(RegExp(r'[:.]'), '-')
+          .substring(0, 19);
       final file = File('${dir.path}/${name}_$ts.png');
       await file.writeAsBytes(byteData.buffer.asUint8List());
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('图表已保存：${file.path}'), duration: const Duration(seconds: 3)));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('图表已保存：${file.path}'),
+            duration: const Duration(seconds: 3)));
     } catch (e, st) {
       swallowDebug(e, tag: 'CalcTab.savePng', stack: st);
     }
@@ -159,7 +191,9 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
           visualDensity: VisualDensity.compact,
         ),
       ),
-      Expanded(child: RepaintBoundary(key: _chartKey(chartId), child: SizedBox.expand(child: chart))),
+      Expanded(
+          child: RepaintBoundary(
+              key: _chartKey(chartId), child: SizedBox.expand(child: chart))),
     ]);
   }
 
@@ -169,8 +203,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
       // 加载问卷满意度数据
       Map<String, dynamic>? surveyData;
       try {
-        surveyData =
-            await widget.achievementDao.getSurveySatisfactionSummary();
+        surveyData = await widget.achievementDao.getSurveySatisfactionSummary();
       } catch (e, st) {
         swallowDebug(e, tag: 'CalcTab.surveySatisfaction', stack: st);
       }
@@ -182,7 +215,8 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
           _loading = false;
           if (_batches.isNotEmpty && _selectedBatchId == null) {
             _selectedBatchId = _batches.first['id'] as int;
-            _currentCourseName = _batches.first['course_name']?.toString() ?? '移动应用开发';
+            _currentCourseName =
+                _batches.first['course_name']?.toString() ?? '移动应用开发';
           }
         });
         if (_selectedBatchId != null) _loadScoresAndCalc();
@@ -197,7 +231,17 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
     if (_selectedBatchId == null) return;
     setState(() => _loading = true);
     try {
-      final scores = await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
+      final scores =
+          await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
+      final rows =
+          await widget.achievementDao.getCourseObjectives(_currentCourseName);
+      final cfg = rows.isNotEmpty
+          ? AchievementConfig.fromObjectiveRows(rows)
+          : AchievementConfig.defaults;
+      final objectiveWeights = await widget.achievementDao
+          .resolveObjectiveWeights(_selectedBatchId!);
+      final envWeights = await widget.achievementDao
+          .resolveObjectiveAssessmentWeights(_selectedBatchId!);
       if (scores.isNotEmpty) {
         final avgs = List<double>.filled(4, 0);
         for (final s in scores) {
@@ -207,11 +251,17 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
         }
         for (int i = 0; i < 4; i++) avgs[i] /= scores.length;
         double weighted = 0;
-        for (int i = 0; i < 4; i++) weighted += avgs[i] * kDefaultWeights[i];
+        for (int i = 0; i < 4; i++) weighted += avgs[i] * objectiveWeights[i];
         _classAvgAchievements = avgs;
         _weightedAchievement = weighted;
       }
-      if (mounted) setState(() { _scores = scores; _loading = false; });
+      if (mounted)
+        setState(() {
+          _config = cfg;
+          _envWeightsByObjective = envWeights;
+          _scores = scores;
+          _loading = false;
+        });
     } catch (e, st) {
       swallowDebug(e, tag: 'CalcTab.loadScoresAndCalc', stack: st);
       if (mounted) setState(() => _loading = false);
@@ -220,7 +270,8 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading && _batches.isEmpty) return const Center(child: CircularProgressIndicator());
+    if (_loading && _batches.isEmpty)
+      return const Center(child: CircularProgressIndicator());
     final primary = Theme.of(context).colorScheme.primary;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -252,11 +303,16 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
         // 七、问卷满意度调查
         _buildSurveySatisfaction(primary),
         if (_scores.isEmpty && !_loading)
-          Padding(padding: const EdgeInsets.only(top: 40), child: Center(child: Column(children: [
-            Icon(Icons.info_outline, size: 64, color: Colors.grey.withValues(alpha: 0.4)),
-            const SizedBox(height: 12),
-            const Text('暂无成绩数据，请先在"成绩管理"中录入', style: TextStyle(color: Colors.grey)),
-          ]))),
+          Padding(
+              padding: const EdgeInsets.only(top: 40),
+              child: Center(
+                  child: Column(children: [
+                Icon(Icons.info_outline,
+                    size: 64, color: Colors.grey.withValues(alpha: 0.4)),
+                const SizedBox(height: 12),
+                const Text('暂无成绩数据，请先在"成绩管理"中录入',
+                    style: TextStyle(color: Colors.grey)),
+              ]))),
       ]),
     );
   }
@@ -264,16 +320,25 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
   Widget _buildBatchSelector(Color primary) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(border: Border.all(color: primary.withValues(alpha: 0.3)), borderRadius: BorderRadius.circular(12)),
-      child: DropdownButtonHideUnderline(child: DropdownButton<int>(
-        isExpanded: true, value: _selectedBatchId, hint: const Text('选择批次'),
-        items: _batches.map((b) => DropdownMenuItem<int>(value: b['id'] as int, child: Text(b['batch_name'] ?? '未命名'))).toList(),
+      decoration: BoxDecoration(
+          border: Border.all(color: primary.withValues(alpha: 0.3)),
+          borderRadius: BorderRadius.circular(12)),
+      child: DropdownButtonHideUnderline(
+          child: DropdownButton<int>(
+        isExpanded: true,
+        value: _selectedBatchId,
+        hint: const Text('选择批次'),
+        items: _batches
+            .map((b) => DropdownMenuItem<int>(
+                value: b['id'] as int, child: Text(b['batch_name'] ?? '未命名')))
+            .toList(),
         onChanged: (v) {
           setState(() {
             _selectedBatchId = v;
             _scores = [];
             if (v != null) {
-              final batch = _batches.firstWhere((b) => b['id'] == v, orElse: () => {});
+              final batch =
+                  _batches.firstWhere((b) => b['id'] == v, orElse: () => {});
               _currentCourseName = batch['course_name']?.toString() ?? '移动应用开发';
             }
           });
@@ -284,178 +349,485 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
   }
 
   Widget _buildSyllabusObjectives(Color primary) {
-    const cfg = AchievementConfig.defaults;
+    final cfg = _config;
     final objectives = [
       for (int i = 0; i < cfg.objectiveNames.length; i++)
-        {
-          'id': cfg.objectiveNames[i],
-          'weight': cfg.weights[i],
-          'req': '毕业要求 ${cfg.indicators[i]}',
-          'desc': cfg.descriptions[i],
-          'ch': cfg.chapters[i],
-        },
+        if (cfg.weights[i] > 0 || cfg.fullMarks[i] > 0)
+          {
+            'id': cfg.objectiveNames[i],
+            'weight': cfg.weights[i],
+            'req': '毕业要求 ${cfg.indicators[i]}',
+            'desc': cfg.descriptions[i],
+            'ch': cfg.chapters[i],
+          },
     ];
-    return Card(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [Icon(Icons.menu_book, color: primary, size: 22), const SizedBox(width: 8), const Text('一、大纲课程目标', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))]),
-      const Divider(height: 20),
-      ...objectives.asMap().entries.map((e) {
-        final i = e.key; final o = e.value;
-        return Padding(padding: const EdgeInsets.only(bottom: 12), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(width: 70, padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 6),
-            decoration: BoxDecoration(color: kObjectiveColors[i].withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-            child: Column(children: [
-              Text(o['id'] as String, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: kObjectiveColors[i])),
-              Text('权重 ${((o['weight'] as double) * 100).toStringAsFixed(0)}%', style: const TextStyle(fontSize: 9, color: Colors.grey)),
-            ])),
-          const SizedBox(width: 10),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(o['desc'] as String, style: const TextStyle(fontSize: 12.5, height: 1.4)),
-            const SizedBox(height: 2),
-            Text('${o['req']} · ${o['ch']}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
-          ])),
-        ]));
-      }),
-    ])));
+    return Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+            padding: const EdgeInsets.all(16),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Icon(Icons.menu_book, color: primary, size: 22),
+                const SizedBox(width: 8),
+                const Text('一、大纲课程目标',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))
+              ]),
+              const Divider(height: 20),
+              ...objectives.asMap().entries.map((e) {
+                final i = e.key;
+                final o = e.value;
+                return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                              width: 70,
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 2, horizontal: 6),
+                              decoration: BoxDecoration(
+                                  color: kObjectiveColors[i].withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6)),
+                              child: Column(children: [
+                                Text(o['id'] as String,
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: kObjectiveColors[i])),
+                                Text(
+                                    '权重 ${((o['weight'] as double) * 100).toStringAsFixed(0)}%',
+                                    style: const TextStyle(
+                                        fontSize: 9, color: Colors.grey)),
+                              ])),
+                          const SizedBox(width: 10),
+                          Expanded(
+                              child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                Text(o['desc'] as String,
+                                    style: const TextStyle(
+                                        fontSize: 12.5, height: 1.4)),
+                                const SizedBox(height: 2),
+                                Text('${o['req']} · ${o['ch']}',
+                                    style: const TextStyle(
+                                        fontSize: 10, color: Colors.grey)),
+                              ])),
+                        ]));
+              }),
+            ])));
   }
 
   Widget _buildAssessmentStructure(Color primary) {
-    return Card(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [Icon(Icons.assignment, color: primary, size: 22), const SizedBox(width: 8), const Text('二、考核方式与满分分配', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))]),
-      const Divider(height: 20),
-      Row(children: [_wChip('平时成绩', '20%', Colors.blue), const SizedBox(width: 8), _wChip('实验成绩', '30%', Colors.green), const SizedBox(width: 8), _wChip('期末成绩', '50%', Colors.orange)]),
-      const SizedBox(height: 16),
-      Container(decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.grey.withValues(alpha: 0.2))),
-        child: Table(border: TableBorder.symmetric(inside: BorderSide(color: Colors.grey.withValues(alpha: 0.15))),
-          columnWidths: const {0: FlexColumnWidth(2), 1: FlexColumnWidth(1.5), 2: FlexColumnWidth(1.5), 3: FlexColumnWidth(1.5)},
-          children: [
-            _tRow(['课程目标', '平时(20%)', '实验(30%)', '期末(50%)'], h: true, p: primary),
-            _tRow(['目标1', '15分', '15分', '15分']), _tRow(['目标2', '25分', '25分', '25分']),
-            _tRow(['目标3', '30分', '30分', '30分']), _tRow(['目标4', '30分', '30分', '30分']),
-            _tRow(['合计', '100分', '100分', '100分'], h: true, p: primary),
-          ])),
-    ])));
+    final activeObjectives = [
+      for (var i = 0; i < 4; i++)
+        if (_config.weights[i] > 0 || _config.fullMarks[i] > 0) i
+    ];
+    bool uses(String env) =>
+        _envWeightsByObjective.any((w) => (w[env] ?? 0) > 0.0001);
+    String pct(double v) => '${(v * 100).toStringAsFixed(0)}%';
+    final avgP = _config.assessmentWeights['平时'] ?? 0;
+    final avgE = _config.assessmentWeights['实验'] ?? 0;
+    final avgX = _config.assessmentWeights['期末'] ?? 0;
+    return Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+            padding: const EdgeInsets.all(16),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Icon(Icons.assignment, color: primary, size: 22),
+                const SizedBox(width: 8),
+                const Text('二、考核方式与满分分配',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))
+              ]),
+              const Divider(height: 20),
+              Row(children: [
+                if (uses('pingshi')) ...[
+                  _wChip('平时成绩', pct(avgP), Colors.blue),
+                  const SizedBox(width: 8)
+                ],
+                if (uses('experiment')) ...[
+                  _wChip('实验成绩', pct(avgE), Colors.green),
+                  const SizedBox(width: 8)
+                ],
+                if (uses('exam')) _wChip('考核成绩', pct(avgX), Colors.orange),
+              ]),
+              const SizedBox(height: 16),
+              Container(
+                  decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.withValues(alpha: 0.2))),
+                  child: Table(
+                      border: TableBorder.symmetric(
+                          inside:
+                              BorderSide(color: Colors.grey.withValues(alpha: 0.15))),
+                      columnWidths: const {
+                        0: FlexColumnWidth(2),
+                        1: FlexColumnWidth(1.5),
+                        2: FlexColumnWidth(1.5),
+                        3: FlexColumnWidth(1.5)
+                      },
+                      children: [
+                        _tRow([
+                          '课程目标',
+                          if (uses('pingshi')) '平时',
+                          if (uses('experiment')) '实验',
+                          if (uses('exam')) '考核',
+                        ], h: true, p: primary),
+                        for (final i in activeObjectives)
+                          _tRow([
+                            '目标${i + 1}',
+                            if (uses('pingshi')) _ratioOrDash(i, 'pingshi'),
+                            if (uses('experiment'))
+                              _ratioOrDash(i, 'experiment'),
+                            if (uses('exam')) _ratioOrDash(i, 'exam'),
+                          ]),
+                      ])),
+            ])));
   }
 
-  Widget _wChip(String label, String value, Color color) => Expanded(child: Container(
-    padding: const EdgeInsets.symmetric(vertical: 10),
-    decoration: BoxDecoration(color: color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(10), border: Border.all(color: color.withValues(alpha: 0.2))),
-    child: Column(children: [Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)), const SizedBox(height: 2), Text(label, style: TextStyle(fontSize: 11, color: color))]),
-  ));
+  String _ratioOrDash(int index, String env) {
+    if (index < 0 || index >= _envWeightsByObjective.length) return '—';
+    final value = _envWeightsByObjective[index][env] ?? 0;
+    if (value <= 0) return '—';
+    return '${(value * 100).toStringAsFixed(0)}%';
+  }
+
+  Widget _wChip(String label, String value, Color color) => Expanded(
+          child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: color.withValues(alpha: 0.2))),
+        child: Column(children: [
+          Text(value,
+              style: TextStyle(
+                  fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+          const SizedBox(height: 2),
+          Text(label, style: TextStyle(fontSize: 11, color: color))
+        ]),
+      ));
 
   TableRow _tRow(List<String> c, {bool h = false, Color? p}) => TableRow(
-    decoration: h ? BoxDecoration(color: (p ?? Colors.grey).withValues(alpha: 0.06)) : null,
-    children: c.map((t) => Padding(padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-      child: Text(t, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: h ? FontWeight.bold : FontWeight.normal)))).toList(),
-  );
+        decoration: h
+            ? BoxDecoration(color: (p ?? Colors.grey).withValues(alpha: 0.06))
+            : null,
+        children: c
+            .map((t) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                child: Text(t,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: h ? FontWeight.bold : FontWeight.normal))))
+            .toList(),
+      );
 
   Widget _buildFormula(Color primary) {
-    return Card(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [Icon(Icons.functions, color: primary, size: 22), const SizedBox(width: 8), const Text('三、达成度计算公式', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))]),
-      const Divider(height: 20),
-      _fItem('Step 1', '目标i综合得分', '= 平时目标i分×0.20 + 实验目标i分×0.30 + 期末目标i分×0.50'),
-      _fItem('Step 2', '目标i达成度', '= 目标i综合得分 / 目标i满分\n  满分：目标1=15, 目标2=25, 目标3=30, 目标4=30'),
-      _fItem('Step 3', '班级平均达成度', '= Σ(所有学生目标i达成度) / 学生人数'),
-      _fItem('Step 4', '加权总达成度', '= 目标1×0.15 + 目标2×0.25 + 目标3×0.30 + 目标4×0.30'),
-      const SizedBox(height: 8),
-      Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.blue.withValues(alpha: 0.15))),
-        child: Row(children: [const Icon(Icons.info_outline, size: 16, color: Colors.blue), const SizedBox(width: 8),
-          Expanded(child: Text('等级标准：≥85% 优秀 · ≥70% 良好 · ≥60% 中等 · <60% 未达成', style: TextStyle(fontSize: 11, color: Colors.blue[700])))])),
-    ])));
+    return Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+            padding: const EdgeInsets.all(16),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Icon(Icons.functions, color: primary, size: 22),
+                const SizedBox(width: 8),
+                const Text('三、达成度计算公式',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))
+              ]),
+              const Divider(height: 20),
+              _fItem('Step 1', '目标i综合达成度', '= Σ(大纲中实际存在的考核项达成度 × 该考核项比例)'),
+              _fItem('Step 2', '目标i达成度', '= 目标i综合达成度\n  不存在的考核项不显示、不参与计算'),
+              _fItem('Step 3', '班级平均达成度', '= Σ(所有学生目标i达成度) / 学生人数'),
+              _fItem('Step 4', '加权总达成度', '= Σ(目标i达成度 × 大纲目标权重)'),
+              const SizedBox(height: 8),
+              Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue.withValues(alpha: 0.15))),
+                  child: Row(children: [
+                    const Icon(Icons.info_outline,
+                        size: 16, color: Colors.blue),
+                    const SizedBox(width: 8),
+                    Expanded(
+                        child: Text(
+                            '等级标准：≥85% 优秀 · ≥70% 良好 · ≥60% 中等 · <60% 未达成',
+                            style: TextStyle(
+                                fontSize: 11, color: Colors.blue[700])))
+                  ])),
+            ])));
   }
 
-  Widget _fItem(String step, String title, String formula) => Padding(padding: const EdgeInsets.only(bottom: 12), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: Colors.indigo.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-      child: Text(step, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.indigo))),
-    const SizedBox(width: 8),
-    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-      const SizedBox(height: 2),
-      Text(formula, style: TextStyle(fontSize: 11, color: Colors.grey[600], fontFamily: 'monospace')),
-    ])),
-  ]));
+  Widget _fItem(String step, String title, String formula) => Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+                color: Colors.indigo.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6)),
+            child: Text(step,
+                style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.indigo))),
+        const SizedBox(width: 8),
+        Expanded(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title,
+              style:
+                  const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 2),
+          Text(formula,
+              style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey[600],
+                  fontFamily: 'monospace')),
+        ])),
+      ]));
 
   Widget _buildClassOverview(Color primary) {
-    return Card(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [Icon(Icons.bar_chart, color: primary, size: 22), const SizedBox(width: 8), Text('四、班级达成度概览（${_scores.length}人）', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold))]),
-      const Divider(height: 20),
-      ...List.generate(4, (i) {
-        final val = _classAvgAchievements[i];
-        return Padding(padding: const EdgeInsets.only(bottom: 10), child: Row(children: [
-          SizedBox(width: 65, child: Text('目标${i + 1}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: kObjectiveColors[i]))),
-          Text('${(kDefaultWeights[i] * 100).toStringAsFixed(0)}%', style: const TextStyle(fontSize: 10, color: Colors.grey)),
-          const SizedBox(width: 8),
-          Expanded(child: Stack(children: [
-            Container(height: 22, decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4))),
-            FractionallySizedBox(widthFactor: val.clamp(0.0, 1.0), child: Container(height: 22, decoration: BoxDecoration(color: kObjectiveColors[i].withValues(alpha: 0.7), borderRadius: BorderRadius.circular(4)))),
-          ])),
-          const SizedBox(width: 8),
-          SizedBox(width: 50, child: Text('${(val * 100).toStringAsFixed(1)}%', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: kObjectiveColors[i]), textAlign: TextAlign.right)),
-        ]));
-      }),
-      const Divider(),
-      Row(children: [
-        const SizedBox(width: 65, child: Text('总达成度', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
-        const SizedBox(width: 34),
-        Expanded(child: Stack(children: [
-          Container(height: 26, decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(5))),
-          FractionallySizedBox(widthFactor: _weightedAchievement.clamp(0.0, 1.0), child: Container(height: 26, decoration: BoxDecoration(
-            gradient: LinearGradient(colors: [primary.withValues(alpha: 0.8), primary.withValues(alpha: 0.5)]), borderRadius: BorderRadius.circular(5)))),
-        ])),
-        const SizedBox(width: 8),
-        SizedBox(width: 50, child: Text('${(_weightedAchievement * 100).toStringAsFixed(1)}%', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: primary), textAlign: TextAlign.right)),
-      ]),
-      const SizedBox(height: 10),
-      Center(child: Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        decoration: BoxDecoration(color: achievementLevelColor(_weightedAchievement).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)),
-        child: Text('达成等级：${achievementLevel(_weightedAchievement)}', style: TextStyle(fontWeight: FontWeight.bold, color: achievementLevelColor(_weightedAchievement))))),
-    ])));
+    final activeObjectives = _activeObjectiveIndexes;
+    return Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+            padding: const EdgeInsets.all(16),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Icon(Icons.bar_chart, color: primary, size: 22),
+                const SizedBox(width: 8),
+                Text('四、班级达成度概览（${_scores.length}人）',
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold))
+              ]),
+              const Divider(height: 20),
+              ...activeObjectives.map((i) {
+                final val = _classAvgAchievements[i];
+                return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(children: [
+                      SizedBox(
+                          width: 65,
+                          child: Text('目标${i + 1}',
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: kObjectiveColors[i]))),
+                      Text('${(_config.weights[i] * 100).toStringAsFixed(0)}%',
+                          style: const TextStyle(
+                              fontSize: 10, color: Colors.grey)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                          child: Stack(children: [
+                        Container(
+                            height: 22,
+                            decoration: BoxDecoration(
+                                color: Colors.grey.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4))),
+                        FractionallySizedBox(
+                            widthFactor: val.clamp(0.0, 1.0),
+                            child: Container(
+                                height: 22,
+                                decoration: BoxDecoration(
+                                    color: kObjectiveColors[i].withValues(alpha: 0.7),
+                                    borderRadius: BorderRadius.circular(4)))),
+                      ])),
+                      const SizedBox(width: 8),
+                      SizedBox(
+                          width: 50,
+                          child: Text('${(val * 100).toStringAsFixed(1)}%',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: kObjectiveColors[i]),
+                              textAlign: TextAlign.right)),
+                    ]));
+              }),
+              const Divider(),
+              Row(children: [
+                const SizedBox(
+                    width: 65,
+                    child: Text('总达成度',
+                        style: TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.bold))),
+                const SizedBox(width: 34),
+                Expanded(
+                    child: Stack(children: [
+                  Container(
+                      height: 26,
+                      decoration: BoxDecoration(
+                          color: Colors.grey.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(5))),
+                  FractionallySizedBox(
+                      widthFactor: _weightedAchievement.clamp(0.0, 1.0),
+                      child: Container(
+                          height: 26,
+                          decoration: BoxDecoration(
+                              gradient: LinearGradient(colors: [
+                                primary.withValues(alpha: 0.8),
+                                primary.withValues(alpha: 0.5)
+                              ]),
+                              borderRadius: BorderRadius.circular(5)))),
+                ])),
+                const SizedBox(width: 8),
+                SizedBox(
+                    width: 50,
+                    child: Text(
+                        '${(_weightedAchievement * 100).toStringAsFixed(1)}%',
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: primary),
+                        textAlign: TextAlign.right)),
+              ]),
+              const SizedBox(height: 10),
+              Center(
+                  child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 6),
+                      decoration: BoxDecoration(
+                          color: achievementLevelColor(_weightedAchievement)
+                              .withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(16)),
+                      child: Text(
+                          '达成等级：${achievementLevel(_weightedAchievement)}',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: achievementLevelColor(
+                                  _weightedAchievement))))),
+            ])));
   }
 
   Widget _buildStudentTable(Color primary) {
-    return Card(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [Icon(Icons.people, color: primary, size: 22), const SizedBox(width: 8), const Text('五、学生个体达成度', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))]),
-      const Divider(height: 20),
-      Container(padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4), decoration: BoxDecoration(color: primary.withValues(alpha: 0.06), borderRadius: const BorderRadius.vertical(top: Radius.circular(8))),
-        child: const Row(children: [
-          SizedBox(width: 70, child: Text('学号', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
-          SizedBox(width: 50, child: Text('姓名', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
-          Expanded(child: Text('目标1', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
-          Expanded(child: Text('目标2', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
-          Expanded(child: Text('目标3', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
-          Expanded(child: Text('目标4', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
-          SizedBox(width: 45, child: Text('总分', textAlign: TextAlign.right, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
-        ])),
-      ...(_scores.length > 30 ? _scores.sublist(0, 30) : _scores).asMap().entries.map((entry) {
-        final i = entry.key; final s = entry.value;
-        final total = (s['total_score'] as num?)?.toDouble() ?? 0;
-        return Container(padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-          decoration: BoxDecoration(color: i.isEven ? Colors.transparent : Colors.grey.withValues(alpha: 0.03), border: Border(bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.08)))),
-          child: Row(children: [
-            SizedBox(width: 70, child: Text(s['student_id']?.toString() ?? '', style: const TextStyle(fontSize: 10, fontFamily: 'monospace'))),
-            SizedBox(width: 50, child: Text(s['student_name']?.toString() ?? '', style: const TextStyle(fontSize: 10), overflow: TextOverflow.ellipsis)),
-            ...List.generate(4, (j) {
-              final ach = (s['obj${j + 1}_achievement'] as num?)?.toDouble() ?? 0;
-              return Expanded(child: Text((ach * 100).toStringAsFixed(1), textAlign: TextAlign.center, style: TextStyle(fontSize: 10, color: achievementLevelColor(ach))));
-            }),
-            SizedBox(width: 45, child: Text(total.toStringAsFixed(1), textAlign: TextAlign.right, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500))),
-          ]));
-      }),
-      if (_scores.length > 30) Padding(padding: const EdgeInsets.only(top: 8), child: Text('... 仅显示前30条，共${_scores.length}条', style: const TextStyle(fontSize: 11, color: Colors.grey))),
-    ])));
+    final activeObjectives = _activeObjectiveIndexes;
+    return Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+            padding: const EdgeInsets.all(16),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Icon(Icons.people, color: primary, size: 22),
+                const SizedBox(width: 8),
+                const Text('五、学生个体达成度',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))
+              ]),
+              const Divider(height: 20),
+              Container(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                  decoration: BoxDecoration(
+                      color: primary.withValues(alpha: 0.06),
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(8))),
+                  child: Row(children: [
+                    const SizedBox(
+                        width: 70,
+                        child: Text('学号',
+                            style: TextStyle(
+                                fontSize: 11, fontWeight: FontWeight.bold))),
+                    const SizedBox(
+                        width: 50,
+                        child: Text('姓名',
+                            style: TextStyle(
+                                fontSize: 11, fontWeight: FontWeight.bold))),
+                    for (final obj in activeObjectives)
+                      Expanded(
+                        child: Text('目标${obj + 1}',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                                fontSize: 11, fontWeight: FontWeight.bold)),
+                      ),
+                    const SizedBox(
+                        width: 45,
+                        child: Text('总分',
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                                fontSize: 11, fontWeight: FontWeight.bold))),
+                  ])),
+              ...(_scores.length > 30 ? _scores.sublist(0, 30) : _scores)
+                  .asMap()
+                  .entries
+                  .map((entry) {
+                final i = entry.key;
+                final s = entry.value;
+                final total = (s['total_score'] as num?)?.toDouble() ?? 0;
+                return Container(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                    decoration: BoxDecoration(
+                        color: i.isEven
+                            ? Colors.transparent
+                            : Colors.grey.withValues(alpha: 0.03),
+                        border: Border(
+                            bottom: BorderSide(
+                                color: Colors.grey.withValues(alpha: 0.08)))),
+                    child: Row(children: [
+                      SizedBox(
+                          width: 70,
+                          child: Text(s['student_id']?.toString() ?? '',
+                              style: const TextStyle(
+                                  fontSize: 10, fontFamily: 'monospace'))),
+                      SizedBox(
+                          width: 50,
+                          child: Text(s['student_name']?.toString() ?? '',
+                              style: const TextStyle(fontSize: 10),
+                              overflow: TextOverflow.ellipsis)),
+                      for (final obj in activeObjectives) ...[
+                        Builder(builder: (_) {
+                          final ach = (s['obj${obj + 1}_achievement'] as num?)
+                                  ?.toDouble() ??
+                              0;
+                          return Expanded(
+                              child: Text((ach * 100).toStringAsFixed(1),
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                      fontSize: 10,
+                                      color: achievementLevelColor(ach))));
+                        }),
+                      ],
+                      SizedBox(
+                          width: 45,
+                          child: Text(total.toStringAsFixed(1),
+                              textAlign: TextAlign.right,
+                              style: const TextStyle(
+                                  fontSize: 10, fontWeight: FontWeight.w500))),
+                    ]));
+              }),
+              if (_scores.length > 30)
+                Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text('... 仅显示前30条，共${_scores.length}条',
+                        style:
+                            const TextStyle(fontSize: 11, color: Colors.grey))),
+            ])));
   }
 
   Widget _buildObjectiveCharts(Color primary) {
+    final activeObjectives = _activeObjectiveIndexes;
+    final barLabels = [
+      for (final obj in activeObjectives) '目标${obj + 1}',
+      '加权总评',
+    ];
     return Column(children: [
-      // 柱状图
       Card(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
               Icon(Icons.bar_chart, color: primary, size: 22),
               const SizedBox(width: 8),
-              const Text('六、课程目标达成度柱状图', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const Text('六、课程目标达成度柱状图',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ]),
             const Divider(height: 20),
             SizedBox(
@@ -469,53 +841,78 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                       getTooltipItem: (group, groupIndex, rod, rodIndex) {
                         return BarTooltipItem(
                           '${rod.toY.toStringAsFixed(3)}\n(${(rod.toY * 100).toStringAsFixed(1)}%)',
-                          TextStyle(color: rod.color, fontWeight: FontWeight.bold, fontSize: 12),
+                          TextStyle(
+                              color: rod.color,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12),
                         );
                       },
                     ),
                   ),
                   titlesData: FlTitlesData(
                     show: true,
-                    bottomTitles: AxisTitles(sideTitles: SideTitles(
+                    bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (value, meta) {
-                        final labels = ['目标1', '目标2', '目标3', '目标4', '加权总评'];
+                        final index = value.toInt();
                         return Padding(
                           padding: const EdgeInsets.only(top: 8),
-                          child: Text(labels[value.toInt()], style: const TextStyle(fontSize: 11)),
+                          child: Text(
+                            index >= 0 && index < barLabels.length
+                                ? barLabels[index]
+                                : '',
+                            style: const TextStyle(fontSize: 11),
+                          ),
                         );
                       },
                     )),
-                    leftTitles: AxisTitles(sideTitles: SideTitles(
+                    leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 40,
                       getTitlesWidget: (value, meta) => Text(
                         '${(value * 100).toInt()}%',
-                        style: const TextStyle(fontSize: 10, color: Colors.grey),
+                        style:
+                            const TextStyle(fontSize: 10, color: Colors.grey),
                       ),
                     )),
-                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false)),
                   ),
                   borderData: FlBorderData(show: false),
                   barGroups: [
-                    for (int i = 0; i < 4; i++)
-                      BarChartGroupData(x: i, showingTooltipIndicators: const [0], barRods: [
-                        BarChartRodData(
-                          toY: _classAvgAchievements[i],
-                          color: kObjectiveColors[i],
-                          width: 32,
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-                        ),
-                      ]),
-                    BarChartGroupData(x: 4, showingTooltipIndicators: const [0], barRods: [
-                      BarChartRodData(
-                        toY: _weightedAchievement,
-                        color: Colors.purple,
-                        width: 32,
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-                      ),
-                    ]),
+                    for (final entry in activeObjectives.asMap().entries)
+                      BarChartGroupData(
+                          x: entry.key,
+                          showingTooltipIndicators: const [
+                            0
+                          ],
+                          barRods: [
+                            BarChartRodData(
+                              toY: _classAvgAchievements[entry.value],
+                              color: kObjectiveColors[entry.value],
+                              width: 32,
+                              borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(4)),
+                            ),
+                          ]),
+                    BarChartGroupData(
+                        x: activeObjectives.length,
+                        showingTooltipIndicators: const [
+                          0
+                        ],
+                        barRods: [
+                          BarChartRodData(
+                            toY: _weightedAchievement,
+                            color: Colors.purple,
+                            width: 32,
+                            borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(4)),
+                          ),
+                        ]),
                   ],
                   gridData: FlGridData(
                     show: true,
@@ -529,94 +926,121 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
         ),
       ),
       const SizedBox(height: 16),
-      // 雷达图
-      Card(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Icon(Icons.radar, color: primary, size: 22),
-              const SizedBox(width: 8),
-              const Text('课程目标达成度雷达图', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            ]),
-            const Divider(height: 20),
-            SizedBox(height: 280, child: RadarChart(RadarChartData(
-              radarTouchData: RadarTouchData(
-                touchCallback: (event, response) {},
-              ),
-              dataSets: [
-                // 透明基准集：四个顶点恒为 1.0，强制雷达半径固定到 0~1，
-                // 否则 fl_chart 会把最大数据点拉到最外环（自动缩放），
-                // 导致与固定 0~1 的柱状图形状不一致。
-                RadarDataSet(
-                  fillColor: Colors.transparent,
-                  borderColor: Colors.transparent,
-                  entryRadius: 0,
-                  dataEntries: [for (int i = 0; i < 4; i++) const RadarEntry(value: 1.0)],
-                ),
-                RadarDataSet(
-                  fillColor: primary.withValues(alpha: 0.25),
-                  borderColor: primary,
-                  borderWidth: 2,
-                  entryRadius: 3,
-                  dataEntries: [
-                    for (int i = 0; i < 4; i++)
-                      RadarEntry(value: _classAvgAchievements[i]),
-                  ],
-                ),
-              ],
-              radarBackgroundColor: Colors.transparent,
-              borderData: FlBorderData(show: false),
-              radarBorderData: const BorderSide(color: Colors.grey, width: 1),
-              titlePositionPercentageOffset: 0.15,
-              titleTextStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-              getTitle: (index, angle) {
-                final titles = ['目标1', '目标2', '目标3', '目标4'];
-                final v = index < 4 ? _classAvgAchievements[index] : 0;
-                return RadarChartTitle(text: '${titles[index]}\n${(v * 100).toStringAsFixed(1)}%');
-              },
-              tickCount: 5,
-              ticksTextStyle: const TextStyle(fontSize: 9, color: Colors.grey),
-              tickBorderData: const BorderSide(color: Colors.grey, width: 0.5),
-              gridBorderData: const BorderSide(color: Colors.grey, width: 0.3),
-            ))),
-            const SizedBox(height: 8),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-              for (int i = 0; i < 4; i++)
-                Text('目标${i + 1}: ${(_classAvgAchievements[i] * 100).toStringAsFixed(1)}%',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: kObjectiveColors[i])),
-            ]),
-          ]),
-        ),
-      ),
-      const SizedBox(height: 16),
-      // 分布统计（保留原分布条）
-      Card(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('各目标达成度分布', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const Divider(height: 20),
-            ...List.generate(4, (objIdx) => _buildSingleObjChart(objIdx)),
-          ]),
-        ),
-      ),
-      const SizedBox(height: 16),
-      // 四个课程目标：每个单独绘制学生个体达成度散点图（个体/平均/期望0.60）
-      for (int obj = 0; obj < 4; obj++) ...[
+      if (activeObjectives.length >= 3) ...[
         Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Icon(Icons.radar, color: primary, size: 22),
+                const SizedBox(width: 8),
+                const Text('课程目标达成度雷达图',
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ]),
+              const Divider(height: 20),
+              SizedBox(
+                  height: 280,
+                  child: RadarChart(RadarChartData(
+                    radarTouchData: RadarTouchData(
+                      touchCallback: (event, response) {},
+                    ),
+                    dataSets: [
+                      RadarDataSet(
+                        fillColor: Colors.transparent,
+                        borderColor: Colors.transparent,
+                        entryRadius: 0,
+                        dataEntries: [
+                          for (final _ in activeObjectives)
+                            const RadarEntry(value: 1.0)
+                        ],
+                      ),
+                      RadarDataSet(
+                        fillColor: primary.withValues(alpha: 0.25),
+                        borderColor: primary,
+                        borderWidth: 2,
+                        entryRadius: 3,
+                        dataEntries: [
+                          for (final obj in activeObjectives)
+                            RadarEntry(value: _classAvgAchievements[obj]),
+                        ],
+                      ),
+                    ],
+                    radarBackgroundColor: Colors.transparent,
+                    borderData: FlBorderData(show: false),
+                    radarBorderData:
+                        const BorderSide(color: Colors.grey, width: 1),
+                    titlePositionPercentageOffset: 0.15,
+                    titleTextStyle: const TextStyle(
+                        fontSize: 11, fontWeight: FontWeight.bold),
+                    getTitle: (index, angle) {
+                      if (index < 0 || index >= activeObjectives.length) {
+                        return const RadarChartTitle(text: '');
+                      }
+                      final obj = activeObjectives[index];
+                      final v = _classAvgAchievements[obj];
+                      return RadarChartTitle(
+                          text:
+                              '目标${obj + 1}\n${(v * 100).toStringAsFixed(1)}%');
+                    },
+                    tickCount: 5,
+                    ticksTextStyle:
+                        const TextStyle(fontSize: 9, color: Colors.grey),
+                    tickBorderData:
+                        const BorderSide(color: Colors.grey, width: 0.5),
+                    gridBorderData:
+                        const BorderSide(color: Colors.grey, width: 0.3),
+                  ))),
+              const SizedBox(height: 8),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+                for (final obj in activeObjectives)
+                  Text(
+                      '目标${obj + 1}: ${(_classAvgAchievements[obj] * 100).toStringAsFixed(1)}%',
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: kObjectiveColors[obj])),
+              ]),
+            ]),
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+      Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('各目标达成度分布',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Divider(height: 20),
+            for (final objIdx in activeObjectives) _buildSingleObjChart(objIdx),
+          ]),
+        ),
+      ),
+      const SizedBox(height: 16),
+      for (final obj in activeObjectives) ...[
+        Card(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('学生个体课程目标${obj + 1}达成评价结果',
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                  style: const TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.bold)),
               const SizedBox(height: 6),
               _objScatterLegend(obj),
               const Divider(height: 20),
-              SizedBox(height: 200, child: _chartWithSaveBtn('scatter$obj', '目标${obj + 1}散点图', ScatterChart(_buildObjScatterData(obj)))),
+              SizedBox(
+                  height: 200,
+                  child: _chartWithSaveBtn('scatter$obj', '目标${obj + 1}散点图',
+                      ScatterChart(_buildObjScatterData(obj)))),
             ]),
           ),
         ),
@@ -674,12 +1098,15 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
         },
       ),
       titlesData: const FlTitlesData(
-        leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 32, interval: 0.2)),
+        leftTitles: AxisTitles(
+            sideTitles:
+                SideTitles(showTitles: true, reservedSize: 32, interval: 0.2)),
         bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
         topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
         rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
       ),
-      borderData: FlBorderData(show: true, border: Border.all(color: Colors.grey.withValues(alpha: 0.3))),
+      borderData: FlBorderData(
+          show: true, border: Border.all(color: Colors.grey.withValues(alpha: 0.3))),
     );
   }
 
@@ -693,10 +1120,12 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
             Container(
               width: line ? 16 : 10,
               height: line ? 2 : 10,
-              decoration: BoxDecoration(color: c, shape: line ? BoxShape.rectangle : BoxShape.circle),
+              decoration: BoxDecoration(
+                  color: c, shape: line ? BoxShape.rectangle : BoxShape.circle),
             ),
             const SizedBox(width: 4),
-            Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+            Text(label,
+                style: const TextStyle(fontSize: 11, color: Colors.grey)),
           ],
         );
     return Wrap(spacing: 16, runSpacing: 4, children: [
@@ -709,41 +1138,75 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
   Widget _buildSingleObjChart(int objIdx) {
     final color = kObjectiveColors[objIdx];
     final key = 'obj${objIdx + 1}_achievement';
-    final fullMark = AchievementConfig.defaults.fullMarks[objIdx];
+    final fullMark = _config.fullMarks[objIdx];
     int cLow = 0, cMid = 0, cGood = 0, cExcel = 0;
     for (final s in _scores) {
       final v = (s[key] as num?)?.toDouble() ?? 0;
-      if (v >= 0.85) cExcel++; else if (v >= 0.70) cGood++; else if (v >= 0.60) cMid++; else cLow++;
+      if (v >= 0.85)
+        cExcel++;
+      else if (v >= 0.70)
+        cGood++;
+      else if (v >= 0.60)
+        cMid++;
+      else
+        cLow++;
     }
     final total = _scores.length;
-    return Padding(padding: const EdgeInsets.only(bottom: 16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [
-        Container(width: 10, height: 10, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
-        const SizedBox(width: 6),
-        Text('课程目标${objIdx + 1}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: color)),
-        const SizedBox(width: 8),
-        Text('满分${fullMark.toInt()}分 · 权重${(kDefaultWeights[objIdx] * 100).toStringAsFixed(0)}%', style: const TextStyle(fontSize: 10, color: Colors.grey)),
-        const Spacer(),
-        Text('均值 ${(_classAvgAchievements[objIdx] * 100).toStringAsFixed(1)}%', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color)),
-      ]),
-      const SizedBox(height: 8),
-      Row(children: [
-        _distBar('未达成', cLow, total, Colors.red), const SizedBox(width: 4),
-        _distBar('中等', cMid, total, Colors.orange), const SizedBox(width: 4),
-        _distBar('良好', cGood, total, Colors.blue), const SizedBox(width: 4),
-        _distBar('优秀', cExcel, total, Colors.green),
-      ]),
-    ]));
+    return Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                    color: color, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(width: 6),
+            Text('课程目标${objIdx + 1}',
+                style: TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w600, color: color)),
+            const SizedBox(width: 8),
+            Text(
+                '满分${fullMark.toInt()}分 · 权重${(_config.weights[objIdx] * 100).toStringAsFixed(0)}%',
+                style: const TextStyle(fontSize: 10, color: Colors.grey)),
+            const Spacer(),
+            Text(
+                '均值 ${(_classAvgAchievements[objIdx] * 100).toStringAsFixed(1)}%',
+                style: TextStyle(
+                    fontSize: 11, fontWeight: FontWeight.bold, color: color)),
+          ]),
+          const SizedBox(height: 8),
+          Row(children: [
+            _distBar('未达成', cLow, total, Colors.red),
+            const SizedBox(width: 4),
+            _distBar('中等', cMid, total, Colors.orange),
+            const SizedBox(width: 4),
+            _distBar('良好', cGood, total, Colors.blue),
+            const SizedBox(width: 4),
+            _distBar('优秀', cExcel, total, Colors.green),
+          ]),
+        ]));
   }
 
   Widget _distBar(String label, int count, int total, Color color) {
     final pct = total > 0 ? count / total : 0.0;
-    return Expanded(flex: max(1, (pct * 100).round()), child: Column(children: [
-      Container(height: 20, decoration: BoxDecoration(color: color.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(3)),
-        child: Center(child: Text(count > 0 ? '$count' : '', style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold)))),
-      const SizedBox(height: 2),
-      Text(label, style: TextStyle(fontSize: 8, color: color)),
-    ]));
+    return Expanded(
+        flex: max(1, (pct * 100).round()),
+        child: Column(children: [
+          Container(
+              height: 20,
+              decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(3)),
+              child: Center(
+                  child: Text(count > 0 ? '$count' : '',
+                      style: const TextStyle(
+                          fontSize: 9,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold)))),
+          const SizedBox(height: 2),
+          Text(label, style: TextStyle(fontSize: 8, color: color)),
+        ]));
   }
 
   /// 七、问卷满意度调查
@@ -752,9 +1215,8 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
     final totalResponses = _surveySummary?['totalResponses'] as int? ?? 0;
     final overallSat =
         (_surveySummary?['overallSatisfaction'] as double?) ?? 0.0;
-    final questionStats = (_surveySummary?['questionStats']
-            as List<Map<String, dynamic>>?) ??
-        [];
+    final questionStats =
+        (_surveySummary?['questionStats'] as List<Map<String, dynamic>>?) ?? [];
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -768,8 +1230,8 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
               const SizedBox(width: 8),
               const Expanded(
                 child: Text('七、课程满意度调查',
-                    style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold)),
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
               if (hasSurvey)
                 Container(
@@ -780,8 +1242,8 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text('$totalResponses份回收',
-                      style: const TextStyle(
-                          fontSize: 10, color: Colors.green)),
+                      style:
+                          const TextStyle(fontSize: 10, color: Colors.green)),
                 ),
             ]),
             const Divider(height: 20),
@@ -791,17 +1253,16 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                 decoration: BoxDecoration(
                   color: Colors.orange.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                      color: Colors.orange.withValues(alpha: 0.2)),
+                  border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
                 ),
                 child: const Row(children: [
                   Icon(Icons.info_outline, color: Colors.orange, size: 18),
                   SizedBox(width: 8),
                   Expanded(
-                    child: Text('暂无问卷调查数据。可点击下方按钮一键创建并发布课程满意度问卷并通知学生，'
+                    child: Text(
+                        '暂无问卷调查数据。可点击下方按钮一键创建并发布课程满意度问卷并通知学生，'
                         '或在「管理 > 问卷管理」中手动管理。',
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.orange)),
+                        style: TextStyle(fontSize: 12, color: Colors.orange)),
                   ),
                 ]),
               ),
@@ -810,7 +1271,11 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                 child: FilledButton.icon(
                   onPressed: _creatingSurvey ? null : _createAndNotifySurvey,
                   icon: _creatingSurvey
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
                       : const Icon(Icons.campaign, size: 18),
                   label: Text(_creatingSurvey ? '创建中...' : '一键创建并通知问卷'),
                 ),
@@ -818,17 +1283,26 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
             ] else ...[
               // 已有问卷：显示数据 + 可再发通知提醒学生填写
               Row(children: [
-                Expanded(child: Text('问卷调查数据', style: TextStyle(fontSize: 12, color: Colors.grey.shade600))),
+                Expanded(
+                    child: Text('问卷调查数据',
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey.shade600))),
                 TextButton.icon(
                   onPressed: () async {
                     try {
                       await NotificationDao().createNotification(
-                        title: '课程满意度调查提醒',
-                        content: '《$_currentCourseName》课程满意度调查正在进行中，请尚未填写的同学尽快完成。',
-                        creatorId: AuthService().getCurrentUserId(),
-                        targetType: 'all', type: 'survey', relatedEntityType: 'survey');
-                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('已通知全体学生填写问卷'), backgroundColor: Colors.green));
+                          title: '课程满意度调查提醒',
+                          content:
+                              '《$_currentCourseName》课程满意度调查正在进行中，请尚未填写的同学尽快完成。',
+                          creatorId: AuthService().getCurrentUserId(),
+                          targetType: 'all',
+                          type: 'survey',
+                          relatedEntityType: 'survey');
+                      if (mounted)
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('已通知全体学生填写问卷'),
+                                backgroundColor: Colors.green));
                     } catch (e, st) {
                       swallowDebug(e, tag: 'CalcTab.notifySurvey', stack: st);
                     }
@@ -844,8 +1318,8 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: achievementLevelColor(overallSat)
-                          .withValues(alpha: 0.08),
+                      color:
+                          achievementLevelColor(overallSat).withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Column(children: [
@@ -861,8 +1335,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                       Text('综合满意度',
                           style: TextStyle(
                               fontSize: 11,
-                              color:
-                                  achievementLevelColor(overallSat))),
+                              color: achievementLevelColor(overallSat))),
                     ]),
                   ),
                 ),
@@ -882,8 +1355,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                               color: primary)),
                       const SizedBox(height: 2),
                       Text('有效回收',
-                          style: TextStyle(
-                              fontSize: 11, color: primary)),
+                          style: TextStyle(fontSize: 11, color: primary)),
                     ]),
                   ),
                 ),
@@ -894,11 +1366,9 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                 final type = qs['type'] as String;
                 final question = qs['question'] as String? ?? '';
                 if (type == 'single_choice') {
-                  final counts =
-                      qs['counts'] as Map<String, int>? ?? {};
+                  final counts = qs['counts'] as Map<String, int>? ?? {};
                   final total = (qs['total'] as int?) ?? 1;
-                  return _buildSurveyQuestion(
-                      question, counts, total);
+                  return _buildSurveyQuestion(question, counts, total);
                 } else if (type == 'rating') {
                   final avg = (qs['average'] as double?) ?? 0;
                   return Padding(
@@ -908,11 +1378,10 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                         child: Text(question,
                             style: const TextStyle(fontSize: 12)),
                       ),
-                      Row(children: List.generate(5, (i) {
+                      Row(
+                          children: List.generate(5, (i) {
                         return Icon(
-                          i < avg.round()
-                              ? Icons.star
-                              : Icons.star_border,
+                          i < avg.round() ? Icons.star : Icons.star_border,
                           size: 14,
                           color: Colors.amber,
                         );
@@ -920,13 +1389,11 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                       const SizedBox(width: 4),
                       Text('${avg.toStringAsFixed(1)}/5.0',
                           style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold)),
+                              fontSize: 11, fontWeight: FontWeight.bold)),
                     ]),
                   );
                 } else if (type == 'text') {
-                  final answers =
-                      qs['answers'] as List<String>? ?? [];
+                  final answers = qs['answers'] as List<String>? ?? [];
                   if (answers.isEmpty) return const SizedBox.shrink();
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),
@@ -935,16 +1402,14 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                       children: [
                         Text(question,
                             style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500)),
+                                fontSize: 12, fontWeight: FontWeight.w500)),
                         const SizedBox(height: 4),
                         ...answers.take(3).map((a) => Padding(
                               padding:
                                   const EdgeInsets.only(left: 8, bottom: 2),
                               child: Text('• $a',
                                   style: const TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey)),
+                                      fontSize: 11, color: Colors.grey)),
                             )),
                         if (answers.length > 3)
                           Text('  ... 共${answers.length}条',
@@ -971,19 +1436,18 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(question,
-              style: const TextStyle(
-                  fontSize: 12, fontWeight: FontWeight.w500)),
+              style:
+                  const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
           const SizedBox(height: 4),
           ...counts.entries.map((entry) {
-            final pct =
-                total > 0 ? entry.value / total : 0.0;
+            final pct = total > 0 ? entry.value / total : 0.0;
             return Padding(
               padding: const EdgeInsets.only(bottom: 3),
               child: Row(children: [
                 SizedBox(
                     width: 65,
-                    child: Text(entry.key,
-                        style: const TextStyle(fontSize: 10))),
+                    child:
+                        Text(entry.key, style: const TextStyle(fontSize: 10))),
                 Expanded(
                   child: Stack(children: [
                     Container(
@@ -1031,8 +1495,7 @@ class ContinuousImprovementTab extends StatefulWidget {
       _ContinuousImprovementTabState();
 }
 
-class _ContinuousImprovementTabState
-    extends State<ContinuousImprovementTab> {
+class _ContinuousImprovementTabState extends State<ContinuousImprovementTab> {
   List<Map<String, dynamic>> _batches = [];
   int? _selectedBatchId;
   bool _loading = true;
@@ -1059,7 +1522,8 @@ class _ContinuousImprovementTabState
         if (json == null || json.isEmpty) continue;
         double? weighted;
         try {
-          weighted = (jsonDecode(json)['weighted_achievement'] as num?)?.toDouble();
+          weighted =
+              (jsonDecode(json)['weighted_achievement'] as num?)?.toDouble();
         } catch (e, st) {
           swallowDebug(e, tag: 'CalcTab.parseCompare', stack: st);
         }
@@ -1102,8 +1566,7 @@ class _ContinuousImprovementTabState
           .generateImprovementSuggestions(_selectedBatchId!);
       Map<String, dynamic>? surveyData;
       try {
-        surveyData =
-            await widget.achievementDao.getSurveySatisfactionSummary();
+        surveyData = await widget.achievementDao.getSurveySatisfactionSummary();
       } catch (e, st) {
         swallowDebug(e, tag: 'CalcTab.surveySatisfaction2', stack: st);
       }
@@ -1119,9 +1582,7 @@ class _ContinuousImprovementTabState
       if (mounted) {
         setState(() => _analyzing = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('分析失败：$e'),
-              backgroundColor: Colors.red),
+          SnackBar(content: Text('分析失败：$e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -1168,18 +1629,37 @@ class _ContinuousImprovementTabState
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Row(children: [
-                SizedBox(width: 110, child: Text(label, style: const TextStyle(fontSize: 10), overflow: TextOverflow.ellipsis)),
+                SizedBox(
+                    width: 110,
+                    child: Text(label,
+                        style: const TextStyle(fontSize: 10),
+                        overflow: TextOverflow.ellipsis)),
                 Expanded(
                   child: Stack(children: [
-                    Container(height: 16, decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(3))),
+                    Container(
+                        height: 16,
+                        decoration: BoxDecoration(
+                            color: Colors.grey.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(3))),
                     FractionallySizedBox(
                       widthFactor: (v / maxV).clamp(0.0, 1.0),
-                      child: Container(height: 16, decoration: BoxDecoration(color: achievementLevelColor(v), borderRadius: BorderRadius.circular(3))),
+                      child: Container(
+                          height: 16,
+                          decoration: BoxDecoration(
+                              color: achievementLevelColor(v),
+                              borderRadius: BorderRadius.circular(3))),
                     ),
                   ]),
                 ),
                 const SizedBox(width: 8),
-                SizedBox(width: 44, child: Text(v.toStringAsFixed(3), style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: achievementLevelColor(v)), textAlign: TextAlign.right)),
+                SizedBox(
+                    width: 44,
+                    child: Text(v.toStringAsFixed(3),
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: achievementLevelColor(v)),
+                        textAlign: TextAlign.right)),
               ]),
             );
           }),
@@ -1208,8 +1688,7 @@ class _ContinuousImprovementTabState
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              border: Border.all(
-                  color: primary.withValues(alpha: 0.3)),
+              border: Border.all(color: primary.withValues(alpha: 0.3)),
               borderRadius: BorderRadius.circular(12),
             ),
             child: DropdownButtonHideUnderline(
@@ -1273,11 +1752,10 @@ class _ContinuousImprovementTabState
             const SizedBox(height: 16),
 
             // 二、各目标达成情况与改进建议
-            ..._suggestions.where((s) => s['objectiveIndex'] != -1).map(
-                (s) => Padding(
+            ..._suggestions.where((s) => s['objectiveIndex'] != -1).map((s) =>
+                Padding(
                     padding: const EdgeInsets.only(bottom: 16),
-                    child:
-                        _buildObjectiveImprovementCard(s, primary))),
+                    child: _buildObjectiveImprovementCard(s, primary))),
 
             // 三、整体教学改进建议
             ..._suggestions
@@ -1295,12 +1773,10 @@ class _ContinuousImprovementTabState
               child: Center(
                 child: Column(children: [
                   Icon(Icons.build_outlined,
-                      size: 80,
-                      color: Colors.grey.withValues(alpha: 0.3)),
+                      size: 80, color: Colors.grey.withValues(alpha: 0.3)),
                   const SizedBox(height: 16),
                   const Text('选择批次后点击"分析达成度"查看改进建议',
-                      style:
-                          TextStyle(color: Colors.grey, fontSize: 14)),
+                      style: TextStyle(color: Colors.grey, fontSize: 14)),
                 ]),
               ),
             ),
@@ -1311,8 +1787,7 @@ class _ContinuousImprovementTabState
 
   Widget _buildPreviousImprovementCard(Color primary) {
     return Card(
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -1323,31 +1798,19 @@ class _ContinuousImprovementTabState
               const SizedBox(width: 8),
               const Expanded(
                 child: Text('一、上轮教学改进措施执行情况',
-                    style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold)),
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ]),
             const Divider(height: 20),
-            _previousItem(
-                '1',
-                '加大与课程目标相关的分析应用问题的题目训练',
-                '已执行。平时作业中增设了技术选型分析题，学生对技术体系理解有明显提升。',
-                Colors.green),
-            _previousItem(
-                '2',
-                '增加章节结束后知识图谱创建训练',
-                '已执行。在每章布置知识图谱绘制作业，帮助学生梳理知识结构。',
-                Colors.green),
-            _previousItem(
-                '3',
-                '优化期末项目考核的场景设计',
-                '已执行。降低跨设备适配模块分值占比，增加AI工具辅助开发评分维度。',
-                Colors.green),
-            _previousItem(
-                '4',
-                '对过程性考核中达标偏低的同学制定帮扶计划',
-                '部分执行。已组织3次技术专题工作坊，但个别化辅导仍需加强。',
-                Colors.orange),
+            _previousItem('1', '加大与课程目标相关的分析应用问题的题目训练',
+                '已执行。平时作业中增设了技术选型分析题，学生对技术体系理解有明显提升。', Colors.green),
+            _previousItem('2', '增加章节结束后知识图谱创建训练',
+                '已执行。在每章布置知识图谱绘制作业，帮助学生梳理知识结构。', Colors.green),
+            _previousItem('3', '优化期末项目考核的场景设计',
+                '已执行。降低跨设备适配模块分值占比，增加AI工具辅助开发评分维度。', Colors.green),
+            _previousItem('4', '对过程性考核中达标偏低的同学制定帮扶计划',
+                '部分执行。已组织3次技术专题工作坊，但个别化辅导仍需加强。', Colors.orange),
           ],
         ),
       ),
@@ -1386,8 +1849,7 @@ class _ContinuousImprovementTabState
                         fontSize: 12, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 2),
                 Text(status,
-                    style: TextStyle(
-                        fontSize: 11, color: statusColor)),
+                    style: TextStyle(fontSize: 11, color: statusColor)),
               ],
             ),
           ),
@@ -1405,15 +1867,12 @@ class _ContinuousImprovementTabState
     final lowCount = suggestion['lowStudentCount'] as int? ?? 0;
     final totalStudents = suggestion['totalStudents'] as int? ?? 0;
     final chapters = suggestion['chapters'] as String? ?? '';
-    final topics =
-        (suggestion['topics'] as List<String>?) ?? [];
-    final actions =
-        (suggestion['actions'] as List<String>?) ?? [];
+    final topics = (suggestion['topics'] as List<String>?) ?? [];
+    final actions = (suggestion['actions'] as List<String>?) ?? [];
     final color = kObjectiveColors[objIdx.clamp(0, 3)];
 
     return Card(
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -1422,8 +1881,7 @@ class _ContinuousImprovementTabState
             // 目标名称 + 达成度
             Row(children: [
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -1442,11 +1900,9 @@ class _ContinuousImprovementTabState
                       color: achievementLevelColor(ach))),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: achievementLevelColor(ach)
-                      .withValues(alpha: 0.1),
+                  color: achievementLevelColor(ach).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(level,
@@ -1470,16 +1926,14 @@ class _ContinuousImprovementTabState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('关联内容: $chapters',
-                      style: const TextStyle(
-                          fontSize: 11, color: Colors.grey)),
+                      style: const TextStyle(fontSize: 11, color: Colors.grey)),
                   Text('核心知识点: ${topics.join("、")}',
-                      style: const TextStyle(
-                          fontSize: 11, color: Colors.grey)),
+                      style: const TextStyle(fontSize: 11, color: Colors.grey)),
                   if (lowCount > 0 && totalStudents > 0)
                     Text(
                         '未达标学生: $lowCount人（占$totalStudents人的${(lowCount / totalStudents * 100).toStringAsFixed(0)}%）',
-                        style: const TextStyle(
-                            fontSize: 11, color: Colors.red)),
+                        style:
+                            const TextStyle(fontSize: 11, color: Colors.red)),
                 ],
               ),
             ),
@@ -1487,8 +1941,7 @@ class _ContinuousImprovementTabState
 
             // 改进建议
             const Text('改进措施：',
-                style: TextStyle(
-                    fontSize: 12, fontWeight: FontWeight.w600)),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
             const SizedBox(height: 6),
             ...actions.asMap().entries.map((entry) {
               return Padding(
@@ -1514,8 +1967,7 @@ class _ContinuousImprovementTabState
                     ),
                     Expanded(
                       child: Text(entry.value,
-                          style: const TextStyle(
-                              fontSize: 12, height: 1.4)),
+                          style: const TextStyle(fontSize: 12, height: 1.4)),
                     ),
                   ],
                 ),
@@ -1530,16 +1982,12 @@ class _ContinuousImprovementTabState
   Widget _buildOverallImprovementCard(
       Map<String, dynamic> suggestion, Color primary) {
     final ach = (suggestion['achievement'] as double?) ?? 0;
-    final actions =
-        (suggestion['actions'] as List<String>?) ?? [];
-    final graphNodes =
-        suggestion['graphNodeCount'] as int? ?? 0;
-    final quizCount =
-        suggestion['quizQuestionCount'] as int? ?? 0;
+    final actions = (suggestion['actions'] as List<String>?) ?? [];
+    final graphNodes = suggestion['graphNodeCount'] as int? ?? 0;
+    final quizCount = suggestion['quizQuestionCount'] as int? ?? 0;
 
     return Card(
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1547,21 +1995,19 @@ class _ContinuousImprovementTabState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
-              Icon(Icons.lightbulb_outline,
-                  color: primary, size: 22),
+              Icon(Icons.lightbulb_outline, color: primary, size: 22),
               const SizedBox(width: 8),
               const Expanded(
                 child: Text('三、整体教学改进建议',
-                    style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold)),
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ]),
             const Divider(height: 20),
 
             // 现状概览
             Row(children: [
-              _statChip('加权达成度',
-                  '${(ach * 100).toStringAsFixed(1)}%', primary),
+              _statChip('加权达成度', '${(ach * 100).toStringAsFixed(1)}%', primary),
               const SizedBox(width: 8),
               _statChip('图谱节点', '$graphNodes个', Colors.teal),
               const SizedBox(width: 8),
@@ -1575,13 +2021,11 @@ class _ContinuousImprovementTabState
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.arrow_forward_ios,
-                          size: 12, color: primary),
+                      Icon(Icons.arrow_forward_ios, size: 12, color: primary),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(entry.value,
-                            style: const TextStyle(
-                                fontSize: 12, height: 1.4)),
+                            style: const TextStyle(fontSize: 12, height: 1.4)),
                       ),
                     ],
                   ),
@@ -1599,19 +2043,14 @@ class _ContinuousImprovementTabState
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-              color: color.withValues(alpha: 0.15)),
+          border: Border.all(color: color.withValues(alpha: 0.15)),
         ),
         child: Column(children: [
           Text(value,
               style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: color)),
+                  fontSize: 15, fontWeight: FontWeight.bold, color: color)),
           const SizedBox(height: 2),
-          Text(label,
-              style:
-                  TextStyle(fontSize: 10, color: color)),
+          Text(label, style: TextStyle(fontSize: 10, color: color)),
         ]),
       ),
     );
@@ -1621,55 +2060,47 @@ class _ContinuousImprovementTabState
     final hasSurvey = _surveySummary?['hasSurveyData'] == true;
     final overallSat =
         (_surveySummary?['overallSatisfaction'] as double?) ?? 0.0;
-    final totalResponses =
-        _surveySummary?['totalResponses'] as int? ?? 0;
-    final questionStats = (_surveySummary?['questionStats']
-            as List<Map<String, dynamic>>?) ??
-        [];
+    final totalResponses = _surveySummary?['totalResponses'] as int? ?? 0;
+    final questionStats =
+        (_surveySummary?['questionStats'] as List<Map<String, dynamic>>?) ?? [];
 
     return Card(
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
-              Icon(Icons.feedback_outlined,
-                  color: primary, size: 22),
+              Icon(Icons.feedback_outlined, color: primary, size: 22),
               const SizedBox(width: 8),
               const Expanded(
                 child: Text('四、课程满意度调查反馈',
-                    style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold)),
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ]),
             const Divider(height: 20),
             if (!hasSurvey) ...[
               const Text('暂无满意度调查数据，建议在下学期增加课程满意度调查。',
-                  style: TextStyle(
-                      fontSize: 12, color: Colors.grey)),
+                  style: TextStyle(fontSize: 12, color: Colors.grey)),
             ] else ...[
               Row(children: [
                 Expanded(
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: achievementLevelColor(overallSat)
-                          .withValues(alpha: 0.08),
+                      color:
+                          achievementLevelColor(overallSat).withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Column(children: [
-                      Text(
-                          '${(overallSat * 100).toStringAsFixed(1)}%',
+                      Text('${(overallSat * 100).toStringAsFixed(1)}%',
                           style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
-                              color: achievementLevelColor(
-                                  overallSat))),
-                      const Text('综合满意度',
-                          style: TextStyle(fontSize: 11)),
+                              color: achievementLevelColor(overallSat))),
+                      const Text('综合满意度', style: TextStyle(fontSize: 11)),
                     ]),
                   ),
                 ),
@@ -1687,8 +2118,7 @@ class _ContinuousImprovementTabState
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
                               color: primary)),
-                      const Text('有效回收数',
-                          style: TextStyle(fontSize: 11)),
+                      const Text('有效回收数', style: TextStyle(fontSize: 11)),
                     ]),
                   ),
                 ),
@@ -1703,8 +2133,7 @@ class _ContinuousImprovementTabState
     );
   }
 
-  List<Widget> _buildTextSuggestions(
-      List<Map<String, dynamic>> questionStats) {
+  List<Widget> _buildTextSuggestions(List<Map<String, dynamic>> questionStats) {
     final textQuestions =
         questionStats.where((q) => q['type'] == 'text').toList();
     if (textQuestions.isEmpty) return [];
@@ -1726,8 +2155,7 @@ class _ContinuousImprovementTabState
               const Text('• ', style: TextStyle(color: Colors.grey)),
               Expanded(
                 child: Text(a,
-                    style: const TextStyle(
-                        fontSize: 12, color: Colors.grey)),
+                    style: const TextStyle(fontSize: 12, color: Colors.grey)),
               ),
             ],
           ),

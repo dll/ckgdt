@@ -299,8 +299,7 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
                   width: 10,
                   height: 10,
                   decoration: BoxDecoration(
-                    color: Colors.red.withValues(
-                        alpha: 0.4 + 0.6 * _pulseAnim.value),
+                    color: Colors.red.withValues(alpha: 0.4 + 0.6 * _pulseAnim.value),
                     shape: BoxShape.circle,
                   ),
                 ),

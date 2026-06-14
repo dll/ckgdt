@@ -58,23 +58,33 @@ class AchievementConfig {
   /// 从 course_objectives 表行（按 idx 升序）构建完整配置。缺字段回落默认。
   static AchievementConfig fromObjectiveRows(List<Map<String, dynamic>> rows) {
     if (rows.isEmpty) return defaults;
-    final sorted = [...rows]..sort((a, b) => (a['idx'] as int).compareTo(b['idx'] as int));
-    final n = sorted.length;
-    if (n == 0) return defaults;
+    final sorted = [...rows]..sort((a, b) => ((a['idx'] as num?)?.toInt() ?? 0)
+        .compareTo((b['idx'] as num?)?.toInt() ?? 0));
+    final byIdx = <int, Map<String, dynamic>>{
+      for (final row in sorted)
+        if (((row['idx'] as num?)?.toInt() ?? 0) > 0)
+          (row['idx'] as num).toInt(): row
+    };
     try {
-      List<T> pick<T>(T Function(Map<String, dynamic>, int) f) =>
-          List<T>.generate(n, (i) => f(sorted[i], i));
+      List<T> pick<T>(T Function(Map<String, dynamic>?, int) f) =>
+          List<T>.generate(4, (i) => f(byIdx[i + 1], i));
       return AchievementConfig(
-        weights: pick((r, i) => (r['weight'] as num?)?.toDouble() ?? _at(defaults.weights, i)),
-        fullMarks: pick((r, i) => (r['full_mark'] as num?)?.toDouble() ?? _at(defaults.fullMarks, i)),
-        objectiveNames: pick((r, i) => (r['name'] as String?)?.trim().isNotEmpty == true
-            ? r['name'] as String
-            : _at(defaults.objectiveNames, i)),
-        indicators: pick((r, i) => (r['indicator'] as String?) ?? _at(defaults.indicators, i)),
-        descriptions: pick((r, i) => (r['description'] as String?) ?? _at(defaults.descriptions, i)),
-        chapters: pick((r, i) => (r['chapters'] as String?) ?? _at(defaults.chapters, i)),
-        assessContents: pick((r, i) => (r['assess_content'] as String?) ?? _at(defaults.assessContents, i)),
-        assessmentWeights: defaults.assessmentWeights,
+        weights: pick((r, i) => r == null
+            ? 0
+            : (r['weight'] as num?)?.toDouble() ?? _at(defaults.weights, i)),
+        fullMarks: pick((r, i) => r == null
+            ? 0
+            : (r['full_mark'] as num?)?.toDouble() ??
+                _at(defaults.fullMarks, i)),
+        objectiveNames: pick((r, i) =>
+            (r?['name'] as String?)?.trim().isNotEmpty == true
+                ? r!['name'] as String
+                : _at(defaults.objectiveNames, i)),
+        indicators: pick((r, i) => (r?['indicator'] as String?) ?? ''),
+        descriptions: pick((r, i) => (r?['description'] as String?) ?? ''),
+        chapters: pick((r, i) => (r?['chapters'] as String?) ?? ''),
+        assessContents: pick((r, i) => (r?['assess_content'] as String?) ?? ''),
+        assessmentWeights: _averageAssessmentWeights(sorted),
       );
     } catch (e, st) {
       swallowDebug(e, tag: 'AchievementConfig.fromObjectiveRows', stack: st);
@@ -83,4 +93,27 @@ class AchievementConfig {
   }
 
   static T _at<T>(List<T> list, int i) => i < list.length ? list[i] : list.last;
+
+  static Map<String, double> _averageAssessmentWeights(
+      List<Map<String, dynamic>> rows) {
+    double p = 0, e = 0, x = 0;
+    var count = 0;
+    for (final row in rows) {
+      final rp = (row['pingshi_ratio'] as num?)?.toDouble() ?? 0;
+      final re = (row['experiment_ratio'] as num?)?.toDouble() ?? 0;
+      final rx = (row['exam_ratio'] as num?)?.toDouble() ?? 0;
+      final sum = rp + re + rx;
+      if (sum <= 0) continue;
+      p += rp / sum;
+      e += re / sum;
+      x += rx / sum;
+      count++;
+    }
+    if (count == 0) return const {'平时': 0, '实验': 0, '期末': 1};
+    return {
+      '平时': p / count,
+      '实验': e / count,
+      '期末': x / count,
+    };
+  }
 }

@@ -2,15 +2,15 @@
 class Version {
   static const int major = 1;
   static const int minor = 21;
-  static const int patch = 0;
-  static const int build = 0;
+  static const int patch = 2;
+  static const int build = 2;
 
-  /// Display version: "1.21.0"
-  static const String display = '1.21.0';
+  /// Display version: "1.21.2.2"
+  static const String display = '1.21.2.2';
 
-  /// Flutter pubspec version: "1.21.0+0"
-  static const String pubspec = '1.21.0+0';
+  /// Flutter pubspec version: "1.21.2+2"
+  static const String pubspec = '1.21.2+2';
 
-  /// 3-part version for platform files: "1.21.0"
-  static const String platform = '1.21.0';
+  /// 3-part version for platform files: "1.21.2"
+  static const String platform = '1.21.2';
 }

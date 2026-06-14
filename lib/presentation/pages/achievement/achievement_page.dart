@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -173,28 +174,69 @@ class _AchievementPageState extends State<AchievementPage>
       if (await tempFile.exists()) await tempFile.delete();
 
       final token = await SyncService().getSyncToken();
-      final uri = Uri.parse(
-        'https://gitee.com/api/v5/repos/${SyncService.repoOwner}/${SyncService.repoName}/raw/$_videoGiteePath',
-      ).replace(
-        queryParameters: {
-          'ref': SyncService.repoBranch,
+      final treeUri = Uri.https(
+        'gitee.com',
+        '/api/v5/repos/${SyncService.repoOwner}/${SyncService.repoName}/git/trees/${SyncService.repoBranch}',
+        {
+          'recursive': '1',
           if (token != null && token.isNotEmpty) 'access_token': token,
         },
       );
-
-      final request = http.Request('GET', uri);
-      final response =
-          await request.send().timeout(const Duration(minutes: 10));
-      if (response.statusCode != 200) {
+      final treeResponse =
+          await http.get(treeUri).timeout(const Duration(minutes: 2));
+      if (treeResponse.statusCode != 200) {
+        debugPrint(
+          'AchievementPage: 视频目录查询失败，Gitee Tree API 返回 ${treeResponse.statusCode}',
+        );
         return null;
       }
 
-      final sink = tempFile.openWrite();
-      await for (final chunk in response.stream) {
-        sink.add(chunk);
+      final treePayload = jsonDecode(utf8.decode(treeResponse.bodyBytes));
+      final tree =
+          treePayload is Map<String, dynamic> ? treePayload['tree'] : null;
+      if (tree is! List) return null;
+      Map<String, dynamic>? videoEntry;
+      for (final item in tree) {
+        if (item is Map && item['path'] == _videoGiteePath) {
+          videoEntry = Map<String, dynamic>.from(item);
+          break;
+        }
       }
-      await sink.flush();
-      await sink.close();
+      final sha = videoEntry?['sha'] as String?;
+      final expectedSize = (videoEntry?['size'] as num?)?.toInt();
+      if (sha == null || sha.isEmpty) return null;
+
+      final blobUri = Uri.https(
+        'gitee.com',
+        '/api/v5/repos/${SyncService.repoOwner}/${SyncService.repoName}/git/blobs/$sha',
+        {
+          if (token != null && token.isNotEmpty) 'access_token': token,
+        },
+      );
+      final blobResponse =
+          await http.get(blobUri).timeout(const Duration(minutes: 10));
+      if (blobResponse.statusCode != 200) {
+        debugPrint(
+          'AchievementPage: 视频下载失败，Gitee Blob API 返回 ${blobResponse.statusCode}',
+        );
+        return null;
+      }
+
+      final payload = jsonDecode(utf8.decode(blobResponse.bodyBytes));
+      if (payload is! Map<String, dynamic>) return null;
+      final encoded = payload['content'] as String?;
+      if (encoded == null || encoded.isEmpty) return null;
+      final actualExpectedSize =
+          expectedSize ?? (payload['size'] as num?)?.toInt();
+      final bytes = base64Decode(encoded.replaceAll(RegExp(r'\s+'), ''));
+      if (actualExpectedSize != null && bytes.length != actualExpectedSize) {
+        debugPrint(
+          'AchievementPage: 视频大小校验失败，本地 ${bytes.length}，远端 $actualExpectedSize',
+        );
+        return null;
+      }
+
+      await tempFile.writeAsBytes(bytes, flush: true);
 
       final fileSize = await tempFile.length();
       if (fileSize < 1024 * 1024) {
@@ -317,16 +359,19 @@ class _AchievementPageState extends State<AchievementPage>
                 achievementDao: _achievementDao,
                 dataRevision: dataRevision,
               ),
-              PingshiAchievementTab(
+              ComponentAchievementTab(
                 achievementDao: _achievementDao,
+                env: 'pingshi',
                 dataRevision: dataRevision,
               ),
-              ExperimentAchievementTab(
+              ComponentAchievementTab(
                 achievementDao: _achievementDao,
+                env: 'experiment',
                 dataRevision: dataRevision,
               ),
-              ExamAchievementTab(
+              ComponentAchievementTab(
                 achievementDao: _achievementDao,
+                env: 'exam',
                 dataRevision: dataRevision,
               ),
               ContinuousImprovementTab(

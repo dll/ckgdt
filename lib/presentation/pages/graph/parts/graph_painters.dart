@@ -1,4 +1,4 @@
-part of '../knowledge_graph_page.dart';
+﻿part of '../knowledge_graph_page.dart';
 
 class _LegendLinePainter extends CustomPainter {
   final Color color;

@@ -5,6 +5,7 @@ import 'package:archive/archive.dart';
 import 'package:archive/archive_io.dart';
 import 'package:xml/xml.dart';
 import '../output_path_service.dart';
+import 'achievement_template_assets.dart';
 
 /// 课程达成评价报告 DOCX 生成器。
 ///
@@ -102,10 +103,7 @@ class AchievementDocxService {
   }
 
   Future<File?> _findTemplateForCourse(String courseName) async {
-    final roots = <Directory>[
-      Directory('data/达成'),
-      Directory('${Directory.current.path}/data/达成'),
-    ];
+    final roots = await AchievementTemplateAssets.templateRoots();
     final seen = <String>{};
     final candidates = <File>[];
     for (final root in roots) {
@@ -256,14 +254,15 @@ class AchievementDocxService {
       _setCell(table, row, 0, '课程目标$idx');
       _setCell(table, row, 1, weight.toStringAsFixed(1));
       _setCell(table, row, 2, '支撑毕业要求${(obj['indicator'] ?? '')}');
-      _setCell(table, row, 3, '$full（20%）');
-      _setCell(table, row, 4, '$full（30%）');
-      _setCell(table, row, 5, '$full（50%）');
+      _setCell(table, row, 3, _envRatioCell(obj, '平时', full.toDouble()));
+      final experimentCell = _envRatioCell(obj, '实验', full.toDouble());
+      _setCell(table, row, 4, experimentCell == '—' ? '' : experimentCell);
+      _setCell(table, row, 5, _envRatioCell(obj, '考核', full.toDouble()));
     }
     _setCell(table, 6, 0, '合计（占总评成绩比例）');
-    _setCell(table, 6, 1, '100（20%）');
-    _setCell(table, 6, 2, '100（30%）');
-    _setCell(table, 6, 3, '100（50%）');
+    _setCell(table, 6, 1, _hasEnv(objectives, '平时') ? '100' : '');
+    _setCell(table, 6, 2, _hasEnv(objectives, '实验') ? '100' : '');
+    _setCell(table, 6, 3, _hasEnv(objectives, '考核') ? '100' : '');
   }
 
   void _fillDocxStandardTable(
@@ -485,14 +484,23 @@ class AchievementDocxService {
     _empty(b);
 
     _heading(b, '二、课程考核标准');
-    _para(b, '1 平时成绩评价标准', bold: true);
-    _buildStandardTable(b, objectives);
-    _para(b, '注：该表格中比例为平时考核成绩比例。');
-    _para(b, '2 实验成绩评价标准', bold: true);
-    _buildStandardTable(b, objectives);
-    _para(b, '注：该表格中比例为实验考核成绩比例。');
-    _para(b, '3 期末考核评价内容', bold: true);
-    _buildExamContentTable(b, objectives);
+    var standardIndex = 1;
+    if (_hasEnv(objectives, '平时')) {
+      _para(b, '$standardIndex 平时成绩评价标准', bold: true);
+      _buildStandardTable(b, _objectivesForEnv(objectives, '平时'));
+      _para(b, '注：该表格中比例为平时考核成绩比例。');
+      standardIndex++;
+    }
+    if (_hasEnv(objectives, '实验')) {
+      _para(b, '$standardIndex 实验成绩评价标准', bold: true);
+      _buildStandardTable(b, _objectivesForEnv(objectives, '实验'));
+      _para(b, '注：该表格中比例为实验考核成绩比例。');
+      standardIndex++;
+    }
+    if (_hasEnv(objectives, '考核')) {
+      _para(b, '$standardIndex 考核评价内容', bold: true);
+      _buildExamContentTable(b, _objectivesForEnv(objectives, '考核'));
+    }
     _empty(b);
 
     _heading(b, '三、课程目标和支撑毕业要求指标点达成情况计算（定量评价）');
@@ -572,14 +580,18 @@ class AchievementDocxService {
   // ── 表1：考核与评价方式对照表 ───────────────────────────────────
   void _buildAssessmentRefTable(
       StringBuffer b, List<Map<String, dynamic>> objectives) {
+    final envLabels = [
+      for (final label in ['平时', '实验', '考核'])
+        if (_hasEnv(objectives, label)) label
+    ];
     b.write(_tblStart(9000));
     b.write('<w:tr>');
     _tc(b, '课程目标', bold: true, fill: 'D9E2F3');
     _tc(b, '权重', bold: true, fill: 'D9E2F3');
     _tc(b, '毕业要求', bold: true, fill: 'D9E2F3');
-    _tc(b, '平时 支撑课程目标的满分（比例%）', bold: true, fill: 'D9E2F3');
-    _tc(b, '实验 支撑课程目标的满分（比例%）', bold: true, fill: 'D9E2F3');
-    _tc(b, '期末 支撑课程目标的满分（比例%）', bold: true, fill: 'D9E2F3');
+    for (final label in envLabels) {
+      _tc(b, '$label 支撑课程目标的满分（比例%）', bold: true, fill: 'D9E2F3');
+    }
     b.write('</w:tr>');
     for (final o in objectives) {
       final idx = (o['objective'] as num?)?.toInt() ?? 0;
@@ -590,13 +602,48 @@ class AchievementDocxService {
       _tc(b, '课程目标$idx');
       _tc(b, w.toStringAsFixed(2));
       _tc(b, '支撑毕业要求$indicator');
-      _tc(b, '${fullMark.toInt()}（20%）');
-      _tc(b, '${fullMark.toInt()}（30%）');
-      _tc(b, '${fullMark.toInt()}（50%）');
+      for (final label in envLabels) {
+        _tc(b, _envRatioCell(o, label, fullMark));
+      }
       b.write('</w:tr>');
     }
     b.write('</w:tbl>');
   }
+
+  String _envRatioCell(
+      Map<String, dynamic> objective, String label, double fallbackFullMark) {
+    final envs = (objective['envs'] as List?) ?? const [];
+    for (final env in envs) {
+      final map = env as Map;
+      final name = (map['name'] ?? '').toString();
+      if (!name.contains(label)) continue;
+      final weight = (map['weight'] as num?)?.toDouble() ?? 0;
+      if (weight <= 0) return '—';
+      final full = (map['full'] as num?)?.toDouble() ?? fallbackFullMark;
+      return '${full.toInt()}（${(weight * 100).toStringAsFixed(0)}%）';
+    }
+    return '—';
+  }
+
+  bool _usesEnv(Map<String, dynamic> objective, String label) {
+    final envs = (objective['envs'] as List?) ?? const [];
+    for (final env in envs) {
+      final map = env as Map;
+      final name = (map['name'] ?? '').toString();
+      final weight = (map['weight'] as num?)?.toDouble() ?? 0;
+      if (name.contains(label) && weight > 0) return true;
+    }
+    return false;
+  }
+
+  bool _hasEnv(List<Map<String, dynamic>> objectives, String label) =>
+      objectives.any((objective) => _usesEnv(objective, label));
+
+  List<Map<String, dynamic>> _objectivesForEnv(
+    List<Map<String, dynamic>> objectives,
+    String label,
+  ) =>
+      objectives.where((objective) => _usesEnv(objective, label)).toList();
 
   // ── 表2/3：平时/实验评价标准 ────────────────────────────────────
   void _buildStandardTable(
@@ -825,7 +872,7 @@ class AchievementDocxService {
           'weight': 0.3
         },
         {
-          'name': '期末考试',
+          'name': '考核',
           'full': 50,
           'avg': objAch * 50,
           'ach': objAch,
@@ -863,7 +910,7 @@ class AchievementDocxService {
       b.write('<w:p><w:r><w:t xml:space="preserve"> </w:t></w:r></w:p>');
 
   String _tblStart(int width) {
-    final borders = '<w:tblBorders>'
+    const borders = '<w:tblBorders>'
         '<w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>'
         '<w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>'
         '<w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>'

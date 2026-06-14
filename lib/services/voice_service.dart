@@ -413,4 +413,28 @@ class VoiceService {
     _cleanupTimer?.cancel();
     _cleanupTimer = Timer(const Duration(seconds: 1), _cleanup);
   }
+
+  /// 立即、同步（awaited）释放录音器与 WebSocket。
+  ///
+  /// 语音登录识别成功后、导航到主页之前必须调用：否则 1s 延迟清理里的原生
+  /// `AudioRecorder.dispose()` 会与页面跳转/HomePage 构建并发，触发 record
+  /// 包原生层崩溃（表现为整个应用闪退）。awaited 确保原生句柄先释放再跳转。
+  Future<void> forceStop() async {
+    _cleanupTimer?.cancel();
+    _cleanupTimer = null;
+    _isListening = false;
+    try {
+      await _audioSub?.cancel();
+    } catch (_) {}
+    _audioSub = null;
+    final rec = _recorder;
+    _recorder = null;
+    await _cleanupRecorder(rec);
+    try {
+      await _wsChannel?.sink.close();
+    } catch (_) {}
+    _wsChannel = null;
+    _firstFrame = true;
+    _cleaningUp = false;
+  }
 }

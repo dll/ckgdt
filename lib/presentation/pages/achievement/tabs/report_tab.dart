@@ -52,6 +52,22 @@ class _ReportTabState extends State<ReportTab> {
   // 课程目标配置：优先取大纲导入的 course_objectives，回退默认。
   AchievementConfig _config = AchievementConfig.defaults;
 
+  List<int> _activeObjectiveIndexesFor(
+    AchievementConfig config, [
+    List<double>? weights,
+  ]) {
+    final resolvedWeights = weights ?? _objectiveWeights;
+    final indexes = [
+      for (var i = 0; i < 4; i++)
+        if ((i < resolvedWeights.length && resolvedWeights[i] > 0) ||
+            (i < config.fullMarks.length && config.fullMarks[i] > 0))
+          i
+    ];
+    return indexes.isEmpty ? [0, 1, 2, 3] : indexes;
+  }
+
+  List<int> get _activeObjectiveIndexes => _activeObjectiveIndexesFor(_config);
+
   @override
   void initState() {
     super.initState();
@@ -61,7 +77,8 @@ class _ReportTabState extends State<ReportTab> {
 
   Future<void> _loadConfig([String? courseName]) async {
     try {
-      final rows = await widget.achievementDao.getCourseObjectives(courseName ?? '移动应用开发');
+      final rows = await widget.achievementDao
+          .getCourseObjectives(courseName ?? '移动应用开发');
       if (mounted && rows.isNotEmpty) {
         setState(() => _config = AchievementConfig.fromObjectiveRows(rows));
       }
@@ -129,7 +146,8 @@ class _ReportTabState extends State<ReportTab> {
       final objAchievements = List<double>.generate(4, (i) {
         final values = objScores[i];
         final mean = values.reduce((a, b) => a + b) / values.length;
-        return (mean / fullMarks[i]).clamp(0.0, 1.0);
+        final fullMark = i < fullMarks.length ? fullMarks[i] : 0.0;
+        return fullMark > 0 ? (mean / fullMark).clamp(0.0, 1.0) : 0.0;
       });
 
       // 加权达成度（权重优先取大纲导入的 course_objectives，回退默认）
@@ -251,10 +269,46 @@ class _ReportTabState extends State<ReportTab> {
       final objIndicators = cfg.indicators;
       final objAssessContent = cfg.assessContents;
       final objMarks = cfg.fullMarks.map((m) => m.toInt()).toList();
-      // 各评价环节满分与权重（对齐 DOCX 表5）
-      const assessNames = ['平时成绩', '实验成绩', '期末成绩'];
-      const assessFullMarks = [20, 30, 50];
-      const assessWeights = [0.2, 0.3, 0.5];
+      final activeObjectiveIndexes = _activeObjectiveIndexesFor(cfg);
+      final rawEnvWeights =
+          (combined['weightsByObjective'] as List?) ?? const [];
+      Map<String, double> envWeightAt(int index) {
+        if (index >= 0 && index < rawEnvWeights.length) {
+          final raw = rawEnvWeights[index] as Map?;
+          return {
+            'pingshi': (raw?['pingshi'] as num?)?.toDouble() ?? 0,
+            'experiment': (raw?['experiment'] as num?)?.toDouble() ?? 0,
+            'exam': (raw?['exam'] as num?)?.toDouble() ?? 0,
+          };
+        }
+        return {'pingshi': 0.20, 'experiment': 0.30, 'exam': 0.50};
+      }
+
+      List<(String, String, double)> envDefsFor(int index) {
+        final w = envWeightAt(index);
+        return [
+          ('平时成绩', 'pingshi', w['pingshi'] ?? 0),
+          ('实验成绩', 'experiment', w['experiment'] ?? 0),
+          ('考核成绩', 'exam', w['exam'] ?? 0),
+        ].where((e) => e.$3 > 0).toList();
+      }
+
+      final activeEnvKeys = [
+        for (final env in ['pingshi', 'experiment', 'exam'])
+          if (activeObjectiveIndexes.any((i) => (envWeightAt(i)[env] ?? 0) > 0))
+            env
+      ];
+      final envLabel = {
+        'pingshi': '平时成绩',
+        'experiment': '实验成绩',
+        'exam': '考核成绩',
+      };
+
+      String ratioCell(int index, String key) {
+        final w = envWeightAt(index)[key] ?? 0;
+        if (w <= 0) return '—';
+        return '${objMarks[index]}（${(w * 100).toStringAsFixed(0)}%）';
+      }
 
       buffer.writeln('# $semester《$courseName》课程目标达成评价报告');
       buffer.writeln();
@@ -282,7 +336,7 @@ class _ReportTabState extends State<ReportTab> {
       buffer.writeln();
       buffer.writeln('| 毕业要求指标点 | 课程目标 | 权重 | 课程目标描述 |');
       buffer.writeln('|---------------|---------|------|------------|');
-      for (int i = 0; i < 4; i++) {
+      for (final i in activeObjectiveIndexes) {
         buffer.writeln(
             '| 指标点${objIndicators[i]} | ${kObjectiveNames[i]} | ${_objectiveWeights[i].toStringAsFixed(2)} | ${objDescFull[i]} |');
       }
@@ -291,15 +345,13 @@ class _ReportTabState extends State<ReportTab> {
       buffer.writeln('### 3. 评价方式及成绩评定对照表');
       buffer.writeln();
       buffer.writeln(
-          '| 课程目标 | 权重 | 支撑指标点 | 平时成绩（${assessFullMarks[0]}分） | 实验成绩（${assessFullMarks[1]}分） | 期末成绩（${assessFullMarks[2]}分） |');
+          '| 课程目标 | 权重 | 支撑指标点 | ${activeEnvKeys.map((e) => envLabel[e]).join(' | ')} |');
       buffer.writeln(
-          '|----------|------|-----------|-----------------|-----------------|-----------------|');
-      for (int i = 0; i < 4; i++) {
+          '|----------|------|-----------|${activeEnvKeys.map((_) => '-----------------').join('|')}|');
+      for (final i in activeObjectiveIndexes) {
         buffer.writeln(
-            '| ${kObjectiveNames[i]} | ${_objectiveWeights[i].toStringAsFixed(2)} | 指标点${objIndicators[i]} | ${objMarks[i]} | ${objMarks[i]} | ${objMarks[i]} |');
+            '| ${kObjectiveNames[i]} | ${_objectiveWeights[i].toStringAsFixed(2)} | 指标点${objIndicators[i]} | ${activeEnvKeys.map((env) => ratioCell(i, env)).join(' | ')} |');
       }
-      buffer.writeln(
-          '| **合计** | **1.00** | — | **${assessFullMarks[0]}** | **${assessFullMarks[1]}** | **${assessFullMarks[2]}** |');
       buffer.writeln();
 
       // ══════════════════════════════════════════════════
@@ -308,44 +360,51 @@ class _ReportTabState extends State<ReportTab> {
       buffer.writeln('## 二、课程考核标准');
       buffer.writeln();
 
-      buffer.writeln('### 1. 平时成绩评价标准（满分${assessFullMarks[0]}分）');
-      buffer.writeln();
-      buffer.writeln(
-          '| 课程目标 | 考核内容 | 优秀（90-100%） | 良好（70-89%） | 合格（60-69%） | 不合格（0-59%） |');
-      buffer.writeln(
-          '|----------|---------|----------------|---------------|---------------|----------------|');
-      for (int i = 0; i < 4; i++) {
-        if (i == 2) continue; // 课程目标3无平时考核
-        final content = objAssessContent[i].split('、').first;
+      if (activeObjectiveIndexes
+          .any((i) => (envWeightAt(i)['pingshi'] ?? 0) > 0)) {
+        buffer.writeln('### 1. 平时成绩评价标准');
+        buffer.writeln();
         buffer.writeln(
-            '| ${kObjectiveNames[i]} | $content | 全面掌握，表现突出 | 较好掌握，表现良好 | 基本掌握，表现一般 | 未能掌握，需要改进 |');
-      }
-      buffer.writeln();
-
-      buffer.writeln('### 2. 实验成绩评价标准（满分${assessFullMarks[1]}分）');
-      buffer.writeln();
-      buffer.writeln(
-          '| 课程目标 | 考核内容 | 优秀（90-100%） | 良好（70-89%） | 合格（60-69%） | 不合格（0-59%） |');
-      buffer.writeln(
-          '|----------|---------|----------------|---------------|---------------|----------------|');
-      for (int i = 0; i < 4; i++) {
-        final parts = objAssessContent[i].split('、');
-        final expItem = parts.length > 1 ? parts[1] : parts[0];
+            '| 课程目标 | 考核内容 | 优秀（90-100%） | 良好（70-89%） | 合格（60-69%） | 不合格（0-59%） |');
         buffer.writeln(
-            '| ${kObjectiveNames[i]} | $expItem | 独立完成，结果正确 | 基本完成，结果较好 | 能够完成，有少量错误 | 无法完成或错误较多 |');
+            '|----------|---------|----------------|---------------|---------------|----------------|');
+        for (final i in activeObjectiveIndexes) {
+          if ((envWeightAt(i)['pingshi'] ?? 0) <= 0) continue;
+          final content = objAssessContent[i].split('、').first;
+          buffer.writeln(
+              '| ${kObjectiveNames[i]} | $content | 全面掌握，表现突出 | 较好掌握，表现良好 | 基本掌握，表现一般 | 未能掌握，需要改进 |');
+        }
+        buffer.writeln();
       }
-      buffer.writeln();
 
-      buffer.writeln('### 3. 期末考核评价内容（满分${assessFullMarks[2]}分）');
+      if (activeObjectiveIndexes
+          .any((i) => (envWeightAt(i)['experiment'] ?? 0) > 0)) {
+        buffer.writeln('### 2. 实验成绩评价标准');
+        buffer.writeln();
+        buffer.writeln(
+            '| 课程目标 | 考核内容 | 优秀（90-100%） | 良好（70-89%） | 合格（60-69%） | 不合格（0-59%） |');
+        buffer.writeln(
+            '|----------|---------|----------------|---------------|---------------|----------------|');
+        for (final i in activeObjectiveIndexes) {
+          if ((envWeightAt(i)['experiment'] ?? 0) <= 0) continue;
+          final parts = objAssessContent[i].split('、');
+          final expItem = parts.length > 1 ? parts[1] : parts[0];
+          buffer.writeln(
+              '| ${kObjectiveNames[i]} | $expItem | 独立完成，结果正确 | 基本完成，结果较好 | 能够完成，有少量错误 | 无法完成或错误较多 |');
+        }
+        buffer.writeln();
+      }
+
+      buffer.writeln('### 3. 考核评价内容');
       buffer.writeln();
       buffer.writeln('| 课程目标 | 考核内容 | 分值 |');
       buffer.writeln('|----------|---------|------|');
-      for (int i = 0; i < 4; i++) {
+      for (final i in activeObjectiveIndexes) {
+        if ((envWeightAt(i)['exam'] ?? 0) <= 0) continue;
         final examContent = objAssessContent[i].split('、').last;
         buffer.writeln(
             '| ${kObjectiveNames[i]} | $examContent | ${objMarks[i]} |');
       }
-      buffer.writeln('| **合计** | — | **${assessFullMarks[2]}** |');
       buffer.writeln();
 
       // ══════════════════════════════════════════════════
@@ -363,21 +422,21 @@ class _ReportTabState extends State<ReportTab> {
       buffer.writeln(
           '|----------|------|---------|------|-----------|--------|---------|--------------|-----------|------------|');
 
-      final assessMaps = [pingshiAvg, experimentAvg, examAvg];
-      for (int i = 0; i < 4; i++) {
+      final assessMapByKey = {
+        'pingshi': pingshiAvg,
+        'experiment': experimentAvg,
+        'exam': examAvg,
+      };
+      for (final i in activeObjectiveIndexes) {
         final objCombined = combinedAvg['obj${i + 1}'] ?? 0;
-        for (int j = 0; j < 3; j++) {
+        final envDefs = envDefsFor(i);
+        for (int j = 0; j < envDefs.length; j++) {
           final isFirstRow = j == 0;
-          if (i == 2 && j == 0) {
-            // 课程目标3无平时成绩
-            buffer.writeln(
-                '| ${isFirstRow ? kObjectiveNames[i] : ''} | ${isFirstRow ? _objectiveWeights[i].toStringAsFixed(2) : ''} | ${assessNames[j]} | ${assessFullMarks[j]} | — | — | ${assessWeights[j]} | ${isFirstRow ? objCombined.toStringAsFixed(4) : ''} | ${isFirstRow ? '指标点${objIndicators[i]}' : ''} | ${isFirstRow ? objCombined.toStringAsFixed(4) : ''} |');
-            continue;
-          }
-          final ach = assessMaps[j]['obj${i + 1}'] ?? 0.0;
-          final avgScore = ach * assessFullMarks[j];
+          final (envName, envKey, envWeight) = envDefs[j];
+          final ach = assessMapByKey[envKey]?['obj${i + 1}'] ?? 0.0;
+          final avgScore = ach * objMarks[i];
           buffer.writeln(
-              '| ${isFirstRow ? kObjectiveNames[i] : ''} | ${isFirstRow ? _objectiveWeights[i].toStringAsFixed(2) : ''} | ${assessNames[j]} | ${assessFullMarks[j]} | ${avgScore.toStringAsFixed(2)} | ${ach.toStringAsFixed(4)} | ${assessWeights[j]} | ${isFirstRow ? objCombined.toStringAsFixed(4) : ''} | ${isFirstRow ? '指标点${objIndicators[i]}' : ''} | ${isFirstRow ? objCombined.toStringAsFixed(4) : ''} |');
+              '| ${isFirstRow ? kObjectiveNames[i] : ''} | ${isFirstRow ? _objectiveWeights[i].toStringAsFixed(2) : ''} | $envName | ${objMarks[i]} | ${avgScore.toStringAsFixed(2)} | ${ach.toStringAsFixed(4)} | ${envWeight.toStringAsFixed(2)} | ${isFirstRow ? objCombined.toStringAsFixed(4) : ''} | ${isFirstRow ? '指标点${objIndicators[i]}' : ''} | ${isFirstRow ? objCombined.toStringAsFixed(4) : ''} |');
         }
       }
       buffer.writeln();
@@ -385,7 +444,7 @@ class _ReportTabState extends State<ReportTab> {
       // 达成度汇总
       buffer.writeln('| 项目 | 达成度 | 预期阈值 | 是否达成 |');
       buffer.writeln('|------|--------|---------|---------|');
-      for (int i = 0; i < 4; i++) {
+      for (final i in activeObjectiveIndexes) {
         final a = _objectiveAchievements[i];
         buffer.writeln(
             '| ${kObjectiveNames[i]}（权重${(_objectiveWeights[i] * 100).toStringAsFixed(0)}%） | ${a.toStringAsFixed(4)} | 0.60 | ${a >= 0.60 ? '达成' : '未达成'} |');
@@ -397,12 +456,14 @@ class _ReportTabState extends State<ReportTab> {
       // 成绩统计
       buffer.writeln('### 2. 成绩统计');
       buffer.writeln();
-      buffer.writeln('| 统计指标 | 目标1 | 目标2 | 目标3 | 目标4 |');
-      buffer.writeln('|----------|-------|-------|-------|-------|');
+      buffer.writeln(
+          '| 统计指标 | ${activeObjectiveIndexes.map((i) => '目标${i + 1}').join(' | ')} |');
+      buffer.writeln(
+          '|----------|${activeObjectiveIndexes.map((_) => '-------').join('|')}|');
       for (int idx = 0; idx < 4; idx++) {
         final label = ['平均分', '最高分', '最低分', '标准差'][idx];
         buffer.write('| $label ');
-        for (int i = 0; i < 4; i++) {
+        for (final i in activeObjectiveIndexes) {
           final s = _statistics['objective${i + 1}'];
           buffer.write('| ${s != null ? s[idx].toStringAsFixed(2) : "-"} ');
         }
@@ -416,23 +477,22 @@ class _ReportTabState extends State<ReportTab> {
       buffer.writeln('共有 $studentCount 名学生参与评价。');
       buffer.writeln();
       buffer.writeln(
-          '| 序号 | 学号 | 姓名 | 目标1达成度 | 目标2达成度 | 目标3达成度 | 目标4达成度 | 综合达成度 |');
+          '| 序号 | 学号 | 姓名 | ${activeObjectiveIndexes.map((i) => '目标${i + 1}达成度').join(' | ')} | 综合达成度 |');
       buffer.writeln(
-          '|------|------|------|-----------|-----------|-----------|-----------|-----------|');
+          '|------|------|------|${activeObjectiveIndexes.map((_) => '-----------').join('|')}|-----------|');
       for (int idx = 0; idx < scores.length; idx++) {
         final s = scores[idx];
         final sid = s['student_id']?.toString() ?? '';
         final sname = s['student_name']?.toString() ?? '';
-        final a1 = (s['obj1_achievement'] as num?)?.toDouble() ?? 0;
-        final a2 = (s['obj2_achievement'] as num?)?.toDouble() ?? 0;
-        final a3 = (s['obj3_achievement'] as num?)?.toDouble() ?? 0;
-        final a4 = (s['obj4_achievement'] as num?)?.toDouble() ?? 0;
-        final wt = a1 * _objectiveWeights[0] +
-            a2 * _objectiveWeights[1] +
-            a3 * _objectiveWeights[2] +
-            a4 * _objectiveWeights[3];
+        double wt = 0;
+        final achValues = <String>[];
+        for (final i in activeObjectiveIndexes) {
+          final ach = (s['obj${i + 1}_achievement'] as num?)?.toDouble() ?? 0;
+          wt += ach * _objectiveWeights[i];
+          achValues.add(ach.toStringAsFixed(4));
+        }
         buffer.writeln(
-            '| ${idx + 1} | $sid | $sname | ${a1.toStringAsFixed(4)} | ${a2.toStringAsFixed(4)} | ${a3.toStringAsFixed(4)} | ${a4.toStringAsFixed(4)} | ${wt.toStringAsFixed(4)} |');
+            '| ${idx + 1} | $sid | $sname | ${achValues.join(' | ')} | ${wt.toStringAsFixed(4)} |');
       }
       buffer.writeln();
 
@@ -450,15 +510,20 @@ class _ReportTabState extends State<ReportTab> {
         final desc = cfg.descriptions[i];
         final assess = cfg.assessContents[i];
         final parts = assess.split('、');
-        final envList = <String>[];
-        if (i != 2) envList.add('平时${parts.isNotEmpty ? "（${parts[0]}）" : ""}（20%）');
-        if (parts.length > 1) envList.add('实验（${parts[1]}）（30%）');
-        if (parts.length > 2) envList.add('期末（${parts[2]}）（50%）');
-        return '课程目标${i + 1}主要考核${desc.substring(0, desc.length.clamp(0, 30))}。'
+        final envList = envDefsFor(i).map((env) {
+          final label = env.$1;
+          final ratio = (env.$3 * 100).toStringAsFixed(0);
+          final content = parts.isNotEmpty ? '（${parts.last}）' : '';
+          return '$label$content（$ratio%）';
+        }).toList();
+        final preview = desc.isEmpty
+            ? kObjectiveNames[i]
+            : desc.substring(0, min(desc.length, 30));
+        return '课程目标${i + 1}主要考核$preview。'
             '该目标通过${envList.join("、")}综合评定。';
       });
 
-      for (int i = 0; i < 4; i++) {
+      for (final i in activeObjectiveIndexes) {
         final a = _objectiveAchievements[i];
         final pA = pingshiAvg['obj${i + 1}'] ?? 0;
         final eA = experimentAvg['obj${i + 1}'] ?? 0;
@@ -478,11 +543,15 @@ class _ReportTabState extends State<ReportTab> {
         buffer.writeln();
         buffer.writeln(objAnalysisDesc[i]);
         buffer.writeln();
-        if (i != 2) {
+        if ((envWeightAt(i)['pingshi'] ?? 0) > 0) {
           buffer.writeln('- 平时环节达成度：${pA.toStringAsFixed(4)}');
         }
-        buffer.writeln('- 实验环节达成度：${eA.toStringAsFixed(4)}');
-        buffer.writeln('- 期末环节达成度：${xA.toStringAsFixed(4)}');
+        if ((envWeightAt(i)['experiment'] ?? 0) > 0) {
+          buffer.writeln('- 实验环节达成度：${eA.toStringAsFixed(4)}');
+        }
+        if ((envWeightAt(i)['exam'] ?? 0) > 0) {
+          buffer.writeln('- 考核环节达成度：${xA.toStringAsFixed(4)}');
+        }
         final lowCount = scores.where((s) {
           final ach = (s['obj${i + 1}_achievement'] as num?)?.toDouble() ?? 0;
           return ach < 0.6;
@@ -524,22 +593,22 @@ class _ReportTabState extends State<ReportTab> {
           buffer.writeln();
         }
       } else {
-        final sortedIdx = List.generate(4, (i) => i)
-          ..sort((a, b) =>
-              _objectiveAchievements[b].compareTo(_objectiveAchievements[a]));
+        final sortedIdx = [...activeObjectiveIndexes]..sort((a, b) =>
+            _objectiveAchievements[b].compareTo(_objectiveAchievements[a]));
         buffer.writeln('从评价结果可以看出：');
         buffer.writeln();
         buffer.writeln(
             '- 学生在${kObjectiveNames[sortedIdx[0]]}方面表现最好（${_objectiveAchievements[sortedIdx[0]].toStringAsFixed(4)}）');
+        final weakest = sortedIdx.last;
         buffer.writeln(
-            '- ${kObjectiveNames[sortedIdx[3]]}方面相对较弱（${_objectiveAchievements[sortedIdx[3]].toStringAsFixed(4)}）');
+            '- ${kObjectiveNames[weakest]}方面相对较弱（${_objectiveAchievements[weakest].toStringAsFixed(4)}）');
         buffer.writeln();
         buffer.writeln('主要原因可能是：');
         buffer.writeln();
-        buffer.writeln('1. 混合开发框架版本更新较快，学生对新特性掌握不及时');
-        buffer.writeln('2. 华为多端开发工具（DevEco Studio）操作复杂度较高，实验课时不足导致实操能力薄弱');
-        buffer.writeln('3. 期末项目考核中跨设备适配场景设计占比过高，学生在多终端兼容性调试方面失分较多');
-        buffer.writeln('4. 本课程在过程性考核中增加了AI工具应用能力的评分项，标准较上届更为严格');
+        buffer.writeln('1. 部分课程目标对应的考核内容综合性较强，学生对关键知识点迁移应用不足');
+        buffer.writeln('2. 过程性评价中暴露出学生阶段性复盘和问题整理不充分');
+        buffer.writeln('3. 终结性考核任务对分析、设计和表达能力要求较高，低分学生需要专项训练');
+        buffer.writeln('4. 后续应结合大纲对照表，针对达成度偏低的目标补充训练与反馈');
         buffer.writeln();
       }
 
@@ -550,15 +619,14 @@ class _ReportTabState extends State<ReportTab> {
       buffer.writeln('针对上一轮该课程教学持续改进意见，在本轮教学中持续改进的措施执行情况如下：');
       buffer.writeln();
       buffer.writeln('1. 在平时作业中加大与课程目标相关的分析应用问题的题目训练，实现期末考核内容与平时训练内容相一致');
-      buffer.writeln(
-          '2. 在每一章结束后，在作业中增加与该章知识点相关的文献阅读培训，扩展学生的知识面并提高其文献阅读与总结能力');
-      buffer.writeln('3. 调整平时、实验以及期末的课程成绩比例，增加实验成绩比例，降低平时和期末的课程比例，注重学生的过程性考核');
+      buffer.writeln('2. 在每一章结束后，在作业中增加与该章知识点相关的文献阅读培训，扩展学生的知识面并提高其文献阅读与总结能力');
+      buffer.writeln('3. 根据大纲对照表复核各考核环节比例，优化过程性评价和终结性评价的衔接');
       buffer.writeln();
       buffer.writeln('#### 后续教学持续改进措施');
       buffer.writeln();
       buffer.writeln('针对本次课程目标达成评价情况分析，今后教学中拟采取以下改进措施：');
       buffer.writeln();
-      for (int i = 0; i < 4; i++) {
+      for (final i in activeObjectiveIndexes) {
         final a = _objectiveAchievements[i];
         final objDesc = cfg.descriptions[i].length > 20
             ? cfg.descriptions[i].substring(0, 20)
@@ -624,17 +692,34 @@ class _ReportTabState extends State<ReportTab> {
       final experimentAvg =
           combined['experiment'] as Map<String, double>? ?? {};
       final examAvg = combined['exam'] as Map<String, double>? ?? {};
-      const envDefs = [
-        ('平时', 'pingshi', 0.2, 20.0),
-        ('实验', 'experiment', 0.3, 30.0),
-        ('期末考试', 'exam', 0.5, 50.0),
-      ];
+      final rawEnvWeights =
+          (combined['weightsByObjective'] as List?) ?? const [];
 
+      Map<String, double> envWeightAt(int index) {
+        if (index >= 0 && index < rawEnvWeights.length) {
+          final raw = rawEnvWeights[index] as Map?;
+          return {
+            'pingshi': (raw?['pingshi'] as num?)?.toDouble() ?? 0,
+            'experiment': (raw?['experiment'] as num?)?.toDouble() ?? 0,
+            'exam': (raw?['exam'] as num?)?.toDouble() ?? 0,
+          };
+        }
+        return {'pingshi': 0.20, 'experiment': 0.30, 'exam': 0.50};
+      }
+
+      final activeObjectiveIndexes = _activeObjectiveIndexesFor(cfg);
       final objectives = <Map<String, dynamic>>[];
-      for (int i = 0; i < 4; i++) {
+      for (final i in activeObjectiveIndexes) {
+        if (_objectiveWeights[i] <= 0 && cfg.fullMarks[i] <= 0) continue;
         final objKey = 'obj${i + 1}';
+        final envWeight = envWeightAt(i);
+        final envDefs = [
+          ('平时', 'pingshi', envWeight['pingshi'] ?? 0),
+          ('实验', 'experiment', envWeight['experiment'] ?? 0),
+          ('考核', 'exam', envWeight['exam'] ?? 0),
+        ].where((e) => e.$3 > 0).toList();
         final envs = <Map<String, dynamic>>[];
-        for (final (label, key, w, full) in envDefs) {
+        for (final (label, key, w) in envDefs) {
           final src = key == 'pingshi'
               ? pingshiAvg
               : key == 'experiment'
@@ -643,8 +728,8 @@ class _ReportTabState extends State<ReportTab> {
           final ach = src[objKey] ?? 0;
           envs.add({
             'name': label,
-            'full': full,
-            'avg': ach * full,
+            'full': cfg.fullMarks[i],
+            'avg': ach * cfg.fullMarks[i],
             'ach': ach,
             'weight': w,
           });
@@ -671,7 +756,7 @@ class _ReportTabState extends State<ReportTab> {
           '开课学期': (batch['semester'] ?? '').toString(),
         },
         'objectives': [
-          for (int i = 0; i < cfg.objectiveNames.length; i++)
+          for (final i in activeObjectiveIndexes)
             {
               'num': i + 1,
               'objective': cfg.descriptions[i],
@@ -679,13 +764,18 @@ class _ReportTabState extends State<ReportTab> {
             }
         ],
         'weights': [
-          for (int i = 0; i < cfg.weights.length; i++)
+          for (final i in activeObjectiveIndexes)
             {
               'objective': i + 1,
               'weight': _objectiveWeights[i],
               'pingshi_full': cfg.fullMarks[i].toInt(),
-              'experiment_full': cfg.fullMarks[i].toInt(),
+              'experiment_full': (envWeightAt(i)['experiment'] ?? 0) > 0
+                  ? cfg.fullMarks[i].toInt()
+                  : 0,
               'exam_full': cfg.fullMarks[i].toInt(),
+              'pingshi_ratio': envWeightAt(i)['pingshi'] ?? 0,
+              'experiment_ratio': envWeightAt(i)['experiment'] ?? 0,
+              'exam_ratio': envWeightAt(i)['exam'] ?? 0,
             }
         ],
       };
@@ -760,6 +850,23 @@ class _ReportTabState extends State<ReportTab> {
       final ps = comb['pingshi'] as Map? ?? {};
       final es = comb['experiment'] as Map? ?? {};
       final xs = comb['exam'] as Map? ?? {};
+      final envWeightsByObjective = ((comb['weightsByObjective'] as List?) ??
+              const [])
+          .map((w) =>
+              (w as Map?)?.map(
+                (key, value) =>
+                    MapEntry(key.toString(), (value as num?)?.toDouble() ?? 0),
+              ) ??
+              <String, double>{})
+          .toList();
+      bool defaultLike(Map<String, double> w) =>
+          ((w['pingshi'] ?? 0) - 0.2).abs() < 0.0001 &&
+          ((w['experiment'] ?? 0) - 0.3).abs() < 0.0001 &&
+          ((w['exam'] ?? 0) - 0.5).abs() < 0.0001;
+      final activeObjectives = _activeObjectiveIndexesFor(cf);
+      final standardThreePart = activeObjectives.length == 4 &&
+          envWeightsByObjective.length >= 4 &&
+          activeObjectives.every((i) => defaultLike(envWeightsByObjective[i]));
       final pById = {for (final r in pingshi) '${r['student_id']}': r};
       final eById = {for (final r in experiment) '${r['student_id']}': r};
       final xById = {for (final r in exam) '${r['student_id']}': r};
@@ -772,6 +879,18 @@ class _ReportTabState extends State<ReportTab> {
       final dir = await OutputPathService.getOutputDirectory();
       final safeName = '$className《$courseName》课程达成度评价表格.xlsx';
       final file = File('${dir.path}/$safeName');
+      if (!standardThreePart) {
+        await _exportDynamicExcelReport(
+          file: file,
+          courseName: courseName,
+          className: className,
+          semester: semester,
+          scores: scores,
+          combined: comb,
+          config: cf,
+        );
+        return;
+      }
       final templateFile =
           await AchievementTemplateExcelService.instance.findTemplateForCourse(
         courseName,
@@ -1161,6 +1280,149 @@ class _ReportTabState extends State<ReportTab> {
     }
   }
 
+  Future<void> _exportDynamicExcelReport({
+    required File file,
+    required String courseName,
+    required String className,
+    required String semester,
+    required List<Map<String, dynamic>> scores,
+    required Map<String, dynamic> combined,
+    required AchievementConfig config,
+  }) async {
+    final excel = xl.Excel.createExcel();
+    for (final n in excel.tables.keys.toList()) {
+      excel.delete(n);
+    }
+
+    xl.TextCellValue t(Object? v) => xl.TextCellValue(v?.toString() ?? '');
+    xl.DoubleCellValue n(num? v, [int digits = 4]) {
+      final d = (v ?? 0).toDouble();
+      return xl.DoubleCellValue(double.parse(d.toStringAsFixed(digits)));
+    }
+
+    final activeObjectives = [
+      for (var i = 0; i < 4; i++)
+        if (_objectiveWeights[i] > 0 || config.fullMarks[i] > 0) i
+    ];
+    final rawWeights = ((combined['weightsByObjective'] as List?) ?? const [])
+        .map((w) =>
+            (w as Map?)?.map(
+              (key, value) =>
+                  MapEntry(key.toString(), (value as num?)?.toDouble() ?? 0),
+            ) ??
+            <String, double>{})
+        .toList();
+    Map<String, double> weightsFor(int i) =>
+        i < rawWeights.length ? rawWeights[i] : const {};
+    final envSources = {
+      'pingshi': combined['pingshi'] as Map? ?? {},
+      'experiment': combined['experiment'] as Map? ?? {},
+      'exam': combined['exam'] as Map? ?? {},
+    };
+    final envLabels = {
+      'pingshi': '平时成绩',
+      'experiment': '实验成绩',
+      'exam': '考核成绩',
+    };
+    final activeEnvKeys = [
+      for (final env in ['pingshi', 'experiment', 'exam'])
+        if (activeObjectives.any((i) => (weightsFor(i)[env] ?? 0) > 0)) env
+    ];
+
+    final matrix = excel['课程目标达成度'];
+    matrix.appendRow([
+      t('$semester$className《$courseName》课程目标达成度计算表'),
+    ]);
+    matrix.appendRow([
+      t('课程目标'),
+      t('目标权重'),
+      t('指标点'),
+      t('评价环节'),
+      t('环节比例'),
+      t('目标满分'),
+      t('班级平均达成度'),
+      t('课程目标达成度'),
+    ]);
+    for (final i in activeObjectives) {
+      final weights = weightsFor(i);
+      var first = true;
+      for (final env in ['pingshi', 'experiment', 'exam']) {
+        final w = weights[env] ?? 0;
+        if (w <= 0) continue;
+        final ach = (envSources[env]?['obj${i + 1}'] as num?)?.toDouble() ?? 0;
+        matrix.appendRow([
+          t(first ? '课程目标${i + 1}' : ''),
+          first ? n(_objectiveWeights[i], 2) : t(''),
+          t(first ? config.indicators[i] : ''),
+          t(envLabels[env]),
+          n(w, 2),
+          n(config.fullMarks[i], 0),
+          n(ach, 4),
+          first ? n(_objectiveAchievements[i], 4) : t(''),
+        ]);
+        first = false;
+      }
+    }
+    matrix.appendRow([
+      t('课程总体目标达成度'),
+      n(_weightedAchievement, 4),
+    ]);
+
+    final students = excel['学生个体达成度'];
+    students.appendRow([
+      t('学号'),
+      t('姓名'),
+      for (final i in activeObjectives) t('课程目标${i + 1}达成度'),
+      t('综合达成度'),
+    ]);
+    for (final s in scores) {
+      var weighted = 0.0;
+      final row = <xl.CellValue?>[
+        t(s['student_id']),
+        t(s['student_name']),
+      ];
+      for (final i in activeObjectives) {
+        final ach = (s['obj${i + 1}_achievement'] as num?)?.toDouble() ?? 0;
+        weighted += ach * _objectiveWeights[i];
+        row.add(n(ach, 4));
+      }
+      row.add(n(weighted, 4));
+      students.appendRow(row);
+    }
+
+    final syllabus = excel['大纲对照表'];
+    syllabus.appendRow([
+      t('课程目标'),
+      t('指标点'),
+      t('目标权重'),
+      t('目标满分'),
+      for (final env in activeEnvKeys) t('${envLabels[env]}比例'),
+      t('考核内容'),
+    ]);
+    for (final i in activeObjectives) {
+      final weights = weightsFor(i);
+      syllabus.appendRow([
+        t('课程目标${i + 1}'),
+        t(config.indicators[i]),
+        n(_objectiveWeights[i], 2),
+        n(config.fullMarks[i], 0),
+        for (final env in activeEnvKeys) n(weights[env] ?? 0, 2),
+        t(config.assessContents[i]),
+      ]);
+    }
+
+    final bytes = excel.save();
+    if (bytes == null) throw StateError('Excel生成失败');
+    await file.writeAsBytes(bytes);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Excel已按大纲动态导出:${file.path}'),
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+              label: '打开', onPressed: () => OpenFilex.open(file.path))));
+    }
+  }
+
   double _maxOf(List<Map<String, dynamic>> items,
       double Function(Map<String, dynamic>) getter) {
     if (items.isEmpty) return 0;
@@ -1213,6 +1475,38 @@ class _ReportTabState extends State<ReportTab> {
       final experimentAvg = combined['experiment'] as Map<String, double>;
       final examAvg = combined['exam'] as Map<String, double>;
       final combinedAvg = combined['combined'] as Map<String, double>;
+      final envWeightsByObjective =
+          ((combined['weightsByObjective'] as List?) ?? const [])
+              .map((w) =>
+                  (w as Map?)?.map(
+                    (key, value) => MapEntry(
+                        key.toString(), (value as num?)?.toDouble() ?? 0),
+                  ) ??
+                  <String, double>{})
+              .toList();
+      bool defaultLike(Map<String, double> w) =>
+          ((w['pingshi'] ?? 0) - 0.2).abs() < 0.0001 &&
+          ((w['experiment'] ?? 0) - 0.3).abs() < 0.0001 &&
+          ((w['exam'] ?? 0) - 0.5).abs() < 0.0001;
+      final activeObjectiveIndexes = _activeObjectiveIndexesFor(cfg);
+      final standardThreePart = activeObjectiveIndexes.length == 4 &&
+          envWeightsByObjective.length >= 4 &&
+          activeObjectiveIndexes
+              .every((i) => defaultLike(envWeightsByObjective[i]));
+      if (!standardThreePart) {
+        await _exportDynamicPdfReport(
+          courseName: courseName.toString(),
+          className: className.toString(),
+          semester: semester.toString(),
+          dateStr: dateStr,
+          scores: scores,
+          config: cfg,
+          combined: combined,
+          envWeightsByObjective: envWeightsByObjective,
+        );
+        if (mounted) setState(() => _generatingReport = false);
+        return;
+      }
 
       // 加载中文字体：优先 Google Fonts（可靠），回退本地 TTC
       pw.Font? chineseFont;
@@ -1762,6 +2056,163 @@ class _ReportTabState extends State<ReportTab> {
     }
   }
 
+  Future<void> _exportDynamicPdfReport({
+    required String courseName,
+    required String className,
+    required String semester,
+    required String dateStr,
+    required List<Map<String, dynamic>> scores,
+    required AchievementConfig config,
+    required Map<String, dynamic> combined,
+    required List<Map<String, double>> envWeightsByObjective,
+  }) async {
+    pw.Font? chineseFont;
+    pw.Font? chineseBoldFont;
+    try {
+      chineseFont = await PdfGoogleFonts.notoSansSCRegular();
+      chineseBoldFont = await PdfGoogleFonts.notoSansSCBold();
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ReportTab.dynamicPdfFonts', stack: st);
+      try {
+        final fontData = await rootBundle.load('assets/fonts/msyh.ttc');
+        chineseFont = pw.Font.ttf(fontData);
+        chineseBoldFont = chineseFont;
+      } catch (_) {}
+    }
+    final theme = chineseFont != null
+        ? pw.ThemeData.withFont(
+            base: chineseFont, bold: chineseBoldFont ?? chineseFont)
+        : null;
+    final pdf = pw.Document(theme: theme);
+    final base = chineseFont != null
+        ? pw.TextStyle(font: chineseFont, fontSize: 10)
+        : const pw.TextStyle(fontSize: 10);
+    final bold =
+        base.copyWith(font: chineseBoldFont, fontWeight: pw.FontWeight.bold);
+    final header = bold.copyWith(fontSize: 14);
+    final title = bold.copyWith(fontSize: 18);
+    final activeObjectives = [
+      for (var i = 0; i < 4; i++)
+        if (_objectiveWeights[i] > 0 || config.fullMarks[i] > 0) i
+    ];
+    final envLabels = {
+      'pingshi': '平时成绩',
+      'experiment': '实验成绩',
+      'exam': '考核成绩',
+    };
+    final envSources = {
+      'pingshi': combined['pingshi'] as Map? ?? {},
+      'experiment': combined['experiment'] as Map? ?? {},
+      'exam': combined['exam'] as Map? ?? {},
+    };
+    Map<String, double> weightsFor(int i) =>
+        i < envWeightsByObjective.length ? envWeightsByObjective[i] : const {};
+
+    pdf.addPage(pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      build: (_) => [
+        pw.Center(
+            child: pw.Text('$className《$courseName》课程目标达成评价报告', style: title)),
+        pw.SizedBox(height: 12),
+        pw.Text('一、基本信息', style: header),
+        pw.TableHelper.fromTextArray(
+          headerStyle: bold,
+          cellStyle: base,
+          headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
+          headers: ['项目', '内容', '项目', '内容'],
+          data: [
+            ['课程名称', courseName, '授课班级', className],
+            ['开课学期', semester, '评价日期', dateStr],
+            ['学生人数', '${scores.length}', '达成阈值', '0.60'],
+          ],
+        ),
+        pw.SizedBox(height: 12),
+        pw.Text('二、课程目标与考核项', style: header),
+        pw.TableHelper.fromTextArray(
+          headerStyle: bold.copyWith(fontSize: 8),
+          cellStyle: base.copyWith(fontSize: 8),
+          headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
+          headers: ['课程目标', '指标点', '权重', '满分', '考核项'],
+          data: [
+            for (final i in activeObjectives)
+              [
+                '课程目标${i + 1}',
+                config.indicators[i],
+                _objectiveWeights[i].toStringAsFixed(2),
+                config.fullMarks[i].toStringAsFixed(0),
+                [
+                  for (final env in ['pingshi', 'experiment', 'exam'])
+                    if ((weightsFor(i)[env] ?? 0) > 0)
+                      '${envLabels[env]} ${(weightsFor(i)[env]! * 100).toStringAsFixed(0)}%'
+                ].join('；'),
+              ],
+          ],
+        ),
+        pw.SizedBox(height: 12),
+        pw.Text('三、课程目标达成度', style: header),
+        pw.TableHelper.fromTextArray(
+          headerStyle: bold.copyWith(fontSize: 8),
+          cellStyle: base.copyWith(fontSize: 8),
+          headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
+          headers: ['课程目标', '评价环节', '比例', '环节达成度', '目标达成度'],
+          data: [
+            for (final i in activeObjectives)
+              for (final env in ['pingshi', 'experiment', 'exam'])
+                if ((weightsFor(i)[env] ?? 0) > 0)
+                  [
+                    '课程目标${i + 1}',
+                    envLabels[env],
+                    '${((weightsFor(i)[env] ?? 0) * 100).toStringAsFixed(0)}%',
+                    ((envSources[env]?['obj${i + 1}'] as num?)?.toDouble() ?? 0)
+                        .toStringAsFixed(4),
+                    _objectiveAchievements[i].toStringAsFixed(4),
+                  ],
+          ],
+        ),
+        pw.SizedBox(height: 8),
+        pw.Text('课程总体目标达成度：${_weightedAchievement.toStringAsFixed(4)}',
+            style: bold),
+        pw.SizedBox(height: 12),
+        pw.Text('四、学生个体达成度', style: header),
+        pw.TableHelper.fromTextArray(
+          headerStyle: bold.copyWith(fontSize: 7),
+          cellStyle: base.copyWith(fontSize: 7),
+          headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
+          headers: [
+            '序号',
+            '学号',
+            '姓名',
+            for (final i in activeObjectives) '目标${i + 1}',
+            '综合',
+          ],
+          data: scores.asMap().entries.map((entry) {
+            final s = entry.value;
+            var weighted = 0.0;
+            final values = <String>[];
+            for (final i in activeObjectives) {
+              final ach =
+                  (s['obj${i + 1}_achievement'] as num?)?.toDouble() ?? 0;
+              weighted += ach * _objectiveWeights[i];
+              values.add(ach.toStringAsFixed(4));
+            }
+            return [
+              '${entry.key + 1}',
+              s['student_id']?.toString() ?? '',
+              s['student_name']?.toString() ?? '',
+              ...values,
+              weighted.toStringAsFixed(4),
+            ];
+          }).toList(),
+        ),
+      ],
+    ));
+
+    await Printing.sharePdf(
+      bytes: await pdf.save(),
+      filename: '$className《$courseName》课程达成度评价报告.pdf',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loadingBatches) {
@@ -1866,7 +2317,8 @@ class _ReportTabState extends State<ReportTab> {
             });
             // 切换批次时重新加载该课程的配置
             if (v != null) {
-              final batch = _batches.firstWhere((b) => b['id'] == v, orElse: () => {});
+              final batch =
+                  _batches.firstWhere((b) => b['id'] == v, orElse: () => {});
               final cn = batch['course_name']?.toString();
               if (cn != null && cn.isNotEmpty) _loadConfig(cn);
             }
@@ -1931,6 +2383,7 @@ class _ReportTabState extends State<ReportTab> {
   }
 
   Widget _buildResultsPanel(Color primary) {
+    final activeObjectives = _activeObjectiveIndexes;
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 2,
@@ -1967,9 +2420,8 @@ class _ReportTabState extends State<ReportTab> {
             ),
             const SizedBox(height: 20),
 
-            // 四个课程目标达成度
-            ...List.generate(4, (i) {
-              return Padding(
+            for (final i in activeObjectives)
+              Padding(
                 padding: const EdgeInsets.only(bottom: 14),
                 child: _buildAchievementBar(
                   label: kObjectiveNames[i],
@@ -1977,8 +2429,7 @@ class _ReportTabState extends State<ReportTab> {
                   weight: _objectiveWeights[i],
                   color: kObjectiveColors[i],
                 ),
-              );
-            }),
+              ),
 
             // 分割线
             Container(
@@ -2142,6 +2593,7 @@ class _ReportTabState extends State<ReportTab> {
 
   Widget _buildStatisticsTable(Color primary) {
     if (_statistics.isEmpty) return const SizedBox.shrink();
+    final activeObjectives = _activeObjectiveIndexes;
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -2206,81 +2658,13 @@ class _ReportTabState extends State<ReportTab> {
               ),
             ),
             // 数据行
-            ...List.generate(4, (i) {
-              final s = _statistics['objective${i + 1}'];
-              if (s == null) return const SizedBox.shrink();
-
-              return Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(
-                  color: i.isEven
-                      ? Colors.transparent
-                      : Colors.grey.withValues(alpha: 0.04),
-                  border: i == 3
-                      ? null
-                      : Border(
-                          bottom: BorderSide(
-                              color: Colors.grey.withValues(alpha: 0.1))),
+            for (final i in activeObjectives)
+              if (_statistics['objective${i + 1}'] != null)
+                _buildStatisticsRow(
+                  i,
+                  _statistics['objective${i + 1}']!,
+                  i == activeObjectives.last,
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 10,
-                            height: 10,
-                            decoration: BoxDecoration(
-                              color: kObjectiveColors[i],
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(kObjectiveNames[i],
-                              style: const TextStyle(fontSize: 13)),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        s[0].toStringAsFixed(1),
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.w500),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        s[1].toStringAsFixed(1),
-                        textAlign: TextAlign.center,
-                        style:
-                            const TextStyle(fontSize: 13, color: Colors.green),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        s[2].toStringAsFixed(1),
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 13, color: Colors.red),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        s[3].toStringAsFixed(1),
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
 
             // 底部圆角
             Container(
@@ -2301,11 +2685,12 @@ class _ReportTabState extends State<ReportTab> {
             ),
             const SizedBox(height: 12),
             Row(
-              children: List.generate(4, (i) {
+              children: activeObjectives.map((i) {
                 final achievement = _objectiveAchievements[i];
                 return Expanded(
                   child: Container(
-                    margin: EdgeInsets.only(right: i < 3 ? 8 : 0),
+                    margin: EdgeInsets.only(
+                        right: i == activeObjectives.last ? 0 : 8),
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: kObjectiveColors[i].withValues(alpha: 0.06),
@@ -2334,8 +2719,7 @@ class _ReportTabState extends State<ReportTab> {
                               CircularProgressIndicator(
                                 value: achievement.clamp(0.0, 1.0),
                                 strokeWidth: 4,
-                                backgroundColor:
-                                    Colors.grey.withValues(alpha: 0.15),
+                                backgroundColor: Colors.grey.withValues(alpha: 0.15),
                                 color: kObjectiveColors[i],
                               ),
                               Text(
@@ -2371,10 +2755,77 @@ class _ReportTabState extends State<ReportTab> {
                     ),
                   ),
                 );
-              }),
+              }).toList(),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildStatisticsRow(int i, List<double> s, bool isLast) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: i.isEven ? Colors.transparent : Colors.grey.withValues(alpha: 0.04),
+        border: isLast
+            ? null
+            : Border(
+                bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.1)),
+              ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 3,
+            child: Row(
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: kObjectiveColors[i],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(kObjectiveNames[i], style: const TextStyle(fontSize: 13)),
+              ],
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              s[0].toStringAsFixed(1),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              s[1].toStringAsFixed(1),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13, color: Colors.green),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              s[2].toStringAsFixed(1),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13, color: Colors.red),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              s[3].toStringAsFixed(1),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13),
+            ),
+          ),
+        ],
       ),
     );
   }

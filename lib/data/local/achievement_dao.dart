@@ -41,15 +41,16 @@ class AchievementDao {
           'indicator': o['indicator'],
           'weight': o['weight'],
           'full_mark': o['full_mark'],
-          'pingshi_ratio': o['pingshi_ratio'] ?? 0.20,
-          'experiment_ratio': o['experiment_ratio'] ?? 0.30,
-          'exam_ratio': o['exam_ratio'] ?? 0.50,
+          'pingshi_ratio': o['pingshi_ratio'] ?? 0,
+          'experiment_ratio': o['experiment_ratio'] ?? 0,
+          'exam_ratio': o['exam_ratio'] ?? 0,
           'chapters': o['chapters'],
           'description': o['description'],
           'assess_content': o['assess_content'],
           'experiments': o['experiments'],
           'pingshi_standard': o['pingshi_standard'],
           'experiment_standard': o['experiment_standard'],
+          'assessment_items_json': o['assessment_items_json'],
           'created_at': now,
           'updated_at': now,
         });
@@ -186,6 +187,15 @@ class AchievementDao {
   Future<Map<String, double>> calculateClassAverage(int batchId) async {
     final scores = await getScores(batchId);
     if (scores.isEmpty) return {};
+    final weights = await resolveObjectiveWeights(batchId);
+    final fullMarks = await resolveObjectiveFullMarks(batchId);
+    final activeIndexes = [
+      for (var i = 0; i < 4; i++)
+        if ((i < weights.length && weights[i] > 0) ||
+            (i < fullMarks.length && fullMarks[i] > 0))
+          i
+    ];
+    if (activeIndexes.isEmpty) activeIndexes.addAll([0, 1, 2, 3]);
 
     double sum1 = 0, sum2 = 0, sum3 = 0, sum4 = 0, sumTotal = 0;
     for (final s in scores) {
@@ -198,10 +208,10 @@ class AchievementDao {
 
     final n = scores.length.toDouble();
     return {
-      '课程目标1': sum1 / n,
-      '课程目标2': sum2 / n,
-      '课程目标3': sum3 / n,
-      '课程目标4': sum4 / n,
+      if (activeIndexes.contains(0)) '课程目标1': sum1 / n,
+      if (activeIndexes.contains(1)) '课程目标2': sum2 / n,
+      if (activeIndexes.contains(2)) '课程目标3': sum3 / n,
+      if (activeIndexes.contains(3)) '课程目标4': sum4 / n,
       '总评': sumTotal / n / 100,
     };
   }
@@ -221,6 +231,15 @@ class AchievementDao {
   Future<Map<String, Map<String, double>>> getStudentStats(int batchId) async {
     final scores = await getScores(batchId);
     if (scores.isEmpty) return {};
+    final weights = await resolveObjectiveWeights(batchId);
+    final fullMarks = await resolveObjectiveFullMarks(batchId);
+    final activeIndexes = [
+      for (var i = 0; i < 4; i++)
+        if ((i < weights.length && weights[i] > 0) ||
+            (i < fullMarks.length && fullMarks[i] > 0))
+          i
+    ];
+    if (activeIndexes.isEmpty) activeIndexes.addAll([0, 1, 2, 3]);
 
     final obj1 = scores
         .map((s) => (s['obj1_achievement'] as num?)?.toDouble() ?? 0)
@@ -236,10 +255,10 @@ class AchievementDao {
         .toList();
 
     return {
-      '课程目标1': _calcStats(obj1),
-      '课程目标2': _calcStats(obj2),
-      '课程目标3': _calcStats(obj3),
-      '课程目标4': _calcStats(obj4),
+      if (activeIndexes.contains(0)) '课程目标1': _calcStats(obj1),
+      if (activeIndexes.contains(1)) '课程目标2': _calcStats(obj2),
+      if (activeIndexes.contains(2)) '课程目标3': _calcStats(obj3),
+      if (activeIndexes.contains(3)) '课程目标4': _calcStats(obj4),
     };
   }
 
@@ -273,24 +292,45 @@ class AchievementDao {
     final scores = await getScores(batchId);
     final avgAchievements = await calculateClassAverage(batchId);
     final stats = await getStudentStats(batchId);
+    final weights = await resolveObjectiveWeights(batchId);
+    final fullMarks = await resolveObjectiveFullMarks(batchId);
+    final objectiveRows = await getCourseObjectives(courseName.toString());
+    final objectiveByIdx = <int, Map<String, dynamic>>{
+      for (final row in objectiveRows)
+        if (((row['idx'] as num?)?.toInt() ?? 0) > 0)
+          (row['idx'] as num).toInt(): row
+    };
+    final activeIndexes = [
+      for (var i = 0; i < 4; i++)
+        if ((i < weights.length && weights[i] > 0) ||
+            (i < fullMarks.length && fullMarks[i] > 0))
+          i
+    ];
+    if (activeIndexes.isEmpty) activeIndexes.addAll([0, 1, 2, 3]);
 
-    // 解析权重
-    Map<String, double> objWeights;
-    try {
-      final weightsJson = batch['objective_weights_json'] as String? ?? '{}';
-      final parsed = jsonDecode(weightsJson) as Map<String, dynamic>;
-      objWeights = {
-        '课程目标1': (parsed['目标1'] as num?)?.toDouble() ?? 0.15,
-        '课程目标2': (parsed['目标2'] as num?)?.toDouble() ?? 0.25,
-        '课程目标3': (parsed['目标3'] as num?)?.toDouble() ?? 0.30,
-        '课程目标4': (parsed['目标4'] as num?)?.toDouble() ?? 0.30,
-      };
-    } catch (e, st) {
-      swallowDebug(e, tag: 'AchievementDao.parseObjWeights', stack: st);
-      objWeights = {'课程目标1': 0.15, '课程目标2': 0.25, '课程目标3': 0.30, '课程目标4': 0.30};
+    String objectiveName(int index) {
+      final row = objectiveByIdx[index + 1];
+      final name = row?['name']?.toString().trim() ?? '';
+      return name.isNotEmpty ? name : '课程目标${index + 1}';
     }
 
-    final weighted = calculateWeightedAchievement(avgAchievements, objWeights);
+    String objectiveDesc(int index) {
+      final row = objectiveByIdx[index + 1];
+      final desc = row?['description']?.toString().trim() ?? '';
+      return desc.isNotEmpty ? desc : objectiveName(index);
+    }
+
+    var weighted = 0.0;
+    var weightSum = 0.0;
+    for (final i in activeIndexes) {
+      final key = '课程目标${i + 1}';
+      final weight = i < weights.length ? weights[i] : 0.0;
+      weighted += (avgAchievements[key] ?? 0) * weight;
+      weightSum += weight;
+    }
+    if (weightSum > 0 && (weightSum - 1.0).abs() > 0.0001) {
+      weighted /= weightSum;
+    }
     final level = getAchievementLevel(weighted);
 
     final now = DateTime.now();
@@ -311,12 +351,12 @@ class AchievementDao {
     buf.writeln('| 课程目标 | 达成度 | 权重 | 加权贡献 |');
     buf.writeln('|---------|-------|------|---------|');
 
-    for (int i = 1; i <= 4; i++) {
-      final key = '课程目标$i';
+    for (final i in activeIndexes) {
+      final key = '课程目标${i + 1}';
       final ach = avgAchievements[key] ?? 0;
-      final w = objWeights[key] ?? 0;
+      final w = i < weights.length ? weights[i] : 0.0;
       buf.writeln(
-          '| $key | ${ach.toStringAsFixed(2)} | ${w.toStringAsFixed(2)} | ${(ach * w).toStringAsFixed(2)} |');
+          '| ${objectiveName(i)} | ${ach.toStringAsFixed(2)} | ${w.toStringAsFixed(2)} | ${(ach * w).toStringAsFixed(2)} |');
     }
     buf.writeln(
         '| **加权总达成度** | **${weighted.toStringAsFixed(2)}** | **1.00** | **${weighted.toStringAsFixed(2)}** |');
@@ -327,15 +367,16 @@ class AchievementDao {
     buf.writeln();
     buf.writeln('#### 学生达成度统计');
     buf.writeln();
-    buf.writeln('| 统计指标 | 课程目标1 | 课程目标2 | 课程目标3 | 课程目标4 |');
-    buf.writeln('|---------|----------|----------|----------|----------|');
+    buf.writeln('| 统计指标 | ${activeIndexes.map(objectiveName).join(' | ')} |');
+    buf.writeln(
+        '|---------|${activeIndexes.map((_) => '----------').join('|')}|');
 
     for (final metric in ['mean', 'max', 'min', 'std']) {
       final label =
           {'mean': '平均值', 'max': '最大值', 'min': '最小值', 'std': '标准差'}[metric]!;
       buf.write('| $label ');
-      for (int i = 1; i <= 4; i++) {
-        final key = '课程目标$i';
+      for (final i in activeIndexes) {
+        final key = '课程目标${i + 1}';
         final val = stats[key]?[metric] ?? 0;
         buf.write('| ${val.toStringAsFixed(2)} ');
       }
@@ -348,14 +389,14 @@ class AchievementDao {
     buf.writeln('## 二、达成度分析');
     buf.writeln();
 
-    for (int i = 1; i <= 4; i++) {
-      final key = '课程目标$i';
+    for (final i in activeIndexes) {
+      final key = '课程目标${i + 1}';
       final ach = avgAchievements[key] ?? 0;
       final performance = ach >= 0.7 ? '良好' : '一般';
-      buf.writeln('#### ${key}分析');
+      buf.writeln('#### ${objectiveName(i)}分析');
       buf.writeln('**达成度：** ${ach.toStringAsFixed(2)}');
       buf.writeln();
-      buf.writeln('从达成度结果可以看出，学生在$key方面表现$performance。');
+      buf.writeln('从达成度结果可以看出，学生在“${objectiveDesc(i)}”方面表现$performance。');
       buf.writeln();
     }
 
@@ -426,18 +467,20 @@ class AchievementDao {
     required double totalScore,
   }) async {
     final fullMarks = await resolveObjectiveFullMarks(batchId);
+    double achievement(double score, double fullMark) =>
+        fullMark > 0 ? (score / fullMark).clamp(0.0, 1.0) : 0.0;
     return insertScore({
       'batch_id': batchId,
       'student_id': studentId,
       'student_name': studentName,
       'obj1_score': objective1Score,
-      'obj1_achievement': (objective1Score / fullMarks[0]).clamp(0.0, 1.0),
+      'obj1_achievement': achievement(objective1Score, fullMarks[0]),
       'obj2_score': objective2Score,
-      'obj2_achievement': (objective2Score / fullMarks[1]).clamp(0.0, 1.0),
+      'obj2_achievement': achievement(objective2Score, fullMarks[1]),
       'obj3_score': objective3Score,
-      'obj3_achievement': (objective3Score / fullMarks[2]).clamp(0.0, 1.0),
+      'obj3_achievement': achievement(objective3Score, fullMarks[2]),
       'obj4_score': objective4Score,
-      'obj4_achievement': (objective4Score / fullMarks[3]).clamp(0.0, 1.0),
+      'obj4_achievement': achievement(objective4Score, fullMarks[3]),
       'total_score': totalScore,
     });
   }
@@ -492,12 +535,16 @@ class AchievementDao {
       // 1. course_objectives（大纲权威源）
       final courseName = batch?['course_name'] as String? ?? '移动应用开发';
       final objs = await getCourseObjectives(courseName);
-      if (objs.length >= 4) {
-        final w = objs
-            .take(4)
-            .map((o) => (o['weight'] as num?)?.toDouble() ?? 0)
-            .toList();
-        if (w.every((x) => x > 0)) return w;
+      if (objs.isNotEmpty) {
+        final w = List<double>.filled(4, 0);
+        for (final o in objs) {
+          final idx = (o['idx'] as num?)?.toInt() ?? 0;
+          final weight = (o['weight'] as num?)?.toDouble() ?? 0;
+          if (idx >= 1 && idx <= 4 && weight > 0) {
+            w[idx - 1] = weight;
+          }
+        }
+        if (w.any((x) => x > 0)) return w;
       }
       // 2. 批次快照
       final json = batch?['objective_weights_json'] as String?;
@@ -524,18 +571,82 @@ class AchievementDao {
       final batch = await getBatch(batchId);
       final courseName = batch?['course_name'] as String? ?? '移动应用开发';
       final objs = await getCourseObjectives(courseName);
-      if (objs.length >= 4) {
-        final marks = objs
-            .take(4)
-            .map((o) => (o['full_mark'] as num?)?.toDouble() ?? 0)
-            .toList();
-        if (marks.every((x) => x > 0)) return marks;
+      if (objs.isNotEmpty) {
+        final marks = List<double>.filled(4, 0);
+        var hasMark = false;
+        for (final o in objs) {
+          final idx = (o['idx'] as num?)?.toInt() ?? 0;
+          final mark = (o['full_mark'] as num?)?.toDouble() ?? 0;
+          if (idx >= 1 && idx <= 4 && mark > 0) {
+            marks[idx - 1] = mark;
+            hasMark = true;
+          }
+        }
+        if (hasMark) return marks;
       }
     } catch (e, st) {
       swallowDebug(e,
           tag: 'AchievementDao.resolveObjectiveFullMarks', stack: st);
     }
     return _kFullMarks;
+  }
+
+  /// 解析每个课程目标的考核环节比例。
+  ///
+  /// 老逻辑固定为 平时0.2/实验0.3/期末0.5，导致没有实验的课程会把
+  /// 实验缺失按 0 分计入。这里以 course_objectives 中的大纲对照表为准：
+  /// - 实验比例为 0 时，不参与该目标合成；
+  /// - “课程设计/项目/综合/答辩”等终结性评价在解析层归入 exam；
+  /// - 比例之和不为 1 时做归一化，避免人工录入 20/30/50 或小数误差。
+  Future<List<Map<String, double>>> resolveObjectiveAssessmentWeights(
+      int batchId) async {
+    final fallback = List<Map<String, double>>.generate(
+      4,
+      (_) => {'pingshi': 0.20, 'experiment': 0.30, 'exam': 0.50},
+    );
+    try {
+      final batch = await getBatch(batchId);
+      final courseName = batch?['course_name'] as String? ?? '移动应用开发';
+      final objs = await getCourseObjectives(courseName);
+      if (objs.isEmpty) return fallback;
+
+      final result = List<Map<String, double>>.generate(
+        4,
+        (_) => {'pingshi': 0, 'experiment': 0, 'exam': 0},
+      );
+      for (final o in objs) {
+        final idx = (o['idx'] as num?)?.toInt() ?? 0;
+        if (idx < 1 || idx > 4) continue;
+        result[idx - 1] = _normalizeAssessmentWeights({
+          'pingshi': (o['pingshi_ratio'] as num?)?.toDouble() ?? 0,
+          'experiment': (o['experiment_ratio'] as num?)?.toDouble() ?? 0,
+          'exam': (o['exam_ratio'] as num?)?.toDouble() ?? 0,
+        });
+      }
+      return result;
+    } catch (e, st) {
+      swallowDebug(e,
+          tag: 'AchievementDao.resolveObjectiveAssessmentWeights', stack: st);
+      return fallback;
+    }
+  }
+
+  Map<String, double> _normalizeAssessmentWeights(Map<String, double> raw) {
+    var p = raw['pingshi'] ?? 0;
+    var e = raw['experiment'] ?? 0;
+    var x = raw['exam'] ?? 0;
+    if (p > 1 || e > 1 || x > 1) {
+      p = p / 100;
+      e = e / 100;
+      x = x / 100;
+    }
+    final sum = p + e + x;
+    if (sum <= 0) return {'pingshi': 0, 'experiment': 0, 'exam': 1};
+    return {
+      'pingshi': p / sum,
+      'experiment': e / sum,
+      'exam': x / sum,
+    };
   }
 
   /// 从已导入的 achievement_scores 计算班级达成度并保存到批次。
@@ -562,7 +673,7 @@ class AchievementDao {
   }
 
   /// 导入课程成绩模板的三张明细表（平时/实验/期末）到三张分项表，
-  /// 并按环节权重（平时0.2/实验0.3/期末0.5）合成 achievement_scores 总表，
+  /// 并按大纲对照表中的环节权重合成 achievement_scores 总表，
   /// 最后重算批次达成度。返回导入的学生数。
   ///
   /// [components] 来自 AchievementExcelService.parseComponentSheets：
@@ -586,7 +697,7 @@ class AchievementDao {
     final allIds = <String>{...pMap.keys, ...eMap.keys, ...xMap.keys};
     if (allIds.isEmpty) return 0;
 
-    const envW = {'pingshi': 0.2, 'experiment': 0.3, 'exam': 0.5};
+    final envWeights = await resolveObjectiveAssessmentWeights(batchId);
     final fm = await resolveObjectiveFullMarks(batchId);
     int count = 0;
 
@@ -681,15 +792,17 @@ class AchievementDao {
               conflictAlgorithm: ConflictAlgorithm.replace);
         }
 
-        // 合成总表：目标i达成度 = 平时i×0.2 + 实验i×0.3 + 期末i×0.5
+        // 合成总表：目标i达成度 = Σ(环节i达成度 × 大纲环节比例)。
+        // 无实验课程的 experiment_ratio 为 0，不会因为缺实验表被扣分。
         final objAch = List<double>.generate(4, (k) {
           final key = 'obj${k + 1}_achievement';
           final pv = pAch?[key] ?? 0;
           final ev = eAch?[key] ?? 0;
           final xv = xAch?[key] ?? 0;
-          return (pv * envW['pingshi']! +
-                  ev * envW['experiment']! +
-                  xv * envW['exam']!)
+          final w = envWeights[k];
+          return (pv * (w['pingshi'] ?? 0) +
+                  ev * (w['experiment'] ?? 0) +
+                  xv * (w['exam'] ?? 0))
               .clamp(0.0, 1.0);
         });
         await txn.insert(
@@ -1040,47 +1153,65 @@ class AchievementDao {
     final scores = await getScores(batchId);
     if (scores.isEmpty) return [];
 
-    // 从批次获取课程名，加载对应的课程目标配置
     final batch = await getBatch(batchId);
     final courseName = batch?['course_name']?.toString() ?? '移动应用开发';
     final objectives = await getCourseObjectives(courseName);
-    final cfg = objectives.isNotEmpty
-        ? objectives
-        : [
-            {'idx': 1, 'chapters': '第1章 + 第2章', 'description': '课程目标1'},
-            {'idx': 2, 'chapters': '第3章 + 第4章', 'description': '课程目标2'},
-            {'idx': 3, 'chapters': '第5章', 'description': '课程目标3'},
-            {'idx': 4, 'chapters': '第6章', 'description': '课程目标4'},
-          ];
+    final weights = await resolveObjectiveWeights(batchId);
+    final fullMarks = await resolveObjectiveFullMarks(batchId);
+    final envWeights = await resolveObjectiveAssessmentWeights(batchId);
+    final objectiveByIdx = <int, Map<String, dynamic>>{
+      for (final row in objectives)
+        if (((row['idx'] as num?)?.toInt() ?? 0) > 0)
+          (row['idx'] as num).toInt(): row
+    };
+    final activeIndexes = [
+      for (var i = 0; i < 4; i++)
+        if ((i < weights.length && weights[i] > 0) ||
+            (i < fullMarks.length && fullMarks[i] > 0))
+          i
+    ];
+    if (activeIndexes.isEmpty) activeIndexes.addAll([0, 1, 2, 3]);
 
-    const fullMarks = _kFullMarks;
-    // 从课程目标动态构建章节和主题列表
-    final objectiveChapters = List<String>.generate(4, (i) {
-      return (cfg.length > i ? cfg[i]['chapters']?.toString() : null) ?? '第${i + 1}章';
-    });
-    final objectiveTopics = List<List<String>>.generate(4, (i) {
-      final desc = (cfg.length > i ? cfg[i]['description']?.toString() : null) ?? '课程目标${i + 1}';
-      // 从描述中提取关键主题（取前4个逗号/顿号分隔的短语）
-      final parts = desc.split(RegExp(r'[、，,]')).where((s) => s.trim().isNotEmpty).toList();
-      return parts.take(4).toList();
-    });
+    String objectiveName(int index) {
+      final name = objectiveByIdx[index + 1]?['name']?.toString().trim() ?? '';
+      return name.isNotEmpty ? name : '课程目标${index + 1}';
+    }
 
-    // 计算每个目标的平均达成度
-    final objAchievements = List<double>.generate(4, (i) {
-      final values = scores.map<double>((s) {
-        return (s['obj${i + 1}_score'] ?? 0).toDouble();
-      }).toList();
-      final mean = values.reduce((a, b) => a + b) / values.length;
-      return (mean / fullMarks[i]).clamp(0.0, 1.0);
-    });
+    String objectiveChapters(int index) {
+      final chapters =
+          objectiveByIdx[index + 1]?['chapters']?.toString().trim() ?? '';
+      return chapters.isNotEmpty ? chapters : '课程目标${index + 1}相关内容';
+    }
 
-    // 统计低于60%的学生数
-    final lowCountPerObj = List<int>.generate(4, (i) {
-      return scores.where((s) {
-        final ach = (s['obj${i + 1}_achievement'] as num?)?.toDouble() ?? 0;
-        return ach < 0.6;
-      }).length;
-    });
+    List<String> objectiveTopics(int index) {
+      final desc =
+          objectiveByIdx[index + 1]?['description']?.toString().trim() ??
+              objectiveName(index);
+      final parts = desc
+          .split(RegExp(r'[、，,；;。]'))
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .take(4)
+          .toList();
+      return parts.isEmpty ? [objectiveName(index)] : parts;
+    }
+
+    final objAchievements = {
+      for (final i in activeIndexes)
+        i: scores
+                .map((s) =>
+                    (s['obj${i + 1}_achievement'] as num?)?.toDouble() ?? 0)
+                .fold<double>(0, (a, b) => a + b) /
+            scores.length
+    };
+
+    final lowCountPerObj = {
+      for (final i in activeIndexes)
+        i: scores.where((s) {
+          final ach = (s['obj${i + 1}_achievement'] as num?)?.toDouble() ?? 0;
+          return ach < 0.6;
+        }).length
+    };
 
     // 获取知识图谱节点数
     final db = await DatabaseHelper.instance.database;
@@ -1122,51 +1253,55 @@ class AchievementDao {
 
     final suggestions = <Map<String, dynamic>>[];
 
-    for (int i = 0; i < 4; i++) {
-      final ach = objAchievements[i];
+    for (final i in activeIndexes) {
+      final ach = objAchievements[i] ?? 0;
       final level = getAchievementLevel(ach);
-      final lowCount = lowCountPerObj[i];
-      final topics = objectiveTopics[i];
-      final chapters = objectiveChapters[i];
+      final lowCount = lowCountPerObj[i] ?? 0;
+      final topics = objectiveTopics(i);
+      final chapters = objectiveChapters(i);
+      final primaryTopic = topics.first;
+      final secondaryTopic = topics.length > 1 ? topics[1] : primaryTopic;
+      final lastTopic = topics.last;
+      final hasExperimentForObjective = i < envWeights.length &&
+          ((envWeights[i]['experiment'] ?? 0) > 0.0001);
       final actions = <String>[];
 
       if (ach < 0.60) {
-        // 未达成 — 重点改进
         actions.addAll([
           '在知识图谱中增加${topics.join("、")}相关节点，丰富知识结构',
           '增加$chapters相关课时（建议增加2-4学时）',
-          '增设${topics.first}和${topics.last}的章节测验和练习题',
-          '增加$chapters的实验项目，强化动手能力',
+          '增设$primaryTopic和$lastTopic的章节测验和练习题',
+          if (hasExperimentForObjective)
+            '增加$chapters的实验项目，强化动手能力'
+          else
+            '围绕$chapters增加案例分析、课堂练习或阶段性任务',
           '对$lowCount名未达标学生制定一对一帮扶计划',
           '组织$chapters相关的技术专题工作坊',
         ]);
       } else if (ach < 0.70) {
-        // 中等 — 有提升空间
         actions.addAll([
-          '补充${topics.first}和${topics[1]}相关的知识图谱节点',
+          '补充$primaryTopic和$secondaryTopic相关的知识图谱节点',
           '适当增加$chapters的课时（建议增加1-2学时）',
           '针对$chapters新增综合性测验，提高应用能力',
           '对$lowCount名未达标学生安排额外练习',
-          '增加${topics.last}的案例教学内容',
+          '增加$lastTopic的案例教学内容',
         ]);
       } else if (ach < 0.85) {
-        // 良好 — 巩固提高
         actions.addAll([
-          '在知识图谱中补充${topics.first}的进阶节点',
+          '在知识图谱中补充$primaryTopic的进阶节点',
           '增加$chapters的拓展阅读和实践项目',
           '保持现有$chapters教学节奏，适当提高考核难度',
         ]);
       } else {
-        // 优秀 — 保持水平
         actions.addAll([
           '保持现有教学方案，持续更新$chapters教学内容',
-          '鼓励优秀学生参与${topics.first}的教学辅助工作',
+          '鼓励优秀学生参与$primaryTopic的教学辅助工作',
         ]);
       }
 
       suggestions.add({
         'objectiveIndex': i,
-        'objectiveName': '课程目标${i + 1}',
+        'objectiveName': objectiveName(i),
         'achievement': ach,
         'level': level,
         'lowStudentCount': lowCount,
@@ -1177,11 +1312,17 @@ class AchievementDao {
       });
     }
 
-    // 添加整体建议
-    double weighted = 0;
-    for (int i = 0; i < 4; i++) {
-      weighted += objAchievements[i] * _kDefaultWeightsForSuggestion[i];
+    var weighted = 0.0;
+    var weightSum = 0.0;
+    for (final i in activeIndexes) {
+      final weight = i < weights.length ? weights[i] : 0.0;
+      weighted += (objAchievements[i] ?? 0) * weight;
+      weightSum += weight;
     }
+    if (weightSum > 0 && (weightSum - 1.0).abs() > 0.0001) {
+      weighted /= weightSum;
+    }
+    final hasExperiment = envWeights.any((w) => (w['experiment'] ?? 0) > 0);
 
     suggestions.add({
       'objectiveIndex': -1,
@@ -1192,17 +1333,15 @@ class AchievementDao {
       'quizQuestionCount': quizQuestionCount,
       'chapterQuizCounts': chapterQuizCounts,
       'totalStudents': scores.length,
-      'actions':
-          _buildOverallSuggestions(weighted, graphNodeCount, quizQuestionCount),
+      'actions': _buildOverallSuggestions(
+          weighted, graphNodeCount, quizQuestionCount, hasExperiment),
     });
 
     return suggestions;
   }
 
-  static const _kDefaultWeightsForSuggestion = [0.15, 0.25, 0.30, 0.30];
-
   List<String> _buildOverallSuggestions(
-      double weighted, int graphNodes, int quizCount) {
+      double weighted, int graphNodes, int quizCount, bool hasExperiment) {
     final suggestions = <String>[];
 
     if (graphNodes < 50) {
@@ -1218,7 +1357,10 @@ class AchievementDao {
     if (weighted < 0.7) {
       suggestions.addAll([
         '加权总达成度偏低，建议调整考核比例（增加平时过程性考核权重）',
-        '增加实验课时占比，从30%提升至35%~40%',
+        if (hasExperiment)
+          '结合大纲复核实验课时与实验成绩占比，强化实验反馈闭环'
+        else
+          '结合大纲复核过程性评价与终结性评价比例，避免缺失环节被按0分处理',
         '引入阶段性小测验，及时发现学习困难学生',
       ]);
     } else {
@@ -1261,6 +1403,17 @@ class AchievementDao {
     final xHas = await hasRows('achievement_exam_scores');
     if (pHas && eHas && xHas) return;
 
+    final envWeights = await resolveObjectiveAssessmentWeights(batchId);
+    bool usesEnv(String env) => envWeights.any((w) => (w[env] ?? 0) > 0.0001);
+    final usesPingshi = usesEnv('pingshi');
+    final usesExperiment = usesEnv('experiment');
+    final usesExam = usesEnv('exam');
+    if ((!usesPingshi || pHas) &&
+        (!usesExperiment || eHas) &&
+        (!usesExam || xHas)) {
+      return;
+    }
+
     final agg = await db.query('achievement_scores',
         where: 'batch_id = ?', whereArgs: [batchId], orderBy: 'student_id ASC');
     if (agg.isEmpty) return;
@@ -1276,7 +1429,7 @@ class AchievementDao {
         final a3 = (s['obj3_achievement'] as num?)?.toDouble() ?? 0;
         final a4 = (s['obj4_achievement'] as num?)?.toDouble() ?? 0;
 
-        if (!pHas) {
+        if (!pHas && usesPingshi) {
           // 平时：课堂→目标1, 测验→目标2, 课外→目标4（目标3无平时项）
           await txn.insert(
               'achievement_pingshi_scores',
@@ -1296,7 +1449,7 @@ class AchievementDao {
               },
               conflictAlgorithm: ConflictAlgorithm.ignore);
         }
-        if (!eHas) {
+        if (!eHas && usesExperiment) {
           // 实验：1,2→目标1, 3,4→目标2, 5→目标3, 6→目标4
           await txn.insert(
               'achievement_experiment_scores',
@@ -1321,7 +1474,7 @@ class AchievementDao {
               },
               conflictAlgorithm: ConflictAlgorithm.ignore);
         }
-        if (!xHas) {
+        if (!xHas && usesExam) {
           // 期末：项目→目标1, 小组→目标2, 个人→目标3, 答辩→目标4
           await txn.insert(
               'achievement_exam_scores',
@@ -1565,30 +1718,116 @@ class AchievementDao {
   /// 生成期末考核演示数据
 
   // ── 综合达成度计算（三类评价加权汇总）──────────────────────────────
-  /// 综合达成度 = 平时×0.2 + 实验×0.3 + 期末×0.5
+  /// 综合达成度 = Σ(环节达成度 × 大纲环节比例)
   Future<Map<String, dynamic>> calculateCombinedAchievement(int batchId) async {
-    final pingshi = await calculatePingshiClassAverage(batchId);
-    final experiment = await calculateExperimentClassAverage(batchId);
-    final exam = await calculateExamClassAverage(batchId);
+    final aggregateAvg = await calculateClassAverage(batchId);
+    final envWeights = await resolveObjectiveAssessmentWeights(batchId);
 
-    const pWeight = 0.2;
-    const eWeight = 0.3;
-    const xWeight = 0.5;
-
-    final combined = <String, double>{};
-    for (int i = 1; i <= 4; i++) {
-      final key = 'obj$i';
-      combined[key] = (pingshi[key] ?? 0) * pWeight +
-          (experiment[key] ?? 0) * eWeight +
-          (exam[key] ?? 0) * xWeight;
+    Future<Map<String, double>> envAverage(
+      String env,
+      Future<Map<String, double>> Function() loadLegacyAverage,
+    ) async {
+      final usesEnv = envWeights.any((w) => (w[env] ?? 0) > 0.0001);
+      if (!usesEnv) return {};
+      final synthetic = await _componentRowsAreAggregateBackfill(batchId, env);
+      if (!synthetic) return loadLegacyAverage();
+      return _aggregateAverageForEnv(aggregateAvg, envWeights, env);
     }
+
+    final pingshi = await envAverage(
+        'pingshi', () => calculatePingshiClassAverage(batchId));
+    final experiment = await envAverage(
+        'experiment', () => calculateExperimentClassAverage(batchId));
+    final exam =
+        await envAverage('exam', () => calculateExamClassAverage(batchId));
+    final combined = <String, double>{
+      for (int i = 1; i <= 4; i++) 'obj$i': aggregateAvg['课程目标$i'] ?? 0,
+    };
 
     return {
       'pingshi': pingshi,
       'experiment': experiment,
       'exam': exam,
       'combined': combined,
-      'weights': {'平时': pWeight, '实验': eWeight, '期末': xWeight},
+      'weightsByObjective': envWeights,
+      'weights': {
+        '平时': envWeights.isEmpty ? 0 : envWeights.first['pingshi'] ?? 0,
+        '实验': envWeights.isEmpty ? 0 : envWeights.first['experiment'] ?? 0,
+        '期末': envWeights.isEmpty ? 0 : envWeights.first['exam'] ?? 0,
+      },
     };
+  }
+
+  Map<String, double> _aggregateAverageForEnv(
+    Map<String, double> aggregateAvg,
+    List<Map<String, double>> envWeights,
+    String env,
+  ) {
+    return {
+      for (int i = 1; i <= 4; i++)
+        if (i - 1 < envWeights.length &&
+            ((envWeights[i - 1][env] ?? 0) > 0.0001))
+          'obj$i': aggregateAvg['课程目标$i'] ?? 0,
+    };
+  }
+
+  Future<bool> _componentRowsAreAggregateBackfill(
+      int batchId, String env) async {
+    final db = await DatabaseHelper.instance.database;
+    final tableName = env == 'pingshi'
+        ? 'achievement_pingshi_scores'
+        : env == 'experiment'
+            ? 'achievement_experiment_scores'
+            : 'achievement_exam_scores';
+    final componentRows = await db.query(tableName,
+        where: 'batch_id = ?', whereArgs: [batchId], orderBy: 'student_id ASC');
+    if (componentRows.isEmpty) return true;
+
+    final aggregateRows = await db.query('achievement_scores',
+        where: 'batch_id = ?', whereArgs: [batchId], orderBy: 'student_id ASC');
+    if (componentRows.length != aggregateRows.length) return false;
+
+    final aggregateById = {
+      for (final row in aggregateRows) row['student_id']?.toString() ?? '': row
+    };
+    bool close(Object? a, Object? b) {
+      final av = (a as num?)?.toDouble() ?? 0;
+      final bv = (b as num?)?.toDouble() ?? 0;
+      return (av - bv).abs() < 0.0001;
+    }
+
+    for (final row in componentRows) {
+      final sid = row['student_id']?.toString() ?? '';
+      final aggregate = aggregateById[sid];
+      if (aggregate == null) return false;
+      switch (env) {
+        case 'pingshi':
+          if (!close(row['class_activity_achievement'],
+                  aggregate['obj1_achievement']) ||
+              !close(row['quiz_homework_achievement'],
+                  aggregate['obj2_achievement']) ||
+              !close(row['extra_learning_achievement'],
+                  aggregate['obj4_achievement'])) {
+            return false;
+          }
+          break;
+        case 'experiment':
+          for (var i = 1; i <= 4; i++) {
+            if (!close(
+                row['obj${i}_achievement'], aggregate['obj${i}_achievement'])) {
+              return false;
+            }
+          }
+          break;
+        default:
+          for (var i = 1; i <= 4; i++) {
+            if (!close(
+                row['obj${i}_achievement'], aggregate['obj${i}_achievement'])) {
+              return false;
+            }
+          }
+      }
+    }
+    return true;
   }
 }

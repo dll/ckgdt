@@ -56,20 +56,39 @@ class SyncService {
   Future<void> _ensureSyncToken() async {
     final prefs = await SharedPreferences.getInstance();
     final existing = prefs.getString(_syncTokenKey);
-    if (existing == null || existing.isEmpty) {
+    final shouldResetSyncToken = existing == null ||
+        existing.isEmpty ||
+        existing == GiteeCredentials.legacyTokenForMigration;
+    if (shouldResetSyncToken) {
       await prefs.setString(_syncTokenKey, _defaultSyncToken);
-      // 同时确保 GiteeService 也配置了此 Token
-      final giteeToken = await _gitee.getToken();
-      if (giteeToken == null || giteeToken.isEmpty) {
-        await _gitee.saveToken(_defaultSyncToken);
-      }
+    }
+
+    // 同时确保 GiteeService 也配置了此 Token。
+    final giteeToken = await _gitee.getToken();
+    if (giteeToken == null ||
+        giteeToken.isEmpty ||
+        giteeToken == GiteeCredentials.legacyTokenForMigration) {
+      await _gitee.saveToken(_defaultSyncToken);
     }
   }
 
   /// 获取同步专用 Token
   Future<String?> getSyncToken() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_syncTokenKey) ?? _defaultSyncToken;
+    final token = prefs.getString(_syncTokenKey);
+    if (token == null ||
+        token.isEmpty ||
+        token == GiteeCredentials.legacyTokenForMigration) {
+      await prefs.setString(_syncTokenKey, _defaultSyncToken);
+      final giteeToken = await _gitee.getToken();
+      if (giteeToken == null ||
+          giteeToken.isEmpty ||
+          giteeToken == GiteeCredentials.legacyTokenForMigration) {
+        await _gitee.saveToken(_defaultSyncToken);
+      }
+      return _defaultSyncToken;
+    }
+    return token;
   }
 
   /// 设置同步 Token

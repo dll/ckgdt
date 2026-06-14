@@ -159,12 +159,13 @@ class AchievementExcelService {
 
     for (final key in excel.tables.keys) {
       final table = excel.tables[key]!;
-      // 用 sheet 名识别类型（含「平时」「实验」「期末」）
-      if (key.contains('平时')) {
+      // 用 sheet 名识别类型。没有实验的课程可只提供平时/考核两张表；
+      // “课程设计/项目/综合/答辩”等终结性评价归入 exam 桶。
+      if (_isPingshiSheetName(key)) {
         out['pingshi'] = _parsePingshiSheet(table);
-      } else if (key.contains('实验')) {
+      } else if (_isExperimentSheetName(key)) {
         out['experiment'] = _parseExperimentSheet(table);
-      } else if (key.contains('期末') || key.contains('考核')) {
+      } else if (_isExamSheetName(key)) {
         out['exam'] = _parseExamSheet(table);
       }
     }
@@ -173,6 +174,28 @@ class AchievementExcelService {
 
   bool _hasComponentRows(Map<String, List<Map<String, dynamic>>> components) {
     return components.values.any((rows) => rows.isNotEmpty);
+  }
+
+  bool _isPingshiSheetName(String name) {
+    return name.contains('平时') ||
+        name.contains('过程') ||
+        name.contains('课堂') ||
+        name.contains('作业') ||
+        name.contains('测验');
+  }
+
+  bool _isExperimentSheetName(String name) {
+    return name.contains('实验') || name.contains('实训') || name.contains('实践');
+  }
+
+  bool _isExamSheetName(String name) {
+    return name.contains('期末') ||
+        name.contains('考核') ||
+        name.contains('考试') ||
+        name.contains('项目') ||
+        name.contains('课程设计') ||
+        name.contains('综合') ||
+        name.contains('答辩');
   }
 
   Map<String, List<Map<String, dynamic>>> _parseComponentSheetsFromOoxml(
@@ -187,11 +210,11 @@ class AchievementExcelService {
       for (final entry in sheets.entries) {
         final key = entry.key;
         final rows = entry.value;
-        if (key.contains('平时')) {
+        if (_isPingshiSheetName(key)) {
           out['pingshi'] = _parsePingshiRows(rows);
-        } else if (key.contains('实验')) {
+        } else if (_isExperimentSheetName(key)) {
           out['experiment'] = _parseExperimentRows(rows);
-        } else if (key.contains('期末') || key.contains('考核')) {
+        } else if (_isExamSheetName(key)) {
           out['exam'] = _parseExamRows(rows);
         }
       }
@@ -622,6 +645,102 @@ class AchievementExcelService {
     return grade;
   }
 
+  /// 解析由 [buildGradeTemplate] 生成的新动态模板。
+  ///
+  /// 新模板不再固定生成「平时/实验/期末」三张表，而是在「成绩录入」sheet
+  /// 中按大纲对照表生成真实存在的考核项列。每个成绩单元格填写 0-100，
+  /// 本方法按列头中的课程目标和比例直接合成 objN_achievement。
+  List<Map<String, dynamic>> parseDynamicGradeTemplate(
+    Uint8List bytes, {
+    List<Map<String, dynamic>> objectiveRows = const [],
+  }) {
+    late final xl.Excel excel;
+    try {
+      excel = xl.Excel.decodeBytes(bytes);
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AchievementExcel.parseDynamic.decode', stack: st);
+      return const [];
+    }
+    final sheet = excel.tables['成绩录入'];
+    if (sheet == null || sheet.rows.isEmpty) return const [];
+
+    final items = _assessmentItemsFromRows(objectiveRows);
+    final itemByObjectiveAndLabel = <String, _TemplateAssessmentItem>{
+      for (final item in items) '${item.objective}|${item.label}': item
+    };
+    final fullMarks = _fullMarksFromRows(objectiveRows);
+
+    var headerRow = -1;
+    for (var r = 0; r < sheet.rows.length && r < 10; r++) {
+      final cells =
+          sheet.rows[r].map((c) => c?.value?.toString() ?? '').toList();
+      if (cells.isNotEmpty && cells[0].trim() == '学号') {
+        headerRow = r;
+        break;
+      }
+    }
+    if (headerRow < 0) return const [];
+
+    final headers =
+        sheet.rows[headerRow].map((c) => c?.value?.toString() ?? '').toList();
+    final columns = <int, _TemplateAssessmentItem>{};
+    for (var c = 2; c < headers.length; c++) {
+      final parsed = _parseDynamicTemplateHeader(headers[c]);
+      if (parsed == null) continue;
+      final key = '${parsed.objective}|${parsed.label}';
+      columns[c] = itemByObjectiveAndLabel[key] ?? parsed;
+    }
+    if (columns.isEmpty) return const [];
+
+    final results = <Map<String, dynamic>>[];
+    for (var r = headerRow + 1; r < sheet.rows.length; r++) {
+      final row = sheet.rows[r];
+      final sid = _cellStr(row, 0);
+      if (!_isDataRow(sid)) continue;
+      final name = _cellStr(row, 1);
+      final ach = List<double>.filled(4, 0);
+
+      for (final entry in columns.entries) {
+        final item = entry.value;
+        if (item.objective < 1 || item.objective > 4) continue;
+        final score = _cell(row, entry.key).clamp(0.0, 100.0).toDouble();
+        ach[item.objective - 1] += score / 100.0 * item.ratio;
+      }
+
+      final grade = <String, dynamic>{
+        'student_id': sid,
+        'student_name': name,
+      };
+      var total = 0.0;
+      for (var i = 0; i < 4; i++) {
+        final full = fullMarks[i];
+        final value = ach[i].clamp(0.0, 1.0);
+        grade['obj${i + 1}_achievement'] = value;
+        grade['obj${i + 1}_score'] = value * full;
+        total += value * full;
+      }
+      grade['total_score'] = total;
+      results.add(grade);
+    }
+    return results;
+  }
+
+  _TemplateAssessmentItem? _parseDynamicTemplateHeader(String header) {
+    final text = _normalizeSyllabusText(header);
+    final m = RegExp(r'^(.+?)-课程目标(\d+)-比例(\d+(?:\.\d+)?)%$').firstMatch(text);
+    if (m == null) return null;
+    final label = m.group(1)!.trim();
+    final objective = int.tryParse(m.group(2)!) ?? 0;
+    final ratio = (double.tryParse(m.group(3)!) ?? 0) / 100.0;
+    if (objective <= 0 || ratio <= 0) return null;
+    return _TemplateAssessmentItem(
+      label: label,
+      kind: _assessmentKind(label),
+      objective: objective,
+      ratio: ratio,
+    );
+  }
+
   /// 从文件解析教学大纲（支持 MD / Word(docx) / Excel）
   Future<Map<String, dynamic>> parseSyllabus(String filePath) async {
     final file = File(filePath);
@@ -935,67 +1054,249 @@ $rawText
       final objectives = <Map<String, String>>[];
       final weights = <Map<String, dynamic>>[];
       final assessContents = <Map<String, dynamic>>[];
+      final experimentMap = <int, List<String>>{};
+      final chapterMap = <int, List<String>>{};
+      final pingshiStandards = <int, String>{};
+      final experimentStandards = <int, String>{};
+      var rubricTableCount = 0;
+
       for (final tbl in doc.findAllElements('w:tbl')) {
+        final tableRows = <List<String>>[];
         for (final tr in tbl.findAllElements('w:tr')) {
           final cells = <String>[];
           for (final tc in tr.findAllElements('w:tc')) {
-            final text =
-                tc.findAllElements('w:t').map((t) => t.innerText).join().trim();
+            final text = _normalizeSyllabusText(
+                tc.findAllElements('w:t').map((t) => t.innerText).join());
             cells.add(text);
           }
           if (cells.isEmpty) continue;
-          // 课程目标表：序号|课程目标|支撑的毕业要求
-          final numOnly = RegExp(r'^\d+$').firstMatch(cells[0]);
-          if (numOnly != null &&
-              cells.length >= 3 &&
-              cells[1].length > 8 &&
-              RegExp(r'\d\.\d').hasMatch(cells[2])) {
+          tableRows.add(cells);
+        }
+        if (tableRows.isEmpty) continue;
+
+        final headerText = tableRows.take(2).expand((r) => r).join('|');
+
+        // 课程目标表：序号 | 课程目标 | 支撑的毕业要求。
+        if (headerText.contains('课程目标') && headerText.contains('支撑的毕业要求')) {
+          for (final cells in tableRows.skip(1)) {
+            final idx = int.tryParse(cells.isNotEmpty ? cells[0] : '');
+            if (idx == null || idx <= 0) continue;
+            if (cells.length < 3 || cells[1].length <= 8) continue;
+            final indicator = _extractIndicator(cells[2]);
+            if (indicator == null) continue;
             objectives.add({
-              'num': numOnly.group(0)!,
+              'num': '$idx',
               'objective': cells[1],
               'requirement': cells[2],
             });
-            continue;
           }
-          // 学校达成报告表0：课程目标描述|毕业要求指标点|考核内容
-          if (objectives.length < 4 &&
-              cells.length >= 3 &&
-              cells[0].length > 8 &&
-              RegExp(r'\d\.\d').hasMatch(cells[1])) {
+          continue;
+        }
+
+        // 学校达成报告表：课程目标描述 | 毕业要求指标点 | 考核内容。
+        if (headerText.contains('毕业要求指标点') && headerText.contains('考核内容')) {
+          for (final cells in tableRows) {
+            if (cells.length < 3 || cells[0].length <= 8) continue;
+            final indicator = _extractIndicator(cells[1]);
+            if (indicator == null) continue;
             final idx = objectives.length + 1;
-            objectives.add({
-              'num': '$idx',
-              'objective': cells[0],
-              'requirement': cells[1],
-            });
+            if (!objectives.any((o) => o['num'] == '$idx')) {
+              objectives.add({
+                'num': '$idx',
+                'objective': cells[0],
+                'requirement': cells[1],
+              });
+            }
             assessContents.add({
               'objective': idx,
               'content': cells[2],
             });
-            continue;
           }
-          // 权重对照表行：以「课程目标N」开头，第2列是权重小数
-          final m = RegExp(r'课程目标\s*(\d)').firstMatch(cells[0]);
-          if (m != null && cells.length >= 2) {
-            final w =
-                double.tryParse(cells[1].replaceAll(RegExp(r'[^\d.]'), ''));
-            if (w != null && w > 0 && w <= 1) {
+          continue;
+        }
+
+        // 实验项目与课程目标映射表。
+        if (headerText.contains('实验项目') && headerText.contains('对应课程目标')) {
+          final targetCol = _findHeaderColumn(tableRows.first, '对应课程目标',
+              fallback: tableRows.first.length - 1);
+          for (final cells in tableRows.skip(1)) {
+            if (cells.isEmpty) continue;
+            final expNo = int.tryParse(cells[0]);
+            if (expNo == null || expNo <= 0 || targetCol >= cells.length) {
+              continue;
+            }
+            for (final target in _parseTargetRefs(cells[targetCol])) {
+              experimentMap.putIfAbsent(target, () => []).add('实验$expNo');
+            }
+          }
+          continue;
+        }
+
+        // 章节与课程目标映射表。
+        if (headerText.contains('章节') && headerText.contains('对应课程目标')) {
+          final targetCol = _findHeaderColumn(tableRows.first, '对应课程目标',
+              fallback:
+                  tableRows.first.length > 3 ? 3 : tableRows.first.length - 1);
+          for (final cells in tableRows.skip(1)) {
+            if (cells.isEmpty) continue;
+            final chapterNo = int.tryParse(cells[0]);
+            if (chapterNo == null ||
+                chapterNo <= 0 ||
+                targetCol >= cells.length) {
+              continue;
+            }
+            for (final target in _parseTargetRefs(cells[targetCol])) {
+              chapterMap.putIfAbsent(target, () => []).add('第$chapterNo章');
+            }
+          }
+          continue;
+        }
+
+        // 课程目标达成考核与评价方式及成绩评定对照表。
+        // 不再要求表头固定为「平时/实验/期末」三列。部分课程没有实验，
+        // 或将终结性评价写成「课程设计/项目/综合考核」，这里按表头识别并
+        // 归入内部三类桶：pingshi / experiment / exam。
+        if (_looksLikeAssessmentMatrix(tableRows, headerText)) {
+          for (var rowIndex = 0; rowIndex < tableRows.length; rowIndex++) {
+            final cells = tableRows[rowIndex];
+            final m = RegExp(r'课程目标\s*(\d)').firstMatch(cells[0]);
+            if (m == null || cells.length < 3) continue;
+            final idx = int.parse(m.group(1)!);
+
+            // 两类模板：
+            // 1) 课程目标1 | 0.15 | 支撑毕业要求1.4 | 15(20%) | 15(30%) | 15(50%)
+            // 2) 课程目标1 | 支撑毕业要求2.2 | 20(20%) | 20(30%) | 20(50%)
+            final explicitWeight =
+                _parseWeightCell(cells.length > 1 ? cells[1] : '');
+            final componentStart = explicitWeight != null ? 3 : 2;
+            final items = <Map<String, dynamic>>[];
+            final ratioByKind = <String, double>{
+              'pingshi': 0,
+              'experiment': 0,
+              'exam': 0,
+            };
+            final fullByKind = <String, double>{};
+            for (int i = componentStart; i < cells.length; i++) {
+              final parsed = _parseFullAndRatio(cells[i]);
+              if (parsed == null) continue;
+              final label =
+                  _assessmentLabelForCell(tableRows, rowIndex, i, items.length);
+              final kind = _assessmentKind(label);
+              final ratio = parsed.ratio ?? 0;
+              ratioByKind[kind] = (ratioByKind[kind] ?? 0) + ratio;
+              fullByKind[kind] = parsed.full;
+              items.add({
+                'label': label,
+                'kind': kind,
+                'full': parsed.full,
+                'ratio': ratio,
+              });
+            }
+            if (items.isEmpty) continue;
+            final fullMark = (items.first['full'] as num).toDouble();
+            final requirement = cells.length > 1
+                ? cells.firstWhere((c) => _extractIndicator(c) != null,
+                    orElse: () => '')
+                : '';
+            final weight = explicitWeight ?? (fullMark / 100.0);
+            weights.add({
+              'objective': idx,
+              'weight': weight,
+              'requirement': requirement,
+              'full_mark': fullMark,
+              'pingshi_full': fullByKind['pingshi'] ?? fullMark,
+              'experiment_full': fullByKind['experiment'] ?? 0,
+              'exam_full': fullByKind['exam'] ?? fullMark,
+              'pingshi_ratio': ratioByKind['pingshi'] ?? 0,
+              'experiment_ratio': ratioByKind['experiment'] ?? 0,
+              'exam_ratio': ratioByKind['exam'] ?? 0,
+              'assessment_items_json': jsonEncode(items),
+            });
+          }
+          continue;
+        }
+
+        // 平时/实验评价标准表：观测点 | 评价标准 | 成绩比例。
+        if (headerText.contains('观测点') && headerText.contains('评价标准')) {
+          rubricTableCount++;
+          final isExperimentRubric = rubricTableCount >= 2;
+          for (final cells in tableRows) {
+            if (cells.length < 2) continue;
+            final idx = _extractObjectiveIndex(cells[0]);
+            if (idx == null) continue;
+            final standard = cells[1].trim();
+            if (standard.isEmpty) continue;
+            if (isExperimentRubric) {
+              experimentStandards[idx] = standard;
+            } else {
+              pingshiStandards[idx] = standard;
+            }
+            final ratio = _parsePercent(cells.last);
+            if (ratio != null && !weights.any((w) => w['objective'] == idx)) {
               weights.add({
-                'objective': int.parse(m.group(1)!),
-                'weight': w,
-                'requirement': cells.length > 2 ? cells[2] : '',
-                'pingshi_full': _extractFull(cells, 3),
-                'experiment_full': _extractFull(cells, 4),
-                'exam_full': _extractFull(cells, 5),
+                'objective': idx,
+                'weight': ratio,
+                'requirement': cells[0],
+                'full_mark': ratio * 100,
+                'pingshi_full': ratio * 100,
+                'experiment_full': ratio * 100,
+                'exam_full': ratio * 100,
+              });
+            }
+          }
+          continue;
+        }
+
+        // 期末/综合评价内容表：基本要求 | 评价内容 | 比例。
+        if (headerText.contains('基本要求') &&
+            headerText.contains('评价内容') &&
+            headerText.contains('比例')) {
+          for (final cells in tableRows.skip(1)) {
+            if (cells.length < 2) continue;
+            final idx = _extractObjectiveIndex(cells[0]);
+            if (idx == null) continue;
+            assessContents.add({
+              'objective': idx,
+              'content': cells[1],
+            });
+            final ratio = cells.length > 2 ? _parsePercent(cells[2]) : null;
+            if (ratio != null && !weights.any((w) => w['objective'] == idx)) {
+              weights.add({
+                'objective': idx,
+                'weight': ratio,
+                'requirement': cells[0],
+                'full_mark': ratio * 100,
+                'pingshi_full': ratio * 100,
+                'experiment_full': ratio * 100,
+                'exam_full': ratio * 100,
               });
             }
           }
         }
       }
+
+      for (final entry in pingshiStandards.entries) {
+        assessContents.add({
+          'objective': entry.key,
+          'pingshi_standard': entry.value,
+        });
+      }
+      for (final entry in experimentStandards.entries) {
+        assessContents.add({
+          'objective': entry.key,
+          'experiment_standard': entry.value,
+        });
+      }
+
       return {
+        'courseName': _extractCourseNameFromDocx(doc),
         'objectives': objectives,
         'weights': weights,
-        'assessContents': assessContents
+        'assessContents': assessContents,
+        'experimentMap':
+            experimentMap.map((k, v) => MapEntry(k.toString(), _joinUnique(v))),
+        'chapterMap':
+            chapterMap.map((k, v) => MapEntry(k.toString(), _joinUnique(v))),
       };
     } catch (e, st) {
       swallowDebug(e, tag: 'AchievementExcel.parseWord', stack: st);
@@ -1003,10 +1304,196 @@ $rawText
     }
   }
 
-  int _extractFull(List<String> cells, int i) {
-    if (i >= cells.length) return 0;
-    final m = RegExp(r'(\d+)').firstMatch(cells[i]);
-    return m != null ? int.parse(m.group(1)!) : 0;
+  bool _looksLikeAssessmentMatrix(
+      List<List<String>> tableRows, String headerText) {
+    if (!headerText.contains('课程目标')) return false;
+    final hasAssessmentKeyword = headerText.contains('成绩') ||
+        headerText.contains('评价') ||
+        headerText.contains('考核') ||
+        headerText.contains('考试') ||
+        headerText.contains('项目') ||
+        headerText.contains('设计') ||
+        headerText.contains('平时') ||
+        headerText.contains('实验');
+    if (!hasAssessmentKeyword) return false;
+
+    var objectiveRowsWithScores = 0;
+    for (final cells in tableRows) {
+      if (cells.isEmpty) continue;
+      if (RegExp(r'课程目标\s*\d').hasMatch(cells[0])) {
+        final scoreCells = cells.where((c) => _parseFullAndRatio(c) != null);
+        if (scoreCells.isNotEmpty) objectiveRowsWithScores++;
+      }
+    }
+    return objectiveRowsWithScores > 0;
+  }
+
+  String _assessmentLabelForCell(List<List<String>> tableRows, int rowIndex,
+      int colIndex, int componentOrdinal) {
+    for (var r = rowIndex - 1; r >= 0; r--) {
+      if (colIndex >= tableRows[r].length) continue;
+      final text = _normalizeSyllabusText(tableRows[r][colIndex]);
+      if (text.isEmpty) continue;
+      if (_parseFullAndRatio(text) != null) continue;
+      if (text.contains('课程目标') ||
+          text.contains('毕业要求') ||
+          text.contains('指标点') ||
+          text == '权重') {
+        continue;
+      }
+      return text;
+    }
+    const fallback = ['平时成绩', '考核成绩', '考核项3'];
+    if (componentOrdinal >= 0 && componentOrdinal < fallback.length) {
+      return fallback[componentOrdinal];
+    }
+    return '考核项${componentOrdinal + 1}';
+  }
+
+  String _assessmentKind(String label) {
+    final text = _normalizeSyllabusText(label);
+    if (text.contains('实验') || text.contains('实训') || text.contains('实践')) {
+      return 'experiment';
+    }
+    if (text.contains('平时') ||
+        text.contains('过程') ||
+        text.contains('课堂') ||
+        text.contains('作业') ||
+        text.contains('测验') ||
+        text.contains('考勤')) {
+      return 'pingshi';
+    }
+    return 'exam';
+  }
+
+  String _normalizeSyllabusText(String text) {
+    const replacements = {
+      '０': '0',
+      '１': '1',
+      '２': '2',
+      '３': '3',
+      '４': '4',
+      '５': '5',
+      '６': '6',
+      '７': '7',
+      '８': '8',
+      '９': '9',
+      '（': '(',
+      '）': ')',
+      '％': '%',
+      '，': ',',
+      '；': ';',
+      '：': ':',
+      '－': '-',
+      '—': '-',
+      '～': '~',
+    };
+    var out = text.trim().replaceAll(RegExp(r'\s+'), ' ');
+    for (final entry in replacements.entries) {
+      out = out.replaceAll(entry.key, entry.value);
+    }
+    return out.trim();
+  }
+
+  String? _extractIndicator(String text) =>
+      RegExp(r'\d+(?:\.\d+)+').firstMatch(text)?.group(0);
+
+  int? _extractObjectiveIndex(String text) {
+    final normalized = _normalizeSyllabusText(text);
+    final m = RegExp(r'课程目标\s*(\d+)').firstMatch(normalized);
+    if (m != null) return int.tryParse(m.group(1)!);
+    return int.tryParse(normalized);
+  }
+
+  int _findHeaderColumn(List<String> header, String keyword,
+      {required int fallback}) {
+    for (var i = 0; i < header.length; i++) {
+      if (header[i].contains(keyword)) return i;
+    }
+    return fallback.clamp(0, header.length - 1);
+  }
+
+  List<int> _parseTargetRefs(String text) {
+    final normalized = _normalizeSyllabusText(text);
+    final direct = RegExp(r'(?:课程)?目标\s*(\d+)')
+        .allMatches(normalized)
+        .map((m) => int.tryParse(m.group(1)!))
+        .whereType<int>()
+        .toList();
+    if (direct.isNotEmpty) return _uniqueInts(direct);
+
+    final targets = <int>[];
+    for (final part in normalized.split(RegExp(r'[、,，;；/和及+\s]+'))) {
+      if (part.isEmpty || part.contains('.')) continue;
+      final range = RegExp(r'^(\d+)\s*[-~至]\s*(\d+)$').firstMatch(part);
+      if (range != null) {
+        final start = int.tryParse(range.group(1)!) ?? 0;
+        final end = int.tryParse(range.group(2)!) ?? start;
+        for (var i = start; i <= end; i++) {
+          if (i > 0) targets.add(i);
+        }
+        continue;
+      }
+      final value = int.tryParse(part);
+      if (value != null && value > 0) targets.add(value);
+    }
+    return _uniqueInts(targets);
+  }
+
+  List<int> _uniqueInts(Iterable<int> values) {
+    final seen = <int>{};
+    return [
+      for (final v in values)
+        if (seen.add(v)) v
+    ];
+  }
+
+  String _joinUnique(Iterable<String> values) {
+    final seen = <String>{};
+    return [
+      for (final v in values)
+        if (v.trim().isNotEmpty && seen.add(v.trim())) v.trim()
+    ].join('、');
+  }
+
+  double? _parseWeightCell(String text) {
+    final trimmed = _normalizeSyllabusText(text);
+    final value = double.tryParse(trimmed);
+    if (value != null && value > 0 && value <= 1) return value;
+    return null;
+  }
+
+  _FullAndRatio? _parseFullAndRatio(String text) {
+    final normalized = _normalizeSyllabusText(text);
+    final m = RegExp(
+            r'^\s*(\d+(?:\.\d+)?)\s*(?:[(]\s*(\d+(?:\.\d+)?)\s*%\s*[)])?\s*$')
+        .firstMatch(normalized);
+    if (m == null) return null;
+    final full = double.tryParse(m.group(1)!);
+    if (full == null) return null;
+    final ratioValue = m.group(2) != null ? double.tryParse(m.group(2)!) : null;
+    return _FullAndRatio(full, ratioValue == null ? null : ratioValue / 100.0);
+  }
+
+  double? _parsePercent(String text) {
+    final normalized = _normalizeSyllabusText(text);
+    final m = RegExp(r'(\d+(?:\.\d+)?)\s*%').firstMatch(normalized);
+    if (m == null) return null;
+    final value = double.tryParse(m.group(1)!);
+    return value == null ? null : value / 100.0;
+  }
+
+  String? _extractCourseNameFromDocx(XmlDocument doc) {
+    for (final p in doc.findAllElements('w:p')) {
+      final text = _normalizeSyllabusText(
+          p.findAllElements('w:t').map((t) => t.innerText).join());
+      if (text.isEmpty) continue;
+      final title = RegExp(r'《([^》]+)》\s*教学大纲').firstMatch(text);
+      if (title != null) return title.group(1)!.trim();
+      final named = RegExp(r'课程名称[:：]\s*([^,，;；\s]+)').firstMatch(text);
+      if (named != null) return named.group(1)!.trim();
+    }
+    return null;
   }
 
   /// 把 parseSyllabus / parseWordSyllabus 的结果转成 course_objectives 行。
@@ -1023,15 +1510,16 @@ $rawText
         'idx': idx,
         'name': '课程目标$idx',
         'indicator':
-            (w['requirement'] as String?)?.replaceAll(RegExp(r'[^\d.]'), '') ??
-                '',
+            _extractIndicator((w['requirement'] as String?) ?? '') ?? '',
         'weight': (w['weight'] as num?)?.toDouble() ?? 0,
-        'full_mark': (w['exam_full'] as num?)?.toDouble() ??
+        'full_mark': (w['full_mark'] as num?)?.toDouble() ??
+            (w['exam_full'] as num?)?.toDouble() ??
             (w['pingshi_full'] as num?)?.toDouble() ??
             0,
-        'pingshi_ratio': 0.20,
-        'experiment_ratio': 0.30,
-        'exam_ratio': 0.50,
+        'pingshi_ratio': (w['pingshi_ratio'] as num?)?.toDouble() ?? 0.20,
+        'experiment_ratio': (w['experiment_ratio'] as num?)?.toDouble() ?? 0.30,
+        'exam_ratio': (w['exam_ratio'] as num?)?.toDouble() ?? 0.50,
+        'assessment_items_json': (w['assessment_items_json'] ?? '').toString(),
       };
     }
     for (final o in objectives) {
@@ -1042,8 +1530,7 @@ $rawText
       row['description'] = o['objective'];
       if ((row['indicator'] as String?)?.isEmpty ?? true) {
         row['indicator'] =
-            (o['requirement'] as String?)?.replaceAll(RegExp(r'[^\d.]'), '') ??
-                '';
+            _extractIndicator((o['requirement'] as String?) ?? '') ?? '';
       }
     }
     // 合并期末考核评价内容 → assess_content
@@ -1053,7 +1540,13 @@ $rawText
       if (idx == 0) continue;
       final row =
           byIdx.putIfAbsent(idx, () => {'idx': idx, 'name': '课程目标$idx'});
-      row['assess_content'] = a['content'];
+      if (a['content'] != null) row['assess_content'] = a['content'];
+      if (a['pingshi_standard'] != null) {
+        row['pingshi_standard'] = a['pingshi_standard'];
+      }
+      if (a['experiment_standard'] != null) {
+        row['experiment_standard'] = a['experiment_standard'];
+      }
     }
     // 合并映射表字段（实验/章节→目标）
     void mergeMapToField(String mapKey, String field) {
@@ -1077,6 +1570,52 @@ $rawText
     return rows;
   }
 
+  /// 用确定性解析结果兜底，AI 结果只补充缺失字段，避免 AI 把权重/满分清空。
+  List<Map<String, dynamic>> mergeSyllabusRows(
+    List<Map<String, dynamic>> deterministicRows,
+    List<Map<String, dynamic>> aiRows,
+  ) {
+    if (deterministicRows.isEmpty) return aiRows;
+    final byIdx = <int, Map<String, dynamic>>{
+      for (final row in deterministicRows)
+        ((row['idx'] as num?)?.toInt() ?? 0): Map<String, dynamic>.from(row)
+    }..remove(0);
+
+    bool isEmptyValue(Object? value) {
+      if (value == null) return true;
+      if (value is num) return value == 0;
+      return value.toString().trim().isEmpty;
+    }
+
+    const fillOnlyFields = [
+      'description',
+      'indicator',
+      'chapters',
+      'experiments',
+      'assess_content',
+      'pingshi_standard',
+      'experiment_standard',
+    ];
+    for (final ai in aiRows) {
+      final idx = (ai['idx'] as num?)?.toInt() ?? 0;
+      if (idx == 0) continue;
+      final row =
+          byIdx.putIfAbsent(idx, () => {'idx': idx, 'name': '课程目标$idx'});
+      for (final field in fillOnlyFields) {
+        if (isEmptyValue(row[field]) && !isEmptyValue(ai[field])) {
+          row[field] = ai[field];
+        }
+      }
+      for (final field in ['weight', 'full_mark']) {
+        if (isEmptyValue(row[field]) && !isEmptyValue(ai[field])) {
+          row[field] = ai[field];
+        }
+      }
+    }
+    return byIdx.values.toList()
+      ..sort((a, b) => (a['idx'] as int).compareTo(b['idx'] as int));
+  }
+
   Future<List<double>> _resolveFullMarks(Database db, int batchId) async {
     final batch = await db.query('achievement_batches',
         columns: ['course_name'], where: 'id = ?', whereArgs: [batchId]);
@@ -1085,12 +1624,18 @@ $rawText
         : '移动应用开发';
     final rows = await db.query('course_objectives',
         where: 'course_name = ?', whereArgs: [courseName], orderBy: 'idx ASC');
-    if (rows.length >= 4) {
-      final marks = rows
-          .take(4)
-          .map((r) => (r['full_mark'] as num?)?.toDouble() ?? 0)
-          .toList();
-      if (marks.every((m) => m > 0)) return marks;
+    if (rows.isNotEmpty) {
+      final marks = List<double>.filled(4, 0);
+      var hasMark = false;
+      for (final r in rows) {
+        final idx = (r['idx'] as num?)?.toInt() ?? 0;
+        final mark = (r['full_mark'] as num?)?.toDouble() ?? 0;
+        if (idx >= 1 && idx <= 4 && mark > 0) {
+          marks[idx - 1] = mark;
+          hasMark = true;
+        }
+      }
+      if (hasMark) return marks;
     }
     return AchievementConfig.defaults.fullMarks;
   }
@@ -1115,14 +1660,20 @@ $rawText
         final obj4 = (g['obj4_score'] as num?)?.toDouble() ?? 0;
         final total = (g['total_score'] as num?)?.toDouble() ??
             (obj1 + obj2 + obj3 + obj4);
+        double achOrScore(Object? achievement, double score, double fullMark) {
+          final direct = (achievement as num?)?.toDouble();
+          if (direct != null) return direct.clamp(0.0, 1.0);
+          return fullMark > 0 ? (score / fullMark).clamp(0.0, 1.0) : 0.0;
+        }
+
         final ach1 = (g['obj1_achievement'] as num?)?.toDouble() ??
-            (obj1 / fm[0]).clamp(0.0, 1.0);
+            achOrScore(null, obj1, fm[0]);
         final ach2 = (g['obj2_achievement'] as num?)?.toDouble() ??
-            (obj2 / fm[1]).clamp(0.0, 1.0);
+            achOrScore(null, obj2, fm[1]);
         final ach3 = (g['obj3_achievement'] as num?)?.toDouble() ??
-            (obj3 / fm[2]).clamp(0.0, 1.0);
+            achOrScore(null, obj3, fm[2]);
         final ach4 = (g['obj4_achievement'] as num?)?.toDouble() ??
-            (obj4 / fm[3]).clamp(0.0, 1.0);
+            achOrScore(null, obj4, fm[3]);
 
         try {
           await txn.insert(
@@ -1155,72 +1706,178 @@ $rawText
     return count;
   }
 
-  /// 生成成绩导入模板（.xlsx，3 个 sheet：平时成绩/实验成绩/期末成绩）。
-  /// 列布局与 parseComponentSheets 的简洁模板分支严格对齐，表头标注每列支撑的
-  /// 课程目标，体现大纲驱动的目标拆分。可选传入 [students] 预填学号/姓名名单。
+  /// 生成成绩导入模板。
   ///
-  /// 目标拆分（以大纲为准）：
-  /// - 平时：课堂表现→目标1，期间测验→目标2，课外学习→目标4
-  /// - 实验：实验1,2→目标1，实验3,4→目标2，实验5,6→目标3，实验7→目标4
-  /// - 期末：项目→目标1，小组→目标2，个人→目标3，答辩→目标4
+  /// 新模板由大纲/对照表驱动：每个实际存在的考核项生成一列，缺失的项
+  /// （例如英语课没有实验）不生成、不显示、不参与后续计算。旧三 sheet
+  /// 模板解析仍保留在 [parseComponentSheets] 中用于兼容历史文件。
   List<int> buildGradeTemplate({
     List<Map<String, dynamic>> students = const [],
     AchievementConfig? config,
+    List<Map<String, dynamic>> objectiveRows = const [],
   }) {
     final cfg = config ?? AchievementConfig.defaults;
+    final objectiveItems = _assessmentItemsFromRows(objectiveRows);
+    final activeItems = objectiveItems.isNotEmpty
+        ? objectiveItems
+        : _assessmentItemsFromConfig(cfg);
+    final fullMarks = objectiveRows.isNotEmpty
+        ? _fullMarksFromRows(objectiveRows)
+        : cfg.fullMarks;
+
     final excel = xl.Excel.createExcel();
-    // 删除默认 Sheet1，最终输出 3 个 sheet
+    // 删除默认 Sheet1，最终只输出动态模板 sheet。
     for (final name in excel.tables.keys.toList()) {
       excel.delete(name);
     }
 
-    String ind(int i) => i < cfg.indicators.length ? cfg.indicators[i] : '';
-
-    // ── 平时：课堂表现(20→目标1) / 期间测验(30→目标2) / 课外学习(50→目标4) ──
-    final ps = excel['平时成绩'];
-    ps.appendRow([
+    final sheet = excel['成绩录入'];
+    sheet.appendRow([
       xl.TextCellValue('学号'),
       xl.TextCellValue('姓名'),
-      xl.TextCellValue('课堂表现 满分20（目标1·${ind(0)}）'),
-      xl.TextCellValue('期间测验 满分30（目标2·${ind(1)}）'),
-      xl.TextCellValue('课外学习 满分50（目标4·${ind(3)}）'),
+      for (final item in activeItems)
+        xl.TextCellValue(
+          '${item.label}-课程目标${item.objective}-比例${(item.ratio * 100).toStringAsFixed(0)}%',
+        ),
     ]);
 
-    // ── 实验：学校表格48为7次实验；1,2→目标1 / 3,4→目标2 / 5,6→目标3 / 7→目标4 ──
-    final es = excel['实验成绩'];
-    es.appendRow([
-      xl.TextCellValue('学号'),
-      xl.TextCellValue('姓名'),
-      xl.TextCellValue('实验1得分（目标1）'),
-      xl.TextCellValue('实验2得分（目标1）'),
-      xl.TextCellValue('实验3得分（目标2）'),
-      xl.TextCellValue('实验4得分（目标2）'),
-      xl.TextCellValue('实验5得分（目标3）'),
-      xl.TextCellValue('实验6得分（目标3）'),
-      xl.TextCellValue('实验7得分（目标4）'),
-    ]);
-
-    // ── 期末成绩：项目(目标1)/小组(目标2)/个人(目标3)/答辩(目标4) ──
-    final xs = excel['期末成绩'];
-    xs.appendRow([
-      xl.TextCellValue('学号'),
-      xl.TextCellValue('姓名'),
-      xl.TextCellValue('项目得分（目标1·满分100）'),
-      xl.TextCellValue('小组得分（目标2·满分100）'),
-      xl.TextCellValue('个人得分（目标3·满分100）'),
-      xl.TextCellValue('答辩得分（目标4·满分100）'),
-    ]);
-
-    // 预填学生名单（学号/姓名），成绩列留空待教师填写
+    // 预填学生名单（学号/姓名），成绩列留空待教师填写。每个成绩单元格填 0-100。
     for (final s in students) {
       final id = (s['student_id'] ?? s['user_id'] ?? '').toString();
       final name = (s['student_name'] ?? s['real_name'] ?? '').toString();
       if (id.isEmpty) continue;
-      ps.appendRow([xl.TextCellValue(id), xl.TextCellValue(name)]);
-      es.appendRow([xl.TextCellValue(id), xl.TextCellValue(name)]);
-      xs.appendRow([xl.TextCellValue(id), xl.TextCellValue(name)]);
+      sheet.appendRow([xl.TextCellValue(id), xl.TextCellValue(name)]);
+    }
+
+    final matrix = excel['大纲对照表'];
+    matrix.appendRow([
+      xl.TextCellValue('课程目标'),
+      xl.TextCellValue('指标点'),
+      xl.TextCellValue('目标权重'),
+      xl.TextCellValue('目标满分'),
+      xl.TextCellValue('考核项'),
+      xl.TextCellValue('考核项比例'),
+    ]);
+    for (var i = 0; i < 4; i++) {
+      final objective = i + 1;
+      final items = activeItems.where((item) => item.objective == objective);
+      if (items.isEmpty && fullMarks[i] <= 0) continue;
+      for (final item in items) {
+        matrix.appendRow([
+          xl.TextCellValue('课程目标$objective'),
+          xl.TextCellValue(i < cfg.indicators.length ? cfg.indicators[i] : ''),
+          xl.DoubleCellValue(i < cfg.weights.length ? cfg.weights[i] : 0),
+          xl.DoubleCellValue(i < fullMarks.length ? fullMarks[i] : 0),
+          xl.TextCellValue(item.label),
+          xl.TextCellValue('${(item.ratio * 100).toStringAsFixed(0)}%'),
+        ]);
+      }
     }
 
     return excel.save() ?? <int>[];
   }
+
+  List<double> _fullMarksFromRows(List<Map<String, dynamic>> rows) {
+    final marks = List<double>.filled(4, 0);
+    for (final row in rows) {
+      final idx = (row['idx'] as num?)?.toInt() ?? 0;
+      if (idx < 1 || idx > 4) continue;
+      marks[idx - 1] = (row['full_mark'] as num?)?.toDouble() ?? 0;
+    }
+    return marks;
+  }
+
+  List<_TemplateAssessmentItem> _assessmentItemsFromRows(
+      List<Map<String, dynamic>> rows) {
+    final items = <_TemplateAssessmentItem>[];
+    for (final row in rows) {
+      final idx = (row['idx'] as num?)?.toInt() ?? 0;
+      if (idx < 1 || idx > 4) continue;
+      final rawJson = (row['assessment_items_json'] ?? '').toString();
+      if (rawJson.trim().isNotEmpty) {
+        try {
+          final parsed = jsonDecode(rawJson) as List;
+          for (final item in parsed) {
+            final map = item as Map;
+            final label = (map['label'] ?? '').toString().trim();
+            final ratio = (map['ratio'] as num?)?.toDouble() ?? 0;
+            if (label.isEmpty || ratio <= 0) continue;
+            items.add(_TemplateAssessmentItem(
+              label: label,
+              kind: (map['kind'] ?? _assessmentKind(label)).toString(),
+              objective: idx,
+              ratio: ratio,
+            ));
+          }
+          continue;
+        } catch (e, st) {
+          swallowDebug(e,
+              tag: 'AchievementExcel.assessmentItemsFromRows', stack: st);
+        }
+      }
+
+      final ratios = {
+        '平时成绩': (row['pingshi_ratio'] as num?)?.toDouble() ?? 0,
+        '实验成绩': (row['experiment_ratio'] as num?)?.toDouble() ?? 0,
+        '考核成绩': (row['exam_ratio'] as num?)?.toDouble() ?? 0,
+      };
+      final sum = ratios.values.fold<double>(0, (a, b) => a + b);
+      if (sum <= 0) continue;
+      for (final entry in ratios.entries) {
+        if (entry.value <= 0) continue;
+        items.add(_TemplateAssessmentItem(
+          label: entry.key,
+          kind: _assessmentKind(entry.key),
+          objective: idx,
+          ratio: entry.value / sum,
+        ));
+      }
+    }
+    return items;
+  }
+
+  List<_TemplateAssessmentItem> _assessmentItemsFromConfig(
+      AchievementConfig cfg) {
+    final p = cfg.assessmentWeights['平时'] ?? 0.20;
+    final e = cfg.assessmentWeights['实验'] ?? 0.30;
+    final x = cfg.assessmentWeights['期末'] ?? 0.50;
+    final items = <_TemplateAssessmentItem>[];
+    for (var i = 0; i < 4; i++) {
+      if (i < cfg.fullMarks.length && cfg.fullMarks[i] <= 0) continue;
+      if (p > 0) {
+        items.add(_TemplateAssessmentItem(
+            label: '平时成绩', kind: 'pingshi', objective: i + 1, ratio: p));
+      }
+      if (e > 0) {
+        items.add(_TemplateAssessmentItem(
+            label: '实验成绩', kind: 'experiment', objective: i + 1, ratio: e));
+      }
+      if (x > 0) {
+        items.add(_TemplateAssessmentItem(
+            label: '考核成绩', kind: 'exam', objective: i + 1, ratio: x));
+      }
+    }
+    return items;
+  }
+}
+
+class _FullAndRatio {
+  const _FullAndRatio(this.full, this.ratio);
+
+  final double full;
+  final double? ratio;
+}
+
+class _TemplateAssessmentItem {
+  const _TemplateAssessmentItem({
+    required this.label,
+    required this.kind,
+    required this.objective,
+    required this.ratio,
+  });
+
+  final String label;
+  final String kind;
+  final int objective;
+  final double ratio;
 }
