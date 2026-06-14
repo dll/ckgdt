@@ -1,0 +1,602 @@
+# 实验一 开发环境搭建
+*基于刘东良教师教学大纲制定*
+
+## 实验基本信息
+- **实验性质**：验证性实验
+- **实验学时**：4学时
+- **适用专业**：计算机科学与技术
+- **先修知识**：Java程序设计基础、操作系统基础
+
+## 实验目标
+- 掌握移动应用开发环境的完整搭建流程
+- 熟悉各种开发工具的安装和配置
+- 能够创建和运行第一个移动应用程序
+- 理解不同平台开发环境的差异和特点
+- **重点**：掌握AI编程工具（GitHub Copilot、CodeGeeX）的集成使用
+
+## 实验内容
+
+### 1. Android开发环境搭建
+
+#### 1.1 JDK安装配置
+- **安装步骤**
+  - 下载Oracle JDK 11或OpenJDK
+  - 安装JDK到指定目录
+  - 配置JAVA_HOME环境变量
+  - 配置PATH路径
+  - 验证安装：java -version
+
+- **环境变量配置**
+  ```bash
+  JAVA_HOME=C:\Program Files\Java\jdk-11.0.x
+  PATH=%JAVA_HOME%\bin;%PATH%
+  ```
+
+#### 1.2 Android Studio安装
+- **下载安装**
+  - 官方网站下载最新版本
+  - 选择安装路径和组件
+  - 首次启动配置向导
+  - SDK下载和配置
+
+- **SDK配置**
+  - Android SDK Platform
+  - Android SDK Build-Tools
+  - Android Emulator
+  - Intel x86 Emulator Accelerator
+
+#### 1.3 模拟器配置
+- **AVD Manager**
+  - 创建虚拟设备
+  - 选择设备型号
+  - 下载系统镜像
+  - 配置硬件参数
+  - 启动和调试
+
+### 2. iOS开发环境搭建
+
+#### 2.1 Xcode安装
+- **系统要求**
+  - macOS操作系统
+  - 足够的磁盘空间
+  - 稳定的网络连接
+
+- **安装步骤**
+  - App Store下载Xcode
+  - 命令行工具安装
+  - 许可证同意
+  - 模拟器下载
+
+#### 2.2 开发者账号
+- **免费账号**
+  - Apple ID注册
+  - 开发者协议同意
+  - 设备真机调试
+  - 7天证书限制
+
+- **付费账号**
+  - 开发者计划注册
+  - 年费支付
+  - 证书管理
+  - App Store发布
+
+#### 2.3 iOS模拟器
+- **模拟器类型**
+  - iPhone模拟器
+  - iPad模拟器
+  - Apple Watch模拟器
+  - Apple TV模拟器
+
+### 3. 跨平台开发环境
+
+#### 3.1 React Native环境
+- **Node.js安装**
+  - LTS版本下载
+  - npm/yarn包管理器
+  - 全局包安装
+  - 版本管理工具
+
+- **React Native CLI**
+  ```bash
+  npm install -g @react-native-community/cli
+  react-native init MyFirstApp
+  ```
+
+- **依赖配置**
+  - Android SDK配置
+  - 环境变量设置
+  - 模拟器启动
+  - Metro服务器
+
+#### 3.2 Flutter环境
+- **Flutter SDK**
+  - 下载Flutter SDK
+  - 解压到指定目录
+  - 配置PATH环境变量
+  - flutter doctor检查
+
+- **开发工具**
+  - VS Code插件安装
+  - Android Studio插件
+  - Dart插件配置
+  - 代码补全设置
+
+### 4. AI编程工具集成配置（课程特色重点）
+
+#### 4.1 GitHub Copilot配置
+- **账号申请与订阅**
+  - GitHub账号注册
+  - Copilot订阅开通
+  - 学生账号优惠申请
+  - 团队协作配置
+
+- **IDE集成配置**
+  - Android Studio插件安装
+  - VS Code扩展配置
+  - IntelliJ IDEA插件设置
+  - Xcode集成方案
+
+- **使用方法掌握**
+  - 代码自动补全
+  - 函数生成建议
+  - 注释生成代码
+  - 重构建议使用
+
+#### 4.2 CodeGeeX本土化AI工具
+- **CodeGeeX安装配置**
+  - 官网注册登录
+  - IDE插件下载安装
+  - 免费使用配置
+  - 高级功能开通
+
+- **特色功能应用**
+  - 中文注释智能生成
+  - 国内开发规范适配
+  - 代码翻译功能
+  - 本土化API建议
+
+#### 4.3 传统开发工具配置
+- **VS Code高级配置**
+  - 必备插件安装
+  - 主题与字体配置
+  - 代码格式化设置
+  - 调试环境配置
+
+- **Android Studio优化**
+  - 插件市场探索
+  - 代码模板配置
+  - 快捷键自定义
+  - 性能优化设置
+
+#### 4.4 版本控制与协作
+- **Git配置**
+  - 用户信息设置
+  - SSH密钥生成
+  - 远程仓库连接
+  - .gitignore配置
+
+- **团队协作工具**
+  - GitHub/GitLab使用
+  - 分支管理策略
+  - Pull Request流程
+  - Code Review机制
+
+### 5. AI辅助第一个应用程序开发
+
+#### 5.1 Android Hello World（AI辅助开发）
+- **项目创建**
+  - 选择API级别（使用AI工具建议）
+  - 应用名称设置
+  - 包名配置
+  - 模板选择
+
+- **AI辅助代码生成**
+  ```java
+  // 使用GitHub Copilot自动生成MainActivity
+  public class MainActivity extends AppCompatActivity {
+      @Override
+      protected void onCreate(Bundle savedInstanceState) {
+          super.onCreate(savedInstanceState);
+          setContentView(R.layout.activity_main);
+          
+          // AI建议：初始化UI组件
+          initializeViews();
+      }
+      
+      // AI自动生成的初始化方法
+      private void initializeViews() {
+          TextView welcomeText = findViewById(R.id.welcome_text);
+          welcomeText.setText("欢迎使用AI辅助开发！");
+      }
+  }
+  ```
+
+- **AI生成布局文件**
+  ```xml
+  <!-- 使用CodeGeeX生成现代化布局 -->
+  <LinearLayout
+      xmlns:android="http://schemas.android.com/apk/res/android"
+      android:layout_width="match_parent"
+      android:layout_height="match_parent"
+      android:gravity="center"
+      android:orientation="vertical"
+      android:padding="16dp">
+
+      <TextView
+          android:id="@+id/welcome_text"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="AI辅助移动开发实验"
+          android:textSize="24sp"
+          android:textStyle="bold"
+          android:layout_centerInParent="true" />
+
+      <Button
+          android:id="@+id/ai_demo_button"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:layout_marginTop="20dp"
+          android:text="体验AI编程助手" />
+
+  </LinearLayout>
+  ```
+
+#### 5.2 iOS Hello World（AI辅助开发）
+- **Xcode项目**
+  - 项目模板选择
+  - 项目名称设置
+  - Bundle Identifier
+  - 团队选择
+
+- **AI辅助Swift代码**
+  ```swift
+  import UIKit
+
+  class ViewController: UIViewController {
+      
+      @IBOutlet weak var welcomeLabel: UILabel!
+      @IBOutlet weak var aiDemoButton: UIButton!
+      
+      override func viewDidLoad() {
+          super.viewDidLoad()
+          setupUI()
+          configureAIFeatures()
+      }
+      
+      // AI自动生成的UI配置方法
+      func setupUI() {
+          welcomeLabel.text = "AI辅助iOS开发实验"
+          welcomeLabel.font = UIFont.boldSystemFont(ofSize: 24)
+          welcomeLabel.textAlignment = .center
+          
+          aiDemoButton.setTitle("体验AI编程助手", for: .normal)
+          aiDemoButton.backgroundColor = .systemBlue
+          aiDemoButton.layer.cornerRadius = 8
+      }
+      
+      // AI建议的功能配置
+      func configureAIFeatures() {
+          // 使用AI工具生成的注释和功能说明
+          print("AI工具已集成，开始体验智能开发")
+      }
+      
+      @IBAction func aiDemoButtonTapped(_ sender: UIButton) {
+          // AI自动生成的按钮响应方法
+          let alert = UIAlertController(
+              title: "AI助手提示", 
+              message: "正在使用AI工具辅助开发", 
+              preferredStyle: .alert
+          )
+          alert.addAction(UIAlertAction(title: "确定", style: .default))
+          present(alert, animated: true)
+      }
+  }
+  ```
+
+#### 5.3 React Native应用（AI辅助开发）
+- **AI辅助项目初始化**
+  ```bash
+  # AI建议的最佳实践命令
+  npx react-native init HelloWorldAI
+  cd HelloWorldAI
+  
+  # AI工具推荐的依赖安装
+  npm install react-native-vector-icons
+  npm install @react-native-async-storage/async-storage
+  
+  # 启动应用
+  npx react-native run-android
+  ```
+
+- **AI生成组件代码**
+  ```javascript
+  import React, {useState} from 'react';
+  import {
+    View, 
+    Text, 
+    StyleSheet, 
+    TouchableOpacity, 
+    Alert
+  } from 'react-native';
+
+  // AI辅助生成的现代化组件
+  const App = () => {
+    const [aiEnabled, setAiEnabled] = useState(true);
+
+    // AI自动生成的处理函数
+    const handleAIDemo = () => {
+      Alert.alert(
+        'AI助手提示', 
+        'GitHub Copilot和CodeGeeX正在协助开发',
+        [{text: '继续体验', onPress: () => console.log('AI助手已激活')}]
+      );
+    };
+
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>AI辅助移动开发实验</Text>
+        <Text style={styles.subtitle}>
+          正在使用 {aiEnabled ? 'AI编程助手' : '传统开发方式'}
+        </Text>
+        
+        <TouchableOpacity style={styles.button} onPress={handleAIDemo}>
+          <Text style={styles.buttonText}>体验AI编程助手</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  // AI建议的样式设计
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: '#f5f5f5',
+      padding: 20,
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: '#333',
+      marginBottom: 10,
+    },
+    subtitle: {
+      fontSize: 16,
+      color: '#666',
+      marginBottom: 30,
+      textAlign: 'center',
+    },
+    button: {
+      backgroundColor: '#007AFF',
+      paddingHorizontal: 30,
+      paddingVertical: 15,
+      borderRadius: 8,
+    },
+    buttonText: {
+      color: 'white',
+      fontSize: 16,
+      fontWeight: '600',
+    },
+  });
+
+  export default App;
+  ```
+
+## 实验步骤
+
+### 步骤1：基础环境准备（45分钟）
+1. **系统环境检查**
+   - 检查操作系统版本和硬件配置
+   - 确认网络连接和下载权限
+   - 准备足够的磁盘空间
+
+2. **核心软件安装**
+   - 下载并安装JDK 11+
+   - 安装Android Studio最新版本
+   - 配置JAVA_HOME等环境变量
+   - 验证安装结果
+
+### 步骤2：AI编程工具配置（30分钟）
+1. **GitHub Copilot配置**
+   - 注册GitHub账号并申请Copilot
+   - 在Android Studio中安装Copilot插件
+   - 登录并验证插件功能
+   - 测试代码自动补全功能
+
+2. **CodeGeeX工具集成**
+   - 访问CodeGeeX官网注册账号
+   - 下载并安装IDE插件
+   - 配置中文编程环境
+   - 体验本土化AI功能
+
+### 步骤3：Android开发环境验证（30分钟）
+1. **模拟器配置**
+   - 使用AVD Manager创建虚拟设备
+   - 下载适当的系统镜像
+   - 启动模拟器并测试功能
+
+2. **第一个AI辅助项目**
+   - 创建新的Android项目
+   - 使用AI工具生成代码
+   - 运行应用并验证功能
+
+### 步骤4：跨平台环境搭建（35分钟）
+1. **Node.js环境**
+   - 安装Node.js LTS版本
+   - 配置npm镜像源
+   - 全局安装React Native CLI
+
+2. **Flutter环境（可选）**
+   - 下载Flutter SDK
+   - 配置环境变量
+   - 运行flutter doctor检查
+
+### 步骤5：开发工具优化（20分钟）
+1. **IDE高级配置**
+   - 安装必要插件和扩展
+   - 配置代码格式化规则
+   - 设置调试环境
+
+2. **版本控制配置**
+   - 配置Git用户信息
+   - 生成SSH密钥
+   - 连接GitHub仓库
+
+## 实验报告要求
+
+### 1. 环境配置截图（必须包含）
+- **基础环境截图**
+  - JDK版本验证截图
+  - Android Studio启动界面
+  - 模拟器启动成功界面
+  - 第一个应用运行效果
+
+- **AI工具配置截图**
+  - GitHub Copilot插件安装成功界面
+  - CodeGeeX插件配置界面
+  - AI代码补全效果展示
+  - AI生成代码的实际案例
+
+### 2. AI工具使用体验记录（重点内容）
+- **GitHub Copilot使用体验**
+  - 代码自动补全的准确性
+  - 函数生成建议的质量
+  - 实际开发效率提升情况
+  - 使用过程中的优缺点
+
+- **CodeGeeX本土化体验**
+  - 中文注释生成效果
+  - 本土化API建议准确性
+  - 与GitHub Copilot的对比
+  - 适合国内开发的特色功能
+
+### 3. 问题解决记录
+- **安装配置问题**
+  - 遇到的具体技术问题
+  - 问题分析和解决思路
+  - 使用AI工具辅助解决问题的经验
+  - 环境变量和配置文件设置
+
+- **AI工具使用问题**
+  - AI工具安装或配置中的困难
+  - 代码生成质量不佳的情况
+  - 如何优化AI工具的使用效果
+  - 团队协作中AI工具的配置
+
+### 4. 综合分析与思考
+- **开发环境对比分析**
+  - 不同平台开发环境的特点
+  - AI辅助开发与传统开发的差异
+  - 开发效率提升的具体量化
+  - 未来AI工具发展趋势预测
+
+- **学习心得与规划**
+  - 通过AI工具学习的新体验
+  - 对移动开发学习路径的重新认识
+  - 后续实验中AI工具应用计划
+  - 个人技能提升目标调整
+
+## 常见问题解决
+
+### 1. JDK版本问题
+- 版本兼容性检查
+- 环境变量冲突
+- 路径配置错误
+- 权限问题
+
+### 2. Android Studio问题
+- SDK下载失败
+- 模拟器启动失败
+- Gradle同步错误
+- 插件安装问题
+
+### 3. 网络问题
+- 代理配置
+- 镜像源切换
+- 下载加速
+- 防火墙设置
+
+### 4. 权限问题
+- 管理员权限
+- 文件夹权限
+- 安全软件拦截
+- 系统兼容性
+
+## 扩展练习
+
+### 1. 多版本环境
+- 配置多个JDK版本
+- Android SDK多版本管理
+- 版本切换工具使用
+
+### 2. 真机调试
+- USB调试开启
+- 驱动程序安装
+- 设备授权
+- 应用安装测试
+
+### 3. 性能优化
+- 模拟器加速配置
+- 内存分配优化
+- 启动速度提升
+- 编译速度优化
+
+## 评分标准
+
+### 1. 基础环境搭建（30分）
+- **软件安装配置**（15分）
+  - JDK、Android Studio等核心软件正确安装
+  - 环境变量配置正确
+  - 模拟器成功创建和运行
+
+- **开发环境验证**（15分）
+  - Hello World应用成功创建和运行
+  - 基础功能测试通过
+  - 跨平台环境配置正确
+
+### 2. AI编程工具应用（25分）
+- **AI工具配置**（15分）
+  - GitHub Copilot成功安装和配置
+  - CodeGeeX工具正确集成
+  - AI功能测试通过
+
+- **AI辅助开发实践**（10分）
+  - 使用AI工具生成有效代码
+  - 体验AI代码补全和建议功能
+  - 对比AI辅助前后的开发体验
+
+### 3. 实验报告质量（25分）
+- **内容完整性**（15分）
+  - 环境配置过程记录详细
+  - AI工具使用体验深入
+  - 截图清晰且说明充分
+
+- **分析思考深度**（10分）
+  - 问题分析思路清晰
+  - AI工具使用心得深刻
+  - 对未来学习规划合理
+
+### 4. 创新与扩展（20分）
+- **问题解决能力**（10分）
+  - 独立解决配置问题
+  - 使用AI工具辅助解决困难
+  - 总结有效的解决方案
+
+- **学习拓展**（10分）
+  - 主动探索AI工具高级功能
+  - 分享AI辅助开发经验
+  - 提出改进建议和创新想法
+
+## 实验考核重点
+1. **AI工具应用能力**：重点考查学生对现代AI编程工具的掌握
+2. **环境配置能力**：考查学生独立解决技术问题的能力
+3. **学习适应能力**：考查学生对新技术工具的学习和适应
+4. **创新思维能力**：考查学生运用AI工具提升开发效率的创新思路
+
+---
+
+**制定依据**：刘东良教师《移动应用开发》教学大纲  
+**实验性质**：验证性实验（4学时）  
+**更新时间**：2025年8月  
+**版本**：v2.0（融合AI编程工具的现代化实验）
