@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../../../data/local/archive_dao.dart';
 import '../../../../services/agent/agents/archive_agent.dart';
-import '../widgets/final_assessment_panel.dart';
 import 'period_tab.dart';
 
 /// 期末 tab —— 复用 [ArchivePeriodTab] 的完整文档流水线（生成 / 结构化审核 /
-/// 一键打印 / docx 归档 + zip + 剪贴板分享 / 5 态徽标），并在文档列表上方附加
-/// 期末特有的"考核材料统计"面板（分组 / 项目 / 答辩 + 报告完成度清单）。
+/// 一键打印 / docx 归档 + zip + 剪贴板分享 / 5 态徽标）。
+///
+/// 期末资料按学校课程档案袋目录组织为 00-12 正式材料，避免顶部统计面板与
+/// 下方归档文档卡片重复。
 class FinalTab extends StatelessWidget {
   final String courseType;
   final ArchiveDao dao;
@@ -26,7 +27,6 @@ class FinalTab extends StatelessWidget {
       courseType: courseType,
       dao: dao,
       agent: agent,
-      extraHeader: const [FinalAssessmentPanel()],
     );
   }
 }

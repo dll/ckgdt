@@ -574,6 +574,85 @@ $source
       tokens: ['期中成绩分析', '成绩分析', '期中分析'],
       extensions: ['.docx', '.pdf', '.md', '.txt', '.html', '.htm'],
     ),
+    'final_archive_catalog': _TemplateSpec(
+      documentType: 'final_archive_catalog',
+      tokens: ['课程档案袋目录', '档案袋目录', '课程档案'],
+      extensions: ['.docx', '.doc', '.md', '.txt'],
+    ),
+    'final_syllabus': _TemplateSpec(
+      documentType: 'final_syllabus',
+      tokens: ['教学大纲', '大纲'],
+      excludeTokens: ['合理性', '评价', '审核'],
+      extensions: ['.docx', '.doc', '.md', '.txt'],
+    ),
+    'final_syllabus_evaluation': _TemplateSpec(
+      documentType: 'final_syllabus_evaluation',
+      tokens: ['大纲合理性评价', '合理性评价', '评价表'],
+      excludeTokens: ['审核'],
+      extensions: ['.docx', '.doc', '.md', '.txt'],
+    ),
+    'final_teaching_schedule': _TemplateSpec(
+      documentType: 'final_teaching_schedule',
+      tokens: ['教学进度表', '进度表', '教学进度'],
+      extensions: ['.docx', '.doc', '.md', '.txt'],
+    ),
+    'final_lesson_plan': _TemplateSpec(
+      documentType: 'final_lesson_plan',
+      tokens: ['教学教案', '理论教案', '教案'],
+      extensions: ['.docx', '.doc', '.md', '.txt'],
+    ),
+    'final_syllabus_review': _TemplateSpec(
+      documentType: 'final_syllabus_review',
+      tokens: ['大纲合理性审核', '合理性审核', '审核表'],
+      excludeTokens: ['命题', '期末考核', '试卷'],
+      extensions: ['.docx', '.doc', '.md', '.txt'],
+    ),
+    'final_assessment_review': _TemplateSpec(
+      documentType: 'final_assessment_review',
+      tokens: ['课程期末考核命题审核', '期末考核命题审核', '命题审核', '试卷审核', '考核审核'],
+      extensions: ['.docx', '.doc', '.pdf', '.md', '.txt'],
+    ),
+    'final_grade_book': _TemplateSpec(
+      documentType: 'final_grade_book',
+      tokens: ['记分册', '成绩册', '课程大作业成绩'],
+      extensions: ['.xlsx', '.xls', '.docx', '.doc', '.md', '.txt'],
+    ),
+    'final_score_register': _TemplateSpec(
+      documentType: 'final_score_register',
+      tokens: ['成绩登记表', '登记表'],
+      extensions: ['.xls', '.xlsx', '.docx', '.doc', '.md', '.txt'],
+    ),
+    'final_assessment_description': _TemplateSpec(
+      documentType: 'final_assessment_description',
+      tokens: ['课程考查说明', '课程考核说明', '考核说明'],
+      extensions: ['.docx', '.doc', '.pdf', '.md', '.txt'],
+    ),
+    'final_achievement_report': _TemplateSpec(
+      documentType: 'final_achievement_report',
+      tokens: ['课程达成评价', '达成评价表格', '达成评价报告', '调查问卷'],
+      extensions: ['.xlsx', '.xls', '.docx', '.doc', '.pdf', '.md', '.txt'],
+    ),
+    'final_textbook_guide': _TemplateSpec(
+      documentType: 'final_textbook_guide',
+      tokens: ['教材封面', '实验指导书', '教材', '指导书'],
+      extensions: [
+        '.docx',
+        '.doc',
+        '.pdf',
+        '.webp',
+        '.png',
+        '.jpg',
+        '.jpeg',
+        '.md',
+        '.txt'
+      ],
+    ),
+    'final_sample_works': _TemplateSpec(
+      documentType: 'final_sample_works',
+      tokens: ['课程考核大作业', '课程大作业', '大作业'],
+      excludeTokens: ['方案'],
+      extensions: ['.docx', '.doc', '.pdf', '.md', '.txt'],
+    ),
   };
 }
 

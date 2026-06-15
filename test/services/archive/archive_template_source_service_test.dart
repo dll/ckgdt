@@ -180,4 +180,31 @@ void main() {
     expect(doc.content, contains('作业与批阅次数统计表'));
     expect(doc.content, contains('源文件疑似为教学进度表'));
   });
+
+  test('real final template directory resolves school archive bag materials',
+      () async {
+    final realRoot = Directory('data/归档').absolute;
+    if (!realRoot.existsSync()) return;
+    BaseDocumentProcessor.archiveDataRoot = realRoot.path;
+
+    const docs = {
+      'final_archive_catalog': '课程档案袋目录',
+      'final_assessment_review': '课程期末考核命题审核表',
+      'final_grade_book': '记分册',
+      'final_score_register': '成绩登记表',
+      'final_achievement_report': '课程达成评价材料',
+      'final_textbook_guide': '教材与实验指导书',
+      'final_sample_works': '课程考核大作业样本',
+    };
+
+    for (final entry in docs.entries) {
+      final doc = await ArchiveTemplateSourceService.parseBestSource(
+        periodKey: 'final',
+        documentType: entry.key,
+        label: entry.value,
+      );
+      expect(doc, isNotNull, reason: '${entry.key} should resolve');
+      expect(doc!.content.trim(), isNotEmpty);
+    }
+  });
 }

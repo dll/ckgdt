@@ -83,6 +83,41 @@ class _ArchiveMaterialsChecklistState extends State<ArchiveMaterialsChecklist> {
     return order[period] ?? 99;
   }
 
+  List<DocumentTypeDef> get _expectedDefs => const [
+        'beginning',
+        'midterm',
+        'final',
+      ].expand((period) => docsForPeriod(widget.courseType, period)).toList();
+
+  List<DocumentTypeDef> get _missingDefs {
+    final existing = _docs.map((d) => d.documentType).toSet();
+    return _expectedDefs.where((def) => !existing.contains(def.key)).toList();
+  }
+
+  int _docCountFor(String period) =>
+      _docs.where((d) => d.period == period).length;
+
+  int _expectedCountFor(String period) =>
+      docsForPeriod(widget.courseType, period).length;
+
+  String _completionLabel() {
+    final expected = _expectedDefs.length;
+    if (expected == 0) return '0%';
+    final completed = _docs.map((d) => d.documentType).toSet().length;
+    final value = (completed / expected * 100).clamp(0, 100);
+    return '${value.toStringAsFixed(0)}%';
+  }
+
+  Color _completionColor(BuildContext context) {
+    final expected = _expectedDefs.length;
+    if (expected == 0) return Theme.of(context).colorScheme.primary;
+    final completed = _docs.map((d) => d.documentType).toSet().length;
+    final rate = completed / expected;
+    if (rate >= 0.9) return Colors.green;
+    if (rate >= 0.6) return Colors.orange;
+    return Colors.redAccent;
+  }
+
   Future<void> _archiveSelected() async {
     if (_selected.isEmpty || _archiving) return;
     if (kIsWeb ||
@@ -221,6 +256,8 @@ class _ArchiveMaterialsChecklistState extends State<ArchiveMaterialsChecklist> {
                 ),
               )
             else ...[
+              _buildCompletionSummary(context),
+              const SizedBox(height: 8),
               Row(
                 children: [
                   TextButton.icon(
@@ -260,40 +297,141 @@ class _ArchiveMaterialsChecklistState extends State<ArchiveMaterialsChecklist> {
                 ],
               ),
               const Divider(height: 12),
-              ..._docs.map((doc) {
-                final id = doc.id;
-                final selected = id != null && _selected.contains(id);
-                final label = documentLabelForCourseType(
-                  widget.courseType,
-                  doc.documentType,
-                );
-                return CheckboxListTile(
-                  value: selected,
-                  dense: true,
-                  controlAffinity: ListTileControlAffinity.leading,
-                  onChanged: id == null || _archiving
-                      ? null
-                      : (value) => setState(() {
-                            if (value == true) {
-                              _selected.add(id);
-                            } else {
-                              _selected.remove(id);
-                            }
-                          }),
-                  title: Text(
-                    '${periodLabel(doc.period)} · $label',
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                  subtitle: Text(
-                    '${doc.title} · ${doc.status == 'archived' ? '已归档' : '待归档'}',
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                  ),
-                );
-              }),
+              ..._buildGroupedDocList(),
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildCompletionSummary(BuildContext context) {
+    final color = _completionColor(context);
+    final missing = _missingDefs;
+    Widget metric(String label, String value, Color metricColor) {
+      return Expanded(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: metricColor.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: metricColor.withValues(alpha: 0.20)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label,
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade700)),
+              const SizedBox(height: 2),
+              Text(value,
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: metricColor)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            metric('结课完成度', _completionLabel(), color),
+            const SizedBox(width: 8),
+            metric('已形成材料', '${_docs.length}', Colors.blue),
+            const SizedBox(width: 8),
+            metric('待补材料', '${missing.length}', Colors.orange),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            _periodChip('期初', 'beginning', Colors.blue),
+            const SizedBox(width: 6),
+            _periodChip('期中', 'midterm', Colors.teal),
+            const SizedBox(width: 6),
+            _periodChip('期末', 'final', Colors.deepPurple),
+          ],
+        ),
+        if (missing.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            '缺项：${missing.take(6).map((d) => d.label).join('、')}${missing.length > 6 ? '等${missing.length}项' : ''}',
+            style: TextStyle(fontSize: 12, color: Colors.orange.shade800),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _periodChip(String label, String period, Color color) {
+    final actual = _docCountFor(period);
+    final expected = _expectedCountFor(period);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        '$label $actual/$expected',
+        style:
+            TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+
+  List<Widget> _buildGroupedDocList() {
+    final result = <Widget>[];
+    for (final period in const ['beginning', 'midterm', 'final']) {
+      final group = _docs.where((d) => d.period == period).toList();
+      if (group.isEmpty) continue;
+      result.add(Padding(
+        padding: const EdgeInsets.only(top: 4, bottom: 2),
+        child: Text(
+          '${periodLabel(period)}材料',
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        ),
+      ));
+      for (final doc in group) {
+        result.add(_buildDocTile(doc));
+      }
+    }
+    return result;
+  }
+
+  Widget _buildDocTile(ArchiveDocument doc) {
+    final id = doc.id;
+    final selected = id != null && _selected.contains(id);
+    final label = documentLabelForCourseType(
+      widget.courseType,
+      doc.documentType,
+    );
+    return CheckboxListTile(
+      value: selected,
+      dense: true,
+      controlAffinity: ListTileControlAffinity.leading,
+      onChanged: id == null || _archiving
+          ? null
+          : (value) => setState(() {
+                if (value == true) {
+                  _selected.add(id);
+                } else {
+                  _selected.remove(id);
+                }
+              }),
+      title: Text(
+        label,
+        style: const TextStyle(fontSize: 13),
+      ),
+      subtitle: Text(
+        '${doc.title} · ${doc.status == 'archived' ? '已归档' : '待归档'}',
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
       ),
     );
   }
