@@ -358,11 +358,16 @@ class AchievementDocxService {
     final improvement = (improvementText?.trim().isNotEmpty ?? false)
         ? improvementText!
         : _defaultImprovement(objectives);
+    _setCell(table, 1, 0, '课程目标达成情况(定量)');
     _setCell(table, 1, 1, quantitative);
+    _setCell(table, 2, 0, '调查问卷评价情况(定性)');
     _setCell(table, 2, 1, qualitative);
+    _setCell(table, 3, 0, '达成情况分析及持续改进');
     _setCell(table, 3, 1, improvement);
+    _setCell(table, 4, 0, '任课教师签字');
     _setCell(table, 4, 1,
         '$teacherName　　日期：${DateTime.now().toString().substring(0, 10)}');
+    _setCell(table, 5, 0, '课程群建设工作组意见');
     _setCell(table, 5, 1, '课程群建设工作组组长签字：　　　　日期：　 年　 月　 日');
   }
 
