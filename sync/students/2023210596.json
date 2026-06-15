@@ -3,8 +3,8 @@
   "user_id": "2023210596",
   "user_name": "胡文启",
   "role": "student",
-  "synced_at": "2026-06-15T17:19:44.785660",
-  "last_active": "2026-06-15T17:19:44.785660",
+  "synced_at": "2026-06-15T17:21:28.292797",
+  "last_active": "2026-06-15T17:21:28.292797",
   "quiz_results": [
     {
       "user_id": "2023210596",
@@ -197,6 +197,20 @@
       "score": null,
       "feedback": null,
       "created_at": "2026-06-15T17:19:36.166399",
+      "updated_at": null
+    },
+    {
+      "template_id": null,
+      "task_id": null,
+      "user_id": "2023210596",
+      "title": "答辩报告",
+      "content_json": "2023210596胡文启答辩报告.pdf",
+      "file_path": "C:\\Users\\29026\\Desktop\\考核报告\\2023210596胡文启答辩报告.pdf",
+      "status": "已提交",
+      "submit_time": "2026-06-15T17:20:59.858998",
+      "score": null,
+      "feedback": null,
+      "created_at": "2026-06-15T17:20:59.858998",
       "updated_at": null
     }
   ],
