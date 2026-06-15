@@ -124,6 +124,36 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
           return '16';
       }
     }
+    if (widget.periodKey == 'final') {
+      switch (def.key) {
+        case 'final_archive_catalog':
+          return '00';
+        case 'final_syllabus':
+          return '01';
+        case 'final_syllabus_evaluation':
+          return '02';
+        case 'final_teaching_schedule':
+          return '03';
+        case 'final_lesson_plan':
+          return '04';
+        case 'final_syllabus_review':
+          return '05';
+        case 'final_assessment_review':
+          return '06';
+        case 'final_grade_book':
+          return '07';
+        case 'final_score_register':
+          return '08';
+        case 'final_assessment_description':
+          return '09';
+        case 'final_achievement_report':
+          return '10';
+        case 'final_textbook_guide':
+          return '11';
+        case 'final_sample_works':
+          return '12';
+      }
+    }
     return (index + 1).toString().padLeft(2, '0');
   }
 
@@ -1289,6 +1319,12 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
   }
 
   Map<String, String> _sourceDetail(String key) {
+    if (key.startsWith('final_')) {
+      return {
+        'system': '期末模板 / 课程档案袋',
+        'description': _finalSourceDescription(key),
+      };
+    }
     switch (key) {
       case 'teaching_task':
         return {
@@ -1404,9 +1440,14 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     String filename;
     String mimeType;
 
-    switch (def.key) {
-      case 'teaching_task':
-        content = '''<!DOCTYPE html>
+    if (def.key.startsWith('final_')) {
+      content = _finalArchiveTemplate(def);
+      filename = '${_ordinalFor(def, 0)}-${def.label}模板.md';
+      mimeType = 'text/markdown';
+    } else {
+      switch (def.key) {
+        case 'teaching_task':
+          content = '''<!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="utf-8"><title>教学任务书模板</title></head>
 <body>
@@ -1421,11 +1462,11 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
 </table>
 </body>
 </html>''';
-        filename = '教学任务书模板.html';
-        mimeType = 'text/html';
-        break;
-      case 'syllabus':
-        content = '''# 教学大纲模板
+          filename = '教学任务书模板.html';
+          mimeType = 'text/html';
+          break;
+        case 'syllabus':
+          content = '''# 教学大纲模板
 
 ## 一、课程基本信息
 - **课程名称**：[请填写]
@@ -1455,11 +1496,11 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
 ## 五、教材与参考书
 - 教材：[请填写]
 - 参考书：[请填写]''';
-        filename = '教学大纲模板.md';
-        mimeType = 'text/markdown';
-        break;
-      case 'syllabus_evaluation':
-        content = '''# 大纲合理性评价表模板
+          filename = '教学大纲模板.md';
+          mimeType = 'text/markdown';
+          break;
+        case 'syllabus_evaluation':
+          content = '''# 大纲合理性评价表模板
 
 ## 评价项目
 - **大纲名称**：[请填写]
@@ -1480,11 +1521,11 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
 
 ## 评价结论
 [通过/修改后通过/不通过]''';
-        filename = '大纲合理性评价表模板.md';
-        mimeType = 'text/markdown';
-        break;
-      case 'syllabus_review':
-        content = '''# 大纲合理性审核表模板
+          filename = '大纲合理性评价表模板.md';
+          mimeType = 'text/markdown';
+          break;
+        case 'syllabus_review':
+          content = '''# 大纲合理性审核表模板
 
 ## 审核项目
 - **大纲名称**：[请填写]
@@ -1505,11 +1546,11 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
 
 ## 审核意见
 [请填写详细审核意见]''';
-        filename = '大纲合理性审核表模板.md';
-        mimeType = 'text/markdown';
-        break;
-      case 'calendar':
-        content = '''<!DOCTYPE html>
+          filename = '大纲合理性审核表模板.md';
+          mimeType = 'text/markdown';
+          break;
+        case 'calendar':
+          content = '''<!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="utf-8"><title>教学日历模板</title></head>
 <body>
@@ -1525,11 +1566,11 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
 </table>
 </body>
 </html>''';
-        filename = '教学日历模板.html';
-        mimeType = 'text/html';
-        break;
-      case 'course_schedule':
-        content = '''# 课程课表模板
+          filename = '教学日历模板.html';
+          mimeType = 'text/html';
+          break;
+        case 'course_schedule':
+          content = '''# 课程课表模板
 
 ## Excel导入格式说明
 课表XLSX文件需包含以下列（从教务系统导出即可，无需手动创建）：
@@ -1548,11 +1589,11 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
 1. 请从教务系统直接导出XLSX文件
 2. 课程类型列应包含"理论"字段
 3. 课程名称列应包含"移动应用开发"''';
-        filename = '课程课表导入说明.md';
-        mimeType = 'text/markdown';
-        break;
-      case 'teaching_schedule':
-        content = '''# 教学进度表模板
+          filename = '课程课表导入说明.md';
+          mimeType = 'text/markdown';
+          break;
+        case 'teaching_schedule':
+          content = '''# 教学进度表模板
 
 **课程名称**：移动应用开发
 **学期**：[请填写]
@@ -1576,11 +1617,11 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
 | 14 | 实验 | 综合实验 | 4 | 实验 | |
 | 15 | 实验 | 综合实验 | 4 | 实验 | |
 | 16 | 复习 | 期末复习 | 4 | 讲授 | |''';
-        filename = '教学进度表模板.md';
-        mimeType = 'text/markdown';
-        break;
-      case 'lesson_plan':
-        content = '''# 教学教案模板
+          filename = '教学进度表模板.md';
+          mimeType = 'text/markdown';
+          break;
+        case 'lesson_plan':
+          content = '''# 教学教案模板
 
 **课程名称**：[请填写]
 **教师**：[请填写]
@@ -1613,11 +1654,11 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
 
 ## 课后作业
 [作业内容]''';
-        filename = '教学教案模板.md';
-        mimeType = 'text/markdown';
-        break;
-      case 'courseware':
-        content = '''# 教学课件模板
+          filename = '教学教案模板.md';
+          mimeType = 'text/markdown';
+          break;
+        case 'courseware':
+          content = '''# 教学课件模板
 
 ## 课件要求
 - 请提交PPT/PDF格式的课件文件
@@ -1626,11 +1667,11 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
 
 ## 技术支持
 如需帮助生成课件，可使用 "一键生成" 功能通过AI自动生成。''';
-        filename = '教学课件说明.md';
-        mimeType = 'text/markdown';
-        break;
-      case 'roll_call':
-        content = '''<!DOCTYPE html>
+          filename = '教学课件说明.md';
+          mimeType = 'text/markdown';
+          break;
+        case 'roll_call':
+          content = '''<!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="utf-8"><title>学生点名册模板</title></head>
 <body>
@@ -1644,11 +1685,11 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
 </table>
 </body>
 </html>''';
-        filename = '学生点名册模板.html';
-        mimeType = 'text/html';
-        break;
-      case 'teacher_guide':
-        content = '''# 教师教学指导手册模板
+          filename = '学生点名册模板.html';
+          mimeType = 'text/html';
+          break;
+        case 'teacher_guide':
+          content = '''# 教师教学指导手册模板
 
 ## 课程定位与目标
 **课程名称**：移动应用开发
@@ -1689,11 +1730,11 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
 - 教材：[请填写]
 - 参考书：[请填写]
 - 在线资源：[请填写]''';
-        filename = '教师教学指导手册模板.md';
-        mimeType = 'text/markdown';
-        break;
-      case 'student_guide':
-        content = '''# 学生学习指导手册模板
+          filename = '教师教学指导手册模板.md';
+          mimeType = 'text/markdown';
+          break;
+        case 'student_guide':
+          content = '''# 学生学习指导手册模板
 
 ## 课程概述
 **课程名称**：移动应用开发
@@ -1738,11 +1779,11 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
 ## 考核说明
 - 考核方式：[请填写]
 - 评分标准：[请填写]''';
-        filename = '学生学习指导手册模板.md';
-        mimeType = 'text/markdown';
-        break;
-      case 'assessment_plan':
-        content = '''# 综合考核方案模板
+          filename = '学生学习指导手册模板.md';
+          mimeType = 'text/markdown';
+          break;
+        case 'assessment_plan':
+          content = '''# 综合考核方案模板
 
 ## 考核目标
 [请填写本课程的考核目标]
@@ -1787,11 +1828,11 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
 
 ## 成绩评定
 [请填写成绩评定方法]''';
-        filename = '综合考核方案模板.md';
-        mimeType = 'text/markdown';
-        break;
-      case 'midterm_progress_check':
-        content = '''# 课程进度执行检查模板
+          filename = '综合考核方案模板.md';
+          mimeType = 'text/markdown';
+          break;
+        case 'midterm_progress_check':
+          content = '''# 课程进度执行检查模板
 
 **课程名称**：[请填写]
 **授课教师**：[请填写]
@@ -1816,11 +1857,11 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
 
 ## 四、后续改进措施
 [请填写进度调整、补课安排、实验补做或教学改进措施]''';
-        filename = '08-课程进度执行检查模板.md';
-        mimeType = 'text/markdown';
-        break;
-      case 'midterm_homework_review':
-        content = '''# 作业与批阅次数统计模板
+          filename = '08-课程进度执行检查模板.md';
+          mimeType = 'text/markdown';
+          break;
+        case 'midterm_homework_review':
+          content = '''# 作业与批阅次数统计模板
 
 **课程名称**：[请填写]
 **授课教师**：[请填写]
@@ -1847,11 +1888,11 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
 
 ## 四、改进措施
 [请填写补批计划、反馈改进和后续教学调整]''';
-        filename = '15-作业与批阅次数统计模板.md';
-        mimeType = 'text/markdown';
-        break;
-      case 'midterm_exam':
-        content = '''# 期中考试（阶段考核）材料模板
+          filename = '15-作业与批阅次数统计模板.md';
+          mimeType = 'text/markdown';
+          break;
+        case 'midterm_exam':
+          content = '''# 期中考试（阶段考核）材料模板
 
 **课程名称**：[请填写]
 **授课教师**：[请填写]
@@ -1885,13 +1926,14 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
 - 参考答案或评分标准
 - 成绩或检查结果
 - 质量分析和改进说明''';
-        filename = '16-期中考试阶段考核模板.md';
-        mimeType = 'text/markdown';
-        break;
-      default:
-        content = '# ${def.label}模板\n\n请按照系统规范格式准备${def.label}内容。';
-        filename = '${def.key}模板.md';
-        mimeType = 'text/markdown';
+          filename = '16-期中考试阶段考核模板.md';
+          mimeType = 'text/markdown';
+          break;
+        default:
+          content = '# ${def.label}模板\n\n请按照系统规范格式准备${def.label}内容。';
+          filename = '${def.key}模板.md';
+          mimeType = 'text/markdown';
+      }
     }
 
     if (!mounted) return;
@@ -1921,6 +1963,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
   }
 
   String _importSource(String key) {
+    if (key.startsWith('final_')) return '期末模板';
     switch (key) {
       case 'teaching_task':
         return '教务系统';
@@ -1956,9 +1999,77 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         return '期中模板';
       case 'midterm_exam':
         return '期中模板';
+      case 'archive_form':
+      case 'print_report':
+        return '结课汇总';
       default:
         return '外部系统';
     }
+  }
+
+  String _finalSourceDescription(String key) {
+    switch (key) {
+      case 'final_archive_catalog':
+        return '读取期末/模板中的00-课程档案袋目录，作为期末档案袋总清单和顺序依据。';
+      case 'final_syllabus':
+        return '读取期末/模板中的01-教学大纲，或承接期初已审核的大纲材料。';
+      case 'final_syllabus_evaluation':
+        return '读取期末/模板中的02-大纲合理性评价表，或承接期初评价材料。';
+      case 'final_teaching_schedule':
+        return '读取期末/模板中的03-教学进度表，用于与期中进度检查和结课总结衔接。';
+      case 'final_lesson_plan':
+        return '读取期末/模板中的04-教学教案，可归档代表性教案或教案汇编。';
+      case 'final_syllabus_review':
+        return '读取期末/模板中的05-大纲合理性审核表，作为教学文件审核证据。';
+      case 'final_assessment_review':
+        return '读取期末/模板中的06-课程期末考核命题审核表，支持考试和非试卷类考核。';
+      case 'final_grade_book':
+        return '读取期末/模板中的07-记分册、成绩册或成绩汇总表。';
+      case 'final_score_register':
+        return '读取期末/模板中的08-成绩登记表，通常为教务系统导出的xls/xlsx。';
+      case 'final_assessment_description':
+        return '读取期末/模板中的09-课程考核说明，说明考核方式、评分依据和材料构成。';
+      case 'final_achievement_report':
+        return '读取期末/模板中的10-课程达成评价表格、调查问卷和达成评价报告。';
+      case 'final_textbook_guide':
+        return '读取期末/模板中的11-教材封面、实验指导书或课程实践指导材料。';
+      case 'final_sample_works':
+        return '读取期末/模板中的12-课程考核大作业样本，形成样本清单和归档说明。';
+      default:
+        return '读取期末/模板中的学校课程档案袋材料，编号不固定时按语义关键词自动匹配。';
+    }
+  }
+
+  String _finalArchiveTemplate(DocumentTypeDef def) {
+    final ordinal = _ordinalFor(def, 0);
+    return '''# $ordinal-${def.label}归档模板
+
+**课程名称**：[请填写]
+**授课教师**：[请填写]
+**教学班级**：[请填写]
+**学年学期**：[请填写]
+**归档日期**：[请填写]
+
+## 一、材料来源
+[说明本材料来自期初、期中、期末哪个环节，或来自教务系统/达成模块/考核模块/教师自备文件。]
+
+## 二、材料清单
+| 序号 | 文件或材料名称 | 来源 | 状态 | 备注 |
+|------|----------------|------|------|------|
+| 01 | ${def.label} | [请填写] | [已审核/待补充] | [请填写] |
+
+## 三、审核要点
+| 检查项 | 要求 | 结论 | 说明 |
+|--------|------|------|------|
+| 完整性 | 材料齐全，无缺页、错页、错文件 | [通过/需补充] | [请填写] |
+| 一致性 | 课程、教师、班级、学期与教学任务一致 | [通过/需修订] | [请填写] |
+| 规范性 | 文件命名、签字盖章、格式符合学校要求 | [通过/需修订] | [请填写] |
+
+## 四、归档结论
+[通过归档 / 修改后归档 / 暂缓归档]
+
+## 五、后续处理
+[如需补材料、补签字、替换文件或重新导出，请在此说明。]''';
   }
 
   Future<void> _createDoc(DocumentTypeDef def) async {

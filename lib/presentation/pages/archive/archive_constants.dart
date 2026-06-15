@@ -11,6 +11,100 @@ const List<IconData> archivePeriodIcons = [
   Icons.archive_outlined,
 ];
 
+const List<DocumentTypeDef> finalArchiveDocs = [
+  DocumentTypeDef(
+      key: 'final_archive_catalog',
+      label: '课程档案袋目录',
+      iconCodePoint: '0xe2c7',
+      canImport: true,
+      needsGeneration: true,
+      canPrint: true),
+  DocumentTypeDef(
+      key: 'final_syllabus',
+      label: '教学大纲',
+      iconCodePoint: '0xe3e4',
+      canImport: true,
+      needsGeneration: true,
+      canPrint: true),
+  DocumentTypeDef(
+      key: 'final_syllabus_evaluation',
+      label: '大纲合理性评价表',
+      iconCodePoint: '0xe869',
+      canImport: true,
+      needsGeneration: true,
+      canPrint: true),
+  DocumentTypeDef(
+      key: 'final_teaching_schedule',
+      label: '教学进度表',
+      iconCodePoint: '0xe8b1',
+      canImport: true,
+      needsGeneration: true,
+      canPrint: true),
+  DocumentTypeDef(
+      key: 'final_lesson_plan',
+      label: '教学教案',
+      iconCodePoint: '0xe882',
+      canImport: true,
+      needsGeneration: true,
+      canPrint: true),
+  DocumentTypeDef(
+      key: 'final_syllabus_review',
+      label: '大纲合理性审核表',
+      iconCodePoint: '0xe8b1',
+      canImport: true,
+      needsGeneration: true,
+      canPrint: true),
+  DocumentTypeDef(
+      key: 'final_assessment_review',
+      label: '课程期末考核命题审核表',
+      iconCodePoint: '0xe8b1',
+      canImport: true,
+      needsGeneration: true,
+      canPrint: true),
+  DocumentTypeDef(
+      key: 'final_grade_book',
+      label: '记分册',
+      iconCodePoint: '0xe8b1',
+      canImport: true,
+      needsGeneration: true,
+      canPrint: true),
+  DocumentTypeDef(
+      key: 'final_score_register',
+      label: '成绩登记表',
+      iconCodePoint: '0xe8b1',
+      canImport: true,
+      needsGeneration: true,
+      canPrint: true),
+  DocumentTypeDef(
+      key: 'final_assessment_description',
+      label: '课程考核说明',
+      iconCodePoint: '0xe8b1',
+      canImport: true,
+      needsGeneration: true,
+      canPrint: true),
+  DocumentTypeDef(
+      key: 'final_achievement_report',
+      label: '课程达成评价材料',
+      iconCodePoint: '0xe8b1',
+      canImport: true,
+      needsGeneration: true,
+      canPrint: true),
+  DocumentTypeDef(
+      key: 'final_textbook_guide',
+      label: '教材与实验指导书',
+      iconCodePoint: '0xe8b1',
+      canImport: true,
+      needsGeneration: true,
+      canPrint: true),
+  DocumentTypeDef(
+      key: 'final_sample_works',
+      label: '课程考核大作业样本',
+      iconCodePoint: '0xe8b1',
+      canImport: true,
+      needsGeneration: true,
+      canPrint: true),
+];
+
 const examCourseDocs = {
   'beginning': [
     DocumentTypeDef(
@@ -129,31 +223,8 @@ const examCourseDocs = {
         needsGeneration: true,
         canPrint: true),
   ],
-  'final': [
-    DocumentTypeDef(
-        key: 'final_exam',
-        label: '期末试卷',
-        iconCodePoint: '0xe869',
-        needsGeneration: true),
-    DocumentTypeDef(
-        key: 'final_analysis',
-        label: '期末成绩分析',
-        iconCodePoint: '0xe872',
-        needsGeneration: true),
-    DocumentTypeDef(
-        key: 'course_summary',
-        label: '课程总结',
-        iconCodePoint: '0xe3e4',
-        needsGeneration: true),
-    DocumentTypeDef(
-        key: 'exam_review_form',
-        label: '试卷审核表',
-        iconCodePoint: '0xe8b1',
-        needsGeneration: true),
-  ],
+  'final': finalArchiveDocs,
   'archive': [
-    DocumentTypeDef(
-        key: 'all_materials', label: '全部教学材料', iconCodePoint: '0xe2c7'),
     DocumentTypeDef(
         key: 'print_report',
         label: '印刷审批表',
@@ -285,31 +356,8 @@ const assessCourseDocs = {
         needsGeneration: true,
         canPrint: true),
   ],
-  'final': [
-    DocumentTypeDef(
-        key: 'final_assessment',
-        label: '期末考核材料',
-        iconCodePoint: '0xe869',
-        needsGeneration: true),
-    DocumentTypeDef(
-        key: 'final_analysis',
-        label: '期末成绩分析',
-        iconCodePoint: '0xe872',
-        needsGeneration: true),
-    DocumentTypeDef(
-        key: 'course_summary',
-        label: '课程总结',
-        iconCodePoint: '0xe3e4',
-        needsGeneration: true),
-    DocumentTypeDef(
-        key: 'assessment_review_form',
-        label: '考核审核表',
-        iconCodePoint: '0xe8b1',
-        needsGeneration: true),
-  ],
+  'final': finalArchiveDocs,
   'archive': [
-    DocumentTypeDef(
-        key: 'all_materials', label: '全部教学材料', iconCodePoint: '0xe2c7'),
     DocumentTypeDef(
         key: 'archive_form',
         label: '归档确认表',

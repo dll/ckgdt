@@ -142,6 +142,49 @@ class ArchiveAgent extends BaseAgent {
       } else if (documentType == 'courseware') {
         final rows = await db.query('resource_files', limit: 100);
         context['resource_files'] = rows;
+      } else if (documentType.startsWith('final_') ||
+          documentType == 'archive_form' ||
+          documentType == 'print_report') {
+        final docs = await _dao.getDocuments();
+        context['archive_document_status'] = docs
+            .map((d) => {
+                  'period': d.period,
+                  'document_type': d.documentType,
+                  'title': d.title,
+                  'status': d.status,
+                  'has_content': (d.content ?? '').trim().isNotEmpty,
+                  'has_file': (d.filePath ?? '').trim().isNotEmpty,
+                })
+            .toList();
+        context['achievement_batches'] = await _safeQuery(
+          db,
+          'achievement_batches',
+          columns: [
+            'batch_name',
+            'course_name',
+            'class_name',
+            'semester',
+            'assessment_weights_json',
+            'status',
+          ],
+          limit: 10,
+          orderBy: 'created_at DESC',
+        );
+        context['achievement_score_count'] = await _safeRawQuery(db, '''
+SELECT COUNT(*) AS score_count FROM achievement_scores
+''');
+        context['lab_submission_stats'] = await _safeRawQuery(db, '''
+SELECT
+  COUNT(*) AS submission_count,
+  SUM(CASE WHEN score IS NOT NULL THEN 1 ELSE 0 END) AS reviewed_count
+FROM lab_submissions
+''');
+        context['quiz_stats'] = await _safeRawQuery(db, '''
+SELECT
+  COUNT(*) AS quiz_count,
+  ROUND(AVG(score), 1) AS average_score
+FROM quiz_results
+''');
       } else if (documentType == 'midterm_progress_check') {
         context['syllabus_items'] = await _safeQuery(
           db,
@@ -334,6 +377,19 @@ ${doc.content ?? '（文档无内容）'}''';
       'lesson_plan': '教学教案',
       'courseware': '教学课件',
       'roll_call': '学生点名册',
+      'final_archive_catalog': '课程档案袋目录',
+      'final_syllabus': '教学大纲',
+      'final_syllabus_evaluation': '大纲合理性评价表',
+      'final_teaching_schedule': '教学进度表',
+      'final_lesson_plan': '教学教案',
+      'final_syllabus_review': '大纲合理性审核表',
+      'final_assessment_review': '课程期末考核命题审核表',
+      'final_grade_book': '记分册',
+      'final_score_register': '成绩登记表',
+      'final_assessment_description': '课程考核说明',
+      'final_achievement_report': '课程达成评价材料',
+      'final_textbook_guide': '教材与实验指导书',
+      'final_sample_works': '课程考核大作业样本',
       'midterm_progress_check': '课程进度执行检查',
       'midterm_homework_review': '作业与批阅次数统计',
       'midterm_exam': '期中试卷',
@@ -672,7 +728,40 @@ ${doc.content ?? '（文档无内容）'}''';
 说明成绩分布、共性薄弱点和后续教学改进。''',
     };
 
-    if (typePrompts.containsKey(documentType)) {
+    if (documentType.startsWith('final_')) {
+      buf.writeln('''
+=== 期末课程档案袋材料格式要求 ===
+请按学校课程档案袋 00-12 材料体系生成「${_docTypeLabel(documentType)}」。
+材料应承接期初、期中已形成的事实，不得把其他课程或历届模板中的旧姓名、旧班级、旧学期照抄进来。
+如系统事实缺失，请明确标注"待教师补录"或"待导入原件"，禁止编造成绩、人数、签字、盖章或审核结论。
+
+格式：
+
+# ${_docTypeLabel(documentType)}
+
+**课程名称：** $courseName
+**教师：** $teacherName
+**班级：** $classInfo
+**学期：** $semesterLabel
+**课程类型：** $courseTypeLabel
+
+## 一、材料来源
+说明本材料来自期初、期中、期末、教务系统、达成模块、考核模块或教师自备原件。
+
+## 二、归档材料清单
+| 序号 | 材料名称 | 来源 | 状态 | 备注 |
+|------|----------|------|------|------|
+
+## 三、智能核验
+| 核验项 | 结论 | 证据或需补充内容 |
+|--------|------|------------------|
+| 课程一致性 | 待核验 | 课程、教师、班级、学期需与教学任务一致 |
+| 材料完整性 | 待核验 | 对照00课程档案袋目录 |
+| 审核归档状态 | 待核验 | 对照已生成/已审核/已归档状态 |
+
+## 四、归档结论
+给出"可归档 / 修改后归档 / 暂缓归档"结论，并列出必须补齐的材料。''');
+    } else if (typePrompts.containsKey(documentType)) {
       buf.writeln(typePrompts[documentType]!);
     }
 
