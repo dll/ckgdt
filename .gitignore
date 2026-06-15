@@ -46,13 +46,27 @@ docs/video/**/crops/
 docs/video/**/assets/
 scripts/achievement_video/work/
 
-# ── 课件大文件 ──
-# 视频/PPT 文件超出 Gitee 免费仓库 1GB 限制，不推送
-# 应用通过 CoursewareDownloadService 从配置的资源地址获取
+# ── data/ 目录（课程数据已迁移至 mad-data 仓库） ──
+# 仅保留 assets/ 下的 Flutter 资源（如 assets/learning_data.db）
+# 所有 data/ 子目录都不追踪，避免仓库膨胀
 data/视频/
+data/课件/
 data/课件/秒出PPT/
 data/课件/讯飞智文/
 data/courseware_output/
+data/courseout/
+data/course_config/
+data/理论/
+data/考核/
+data/图谱/
+data/课程/
+data/项目/
+data/用户/
+data/归档/
+data/*.md
+data/*.py
+data/*.docx
+data/*.xlsx
 video_output/
 docs/video/generated/
 docs/video/v3/
@@ -140,4 +154,5 @@ avd_features.ini
 # ── 草稿 / 计划文档 ──
 /drafts/
 data/达成/
+data/图像/
 sqlite-autoconf-*.zip
