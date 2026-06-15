@@ -261,6 +261,65 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     );
   }
 
+  Future<void> _editDoc(ArchiveDocument doc) async {
+    final initial = doc.content ?? '';
+    if (initial.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('当前文档没有可编辑的 Markdown 内容')),
+      );
+      return;
+    }
+
+    final controller = TextEditingController(text: initial);
+    final result = await showDialog<_EditDocResult>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _MarkdownEditDialog(
+        title: '${doc.title} - Markdown编辑',
+        controller: controller,
+      ),
+    );
+    if (result == null) return;
+
+    final content = result.content.trimRight();
+    if (content.trim().isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Markdown内容为空，未保存')),
+      );
+      return;
+    }
+
+    final updated = doc.copyWith(
+      content: content,
+      status: 'draft',
+      reviewJson: '',
+      reviewedAt: '',
+      updatedAt: DateTime.now().toIso8601String(),
+    );
+    await widget.dao.saveDocument(updated);
+    await _load();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(result.previewPdf ? '已保存，正在生成PDF预览' : '已保存Markdown修改'),
+      ),
+    );
+    if (result.previewPdf && mounted) {
+      _previewDoc(updated);
+    }
+  }
+
+  bool _canEditMarkdown(ArchiveDocument doc) {
+    if ((doc.content ?? '').trim().isEmpty) return false;
+    if (doc.documentType == 'teaching_task') return true;
+    if (_shouldUseOriginalSource(doc.documentType) &&
+        _hasArchiveOriginal(doc.filePath)) {
+      return false;
+    }
+    return true;
+  }
+
   Future<void> _printDoc(ArchiveDocument doc) async {
     if (!mounted) return;
 
@@ -2862,6 +2921,8 @@ ${_templateExcerpt(parsed.content)}
         onCreate: def.canCreate ? () => _createDoc(def) : null,
         onGenerate: _canAutoGenerate(def) ? () => _generateDoc(def) : null,
         onReview: doc != null ? () => _reviewDoc(doc) : null,
+        onEdit:
+            doc != null && _canEditMarkdown(doc) ? () => _editDoc(doc) : null,
         onPreview: doc != null ? () => _previewDoc(doc) : null,
         onPrint: (doc != null && def.canPrint) ? () => _printDoc(doc) : null,
         onArchive: doc != null && doc.status != 'archived'
@@ -2912,6 +2973,7 @@ class DocCard extends StatelessWidget {
   final VoidCallback? onCreate;
   final VoidCallback? onPreview;
   final VoidCallback? onReview;
+  final VoidCallback? onEdit;
   final VoidCallback? onPrint;
   final VoidCallback? onArchive;
   final VoidCallback? onDelete;
@@ -2929,6 +2991,7 @@ class DocCard extends StatelessWidget {
     this.onCreate,
     this.onPreview,
     this.onReview,
+    this.onEdit,
     this.onPrint,
     this.onArchive,
     this.onDelete,
@@ -3009,6 +3072,12 @@ class DocCard extends StatelessWidget {
                   tooltip: '审核',
                   color: Colors.teal,
                   onTap: onReview),
+            if (onEdit != null)
+              ActionBtn(
+                  icon: Icons.edit_note,
+                  tooltip: '编辑Markdown',
+                  color: Colors.indigo,
+                  onTap: onEdit),
             if (onPreview != null)
               ActionBtn(
                   icon: Icons.visibility, tooltip: '预览', onTap: onPreview),
@@ -3213,6 +3282,150 @@ class ActionBtn extends StatelessWidget {
         onPressed: onTap,
         constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
         padding: EdgeInsets.zero,
+      ),
+    );
+  }
+}
+
+class _EditDocResult {
+  final String content;
+  final bool previewPdf;
+
+  const _EditDocResult({
+    required this.content,
+    required this.previewPdf,
+  });
+}
+
+class _MarkdownEditDialog extends StatefulWidget {
+  final String title;
+  final TextEditingController controller;
+
+  const _MarkdownEditDialog({
+    required this.title,
+    required this.controller,
+  });
+
+  @override
+  State<_MarkdownEditDialog> createState() => _MarkdownEditDialogState();
+}
+
+class _MarkdownEditDialogState extends State<_MarkdownEditDialog> {
+  int _chars = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _chars = widget.controller.text.length;
+    widget.controller.addListener(_syncChars);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_syncChars);
+    super.dispose();
+  }
+
+  void _syncChars() {
+    if (mounted) setState(() => _chars = widget.controller.text.length);
+  }
+
+  void _submit({required bool previewPdf}) {
+    Navigator.of(context).pop(
+      _EditDocResult(
+        content: widget.controller.text,
+        previewPdf: previewPdf,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1120, maxHeight: 760),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 14, 10, 8),
+              child: Row(
+                children: [
+                  Icon(Icons.edit_note, color: theme.colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      widget.title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Text(
+                    '$_chars 字',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+                  IconButton(
+                    tooltip: '关闭',
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: TextField(
+                controller: widget.controller,
+                expands: true,
+                maxLines: null,
+                minLines: null,
+                textAlignVertical: TextAlignVertical.top,
+                style: const TextStyle(
+                  fontFamily: 'Consolas',
+                  fontSize: 13,
+                  height: 1.35,
+                ),
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.all(16),
+                ),
+              ),
+            ),
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+              child: Row(
+                children: [
+                  Text(
+                    '保存后旧审核结果失效，需要重新审核或直接预览确认。',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('取消'),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: () => _submit(previewPdf: false),
+                    icon: const Icon(Icons.save_outlined, size: 18),
+                    label: const Text('保存'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.icon(
+                    onPressed: () => _submit(previewPdf: true),
+                    icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+                    label: const Text('保存并预览PDF'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
