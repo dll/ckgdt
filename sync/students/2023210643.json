@@ -3,8 +3,8 @@
   "user_id": "2023210643",
   "user_name": "张海天",
   "role": "student",
-  "synced_at": "2026-06-15T18:33:38.070196",
-  "last_active": "2026-06-15T18:33:38.070196",
+  "synced_at": "2026-06-15T18:35:04.988883",
+  "last_active": "2026-06-15T18:35:04.988883",
   "quiz_results": [
     {
       "user_id": "2023210643",
@@ -14,7 +14,8 @@
       "num_total": 5,
       "chapter": "第四章 小程序开发2",
       "quiz_type": null,
-      "completed_at": "2026-05-04T21:25:23.121605"
+      "completed_at": "2026-05-04T21:25:23.121605",
+      "course_id": null
     },
     {
       "user_id": "2023210643",
@@ -24,7 +25,8 @@
       "num_total": 5,
       "chapter": "第四章 小程序开发1",
       "quiz_type": null,
-      "completed_at": "2026-05-04T21:24:48.147508"
+      "completed_at": "2026-05-04T21:24:48.147508",
+      "course_id": null
     },
     {
       "user_id": "2023210643",
@@ -34,7 +36,8 @@
       "num_total": 5,
       "chapter": "第二章 原生开发基础2",
       "quiz_type": null,
-      "completed_at": "2026-05-04T21:24:17.316752"
+      "completed_at": "2026-05-04T21:24:17.316752",
+      "course_id": null
     },
     {
       "user_id": "2023210643",
@@ -44,7 +47,8 @@
       "num_total": 3,
       "chapter": "第二章 原生开发基础1",
       "quiz_type": null,
-      "completed_at": "2026-05-04T21:23:27.648532"
+      "completed_at": "2026-05-04T21:23:27.648532",
+      "course_id": null
     },
     {
       "user_id": "2023210643",
@@ -54,7 +58,8 @@
       "num_total": 2,
       "chapter": "第三章 混合开发技术3",
       "quiz_type": null,
-      "completed_at": "2026-05-04T21:22:56.619127"
+      "completed_at": "2026-05-04T21:22:56.619127",
+      "course_id": null
     },
     {
       "user_id": "2023210643",
@@ -64,7 +69,8 @@
       "num_total": 5,
       "chapter": "第三章 混合开发技术2",
       "quiz_type": null,
-      "completed_at": "2026-05-04T21:22:50.481155"
+      "completed_at": "2026-05-04T21:22:50.481155",
+      "course_id": null
     },
     {
       "user_id": "2023210643",
@@ -74,7 +80,8 @@
       "num_total": 5,
       "chapter": "第三章 混合开发技术1",
       "quiz_type": null,
-      "completed_at": "2026-05-04T21:22:31.040576"
+      "completed_at": "2026-05-04T21:22:31.040576",
+      "course_id": null
     },
     {
       "user_id": "2023210643",
@@ -84,7 +91,8 @@
       "num_total": 5,
       "chapter": "第一章 移动应用开发技术体系2",
       "quiz_type": null,
-      "completed_at": "2026-05-04T21:21:44.280765"
+      "completed_at": "2026-05-04T21:21:44.280765",
+      "course_id": null
     },
     {
       "user_id": "2023210643",
@@ -94,7 +102,8 @@
       "num_total": 5,
       "chapter": "第一章 移动应用开发技术体系1",
       "quiz_type": null,
-      "completed_at": "2026-05-04T21:20:58.952668"
+      "completed_at": "2026-05-04T21:20:58.952668",
+      "course_id": null
     }
   ],
   "learning_records": [
@@ -104,11 +113,13 @@
       "node_title": "状态管理",
       "study_time": "2026-05-04T21:27:48.857834",
       "completed_at": "2026-05-04T21:27:48.857849",
-      "created_at": "2026-05-04 13:27:48"
+      "created_at": "2026-05-04 13:27:48",
+      "course_id": null
     }
   ],
   "wrong_answers": [
     {
+      "course_id": null,
       "user_id": "2023210643",
       "question_id": 2284,
       "question": "以下哪个是移动应用开发中\"原生应用\"的主要特征？",
@@ -121,6 +132,7 @@
       "explanation": "正确答案对是因为原生应用直接调用手机系统底层功能，必须用平台官方语言（如安卓的Java/Kotlin或iOS的Swift）和SDK开发，性能最好且能完全利用硬件。学生答案错在误将跨平台技术（如React Native或Flutter）的特征当作原生应用，HTML/CSS/JS通常用于混合应用或Web应用，无法直接调用原生系统接口。"
     },
     {
+      "course_id": null,
       "user_id": "2023210643",
       "question_id": 2300,
       "question": "在选择移动应用开发技术时，如果项目要求最高的性能和最佳的用户体验，应该优先考虑哪种技术方案？",
@@ -133,6 +145,7 @@
       "explanation": "原生应用直接调用手机系统底层功能，运行效率最高，能实现流畅的动画和复杂交互，因此性能与用户体验最佳。混合应用本质上是嵌套网页，依赖浏览器渲染，性能和响应速度受限制，无法达到原生级别的流畅度。"
     },
     {
+      "course_id": null,
       "user_id": "2023210643",
       "question_id": 2260,
       "question": "AI编程工具GitHub Copilot在移动开发中的主要作用是什么？",
@@ -145,6 +158,7 @@
       "explanation": "正确答案强调GitHub Copilot的核心功能是辅助写代码，比如自动补全函数或生成代码片段，这能提高开发效率。而学生答案提到的界面设计和原型制作属于UI/UX设计工具的范畴，比如Figma或Sketch，并非Copilot的主要用途。简单说，Copilot是帮你“写代码”的，不是帮你“画界面”的。"
     },
     {
+      "course_id": null,
       "user_id": "2023210643",
       "question_id": 2296,
       "question": "在混合开发技术路线中，哪种方式的性能表现最接近原生应用？",
@@ -157,6 +171,7 @@
       "explanation": "正确答案之所以是自绘引擎模式，是因为它直接通过Skia引擎绘制UI，绕过了原生组件的桥接通信，减少了性能损耗。学生选的React Native属于原生渲染桥接模式，每次交互都需要在JavaScript和原生层之间频繁桥接，这会造成明显的性能开销，所以不如自绘引擎流畅。简单说，Flutter更像“自己画画”，而React Native是“找人传话”，自然更慢。"
     },
     {
+      "course_id": null,
       "user_id": "2023210643",
       "question_id": 2265,
       "question": "Dart语言相比JavaScript的主要优势是什么？",
@@ -169,6 +184,7 @@
       "explanation": "正确答案在于Dart是强类型语言，编译时就能发现类型错误，而JavaScript是弱类型，很多bug要运行时才暴露。学生说的“更大开发者社区”不符合事实——JavaScript的社区远比Dart庞大。核心区别是类型系统带来的安全性和稳定性，而非社区规模。"
     },
     {
+      "course_id": null,
       "user_id": "2023210643",
       "question_id": 2267,
       "question": "Flutter框架的核心技术特征是什么？",
@@ -181,6 +197,7 @@
       "explanation": "正确答案强调Flutter不依赖系统原生控件，而是通过Skia引擎直接绘制UI，这保证了跨平台的一致性。学生误以为Flutter是类似WebView的封装方案，实际上WebView加载网页性能差且体验不统一，并非Flutter的核心技术特征。"
     },
     {
+      "course_id": null,
       "user_id": "2023210643",
       "question_id": 2295,
       "question": "在技术选型时，什么情况下最适合选择Web技术栈混合开发？",
@@ -193,6 +210,7 @@
       "explanation": "正确答案更合理，因为混合开发的核心优势是跨平台和快速更新，适合展示类应用。学生答案错在“大量原生功能”反而应选原生开发，混合技术对深层调用支持不足。简单说：混合开发擅长“表面功夫”，不擅长“硬核功能”。"
     },
     {
+      "course_id": null,
       "user_id": "2023210643",
       "question_id": 2263,
       "question": "Android应用的四大组件不包括以下哪一项？",
@@ -205,6 +223,7 @@
       "explanation": "四大组件是Android应用的四大核心模块，包括Activity、Service、BroadcastReceiver和ContentProvider。Fragment不是独立组件，它必须依附于Activity运行，属于UI片段。学生选Activity是因为它确实是四大组件之一，但题目问的是“不包括”哪一项，所以正确选项应是Fragment。"
     },
     {
+      "course_id": null,
       "user_id": "2023210643",
       "question_id": 2282,
       "question": "以下哪个布局管理器是Google推荐使用的？",
@@ -217,6 +236,7 @@
       "explanation": "Google推荐使用ConstraintLayout，因为它更灵活，能通过拖拽或代码轻松实现复杂布局，且性能优于RelativeLayout。RelativeLayout虽然也能定位控件，但嵌套层级多时会影响性能，且功能不如ConstraintLayout强大。所以官方建议优先用ConstraintLayout替代RelativeLayout。"
     },
     {
+      "course_id": null,
       "user_id": "2023210643",
       "question_id": 2262,
       "question": "Activity的哪个生命周期方法适合进行UI初始化操作？",
@@ -229,6 +249,7 @@
       "explanation": "`onCreate()`是Activity创建时第一个调用的方法，此时界面尚未显示，最适合一次性完成UI初始化（如设置布局、绑定控件）。而`onResume()`在Activity每次从后台回到前台时都会调用，如果在这里初始化UI，会导致重复执行浪费资源，甚至覆盖用户操作后的界面状态。"
     },
     {
+      "course_id": null,
       "user_id": "2023210643",
       "question_id": 2270,
       "question": "React Native框架的核心架构中，JavaScript代码与原生代码之间的通信是通过什么机制实现的？",
@@ -241,6 +262,7 @@
       "explanation": "正确答案是“Bridge桥接”，因为React Native通过一个双向通信的桥梁，让JavaScript代码直接调用原生模块（如摄像头、GPS），而无需像WebView那样加载网页。你选的“WebView容器”其实是用来显示网页内容的组件，它会让应用运行得像网页，而不是真正的原生体验，所以不能实现高效的原生通信。"
     },
     {
+      "course_id": null,
       "user_id": "2023210643",
       "question_id": 2272,
       "question": "SwiftUI相比传统的UIKit框架，最主要的编程范式特点是什么？",
@@ -253,6 +275,7 @@
       "explanation": "SwiftUI的核心特点是“声明式编程”，你只需描述界面“是什么样子”，系统会自动处理变化；而UIKit是“面向对象编程”，需要你手动控制每个UI对象的创建和更新。你选“面向对象编程”虽然没错，但这不是SwiftUI区别于UIKit的**最主要特点**，因为UIKit本身也是面向对象的。"
     },
     {
+      "course_id": null,
       "user_id": "2023210643",
       "question_id": 2279,
       "question": "iOS应用开发中，ViewController的生命周期方法按照执行顺序，正确的是？",
@@ -265,6 +288,7 @@
       "explanation": "正确的顺序是：视图加载完成(viewDidLoad)先执行，然后视图将要出现(viewWillAppear)，最后视图已经出现(viewDidAppear)。你的答案把viewDidLoad放到了viewWillAppear后面，但实际在视图显示之前，必须先完成加载，所以viewDidLoad是最先调用的。"
     },
     {
+      "course_id": null,
       "user_id": "2023210643",
       "question_id": 2286,
       "question": "以下哪个混合开发框架使用自绘引擎技术，性能最接近原生应用？",
@@ -277,6 +301,7 @@
       "explanation": "Flutter使用自绘引擎（Skia）直接绘制界面，不依赖系统原生控件，因此性能接近原生应用。而Cordova本质上是将网页封装在WebView中运行，通过JavaScript桥接调用原生功能，渲染依赖浏览器内核，性能远不如自绘引擎方案。"
     },
     {
+      "course_id": null,
       "user_id": "2023210643",
       "question_id": 2294,
       "question": "在小程序页面生命周期中，页面初次渲染完成时触发的函数是？",
@@ -289,6 +314,7 @@
       "explanation": "`onLoad()` 是在页面加载时触发，此时页面还没渲染完成；而`onReady()` 才是页面渲染完成后调用的。简单说，`onLoad` 负责“准备材料”，`onReady` 负责“展示成品”。你选的是准备阶段，题目问的是展示阶段。"
     },
     {
+      "course_id": null,
       "user_id": "2023210643",
       "question_id": 2304,
       "question": "小程序性能优化的关键策略不包括？",
@@ -301,6 +327,7 @@
       "explanation": "正确答案是“增加动画效果”，因为动画效果会消耗设备性能，反而拖慢小程序运行，不属于优化策略。图片懒加载是常用的优化手段，能减少首次加载的流量和渲染压力，所以学生答错了。"
     },
     {
+      "course_id": null,
       "user_id": "2023210643",
       "question_id": 2308,
       "question": "支付宝小程序的页面结构文件使用什么扩展名？",
@@ -317,6 +344,7 @@
   "feedback": [],
   "learning_paths": [
     {
+      "course_id": null,
       "user_id": "2023210643",
       "title": "综合项目实践 学习路径",
       "description": "自动推荐 · 3个概念 · 基于前置关系链",
@@ -327,6 +355,7 @@
       "updated_at": "2026-04-21T11:37:30.081048"
     },
     {
+      "course_id": null,
       "user_id": "2023210643",
       "title": "应用架构 学习路径",
       "description": "自动推荐 · 2个概念 · 基于前置关系链",
@@ -337,6 +366,7 @@
       "updated_at": "2026-04-21T11:37:30.073778"
     },
     {
+      "course_id": null,
       "user_id": "2023210643",
       "title": "ArkTS 学习路径",
       "description": "自动推荐 · 2个概念 · 基于前置关系链",
@@ -347,6 +377,7 @@
       "updated_at": "2026-04-21T11:37:30.068777"
     },
     {
+      "course_id": null,
       "user_id": "2023210643",
       "title": "Dart语言 学习路径",
       "description": "自动推荐 · 2个概念 · 基于前置关系链",
@@ -357,6 +388,7 @@
       "updated_at": "2026-04-21T11:37:30.062815"
     },
     {
+      "course_id": null,
       "user_id": "2023210643",
       "title": "Swift语言 学习路径",
       "description": "自动推荐 · 2个概念 · 基于前置关系链",
@@ -367,6 +399,7 @@
       "updated_at": "2026-04-21T11:37:30.057778"
     },
     {
+      "course_id": null,
       "user_id": "2023210643",
       "title": "Kotlin语言 学习路径",
       "description": "自动推荐 · 2个概念 · 基于前置关系链",
@@ -377,6 +410,7 @@
       "updated_at": "2026-04-21T11:37:30.051216"
     },
     {
+      "course_id": null,
       "user_id": "2023210643",
       "title": "Jetpack Compose 学习路径",
       "description": "自动推荐 · 3个概念 · 基于前置关系链",
@@ -541,40 +575,7 @@
       "updated_at": null
     }
   ],
-  "student_works": [
-    {
-      "title": "二手物品交易平台开发与整合",
-      "description": "【数据报表生成】自动汇总平台的交易数据生成运营报表，包含交易量、成交率、热门品类和用户活跃度等关键指标。【图表展示】使用图表组件可视化展示交易趋势、价格分布和用户增长数据，支持多维度筛选和对比分析。【AI交易分析】调用AI大模型分析平台交易数据模式，预测热门品类趋势和最佳定价策略。",
-      "tech_stack": "C# + .NET + MAUI",
-      "work_type": "综合项目",
-      "group_name": "cg2-sgtpdi",
-      "leader_name": "张海天",
-      "user_id": "2023210643",
-      "file_path": "E:\\Document/works_videos/2023210643/secondhand_intro_sub.mp4",
-      "file_size": "5.0MB",
-      "status": "已提交",
-      "submit_time": "2026-06-06T20:41:25.900330",
-      "tags": "[\"C#\",\".NET\",\"MAUI\"]",
-      "created_at": "2026-06-06T20:40:55.077984",
-      "updated_at": "2026-06-06T20:41:25.900330",
-      "related_node_ids": null,
-      "ai_suspicion": 0.0,
-      "teacher_confirmed": 0,
-      "project_id": null,
-      "group_id": null,
-      "video_url": "E:\\Document/works_videos/2023210643/secondhand_intro_sub.mp4",
-      "thumbnail_url": null,
-      "video_duration": null,
-      "view_count": 0,
-      "like_count": 1,
-      "comment_count": 0,
-      "repo": "cg2-sgtpdi",
-      "class_group": "cg2",
-      "project": "二手物品交易平台开发与整合",
-      "student_role": "MAUI开发工程师",
-      "student_name": "张海天"
-    }
-  ],
+  "student_works": [],
   "survey_responses": [
     {
       "survey_id": 1,
@@ -585,20 +586,8 @@
   ],
   "checkin_records": [],
   "work_comments": [],
-  "work_likes": [
-    {
-      "work_id": 55,
-      "user_id": "2023210643",
-      "created_at": "2026-06-06T20:46:30.564162"
-    }
-  ],
-  "work_views": [
-    {
-      "work_id": 86,
-      "user_id": "2023210643",
-      "viewed_at": "2026-06-06T20:42:33.244701"
-    }
-  ],
+  "work_likes": [],
+  "work_views": [],
   "peer_reviews": [],
   "collaboration_messages": [],
   "contribution_scores": [
@@ -625,6 +614,7 @@
   "lab_tasks": [
     {
       "id": 1,
+      "course_id": null,
       "title": "实验一 开发环境搭建",
       "chapter": "第1章",
       "description": "搭建 Android Studio、Flutter、微信开发者工具、DevEco Studio、HBuilderX（Uniapp）、Visual Studio（MAUI）开发环境，各成员根据分工完成对应平台环境配置并成功运行 Hello World 项目。\n\n【实验学时】2学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标1 | 【分组人数】6人/组",
@@ -641,6 +631,7 @@
     },
     {
       "id": 2,
+      "course_id": null,
       "title": "实验二 原生应用开发",
       "chapter": "第2章",
       "description": "Android方向：使用 Kotlin 实现\"智慧校园\"登录页面（EditText输入验证、Activity跳转与数据传递）。iOS方向（演示/模拟器）：使用 SwiftUI 实现登录页面，理解 ViewController 生命周期。组内每人选择不同平台或技术方案实现同一功能，完成后进行组内技术对比分享。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标1 | 【分组人数】6人/组",
@@ -657,6 +648,7 @@
     },
     {
       "id": 3,
+      "course_id": null,
       "title": "实验三 跨平台应用开发",
       "chapter": "第3章",
       "description": "开发\"智慧校园\"业务数据列表页（RESTful API 网络数据请求 + JSON 解析 + 下拉刷新），组内成员分别使用 Flutter（Dart）、React Native（JSX）、Uniapp（Vue）、MAUI（C#）等不同框架实现同一功能需求。扩展案例：集成设备传感器（如GPS定位、加速度计），体验移动硬件能力调用。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标2 | 【分组人数】6人/组",
@@ -673,6 +665,7 @@
     },
     {
       "id": 4,
+      "course_id": null,
       "title": "实验四 微信小程序开发",
       "chapter": "第4章",
       "description": "借助 AI 编程工具辅助开发\"智慧校园通知\"小程序（列表 + 详情页路由 + 本地存储），体验 AI 工具在代码生成与调试中的作用。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标2 | 【分组人数】6人/组",
@@ -689,6 +682,7 @@
     },
     {
       "id": 5,
+      "course_id": null,
       "title": "实验五 鸿蒙多端应用开发",
       "chapter": "第5章",
       "description": "使用 DevEco Studio 开发\"智慧天气\"应用，实现手机/平板界面自适应布局；通过模拟器演示分布式数据同步原理。扩展案例：调用设备传感器（如光线传感器、陀螺仪）实现简单的物联网数据采集与展示场景。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标3 | 【分组人数】6人/组",
@@ -705,6 +699,7 @@
     },
     {
       "id": 6,
+      "course_id": null,
       "title": "实验六 跨平台综合项目实战",
       "chapter": "第6章",
       "description": "团队开发\"智慧健康\"等业务应用（建议选题涉及传感器或硬件交互场景），每人负责一个技术栈（Android/Flutter/React Native/Uniapp/MAUI/微信小程序），使用 Git 进行版本控制与协作，借助 AI 编程工具辅助代码生成与调试。每组6人，实验中每人选择一个技术栈独立完成对应实验任务，组内进行技术分享与对比分析。\n\n【实验学时】6学时 | 【实验类型】综合型 | 【实验要求】必做 | 【对应课程目标】目标1-4 | 【分组人数】6人/组",
