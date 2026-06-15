@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
+import 'package:path/path.dart' as p;
 import 'package:printing/printing.dart';
 import '../../../../core/error_handler.dart';
 import '../../../../services/agent/agents/archive_agent.dart';
@@ -273,16 +274,18 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     }
 
     final content = doc.content ?? '';
-    if (content.trim().isEmpty) {
+    if (content.trim().isEmpty && !_hasArchiveOriginal(doc.filePath)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('文档内容为空，无法打印')),
       );
       return;
     }
 
-    final loadingText = doc.documentType == 'teaching_task'
-        ? '正在生成学校版式 PDF...'
-        : '正在生成 PDF（pandoc + LibreOffice）...';
+    final loadingText = _canPreviewOriginalAsPdf(doc.filePath)
+        ? '正在按原件版式生成 PDF...'
+        : doc.documentType == 'teaching_task'
+            ? '正在生成学校版式 PDF...'
+            : '正在生成 PDF（pandoc + LibreOffice）...';
 
     // loading 提示（普通文档 pandoc + soffice 两步通常 5-15 秒）
     showDialog(
@@ -337,9 +340,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
   /// 自动从 `data/归档/<期>/模板/<docType>.docx` 找 reference-doc 继承样式。
   Future<Uint8List> _renderPdfBytes(ArchiveDocument doc) async {
     final sourcePath = doc.filePath;
-    if (sourcePath != null && sourcePath.toLowerCase().endsWith('.pdf')) {
-      final sourceFile = File(sourcePath);
-      if (await sourceFile.exists()) return sourceFile.readAsBytes();
+    if (_canPreviewOriginalAsPdf(sourcePath)) {
+      return PandocService.instance.officeFileToPdf(sourcePath!);
     }
     final processor = ProcessorRegistry.instance.find(doc.documentType);
     if (processor != null && processor.supportsPrint) {
@@ -352,6 +354,23 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         docLabel: _docLabelFor(doc.documentType),
       ),
     );
+  }
+
+  bool _canPreviewOriginalAsPdf(String? sourcePath) {
+    if (sourcePath == null || sourcePath.trim().isEmpty) return false;
+    if (kIsWeb) return false;
+    final ext = p.extension(sourcePath).toLowerCase();
+    const supported = {
+      '.pdf',
+      '.doc',
+      '.docx',
+      '.xls',
+      '.xlsx',
+      '.ppt',
+      '.pptx',
+    };
+    if (!supported.contains(ext)) return false;
+    return File(sourcePath).existsSync();
   }
 
   void _showPrintErrorDialog({required String title, required String message}) {
@@ -536,7 +555,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     }
 
     final content = doc.content ?? '';
-    if (content.trim().isEmpty) {
+    if (content.trim().isEmpty && !_hasArchiveOriginal(doc.filePath)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('文档内容为空，无法归档')),
       );
@@ -544,20 +563,25 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     }
 
     final docLabel = _docLabelFor(doc.documentType);
+    final loadingText = _hasArchiveOriginal(doc.filePath)
+        ? '正在按学校命名保存原件...'
+        : doc.documentType == 'teaching_task'
+            ? '正在生成学校版式归档件...'
+            : '正在归档（pandoc 生成 docx 并落盘）...';
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const AlertDialog(
+      builder: (_) => AlertDialog(
         content: SizedBox(
           height: 80,
           child: Row(
             children: [
-              SizedBox(
+              const SizedBox(
                   width: 24,
                   height: 24,
                   child: CircularProgressIndicator(strokeWidth: 2)),
-              SizedBox(width: 16),
-              Expanded(child: Text('正在归档（pandoc 生成 docx 并落盘）...')),
+              const SizedBox(width: 16),
+              Expanded(child: Text(loadingText)),
             ],
           ),
         ),
@@ -579,11 +603,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       _showArchivedDialog(
         title: '已归档',
         path: outPath,
-        message: outPath.toLowerCase().endsWith('.pdf')
-            ? '原始 PDF 已按学校命名保存，文件路径已复制到剪贴板，可直接粘贴到 QQ 群发送。'
-            : doc.documentType == 'teaching_task'
-                ? 'docx 与学校版式 PDF 已保存，文件路径已复制到剪贴板，可直接粘贴到 QQ 群发送。'
-                : 'docx 已保存，文件路径已复制到剪贴板，可直接粘贴到 QQ 群发送。',
+        message: _archiveSuccessMessage(doc),
       );
     } on ArchivePackageException catch (e) {
       swallowDebug(e, tag: 'ArchivePeriodTab._archiveDoc.pkg');
@@ -607,6 +627,40 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
 
   String _docLabelFor(String docType) {
     return documentLabelForCourseType(widget.courseType, docType);
+  }
+
+  bool _hasArchiveOriginal(String? sourcePath) {
+    if (sourcePath == null || sourcePath.trim().isEmpty) return false;
+    if (kIsWeb) return false;
+    final ext = p.extension(sourcePath).toLowerCase();
+    const preserved = {
+      '.pdf',
+      '.doc',
+      '.docx',
+      '.xls',
+      '.xlsx',
+      '.ppt',
+      '.pptx',
+      '.png',
+      '.jpg',
+      '.jpeg',
+      '.webp',
+      '.bmp',
+    };
+    if (!preserved.contains(ext)) return false;
+    return File(sourcePath).existsSync();
+  }
+
+  String _archiveSuccessMessage(ArchiveDocument doc) {
+    if (_hasArchiveOriginal(doc.filePath)) {
+      final ext =
+          p.extension(doc.filePath!).replaceFirst('.', '').toUpperCase();
+      return '$ext 原件已按学校命名保存，文件路径已复制到剪贴板，可直接粘贴到 QQ 群发送。';
+    }
+    if (doc.documentType == 'teaching_task') {
+      return 'docx 与学校版式 PDF 已保存，文件路径已复制到剪贴板，可直接粘贴到 QQ 群发送。';
+    }
+    return 'docx 已保存，文件路径已复制到剪贴板，可直接粘贴到 QQ 群发送。';
   }
 
   /// 归档完成提示：显示文件路径 + 「打开文件夹 / 复制路径 / 关闭」三个动作
@@ -2911,7 +2965,7 @@ class _DocumentPreviewSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final sourcePath = doc.filePath;
     final usePdfPreview = doc.documentType == 'teaching_task' ||
-        (sourcePath != null && sourcePath.toLowerCase().endsWith('.pdf'));
+        _canUsePdfPreviewSource(sourcePath);
     return DraggableScrollableSheet(
       initialChildSize: 0.85,
       minChildSize: 0.5,
@@ -2962,5 +3016,19 @@ class _DocumentPreviewSheet extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  bool _canUsePdfPreviewSource(String? sourcePath) {
+    if (sourcePath == null || sourcePath.trim().isEmpty) return false;
+    final ext = p.extension(sourcePath).toLowerCase();
+    return const {
+      '.pdf',
+      '.doc',
+      '.docx',
+      '.xls',
+      '.xlsx',
+      '.ppt',
+      '.pptx',
+    }.contains(ext);
   }
 }

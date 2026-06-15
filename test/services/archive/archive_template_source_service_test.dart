@@ -54,6 +54,22 @@ void main() {
     expect(doc!.sourcePath, source.path);
   });
 
+  test('keeps beginning official docx template as original material', () async {
+    final source = File(p.join(templateDir.path, '课程教学大纲合理性评价表.docx'))
+      ..writeAsBytesSync(const [0x50, 0x4b, 0x03, 0x04]);
+
+    final doc = await ArchiveTemplateSourceService.parseBestSource(
+      periodKey: 'beginning',
+      documentType: 'syllabus_evaluation',
+      label: '大纲合理性评价表',
+    );
+
+    expect(doc, isNotNull);
+    expect(doc!.sourcePath, source.path);
+    expect(doc.content, contains('此资料以原始文件为准'));
+    expect(doc.content, contains('DOCX 原件'));
+  });
+
   test('matches assessment plan pdf as original file', () async {
     final source = File(p.join(templateDir.path, '课程考查大作业方案.pdf'))
       ..writeAsBytesSync([0x25, 0x50, 0x44, 0x46]);
@@ -161,6 +177,25 @@ void main() {
     expect(doc.content, contains('2026-06-15'));
   });
 
+  test('keeps midterm official docx template as original material', () async {
+    final midtermDir = Directory(p.join(temp.path, '期中', '模板'))
+      ..createSync(recursive: true);
+    final source = File(p.join(midtermDir.path, '08-软件工程课程进度检查.docx'))
+      ..writeAsBytesSync(const [0x50, 0x4b, 0x03, 0x04]);
+
+    final doc = await ArchiveTemplateSourceService.parseBestSource(
+      periodKey: 'midterm',
+      documentType: 'midterm_progress_check',
+      label: '课程进度执行检查',
+      now: DateTime(2026, 6, 15),
+    );
+
+    expect(doc, isNotNull);
+    expect(doc!.sourcePath, source.path);
+    expect(doc.content, contains('此资料以原始文件为准'));
+    expect(doc.content, contains('DOCX 原件'));
+  });
+
   test('midterm homework review warns when source is actually progress table',
       () async {
     final midtermDir = Directory(p.join(temp.path, '期中', '模板'))
@@ -206,5 +241,24 @@ void main() {
       expect(doc, isNotNull, reason: '${entry.key} should resolve');
       expect(doc!.content.trim(), isNotEmpty);
     }
+  });
+
+  test(
+      'final docx template is kept as original material instead of extracted markdown',
+      () async {
+    final realRoot = Directory('data/归档').absolute;
+    if (!realRoot.existsSync()) return;
+    BaseDocumentProcessor.archiveDataRoot = realRoot.path;
+
+    final doc = await ArchiveTemplateSourceService.parseBestSource(
+      periodKey: 'final',
+      documentType: 'final_archive_catalog',
+      label: '课程档案袋目录',
+    );
+
+    expect(doc, isNotNull);
+    expect(doc!.sourceName, contains('课程档案袋目录'));
+    expect(doc.content, contains('此资料以原始文件为准'));
+    expect(doc.content, contains('DOCX 原件'));
   });
 }
