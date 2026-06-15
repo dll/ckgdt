@@ -3,8 +3,8 @@
   "user_id": "2023210601",
   "user_name": "金正轩",
   "role": "student",
-  "synced_at": "2026-06-15T15:47:40.768573",
-  "last_active": "2026-06-15T15:47:40.768586",
+  "synced_at": "2026-06-15T15:50:29.321010",
+  "last_active": "2026-06-15T15:50:29.321019",
   "quiz_results": [
     {
       "user_id": "2023210601",
@@ -169,7 +169,36 @@
       "teacher_confirmed": 0
     }
   ],
-  "student_reports": [],
+  "student_reports": [
+    {
+      "template_id": null,
+      "task_id": null,
+      "user_id": "2023210601",
+      "title": "答辩报告",
+      "content_json": "2023210601金正轩答辩报告.pdf",
+      "file_path": "/data/user/0/cn.edu.chzu.madkg/cache/file_picker/1781509660894/2023210601金正轩答辩报告.pdf",
+      "status": "已提交",
+      "submit_time": "2026-06-15T15:47:45.206622",
+      "score": null,
+      "feedback": null,
+      "created_at": "2026-06-15T15:47:45.206636",
+      "updated_at": null
+    },
+    {
+      "template_id": null,
+      "task_id": null,
+      "user_id": "2023210601",
+      "title": "个人报告",
+      "content_json": "2023210601金正轩个人报告.pdf",
+      "file_path": "/data/user/0/cn.edu.chzu.madkg/cache/file_picker/1781509796809/2023210601金正轩个人报告.pdf",
+      "status": "已提交",
+      "submit_time": "2026-06-15T15:50:02.113259",
+      "score": null,
+      "feedback": null,
+      "created_at": "2026-06-15T15:50:02.113271",
+      "updated_at": null
+    }
+  ],
   "student_works": [
     {
       "title": "智慧社区生活服务平台开发与整合",
