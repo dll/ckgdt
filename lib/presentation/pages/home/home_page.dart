@@ -1177,21 +1177,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildGradientPlaceholder(IconData icon, Color color) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [color, color.withValues(alpha: 0.6)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Center(
-        child: Icon(icon, size: 32, color: Colors.white.withValues(alpha: 0.9)),
-      ),
-    );
-  }
-
   // ── 修改密码对话框 ──────────────────────────────────────────────────────
   void _showChangePasswordDialog() {
     final user = _authService.currentUser;

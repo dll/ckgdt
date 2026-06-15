@@ -1,4 +1,4 @@
-﻿import 'dart:math';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../services/auth_service.dart';
@@ -6,6 +6,7 @@ import '../../../data/local/quiz_dao.dart';
 import '../../../data/local/learning_record_dao.dart';
 
 import '../../widgets/back_button_bar.dart';
+
 /// 能力增长曲线 — 灵感来自"天天向上"项目
 /// 用数学模型展示不同学习模式的长期效果差异
 class GrowthCurvePage extends StatefulWidget {
@@ -100,7 +101,9 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
               if (dateStr != null) {
                 try {
                   final rd = DateTime.parse(dateStr);
-                  if (rd.year == date.year && rd.month == date.month && rd.day == date.day) {
+                  if (rd.year == date.year &&
+                      rd.month == date.month &&
+                      rd.day == date.day) {
                     activities++;
                   }
                 } catch (_) {}
@@ -149,7 +152,6 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -189,7 +191,9 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
         children: [
           // 说明卡片
           Card(
-            color: isDark ? Colors.indigo.withValues(alpha: 0.2) : Colors.indigo[50],
+            color: isDark
+                ? Colors.indigo.withValues(alpha: 0.2)
+                : Colors.indigo[50],
             child: Padding(
               padding: const EdgeInsets.all(14),
               child: Column(
@@ -197,18 +201,22 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.auto_graph, color: Colors.indigo[400], size: 20),
+                      Icon(Icons.auto_graph,
+                          color: Colors.indigo[400], size: 20),
                       const SizedBox(width: 6),
                       const Text('天天向上：坚持的力量',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 14)),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Text(
                     '假设初始能力值为 1，每天学习能力提升 r%，不学习衰减 r/3%。\n'
                     '120 天后（一学期），不同学习模式的差距令人惊讶！',
-                    style: TextStyle(fontSize: 12, height: 1.5,
-                      color: isDark ? Colors.white60 : Colors.black54),
+                    style: TextStyle(
+                        fontSize: 12,
+                        height: 1.5,
+                        color: isDark ? Colors.white60 : Colors.black54),
                   ),
                 ],
               ),
@@ -224,13 +232,18 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
               final mode = _modes[i];
               final isActive = _activeModes.contains(i);
               return FilterChip(
-                label: Text(mode.name, style: TextStyle(fontSize: 11,
-                  color: isActive ? Colors.white : mode.color)),
+                label: Text(mode.name,
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: isActive ? Colors.white : mode.color)),
                 selected: isActive,
                 selectedColor: mode.color,
                 checkmarkColor: Colors.white,
                 onSelected: (v) => setState(() {
-                  if (v) _activeModes.add(i); else _activeModes.remove(i);
+                  if (v)
+                    _activeModes.add(i);
+                  else
+                    _activeModes.remove(i);
                 }),
               );
             }),
@@ -244,7 +257,9 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
               Expanded(
                 child: Slider(
                   value: _totalDays.toDouble(),
-                  min: 30, max: 365, divisions: 67,
+                  min: 30,
+                  max: 365,
+                  divisions: 67,
                   label: '$_totalDays天',
                   onChanged: (v) => setState(() => _totalDays = v.round()),
                 ),
@@ -277,7 +292,9 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
 
           // 启发文字
           Card(
-            color: isDark ? Colors.amber.withValues(alpha: 0.15) : Colors.amber[50],
+            color: isDark
+                ? Colors.amber.withValues(alpha: 0.15)
+                : Colors.amber[50],
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
@@ -287,8 +304,11 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
                     children: [
                       Icon(Icons.lightbulb, color: Colors.amber[700], size: 18),
                       const SizedBox(width: 6),
-                      Text('学习启示', style: TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 13, color: Colors.amber[800])),
+                      Text('学习启示',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: Colors.amber[800])),
                     ],
                   ),
                   const SizedBox(height: 6),
@@ -297,8 +317,10 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
                     '• 适度休息（5+2模式）比"内卷"更高效\n'
                     '• 哪怕每天只提升 0.5%，120天后能力值也能翻倍\n'
                     '• 关键不是学多久，而是能坚持多久',
-                    style: TextStyle(fontSize: 12, height: 1.6,
-                      color: isDark ? Colors.white70 : Colors.black87),
+                    style: TextStyle(
+                        fontSize: 12,
+                        height: 1.6,
+                        color: isDark ? Colors.white70 : Colors.black87),
                   ),
                 ],
               ),
@@ -338,7 +360,9 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
     // 添加实际数据线
     if (_hasActualData && _actualData.isNotEmpty) {
       final actualSpots = _showLog
-          ? _actualData.map((s) => FlSpot(s.x, s.y > 0 ? log(s.y) / ln10 + 1 : 1)).toList()
+          ? _actualData
+              .map((s) => FlSpot(s.x, s.y > 0 ? log(s.y) / ln10 + 1 : 1))
+              .toList()
           : _actualData;
 
       lines.add(LineChartBarData(
@@ -370,7 +394,8 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
               interval: max(1, _totalDays / 6),
               getTitlesWidget: (v, _) => Padding(
                 padding: const EdgeInsets.only(top: 4),
-                child: Text('${v.toInt()}天', style: const TextStyle(fontSize: 10)),
+                child:
+                    Text('${v.toInt()}天', style: const TextStyle(fontSize: 10)),
               ),
             ),
           ),
@@ -384,18 +409,22 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
               ),
             ),
           ),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
-        borderData: FlBorderData(show: true,
-          border: Border.all(color: Colors.grey.withValues(alpha: 0.3))),
+        borderData: FlBorderData(
+            show: true,
+            border: Border.all(color: Colors.grey.withValues(alpha: 0.3))),
         lineTouchData: LineTouchData(
           touchTooltipData: LineTouchTooltipData(
             getTooltipItems: (spots) => spots.map((s) {
               final color = s.bar.color ?? Colors.blue;
               return LineTooltipItem(
                 '第${s.x.toInt()}天\n能力: ${s.y.toStringAsFixed(2)}',
-                TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold),
+                TextStyle(
+                    color: color, fontSize: 11, fontWeight: FontWeight.bold),
               );
             }).toList(),
           ),
@@ -412,25 +441,37 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('🏁 终值对比（初始能力=1.0）',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
             const SizedBox(height: 8),
-            ..._modes.asMap().entries.where((e) => _activeModes.contains(e.key)).map((e) {
+            ..._modes
+                .asMap()
+                .entries
+                .where((e) => _activeModes.contains(e.key))
+                .map((e) {
               final mode = e.value;
               final finalVal = _calcAbility(mode, _totalDays);
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 3),
                 child: Row(
                   children: [
-                    Container(width: 10, height: 10, decoration: BoxDecoration(
-                      color: mode.color, shape: BoxShape.circle)),
+                    Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                            color: mode.color, shape: BoxShape.circle)),
                     const SizedBox(width: 8),
-                    Expanded(child: Text(mode.name, style: const TextStyle(fontSize: 12))),
+                    Expanded(
+                        child: Text(mode.name,
+                            style: const TextStyle(fontSize: 12))),
                     Text('${finalVal.toStringAsFixed(2)}×',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13,
-                        color: mode.color)),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: mode.color)),
                     const SizedBox(width: 8),
                     Text('(+${((finalVal - 1) * 100).toStringAsFixed(0)}%)',
-                      style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                        style:
+                            TextStyle(fontSize: 11, color: Colors.grey[600])),
                   ],
                 ),
               );
@@ -439,13 +480,19 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
               const Divider(),
               Row(
                 children: [
-                  Container(width: 10, height: 10, decoration: const BoxDecoration(
-                    color: Colors.amber, shape: BoxShape.circle)),
+                  Container(
+                      width: 10,
+                      height: 10,
+                      decoration: const BoxDecoration(
+                          color: Colors.amber, shape: BoxShape.circle)),
                   const SizedBox(width: 8),
-                  const Expanded(child: Text('我的实际', style: TextStyle(fontSize: 12))),
+                  const Expanded(
+                      child: Text('我的实际', style: TextStyle(fontSize: 12))),
                   Text('${_actualData.last.y.toStringAsFixed(2)}×',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13,
-                      color: Colors.amber)),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: Colors.amber)),
                 ],
               ),
             ],
@@ -459,7 +506,8 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
 
   Widget _buildCustomTab(bool isDark) {
     final customMode = _LearningMode(
-      '自定义', '自定义模式',
+      '自定义',
+      '自定义模式',
       studyDays: _customStudyDays,
       restDays: 7 - _customStudyDays,
       rate: _customRate,
@@ -482,57 +530,83 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('⚙️ 自定义学习参数',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                   const SizedBox(height: 16),
 
                   // 每周学习天数
                   Row(
                     children: [
-                      const SizedBox(width: 80, child: Text('学习天数：', style: TextStyle(fontSize: 13))),
+                      const SizedBox(
+                          width: 80,
+                          child: Text('学习天数：', style: TextStyle(fontSize: 13))),
                       Expanded(
                         child: Slider(
                           value: _customStudyDays.toDouble(),
-                          min: 1, max: 7, divisions: 6,
+                          min: 1,
+                          max: 7,
+                          divisions: 6,
                           label: '$_customStudyDays天/周',
-                          onChanged: (v) => setState(() => _customStudyDays = v.round()),
+                          onChanged: (v) =>
+                              setState(() => _customStudyDays = v.round()),
                         ),
                       ),
-                      SizedBox(width: 50, child: Text('$_customStudyDays天/周',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+                      SizedBox(
+                          width: 50,
+                          child: Text('$_customStudyDays天/周',
+                              style: const TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.bold))),
                     ],
                   ),
 
                   // 每日增长率
                   Row(
                     children: [
-                      const SizedBox(width: 80, child: Text('增长率：', style: TextStyle(fontSize: 13))),
+                      const SizedBox(
+                          width: 80,
+                          child: Text('增长率：', style: TextStyle(fontSize: 13))),
                       Expanded(
                         child: Slider(
                           value: _customRate * 100,
-                          min: 0.1, max: 5.0, divisions: 49,
+                          min: 0.1,
+                          max: 5.0,
+                          divisions: 49,
                           label: '${(_customRate * 100).toStringAsFixed(1)}%',
-                          onChanged: (v) => setState(() => _customRate = v / 100),
+                          onChanged: (v) =>
+                              setState(() => _customRate = v / 100),
                         ),
                       ),
-                      SizedBox(width: 50, child: Text('${(_customRate * 100).toStringAsFixed(1)}%/天',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+                      SizedBox(
+                          width: 50,
+                          child: Text(
+                              '${(_customRate * 100).toStringAsFixed(1)}%/天',
+                              style: const TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.bold))),
                     ],
                   ),
 
                   // 模拟天数
                   Row(
                     children: [
-                      const SizedBox(width: 80, child: Text('模拟天数：', style: TextStyle(fontSize: 13))),
+                      const SizedBox(
+                          width: 80,
+                          child: Text('模拟天数：', style: TextStyle(fontSize: 13))),
                       Expanded(
                         child: Slider(
                           value: _totalDays.toDouble(),
-                          min: 30, max: 365, divisions: 67,
+                          min: 30,
+                          max: 365,
+                          divisions: 67,
                           label: '$_totalDays天',
-                          onChanged: (v) => setState(() => _totalDays = v.round()),
+                          onChanged: (v) =>
+                              setState(() => _totalDays = v.round()),
                         ),
                       ),
-                      SizedBox(width: 50, child: Text('$_totalDays天',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+                      SizedBox(
+                          width: 50,
+                          child: Text('$_totalDays天',
+                              style: const TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.bold))),
                     ],
                   ),
                 ],
@@ -556,11 +630,13 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
                 children: [
                   Row(
                     children: [
-                      Expanded(child: _buildResultCard(
-                        '你的模式', customVal, Colors.teal, isDark)),
+                      Expanded(
+                          child: _buildResultCard(
+                              '你的模式', customVal, Colors.teal, isDark)),
                       const SizedBox(width: 12),
-                      Expanded(child: _buildResultCard(
-                        '标准模式', standardVal, Colors.blue, isDark)),
+                      Expanded(
+                          child: _buildResultCard(
+                              '标准模式', standardVal, Colors.blue, isDark)),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -578,8 +654,11 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
                           ? '🎉 你的模式比标准模式强 ${((customVal / standardVal - 1) * 100).toStringAsFixed(0)}%'
                           : '⚠️ 你的模式比标准模式弱 ${((1 - customVal / standardVal) * 100).toStringAsFixed(0)}%',
                       style: TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 13,
-                        color: customVal >= standardVal ? Colors.green[700] : Colors.red[700]),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: customVal >= standardVal
+                              ? Colors.green[700]
+                              : Colors.red[700]),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -605,18 +684,26 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
     return LineChart(LineChartData(
       lineBarsData: [
         LineChartBarData(
-          spots: customSpots, isCurved: true, color: Colors.teal,
-          barWidth: 3, dotData: const FlDotData(show: false),
-          belowBarData: BarAreaData(show: true, color: Colors.teal.withValues(alpha: 0.1)),
+          spots: customSpots,
+          isCurved: true,
+          color: Colors.teal,
+          barWidth: 3,
+          dotData: const FlDotData(show: false),
+          belowBarData: BarAreaData(
+              show: true, color: Colors.teal.withValues(alpha: 0.1)),
         ),
         LineChartBarData(
-          spots: standardSpots, isCurved: true, color: Colors.blue,
-          barWidth: 2, dotData: const FlDotData(show: false),
+          spots: standardSpots,
+          isCurved: true,
+          color: Colors.blue,
+          barWidth: 2,
+          dotData: const FlDotData(show: false),
           dashArray: [5, 3],
         ),
       ],
       titlesData: FlTitlesData(
-        bottomTitles: AxisTitles(sideTitles: SideTitles(
+        bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
           showTitles: true,
           interval: max(1, _totalDays / 6),
           getTitlesWidget: (v, _) => Padding(
@@ -624,14 +711,20 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
             child: Text('${v.toInt()}天', style: const TextStyle(fontSize: 10)),
           ),
         )),
-        leftTitles: AxisTitles(sideTitles: SideTitles(
-          showTitles: true, reservedSize: 36,
-          getTitlesWidget: (v, _) => Text(v.toStringAsFixed(1), style: const TextStyle(fontSize: 10)),
+        leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+          showTitles: true,
+          reservedSize: 36,
+          getTitlesWidget: (v, _) =>
+              Text(v.toStringAsFixed(1), style: const TextStyle(fontSize: 10)),
         )),
         topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles:
+            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
       ),
-      borderData: FlBorderData(show: true, border: Border.all(color: Colors.grey.withValues(alpha: 0.3))),
+      borderData: FlBorderData(
+          show: true,
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.3))),
     ));
   }
 
@@ -647,9 +740,10 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
           Text(title, style: TextStyle(fontSize: 12, color: color)),
           const SizedBox(height: 4),
           Text('${val.toStringAsFixed(2)}×',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: color)),
+              style: TextStyle(
+                  fontSize: 22, fontWeight: FontWeight.bold, color: color)),
           Text('+${((val - 1) * 100).toStringAsFixed(0)}%',
-            style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+              style: TextStyle(fontSize: 11, color: Colors.grey[600])),
         ],
       ),
     );
@@ -670,7 +764,7 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
           // 我的成长曲线
           if (_hasActualData) ...[
             const Text('📈 我的学习轨迹',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
             const SizedBox(height: 8),
             SizedBox(height: 220, child: _buildPersonalChart()),
             const SizedBox(height: 16),
@@ -692,9 +786,8 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
     final totalDays = _hasActualData && _actualData.isNotEmpty
         ? _actualData.last.x.toInt()
         : 0;
-    final abilityMultiplier = _hasActualData && _actualData.isNotEmpty
-        ? _actualData.last.y
-        : 1.0;
+    final abilityMultiplier =
+        _hasActualData && _actualData.isNotEmpty ? _actualData.last.y : 1.0;
 
     // 判断最接近的学习模式
     String bestMatch = '未知';
@@ -721,21 +814,25 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
         ),
         child: Column(
           children: [
-            const Text('我的学习概况', style: TextStyle(color: Colors.white,
-              fontSize: 15, fontWeight: FontWeight.bold)),
+            const Text('我的学习概况',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _summaryItem('学习天数', '$totalDays'),
-                _summaryItem('能力倍率', '${abilityMultiplier.toStringAsFixed(2)}×'),
+                _summaryItem(
+                    '能力倍率', '${abilityMultiplier.toStringAsFixed(2)}×'),
                 _summaryItem('学习模式', bestMatch),
               ],
             ),
             if (!_hasActualData) ...[
               const SizedBox(height: 12),
               const Text('开始学习后，这里将显示你的成长数据',
-                style: TextStyle(color: Colors.white60, fontSize: 12)),
+                  style: TextStyle(color: Colors.white60, fontSize: 12)),
             ],
           ],
         ),
@@ -746,10 +843,14 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
   Widget _summaryItem(String label, String value) {
     return Column(
       children: [
-        Text(value, style: const TextStyle(color: Colors.white, fontSize: 18,
-          fontWeight: FontWeight.bold)),
+        Text(value,
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold)),
         const SizedBox(height: 2),
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+        Text(label,
+            style: const TextStyle(color: Colors.white70, fontSize: 11)),
       ],
     );
   }
@@ -762,37 +863,53 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
     return LineChart(LineChartData(
       lineBarsData: [
         LineChartBarData(
-          spots: _actualData, isCurved: true, color: Colors.amber,
-          barWidth: 3, dotData: const FlDotData(show: false),
-          belowBarData: BarAreaData(show: true, color: Colors.amber.withValues(alpha: 0.15)),
+          spots: _actualData,
+          isCurved: true,
+          color: Colors.amber,
+          barWidth: 3,
+          dotData: const FlDotData(show: false),
+          belowBarData: BarAreaData(
+              show: true, color: Colors.amber.withValues(alpha: 0.15)),
         ),
         // 对比标准线
         LineChartBarData(
           spots: List.generate(
-            max(1, (_actualData.last.x / max(1, _actualData.last.x ~/ 30)).ceil()),
+            max(1,
+                (_actualData.last.x / max(1, _actualData.last.x ~/ 30)).ceil()),
             (i) {
               final d = (i * max(1, _actualData.last.x ~/ 30)).toDouble();
               return FlSpot(d, _calcAbility(_modes[1], d.toInt()));
             },
           ),
-          isCurved: true, color: Colors.blue.withValues(alpha: 0.4),
-          barWidth: 1.5, dotData: const FlDotData(show: false),
+          isCurved: true,
+          color: Colors.blue.withValues(alpha: 0.4),
+          barWidth: 1.5,
+          dotData: const FlDotData(show: false),
           dashArray: [4, 4],
         ),
       ],
       titlesData: FlTitlesData(
-        bottomTitles: AxisTitles(sideTitles: SideTitles(
-          showTitles: true, reservedSize: 22,
-          getTitlesWidget: (v, _) => Text('${v.toInt()}', style: const TextStyle(fontSize: 10)),
+        bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+          showTitles: true,
+          reservedSize: 22,
+          getTitlesWidget: (v, _) =>
+              Text('${v.toInt()}', style: const TextStyle(fontSize: 10)),
         )),
-        leftTitles: AxisTitles(sideTitles: SideTitles(
-          showTitles: true, reservedSize: 36,
-          getTitlesWidget: (v, _) => Text(v.toStringAsFixed(1), style: const TextStyle(fontSize: 10)),
+        leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+          showTitles: true,
+          reservedSize: 36,
+          getTitlesWidget: (v, _) =>
+              Text(v.toStringAsFixed(1), style: const TextStyle(fontSize: 10)),
         )),
         topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles:
+            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
       ),
-      borderData: FlBorderData(show: true, border: Border.all(color: Colors.grey.withValues(alpha: 0.3))),
+      borderData: FlBorderData(
+          show: true,
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.3))),
     ));
   }
 
@@ -800,35 +917,57 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
     final suggestions = <Map<String, dynamic>>[];
 
     if (!_hasActualData || _actualData.isEmpty) {
-      suggestions.add({'icon': Icons.play_arrow, 'color': Colors.blue,
-        'text': '开始你的第一次学习吧！浏览知识图谱或做章节测验都算学习活动。'});
+      suggestions.add({
+        'icon': Icons.play_arrow,
+        'color': Colors.blue,
+        'text': '开始你的第一次学习吧！浏览知识图谱或做章节测验都算学习活动。'
+      });
     } else {
       final days = _actualData.last.x.toInt();
       final val = _actualData.last.y;
 
       if (days < 7) {
-        suggestions.add({'icon': Icons.emoji_events, 'color': Colors.amber,
-          'text': '学习刚起步，坚持7天形成习惯！'});
+        suggestions.add({
+          'icon': Icons.emoji_events,
+          'color': Colors.amber,
+          'text': '学习刚起步，坚持7天形成习惯！'
+        });
       } else if (days < 30) {
-        suggestions.add({'icon': Icons.trending_up, 'color': Colors.green,
-          'text': '已坚持${days}天，继续保持！30天后效果将非常明显。'});
+        suggestions.add({
+          'icon': Icons.trending_up,
+          'color': Colors.green,
+          'text': '已坚持${days}天，继续保持！30天后效果将非常明显。'
+        });
       } else {
-        suggestions.add({'icon': Icons.stars, 'color': Colors.purple,
-          'text': '太棒了！已坚持${days}天，能力提升了${((val - 1) * 100).toStringAsFixed(0)}%！'});
+        suggestions.add({
+          'icon': Icons.stars,
+          'color': Colors.purple,
+          'text':
+              '太棒了！已坚持${days}天，能力提升了${((val - 1) * 100).toStringAsFixed(0)}%！'
+        });
       }
 
       final standardVal = _calcAbility(_modes[1], days);
       if (val > standardVal) {
-        suggestions.add({'icon': Icons.rocket_launch, 'color': Colors.deepPurple,
-          'text': '你的成长速度超过标准模式！继续保持这个节奏！'});
+        suggestions.add({
+          'icon': Icons.rocket_launch,
+          'color': Colors.deepPurple,
+          'text': '你的成长速度超过标准模式！继续保持这个节奏！'
+        });
       } else {
-        suggestions.add({'icon': Icons.tips_and_updates, 'color': Colors.orange,
-          'text': '试试每天多学一点，哪怕 10 分钟也能显著提升成长曲线。'});
+        suggestions.add({
+          'icon': Icons.tips_and_updates,
+          'color': Colors.orange,
+          'text': '试试每天多学一点，哪怕 10 分钟也能显著提升成长曲线。'
+        });
       }
     }
 
-    suggestions.add({'icon': Icons.book, 'color': Colors.teal,
-      'text': '推荐：每天完成一个深度实践节，测验做错的题记入错题本复习。'});
+    suggestions.add({
+      'icon': Icons.book,
+      'color': Colors.teal,
+      'text': '推荐：每天完成一个深度实践节，测验做错的题记入错题本复习。'
+    });
 
     return Card(
       child: Padding(
@@ -836,20 +975,24 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('💡 学习建议', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            const Text('💡 学习建议',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
             const SizedBox(height: 8),
             ...suggestions.map((s) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(s['icon'] as IconData, size: 18, color: s['color'] as Color),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(s['text'] as String,
-                    style: const TextStyle(fontSize: 12, height: 1.5))),
-                ],
-              ),
-            )),
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(s['icon'] as IconData,
+                          size: 18, color: s['color'] as Color),
+                      const SizedBox(width: 8),
+                      Expanded(
+                          child: Text(s['text'] as String,
+                              style:
+                                  const TextStyle(fontSize: 12, height: 1.5))),
+                    ],
+                  ),
+                )),
           ],
         ),
       ),
@@ -857,15 +1000,47 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
   }
 
   Widget _buildBadges(bool isDark) {
-    final days = _hasActualData && _actualData.isNotEmpty ? _actualData.last.x.toInt() : 0;
+    final days = _hasActualData && _actualData.isNotEmpty
+        ? _actualData.last.x.toInt()
+        : 0;
 
     final badges = <Map<String, dynamic>>[
-      {'icon': Icons.looks_one, 'name': '初学者', 'desc': '完成首次学习', 'unlocked': days >= 1},
-      {'icon': Icons.calendar_today, 'name': '坚持一周', 'desc': '连续学习7天', 'unlocked': days >= 7},
-      {'icon': Icons.event_available, 'name': '月度之星', 'desc': '坚持学习30天', 'unlocked': days >= 30},
-      {'icon': Icons.military_tech, 'name': '学霸', 'desc': '坚持学习60天', 'unlocked': days >= 60},
-      {'icon': Icons.diamond, 'name': '钻石学员', 'desc': '坚持学习100天', 'unlocked': days >= 100},
-      {'icon': Icons.auto_awesome, 'name': '传说', 'desc': '坚持学习一整学期', 'unlocked': days >= 120},
+      {
+        'icon': Icons.looks_one,
+        'name': '初学者',
+        'desc': '完成首次学习',
+        'unlocked': days >= 1
+      },
+      {
+        'icon': Icons.calendar_today,
+        'name': '坚持一周',
+        'desc': '连续学习7天',
+        'unlocked': days >= 7
+      },
+      {
+        'icon': Icons.event_available,
+        'name': '月度之星',
+        'desc': '坚持学习30天',
+        'unlocked': days >= 30
+      },
+      {
+        'icon': Icons.military_tech,
+        'name': '学霸',
+        'desc': '坚持学习60天',
+        'unlocked': days >= 60
+      },
+      {
+        'icon': Icons.diamond,
+        'name': '钻石学员',
+        'desc': '坚持学习100天',
+        'unlocked': days >= 100
+      },
+      {
+        'icon': Icons.auto_awesome,
+        'name': '传说',
+        'desc': '坚持学习一整学期',
+        'unlocked': days >= 120
+      },
     ];
 
     return Card(
@@ -874,7 +1049,8 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('🏅 学习成就', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            const Text('🏅 学习成就',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
             const SizedBox(height: 10),
             Wrap(
               spacing: 10,
@@ -895,15 +1071,23 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
                   ),
                   child: Column(
                     children: [
-                      Icon(b['icon'] as IconData, size: 24,
-                        color: unlocked ? Colors.amber[700] : Colors.grey),
+                      Icon(b['icon'] as IconData,
+                          size: 24,
+                          color: unlocked ? Colors.amber[700] : Colors.grey),
                       const SizedBox(height: 4),
-                      Text(b['name'] as String, style: TextStyle(fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: unlocked ? Colors.amber[800] : Colors.grey)),
-                      Text(b['desc'] as String, style: TextStyle(fontSize: 9,
-                        color: unlocked ? Colors.amber[600] : Colors.grey[500]),
-                        textAlign: TextAlign.center),
+                      Text(b['name'] as String,
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color:
+                                  unlocked ? Colors.amber[800] : Colors.grey)),
+                      Text(b['desc'] as String,
+                          style: TextStyle(
+                              fontSize: 9,
+                              color: unlocked
+                                  ? Colors.amber[600]
+                                  : Colors.grey[500]),
+                          textAlign: TextAlign.center),
                     ],
                   ),
                 );
@@ -925,8 +1109,12 @@ class _LearningMode {
   final int restDays;
   final double rate;
   final Color color;
-  const _LearningMode(this.name, this.desc, {
-    required this.studyDays, required this.restDays,
-    required this.rate, required this.color,
+  const _LearningMode(
+    this.name,
+    this.desc, {
+    required this.studyDays,
+    required this.restDays,
+    required this.rate,
+    required this.color,
   });
 }

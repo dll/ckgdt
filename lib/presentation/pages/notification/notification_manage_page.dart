@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/design/noir_tokens.dart';
-import '../../../core/error_handler.dart';
 import '../../../data/local/class_dao.dart';
 import '../../../data/local/notification_dao.dart';
 import '../../../services/auth_service.dart';
-import '../../../services/sync_service.dart';
 
 class NotificationManagePage extends StatefulWidget {
   const NotificationManagePage({super.key});

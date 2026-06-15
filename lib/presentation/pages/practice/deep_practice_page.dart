@@ -1,10 +1,11 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../services/ai_service.dart';
 import '../../../data/local/learning_record_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../widgets/markdown_bubble.dart';
 
 import '../../widgets/back_button_bar.dart';
+
 /// 深度实践中心 — 每章提供多层次深入学习内容
 /// 借鉴天天向上"学前-学中-学后"闭环，解决课时不足问题
 class DeepPracticePage extends StatefulWidget {
@@ -206,7 +207,8 @@ class _DeepPracticePageState extends State<DeepPracticePage>
         _DeepSection(
           title: '核心概念：状态管理方案对比',
           icon: Icons.account_tree,
-          content: '从 setState → InheritedWidget → Provider → Riverpod → BLoC → GetX，'
+          content:
+              '从 setState → InheritedWidget → Provider → Riverpod → BLoC → GetX，'
               '深入理解每种方案的适用规模和工程实践。',
           keyPoints: [
             'setState：简单场景，单 Widget 内部状态',
@@ -559,18 +561,26 @@ class _DeepPracticePageState extends State<DeepPracticePage>
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('已标记完成 ✓'), duration: Duration(seconds: 1)),
+          const SnackBar(
+              content: Text('已标记完成 ✓'), duration: Duration(seconds: 1)),
         );
       }
     } catch (_) {}
   }
 
   Future<void> _askAi(String question) async {
-    setState(() { _isAiLoading = true; _aiAnswer = ''; _aiProvider = null; _aiModel = null; });
+    setState(() {
+      _isAiLoading = true;
+      _aiAnswer = '';
+      _aiProvider = null;
+      _aiModel = null;
+    });
     try {
       final ai = AiService();
       final result = await ai.chatWithMeta(
-        [{'role': 'user', 'content': question}],
+        [
+          {'role': 'user', 'content': question}
+        ],
         systemPrompt: '你是移动应用开发课程的AI助教。请用简洁、专业的语言回答问题。',
       );
       if (mounted) {
@@ -589,7 +599,6 @@ class _DeepPracticePageState extends State<DeepPracticePage>
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -601,17 +610,21 @@ class _DeepPracticePageState extends State<DeepPracticePage>
           indicatorColor: Colors.white,
           indicatorWeight: 3,
           labelColor: Colors.white,
-          labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+          labelStyle:
+              const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
           unselectedLabelColor: Colors.white60,
-          tabs: _chapters.map((c) => Tab(
-            icon: Icon(c.icon, size: 18),
-            text: c.chapter,
-          )).toList(),
+          tabs: _chapters
+              .map((c) => Tab(
+                    icon: Icon(c.icon, size: 18),
+                    text: c.chapter,
+                  ))
+              .toList(),
         ),
       ),
       body: TabBarView(
         controller: _tabController,
-        children: _chapters.map((ch) => _buildChapterContent(ch, isDark)).toList(),
+        children:
+            _chapters.map((ch) => _buildChapterContent(ch, isDark)).toList(),
       ),
     );
   }
@@ -646,8 +659,10 @@ class _DeepPracticePageState extends State<DeepPracticePage>
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(chapter.title,
-                        style: const TextStyle(color: Colors.white, fontSize: 17,
-                          fontWeight: FontWeight.bold)),
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
@@ -661,13 +676,17 @@ class _DeepPracticePageState extends State<DeepPracticePage>
                           value: progress,
                           minHeight: 8,
                           backgroundColor: Colors.white24,
-                          valueColor: const AlwaysStoppedAnimation(Colors.white),
+                          valueColor:
+                              const AlwaysStoppedAnimation(Colors.white),
                         ),
                       ),
                     ),
                     const SizedBox(width: 10),
-                    Text('$done/$total', style: const TextStyle(color: Colors.white, fontSize: 13,
-                        fontWeight: FontWeight.bold)),
+                    Text('$done/$total',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold)),
                   ],
                 ),
               ],
@@ -687,7 +706,9 @@ class _DeepPracticePageState extends State<DeepPracticePage>
                   Expanded(
                     child: Text(
                       '学习建议：按顺序完成 知识拓展 → 核心概念 → 动手练习 → 实战挑战',
-                      style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : Colors.blue[900]),
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? Colors.white70 : Colors.blue[900]),
                     ),
                   ),
                 ],
@@ -700,14 +721,16 @@ class _DeepPracticePageState extends State<DeepPracticePage>
           ...List.generate(chapter.sections.length, (idx) {
             final section = chapter.sections[idx];
             final isCompleted = completed.contains(idx);
-            final isExpanded = _selectedChapter == chapter.chapter && _selectedSection == idx;
+            final isExpanded =
+                _selectedChapter == chapter.chapter && _selectedSection == idx;
 
             return Card(
               margin: const EdgeInsets.only(bottom: 10),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
                 side: isCompleted
-                    ? BorderSide(color: Colors.green.withValues(alpha: 0.5), width: 1.5)
+                    ? BorderSide(
+                        color: Colors.green.withValues(alpha: 0.5), width: 1.5)
                     : BorderSide.none,
               ),
               child: Column(
@@ -715,7 +738,8 @@ class _DeepPracticePageState extends State<DeepPracticePage>
                   // 节标题
                   ListTile(
                     leading: Container(
-                      width: 36, height: 36,
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
                         color: isCompleted
                             ? Colors.green.withValues(alpha: 0.15)
@@ -729,8 +753,12 @@ class _DeepPracticePageState extends State<DeepPracticePage>
                       ),
                     ),
                     title: Text(section.title,
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14,
-                        decoration: isCompleted ? TextDecoration.lineThrough : null)),
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                            decoration: isCompleted
+                                ? TextDecoration.lineThrough
+                                : null)),
                     trailing: Icon(
                       isExpanded ? Icons.expand_less : Icons.expand_more,
                       color: chapter.color,
@@ -757,8 +785,12 @@ class _DeepPracticePageState extends State<DeepPracticePage>
                           const Divider(),
                           // 内容描述
                           Text(section.content,
-                            style: TextStyle(fontSize: 13, height: 1.6,
-                              color: isDark ? Colors.white70 : Colors.black87)),
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  height: 1.6,
+                                  color: isDark
+                                      ? Colors.white70
+                                      : Colors.black87)),
                           const SizedBox(height: 12),
 
                           // 要点列表
@@ -766,89 +798,130 @@ class _DeepPracticePageState extends State<DeepPracticePage>
                             width: double.infinity,
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: isDark ? Colors.grey[850] : Colors.grey[50],
+                              color:
+                                  isDark ? Colors.grey[850] : Colors.grey[50],
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: chapter.color.withValues(alpha: 0.2)),
+                              border: Border.all(
+                                  color: chapter.color.withValues(alpha: 0.2)),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
                                   children: [
-                                    Icon(Icons.bookmark, color: chapter.color, size: 16),
+                                    Icon(Icons.bookmark,
+                                        color: chapter.color, size: 16),
                                     const SizedBox(width: 4),
-                                    Text('核心要点', style: TextStyle(
-                                      fontWeight: FontWeight.bold, fontSize: 13, color: chapter.color)),
+                                    Text('核心要点',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                            color: chapter.color)),
                                   ],
                                 ),
                                 const SizedBox(height: 8),
                                 ...section.keyPoints.map((p) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 4),
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text('• ', style: TextStyle(color: chapter.color, fontSize: 13)),
-                                      Expanded(child: Text(p, style: const TextStyle(fontSize: 12, height: 1.5))),
-                                    ],
-                                  ),
-                                )),
+                                      padding: const EdgeInsets.only(bottom: 4),
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text('• ',
+                                              style: TextStyle(
+                                                  color: chapter.color,
+                                                  fontSize: 13)),
+                                          Expanded(
+                                              child: Text(p,
+                                                  style: const TextStyle(
+                                                      fontSize: 12,
+                                                      height: 1.5))),
+                                        ],
+                                      ),
+                                    )),
                               ],
                             ),
                           ),
                           const SizedBox(height: 12),
 
                           // 思考题
-                          Text('💡 思考与练习', style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 13, color: chapter.color)),
+                          Text('💡 思考与练习',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: chapter.color)),
                           const SizedBox(height: 6),
-                          ...section.practiceQuestions.asMap().entries.map((e) => Container(
-                            width: double.infinity,
-                            margin: const EdgeInsets.only(bottom: 6),
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: isDark ? Colors.indigo.withValues(alpha: 0.15) : Colors.indigo.withValues(alpha: 0.05),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 20, height: 20,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    color: chapter.color.withValues(alpha: 0.15),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Text('${e.key + 1}',
-                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold,
-                                      color: chapter.color)),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(e.value, style: const TextStyle(fontSize: 12, height: 1.4)),
-                                ),
-                                // AI 解答按钮
-                                InkWell(
-                                  onTap: () => _askAi(e.value),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          ...section.practiceQuestions
+                              .asMap()
+                              .entries
+                              .map((e) => Container(
+                                    width: double.infinity,
+                                    margin: const EdgeInsets.only(bottom: 6),
+                                    padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
-                                      color: Colors.deepPurple.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(4),
+                                      color: isDark
+                                          ? Colors.indigo
+                                              .withValues(alpha: 0.15)
+                                          : Colors.indigo
+                                              .withValues(alpha: 0.05),
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Row(
-                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Icon(Icons.smart_toy, size: 12, color: Colors.deepPurple[400]),
-                                        const SizedBox(width: 2),
-                                        Text('AI', style: TextStyle(fontSize: 10, color: Colors.deepPurple[400])),
+                                        Container(
+                                          width: 20,
+                                          height: 20,
+                                          alignment: Alignment.center,
+                                          decoration: BoxDecoration(
+                                            color: chapter.color
+                                                .withValues(alpha: 0.15),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Text('${e.key + 1}',
+                                              style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: chapter.color)),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(e.value,
+                                              style: const TextStyle(
+                                                  fontSize: 12, height: 1.4)),
+                                        ),
+                                        // AI 解答按钮
+                                        InkWell(
+                                          onTap: () => _askAi(e.value),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: Colors.deepPurple
+                                                  .withValues(alpha: 0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.smart_toy,
+                                                    size: 12,
+                                                    color:
+                                                        Colors.deepPurple[400]),
+                                                const SizedBox(width: 2),
+                                                Text('AI',
+                                                    style: TextStyle(
+                                                        fontSize: 10,
+                                                        color: Colors
+                                                            .deepPurple[400])),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
                                       ],
                                     ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )),
+                                  )),
 
                           // AI 回答区域
                           if (_aiAnswer.isNotEmpty || _isAiLoading)
@@ -857,27 +930,37 @@ class _DeepPracticePageState extends State<DeepPracticePage>
                               margin: const EdgeInsets.only(top: 8),
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: isDark ? Colors.deepPurple.withValues(alpha: 0.15) : Colors.deepPurple.withValues(alpha: 0.05),
+                                color: isDark
+                                    ? Colors.deepPurple.withValues(alpha: 0.15)
+                                    : Colors.deepPurple.withValues(alpha: 0.05),
                                 borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: Colors.deepPurple.withValues(alpha: 0.2)),
+                                border: Border.all(
+                                    color: Colors.deepPurple
+                                        .withValues(alpha: 0.2)),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
                                     children: [
-                                      Icon(Icons.smart_toy, size: 16, color: Colors.deepPurple[400]),
+                                      Icon(Icons.smart_toy,
+                                          size: 16,
+                                          color: Colors.deepPurple[400]),
                                       const SizedBox(width: 4),
-                                      Text('AI 解答', style: TextStyle(
-                                        fontWeight: FontWeight.bold, fontSize: 12,
-                                        color: Colors.deepPurple[400])),
+                                      Text('AI 解答',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                              color: Colors.deepPurple[400])),
                                     ],
                                   ),
                                   const SizedBox(height: 8),
                                   if (_isAiLoading)
-                                    const Center(child: Padding(
+                                    const Center(
+                                        child: Padding(
                                       padding: EdgeInsets.all(16),
-                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2),
                                     ))
                                   else
                                     MarkdownBubble(
@@ -903,22 +986,28 @@ class _DeepPracticePageState extends State<DeepPracticePage>
                                     hintText: '输入问题，向AI请教...',
                                     hintStyle: const TextStyle(fontSize: 12),
                                     isDense: true,
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 8),
+                                    border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8)),
                                   ),
                                   style: const TextStyle(fontSize: 13),
                                 ),
                               ),
                               const SizedBox(width: 8),
                               FilledButton.tonal(
-                                onPressed: _isAiLoading ? null : () {
-                                  final q = _aiQuestionController.text.trim();
-                                  if (q.isNotEmpty) {
-                                    _askAi(q);
-                                    _aiQuestionController.clear();
-                                  }
-                                },
-                                child: const Text('提问', style: TextStyle(fontSize: 12)),
+                                onPressed: _isAiLoading
+                                    ? null
+                                    : () {
+                                        final q =
+                                            _aiQuestionController.text.trim();
+                                        if (q.isNotEmpty) {
+                                          _askAi(q);
+                                          _aiQuestionController.clear();
+                                        }
+                                      },
+                                child: const Text('提问',
+                                    style: TextStyle(fontSize: 12)),
                               ),
                             ],
                           ),
@@ -931,15 +1020,20 @@ class _DeepPracticePageState extends State<DeepPracticePage>
                             children: [
                               if (!isCompleted)
                                 FilledButton.icon(
-                                  onPressed: () => _markCompleted(chapter.chapter, idx),
+                                  onPressed: () =>
+                                      _markCompleted(chapter.chapter, idx),
                                   icon: const Icon(Icons.check, size: 16),
-                                  label: const Text('标记完成', style: TextStyle(fontSize: 12)),
+                                  label: const Text('标记完成',
+                                      style: TextStyle(fontSize: 12)),
                                 ),
                               if (isCompleted)
                                 Chip(
-                                  avatar: const Icon(Icons.check_circle, color: Colors.green, size: 16),
-                                  label: const Text('已完成', style: TextStyle(fontSize: 12)),
-                                  backgroundColor: Colors.green.withValues(alpha: 0.1),
+                                  avatar: const Icon(Icons.check_circle,
+                                      color: Colors.green, size: 16),
+                                  label: const Text('已完成',
+                                      style: TextStyle(fontSize: 12)),
+                                  backgroundColor:
+                                      Colors.green.withValues(alpha: 0.1),
                                 ),
                             ],
                           ),
@@ -965,8 +1059,11 @@ class _ChapterDeepContent {
   final Color color;
   final List<_DeepSection> sections;
   const _ChapterDeepContent({
-    required this.chapter, required this.title, required this.icon,
-    required this.color, required this.sections,
+    required this.chapter,
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.sections,
   });
 }
 
@@ -977,7 +1074,10 @@ class _DeepSection {
   final List<String> keyPoints;
   final List<String> practiceQuestions;
   const _DeepSection({
-    required this.title, required this.icon, required this.content,
-    required this.keyPoints, required this.practiceQuestions,
+    required this.title,
+    required this.icon,
+    required this.content,
+    required this.keyPoints,
+    required this.practiceQuestions,
   });
 }

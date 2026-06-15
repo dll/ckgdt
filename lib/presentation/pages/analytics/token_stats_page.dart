@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../data/local/ai_history_dao.dart';
 import '../../../services/auth_service.dart';
@@ -106,8 +106,6 @@ class _TokenStatsPageState extends State<TokenStatsPage>
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-
     return Scaffold(
       appBar: BackButtonBar(
         title: 'Token 用量统计',
@@ -137,7 +135,9 @@ class _TokenStatsPageState extends State<TokenStatsPage>
           children: [
             const Icon(Icons.error_outline, size: 48, color: Colors.red),
             const SizedBox(height: 12),
-            Text(_error!, style: const TextStyle(color: Colors.red), textAlign: TextAlign.center),
+            Text(_error!,
+                style: const TextStyle(color: Colors.red),
+                textAlign: TextAlign.center),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: _loadData,
@@ -184,13 +184,19 @@ class _TokenStatsPageState extends State<TokenStatsPage>
         Row(
           children: [
             Expanded(
-              child: _statCard('总 Token', _formatTokens(_totals['grandTotal'] ?? 0),
-                  Icons.token, Colors.deepPurple),
+              child: _statCard(
+                  '总 Token',
+                  _formatTokens(_totals['grandTotal'] ?? 0),
+                  Icons.token,
+                  Colors.deepPurple),
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: _statCard('输入 Token', _formatTokens(_totals['promptTotal'] ?? 0),
-                  Icons.input, Colors.blue),
+              child: _statCard(
+                  '输入 Token',
+                  _formatTokens(_totals['promptTotal'] ?? 0),
+                  Icons.input,
+                  Colors.blue),
             ),
           ],
         ),
@@ -198,8 +204,11 @@ class _TokenStatsPageState extends State<TokenStatsPage>
         Row(
           children: [
             Expanded(
-              child: _statCard('输出 Token', _formatTokens(_totals['completionTotal'] ?? 0),
-                  Icons.output, Colors.green),
+              child: _statCard(
+                  '输出 Token',
+                  _formatTokens(_totals['completionTotal'] ?? 0),
+                  Icons.output,
+                  Colors.green),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -225,11 +234,14 @@ class _TokenStatsPageState extends State<TokenStatsPage>
               children: [
                 Icon(icon, size: 18, color: color),
                 const SizedBox(width: 6),
-                Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                Text(label,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600])),
               ],
             ),
             const SizedBox(height: 8),
-            Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+            Text(value,
+                style: TextStyle(
+                    fontSize: 18, fontWeight: FontWeight.bold, color: color)),
           ],
         ),
       ),
@@ -255,7 +267,8 @@ class _TokenStatsPageState extends State<TokenStatsPage>
         const SizedBox(height: 12),
         Card(
           elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 20, 20, 12),
             child: SizedBox(
@@ -265,7 +278,8 @@ class _TokenStatsPageState extends State<TokenStatsPage>
                   gridData: FlGridData(
                     show: true,
                     drawVerticalLine: false,
-                    horizontalInterval: maxTokens > 0 ? (maxTokens / 4).ceilToDouble() : 50,
+                    horizontalInterval:
+                        maxTokens > 0 ? (maxTokens / 4).ceilToDouble() : 50,
                     getDrawingHorizontalLine: (value) => FlLine(
                       color: Colors.grey.withValues(alpha: 0.15),
                       strokeWidth: 1,
@@ -277,10 +291,12 @@ class _TokenStatsPageState extends State<TokenStatsPage>
                         showTitles: true,
                         reservedSize: 42,
                         getTitlesWidget: (value, meta) {
-                          if (value == meta.max && value == meta.min) return const SizedBox.shrink();
+                          if (value == meta.max && value == meta.min)
+                            return const SizedBox.shrink();
                           return Text(
                             _formatTokens(value.toInt()),
-                            style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+                            style: TextStyle(
+                                fontSize: 10, color: Colors.grey[500]),
                           );
                         },
                       ),
@@ -289,22 +305,32 @@ class _TokenStatsPageState extends State<TokenStatsPage>
                       sideTitles: SideTitles(
                         showTitles: true,
                         reservedSize: 30,
-                        interval: (_dailyStats.length / 5).ceilToDouble().clamp(1, 100),
+                        interval: (_dailyStats.length / 5)
+                            .ceilToDouble()
+                            .clamp(1, 100),
                         getTitlesWidget: (value, meta) {
                           final idx = value.toInt();
-                          if (idx < 0 || idx >= _dailyStats.length) return const SizedBox.shrink();
-                          final dateStr = _dailyStats[idx]['date'] as String? ?? '';
+                          if (idx < 0 || idx >= _dailyStats.length)
+                            return const SizedBox.shrink();
+                          final dateStr =
+                              _dailyStats[idx]['date'] as String? ?? '';
                           final parts = dateStr.split('-');
-                          final label = parts.length >= 3 ? '${parts[1]}/${parts[2]}' : dateStr;
+                          final label = parts.length >= 3
+                              ? '${parts[1]}/${parts[2]}'
+                              : dateStr;
                           return Padding(
                             padding: const EdgeInsets.only(top: 6),
-                            child: Text(label, style: TextStyle(fontSize: 9, color: Colors.grey[500])),
+                            child: Text(label,
+                                style: TextStyle(
+                                    fontSize: 9, color: Colors.grey[500])),
                           );
                         },
                       ),
                     ),
-                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false)),
                   ),
                   borderData: FlBorderData(show: false),
                   minY: 0,
@@ -312,7 +338,11 @@ class _TokenStatsPageState extends State<TokenStatsPage>
                   lineBarsData: [
                     LineChartBarData(
                       spots: List.generate(_dailyStats.length, (i) {
-                        return FlSpot(i.toDouble(), (_dailyStats[i]['total_tokens'] as int?)?.toDouble() ?? 0);
+                        return FlSpot(
+                            i.toDouble(),
+                            (_dailyStats[i]['total_tokens'] as int?)
+                                    ?.toDouble() ??
+                                0);
                       }),
                       isCurved: true,
                       color: primary,
@@ -320,7 +350,8 @@ class _TokenStatsPageState extends State<TokenStatsPage>
                       dotData: FlDotData(
                         show: _dailyStats.length <= 15,
                         getDotPainter: (spot, percent, barData, index) =>
-                            FlDotCirclePainter(radius: 3, color: primary, strokeWidth: 0),
+                            FlDotCirclePainter(
+                                radius: 3, color: primary, strokeWidth: 0),
                       ),
                       belowBarData: BarAreaData(
                         show: true,
@@ -357,7 +388,8 @@ class _TokenStatsPageState extends State<TokenStatsPage>
         const SizedBox(height: 12),
         Card(
           elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 20, 20, 12),
             child: SizedBox(
@@ -367,7 +399,8 @@ class _TokenStatsPageState extends State<TokenStatsPage>
                   alignment: BarChartAlignment.spaceAround,
                   maxY: (maxTokens * 1.2).ceilToDouble(),
                   barGroups: List.generate(stats.length, (i) {
-                    final t = (stats[i]['total_tokens'] as int?)?.toDouble() ?? 0;
+                    final t =
+                        (stats[i]['total_tokens'] as int?)?.toDouble() ?? 0;
                     return BarChartGroupData(
                       x: i,
                       barRods: [
@@ -375,7 +408,8 @@ class _TokenStatsPageState extends State<TokenStatsPage>
                           toY: t,
                           color: _barColor(i),
                           width: 28,
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                          borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(4)),
                         ),
                       ],
                     );
@@ -388,7 +422,8 @@ class _TokenStatsPageState extends State<TokenStatsPage>
                         getTitlesWidget: (value, meta) {
                           return Text(
                             _formatTokens(value.toInt()),
-                            style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+                            style: TextStyle(
+                                fontSize: 10, color: Colors.grey[500]),
                           );
                         },
                       ),
@@ -399,27 +434,34 @@ class _TokenStatsPageState extends State<TokenStatsPage>
                         reservedSize: 60,
                         getTitlesWidget: (value, meta) {
                           final idx = value.toInt();
-                          if (idx < 0 || idx >= stats.length) return const SizedBox.shrink();
+                          if (idx < 0 || idx >= stats.length)
+                            return const SizedBox.shrink();
                           final model = stats[idx]['model'] as String? ?? '';
                           return Padding(
                             padding: const EdgeInsets.only(top: 6),
                             child: Text(
-                              model.length > 12 ? '${model.substring(0, 12)}...' : model,
-                              style: TextStyle(fontSize: 9, color: Colors.grey[600]),
+                              model.length > 12
+                                  ? '${model.substring(0, 12)}...'
+                                  : model,
+                              style: TextStyle(
+                                  fontSize: 9, color: Colors.grey[600]),
                             ),
                           );
                         },
                       ),
                     ),
-                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false)),
                   ),
                   borderData: FlBorderData(show: false),
                   gridData: FlGridData(
                     show: true,
                     drawVerticalLine: false,
-                    getDrawingHorizontalLine: (value) =>
-                        FlLine(color: Colors.grey.withValues(alpha: 0.15), strokeWidth: 1),
+                    getDrawingHorizontalLine: (value) => FlLine(
+                        color: Colors.grey.withValues(alpha: 0.15),
+                        strokeWidth: 1),
                   ),
                 ),
               ),
@@ -435,8 +477,16 @@ class _TokenStatsPageState extends State<TokenStatsPage>
       return _emptyCard('暂无服务商 Token 数据');
     }
 
-    final colorList = [Colors.indigo, Colors.teal, Colors.deepOrange, Colors.purple, Colors.blueGrey];
-    final maxTokens = (_providerStats.map((r) => (r['total_tokens'] as int?) ?? 0).reduce((a, b) => a > b ? a : b));
+    final colorList = [
+      Colors.indigo,
+      Colors.teal,
+      Colors.deepOrange,
+      Colors.purple,
+      Colors.blueGrey
+    ];
+    final maxTokens = (_providerStats
+        .map((r) => (r['total_tokens'] as int?) ?? 0)
+        .reduce((a, b) => a > b ? a : b));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -445,7 +495,8 @@ class _TokenStatsPageState extends State<TokenStatsPage>
         const SizedBox(height: 12),
         Card(
           elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -466,7 +517,8 @@ class _TokenStatsPageState extends State<TokenStatsPage>
     );
   }
 
-  Widget _buildProviderRow(Map<String, dynamic> row, Color color, int maxTokens) {
+  Widget _buildProviderRow(
+      Map<String, dynamic> row, Color color, int maxTokens) {
     final provider = row['provider'] as String? ?? '未知';
     final total = (row['total_tokens'] as int?) ?? 0;
     final prompt = (row['prompt_tokens'] as int?) ?? 0;
@@ -481,9 +533,13 @@ class _TokenStatsPageState extends State<TokenStatsPage>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Expanded(
-              child: Text(provider, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: color)),
+              child: Text(provider,
+                  style: TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w600, color: color)),
             ),
-            Text(_formatTokens(total), style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color)),
+            Text(_formatTokens(total),
+                style: TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.bold, color: color)),
           ],
         ),
         const SizedBox(height: 4),
@@ -501,13 +557,16 @@ class _TokenStatsPageState extends State<TokenStatsPage>
           children: [
             Icon(Icons.input, size: 12, color: Colors.grey[400]),
             const SizedBox(width: 2),
-            Text('输入 ${_formatTokens(prompt)}', style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+            Text('输入 ${_formatTokens(prompt)}',
+                style: TextStyle(fontSize: 10, color: Colors.grey[500])),
             const SizedBox(width: 12),
             Icon(Icons.output, size: 12, color: Colors.grey[400]),
             const SizedBox(width: 2),
-            Text('输出 ${_formatTokens(completion)}', style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+            Text('输出 ${_formatTokens(completion)}',
+                style: TextStyle(fontSize: 10, color: Colors.grey[500])),
             const Spacer(),
-            Text('$count 次请求', style: TextStyle(fontSize: 10, color: Colors.grey[400])),
+            Text('$count 次请求',
+                style: TextStyle(fontSize: 10, color: Colors.grey[400])),
           ],
         ),
       ],
@@ -515,12 +574,21 @@ class _TokenStatsPageState extends State<TokenStatsPage>
   }
 
   Color _barColor(int index) {
-    const colors = [Colors.blue, Colors.green, Colors.orange, Colors.purple, Colors.teal, Colors.indigo];
+    const colors = [
+      Colors.blue,
+      Colors.green,
+      Colors.orange,
+      Colors.purple,
+      Colors.teal,
+      Colors.indigo
+    ];
     return colors[index % colors.length];
   }
 
   Widget _sectionTitle(String title, Color primary) {
-    return Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: primary));
+    return Text(title,
+        style: TextStyle(
+            fontSize: 16, fontWeight: FontWeight.bold, color: primary));
   }
 
   Widget _emptyCard(String message) {
@@ -532,7 +600,8 @@ class _TokenStatsPageState extends State<TokenStatsPage>
         child: Center(
           child: Column(
             children: [
-              Icon(Icons.token, size: 48, color: Colors.grey.withValues(alpha: 0.3)),
+              Icon(Icons.token,
+                  size: 48, color: Colors.grey.withValues(alpha: 0.3)),
               const SizedBox(height: 8),
               Text(message, style: const TextStyle(color: Colors.grey)),
             ],

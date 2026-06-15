@@ -1,9 +1,8 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../widgets/back_button_bar.dart';
 import '../../../data/local/notification_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/update_service.dart';
-import '../../../services/sync_service.dart';
 import 'compose_notification_page.dart';
 import '../settings/update_dialog.dart';
 import '../assessment/defense/defense_broadcast_page.dart';
@@ -58,8 +57,8 @@ class _NotificationListPageState extends State<NotificationListPage> {
         for (int i = 0; i < notifications.length; i++) {
           final n = notifications[i];
           if (n['creator_id'] == userId) {
-            final stats = await _notificationDao
-                .getNotificationReadStats(n['id'] as int);
+            final stats =
+                await _notificationDao.getNotificationReadStats(n['id'] as int);
             // 创建可变副本并附加统计数据
             final mutable = Map<String, dynamic>.from(n);
             mutable['read_count'] = stats['read_count'];
@@ -352,10 +351,8 @@ class _NotificationListPageState extends State<NotificationListPage> {
   }
 
   /// 应用更新 — 忽略此版本
-  Future<void> _onAppUpdateIgnore(
-      Map<String, dynamic> notification) async {
-    final relatedId =
-        notification['related_entity_id'] as String? ?? '';
+  Future<void> _onAppUpdateIgnore(Map<String, dynamic> notification) async {
+    final relatedId = notification['related_entity_id'] as String? ?? '';
     if (relatedId.startsWith('app_update_v')) {
       final version = relatedId.substring('app_update_v'.length);
       await UpdateService().ignoreVersion(version);
@@ -381,7 +378,8 @@ class _NotificationListPageState extends State<NotificationListPage> {
   }
 
   /// 把通知里的 related_entity_type 翻译成提示，让用户自己跳对应 Tab
-  void _navigateToRelated(String entityType, [Map<String, dynamic>? notification]) {
+  void _navigateToRelated(String entityType,
+      [Map<String, dynamic>? notification]) {
     // 答辩直播：直接跳转到答辩页面并传入 serverIp
     if (entityType == 'defense_live') {
       String? serverIp;
@@ -460,7 +458,8 @@ class _NotificationListPageState extends State<NotificationListPage> {
                       dense: true,
                       leading: Icon(
                         isRead ? Icons.check_circle : Icons.circle_outlined,
-                        color: isRead ? Colors.green : theme.colorScheme.outline,
+                        color:
+                            isRead ? Colors.green : theme.colorScheme.outline,
                         size: 20,
                       ),
                       title: Text(name, style: const TextStyle(fontSize: 14)),
@@ -591,7 +590,8 @@ class _NotificationListPageState extends State<NotificationListPage> {
                         value: 'clear',
                         child: ListTile(
                           leading: Icon(Icons.delete_sweep, color: Colors.red),
-                          title: Text('清空所有', style: TextStyle(color: Colors.red)),
+                          title:
+                              Text('清空所有', style: TextStyle(color: Colors.red)),
                           dense: true,
                           contentPadding: EdgeInsets.zero,
                         ),
@@ -735,35 +735,36 @@ class _NotificationListPageState extends State<NotificationListPage> {
                 )
               else
                 Padding(
-                padding: const EdgeInsets.only(top: 2, right: 12),
-                child: isRead
-                    ? Icon(
-                        _getTypeIcon(notifType),
-                        size: 20,
-                        color: theme.colorScheme.outline.withValues(alpha: 0.4),
-                      )
-                    : Stack(
-                        children: [
-                          Icon(
-                            _getTypeIcon(notifType),
-                            size: 20,
-                            color: theme.colorScheme.primary,
-                          ),
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.error,
-                                shape: BoxShape.circle,
+                  padding: const EdgeInsets.only(top: 2, right: 12),
+                  child: isRead
+                      ? Icon(
+                          _getTypeIcon(notifType),
+                          size: 20,
+                          color:
+                              theme.colorScheme.outline.withValues(alpha: 0.4),
+                        )
+                      : Stack(
+                          children: [
+                            Icon(
+                              _getTypeIcon(notifType),
+                              size: 20,
+                              color: theme.colorScheme.primary,
+                            ),
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              child: Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.error,
+                                  shape: BoxShape.circle,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-              ),
+                          ],
+                        ),
+                ),
               // 通知内容
               Expanded(
                 child: Column(
@@ -774,7 +775,8 @@ class _NotificationListPageState extends State<NotificationListPage> {
                       title,
                       style: TextStyle(
                         fontSize: 15,
-                        fontWeight: isRead ? FontWeight.normal : FontWeight.w600,
+                        fontWeight:
+                            isRead ? FontWeight.normal : FontWeight.w600,
                         color: isRead
                             ? theme.colorScheme.onSurface.withValues(alpha: 0.7)
                             : theme.colorScheme.onSurface,

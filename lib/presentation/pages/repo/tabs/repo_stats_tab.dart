@@ -77,7 +77,7 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
     // 2. 测试 mad-data 课程配置读取
     try {
       final content = await widget.gitee.getFileContent(
-          'osgisOne', 'mad-data', 'course_config/lab_tasks.json');
+          'chzcldl', 'mad-data', 'course_config/lab_tasks.json');
       results['mad_data_config'] = _AuditResult(
           content != null, content != null ? '读取成功 (${content.length} 字符)' : '文件为空');
     } catch (e) {
@@ -87,7 +87,7 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
     // 3. 测试 mad-data 目录列表
     try {
       final dir = await widget.gitee.listDir(
-          'osgisOne', 'mad-data', 'course_config');
+          'chzcldl', 'mad-data', 'course_config');
       results['mad_data_dir'] = _AuditResult(
           dir.isNotEmpty, '${dir.length} 个配置文件');
     } catch (e) {
@@ -151,7 +151,7 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
     // 7. 测试课件下载 URL 可达性
     try {
       final rawUrl = await widget.gitee.getRawUrl(
-          'osgisOne', 'mad-data', 'course_config/lab_tasks.json');
+          'chzcldl', 'mad-data', 'course_config/lab_tasks.json');
       results['raw_download'] = _AuditResult(true, 'Raw URL 生成正常');
       // 不实际下载，仅验证 URL 生成
       debugPrint('Audit: raw URL = $rawUrl');
@@ -293,7 +293,7 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
             _buildFlowItem(
               icon: Icons.cloud,
               color: Colors.indigo,
-              title: 'mad-data 仓库 (osgisOne/mad-data)',
+              title: 'mad-data 仓库 (chzcldl/mad-data)',
               subtitle: '系统课件仓库 — 教学视频/PPT/PDF/课程配置',
               items: [
                 'course_config/*.json → 实验定义、章节、考核方案、报告模板',

@@ -16,7 +16,7 @@ class CourseResourceService {
   // ── 仓库常量 ────────────────────────────────────────────────────────
 
   /// 系统资源仓库（mad-data — 课件数据独立仓库）
-  static const String sysOwner = 'osgisOne';
+  static const String sysOwner = 'chzcldl';
   static const String sysRepo = 'mad-data';
   static const String configDir = 'course_config';
 

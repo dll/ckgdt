@@ -1,4 +1,4 @@
-﻿part of '../assessment_page.dart';
+part of '../assessment_page.dart';
 
 class _ProjectTab extends StatefulWidget {
   final AuthService authService;
@@ -252,7 +252,8 @@ class _ProjectTabState extends State<_ProjectTab> {
           title: '团队成员（$memberCount 人）',
           child: Column(
             children: members
-                .map((m) => _buildTeamMemberTile(m, isMe: m['userId'] == userId))
+                .map(
+                    (m) => _buildTeamMemberTile(m, isMe: m['userId'] == userId))
                 .toList(),
           ),
         ),
@@ -464,8 +465,7 @@ class _ProjectTabState extends State<_ProjectTab> {
           subtitle: Text('$role · $techStack',
               style: TextStyle(fontSize: 11, color: Colors.grey[500])),
           children: [
-            if (userId.isNotEmpty)
-              _buildLabelValue('学号', userId),
+            if (userId.isNotEmpty) _buildLabelValue('学号', userId),
             _buildLabelValue('核心职责', coreDuty),
             _buildLabelValue('特色功能', features),
             if (featureDetail.isNotEmpty) ...[
@@ -563,24 +563,6 @@ class _ProjectTabState extends State<_ProjectTab> {
     );
   }
 
-  Widget _buildMemberRow(String label, String value) {
-    if (value.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(top: 4),
-      child: RichText(
-        text: TextSpan(
-          children: [
-            TextSpan(
-              text: '$label: ',
-              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-            ),
-            TextSpan(text: value, style: const TextStyle(fontSize: 11)),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildDetailRow(String label, String value, IconData icon) {
     if (value.isEmpty) return const SizedBox.shrink();
     return Padding(
@@ -607,4 +589,3 @@ class _ProjectTabState extends State<_ProjectTab> {
 // ══════════════════════════════════════════════════════════════════════════════
 // 贡献评分 Tab — 自评 / 组员互评 / 教师评分，个人/小组/项目三维度
 // ══════════════════════════════════════════════════════════════════════════════
-

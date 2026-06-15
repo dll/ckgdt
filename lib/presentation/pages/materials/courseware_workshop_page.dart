@@ -3315,34 +3315,31 @@ class Example {
         };
       }
 
-      if (plan != null) {
-        final safePlan = plan;
-        setState(() {
-          _lessonPlan = safePlan;
-          _topicCtrl.text = safePlan['title']?.toString() ?? '';
-          // 重置后续步骤
-          _markdownContent = null;
-          _pumlResults = [];
-          _umlImages = [];
-          _pdfPath = null;
-          _pptxPath = null;
-          _mdPath = null;
-          _narrationScripts = [];
-          _audioPaths = [];
-          _videoPath = null;
-          _sessionDir = null;
-          _published = false;
-        });
+      final safePlan = plan;
+      if (!mounted) return;
+      setState(() {
+        _lessonPlan = safePlan;
+        _topicCtrl.text = safePlan['title']?.toString() ?? '';
+        // 重置后续步骤
+        _markdownContent = null;
+        _pumlResults = [];
+        _umlImages = [];
+        _pdfPath = null;
+        _pptxPath = null;
+        _mdPath = null;
+        _narrationScripts = [];
+        _audioPaths = [];
+        _videoPath = null;
+        _sessionDir = null;
+        _published = false;
+      });
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('✅ 教案已导入: ${plan['title']}'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('✅ 教案已导入: ${plan['title']}'),
+          backgroundColor: Colors.green,
+        ),
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
