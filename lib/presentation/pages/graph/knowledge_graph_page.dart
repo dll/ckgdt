@@ -2252,44 +2252,60 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   }
 
   Widget _buildEmptyView() {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.hub_outlined,
-              size: 80, color: NoirTokens.paper.withValues(alpha: 0.2)),
-          const SizedBox(height: 16),
-          Text(
-            '暂无知识图谱数据',
-            style: TextStyle(
-              fontSize: 18,
-              color: NoirTokens.paper.withValues(alpha: 0.6),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '点击下方按钮初始化知识图谱',
-            style: TextStyle(
-                fontSize: 14, color: NoirTokens.paper.withValues(alpha: 0.4)),
-          ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: _initData,
-            icon: const Icon(Icons.auto_fix_high),
-            label: const Text('初始化知识图谱'),
-            style: FilledButton.styleFrom(
-              backgroundColor: NoirTokens.ink,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(NoirTokens.radius),
-                side:
-                    BorderSide(color: NoirTokens.paper.withValues(alpha: 0.15)),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.hub_outlined,
+                        size: 80,
+                        color: NoirTokens.paper.withValues(alpha: 0.2)),
+                    const SizedBox(height: 16),
+                    Text(
+                      '暂无知识图谱数据',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: NoirTokens.paper.withValues(alpha: 0.6),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '点击下方按钮初始化知识图谱',
+                      style: TextStyle(
+                          fontSize: 14,
+                          color: NoirTokens.paper.withValues(alpha: 0.4)),
+                    ),
+                    const SizedBox(height: 24),
+                    FilledButton.icon(
+                      onPressed: _initData,
+                      icon: const Icon(Icons.auto_fix_high),
+                      label: const Text('初始化知识图谱'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: NoirTokens.ink,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(NoirTokens.radius),
+                          side: BorderSide(
+                              color: NoirTokens.paper.withValues(alpha: 0.15)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 

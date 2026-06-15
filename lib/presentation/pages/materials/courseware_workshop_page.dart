@@ -134,7 +134,6 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
 
   // ── AI 模型选择 ──
   AiConfigModel? _selectedModelConfig; // null = 使用全局默认配置
-  String _selectedModelLabel = '默认'; // 当前模型显示名称
   List<_ModelOption> _availableModels = []; // 可选模型列表
   String? _balanceText; // 账户余额显示文本
 
@@ -440,10 +439,8 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                       setState(() {
                         if (m.isDefault) {
                           _selectedModelConfig = null;
-                          _selectedModelLabel = '默认';
                         } else {
                           _selectedModelConfig = m.toConfig();
-                          _selectedModelLabel = m.label;
                         }
                         _balanceText = null; // 切换模型时重新查询余额
                       });

@@ -1,12 +1,12 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
+import '../../../core/error_handler.dart';
 import '../../../core/design/noir_tokens.dart';
 import '../../../data/local/achievement_dao.dart';
 import '../../../services/auth_service.dart';
-import '../../../services/sync_service.dart';
+import '../../../services/course_context_service.dart';
 import '../../widgets/agent_entry_button.dart';
 import '../../widgets/inner_tab_request_mixin.dart';
 import '../../pages/learning/video_player_page.dart';
@@ -31,24 +31,26 @@ class AchievementPage extends StatefulWidget {
 }
 
 class _AchievementPageState extends State<AchievementPage>
-    with SingleTickerProviderStateMixin, InnerTabRequestMixin {
+    with TickerProviderStateMixin, InnerTabRequestMixin {
   late TabController _tabController;
   final _authService = AuthService();
   final _achievementDao = AchievementDao();
+  final _courseContext = CourseContextService();
 
   /// 数据变更通知器：成绩导入/删除时 +1，子 tab 监听后刷新
   final ValueNotifier<int> dataRevision = ValueNotifier(0);
 
-  static const _tabSpecs = <(IconData, String, String)>[
-    (Icons.analytics_outlined, '达成度概览', '01'),
-    (Icons.edit_note, '成绩管理', '02'),
-    (Icons.calculate_outlined, '计算过程', '03'),
-    (Icons.school_outlined, '平时达成', '04'),
-    (Icons.science_outlined, '实验达成', '05'),
-    (Icons.assignment_outlined, '考核达成', '06'),
-    (Icons.build_outlined, '持续改进', '07'),
-    (Icons.summarize_outlined, '报告生成', '08'),
+  static const _allTabSpecs = <(IconData, String, String, String?)>[
+    (Icons.analytics_outlined, '达成度概览', '01', null),
+    (Icons.edit_note, '成绩管理', '02', null),
+    (Icons.calculate_outlined, '计算过程', '03', null),
+    (Icons.school_outlined, '平时达成', '04', 'pingshi'),
+    (Icons.science_outlined, '实验达成', '05', 'experiment'),
+    (Icons.assignment_outlined, '考核达成', '06', 'exam'),
+    (Icons.build_outlined, '持续改进', '07', null),
+    (Icons.summarize_outlined, '报告生成', '08', null),
   ];
+  List<(IconData, String, String, String?)> _tabSpecs = _allTabSpecs;
 
   @override
   String get innerTabPageKey => 'achievement';
@@ -65,6 +67,7 @@ class _AchievementPageState extends State<AchievementPage>
     super.initState();
     _tabController = TabController(length: _tabSpecs.length, vsync: this);
     bindInnerTabRequest();
+    _refreshVisibleTabs();
   }
 
   @override
@@ -78,8 +81,63 @@ class _AchievementPageState extends State<AchievementPage>
   /// 视频文件名
   static const _videoFileName = '达成度评价系统操作指南.mp4';
 
-  /// Gitee 仓库中的视频路径
-  static const _videoGiteePath = 'data/视频/$_videoFileName';
+  /// GitHub Release 视频下载地址
+  static const _videoDownloadUrl =
+      'https://github.com/dll/mad-fd/releases/download/video-assets/default.mp4';
+
+  Future<void> _refreshVisibleTabs() async {
+    try {
+      final courseName = await _courseContext.activeCourseName(
+          fallback: CourseContextService.defaultCourseName);
+      final objectives = await _achievementDao.getCourseObjectives(courseName);
+      final hasExperiment = objectives.isEmpty ||
+          objectives.any(
+            (row) =>
+                ((row['experiment_ratio'] as num?)?.toDouble() ?? 0) > 0.0001,
+          );
+      final nextSpecs = hasExperiment
+          ? _allTabSpecs
+          : _allTabSpecs
+              .where((spec) => spec.$4 != 'experiment')
+              .toList(growable: false);
+      if (!mounted || _sameTabSpecs(_tabSpecs, nextSpecs)) return;
+
+      final oldController = _tabController;
+      final oldLabel = oldController.index < _tabSpecs.length
+          ? _tabSpecs[oldController.index].$2
+          : null;
+      var nextIndex = oldLabel == null
+          ? 0
+          : nextSpecs.indexWhere((spec) => spec.$2 == oldLabel);
+      if (nextIndex < 0) {
+        nextIndex = oldController.index;
+        if (nextIndex >= nextSpecs.length) nextIndex = nextSpecs.length - 1;
+      }
+      final nextController = TabController(
+        length: nextSpecs.length,
+        vsync: this,
+        initialIndex: nextIndex,
+      );
+      setState(() {
+        _tabSpecs = nextSpecs;
+        _tabController = nextController;
+      });
+      oldController.dispose();
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AchievementPage.refreshVisibleTabs', stack: st);
+    }
+  }
+
+  bool _sameTabSpecs(
+    List<(IconData, String, String, String?)> a,
+    List<(IconData, String, String, String?)> b,
+  ) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i].$2 != b[i].$2 || a[i].$4 != b[i].$4) return false;
+    }
+    return true;
+  }
 
   Future<void> _playGuideVideo() async {
     try {
@@ -173,76 +231,22 @@ class _AchievementPageState extends State<AchievementPage>
       tempFile = File('${file.path}.download');
       if (await tempFile.exists()) await tempFile.delete();
 
-      final token = await SyncService().getSyncToken();
-      final treeUri = Uri.https(
-        'gitee.com',
-        '/api/v5/repos/${SyncService.repoOwner}/${SyncService.repoName}/git/trees/${SyncService.repoBranch}',
-        {
-          'recursive': '1',
-          if (token != null && token.isNotEmpty) 'access_token': token,
-        },
-      );
-      final treeResponse =
-          await http.get(treeUri).timeout(const Duration(minutes: 2));
-      if (treeResponse.statusCode != 200) {
+      final response = await http
+          .get(Uri.parse(_videoDownloadUrl))
+          .timeout(const Duration(minutes: 5));
+      if (response.statusCode != 200) {
         debugPrint(
-          'AchievementPage: 视频目录查询失败，Gitee Tree API 返回 ${treeResponse.statusCode}',
+          'AchievementPage: 视频下载失败，HTTP ${response.statusCode}',
         );
         return null;
       }
 
-      final treePayload = jsonDecode(utf8.decode(treeResponse.bodyBytes));
-      final tree =
-          treePayload is Map<String, dynamic> ? treePayload['tree'] : null;
-      if (tree is! List) return null;
-      Map<String, dynamic>? videoEntry;
-      for (final item in tree) {
-        if (item is Map && item['path'] == _videoGiteePath) {
-          videoEntry = Map<String, dynamic>.from(item);
-          break;
-        }
-      }
-      final sha = videoEntry?['sha'] as String?;
-      final expectedSize = (videoEntry?['size'] as num?)?.toInt();
-      if (sha == null || sha.isEmpty) return null;
-
-      final blobUri = Uri.https(
-        'gitee.com',
-        '/api/v5/repos/${SyncService.repoOwner}/${SyncService.repoName}/git/blobs/$sha',
-        {
-          if (token != null && token.isNotEmpty) 'access_token': token,
-        },
-      );
-      final blobResponse =
-          await http.get(blobUri).timeout(const Duration(minutes: 10));
-      if (blobResponse.statusCode != 200) {
-        debugPrint(
-          'AchievementPage: 视频下载失败，Gitee Blob API 返回 ${blobResponse.statusCode}',
-        );
+      if (response.bodyBytes.length < 1024 * 1024) {
+        debugPrint('AchievementPage: 视频文件过小，跳过');
         return null;
       }
 
-      final payload = jsonDecode(utf8.decode(blobResponse.bodyBytes));
-      if (payload is! Map<String, dynamic>) return null;
-      final encoded = payload['content'] as String?;
-      if (encoded == null || encoded.isEmpty) return null;
-      final actualExpectedSize =
-          expectedSize ?? (payload['size'] as num?)?.toInt();
-      final bytes = base64Decode(encoded.replaceAll(RegExp(r'\s+'), ''));
-      if (actualExpectedSize != null && bytes.length != actualExpectedSize) {
-        debugPrint(
-          'AchievementPage: 视频大小校验失败，本地 ${bytes.length}，远端 $actualExpectedSize',
-        );
-        return null;
-      }
-
-      await tempFile.writeAsBytes(bytes, flush: true);
-
-      final fileSize = await tempFile.length();
-      if (fileSize < 1024 * 1024) {
-        await tempFile.delete();
-        return null;
-      }
+      await tempFile.writeAsBytes(response.bodyBytes, flush: true);
 
       if (await file.exists()) await file.delete();
       await tempFile.rename(file.path);
@@ -291,7 +295,7 @@ class _AchievementPageState extends State<AchievementPage>
                     letterSpacing: 1.6,
                   ),
                   tabs: [
-                    for (final (icon, label, serial) in _tabSpecs)
+                    for (final (icon, label, serial, _) in _tabSpecs)
                       Tab(
                         height: 56,
                         child: Row(
@@ -346,45 +350,61 @@ class _AchievementPageState extends State<AchievementPage>
           child: TabBarView(
             controller: _tabController,
             children: [
-              AchievementOverviewTab(
-                authService: _authService,
-                achievementDao: _achievementDao,
-              ),
-              ScoreManagementTab(
-                authService: _authService,
-                achievementDao: _achievementDao,
-                dataRevision: dataRevision,
-              ),
-              CalculationProcessTab(
-                achievementDao: _achievementDao,
-                dataRevision: dataRevision,
-              ),
-              ComponentAchievementTab(
-                achievementDao: _achievementDao,
-                env: 'pingshi',
-                dataRevision: dataRevision,
-              ),
-              ComponentAchievementTab(
-                achievementDao: _achievementDao,
-                env: 'experiment',
-                dataRevision: dataRevision,
-              ),
-              ComponentAchievementTab(
-                achievementDao: _achievementDao,
-                env: 'exam',
-                dataRevision: dataRevision,
-              ),
-              ContinuousImprovementTab(
-                achievementDao: _achievementDao,
-              ),
-              ReportTab(
-                authService: _authService,
-                achievementDao: _achievementDao,
-              ),
+              for (final spec in _tabSpecs) _buildTabContent(spec),
             ],
           ),
         ),
       ],
     );
+  }
+
+  Widget _buildTabContent((IconData, String, String, String?) spec) {
+    switch (spec.$2) {
+      case '达成度概览':
+        return AchievementOverviewTab(
+          authService: _authService,
+          achievementDao: _achievementDao,
+        );
+      case '成绩管理':
+        return ScoreManagementTab(
+          authService: _authService,
+          achievementDao: _achievementDao,
+          dataRevision: dataRevision,
+        );
+      case '计算过程':
+        return CalculationProcessTab(
+          achievementDao: _achievementDao,
+          dataRevision: dataRevision,
+        );
+      case '平时达成':
+        return ComponentAchievementTab(
+          achievementDao: _achievementDao,
+          env: 'pingshi',
+          dataRevision: dataRevision,
+        );
+      case '实验达成':
+        return ComponentAchievementTab(
+          achievementDao: _achievementDao,
+          env: 'experiment',
+          dataRevision: dataRevision,
+        );
+      case '考核达成':
+        return ComponentAchievementTab(
+          achievementDao: _achievementDao,
+          env: 'exam',
+          dataRevision: dataRevision,
+        );
+      case '持续改进':
+        return ContinuousImprovementTab(
+          achievementDao: _achievementDao,
+        );
+      case '报告生成':
+        return ReportTab(
+          authService: _authService,
+          achievementDao: _achievementDao,
+        );
+      default:
+        return const SizedBox.shrink();
+    }
   }
 }

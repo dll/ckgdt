@@ -105,8 +105,15 @@ const _cardColors = {
 
 class HomePage extends StatefulWidget {
   final int initialTabIndex;
+  final bool enableBackgroundTasks;
+  final Widget? graphPageOverride;
 
-  const HomePage({super.key, this.initialTabIndex = 0});
+  const HomePage({
+    super.key,
+    this.initialTabIndex = 0,
+    this.enableBackgroundTasks = true,
+    this.graphPageOverride,
+  });
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -125,13 +132,15 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _selectedIndex = widget.initialTabIndex;
-    _refreshUnreadCount();
-    _loadActiveCourse();
-    _ensureClassesInitialized();
-    // 学生登录后自动拉取 Gitee 答辩通知（每 30 秒轮询，降低 Gitee 配额压力）
-    _pullNotifications();
-    _defensePollTimer = Timer.periodic(
-        const Duration(seconds: 30), (_) => _pullNotifications());
+    if (widget.enableBackgroundTasks) {
+      _refreshUnreadCount();
+      _loadActiveCourse();
+      _ensureClassesInitialized();
+      // 学生登录后自动拉取 Gitee 答辩通知（每 30 秒轮询，降低 Gitee 配额压力）
+      _pullNotifications();
+      _defensePollTimer = Timer.periodic(
+          const Duration(seconds: 30), (_) => _pullNotifications());
+    }
     // 注册全局导航服务回调
     NavigationService.instance.onSwitchTab = (index) {
       if (mounted) {
@@ -314,7 +323,7 @@ class _HomePageState extends State<HomePage> {
       selectedIcon: Icon(Icons.account_tree),
       label: '图谱',
     ));
-    bodyMap[1] = () => const KnowledgeGraphPage();
+    bodyMap[1] = () => widget.graphPageOverride ?? const KnowledgeGraphPage();
 
     if (isTeacherOrAdmin) {
       // ── 教师/管理员导航（精简 6 Tab）────────────────────────────
