@@ -3,8 +3,8 @@
   "user_id": "2023210596",
   "user_name": "胡文启",
   "role": "student",
-  "synced_at": "2026-06-15T17:01:57.644911",
-  "last_active": "2026-06-15T17:01:57.644936",
+  "synced_at": "2026-06-15T17:04:28.860932",
+  "last_active": "2026-06-15T17:04:28.860947",
   "quiz_results": [
     {
       "user_id": "2023210596",
@@ -158,53 +158,10 @@
       "updated_at": null
     }
   ],
-  "student_works": [
-    {
-      "title": "智慧社区生活服务平台开发与整合",
-      "description": "【Siri快捷指令】开发iOS快捷指令集成，用户可通过Siri语音直接执行\"打开门禁\"\"查看快递\"\"报修申请\"等常用操作。【Widget桌面组件】开发iOS桌面小组件，在锁屏和主屏幕展示社区公告、快递状态和物业费到期提醒等信息。【AI语音识别】集成AI大模型的语音识别能力，支持用户通过语音描述报修问题，自动转换为工单并分类提交。",
-      "tech_stack": "Swift+IOS SDK",
-      "work_type": "综合项目",
-      "group_name": "cg1-sclsdpi",
-      "leader_name": "胡文启",
-      "user_id": "2023210596",
-      "file_path": null,
-      "file_size": null,
-      "status": "待提交",
-      "submit_time": null,
-      "tags": "[\"Swift\",\"IOS\",\"SDK\"]",
-      "created_at": "2026-06-01T17:00:26.040575",
-      "updated_at": "2026-06-01T17:00:26.040605",
-      "related_node_ids": null,
-      "ai_suspicion": 0.0,
-      "teacher_confirmed": 0,
-      "project_id": null,
-      "group_id": null,
-      "video_url": null,
-      "thumbnail_url": null,
-      "video_duration": null,
-      "view_count": 0,
-      "like_count": 0,
-      "comment_count": 0,
-      "repo": "cg1-sclsdpi",
-      "class_group": "cg1",
-      "project": "智慧社区生活服务平台开发与整合",
-      "student_role": "iOS开发工程师",
-      "student_name": "胡文启"
-    }
-  ],
+  "student_works": [],
   "survey_responses": [],
   "checkin_records": [],
-  "work_comments": [
-    {
-      "work_id": 31,
-      "user_id": "2023210596",
-      "user_name": "胡文启",
-      "user_role": "student",
-      "content": "跨平台适配做得不错。",
-      "parent_id": null,
-      "created_at": "2026-04-18T16:18:05.421643"
-    }
-  ],
+  "work_comments": [],
   "work_likes": [],
   "work_views": [],
   "peer_reviews": [],
