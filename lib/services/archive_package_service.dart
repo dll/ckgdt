@@ -9,6 +9,7 @@ import '../data/local/course_dao.dart';
 import '../data/models/archive_document_model.dart';
 import 'archive/pandoc_service.dart';
 import 'archive/processor_registry.dart';
+import 'archive/document_processor.dart';
 import 'auth_service.dart';
 
 /// 一键归档打包服务。
@@ -153,12 +154,12 @@ class ArchivePackageService {
     final outFile = File(p.join(dir.path, fileName));
     await outFile.writeAsBytes(bytes, flush: true);
 
-    if (_shouldArchivePdf(doc, processor)) {
-      final pdfBytes = await processor!.toPdf(doc);
-      final pdfFile =
-          File(p.join(dir.path, '${n.fileBase(docLabel: n.docLabel)}.pdf'));
-      await pdfFile.writeAsBytes(pdfBytes, flush: true);
-    }
+    await _tryArchivePdf(
+      doc: doc,
+      processor: processor,
+      outFile:
+          File(p.join(dir.path, '${n.fileBase(docLabel: n.docLabel)}.pdf')),
+    );
     return outFile.path;
   }
 
@@ -294,10 +295,28 @@ class ArchivePackageService {
     return ArchiveFile(relPath, bytes.length, bytes);
   }
 
-  bool _shouldArchivePdf(ArchiveDocument doc, Object? processor) =>
-      doc.documentType == 'teaching_task' && processor != null;
+  Future<void> _tryArchivePdf({
+    required ArchiveDocument doc,
+    required DocumentProcessor? processor,
+    required File outFile,
+  }) async {
+    try {
+      final content = doc.content ?? '';
+      if (content.trim().isEmpty) return;
+      Uint8List pdfBytes;
+      if (processor != null) {
+        pdfBytes = await processor.toPdf(doc);
+      } else {
+        pdfBytes = await PandocService.instance.markdownToPdf(content);
+      }
+      await outFile.writeAsBytes(pdfBytes, flush: true);
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ArchivePackageService.tryArchivePdf', stack: st);
+    }
+  }
 
   File? _sourceOriginalFile(ArchiveDocument doc) {
+    if (_contentMustBeRegenerated(doc.documentType)) return null;
     final path = doc.filePath;
     if (path == null) return null;
     final ext = p.extension(path).toLowerCase();
@@ -318,6 +337,29 @@ class ArchivePackageService {
     if (!preserved.contains(ext)) return null;
     final file = File(path);
     return file.existsSync() ? file : null;
+  }
+
+  bool _contentMustBeRegenerated(String docType) {
+    return const {
+      'syllabus_evaluation',
+      'syllabus_review',
+      'teaching_schedule',
+      'teacher_guide',
+      'student_guide',
+      'midterm_progress_check',
+      'midterm_homework_review',
+      'midterm_exam',
+      'midterm_check',
+      'midterm_analysis',
+      'final_archive_catalog',
+      'final_syllabus',
+      'final_syllabus_evaluation',
+      'final_teaching_schedule',
+      'final_lesson_plan',
+      'final_syllabus_review',
+      'final_assessment_review',
+      'final_assessment_description',
+    }.contains(docType);
   }
 
   bool _isArchiveOutputFile(File f) {

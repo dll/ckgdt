@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
+import 'package:knowledge_graph_app/data/models/archive_document_model.dart';
 import 'package:knowledge_graph_app/services/archive_package_service.dart';
 
 void main() {
@@ -59,6 +60,46 @@ void main() {
   });
 
   group('ArchivePackageService selected zip', () {
+    test(
+        'adaptive final catalog archives generated docx instead of old template',
+        () async {
+      final oldRoot = ArchivePackageService.outputRoot;
+      final temp =
+          Directory.systemTemp.createTempSync('archive_adaptive_catalog_');
+      try {
+        ArchivePackageService.outputRoot = temp.path;
+        final template = File(p.join(temp.path, 'old-catalog.docx'))
+          ..writeAsBytesSync([1, 2, 3]);
+        final doc = ArchiveDocument(
+          title: '期末课程档案袋目录',
+          documentType: 'final_archive_catalog',
+          period: 'final',
+          courseType: 'assess',
+          content: '# 课程档案袋目录\n\n当前课程目录',
+          filePath: template.path,
+        );
+        final naming = ArchiveNaming(
+          department: '信息学院',
+          course: '软件工程',
+          docLabel: '课程档案袋目录',
+          teacher: '刘东良',
+          semester: '2025-2026-2',
+        );
+
+        final out = await ArchivePackageService.instance.archiveDocxOf(
+          doc,
+          docLabel: '课程档案袋目录',
+          naming: naming,
+        );
+
+        expect(out, endsWith('.docx'));
+        expect(File(out).readAsBytesSync(), isNot(equals([1, 2, 3])));
+      } finally {
+        ArchivePackageService.outputRoot = oldRoot;
+        if (temp.existsSync()) temp.deleteSync(recursive: true);
+      }
+    });
+
     test('zipSelectedFiles keeps selected original file types', () async {
       final oldRoot = ArchivePackageService.outputRoot;
       final temp = Directory.systemTemp.createTempSync('archive_zip_selected_');

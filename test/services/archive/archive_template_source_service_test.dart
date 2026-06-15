@@ -54,7 +54,8 @@ void main() {
     expect(doc!.sourcePath, source.path);
   });
 
-  test('keeps beginning official docx template as original material', () async {
+  test('extracts beginning official docx template as editable content',
+      () async {
     final source = File(p.join(templateDir.path, '课程教学大纲合理性评价表.docx'))
       ..writeAsBytesSync(const [0x50, 0x4b, 0x03, 0x04]);
 
@@ -66,8 +67,7 @@ void main() {
 
     expect(doc, isNotNull);
     expect(doc!.sourcePath, source.path);
-    expect(doc.content, contains('此资料以原始文件为准'));
-    expect(doc.content, contains('DOCX 原件'));
+    expect(doc.content, isNot(contains('此资料以原始文件为准')));
   });
 
   test('matches assessment plan pdf as original file', () async {
@@ -177,7 +177,7 @@ void main() {
     expect(doc.content, contains('2026-06-15'));
   });
 
-  test('keeps midterm official docx template as original material', () async {
+  test('uses midterm official docx template as editable structure', () async {
     final midtermDir = Directory(p.join(temp.path, '期中', '模板'))
       ..createSync(recursive: true);
     final source = File(p.join(midtermDir.path, '08-软件工程课程进度检查.docx'))
@@ -192,8 +192,8 @@ void main() {
 
     expect(doc, isNotNull);
     expect(doc!.sourcePath, source.path);
-    expect(doc.content, contains('此资料以原始文件为准'));
-    expect(doc.content, contains('DOCX 原件'));
+    expect(doc.content, contains('课程进度执行检查'));
+    expect(doc.content, isNot(contains('此资料以原始文件为准')));
   });
 
   test('midterm homework review warns when source is actually progress table',
@@ -243,8 +243,7 @@ void main() {
     }
   });
 
-  test(
-      'final docx template is kept as original material instead of extracted markdown',
+  test('final archive catalog docx template is extracted for regeneration',
       () async {
     final realRoot = Directory('data/归档').absolute;
     if (!realRoot.existsSync()) return;
@@ -258,7 +257,7 @@ void main() {
 
     expect(doc, isNotNull);
     expect(doc!.sourceName, contains('课程档案袋目录'));
-    expect(doc.content, contains('此资料以原始文件为准'));
-    expect(doc.content, contains('DOCX 原件'));
+    expect(doc.content, isNot(contains('此资料以原始文件为准')));
+    expect(doc.content, contains('课程档案袋目录'));
   });
 }
