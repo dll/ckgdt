@@ -50,6 +50,7 @@ scripts/achievement_video/work/
 # 仅保留 assets/ 下的 Flutter 资源（如 assets/learning_data.db）
 # 所有 data/ 子目录都不追踪，避免仓库膨胀
 data/视频/
+!data/视频/达成度评价系统操作指南.mp4
 data/课件/
 data/课件/秒出PPT/
 data/课件/讯飞智文/
