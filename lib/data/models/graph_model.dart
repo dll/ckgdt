@@ -27,7 +27,7 @@ class GraphModel {
     return {
       'id': id,
       'title': title,
-      'course_id': courseId,
+      if (courseId != null) 'course_id': courseId,
       'graph_type': graphType,
       'layout': layout,
     };
