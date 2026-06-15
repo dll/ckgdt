@@ -3,8 +3,8 @@
   "user_id": "2023210592",
   "user_name": "龚成磊",
   "role": "student",
-  "synced_at": "2026-06-15T17:55:29.051869",
-  "last_active": "2026-06-15T17:55:29.051869",
+  "synced_at": "2026-06-15T17:57:03.996950",
+  "last_active": "2026-06-15T17:57:03.996950",
   "quiz_results": [
     {
       "user_id": "2023210592",
@@ -37,7 +37,7 @@
       "task_id": 6,
       "user_id": "2023210592",
       "content": "PDF实验报告：2023210592龚成磊实验六 跨平台综合项目实战.pdf\n\n--- 报告正文（自动提取）---\n痛点\n现状\n影响\n设备孤岛\n各类智能设备独立运行\n用户体验割裂，操作繁琐\n安全管理滞后\n依赖人工巡检\n响应不及时，存在安全隐患\n多设备协同缺失\n设备间无法联动\n智能化程度低\n数据安全隐患\n数据传输和存储缺乏保护\n用户隐私泄露风险\n跨设备体验差\n不同设备数据不同步\n使用体验不一致\n实验六：跨平台综合项目实战报告\n目录\n1.\n项目背景与目标\n2.\n现状分析\n3.\n功能设计\n4.\n技术架构\n5.\n创新亮点\n6.\n团队与分工\n7.\n实施计划\n8.\n风险与对策\n9.\n实验结果截图\n1.\n项目背景与目标\n1.1\n项目背景\n随着物联网技术的快速发展和社区智能化建设的推进，居民对智慧社区服务的需求日益增长。当前社区管理普遍存在\n以下问题：设备孤岛、安全管理手段单一、多设备协同能力不足、数据安全缺乏保障等。\n本项目\n\"\n智慧社区生活服务平台\n\"\n旨在基于\nHarmonyOS\n构建新一代智慧社区服务平台，实现分布式服务、设备互联、\nAI\n社区安全管理、多设备协同等核心功能，为居民提供安全、便捷、智能的社区生活体验。\n1.2\n现有痛点\n智慧社区生活服务平台\n分布式服务\n设备互联\nAI社区安全管理\n多设备协同\n数据安全\n服务分发共享\n智能家居控制\n智能安防监控\n跨设备数据同步\n加密存储传输\n平台\n存在问题\n导致结果\n传统物业系统\n功能单一\n服务能力有限\n第三方智能家居平台\n生态封闭\n设备兼容性差\n社区安防系统\n独立运行\n缺乏联动能力\n1.3\n项目目标\n图注：平台通过分布式服务实现服务共享，设备互联实现智能家居控制，\nAI\n安全管理实现智能安防，多设备协同实现\n数据同步，数据安全保障隐私保护。\n1.4\n核心价值\n居民\n:\n享受安全、便捷、智能的社区生活服务\n物业\n:\n提升社区管理效率，降低运营成本\n平台\n:\n构建开放的智慧社区生态，提升服务能力\n2.\n现状分析\n2.1\n现有智慧社区平台分析\n功能\n现有平台\n智慧社区平台\n分布式服务\n[\n无\n]\n[\n有\n]\n多设备服务分发\n设备互联\n[\n弱\n]\n[\n强\n]\n统一设备管理\nAI\n安全管理\n[\n无\n]\n[\n有\n]\n智能安防监控\n多设备协同\n[\n无\n]\n[\n有\n]\n跨设备联动\n数据安全\n[\n弱\n]\n[\n强\n]\n端到端加密\n多端覆盖\n[\n单一\n]\n[\n全\n]HarmonyOS\n分布式\n总结\n：现有平台各自独立，无法形成协同效应。智慧社区生活服务平台旨在整合各方资源，提供一站式智慧社区解决\n方案。\n2.2\n系统能力对比\n3.\n功能设计\n3.1\n核心功能矩阵\n核心功能由分布式服务、设备互联、\nAI\n安全管理三大模块组成，协同构建智慧社区服务体系，最终提升居民生活质\n量。\n3.2\n重点功能详解\n3.2.1\n分布式服务\n分布式服务流程包含以下核心步骤：服务注册\n→\n服务发现\n→\n服务调用\n→\n服务协同\n→\n结果返回。\n功能要点\n:\n支持多设备服务注册与发现\n实现跨设备服务调用\n支持服务负载均衡\n服务状态实时监控\n故障自动转移\n设备接入\n设备认证\n设备注册\n设备管理\n设备控制\n状态同步\n设备联动\n3.2.2\n设备互联\n图注：设备从接入到联动的完整流程，支持设备认证、注册、管理、控制和状态同步。\n功能要点\n:\n支持多种协议设备接入（\nWi-Fi\n、蓝牙、\nZigbee\n等）\n设备身份认证与权限管理\n设备状态实时监控\n远程设备控制\n设备场景联动\n场景\n描述\n设备参与\n离家模式\n自动关闭电器、启动安防\n智能开关、摄像头、门锁\n回家模式\n自动开灯、调节温度\n智能灯、空调、窗帘\n安防模式\n异常触发多设备联动\n摄像头、报警器、门锁\n节能模式\n智能控制用电设备\n智能插座、热水器\n3.2.3 AI\n社区安全管理\nAI\n安全管理流程：数据采集\n→\n智能分析\n→\n异常检测\n→\n预警通知\n→\n处置响应。\n功能要点\n:\n视频监控智能分析\n异常行为识别与预警\n人脸识别门禁系统\n紧急报警一键触发\n安全事件追溯查询\n3.2.4\n多设备协同\n协同场景\n:\n协同能力\n:\n分布式软总线通信\n跨设备数据同步\n设备状态共享\n场景联动触发\n3.2.5\n数据安全\n安全机制\n:\n端到端数据加密\n设备身份认证\n访问权限控制\n数据脱敏处理\n安全审计日志\n应用层\n分布式服务层\n设备层\n智能家电\n安防设备\n传感器\n智能终端\n分布式软总线\n服务管理框架\n设备管理服务\n安全管理服务\n社区安全App\n设备控制App\n服务中心\n层级\n技术选型\n说明\n开发语言\nArkTS\nHarmonyOS\n首选开发语言，\nTypeScript\n风格\n框架\nHarmonyOS SDK\n华为官方\nSDK\n，支持分布式能力\n分布式能力\n分布式软总线\n设备间通信基础\nUI\n框架\nArkUI\nHarmonyOS\n原生\nUI\n组件\n状态管理\nAppStorage\n应用状态管理\n本地存储\nPreferences\n轻量级数据持久化\n4.\n技术架构\n4.1\n整体架构\n架构说明\n：系统采用\nHarmonyOS\n分布式架构，设备层通过分布式软总线连接，服务层提供统一的服务管理和设备管\n理能力，应用层提供面向用户的各类应用。\n4.2\n技术选型\n层级\n技术选型\n说明\n网络通信\nHTTP/HTTPS\n远程\nAPI\n调用\n实时通信\nWebSocket\n实时消息推送\n4.3\n项目结构\n项目采用标准\nHarmonyOS\n项目结构，主要目录包括：\nentry\n:\n应用入口\nfeature\n:\n功能模块\ncommon\n:\n公共组件和工具\ndata\n:\n数据模型和数据源\nservice\n:\n业务服务层\nuses\nmonitors\nsyncs\nDevice\n+string deviceId\n+string deviceName\n+string deviceType\n+boolean online\n+void connect()\n+void disconnect()\n+void sendCommand(command)\nService\n+string serviceId\n+string serviceName\n+void register()\n+void unregister()\n+void invoke(params)\nSecurityManager\n+void detectAnomaly()\n+void sendAlert()\n+void recordEvent()\nSyncManager\n+void syncData()\n+void syncStatus()\n+void syncConfiguration()\n核心类图\n类图说明\n：展示了核心数据模型（\nDevice\n、\nService\n）和业务管理类（\nSecurityManager\n、\nSyncManager\n）之间的关联\n关系。\n智能设备\n分布式服务\n智慧社区App\n用户\n智能设备\n分布式服务\n智慧社区App\n用户\n通过分布式软总线通信\n发送设备控制指令\n调用设备控制服务\n转发控制指令\n返回执行结果\n返回服务响应\n显示操作结果\n4.4\n核心功能实现\n本项目的核心功能实现基于\nHarmonyOS\n分布式架构：\n分布式服务层\n：通过分布式软总线实现设备间通信，支持服务注册、发现和调用。\n设备管理层\n：统一管理各类智能设备的接入、认证和控制。\n安全管理层\n：集成\nAI\n分析能力，实现智能安防监控。\n协同引擎\n：支持多设备场景联动和数据同步。\n4.5\n核心交互时序图\n时序图说明\n：展示了用户通过\nApp\n控制智能设备的完整流程，通过分布式服务实现跨设备通信。\n5.\n创新亮点\n5.1\n五大创新亮点\n25%\n25%\n20%\n15%\n15%\n创新亮点分布\n分布式服务\n设备互联\nAI安全管理\n多设备协同\n数据安全\n创新点\n传统方式\n本项目\n提升效果\n分布式服务\n设备独立运行\n服务统一管理与分发\n服务复用率提升\n设备互联\n单一协议\n多协议统一接入\n兼容性提升\nAI\n安全管理\n人工巡检\n智能分析预警\n响应时间缩短\n多设备协同\n无联动\n场景化联动\n智能化程度提升\n数据安全\n明文传输\n端到端加密\n安全性保障\n角色\n姓名\n技术栈\n核心功能\nHarmonyOS\n开\n发\n龚成\n磊\nArkTS+HarmonyOS\n分布式服务、设备互联、\nAI\n社区安全管理、多设备协\n同、数据安全\n图注：分布式服务、设备互联、\nAI\n安全管理、多设备协同、数据安全五大创新亮点。\n5.2\n创新对比分析\n6.\n个人分工与任务\n6.1\n个人角色定位\n功能模块\n具体任务\n关键技术\n预计工时\n分布式服务\n服务注册、发现、调用\n分布式软总线\n8h\n设备互联\n设备接入、认证、控制\nArkUI\n、设备管理\n8h\nAI\n安全管理\n异常检测、预警通知\nAI SDK\n集成\n6h\n多设备协同\n数据同步、场景联动\n分布式数据管理\n6h\n数据安全\n加密存储、安全传输\n安全框架\n4h\n2026-05-01\n2026-05-03\n2026-05-05\n2026-05-07\n2026-05-09\n2026-05-11\n2026-05-13\n2026-05-15\n2026-05-1\n需求分析\n技术方案设计\n项目初始化\n分布式服务\n设备互联\nAI安全管理\n多设备协同\n数据安全\n功能测试\n性能优化\n项目验收\n需求确认\n核心开发\n高级功能\n测试上线\n项目实施计划\n任务\n时间\n负责人\n产出\n需求分析\nD1\n全体\n需求清单\n6.2 HarmonyOS\n开发任务清单\n6.3\n开发规范\n代码规范\n:\n遵循\nHarmonyOS\n官方编码规范，使用\nArkTS\n语言特性\n命名规范\n:\n组件、方法、变量命名采用驼峰命名法\n文档规范\n:\n核心接口和组件需编写注释文档\n版本控制\n:\n使用\nGit\n进行代码管理，提交信息规范\n7.\n实施计划\n7.1\n项目周期\n14\n天周期\n：需求确认\n→\n核心开发\n→\n高级功能\n→\n测试上线\n图注：\n14\n天分阶段实施，确保设计冻结、功能冻结和上线验收。\n7.2\n详细实施计划\n第\n1-3\n天：需求确认与方案设计\n任务\n时间\n负责人\n产出\n技术方案设计\nD2-D3\nHarmonyOS\n开发\n技术方案\nUI/UX\n设计\nD3\nUI\n设计师\n设计稿\n任务\n时间\n负责人\n产出\n项目初始化\nD4\nHarmonyOS\n开发\nHarmonyOS\n项目架构\n分布式服务\nD4-D5\nHarmonyOS\n开发\n服务模块\n设备互联\nD6-D7\nHarmonyOS\n开发\n设备管理模块\n任务\n时间\n负责人\n产出\nAI\n安全管理\nD8-D9\nHarmonyOS\n开发\n安全模块\n多设备协同\nD10\nHarmonyOS\n开发\n协同模块\n任务\n时间\n负责人\n产出\n功能测试\nD11-D12\n测试工程师\n测试报告\n性能优化\nD12\nHarmonyOS\n开发\n优化完成\n多端打包\nD13\nHarmonyOS\n开发\nAPP\n安装包\n项目验收\nD14\n全体\n验收文档\n里程碑\n时间\n交付内容\nM1\nD03\n需求确认\n+\n架构冻结\nM2\nD07\n核心功能完成\nM3\nD10\n高级功能集成\nM4\nD12\n测试通过\n+\n性能优化\nM5\nD14\n发布\n+\n项目验收\n第\n4-7\n天：核心功能开发\n第\n8-10\n天：高级功能与集成\n第\n11-14\n天：测试与上线\n7.3\n里程碑\n风险项\n等级\n触发信号\n对策\n责任人\n分布式设备发现不稳定\n中\n设备连接失败\n增加重试机制和超时处理\nHarmonyOS\n开发\n设备兼容性问题\n中\n部分设备无法接入\n支持多种协议适配\nHarmonyOS\n开发\nAI\n服务响应慢\n低\n分析超时\n增加缓存和异步处理\nHarmonyOS\n开发\n多设备协同冲突\n中\n状态不一致\n实现分布式锁和冲突检测\nHarmonyOS\n开发\n数据同步失败\n低\n数据不一致\n增加同步重试和版本管理\nHarmonyOS\n开发\n场景\n推荐方案\n说明\n开发语言\nArkTS\n官方推荐，\nTypeScript\n风格\nUI\n框架\nArkUI\n原生组件，性能优异\n分布式能力\n分布式软总线\n设备间通信基础\n状态管理\nAppStorage\n应用状态管理\n本地存储\nPreferences\n轻量级数据持久化\n网络通信\nHTTP/HTTPS\n远程\nAPI\n调用\n指标\n验收标准\n功能完整性\n分布式服务、设备互联、\nAI\n安全管理功能可用\n多设备协同\n至少支持\n3\n种设备联动场景\n性能表现\n设备发现\n<1s\n，控制响应\n<500ms\n安全性\n数据传输加密，设备认证正常\n用户体验\n核心操作路径\n3\n步以内完成\n8.\n风险与对策\n8.1\n风险清单\n8.2\n技术选型建议\n对于智慧社区\nHarmonyOS\n应用开发，推荐以下技术选型：\n8.3\n验收标准\n9.\n实验结果截图\n9.1 DevEco Studio\n开发环境截图\n截图说明\n：\n此截图展示了\nDevEco Studio\n开发环境的主界面，包括顶部工具栏、左侧项目视图（显示\nHarmonyOS\n项目结构）、中\n间代码编辑区域（展示\nArkTS\n代码示例）以及底部状态栏。\nDevEco Studio\n是华为官方\nHarmonyOS\n开发工具，支持\nArkTS/JS\n、\nJava/Kotlin\n等多种语言。\n9.2 HarmonyOS\n项目创建截图\n截图说明\n：\n此截图展示了\nHarmonyOS\n项目创建后的开发环境界面，显示项目名称和快速操作提示。界面表明项目已成功初始\n化，开发环境就绪，可以开始进行分布式服务、设备互联等核心功能的开发工作。\n总结与思考\n实验总结\n本次实验完成了智慧社区生活服务平台\nHarmonyOS\n端的开发，主要成果包括：\n1.\n掌握了\nHarmonyOS\n分布式开发能力\n：使用\nArkTS\n语言和\nHarmonyOS SDK\n，实现了分布式服务、设备互联等核\n心功能\n2.\n学会了分布式软总线使用\n：通过分布式软总线实现设备间通信和服务调用\n3.\n实现了多设备协同能力\n：支持跨设备数据同步和场景联动\n4.\n集成了\nAI\n安全管理功能\n：实现智能安防监控和异常预警\n5.\n保障了数据安全\n：实现端到端数据加密和设备身份认证\n技术收获\nHarmonyOS\n分布式架构提供了天然的多设备协同能力\nArkTS\n语言简洁现代，开发体验良好\n分布式软总线简化了设备间通信\nArkUI\n组件库丰富，\nUI\n开发效率高\nAppStorage\n状态管理简单易用\n未来展望\n探索更多分布式场景应用\n优化设备发现和连接稳定性\n增加更多\nAI\n智能分析能力\n拓展更多设备类型支持\n文档版本\n: v1.0\n完成日期\n: 2026\n年\n5\n月\n23\n日\n负责模块\n: HarmonyOS\n开发（分布式服务、设备互联、\nAI\n安全管理、多设备协同、数据安全）\n",
-      "file_paths": "C:\\Users\\29026\\Documents/sync_files/2023210592/2023210592龚成磊实验六 跨平台综合项目实战.pdf",
+      "file_paths": "G:\\文档/sync_files/2023210592/2023210592龚成磊实验六 跨平台综合项目实战.pdf",
       "file_names": "2023210592龚成磊实验六 跨平台综合项目实战.pdf",
       "submit_time": "2026-06-01T11:11:17.151070",
       "status": "已提交",
@@ -55,7 +55,7 @@
       "task_id": 5,
       "user_id": "2023210592",
       "content": "PDF实验报告：2023210592龚成磊实验五 鸿蒙多端应用开发.pdf\n\n--- 报告正文（自动提取）---\n项目\n内容\n实验名称\n鸿蒙多端应用开发\n实验编号\nd20301035105\n、\nd20301009205\n学号\n2023210592\n姓名\n龚成磊\n班级\n软件\n231\n日期\n2026/5/4\n组别\ncg1\n项目名称\n智慧校园生活服务平台\n技术栈\nHarmonyOS (ArkTS)\n工具\n版本\n用途\nDevEco Studio\n5.0+\n鸿蒙应用开发\nHarmonyOS SDK\n5.0+\n鸿蒙开发工具包\n模拟器\n最新版\n多设备模拟测试\nAI\n辅助工具\nTRAE\n代码生成与调试\n实验五鸿蒙多端应用开发\n封面信息\n实验目的\n1.\n掌握\nArkUI\n声明式开发\n2.\n学会多端响应式布局\n3.\n了解传感器数据采集\n4.\n理解分布式能力原理\n实验环境\n系统架构设计\n1.\n框架图（系统模块划分）\n框架图展示了鸿蒙多端天气应用的整体架构设计，包含四大核心模块：\n模块说明：\n分布式模块\n：负责跨设备数据同步，包含\nDistributedKVStore\n、\nDistributedDevice\n、\nDistributedNetwork\n等\n核心组件\n多端适配模块\n：实现响应式布局，包含\nMultiDeviceAdapter\n、\nLayoutEngine\n、\nBreakpointSystem\n等组件\n传感器模块\n：管理硬件传感器数据采集，包含\nSensorManager\n、\nLightSensor\n、\nGyroscope\n等组件\n天气应用模块\n：提供天气数据展示和管理功能\n2.\n类图（核心类结构）\n类图详细描述了分布式数据管理核心类的结构和关系：\n核心类说明：\nDistributedKVStore\n：分布式键值存储核心类，提供数据的增删改查和同步功能\nDistributedDevice\n：设备管理类，管理设备注册、数据同步日志等\nDistributedNetwork\n：网络通信类，负责跨设备网络连接和数据传输\nSyncEvent\n：同步事件类，定义同步类型（\nPUT/DELETE/UPDATE/SYNC\n）和事件数据结构\nStorageEntry\n：存储条目类，封装键值对数据结构\n3.\n流程图（分布式同步流程）\n流程图展示了分布式数据同步的完整流程，分为四个阶段：\n阶段\n1-4\n：分布式数据同步流程\n流程说明：\n阶段\n1\n：初始化连接\n-\n设备加入分布式网络，建立通信连接\n阶段\n2\n：设备写入数据\n-\n将天气数据、设置数据写入本地\nKV\n存储，并触发\nPUT\n同步事件\n阶段\n3\n：执行网络同步\n-\n通过\nSyncEvent\n事件机制，将数据同步到其他设备的\nKV\n存储\n阶段\n4\n：验证同步结果\n-\n查询各设备数据，确认同步成功\n实验步骤\n1.\n需求分析\n1.1\n功能需求\n天气展示（城市名称、温度、天气状况、空气质量）\n多端适配（手机竖屏、平板横屏）\n传感器集成（光线传感器、陀螺仪）\n2.\n创建鸿蒙项目\n2.1\n新建项目\n打开\nDevEco Studio\n新建\nEmpty Ability\n项目\n选择\nArkTS\n语言\n命名为\nWeatherApp\n3.\n天气应用开发\n3.1\n天气首页实现\n// ets/pages/index/Index.ets\n@\nEntry\n@\nComponent\nstruct\nIndex\n{\n@\nState\ncityName\n:\nstring\n=\n'\n合肥\n'\n;\n@\nState\ntemperature\n:\nnumber\n=\n22\n;\n@\nState\nweather\n:\nstring\n=\n'\n晴\n'\n;\n@\nState\naqi\n:\nnumber\n=\n45\n;\nbuild\n() {\nColumn\n() {\n//\n城市名称\nText\n(\nthis\n.\ncityName\n)\n.\nfontSize\n(\n24\n)\n.\nfontWeight\n(\nFontWeight\n.\nBold\n)\n.\nmargin\n({\ntop\n:\n50\n})\n//\n天气图标\nText\n(\nthis\n.\nweather\n===\n'\n晴\n'\n?\n'\n☀\n'\n:\n'\n⛅\n'\n)\n.\nfontSize\n(\n80\n)\n.\nmargin\n({\ntop\n:\n20\n})\n//\n温度\nText\n(\n`${\nthis\n.\ntemperature\n}°C`\n)\n.\nfontSize\n(\n60\n)\n.\nfontWeight\n(\nFontWeight\n.\nLighter\n)\n.\nmargin\n({\ntop\n:\n20\n})\n@State lightValue: number = 0;\n}\n//\n天气状况\nText\n(\nthis\n.\nweather\n)\n.\nfontSize\n(\n20\n)\n.\nmargin\n({\ntop\n:\n10\n})\n//\n空气质量\nRow\n() {\nText\n(\n'\n空气质量\n: '\n)\nText\n(\n`${\nthis\n.\naqi\n}\n-\n优\n`\n)\n.\nfontColor\n(\nthis\n.\naqi\n<=\n50\n?\n'#00ff00'\n:\n'#ff9900'\n)\n}\n.\nmargin\n({\ntop\n:\n30\n})\n//\n传感器数据展示\nRow\n() {\nText\n(\n'\n光线传感器\n: '\n)\nText\n(\nthis\n.\nlightValue\n.\ntoString\n())\n.\nid\n(\n'lightValue'\n)\n}\n.\nmargin\n({\ntop\n:\n20\n})\n}\n.\nwidth\n(\n'100%'\n)\n.\nheight\n(\n'100%'\n)\n.\nbackgroundColor\n(\n'#f5f5f5'\n)\n}\n**\n手机端界面效果：\n**\n![\n手机端界面\n-\n合肥天气\n](\n手机端界面\n-\n合肥天气\n.jpg)\n![\n手机端界面\n-\n北京天气\n](\n手机端界面\n-\n北京天气\n.jpg)\n### 4.\n多端适配布局\n#### 4.1\n响应式布局实现\n```typescript\n//\n断点系统适配\n@State currentBreakpoint: string = 'md';\naboutToAppear() {\n//\n获取设备类型\nlet deviceInfo = umpInfo.getDeviceInfo();\nlet windowWidth = window.getWindow().getWindowProperties().windowWidth;\nif (windowWidth < 600) {\nthis.currentBreakpoint = 'sm'; //\n手机\n} else if (windowWidth < 840) {\n平板端界面效果：\n5.\n传感器集成\n5.1\n光线传感器开发\nthis.currentBreakpoint = 'md'; //\n平板竖屏\n} else {\nthis.currentBreakpoint = 'lg'; //\n平板横屏\n}\n}\nbuild() {\nif (this.currentBreakpoint === 'sm') {\n//\n手机布局\nColumn() {\nthis.phoneLayout()\n}\n} else {\n//\n平板布局\nRow() {\nthis.tabletLayout()\n}\n}\n}\n@Builder phoneLayout() {\nColumn() {\nText(this.cityName).fontSize(24)\nText(`${this.temperature}°C`).fontSize(60)\n}\n}\n@Builder tabletLayout() {\nColumn() {\nText(this.cityName).fontSize(32)\nText(`${this.temperature}°C`).fontSize(80)\n}\n.width('40%')\n}\nimport\nsensor\nfrom\n'@ohos.sensor'\n;\n@\nState\nlightIntensity\n:\nnumber\n=\n0\n;\naboutToAppear\n() {\n//\n注册光线传感器监听\nsensor\n.\non\n(\nsensor\n.\nSensorType\n.\nSENSOR_TYPE_ID_LIGHT\n, (\ndata\n)\n=>\n{\nthis\n.\nlightIntensity\n=\ndata\n.\nlight\n;\n});\n}\n5.2\n陀螺仪传感器开发\n传感器数据展示效果：\n6.\n分布式数据同步\n6.1\n分布式数据管理\naboutToDisappear\n() {\n//\n取消监听\nsensor\n.\noff\n(\nsensor\n.\nSensorType\n.\nSENSOR_TYPE_ID_LIGHT\n);\n}\n// UI\n展示\nText\n(\n`\n环境光线\n: ${\nthis\n.\nlightIntensity\n}\nlux`\n)\n.\nfontSize\n(\n16\n)\n.\nmargin\n({\ntop\n:\n10\n})\n@\nState\nrotateX\n:\nnumber\n=\n0\n;\n@\nState\nrotateY\n:\nnumber\n=\n0\n;\n@\nState\nrotateZ\n:\nnumber\n=\n0\n;\naboutToAppear\n() {\nsensor\n.\non\n(\nsensor\n.\nSensorType\n.\nSENSOR_TYPE_ID_GYROSCOPE\n, (\ndata\n)\n=>\n{\nthis\n.\nrotateX\n=\ndata\n.\nx\n;\nthis\n.\nrotateY\n=\ndata\n.\ny\n;\nthis\n.\nrotateZ\n=\ndata\n.\nz\n;\n});\n}\n// UI\n展示\nRow\n() {\nColumn\n() {\nText\n(\n`X\n轴\n: ${\nthis\n.\nrotateX\n.\ntoFixed\n(\n2\n)\n}`\n) }\nColumn\n() {\nText\n(\n`Y\n轴\n: ${\nthis\n.\nrotateY\n.\ntoFixed\n(\n2\n)\n}`\n) }\nColumn\n() {\nText\n(\n`Z\n轴\n: ${\nthis\n.\nrotateZ\n.\ntoFixed\n(\n2\n)\n}`\n) }\n}\n.\nspacing\n(\n20\n)\nimport\ndistributedData\nfrom\n'@ohos.data.distributedData'\n;\n//\n创建分布式数据库\nconst\nKVManager\n=\ndistributedData\n.\ncreateKVManager\n({\nbundleName\n:\n'com.example.weather'\n,\nkvStoreType\n:\ndistributedData\n.\nKVStoreType\n.\nSINGLE_VERSION\n});\n//\n存储数据\nasync\nfunction\nsaveData\n(\nkey\n:\nstring\n,\nvalue\n:\nstring\n) {\nconst\nkvStore\n=\nawait\nKVManager\n.\ngetKVStore\n(\n'weatherStore'\n);\nawait\nkvStore\n.\nput\n(\nkey\n,\nvalue\n);\n}\n功能\n状态\n备注\n天气信息展示\n[x]\n成功\n城市、温度、天气状况、空气质量均正常显示\n多端适配\n[x]\n成功\n手机竖屏\n(<600px)\n、平板横屏\n(\n≥\n600px)\n自动切换\n光线传感器\n[x]\n成功\n实时采集环境光线强度\n(lux)\n陀螺仪传感器\n[x]\n成功\nX/Y/Z\n三轴数据实时采集\n分布式数据同步\n[x]\n成功\nKV\n存储跨设备同步正常\n分布式同步状态：\n7.\n测试验证\n7.1\n多设备模拟器测试\n启动手机模拟器\n启动平板模拟器\n测试界面适配效果\n观察传感器数据\n实验结果\n验证结果\n技术分析报告\n多端适配分析\n手机布局特点：垂直排列，紧凑布局\n平板布局特点：横向排列，更宽敞的空间利用\n断点系统实现：基于屏幕宽度的响应式设计\n传感器集成分析\n光线传感器应用场景：自动亮度调节、环境光感知\n陀螺仪应用场景：设备姿态检测、游戏控制\n数据采集准确性：实时性好，精度满足一般应用需求\n//\n读取数据\nasync\nfunction\ngetData\n(\nkey\n:\nstring\n) {\nconst\nkvStore\n=\nawait\nKVManager\n.\ngetKVStore\n(\n'weatherStore'\n);\nreturn\nawait\nkvStore\n.\nget\n(\nkey\n);\n}\n问题描述\n解决方案\n解决结果\n传感器数据无法实时更新到\nUI\n检查\n@State\n装饰器是否正确使用，确保数据绑定生\n效\n已解决，数据实时刷\n新\n平板布局显示异常\n调整断点阈值，优化\nRow/Column\n布局结构\n已解决，适配正常\n分布式存储初始化失败\n检查\nbundleName\n配置，确保权限配置正确\n已解决，同步正常\n模拟器传感器无数据\n使用模拟器提供的传感器模拟功能\n已解决，数据正常采\n集\n考核项\n评分标准\n得分\n功能完整性\n天气应用功能完整，多端适配正常\n25\n分\n代码质量\n代码结构清晰，注释完整\n20\n分\n多端适配\n手机\n/\n平板界面自适应良好\n15\n分\n传感器集成\n传感器数据采集正常\n15\n分\n分布式能力\n分布式数据同步功能实现\n15\n分\n分布式能力分析\n分布式数据管理原理：基于\nKV\n存储的跨设备数据同步\n跨设备同步实现：通过软总线技术实现设备间通信\n问题与解决\n实验总结\n实验收获\n掌握了\nArkUI\n声明式\nUI\n开发模式，学会使用\n@State\n、\n@Builder\n等装饰器构建响应式界面\n理解了鸿蒙多端适配的断点系统原理，能够根据屏幕宽度实现手机\n/\n平板自适应布局\n掌握了传感器\nAPI\n的调用方法，实现了光线传感器和陀螺仪的数据采集与实时展示\n了解了分布式数据管理的基本原理，实现了基于\nKV\n存储的跨设备数据同步\n技术要点\n声明式\nUI\n：使用\n@Entry\n、\n@Component\n、\n@State\n等装饰器构建组件，数据驱动视图更新\n断点适配：通过\nwindow.getWindow().getWindowProperties().windowWidth\n获取屏幕宽度，实现响应式布局\n传感器调用：使用\nsensor.on()\n注册监听，\nsensor.off()\n取消监听，实时获取传感器数据\n分布式存储：使用\ndistributedData.createKVManager\n创建\nKV\n管理器，实现跨设备数据同步\n考核指标\n考核项\n评分标准\n得分\n实验报告\n报告结构完整，内容详实\n10\n分\n项目\n评价\n实验完成情况\n技术掌握程度\n创新点\n综合评价\n成绩\n教师评价\n教师签名：\n__\n__\n__\n_\n日期：\n__\n__\n__\n_\n",
-      "file_paths": "C:\\Users\\29026\\Documents/sync_files/2023210592/2023210592龚成磊实验五 鸿蒙多端应用开发.pdf",
+      "file_paths": "G:\\文档/sync_files/2023210592/2023210592龚成磊实验五 鸿蒙多端应用开发.pdf",
       "file_names": "2023210592龚成磊实验五 鸿蒙多端应用开发.pdf",
       "submit_time": "2026-06-01T11:07:26.114185",
       "status": "已提交",
@@ -73,7 +73,7 @@
       "task_id": 1,
       "user_id": "2023210592",
       "content": "PDF实验报告：2023210592龚成磊实验一 开发环境搭建.pdf\n\n--- 报告正文（自动提取）---\n实验一开发环境搭建\n1.\n开发环境要求\n1.1\n系统要求\n操作系统：\nWindows 10/11 (64\n位\n)\n内存：至少\n8GB RAM\n，推荐\n16GB\n硬盘空间：至少\n20GB\n可用空间\n1.2\n软件要求\nNode.js\n：推荐\nv14.x\n或更高版本\nJDK\n：\nJDK 11\n或更高版本\nDevEco Studio\n：最新版本\n2.\n环境配置步骤\n2.1\n安装\nNode.js\n1.\n访问\nNode.js\n官网下载安装包\n2.\n运行安装程序，按照提示完成安装\n3.\n验证安装：打开命令行，输入\nnode -v\n查看版本\n2.2\n安装\nJDK\n1.\n下载\nJDK 11\n或更高版本\n2.\n配置\nJAVA_HOME\n环境变量\n3.\n将\nJDK\n的\nbin\n目录添加到\nPATH\n环境变量\n4.\n验证安装：在命令行输入\njava -version\n2.3\n安装\nDevEco Studio\n1.\n访问华为开发者联盟官网下载\nDevEco Studio\n2.\n运行安装程序，选择安装路径\n3.\n配置\nSDK\n和开发环境\n4.\n启动\nDevEco Studio\n，完成初始配置\n2.4\n运行项目\n1.\n打开项目后，点击工具栏的运行按钮\n2.\n选择模拟器或真机设备\n3.\n等待应用编译并部署到设备\n4.\n查看应用运行效果\n3.\n项目配置\n3.1\n创建新项目\n1.\n打开\nDevEco Studio\n2.\n选择\n\"File\"\n→\n\"New\"\n→\n\"Project\"\n3.\n选择项目模板（\nEmpty Ability\n）\n4.\n配置项目名称、包名等信息\n5.\n点击\n\"Finish\"\n完成项目创建\n3.2\n配置项目依赖\n在项目根目录的\noh-package.json5\n文件中配置项目依赖：\n4.\n常见问题\n4.1 SDK\n下载失败\n检查网络连接\n配置代理服务器\n手动下载\nSDK\n并配置路径\n{\n\"name\"\n:\n\"myapplication\"\n,\n\"version\"\n:\n\"1.0.0\"\n,\n\"description\"\n:\n\"\n鸿蒙应用开发项目\n\"\n,\n\"main\"\n:\n\"\"\n,\n\"author\"\n:\n\"\"\n,\n\"license\"\n:\n\"\"\n,\n\"dependencies\"\n: {},\n\"devDependencies\"\n: {\n\"@ohos/hypium\"\n:\n\"1.0.16\"\n}\n}\n功能\n快捷键\n运行项目\nShift + F10\n调试项目\nShift + F9\n格式化代码\nCtrl + Alt + L\n查找文件\nCtrl + Shift + N\n查看类结构\nCtrl + F12\n4.2\n项目编译错误\n清理项目缓存：\nBuild\n→\nClean Project\n重新构建项目：\nBuild\n→\nRebuild Project\n检查依赖包是否正确安装\n4.3\n模拟器启动失败\n检查系统虚拟化是否开启\n确保硬件满足要求\n重启\nDevEco Studio\n5.\n开发工具快捷键\n6.\n参考资源\n鸿蒙开发官方文档\nDevEco Studio\n用户指南\nAPI\n参考\n",
-      "file_paths": "C:\\Users\\29026\\Documents/sync_files/2023210592/2023210592龚成磊实验一 开发环境搭建.pdf",
+      "file_paths": "G:\\文档/sync_files/2023210592/2023210592龚成磊实验一 开发环境搭建.pdf",
       "file_names": "2023210592龚成磊实验一 开发环境搭建.pdf",
       "submit_time": "2026-06-01T11:05:56.644706",
       "status": "已提交",
@@ -91,7 +91,7 @@
       "task_id": 4,
       "user_id": "2023210592",
       "content": "PDF实验报告：2023210592龚成磊实验四 微信小程序开发.pdf",
-      "file_paths": "C:\\Users\\29026\\Documents/sync_files/2023210592/2023210592龚成磊实验四 微信小程序开发.pdf",
+      "file_paths": "G:\\文档/sync_files/2023210592/2023210592龚成磊实验四 微信小程序开发.pdf",
       "file_names": "2023210592龚成磊实验四 微信小程序开发.pdf",
       "submit_time": "2026-04-28T20:42:08.210377",
       "status": "已提交",
@@ -109,7 +109,7 @@
       "task_id": 3,
       "user_id": "2023210592",
       "content": "PDF实验报告：2023210592龚成磊实验三 跨平台应用开发.pdf",
-      "file_paths": "C:\\Users\\29026\\Documents/sync_files/2023210592/2023210592龚成磊实验三 跨平台应用开发.pdf",
+      "file_paths": "G:\\文档/sync_files/2023210592/2023210592龚成磊实验三 跨平台应用开发.pdf",
       "file_names": "2023210592龚成磊实验三 跨平台应用开发.pdf",
       "submit_time": "2026-04-28T20:41:57.776674",
       "status": "已提交",
@@ -127,7 +127,7 @@
       "task_id": 2,
       "user_id": "2023210592",
       "content": "PDF实验报告：2023210592龚成磊实验二 原生应用开发.pdf",
-      "file_paths": "C:\\Users\\29026\\Documents/sync_files/2023210592/2023210592龚成磊实验二 原生应用开发.pdf",
+      "file_paths": "G:\\文档/sync_files/2023210592/2023210592龚成磊实验二 原生应用开发.pdf",
       "file_names": "2023210592龚成磊实验二 原生应用开发.pdf",
       "submit_time": "2026-04-28T20:40:54.498986",
       "status": "已提交",
@@ -198,20 +198,6 @@
       "feedback": null,
       "created_at": "2026-06-15T17:46:54.475635",
       "updated_at": null
-    },
-    {
-      "template_id": null,
-      "task_id": null,
-      "user_id": "2023210592",
-      "title": "答辩报告",
-      "content_json": "2023210592龚成磊答辩报告.pdf",
-      "file_path": "C:\\Users\\29026\\Downloads\\2023210592龚成磊答辩报告.pdf",
-      "status": "已提交",
-      "submit_time": "2026-06-15T17:55:17.542057",
-      "score": null,
-      "feedback": null,
-      "created_at": "2026-06-15T17:55:17.542057",
-      "updated_at": null
     }
   ],
   "student_works": [],
@@ -233,13 +219,13 @@
       "description": "搭建 Android Studio、Flutter、微信开发者工具、DevEco Studio、HBuilderX（Uniapp）、Visual Studio（MAUI）开发环境，各成员根据分工完成对应平台环境配置并成功运行 Hello World 项目。\n\n【实验学时】2学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标1 | 【分组人数】6人/组",
       "requirements": "AI新范式开发流程：\n① 需求分析：明确各平台环境依赖与版本要求；\n② AI辅助编码：使用 TRAE 生成 Hello World 模板代码；\n③ 测试验证：在模拟器/真机上验证项目运行；\n④ 部署运维：记录环境配置文档，总结常见问题与解决方案。",
       "deliverables": "各平台Hello World运行截图、环境配置文档、常见问题解决方案、实验报告",
-      "due_date": "2026-05-11T07:58:49.766883",
+      "due_date": "2026-05-08T20:01:28.464964",
       "difficulty": "简单",
       "max_score": 100,
       "status": "active",
       "creator_id": "206004",
-      "created_at": "2026-04-27T07:58:49.766866",
-      "updated_at": "2026-04-27T07:58:49.766866",
+      "created_at": "2026-04-24T20:01:28.464947",
+      "updated_at": "2026-04-24T20:01:28.464947",
       "related_node_ids": null
     },
     {
@@ -249,13 +235,13 @@
       "description": "Android方向：使用 Kotlin 实现\"智慧校园\"登录页面（EditText输入验证、Activity跳转与数据传递）。iOS方向（演示/模拟器）：使用 SwiftUI 实现登录页面，理解 ViewController 生命周期。组内每人选择不同平台或技术方案实现同一功能，完成后进行组内技术对比分享。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标1 | 【分组人数】6人/组",
       "requirements": "AI新范式开发流程：\n① 需求分析：编写登录功能需求文档（输入验证规则、页面跳转逻辑）；\n② AI辅助编码：使用 TRAE 生成登录页面骨架代码并手动完善业务逻辑；\n③ 测试验证：编写输入验证测试用例，验证边界条件；\n④ 部署运维：打包调试版本，记录平台差异对比报告。",
       "deliverables": "登录页面运行截图及录屏、输入验证测试报告、平台差异对比分析报告、实验报告",
-      "due_date": "2026-05-18T07:58:49.771438",
+      "due_date": "2026-05-15T20:01:28.467156",
       "difficulty": "中等",
       "max_score": 100,
       "status": "active",
       "creator_id": "206004",
-      "created_at": "2026-04-27T07:58:49.766866",
-      "updated_at": "2026-04-27T07:58:49.766866",
+      "created_at": "2026-04-24T20:01:28.464947",
+      "updated_at": "2026-04-24T20:01:28.464947",
       "related_node_ids": null
     },
     {
@@ -265,13 +251,13 @@
       "description": "开发\"智慧校园\"业务数据列表页（RESTful API 网络数据请求 + JSON 解析 + 下拉刷新），组内成员分别使用 Flutter（Dart）、React Native（JSX）、Uniapp（Vue）、MAUI（C#）等不同框架实现同一功能需求。扩展案例：集成设备传感器（如GPS定位、加速度计），体验移动硬件能力调用。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标2 | 【分组人数】6人/组",
       "requirements": "AI新范式开发流程：\n① 需求分析：定义列表页数据结构、API接口规范与传感器调用需求；\n② AI辅助编码：使用 TRAE 生成网络请求与JSON解析代码，辅助生成传感器调用模板；\n③ 测试验证：模拟API异常响应测试容错能力，验证传感器数据采集准确性；\n④ 部署运维：多框架性能对比测试，输出框架适用性分析报告。",
       "deliverables": "列表页运行截图及录屏、API交互测试报告、多框架性能对比报告、实验报告",
-      "due_date": "2026-05-25T07:58:49.774513",
+      "due_date": "2026-05-22T20:01:28.469424",
       "difficulty": "中等",
       "max_score": 100,
       "status": "active",
       "creator_id": "206004",
-      "created_at": "2026-04-27T07:58:49.766866",
-      "updated_at": "2026-04-27T07:58:49.766866",
+      "created_at": "2026-04-24T20:01:28.464947",
+      "updated_at": "2026-04-24T20:01:28.464947",
       "related_node_ids": null
     },
     {
@@ -281,13 +267,13 @@
       "description": "借助 AI 编程工具辅助开发\"智慧校园通知\"小程序（列表 + 详情页路由 + 本地存储），体验 AI 工具在代码生成与调试中的作用。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标2 | 【分组人数】6人/组",
       "requirements": "AI新范式开发流程：\n① 需求分析：绘制小程序页面流程图与数据模型；\n② AI辅助编码：使用 TRAE 生成小程序页面代码与数据绑定逻辑；\n③ 测试验证：使用微信开发者工具进行真机预览与功能测试；\n④ 部署运维：体验小程序审核与发布流程（体验版）。",
       "deliverables": "小程序预览码截图、页面流程图、功能测试报告、实验报告",
-      "due_date": "2026-06-01T07:58:49.777512",
+      "due_date": "2026-05-29T20:01:28.471086",
       "difficulty": "中等",
       "max_score": 100,
       "status": "active",
       "creator_id": "206004",
-      "created_at": "2026-04-27T07:58:49.766866",
-      "updated_at": "2026-04-27T07:58:49.766866",
+      "created_at": "2026-04-24T20:01:28.464947",
+      "updated_at": "2026-04-24T20:01:28.464947",
       "related_node_ids": null
     },
     {
@@ -297,13 +283,13 @@
       "description": "使用 DevEco Studio 开发\"智慧天气\"应用，实现手机/平板界面自适应布局；通过模拟器演示分布式数据同步原理。扩展案例：调用设备传感器（如光线传感器、陀螺仪）实现简单的物联网数据采集与展示场景。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标3 | 【分组人数】6人/组",
       "requirements": "AI新范式开发流程：\n① 需求分析：定义天气应用功能需求与多端适配策略，明确传感器数据采集需求；\n② AI辅助编码：使用 TRAE 辅助生成 ArkUI 页面布局与传感器调用代码；\n③ 测试验证：在不同设备模拟器上验证UI适配效果与传感器数据准确性；\n④ 部署运维：编写多端适配与硬件集成技术分析报告。",
       "deliverables": "天气应用运行截图（手机+平板）、多端适配效果对比截图、技术分析报告、实验报告",
-      "due_date": "2026-06-08T07:58:49.781659",
+      "due_date": "2026-06-05T20:01:28.474246",
       "difficulty": "较难",
       "max_score": 100,
       "status": "active",
       "creator_id": "206004",
-      "created_at": "2026-04-27T07:58:49.766866",
-      "updated_at": "2026-04-27T07:58:49.766866",
+      "created_at": "2026-04-24T20:01:28.464947",
+      "updated_at": "2026-04-24T20:01:28.464947",
       "related_node_ids": null
     },
     {
@@ -313,13 +299,13 @@
       "description": "团队开发\"智慧健康\"等业务应用（建议选题涉及传感器或硬件交互场景），每人负责一个技术栈（Android/Flutter/React Native/Uniapp/MAUI/微信小程序），使用 Git 进行版本控制与协作，借助 AI 编程工具辅助代码生成与调试。每组6人，实验中每人选择一个技术栈独立完成对应实验任务，组内进行技术分享与对比分析。\n\n【实验学时】6学时 | 【实验类型】综合型 | 【实验要求】必做 | 【对应课程目标】目标1-4 | 【分组人数】6人/组",
       "requirements": "AI新范式开发流程：\n① 需求分析：团队协作完成项目需求文档与技术选型方案；\n② AI辅助编码：各成员使用 TRAE 辅助各技术栈端的代码开发；\n③ 测试验证：制定测试计划，进行功能测试与跨端兼容性测试；\n④ 部署运维：完成多端应用打包部署，撰写技术选型对比报告与项目总结。",
       "deliverables": "可运行的多端应用安装包、Git仓库地址、技术选型对比报告、答辩PPT、演示视频、项目总结报告",
-      "due_date": "2026-06-22T07:58:49.785326",
+      "due_date": "2026-06-19T20:01:28.477397",
       "difficulty": "较难",
       "max_score": 100,
       "status": "active",
       "creator_id": "206004",
-      "created_at": "2026-04-27T07:58:49.766866",
-      "updated_at": "2026-04-27T07:58:49.766866",
+      "created_at": "2026-04-24T20:01:28.464947",
+      "updated_at": "2026-04-24T20:01:28.464947",
       "related_node_ids": null
     }
   ],
@@ -332,8 +318,8 @@
       "description": "适用于各章节实验的标准报告模板",
       "creator_id": "206004",
       "is_default": 1,
-      "created_at": "2026-04-27T07:58:49.790783",
-      "updated_at": "2026-04-27T07:58:49.790783"
+      "created_at": "2026-04-24T20:01:28.480768",
+      "updated_at": "2026-04-24T20:01:28.480768"
     },
     {
       "id": 2,
@@ -343,8 +329,8 @@
       "description": "适用于综合项目的完整开发文档模板",
       "creator_id": "206004",
       "is_default": 0,
-      "created_at": "2026-04-27T07:58:49.790783",
-      "updated_at": "2026-04-27T07:58:49.790783"
+      "created_at": "2026-04-24T20:01:28.480768",
+      "updated_at": "2026-04-24T20:01:28.480768"
     },
     {
       "id": 3,
@@ -354,8 +340,8 @@
       "description": "适用于项目答辩准备的PPT大纲模板",
       "creator_id": "206004",
       "is_default": 0,
-      "created_at": "2026-04-27T07:58:49.790783",
-      "updated_at": "2026-04-27T07:58:49.790783"
+      "created_at": "2026-04-24T20:01:28.480768",
+      "updated_at": "2026-04-24T20:01:28.480768"
     }
   ],
   "classroom_messages": [],
