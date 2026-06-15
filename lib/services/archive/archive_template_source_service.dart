@@ -384,14 +384,32 @@ $source
       try {
         text = ArchiveImporters.extractDocxText(await file.readAsBytes());
       } on Exception {
-        return null;
+        return _templateStructureFallback(file, label: label);
       } on Error {
-        return null;
+        return _templateStructureFallback(file, label: label);
       }
-      if (text == null || text.trim().isEmpty) return null;
+      if (text == null || text.trim().isEmpty) {
+        return _templateStructureFallback(file, label: label);
+      }
       return '# $label\n\n$text';
     }
+    if (const {'.doc', '.xls', '.xlsx', '.ppt', '.pptx'}.contains(ext)) {
+      return _templateStructureFallback(file, label: label);
+    }
     return _fileContent(file, label: label);
+  }
+
+  static String _templateStructureFallback(File file, {required String label}) {
+    final ext = p.extension(file.path).replaceFirst('.', '').toUpperCase();
+    return '''
+# $label
+
+**资料来源**：模板目录
+**原始模板**：${file.path}
+**模板类型**：$ext
+
+> 当前模板为 Office 二进制或表格/演示文件，系统无法直接抽取完整正文结构。生成归档件时将以该文件作为版式参考，并结合当前课程、教师、班级、学期和已形成材料重新整理内容；不得直接照搬模板中的旧课程数据。
+''';
   }
 
   static String _directoryContent(Directory dir, {required String label}) {
@@ -466,6 +484,7 @@ $source
 
   static bool _shouldKeepOriginal(String documentType, String ext) {
     if (documentType == 'teaching_task') return false;
+    if (_adaptiveTemplateDocTypes.contains(documentType)) return false;
     if (ext == '.md' || ext == '.txt' || _isTextLike(ext)) return false;
     return const {
       '.pdf',
@@ -482,6 +501,27 @@ $source
       '.bmp',
     }.contains(ext);
   }
+
+  static const Set<String> _adaptiveTemplateDocTypes = {
+    'syllabus_evaluation',
+    'syllabus_review',
+    'teaching_schedule',
+    'teacher_guide',
+    'student_guide',
+    'midterm_progress_check',
+    'midterm_homework_review',
+    'midterm_exam',
+    'midterm_check',
+    'midterm_analysis',
+    'final_archive_catalog',
+    'final_syllabus',
+    'final_syllabus_evaluation',
+    'final_teaching_schedule',
+    'final_lesson_plan',
+    'final_syllabus_review',
+    'final_assessment_review',
+    'final_assessment_description',
+  };
 
   static String _normalize(String value) => value
       .toLowerCase()

@@ -281,7 +281,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       return;
     }
 
-    final loadingText = _canPreviewOriginalAsPdf(doc.filePath)
+    final loadingText = _shouldUseOriginalSource(doc.documentType) &&
+            _canPreviewOriginalAsPdf(doc.filePath)
         ? '正在按原件版式生成 PDF...'
         : doc.documentType == 'teaching_task'
             ? '正在生成学校版式 PDF...'
@@ -340,7 +341,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
   /// 自动从 `data/归档/<期>/模板/<docType>.docx` 找 reference-doc 继承样式。
   Future<Uint8List> _renderPdfBytes(ArchiveDocument doc) async {
     final sourcePath = doc.filePath;
-    if (_canPreviewOriginalAsPdf(sourcePath)) {
+    if (_shouldUseOriginalSource(doc.documentType) &&
+        _canPreviewOriginalAsPdf(sourcePath)) {
       return PandocService.instance.officeFileToPdf(sourcePath!);
     }
     final processor = ProcessorRegistry.instance.find(doc.documentType);
@@ -563,7 +565,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     }
 
     final docLabel = _docLabelFor(doc.documentType);
-    final loadingText = _hasArchiveOriginal(doc.filePath)
+    final loadingText = _shouldUseOriginalSource(doc.documentType) &&
+            _hasArchiveOriginal(doc.filePath)
         ? '正在按学校命名保存原件...'
         : doc.documentType == 'teaching_task'
             ? '正在生成学校版式归档件...'
@@ -651,8 +654,32 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     return File(sourcePath).existsSync();
   }
 
+  bool _shouldUseOriginalSource(String docType) {
+    return !const {
+      'syllabus_evaluation',
+      'syllabus_review',
+      'teaching_schedule',
+      'teacher_guide',
+      'student_guide',
+      'midterm_progress_check',
+      'midterm_homework_review',
+      'midterm_exam',
+      'midterm_check',
+      'midterm_analysis',
+      'final_archive_catalog',
+      'final_syllabus',
+      'final_syllabus_evaluation',
+      'final_teaching_schedule',
+      'final_lesson_plan',
+      'final_syllabus_review',
+      'final_assessment_review',
+      'final_assessment_description',
+    }.contains(docType);
+  }
+
   String _archiveSuccessMessage(ArchiveDocument doc) {
-    if (_hasArchiveOriginal(doc.filePath)) {
+    if (_shouldUseOriginalSource(doc.documentType) &&
+        _hasArchiveOriginal(doc.filePath)) {
       final ext =
           p.extension(doc.filePath!).replaceFirst('.', '').toUpperCase();
       return '$ext 原件已按学校命名保存，文件路径已复制到剪贴板，可直接粘贴到 QQ 群发送。';
@@ -1212,18 +1239,257 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       label: def.label,
     );
     if (parsed == null) return null;
-    final doc = ArchiveDocument(
+    final draftDoc = ArchiveDocument(
       title: '${periodLabel(widget.periodKey)}${def.label}',
       documentType: def.key,
       period: widget.periodKey,
       courseType: widget.courseType,
-      content: parsed.content,
       filePath: parsed.sourcePath,
       isGenerated: false,
     );
+    final content = await _contextualizeTemplateContent(
+      def: def,
+      parsed: parsed,
+      doc: draftDoc,
+    );
+    final doc = draftDoc.copyWith(content: content);
     final id = await widget.dao.saveDocument(doc);
     if (def.key == 'syllabus') widget.onSyllabusChanged?.call();
     return doc.copyWith(id: id);
+  }
+
+  Future<String> _contextualizeTemplateContent({
+    required DocumentTypeDef def,
+    required ArchiveTemplateDocument parsed,
+    required ArchiveDocument doc,
+  }) async {
+    if (!_isAdaptiveTemplateDocument(def.key)) return parsed.content;
+
+    final naming = await ArchivePackageService.instance.buildNaming(
+      doc: doc,
+      docLabel: def.label,
+    );
+    if (def.key == 'final_archive_catalog') {
+      return _finalArchiveCatalogContent(
+        def: def,
+        parsed: parsed,
+        naming: naming,
+      );
+    }
+    return _adaptiveTemplateContent(
+      def: def,
+      parsed: parsed,
+      naming: naming,
+    );
+  }
+
+  bool _isAdaptiveTemplateDocument(String docType) {
+    return const {
+      'syllabus_evaluation',
+      'syllabus_review',
+      'teaching_schedule',
+      'teacher_guide',
+      'student_guide',
+      'midterm_progress_check',
+      'midterm_homework_review',
+      'midterm_exam',
+      'midterm_check',
+      'midterm_analysis',
+      'final_archive_catalog',
+      'final_syllabus',
+      'final_syllabus_evaluation',
+      'final_teaching_schedule',
+      'final_lesson_plan',
+      'final_syllabus_review',
+      'final_assessment_review',
+      'final_assessment_description',
+    }.contains(docType);
+  }
+
+  String _finalArchiveCatalogContent({
+    required DocumentTypeDef def,
+    required ArchiveTemplateDocument parsed,
+    required ArchiveNaming naming,
+  }) {
+    final now = DateTime.now();
+    final rows = <String>[];
+    final expected = docsForPeriod(widget.courseType, 'final');
+    for (var i = 0; i < expected.length; i++) {
+      final item = expected[i];
+      final existing = _documents.where((d) => d.documentType == item.key);
+      final status = item.key == def.key
+          ? '本次生成'
+          : existing.isNotEmpty
+              ? '已形成'
+              : '待补充';
+      final source = _finalCatalogSourceFor(item.key);
+      rows.add(
+        '| ${_ordinalFor(item, i)} | ${item.label} | $source | $status | ${_catalogRemark(item.key, status)} |',
+      );
+    }
+    return '''
+# 课程档案袋目录
+
+**学院**：${naming.department}
+**课程名称**：${naming.course}
+**授课教师**：${naming.teacher}
+**学年学期**：${naming.semester}
+**生成日期**：${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}
+**版式依据**：${parsed.sourceName}
+
+## 一、目录生成说明
+
+本目录依据学校课程档案袋目录模板生成。模板中的旧课程、旧班级、旧学期、旧教师和旧文件清单仅作为版式参考；本次归档以当前系统课程和已形成材料为准。
+
+## 二、课程档案袋目录
+
+| 序号 | 材料名称 | 来源 | 当前状态 | 备注 |
+|------|----------|------|----------|------|
+${rows.join('\n')}
+
+## 三、归档一致性检查
+
+| 检查项 | 当前值 | 检查要求 | 结论 |
+|--------|--------|----------|------|
+| 课程名称 | ${naming.course} | 与教学任务单、教学大纲、成绩材料一致 | 待审核 |
+| 授课教师 | ${naming.teacher} | 与教学任务单和教师签名一致 | 待审核 |
+| 学年学期 | ${naming.semester} | 与教务系统导出材料一致 | 待审核 |
+| 材料数量 | ${expected.length}项 | 按学校课程档案袋目录逐项核对 | 待审核 |
+
+## 四、模板结构摘录
+
+${_templateExcerpt(parsed.content)}
+''';
+  }
+
+  String _adaptiveTemplateContent({
+    required DocumentTypeDef def,
+    required ArchiveTemplateDocument parsed,
+    required ArchiveNaming naming,
+  }) {
+    final ordinal =
+        _ordinalFor(def, _expectedDocs.indexWhere((d) => d.key == def.key));
+    final now = DateTime.now();
+    return '''
+# $ordinal-${def.label}
+
+**学院**：${naming.department}
+**课程名称**：${naming.course}
+**授课教师**：${naming.teacher}
+**学年学期**：${naming.semester}
+**生成日期**：${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}
+**版式依据**：${parsed.sourceName}
+
+## 一、生成原则
+
+本材料依据学校模板结构生成。模板中的旧课程、旧班级、旧学期、旧教师和旧数据仅作为版式与栏目参考；正文内容应以当前课程信息、已导入材料和教师审核结果为准。
+
+## 二、当前课程信息
+
+| 项目 | 内容 |
+|------|------|
+| 学院 | ${naming.department} |
+| 课程 | ${naming.course} |
+| 教师 | ${naming.teacher} |
+| 学年学期 | ${naming.semester} |
+| 资料类型 | ${def.label} |
+
+## 三、结构化整理内容
+
+${_adaptiveBodyFor(def.key)}
+
+## 四、模板结构摘录
+
+${_templateExcerpt(parsed.content)}
+''';
+  }
+
+  String _adaptiveBodyFor(String key) {
+    switch (key) {
+      case 'final_syllabus':
+        return '请承接期初已审核教学大纲，核对课程目标、教学内容、学时分配、考核方式与当前课程一致后归档。';
+      case 'final_syllabus_evaluation':
+      case 'syllabus_evaluation':
+        return '''
+| 评价项目 | 当前检查要求 | 结论 | 说明 |
+|----------|--------------|------|------|
+| 课程目标 | 与人才培养方案和当前课程定位一致 | 待审核 | 请填写 |
+| 教学内容 | 覆盖当前课程章节和实验/实践任务 | 待审核 | 请填写 |
+| 考核方式 | 与当前课程考核构成一致 | 待审核 | 请填写 |
+| 持续改进 | 能支撑后续达成度评价和教学改进 | 待审核 | 请填写 |
+''';
+      case 'final_syllabus_review':
+      case 'syllabus_review':
+        return '''
+| 审核项 | 审核要求 | 结论 | 审核意见 |
+|--------|----------|------|----------|
+| 大纲完整性 | 基本信息、目标、内容、考核方式齐全 | 待审核 | 请填写 |
+| 目标支撑 | 课程目标与毕业要求或培养目标对应明确 | 待审核 | 请填写 |
+| 考核合理性 | 成绩构成和课程目标评价方式一致 | 待审核 | 请填写 |
+| 归档规范 | 签字、日期、版本信息符合学校要求 | 待审核 | 请填写 |
+''';
+      case 'final_teaching_schedule':
+      case 'teaching_schedule':
+      case 'midterm_progress_check':
+        return '''
+| 周次/阶段 | 计划内容 | 实际执行 | 偏差说明 | 整改措施 |
+|-----------|----------|----------|----------|----------|
+| 期初至期中 | 按教学进度表执行 | 待填写 | 待填写 | 待填写 |
+| 期中至期末 | 按课程目标完成教学任务 | 待填写 | 待填写 | 待填写 |
+''';
+      case 'final_lesson_plan':
+        return '请汇总代表性教案或教案目录，说明章节覆盖、教学目标、重点难点、教学方法与课程目标的对应关系。';
+      case 'final_assessment_review':
+        return '''
+| 审核项 | 要求 | 结论 | 说明 |
+|--------|------|------|------|
+| 考核内容 | 覆盖课程目标和核心教学内容 | 待审核 | 请填写 |
+| 评分标准 | 分值、评分点或量规清晰 | 待审核 | 请填写 |
+| 难度区分度 | 难度适中，能区分学习效果 | 待审核 | 请填写 |
+| 材料完整性 | 命题审核、任务书、评分标准等齐全 | 待审核 | 请填写 |
+''';
+      case 'final_assessment_description':
+        return '请说明当前课程考核方式、成绩构成、评分依据、材料构成和归档附件，不得沿用旧课程说明。';
+      case 'midterm_homework_review':
+        return '''
+| 序号 | 作业/测验/实验名称 | 应交 | 实交 | 应批 | 已批 | 反馈方式 | 备注 |
+|------|--------------------|------|------|------|------|----------|------|
+| 01 | 待填写 | 待填写 | 待填写 | 待填写 | 待填写 | 待填写 | 待填写 |
+''';
+      case 'midterm_exam':
+      case 'midterm_check':
+      case 'midterm_analysis':
+        return '请根据当前课程是否设置期中考试，整理试题/阶段任务、评分标准、成绩记录、质量分析和改进措施。无正式期中考试时，应明确替代性阶段考核方式。';
+      case 'teacher_guide':
+      case 'student_guide':
+        return '请结合当前课程章节、实验任务、学习要求和考核方式，重新整理指导手册正文。';
+      default:
+        return '请根据当前课程信息和学校模板栏目补全正文，系统已自动替换课程、教师、学期等基础信息。';
+    }
+  }
+
+  String _finalCatalogSourceFor(String key) {
+    if (key == 'final_archive_catalog') return '期末目录模板';
+    if (key == 'final_achievement_report') return '达成模块/期末模板';
+    if (key == 'final_grade_book' || key == 'final_score_register') {
+      return '成绩管理/教务导出';
+    }
+    if (key == 'final_sample_works') return '作品/考核模块';
+    return '期初/期中/期末材料积累';
+  }
+
+  String _catalogRemark(String key, String status) {
+    if (status == '待补充') return '生成前请补齐或导入';
+    if (key == 'final_archive_catalog') return '按当前课程重新生成';
+    return '归档前复核课程、教师、学期一致性';
+  }
+
+  String _templateExcerpt(String content) {
+    final trimmed = content.trim();
+    if (trimmed.isEmpty) return '（模板未抽取到正文，仅作为版式参考）';
+    const maxChars = 4000;
+    if (trimmed.length <= maxChars) return trimmed;
+    return '${trimmed.substring(0, maxChars)}\n\n...（模板摘录已截断，完整版式以原始模板为准）';
   }
 
   Future<ArchiveDocument?> _generateTeachingTaskFromSource() async {
@@ -2965,7 +3231,8 @@ class _DocumentPreviewSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final sourcePath = doc.filePath;
     final usePdfPreview = doc.documentType == 'teaching_task' ||
-        _canUsePdfPreviewSource(sourcePath);
+        _canUseOriginalPdfPreview(doc.documentType, sourcePath) ||
+        (doc.content ?? '').trim().isNotEmpty;
     return DraggableScrollableSheet(
       initialChildSize: 0.85,
       minChildSize: 0.5,
@@ -3018,7 +3285,8 @@ class _DocumentPreviewSheet extends StatelessWidget {
     );
   }
 
-  bool _canUsePdfPreviewSource(String? sourcePath) {
+  bool _canUseOriginalPdfPreview(String docType, String? sourcePath) {
+    if (!_shouldUseOriginalSource(docType)) return false;
     if (sourcePath == null || sourcePath.trim().isEmpty) return false;
     final ext = p.extension(sourcePath).toLowerCase();
     return const {
@@ -3030,5 +3298,28 @@ class _DocumentPreviewSheet extends StatelessWidget {
       '.ppt',
       '.pptx',
     }.contains(ext);
+  }
+
+  bool _shouldUseOriginalSource(String docType) {
+    return !const {
+      'syllabus_evaluation',
+      'syllabus_review',
+      'teaching_schedule',
+      'teacher_guide',
+      'student_guide',
+      'midterm_progress_check',
+      'midterm_homework_review',
+      'midterm_exam',
+      'midterm_check',
+      'midterm_analysis',
+      'final_archive_catalog',
+      'final_syllabus',
+      'final_syllabus_evaluation',
+      'final_teaching_schedule',
+      'final_lesson_plan',
+      'final_syllabus_review',
+      'final_assessment_review',
+      'final_assessment_description',
+    }.contains(docType);
   }
 }
