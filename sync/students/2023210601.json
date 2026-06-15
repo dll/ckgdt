@@ -3,8 +3,8 @@
   "user_id": "2023210601",
   "user_name": "金正轩",
   "role": "student",
-  "synced_at": "2026-06-15T15:26:15.095147",
-  "last_active": "2026-06-15T15:26:15.095159",
+  "synced_at": "2026-06-15T15:26:57.409461",
+  "last_active": "2026-06-15T15:26:57.409472",
   "quiz_results": [
     {
       "user_id": "2023210601",
@@ -14,7 +14,8 @@
       "num_total": 1,
       "chapter": "第五章 华为多端应用开发3",
       "quiz_type": null,
-      "completed_at": "2026-05-09T10:10:19.437186"
+      "completed_at": "2026-05-09T10:10:19.437186",
+      "course_id": null
     },
     {
       "user_id": "2023210601",
@@ -24,7 +25,8 @@
       "num_total": 3,
       "chapter": "第五章 华为多端应用开发2",
       "quiz_type": null,
-      "completed_at": "2026-05-09T10:10:08.379211"
+      "completed_at": "2026-05-09T10:10:08.379211",
+      "course_id": null
     },
     {
       "user_id": "2023210601",
@@ -34,7 +36,8 @@
       "num_total": 5,
       "chapter": "第五章 华为多端应用开发1",
       "quiz_type": null,
-      "completed_at": "2026-05-09T10:09:18.092540"
+      "completed_at": "2026-05-09T10:09:18.092540",
+      "course_id": null
     }
   ],
   "learning_records": [],
@@ -49,7 +52,8 @@
       "times": 1,
       "wrong_time": "2026-05-09T10:09:13.147338",
       "last_wrong_time": "2026-05-09T10:09:13.147363",
-      "explanation": "鸿蒙是华为自研操作系统，官方主推 **ArkTS**（基于 TypeScript 的声明式 UI 语言）和 **JavaScript** 进行应用开发。而 Swift/Objective-C 是苹果 iOS 的开发语言，无法直接用于鸿蒙环境，你答的框架与平台不匹配。"
+      "explanation": "鸿蒙是华为自研操作系统，官方主推 **ArkTS**（基于 TypeScript 的声明式 UI 语言）和 **JavaScript** 进行应用开发。而 Swift/Objective-C 是苹果 iOS 的开发语言，无法直接用于鸿蒙环境，你答的框架与平台不匹配。",
+      "course_id": null
     }
   ],
   "favorites": [],
@@ -197,7 +201,8 @@
       "class_group": "cg1",
       "project": "智慧社区生活服务平台开发与整合",
       "student_role": "Android开发工程师",
-      "student_name": "金正轩"
+      "student_name": "金正轩",
+      "course_id": null
     }
   ],
   "survey_responses": [],
@@ -225,7 +230,8 @@
       "creator_id": "206004",
       "created_at": "2026-04-21T18:55:11.522761",
       "updated_at": "2026-04-21T18:55:11.522761",
-      "related_node_ids": null
+      "related_node_ids": null,
+      "course_id": "mad"
     },
     {
       "id": 2,
@@ -241,7 +247,8 @@
       "creator_id": "206004",
       "created_at": "2026-04-21T18:55:11.522761",
       "updated_at": "2026-04-21T18:55:11.522761",
-      "related_node_ids": null
+      "related_node_ids": null,
+      "course_id": "mad"
     },
     {
       "id": 3,
@@ -257,7 +264,8 @@
       "creator_id": "206004",
       "created_at": "2026-04-21T18:55:11.522761",
       "updated_at": "2026-04-21T18:55:11.522761",
-      "related_node_ids": null
+      "related_node_ids": null,
+      "course_id": "mad"
     },
     {
       "id": 4,
@@ -273,7 +281,8 @@
       "creator_id": "206004",
       "created_at": "2026-04-21T18:55:11.522761",
       "updated_at": "2026-04-21T18:55:11.522761",
-      "related_node_ids": null
+      "related_node_ids": null,
+      "course_id": "mad"
     },
     {
       "id": 5,
@@ -289,7 +298,8 @@
       "creator_id": "206004",
       "created_at": "2026-04-21T18:55:11.522761",
       "updated_at": "2026-04-21T18:55:11.522761",
-      "related_node_ids": null
+      "related_node_ids": null,
+      "course_id": "mad"
     },
     {
       "id": 6,
@@ -305,7 +315,8 @@
       "creator_id": "206004",
       "created_at": "2026-04-21T18:55:11.522761",
       "updated_at": "2026-04-21T18:55:11.522761",
-      "related_node_ids": null
+      "related_node_ids": null,
+      "course_id": "mad"
     }
   ],
   "report_templates": [
