@@ -6,7 +6,7 @@ import '../../core/constants/archive_periods.dart';
 import 'base_document_processor.dart';
 import 'importers/archive_importers.dart';
 
-/// 期初模板资料识别服务。
+/// 归档模板资料识别服务。
 ///
 /// `data/归档/<期>/模板` 中的编号只作为人工排序参考，不参与匹配。
 /// 不同课程可使用不同编号或文件名；系统按资料类型关键词、排除词和扩展名
@@ -125,6 +125,10 @@ class ArchiveTemplateSourceService {
     final ext = p.extension(entity.path).toLowerCase();
     final bytes = await entity.readAsBytes();
     String readText() => entity.readAsStringSync();
+
+    if (_shouldKeepOriginal(match.documentType, ext)) {
+      return _fileContent(entity, label: label);
+    }
 
     switch (match.documentType) {
       case 'teaching_task':
@@ -459,6 +463,25 @@ $source
 
   static bool _isTextLike(String ext) =>
       const {'.mhtml', '.mht', '.html', '.htm'}.contains(ext);
+
+  static bool _shouldKeepOriginal(String documentType, String ext) {
+    if (documentType == 'teaching_task') return false;
+    if (ext == '.md' || ext == '.txt' || _isTextLike(ext)) return false;
+    return const {
+      '.pdf',
+      '.doc',
+      '.docx',
+      '.xls',
+      '.xlsx',
+      '.ppt',
+      '.pptx',
+      '.png',
+      '.jpg',
+      '.jpeg',
+      '.webp',
+      '.bmp',
+    }.contains(ext);
+  }
 
   static String _normalize(String value) => value
       .toLowerCase()

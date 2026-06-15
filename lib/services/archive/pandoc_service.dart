@@ -84,8 +84,8 @@ class PandocService {
   /// 检测顺序：PATH `soffice` → `C:\Program Files\LibreOffice\program\soffice.exe`
   /// → `C:\Program Files (x86)\LibreOffice\program\soffice.exe`。
   Future<Uint8List> markdownToPdf(
-    String markdown,
-    {String? referenceDocPath,
+    String markdown, {
+    String? referenceDocPath,
   }) async {
     if (markdown.isEmpty) {
       throw const PandocException('markdown 内容为空，无法转 PDF');
@@ -121,7 +121,8 @@ class PandocService {
       await inputDocx.writeAsBytes(docxBytes, flush: true);
 
       if (kDebugMode) {
-        debugPrint('[PandocService] soffice convert: $soffice → ${inputDocx.path}');
+        debugPrint(
+            '[PandocService] soffice convert: $soffice → ${inputDocx.path}');
       }
 
       final result = await Process.run(
@@ -130,8 +131,10 @@ class PandocService {
           '--headless',
           '--norestore',
           '--nologo',
-          '--convert-to', 'pdf',
-          '--outdir', tmpDir.path,
+          '--convert-to',
+          'pdf',
+          '--outdir',
+          tmpDir.path,
           inputDocx.path,
         ],
         runInShell: true,
@@ -163,6 +166,240 @@ class PandocService {
       }
     }
   }
+
+  /// 用 LibreOffice headless 把 Office 原件转为 PDF。
+  ///
+  /// 期末归档大量材料已经是学校定稿 doc/docx/xls/xlsx 原件，预览和打印应以
+  /// 原件版式为准，而不是先抽取文本再走 Markdown/Pandoc。
+  Future<Uint8List> officeFileToPdf(String sourcePath) async {
+    final source = File(sourcePath);
+    if (!source.existsSync()) {
+      throw PandocException('原始文件不存在：$sourcePath');
+    }
+    final ext = p.extension(source.path).toLowerCase();
+    if (ext == '.pdf') return source.readAsBytes();
+
+    final soffice = await _findSoffice();
+    if (soffice != null) {
+      try {
+        return await _officeFileToPdfViaSoffice(sourcePath, soffice);
+      } on PandocException catch (e) {
+        if (kDebugMode) {
+          debugPrint(
+              '[PandocService] LibreOffice 原件转 PDF 失败，尝试 Office COM: $e');
+        }
+      }
+    }
+
+    if (Platform.isWindows) {
+      try {
+        return await _officeFileToPdfViaMicrosoftOffice(sourcePath);
+      } on PandocException {
+        rethrow;
+      } on Exception catch (e) {
+        throw PandocException('Microsoft Office/WPS 转 PDF 失败：$e');
+      }
+    }
+
+    throw const PandocException(
+      '未找到 LibreOffice (soffice.exe)，无法预览或打印 Office 原件。'
+      '请安装 LibreOffice，或在 Windows 教师端安装 Microsoft Office/WPS 后重试。',
+    );
+  }
+
+  Future<Uint8List> _officeFileToPdfViaSoffice(
+    String sourcePath,
+    String soffice,
+  ) async {
+    final source = File(sourcePath);
+    final ext = p.extension(source.path).toLowerCase();
+    final tmpDir = await Directory.systemTemp.createTemp('mad_office_pdf_');
+    final input = File(p.join(tmpDir.path, 'source$ext'));
+    final output = File(p.join(tmpDir.path, 'source.pdf'));
+    try {
+      await source.copy(input.path);
+      final result = await Process.run(
+        soffice,
+        [
+          '--headless',
+          '--norestore',
+          '--nologo',
+          '--convert-to',
+          'pdf',
+          '--outdir',
+          tmpDir.path,
+          input.path,
+        ],
+        runInShell: true,
+      ).timeout(const Duration(seconds: 90));
+
+      if (result.exitCode != 0) {
+        throw PandocException(
+          'LibreOffice 退出码 ${result.exitCode}: ${result.stderr}',
+        );
+      }
+      if (!output.existsSync()) {
+        throw PandocException(
+          'LibreOffice 转换完成但未生成 PDF: ${output.path}\n'
+          'stdout: ${result.stdout}\nstderr: ${result.stderr}',
+        );
+      }
+      return await output.readAsBytes();
+    } finally {
+      try {
+        if (tmpDir.existsSync()) await tmpDir.delete(recursive: true);
+      } catch (e) {
+        swallow(e, tag: 'PandocService.cleanup.officePdf');
+      }
+    }
+  }
+
+  Future<Uint8List> _officeFileToPdfViaMicrosoftOffice(
+    String sourcePath,
+  ) async {
+    final ext = p.extension(sourcePath).toLowerCase();
+    if (!const {
+      '.doc',
+      '.docx',
+      '.xls',
+      '.xlsx',
+      '.ppt',
+      '.pptx',
+    }.contains(ext)) {
+      throw PandocException('该原件类型暂不支持转换 PDF：$ext');
+    }
+
+    final tmpDir = await Directory.systemTemp.createTemp('mad_ms_office_pdf_');
+    final input = File(p.join(tmpDir.path, 'source$ext'));
+    final output = File(p.join(tmpDir.path, 'source.pdf'));
+    await File(sourcePath).copy(input.path);
+    final script = _officeComScript(
+      sourcePath: input.path,
+      outputPath: output.path,
+      ext: ext,
+    );
+    final scriptFile = File(p.join(tmpDir.path, 'convert.ps1'));
+    try {
+      await scriptFile.writeAsString(script, flush: true);
+      final result = await Process.run(
+        'powershell',
+        [
+          '-NoProfile',
+          '-ExecutionPolicy',
+          'Bypass',
+          '-File',
+          scriptFile.path,
+        ],
+        runInShell: true,
+      ).timeout(const Duration(seconds: 90));
+      if (result.exitCode != 0) {
+        throw PandocException(
+          'Office COM 退出码 ${result.exitCode}: ${result.stderr}${result.stdout}',
+        );
+      }
+      if (!output.existsSync()) {
+        throw PandocException(
+          'Office COM 转换完成但未生成 PDF: ${output.path}\n'
+          'stdout: ${result.stdout}\nstderr: ${result.stderr}',
+        );
+      }
+      return await output.readAsBytes();
+    } finally {
+      try {
+        if (tmpDir.existsSync()) await tmpDir.delete(recursive: true);
+      } catch (e) {
+        swallow(e, tag: 'PandocService.cleanup.msOfficePdf');
+      }
+    }
+  }
+
+  String _officeComScript({
+    required String sourcePath,
+    required String outputPath,
+    required String ext,
+  }) {
+    final source = _psQuote(sourcePath);
+    final output = _psQuote(outputPath);
+    if (ext == '.doc' || ext == '.docx') {
+      return '''
+\$ErrorActionPreference = 'Stop'
+\$source = $source
+\$output = $output
+\$word = \$null
+\$doc = \$null
+try {
+  \$word = New-Object -ComObject Word.Application
+  \$word.Visible = \$false
+  \$word.DisplayAlerts = 0
+  \$doc = \$word.Documents.Open(\$source, \$false, \$true)
+  \$doc.ExportAsFixedFormat(\$output, 17)
+} finally {
+  if (\$doc -ne \$null) {
+    \$doc.Close(\$false) | Out-Null
+    [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject(\$doc)
+  }
+  if (\$word -ne \$null) {
+    \$word.Quit() | Out-Null
+    [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject(\$word)
+  }
+  [GC]::Collect()
+  [GC]::WaitForPendingFinalizers()
+}
+''';
+    }
+    if (ext == '.xls' || ext == '.xlsx') {
+      return '''
+\$ErrorActionPreference = 'Stop'
+\$source = $source
+\$output = $output
+\$excel = \$null
+\$workbook = \$null
+try {
+  \$excel = New-Object -ComObject Excel.Application
+  \$excel.Visible = \$false
+  \$excel.DisplayAlerts = \$false
+  \$workbook = \$excel.Workbooks.Open(\$source, 0, \$true)
+  \$workbook.ExportAsFixedFormat(0, \$output)
+} finally {
+  if (\$workbook -ne \$null) {
+    \$workbook.Close(\$false) | Out-Null
+    [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject(\$workbook)
+  }
+  if (\$excel -ne \$null) {
+    \$excel.Quit() | Out-Null
+    [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject(\$excel)
+  }
+  [GC]::Collect()
+  [GC]::WaitForPendingFinalizers()
+}
+''';
+    }
+    return '''
+\$ErrorActionPreference = 'Stop'
+\$source = $source
+\$output = $output
+\$powerPoint = \$null
+\$presentation = \$null
+try {
+  \$powerPoint = New-Object -ComObject PowerPoint.Application
+  \$presentation = \$powerPoint.Presentations.Open(\$source, \$true, \$true, \$false)
+  \$presentation.SaveAs(\$output, 32)
+} finally {
+  if (\$presentation -ne \$null) {
+    \$presentation.Close() | Out-Null
+    [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject(\$presentation)
+  }
+  if (\$powerPoint -ne \$null) {
+    \$powerPoint.Quit() | Out-Null
+    [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject(\$powerPoint)
+  }
+  [GC]::Collect()
+  [GC]::WaitForPendingFinalizers()
+}
+''';
+  }
+
+  String _psQuote(String value) => "'${value.replaceAll("'", "''")}'";
 
   /// 探测 LibreOffice 可执行文件路径。命中即缓存。
   Future<String?> _findSoffice() async {
@@ -227,9 +464,12 @@ class PandocService {
       await inputFile.writeAsString(input, flush: true);
 
       final args = <String>[
-        '-f', fromFormat,
-        '-t', toFormat,
-        '-o', outputFile.path,
+        '-f',
+        fromFormat,
+        '-t',
+        toFormat,
+        '-o',
+        outputFile.path,
         ...extraArgs,
         inputFile.path,
       ];
