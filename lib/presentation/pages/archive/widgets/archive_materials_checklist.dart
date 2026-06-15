@@ -45,7 +45,7 @@ class _ArchiveMaterialsChecklistState extends State<ArchiveMaterialsChecklist> {
       final materials = docs
           .where(
               (d) => const {'beginning', 'midterm', 'final'}.contains(d.period))
-          .where((d) => (d.content ?? '').trim().isNotEmpty)
+          .where(_hasMaterial)
           .toList()
         ..sort((a, b) {
           final p = _periodOrder(a.period).compareTo(_periodOrder(b.period));
@@ -63,6 +63,18 @@ class _ArchiveMaterialsChecklistState extends State<ArchiveMaterialsChecklist> {
     } catch (e, st) {
       swallowDebug(e, tag: 'ArchiveMaterialsChecklist._load', stack: st);
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  bool _hasMaterial(ArchiveDocument doc) {
+    if ((doc.content ?? '').trim().isNotEmpty) return true;
+    final filePath = (doc.filePath ?? '').trim();
+    if (filePath.isEmpty) return false;
+    if (kIsWeb) return true;
+    try {
+      return File(filePath).existsSync();
+    } catch (_) {
+      return true;
     }
   }
 
