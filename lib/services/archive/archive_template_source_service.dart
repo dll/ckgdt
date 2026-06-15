@@ -151,13 +151,13 @@ class ArchiveTemplateSourceService {
         return ArchiveImporters.parseSurvey(readText(), now: now) ??
             _fileContent(entity, label: label);
       case 'midterm_progress_check':
-        return _midtermProgressCheckContent(entity, label: label);
+        return _midtermProgressCheckContent(entity, label: label, now: now);
       case 'midterm_homework_review':
-        return _midtermHomeworkReviewContent(entity, label: label);
+        return _midtermHomeworkReviewContent(entity, label: label, now: now);
       case 'midterm_exam':
       case 'midterm_check':
       case 'midterm_analysis':
-        return _midtermExamContent(entity, label: label);
+        return _midtermExamContent(entity, label: label, now: now);
       default:
         return _readPlainFile(entity, label: label);
     }
@@ -166,100 +166,202 @@ class ArchiveTemplateSourceService {
   static Future<String?> _midtermProgressCheckContent(
     File file, {
     required String label,
+    DateTime? now,
   }) async {
     final sourceText = await _readPlainFile(file, label: label);
     if (sourceText == null || sourceText.trim().isEmpty) return null;
+    final source = _trimSource(sourceText);
+    final normalized = _normalize(sourceText);
+    final hasWeeks = _containsAny(normalized, ['周次', '第一周', '第1周']);
+    final hasHours = _containsAny(normalized, ['学时', '讲课', '实验课']);
+    final hasCourse = _containsAny(normalized, ['课程名称', '授课教师', '班级']);
+    final conclusion = hasWeeks && hasHours
+        ? '已识别进度表要素，需由教师结合实际授课记录确认是否一致'
+        : '源文件要素不完整，需补充周次、学时和实际执行情况后再归档';
     return '''
 # $label
 
 **资料来源**：期中模板目录
 **原始文件**：${file.path}
+**生成日期**：${_formatDate(now)}
 
-## 检查目标
+## 01 检查范围
 
-- 依据教学进度表核对课程当前执行情况。
-- 检查已完成周次、章节、实验/实践任务是否与计划一致。
-- 标识滞后、超前、调课、补课和需说明事项。
+| 项目 | 内容 |
+|------|------|
+| 检查对象 | 期中前课程教学进度执行情况 |
+| 核对依据 | 期初教学进度表、实际授课记录、实验/实践安排 |
+| 核对重点 | 周次覆盖、章节内容、理论/实验学时、调课补课说明 |
+| 初步结论 | $conclusion |
 
-## 检查要点
+## 02 自动核对摘要
 
-| 项目 | 审核要求 | 结论 |
-|------|----------|------|
-| 周次覆盖 | 期中前应覆盖教学进度表中已到周次 | 待核对 |
-| 内容一致 | 实际授课内容应与进度表章节、实验项目对应 | 待核对 |
-| 学时执行 | 理论、实验/实践学时应与计划匹配 | 待核对 |
-| 调整说明 | 进度偏差应记录原因和补救安排 | 待核对 |
+| 核对项 | 自动识别 | 检查结论 | 处理要求 |
+|--------|----------|----------|----------|
+| 周次覆盖 | ${hasWeeks ? '已识别周次信息' : '未识别明确周次'} | ${hasWeeks ? '基本具备核对条件' : '需补充'} | 核对期中前已到教学周 |
+| 学时执行 | ${hasHours ? '已识别学时或讲课/实验课信息' : '未识别学时信息'} | ${hasHours ? '基本具备核对条件' : '需补充'} | 理论、实验/实践学时分别确认 |
+| 课程信息 | ${hasCourse ? '已识别课程/教师/班级信息' : '未识别完整课程信息'} | ${hasCourse ? '基本具备归档条件' : '需补充'} | 与教学任务书、课表保持一致 |
+| 偏差说明 | 需教师填写实际执行偏差 | 待确认 | 若有调课、补课、滞后或超前，必须说明原因和整改安排 |
 
-## 原始进度资料
+## 03 课程进度执行检查表
 
-$sourceText
+| 序号 | 检查项目 | 检查要求 | 执行情况 | 结论 |
+|------|----------|----------|----------|------|
+| 1 | 教学周次 | 期中前教学周次应按计划完成 | 依据原始资料和授课记录核对 | 教师确认 |
+| 2 | 教学内容 | 已授章节、知识点、实验项目应与进度表一致 | 依据原始资料逐项核对 | 教师确认 |
+| 3 | 学时安排 | 理论、实验、实践学时应与期初计划一致 | 依据课表和进度记录核对 | 教师确认 |
+| 4 | 教学调整 | 调课、停课、补课、进度偏差应有记录 | 如有偏差需写明原因和补救措施 | 教师确认 |
+
+## 04 审核结论
+
+本材料用于期中教学检查。系统已完成源文件识别和要素初筛，最终结论需由任课教师根据实际授课记录、课堂考勤、实验安排和补课记录确认后签字归档。
+
+## 附：原始进度资料
+
+$source
 ''';
   }
 
   static Future<String?> _midtermHomeworkReviewContent(
     File file, {
     required String label,
+    DateTime? now,
   }) async {
     final sourceText = await _readPlainFile(file, label: label);
     if (sourceText == null || sourceText.trim().isEmpty) return null;
+    final source = _trimSource(sourceText);
+    final normalized = _normalize(sourceText);
+    final hasHomeworkEvidence = _containsAny(
+      normalized,
+      ['作业', '批阅', '评分', '反馈', '提交', '测验', '实验报告'],
+    );
+    final looksLikeProgress = _containsAny(normalized, ['教学进度表']) &&
+        _containsAny(normalized, ['周次', '教学内容摘要']);
+    final sourceConclusion = hasHomeworkEvidence && !looksLikeProgress
+        ? '已识别作业或批阅统计要素'
+        : looksLikeProgress
+            ? '源文件疑似为教学进度表，不是作业与批阅次数统计，请更换源文件或补录统计数据'
+            : '未识别明确作业/批阅统计要素，需补充后再归档';
     return '''
 # $label
 
 **资料来源**：期中模板目录
 **原始文件**：${file.path}
+**生成日期**：${_formatDate(now)}
 
-## 统计目标
+## 01 统计范围
 
-- 统计期中前布置作业次数、应批阅次数和实际批阅次数。
-- 核对作业批阅是否满足学校过程性教学检查要求。
-- 对未批、迟批、反馈不足等情况形成改进说明。
+| 项目 | 内容 |
+|------|------|
+| 统计对象 | 期中前布置的作业、测验、实验报告、项目阶段材料 |
+| 统计口径 | 应提交人数、实交人数、应批阅份数、已批阅份数、反馈方式 |
+| 审核重点 | 作业次数是否达标、批阅是否及时、反馈是否覆盖主要问题 |
+| 源文件初判 | $sourceConclusion |
 
-## 检查表
+## 02 数据完整性检查
 
-| 项目 | 口径 | 结论 |
-|------|------|------|
-| 作业布置次数 | 期中前已布置的课程作业、测验或训练 | 待核对 |
-| 批阅次数 | 教师已完成批阅并给出反馈的次数 | 待核对 |
-| 批阅覆盖 | 是否覆盖全部教学班级和主要学生提交 | 待核对 |
-| 反馈质量 | 是否有分数、评语或改进建议 | 待核对 |
+| 核对项 | 自动识别 | 检查结论 | 处理要求 |
+|--------|----------|----------|----------|
+| 作业记录 | ${hasHomeworkEvidence ? '已识别作业/批阅相关文本' : '未识别作业/批阅文本'} | ${hasHomeworkEvidence ? '可继续核对' : '需补充'} | 列明每次作业或阶段测验 |
+| 源文件类型 | ${looksLikeProgress ? '疑似教学进度表' : '未发现明显错配'} | ${looksLikeProgress ? '源文件错配风险' : '可继续核对'} | 错配时不得直接作为作业统计归档 |
+| 批阅证据 | 需包含已批阅份数、成绩或反馈记录 | 待确认 | 支持截图、平台记录或汇总表 |
+| 改进说明 | 未批、迟批、反馈不足需说明原因 | 待确认 | 补充后续批阅计划 |
 
-## 原始统计资料
+## 03 作业与批阅次数统计表
 
-$sourceText
+| 序号 | 作业/测验/实验名称 | 布置周次 | 应提交人数 | 实交人数 | 应批阅份数 | 已批阅份数 | 反馈方式 | 备注 |
+|------|--------------------|----------|------------|----------|------------|------------|----------|------|
+| 01 | 期中前作业或阶段任务 | 待填写 | 待填写 | 待填写 | 待填写 | 待填写 | 分数/评语/课堂反馈 | 教师确认 |
+| 02 | 期中前测验或实验报告 | 待填写 | 待填写 | 待填写 | 待填写 | 待填写 | 分数/评语/平台反馈 | 教师确认 |
+
+## 04 审核结论
+
+本材料必须能证明期中前作业布置和批阅反馈情况。若源文件初判提示错配，应先替换为真实作业批阅统计表，或在本表中补录统计数据后再审核、打印和归档。
+
+## 附：原始统计资料
+
+$source
 ''';
   }
 
   static Future<String?> _midtermExamContent(
     File file, {
     required String label,
+    DateTime? now,
   }) async {
     final sourceText = await _readPlainFile(file, label: label);
     if (sourceText == null || sourceText.trim().isEmpty) return null;
+    final source = _trimSource(sourceText);
+    final normalized = _normalize(sourceText);
+    final hasExamEvidence = _containsAny(
+      normalized,
+      ['试卷', '答案', '评分标准', '成绩', '考核', '测验', '题目'],
+    );
+    final hasCourseObjectives =
+        _containsAny(normalized, ['课程目标', '目标1', '目标 1']);
+    final conclusion = hasExamEvidence
+        ? '已识别期中考试或阶段考核要素'
+        : '未识别完整试卷、答案、评分标准或成绩记录；如课程无期中考试，应按阶段考核材料归档并写明替代说明';
     return '''
 # $label
 
 **资料来源**：期中模板目录
 **原始文件**：${file.path}
+**生成日期**：${_formatDate(now)}
 
-## 材料要求
+## 01 材料范围
 
-- 期中考试或阶段考核材料应体现课程阶段性学习目标。
-- 题目、评分标准、成绩记录或质量分析应完整。
-- 若课程不单独组织期中考试，应说明采用阶段测验、项目检查或作业检查替代。
+| 项目 | 内容 |
+|------|------|
+| 适用场景 | 期中考试、阶段测验、项目阶段检查、作业/实验阶段考核 |
+| 必备材料 | 题目或任务书、参考答案或评分标准、成绩/结果记录、质量分析 |
+| 目标对应 | 应覆盖期中前核心知识点和课程目标 |
+| 源文件初判 | $conclusion |
 
-## 审核要点
+## 02 自动核对摘要
 
-| 项目 | 审核要求 | 结论 |
-|------|----------|------|
-| 考核内容 | 覆盖期中前核心知识点和能力目标 | 待核对 |
-| 评分标准 | 有明确分值、评分点或等级标准 | 待核对 |
-| 结果记录 | 有成绩、分析或学生表现记录 | 待核对 |
-| 改进措施 | 对薄弱环节提出后续教学调整 | 待核对 |
+| 核对项 | 自动识别 | 检查结论 | 处理要求 |
+|--------|----------|----------|----------|
+| 考核材料 | ${hasExamEvidence ? '已识别考试/考核相关文本' : '未识别完整考试材料'} | ${hasExamEvidence ? '可继续核对' : '需补充或说明替代方式'} | 补齐题目、答案、评分标准和成绩记录 |
+| 目标覆盖 | ${hasCourseObjectives ? '已识别课程目标信息' : '未识别课程目标映射'} | ${hasCourseObjectives ? '可继续核对' : '需补充'} | 标明考核内容对应课程目标 |
+| 质量分析 | 需说明学生掌握情况和薄弱环节 | 待确认 | 形成后续教学改进措施 |
+| 替代说明 | 无正式期中考试时必须说明阶段考核方式 | 待确认 | 写明测验、项目检查或作业检查依据 |
 
-## 原始期中考试资料
+## 03 期中考试/阶段考核归档表
 
-$sourceText
+| 序号 | 材料项 | 归档要求 | 当前状态 | 备注 |
+|------|--------|----------|----------|------|
+| 1 | 试题/任务书 | 覆盖期中前核心内容 | 教师确认 | 无正式期中考试时填阶段任务 |
+| 2 | 参考答案/评分标准 | 分值、评分点或等级标准明确 | 教师确认 | 可附评分量规 |
+| 3 | 成绩/结果记录 | 能反映学生阶段学习情况 | 教师确认 | 可为平台成绩或项目检查记录 |
+| 4 | 质量分析 | 说明共性问题和后续改进措施 | 教师确认 | 与期末教学调整衔接 |
+
+## 04 审核结论
+
+本材料用于证明课程期中阶段已经开展过程性检查或阶段考核。若课程无独立期中考试，不应空缺，应归档阶段测验、项目检查、实验检查或作业检查材料，并在结论中明确替代考核方式。
+
+## 附：原始期中考试资料
+
+$source
 ''';
+  }
+
+  static bool _containsAny(String normalizedText, Iterable<String> tokens) {
+    for (final token in tokens) {
+      if (normalizedText.contains(_normalize(token))) return true;
+    }
+    return false;
+  }
+
+  static String _formatDate(DateTime? now) {
+    final d = now ?? DateTime.now();
+    return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+  }
+
+  static String _trimSource(String text, {int maxChars = 12000}) {
+    final trimmed = text.trim();
+    if (trimmed.length <= maxChars) return trimmed;
+    return '${trimmed.substring(0, maxChars)}\n\n...（原始资料较长，已截断；归档时请以源文件为准）';
   }
 
   static Future<String?> _readPlainFile(File file,
