@@ -237,7 +237,7 @@ class _GiteeSettingsTabState extends State<_GiteeSettingsTab> {
           // 仓库配置信息
           const Text('仓库配置', style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          _buildConfigItem('系统资源仓库', 'osgisOne/mad-data'),
+          _buildConfigItem('系统资源仓库', 'chzcldl/mad-data'),
           _buildConfigItem('企业命名空间', 'chzuczldl (滁州学院-刘东良)'),
           _buildConfigItem('学生仓库前缀', 'cg1-, cg2-, cg3-'),
           _buildConfigItem('分支命名规范', 'feat-{姓名拼音首字母小写}'),

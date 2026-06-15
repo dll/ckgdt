@@ -1,4 +1,4 @@
-﻿part of '../classroom_page.dart';
+part of '../classroom_page.dart';
 
 class _ClassroomToolsTab extends StatefulWidget {
   final ClassroomDao classroomDao;
@@ -43,7 +43,6 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
   Timer? _countdownTimer;
   int _timerSeconds = 300; // 5分钟
   int _remainingSeconds = 0;
-  int? _timerStartMillis;
   bool _timerRunning = false;
   final _customTimerController = TextEditingController();
   final _timerFormKey = GlobalKey<FormState>();
@@ -88,38 +87,49 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
 
   /// 得分规则
   static const _scoreRules = {
-    'hard':   {'correct': 5.0, 'wrong': -1.0},
+    'hard': {'correct': 5.0, 'wrong': -1.0},
     'medium': {'correct': 3.0, 'wrong': -2.0},
-    'easy':   {'correct': 1.0, 'wrong': -3.0},
+    'easy': {'correct': 1.0, 'wrong': -3.0},
   };
 
   /// 难度对应的学生池
   List<Map<String, dynamic>> get _targetPool {
     switch (_selectedDifficulty) {
-      case 'hard':   return _highStudents;
-      case 'easy':   return _lowStudents;
-      default:       return _midStudents;
+      case 'hard':
+        return _highStudents;
+      case 'easy':
+        return _lowStudents;
+      default:
+        return _midStudents;
     }
   }
 
   /// 所有学生（用于滚动动画）
   List<Map<String, dynamic>> get _allStudents => [
-    ..._highStudents, ..._midStudents, ..._lowStudents,
-  ];
+        ..._highStudents,
+        ..._midStudents,
+        ..._lowStudents,
+      ];
 
   String _difficultyLabel(String d) {
     switch (d) {
-      case 'hard':   return '难';
-      case 'easy':   return '易';
-      default:       return '中';
+      case 'hard':
+        return '难';
+      case 'easy':
+        return '易';
+      default:
+        return '中';
     }
   }
 
   Color _difficultyColor(String d) {
     switch (d) {
-      case 'hard':   return Colors.red;
-      case 'easy':   return Colors.green;
-      default:       return Colors.orange;
+      case 'hard':
+        return Colors.red;
+      case 'easy':
+        return Colors.green;
+      default:
+        return Colors.orange;
     }
   }
 
@@ -146,7 +156,10 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
     _rollTimer = Timer.periodic(const Duration(milliseconds: 80), (timer) {
       _rollCount++;
       final all = _allStudents;
-      if (all.isEmpty) { timer.cancel(); return; }
+      if (all.isEmpty) {
+        timer.cancel();
+        return;
+      }
       final idx = random.nextInt(all.length);
       setState(() => _pickedStudent = all[idx]);
 
@@ -174,7 +187,8 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
 
     // 确定学生所属层级
     String tier = 'mid';
-    if (_highStudents.any((s) => s['user_id'] == userId)) tier = 'high';
+    if (_highStudents.any((s) => s['user_id'] == userId))
+      tier = 'high';
     else if (_lowStudents.any((s) => s['user_id'] == userId)) tier = 'low';
 
     // 确保有会话
@@ -198,8 +212,8 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
         SnackBar(
           content: Text(
             isCorrect
-              ? '$userName 回答正确！+${delta.toStringAsFixed(0)} 分'
-              : '$userName 回答错误，${delta.toStringAsFixed(0)} 分',
+                ? '$userName 回答正确！+${delta.toStringAsFixed(0)} 分'
+                : '$userName 回答错误，${delta.toStringAsFixed(0)} 分',
           ),
           backgroundColor: isCorrect ? Colors.green : Colors.red[400],
           duration: const Duration(seconds: 2),
@@ -207,8 +221,12 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
       );
       setState(() => _showResult = false);
       // 刷新排行
-      final scores = await _classroomDao.getRollCallScoreboard(classId: widget.classId);
-      if (mounted) setState(() { _scoreboard = scores; });
+      final scores =
+          await _classroomDao.getRollCallScoreboard(classId: widget.classId);
+      if (mounted)
+        setState(() {
+          _scoreboard = scores;
+        });
     }
   }
 
@@ -297,7 +315,8 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
       setState(() => _timerSeconds = parsed * 60);
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请输入1~180之间的整数分钟'), backgroundColor: Colors.orange),
+        const SnackBar(
+            content: Text('请输入1~180之间的整数分钟'), backgroundColor: Colors.orange),
       );
     }
   }
@@ -329,28 +348,37 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                 // 难度选择
                 Row(
                   children: [
-                    const Text('题目难度：', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                    const Text('题目难度：',
+                        style: TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w500)),
                     const SizedBox(width: 8),
                     ...['hard', 'medium', 'easy'].map((d) => Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: ChoiceChip(
-                        label: Text(_difficultyLabel(d), style: const TextStyle(fontSize: 12)),
-                        selected: _selectedDifficulty == d,
-                        selectedColor: _difficultyColor(d).withValues(alpha: 0.2),
-                        onSelected: _isRolling || _showResult ? null : (v) {
-                          if (v) setState(() => _selectedDifficulty = d);
-                        },
-                      ),
-                    )),
+                          padding: const EdgeInsets.only(right: 6),
+                          child: ChoiceChip(
+                            label: Text(_difficultyLabel(d),
+                                style: const TextStyle(fontSize: 12)),
+                            selected: _selectedDifficulty == d,
+                            selectedColor:
+                                _difficultyColor(d).withValues(alpha: 0.2),
+                            onSelected: _isRolling || _showResult
+                                ? null
+                                : (v) {
+                                    if (v)
+                                      setState(() => _selectedDifficulty = d);
+                                  },
+                          ),
+                        )),
                   ],
                 ),
                 const SizedBox(height: 4),
                 // 得分规则提示
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: _difficultyColor(_selectedDifficulty).withValues(alpha: 0.06),
+                    color: _difficultyColor(_selectedDifficulty)
+                        .withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -358,7 +386,9 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                     '${_selectedDifficulty == "hard" ? "优等生" : _selectedDifficulty == "easy" ? "待提升" : "中等生"}  |  '
                     '答对 +${_scoreRules[_selectedDifficulty]!["correct"]!.toStringAsFixed(0)}  '
                     '答错 ${_scoreRules[_selectedDifficulty]!["wrong"]!.toStringAsFixed(0)}',
-                    style: TextStyle(fontSize: 11, color: _difficultyColor(_selectedDifficulty)),
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: _difficultyColor(_selectedDifficulty)),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -382,15 +412,16 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                     color: _isRolling
                         ? Colors.orange.withValues(alpha: 0.1)
                         : _showResult
-                          ? _difficultyColor(_selectedDifficulty).withValues(alpha: 0.08)
-                          : (isDark ? Colors.grey[850] : Colors.grey[50]),
+                            ? _difficultyColor(_selectedDifficulty)
+                                .withValues(alpha: 0.08)
+                            : (isDark ? Colors.grey[850] : Colors.grey[50]),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: _isRolling
                           ? Colors.orange
                           : _showResult
-                            ? _difficultyColor(_selectedDifficulty)
-                            : Colors.grey.withValues(alpha: 0.2),
+                              ? _difficultyColor(_selectedDifficulty)
+                              : Colors.grey.withValues(alpha: 0.2),
                       width: _isRolling || _showResult ? 2 : 1,
                     ),
                   ),
@@ -409,7 +440,9 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                                   fontWeight: FontWeight.bold,
                                   color: !_isRolling
                                       ? _difficultyColor(_selectedDifficulty)
-                                      : (isDark ? Colors.white60 : Colors.black54),
+                                      : (isDark
+                                          ? Colors.white60
+                                          : Colors.black54),
                                 ),
                               ),
                               if (_showResult) ...[
@@ -417,13 +450,17 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                                 Text(
                                   '${_pickedStudent!["user_id"]}  |  '
                                   '均分 ${(_pickedStudent!["avg_score"] as double).toStringAsFixed(1)}',
-                                  style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                                  style: TextStyle(
+                                      fontSize: 11, color: Colors.grey[500]),
                                 ),
                               ],
                             ],
                           )
                         : Text('点击开始',
-                            style: TextStyle(fontSize: 20, color: isDark ? Colors.white60 : Colors.black38)),
+                            style: TextStyle(
+                                fontSize: 20,
+                                color:
+                                    isDark ? Colors.white60 : Colors.black38)),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -435,15 +472,19 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                       FilledButton.icon(
                         onPressed: () => _judgeAnswer(true),
                         icon: const Icon(Icons.check, size: 18),
-                        label: Text('正确 +${_scoreRules[_selectedDifficulty]!["correct"]!.toStringAsFixed(0)}'),
-                        style: FilledButton.styleFrom(backgroundColor: Colors.green),
+                        label: Text(
+                            '正确 +${_scoreRules[_selectedDifficulty]!["correct"]!.toStringAsFixed(0)}'),
+                        style: FilledButton.styleFrom(
+                            backgroundColor: Colors.green),
                       ),
                       const SizedBox(width: 12),
                       FilledButton.icon(
                         onPressed: () => _judgeAnswer(false),
                         icon: const Icon(Icons.close, size: 18),
-                        label: Text('错误 ${_scoreRules[_selectedDifficulty]!["wrong"]!.toStringAsFixed(0)}'),
-                        style: FilledButton.styleFrom(backgroundColor: Colors.red[400]),
+                        label: Text(
+                            '错误 ${_scoreRules[_selectedDifficulty]!["wrong"]!.toStringAsFixed(0)}'),
+                        style: FilledButton.styleFrom(
+                            backgroundColor: Colors.red[400]),
                       ),
                       const SizedBox(width: 12),
                       OutlinedButton(
@@ -458,9 +499,12 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                     children: [
                       FilledButton.icon(
                         onPressed: _isRolling ? null : _startRoll,
-                        icon: Icon(_isRolling ? Icons.hourglass_top : Icons.shuffle, size: 18),
+                        icon: Icon(
+                            _isRolling ? Icons.hourglass_top : Icons.shuffle,
+                            size: 18),
                         label: Text(_isRolling ? '选择中...' : '开始点名'),
-                        style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+                        style: FilledButton.styleFrom(
+                            backgroundColor: Colors.orange),
                       ),
                       const SizedBox(width: 12),
                       Text(
@@ -495,18 +539,28 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                       leading: CircleAvatar(
                         radius: 14,
                         backgroundColor: i < 3
-                            ? [Colors.amber, Colors.grey[400]!, Colors.brown[300]!][i]
+                            ? [
+                                Colors.amber,
+                                Colors.grey[400]!,
+                                Colors.brown[300]!
+                              ][i]
                             : Colors.grey[200],
-                        child: Text('${i + 1}', style: TextStyle(
-                          fontSize: 12, fontWeight: FontWeight.bold,
-                          color: i < 3 ? Colors.white : Colors.black54)),
+                        child: Text('${i + 1}',
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: i < 3 ? Colors.white : Colors.black54)),
                       ),
-                      title: Text(s['user_name'] as String? ?? '', style: const TextStyle(fontSize: 13)),
-                      subtitle: Text('$calls 次点名, $correct 次正确', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                      title: Text(s['user_name'] as String? ?? '',
+                          style: const TextStyle(fontSize: 13)),
+                      subtitle: Text('$calls 次点名, $correct 次正确',
+                          style:
+                              TextStyle(fontSize: 11, color: Colors.grey[500])),
                       trailing: Text(
                         '${score >= 0 ? "+" : ""}${score.toStringAsFixed(1)}',
                         style: TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
                           color: score >= 0 ? Colors.green : Colors.red,
                         ),
                       ),
@@ -549,7 +603,8 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text('$label $count人',
-        style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w500)),
+          style: TextStyle(
+              fontSize: 11, color: color, fontWeight: FontWeight.w500)),
     );
   }
 
@@ -578,8 +633,11 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                   child: Icon(icon, color: color, size: 20),
                 ),
                 const SizedBox(width: 10),
-                Text(title, style: TextStyle(fontWeight: FontWeight.bold,
-                  fontSize: 15, color: color)),
+                Text(title,
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: color)),
               ],
             ),
             const SizedBox(height: 14),
@@ -602,55 +660,65 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
             hintText: '输入投票问题...',
             hintStyle: const TextStyle(fontSize: 13),
             isDense: true,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
           ),
           style: const TextStyle(fontSize: 13),
         ),
         const SizedBox(height: 10),
-        ...List.generate(_pollOptions.length, (i) => Padding(
-          padding: const EdgeInsets.only(bottom: 6),
-          child: Row(
-            children: [
-              Container(
-                width: 24, height: 24,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Text('${String.fromCharCode(65 + i)}',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold,
-                    color: Colors.blue)),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: '选项${String.fromCharCode(65 + i)}',
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+        ...List.generate(
+            _pollOptions.length,
+            (i) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 24,
+                        height: 24,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text('${String.fromCharCode(65 + i)}',
+                            style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue)),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          decoration: InputDecoration(
+                            hintText: '选项${String.fromCharCode(65 + i)}',
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 8),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(6)),
+                          ),
+                          style: const TextStyle(fontSize: 12),
+                          controller:
+                              TextEditingController(text: _pollOptions[i]),
+                          onChanged: (v) => _pollOptions[i] = v,
+                        ),
+                      ),
+                      if (_pollOptions.length > 2)
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 16),
+                          onPressed: () =>
+                              setState(() => _pollOptions.removeAt(i)),
+                        ),
+                    ],
                   ),
-                  style: const TextStyle(fontSize: 12),
-                  controller: TextEditingController(text: _pollOptions[i]),
-                  onChanged: (v) => _pollOptions[i] = v,
-                ),
-              ),
-              if (_pollOptions.length > 2)
-                IconButton(
-                  icon: const Icon(Icons.close, size: 16),
-                  onPressed: () => setState(() => _pollOptions.removeAt(i)),
-                ),
-            ],
-          ),
-        )),
+                )),
         Row(
           children: [
             if (_pollOptions.length < 6)
               TextButton.icon(
-                onPressed: () => setState(() =>
-                    _pollOptions.add('选项${String.fromCharCode(65 + _pollOptions.length)}')),
+                onPressed: () => setState(() => _pollOptions
+                    .add('选项${String.fromCharCode(65 + _pollOptions.length)}')),
                 icon: const Icon(Icons.add, size: 16),
                 label: const Text('添加选项', style: TextStyle(fontSize: 12)),
               ),
@@ -674,8 +742,8 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(_pollQuestion ?? '', style: const TextStyle(
-          fontWeight: FontWeight.bold, fontSize: 14)),
+        Text(_pollQuestion ?? '',
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
         const SizedBox(height: 12),
         ..._pollResults.entries.map((e) {
           final pct = totalVotes > 0 ? e.value / totalVotes : 0.0;
@@ -685,7 +753,8 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
               onTap: _pollActive ? () => _vote(e.key) : null,
               borderRadius: BorderRadius.circular(8),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
@@ -703,9 +772,10 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                             child: LinearProgressIndicator(
                               value: pct,
                               minHeight: 6,
-                              backgroundColor: Colors.grey.withValues(alpha: 0.1),
+                              backgroundColor:
+                                  Colors.grey.withValues(alpha: 0.1),
                               valueColor: AlwaysStoppedAnimation(
-                                Colors.blue.withValues(alpha: 0.7)),
+                                  Colors.blue.withValues(alpha: 0.7)),
                             ),
                           ),
                         ],
@@ -713,8 +783,10 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                     ),
                     const SizedBox(width: 12),
                     Text('${e.value}票 (${(pct * 100).toStringAsFixed(0)}%)',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold,
-                        color: Colors.blue[700])),
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue[700])),
                   ],
                 ),
               ),
@@ -725,7 +797,7 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
         Row(
           children: [
             Text('总票数：$totalVotes',
-              style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                style: TextStyle(fontSize: 12, color: Colors.grey[600])),
             const Spacer(),
             if (_pollActive)
               FilledButton.tonal(
@@ -754,11 +826,14 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
             spacing: 8,
             runSpacing: 8,
             alignment: WrapAlignment.center,
-            children: [1, 2, 3, 5, 10, 15, 20, 30].map((m) => ChoiceChip(
-              label: Text('${m}分钟', style: const TextStyle(fontSize: 12)),
-              selected: _timerSeconds == m * 60,
-              onSelected: (v) => setState(() => _timerSeconds = m * 60),
-            )).toList(),
+            children: [1, 2, 3, 5, 10, 15, 20, 30]
+                .map((m) => ChoiceChip(
+                      label:
+                          Text('${m}分钟', style: const TextStyle(fontSize: 12)),
+                      selected: _timerSeconds == m * 60,
+                      onSelected: (v) => setState(() => _timerSeconds = m * 60),
+                    ))
+                .toList(),
           ),
           const SizedBox(height: 8),
           // 自定义时间输入 + 语音输入
@@ -775,12 +850,16 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                     style: const TextStyle(fontSize: 14),
                     decoration: InputDecoration(
                       hintText: '自定义分钟',
-                      hintStyle: TextStyle(color: Colors.grey[400], fontSize: 12),
+                      hintStyle:
+                          TextStyle(color: Colors.grey[400], fontSize: 12),
                       isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 8),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8)),
                       suffixIcon: IconButton(
-                        icon: Icon(Icons.graphic_eq, size: 18, color: Colors.grey[600]),
+                        icon: Icon(Icons.graphic_eq,
+                            size: 18, color: Colors.grey[600]),
                         tooltip: '语音输入',
                         onPressed: () async {
                           final text = await showDialog<String>(
@@ -799,7 +878,8 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                 ),
                 const SizedBox(width: 8),
                 FilledButton.tonal(
-                  onPressed: () => _applyCustomTimer(_customTimerController.text),
+                  onPressed: () =>
+                      _applyCustomTimer(_customTimerController.text),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     minimumSize: Size.zero,
@@ -925,7 +1005,10 @@ class _VoiceTimerDialogState extends State<_VoiceTimerDialog> {
     };
     _voice.onError = (e) {
       if (!mounted) return;
-      setState(() { _error = e; _listening = false; });
+      setState(() {
+        _error = e;
+        _listening = false;
+      });
     };
     _voice.onStateChanged = (listening) {
       if (!mounted) return;
@@ -949,7 +1032,10 @@ class _VoiceTimerDialogState extends State<_VoiceTimerDialog> {
       if (mounted) setState(() => _error = '语音未配置（讯飞密钥）或被禁用，请手动输入');
       return;
     }
-    setState(() { _error = null; _heard = ''; });
+    setState(() {
+      _error = null;
+      _heard = '';
+    });
     await _voice.startListening();
   }
 
@@ -958,8 +1044,18 @@ class _VoiceTimerDialogState extends State<_VoiceTimerDialog> {
     final digit = RegExp(r'(\d+)').firstMatch(text);
     if (digit != null) return int.tryParse(digit.group(1)!);
     const cn = {
-      '零': 0, '一': 1, '两': 2, '二': 2, '三': 3, '四': 4, '五': 5,
-      '六': 6, '七': 7, '八': 8, '九': 9, '十': 10,
+      '零': 0,
+      '一': 1,
+      '两': 2,
+      '二': 2,
+      '三': 3,
+      '四': 4,
+      '五': 5,
+      '六': 6,
+      '七': 7,
+      '八': 8,
+      '九': 9,
+      '十': 10,
     };
     // 处理"十五""二十""三十"等
     if (text.contains('十')) {
@@ -1001,7 +1097,8 @@ class _VoiceTimerDialogState extends State<_VoiceTimerDialog> {
           ),
           const SizedBox(height: 8),
           if (_listening)
-            const Text('正在聆听…', style: TextStyle(fontSize: 12, color: Colors.red)),
+            const Text('正在聆听…',
+                style: TextStyle(fontSize: 12, color: Colors.red)),
           if (_heard.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 4),

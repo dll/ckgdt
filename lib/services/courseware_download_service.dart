@@ -20,7 +20,7 @@ class CoursewareDownloadService {
   final GiteeService _gitee = GiteeService();
 
   /// Gitee 仓库信息 — 课件数据独立仓库
-  static const String _owner = 'osgisOne';
+  static const String _owner = 'chzcldl';
   static const String _repo = 'mad-data';
   static const String _branch = 'master';
 

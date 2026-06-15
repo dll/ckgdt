@@ -1,4 +1,4 @@
-﻿import 'dart:math' as math;
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../services/auth_service.dart';
 import '../../widgets/agent_entry_button.dart';
@@ -12,6 +12,7 @@ import '../learning/video_page.dart';
 import '../materials/resource_viewer_page.dart';
 
 import '../../../core/constants/app_theme.dart';
+
 /// 学习路径页面 — 替代原"学习计划"
 /// 列表模式: 显示所有路径卡片
 /// 详情模式: 上半部路径图形，下半部节点属性列表
@@ -113,7 +114,9 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
         title: const Text('确认删除'),
         content: Text('确定删除路径「${path.title}」？'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('取消')),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('删除', style: TextStyle(color: Colors.red)),
@@ -180,8 +183,6 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-
     return Scaffold(
       appBar: BackButtonBar(
         title: _selectedPath != null ? '路径详情' : '学习路径',
@@ -253,8 +254,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
 
   Widget _buildSummaryCard() {
     final total = _paths.length;
-    final totalNodes =
-        _paths.fold<int>(0, (sum, p) => sum + p.nodeIds.length);
+    final totalNodes = _paths.fold<int>(0, (sum, p) => sum + p.nodeIds.length);
     final avgProgress = _paths.isEmpty
         ? 0.0
         : _paths.map((p) => p.progress).reduce((a, b) => a + b) / total;
@@ -375,7 +375,8 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                     itemBuilder: (_) => [
                       const PopupMenuItem(
                           value: 'delete',
-                          child: Text('删除', style: TextStyle(color: Colors.red))),
+                          child:
+                              Text('删除', style: TextStyle(color: Colors.red))),
                     ],
                   ),
                 ],
@@ -423,7 +424,8 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.05),
-            border: Border(bottom: BorderSide(color: color.withValues(alpha: 0.15))),
+            border: Border(
+                bottom: BorderSide(color: color.withValues(alpha: 0.15))),
           ),
           child: Row(
             children: [
@@ -578,22 +580,32 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                           spacing: 8,
                           runSpacing: 4,
                           children: [
-                            _attrChip(Icons.category,
-                                node.isConcept ? _conceptTypeLabel(node.conceptType) : _nodeTypeLabel(node.nodeType), Colors.grey),
+                            _attrChip(
+                                Icons.category,
+                                node.isConcept
+                                    ? _conceptTypeLabel(node.conceptType)
+                                    : _nodeTypeLabel(node.nodeType),
+                                Colors.grey),
                             if (isFirst)
-                              _attrChip(Icons.play_arrow, '起点',
-                                  Colors.green),
-                            if (isLast)
-                              _attrChip(
-                                  Icons.flag, '终点', Colors.red),
+                              _attrChip(Icons.play_arrow, '起点', Colors.green),
+                            if (isLast) _attrChip(Icons.flag, '终点', Colors.red),
                             if (node.isConcept && node.importance != null)
                               _attrChip(
                                 Icons.star,
-                                node.importance == 'core' ? '核心' : node.importance == 'important' ? '重要' : '补充',
-                                node.importance == 'core' ? Colors.red : node.importance == 'important' ? Colors.orange : Colors.grey,
+                                node.importance == 'core'
+                                    ? '核心'
+                                    : node.importance == 'important'
+                                        ? '重要'
+                                        : '补充',
+                                node.importance == 'core'
+                                    ? Colors.red
+                                    : node.importance == 'important'
+                                        ? Colors.orange
+                                        : Colors.grey,
                               ),
                             if (node.chapter != null)
-                              _attrChip(Icons.book, '第${node.chapter}章', Colors.indigo),
+                              _attrChip(Icons.book, '第${node.chapter}章',
+                                  Colors.indigo),
                           ],
                         ),
                         // 内容摘要
@@ -712,7 +724,14 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
   void _showNodeInfo(_UnifiedNode node) {
     String? chapter;
     if (node.isConcept && node.chapter != null) {
-      const chapterNames = {1: '第一章', 2: '第二章', 3: '第三章', 4: '第四章', 5: '第五章', 6: '第六章'};
+      const chapterNames = {
+        1: '第一章',
+        2: '第二章',
+        3: '第三章',
+        4: '第四章',
+        5: '第五章',
+        6: '第六章'
+      };
       chapter = chapterNames[node.chapter];
     } else {
       chapter = _matchChapterByTitle(node.title, node.content);
@@ -760,13 +779,16 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
             ),
             const SizedBox(height: 6),
             // 节点属性信息
-            _infoRow('ID', node.isConcept ? '概念 ${node.id.substring(2)}' : node.id),
-            _infoRow('类型', node.isConcept ? _conceptTypeLabel(node.conceptType) : _nodeTypeLabel(node.nodeType)),
+            _infoRow(
+                'ID', node.isConcept ? '概念 ${node.id.substring(2)}' : node.id),
+            _infoRow(
+                '类型',
+                node.isConcept
+                    ? _conceptTypeLabel(node.conceptType)
+                    : _nodeTypeLabel(node.nodeType)),
             _infoRow('层级', 'Level ${node.level}'),
-            if (chapter != null)
-              _infoRow('关联章节', chapter),
-            if (node.keywords != null)
-              _infoRow('关键词', node.keywords!),
+            if (chapter != null) _infoRow('关联章节', chapter),
+            if (node.keywords != null) _infoRow('关键词', node.keywords!),
 
             if (node.content != null && node.content!.isNotEmpty) ...[
               const Divider(),
@@ -775,9 +797,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                 child: SingleChildScrollView(
                   child: Text(node.content!,
                       style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey[700],
-                          height: 1.5)),
+                          fontSize: 13, color: Colors.grey[700], height: 1.5)),
                 ),
               ),
             ],
@@ -938,9 +958,8 @@ class _PathGraphPainter extends CustomPainter {
       // 蛇形排列：偶数行左→右，奇数行右→左
       final actualCol = row.isOdd ? (itemsInRow - 1 - col) : col;
       final x = padding + colSpacing * (actualCol + 1);
-      final y = rows == 1
-          ? centerY
-          : padding + rowHeight * 0.5 + row * rowHeight;
+      final y =
+          rows == 1 ? centerY : padding + rowHeight * 0.5 + row * rowHeight;
       positions.add(Offset(x, y));
     }
 
@@ -1000,7 +1019,8 @@ class _PathGraphPainter extends CustomPainter {
       // 光晕
       if (isFirst || isLast) {
         final glowPaint = Paint()
-          ..color = (isFirst ? Colors.green : Colors.red).withValues(alpha: 0.15)
+          ..color =
+              (isFirst ? Colors.green : Colors.red).withValues(alpha: 0.15)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
         canvas.drawCircle(pos, radius + 6, glowPaint);
       }
@@ -1021,18 +1041,15 @@ class _PathGraphPainter extends CustomPainter {
         text: TextSpan(
           text: '${i + 1}',
           style: const TextStyle(
-              color: Colors.white,
-              fontSize: 9,
-              fontWeight: FontWeight.bold),
+              color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
       tp.paint(canvas, Offset(pos.dx - tp.width / 2, pos.dy - tp.height / 2));
 
       // 节点标题
-      final title = node.title.length > 6
-          ? '${node.title.substring(0, 6)}…'
-          : node.title;
+      final title =
+          node.title.length > 6 ? '${node.title.substring(0, 6)}…' : node.title;
       final titleTp = TextPainter(
         text: TextSpan(
           text: title,
@@ -1118,7 +1135,9 @@ class _UnifiedNode {
       id: 'c_${concept['id']}',
       title: concept['concept_name'] as String? ?? '未命名概念',
       content: concept['description'] as String?,
-      level: concept['importance'] == 'core' ? 0 : (concept['importance'] == 'important' ? 1 : 2),
+      level: concept['importance'] == 'core'
+          ? 0
+          : (concept['importance'] == 'important' ? 1 : 2),
       nodeType: cType,
       color: typeColors[cType] ?? '#667eea',
       chapter: concept['chapter'] as int?,
