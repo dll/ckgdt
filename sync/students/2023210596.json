@@ -3,8 +3,8 @@
   "user_id": "2023210596",
   "user_name": "胡文启",
   "role": "student",
-  "synced_at": "2026-06-15T17:17:17.735077",
-  "last_active": "2026-06-15T17:17:17.735077",
+  "synced_at": "2026-06-15T17:18:37.406548",
+  "last_active": "2026-06-15T17:18:37.406548",
   "quiz_results": [
     {
       "user_id": "2023210596",
@@ -169,6 +169,20 @@
       "score": null,
       "feedback": null,
       "created_at": "2026-06-15T17:04:51.979619",
+      "updated_at": null
+    },
+    {
+      "template_id": null,
+      "task_id": null,
+      "user_id": "2023210596",
+      "title": "第三周报告",
+      "content_json": "2023210596胡文启第三周报告.pdf",
+      "file_path": "C:\\过程报告\\2023210596胡文启第三周报告.pdf",
+      "status": "已提交",
+      "submit_time": "2026-06-15T17:18:25.210932",
+      "score": null,
+      "feedback": null,
+      "created_at": "2026-06-15T17:18:25.210932",
       "updated_at": null
     }
   ],
