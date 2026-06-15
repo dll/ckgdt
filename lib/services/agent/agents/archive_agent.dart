@@ -142,11 +142,149 @@ class ArchiveAgent extends BaseAgent {
       } else if (documentType == 'courseware') {
         final rows = await db.query('resource_files', limit: 100);
         context['resource_files'] = rows;
+      } else if (documentType == 'midterm_progress_check') {
+        context['syllabus_items'] = await _safeQuery(
+          db,
+          'syllabus_items',
+          limit: 50,
+          orderBy: 'chapter_number ASC',
+        );
+        context['teaching_progress'] = await _safeQuery(
+          db,
+          'teaching_progress',
+          limit: 80,
+          orderBy: 'chapter ASC, planned_date ASC',
+        );
+        final teachingDocs = await _dao.getDocuments(
+          period: 'beginning',
+          documentType: 'teaching_schedule',
+        );
+        if (teachingDocs.isNotEmpty) {
+          context['beginning_teaching_schedule'] =
+              teachingDocs.first.content ?? '';
+        }
+      } else if (documentType == 'midterm_homework_review') {
+        context['lesson_homework'] = await _safeQuery(
+          db,
+          'lesson_plans',
+          columns: ['chapter', 'title', 'homework', 'status'],
+          where: "homework IS NOT NULL AND TRIM(homework) <> ''",
+          limit: 100,
+          orderBy: 'chapter ASC, id ASC',
+        );
+        context['teaching_progress'] = await _safeQuery(
+          db,
+          'teaching_progress',
+          columns: [
+            'chapter',
+            'topic',
+            'planned_date',
+            'actual_date',
+            'status',
+            'homework_completion',
+          ],
+          limit: 80,
+          orderBy: 'chapter ASC, planned_date ASC',
+        );
+        context['lab_submission_stats'] = await _safeRawQuery(db, '''
+SELECT
+  COUNT(DISTINCT t.id) AS lab_task_count,
+  COUNT(s.id) AS submission_count,
+  SUM(CASE WHEN s.score IS NOT NULL THEN 1 ELSE 0 END) AS reviewed_count
+FROM lab_tasks t
+LEFT JOIN lab_submissions s ON s.task_id = t.id
+''');
+        context['quiz_stats'] = await _safeRawQuery(db, '''
+SELECT
+  COUNT(*) AS quiz_count,
+  ROUND(AVG(score), 1) AS average_score,
+  SUM(num_total) AS total_questions
+FROM quiz_results
+''');
+        context['wrong_answer_stats'] = await _safeRawQuery(db, '''
+SELECT
+  COUNT(*) AS wrong_answer_count,
+  COUNT(DISTINCT user_id) AS affected_students
+FROM wrong_answers
+''');
+      } else if (documentType == 'midterm_exam') {
+        context['syllabus_items'] = await _safeQuery(
+          db,
+          'syllabus_items',
+          limit: 50,
+          orderBy: 'chapter_number ASC',
+        );
+        context['quiz_stats'] = await _safeRawQuery(db, '''
+SELECT
+  COUNT(*) AS quiz_count,
+  ROUND(AVG(score), 1) AS average_score,
+  SUM(num_correct) AS total_correct,
+  SUM(num_total) AS total_questions
+FROM quiz_results
+''');
+        context['achievement_batches'] = await _safeQuery(
+          db,
+          'achievement_batches',
+          columns: [
+            'batch_name',
+            'course_name',
+            'class_name',
+            'semester',
+            'assessment_weights_json',
+            'status',
+          ],
+          limit: 5,
+          orderBy: 'created_at DESC',
+        );
+        final assessmentDocs = await _dao.getDocuments(
+          period: 'beginning',
+          documentType: 'assessment_plan',
+        );
+        if (assessmentDocs.isNotEmpty) {
+          context['beginning_assessment_plan'] =
+              assessmentDocs.first.content ?? '';
+        }
       }
     } catch (e, st) {
       swallowDebug(e, tag: 'ArchiveAgent._collectContext', stack: st);
     }
     return context;
+  }
+
+  Future<List<Map<String, dynamic>>> _safeQuery(
+    Database db,
+    String table, {
+    List<String>? columns,
+    String? where,
+    int? limit,
+    String? orderBy,
+  }) async {
+    try {
+      final rows = await db.query(
+        table,
+        columns: columns,
+        where: where,
+        limit: limit,
+        orderBy: orderBy,
+      );
+      return rows.map((row) => Map<String, dynamic>.from(row)).toList();
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ArchiveAgent._safeQuery.$table', stack: st);
+      return const [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _safeRawQuery(
+    Database db,
+    String sql,
+  ) async {
+    try {
+      final rows = await db.rawQuery(sql);
+      return rows.map((row) => Map<String, dynamic>.from(row)).toList();
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ArchiveAgent._safeRawQuery', stack: st);
+      return const [];
+    }
   }
 
   Future<String> reviewDocument(ArchiveDocument doc) async {
@@ -454,6 +592,84 @@ ${doc.content ?? '（文档无内容）'}''';
 ### 课件清单
 | 章节 | 资源名称 | 类型 | 说明 |
 |------|----------|------|------|''',
+      'midterm_progress_check': '''
+=== 期中课程进度执行检查格式要求 ===
+请依据教学进度表、teaching_progress 表和期初归档材料，生成可审核、可打印、可归档的期中进度检查材料。
+不得把期初教学进度表原样复制成检查结果，必须形成"计划-执行-偏差-整改"结构。
+
+格式：
+
+# 课程进度执行检查
+
+**课程名称：** $courseName
+**教师：** $teacherName
+**班级：** $classInfo
+**检查阶段：** 期中
+
+## 一、检查依据
+列出期初教学进度表、实际授课记录、课表、实验安排等依据。
+
+## 二、进度执行情况
+| 周次 | 计划教学内容 | 实际执行情况 | 理论/实验学时 | 偏差说明 | 整改安排 |
+|------|--------------|--------------|----------------|----------|----------|
+
+## 三、问题与改进
+按进度滞后、调课补课、实验安排、学时偏差分别说明。
+
+## 四、检查结论
+给出"一致 / 基本一致需说明 / 不一致需整改"的明确结论。''',
+      'midterm_homework_review': '''
+=== 期中作业与批阅次数统计格式要求 ===
+请依据 lesson_plans.homework、teaching_progress.homework_completion、quiz_results、lab_submissions 等数据生成统计材料。
+如果系统没有真实次数，不要编造数字，应标注"待教师补录"并保留可填写表格。
+
+格式：
+
+# 作业与批阅次数统计
+
+**课程名称：** $courseName
+**教师：** $teacherName
+**班级：** $classInfo
+**统计阶段：** 期中前
+
+## 一、统计口径
+说明作业、阶段测验、实验报告、项目阶段材料的统计范围。
+
+## 二、作业与批阅统计表
+| 序号 | 作业/测验/实验名称 | 布置周次 | 应提交人数 | 实交人数 | 应批阅份数 | 已批阅份数 | 反馈方式 | 备注 |
+|------|--------------------|----------|------------|----------|------------|------------|----------|------|
+
+## 三、批阅质量检查
+说明及时性、覆盖率、反馈质量和未批/迟批情况。
+
+## 四、改进措施
+给出后续补批、反馈改进和教学调整安排。''',
+      'midterm_exam': '''
+=== 期中考试/阶段考核材料格式要求 ===
+课程可能没有独立期中考试。若没有，请生成"阶段考核材料"而不是空白期中试卷，说明采用阶段测验、实验检查、项目检查或作业检查替代。
+必须覆盖：考核内容、课程目标对应、评分标准、结果记录、质量分析、后续改进。
+
+格式：
+
+# 期中考试（阶段考核）材料
+
+**课程名称：** $courseName
+**教师：** $teacherName
+**班级：** $classInfo
+**考核阶段：** 期中
+
+## 一、考核方式说明
+说明是否有正式期中考试；无正式考试时说明替代阶段考核方式。
+
+## 二、考核内容与目标对应
+| 考核内容 | 覆盖章节 | 对应课程目标 | 考核方式 | 分值/权重 |
+|----------|----------|--------------|----------|-----------|
+
+## 三、评分标准
+列明评分点或等级标准。
+
+## 四、结果记录与质量分析
+说明成绩分布、共性薄弱点和后续教学改进。''',
     };
 
     if (typePrompts.containsKey(documentType)) {

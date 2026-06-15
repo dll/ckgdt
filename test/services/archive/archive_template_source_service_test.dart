@@ -141,4 +141,43 @@ void main() {
       expect(doc!.content.trim(), isNotEmpty);
     }
   });
+
+  test('midterm progress template matches arbitrary numbering', () async {
+    final midtermDir = Directory(p.join(temp.path, '期中', '模板'))
+      ..createSync(recursive: true);
+    final source = File(p.join(midtermDir.path, '22-软件工程课程进度.md'))
+      ..writeAsStringSync('# 教学进度表\n\n周次：第1-8周\n\n计划学时：32学时');
+
+    final doc = await ArchiveTemplateSourceService.parseBestSource(
+      periodKey: 'midterm',
+      documentType: 'midterm_progress_check',
+      label: '课程进度执行检查',
+      now: DateTime(2026, 6, 15),
+    );
+
+    expect(doc, isNotNull);
+    expect(doc!.sourcePath, source.path);
+    expect(doc.content, contains('课程进度执行检查表'));
+    expect(doc.content, contains('2026-06-15'));
+  });
+
+  test('midterm homework review warns when source is actually progress table',
+      () async {
+    final midtermDir = Directory(p.join(temp.path, '期中', '模板'))
+      ..createSync(recursive: true);
+    final source = File(p.join(midtermDir.path, '15-作业次数和批阅次数.md'))
+      ..writeAsStringSync('# 教学进度表\n\n周次\n\n教学内容摘要\n\n第1周 移动应用开发技术体系');
+
+    final doc = await ArchiveTemplateSourceService.parseBestSource(
+      periodKey: 'midterm',
+      documentType: 'midterm_homework_review',
+      label: '作业与批阅次数统计',
+      now: DateTime(2026, 6, 15),
+    );
+
+    expect(doc, isNotNull);
+    expect(doc!.sourcePath, source.path);
+    expect(doc.content, contains('作业与批阅次数统计表'));
+    expect(doc.content, contains('源文件疑似为教学进度表'));
+  });
 }
