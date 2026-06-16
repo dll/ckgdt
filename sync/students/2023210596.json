@@ -3,8 +3,8 @@
   "user_id": "2023210596",
   "user_name": "胡文启",
   "role": "student",
-  "synced_at": "2026-06-16T21:05:34.226232",
-  "last_active": "2026-06-16T21:05:34.226239",
+  "synced_at": "2026-06-16T21:12:11.497858",
+  "last_active": "2026-06-16T21:12:11.497860",
   "quiz_results": [
     {
       "user_id": "2023210596",
@@ -258,7 +258,41 @@
       "updated_at": null
     }
   ],
-  "student_works": [],
+  "student_works": [
+    {
+      "course_id": "mad",
+      "title": "智慧社区生活服务平台开发与整合",
+      "description": "【Siri快捷指令】开发iOS快捷指令集成，用户可通过Siri语音直接执行\"打开门禁\"\"查看快递\"\"报修申请\"等常用操作。【Widget桌面组件】开发iOS桌面小组件，在锁屏和主屏幕展示社区公告、快递状态和物业费到期提醒等信息。【AI语音识别】集成AI大模型的语音识别能力，支持用户通过语音描述报修问题，自动转换为工单并分类提交。",
+      "tech_stack": "Swift+IOS SDK",
+      "work_type": "综合项目",
+      "group_name": "cg1-sclsdpi",
+      "leader_name": "胡文启",
+      "user_id": "2023210596",
+      "file_path": null,
+      "file_size": null,
+      "status": "待提交",
+      "submit_time": null,
+      "tags": "[\"Swift\",\"IOS\",\"SDK\"]",
+      "created_at": "2026-06-16T21:05:36.921188",
+      "updated_at": "2026-06-16T21:05:36.921216",
+      "related_node_ids": null,
+      "ai_suspicion": 0.0,
+      "teacher_confirmed": 0,
+      "project_id": null,
+      "group_id": null,
+      "video_url": null,
+      "thumbnail_url": null,
+      "video_duration": null,
+      "view_count": 0,
+      "like_count": 0,
+      "comment_count": 0,
+      "repo": "cg1-sclsdpi",
+      "class_group": "cg1",
+      "project": "智慧社区生活服务平台开发与整合",
+      "student_role": "iOS开发工程师",
+      "student_name": "胡文启"
+    }
+  ],
   "survey_responses": [],
   "checkin_records": [],
   "work_comments": [],
@@ -272,7 +306,7 @@
   "lab_tasks": [
     {
       "id": 1,
-      "course_id": null,
+      "course_id": "mad",
       "title": "实验一 开发环境搭建",
       "chapter": "第1章",
       "description": "搭建 Android Studio、Flutter、微信开发者工具、DevEco Studio、HBuilderX（Uniapp）、Visual Studio（MAUI）开发环境，各成员根据分工完成对应平台环境配置并成功运行 Hello World 项目。\n\n【实验学时】2学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标1 | 【分组人数】6人/组",
@@ -289,7 +323,7 @@
     },
     {
       "id": 2,
-      "course_id": null,
+      "course_id": "mad",
       "title": "实验二 原生应用开发",
       "chapter": "第2章",
       "description": "Android方向：使用 Kotlin 实现\"智慧校园\"登录页面（EditText输入验证、Activity跳转与数据传递）。iOS方向（演示/模拟器）：使用 SwiftUI 实现登录页面，理解 ViewController 生命周期。组内每人选择不同平台或技术方案实现同一功能，完成后进行组内技术对比分享。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标1 | 【分组人数】6人/组",
@@ -306,7 +340,7 @@
     },
     {
       "id": 3,
-      "course_id": null,
+      "course_id": "mad",
       "title": "实验三 跨平台应用开发",
       "chapter": "第3章",
       "description": "开发\"智慧校园\"业务数据列表页（RESTful API 网络数据请求 + JSON 解析 + 下拉刷新），组内成员分别使用 Flutter（Dart）、React Native（JSX）、Uniapp（Vue）、MAUI（C#）等不同框架实现同一功能需求。扩展案例：集成设备传感器（如GPS定位、加速度计），体验移动硬件能力调用。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标2 | 【分组人数】6人/组",
@@ -323,7 +357,7 @@
     },
     {
       "id": 4,
-      "course_id": null,
+      "course_id": "mad",
       "title": "实验四 微信小程序开发",
       "chapter": "第4章",
       "description": "借助 AI 编程工具辅助开发\"智慧校园通知\"小程序（列表 + 详情页路由 + 本地存储），体验 AI 工具在代码生成与调试中的作用。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标2 | 【分组人数】6人/组",
@@ -340,7 +374,7 @@
     },
     {
       "id": 5,
-      "course_id": null,
+      "course_id": "mad",
       "title": "实验五 鸿蒙多端应用开发",
       "chapter": "第5章",
       "description": "使用 DevEco Studio 开发\"智慧天气\"应用，实现手机/平板界面自适应布局；通过模拟器演示分布式数据同步原理。扩展案例：调用设备传感器（如光线传感器、陀螺仪）实现简单的物联网数据采集与展示场景。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标3 | 【分组人数】6人/组",
@@ -357,7 +391,7 @@
     },
     {
       "id": 6,
-      "course_id": null,
+      "course_id": "mad",
       "title": "实验六 跨平台综合项目实战",
       "chapter": "第6章",
       "description": "团队开发\"智慧健康\"等业务应用（建议选题涉及传感器或硬件交互场景），每人负责一个技术栈（Android/Flutter/React Native/Uniapp/MAUI/微信小程序），使用 Git 进行版本控制与协作，借助 AI 编程工具辅助代码生成与调试。每组6人，实验中每人选择一个技术栈独立完成对应实验任务，组内进行技术分享与对比分析。\n\n【实验学时】6学时 | 【实验类型】综合型 | 【实验要求】必做 | 【对应课程目标】目标1-4 | 【分组人数】6人/组",
