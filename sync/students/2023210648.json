@@ -3,8 +3,8 @@
   "user_id": "2023210648",
   "user_name": "张政",
   "role": "student",
-  "synced_at": "2026-06-16T20:43:14.893333",
-  "last_active": "2026-06-16T20:43:14.893350",
+  "synced_at": "2026-06-16T21:33:20.168752",
+  "last_active": "2026-06-16T21:33:20.168762",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
@@ -48,7 +48,14 @@
       "student_name": "张政"
     }
   ],
-  "survey_responses": [],
+  "survey_responses": [
+    {
+      "survey_id": 1,
+      "user_id": "2023210648",
+      "answers_json": "{\"1\":\"非常满意\",\"2\":[\"Flutter开发\",\"Android原生\",\"小程序开发\",\"综合实践\"],\"3\":\"5\",\"4\":\"无\"}",
+      "submitted_at": "2026-06-16T20:43:28.940394"
+    }
+  ],
   "checkin_records": [],
   "work_comments": [],
   "work_likes": [],
