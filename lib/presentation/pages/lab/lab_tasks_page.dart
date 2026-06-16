@@ -1,7 +1,8 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
@@ -10,10 +11,13 @@ import '../../../data/local/grading_result_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../services/sync_service.dart';
+import '../../../services/auto_grading_service.dart';
+import '../../../services/settings_service.dart';
 import '../../../services/agent/agents/grading_agent.dart';
 import '../../../services/gitee_service.dart';
 import '../../../services/course_resource_service.dart';
 import '../../../services/pdf_text_service.dart';
+import '../../../services/lab_report_validation_service.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../services/score_export_service.dart';
 import '../../widgets/agent_entry_button.dart';
@@ -46,21 +50,69 @@ class LabTasksPage extends StatefulWidget {
 
 /// 尝试从 AI 批阅结果中解析 JSON（顶层函数，多处复用）
 Map<String, dynamic>? tryParseGradingJson(String text) {
-  try {
-    final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(text);
-    if (jsonMatch == null) return null;
-    final jsonStr = jsonMatch.group(0)!;
-    final map = jsonDecode(jsonStr) as Map<String, dynamic>;
-    // 兼容三种批阅类型的 JSON key：lab 用 score / feedback，assessment 和 work 用 total_score / scores / feedback
-    if (map.containsKey('score') || map.containsKey('total_score') ||
-        map.containsKey('feedback') || map.containsKey('scores')) {
-      return map;
-    }
-    return null;
-  } catch (e) {
-    swallow(e, tag: 'tryParseGradingJson');
-    return null;
+  final candidates = <String>[];
+  final trimmed = text.trim();
+  candidates.add(trimmed);
+  final fenced =
+      RegExp(r'```(?:json)?\s*([\s\S]*?)\s*```', caseSensitive: false)
+          .firstMatch(trimmed);
+  if (fenced != null) {
+    candidates.add(fenced.group(1)!.trim());
   }
+  candidates.addAll(_balancedJsonObjects(trimmed));
+
+  for (final candidate in candidates) {
+    try {
+      final decoded = jsonDecode(candidate);
+      if (decoded is! Map<String, dynamic>) continue;
+      if (decoded.containsKey('score') ||
+          decoded.containsKey('total_score') ||
+          decoded.containsKey('feedback') ||
+          decoded.containsKey('summary') ||
+          decoded.containsKey('scores') ||
+          decoded.containsKey('dimensions')) {
+        return decoded;
+      }
+    } catch (e) {
+      swallow(e, tag: 'tryParseGradingJson.candidate');
+    }
+  }
+  return null;
+}
+
+List<String> _balancedJsonObjects(String text) {
+  final objects = <String>[];
+  var start = -1;
+  var depth = 0;
+  var inString = false;
+  var escaping = false;
+  for (var i = 0; i < text.length; i++) {
+    final ch = text[i];
+    if (escaping) {
+      escaping = false;
+      continue;
+    }
+    if (ch == '\\') {
+      escaping = inString;
+      continue;
+    }
+    if (ch == '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (ch == '{') {
+      if (depth == 0) start = i;
+      depth++;
+    } else if (ch == '}' && depth > 0) {
+      depth--;
+      if (depth == 0 && start >= 0) {
+        objects.add(text.substring(start, i + 1));
+        start = -1;
+      }
+    }
+  }
+  return objects;
 }
 
 /// 将 AI 批阅的 JSON 结果转为人类可读的反馈文本（顶层函数，多处复用）
@@ -79,7 +131,8 @@ String formatGradingFeedback(Map<String, dynamic> parsed) {
     for (final entry in dims.entries) {
       final d = entry.value;
       if (d is Map<String, dynamic>) {
-        sb.writeln('  ${entry.key}: ${d['score'] ?? ''}/${d['max'] ?? ''} — ${d['comment'] ?? ''}');
+        sb.writeln(
+            '  ${entry.key}: ${d['score'] ?? ''}/${d['max'] ?? ''} — ${d['comment'] ?? ''}');
       }
     }
     sb.writeln();
@@ -117,7 +170,7 @@ String formatGradingFeedback(Map<String, dynamic> parsed) {
 ///
 /// 返回 (content, hasBody)：
 /// - hasBody=false 表示仍未拿到正文，UI 应提示教师 "PDF 同步中或损坏，需手动批改"
-String? _gradingContentBodyMarker = '--- 报告正文（自动提取）---';
+String? _gradingContentBodyMarker = LabReportValidationService.bodyMarker;
 
 Future<({String content, bool hasBody})> prepareGradingContent({
   required String rawContent,
@@ -135,9 +188,7 @@ Future<({String content, bool hasBody})> prepareGradingContent({
     final extracted = await PdfTextService.extractFromFile(resolved);
     if (extracted != null && extracted.isNotEmpty) {
       final buf = StringBuffer()
-        ..writeln(rawContent.isEmpty
-            ? 'PDF实验报告：$fileNames'
-            : rawContent.trim())
+        ..writeln(rawContent.isEmpty ? 'PDF实验报告：$fileNames' : rawContent.trim())
         ..writeln()
         ..writeln(_gradingContentBodyMarker)
         ..writeln(extracted);
@@ -272,7 +323,8 @@ Future<void> previewOrPromptSync(
                   final r = await SyncService().downloadOwnData(userId);
                   messenger.hideCurrentSnackBar();
                   messenger.showSnackBar(SnackBar(
-                    content: Text(r.success ? '同步完成：${r.message}' : '同步失败：${r.message}'),
+                    content: Text(
+                        r.success ? '同步完成：${r.message}' : '同步失败：${r.message}'),
                     backgroundColor: r.success ? null : Colors.red,
                   ));
                   if (r.success) onSyncFinished?.call();
@@ -435,24 +487,33 @@ class _LabTasksPageState extends State<LabTasksPage>
                   isScrollable: true,
                   labelColor: primary,
                   unselectedLabelColor: Colors.grey,
-                  labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  labelStyle: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w600),
                   indicatorColor: primary,
                   tabs: [
-                    const Tab(icon: Icon(Icons.science, size: 20), text: '任务列表'),
+                    const Tab(
+                        icon: Icon(Icons.science, size: 20), text: '任务列表'),
                     Tab(
                       icon: const Icon(Icons.assignment_turned_in, size: 20),
                       text: _isTeacherOrAdmin ? '提交管理' : '我的提交',
                     ),
-                    const Tab(icon: Icon(Icons.description, size: 20), text: '实验报告'),
-                    const Tab(icon: Icon(Icons.menu_book, size: 20), text: '实验材料'),
+                    const Tab(
+                        icon: Icon(Icons.description, size: 20), text: '实验报告'),
+                    const Tab(
+                        icon: Icon(Icons.menu_book, size: 20), text: '实验材料'),
                     if (!_isTeacherOrAdmin)
-                      const Tab(icon: Icon(Icons.analytics, size: 20), text: '仓库报表'),
+                      const Tab(
+                          icon: Icon(Icons.analytics, size: 20), text: '仓库报表'),
                     if (_isTeacherOrAdmin)
-                      const Tab(icon: Icon(Icons.settings, size: 20), text: '任务管理'),
+                      const Tab(
+                          icon: Icon(Icons.settings, size: 20), text: '任务管理'),
                     if (_isTeacherOrAdmin)
-                      const Tab(icon: Icon(Icons.auto_awesome, size: 20), text: 'AI批阅'),
+                      const Tab(
+                          icon: Icon(Icons.auto_awesome, size: 20),
+                          text: 'AI批阅'),
                     if (_isTeacherOrAdmin)
-                      const Tab(icon: Icon(Icons.analytics, size: 20), text: '仓库报表'),
+                      const Tab(
+                          icon: Icon(Icons.analytics, size: 20), text: '仓库报表'),
                   ],
                 ),
               ),
@@ -490,4 +551,3 @@ class _LabTasksPageState extends State<LabTasksPage>
 // ══════════════════════════════════════════════════════════════════════════════
 // Tab 1: 任务列表
 // ══════════════════════════════════════════════════════════════════════════════
-

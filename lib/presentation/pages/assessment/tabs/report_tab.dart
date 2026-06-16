@@ -1,4 +1,4 @@
-﻿part of '../assessment_page.dart';
+part of '../assessment_page.dart';
 
 class _AssessmentReportTab extends StatefulWidget {
   final AuthService authService;
@@ -126,7 +126,8 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
             controller: _subTabController,
             labelColor: indigo[700],
             unselectedLabelColor: Colors.grey,
-            labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            labelStyle:
+                const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             unselectedLabelStyle: const TextStyle(fontSize: 11),
             dividerColor: Colors.transparent,
             indicator: BoxDecoration(
@@ -263,7 +264,8 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
       children: [
         // 总览卡片
         Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
@@ -292,7 +294,8 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                 const SizedBox(height: 8),
                 Text(
                   '15天完成项目开发与考核。每周提交过程性报告，记录进展。四份过程报告整合为最终考核大作业的支撑材料。',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600], height: 1.5),
+                  style: TextStyle(
+                      fontSize: 12, color: Colors.grey[600], height: 1.5),
                 ),
               ],
             ),
@@ -330,7 +333,8 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                   color: color,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(w['icon'] as IconData, size: 14, color: Colors.white),
+                child:
+                    Icon(w['icon'] as IconData, size: 14, color: Colors.white),
               ),
               if (!isLast)
                 Container(
@@ -346,7 +350,8 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
         Expanded(
           child: Card(
             margin: const EdgeInsets.only(bottom: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             elevation: 2,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(14),
@@ -362,7 +367,8 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                   title: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: color.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
@@ -383,67 +389,69 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                   ),
                   subtitle: Text('${w['period']}',
                       style: TextStyle(fontSize: 11, color: Colors.grey[400])),
-              children: [
-                // 主要任务
-                _reportSubHeader('主要任务', Icons.checklist, color),
-                const SizedBox(height: 4),
-                ...tasks.map((t) => Padding(
-                      padding: const EdgeInsets.only(bottom: 3),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(Icons.check_circle_outline,
-                              size: 14, color: color.withValues(alpha: 0.6)),
-                          const SizedBox(width: 6),
-                          Expanded(
-                              child: Text(t,
-                                  style: const TextStyle(fontSize: 12))),
-                        ],
+                  children: [
+                    // 主要任务
+                    _reportSubHeader('主要任务', Icons.checklist, color),
+                    const SizedBox(height: 4),
+                    ...tasks.map((t) => Padding(
+                          padding: const EdgeInsets.only(bottom: 3),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(Icons.check_circle_outline,
+                                  size: 14,
+                                  color: color.withValues(alpha: 0.6)),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                  child: Text(t,
+                                      style: const TextStyle(fontSize: 12))),
+                            ],
+                          ),
+                        )),
+                    const SizedBox(height: 10),
+                    // 交付物
+                    _reportSubHeader('交付物', Icons.inventory, Colors.orange),
+                    const SizedBox(height: 4),
+                    ...deliverables.map((d) => Padding(
+                          padding: const EdgeInsets.only(bottom: 3),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(Icons.description,
+                                  size: 14,
+                                  color: Colors.orange.withValues(alpha: 0.6)),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                  child: Text(d,
+                                      style: const TextStyle(fontSize: 12))),
+                            ],
+                          ),
+                        )),
+                    const SizedBox(height: 8),
+                    // 重点提示
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: color.withValues(alpha: 0.2)),
                       ),
-                    )),
-                const SizedBox(height: 10),
-                // 交付物
-                _reportSubHeader('交付物', Icons.inventory, Colors.orange),
-                const SizedBox(height: 4),
-                ...deliverables.map((d) => Padding(
-                      padding: const EdgeInsets.only(bottom: 3),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(Icons.description,
-                              size: 14, color: Colors.orange.withValues(alpha: 0.6)),
-                          const SizedBox(width: 6),
-                          Expanded(
-                              child: Text(d,
-                                  style: const TextStyle(fontSize: 12))),
-                        ],
-                      ),
-                    )),
-                const SizedBox(height: 8),
-                // 重点提示
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.06),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: color.withValues(alpha: 0.2)),
-                  ),
-                  child: Text(focus,
-                      style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: color)),
+                      child: Text(focus,
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: color)),
+                    ),
+                    const SizedBox(height: 10),
+                    // 上传/批阅 操作行
+                    _buildReportActions(
+                      reportType: '${w['week']}报告',
+                      color: color,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 10),
-                // 上传/批阅 操作行
-                _buildReportActions(
-                  reportType: '${w['week']}报告',
-                  color: color,
-                ),
-              ],
-            ),
-          ),
+              ),
             ),
           ),
         ),
@@ -476,9 +484,8 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
         .toList();
     final hasSubmitted = matched.isNotEmpty;
     final score = hasSubmitted ? matched.first['score'] as int? : null;
-    final status = hasSubmitted
-        ? (matched.first['status'] as String? ?? '已提交')
-        : '未提交';
+    final status =
+        hasSubmitted ? (matched.first['status'] as String? ?? '已提交') : '未提交';
 
     return Container(
       padding: const EdgeInsets.all(8),
@@ -493,7 +500,9 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
           Row(
             children: [
               Icon(
-                hasSubmitted ? Icons.check_circle : Icons.radio_button_unchecked,
+                hasSubmitted
+                    ? Icons.check_circle
+                    : Icons.radio_button_unchecked,
                 size: 14,
                 color: hasSubmitted ? color : Colors.grey,
               ),
@@ -505,8 +514,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                       : '尚未上传',
                   style: TextStyle(
                     fontSize: 11,
-                    color:
-                        hasSubmitted ? Colors.grey[700] : Colors.grey[400],
+                    color: hasSubmitted ? Colors.grey[700] : Colors.grey[400],
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -557,8 +565,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                         ? () => _showReportGradeDialog(matched.first)
                         : null,
                     icon: const Icon(Icons.grading, size: 14),
-                    label: const Text('教师批阅',
-                        style: TextStyle(fontSize: 11)),
+                    label: const Text('教师批阅', style: TextStyle(fontSize: 11)),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.indigo,
                       minimumSize: Size.zero,
@@ -574,8 +581,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                         ? () => _showReportGradeDialog(matched.first)
                         : null,
                     icon: const Icon(Icons.auto_awesome, size: 14),
-                    label: const Text('AI 批阅',
-                        style: TextStyle(fontSize: 11)),
+                    label: const Text('AI 批阅', style: TextStyle(fontSize: 11)),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.deepPurple,
                       minimumSize: Size.zero,
@@ -705,7 +711,8 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.warning_amber, size: 18, color: Colors.red),
+                    const Icon(Icons.warning_amber,
+                        size: 18, color: Colors.red),
                     const SizedBox(width: 6),
                     Text('重要提示',
                         style: TextStyle(
@@ -720,7 +727,8 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                   '• 缺少任何一份报告，大作业成绩为0分（占总成绩50%）\n'
                   '• 迟交任何一份报告，按缺交处理\n'
                   '• 建议顺序：答辩 → 个人 → 小组 → 项目',
-                  style: TextStyle(fontSize: 12, color: Colors.red[600], height: 1.6),
+                  style: TextStyle(
+                      fontSize: 12, color: Colors.red[600], height: 1.6),
                 ),
               ],
             ),
@@ -765,7 +773,9 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
               child: Center(
                 child: Text(r['num'] as String,
                     style: TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.bold, color: color)),
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: color)),
               ),
             ),
             title: Text(r['title'] as String,
@@ -773,85 +783,88 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                     fontSize: 14, fontWeight: FontWeight.bold, color: color)),
             subtitle: Text(r['subtitle'] as String,
                 style: TextStyle(fontSize: 11, color: Colors.grey[500])),
-        children: [
-          // 基本要求
-          _reportSubHeader('基本要求', Icons.rule, color),
-          const SizedBox(height: 6),
-          ...requirements.map((req) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
+            children: [
+              // 基本要求
+              _reportSubHeader('基本要求', Icons.rule, color),
+              const SizedBox(height: 6),
+              ...requirements.map((req) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.check_box_outlined,
+                            size: 14, color: color.withValues(alpha: 0.6)),
+                        const SizedBox(width: 6),
+                        Expanded(
+                            child: Text(req,
+                                style: const TextStyle(fontSize: 12))),
+                      ],
+                    ),
+                  )),
+              const SizedBox(height: 10),
+              // 核心内容
+              _reportSubHeader('核心内容（每项都要写）', Icons.edit_note, Colors.indigo),
+              const SizedBox(height: 6),
+              ...keyContent.asMap().entries.map((e) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 18,
+                          height: 18,
+                          margin: const EdgeInsets.only(right: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.indigo.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Center(
+                            child: Text('${e.key + 1}',
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.indigo[700])),
+                          ),
+                        ),
+                        Expanded(
+                            child: Text(e.value,
+                                style: const TextStyle(fontSize: 12))),
+                      ],
+                    ),
+                  )),
+              const SizedBox(height: 8),
+              // 提示
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border:
+                      Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+                ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.check_box_outlined,
-                        size: 14, color: color.withValues(alpha: 0.6)),
+                    Icon(Icons.lightbulb, size: 14, color: Colors.amber[700]),
                     const SizedBox(width: 6),
                     Expanded(
-                        child: Text(req,
-                            style: const TextStyle(fontSize: 12))),
-                  ],
-                ),
-              )),
-          const SizedBox(height: 10),
-          // 核心内容
-          _reportSubHeader('核心内容（每项都要写）', Icons.edit_note, Colors.indigo),
-          const SizedBox(height: 6),
-          ...keyContent.asMap().entries.map((e) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 18,
-                      height: 18,
-                      margin: const EdgeInsets.only(right: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.indigo.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Center(
-                        child: Text('${e.key + 1}',
-                            style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.indigo[700])),
-                      ),
+                      child: Text(tips,
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.amber[800],
+                              height: 1.4)),
                     ),
-                    Expanded(
-                        child: Text(e.value,
-                            style: const TextStyle(fontSize: 12))),
                   ],
                 ),
-              )),
-          const SizedBox(height: 8),
-          // 提示
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.amber.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.lightbulb, size: 14, color: Colors.amber[700]),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(tips,
-                      style: TextStyle(
-                          fontSize: 11, color: Colors.amber[800], height: 1.4)),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          // 上传/批阅 操作行
-          _buildReportActions(
-            reportType: r['title'] as String,
-            color: color,
-          ),
-          ],
+              ),
+              const SizedBox(height: 10),
+              // 上传/批阅 操作行
+              _buildReportActions(
+                reportType: r['title'] as String,
+                color: color,
+              ),
+            ],
           ),
         ),
       ),
@@ -887,8 +900,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
       if (result == null || result.files.isEmpty) return;
       final file = result.files.first;
       final userId = _currentUserId ?? '';
-      final userName =
-          widget.authService.currentUser?.realName ?? userId;
+      final userName = widget.authService.currentUser?.realName ?? userId;
 
       // 学生提交时验证文件名规范
       if (_isStudent) {
@@ -913,7 +925,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
         final techInfo = await _dao.getStudentGroupTechInfo(userId);
         if (techInfo != null &&
             (techInfo['techStack']?.isNotEmpty == true ||
-             techInfo['features']?.isNotEmpty == true)) {
+                techInfo['features']?.isNotEmpty == true)) {
           final pdfText = await PdfTextService.extractFromFile(
             file.path!,
             maxChars: 2000,
@@ -921,8 +933,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
           pdfTextForGrading = pdfText;
           if (pdfText != null && pdfText.isNotEmpty) {
             // ignore: use_build_context_synchronously
-            final reason = await GradingAgent()
-                .checkReportTechStackAlignment(
+            final reason = await GradingAgent().checkReportTechStackAlignment(
               reportContent: pdfText,
               groupTechStack: techInfo['techStack'] ?? '',
               groupFeatures: techInfo['features'] ?? '',
@@ -952,15 +963,6 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
         filePath: file.path ?? '',
       );
 
-      // 通知教师
-      NotificationService().notifyAssessmentSubmission(
-        studentId: userId,
-        studentName: userName,
-        reportType: reportType,
-      );
-
-      await _loadSubmissions();
-
       // 没拿到 PDF 文本前先尝试解析（学生路径走过 alignment 检查会有，
       // 教师代上传 / 验证跳过的情况下这里需要补抽一次）
       if (pdfTextForGrading == null && file.path != null) {
@@ -974,36 +976,60 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
 
       if (!mounted) return;
 
-      // 学生路径触发 AI 自动批阅；教师代上传则不打扰
-      if (_isStudent &&
-          reportId > 0 &&
-          pdfTextForGrading != null &&
-          pdfTextForGrading.isNotEmpty) {
-        final inline = await _askWatchOrNotify(reportType);
-        if (inline == true) {
-          await _runInlineAiGrading(
-            reportId: reportId,
-            studentId: userId,
-            studentName: userName,
-            reportType: reportType,
-            content: pdfTextForGrading,
-          );
-        } else {
-          unawaited(AutoGradingService.instance.gradeAssessmentReport(
-            reportId: reportId,
-            studentId: userId,
-            studentName: userName,
-            reportType: reportType,
-            content: pdfTextForGrading,
-          ));
+      // 学生路径：AI 初评达到评价分数线后才算提交成功；教师代上传则不拦截。
+      if (_isStudent && reportId > 0) {
+        if (pdfTextForGrading == null || pdfTextForGrading.isEmpty) {
+          await _dao.deleteSubmittedReport(reportId);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('提交失败：无法读取 PDF 正文，不能进行 AI 审核'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
+        }
+
+        final passScore = await SettingsService.getEvaluationPassScore();
+        final draft = await AutoGradingService.instance.gradeAssessmentReport(
+          reportId: reportId,
+          studentId: userId,
+          studentName: userName,
+          reportType: reportType,
+          content: pdfTextForGrading,
+          returnDraft: true,
+          notifyStudent: false,
+        );
+
+        if (draft == null || !draft.isUsable || draft.score < passScore) {
+          await _dao.deleteSubmittedReport(reportId);
+          await GradingResultDao()
+              .deletePendingForTarget('assessment', reportId);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                  content: Text('$reportType 已提交：${file.name}\nAI 批阅完成后会通知你。')),
+                content: Text(draft == null
+                    ? '提交失败：AI 审核未完成，请稍后重试'
+                    : '提交失败：AI 初评 ${draft.score} 分，未达到 $passScore 分达标线，请修改后重新提交'),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 5),
+              ),
             );
           }
+          return;
         }
-      } else if (mounted) {
+      }
+
+      // 通知教师
+      NotificationService().notifyAssessmentSubmission(
+        studentId: userId,
+        studentName: userName,
+        reportType: reportType,
+      );
+
+      await _loadSubmissions();
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('$reportType 已提交: ${file.name}')),
         );
@@ -1059,8 +1085,9 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                     if (!mounted) return;
                     messenger.hideCurrentSnackBar();
                     messenger.showSnackBar(SnackBar(
-                      content: Text(
-                          r.success ? '同步完成：${r.message}' : '同步失败：${r.message}'),
+                      content: Text(r.success
+                          ? '同步完成：${r.message}'
+                          : '同步失败：${r.message}'),
                       backgroundColor: r.success ? null : Colors.red,
                     ));
                     if (r.success) await _loadSubmissions();
@@ -1127,11 +1154,13 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                   children: [
                     // 学生信息
                     Text('学生：$userId',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                        style:
+                            TextStyle(fontSize: 12, color: Colors.grey[600])),
                     if (content.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Text('提交文件：$content',
-                          style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                          style:
+                              TextStyle(fontSize: 12, color: Colors.grey[600])),
                     ],
                     // PDF 预览按钮
                     if (filePath.isNotEmpty) ...[
@@ -1144,15 +1173,18 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                           fileName: content,
                         ),
                         icon: const Icon(Icons.visibility, size: 16),
-                        label: const Text('预览 PDF', style: TextStyle(fontSize: 12)),
+                        label: const Text('预览 PDF',
+                            style: TextStyle(fontSize: 12)),
                         style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 4),
                           minimumSize: Size.zero,
                         ),
                       ),
                     ],
                     Text('状态：$status',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                        style:
+                            TextStyle(fontSize: 12, color: Colors.grey[600])),
                     const SizedBox(height: 16),
                     // 评分
                     Row(
@@ -1222,15 +1254,17 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                           final result = await agent.gradeReport(
                             reportType: title,
                             studentName: userId,
-                            content: content.isNotEmpty ? content : '（学生提交了PDF文件：$title）',
+                            content: content.isNotEmpty
+                                ? content
+                                : '（学生提交了PDF文件：$title）',
                           );
                           final parsed = _tryParseGradingJson(result);
                           if (parsed != null) {
                             setDialogState(() {
-                              scoreValue = (parsed['total_score'] as num?)
-                                      ?.toDouble() ??
-                                  (parsed['score'] as num?)?.toDouble() ??
-                                  scoreValue;
+                              scoreValue =
+                                  (parsed['total_score'] as num?)?.toDouble() ??
+                                      (parsed['score'] as num?)?.toDouble() ??
+                                      scoreValue;
                               if (scoreValue > 100) scoreValue = 100;
                               feedbackCtrl.text =
                                   parsed['feedback'] as String? ?? '';
@@ -1342,152 +1376,8 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
       return null;
     }
   }
-
-  // ── AI 批阅交互（学生提交后）──────────────────────────────────────────────
-
-  /// 提交后弹"在线等待 / 稍后通知"二选一
-  Future<bool?> _askWatchOrNotify(String reportType) async {
-    return showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.auto_awesome, color: Theme.of(ctx).colorScheme.primary),
-            SizedBox(width: 8),
-            Text('AI 批阅', style: TextStyle(fontSize: 18)),
-          ],
-        ),
-        content: Text('「$reportType」已提交。AI 批阅约需 10-30 秒。\n\n'
-            '在线等待会立刻看到优点 / 改进建议；\n'
-            '稍后通知则后台跑，完成时通过通知提示你。'),
-        actions: [
-          OutlinedButton.icon(
-            onPressed: () => Navigator.pop(ctx, false),
-            icon: const Icon(Icons.notifications_active),
-            label: const Text('稍后通知我'),
-          ),
-          FilledButton.icon(
-            onPressed: () => Navigator.pop(ctx, true),
-            icon: const Icon(Icons.visibility),
-            label: const Text('在线等待'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 在线等待 AI：弹 loading dialog，结果出来后弹评分详情
-  Future<void> _runInlineAiGrading({
-    required int reportId,
-    required String studentId,
-    required String studentName,
-    required String reportType,
-    required String content,
-  }) async {
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const AlertDialog(
-        content: SizedBox(
-          height: 80,
-          child: Row(
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 16),
-              Expanded(child: Text('AI 正在批阅，请稍候…')),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    final draft = await AutoGradingService.instance.gradeAssessmentReport(
-      reportId: reportId,
-      studentId: studentId,
-      studentName: studentName,
-      reportType: reportType,
-      content: content,
-      returnDraft: true,
-    );
-
-    if (!mounted) return;
-    Navigator.of(context, rootNavigator: true).pop();
-
-    if (draft == null || !draft.isUsable) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('AI 批阅失败，已发通知给教师人工批阅'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.auto_awesome, color: Theme.of(ctx).colorScheme.primary),
-            const SizedBox(width: 8),
-            Text('AI 批阅草稿 · ${draft.score} 分',
-                style: const TextStyle(fontSize: 18)),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('（教师复核后才是最终成绩）',
-                  style: TextStyle(color: Colors.grey, fontSize: 12)),
-              const SizedBox(height: 12),
-              if (draft.strengths.isNotEmpty) ...[
-                const Text('✓ 优点',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, color: Colors.green)),
-                const SizedBox(height: 4),
-                ...draft.strengths.map((s) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text('· $s'),
-                    )),
-                const SizedBox(height: 12),
-              ],
-              if (draft.improvements.isNotEmpty) ...[
-                const Text('✎ 改进建议',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, color: Colors.orange)),
-                const SizedBox(height: 4),
-                ...draft.improvements.map((s) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text('· $s'),
-                    )),
-                const SizedBox(height: 12),
-              ],
-              if (draft.feedback.isNotEmpty) ...[
-                const Text('总评',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Text(draft.feedback),
-              ],
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('知道了'),
-          ),
-        ],
-      ),
-    );
-  }
 }
-
 
 // ══════════════════════════════════════════════════════════════════════════════
 // 成绩统计 Tab
 // ══════════════════════════════════════════════════════════════════════════════
-

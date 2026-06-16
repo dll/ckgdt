@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -8,12 +8,14 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../core/error_handler.dart';
+import '../../../data/local/grading_result_dao.dart';
 import '../../../data/local/score_audit_dao.dart';
 import '../../../data/local/works_dao.dart';
 import '../../widgets/score_history_dialog.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/auto_grading_service.dart';
 import '../../../services/file_opener_service.dart';
+import '../../../services/settings_service.dart';
 import '../../../services/sync_service.dart';
 import '../../../services/gitee_service.dart';
 import '../../../services/agent/agents/grading_agent.dart';
@@ -22,7 +24,6 @@ import '../../widgets/agent_entry_button.dart';
 import '../../widgets/inner_tab_request_mixin.dart';
 import '../../widgets/score_preview_dialog.dart';
 import 'ai_grading_tab.dart';
-
 
 // ── Tab 实现拆分到 tabs/ 子目录（part / part of 模式）──────────────
 part 'tabs/gallery_tab.dart';
@@ -88,15 +89,13 @@ class _WorksPageState extends State<WorksPage>
   List<Map<String, dynamic>> _allStudents = [];
   bool _initialized = false;
 
-  bool get _isTeacherOrAdmin =>
-      _authService.isTeacher || _authService.isAdmin;
+  bool get _isTeacherOrAdmin => _authService.isTeacher || _authService.isAdmin;
 
   bool get _isStudent => !_isTeacherOrAdmin;
 
   /// 学生在第 0 个 tab 看到 "我的作品"；教师没有这个 tab 但多 "AI批阅"。
   /// length = 3 公共 + 学生(+1 我的) + 教师(+1 AI批阅)。
-  int get _tabCount =>
-      3 + (_isStudent ? 1 : 0) + (_isTeacherOrAdmin ? 1 : 0);
+  int get _tabCount => 3 + (_isStudent ? 1 : 0) + (_isTeacherOrAdmin ? 1 : 0);
 
   @override
   String get innerTabPageKey => 'works';
@@ -145,8 +144,7 @@ class _WorksPageState extends State<WorksPage>
       final jsonStr =
           await rootBundle.loadString('assets/student_group_data.json');
       final List<dynamic> decoded = jsonDecode(jsonStr);
-      _allStudents =
-          decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+      _allStudents = decoded.map((e) => Map<String, dynamic>.from(e)).toList();
       // 2. 同步到数据库（每人一个作品，幂等）
       await _worksDao.syncStudentWorks(_allStudents);
     } catch (e, st) {
@@ -174,8 +172,7 @@ class _WorksPageState extends State<WorksPage>
   }
 
   Future<void> _showWorkScorePreview() async {
-    final data =
-        await ScoreExportService.instance.getWorkScoresForPreview();
+    final data = await ScoreExportService.instance.getWorkScoresForPreview();
     if (!mounted) return;
     showDialog(
       context: context,
@@ -312,13 +309,11 @@ class _WorksPageState extends State<WorksPage>
             labelStyle:
                 const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             tabs: [
-              if (_isStudent)
-                const Tab(text: '我的作品'),
+              if (_isStudent) const Tab(text: '我的作品'),
               const Tab(text: '作品展示'),
               const Tab(text: '作品记录'),
               const Tab(text: '排行榜'),
-              if (_isTeacherOrAdmin)
-                const Tab(text: 'AI批阅'),
+              if (_isTeacherOrAdmin) const Tab(text: 'AI批阅'),
             ],
           ),
         ),
@@ -350,8 +345,7 @@ class _WorksPageState extends State<WorksPage>
                     children: [
                       CircularProgressIndicator(),
                       SizedBox(height: 16),
-                      Text('正在加载作品数据...',
-                          style: TextStyle(color: Colors.grey)),
+                      Text('正在加载作品数据...', style: TextStyle(color: Colors.grey)),
                     ],
                   ),
                 ),
@@ -450,8 +444,7 @@ Widget _sectionHeader(String title, {IconData? icon, Color? color}) {
           const SizedBox(width: 6),
         ],
         Text(title,
-            style: const TextStyle(
-                fontSize: 15, fontWeight: FontWeight.bold)),
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
       ],
     ),
   );
@@ -472,8 +465,7 @@ Widget _emptyHint(String message, IconData icon) {
       children: [
         Icon(icon, size: 48, color: Colors.grey[300]),
         const SizedBox(height: 12),
-        Text(message,
-            style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+        Text(message, style: TextStyle(color: Colors.grey[500], fontSize: 13)),
       ],
     ),
   );
@@ -528,4 +520,3 @@ String _shortRole(String? role) {
 // ╔══════════════════════════════════════════════════════════════════════════════╗
 // ║  Tab 0: 作品展示 (Gallery) — 多维度过滤 + 搜索 + 排序                       ║
 // ╚══════════════════════════════════════════════════════════════════════════════╝
-

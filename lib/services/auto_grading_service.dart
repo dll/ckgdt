@@ -15,7 +15,6 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../core/init_logger.dart';
 import '../data/local/grading_result_dao.dart';
-import '../presentation/pages/lab/lab_tasks_page.dart' show tryParseGradingJson;
 import 'agent/agents/grading_agent.dart';
 import 'notification_service.dart';
 
@@ -76,7 +75,7 @@ class AutoGradingService {
         maxScore: maxScore,
         requirements: requirements,
       );
-      final draft = _parseAndSave(
+      final draft = await _parseAndSave(
         domain: 'lab',
         targetId: submissionId,
         scorerId: 'system',
@@ -129,7 +128,7 @@ class AutoGradingService {
         projectName: projectName,
         groupName: groupName,
       );
-      final draft = _parseAndSave(
+      final draft = await _parseAndSave(
         domain: 'assessment',
         targetId: reportId,
         scorerId: 'system',
@@ -181,7 +180,7 @@ class AutoGradingService {
         studentName: studentName,
         groupName: groupName,
       );
-      final draft = _parseAndSave(
+      final draft = await _parseAndSave(
         domain: 'works',
         targetId: workId,
         scorerId: 'system',
@@ -213,13 +212,13 @@ class AutoGradingService {
 
   // ── 解析 + 持久化 ────────────────────────────────────────────────────────
 
-  AiGradingDraft? _parseAndSave({
+  Future<AiGradingDraft?> _parseAndSave({
     required String domain,
     required int targetId,
     required String scorerId,
     required String rawText,
-  }) {
-    final parsed = tryParseGradingJson(rawText);
+  }) async {
+    final parsed = _tryParseGradingJson(rawText);
     if (parsed == null) {
       // 非 JSON 返回，保留原始文本作为 feedback，但不写 grading_results
       // 教师在 ai_grading_tab 里看到的话会用 0 分 + 原文，重新触发即可
@@ -231,44 +230,36 @@ class AutoGradingService {
     final score = (parsed['score'] as num?)?.toInt() ??
         (parsed['total_score'] as num?)?.toInt() ??
         0;
-    final feedback = (parsed['feedback'] as String?) ??
-        (parsed['summary'] as String?) ??
-        '';
+    final feedback = _formatGradingFeedback(parsed);
     final dims = parsed['dimensions'] as Map<String, dynamic>? ??
         parsed['scores'] as Map<String, dynamic>?;
-    final strengths = (parsed['strengths'] as List?)
-            ?.map((e) => e.toString())
-            .toList() ??
-        [];
-    final improvements = (parsed['improvements'] as List?)
-            ?.map((e) => e.toString())
-            .toList() ??
-        [];
+    final strengths =
+        (parsed['strengths'] as List?)?.map((e) => e.toString()).toList() ?? [];
+    final improvements =
+        (parsed['improvements'] as List?)?.map((e) => e.toString()).toList() ??
+            [];
     final aiFlag = parsed['ai_flag'] == true;
 
-    // 异步写入；调用方不等结果
-    () async {
-      try {
-        await _gradingDao.deletePendingForTarget(domain, targetId);
-        await _gradingDao.saveResult(
-          domain: domain,
-          targetId: targetId,
-          scorerId: scorerId,
-          rawJson: jsonEncode(parsed),
-          score: score.toDouble(),
-          feedback: feedback,
-          dimensions: dims,
-          strengths: strengths,
-          improvements: improvements,
-          aiFlag: aiFlag,
-        );
-        debugPrint(
-            'AutoGradingService: saved $domain/$targetId (score=$score, pending)');
-      } catch (e, st) {
-        InitLogger.error('auto_grade',
-            '$domain target=$targetId: saveResult failed: $e', st);
-      }
-    }();
+    try {
+      await _gradingDao.deletePendingForTarget(domain, targetId);
+      await _gradingDao.saveResult(
+        domain: domain,
+        targetId: targetId,
+        scorerId: scorerId,
+        rawJson: jsonEncode(parsed),
+        score: score.toDouble(),
+        feedback: feedback,
+        dimensions: dims,
+        strengths: strengths,
+        improvements: improvements,
+        aiFlag: aiFlag,
+      );
+      debugPrint(
+          'AutoGradingService: saved $domain/$targetId (score=$score, pending)');
+    } catch (e, st) {
+      InitLogger.error(
+          'auto_grade', '$domain target=$targetId: saveResult failed: $e', st);
+    }
 
     return AiGradingDraft(
       score: score,
@@ -279,5 +270,119 @@ class AutoGradingService {
       aiFlag: aiFlag,
       raw: parsed,
     );
+  }
+
+  Map<String, dynamic>? _tryParseGradingJson(String text) {
+    final candidates = <String>[];
+    final trimmed = text.trim();
+    candidates.add(trimmed);
+    final fenced =
+        RegExp(r'```(?:json)?\s*([\s\S]*?)\s*```', caseSensitive: false)
+            .firstMatch(trimmed);
+    if (fenced != null) {
+      candidates.add(fenced.group(1)!.trim());
+    }
+    candidates.addAll(_balancedJsonObjects(trimmed));
+
+    for (final candidate in candidates) {
+      try {
+        final decoded = jsonDecode(candidate);
+        if (decoded is! Map<String, dynamic>) continue;
+        if (decoded.containsKey('score') ||
+            decoded.containsKey('total_score') ||
+            decoded.containsKey('feedback') ||
+            decoded.containsKey('summary') ||
+            decoded.containsKey('scores') ||
+            decoded.containsKey('dimensions')) {
+          return decoded;
+        }
+      } catch (e, st) {
+        InitLogger.error(
+            'auto_grade', 'parse grading json candidate failed: $e', st);
+      }
+    }
+    return null;
+  }
+
+  List<String> _balancedJsonObjects(String text) {
+    final objects = <String>[];
+    var start = -1;
+    var depth = 0;
+    var inString = false;
+    var escaping = false;
+    for (var i = 0; i < text.length; i++) {
+      final ch = text[i];
+      if (escaping) {
+        escaping = false;
+        continue;
+      }
+      if (ch == '\\') {
+        escaping = inString;
+        continue;
+      }
+      if (ch == '"') {
+        inString = !inString;
+        continue;
+      }
+      if (inString) continue;
+      if (ch == '{') {
+        if (depth == 0) start = i;
+        depth++;
+      } else if (ch == '}' && depth > 0) {
+        depth--;
+        if (depth == 0 && start >= 0) {
+          objects.add(text.substring(start, i + 1));
+          start = -1;
+        }
+      }
+    }
+    return objects;
+  }
+
+  String _formatGradingFeedback(Map<String, dynamic> parsed) {
+    final sb = StringBuffer();
+    final summary = parsed['summary'] as String?;
+    if (summary != null && summary.isNotEmpty) {
+      sb
+        ..writeln('【总评】$summary')
+        ..writeln();
+    }
+    final dims = parsed['dimensions'] as Map<String, dynamic>? ??
+        parsed['scores'] as Map<String, dynamic>?;
+    if (dims != null && dims.isNotEmpty) {
+      sb.writeln('【各维度评分】');
+      for (final entry in dims.entries) {
+        final d = entry.value;
+        if (d is Map<String, dynamic>) {
+          sb.writeln(
+              '  ${entry.key}: ${d['score'] ?? ''}/${d['max'] ?? ''} - ${d['comment'] ?? ''}');
+        }
+      }
+      sb.writeln();
+    }
+    final strengths = parsed['strengths'] as List?;
+    if (strengths != null && strengths.isNotEmpty) {
+      sb.writeln('【优点】');
+      for (final s in strengths) {
+        sb.writeln('  - $s');
+      }
+      sb.writeln();
+    }
+    final improvements = parsed['improvements'] as List?;
+    if (improvements != null && improvements.isNotEmpty) {
+      sb.writeln('【改进建议】');
+      for (final s in improvements) {
+        sb.writeln('  - $s');
+      }
+      sb.writeln();
+    }
+    final feedback = parsed['feedback'] as String?;
+    if (feedback != null && feedback.isNotEmpty) {
+      sb
+        ..writeln('【详细反馈】')
+        ..writeln(feedback);
+    }
+    final result = sb.toString().trim();
+    return result.isNotEmpty ? result : feedback ?? '';
   }
 }

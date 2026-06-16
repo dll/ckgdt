@@ -5,13 +5,16 @@ class SettingsService {
   SettingsService._();
 
   // ── 持久化 Key ────────────────────────────────────────────────────────────
-  static const String _legacyThemeKey = 'theme_mode';       // 旧 bool 键（兼容）
-  static const String _themeModeKey   = 'theme_mode_index'; // 0=system 1=light 2=dark
-  static const String _colorIndexKey  = 'color_index';      // 0=科技蓝 1=清新绿 2=轻奢紫
-  static const String _localeKey      = 'app_locale';       // 'zh' / 'en' / null=系统
+  static const String _legacyThemeKey = 'theme_mode'; // 旧 bool 键（兼容）
+  static const String _themeModeKey =
+      'theme_mode_index'; // 0=system 1=light 2=dark
+  static const String _colorIndexKey = 'color_index'; // 0=科技蓝 1=清新绿 2=轻奢紫
+  static const String _localeKey = 'app_locale'; // 'zh' / 'en' / null=系统
   static const String _notificationKey = 'notification_enabled';
   static const String _quickLoginKey = 'quick_login_enabled';
   static const String _feedbackEnabledKey = 'feedback_enabled';
+  static const String _evaluationPassScoreKey = 'evaluation_pass_score';
+  static const int defaultEvaluationPassScore = 85;
 
   // ── 讯飞语音配置 ────────────────────────────────────────────────────────
   static const String _xunfeiAppIdKey = 'xunfei_app_id';
@@ -21,10 +24,10 @@ class SettingsService {
   // ── 考核报告封面默认值 ──────────────────────────────────────────────────
   static const String _advisorNameKey = 'assessment_advisor_name';
   static const String _collegeNameKey = 'assessment_college_name';
-  static const String _courseNameKey  = 'assessment_course_name';
+  static const String _courseNameKey = 'assessment_course_name';
   static const String _defaultAdvisorName = '刘东良';
   static const String _defaultCollegeName = '计算机与信息工程学院';
-  static const String _defaultCourseName  = '移动应用开发';
+  static const String _defaultCourseName = '移动应用开发';
 
   // ═════════════════════════════════════════════════════════════════════════
   // 显示模式  ThemeMode（跟随系统 / 浅色 / 深色）
@@ -142,13 +145,29 @@ class SettingsService {
   }
 
   // ═════════════════════════════════════════════════════════════════════════
+  // 评价提交达标分数线（实验 / 考核 / 作品共用）
+  // ═════════════════════════════════════════════════════════════════════════
+
+  static Future<int> getEvaluationPassScore() async {
+    final prefs = await SharedPreferences.getInstance();
+    return (prefs.getInt(_evaluationPassScoreKey) ?? defaultEvaluationPassScore)
+        .clamp(60, 100);
+  }
+
+  static Future<void> setEvaluationPassScore(int score) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_evaluationPassScoreKey, score.clamp(60, 100));
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
   // 讯飞语音配置（AppID / APIKey / APISecret）
   // ═════════════════════════════════════════════════════════════════════════
 
   // 讯飞默认配置
   static const String _defaultXunfeiAppId = 'ae4a0e4a';
   static const String _defaultXunfeiApiKey = '7385e5cb32d3465474e613dfbfc69310';
-  static const String _defaultXunfeiApiSecret = 'NTI2NzVlOWQ0ZTM5YTgzNGYzZDI5NjQx';
+  static const String _defaultXunfeiApiSecret =
+      'NTI2NzVlOWQ0ZTM5YTgzNGYzZDI5NjQx';
 
   static Future<String> getXunfeiAppId() async {
     final prefs = await SharedPreferences.getInstance();

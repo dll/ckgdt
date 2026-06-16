@@ -98,6 +98,29 @@ class NotificationService {
     }
   }
 
+  /// 通知学生：实验报告被教师打回，需要重新提交
+  Future<void> notifyLabSubmissionReturned({
+    required String studentId,
+    required String taskTitle,
+    required String reason,
+  }) async {
+    try {
+      final preview =
+          reason.length > 160 ? '${reason.substring(0, 160)}...' : reason;
+      await _notificationDao.createNotification(
+        title: '实验报告已打回',
+        content: '你的实验「$taskTitle」未通过审核，需要修改后重新提交。原因：$preview',
+        creatorId: 'system',
+        targetType: 'individual',
+        targetId: studentId,
+        type: 'return',
+        relatedEntityType: 'lab_submission',
+      );
+    } catch (e) {
+      debugPrint('NotificationService: 实验打回通知学生失败 — $e');
+    }
+  }
+
   /// 学生提交考核报告时通知所有教师
   Future<void> notifyAssessmentSubmission({
     required String studentId,
@@ -139,7 +162,8 @@ class NotificationService {
         relatedEntityType: 'contribution_score',
         relatedEntityId: entityId,
       );
-      debugPrint('NotificationService: 贡献评分通知 — $scorerName → $targetName ($dimension)');
+      debugPrint(
+          'NotificationService: 贡献评分通知 — $scorerName → $targetName ($dimension)');
     } catch (e) {
       debugPrint('NotificationService: 发送贡献评分通知失败 — $e');
     }
@@ -152,7 +176,8 @@ class NotificationService {
     required String content,
   }) async {
     try {
-      final preview = content.length > 80 ? '${content.substring(0, 80)}...' : content;
+      final preview =
+          content.length > 80 ? '${content.substring(0, 80)}...' : content;
       await _notificationDao.createNotification(
         title: '用户反馈：$userName',
         content: '$userName 提交了问题反馈：$preview',
@@ -252,10 +277,11 @@ class NotificationService {
     required int aiScore,
   }) async {
     final domainName = {
-      'lab': '实验',
-      'assessment': '考核',
-      'work': '作品',
-    }[domain] ?? '提交';
+          'lab': '实验',
+          'assessment': '考核',
+          'work': '作品',
+        }[domain] ??
+        '提交';
     try {
       await _notificationDao.createNotification(
         title: 'AI 已批阅 ($domainName)：$entityTitle',

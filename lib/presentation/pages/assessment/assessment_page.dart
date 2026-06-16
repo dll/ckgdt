@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -8,9 +8,11 @@ import '../../../core/constants/app_theme.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/auto_grading_service.dart';
 import '../../../services/notification_service.dart';
+import '../../../services/settings_service.dart';
 import '../../../services/sync_service.dart';
 import '../../../data/local/assessment_dao.dart';
 import '../../../data/local/database_helper.dart';
+import '../../../data/local/grading_result_dao.dart';
 import '../../../data/local/score_audit_dao.dart';
 import '../../../services/agent/agents/grading_agent.dart';
 import '../../../services/score_export_service.dart';
@@ -128,8 +130,7 @@ class _AssessmentPageState extends State<AssessmentPage>
       content: Text('正在导出考核成绩…'),
       duration: Duration(seconds: 1),
     ));
-    final path =
-        await ScoreExportService.instance.exportAssessmentScores();
+    final path = await ScoreExportService.instance.exportAssessmentScores();
     messenger.hideCurrentSnackBar();
     if (!mounted) return;
     if (path != null) {
@@ -250,7 +251,8 @@ class _AssessmentPageState extends State<AssessmentPage>
                         ],
                       ),
                     ),
-                    const AgentEntryButton(agentId: 'assessment', color: Colors.white),
+                    const AgentEntryButton(
+                        agentId: 'assessment', color: Colors.white),
                     _buildHeaderRoleBadge(),
                     if (!_isStudent) _buildScoreActions(),
                   ],
@@ -267,7 +269,9 @@ class _AssessmentPageState extends State<AssessmentPage>
                     _AssessmentTopStat(
                         label: '贡献', value: '3维度', icon: Icons.star_rate),
                     _AssessmentTopStat(
-                        label: '答辩', value: '流程化', icon: Icons.record_voice_over),
+                        label: '答辩',
+                        value: '流程化',
+                        icon: Icons.record_voice_over),
                     _AssessmentTopStat(
                         label: '报告', value: '4份', icon: Icons.summarize),
                     _AssessmentTopStat(
@@ -303,18 +307,21 @@ class _AssessmentPageState extends State<AssessmentPage>
                 ),
               ],
             ),
-            labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            labelStyle:
+                const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             unselectedLabelStyle: const TextStyle(fontSize: 12),
             tabs: [
               const Tab(icon: Icon(Icons.groups, size: 20), text: '分组'),
               const Tab(icon: Icon(Icons.assignment, size: 20), text: '项目'),
               const Tab(icon: Icon(Icons.star_rate, size: 20), text: '贡献'),
               const Tab(icon: Icon(Icons.menu_book, size: 20), text: '材料'),
-              const Tab(icon: Icon(Icons.record_voice_over, size: 20), text: '答辩'),
+              const Tab(
+                  icon: Icon(Icons.record_voice_over, size: 20), text: '答辩'),
               const Tab(icon: Icon(Icons.summarize, size: 20), text: '报告'),
               const Tab(icon: Icon(Icons.leaderboard, size: 20), text: '成绩'),
               if (!_isStudent)
-                const Tab(icon: Icon(Icons.auto_awesome, size: 20), text: 'AI批阅'),
+                const Tab(
+                    icon: Icon(Icons.auto_awesome, size: 20), text: 'AI批阅'),
             ],
           ),
         ),
@@ -366,7 +373,6 @@ class _AssessmentPageState extends State<AssessmentPage>
 // ══════════════════════════════════════════════════════════════════════════════
 // 顶部统计小组件
 // ══════════════════════════════════════════════════════════════════════════════
-
 
 class _AssessmentTopStat extends StatelessWidget {
   final String label;
