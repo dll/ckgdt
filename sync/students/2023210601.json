@@ -3,8 +3,8 @@
   "user_id": "2023210601",
   "user_name": "金正轩",
   "role": "student",
-  "synced_at": "2026-06-16T20:53:09.868932",
-  "last_active": "2026-06-16T20:53:09.868940",
+  "synced_at": "2026-06-16T21:00:37.522955",
+  "last_active": "2026-06-16T21:00:37.522963",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
@@ -235,7 +235,41 @@
       "updated_at": null
     }
   ],
-  "student_works": [],
+  "student_works": [
+    {
+      "course_id": "mad",
+      "title": "智慧社区生活服务平台开发与整合",
+      "description": "【消息推送服务】集成推送SDK实现社区公告、物业通知、快递到达等消息的实时推送，支持按类型设置免打扰和推送偏好。【快捷方式】在Android桌面创建常用功能（一键报修、快递查询、门禁开锁）的快捷入口，用户无需打开App即可直达功能页面。【AI智能通知】调用AI大模型对推送消息进行智能分类和优先级排序，重要通知置顶显示，减少信息过载。",
+      "tech_stack": "Kotlin + Android SDK",
+      "work_type": "综合项目",
+      "group_name": "cg1-sclsdpi",
+      "leader_name": "金正轩",
+      "user_id": "2023210601",
+      "file_path": "/data/user/0/cn.edu.chzu.madkg/app_flutter/works_videos/2023210601/lv_0_20260604212345.mp4",
+      "file_size": "35.5MB",
+      "status": "待提交",
+      "submit_time": null,
+      "tags": "[\"Kotlin\",\"Android\",\"SDK\"]",
+      "created_at": "2026-06-16T20:55:05.619803",
+      "updated_at": "2026-06-16T20:55:05.619809",
+      "related_node_ids": null,
+      "ai_suspicion": 0.0,
+      "teacher_confirmed": 0,
+      "project_id": null,
+      "group_id": null,
+      "video_url": "/data/user/0/cn.edu.chzu.madkg/app_flutter/works_videos/2023210601/lv_0_20260604212345.mp4",
+      "thumbnail_url": null,
+      "video_duration": null,
+      "view_count": 0,
+      "like_count": 0,
+      "comment_count": 0,
+      "repo": "cg1-sclsdpi",
+      "class_group": "cg1",
+      "project": "智慧社区生活服务平台开发与整合",
+      "student_role": "Android开发工程师",
+      "student_name": "金正轩"
+    }
+  ],
   "survey_responses": [],
   "checkin_records": [],
   "work_comments": [],
@@ -301,7 +335,7 @@
   "lab_tasks": [
     {
       "id": 1,
-      "course_id": null,
+      "course_id": "mad",
       "title": "实验一 开发环境搭建",
       "chapter": "第1章",
       "description": "搭建 Android Studio、Flutter、微信开发者工具、DevEco Studio、HBuilderX（Uniapp）、Visual Studio（MAUI）开发环境，各成员根据分工完成对应平台环境配置并成功运行 Hello World 项目。\n\n【实验学时】2学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标1 | 【分组人数】6人/组",
@@ -318,7 +352,7 @@
     },
     {
       "id": 2,
-      "course_id": null,
+      "course_id": "mad",
       "title": "实验二 原生应用开发",
       "chapter": "第2章",
       "description": "Android方向：使用 Kotlin 实现\"智慧校园\"登录页面（EditText输入验证、Activity跳转与数据传递）。iOS方向（演示/模拟器）：使用 SwiftUI 实现登录页面，理解 ViewController 生命周期。组内每人选择不同平台或技术方案实现同一功能，完成后进行组内技术对比分享。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标1 | 【分组人数】6人/组",
@@ -335,7 +369,7 @@
     },
     {
       "id": 3,
-      "course_id": null,
+      "course_id": "mad",
       "title": "实验三 跨平台应用开发",
       "chapter": "第3章",
       "description": "开发\"智慧校园\"业务数据列表页（RESTful API 网络数据请求 + JSON 解析 + 下拉刷新），组内成员分别使用 Flutter（Dart）、React Native（JSX）、Uniapp（Vue）、MAUI（C#）等不同框架实现同一功能需求。扩展案例：集成设备传感器（如GPS定位、加速度计），体验移动硬件能力调用。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标2 | 【分组人数】6人/组",
@@ -352,7 +386,7 @@
     },
     {
       "id": 4,
-      "course_id": null,
+      "course_id": "mad",
       "title": "实验四 微信小程序开发",
       "chapter": "第4章",
       "description": "借助 AI 编程工具辅助开发\"智慧校园通知\"小程序（列表 + 详情页路由 + 本地存储），体验 AI 工具在代码生成与调试中的作用。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标2 | 【分组人数】6人/组",
@@ -369,7 +403,7 @@
     },
     {
       "id": 5,
-      "course_id": null,
+      "course_id": "mad",
       "title": "实验五 鸿蒙多端应用开发",
       "chapter": "第5章",
       "description": "使用 DevEco Studio 开发\"智慧天气\"应用，实现手机/平板界面自适应布局；通过模拟器演示分布式数据同步原理。扩展案例：调用设备传感器（如光线传感器、陀螺仪）实现简单的物联网数据采集与展示场景。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标3 | 【分组人数】6人/组",
@@ -386,7 +420,7 @@
     },
     {
       "id": 6,
-      "course_id": null,
+      "course_id": "mad",
       "title": "实验六 跨平台综合项目实战",
       "chapter": "第6章",
       "description": "团队开发\"智慧健康\"等业务应用（建议选题涉及传感器或硬件交互场景），每人负责一个技术栈（Android/Flutter/React Native/Uniapp/MAUI/微信小程序），使用 Git 进行版本控制与协作，借助 AI 编程工具辅助代码生成与调试。每组6人，实验中每人选择一个技术栈独立完成对应实验任务，组内进行技术分享与对比分析。\n\n【实验学时】6学时 | 【实验类型】综合型 | 【实验要求】必做 | 【对应课程目标】目标1-4 | 【分组人数】6人/组",
