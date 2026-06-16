@@ -1,16 +1,19 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../data/local/lab_task_dao.dart';
+import '../../../data/local/grading_result_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/auto_grading_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../services/sync_service.dart';
 import '../../../services/gitee_service.dart';
 import '../../../services/pdf_text_service.dart';
+import '../../../services/lab_report_validation_service.dart';
+import '../../../services/settings_service.dart';
 import '../lab/lab_material_preview_page.dart';
 import '../../widgets/agent_entry_button.dart';
 
@@ -36,53 +39,12 @@ class _StudentLabPageState extends State<StudentLabPage> {
 
   /// 验证实验报告文件名：必须为 学号+姓名+任务名称.pdf
   String? _validateFileName(String fileName, String taskTitle) {
-    final userId = _userId;
-    final realName = _authService.currentUser?.realName ?? '';
-    if (userId.isEmpty || realName.isEmpty) {
-      return '提交失败：无法获取当前用户信息，请重新登录';
-    }
-
-    // 去掉扩展名
-    final baseName = fileName.endsWith('.pdf')
-        ? fileName.substring(0, fileName.length - 4)
-        : fileName;
-
-    // 检查非法后缀：(1) (2) 1 2 new copy 副本 - 复制 等
-    if (RegExp(r'[\(\（]\d+[\)\）]$').hasMatch(baseName) ||
-        RegExp(r'[_\-\s]?\d+$').hasMatch(baseName) &&
-            !baseName.endsWith(taskTitle) ||
-        RegExp(r'(new|copy|副本|复制|备份)', caseSensitive: false)
-            .hasMatch(baseName)) {
-      return '提交失败：文件名不规范，不允许包含(1)、new、copy、副本等后缀\n'
-          '正确格式：$userId$realName$taskTitle.pdf';
-    }
-
-    // 检查学号是否匹配当前登录用户
-    if (!baseName.startsWith(userId)) {
-      return '提交失败：文件名中的学号与当前登录用户不匹配\n'
-          '正确格式：$userId$realName$taskTitle.pdf';
-    }
-
-    // 检查是否包含姓名
-    if (!baseName.contains(realName)) {
-      return '提交失败：文件名中未包含姓名"$realName"\n'
-          '正确格式：$userId$realName$taskTitle.pdf';
-    }
-
-    // 检查是否包含任务名称
-    if (!baseName.contains(taskTitle)) {
-      return '提交失败：文件名中未包含实验名称"$taskTitle"\n'
-          '正确格式：$userId$realName$taskTitle.pdf';
-    }
-
-    // 严格匹配：学号+姓名+任务名称
-    final expected = '$userId$realName$taskTitle';
-    if (baseName != expected) {
-      return '提交失败：文件命名不规范\n'
-          '正确格式：$userId$realName$taskTitle.pdf';
-    }
-
-    return null; // 验证通过
+    return LabReportValidationService.validateFileName(
+      fileName: fileName,
+      studentId: _userId,
+      realName: _authService.currentUser?.realName ?? '',
+      taskTitle: taskTitle,
+    );
   }
 
   @override
@@ -150,12 +112,15 @@ class _StudentLabPageState extends State<StudentLabPage> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.folder_special, color: Colors.blue[700], size: 18),
+                      Icon(Icons.folder_special,
+                          color: Colors.blue[700], size: 18),
                       const SizedBox(width: 6),
-                      Text('PDF 提交规范', style: TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.bold,
-                        color: Colors.blue[800],
-                      )),
+                      Text('PDF 提交规范',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue[800],
+                          )),
                     ],
                   ),
                   const SizedBox(height: 6),
@@ -165,7 +130,8 @@ class _StudentLabPageState extends State<StudentLabPage> {
                     '  实验 → sync/students/$_userId/实验/\n'
                     '  考核 → sync/students/$_userId/考核/\n'
                     '  作品 → sync/students/$_userId/作品/',
-                    style: TextStyle(fontSize: 11, color: Colors.blue[900], height: 1.5),
+                    style: TextStyle(
+                        fontSize: 11, color: Colors.blue[900], height: 1.5),
                   ),
                 ],
               ),
@@ -187,8 +153,7 @@ class _StudentLabPageState extends State<StudentLabPage> {
                     children: [
                       Icon(Icons.assignment, size: 48, color: Colors.grey[300]),
                       const SizedBox(height: 8),
-                      Text('暂无实验任务',
-                          style: TextStyle(color: Colors.grey[400])),
+                      Text('暂无实验任务', style: TextStyle(color: Colors.grey[400])),
                     ],
                   ),
                 ),
@@ -222,9 +187,7 @@ class _StudentLabPageState extends State<StudentLabPage> {
             Expanded(
               child: _statItem(
                 Icons.score,
-                avgScore != null
-                    ? (avgScore as num).toStringAsFixed(1)
-                    : '--',
+                avgScore != null ? (avgScore as num).toStringAsFixed(1) : '--',
                 '平均分',
                 Colors.green,
               ),
@@ -259,14 +222,34 @@ class _StudentLabPageState extends State<StudentLabPage> {
 
   Widget _buildMaterialsCard() {
     final categories = [
-      {'icon': Icons.school, 'title': '实验教程', 'color': accentColor,
-       'dir': 'data/实验/实验教程/', 'desc': '6个实验的步骤教程'},
-      {'icon': Icons.layers, 'title': '移动技术栈', 'color': accentColor,
-       'dir': 'data/实验/移动技术栈/', 'desc': '主流技术手册'},
-      {'icon': Icons.menu_book, 'title': '实验指导', 'color': Colors.teal,
-       'dir': 'data/实验/实验指导/', 'desc': '实验指导书'},
-      {'icon': Icons.assignment, 'title': '报告模板', 'color': Colors.orange,
-       'dir': 'data/实验/报告模板/', 'desc': '报告填写模板'},
+      {
+        'icon': Icons.school,
+        'title': '实验教程',
+        'color': accentColor,
+        'dir': 'data/实验/实验教程/',
+        'desc': '6个实验的步骤教程'
+      },
+      {
+        'icon': Icons.layers,
+        'title': '移动技术栈',
+        'color': accentColor,
+        'dir': 'data/实验/移动技术栈/',
+        'desc': '主流技术手册'
+      },
+      {
+        'icon': Icons.menu_book,
+        'title': '实验指导',
+        'color': Colors.teal,
+        'dir': 'data/实验/实验指导/',
+        'desc': '实验指导书'
+      },
+      {
+        'icon': Icons.assignment,
+        'title': '报告模板',
+        'color': Colors.orange,
+        'dir': 'data/实验/报告模板/',
+        'desc': '报告填写模板'
+      },
     ];
 
     return Card(
@@ -319,8 +302,8 @@ class _StudentLabPageState extends State<StudentLabPage> {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: (cat['color'] as Color)
-                                .withValues(alpha: 0.1),
+                            color:
+                                (cat['color'] as Color).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(cat['icon'] as IconData,
@@ -345,8 +328,12 @@ class _StudentLabPageState extends State<StudentLabPage> {
 
   Widget _buildTaskItem(Map<String, dynamic> task) {
     // Find my submission for this task
-    final mySub = _mySubmissions.where((s) => s['task_id'] == task['id']).toList();
+    final mySub =
+        _mySubmissions.where((s) => s['task_id'] == task['id']).toList();
     final hasSubmitted = mySub.isNotEmpty;
+    final status =
+        hasSubmitted ? mySub.first['status'] as String? ?? '已提交' : '';
+    final isReturned = status == '已打回';
     final score = hasSubmitted ? mySub.first['score'] as int? : null;
 
     final difficulty = task['difficulty'] as String? ?? '中等';
@@ -364,13 +351,25 @@ class _StudentLabPageState extends State<StudentLabPage> {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: (hasSubmitted ? Colors.green : Colors.blue)
+            color: (isReturned
+                    ? Colors.red
+                    : hasSubmitted
+                        ? Colors.green
+                        : Colors.blue)
                 .withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
-            hasSubmitted ? Icons.check_circle : Icons.assignment,
-            color: hasSubmitted ? Colors.green : Colors.blue,
+            isReturned
+                ? Icons.assignment_return
+                : hasSubmitted
+                    ? Icons.check_circle
+                    : Icons.assignment,
+            color: isReturned
+                ? Colors.red
+                : hasSubmitted
+                    ? Colors.green
+                    : Colors.blue,
             size: 22,
           ),
         ),
@@ -399,8 +398,10 @@ class _StudentLabPageState extends State<StudentLabPage> {
                       color: Colors.green,
                       fontWeight: FontWeight.w500))
             else if (hasSubmitted)
-              const Text('已提交·待批改',
-                  style: TextStyle(fontSize: 11, color: Colors.orange))
+              Text(isReturned ? '已打回·请修改后重新提交' : '已提交·待批改',
+                  style: TextStyle(
+                      fontSize: 11,
+                      color: isReturned ? Colors.red : Colors.orange))
             else
               const Text('未提交',
                   style: TextStyle(fontSize: 11, color: Colors.grey)),
@@ -419,11 +420,10 @@ class _StudentLabPageState extends State<StudentLabPage> {
                 ],
                 if ((task['requirements'] as String?)?.isNotEmpty == true) ...[
                   const Text('实验要求：',
-                      style: TextStyle(
-                          fontSize: 12, fontWeight: FontWeight.w600)),
-                  Text(task['requirements'] as String,
                       style:
-                          TextStyle(fontSize: 12, color: Colors.grey[700])),
+                          TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                  Text(task['requirements'] as String,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[700])),
                   const SizedBox(height: 8),
                 ],
                 Row(
@@ -433,8 +433,7 @@ class _StudentLabPageState extends State<StudentLabPage> {
                     const SizedBox(width: 4),
                     Text(
                       '截止：${(task['due_date'] as String? ?? '').split('T').first}',
-                      style:
-                          TextStyle(fontSize: 11, color: Colors.grey[500]),
+                      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                     ),
                   ],
                 ),
@@ -446,15 +445,14 @@ class _StudentLabPageState extends State<StudentLabPage> {
                       const Icon(Icons.rate_review,
                           size: 16, color: Colors.blue),
                       const SizedBox(width: 6),
-                      const Text('教师批改反馈：',
+                      Text(isReturned ? '打回理由：' : '教师批改反馈：',
                           style: TextStyle(
                               fontSize: 12, fontWeight: FontWeight.w600)),
                     ],
                   ),
                   const SizedBox(height: 4),
                   Text(mySub.first['feedback'] as String,
-                      style:
-                          TextStyle(fontSize: 12, color: Colors.grey[700])),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[700])),
                 ],
                 const Divider(),
                 Row(
@@ -470,15 +468,13 @@ class _StudentLabPageState extends State<StudentLabPage> {
                         label: const Text('删除提交',
                             style: TextStyle(color: Colors.red, fontSize: 13)),
                       ),
-                    if (hasSubmitted)
-                      const SizedBox(width: 8),
+                    if (hasSubmitted) const SizedBox(width: 8),
                     FilledButton.icon(
-                      onPressed: () =>
-                          _showSubmitDialog(task, hasSubmitted ? mySub.first : null),
+                      onPressed: () => _showSubmitDialog(
+                          task, hasSubmitted ? mySub.first : null),
                       icon: Icon(hasSubmitted ? Icons.edit : Icons.upload,
                           size: 16),
-                      label:
-                          Text(hasSubmitted ? '重新提交' : '提交作业'),
+                      label: Text(hasSubmitted ? '重新提交' : '提交作业'),
                     ),
                   ],
                 ),
@@ -522,8 +518,7 @@ class _StudentLabPageState extends State<StudentLabPage> {
       await _dao.deleteSubmission(subId);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('已删除提交'), backgroundColor: Colors.green),
+          const SnackBar(content: Text('已删除提交'), backgroundColor: Colors.green),
         );
         _loadData();
       }
@@ -546,6 +541,7 @@ class _StudentLabPageState extends State<StudentLabPage> {
       selectedFileName = existing['file_names'] as String;
       selectedFilePath = existing['file_paths'] as String?;
     }
+    bool isSubmitting = false;
 
     await showDialog(
       context: context,
@@ -576,8 +572,8 @@ class _StudentLabPageState extends State<StudentLabPage> {
                       Expanded(
                         child: Text(
                           '提交的PDF将同步到仓库：\nsync/students/$_userId/实验/文件名.pdf\n\n文件名格式：学号+姓名+任务名称.pdf',
-                          style: TextStyle(
-                              fontSize: 11, color: Colors.amber[900]),
+                          style:
+                              TextStyle(fontSize: 11, color: Colors.amber[900]),
                         ),
                       ),
                     ],
@@ -647,7 +643,8 @@ class _StudentLabPageState extends State<StudentLabPage> {
                                     ),
                                     if (selectedFilePath != null)
                                       FutureBuilder<int>(
-                                        future: File(selectedFilePath!).length(),
+                                        future:
+                                            File(selectedFilePath!).length(),
                                         builder: (_, snap) => Text(
                                           snap.hasData
                                               ? '${(snap.data! / 1024 / 1024).toStringAsFixed(1)} MB'
@@ -671,10 +668,8 @@ class _StudentLabPageState extends State<StudentLabPage> {
                                   );
                                   if (result != null &&
                                       result.files.single.path != null) {
-                                    final pickedName =
-                                        result.files.single.name;
-                                    final error = _validateFileName(
-                                        pickedName,
+                                    final pickedName = result.files.single.name;
+                                    final error = _validateFileName(pickedName,
                                         task['title'] as String? ?? '');
                                     if (error != null) {
                                       if (mounted) {
@@ -704,8 +699,7 @@ class _StudentLabPageState extends State<StudentLabPage> {
                         : Column(
                             children: [
                               Icon(Icons.upload_file,
-                                  size: 40,
-                                  color: Colors.grey[400]),
+                                  size: 40, color: Colors.grey[400]),
                               const SizedBox(height: 8),
                               Text(
                                 '点击选择 PDF 实验报告',
@@ -727,245 +721,131 @@ class _StudentLabPageState extends State<StudentLabPage> {
           ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('取消')),
+                onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
             FilledButton(
-              onPressed: selectedFilePath == null
+              onPressed: selectedFilePath == null || isSubmitting
                   ? null
                   : () async {
-                      // 提取 PDF 文本，作为 AI 批阅的输入（避开 1MB 同步限制 + 跨设备路径解析问题）
-                      final extractedText =
-                          await PdfTextService.extractFromFile(
-                              selectedFilePath!);
-                      final contentBuf = StringBuffer()
-                        ..writeln('PDF实验报告：$selectedFileName');
-                      if (extractedText != null && extractedText.isNotEmpty) {
-                        contentBuf
-                          ..writeln()
-                          ..writeln('--- 报告正文（自动提取）---')
-                          ..writeln(extractedText);
-                      }
-                      await _dao.submitTask(
-                        taskId: task['id'] as int,
-                        userId: _userId,
-                        content: contentBuf.toString(),
-                        filePaths: selectedFilePath,
-                        fileNames: selectedFileName,
-                      );
-                      // 拿提交 ID（用 task_id + user_id 反查）
-                      final subRow = await _dao.getSubmission(
-                          task['id'] as int, _userId);
-                      final subId = subRow?['id'] as int?;
-                      // 通知教师
-                      NotificationService().notifyLabSubmission(
-                        studentId: _userId,
-                        studentName: _authService.currentUser?.realName ?? _userId,
-                        taskTitle: task['title'] as String? ?? '实验任务',
-                        taskId: task['id'] as int,
-                      );
-                      // 立即触发同步上传（不等定时器）
-                      unawaited(SyncService().uploadStudentData(_userId));
-                      if (ctx.mounted) Navigator.pop(ctx);
-                      if (!mounted) return;
-
-                      // 询问学生：立即查看 AI 批阅 vs 稍后通知
-                      final taskTitle = task['title'] as String? ?? '实验任务';
-                      final inline = await _askWatchOrNotify(context, taskTitle);
-                      if (subId != null) {
-                        if (inline == true) {
-                          // 同步等待 AI，UI 弹 loading + 结果
-                          await _runInlineAiGrading(
-                            context: context,
-                            submissionId: subId,
-                            taskId: task['id'] as int,
-                            taskTitle: taskTitle,
-                            content: contentBuf.toString(),
-                            requirements:
-                                task['requirements'] as String? ?? '',
-                            maxScore: (task['max_score'] as int?) ?? 100,
-                          );
-                        } else {
-                          // 后台跑，AI 完成后通过通知告诉学生
-                          unawaited(AutoGradingService.instance
-                              .gradeLabSubmission(
-                            submissionId: subId,
-                            studentId: _userId,
-                            studentName: _authService.currentUser?.realName ??
-                                _userId,
-                            taskId: task['id'] as int,
-                            taskTitle: taskTitle,
-                            content: contentBuf.toString(),
-                            requirements:
-                                task['requirements'] as String? ?? '',
-                            maxScore: (task['max_score'] as int?) ?? 100,
-                          ));
+                      setDialogState(() => isSubmitting = true);
+                      int? savedSubmissionId;
+                      try {
+                        // 提取 PDF 文本，作为 AI 批阅的输入（避开 1MB 同步限制 + 跨设备路径解析问题）
+                        final extractedText =
+                            await PdfTextService.extractFromFile(
+                                selectedFilePath!);
+                        final bodyError =
+                            LabReportValidationService.validateExtractedBody(
+                          extractedText: extractedText ?? '',
+                          taskTitle: task['title'] as String? ?? '',
+                          requirements: task['requirements'] as String?,
+                        );
+                        if (bodyError != null) {
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('提交成功！AI 批阅完成后会通知你。')),
+                              SnackBar(
+                                content: Text(bodyError),
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 4),
+                              ),
                             );
                           }
+                          return;
                         }
-                      } else if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('提交成功！')),
+                        final content =
+                            LabReportValidationService.buildSubmissionContent(
+                          fileName: selectedFileName!,
+                          extractedText: extractedText!,
                         );
+                        savedSubmissionId = await _dao.submitTask(
+                          taskId: task['id'] as int,
+                          userId: _userId,
+                          content: content,
+                          filePaths: selectedFilePath,
+                          fileNames: selectedFileName,
+                        );
+                        final taskTitle = task['title'] as String? ?? '实验任务';
+                        final draft = await AutoGradingService.instance
+                            .gradeLabSubmission(
+                          submissionId: savedSubmissionId,
+                          studentId: _userId,
+                          studentName:
+                              _authService.currentUser?.realName ?? _userId,
+                          taskId: task['id'] as int,
+                          taskTitle: taskTitle,
+                          content: content,
+                          requirements: task['requirements'] as String? ?? '',
+                          maxScore: (task['max_score'] as int?) ?? 100,
+                          returnDraft: true,
+                          notifyStudent: false,
+                        );
+                        final passScore =
+                            await SettingsService.getEvaluationPassScore();
+                        if (draft == null ||
+                            !draft.isUsable ||
+                            draft.score < passScore) {
+                          await _dao.deleteSubmission(savedSubmissionId);
+                          await GradingResultDao()
+                              .deletePendingForTarget('lab', savedSubmissionId);
+                          savedSubmissionId = null;
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(draft == null
+                                    ? '提交失败：AI 审核未完成，请稍后重试'
+                                    : '提交失败：AI 初评 ${draft.score} 分，未达到 $passScore 分达标线，请修改后重新提交'),
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 5),
+                              ),
+                            );
+                          }
+                          return;
+                        }
+                        // 通知教师
+                        NotificationService().notifyLabSubmission(
+                          studentId: _userId,
+                          studentName:
+                              _authService.currentUser?.realName ?? _userId,
+                          taskTitle: task['title'] as String? ?? '实验任务',
+                          taskId: task['id'] as int,
+                        );
+                        // 立即触发同步上传（不等定时器）
+                        unawaited(SyncService().uploadStudentData(_userId));
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        if (!mounted) return;
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content:
+                                  Text('提交成功！AI 初评 ${draft.score} 分，等待教师复核。'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                        _loadData();
+                      } catch (e) {
+                        if (savedSubmissionId != null) {
+                          await _dao.deleteSubmission(savedSubmissionId);
+                          await GradingResultDao()
+                              .deletePendingForTarget('lab', savedSubmissionId);
+                        }
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('提交失败: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      } finally {
+                        if (ctx.mounted) {
+                          setDialogState(() => isSubmitting = false);
+                        }
                       }
-                      _loadData();
                     },
-              child: const Text('确认提交'),
+              child: Text(isSubmitting ? 'AI审核中...' : '确认提交'),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  // ── AI 批阅交互 ──────────────────────────────────────────────────────────
-
-  /// 提交后弹窗：让学生选"立即查看 AI 批阅" / "稍后通知我"
-  Future<bool?> _askWatchOrNotify(BuildContext context, String taskTitle) async {
-    return showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.auto_awesome, color: accentColor),
-            const SizedBox(width: 8),
-            const Text('AI 批阅', style: TextStyle(fontSize: 18)),
-          ],
-        ),
-        content: Text('「$taskTitle」已提交。AI 批阅约需 10-30 秒。\n\n'
-            '在线等待会立刻看到优点 / 改进建议；\n'
-            '稍后通知则后台跑，完成时通过通知提示你。'),
-        actions: [
-          OutlinedButton.icon(
-            onPressed: () => Navigator.pop(ctx, false),
-            icon: const Icon(Icons.notifications_active),
-            label: const Text('稍后通知我'),
-          ),
-          FilledButton.icon(
-            onPressed: () => Navigator.pop(ctx, true),
-            icon: const Icon(Icons.visibility),
-            label: const Text('在线等待'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 在线等待 AI：弹 loading dialog 同步等结果，结果出来后弹评分详情
-  Future<void> _runInlineAiGrading({
-    required BuildContext context,
-    required int submissionId,
-    required int taskId,
-    required String taskTitle,
-    required String content,
-    required String requirements,
-    required int maxScore,
-  }) async {
-    // 先弹 loading
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const AlertDialog(
-        content: SizedBox(
-          height: 80,
-          child: Row(
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 16),
-              Expanded(child: Text('AI 正在批阅，请稍候…')),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    final draft = await AutoGradingService.instance.gradeLabSubmission(
-      submissionId: submissionId,
-      studentId: _userId,
-      studentName: _authService.currentUser?.realName ?? _userId,
-      taskId: taskId,
-      taskTitle: taskTitle,
-      content: content,
-      requirements: requirements,
-      maxScore: maxScore,
-      returnDraft: true,
-    );
-
-    if (!mounted) return;
-    Navigator.of(context, rootNavigator: true).pop(); // 关 loading
-
-    if (draft == null || !draft.isUsable) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('AI 批阅失败，已发通知给教师人工批阅'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    // 弹 AI 草稿详情
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.auto_awesome, color: accentColor),
-            const SizedBox(width: 8),
-            Text('AI 批阅草稿 · ${draft.score} 分',
-                style: const TextStyle(fontSize: 18)),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('（教师复核后才是最终成绩）',
-                  style: TextStyle(color: Colors.grey, fontSize: 12)),
-              const SizedBox(height: 12),
-              if (draft.strengths.isNotEmpty) ...[
-                const Text('✓ 优点',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, color: Colors.green)),
-                const SizedBox(height: 4),
-                ...draft.strengths.map((s) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text('· $s'),
-                    )),
-                const SizedBox(height: 12),
-              ],
-              if (draft.improvements.isNotEmpty) ...[
-                const Text('✎ 改进建议',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, color: Colors.orange)),
-                const SizedBox(height: 4),
-                ...draft.improvements.map((s) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text('· $s'),
-                    )),
-                const SizedBox(height: 12),
-              ],
-              if (draft.feedback.isNotEmpty) ...[
-                const Text('总评',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Text(draft.feedback),
-              ],
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('知道了'),
-          ),
-        ],
       ),
     );
   }
@@ -985,18 +865,34 @@ class _StudentMaterialsPageState extends State<_StudentMaterialsPage> {
   static const _dataRepoBranch = 'master';
 
   static final _categories = [
-    {'title': '实验教程', 'icon': Icons.school, 'color': const Color(0xFF1677FF),
-     'giteeDir': '实验/实验教程/',
-     'desc': '6 个实验的详细步骤教程'},
-    {'title': '移动技术栈', 'icon': Icons.layers, 'color': const Color(0xFF1677FF),
-     'giteeDir': '实验/移动技术栈/',
-     'desc': '覆盖 Kotlin/Swift/Flutter/ArkUI 等主流技术手册'},
-    {'title': '实验指导', 'icon': Icons.menu_book, 'color': Colors.teal,
-     'giteeDir': '实验/实验指导/',
-     'desc': '实验指导书及 UML 设计文档参考'},
-    {'title': '报告模板', 'icon': Icons.assignment, 'color': Colors.orange,
-     'giteeDir': '实验/报告模板/',
-     'desc': '每个实验对应的报告模板'},
+    {
+      'title': '实验教程',
+      'icon': Icons.school,
+      'color': const Color(0xFF1677FF),
+      'giteeDir': '实验/实验教程/',
+      'desc': '6 个实验的详细步骤教程'
+    },
+    {
+      'title': '移动技术栈',
+      'icon': Icons.layers,
+      'color': const Color(0xFF1677FF),
+      'giteeDir': '实验/移动技术栈/',
+      'desc': '覆盖 Kotlin/Swift/Flutter/ArkUI 等主流技术手册'
+    },
+    {
+      'title': '实验指导',
+      'icon': Icons.menu_book,
+      'color': Colors.teal,
+      'giteeDir': '实验/实验指导/',
+      'desc': '实验指导书及 UML 设计文档参考'
+    },
+    {
+      'title': '报告模板',
+      'icon': Icons.assignment,
+      'color': Colors.orange,
+      'giteeDir': '实验/报告模板/',
+      'desc': '每个实验对应的报告模板'
+    },
   ];
 
   final Map<int, List<Map<String, String>>> _files = {};
@@ -1012,29 +908,33 @@ class _StudentMaterialsPageState extends State<_StudentMaterialsPage> {
     try {
       final gitee = GiteeService();
       final tree = await gitee.getTree(
-        _dataRepoOwner, _dataRepoName,
-        sha: _dataRepoBranch, recursive: true,
+        _dataRepoOwner,
+        _dataRepoName,
+        sha: _dataRepoBranch,
+        recursive: true,
       );
 
       for (int i = 0; i < _categories.length; i++) {
         final prefix = _categories[i]['giteeDir'] as String;
-        final files = tree
-            .where((e) {
-              final path = e['path'] as String? ?? '';
-              final type = e['type'] as String? ?? '';
-              return type == 'blob' && path.startsWith(prefix) &&
-                  (path.endsWith('.md') || path.endsWith('.puml'));
-            })
-            .map((e) {
-              final path = e['path'] as String;
-              final name = path.split('/').last;
-              final displayName = name
-                  .replaceAll('_new.md', '')
-                  .replaceAll('.md', '')
-                  .replaceAll('.puml', '');
-              return {'giteePath': path, 'displayName': displayName, 'fileName': name};
-            })
-            .toList();
+        final files = tree.where((e) {
+          final path = e['path'] as String? ?? '';
+          final type = e['type'] as String? ?? '';
+          return type == 'blob' &&
+              path.startsWith(prefix) &&
+              (path.endsWith('.md') || path.endsWith('.puml'));
+        }).map((e) {
+          final path = e['path'] as String;
+          final name = path.split('/').last;
+          final displayName = name
+              .replaceAll('_new.md', '')
+              .replaceAll('.md', '')
+              .replaceAll('.puml', '');
+          return {
+            'giteePath': path,
+            'displayName': displayName,
+            'fileName': name
+          };
+        }).toList();
         files.sort((a, b) => a['displayName']!.compareTo(b['displayName']!));
         _files[i] = files;
       }
@@ -1077,8 +977,8 @@ class _StudentMaterialsPageState extends State<_StudentMaterialsPage> {
                         color: color.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(cat['icon'] as IconData,
-                          color: color, size: 22),
+                      child:
+                          Icon(cat['icon'] as IconData, color: color, size: 22),
                     ),
                     title: Row(
                       children: [
@@ -1099,8 +999,7 @@ class _StudentMaterialsPageState extends State<_StudentMaterialsPage> {
                       ],
                     ),
                     subtitle: Text(cat['desc'] as String,
-                        style:
-                            TextStyle(fontSize: 11, color: Colors.grey[500]),
+                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis),
                     initiallyExpanded: catIdx == widget.initialCategory,
@@ -1158,13 +1057,17 @@ class _StudentMaterialsPageState extends State<_StudentMaterialsPage> {
     try {
       final gitee = GiteeService();
       final content = await gitee.getFileContent(
-            _dataRepoOwner, _dataRepoName, file['giteePath']!,
+            _dataRepoOwner,
+            _dataRepoName,
+            file['giteePath']!,
             ref: _dataRepoBranch,
-          ) ?? '';
+          ) ??
+          '';
       if (content.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('文件内容为空'), backgroundColor: Colors.orange),
+            const SnackBar(
+                content: Text('文件内容为空'), backgroundColor: Colors.orange),
           );
         }
         return;
@@ -1175,7 +1078,8 @@ class _StudentMaterialsPageState extends State<_StudentMaterialsPage> {
       if (!await labDir.exists()) {
         await labDir.create(recursive: true);
       }
-      final saveName = file['displayName']!.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+      final saveName =
+          file['displayName']!.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
       final ext = (file['fileName'] ?? '').endsWith('.puml') ? '.puml' : '.md';
       final saveFile = File('${labDir.path}/$saveName$ext');
       await saveFile.writeAsString(content);
