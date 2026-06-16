@@ -3,8 +3,8 @@
   "user_id": "2023210628",
   "user_name": "王全洋",
   "role": "student",
-  "synced_at": "2026-06-16T13:54:33.328846",
-  "last_active": "2026-06-16T13:54:33.328846",
+  "synced_at": "2026-06-16T22:46:33.516211",
+  "last_active": "2026-06-16T22:46:33.516211",
   "quiz_results": [
     {
       "user_id": "2023210628",
@@ -14,7 +14,8 @@
       "num_total": 5,
       "chapter": "第四章 小程序开发1",
       "quiz_type": null,
-      "completed_at": "2026-05-02T11:25:14.304408"
+      "completed_at": "2026-05-02T11:25:14.304408",
+      "course_id": null
     }
   ],
   "learning_records": [],
@@ -133,40 +134,7 @@
     }
   ],
   "student_reports": [],
-  "student_works": [
-    {
-      "title": "线上购物平台开发与整合",
-      "description": "【积分通兑】实现积分获取（购物、签到、评价）和消费体系，支持积分抵扣现金、兑换优惠券和积分商城功能。【商品评分】提供商品评价和星级打分功能，支持文字+图片评价，展示评价统计和热门评价标签。【AI购物推荐】调用AI大模型根据用户画像和购物行为，在不同场景（首页、搜索结果、购物车）智能推荐相关商品。",
-      "tech_stack": "Vue.js + CSS",
-      "work_type": "综合项目",
-      "group_name": "cg2-ospdi",
-      "leader_name": "王全洋",
-      "user_id": "2023210628",
-      "file_path": null,
-      "file_size": null,
-      "status": "待提交",
-      "submit_time": null,
-      "tags": "[\"Vue.js\",\"CSS\"]",
-      "created_at": "2026-06-01T10:33:35.334991",
-      "updated_at": "2026-06-01T10:33:35.334991",
-      "related_node_ids": null,
-      "ai_suspicion": 0.0,
-      "teacher_confirmed": 0,
-      "project_id": null,
-      "group_id": null,
-      "video_url": null,
-      "thumbnail_url": null,
-      "video_duration": null,
-      "view_count": 0,
-      "like_count": 0,
-      "comment_count": 0,
-      "repo": "cg2-ospdi",
-      "class_group": "cg2",
-      "project": "线上购物平台开发与整合",
-      "student_role": "Uniapp开发工程师",
-      "student_name": "王全洋"
-    }
-  ],
+  "student_works": [],
   "survey_responses": [],
   "checkin_records": [],
   "work_comments": [],
@@ -180,6 +148,7 @@
   "lab_tasks": [
     {
       "id": 1,
+      "course_id": null,
       "title": "实验一 开发环境搭建",
       "chapter": "第1章",
       "description": "搭建 Android Studio、Flutter、微信开发者工具、DevEco Studio、HBuilderX（Uniapp）、Visual Studio（MAUI）开发环境，各成员根据分工完成对应平台环境配置并成功运行 Hello World 项目。\n\n【实验学时】2学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标1 | 【分组人数】6人/组",
@@ -196,6 +165,7 @@
     },
     {
       "id": 2,
+      "course_id": null,
       "title": "实验二 原生应用开发",
       "chapter": "第2章",
       "description": "Android方向：使用 Kotlin 实现\"智慧校园\"登录页面（EditText输入验证、Activity跳转与数据传递）。iOS方向（演示/模拟器）：使用 SwiftUI 实现登录页面，理解 ViewController 生命周期。组内每人选择不同平台或技术方案实现同一功能，完成后进行组内技术对比分享。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标1 | 【分组人数】6人/组",
@@ -212,6 +182,7 @@
     },
     {
       "id": 3,
+      "course_id": null,
       "title": "实验三 跨平台应用开发",
       "chapter": "第3章",
       "description": "开发\"智慧校园\"业务数据列表页（RESTful API 网络数据请求 + JSON 解析 + 下拉刷新），组内成员分别使用 Flutter（Dart）、React Native（JSX）、Uniapp（Vue）、MAUI（C#）等不同框架实现同一功能需求。扩展案例：集成设备传感器（如GPS定位、加速度计），体验移动硬件能力调用。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标2 | 【分组人数】6人/组",
@@ -228,6 +199,7 @@
     },
     {
       "id": 4,
+      "course_id": null,
       "title": "实验四 微信小程序开发",
       "chapter": "第4章",
       "description": "借助 AI 编程工具辅助开发\"智慧校园通知\"小程序（列表 + 详情页路由 + 本地存储），体验 AI 工具在代码生成与调试中的作用。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标2 | 【分组人数】6人/组",
@@ -244,6 +216,7 @@
     },
     {
       "id": 5,
+      "course_id": null,
       "title": "实验五 鸿蒙多端应用开发",
       "chapter": "第5章",
       "description": "使用 DevEco Studio 开发\"智慧天气\"应用，实现手机/平板界面自适应布局；通过模拟器演示分布式数据同步原理。扩展案例：调用设备传感器（如光线传感器、陀螺仪）实现简单的物联网数据采集与展示场景。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标3 | 【分组人数】6人/组",
@@ -260,6 +233,7 @@
     },
     {
       "id": 6,
+      "course_id": null,
       "title": "实验六 跨平台综合项目实战",
       "chapter": "第6章",
       "description": "团队开发\"智慧健康\"等业务应用（建议选题涉及传感器或硬件交互场景），每人负责一个技术栈（Android/Flutter/React Native/Uniapp/MAUI/微信小程序），使用 Git 进行版本控制与协作，借助 AI 编程工具辅助代码生成与调试。每组6人，实验中每人选择一个技术栈独立完成对应实验任务，组内进行技术分享与对比分析。\n\n【实验学时】6学时 | 【实验类型】综合型 | 【实验要求】必做 | 【对应课程目标】目标1-4 | 【分组人数】6人/组",
