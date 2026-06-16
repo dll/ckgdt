@@ -3,8 +3,8 @@
   "user_id": "2023210575",
   "user_name": "安豪",
   "role": "student",
-  "synced_at": "2026-06-16T01:46:28.287515",
-  "last_active": "2026-06-16T01:46:28.287515",
+  "synced_at": "2026-06-16T23:08:17.699848",
+  "last_active": "2026-06-16T23:08:17.699848",
   "quiz_results": [
     {
       "user_id": "2023210575",
@@ -290,7 +290,14 @@
       "student_name": "安豪"
     }
   ],
-  "survey_responses": [],
+  "survey_responses": [
+    {
+      "survey_id": 1,
+      "user_id": "2023210575",
+      "answers_json": "{\"1\":\"非常满意\",\"2\":[\"Flutter开发\",\"Android原生\",\"React Native\",\"小程序开发\",\"HarmonyOS\",\"综合实践\"],\"3\":\"5\",\"4\":\"无\"}",
+      "submitted_at": "2026-06-16T01:52:43.014724"
+    }
+  ],
   "checkin_records": [],
   "work_comments": [],
   "work_likes": [],
