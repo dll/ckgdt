@@ -3,8 +3,8 @@
   "user_id": "2023210643",
   "user_name": "张海天",
   "role": "student",
-  "synced_at": "2026-06-16T21:52:50.480289",
-  "last_active": "2026-06-16T21:52:50.480289",
+  "synced_at": "2026-06-16T22:00:31.417956",
+  "last_active": "2026-06-16T22:00:31.417956",
   "quiz_results": [
     {
       "user_id": "2023210643",
@@ -575,41 +575,7 @@
       "updated_at": null
     }
   ],
-  "student_works": [
-    {
-      "course_id": "mad",
-      "title": "二手物品交易平台开发与整合",
-      "description": "【数据报表生成】自动汇总平台的交易数据生成运营报表，包含交易量、成交率、热门品类和用户活跃度等关键指标。【图表展示】使用图表组件可视化展示交易趋势、价格分布和用户增长数据，支持多维度筛选和对比分析。【AI交易分析】调用AI大模型分析平台交易数据模式，预测热门品类趋势和最佳定价策略。",
-      "tech_stack": "C# + .NET + MAUI",
-      "work_type": "综合项目",
-      "group_name": "cg2-sgtpdi",
-      "leader_name": "张海天",
-      "user_id": "2023210643",
-      "file_path": null,
-      "file_size": null,
-      "status": "待提交",
-      "submit_time": null,
-      "tags": "[\"C#\",\".NET\",\"MAUI\"]",
-      "created_at": "2026-06-15T18:45:38.906963",
-      "updated_at": "2026-06-15T18:45:38.906963",
-      "related_node_ids": null,
-      "ai_suspicion": 0.0,
-      "teacher_confirmed": 0,
-      "project_id": null,
-      "group_id": null,
-      "video_url": null,
-      "thumbnail_url": null,
-      "video_duration": null,
-      "view_count": 0,
-      "like_count": 0,
-      "comment_count": 0,
-      "repo": "cg2-sgtpdi",
-      "class_group": "cg2",
-      "project": "二手物品交易平台开发与整合",
-      "student_role": "MAUI开发工程师",
-      "student_name": "张海天"
-    }
-  ],
+  "student_works": [],
   "survey_responses": [
     {
       "survey_id": 1,
@@ -621,13 +587,7 @@
   "checkin_records": [],
   "work_comments": [],
   "work_likes": [],
-  "work_views": [
-    {
-      "work_id": 86,
-      "user_id": "2023210643",
-      "viewed_at": "2026-06-15T18:46:10.025239"
-    }
-  ],
+  "work_views": [],
   "peer_reviews": [],
   "collaboration_messages": [],
   "contribution_scores": [
