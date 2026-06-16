@@ -1,4 +1,4 @@
-﻿part of '../lab_tasks_page.dart';
+part of '../lab_tasks_page.dart';
 
 class _TaskListTab extends StatefulWidget {
   final AuthService authService;
@@ -274,11 +274,13 @@ class _TaskListTabState extends State<_TaskListTab> {
   Widget _buildStudentStatusRow(String status) {
     final statusColor = switch (status) {
       '已批改' => Colors.green,
+      '已打回' => Colors.red,
       '已提交' => Colors.blue,
       _ => Colors.orange,
     };
     final statusIcon = switch (status) {
       '已批改' => Icons.check_circle,
+      '已打回' => Icons.assignment_return,
       '已提交' => Icons.upload_file,
       _ => Icons.pending,
     };
@@ -538,11 +540,15 @@ class _TaskListTabState extends State<_TaskListTab> {
     final taskId = task['id'] as int;
     final userId = widget.authService.getCurrentUserId();
     final contentCtrl = TextEditingController();
+    String? selectedFilePath;
+    String? selectedFileName;
     bool isSubmitting = false;
 
     final existing = _submissionCache[taskId];
     if (existing != null) {
       contentCtrl.text = existing['content'] as String? ?? '';
+      selectedFilePath = existing['file_paths'] as String?;
+      selectedFileName = existing['file_names'] as String?;
     }
 
     showDialog(
@@ -568,12 +574,92 @@ class _TaskListTabState extends State<_TaskListTab> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () async {
+                      final result = await FilePicker.platform.pickFiles(
+                        type: FileType.custom,
+                        allowedExtensions: ['pdf'],
+                        dialogTitle: '选择 PDF 实验报告',
+                      );
+                      if (result == null || result.files.single.path == null) {
+                        return;
+                      }
+                      final pickedName = result.files.single.name;
+                      final error = LabReportValidationService.validateFileName(
+                        fileName: pickedName,
+                        studentId: userId ?? '',
+                        realName:
+                            widget.authService.currentUser?.realName ?? '',
+                        taskTitle: task['title'] as String? ?? '',
+                      );
+                      if (error != null) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(error),
+                              backgroundColor: Colors.red,
+                              duration: const Duration(seconds: 4),
+                            ),
+                          );
+                        }
+                        return;
+                      }
+                      setDialogState(() {
+                        selectedFilePath = result.files.single.path!;
+                        selectedFileName = pickedName;
+                      });
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: selectedFilePath == null
+                            ? Colors.grey.withValues(alpha: 0.05)
+                            : Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: selectedFilePath == null
+                              ? Colors.grey.withValues(alpha: 0.25)
+                              : Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            selectedFilePath == null
+                                ? Icons.upload_file
+                                : Icons.picture_as_pdf,
+                            color: selectedFilePath == null
+                                ? Colors.grey[500]
+                                : Colors.red,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              selectedFileName ?? '选择 PDF 实验报告',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                   TextField(
                     controller: contentCtrl,
-                    maxLines: 6,
+                    maxLines: 3,
                     decoration: InputDecoration(
-                      labelText: '实验总结 *',
-                      hintText: '请简要描述实验完成情况、遇到的问题及解决方案...',
+                      labelText: '补充说明（可选）',
+                      hintText: '可补充说明实验完成情况、遇到的问题及解决方案...',
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10)),
                       contentPadding: const EdgeInsets.symmetric(
@@ -593,44 +679,111 @@ class _TaskListTabState extends State<_TaskListTab> {
               onPressed: isSubmitting
                   ? null
                   : () async {
-                      if (contentCtrl.text.trim().isEmpty) {
+                      if (selectedFilePath == null ||
+                          selectedFileName == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('请填写实验总结')),
+                          const SnackBar(content: Text('请选择符合命名规范的 PDF 实验报告')),
                         );
                         return;
                       }
                       setDialogState(() => isSubmitting = true);
+                      int? submissionId;
                       try {
-                        final submissionId = await widget.labTaskDao.submitTask(
+                        final extractedText =
+                            await PdfTextService.extractFromFile(
+                                selectedFilePath!);
+                        final bodyError =
+                            LabReportValidationService.validateExtractedBody(
+                          extractedText: extractedText ?? '',
+                          taskTitle: task['title'] as String? ?? '',
+                          requirements: task['requirements'] as String?,
+                        );
+                        if (bodyError != null) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(bodyError),
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 4),
+                              ),
+                            );
+                          }
+                          return;
+                        }
+                        final content = StringBuffer()
+                          ..write(
+                              LabReportValidationService.buildSubmissionContent(
+                            fileName: selectedFileName!,
+                            extractedText: extractedText!,
+                          ));
+                        if (contentCtrl.text.trim().isNotEmpty) {
+                          content
+                            ..writeln()
+                            ..writeln('--- 学生补充说明 ---')
+                            ..writeln(contentCtrl.text.trim());
+                        }
+                        submissionId = await widget.labTaskDao.submitTask(
                           taskId: taskId,
                           userId: userId!,
-                          content: contentCtrl.text.trim(),
+                          content: content.toString(),
+                          filePaths: selectedFilePath,
+                          fileNames: selectedFileName,
                         );
+                        final draft = await AutoGradingService.instance
+                            .gradeLabSubmission(
+                          submissionId: submissionId,
+                          studentId: userId,
+                          studentName:
+                              widget.authService.currentUser?.realName ??
+                                  userId,
+                          taskId: taskId,
+                          taskTitle: task['title'] as String? ?? '实验任务',
+                          content: content.toString(),
+                          requirements: task['requirements'] as String?,
+                          maxScore: (task['max_score'] as int?) ?? 100,
+                          returnDraft: true,
+                          notifyStudent: false,
+                        );
+                        final passScore =
+                            await SettingsService.getEvaluationPassScore();
+                        if (draft == null ||
+                            !draft.isUsable ||
+                            draft.score < passScore) {
+                          await widget.labTaskDao
+                              .deleteSubmission(submissionId);
+                          await GradingResultDao()
+                              .deletePendingForTarget('lab', submissionId);
+                          submissionId = null;
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(draft == null
+                                    ? '提交失败：AI 审核未完成，请稍后重试'
+                                    : '提交失败：AI 初评 ${draft.score} 分，未达到 $passScore 分达标线，请修改后重新提交'),
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 5),
+                              ),
+                            );
+                          }
+                          return;
+                        }
                         // 通知教师
                         NotificationService().notifyLabSubmission(
                           studentId: userId,
-                          studentName: widget.authService.currentUser?.realName ?? userId,
+                          studentName:
+                              widget.authService.currentUser?.realName ??
+                                  userId,
                           taskTitle: task['title'] as String? ?? '实验任务',
                           taskId: taskId,
                         );
                         // 立即触发同步上传
                         unawaited(SyncService().uploadStudentData(userId));
-                        // 后台触发 AI 批阅草稿（不阻塞 UI）—— 学生侧体验：
-                        // 提交后教师会很快收到"AI 已生成评分草稿"，等教师审核
-                        if (submissionId > 0) {
-                          unawaited(_triggerAiGradingDraft(
-                            submissionId: submissionId,
-                            taskId: taskId,
-                            taskTitle: task['title'] as String? ?? '实验任务',
-                            content: contentCtrl.text.trim(),
-                            studentId: userId,
-                          ));
-                        }
                         if (context.mounted) {
                           Navigator.pop(ctx);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('提交成功！'),
+                            SnackBar(
+                              content:
+                                  Text('提交成功！AI 初评 ${draft.score} 分，等待教师复核。'),
                               backgroundColor: Colors.green,
                             ),
                           );
@@ -641,6 +794,12 @@ class _TaskListTabState extends State<_TaskListTab> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text('提交失败: $e')),
                           );
+                        }
+                        if (submissionId != null) {
+                          await widget.labTaskDao
+                              .deleteSubmission(submissionId);
+                          await GradingResultDao()
+                              .deletePendingForTarget('lab', submissionId);
                         }
                       } finally {
                         if (ctx.mounted) {
@@ -699,7 +858,8 @@ class _TaskListTabState extends State<_TaskListTab> {
       final feedback = formatGradingFeedback(parsed);
       final dimensions = parsed['dimensions'] as Map<String, dynamic>?;
       final strengths = (parsed['strengths'] as List?)?.cast<String>() ?? [];
-      final improvements = (parsed['improvements'] as List?)?.cast<String>() ?? [];
+      final improvements =
+          (parsed['improvements'] as List?)?.cast<String>() ?? [];
       final aiFlag = (parsed['ai_flag'] as bool?) ?? false;
 
       await GradingResultDao().saveResult(
@@ -732,4 +892,3 @@ class _TaskListTabState extends State<_TaskListTab> {
 // ══════════════════════════════════════════════════════════════════════════════
 // Tab 2: 我的提交 / 提交管理
 // ══════════════════════════════════════════════════════════════════════════════
-

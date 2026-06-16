@@ -1,4 +1,4 @@
-﻿part of '../lab_tasks_page.dart';
+part of '../lab_tasks_page.dart';
 
 class _ReportTab extends StatefulWidget {
   final AuthService authService;
@@ -14,7 +14,7 @@ class _ReportTabState extends State<_ReportTab> {
   List<Map<String, dynamic>> _templates = [];
   bool _isLoading = true;
 
-  /// 教师视图下报告分组方式：byStudent（学号）/ byTask（实验任务）
+  /// 教师视图下报告分组方式：byStudent（学号）/ byTask（实验任务）/ byGrade（成绩等级）
   String _groupBy = 'byStudent';
 
   @override
@@ -25,6 +25,49 @@ class _ReportTabState extends State<_ReportTab> {
 
   bool get _isTeacherOrAdmin =>
       widget.authService.isTeacher || widget.authService.isAdmin;
+
+  Future<List<Map<String, dynamic>>> _cleanupInvalidSubmissions(
+    List<Map<String, dynamic>> submissions,
+  ) async {
+    if (!_isTeacherOrAdmin) return submissions;
+    final valid = <Map<String, dynamic>>[];
+    var removed = 0;
+    for (final sub in submissions) {
+      final subId = sub['id'] as int?;
+      final error = LabReportValidationService.validateStoredSubmission(sub);
+      if (subId != null && error != null) {
+        removed++;
+        await widget.labTaskDao.deleteSubmission(subId);
+        await GradingResultDao().deletePendingForTarget('lab', subId);
+        debugPrint(
+            'LabReportTab: removed invalid submission $subId, reason=$error');
+      } else {
+        valid.add(sub);
+      }
+    }
+    if (removed > 0 && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('已清理 $removed 条不合规实验报告提交')),
+      );
+    }
+    return valid;
+  }
+
+  Future<Map<int, Map<String, dynamic>>> _loadPendingAiDrafts() async {
+    final rows = await GradingResultDao().getPendingResults('lab');
+    final result = <int, Map<String, dynamic>>{};
+    for (final row in rows) {
+      final targetId = row['target_id'] as int?;
+      if (targetId == null) continue;
+      result[targetId] = {
+        '_ai_result_id': row['id'],
+        '_ai_score': (row['score'] as num?)?.round(),
+        '_ai_feedback': (row['feedback'] as String? ?? '').trim(),
+        '_ai_created_at': row['created_at'] as String? ?? '',
+      };
+    }
+    return result;
+  }
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
@@ -58,16 +101,19 @@ class _ReportTabState extends State<_ReportTab> {
             await widget.labTaskDao.getStudentReports());
         // 同时加载 lab_submissions 中的提交（学生通过 submitTask 提交的）
         // 将其转换为与 student_reports 兼容的格式合并显示
-        final submissions = await widget.labTaskDao.getSubmissions();
+        final submissions = await _cleanupInvalidSubmissions(
+            await widget.labTaskDao.getSubmissions());
+        final aiDrafts = await _loadPendingAiDrafts();
         for (final sub in submissions) {
           // 检查是否已有对应的 student_reports 记录（避免重复显示）
           final subUserId = sub['user_id'] as String? ?? '';
           final subTaskId = sub['task_id'] as int?;
-          final alreadyHasReport = reports.any((r) =>
-              r['user_id'] == subUserId && r['task_id'] == subTaskId);
+          final alreadyHasReport = reports.any(
+              (r) => r['user_id'] == subUserId && r['task_id'] == subTaskId);
           if (!alreadyHasReport) {
             reports.add({
               ...sub,
+              ...?aiDrafts[sub['id'] as int?],
               'title': sub['task_title'] as String? ??
                   sub['content'] as String? ??
                   '实验提交',
@@ -113,6 +159,31 @@ class _ReportTabState extends State<_ReportTab> {
         );
       }
     }
+  }
+
+  String _gradeBand(int? score) {
+    if (score == null) return '未批阅';
+    if (score >= 90) return '优秀 90-100';
+    if (score >= 80) return '良好 80-89';
+    if (score >= 70) return '中等 70-79';
+    if (score >= 60) return '及格 60-69';
+    return '不及格 0-59';
+  }
+
+  int _gradeBandOrder(String band) {
+    if (band.startsWith('优秀')) return 0;
+    if (band.startsWith('良好')) return 1;
+    if (band.startsWith('中等')) return 2;
+    if (band.startsWith('及格')) return 3;
+    if (band.startsWith('不及格')) return 4;
+    if (band == '未批阅') return 5;
+    return _groupBy == 'byGrade' ? 99 : 0;
+  }
+
+  IconData _groupIcon() {
+    if (_groupBy == 'byTask') return Icons.assignment;
+    if (_groupBy == 'byGrade') return Icons.workspace_premium;
+    return Icons.person;
   }
 
   @override
@@ -177,13 +248,19 @@ class _ReportTabState extends State<_ReportTab> {
           ? ((r['task_title'] as String?)?.trim().isNotEmpty == true
               ? r['task_title'] as String
               : (r['title'] as String? ?? '未知任务'))
-          : ((r['user_id'] as String?)?.trim().isNotEmpty == true
-              ? r['user_id'] as String
-              : '未知学生');
+          : _groupBy == 'byGrade'
+              ? _gradeBand((r['score'] as num?)?.round() ??
+                  (r['_ai_score'] as num?)?.round())
+              : ((r['user_id'] as String?)?.trim().isNotEmpty == true
+                  ? r['user_id'] as String
+                  : '未知学生');
       (groups[key] ??= []).add(r);
     }
 
-    final keys = groups.keys.toList()..sort();
+    final keys = groups.keys.toList()
+      ..sort((a, b) => _groupBy == 'byGrade'
+          ? _gradeBandOrder(a).compareTo(_gradeBandOrder(b))
+          : a.compareTo(b));
     final primary = Theme.of(context).colorScheme.primary;
 
     return ListView(
@@ -191,7 +268,8 @@ class _ReportTabState extends State<_ReportTab> {
       children: [
         // 分组切换 + 总数
         Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(
@@ -199,8 +277,8 @@ class _ReportTabState extends State<_ReportTab> {
                 const Icon(Icons.filter_list, size: 16, color: Colors.indigo),
                 const SizedBox(width: 6),
                 const Text('分组方式',
-                    style: TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.w600)),
+                    style:
+                        TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                 const SizedBox(width: 10),
                 Expanded(
                   child: SegmentedButton<String>(
@@ -213,6 +291,10 @@ class _ReportTabState extends State<_ReportTab> {
                           value: 'byTask',
                           icon: Icon(Icons.assignment, size: 14),
                           label: Text('按实验', style: TextStyle(fontSize: 11))),
+                      ButtonSegment(
+                          value: 'byGrade',
+                          icon: Icon(Icons.workspace_premium, size: 14),
+                          label: Text('按成绩', style: TextStyle(fontSize: 11))),
                     ],
                     selected: {_groupBy},
                     onSelectionChanged: (s) =>
@@ -225,8 +307,7 @@ class _ReportTabState extends State<_ReportTab> {
                 ),
                 const SizedBox(width: 8),
                 Text('共 ${_reports.length}',
-                    style: TextStyle(
-                        fontSize: 11, color: Colors.grey[600])),
+                    style: TextStyle(fontSize: 11, color: Colors.grey[600])),
               ],
             ),
           ),
@@ -246,7 +327,7 @@ class _ReportTabState extends State<_ReportTab> {
             child: Row(
               children: [
                 Icon(
-                  _groupBy == 'byTask' ? Icons.assignment : Icons.person,
+                  _groupIcon(),
                   size: 14,
                   color: primary,
                 ),
@@ -259,7 +340,8 @@ class _ReportTabState extends State<_ReportTab> {
                           color: primary)),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                   decoration: BoxDecoration(
                     color: primary,
                     borderRadius: BorderRadius.circular(8),
@@ -288,6 +370,8 @@ class _ReportTabState extends State<_ReportTab> {
     final updatedAt = report['updated_at'] as String? ?? '';
     final userId = report['user_id'] as String? ?? '';
     final isFromSubmissions = report['_from_submissions'] == true;
+    final aiScore = (report['_ai_score'] as num?)?.round();
+    final aiFeedback = report['_ai_feedback'] as String? ?? '';
 
     final statusColor = status == '已批改'
         ? Colors.blue
@@ -386,8 +470,6 @@ class _ReportTabState extends State<_ReportTab> {
                       if (value == 'edit') {
                         _showReportEditor(report: report);
                       } else if (value == 'delete') {
-                        _confirmDeleteReport(report);
-                      } else if (value == 'delete') {
                         if (isFromSubmissions) {
                           _confirmDeleteSubmission(report);
                         } else {
@@ -430,9 +512,11 @@ class _ReportTabState extends State<_ReportTab> {
                                 value: 'delete',
                                 child: Row(
                                   children: [
-                                    Icon(Icons.delete, size: 18, color: Colors.red),
+                                    Icon(Icons.delete,
+                                        size: 18, color: Colors.red),
                                     SizedBox(width: 8),
-                                    Text('删除', style: TextStyle(color: Colors.red)),
+                                    Text('删除',
+                                        style: TextStyle(color: Colors.red)),
                                   ],
                                 ),
                               ),
@@ -453,9 +537,11 @@ class _ReportTabState extends State<_ReportTab> {
                               value: 'delete',
                               child: Row(
                                 children: [
-                                  Icon(Icons.delete, size: 18, color: Colors.red),
+                                  Icon(Icons.delete,
+                                      size: 18, color: Colors.red),
                                   SizedBox(width: 8),
-                                  Text('删除', style: TextStyle(color: Colors.red)),
+                                  Text('删除',
+                                      style: TextStyle(color: Colors.red)),
                                 ],
                               ),
                             ),
@@ -476,6 +562,47 @@ class _ReportTabState extends State<_ReportTab> {
                           overflow: TextOverflow.ellipsis),
                     ),
                   ],
+                ),
+              ],
+              if (aiScore != null || aiFeedback.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.purple.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                        color: Colors.purple.withValues(alpha: 0.18)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.auto_awesome,
+                          size: 15, color: Colors.purple),
+                      const SizedBox(width: 6),
+                      Text(
+                        aiScore == null ? 'AI 初评' : 'AI 初评：$aiScore 分',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.purple,
+                        ),
+                      ),
+                      if (aiFeedback.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            aiFeedback.replaceAll('\n', ' '),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 11, color: Colors.grey[700]),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ],
             ],
@@ -575,8 +702,7 @@ class _ReportTabState extends State<_ReportTab> {
                 if (updatedAt.isNotEmpty) ...[
                   const SizedBox(height: 6),
                   Text('提交时间：$updatedAt',
-                      style:
-                          TextStyle(fontSize: 11, color: Colors.grey[500])),
+                      style: TextStyle(fontSize: 11, color: Colors.grey[500])),
                 ],
                 const Divider(height: 24),
                 // PDF 附件块（lab_submissions 主要数据源）
@@ -587,8 +713,8 @@ class _ReportTabState extends State<_ReportTab> {
                     decoration: BoxDecoration(
                       color: Colors.red.withValues(alpha: 0.04),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                          color: Colors.red.withValues(alpha: 0.2)),
+                      border:
+                          Border.all(color: Colors.red.withValues(alpha: 0.2)),
                     ),
                     child: Row(
                       children: [
@@ -607,7 +733,11 @@ class _ReportTabState extends State<_ReportTab> {
                               Text(
                                 fileNames.isNotEmpty
                                     ? fileNames
-                                    : filePaths.split('/').last.split('\\').last,
+                                    : filePaths
+                                        .split('/')
+                                        .last
+                                        .split('\\')
+                                        .last,
                                 style: TextStyle(
                                     fontSize: 11, color: Colors.grey[700]),
                                 maxLines: 2,
@@ -643,8 +773,8 @@ class _ReportTabState extends State<_ReportTab> {
                 // 简单文本提交（lab_submissions.content）
                 if (plainContent.isNotEmpty && contentMap.isEmpty) ...[
                   const Text('提交说明',
-                      style: TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.bold)),
+                      style:
+                          TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
                   Container(
                     width: double.infinity,
@@ -654,17 +784,21 @@ class _ReportTabState extends State<_ReportTab> {
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.grey[200]!),
                     ),
-                    child: SelectableText(plainContent,
-                        style: const TextStyle(fontSize: 13, height: 1.6)),
+                    child: Text(
+                      plainContent
+                              .contains(LabReportValidationService.bodyMarker)
+                          ? '报告正文已从 PDF 提取，用于 AI 批阅。请点击上方“打开 PDF”查看原始版式。'
+                          : plainContent,
+                      style: const TextStyle(fontSize: 13, height: 1.6),
+                    ),
                   ),
                   const SizedBox(height: 12),
                 ],
                 // 结构化报告内容（student_reports.content_json）
                 if (contentMap.isNotEmpty)
                   ...contentMap.entries.map((entry) {
-                    final sectionTitle = entry.key == 'content'
-                        ? '报告内容'
-                        : entry.key;
+                    final sectionTitle =
+                        entry.key == 'content' ? '报告内容' : entry.key;
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Column(
@@ -672,8 +806,7 @@ class _ReportTabState extends State<_ReportTab> {
                         children: [
                           Text(sectionTitle,
                               style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold)),
+                                  fontSize: 13, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 6),
                           Container(
                             width: double.infinity,
@@ -681,8 +814,7 @@ class _ReportTabState extends State<_ReportTab> {
                             decoration: BoxDecoration(
                               color: Colors.grey[50],
                               borderRadius: BorderRadius.circular(8),
-                              border:
-                                  Border.all(color: Colors.grey[200]!),
+                              border: Border.all(color: Colors.grey[200]!),
                             ),
                             child: SelectableText(
                               entry.value.isEmpty ? '（未填写）' : entry.value,
@@ -712,8 +844,8 @@ class _ReportTabState extends State<_ReportTab> {
                     decoration: BoxDecoration(
                       color: Colors.blue.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                          color: Colors.blue.withValues(alpha: 0.2)),
+                      border:
+                          Border.all(color: Colors.blue.withValues(alpha: 0.2)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -740,12 +872,11 @@ class _ReportTabState extends State<_ReportTab> {
                                             : Colors.red)),
                           ],
                         ),
-                        if (feedback != null &&
-                            feedback.isNotEmpty) ...[
+                        if (feedback != null && feedback.isNotEmpty) ...[
                           const SizedBox(height: 8),
                           Text(feedback,
-                              style: const TextStyle(
-                                  fontSize: 12, height: 1.5)),
+                              style:
+                                  const TextStyle(fontSize: 12, height: 1.5)),
                         ],
                       ],
                     ),
@@ -810,71 +941,67 @@ class _ReportTabState extends State<_ReportTab> {
               ],
             ),
             content: SizedBox(
-              width: double.maxFinite,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('学生：$userId',
-                        style:
-                            TextStyle(fontSize: 12, color: Colors.grey[600])),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        const Text('评分',
+              width: 760,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('学生：$userId',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      const Text('评分',
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.bold)),
+                      const Spacer(),
+                      Text('${scoreValue.round()} / 100',
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: scoreColor)),
+                    ],
+                  ),
+                  Slider(
+                    value: scoreValue,
+                    min: 0,
+                    max: 100,
+                    divisions: 100,
+                    label: '${scoreValue.round()}',
+                    onChanged: (v) => setDialogState(() => scoreValue = v),
+                  ),
+                  Wrap(
+                    spacing: 8,
+                    children: [60, 70, 80, 85, 90, 95, 100].map((v) {
+                      final isSelected = scoreValue.round() == v;
+                      return ActionChip(
+                        label: Text('$v',
                             style: TextStyle(
-                                fontSize: 13, fontWeight: FontWeight.bold)),
-                        const Spacer(),
-                        Text('${scoreValue.round()} / 100',
-                            style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: scoreColor)),
-                      ],
+                                fontSize: 12,
+                                color: isSelected ? Colors.white : null)),
+                        backgroundColor: isSelected
+                            ? Theme.of(context).colorScheme.primary
+                            : null,
+                        onPressed: () =>
+                            setDialogState(() => scoreValue = v.toDouble()),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: feedbackCtrl,
+                    minLines: 6,
+                    maxLines: 8,
+                    decoration: InputDecoration(
+                      labelText: '教师反馈',
+                      hintText: '请输入批改意见和建议...',
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 12),
                     ),
-                    Slider(
-                      value: scoreValue,
-                      min: 0,
-                      max: 100,
-                      divisions: 100,
-                      label: '${scoreValue.round()}',
-                      onChanged: (v) =>
-                          setDialogState(() => scoreValue = v),
-                    ),
-                    Wrap(
-                      spacing: 8,
-                      children: [60, 70, 80, 85, 90, 95, 100].map((v) {
-                        final isSelected = scoreValue.round() == v;
-                        return ActionChip(
-                          label: Text('$v',
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  color:
-                                      isSelected ? Colors.white : null)),
-                          backgroundColor: isSelected
-                              ? Theme.of(context).colorScheme.primary
-                              : null,
-                          onPressed: () => setDialogState(
-                              () => scoreValue = v.toDouble()),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: feedbackCtrl,
-                      maxLines: 3,
-                      decoration: InputDecoration(
-                        labelText: '教师反馈',
-                        hintText: '请输入批改意见和建议...',
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 12),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
             actions: [
@@ -976,7 +1103,8 @@ class _ReportTabState extends State<_ReportTab> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('确认删除'),
-        content: Text('确定删除 $userId 的提交${title.isNotEmpty ? "「$title」" : ""}？\n此操作不可恢复。'),
+        content: Text(
+            '确定删除 $userId 的提交${title.isNotEmpty ? "「$title」" : ""}？\n此操作不可恢复。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -1020,9 +1148,15 @@ class _ReportTabState extends State<_ReportTab> {
     final userId = submission['user_id'] as String? ?? '';
     final existingScore = submission['score'] as int?;
     final existingFeedback = submission['feedback'] as String?;
+    final aiScore = (submission['_ai_score'] as num?)?.round();
+    final aiFeedback = submission['_ai_feedback'] as String? ?? '';
+    final aiResultId = submission['_ai_result_id'] as int?;
 
-    double scoreValue = (existingScore ?? 80).toDouble();
-    final feedbackCtrl = TextEditingController(text: existingFeedback ?? '');
+    double scoreValue = (existingScore ?? aiScore ?? 80).toDouble();
+    final feedbackCtrl = TextEditingController(
+        text: (existingFeedback?.trim().isNotEmpty == true)
+            ? existingFeedback
+            : aiFeedback);
     bool isGrading = false;
     bool isAiGrading = false;
 
@@ -1051,107 +1185,149 @@ class _ReportTabState extends State<_ReportTab> {
               ],
             ),
             content: SizedBox(
-              width: double.maxFinite,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('学生：$userId',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                    if (content.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text('提交内容：$content',
-                          style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                    ],
-                    if (fileNames.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(Icons.picture_as_pdf, color: Colors.red, size: 16),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text('附件：$fileNames',
-                                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis),
-                          ),
-                          if (filePaths.isNotEmpty)
-                            TextButton.icon(
-                              icon: const Icon(Icons.visibility, size: 14),
-                              label: const Text('预览', style: TextStyle(fontSize: 11)),
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 8),
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              onPressed: () => previewOrPromptSync(
-                                context,
-                                filePaths: filePaths,
-                                fileNames: fileNames,
-                                userId: userId,
-                                title: '$userId - $title',
-                                onSyncFinished: _loadData,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ],
-                    const SizedBox(height: 16),
-                    // 评分
+              width: 760,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('学生：$userId',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                  if (content.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text('报告正文：已提取，点击附件预览查看 PDF 原文',
+                        style:
+                            TextStyle(fontSize: 12, color: Colors.grey[600])),
+                  ],
+                  if (fileNames.isNotEmpty) ...[
+                    const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Text('评分',
-                            style: TextStyle(
-                                fontSize: 13, fontWeight: FontWeight.bold)),
-                        const Spacer(),
-                        Text('${scoreValue.round()} / 100',
-                            style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: scoreColor)),
+                        const Icon(Icons.picture_as_pdf,
+                            color: Colors.red, size: 16),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text('附件：$fileNames',
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.grey[600]),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis),
+                        ),
+                        if (filePaths.isNotEmpty)
+                          TextButton.icon(
+                            icon: const Icon(Icons.visibility, size: 14),
+                            label: const Text('预览',
+                                style: TextStyle(fontSize: 11)),
+                            style: TextButton.styleFrom(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 8),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            onPressed: () => previewOrPromptSync(
+                              context,
+                              filePaths: filePaths,
+                              fileNames: fileNames,
+                              userId: userId,
+                              title: '$userId - $title',
+                              onSyncFinished: _loadData,
+                            ),
+                          ),
                       ],
                     ),
-                    Slider(
-                      value: scoreValue,
-                      min: 0,
-                      max: 100,
-                      divisions: 100,
-                      label: '${scoreValue.round()}',
-                      onChanged: (v) => setDialogState(() => scoreValue = v),
-                    ),
-                    Wrap(
-                      spacing: 8,
-                      children: [60, 70, 80, 85, 90, 95, 100].map((v) {
-                        final isSelected = scoreValue.round() == v;
-                        return ActionChip(
-                          label: Text('$v',
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  color: isSelected ? Colors.white : null)),
-                          backgroundColor: isSelected
-                              ? Theme.of(context).colorScheme.primary
-                              : null,
-                          onPressed: () =>
-                              setDialogState(() => scoreValue = v.toDouble()),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: feedbackCtrl,
-                      maxLines: 3,
-                      decoration: InputDecoration(
-                        labelText: '教师反馈',
-                        hintText: '请输入批改意见和建议...',
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 12),
+                  ],
+                  if (aiScore != null || aiFeedback.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.purple.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                            color: Colors.purple.withValues(alpha: 0.18)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.auto_awesome,
+                                  size: 16, color: Colors.purple),
+                              const SizedBox(width: 6),
+                              Text(
+                                aiScore == null ? 'AI 初评' : 'AI 初评：$aiScore 分',
+                                style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.purple),
+                              ),
+                            ],
+                          ),
+                          if (aiFeedback.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Text(aiFeedback,
+                                style: const TextStyle(
+                                    fontSize: 12, height: 1.35)),
+                          ],
+                        ],
                       ),
                     ),
                   ],
-                ),
+                  const SizedBox(height: 16),
+                  // 评分
+                  Row(
+                    children: [
+                      const Text('评分',
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.bold)),
+                      const Spacer(),
+                      Text('${scoreValue.round()} / 100',
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: scoreColor)),
+                    ],
+                  ),
+                  Slider(
+                    value: scoreValue,
+                    min: 0,
+                    max: 100,
+                    divisions: 100,
+                    label: '${scoreValue.round()}',
+                    onChanged: (v) => setDialogState(() => scoreValue = v),
+                  ),
+                  Wrap(
+                    spacing: 8,
+                    children: [60, 70, 80, 85, 90, 95, 100].map((v) {
+                      final isSelected = scoreValue.round() == v;
+                      return ActionChip(
+                        label: Text('$v',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: isSelected ? Colors.white : null)),
+                        backgroundColor: isSelected
+                            ? Theme.of(context).colorScheme.primary
+                            : null,
+                        onPressed: () =>
+                            setDialogState(() => scoreValue = v.toDouble()),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: feedbackCtrl,
+                    minLines: 6,
+                    maxLines: 8,
+                    decoration: InputDecoration(
+                      labelText: '教师反馈',
+                      hintText: '请输入批改意见和建议...',
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 12),
+                    ),
+                  ),
+                ],
               ),
             ),
             actions: [
@@ -1171,8 +1347,8 @@ class _ReportTabState extends State<_ReportTab> {
                             if (ctx.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text(
-                                      '无法读取报告正文：PDF 文件未同步到本机或损坏，请使用手动批改'),
+                                  content:
+                                      Text('无法读取报告正文：PDF 文件未同步到本机或损坏，请使用手动批改'),
                                   duration: Duration(seconds: 4),
                                 ),
                               );
@@ -1189,17 +1365,22 @@ class _ReportTabState extends State<_ReportTab> {
                           final parsed = tryParseGradingJson(result);
                           if (parsed != null) {
                             setDialogState(() {
-                              scoreValue = (parsed['total_score'] as num?)
-                                      ?.toDouble() ??
-                                  (parsed['score'] as num?)?.toDouble() ??
-                                  scoreValue;
+                              scoreValue =
+                                  (parsed['total_score'] as num?)?.toDouble() ??
+                                      (parsed['score'] as num?)?.toDouble() ??
+                                      scoreValue;
                               if (scoreValue > 100) scoreValue = 100;
-                              feedbackCtrl.text =
-                                  formatGradingFeedback(parsed);
+                              feedbackCtrl.text = formatGradingFeedback(parsed);
                             });
                           } else {
                             setDialogState(() {
-                              feedbackCtrl.text = result;
+                              feedbackCtrl.text = result
+                                  .replaceAll(
+                                      RegExp(r'```(?:json)?',
+                                          caseSensitive: false),
+                                      '')
+                                  .replaceAll('```', '')
+                                  .trim();
                             });
                           }
                         } catch (e) {
@@ -1250,6 +1431,13 @@ class _ReportTabState extends State<_ReportTab> {
                                   : null,
                               scorerId: widget.authService.getCurrentUserId(),
                             );
+                            if (aiResultId != null) {
+                              await GradingResultDao().approveResult(
+                                aiResultId,
+                                widget.authService.getCurrentUserId() ??
+                                    'teacher',
+                              );
+                            }
                           }
                           if (context.mounted) {
                             Navigator.pop(ctx);
@@ -1625,4 +1813,3 @@ class _ReportTabState extends State<_ReportTab> {
 // ══════════════════════════════════════════════════════════════════════════════
 // Tab 4: 任务管理（教师/管理员）
 // ══════════════════════════════════════════════════════════════════════════════
-

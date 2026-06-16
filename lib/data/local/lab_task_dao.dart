@@ -91,9 +91,11 @@ class LabTaskDao {
     final db = await _dbHelper.database;
     final scope = await _courseContext.scopedWhere(column: 't.course_id');
     String sql = '''
-      SELECT s.*, t.title as task_title, t.chapter, t.max_score, t.difficulty
+      SELECT s.*, t.title as task_title, t.chapter, t.max_score, t.difficulty,
+             u.real_name
       FROM lab_submissions s
       LEFT JOIN lab_tasks t ON t.id = s.task_id
+      LEFT JOIN users u ON u.user_id = s.user_id
       WHERE ${scope.where}
     ''';
     final args = <dynamic>[...scope.args];
@@ -128,7 +130,7 @@ class LabTaskDao {
     final existing = await getSubmission(taskId, userId);
     final now = DateTime.now().toIso8601String();
     if (existing != null) {
-      return db.update(
+      await db.update(
           'lab_submissions',
           {
             'content': content,
@@ -136,10 +138,15 @@ class LabTaskDao {
             'file_names': fileNames,
             'submit_time': now,
             'status': '已提交',
+            'score': null,
+            'feedback': null,
+            'scorer_id': null,
+            'scored_at': null,
             'updated_at': now,
           },
           where: 'id = ?',
           whereArgs: [existing['id']]);
+      return existing['id'] as int;
     } else {
       return db.insert('lab_submissions', {
         'task_id': taskId,
@@ -171,6 +178,27 @@ class LabTaskDao {
           'scored_at': DateTime.now().toIso8601String(),
           'status': '已批改',
           'updated_at': DateTime.now().toIso8601String(),
+        },
+        where: 'id = ?',
+        whereArgs: [submissionId]);
+  }
+
+  Future<int> returnSubmission(
+    int submissionId, {
+    required String reason,
+    String? reviewerId,
+  }) async {
+    final db = await _dbHelper.database;
+    final now = DateTime.now().toIso8601String();
+    return db.update(
+        'lab_submissions',
+        {
+          'score': null,
+          'feedback': reason,
+          'scorer_id': reviewerId,
+          'scored_at': now,
+          'status': '已打回',
+          'updated_at': now,
         },
         where: 'id = ?',
         whereArgs: [submissionId]);
@@ -281,7 +309,7 @@ class LabTaskDao {
   }
 
   /// 班级实验总览统计（教师用）
-  Future<Map<String, dynamic>> getClassLabOverview() async {
+  Future<Map<String, dynamic>> getClassLabOverview({int passScore = 85}) async {
     final db = await _dbHelper.database;
     final scope = await _courseContext.scopedWhere(column: 't.course_id');
     final result = await db.rawQuery('''
@@ -291,8 +319,8 @@ class LabTaskDao {
         AVG(s.score) as avg_score,
         MAX(s.score) as max_score,
         MIN(CASE WHEN s.score IS NOT NULL THEN s.score END) as min_score,
-        SUM(CASE WHEN s.score >= 95 THEN 1 ELSE 0 END) as excellent_count,
-        SUM(CASE WHEN s.score >= 60 AND s.score < 95 THEN 1 ELSE 0 END) as pass_count,
+        SUM(CASE WHEN s.score >= ? THEN 1 ELSE 0 END) as excellent_count,
+        SUM(CASE WHEN s.score >= 60 AND s.score < ? THEN 1 ELSE 0 END) as pass_count,
         SUM(CASE WHEN s.score < 60 THEN 1 ELSE 0 END) as fail_count,
         SUM(CASE WHEN s.score IS NULL THEN 1 ELSE 0 END) as ungraded_count
       FROM lab_submissions s
@@ -300,7 +328,7 @@ class LabTaskDao {
       LEFT JOIN lab_tasks t ON t.id = s.task_id
       WHERE u.role = 'student' AND u.is_active = 1
         AND ${scope.where}
-    ''', scope.args);
+    ''', [passScore, passScore, ...scope.args]);
     final row = result.isNotEmpty ? result.first : {};
     final total = (row['excellent_count'] ?? 0) +
         (row['pass_count'] ?? 0) +

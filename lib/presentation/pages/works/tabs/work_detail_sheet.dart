@@ -1,4 +1,4 @@
-﻿part of '../works_page.dart';
+part of '../works_page.dart';
 
 class _WorkDetailSheet extends StatefulWidget {
   final Map<String, dynamic> work;
@@ -144,10 +144,61 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
         whereArgs: [workId],
       );
 
-      // 上传视频即视为提交：把状态从"待提交"切到"已提交"
-      // 内含 NotifyTeachers，再触发 AI 自动批阅
       final wasUnsubmitted = (_work['status'] as String? ?? '待提交') == '待提交';
-      if (wasUnsubmitted) {
+      final isStudent =
+          !widget.authService.isTeacher && !widget.authService.isAdmin;
+      var successMessage = '视频上传成功';
+
+      // 学生首次提交：AI 初评达到评价分数线后才切换为已提交并通知教师。
+      if (wasUnsubmitted && isStudent) {
+        final refreshedDraft = await widget.worksDao.getWork(workId);
+        if (refreshedDraft != null && mounted) {
+          final title = (refreshedDraft['title'] as String?) ??
+              (refreshedDraft['project'] as String?) ??
+              '作品';
+          final description = (refreshedDraft['description'] as String?) ?? '';
+          final techStack = refreshedDraft['tech_stack'] as String?;
+          final groupName = refreshedDraft['group_name'] as String?;
+          final studentName = (refreshedDraft['student_name'] as String?) ??
+              widget.authService.currentUser?.realName ??
+              userId;
+          final passScore = await SettingsService.getEvaluationPassScore();
+          final draft = await AutoGradingService.instance.gradeWork(
+            workId: workId,
+            studentId: userId,
+            studentName: studentName,
+            workTitle: title,
+            description: description,
+            techStack: techStack,
+            groupName: groupName,
+            returnDraft: true,
+            notifyStudent: false,
+          );
+          if (draft == null || !draft.isUsable || draft.score < passScore) {
+            await GradingResultDao().deletePendingForTarget('works', workId);
+            final refreshed = await widget.worksDao.getWork(workId);
+            if (mounted) {
+              setState(() {
+                if (refreshed != null) _work = refreshed;
+                _isUploading = false;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(draft == null
+                      ? '提交失败：AI 审核未完成，请稍后重试'
+                      : '提交失败：AI 初评 ${draft.score} 分，未达到 $passScore 分达标线，请修改后重新提交'),
+                  backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 5),
+                ),
+              );
+              widget.onChanged?.call();
+            }
+            return;
+          }
+          await widget.worksDao.submitWork(workId);
+          successMessage = '作品提交成功！AI 初评 ${draft.score} 分，等待教师复核。';
+        }
+      } else if (wasUnsubmitted) {
         await widget.worksDao.submitWork(workId);
       }
 
@@ -159,57 +210,12 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
           _isUploading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('视频上传成功'),
+          SnackBar(
+            content: Text(successMessage),
             backgroundColor: Colors.green,
           ),
         );
         widget.onChanged?.call();
-      }
-
-      // 学生侧：触发 AI 自动批阅（仅首次提交）
-      if (wasUnsubmitted && refreshed != null && mounted) {
-        final isStudent =
-            !widget.authService.isTeacher && !widget.authService.isAdmin;
-        if (isStudent) {
-          final title = (refreshed['title'] as String?) ??
-              (refreshed['project'] as String?) ??
-              '作品';
-          final description = (refreshed['description'] as String?) ?? '';
-          final techStack = refreshed['tech_stack'] as String?;
-          final groupName = refreshed['group_name'] as String?;
-          final studentName = (refreshed['student_name'] as String?) ??
-              widget.authService.currentUser?.realName ??
-              userId;
-
-          final inline = await _askWatchOrNotify(title);
-          if (inline == true) {
-            await _runInlineAiGrading(
-              workId: workId,
-              studentId: userId,
-              studentName: studentName,
-              workTitle: title,
-              description: description,
-              techStack: techStack,
-              groupName: groupName,
-            );
-          } else {
-            unawaited(AutoGradingService.instance.gradeWork(
-              workId: workId,
-              studentId: userId,
-              studentName: studentName,
-              workTitle: title,
-              description: description,
-              techStack: techStack,
-              groupName: groupName,
-            ));
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('AI 批阅完成后会通知你。')),
-              );
-            }
-          }
-        }
       }
     } catch (e) {
       if (mounted) {
@@ -387,13 +393,14 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                             children: [
                               if (_isUploading)
                                 const SizedBox(
-                                  width: 14, height: 14,
+                                  width: 14,
+                                  height: 14,
                                   child: CircularProgressIndicator(
                                       strokeWidth: 2, color: Colors.white),
                                 )
                               else
-                                const Icon(Icons.upload, size: 16,
-                                    color: Colors.white),
+                                const Icon(Icons.upload,
+                                    size: 16, color: Colors.white),
                               const SizedBox(width: 4),
                               Text(
                                 _isUploading ? '上传中...' : '上传视频',
@@ -461,16 +468,13 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: Colors.orange
-                                  .withValues(alpha: 0.1),
-                              borderRadius:
-                                  BorderRadius.circular(4),
+                              color: Colors.orange.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
                               _work['student_role'] as String,
                               style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.orange[700]),
+                                  fontSize: 10, color: Colors.orange[700]),
                             ),
                           ),
                         if (_work['repo'] != null) ...[
@@ -479,16 +483,13 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: Colors.blue
-                                  .withValues(alpha: 0.1),
-                              borderRadius:
-                                  BorderRadius.circular(4),
+                              color: Colors.blue.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
                               _work['repo'] as String,
                               style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.blue[700]),
+                                  fontSize: 10, color: Colors.blue[700]),
                             ),
                           ),
                         ],
@@ -504,8 +505,8 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
           // 交互按钮行
           Row(
             children: [
-              _statChip(Icons.visibility, '$viewCount', '播放',
-                  Colors.grey[600]!),
+              _statChip(
+                  Icons.visibility, '$viewCount', '播放', Colors.grey[600]!),
               const SizedBox(width: 8),
               InkWell(
                 onTap: canInteract ? _toggleLike : null,
@@ -518,8 +519,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                 ),
               ),
               const SizedBox(width: 8),
-              _statChip(
-                  Icons.comment, '$commentCount', '评论', Colors.blue),
+              _statChip(Icons.comment, '$commentCount', '评论', Colors.blue),
               const Spacer(),
               if (isTeacherOrAdmin)
                 ElevatedButton.icon(
@@ -527,8 +527,8 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                   icon: const Icon(Icons.rate_review, size: 16),
                   label: Text(score != null ? '重新评分' : '评分'),
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     textStyle: const TextStyle(fontSize: 12),
                   ),
                 ),
@@ -540,8 +540,8 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                   icon: const Icon(Icons.people, size: 16),
                   label: const Text('同学互评'),
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     textStyle: const TextStyle(fontSize: 12),
                     backgroundColor: Colors.orange,
                     foregroundColor: Colors.white,
@@ -553,26 +553,18 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
 
           // ── 项目信息 ────────────────────────────────────
           _sectionHeader('项目信息', icon: Icons.info_outline),
-          _infoRow(Icons.science, '项目',
-              _work['title'] as String? ?? '未命名'),
-          _infoRow(Icons.code, '技术栈',
-              _work['tech_stack'] as String? ?? '未指定'),
+          _infoRow(Icons.science, '项目', _work['title'] as String? ?? '未命名'),
+          _infoRow(Icons.code, '技术栈', _work['tech_stack'] as String? ?? '未指定'),
           if (_work['class_group'] != null)
-            _infoRow(Icons.class_, '班组',
-                _work['class_group'] as String),
+            _infoRow(Icons.class_, '班组', _work['class_group'] as String),
 
           // 来自 JSON 的丰富信息
           if (si != null) ...[
-            if (si['coreDuty'] != null &&
-                (si['coreDuty'] as String).isNotEmpty)
-              _infoRow(
-                  Icons.work, '核心职责', si['coreDuty'] as String),
-            if (si['features'] != null &&
-                (si['features'] as String).isNotEmpty)
-              _infoRow(Icons.auto_awesome, '特色功能',
-                  si['features'] as String),
-            if (si['remark'] != null &&
-                (si['remark'] as String).isNotEmpty)
+            if (si['coreDuty'] != null && (si['coreDuty'] as String).isNotEmpty)
+              _infoRow(Icons.work, '核心职责', si['coreDuty'] as String),
+            if (si['features'] != null && (si['features'] as String).isNotEmpty)
+              _infoRow(Icons.auto_awesome, '特色功能', si['features'] as String),
+            if (si['remark'] != null && (si['remark'] as String).isNotEmpty)
               _infoRow(Icons.note, '备注', si['remark'] as String),
           ],
 
@@ -591,9 +583,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
               ),
               child: Text(_work['description'] as String,
                   style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[700],
-                      height: 1.6)),
+                      fontSize: 12, color: Colors.grey[700], height: 1.6)),
             ),
           ],
 
@@ -612,8 +602,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(t.toString(),
-                            style: TextStyle(
-                                fontSize: 11, color: primary)),
+                            style: TextStyle(fontSize: 11, color: primary)),
                       ))
                   .toList(),
             ),
@@ -626,12 +615,10 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
               children: [
                 Expanded(child: _sectionHeader('教师评分', icon: Icons.star)),
                 // 仅教师/管理员能查审计 — 学生无操作权限不暴露入口
-                if (widget.authService.isTeacher ||
-                    widget.authService.isAdmin)
+                if (widget.authService.isTeacher || widget.authService.isAdmin)
                   TextButton.icon(
                     icon: const Icon(Icons.history, size: 16),
-                    label: const Text('修改历史',
-                        style: TextStyle(fontSize: 12)),
+                    label: const Text('修改历史', style: TextStyle(fontSize: 12)),
                     onPressed: () => ScoreHistoryDialog.show(
                       context,
                       tableName: 'work_scores',
@@ -649,8 +636,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
               (_work['peer_count'] as int?) != null &&
               (_work['peer_count'] as int) > 0) ...[
             const SizedBox(height: 16),
-            _sectionHeader(
-                '同学互评 (${_work['peer_count']}人)',
+            _sectionHeader('同学互评 (${_work['peer_count']}人)',
                 icon: Icons.people),
             _buildPeerScoreDetail(),
           ],
@@ -685,7 +671,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                   ),
                 ),
               ],
-          ),
+            ),
           const SizedBox(height: 12),
           if (_loadingComments)
             const Center(
@@ -698,8 +684,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
               padding: const EdgeInsets.all(20),
               alignment: Alignment.center,
               child: Text('暂无评论，快来抢沙发吧~',
-                  style: TextStyle(
-                      color: Colors.grey[400], fontSize: 13)),
+                  style: TextStyle(color: Colors.grey[400], fontSize: 13)),
             )
           else
             ..._comments.map((c) => _buildCommentItem(c)),
@@ -728,8 +713,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
       decoration: BoxDecoration(
         color: scoreColor.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(12),
-        border:
-            Border(left: BorderSide(color: scoreColor, width: 3)),
+        border: Border(left: BorderSide(color: scoreColor, width: 3)),
       ),
       child: Column(
         children: [
@@ -741,14 +725,12 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                       fontWeight: FontWeight.bold,
                       color: scoreColor)),
               Text(' / 100',
-                  style:
-                      TextStyle(fontSize: 16, color: Colors.grey[500])),
+                  style: TextStyle(fontSize: 16, color: Colors.grey[500])),
             ],
           ),
           const SizedBox(height: 10),
           ...dims.map((d) {
-            final val =
-                (_work[d['key'] as String] as int?) ?? 0;
+            final val = (_work[d['key'] as String] as int?) ?? 0;
             final maxVal = d['max'] as int;
             final ratio = val / maxVal;
             final barColor = ratio >= 0.9
@@ -772,8 +754,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                         value: ratio,
                         minHeight: 8,
                         backgroundColor: Colors.grey[200],
-                        valueColor:
-                            AlwaysStoppedAnimation(barColor),
+                        valueColor: AlwaysStoppedAnimation(barColor),
                       ),
                     ),
                   ),
@@ -806,8 +787,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                           color: Colors.grey[600])),
                   const SizedBox(height: 4),
                   Text(_work['score_comment'] as String,
-                      style: TextStyle(
-                          fontSize: 12, color: Colors.grey[700])),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[700])),
                 ],
               ),
             ),
@@ -831,8 +811,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
       decoration: BoxDecoration(
         color: Colors.orange.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(12),
-        border: const Border(
-            left: BorderSide(color: Colors.orange, width: 3)),
+        border: const Border(left: BorderSide(color: Colors.orange, width: 3)),
       ),
       child: Row(
         children: [
@@ -849,13 +828,11 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                           fontWeight: FontWeight.bold,
                           color: scoreColor)),
                   Text(' / 100',
-                      style: TextStyle(
-                          fontSize: 14, color: Colors.grey[500])),
+                      style: TextStyle(fontSize: 14, color: Colors.grey[500])),
                 ],
               ),
               Text('$peerCount 位同学参与互评',
-                  style: TextStyle(
-                      fontSize: 12, color: Colors.grey[600])),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600])),
             ],
           ),
         ],
@@ -873,21 +850,18 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
     final commentName = viewerIsAdmin
         ? (comment['user_name'] as String? ?? '未知')
         : (isTeacher ? (comment['user_name'] as String? ?? '教师') : '匿名同学');
-    final commentAvatar = commentName.isNotEmpty
-        ? commentName.characters.first
-        : '?';
+    final commentAvatar =
+        commentName.isNotEmpty ? commentName.characters.first : '?';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isTeacher
-            ? Colors.blue.withValues(alpha: 0.03)
-            : Colors.grey[50],
+        color:
+            isTeacher ? Colors.blue.withValues(alpha: 0.03) : Colors.grey[50],
         borderRadius: BorderRadius.circular(10),
         border: Border(
-          left: BorderSide(
-              color: roleColor.withValues(alpha: 0.4), width: 3),
+          left: BorderSide(color: roleColor.withValues(alpha: 0.4), width: 3),
         ),
       ),
       child: Column(
@@ -912,8 +886,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                       fontSize: 13, fontWeight: FontWeight.w600)),
               const SizedBox(width: 6),
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 6, vertical: 1),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(
                   color: roleColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
@@ -925,18 +898,14 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                         fontWeight: FontWeight.bold)),
               ),
               const Spacer(),
-              Text(
-                  _timeAgo(comment['created_at'] as String?),
-                  style: TextStyle(
-                      fontSize: 10, color: Colors.grey[400])),
+              Text(_timeAgo(comment['created_at'] as String?),
+                  style: TextStyle(fontSize: 10, color: Colors.grey[400])),
             ],
           ),
           const SizedBox(height: 8),
           Text(comment['content'] as String? ?? '',
               style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey[800],
-                  height: 1.4)),
+                  fontSize: 13, color: Colors.grey[800], height: 1.4)),
         ],
       ),
     );
@@ -953,12 +922,10 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
           SizedBox(
             width: 60,
             child: Text(label,
-                style:
-                    TextStyle(fontSize: 12, color: Colors.grey[500])),
+                style: TextStyle(fontSize: 12, color: Colors.grey[500])),
           ),
           Expanded(
-            child:
-                Text(value, style: const TextStyle(fontSize: 12)),
+            child: Text(value, style: const TextStyle(fontSize: 12)),
           ),
         ],
       ),
@@ -970,16 +937,13 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
   void _showScoreDialog(BuildContext context, {bool isPeer = false}) {
     double functionality =
         (_work['score_functionality'] as int?)?.toDouble() ?? 15;
-    double techDepth =
-        (_work['score_tech_depth'] as int?)?.toDouble() ?? 12;
-    double integration =
-        (_work['score_integration'] as int?)?.toDouble() ?? 15;
-    double quality =
-        (_work['score_quality'] as int?)?.toDouble() ?? 9;
+    double techDepth = (_work['score_tech_depth'] as int?)?.toDouble() ?? 12;
+    double integration = (_work['score_integration'] as int?)?.toDouble() ?? 15;
+    double quality = (_work['score_quality'] as int?)?.toDouble() ?? 9;
     double documentation =
         (_work['score_documentation'] as int?)?.toDouble() ?? 9;
-    final commentCtrl = TextEditingController(
-        text: _work['score_comment'] as String? ?? '');
+    final commentCtrl =
+        TextEditingController(text: _work['score_comment'] as String? ?? '');
     bool isAiGrading = false;
 
     showDialog(
@@ -1032,11 +996,9 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                         labelText: isPeer ? '互评评语' : '教师评语',
                         hintText: '请输入评语...',
                         border: OutlineInputBorder(
-                            borderRadius:
-                                BorderRadius.circular(10)),
-                        contentPadding:
-                            const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 12),
+                            borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 12),
                       ),
                     ),
                   ],
@@ -1046,60 +1008,77 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
             actions: [
               // AI 批阅按钮（仅教师可用）
               if (!isPeer)
-              OutlinedButton.icon(
-                onPressed: isAiGrading
-                    ? null
-                    : () async {
-                        setDialogState(() => isAiGrading = true);
-                        try {
-                          final agent = GradingAgent();
-                          final result = await agent.gradeWork(
-                            title: _work['title'] as String? ?? '',
-                            description: _work['description'] as String?,
-                            techStack: _work['tech_stack'] as String?,
-                            studentName: _work['student_name'] as String? ??
-                                _work['leader_name'] as String?,
-                            groupName: _work['group_name'] as String?,
-                          );
-                          final parsed = _tryParseGradingJson(result);
-                          if (parsed != null) {
-                            final scores = parsed['scores'] as Map<String, dynamic>?;
-                            setDialogState(() {
-                              if (scores != null) {
-                                functionality = ((scores['functionality'] as Map?)?['score'] as num?)?.toDouble() ?? functionality;
-                                techDepth = ((scores['tech_depth'] as Map?)?['score'] as num?)?.toDouble() ?? techDepth;
-                                integration = ((scores['integration'] as Map?)?['score'] as num?)?.toDouble() ?? integration;
-                                quality = ((scores['quality'] as Map?)?['score'] as num?)?.toDouble() ?? quality;
-                                documentation = ((scores['documentation'] as Map?)?['score'] as num?)?.toDouble() ?? documentation;
-                              }
-                              commentCtrl.text = parsed['feedback'] as String? ?? '';
-                            });
-                          } else {
-                            setDialogState(() {
-                              commentCtrl.text = result;
-                            });
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('AI批阅失败: $e')),
+                OutlinedButton.icon(
+                  onPressed: isAiGrading
+                      ? null
+                      : () async {
+                          setDialogState(() => isAiGrading = true);
+                          try {
+                            final agent = GradingAgent();
+                            final result = await agent.gradeWork(
+                              title: _work['title'] as String? ?? '',
+                              description: _work['description'] as String?,
+                              techStack: _work['tech_stack'] as String?,
+                              studentName: _work['student_name'] as String? ??
+                                  _work['leader_name'] as String?,
+                              groupName: _work['group_name'] as String?,
                             );
+                            final parsed = _tryParseGradingJson(result);
+                            if (parsed != null) {
+                              final scores =
+                                  parsed['scores'] as Map<String, dynamic>?;
+                              setDialogState(() {
+                                if (scores != null) {
+                                  functionality = ((scores['functionality']
+                                              as Map?)?['score'] as num?)
+                                          ?.toDouble() ??
+                                      functionality;
+                                  techDepth = ((scores['tech_depth']
+                                              as Map?)?['score'] as num?)
+                                          ?.toDouble() ??
+                                      techDepth;
+                                  integration = ((scores['integration']
+                                              as Map?)?['score'] as num?)
+                                          ?.toDouble() ??
+                                      integration;
+                                  quality = ((scores['quality']
+                                              as Map?)?['score'] as num?)
+                                          ?.toDouble() ??
+                                      quality;
+                                  documentation = ((scores['documentation']
+                                              as Map?)?['score'] as num?)
+                                          ?.toDouble() ??
+                                      documentation;
+                                }
+                                commentCtrl.text =
+                                    parsed['feedback'] as String? ?? '';
+                              });
+                            } else {
+                              setDialogState(() {
+                                commentCtrl.text = result;
+                              });
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('AI批阅失败: $e')),
+                              );
+                            }
+                          } finally {
+                            if (ctx.mounted) {
+                              setDialogState(() => isAiGrading = false);
+                            }
                           }
-                        } finally {
-                          if (ctx.mounted) {
-                            setDialogState(() => isAiGrading = false);
-                          }
-                        }
-                      },
-                icon: isAiGrading
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.auto_awesome, size: 16),
-                label: Text(isAiGrading ? 'AI批阅中...' : 'AI批阅'),
-              ),
+                        },
+                  icon: isAiGrading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.auto_awesome, size: 16),
+                  label: Text(isAiGrading ? 'AI批阅中...' : 'AI批阅'),
+                ),
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
                 child: const Text('取消'),
@@ -1111,18 +1090,16 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                     final workId = _work['id'] as int;
                     await widget.worksDao.scoreWork(
                       workId: workId,
-                      scorerId:
-                          widget.authService.getCurrentUserId(),
+                      scorerId: widget.authService.getCurrentUserId(),
                       scorerName: user?.realName ?? (isPeer ? '同学' : '教师'),
                       functionality: functionality.round(),
                       techDepth: techDepth.round(),
                       integration: integration.round(),
                       quality: quality.round(),
                       documentation: documentation.round(),
-                      comment:
-                          commentCtrl.text.trim().isNotEmpty
-                              ? commentCtrl.text.trim()
-                              : null,
+                      comment: commentCtrl.text.trim().isNotEmpty
+                          ? commentCtrl.text.trim()
+                          : null,
                     );
                     // 审计：评分录入操作（失败不阻塞）
                     try {
@@ -1130,8 +1107,11 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                         tableName: 'work_scores',
                         rowId: workId,
                         field: 'total',
-                        newValue: (functionality + techDepth + integration +
-                                quality + documentation)
+                        newValue: (functionality +
+                                techDepth +
+                                integration +
+                                quality +
+                                documentation)
                             .round()
                             .toString(),
                         scorerId: widget.authService.getCurrentUserId() ?? '',
@@ -1177,7 +1157,9 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
       if (jsonMatch == null) return null;
       final jsonStr = jsonMatch.group(0)!;
       final map = jsonDecode(jsonStr) as Map<String, dynamic>;
-      if (map.containsKey('scores') || map.containsKey('feedback') || map.containsKey('total_score')) {
+      if (map.containsKey('scores') ||
+          map.containsKey('feedback') ||
+          map.containsKey('total_score')) {
         return map;
       }
       return null;
@@ -1188,8 +1170,8 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
     }
   }
 
-  Widget _scoreSlider(String name, double value, int max,
-      ValueChanged<double> onChanged) {
+  Widget _scoreSlider(
+      String name, double value, int max, ValueChanged<double> onChanged) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Column(
@@ -1197,9 +1179,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
         children: [
           Row(
             children: [
-              Expanded(
-                  child: Text(name,
-                      style: const TextStyle(fontSize: 13))),
+              Expanded(child: Text(name, style: const TextStyle(fontSize: 13))),
               Text('${value.round()} / $max',
                   style: const TextStyle(
                       fontSize: 13, fontWeight: FontWeight.bold)),
@@ -1216,153 +1196,8 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
       ),
     );
   }
-
-  // ── AI 批阅交互（学生上传视频后触发）────────────────────────────────────
-
-  Future<bool?> _askWatchOrNotify(String workTitle) async {
-    return showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.auto_awesome, color: Theme.of(ctx).colorScheme.primary),
-            SizedBox(width: 8),
-            Text('AI 批阅', style: TextStyle(fontSize: 18)),
-          ],
-        ),
-        content: Text('「$workTitle」已提交。AI 批阅约需 10-30 秒。\n\n'
-            '在线等待会立刻看到优点 / 改进建议；\n'
-            '稍后通知则后台跑，完成时通过通知提示你。'),
-        actions: [
-          OutlinedButton.icon(
-            onPressed: () => Navigator.pop(ctx, false),
-            icon: const Icon(Icons.notifications_active),
-            label: const Text('稍后通知我'),
-          ),
-          FilledButton.icon(
-            onPressed: () => Navigator.pop(ctx, true),
-            icon: const Icon(Icons.visibility),
-            label: const Text('在线等待'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _runInlineAiGrading({
-    required int workId,
-    required String studentId,
-    required String studentName,
-    required String workTitle,
-    required String description,
-    String? techStack,
-    String? groupName,
-  }) async {
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const AlertDialog(
-        content: SizedBox(
-          height: 80,
-          child: Row(
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 16),
-              Expanded(child: Text('AI 正在批阅，请稍候…')),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    final draft = await AutoGradingService.instance.gradeWork(
-      workId: workId,
-      studentId: studentId,
-      studentName: studentName,
-      workTitle: workTitle,
-      description: description,
-      techStack: techStack,
-      groupName: groupName,
-      returnDraft: true,
-    );
-
-    if (!mounted) return;
-    Navigator.of(context, rootNavigator: true).pop();
-
-    if (draft == null || !draft.isUsable) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('AI 批阅失败，已发通知给教师人工批阅'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.auto_awesome, color: Theme.of(ctx).colorScheme.primary),
-            const SizedBox(width: 8),
-            Text('AI 批阅草稿 · ${draft.score} 分',
-                style: const TextStyle(fontSize: 18)),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('（教师复核后才是最终成绩）',
-                  style: TextStyle(color: Colors.grey, fontSize: 12)),
-              const SizedBox(height: 12),
-              if (draft.strengths.isNotEmpty) ...[
-                const Text('✓ 优点',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, color: Colors.green)),
-                const SizedBox(height: 4),
-                ...draft.strengths.map((s) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text('· $s'),
-                    )),
-                const SizedBox(height: 12),
-              ],
-              if (draft.improvements.isNotEmpty) ...[
-                const Text('✎ 改进建议',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, color: Colors.orange)),
-                const SizedBox(height: 4),
-                ...draft.improvements.map((s) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text('· $s'),
-                    )),
-                const SizedBox(height: 12),
-              ],
-              if (draft.feedback.isNotEmpty) ...[
-                const Text('总评',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Text(draft.feedback),
-              ],
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('知道了'),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 // ╔══════════════════════════════════════════════════════════════════════════════╗
 // ║  Tab 1: 作品记录 (Records) — 多维度排序展示                                 ║
 // ╚══════════════════════════════════════════════════════════════════════════════╝
-
