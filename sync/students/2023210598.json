@@ -3,8 +3,8 @@
   "user_id": "2023210598",
   "user_name": "姬鹏炜",
   "role": "student",
-  "synced_at": "2026-06-17T16:10:06.613018",
-  "last_active": "2026-06-17T16:10:06.613018",
+  "synced_at": "2026-06-17T16:13:38.573143",
+  "last_active": "2026-06-17T16:13:38.573143",
   "quiz_results": [
     {
       "user_id": "2023210598",
@@ -24,6 +24,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 1,
+      "user_id": "2023210598",
+      "content": "PDF实验报告：2023210598姬鹏炜实验一 开发环境搭建.pdf\n\n--- 报告正文（自动提取）---\n项目\n内容\n实验名称\n开发环境搭建\n实验编号\nd20301035101\n、\nd20301009201\n学号\n2023210598\n姓名\n姬鹏炜\n班级\n软件\n232\n日期\n2026-04-23\n组别\nCG1-IHFTPDI\n项目名称\n智慧校园生活服务平台\n序号\n开发工具\n版本要求\n验证项目\n1\nAndroid Studio\n2024.1+\nKotlin HelloWorld\n2\nFlutter SDK\n3.19+\nDart HelloWorld\n3\n微信开发者工具\n最新版\n微信小程序\nHelloWorld\n实验一：移动应用开发环境搭建\n封面信息\n实验目的\n本次实验是移动应用开发课程的首次实验，旨在帮助学生建立完整的移动开发工具链认知。具体实验目\n的如下：\n1.\n掌握\n6\n大主流移动开发工具的安装配置方法\n：移动应用开发涉及多个平台（\nAndroid\n、\niOS\n、鸿蒙、\n微信小程序等），每个平台都有其专属的开发工具。通过本次实验，学生需要熟悉各平台开发工具\n的下载渠道、安装流程、环境变量配置以及版本验证方法，为后续实验打下坚实基础。\n2.\n了解各平台的\nHelloWorld\n创建流程\n：\nHelloWorld\n项目是学习任何新框架或工具的第一步。通过创\n建各平台的\nHelloWorld\n项目，学生可以快速了解项目的目录结构、入口文件、编译流程和运行方\n式，建立起对各开发框架的初步认知。\n3.\n体验\nAI\n辅助代码生成工具的使用\n：随着人工智能技术的发展，\nAI\n辅助编程工具（如\nTRAE\n）已经成为\n提升开发效率的重要手段。本次实验要求学生使用\nAI\n工具生成模板代码，体验\nAI\n在代码补全、模板\n生成、语法建议等方面的能力，思考\nAI\n辅助开发对传统开发流程的影响。\n4.\n完成环境配置文档的编写\n：良好的文档习惯是软件工程师的基本素养。通过编写环境配置文档，学\n生可以系统梳理各工具的安装步骤、注意事项和常见问题，形成可复用的知识沉淀。\n实验环境\n本次实验需要安装和配置以下\n6\n大主流移动开发工具，覆盖\nAndroid\n原生开发、跨平台开发、小程序开\n发、鸿蒙开发和\n.NET MAUI\n开发等多个技术方向：\n序号\n开发工具\n版本要求\n验证项目\n4\nDevEco Studio\n5.0+\nHarmonyOS HelloWorld\n5\nHBuilderX\n4.0+\nVue HelloWorld\n6\nVisual Studio\n2022\nC# HelloWorld\n在实际操作过程中，由于时间和设备限制，本组成员根据组内分工，各自负责部分开发工具的安装与验\n证。本人主要负责\nHBuilderX\n和微信开发者工具的安装配置与项目验证工作。\n实验步骤\n1. Node.js\n环境搭建\nNode.js\n是\nJavaScript\n的服务器端运行环境，也是前端工程化开发的基础依赖。\nHBuilderX\n的\nVue\n项目编\n译、\nnpm\n包管理等功能均依赖于\nNode.js\n环境，因此需要优先安装。\n1.1\n下载与安装\n访问官网：\nhttps://nodejs.org/\n下载\nWindows\n版本（\nv24.14.0\n）\n运行安装程序，按默认设置完成安装\n验证安装：打开命令行输入\nnode -v\n和\nnpm -v\n在安装过程中，安装程序会自动将\nNode.js\n添加到系统环境变量\nPATH\n中。安装完成后，\nnpm\n（\nNode\nPackage Manager\n）也会一并安装，用于后续的依赖包管理。\n1.2\n配置验证\n打开\nPowerShell\n或\nCMD\n执行命令：\nnode -v\n确认版本显示为：\nv24.14.0\n执行命令：\nnpm -v\n确认\nnpm\n版本正常显示\n验证\nNode.js\n安装成功后，还可以通过执行\nnpm config set registry\nhttps://registry.npmmirror.com\n命令将\nnpm\n源切换为国内镜像，以提升后续依赖包的下载速度。\n2. HBuilderX\n环境搭建\nHBuilderX\n是\nDCloud\n公司推出的一款轻量级、高性能的前端开发\nIDE\n，特别针对\nuni-app\n和\nVue.js\n开发进\n行了深度优化。它内置了\nVue\n语法支持、真机调试、云端打包等功能，是\nuni-app\n开发的首选工具。\n2.1\n下载与安装\n访问官网：\nhttps://www.dcloud.io/hbuilderx.html\n下载\nWindows\n版本（\n4.0+\n）\n解压或运行安装程序\n完成安装并启动\nHBuilderX\nHBuilderX\n采用免安装的绿色包形式发布，下载后直接解压即可使用，不会修改系统注册表，非常适合在\n实验室环境中快速部署。\n2.2\n配置验证\n启动\nHBuilderX\n检查插件安装情况\n确认\nVue.js\n开发插件已启用\n启动\nHBuilderX\n后，通过\n\"\n工具\n\"\n→\n\"\n插件安装\n\"\n菜单检查内置插件是否正常加载。\nuni-app\n开发所需的核心插\n件（如\nVue\n语法提示、\nuni-app\n编译器等）均已默认安装并启用。\n3.\n微信开发者工具环境搭建\n微信开发者工具是微信官方提供的小程序开发\nIDE\n，集成了代码编辑、模拟器调试、真机预览、性能分\n析、云端发布等完整的小程序开发生命周期功能。\n3.1\n下载与安装\n访问官网：\nhttps://developers.weixin.qq.com/miniprogram/dev/devtools/download.html\n下载\nWindows\n版本\n运行安装程序\n扫码登录微信账号\n微信开发者工具需要使用微信扫码登录，这一机制将开发者的微信账号与小程序项目绑定，便于后续的\n真机预览、体验版发布等操作。\n3.2\n配置验证\n启动微信开发者工具\n确认登录状态正常\n检查模拟器功能可用\n登录成功后，可以在\n\"\n设置\n\"\n→\n\"\n编辑器设置\n\"\n中配置代码风格、快捷键等个性化选项。同时建议开启\n\"\n增强\n编译\n\"\n选项，以支持\nES6+\n语法特性。\n4.\n项目创建与开发\n4.1\n创建\nUniapp\n项目\n打开\nHBuilderX\n点击\n\"\n文件\n\"\n→\n\"\n新建\n\"\n→\n\"\n项目\n\"\n选择\n\"uni-app\"\n项目类型\n填写项目名称：\nHelloworld\n选择\n\"Vue3\"\n版本\n点击\n\"\n创建\n\"\n完成项目初始化\n项目创建完成后，\nHBuilderX\n会自动生成标准的\nuni-app\n项目目录结构，包括\npages\n目录（页面文件）、\nstatic\n目录（静态资源）、\nApp.vue\n（应用入口）、\nmain.js\n（主入口文件）、\npages.json\n（页面路由配\n置）和\nmanifest.json\n（应用配置）等核心文件。\n工具\n安装状态\n项目创建\n运行状态\n备注\nAndroid Studio\n[ ]\n成功\n[ ]\n成功\n[ ]\n成功\n未安装\nFlutter\n[ ]\n成功\n[ ]\n成功\n[ ]\n成功\n未安装\nDevEco Studio\n[ ]\n成功\n[ ]\n成功\n[ ]\n成功\n未安装\nHBuilderX\n[x]\n成功\n[x]\n成功\n[x]\n成功\n已验证\nVisual Studio\n[ ]\n成功\n[ ]\n成功\n[ ]\n成功\n未安装\n微信开发者工具\n[x]\n成功\n[x]\n成功\n[x]\n成功\n已验证\n4.2 AI\n辅助代码生成\n启动\nTRAE AI\n助手\n输入需求：创建\n\"\n智慧校园\n\"\n主题的\nHelloWorld\n页面\n生成\nVue\n组件代码\n生成\nCSS\n样式代码\n将生成的代码复制到\nindex.vue\n文件\n调整样式和布局\n测试页面效果\n使用\nTRAE AI\n助手生成代码时，首先需要清晰地描述功能需求。本次实验中，我向\nAI\n描述了\n\"\n创建一个智慧\n校园主题的\nHelloWorld\n页面，包含校园名称标题、欢迎语句、校园图标和渐变背景色\n\"\n等需求。\nAI\n助手在\n数秒内生成了完整的\nVue\n组件代码，包括\ntemplate\n模板、\nscript\n逻辑和\nstyle\n样式三部分。生成的代码结构\n清晰、注释完善，可以直接复制到项目中运行。在此基础上，我手动调整了部分样式细节（如渐变色方\n向、字体大小等），使页面效果更加美观。\n实验结果\n验证结果\n下表汇总了各开发工具的安装与项目验证结果。由于组内分工不同，部分工具由其他组员负责安装验\n证，本人主要完成了\nHBuilderX\n和微信开发者工具的全部验证工作：\nHBuilderX\n和微信开发者工具均成功安装并完成了项目创建与运行验证。其中\nHBuilderX\n创建的\nuni-app\n项\n目可以在内置浏览器、外部浏览器和微信小程序模拟器中正常运行，微信开发者工具创建的小程序项目\n可以在模拟器和真机上正常预览。\n截图记录\n以下截图记录了本次实验的关键验证节点，展示了从项目创建到多端运行的完整过程：\n项目开发截图\n图\n1\n：项目开发截图\n——\n展示了\nHBuilderX\n中创建的\nuni-app\n项目结构和代码编辑界面。可以看到项目自动\n生成了标准的目录结构，\nindex.vue\n文件中包含了\nAI\n生成的\n\"\n智慧校园\n\"\n主题\nHelloWorld\n代码。\n内置浏览器运行截图\n图\n2\n：内置浏览器运行截图\n——\n展示了在\nHBuilderX\n内置浏览器中运行\nuni-app\n项目的效果。页面正确渲染\n了智慧校园主题的\nHelloWorld\n界面，包括标题文字、欢迎语句和背景样式。\n浏览器运行截图\n图\n3\n：浏览器运行截图\n——\n展示了在外部\nChrome\n浏览器中运行\nH5\n版本的效果。\nuni-app\n的跨平台特性使\n得同一份代码可以同时运行在浏览器环境中，验证了\nH5\n端的兼容性。\n小程序模拟器运行截图\n图\n4\n：小程序模拟器运行截图\n——\n展示了在微信开发者工具的模拟器中运行小程序版本的效果。页面布局\n和样式在小程序环境中表现正常，验证了微信小程序端的编译通过。\n微信\nPC\n端预览\n图\n5\n：微信\nPC\n端预览\n——\n展示了通过微信\nPC\n端扫描二维码预览小程序的效果。这是从开发环境到真实运\n行环境的过渡验证，确认小程序可以在微信客户端中正常加载和显示。\n真机测试连接截图\n图\n6\n：真机测试连接截图\n——\n展示了通过\nHBuilderX\n连接真机进行调试的过程。真机测试是移动应用开发\n中不可或缺的环节，可以发现模拟器无法暴露的兼容性问题。\n真机测试登录界面\n图\n7\n：真机测试登录界面\n——\n展示了在真机上运行的登录界面效果。界面元素布局合理，输入框、按钮等\n交互组件响应正常。\n登录成功截图\n问题描述\n解决方案\n解决结果\nNode.js\n版本不\n兼容\n下载安装\nNode.js\n24.14.0\n版本\n已解决。原先安装的\nNode.js\n版本过低，导致\nHBuilderX\n的某些依赖包无法正常安装。升级到\nv24.14.0\n后问题解决。\nHBuilderX\n编译\n失败\n检查\nNode.js\n环境变量\n配置，重启\nHBuilderX\n已解决。原因是\nNode.js\n安装后未重启\nHBuilderX\n，\n导致\nIDE\n无法识别新安装的\nNode.js\n环境。重启后编\n译恢复正常。\n微信开发者工具\n连接失败\n检查网络连接，重新登\n录微信账号\n已解决。首次登录时网络不稳定导致扫码授权失\n败，切换网络后重新扫码登录成功。\n样式显示异常\n检查\nCSS\n语法，确认样\n式文件路径正确\n已解决。在调整\nCSS\n样式时，误将渐变色语法写\n错，导致背景色无法正常显示。修正\nCSS\n语法后样\n式恢复正常。\n图\n8\n：登录成功截图\n——\n展示了真机测试中登录成功后的页面跳转效果，验证了页面路由和数据传递功能\n的正确性。\n问题与解决\n在实验过程中，遇到了以下几个典型问题，通过查阅文档和调试逐一解决：\n实验总结\n实验收获\n通过本次实验，我获得了以下几方面的收获：\n1.\n开发环境搭建能力\n：成功搭建了基于\nHBuilderX\n和微信开发者工具的完整移动应用开发环境，掌握\n了\nNode.js\n、\nHBuilderX\n、微信开发者工具三者之间的依赖关系和配置方法。理解了前端工程化开发\n中环境依赖管理的重要性。\n2.\n多平台运行验证经验\n：完成了\nH5\n浏览器、微信小程序模拟器、微信\nPC\n端和真机测试四个运行环境的\n验证，深刻体会到\nuni-app\"\n一套代码，多端运行\n\"\n的跨平台优势。同时也认识到不同平台之间存在细\n微的兼容性差异，需要在开发过程中加以注意。\n3.\nAI\n辅助开发体验\n：首次使用\nTRAE AI\n助手生成代码，体验了\nAI\n在代码生成方面的效率提升。\nAI\n生成的\n代码质量较高，可以直接作为项目骨架使用，在此基础上进行人工调整和完善，可以大幅缩短开发\n周期。\n考核项\n评分标准\n得分\n环境搭建完整性\n6\n个开发工具全部安装成功\n10\n分\n项目创建与运行\n6\n个\nHelloWorld\n项目成功运行\n15\n分\n截图记录\n提供所有工具运行截图\n15\n分\n问题解决\n能独立解决遇到的问题\n10\n分\n实验报告质量\n报告结构完整，内容详实\n10\n分\n项目\n评价\n实验完成情况\n技术掌握程度\n创新点\n综合评价\n成绩\n4.\n问题排查与解决能力\n：在实验过程中遇到了环境配置、编译失败、网络连接等多个问题，通过查阅\n官方文档、搜索解决方案、逐步调试等方法逐一解决，提升了独立解决问题的能力。\n技术要点\n环境搭建\n：\nNode.js 24.14.0 + HBuilderX 4.0+ +\n微信开发者工具，三者协同构成\nuni-app\n开发的完\n整工具链\n项目开发\n：使用\nVue3\n组合式\nAPI\n和\nCSS3\n创建\n\"\n智慧校园\n\"\n主题页面，采用渐变背景、\nFlex\n布局等现代\nCSS\n特性\n跨平台测试\n：\nH5\n端、微信小程序端、真机端三端验证，确认\nuni-app\n的跨平台编译能力\nAI\n辅助开发\n：使用\nTRAE\n生成\nVue\n组件代码，体验\nAI\n辅助编程的效率优势\n课后思考\n1.\n各开发工具的优缺点分析\n：\nHBuilderX\n轻量高效，对\nuni-app\n支持最好，但对其他框架支持一般；\nAndroid Studio\n功能强大，但资源占用大、启动慢；微信开发者工具针对小程序优化，但只能用于\n微信生态。\n2.\n如何根据项目需求选择合适的开发工具\n：如果项目需要跨平台发布（同时支持\nApp\n、\nH5\n、小程\n序），\nuni-app+HBuilderX\n是最佳选择；如果只需要\nAndroid\n原生开发，则选择\nAndroid Studio\n。\n3.\nAI\n辅助开发对效率的提升分析\n：\nAI\n工具在模板代码生成、语法补全、错误排查等方面能显著提升效\n率，但对于复杂的业务逻辑和架构设计，仍需要开发者自主思考和决策。\n考核指标\n教师评价\n教师签名：\n__\n__\n__\n_\n日期：\n__\n__\n__\n_\n",
+      "file_paths": "D:\\GradeThree\\MobileApplicationDevelopment\\ExperimentFolder\\jpw\\实验PDF\\实验一到六AI审核提交版\\2023210598姬鹏炜实验一 开发环境搭建.pdf",
+      "file_names": "2023210598姬鹏炜实验一 开发环境搭建.pdf",
+      "submit_time": "2026-06-17T16:12:50.662371",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-06-17T16:12:50.662371",
+      "updated_at": "2026-06-17T16:12:50.662371",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 5,
       "user_id": "2023210598",
@@ -92,24 +110,6 @@
       "scored_at": null,
       "created_at": "2026-04-24T15:32:31.837381",
       "updated_at": "2026-05-31T23:31:26.670978",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 1,
-      "user_id": "2023210598",
-      "content": "PDF实验报告：2023210598姬鹏炜实验一 开发环境搭建.pdf\n",
-      "file_paths": "D:\\GradeThree\\MobileApplicationDevelopment\\ExperimentFolder\\jpw\\实验PDF\\2023210598姬鹏炜实验一 开发环境搭建.pdf",
-      "file_names": "2023210598姬鹏炜实验一 开发环境搭建.pdf",
-      "submit_time": "2026-05-31T23:31:12.179220",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-04-24T15:32:23.700405",
-      "updated_at": "2026-05-31T23:31:12.179220",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
