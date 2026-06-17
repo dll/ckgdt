@@ -3,8 +3,8 @@
   "user_id": "2023210576",
   "user_name": "蔡迦南",
   "role": "student",
-  "synced_at": "2026-06-17T15:33:55.535742",
-  "last_active": "2026-06-17T15:33:55.535742",
+  "synced_at": "2026-06-17T15:43:55.356947",
+  "last_active": "2026-06-17T15:43:55.356947",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
@@ -121,7 +121,22 @@
       "teacher_confirmed": 0
     }
   ],
-  "student_reports": [],
+  "student_reports": [
+    {
+      "template_id": null,
+      "task_id": null,
+      "user_id": "2023210576",
+      "title": "项目报告",
+      "content_json": "2023210576蔡迦南项目报告.pdf",
+      "file_path": "D:\\Grade3\\移动应用开发\\最终考核\\报告\\最终评估\\2023210576蔡迦南项目报告.pdf",
+      "status": "已提交",
+      "submit_time": "2026-06-17T15:40:56.356196",
+      "score": null,
+      "feedback": null,
+      "created_at": "2026-06-17T15:40:56.356196",
+      "updated_at": null
+    }
+  ],
   "student_works": [],
   "survey_responses": [],
   "checkin_records": [],
