@@ -3,8 +3,8 @@
   "user_id": "2023210654",
   "user_name": "朱思维",
   "role": "student",
-  "synced_at": "2026-06-15T14:42:44.531823",
-  "last_active": "2026-06-15T14:42:44.531838",
+  "synced_at": "2026-06-17T12:31:19.828481",
+  "last_active": "2026-06-17T12:31:19.828531",
   "quiz_results": [
     {
       "user_id": "2023210654",
@@ -188,7 +188,13 @@
   "checkin_records": [],
   "work_comments": [],
   "work_likes": [],
-  "work_views": [],
+  "work_views": [
+    {
+      "work_id": 86,
+      "user_id": "2023210654",
+      "viewed_at": "2026-06-15T14:43:54.303303"
+    }
+  ],
   "peer_reviews": [],
   "collaboration_messages": [],
   "contribution_scores": [],
