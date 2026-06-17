@@ -3,8 +3,8 @@
   "user_id": "2023210649",
   "user_name": "赵翔",
   "role": "student",
-  "synced_at": "2026-06-17T10:26:00.405655",
-  "last_active": "2026-06-17T10:26:00.405655",
+  "synced_at": "2026-06-17T10:27:46.106199",
+  "last_active": "2026-06-17T10:27:46.106199",
   "quiz_results": [
     {
       "user_id": "2023210649",
@@ -24,6 +24,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 1,
+      "user_id": "2023210649",
+      "content": "PDF实验报告：2023210649赵翔实验一 开发环境搭建.pdf\n\n--- 报告正文（自动提取）---\n实验一：移动应用开发环境搭建\n个人实验报告\n一、实验基本信息\n项目\n内容\n实验名称\n移动应用开发环境搭建\n实验类型\n验证型\n实验学时\n2\n学时\n负责平台\n鸿蒙\nHarmonyOS\n应用开发\n开发工具\nDevEco\nStudio\n开发语言\nArkTS\n二、实验目的\n1.\n掌握鸿蒙\nHarmonyOS\n开发环境的搭建方法\n2.\n熟悉\nDevEco\nStudio\n开发工具的使用\n3.\n了解鸿蒙应用项目结构和开发流程\n4.\n体验\nAI\n辅助代码生成工具在开发中的应用\n5.\n完成\nHelloWorld\n项目的创建与运行验证\n三、实验环境与工具\n3.1\n硬件环境\n\n操作系统：\nWindows\n11\n\n处理器：\nIntel\nCore\ni5/i7\n或同等配置\n\n内存：\n16GB\nRAM\n\n硬盘空间：至少\n50GB\n可用空间\n3.2\n软件环境\n\n开发工具\n：\nDevEco\nStudio\n5.0+\n\nSDK\n版本\n：\nHarmonyOS\nSDK\n5.0+\n\n编程语言\n：\nArkTS\n（基于\nTypeScript\n）\n\n模拟器\n：\nHarmonyOS\nEmulator\n四、实验步骤\n4.1\n环境搭建阶段\n步骤\n1\n：下载\nDevEco\nStudio\n1.\n访问鸿蒙开发者官网：\nhttps://developer.harmonyos.com/\n2.\n下载\nDevEco\nStudio\n最新版本（\n5.0+\n）\n3.\n运行安装程序，按照向导完成安装\n步骤\n2\n：配置开发环境\n1.\n启动\nDevEco\nStudio\n2.\n首次启动时配置\nSDK\n路径\n3.\n下载并安装\nHarmonyOS\nSDK\n5.0+\n4.\n配置模拟器环境\n步骤\n3\n：环境验证\n#\n验证\nSDK\n安装\nhdc\n-v\n#\n查看\nHDC\n工具版本\n#\n验证模拟器\n#\n在\nDevEco\nStudio\n中打开\nDevice\nManager\n，创建并启动虚拟设备\n4.2\n项目创建阶段\n步骤\n1\n：新建鸿蒙项目\n1.\n打开\nDevEco\nStudio\n，选择\n\"Create\nProject\"\n2.\n选择\n\"Empty\nAbility\"\n模板\n3.\n配置项目信息：\no\n项目名称：\nMtcshm\no\n包名：\ncom.example.mtcshm\no\n保存路径：\nD:\\Mtcshm\no\n开发语言：\nArkTS\no\nAPI\n版本：\nAPI\n12\n步骤\n2\n：项目结构分析\n创建后的项目结构如下：\nMtcshm/\n├──\nAppScope/\n#\n应用级配置\n│\n├──\napp.json5\n#\n应用配置文件\n│\n└──\nresources/\n#\n应用级资源\n├──\nentry/\n#\n入口模块\n│\n├──\nsrc/main/ets/\n#\nArkTS\n源代码\n│\n│\n├──\nentryability/\n#\nAbility\n组件\n│\n│\n│\n└──\nEntryAbility.ets\n│\n│\n└\n──\npages/\n#\n页面文件\n│\n│\n├──\nIndex.ets\n│\n│\n└──\nLoginPage.ets\n│\n└──\nsrc/main/resources/\n#\n模块资源\n├──\nbuild-\nprofile.json5\n#\n构建配置\n└──\noh-package.json5\n#\n依赖管理\n4.3\nAI\n辅助编码阶段\n步骤\n1\n：使用\nTRAE\n生成登录页面代码\n在\nTRAE\n中输入需求：\n请帮我生成一个鸿蒙\nHarmonyOS\n的登录页面，要求：\n1.\n包含用户名和密码输入框\n2.\n有密码显示\n/\n隐藏\n切换功能\n3.\n包含\n\"\n记住我\n\"\n复选框\n4.\n有\n\"\n忘记密码\n\"\n链接\n5.\n登录按钮要有加载状态\n6.\n要有表单验证功\n能\n步骤\n2\n：代码集成与优化\n将\nAI\n生成的代码集成到项目中，主要文件包括：\n1.\nLoginPage.ets\n-\n登录页面组件\n2.\no\n使用\n@Entry\n和\n@Component\n装饰器定义页面\no\n使用\n@State\n管理组件状态\no\n实现表单验证逻辑\no\n使用\nArkUI\n构建用户界面\n3.\nEntryAbility.ets\n-\n入口\nAbility\n4.\no\n配置应用生命周期回调\no\n设置主页面为\nLoginPage\n核心代码片段展示：\n//\nLoginPage.ets\n-\n状态管理\n@State\nusername:\nstring\n=\n''@State\npassword:\nstring\n=\n''@State\nisPasswordVisible:\nboolean\n=\nfalse@State\nrememberMe:\nboolean\n=\nfalse@State\nisLoading:\nboolean\n=\nfalse\n//\n表单验证方法\nprivate\nvalidateUsername(username:\nstring):\nboolean\n{\nreturn\nusername.length\n>=\n3\n&&\nusername.length\n<=\n50}\nprivate\nvalidatePassword(password:\nstring):\nboolean\n{\nreturn\npassword.length\n>=\n6}\n4.4\n测试验证阶段\n步骤\n1\n：编译项目\n1.\n点击\nDevEco\nStudio\n工具栏的\n\"Build\"\n按钮\n2.\n等待编译完成，确保无错误\n步骤\n2\n：运行项目\n1.\n选择目标设备（模拟器或真机）\n2.\n点击\n\"Run\"\n按钮启动应用\n3.\n观察应用在模拟器上的运行效果\n步骤\n3\n：功能验证\n\n登录页面正常显示\n\n用户名\n/\n密码输入正常\n\n密码显示\n/\n隐藏切换功能正常\n\n表单验证功能正常\n\n登录按钮交互正常\n五、实验结果\n5.1\n运行截图\n图\n1\n：\nDevEco\nStudio\n开发环境及鸿蒙登录页面运行效果\n从截图可以看到：\n1.\n左侧\n：项目结构树，展示了鸿蒙应用的标准目录结构\n2.\n中间\n：\nArkTS\n代码编辑区，显示\nLoginPage.ets\n的代码\n3.\n右侧\n：鸿蒙模拟器运行效果，展示登录页面\nUI\n4.\n底部\n：运行日志，显示应用启动成功信息\n5.2\n运行日志\n20:22:37.238:\nhdc\nshell\naa\nforce-stop\ncom.example.mtcshm20:22:37.459:\nhdc\nshell\nmkdir\ndata/local/tmp/f42ed881ccb347b883e36a47fd1817220:22:37.567:\nhdc\nfile\nsend\nD:\\Mtcshm\\entry\\build\\default\\outputs\\default\\entry-default-\nunsigned.hap\n20:22:37.909:\nhdc\nshell\nbm\ninstall\n-p\ndata/local/tmp/f42ed881ccb347b883e36a47fd18172\nin\n341\nms20:22:37.959:\nhdc\nshell\nrm\n-rf\ndata/local/tmp/f42ed881ccb347b883e36a47fd1817220:22:38.433:\nhdc\nshell\naa\nstart\n-a\nEntryAbility\n-b\ncom.example.mtcshm\n-m\nentry\nin\n334\nms20:22:38.434:\ncom.example.mtcshm\nsuccessfully\nlaunched\nwithin\n1\ns\n201\nms\n六、实验总结\n6.1\n完成内容\n1.\n✅\n成功安装并配置\nDevEco\nStudio\n开发环境\n2.\n✅\n成功创建鸿蒙\nHarmonyOS\n应用项目\n3.\n✅\n使用\nAI\n辅助生成了登录页面代码\n4.\n✅\n成功在模拟器上运行应用\n5.\n✅\n实现了完整的登录页面功能\n6.2\n遇到的问题与解决方案\n问题\n解决方案\nSDK\n下载速度慢\n配置国内镜像源\n模拟器启动失败\n检查\nHyper-V\n和虚拟化功能是否开启\n编译报错\n检查\nAPI\n版本兼容性，更新\nSDK\n6.3\n心得体会\n1.\n鸿蒙开发体验\n：\nDevEco\nStudio\n提供了完整的开发工具链，从代码编辑到调试运行一体化，开\n发体验良好。\n2.\nArkTS\n语言特点\n：\nArkTS\n基于\nTypeScript\n，语法简洁，配合\nArkUI\n框架可以快速构建声明\n式\nUI\n。\n3.\nAI\n辅助开发\n：使用\nTRAE\n等\nAI\n工具可以大幅提升编码效率，特别是在生成模板代码和基础功\n能方面。\n4.\n项目结构理解\n：鸿蒙应用采用模块化设计，\nentry\n作为入口模块，\nresources\n统一管理资源，结\n构清晰。\n七、课后思考\n1.\n鸿蒙开发优势分析\n：\n2.\no\n一次开发，多端部署（手机、平板、智能设备等）\no\n分布式能力支持跨设备协同\no\n原生性能优于跨平台方案\n3.\n与其他平台对比\n：\n4.\no\n相比\nAndroid\n：开发语言更现代（\nArkTS\nvs\nJava/Kotlin\n）\no\n相比\nFlutter\n：原生性能更好，但生态相对年轻\no\n相比小程序：功能更强大，可访问系统底层能力\n5.\nAI\n辅助开发的影响\n：\n6.\no\n提高开发效率，减少重复代码编写\no\n帮助快速学习新技术和框架\no\n开发者需要更多关注架构设计和业务逻辑\n八、附录\n8.1\n参考资料\n\n鸿蒙开发者官网：\nhttps://developer.harmonyos.com/\n\nArkTS\n语言指南\n\nArkUI\n开发文档\n8.2\n项目文件清单\n文件名\n说明\nLoginPage.ets\n登录页面组件\nEntryAbility.ets\n入口\nAbility\nmodule.json5\n模块配置\nstring.json\n字符串资源\ncolor.json\n颜色资源\n实验完成日期\n：\n2026\n年\n3\n月\n14\n日\n报告撰写人\n：\n[\n赵翔\n]\n",
+      "file_paths": "C:\\Users\\lenovo\\Desktop\\移动应用开发\\期末材料\\2023210649赵翔实验一 开发环境搭建.pdf",
+      "file_names": "2023210649赵翔实验一 开发环境搭建.pdf",
+      "submit_time": "2026-06-17T10:27:14.540638",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-04-24T16:31:50.584782",
+      "updated_at": "2026-06-17T10:27:14.540638",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 6,
       "user_id": "2023210649",
@@ -110,24 +128,6 @@
       "scored_at": null,
       "created_at": "2026-04-24T16:33:20.585041",
       "updated_at": "2026-04-24T16:33:20.585041",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 1,
-      "user_id": "2023210649",
-      "content": "PDF实验报告：2023210649赵翔实验一 开发环境搭建.pdf",
-      "file_paths": "C:\\Users\\ldl\\Documents/sync_files/2023210649/2023210649赵翔实验一 开发环境搭建.pdf",
-      "file_names": "2023210649赵翔实验一 开发环境搭建.pdf",
-      "submit_time": "2026-04-24T16:31:50.584782",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-04-24T16:31:50.584782",
-      "updated_at": "2026-04-24T16:31:50.584782",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
