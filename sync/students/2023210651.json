@@ -3,8 +3,8 @@
   "user_id": "2023210651",
   "user_name": "周乐",
   "role": "student",
-  "synced_at": "2026-06-17T22:32:29.969659",
-  "last_active": "2026-06-17T22:32:29.969659",
+  "synced_at": "2026-06-17T22:35:18.155720",
+  "last_active": "2026-06-17T22:35:18.155720",
   "quiz_results": [
     {
       "user_id": "2023210651",
@@ -247,7 +247,41 @@
       "updated_at": null
     }
   ],
-  "student_works": [],
+  "student_works": [
+    {
+      "course_id": "mad",
+      "title": "多端温控系统",
+      "description": "【数据报表生成】自动汇总各温控设备的运行数据生成日报和周报，包含温度统计、设备运行时长和能耗数据。【温控数据分析】使用图表展示各设备温度变化曲线，支持多设备数据对比和异常时段标注，辅助用户优化温控策略。【AI异常诊断】调用AI大模型分析温控设备的运行数据，自动识别传感器故障、制冷/制热异常等问题并给出维修建议。",
+      "tech_stack": "C# + .NET + MAUI",
+      "work_type": "综合项目",
+      "group_name": "cg2-mtcs",
+      "leader_name": "周乐",
+      "user_id": "2023210651",
+      "file_path": null,
+      "file_size": null,
+      "status": "待提交",
+      "submit_time": null,
+      "tags": "[\"C#\",\".NET\",\"MAUI\"]",
+      "created_at": "2026-06-17T22:34:40.840970",
+      "updated_at": "2026-06-17T22:34:40.840970",
+      "related_node_ids": null,
+      "ai_suspicion": 0.0,
+      "teacher_confirmed": 0,
+      "project_id": null,
+      "group_id": null,
+      "video_url": null,
+      "thumbnail_url": null,
+      "video_duration": null,
+      "view_count": 0,
+      "like_count": 0,
+      "comment_count": 0,
+      "repo": "cg2-mtcs",
+      "class_group": "cg2",
+      "project": "多端温控系统",
+      "student_role": "MAUI开发工程师",
+      "student_name": "周乐"
+    }
+  ],
   "survey_responses": [],
   "checkin_records": [],
   "work_comments": [],
