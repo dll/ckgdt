@@ -3,15 +3,34 @@
   "user_id": "2023210597",
   "user_name": "虎康",
   "role": "student",
-  "synced_at": "2026-06-18T22:32:57.250922",
-  "last_active": "2026-06-18T22:32:57.250922",
+  "synced_at": "2026-06-18T22:33:16.467245",
+  "last_active": "2026-06-18T22:33:16.467245",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
   "favorites": [],
   "feedback": [],
   "learning_paths": [],
-  "lab_submissions": [],
+  "lab_submissions": [
+    {
+      "task_id": 1,
+      "user_id": "2023210597",
+      "content": "PDF实验报告：2023210597虎康实验一 开发环境搭建.pdf\n\n--- 报告正文（自动提取）---\n工具名称\n版本要求\n安装状态\nNode.js\n18+\n✅\n已安装\nCordova CLI\n最新版\n✅\n已安装\nVisual Studio Code\n最新版\n✅\n已安装\nAndroid Studio\n2024.1+\n✅\n已安装\nAndroid SDK\n34+\n✅\n已安装\n实验一：开发环境搭建\n实验项目基本信息\n实验编号\n：\nd20301035101\n、\nd20301009201\n实验名称\n：开发环境搭建\n学生姓名\n：虎康\n学号\n：\n2023210597\n技术岗位\n：\nCordova\n开发\n技术栈\n：\nHTML+CSS+JavaScript\n实验时间\n：\n2026\n年\n3\n月\n16\n日\n🎯\n实验目标\n1.\n搭建完整的\nCordova\n开发环境\n2.\n实现智慧社区生活服务平台的登录功能\n3.\n验证开发环境的可用性\n4.\n掌握移动应用开发的基本流程\n🛠\n开发环境搭建\n1.\n环境依赖\n2.\n环境搭建步骤\n2.1 Node.js\n安装\n访问\nhttps://nodejs.org/\n下载并安装\nNode.js 18+\n版本\n验证安装：\nnode -v\n→\nv18.17.0\n验证\nnpm\n：\nnpm -v\n→\n9.6.7\n2.2 Cordova CLI\n安装\n执行命令：\nnpm install -g cordova\n验证安装：\ncordova -v\n→\n12.0.0\n2.3 Visual Studio Code\n配置\n安装插件：\nCordova Tools\nHTML CSS Support\nESLint\nGitLens\n2.4 Android Studio\n配置\n安装\nAndroid Studio 2024.1+\n安装\nAndroid SDK 34+\n配置\nAndroid Virtual Device\n📱\n项目实现\n1.\n项目创建\n2.\n登录功能实现\n2.1\n登录页面设计\n文件：\nwww/index.html\n实现了用户名和密码输入表单\n添加了登录按钮和基本的表单验证\n2.2\n登录逻辑实现\n文件：\nwww/js/index.js\n实现了登录验证逻辑\n登录成功后跳转到个人信息页面\n#\n创建\nCordova\n项目\ncordova create smart-community com.smartcommunity.app SmartCommunity\ncd\nsmart-community\n#\n添加\nAndroid\n平台\ncordova platform add android\n2.3\n个人信息页面\n文件：\nwww/profile.html\n登录成功后显示用户个人信息\n包含用户头像、用户名、个人资料等信息\n3.\n核心代码\n登录页面\nHTML\n登录逻辑\nJavaScript\n<!DOCTYPE html>\n<\nhtml\n>\n<\nhead\n>\n<\nmeta\ncharset\n=\n\"utf-8\"\n>\n<\nmeta\nname\n=\n\"viewport\"\ncontent\n=\n\"width=device-width, initial-scale=1\"\n>\n<\ntitle\n>\n智慧社区\n-\n登录\n</\ntitle\n>\n<\nlink\nrel\n=\n\"stylesheet\"\nhref\n=\n\"css/index.css\"\n>\n</\nhead\n>\n<\nbody\n>\n<\ndiv\nclass\n=\n\"login-container\"\n>\n<\nh1\n>\n智慧社区生活服务平台\n</\nh1\n>\n<\nform\nid\n=\n\"loginForm\"\n>\n<\ndiv\nclass\n=\n\"form-group\"\n>\n<\nlabel\nfor\n=\n\"username\"\n>\n用户名\n</\nlabel\n>\n<\ninput\ntype\n=\n\"text\"\nid\n=\n\"username\"\nplaceholder\n=\n\"\n请输入用户名\n\"\n>\n</\ndiv\n>\n<\ndiv\nclass\n=\n\"form-group\"\n>\n<\nlabel\nfor\n=\n\"password\"\n>\n密码\n</\nlabel\n>\n<\ninput\ntype\n=\n\"password\"\nid\n=\n\"password\"\nplaceholder\n=\n\"\n请输入密码\n\"\n>\n</\ndiv\n>\n<\nbutton\ntype\n=\n\"submit\"\nclass\n=\n\"login-btn\"\n>\n登录\n</\nbutton\n>\n</\nform\n>\n</\ndiv\n>\n<\nscript\nsrc\n=\n\"js/index.js\"\n></\nscript\n>\n</\nbody\n>\n</\nhtml\n>\ndocument\n.\ngetElementById\n(\n'loginForm'\n).\naddEventListener\n(\n'submit'\n,\nfunction\n(\ne\n) {\ne\n.\npreventDefault\n();\nconst\nusername\n=\ndocument\n.\ngetElementById\n(\n'username'\n).\nvalue\n;\nconst\npassword\n=\ndocument\n.\ngetElementById\n(\n'password'\n).\nvalue\n;\n//\n简单的登录验证\nif\n(\nusername\n&&\npassword\n) {\n//\n登录成功，跳转到个人信息页面\nwindow\n.\nlocation\n.\nhref\n=\n'profile.html'\n;\n}\nelse\n{\nalert\n(\n'\n请输入用户名和密码\n'\n);\n个人信息页面\nHTML\n📊\n测试结果\n1.\n环境验证\n✅\nNode.js\n安装成功\n✅\nCordova CLI\n安装成功\n✅\nVisual Studio Code\n配置成功\n✅\nAndroid Studio\n配置成功\n2.\n功能测试\n✅\n登录页面显示正常\n✅\n登录功能正常（输入用户名和密码后可成功登录）\n✅\n个人信息页面显示正常\n}\n});\n<!DOCTYPE html>\n<\nhtml\n>\n<\nhead\n>\n<\nmeta\ncharset\n=\n\"utf-8\"\n>\n<\nmeta\nname\n=\n\"viewport\"\ncontent\n=\n\"width=device-width, initial-scale=1\"\n>\n<\ntitle\n>\n智慧社区\n-\n个人信息\n</\ntitle\n>\n<\nlink\nrel\n=\n\"stylesheet\"\nhref\n=\n\"css/index.css\"\n>\n</\nhead\n>\n<\nbody\n>\n<\ndiv\nclass\n=\n\"profile-container\"\n>\n<\nh1\n>\n个人信息\n</\nh1\n>\n<\ndiv\nclass\n=\n\"profile-card\"\n>\n<\ndiv\nclass\n=\n\"avatar\"\n>\n<\nimg\nsrc\n=\n\"img/avatar.png\"\nalt\n=\n\"\n用户头像\n\"\n>\n</\ndiv\n>\n<\ndiv\nclass\n=\n\"profile-info\"\n>\n<\nh2\n>\n虎康\n</\nh2\n>\n<\np\n>\n学号：\n2023210597\n</\np\n>\n<\np\n>\n技术岗位：\nCordova\n开发\n</\np\n>\n<\np\n>\n技术栈：\nHTML+CSS+JavaScript\n</\np\n>\n<\np\n>\n负责功能：可扩展功能模块系统、跨平台组件复用机制、\nAI\n智能客服、产品化：模块化架构、性能\n优化\n</\np\n>\n</\ndiv\n>\n<\nbutton\nclass\n=\n\"logout-btn\"\nonclick\n=\n\"window.location.href='index.html'\"\n>\n退出登录\n</\nbutton\n>\n</\ndiv\n>\n</\ndiv\n>\n</\nbody\n>\n</\nhtml\n>\n✅\n退出登录功能正常\n功能测试截图\n登录页面：\n!\n[\n登录页面\n]\n(\n../images/1.png)\n个人信息页面：\n!\n[\n个人信息页面\n]\n(\n../images/2.png)\n3.\n构建测试\n✅\n执行\ncordova build android\n成功\n✅\n执行\ncordova run android\n成功\n✅\n应用在\nAndroid\n模拟器上运行正常\n📝\n实验总结\n完成情况\n1.\n环境搭建\n：成功搭建了完整的\nCordova\n开发环境，包括\nNode.js\n、\nCordova CLI\n、\nVisual Studio Code\n和\nAndroid\nStudio\n2.\n功能实现\n：实现了智慧社区生活服务平台的登录功能，登录成功后显示个人信息页面\n3.\n测试验证\n：所有功能均测试通过，应用能够正常构建和运行\n技术要点\n使用\nCordova\n框架进行跨平台移动应用开发\n采用\nHTML+CSS+JavaScript\n技术栈实现前端界面和逻辑\n实现了基本的表单验证和页面跳转功能\n掌握了\nCordova\n项目的创建、构建和运行流程\n后续改进\n1.\n完善用户认证机制，实现真实的后端验证\n2.\n优化\nUI\n设计，提升用户体验\n3.\n增加更多功能模块，如社区服务、智能客服等\n4.\n实现数据持久化，保存用户登录状态\n🎉\n实验结论\n本次实验成功完成了开发环境的搭建和登录功能的实现，为智慧社区生活服务平台的后续开发奠定了基础。通过本次\n实验，我掌握了\nCordova\n开发的基本流程和技术要点，熟悉了移动应用开发的环境配置和项目构建过程。\n实验过程中遇到的问题都已成功解决，开发环境运行稳定，功能实现符合预期。后续将继续完善平台功能，实现更多\n智慧社区服务相关的特性。\n📷\n功能测试截图\n登录页面\n个人信息页面\n",
+      "file_paths": "C:\\Users\\Lenovo\\Desktop\\移动应用开发作业\\实验\\2023210597虎康实验一 开发环境搭建.pdf",
+      "file_names": "2023210597虎康实验一 开发环境搭建.pdf",
+      "submit_time": "2026-06-18T22:33:16.438088",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-06-18T22:33:16.438088",
+      "updated_at": "2026-06-18T22:33:16.438088",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    }
+  ],
   "student_reports": [
     {
       "template_id": null,
