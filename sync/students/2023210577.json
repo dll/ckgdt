@@ -3,8 +3,8 @@
   "user_id": "2023210577",
   "user_name": "常烁",
   "role": "student",
-  "synced_at": "2026-06-18T10:56:47.695106",
-  "last_active": "2026-06-18T10:56:47.695106",
+  "synced_at": "2026-06-18T10:57:27.462291",
+  "last_active": "2026-06-18T10:57:27.457942",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
@@ -13,19 +13,62 @@
   "learning_paths": [],
   "lab_submissions": [],
   "student_reports": [],
-  "student_works": [],
+  "student_works": [
+    {
+      "title": "智慧社区生活服务平台开发与整合",
+      "description": "【Siri快捷指令】开发Siri快捷指令集成，用户可通过语音完成\"查看社区公告\"\"报修提交\"\"缴费查询\"等常用操作。【Widget组件】开发iOS桌面Widget展示最新社区公告摘要、待缴费用和待处理工单数量，信息一目了然。【AI语音服务】集成AI大模型语音交互能力，支持用户通过语音描述问题并自动转换为文字工单提交。",
+      "tech_stack": "Swift+iOS SDK",
+      "work_type": "综合项目",
+      "group_name": "cg2-sclspdi",
+      "leader_name": "常烁",
+      "user_id": "2023210577",
+      "file_path": null,
+      "file_size": null,
+      "status": "已评分",
+      "submit_time": null,
+      "tags": "[\"Swift\",\"iOS\",\"SDK\"]",
+      "created_at": "2026-04-18T16:18:03.998453",
+      "updated_at": "2026-04-18T16:18:06.924069",
+      "project_id": null,
+      "group_id": null,
+      "video_url": "assets/videos/demo_2023210577.mp4",
+      "thumbnail_url": null,
+      "video_duration": "03:20",
+      "view_count": 39,
+      "like_count": 21,
+      "comment_count": 2,
+      "repo": "cg2-sclspdi",
+      "class_group": "cg2",
+      "project": "智慧社区生活服务平台开发与整合",
+      "student_role": "iOS开发工程师",
+      "student_name": "常烁"
+    }
+  ],
   "survey_responses": [],
   "checkin_records": [],
-  "work_comments": [],
+  "work_comments": [
+    {
+      "work_id": 65,
+      "user_id": "2023210577",
+      "user_name": "常烁",
+      "user_role": "student",
+      "content": "AI功能很实用，创意不错。",
+      "parent_id": null,
+      "created_at": "2026-04-18T16:18:06.048578"
+    }
+  ],
   "work_likes": [],
-  "work_views": [],
   "peer_reviews": [],
+  "notification_recipients": [
+    {
+      "notification_id": 1,
+      "user_id": "2023210577",
+      "is_read": 0,
+      "read_at": null
+    }
+  ],
   "collaboration_messages": [],
   "contribution_scores": [],
-  "work_scores": [],
-  "project_scores": [],
-  "lab_tasks": [],
-  "report_templates": [],
   "classroom_messages": [],
   "path_nodes": []
 }
