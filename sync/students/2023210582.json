@@ -3,8 +3,8 @@
   "user_id": "2023210582",
   "user_name": "程浩宇",
   "role": "student",
-  "synced_at": "2026-06-18T16:59:41.405588",
-  "last_active": "2026-06-18T16:59:41.402413",
+  "synced_at": "2026-06-18T17:00:15.123077",
+  "last_active": "2026-06-18T17:00:15.115034",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
@@ -218,6 +218,20 @@
       "score": null,
       "feedback": null,
       "created_at": "2026-06-18T16:59:28.576919",
+      "updated_at": null
+    },
+    {
+      "template_id": null,
+      "task_id": null,
+      "user_id": "2023210582",
+      "title": "项目报告",
+      "content_json": "2023210582程浩宇项目报告.pdf",
+      "file_path": "C:\\Users\\Lenovo\\Pictures\\Camera Roll\\123\\2023210582程浩宇项目报告.pdf",
+      "status": "已提交",
+      "submit_time": "2026-06-18T17:00:02.062179",
+      "score": null,
+      "feedback": null,
+      "created_at": "2026-06-18T17:00:02.062179",
       "updated_at": null
     }
   ],
