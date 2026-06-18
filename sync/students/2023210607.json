@@ -3,8 +3,8 @@
   "user_id": "2023210607",
   "user_name": "刘海静",
   "role": "student",
-  "synced_at": "2026-06-18T10:37:24.709056",
-  "last_active": "2026-06-18T10:37:24.709065",
+  "synced_at": "2026-06-18T10:54:36.733617",
+  "last_active": "2026-06-18T10:54:36.733626",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
@@ -52,7 +52,18 @@
   "checkin_records": [],
   "work_comments": [],
   "work_likes": [],
-  "work_views": [],
+  "work_views": [
+    {
+      "work_id": 89,
+      "user_id": "2023210607",
+      "viewed_at": "2026-06-18T10:40:57.571827"
+    },
+    {
+      "work_id": 89,
+      "user_id": "2023210607",
+      "viewed_at": "2026-06-18T10:40:47.562029"
+    }
+  ],
   "peer_reviews": [],
   "collaboration_messages": [],
   "contribution_scores": [],
