@@ -3,8 +3,8 @@
   "user_id": "2020211596",
   "user_name": "李世程",
   "role": "student",
-  "synced_at": "2026-06-18T09:29:17.474818",
-  "last_active": "2026-06-18T09:29:17.474833",
+  "synced_at": "2026-06-18T09:39:05.225266",
+  "last_active": "2026-06-18T09:39:05.225282",
   "quiz_results": [
     {
       "user_id": "2020211596",
@@ -174,12 +174,57 @@
       "updated_at": null
     }
   ],
-  "student_works": [],
+  "student_works": [
+    {
+      "course_id": "mad",
+      "title": "云端智能畜牧养殖管理系统",
+      "description": "【数据报表生成】自动汇总养殖数据生成日报/周报/月报，包含饲料消耗、产出统计、健康状况等关键指标。【图表展示】使用图表组件展示养殖数据的多维度可视化（趋势图、对比图、分布图），支持数据钻取。【AI预测分析】调用AI大模型对养殖数据进行时序分析，预测产出趋势和潜在健康风险。",
+      "tech_stack": "C# + .NET + MAUI",
+      "work_type": "综合项目",
+      "group_name": "cg3-cifms",
+      "leader_name": "李世程",
+      "user_id": "2020211596",
+      "file_path": null,
+      "file_size": null,
+      "status": "待提交",
+      "submit_time": null,
+      "tags": "[\"C#\",\".NET\",\"MAUI\"]",
+      "created_at": "2026-06-18T09:29:18.276161",
+      "updated_at": "2026-06-18T09:29:18.276172",
+      "related_node_ids": null,
+      "ai_suspicion": 0.0,
+      "teacher_confirmed": 0,
+      "project_id": null,
+      "group_id": null,
+      "video_url": null,
+      "thumbnail_url": null,
+      "video_duration": null,
+      "view_count": 0,
+      "like_count": 0,
+      "comment_count": 0,
+      "repo": "cg3-cifms",
+      "class_group": "cg3",
+      "project": "云端智能畜牧养殖管理系统",
+      "student_role": "MAUI开发工程师",
+      "student_name": "李世程"
+    }
+  ],
   "survey_responses": [],
   "checkin_records": [],
   "work_comments": [],
   "work_likes": [],
-  "work_views": [],
+  "work_views": [
+    {
+      "work_id": 82,
+      "user_id": "2020211596",
+      "viewed_at": "2026-06-18T09:33:25.285705"
+    },
+    {
+      "work_id": 85,
+      "user_id": "2020211596",
+      "viewed_at": "2026-06-18T09:33:17.705296"
+    }
+  ],
   "peer_reviews": [],
   "collaboration_messages": [],
   "contribution_scores": [],
