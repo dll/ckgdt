@@ -3,8 +3,8 @@
   "user_id": "2023210638",
   "user_name": "谢宇翰",
   "role": "student",
-  "synced_at": "2026-06-19T21:26:43.472510",
-  "last_active": "2026-06-19T21:26:43.472521",
+  "synced_at": "2026-06-19T21:36:38.092335",
+  "last_active": "2026-06-19T21:36:38.092358",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
@@ -161,7 +161,13 @@
   "checkin_records": [],
   "work_comments": [],
   "work_likes": [],
-  "work_views": [],
+  "work_views": [
+    {
+      "work_id": 85,
+      "user_id": "2023210638",
+      "viewed_at": "2026-06-19T21:36:24.796260"
+    }
+  ],
   "peer_reviews": [],
   "collaboration_messages": [],
   "contribution_scores": [],
