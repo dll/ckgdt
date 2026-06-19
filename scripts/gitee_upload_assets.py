@@ -5,10 +5,9 @@ REPO = 'osgisOne/mad-fd'
 URL = f'https://gitee.com/api/v5/repos/{REPO}/releases/{RELEASE_ID}/attach_files'
 def safe_name(name): return name.replace('+', '%2B')
 ASSETS = [
-	(r'D:\FlutterProjects\knowledge_graph_app\dist\课程图谱与数字孪生+windows+v2.0.0.zip',   '课程图谱与数字孪生+windows+v2.0.0.zip'),
-	(r'D:\FlutterProjects\knowledge_graph_app\dist\课程图谱与数字孪生+android+v2.0.0.zip',   '课程图谱与数字孪生+android+v2.0.0.zip'),
-	(r'D:\FlutterProjects\knowledge_graph_app\dist\课程图谱与数字孪生+web+v2.0.0.zip',       '课程图谱与数字孪生+web+v2.0.0.zip'),
-	(r'D:\FlutterProjects\knowledge_graph_app\dist\课程图谱与数字孪生+harmonyos+v2.0.0.zip', '课程图谱与数字孪生+harmonyos+v2.0.0.zip'),
+	(r'D:\FlutterProjects\knowledge_graph_app\dist\课程图谱与数字孪生+windows+v2.0.1.zip',   '课程图谱与数字孪生+windows+v2.0.1.zip'),
+	(r'D:\FlutterProjects\knowledge_graph_app\dist\课程图谱与数字孪生+web+v2.0.1.zip',       '课程图谱与数字孪生+web+v2.0.1.zip'),
+	(r'D:\FlutterProjects\knowledge_graph_app\dist\课程图谱与数字孪生+harmonyos+v2.0.1.hap', '课程图谱与数字孪生+harmonyos+v2.0.1.hap'),
 ]
 session = requests.Session()
 for path, display in ASSETS:
