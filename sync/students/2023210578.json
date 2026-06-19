@@ -3,8 +3,8 @@
   "user_id": "2023210578",
   "user_name": "车蕊",
   "role": "student",
-  "synced_at": "2026-06-19T11:58:44.218998",
-  "last_active": "2026-06-19T11:58:44.219031",
+  "synced_at": "2026-06-19T12:01:52.926367",
+  "last_active": "2026-06-19T12:01:52.926387",
   "quiz_results": [
     {
       "user_id": "2023210578",
@@ -155,7 +155,13 @@
   "checkin_records": [],
   "work_comments": [],
   "work_likes": [],
-  "work_views": [],
+  "work_views": [
+    {
+      "work_id": 86,
+      "user_id": "2023210578",
+      "viewed_at": "2026-06-19T11:59:09.991328"
+    }
+  ],
   "peer_reviews": [],
   "collaboration_messages": [],
   "contribution_scores": [],
