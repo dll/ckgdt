@@ -1336,6 +1336,18 @@ class _ReportTabState extends State<_ReportTab> {
                 onPressed: isAiGrading
                     ? null
                     : () async {
+                        if (!await SettingsService
+                            .isTeacherAiGradingEnabled()) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                    '教师 AI 批阅已关闭，请在「系统设置 → 教师 AI 批阅」中开启后再使用。'),
+                              ),
+                            );
+                          }
+                          return;
+                        }
                         setDialogState(() => isAiGrading = true);
                         try {
                           final prepared = await prepareGradingContent(

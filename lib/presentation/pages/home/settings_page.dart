@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../core/build_info.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../core/error_handler.dart';
@@ -56,6 +56,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _notificationsEnabled = true;
   bool _quickLoginEnabled = false;
   bool _feedbackEnabled = true;
+  bool _teacherAiGradingEnabled = true;
 
   @override
   void initState() {
@@ -69,6 +70,8 @@ class _SettingsPageState extends State<SettingsPage> {
     final notifEnabled = await SettingsService.isNotificationEnabled();
     final quickLogin = await SettingsService.isQuickLoginEnabled();
     final feedbackEnabled = await SettingsService.isFeedbackEnabled();
+    final teacherAiGradingEnabled =
+        await SettingsService.isTeacherAiGradingEnabled();
     if (mounted) {
       setState(() {
         _themeMode = mode;
@@ -76,6 +79,7 @@ class _SettingsPageState extends State<SettingsPage> {
         _notificationsEnabled = notifEnabled;
         _quickLoginEnabled = quickLogin;
         _feedbackEnabled = feedbackEnabled;
+        _teacherAiGradingEnabled = teacherAiGradingEnabled;
       });
     }
   }
@@ -180,6 +184,30 @@ class _SettingsPageState extends State<SettingsPage> {
               MaterialPageRoute(builder: (_) => const AiSettingsPage()),
             ),
           ),
+          if (authService.isTeacher || authService.isAdmin)
+            _buildMenuItem(
+              context,
+              icon: Icons.fact_check_outlined,
+              title: '教师 AI 批阅',
+              subtitle: _teacherAiGradingEnabled
+                  ? '已开启：学生提交实验、考核、作品时进行 AI 初评与反馈'
+                  : '已关闭：学生可直接提交，教师可后续手动批阅或单独 AI 批阅',
+              trailing: Switch(
+                value: _teacherAiGradingEnabled,
+                onChanged: (value) async {
+                  await SettingsService.setTeacherAiGradingEnabled(value);
+                  setState(() => _teacherAiGradingEnabled = value);
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(value
+                          ? '教师 AI 批阅已开启'
+                          : '教师 AI 批阅已关闭，学生提交将不再被 AI 初评拦截'),
+                    ),
+                  );
+                },
+              ),
+            ),
           _buildMenuItem(
             context,
             icon: Icons.chat_outlined,
@@ -321,8 +349,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               preset.name,
                               style: TextStyle(
                                 fontSize: 12,
-                                color:
-                                    selected ? preset.primary : Colors.grey,
+                                color: selected ? preset.primary : Colors.grey,
                                 fontWeight: selected
                                     ? FontWeight.bold
                                     : FontWeight.normal,
@@ -406,8 +433,7 @@ class _SettingsPageState extends State<SettingsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('语言 / Language',
-                    style: TextStyle(fontSize: 14)),
+                const Text('语言 / Language', style: TextStyle(fontSize: 14)),
                 const SizedBox(height: 12),
                 FutureBuilder<Locale?>(
                   future: SettingsService.getLocale(),
@@ -486,8 +512,7 @@ class _SettingsPageState extends State<SettingsPage> {
               subtitle: '查看和处理用户反馈',
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(
-                    builder: (_) => const FeedbackManagePage()),
+                MaterialPageRoute(builder: (_) => const FeedbackManagePage()),
               ),
             ),
 

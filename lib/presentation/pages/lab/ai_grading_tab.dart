@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -8,6 +8,7 @@ import '../../../services/auth_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../services/sync_service.dart';
 import '../../../services/agent/agents/grading_agent.dart';
+import '../../../services/settings_service.dart';
 import 'lab_tasks_page.dart';
 import '../../../core/error_handler.dart';
 
@@ -106,11 +107,26 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
         final tid = p['target_id'] as int;
         if (!_approvedIds.contains(tid) && !_gradingResults.containsKey(tid)) {
           Map<String, dynamic>? dims;
-          try { dims = jsonDecode(p['dimensions'] as String? ?? ''); } catch (e, st) { swallowDebug(e, tag: 'LabAiGrading.dims', stack: st); }
+          try {
+            dims = jsonDecode(p['dimensions'] as String? ?? '');
+          } catch (e, st) {
+            swallowDebug(e, tag: 'LabAiGrading.dims', stack: st);
+          }
           List<String> strengths = [];
-          try { strengths = (jsonDecode(p['strengths'] as String? ?? '[]') as List).cast<String>(); } catch (e, st) { swallowDebug(e, tag: 'LabAiGrading.strengths', stack: st); }
+          try {
+            strengths = (jsonDecode(p['strengths'] as String? ?? '[]') as List)
+                .cast<String>();
+          } catch (e, st) {
+            swallowDebug(e, tag: 'LabAiGrading.strengths', stack: st);
+          }
           List<String> improvements = [];
-          try { improvements = (jsonDecode(p['improvements'] as String? ?? '[]') as List).cast<String>(); } catch (e, st) { swallowDebug(e, tag: 'LabAiGrading.improvements', stack: st); }
+          try {
+            improvements =
+                (jsonDecode(p['improvements'] as String? ?? '[]') as List)
+                    .cast<String>();
+          } catch (e, st) {
+            swallowDebug(e, tag: 'LabAiGrading.improvements', stack: st);
+          }
           _gradingResults[tid] = _GradingResult(
             score: (p['score'] as num?)?.toInt() ?? 0,
             feedback: (p['feedback'] as String?) ?? '',
@@ -144,10 +160,19 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
   // ═══════════ AI 批量批阅 ═══════════
 
   Future<void> _startBatchGrading() async {
+    if (!await SettingsService.isTeacherAiGradingEnabled()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('教师 AI 批阅已关闭，请在「系统设置 → 教师 AI 批阅」中开启后再使用。'),
+          ),
+        );
+      }
+      return;
+    }
     final ungradedSubs = _submissions
         .where((s) =>
-            s['score'] == null &&
-            !_gradingResults.containsKey(s['id'] as int))
+            s['score'] == null && !_gradingResults.containsKey(s['id'] as int))
         .toList();
 
     if (ungradedSubs.isEmpty) {
@@ -212,7 +237,8 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
         String? safetyNote;
         String? chainId;
         if (_enhancedMode) {
-          final orchResult = await _gradingAgent.gradeSubmissionWithOrchestrator(
+          final orchResult =
+              await _gradingAgent.gradeSubmissionWithOrchestrator(
             taskTitle: taskTitle,
             content: prepared.content,
             maxScore: (sub['max_score'] as int?) ?? 100,
@@ -249,8 +275,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
             }
             if (extra.isNotEmpty) feedback = '$feedback${extra.toString()}';
           }
-          final dims =
-              parsed['dimensions'] as Map<String, dynamic>?;
+          final dims = parsed['dimensions'] as Map<String, dynamic>?;
           final strengths = (parsed['strengths'] as List?)
                   ?.map((e) => e.toString())
                   .toList() ??
@@ -340,9 +365,11 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
 
     // 更新 grading_results 状态
     try {
-      final pending = await _gradingDao.getPendingResults('lab', targetId: submissionId);
+      final pending =
+          await _gradingDao.getPendingResults('lab', targetId: submissionId);
       for (final p in pending) {
-        await _gradingDao.approveResult(p['id'] as int, widget.authService.getCurrentUserId() ?? '');
+        await _gradingDao.approveResult(
+            p['id'] as int, widget.authService.getCurrentUserId() ?? '');
       }
     } catch (e) {
       swallow(e, tag: 'LabAiGrading.approveStatus');
@@ -479,8 +506,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
           ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('取消')),
+                onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
             FilledButton(
               onPressed: () {
                 _gradingResults[submissionId] = _GradingResult(
@@ -540,8 +566,8 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                       color: _scoreColor(result.score).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                          color: _scoreColor(result.score)
-                              .withValues(alpha: 0.3)),
+                          color:
+                              _scoreColor(result.score).withValues(alpha: 0.3)),
                     ),
                     child: Column(
                       children: [
@@ -568,7 +594,8 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                     ),
                     child: const Row(
                       children: [
-                        Icon(Icons.warning_amber, color: Colors.orange, size: 18),
+                        Icon(Icons.warning_amber,
+                            color: Colors.orange, size: 18),
                         SizedBox(width: 6),
                         Expanded(
                           child: Text('AI 检测到此报告可能为 AI 生成，已扣分',
@@ -605,15 +632,16 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                                   style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.bold,
-                                      color:
-                                          _scoreColor((dimScore / dimMax * 100).toInt()))),
+                                      color: _scoreColor(
+                                          (dimScore / dimMax * 100).toInt()))),
                             ],
                           ),
                           const SizedBox(height: 2),
                           LinearProgressIndicator(
                             value: dimMax > 0 ? dimScore / dimMax : 0,
                             backgroundColor: Colors.grey.withValues(alpha: 0.2),
-                            color: _scoreColor((dimScore / dimMax * 100).toInt()),
+                            color:
+                                _scoreColor((dimScore / dimMax * 100).toInt()),
                           ),
                           if (comment.isNotEmpty)
                             Padding(
@@ -633,21 +661,20 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                   const Text('优点',
                       style:
                           TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                  ...result.strengths
-                      .map((s) => Padding(
-                            padding: const EdgeInsets.only(left: 8, top: 4),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('✓ ',
-                                    style: TextStyle(
-                                        color: Colors.green, fontSize: 13)),
-                                Expanded(
-                                    child: Text(s,
-                                        style: const TextStyle(fontSize: 13))),
-                              ],
-                            ),
-                          )),
+                  ...result.strengths.map((s) => Padding(
+                        padding: const EdgeInsets.only(left: 8, top: 4),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('✓ ',
+                                style: TextStyle(
+                                    color: Colors.green, fontSize: 13)),
+                            Expanded(
+                                child: Text(s,
+                                    style: const TextStyle(fontSize: 13))),
+                          ],
+                        ),
+                      )),
                 ],
                 // 改进建议
                 if (result.improvements.isNotEmpty) ...[
@@ -655,21 +682,20 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                   const Text('改进建议',
                       style:
                           TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                  ...result.improvements
-                      .map((s) => Padding(
-                            padding: const EdgeInsets.only(left: 8, top: 4),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('→ ',
-                                    style: TextStyle(
-                                        color: Colors.orange, fontSize: 13)),
-                                Expanded(
-                                    child: Text(s,
-                                        style: const TextStyle(fontSize: 13))),
-                              ],
-                            ),
-                          )),
+                  ...result.improvements.map((s) => Padding(
+                        padding: const EdgeInsets.only(left: 8, top: 4),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('→ ',
+                                style: TextStyle(
+                                    color: Colors.orange, fontSize: 13)),
+                            Expanded(
+                                child: Text(s,
+                                    style: const TextStyle(fontSize: 13))),
+                          ],
+                        ),
+                      )),
                 ],
               ],
             ),
@@ -756,12 +782,10 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
   // ═══════════ ① 任务选择器 ═══════════
 
   Widget _buildTaskSelector(Color primary) {
-    final submitted =
-        _submissions.where((s) => s['content'] != null).length;
+    final submitted = _submissions.where((s) => s['content'] != null).length;
     final graded = _approvedIds.length;
-    final pendingAi = _gradingResults.keys
-        .where((id) => !_approvedIds.contains(id))
-        .length;
+    final pendingAi =
+        _gradingResults.keys.where((id) => !_approvedIds.contains(id)).length;
 
     return Card(
       child: Padding(
@@ -803,23 +827,19 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                 spacing: 12,
                 runSpacing: 6,
                 children: [
-                  _statChip('已提交', '$submitted/$_totalStudents',
-                      Colors.blue),
+                  _statChip('已提交', '$submitted/$_totalStudents', Colors.blue),
                   _statChip('已核准', '$graded', Colors.green),
                   _statChip('待核准', '$pendingAi', Colors.orange),
                   _statChip(
-                      '未批阅',
-                      '${submitted - graded - pendingAi}',
-                      Colors.grey),
+                      '未批阅', '${submitted - graded - pendingAi}', Colors.grey),
                 ],
               ),
               const SizedBox(height: 10),
               // 批阅按钮 + 进度
               if (_isBatchGrading) ...[
                 LinearProgressIndicator(
-                  value: _gradingTotal > 0
-                      ? _gradingProgress / _gradingTotal
-                      : 0,
+                  value:
+                      _gradingTotal > 0 ? _gradingProgress / _gradingTotal : 0,
                 ),
                 const SizedBox(height: 6),
                 Row(
@@ -829,8 +849,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                           style: const TextStyle(fontSize: 12)),
                     ),
                     TextButton.icon(
-                      onPressed: () =>
-                          setState(() => _isBatchGrading = false),
+                      onPressed: () => setState(() => _isBatchGrading = false),
                       icon: const Icon(Icons.stop, size: 16),
                       label: const Text('停止'),
                     ),
@@ -844,8 +863,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                       children: [
                         Switch(
                           value: _enhancedMode,
-                          onChanged: (v) =>
-                              setState(() => _enhancedMode = v),
+                          onChanged: (v) => setState(() => _enhancedMode = v),
                         ),
                         const SizedBox(width: 4),
                         Expanded(
@@ -860,9 +878,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                                       ? Icons.shield
                                       : Icons.shield_outlined,
                                   size: 16,
-                                  color: _enhancedMode
-                                      ? primary
-                                      : Colors.grey,
+                                  color: _enhancedMode ? primary : Colors.grey,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
@@ -892,9 +908,8 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                                 ? Icons.auto_awesome_motion
                                 : Icons.auto_awesome,
                             size: 18),
-                        label: Text(_enhancedMode
-                            ? '开始增强 AI 批阅'
-                            : '开始批量 AI 批阅'),
+                        label:
+                            Text(_enhancedMode ? '开始增强 AI 批阅' : '开始批量 AI 批阅'),
                       ),
                     ),
                   ],
@@ -926,7 +941,8 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
       return const Card(
         child: Padding(
           padding: EdgeInsets.all(24),
-          child: Center(child: Text('暂无提交数据', style: TextStyle(color: Colors.grey))),
+          child: Center(
+              child: Text('暂无提交数据', style: TextStyle(color: Colors.grey))),
         ),
       );
     }
@@ -951,9 +967,8 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
       return 0;
     });
 
-    final unapprovedWithResults = _gradingResults.keys
-        .where((id) => !_approvedIds.contains(id))
-        .toList();
+    final unapprovedWithResults =
+        _gradingResults.keys.where((id) => !_approvedIds.contains(id)).toList();
 
     return Card(
       child: Padding(
@@ -967,8 +982,8 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                 const SizedBox(width: 8),
                 const Expanded(
                   child: Text('批阅结果 / 核准',
-                      style: TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.bold)),
+                      style:
+                          TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                 ),
                 if (unapprovedWithResults.isNotEmpty) ...[
                   TextButton(
@@ -993,9 +1008,8 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                     ),
                   ),
                   FilledButton.tonalIcon(
-                    onPressed: _selectedForApproval.isEmpty
-                        ? null
-                        : _approveBatch,
+                    onPressed:
+                        _selectedForApproval.isEmpty ? null : _approveBatch,
                     icon: const Icon(Icons.check_circle, size: 16),
                     label: Text('批量核准(${_selectedForApproval.length})',
                         style: const TextStyle(fontSize: 12)),
@@ -1065,8 +1079,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
             const SizedBox(width: 8),
             if (result != null)
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: _scoreColor(result.score).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
@@ -1084,14 +1097,12 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                       fontSize: 11, color: _scoreColor(result.score))),
             if (result?.aiFlag == true) ...[
               const SizedBox(width: 4),
-              const Icon(Icons.warning_amber,
-                  size: 14, color: Colors.orange),
+              const Icon(Icons.warning_amber, size: 14, color: Colors.orange),
             ],
             if (isApproved) ...[
               const SizedBox(width: 6),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(
                   color: Colors.green.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
@@ -1130,8 +1141,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                     onPressed: () => _showAdjustDialog(sid, sub),
                   ),
                   IconButton(
-                    icon:
-                        const Icon(Icons.check_circle_outline, size: 18),
+                    icon: const Icon(Icons.check_circle_outline, size: 18),
                     tooltip: '核准',
                     color: Colors.green,
                     onPressed: () => _approveOne(sid),
@@ -1375,8 +1385,10 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
       Colors.blue,
       Colors.green,
     ];
-    final maxVal =
-        data.reduce((a, b) => a > b ? a : b).toDouble().clamp(1, double.infinity);
+    final maxVal = data
+        .reduce((a, b) => a > b ? a : b)
+        .toDouble()
+        .clamp(1, double.infinity);
 
     return Card(
       child: Padding(
@@ -1451,12 +1463,11 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
 
   // ── 维度雷达图 ──
 
-  Widget _buildRadarChart(
-      Map<String, List<double>> dimTotals, Color primary) {
+  Widget _buildRadarChart(Map<String, List<double>> dimTotals, Color primary) {
     if (dimTotals.isEmpty) {
       return const Card(
-        child: Center(
-            child: Text('暂无维度数据', style: TextStyle(color: Colors.grey))),
+        child:
+            Center(child: Text('暂无维度数据', style: TextStyle(color: Colors.grey))),
       );
     }
 
@@ -1482,13 +1493,14 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                   radarShape: RadarShape.polygon,
                   tickCount: 4,
                   ticksTextStyle: const TextStyle(fontSize: 0),
-                  tickBorderData: BorderSide(
-                      color: Colors.grey.withValues(alpha: 0.2)),
-                  gridBorderData: BorderSide(
-                      color: Colors.grey.withValues(alpha: 0.2)),
+                  tickBorderData:
+                      BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
+                  gridBorderData:
+                      BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
                   radarBorderData: const BorderSide(color: Colors.transparent),
                   getTitle: (index, _) {
-                    if (index >= keys.length) return const RadarChartTitle(text: '');
+                    if (index >= keys.length)
+                      return const RadarChartTitle(text: '');
                     return RadarChartTitle(
                       text: _dimLabel(keys[index]),
                       angle: 0,
@@ -1549,12 +1561,11 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text('趋势分析',
-                  style:
-                      TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
               const Expanded(
                 child: Center(
-                    child:
-                        Text('至少需要批阅2个实验的数据', style: TextStyle(color: Colors.grey))),
+                    child: Text('至少需要批阅2个实验的数据',
+                        style: TextStyle(color: Colors.grey))),
               ),
             ],
           ),
@@ -1606,9 +1617,8 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                           }
                           final label = taskOrder[idx];
                           // 截取短标签
-                          final short = label.length > 4
-                              ? label.substring(0, 4)
-                              : label;
+                          final short =
+                              label.length > 4 ? label.substring(0, 4) : label;
                           return Padding(
                             padding: const EdgeInsets.only(top: 4),
                             child: Text(short,
@@ -1653,8 +1663,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
 
   Widget _buildAchievementProgress(List<int> scores, Color primary) {
     final avg = scores.reduce((a, b) => a + b) / scores.length;
-    final passRate =
-        scores.where((s) => s >= 60).length / scores.length * 100;
+    final passRate = scores.where((s) => s >= 60).length / scores.length * 100;
     final excellentRate =
         scores.where((s) => s >= 90).length / scores.length * 100;
 
@@ -1663,8 +1672,8 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
       _AchievementItem('平均分达成', avg, 75, '目标: 平均分≥75'),
       _AchievementItem('及格率', passRate, 90, '目标: 及格率≥90%'),
       _AchievementItem('优秀率', excellentRate, 20, '目标: 优秀率≥20%'),
-      _AchievementItem('提交率',
-          _submissions.length / _totalStudents * 100, 95, '目标: 提交率≥95%'),
+      _AchievementItem(
+          '提交率', _submissions.length / _totalStudents * 100, 95, '目标: 提交率≥95%'),
     ];
 
     return Card(
@@ -1693,8 +1702,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                                   ? Icons.check_circle
                                   : Icons.radio_button_unchecked,
                               size: 14,
-                              color:
-                                  achieved ? Colors.green : Colors.orange,
+                              color: achieved ? Colors.green : Colors.orange,
                             ),
                             const SizedBox(width: 6),
                             Expanded(
@@ -1706,8 +1714,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color:
-                                    achieved ? Colors.green : Colors.orange,
+                                color: achieved ? Colors.green : Colors.orange,
                               ),
                             ),
                           ],
@@ -1719,8 +1726,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                               value: rate.clamp(0.0, 1.0),
                               backgroundColor:
                                   Colors.grey.withValues(alpha: 0.2),
-                              color:
-                                  achieved ? Colors.green : Colors.orange,
+                              color: achieved ? Colors.green : Colors.orange,
                               minHeight: 8,
                               borderRadius: BorderRadius.circular(4),
                             ),

@@ -19,7 +19,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
   bool get _isStudent =>
       !widget.authService.isTeacher && !widget.authService.isAdmin;
 
-  /// 验证考核报告文件名：必须为 学号+姓名+报告类型.pdf
+  /// 验证考核报告文件名：推荐为 学号+姓名+报告类型.pdf，兼容历史无加号格式。
   String? _validateReportFileName(String fileName, String reportType) {
     final userId = _currentUserId ?? '';
     final realName = widget.authService.currentUser?.realName ?? '';
@@ -39,35 +39,51 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
         RegExp(r'(new|copy|副本|复制|备份)', caseSensitive: false)
             .hasMatch(baseName)) {
       return '提交失败：文件名不规范，不允许包含(1)、new、copy、副本等后缀\n'
-          '正确格式：$userId$realName$reportType.pdf';
+          '正确格式：$userId+$realName+$reportType.pdf\n'
+          '示例：206004+刘东良+实验一 开发环境搭建.pdf';
     }
 
     // 检查学号是否匹配当前登录用户
     if (!baseName.startsWith(userId)) {
       return '提交失败：文件名中的学号与当前登录用户不匹配\n'
-          '正确格式：$userId$realName$reportType.pdf';
+          '正确格式：$userId+$realName+$reportType.pdf\n'
+          '示例：206004+刘东良+实验一 开发环境搭建.pdf';
     }
 
     // 检查是否包含姓名
     if (!baseName.contains(realName)) {
       return '提交失败：文件名中未包含姓名"$realName"\n'
-          '正确格式：$userId$realName$reportType.pdf';
+          '正确格式：$userId+$realName+$reportType.pdf\n'
+          '示例：206004+刘东良+实验一 开发环境搭建.pdf';
     }
 
     // 检查是否包含报告类型
     if (!baseName.contains(reportType)) {
       return '提交失败：文件名中未包含报告类型"$reportType"\n'
-          '正确格式：$userId$realName$reportType.pdf';
+          '正确格式：$userId+$realName+$reportType.pdf\n'
+          '示例：206004+刘东良+实验一 开发环境搭建.pdf';
     }
 
-    // 严格匹配：学号+姓名+报告类型
-    final expected = '$userId$realName$reportType';
-    if (baseName != expected) {
+    final expected = '$userId+$realName+$reportType';
+    final legacyExpected = '$userId$realName$reportType';
+    if (baseName != expected && baseName != legacyExpected) {
       return '提交失败：文件命名不规范\n'
-          '正确格式：$userId$realName$reportType.pdf';
+          '正确格式：$expected.pdf\n'
+          '示例：206004+刘东良+实验一 开发环境搭建.pdf';
     }
 
     return null; // 验证通过
+  }
+
+  bool _isAiUnavailableMessage(String text) {
+    final lower = text.toLowerCase();
+    return text.contains('AI 服务暂时不可用') ||
+        text.contains('AI 请求失败') ||
+        text.contains('API 配置') ||
+        lower.contains('api key') ||
+        lower.contains('400') ||
+        lower.contains('401') ||
+        lower.contains('429');
   }
 
   @override
@@ -536,6 +552,17 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
             ],
           ),
           const SizedBox(height: 6),
+          if (_isStudent) ...[
+            Text(
+              '文件名格式：学号+姓名+报告类型.pdf；示例：206004+刘东良+实验一 开发环境搭建.pdf',
+              style: TextStyle(
+                fontSize: 11,
+                height: 1.35,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 6),
+          ],
           Row(
             children: [
               if (_isStudent)
@@ -918,10 +945,16 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
           return;
         }
       }
+      final teacherAiEnabled =
+          await SettingsService.isTeacherAiGradingEnabled();
+      if (_isStudent && !teacherAiEnabled) {
+        final proceed = await _confirmDirectSubmitWithoutTeacherAi();
+        if (proceed != true) return;
+      }
 
       // AI 检查：报告内容是否匹配小组技术栈和特色功能
       String? pdfTextForGrading;
-      if (_isStudent && file.path != null) {
+      if (_isStudent && teacherAiEnabled && file.path != null) {
         final techInfo = await _dao.getStudentGroupTechInfo(userId);
         if (techInfo != null &&
             (techInfo['techStack']?.isNotEmpty == true ||
@@ -932,17 +965,36 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
           );
           pdfTextForGrading = pdfText;
           if (pdfText != null && pdfText.isNotEmpty) {
-            // ignore: use_build_context_synchronously
-            final reason = await GradingAgent().checkReportTechStackAlignment(
-              reportContent: pdfText,
-              groupTechStack: techInfo['techStack'] ?? '',
-              groupFeatures: techInfo['features'] ?? '',
-            );
+            String? reason;
+            try {
+              reason = await GradingAgent().checkReportTechStackAlignment(
+                reportContent: pdfText,
+                groupTechStack: techInfo['techStack'] ?? '',
+                groupFeatures: techInfo['features'] ?? '',
+              );
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      '提交失败：AI 服务暂时不可用，请检查网络连接和 AI 配置后重试。\n错误：$e',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    backgroundColor: Colors.red[700],
+                    duration: const Duration(seconds: 6),
+                  ),
+                );
+              }
+              return;
+            }
             if (reason != null && mounted) {
+              final isAiUnavailable = _isAiUnavailableMessage(reason);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    '提交失败：报告内容未体现小组技术栈和特色功能 — $reason',
+                    isAiUnavailable
+                        ? '提交失败：AI 服务暂时不可用，请检查网络连接和 AI 配置后重试。\n错误：$reason'
+                        : '提交失败：报告内容未体现小组技术栈和特色功能 — $reason',
                     style: const TextStyle(color: Colors.white),
                   ),
                   backgroundColor: Colors.red[700],
@@ -977,7 +1029,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
       if (!mounted) return;
 
       // 学生路径：AI 初评达到评价分数线后才算提交成功；教师代上传则不拦截。
-      if (_isStudent && reportId > 0) {
+      if (_isStudent && teacherAiEnabled && reportId > 0) {
         if (pdfTextForGrading == null || pdfTextForGrading.isEmpty) {
           await _dao.deleteSubmittedReport(reportId);
           if (mounted) {
@@ -1007,15 +1059,17 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
           await GradingResultDao()
               .deletePendingForTarget('assessment', reportId);
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(draft == null
-                    ? '提交失败：AI 审核未完成，请稍后重试'
-                    : '提交失败：AI 初评 ${draft.score} 分，未达到 $passScore 分达标线，请修改后重新提交'),
-                backgroundColor: Colors.red,
-                duration: const Duration(seconds: 5),
-              ),
-            );
+            if (draft == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('提交失败：AI 服务暂时不可用，请检查网络连接和 AI 配置后重试'),
+                  backgroundColor: Colors.red,
+                  duration: Duration(seconds: 5),
+                ),
+              );
+            } else {
+              _showAiDraftBlockedDialog(draft, passScore);
+            }
           }
           return;
         }
@@ -1031,7 +1085,11 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
       await _loadSubmissions();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$reportType 已提交: ${file.name}')),
+          SnackBar(
+            content: Text(teacherAiEnabled
+                ? '$reportType 已提交: ${file.name}'
+                : '$reportType 已直接提交，当前教师未开启系统 AI 初评。'),
+          ),
         );
       }
     } catch (e) {
@@ -1248,14 +1306,38 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                 onPressed: isAiGrading
                     ? null
                     : () async {
+                        if (!await SettingsService
+                            .isTeacherAiGradingEnabled()) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                    '教师 AI 批阅已关闭，请在「系统设置 → 教师 AI 批阅」中开启后再使用。'),
+                              ),
+                            );
+                          }
+                          return;
+                        }
                         setDialogState(() => isAiGrading = true);
                         try {
                           final agent = GradingAgent();
+                          var reportContent = content;
+                          if (filePath.isNotEmpty &&
+                              File(filePath).existsSync()) {
+                            final extracted =
+                                await PdfTextService.extractFromFile(
+                              filePath,
+                              maxChars: 8000,
+                            );
+                            if (extracted != null && extracted.isNotEmpty) {
+                              reportContent = extracted;
+                            }
+                          }
                           final result = await agent.gradeReport(
                             reportType: title,
                             studentName: userId,
-                            content: content.isNotEmpty
-                                ? content
+                            content: reportContent.isNotEmpty
+                                ? reportContent
                                 : '（学生提交了PDF文件：$title）',
                           );
                           final parsed = _tryParseGradingJson(result);
@@ -1267,7 +1349,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                                       scoreValue;
                               if (scoreValue > 100) scoreValue = 100;
                               feedbackCtrl.text =
-                                  parsed['feedback'] as String? ?? '';
+                                  _formatAssessmentAiFeedback(parsed);
                             });
                           } else {
                             setDialogState(() {
@@ -1359,6 +1441,90 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
     );
   }
 
+  void _showAiDraftBlockedDialog(AiGradingDraft draft, int passScore) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('AI 初评未达标'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: _buildAiDraftFeedback(draft, passScore),
+          ),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('知道了，修改后再提交'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<bool?> _confirmDirectSubmitWithoutTeacherAi() {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('当前可直接提交'),
+        content: const Text(
+          '教师当前未开启系统 AI 批阅，本次考核报告可以直接提交，提交后等待教师审核。\n\n'
+          '建议你自行进行 AI 自检：进入「系统设置 → AI 配置」，选择服务商，填写 API Key，保存后可使用学习助手或相关 AI 功能检查报告是否覆盖项目技术栈、特色功能和考核要求。',
+          style: TextStyle(height: 1.45),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('先不提交'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('直接提交'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAiDraftFeedback(AiGradingDraft draft, int passScore) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+            'AI 初评 ${draft.score} 分，未达到 $passScore 分达标线。教师尚未审核，请按以下意见修改后再次提交。'),
+        const SizedBox(height: 12),
+        _draftList('评分依据', draft.basis),
+        _draftList('做得好的地方', draft.strengths),
+        _draftList('需要改进', draft.improvements),
+        if (draft.feedback.trim().isNotEmpty) ...[
+          const SizedBox(height: 8),
+          const Text('详细反馈', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text(draft.feedback, style: const TextStyle(height: 1.45)),
+        ],
+      ],
+    );
+  }
+
+  Widget _draftList(String title, List<String> items) {
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          ...items.map((item) => Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Text('• $item', style: const TextStyle(height: 1.35)),
+              )),
+        ],
+      ),
+    );
+  }
+
   Map<String, dynamic>? _tryParseGradingJson(String text) {
     try {
       final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(text);
@@ -1375,6 +1541,61 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
       swallowDebug(e, tag: 'AssessmentReportTab.parseGradingJson', stack: st);
       return null;
     }
+  }
+
+  String _formatAssessmentAiFeedback(Map<String, dynamic> parsed) {
+    final sb = StringBuffer();
+    final summary = parsed['summary'] as String?;
+    if (summary != null && summary.isNotEmpty) {
+      sb
+        ..writeln('【总评】$summary')
+        ..writeln();
+    }
+    final basis = parsed['basis'] as List?;
+    if (basis != null && basis.isNotEmpty) {
+      sb.writeln('【评分依据】');
+      for (final s in basis) {
+        sb.writeln('  - $s');
+      }
+      sb.writeln();
+    }
+    final scores = parsed['scores'] as Map<String, dynamic>? ??
+        parsed['dimensions'] as Map<String, dynamic>?;
+    if (scores != null && scores.isNotEmpty) {
+      sb.writeln('【各维度评分】');
+      for (final e in scores.entries) {
+        final d = e.value;
+        if (d is Map<String, dynamic>) {
+          sb.writeln(
+              '  ${e.key}: ${d['score'] ?? ''}/${d['max'] ?? ''} - ${d['comment'] ?? ''}');
+        }
+      }
+      sb.writeln();
+    }
+    final strengths = parsed['strengths'] as List?;
+    if (strengths != null && strengths.isNotEmpty) {
+      sb.writeln('【优点】');
+      for (final s in strengths) {
+        sb.writeln('  - $s');
+      }
+      sb.writeln();
+    }
+    final improvements = parsed['improvements'] as List?;
+    if (improvements != null && improvements.isNotEmpty) {
+      sb.writeln('【改进建议】');
+      for (final s in improvements) {
+        sb.writeln('  - $s');
+      }
+      sb.writeln();
+    }
+    final feedback = parsed['feedback'] as String?;
+    if (feedback != null && feedback.isNotEmpty) {
+      sb
+        ..writeln('【详细反馈】')
+        ..writeln(feedback);
+    }
+    final result = sb.toString().trim();
+    return result.isNotEmpty ? result : (feedback ?? '');
   }
 }
 

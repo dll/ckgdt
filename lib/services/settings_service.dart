@@ -14,7 +14,9 @@ class SettingsService {
   static const String _quickLoginKey = 'quick_login_enabled';
   static const String _feedbackEnabledKey = 'feedback_enabled';
   static const String _evaluationPassScoreKey = 'evaluation_pass_score';
-  static const int defaultEvaluationPassScore = 85;
+  static const String _teacherAiGradingEnabledKey =
+      'teacher_ai_grading_enabled';
+  static const int defaultEvaluationPassScore = 60;
 
   // ── 讯飞语音配置 ────────────────────────────────────────────────────────
   static const String _xunfeiAppIdKey = 'xunfei_app_id';
@@ -157,6 +159,20 @@ class SettingsService {
   static Future<void> setEvaluationPassScore(int score) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_evaluationPassScoreKey, score.clamp(60, 100));
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // 教师系统级 AI 批阅开关（实验 / 考核 / 作品共用，默认开启）
+  // ═════════════════════════════════════════════════════════════════════════
+
+  static Future<bool> isTeacherAiGradingEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_teacherAiGradingEnabledKey) ?? true;
+  }
+
+  static Future<void> setTeacherAiGradingEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_teacherAiGradingEnabledKey, enabled);
   }
 
   // ═════════════════════════════════════════════════════════════════════════

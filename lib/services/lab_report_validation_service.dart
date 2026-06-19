@@ -32,14 +32,17 @@ class LabReportValidationService {
     );
     if (copyPattern.hasMatch(baseName)) {
       return '提交失败：文件名不规范，不允许包含(1)、new、copy、副本等复制痕迹\n'
-          '正确格式：$trimmedStudentId$trimmedRealName$trimmedTaskTitle.pdf';
+          '正确格式：$trimmedStudentId+$trimmedRealName+$trimmedTaskTitle.pdf\n'
+          '示例：206004+刘东良+实验一 开发环境搭建.pdf';
     }
 
-    final expected = '$trimmedStudentId$trimmedRealName$trimmedTaskTitle';
-    if (baseName != expected) {
+    final expected = '$trimmedStudentId+$trimmedRealName+$trimmedTaskTitle';
+    final legacyExpected = '$trimmedStudentId$trimmedRealName$trimmedTaskTitle';
+    if (baseName != expected && baseName != legacyExpected) {
       return '提交失败：文件命名不规范\n'
           '当前文件：$trimmedName\n'
-          '正确格式：$expected.pdf';
+          '正确格式：$expected.pdf\n'
+          '示例：206004+刘东良+实验一 开发环境搭建.pdf';
     }
     return null;
   }
