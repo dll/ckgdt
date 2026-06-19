@@ -3,8 +3,8 @@
   "user_id": "2023210594",
   "user_name": "赫宇豪",
   "role": "student",
-  "synced_at": "2026-06-20T05:19:56.026409",
-  "last_active": "2026-06-20T05:19:56.026415",
+  "synced_at": "2026-06-20T05:20:28.609920",
+  "last_active": "2026-06-20T05:20:28.609927",
   "quiz_results": [
     {
       "user_id": "2023210594",
@@ -46,6 +46,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 1,
+      "user_id": "2023210594",
+      "content": "PDF实验报告：2023210594赫宇豪实验一 开发环境搭建.pdf\n\n--- 报告正文（自动提取）---\n实验一：开发环境搭建\n实验\n小组\n成员\n负责\n技术\n赫宇豪\nV\nue\n张玉\n满\nandriod\n彭\n绍\n洋\n鸿蒙应用开发\n张爽\n小程序开发\n李世\n成\nMAUI\n开发\n一、实验概述\n本次实验是移动应用开发课程的入门实验，通过搭建\n6\n大主流移动开发平台的开\n发环境，系统学习了各平台的安装配置方法和\nHelloWorld\n项目创建流程。实验过\n程中，充分体验了\nAI\n辅助代码生成工具的便捷性，完成了从环境准备到项目验证\n的完整流程，为后续的移动应用开发奠定了坚实基础。\n二、实验目标\n1\n掌握\n6\n大主流移动开发工具的安装配置方法\n|\n已完成\n|\n2\n了解各平台的\nHelloWorld\n创建流程\n|\n已完成\n|\n3\n体验\nAI\n辅助代码生成工具的使用\n|\n已完成\n4\n完成环境配置文档的编写\n已完成\n5\n验证所有开发环境的正常运行\n已完成\n三、实验环境\n3.1\n开发环境\n类别\n配置信息\n版本号\n操作系统\nWindows 10/11\n64\n位专业版\n内存\n系统内存\n16GB\n以上\n存储\n可用磁盘空间\n100GB\n以上\nAI\n辅助工具\nTRAE\nAI\n编程助手\nv2.0\n3.2\n工具配置要求\n1\nFlutter SDK\n3.19+\nDart HelloWorld\n2\n微信开发者\n工具\n最新\n版\n微信小程序\nHelloWorld\n3\nDevEco\nStudio\n5.0+\nHarmonyOS\nHelloWorld\n4\nHBuilderX\n4.0+\nVue HelloWorld\n5\nVisual\nStudio\n2022\nC# HelloWorld\n四、实验步骤\n4.1 Android\nStudio\n环境搭建\n4.1.1\n下载与安装\n1.\n访问官网：\nhttps://developer.android.com/studio\n2.\n下载\nWindows/macOS\n版本\n3.\n运行安装程序，勾选必要组件\n4.\n完成安装\n4.1.2\n配置验证\n1.\n启动\nAndroid\nStudio\n2.\n创建\nEmpty\nActivity\n项目\n3.\n使用\nAI\n辅助生成\nHelloWorld\n代码\n4.\n运行项目验证\n4.2\nFlutter\n环境搭建\n4.2.1\n下载\nFlutter\nSDK\n1.\n访问：\nhttps://flutter.dev/docs/get\n-\nstarted/install\n2.\n下载对应系统版本\n3.\n解压到指定目录\n4.\n添加到系统\nPATH\n环境变量\n4.2.2\n配置验证\n1.\n运行\nflutter doctor\n检查环境\n2.\n创建\nFlutter\n项目：\nflutter create hello_flutter\n3.\n使用\nAI\n辅助生成\nDart\n代码\n4.\n运行项目验证\n4.3\n鸿蒙开发环境搭建\n4.3.1\n下载\nDevEco\nStudio\n1.\n访问：\nhttps://developer.harmonyos.com/\n2.\n下载\nDevEco\nStudio\n3.\n完成安装\n4.3.2\n创建鸿蒙项目\n1.\n启动\nDevEco\nStudio\n2.\n创建\nEmpty\nAbility\n项目\n3.\n使用\nAI\n辅助生成\nArkTS\n代码\n4.\n运行项目验证\n4.4\nUniapp\n开发环境搭建\n4.4.1\n安装\nHBuilderX\n1.\n访问：\nhttps://www.dcloud.io/hbuilderx.html\n2.\n下载\nHBuilderX\n4.45\n3.\n完成安装\n4.4.2\n创建\nUniapp\n项目\n1.\n新建\nuni\n-\napp\n项目\n2.\n使用\nAI\n辅助生成\nVue\n代码\n3.\n运行项目验证\n4.5\nMAUI\n开发环境搭建\n4.5.1\n安装\nVisual\nStudio\n1.\n安装\nVisual\nStudio 2022\n2.\n勾选”\n.NET\nMAUI” workload\n4.5.2\n创建\nMAUI\n项目\n1.\n新建\n.NET\nMAUI\n项目\n2.\n使用\nAI\n辅助生成\nC#\n代码\n3.\n运行项目验证\n4.6\n微信小程序开发环境\n4.6.1\n安装微信开发者工具\n1.\n访问：\nhttps://developers.weixin.qq.com/miniprogram/dev/devtools/download.ht\nml\n2.\n下载并安装\n3.\n扫码登录\n4.6.2\n创建小程序项目\n1.\n新建小程序项目\n2.\n使用\nAI\n辅助生成小程序代码\n3.\n运行项目验证\n4.7\n工具架构关系图\n4.7.1\n开发工具架构图\n架构图解释：\n分类\n工具\n说明\n原生开\n发\nAndroid\nStudio\nXcode\nDevEco\nStudio\nAndroid\n平台原生开发工具\niOS\n平\n台原生开发工具\nHarmonyOS\n平台\n原生开发工具\n跨平台\n开发\nFlutter\nSDK\nHBuilde\nrX\nVisual\nStudio\nGoogle\n跨平台框架，支持多端编\n译\nUniapp\n框架，支持小程序和\nApp\n开发\n|\nMAUI\n框架，\n.NET\n跨平\n台开发\n小程序\n微信开\n发者工\n微信小程序开发专用工具\n分类\n工具\n说明\n开发\n具\n4.7.2\n环境搭建流程图\n五、实验结果\n5.1\n验证结果\nFlutte\nr\n成功\nDevEc\no\nStudio\n成功\nHBuil\nderX\n成功\nVisual\nStudio\n成功\n5.2\n截图记录\n5.2.1 Android\nStudio\n运行截图\n截图内容：\nAndroid\nStudio\n运行\nKotlin\nHelloWorld\n项目\n测试验证：模拟器启动正\n常，\nHelloWorld\n显示正确\n5.2.2\nFlutter\n运行截图\n截图内容：\nFlutter\n项目运行在模拟器中\n测试验证：\nDart\n代码执行正常，界面渲染\n正确\n5.2.3\n鸿蒙运行截图\n截图内容：\nHarmonyOS\n项目运行在模拟器中\n测试验证：\nArkTS\n代码执行正常，界\n面显示正确\n5.2.4\nUniapp\n运行截图\n截图内容：\nUniapp\n项目运行预览\n测试验证：\nVue\n代码执行正常，界面渲染正确\n5.2.5\nMAUI\n运行截图\n截图内容：\nMAUI\n项目运行在模拟器中\n测试验证：\nC#\n代码执行正常，界面显示正\n确\n5.2.6\n微信小程序运行截图\n截图内容：微信小程序项目运行预览\n测试验证：小程序代码执行正常，界面显示\n正确\n六、问题与解决方案\n问题描述\n解决方案\nESLint\n组件命\n名规范问题\n将\nLogin\n组件重命名为\n|\n解决\n| |\nLoginForm\n，并更新相关引用\n|\n跨域问题\n在\nvue.config.js\n中配置\n| >\n解决\n|\ndevServer.proxy | |\n依赖安装失败\n清除\nnpm\n缓存并重新安装依赖\n| >\n解决\n|\n部署路径问题\n在\nvue.config.js\n中配置\n| >\n解决\n| publicPath\n| |\n七、实验总结\n7.1\n学习收获\n技术层面：\n掌握\nAndroid\nStudio\n、\nFlutter\n、\nDevEco Studio\n、\nHBuilderX\n、\nVisual\nStudio\n、微信开发者工具的安装配置\n了解各平台\nHelloWorld\n项目创建流程\n熟悉各平台的开发语言（\nKotlin\n、\nDart\n、\nArkTS\n、\nVue\n、\nC#\n、\nJavaScript\n）\n体验\nAI\n辅助代码生成工具的便捷性\n工具层面：\n熟练使用各平台开发工具\n掌握环境变量配置方法\n学会验证开发环境是否正常\n思维层面：\n培养系统配置能力\n提高问题排查能力\n理解移动开发生态的多样性\n7.2\n各平台对比\n平台\n优势\n适用场景\n学习难度\nAndroi\nd\n原生性能优\n|\n高性能应用\n|\n中等\n|\nFlutter\n跨平台能力强\n|\n快速迭代产品\n|\n中等\n|\nHarmo\nnyOS\n全场景覆盖\n|\nIoT\n设备应用\n|\n中等\n|\nUniap\np\n开发效率高\n|\n小程序\n+App\n|\n较低\n|\nMAUI\n.NET\n生态完善\n|\nWindows\n生态应用\n|\n中等\n|\n微信小\n程序\n获客成本低\n|\n轻量级应用\n|\n较低\n|\n7.3\n改进方向\n序\n号\n改进方向\n说明\n1\n深入学习各\n平台\n深入学习各平台的高级特性和最佳实践\n2\n项目实战演\n练\n使用各平台开发实际项目\n3\n性能优化学\n习\n学习各平台性能优化技巧\n4\n自动化测试\n学习各平台的测试框架和方法\n八、考核指标\n考核项\n评分标准\n得分\n环境搭建完整性\n6\n个开发工具全部安装成功\n20\n分\n考核项\n评分标准\n得分\n项目创建与运行\n6\n个\nHelloWorld\n项目成功运行\n30\n分\n截图记录\n提供所有工具运行截图\n20\n分\n问题解决\n能独立解决遇到的问题\n15\n分\n实验报告质量\n报告结构完整，内容详实\n15\n分\n九、致谢\n感谢老师的悉心指导，让我在本次实验中系统学习了\n6\n大主流移动开发平台的环\n境搭建方法。通过这次实践，我对移动应用开发生态有了全面的认识，为今后的学\n习和工作打下了坚实的基础。\n实验日期\n：\n2026\n年\n3\n月\n09\n日\n实验地点\n：移动应用开发实验室\n实验者\n：赫宇豪\n学号\n：\n2023210594\n班级\n：软件\n232\n组别\n：组三·\nCifms\n项目名称\n：智慧校园生活服务平台\n指导教师\n：刘东良\n",
+      "file_paths": "/data/user/0/cn.edu.chzu.madkg/cache/file_picker/1781904004251/2023210594赫宇豪实验一 开发环境搭建.pdf",
+      "file_names": "2023210594赫宇豪实验一 开发环境搭建.pdf",
+      "submit_time": "2026-06-20T05:20:05.258137",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-06-20T05:20:05.258137",
+      "updated_at": "2026-06-20T05:20:05.258137",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 6,
       "user_id": "2023210594",
