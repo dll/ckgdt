@@ -11,7 +11,7 @@ import '../core/constants/score_colors.dart';
 /// 三块内容由 [AuditedReportData] 提供：
 ///   - cover: 封面信息（标题/学院/课程/班级/姓名/学号/题目/教师/起止日期）
 ///   - grading: 教师评语 + 4 项分数（项目30% / 小组20% / 个人20% / 答辩30%）
-///   - reports: 已提交的 4 份子报告（标题+评分+反馈）
+///   - reports: 已提交的 4 项支撑材料（标题+评分+反馈），用于形成一份完整考核报告
 class AssessmentPdfService {
   static Future<Uint8List> buildAuditedReportPdf({
     required AuditedReportData data,
@@ -39,8 +39,7 @@ class AssessmentPdfService {
     return pdf.save();
   }
 
-  static Future<void> printPdf(Uint8List bytes,
-      {String name = '考核报告'}) async {
+  static Future<void> printPdf(Uint8List bytes, {String name = '考核报告'}) async {
     await Printing.layoutPdf(onLayout: (_) async => bytes, name: name);
   }
 
@@ -103,15 +102,14 @@ class AssessmentPdfService {
           pw.SizedBox(
             width: 90,
             child: pw.Text('$label：',
-                style: pw.TextStyle(
-                    fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                style:
+                    pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
           ),
           pw.Container(
             width: 280,
             decoration: const pw.BoxDecoration(
               border: pw.Border(
-                bottom:
-                    pw.BorderSide(color: PdfColors.grey700, width: 0.8),
+                bottom: pw.BorderSide(color: PdfColors.grey700, width: 0.8),
               ),
             ),
             padding: const pw.EdgeInsets.only(bottom: 4),
@@ -137,8 +135,8 @@ class AssessmentPdfService {
         children: [
           pw.Center(
             child: pw.Text('指导教师评语',
-                style: pw.TextStyle(
-                    fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                style:
+                    pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
           ),
           pw.SizedBox(height: 12),
           pw.Container(
@@ -156,8 +154,8 @@ class AssessmentPdfService {
           pw.SizedBox(height: 24),
           pw.Center(
             child: pw.Text('成绩评定',
-                style: pw.TextStyle(
-                    fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                style:
+                    pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
           ),
           pw.SizedBox(height: 12),
           _scoreTable(g),
@@ -180,11 +178,11 @@ class AssessmentPdfService {
     pw.TableRow row(String idx, String type, int? score, int weight,
         {bool bold = false, bool isTotal = false}) {
       final scoreText = score?.toString() ?? '—';
-      final weighted = (score == null) ? '—' : (score * weight / 100).toStringAsFixed(1);
+      final weighted =
+          (score == null) ? '—' : (score * weight / 100).toStringAsFixed(1);
       return pw.TableRow(
-        decoration: bold
-            ? const pw.BoxDecoration(color: PdfColors.indigo50)
-            : null,
+        decoration:
+            bold ? const pw.BoxDecoration(color: PdfColors.indigo50) : null,
         children: [
           _tCell(idx, bold: bold),
           _tCell(type, bold: bold),
@@ -227,7 +225,7 @@ class AssessmentPdfService {
   }
 
   // ════════════════════════════════════════════════════════
-  //  4 份报告内容（每份带评分小条）
+  //  4 项支撑材料审核明细（最终仍输出为一份完整报告）
   // ════════════════════════════════════════════════════════
   static pw.Page _buildReportsPage(List<AuditedReport> reports) {
     return pw.MultiPage(
@@ -235,9 +233,9 @@ class AssessmentPdfService {
       margin: const pw.EdgeInsets.all(40),
       build: (context) => [
         pw.Center(
-          child: pw.Text('附：报告评分明细',
-              style: pw.TextStyle(
-                  fontSize: 16, fontWeight: pw.FontWeight.bold)),
+          child: pw.Text('附：课程考核大作业支撑材料审核明细',
+              style:
+                  pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
         ),
         pw.SizedBox(height: 16),
         for (final r in reports) ...[
@@ -293,8 +291,7 @@ class AssessmentPdfService {
   // ════════════════════════════════════════════════════════
   //  通用工具
   // ════════════════════════════════════════════════════════
-  static pw.Widget _tCell(String text,
-      {bool bold = false, PdfColor? color}) {
+  static pw.Widget _tCell(String text, {bool bold = false, PdfColor? color}) {
     return pw.Padding(
       padding: const pw.EdgeInsets.all(6),
       child: pw.Center(

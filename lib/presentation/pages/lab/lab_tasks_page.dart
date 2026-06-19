@@ -125,6 +125,15 @@ String formatGradingFeedback(Map<String, dynamic> parsed) {
     sb.writeln();
   }
 
+  final basis = parsed['basis'] as List?;
+  if (basis != null && basis.isNotEmpty) {
+    sb.writeln('【评分依据】');
+    for (final s in basis) {
+      sb.writeln('  - $s');
+    }
+    sb.writeln();
+  }
+
   final dims = parsed['dimensions'] as Map<String, dynamic>?;
   if (dims != null) {
     sb.writeln('【各维度评分】');

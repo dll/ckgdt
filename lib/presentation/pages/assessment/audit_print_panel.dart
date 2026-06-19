@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../core/constants/score_colors.dart';
@@ -11,8 +11,8 @@ import '../../../services/agent/agents/grading_agent.dart';
 /// 审核打印面板 — 替代原"提交"Tab。
 ///
 /// 两步流程：
-///   ① 审核报告：上传 4 份 PDF + 填写 [封面 / 批阅 / 成绩] 表单（自动预填）
-///   ② 打印报告：对齐学院模板生成单一整合 PDF（封面 + 评定页 + 报告附录）
+///   ① 审核支撑材料：上传/审核 4 项 PDF + 填写 [封面 / 批阅 / 成绩] 表单（自动预填）
+///   ② 打印完整报告：对齐学院模板生成单一整合 PDF（封面 + 评定页 + 支撑材料审核明细）
 class AuditPrintPanel extends StatefulWidget {
   final bool isStudent;
   final String? currentUserId;
@@ -136,8 +136,7 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
       _personalScore = scores['个人报告'];
       _defenseScore = scores['答辩报告'];
 
-      final feedbacks =
-          (coverData['feedbacks'] as Map<String, String>?) ?? {};
+      final feedbacks = (coverData['feedbacks'] as Map<String, String>?) ?? {};
       if (_commentCtrl.text.isEmpty) {
         _commentCtrl.text = _composeFallbackComment(feedbacks);
       }
@@ -213,14 +212,14 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
   Widget _buildStepper() {
     return Row(
       children: [
-        _stepDot(0, '审核报告', Icons.fact_check),
+        _stepDot(0, '审核材料', Icons.fact_check),
         Expanded(
           child: Container(
             height: 2,
             color: _step >= 1 ? Colors.indigo : Colors.grey[300],
           ),
         ),
-        _stepDot(1, '打印报告', Icons.print),
+        _stepDot(1, '完整报告', Icons.print),
       ],
     );
   }
@@ -243,9 +242,7 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
             const SizedBox(height: 4),
             Text(label,
                 style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: color)),
+                    fontSize: 11, fontWeight: FontWeight.w600, color: color)),
           ],
         ),
       ),
@@ -274,7 +271,7 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
         FilledButton.icon(
           onPressed: () => setState(() => _step = 1),
           icon: const Icon(Icons.arrow_forward),
-          label: const Text('下一步：打印报告'),
+          label: const Text('下一步：生成完整报告'),
           style: FilledButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 14),
           ),
@@ -311,9 +308,9 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
               children: [
                 const Icon(Icons.upload_file, size: 18, color: Colors.indigo),
                 const SizedBox(width: 6),
-                const Text('上传 4 份子报告',
-                    style: TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.bold)),
+                const Text('上传 4 项支撑材料',
+                    style:
+                        TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                 const Spacer(),
                 Text('$n/4',
                     style: TextStyle(
@@ -348,8 +345,7 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
             child: Text(key,
                 style: TextStyle(
                     fontSize: 13,
-                    fontWeight:
-                        done ? FontWeight.w600 : FontWeight.normal,
+                    fontWeight: done ? FontWeight.w600 : FontWeight.normal,
                     color: done ? color : null)),
           ),
           if (done)
@@ -369,13 +365,12 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
           OutlinedButton.icon(
             onPressed: () => widget.onPickAndUploadPdf(key),
             icon: Icon(done ? Icons.refresh : Icons.upload, size: 14),
-            label: Text(done ? '替换' : '上传',
-                style: const TextStyle(fontSize: 11)),
+            label:
+                Text(done ? '替换' : '上传', style: const TextStyle(fontSize: 11)),
             style: OutlinedButton.styleFrom(
               foregroundColor: color,
               minimumSize: Size.zero,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             ),
           ),
         ],
@@ -434,8 +429,7 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
         minLines: 4,
         decoration: InputDecoration(
           hintText: '请输入或 AI 生成总评（200-400 字推荐）',
-          border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8)),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         ),
@@ -450,7 +444,7 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
     return _formCard(
       icon: Icons.leaderboard,
       title: '三、成绩评定',
-      subtitle: '项目30% + 小组20% + 个人20% + 答辩30%',
+      subtitle: '4项材料用于审核与评分，最终只生成一份完整课程考核大作业报告',
       action: TextButton.icon(
         onPressed: _refillScoresFromSubmissions,
         icon: const Icon(Icons.sync, size: 14),
@@ -460,8 +454,8 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
         children: [
           _scoreRow('项目', 30, _projectScore,
               (v) => setState(() => _projectScore = v)),
-          _scoreRow('小组', 20, _groupScore,
-              (v) => setState(() => _groupScore = v)),
+          _scoreRow(
+              '小组', 20, _groupScore, (v) => setState(() => _groupScore = v)),
           _scoreRow('个人', 20, _personalScore,
               (v) => setState(() => _personalScore = v)),
           _scoreRow('答辩', 30, _defenseScore,
@@ -471,8 +465,7 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('总成绩',
-                  style: TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.bold)),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
               Text(total == null ? '—' : '$total 分',
                   style: TextStyle(
                       fontSize: 18,
@@ -499,8 +492,7 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
                     const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           ),
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
               color: Colors.grey.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(4),
@@ -549,8 +541,8 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
                 Icon(Icons.tune, size: 18, color: Colors.indigo),
                 SizedBox(width: 6),
                 Text('PDF 包含内容',
-                    style: TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.bold)),
+                    style:
+                        TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
               ],
             ),
             CheckboxListTile(
@@ -564,16 +556,16 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
               dense: true,
               contentPadding: EdgeInsets.zero,
               value: _includeGrading,
-              title: const Text('指导教师评语 + 成绩评定页',
-                  style: TextStyle(fontSize: 13)),
+              title:
+                  const Text('指导教师评语 + 成绩评定页', style: TextStyle(fontSize: 13)),
               onChanged: (v) => setState(() => _includeGrading = v ?? false),
             ),
             CheckboxListTile(
               dense: true,
               contentPadding: EdgeInsets.zero,
               value: _includeReports,
-              title: const Text('附 4 份报告评分明细',
-                  style: TextStyle(fontSize: 13)),
+              title:
+                  const Text('附 4 项支撑材料审核明细', style: TextStyle(fontSize: 13)),
               onChanged: (v) => setState(() => _includeReports = v ?? false),
             ),
           ],
@@ -598,22 +590,19 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('打印预览',
-                    style: TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.bold)),
+                const Text('完整报告预览',
+                    style:
+                        TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 _summaryRow(Icons.person, '学生',
                     '${_studentNameCtrl.text} (${_studentIdCtrl.text})'),
                 _summaryRow(Icons.class_, '班级', _classNameCtrl.text),
-                _summaryRow(
-                    Icons.assignment, '项目题目', _projectTitleCtrl.text),
+                _summaryRow(Icons.assignment, '项目题目', _projectTitleCtrl.text),
                 _summaryRow(Icons.school, '指导教师', _advisorCtrl.text),
                 const Divider(),
                 _summaryToggleRow(Icons.article_outlined, '封面', _includeCover),
-                _summaryToggleRow(
-                    Icons.rate_review, '评语+成绩', _includeGrading),
-                _summaryToggleRow(
-                    Icons.list_alt, '报告明细', _includeReports),
+                _summaryToggleRow(Icons.rate_review, '评语+成绩', _includeGrading),
+                _summaryToggleRow(Icons.list_alt, '支撑材料审核明细', _includeReports),
                 const Divider(),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -656,7 +645,7 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: Colors.white))
                     : const Icon(Icons.print, size: 18),
-                label: Text(_generating ? '生成中…' : '生成并打印 PDF'),
+                label: Text(_generating ? '生成中…' : '生成完整报告 PDF'),
                 style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12)),
               ),
@@ -730,8 +719,8 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
           SizedBox(
             width: 70,
             child: Text(label,
-                style: const TextStyle(
-                    fontSize: 12, fontWeight: FontWeight.w600)),
+                style:
+                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
           ),
           Expanded(
             child: TextField(
@@ -741,8 +730,8 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
                 isDense: true,
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(6)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
               ),
               style: const TextStyle(fontSize: 13),
             ),
@@ -777,6 +766,16 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
   //  AI 总评 / PDF 生成 / 保存
   // ════════════════════════════════════════════════════════
   Future<void> _generateAdvisorComment() async {
+    if (!await SettingsService.isTeacherAiGradingEnabled()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('教师 AI 批阅已关闭，请在「系统设置 → 教师 AI 批阅」中开启后再使用。'),
+          ),
+        );
+      }
+      return;
+    }
     setState(() => _aiGenerating = true);
     try {
       final agent = GradingAgent();

@@ -27,7 +27,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   FlutterWindow window(project);
   Win32Window::Point origin(10, 10);
   Win32Window::Size size(1280, 720);
-  if (!window.Create(L"移动图谱与数字孪生v2.0.0", origin, size)) {
+  if (!window.Create(L"课程图谱与数字孪生v2.0.1", origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);

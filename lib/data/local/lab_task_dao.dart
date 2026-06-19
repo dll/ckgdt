@@ -309,7 +309,7 @@ class LabTaskDao {
   }
 
   /// 班级实验总览统计（教师用）
-  Future<Map<String, dynamic>> getClassLabOverview({int passScore = 85}) async {
+  Future<Map<String, dynamic>> getClassLabOverview({int passScore = 60}) async {
     final db = await _dbHelper.database;
     final scope = await _courseContext.scopedWhere(column: 't.course_id');
     final result = await db.rawQuery('''

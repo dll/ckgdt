@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../data/local/score_audit_dao.dart';
@@ -7,8 +7,10 @@ import '../../../data/local/grading_result_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../services/agent/agents/grading_agent.dart';
+import '../../../services/settings_service.dart';
 
 import '../../../core/error_handler.dart';
+
 /// 作品 AI 智能批阅 Tab — 仅教师/管理员可见
 ///
 /// 四区结构（与实验/考核 AI 批阅保持一致风格）：
@@ -59,10 +61,10 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
     _approvedIds.clear();
     for (final w in submitted) {
       final wid = w['id'] as int;
-      if (w['teacher_score'] != null) {
+      if (w['score'] != null) {
         _approvedIds.add(wid);
         _gradingResults[wid] = _GradingResult(
-          score: (w['teacher_score'] as num).toInt(),
+          score: (w['score'] as num).toInt(),
           feedback: '',
           dimensions: null,
           strengths: [],
@@ -77,11 +79,26 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
         final tid = p['target_id'] as int;
         if (!_approvedIds.contains(tid) && !_gradingResults.containsKey(tid)) {
           Map<String, dynamic>? dims;
-          try { dims = jsonDecode(p['dimensions'] as String? ?? ''); } catch (e, st) { swallowDebug(e, tag: 'WorksAiGrading.dims', stack: st); }
+          try {
+            dims = jsonDecode(p['dimensions'] as String? ?? '');
+          } catch (e, st) {
+            swallowDebug(e, tag: 'WorksAiGrading.dims', stack: st);
+          }
           List<String> strengths = [];
-          try { strengths = (jsonDecode(p['strengths'] as String? ?? '[]') as List).cast<String>(); } catch (e, st) { swallowDebug(e, tag: 'WorksAiGrading.strengths', stack: st); }
+          try {
+            strengths = (jsonDecode(p['strengths'] as String? ?? '[]') as List)
+                .cast<String>();
+          } catch (e, st) {
+            swallowDebug(e, tag: 'WorksAiGrading.strengths', stack: st);
+          }
           List<String> improvements = [];
-          try { improvements = (jsonDecode(p['improvements'] as String? ?? '[]') as List).cast<String>(); } catch (e, st) { swallowDebug(e, tag: 'WorksAiGrading.improvements', stack: st); }
+          try {
+            improvements =
+                (jsonDecode(p['improvements'] as String? ?? '[]') as List)
+                    .cast<String>();
+          } catch (e, st) {
+            swallowDebug(e, tag: 'WorksAiGrading.improvements', stack: st);
+          }
           _gradingResults[tid] = _GradingResult(
             score: (p['score'] as num?)?.toInt() ?? 0,
             feedback: (p['feedback'] as String?) ?? '',
@@ -100,10 +117,19 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
   // ═══════════ AI 批量批阅 ═══════════
 
   Future<void> _startBatchGrading() async {
+    if (!await SettingsService.isTeacherAiGradingEnabled()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('教师 AI 批阅已关闭，请在「系统设置 → 教师 AI 批阅」中开启后再使用。'),
+          ),
+        );
+      }
+      return;
+    }
     final ungraded = _works
         .where((w) =>
-            w['teacher_score'] == null &&
-            !_gradingResults.containsKey(w['id'] as int))
+            w['score'] == null && !_gradingResults.containsKey(w['id'] as int))
         .toList();
 
     if (ungraded.isEmpty) {
@@ -145,12 +171,14 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
         // 旧版 gradeWork(title/desc) 仍保留，但不再被 UI 直接调用 — 它没看视频，
         // 评语是空泛幻觉。
         final videoUrl = work['video_url'] as String?;
+        final videoPath = work['file_path'] as String?;
         final compRes = await _gradingAgent.gradeWorkComprehensive(
           title: title,
           description: desc,
           techStack: techStack,
           studentName: studentName,
           groupName: groupName.isNotEmpty ? groupName : null,
+          videoPath: videoPath,
           videoUrl: videoUrl,
           frameCount: 5,
         );
@@ -259,6 +287,14 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
     if (summary != null && summary.isNotEmpty) {
       sb.writeln('【总评】$summary\n');
     }
+    final basis = parsed['basis'] as List?;
+    if (basis != null && basis.isNotEmpty) {
+      sb.writeln('【评分依据】');
+      for (final s in basis) {
+        sb.writeln('  - $s');
+      }
+      sb.writeln();
+    }
     final scores = parsed['scores'] as Map<String, dynamic>?;
     if (scores != null) {
       sb.writeln('【各维度评分】');
@@ -299,25 +335,25 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
     int func = 0, tech = 0, integ = 0, qual = 0, doc = 0;
     if (result.dimensions != null) {
       func = ((result.dimensions!['functionality']
-                      as Map<String, dynamic>?)?['score'] as num?)
-                  ?.toInt() ??
-              0;
+                  as Map<String, dynamic>?)?['score'] as num?)
+              ?.toInt() ??
+          0;
       tech = ((result.dimensions!['tech_depth']
-                      as Map<String, dynamic>?)?['score'] as num?)
-                  ?.toInt() ??
-              0;
+                  as Map<String, dynamic>?)?['score'] as num?)
+              ?.toInt() ??
+          0;
       integ = ((result.dimensions!['integration']
-                      as Map<String, dynamic>?)?['score'] as num?)
-                  ?.toInt() ??
-              0;
-      qual = ((result.dimensions!['quality']
-                      as Map<String, dynamic>?)?['score'] as num?)
-                  ?.toInt() ??
-              0;
+                  as Map<String, dynamic>?)?['score'] as num?)
+              ?.toInt() ??
+          0;
+      qual = ((result.dimensions!['quality'] as Map<String, dynamic>?)?['score']
+                  as num?)
+              ?.toInt() ??
+          0;
       doc = ((result.dimensions!['documentation']
-                      as Map<String, dynamic>?)?['score'] as num?)
-                  ?.toInt() ??
-              0;
+                  as Map<String, dynamic>?)?['score'] as num?)
+              ?.toInt() ??
+          0;
     } else {
       // 按各维度满分占比分配（功能25/技术20/集成20/质量20/文档15）
       final s = result.score;
@@ -360,9 +396,11 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
 
     // 更新 grading_results 状态
     try {
-      final pending = await _gradingDao.getPendingResults('works', targetId: workId);
+      final pending =
+          await _gradingDao.getPendingResults('works', targetId: workId);
       for (final p in pending) {
-        await _gradingDao.approveResult(p['id'] as int, widget.authService.getCurrentUserId() ?? '');
+        await _gradingDao.approveResult(
+            p['id'] as int, widget.authService.getCurrentUserId() ?? '');
       }
     } catch (e) {
       swallow(e, tag: 'WorksAiGrading.approveStatus');
@@ -475,8 +513,7 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
           ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('取消')),
+                onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
             FilledButton(
               onPressed: () {
                 _gradingResults[workId] = _GradingResult(
@@ -549,8 +586,7 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
   // ═══════════ ① 选择器 ═══════════
 
   Widget _buildSelector(Color primary) {
-    final ungraded =
-        _works.where((w) => w['teacher_score'] == null).length;
+    final ungraded = _works.where((w) => w['score'] == null).length;
 
     return Card(
       child: Padding(
@@ -577,9 +613,7 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
             const SizedBox(height: 10),
             if (_isBatchGrading) ...[
               LinearProgressIndicator(
-                value: _gradingTotal > 0
-                    ? _gradingProgress / _gradingTotal
-                    : 0,
+                value: _gradingTotal > 0 ? _gradingProgress / _gradingTotal : 0,
               ),
               const SizedBox(height: 6),
               Row(children: [
@@ -633,9 +667,8 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
       );
     }
 
-    final unapprovedWithResults = _gradingResults.keys
-        .where((id) => !_approvedIds.contains(id))
-        .toList();
+    final unapprovedWithResults =
+        _gradingResults.keys.where((id) => !_approvedIds.contains(id)).toList();
 
     return Card(
       child: Padding(
@@ -666,8 +699,7 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
                     });
                   },
                   child: Text(
-                    _selectedForApproval.length ==
-                            unapprovedWithResults.length
+                    _selectedForApproval.length == unapprovedWithResults.length
                         ? '取消全选'
                         : '全选待核准',
                     style: const TextStyle(fontSize: 12),
@@ -727,8 +759,8 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(title,
-                          style: TextStyle(
-                              fontSize: 11, color: Colors.grey[600]),
+                          style:
+                              TextStyle(fontSize: 11, color: Colors.grey[600]),
                           overflow: TextOverflow.ellipsis),
                     ),
                     if (result != null) ...[
@@ -737,8 +769,8 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: _scoreColor(result.score)
-                              .withValues(alpha: 0.15),
+                          color:
+                              _scoreColor(result.score).withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text('${result.score}分',
@@ -770,12 +802,10 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
                             IconButton(
                               icon: const Icon(Icons.edit, size: 18),
                               tooltip: '调整',
-                              onPressed: () =>
-                                  _showAdjustDialog(wid, work),
+                              onPressed: () => _showAdjustDialog(wid, work),
                             ),
                             IconButton(
-                              icon: const Icon(
-                                  Icons.check_circle_outline,
+                              icon: const Icon(Icons.check_circle_outline,
                                   size: 18),
                               tooltip: '核准',
                               color: Colors.green,
@@ -802,9 +832,8 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
       final result = _gradingResults[wid];
       if (result != null && result.score > 0) {
         scored.add(_ScoredEntry(
-          name: (w['student_name'] as String?) ??
-              (w['user_id'] as String?) ??
-              '',
+          name:
+              (w['student_name'] as String?) ?? (w['user_id'] as String?) ?? '',
           title: (w['title'] as String?) ?? '',
           score: result.score,
           strengths: result.strengths,
@@ -883,29 +912,27 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
                       overflow: TextOverflow.ellipsis),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children:
-                        (showStrengths ? e.strengths : e.improvements)
-                            .take(3)
-                            .map((s) => Padding(
-                                  padding: const EdgeInsets.only(top: 2),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(showStrengths ? '✓ ' : '→ ',
-                                          style: TextStyle(
-                                              fontSize: 12,
-                                              color: showStrengths
-                                                  ? Colors.green
-                                                  : Colors.orange)),
-                                      Expanded(
-                                          child: Text(s,
-                                              style: const TextStyle(
-                                                  fontSize: 12))),
-                                    ],
-                                  ),
-                                ))
-                            .toList(),
+                    children: (showStrengths ? e.strengths : e.improvements)
+                        .take(3)
+                        .map((s) => Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(showStrengths ? '✓ ' : '→ ',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          color: showStrengths
+                                              ? Colors.green
+                                              : Colors.orange)),
+                                  Expanded(
+                                      child: Text(s,
+                                          style:
+                                              const TextStyle(fontSize: 12))),
+                                ],
+                              ),
+                            ))
+                        .toList(),
                   ),
                 ))
             .toList(),
@@ -979,8 +1006,17 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
 
     final data = [fail, pass, medium, good, excellent];
     final labels = ['不及格', '及格', '中等', '良好', '优秀'];
-    final colors = [Colors.red, Colors.orange, Colors.amber, Colors.blue, Colors.green];
-    final maxVal = data.reduce((a, b) => a > b ? a : b).toDouble().clamp(1, double.infinity);
+    final colors = [
+      Colors.red,
+      Colors.orange,
+      Colors.amber,
+      Colors.blue,
+      Colors.green
+    ];
+    final maxVal = data
+        .reduce((a, b) => a > b ? a : b)
+        .toDouble()
+        .clamp(1, double.infinity);
 
     return Card(
       child: Padding(
@@ -995,34 +1031,48 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
               child: BarChart(BarChartData(
                 alignment: BarChartAlignment.spaceAround,
                 maxY: maxVal + 1,
-                barGroups: List.generate(5, (i) => BarChartGroupData(
-                  x: i,
-                  barRods: [BarChartRodData(
-                    toY: data[i].toDouble(),
-                    color: colors[i],
-                    width: 22,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-                  )],
-                  showingTooltipIndicators: data[i] > 0 ? [0] : [],
-                )),
+                barGroups: List.generate(
+                    5,
+                    (i) => BarChartGroupData(
+                          x: i,
+                          barRods: [
+                            BarChartRodData(
+                              toY: data[i].toDouble(),
+                              color: colors[i],
+                              width: 22,
+                              borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(4)),
+                            )
+                          ],
+                          showingTooltipIndicators: data[i] > 0 ? [0] : [],
+                        )),
                 titlesData: FlTitlesData(
-                  bottomTitles: AxisTitles(sideTitles: SideTitles(
+                  bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
                     showTitles: true,
                     getTitlesWidget: (v, _) => Padding(
                       padding: const EdgeInsets.only(top: 4),
-                      child: Text(labels[v.toInt()], style: const TextStyle(fontSize: 10)),
+                      child: Text(labels[v.toInt()],
+                          style: const TextStyle(fontSize: 10)),
                     ),
                   )),
-                  leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  leftTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
                 ),
                 borderData: FlBorderData(show: false),
                 gridData: const FlGridData(show: false),
-                barTouchData: BarTouchData(touchTooltipData: BarTouchTooltipData(
+                barTouchData: BarTouchData(
+                    touchTooltipData: BarTouchTooltipData(
                   getTooltipItem: (g, gi, rod, ri) => BarTooltipItem(
                     '${rod.toY.toInt()}人',
-                    const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold),
+                    const TextStyle(
+                        fontSize: 12,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold),
                   ),
                 )),
               )),
@@ -1036,7 +1086,8 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
   Widget _buildRadarChart(Map<String, List<double>> dimTotals, Color primary) {
     if (dimTotals.isEmpty) {
       return const Card(
-          child: Center(child: Text('暂无维度数据', style: TextStyle(color: Colors.grey))));
+          child: Center(
+              child: Text('暂无维度数据', style: TextStyle(color: Colors.grey))));
     }
 
     final keys = dimTotals.keys.toList();
@@ -1059,20 +1110,28 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
                 radarShape: RadarShape.polygon,
                 tickCount: 4,
                 ticksTextStyle: const TextStyle(fontSize: 0),
-                tickBorderData: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
-                gridBorderData: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
+                tickBorderData:
+                    BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
+                gridBorderData:
+                    BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
                 radarBorderData: const BorderSide(color: Colors.transparent),
                 getTitle: (index, _) {
-                  if (index >= keys.length) return const RadarChartTitle(text: '');
-                  return RadarChartTitle(text: _dimLabel(keys[index]), angle: 0);
+                  if (index >= keys.length)
+                    return const RadarChartTitle(text: '');
+                  return RadarChartTitle(
+                      text: _dimLabel(keys[index]), angle: 0);
                 },
-                dataSets: [RadarDataSet(
-                  dataEntries: avgRates.map((r) => RadarEntry(value: r * 100)).toList(),
-                  fillColor: primary.withValues(alpha: 0.2),
-                  borderColor: primary,
-                  borderWidth: 2,
-                  entryRadius: 3,
-                )],
+                dataSets: [
+                  RadarDataSet(
+                    dataEntries: avgRates
+                        .map((r) => RadarEntry(value: r * 100))
+                        .toList(),
+                    fillColor: primary.withValues(alpha: 0.2),
+                    borderColor: primary,
+                    borderWidth: 2,
+                    entryRadius: 3,
+                  )
+                ],
                 titlePositionPercentageOffset: 0.2,
               )),
             ),
@@ -1085,7 +1144,8 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
   Widget _buildAchievementProgress(List<int> scores, Color primary) {
     final avg = scores.reduce((a, b) => a + b) / scores.length;
     final passRate = scores.where((s) => s >= 60).length / scores.length * 100;
-    final excellentRate = scores.where((s) => s >= 90).length / scores.length * 100;
+    final excellentRate =
+        scores.where((s) => s >= 90).length / scores.length * 100;
 
     final objectives = [
       ('平均分达成', avg, 75.0, '目标: 平均分≥75'),
@@ -1110,10 +1170,16 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(children: [
-                      Icon(achieved ? Icons.check_circle : Icons.radio_button_unchecked,
-                          size: 14, color: achieved ? Colors.green : Colors.orange),
+                      Icon(
+                          achieved
+                              ? Icons.check_circle
+                              : Icons.radio_button_unchecked,
+                          size: 14,
+                          color: achieved ? Colors.green : Colors.orange),
                       const SizedBox(width: 6),
-                      Expanded(child: Text(obj.$1, style: const TextStyle(fontSize: 12))),
+                      Expanded(
+                          child: Text(obj.$1,
+                              style: const TextStyle(fontSize: 12))),
                       Text('${obj.$2.toStringAsFixed(1)}%',
                           style: TextStyle(
                               fontSize: 12,
@@ -1131,7 +1197,8 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
                     Padding(
                       padding: const EdgeInsets.only(top: 2),
                       child: Text(obj.$4,
-                          style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+                          style:
+                              TextStyle(fontSize: 10, color: Colors.grey[500])),
                     ),
                   ],
                 ),

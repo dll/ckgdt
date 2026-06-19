@@ -142,7 +142,8 @@ class SyncService {
   }
 
   /// 保存同步配置
-  Future<void> saveConfig({required bool enabled, required int interval}) async {
+  Future<void> saveConfig(
+      {required bool enabled, required int interval}) async {
     await setSyncEnabled(enabled);
     await setSyncInterval(interval);
   }
@@ -171,7 +172,8 @@ class SyncService {
       Duration(minutes: interval),
       (_) => _doAutoSync(userId, role),
     );
-    debugPrint('SyncService: 自动同步已启动 (每 $interval 分钟, 仓库: $repoOwner/$repoName)');
+    debugPrint(
+        'SyncService: 自动同步已启动 (每 $interval 分钟, 仓库: $repoOwner/$repoName)');
   }
 
   /// 停止自动同步
@@ -216,7 +218,9 @@ class SyncService {
           where: 'user_id = ?',
           whereArgs: [userId],
         );
-      } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
+      } catch (e, st) {
+        swallowDebug(e, tag: 'SyncService', stack: st);
+      }
 
       // 1. 收集本地数据
       final data = await _collectStudentData(userId);
@@ -227,10 +231,15 @@ class SyncService {
       final prefs = await SharedPreferences.getInstance();
       final lastHash = prefs.getString('sync_hash_$userId');
       if (lastHash == hash) {
+        try {
+          await _uploadSubmissionFiles(userId, data);
+        } catch (e) {
+          debugPrint('SyncService: 附件补传失败（不影响主同步）: $e');
+        }
         _isSyncing = false;
         status.value = SyncStatus.idle;
         debugPrint('SyncService: $userId 数据未变更，跳过同步');
-        return SyncResult(success: true, message: '数据未变更，跳过同步');
+        return SyncResult(success: true, message: '数据未变更，已检查附件同步');
       }
 
       // 3. 上传到课程共享仓库 (mad-fd)
@@ -330,7 +339,9 @@ class SyncService {
       String? content;
       try {
         content = await _gitee.getFileContent(
-          repoOwner, repoName, path,
+          repoOwner,
+          repoName,
+          path,
           ref: repoBranch,
         );
       } catch (e) {
@@ -388,10 +399,10 @@ class SyncService {
     for (final sub in submissions) {
       await _uploadSingleFile(userId, sub, '实验');
     }
-    // 实验报告（student_reports 表）
+    // 考核报告（student_reports 表）
     final reports = data['student_reports'] as List? ?? [];
     for (final report in reports) {
-      await _uploadSingleFile(userId, report, '实验');
+      await _uploadSingleFile(userId, report, '考核');
     }
     // 项目考核
     final projectScores = data['project_scores'] as List? ?? [];
@@ -414,6 +425,7 @@ class SyncService {
         '';
     final fileNames = (row['file_names'] as String?) ??
         (row['file_name'] as String?) ??
+        (row['content_json'] as String?) ??
         '';
     if (filePaths.isEmpty) return;
 
@@ -427,10 +439,9 @@ class SyncService {
 
     try {
       final bytes = await file.readAsBytes();
-      // Gitee 单文件上限约 1MB，超大文件跳过
-      if (bytes.length > 1024 * 1024) {
-        debugPrint(
-            'SyncService: 跳过超大文件 $fileName (${bytes.length} bytes)');
+      // 作品视频会明显大于 PDF。与上传入口保持一致，100MB 以内尝试同步。
+      if (bytes.length > 100 * 1024 * 1024) {
+        debugPrint('SyncService: 跳过超大文件 $fileName (${bytes.length} bytes)');
         return;
       }
       await _gitee.createOrUpdateBinaryFile(
@@ -461,9 +472,8 @@ class SyncService {
     final userName = userRows.isNotEmpty
         ? (userRows.first['real_name'] as String? ?? '')
         : '';
-    final lastActive = userRows.isNotEmpty
-        ? (userRows.first['last_active'] as String?)
-        : null;
+    final lastActive =
+        userRows.isNotEmpty ? (userRows.first['last_active'] as String?) : null;
 
     // ── 按 user_id 收集的表 ─────────────────────────────────────────
     // 表名 → 排序字段（null 则不排序）
@@ -497,8 +507,10 @@ class SyncService {
 
     for (final entry in userIdTables.entries) {
       result[entry.key] = await _safeQuery(
-        db, entry.key,
-        where: 'user_id = ?', whereArgs: [userId],
+        db,
+        entry.key,
+        where: 'user_id = ?',
+        whereArgs: [userId],
         orderBy: entry.value,
       );
     }
@@ -506,34 +518,43 @@ class SyncService {
     // ── 按其他字段收集的表 ────────────────────────────────────────────
     // peer_reviews 使用 reviewer_id
     result['peer_reviews'] = await _safeQuery(
-      db, 'peer_reviews',
-      where: 'reviewer_id = ?', whereArgs: [userId],
+      db,
+      'peer_reviews',
+      where: 'reviewer_id = ?',
+      whereArgs: [userId],
     );
 
     // collaboration_messages 使用 sender_id
     result['collaboration_messages'] = await _safeQuery(
-      db, 'collaboration_messages',
-      where: 'sender_id = ?', whereArgs: [userId],
+      db,
+      'collaboration_messages',
+      where: 'sender_id = ?',
+      whereArgs: [userId],
     );
 
     // contribution_scores — 学生作为评分人或被评人
     result['contribution_scores'] = await _safeQuery(
-      db, 'contribution_scores',
+      db,
+      'contribution_scores',
       where: 'scorer_user_id = ? OR target_user_id = ?',
       whereArgs: [userId, userId],
     );
 
     // work_scores — 学生作为评分人（同学互评）
     result['work_scores'] = await _safeQuery(
-      db, 'work_scores',
-      where: 'scorer_id = ?', whereArgs: [userId],
+      db,
+      'work_scores',
+      where: 'scorer_id = ?',
+      whereArgs: [userId],
       orderBy: 'scored_at DESC',
     );
 
     // project_scores — 学生作为评分人（项目互评）
     result['project_scores'] = await _safeQuery(
-      db, 'project_scores',
-      where: 'scorer_id = ?', whereArgs: [userId],
+      db,
+      'project_scores',
+      where: 'scorer_id = ?',
+      whereArgs: [userId],
       orderBy: 'scored_at DESC',
     );
 
@@ -562,8 +583,10 @@ class SyncService {
 
     // classroom_messages 使用 sender_id
     result['classroom_messages'] = await _safeQuery(
-      db, 'classroom_messages',
-      where: 'sender_id = ?', whereArgs: [userId],
+      db,
+      'classroom_messages',
+      where: 'sender_id = ?',
+      whereArgs: [userId],
     );
 
     // path_nodes — 通过 learning_paths 的 id 关联
@@ -574,8 +597,10 @@ class SyncService {
         final pathId = (p as Map)['id'];
         if (pathId != null) {
           final nodes = await _safeQuery(
-            db, 'path_nodes',
-            where: 'path_id = ?', whereArgs: [pathId],
+            db,
+            'path_nodes',
+            where: 'path_id = ?',
+            whereArgs: [pathId],
             orderBy: 'sort_order',
           );
           allPathNodes.addAll(nodes.cast<Map<String, dynamic>>());
@@ -628,8 +653,8 @@ class SyncService {
       // 1. 列出 sync/students/ 目录下的所有文件
       List<Map<String, dynamic>> files;
       try {
-        files = await _gitee.listDir(
-            repoOwner, repoName, _syncDir, ref: repoBranch);
+        files = await _gitee.listDir(repoOwner, repoName, _syncDir,
+            ref: repoBranch);
       } catch (e) {
         // 目录不存在说明还没有学生上传过数据
         final prefs = await SharedPreferences.getInstance();
@@ -672,7 +697,9 @@ class SyncService {
 
         try {
           final content = await _gitee.getFileContent(
-            repoOwner, repoName, filePath,
+            repoOwner,
+            repoName,
+            filePath,
             ref: repoBranch,
           );
           if (content == null) continue;
@@ -720,11 +747,13 @@ class SyncService {
                   owner: parsed.owner,
                   repo: parsed.repo,
                   path: 'sync/teacher_sync_log.json',
-                  content: const JsonEncoder.withIndent('  ').convert(backupData),
+                  content:
+                      const JsonEncoder.withIndent('  ').convert(backupData),
                   message: '教师同步备份 ($studentCount 学生, $totalRecords 条记录)',
                   branch: 'master',
                 );
-                debugPrint('SyncService: 已备份到教师仓库 ${parsed.owner}/${parsed.repo}');
+                debugPrint(
+                    'SyncService: 已备份到教师仓库 ${parsed.owner}/${parsed.repo}');
               }
             }
           }
@@ -792,7 +821,9 @@ class SyncService {
         try {
           await db.update('users', updates,
               where: 'user_id = ?', whereArgs: [userId]);
-        } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
+        } catch (e, st) {
+          swallowDebug(e, tag: 'SyncService', stack: st);
+        }
       }
     }
 
@@ -918,8 +949,11 @@ class SyncService {
 
         for (final table in userIdTables) {
           txnCount += await _importTable(
-            txn, data, table,
-            userIdColumn: 'user_id', userId: userId,
+            txn,
+            data,
+            table,
+            userIdColumn: 'user_id',
+            userId: userId,
           );
         }
 
@@ -927,27 +961,43 @@ class SyncService {
         // 1) task_id 重映射（学生端ID → 教师端ID）
         // 2) 保护教师已批改的评分数据不被覆盖
         txnCount += await _importLabSubmissions(
-          txn, data, userId, taskIdRemap,
+          txn,
+          data,
+          userId,
+          taskIdRemap,
         );
 
         // ── student_reports 特殊处理 ─────────────────────────────────
         // task_id / template_id 重映射
         txnCount += await _importStudentReports(
-          txn, data, userId, taskIdRemap, templateIdRemap,
+          txn,
+          data,
+          userId,
+          taskIdRemap,
+          templateIdRemap,
         );
 
         // ── 按其他字段导入的表 ──────────────────────────────────────
         txnCount += await _importTable(
-          txn, data, 'peer_reviews',
-          userIdColumn: 'reviewer_id', userId: userId,
+          txn,
+          data,
+          'peer_reviews',
+          userIdColumn: 'reviewer_id',
+          userId: userId,
         );
         txnCount += await _importTable(
-          txn, data, 'collaboration_messages',
-          userIdColumn: 'sender_id', userId: userId,
+          txn,
+          data,
+          'collaboration_messages',
+          userIdColumn: 'sender_id',
+          userId: userId,
         );
         txnCount += await _importTable(
-          txn, data, 'classroom_messages',
-          userIdColumn: 'sender_id', userId: userId,
+          txn,
+          data,
+          'classroom_messages',
+          userIdColumn: 'sender_id',
+          userId: userId,
         );
 
         // ── student_works 特殊处理 ──────────────────────────────────
@@ -974,9 +1024,13 @@ class SyncService {
                 row.remove('id');
                 await txn.insert('contribution_scores', row);
                 txnCount++;
-              } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
+              } catch (e, st) {
+                swallowDebug(e, tag: 'SyncService', stack: st);
+              }
             }
-          } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
+          } catch (e, st) {
+            swallowDebug(e, tag: 'SyncService', stack: st);
+          }
         }
 
         // path_nodes — 先删除该用户所有 path 的节点，再导入
@@ -995,9 +1049,13 @@ class SyncService {
                 row.remove('id');
                 await txn.insert('path_nodes', row);
                 txnCount++;
-              } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
+              } catch (e, st) {
+                swallowDebug(e, tag: 'SyncService', stack: st);
+              }
             }
-          } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
+          } catch (e, st) {
+            swallowDebug(e, tag: 'SyncService', stack: st);
+          }
         }
 
         return txnCount;
@@ -1022,8 +1080,7 @@ class SyncService {
 
     int count = 0;
     try {
-      await db.delete(table,
-          where: '$userIdColumn = ?', whereArgs: [userId]);
+      await db.delete(table, where: '$userIdColumn = ?', whereArgs: [userId]);
       for (final r in list) {
         try {
           final row = Map<String, dynamic>.from(r as Map);
@@ -1035,7 +1092,9 @@ class SyncService {
           debugPrint('SyncService: 导入 $table 失败: $e');
         }
       }
-    } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); } // 表可能不存在
+    } catch (e, st) {
+      swallowDebug(e, tag: 'SyncService', stack: st);
+    } // 表可能不存在
     return count;
   }
 
@@ -1057,8 +1116,7 @@ class SyncService {
       final existingGraded = <String, Map<String, dynamic>>{};
       try {
         final graded = await db.query('lab_submissions',
-            where: 'user_id = ? AND score IS NOT NULL',
-            whereArgs: [userId]);
+            where: 'user_id = ? AND score IS NOT NULL', whereArgs: [userId]);
         for (final g in graded) {
           // 以 task_id 为 key（已是教师端 ID）
           final taskId = g['task_id'] as int?;
@@ -1066,7 +1124,9 @@ class SyncService {
             existingGraded['$taskId'] = Map<String, dynamic>.from(g as Map);
           }
         }
-      } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
+      } catch (e, st) {
+        swallowDebug(e, tag: 'SyncService', stack: st);
+      }
 
       // 删除该学生的所有未批改提交（已批改的保留）
       await db.delete('lab_submissions',
@@ -1080,14 +1140,16 @@ class SyncService {
 
           // 重映射 task_id
           final originalTaskId = row['task_id'] as int?;
-          if (originalTaskId != null && taskIdRemap.containsKey(originalTaskId)) {
+          if (originalTaskId != null &&
+              taskIdRemap.containsKey(originalTaskId)) {
             row['task_id'] = taskIdRemap[originalTaskId];
           }
 
           final localTaskId = row['task_id'] as int?;
 
           // 检查教师端是否已有该任务的已批改提交
-          if (localTaskId != null && existingGraded.containsKey('$localTaskId')) {
+          if (localTaskId != null &&
+              existingGraded.containsKey('$localTaskId')) {
             // 已批改 → 只更新学生端字段（content/file_paths 等），保留评分
             final graded = existingGraded['$localTaskId']!;
             row['score'] = graded['score'];
@@ -1115,32 +1177,36 @@ class SyncService {
           debugPrint('SyncService: 导入 lab_submissions 失败: $e');
         }
       }
-    } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'SyncService', stack: st);
+    }
     return count;
   }
 
   /// 从 Gitee 仓库下载实验提交的 PDF 文件到本地
   ///
   /// 按新目录规范依次尝试：实验/ → files/（兼容旧数据）
-  Future<void> _downloadSubmissionFile(
-      Map<String, dynamic> row, String userId,
+  Future<void> _downloadSubmissionFile(Map<String, dynamic> row, String userId,
       {String category = '实验'}) async {
     try {
       final fileNames = (row['file_names'] as String?) ??
           (row['file_name'] as String?) ??
+          (row['content_json'] as String?) ??
           '';
-      if (fileNames.isEmpty) return;
 
       // 本地已存在则跳过
-      final filePaths = (row['file_paths'] as String?) ??
-          (row['file_path'] as String?) ??
-          '';
+      final filePaths =
+          (row['file_paths'] as String?) ?? (row['file_path'] as String?) ?? '';
+      final fileName = fileNames.isNotEmpty
+          ? fileNames
+          : filePaths.split('/').last.split('\\').last;
+      if (fileName.isEmpty) return;
       if (filePaths.isNotEmpty && File(filePaths).existsSync()) return;
 
       // 按新目录规范下载，失败则回退旧路径
       List<int>? bytes;
       for (final subDir in [category, 'files']) {
-        final remotePath = '$_syncDir/$userId/$subDir/$fileNames';
+        final remotePath = '$_syncDir/$userId/$subDir/$fileName';
         try {
           bytes = await _gitee.downloadBinaryFile(
             owner: repoOwner,
@@ -1149,7 +1215,9 @@ class SyncService {
             branch: repoBranch,
           );
           if (bytes != null && bytes.isNotEmpty) break;
-        } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
+        } catch (e, st) {
+          swallowDebug(e, tag: 'SyncService', stack: st);
+        }
       }
       if (bytes == null || bytes.isEmpty) return;
 
@@ -1159,12 +1227,13 @@ class SyncService {
       if (!syncFilesDir.existsSync()) {
         syncFilesDir.createSync(recursive: true);
       }
-      final localFile = File('${syncFilesDir.path}/$fileNames');
+      final localFile = File('${syncFilesDir.path}/$fileName');
       await localFile.writeAsBytes(bytes);
 
       // 更新 file_paths 为本地路径
       row['file_paths'] = localFile.path;
-      debugPrint('SyncService: 已下载 $fileNames -> ${localFile.path}');
+      row['file_path'] = localFile.path;
+      debugPrint('SyncService: 已下载 $fileName -> ${localFile.path}');
     } catch (e) {
       debugPrint('SyncService: 下载 PDF 失败: $e');
     }
@@ -1189,14 +1258,16 @@ class SyncService {
       final existingScored = <String, Map<String, dynamic>>{};
       try {
         final scored = await db.query('student_reports',
-            where: 'user_id = ? AND score IS NOT NULL',
-            whereArgs: [userId]);
+            where: 'user_id = ? AND score IS NOT NULL', whereArgs: [userId]);
         for (final s in scored) {
           final title = s['title'] as String? ?? '';
           final taskId = s['task_id']?.toString() ?? '';
-          existingScored['$title|$taskId'] = Map<String, dynamic>.from(s as Map);
+          existingScored['$title|$taskId'] =
+              Map<String, dynamic>.from(s as Map);
         }
-      } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
+      } catch (e, st) {
+        swallowDebug(e, tag: 'SyncService', stack: st);
+      }
 
       // 删除该学生的未评分报告
       await db.delete('student_reports',
@@ -1210,19 +1281,22 @@ class SyncService {
 
           // 重映射 task_id
           final originalTaskId = row['task_id'] as int?;
-          if (originalTaskId != null && taskIdRemap.containsKey(originalTaskId)) {
+          if (originalTaskId != null &&
+              taskIdRemap.containsKey(originalTaskId)) {
             row['task_id'] = taskIdRemap[originalTaskId];
           }
 
           // 重映射 template_id
           final originalTemplateId = row['template_id'] as int?;
-          if (originalTemplateId != null && templateIdRemap.containsKey(originalTemplateId)) {
+          if (originalTemplateId != null &&
+              templateIdRemap.containsKey(originalTemplateId)) {
             row['template_id'] = templateIdRemap[originalTemplateId];
           }
 
           final title = row['title'] as String? ?? '';
           final taskId = row['task_id']?.toString() ?? '';
           final key = '$title|$taskId';
+          await _downloadSubmissionFile(row, userId, category: '考核');
 
           if (existingScored.containsKey(key)) {
             // 已评分 → 保留评分，更新内容
@@ -1240,7 +1314,9 @@ class SyncService {
           debugPrint('SyncService: 导入 student_reports 失败: $e');
         }
       }
-    } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'SyncService', stack: st);
+    }
     return count;
   }
 
@@ -1268,23 +1344,27 @@ class SyncService {
           final id = r['id'] as int?;
           if (id != null) scoredWorkIds.add(id);
         }
-      } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
+      } catch (e, st) {
+        swallowDebug(e, tag: 'SyncService', stack: st);
+      }
 
       // 构建已有作品的 title → id 映射（用于匹配跨设备数据）
       final existingByTitle = <String, Map<String, dynamic>>{};
       try {
-        final existing = await db.query('student_works',
-            where: 'user_id = ?', whereArgs: [userId]);
+        final existing = await db
+            .query('student_works', where: 'user_id = ?', whereArgs: [userId]);
         for (final r in existing) {
           final title = r['title'] as String? ?? '';
           existingByTitle[title] = Map<String, dynamic>.from(r as Map);
         }
-      } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
+      } catch (e, st) {
+        swallowDebug(e, tag: 'SyncService', stack: st);
+      }
 
       // 删除未评分的作品（已评分的保留）
       if (scoredWorkIds.isEmpty) {
-        await db.delete('student_works',
-            where: 'user_id = ?', whereArgs: [userId]);
+        await db
+            .delete('student_works', where: 'user_id = ?', whereArgs: [userId]);
       } else {
         final placeholders = scoredWorkIds.map((_) => '?').join(',');
         await db.delete('student_works',
@@ -1300,6 +1380,7 @@ class SyncService {
 
           final title = row['title'] as String? ?? '';
           final existing = existingByTitle[title];
+          await _downloadSubmissionFile(row, userId, category: '作品');
 
           if (existing != null && scoredWorkIds.contains(existing['id'])) {
             // 已评分 → 更新内容字段，保留 id 不变（work_scores 外键依赖）
@@ -1314,7 +1395,9 @@ class SyncService {
           debugPrint('SyncService: 导入 student_works 失败: $e');
         }
       }
-    } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'SyncService', stack: st);
+    }
     return count;
   }
 
@@ -1332,8 +1415,8 @@ class SyncService {
     int count = 0;
     try {
       // 删除该学生作为评分人的旧评分（重新导入）
-      await db.delete('work_scores',
-          where: 'scorer_id = ?', whereArgs: [userId]);
+      await db
+          .delete('work_scores', where: 'scorer_id = ?', whereArgs: [userId]);
 
       for (final r in list) {
         try {
@@ -1354,7 +1437,9 @@ class SyncService {
           debugPrint('SyncService: 导入 work_scores 失败: $e');
         }
       }
-    } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'SyncService', stack: st);
+    }
     return count;
   }
 
@@ -1387,7 +1472,9 @@ class SyncService {
           debugPrint('SyncService: 导入 project_scores 失败: $e');
         }
       }
-    } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'SyncService', stack: st);
+    }
     return count;
   }
 
@@ -1396,8 +1483,8 @@ class SyncService {
   /// 列出已同步的学生文件概览
   Future<List<Map<String, dynamic>>> listSyncedStudents() async {
     try {
-      final files = await _gitee.listDir(
-          repoOwner, repoName, _syncDir, ref: repoBranch);
+      final files =
+          await _gitee.listDir(repoOwner, repoName, _syncDir, ref: repoBranch);
       final jsonFiles = files
           .where((f) =>
               f['type'] == 'file' &&
@@ -1411,8 +1498,8 @@ class SyncService {
         if (filePath.isEmpty) continue;
 
         try {
-          final content = await _gitee.getFileContent(
-              repoOwner, repoName, filePath, ref: repoBranch);
+          final content = await _gitee
+              .getFileContent(repoOwner, repoName, filePath, ref: repoBranch);
           if (content == null) continue;
 
           final data = jsonDecode(content) as Map<String, dynamic>;
@@ -1422,8 +1509,7 @@ class SyncService {
             'synced_at': data['synced_at'] ?? '',
             'last_active': data['last_active'] ?? '',
             'quiz_count': (data['quiz_results'] as List?)?.length ?? 0,
-            'record_count':
-                (data['learning_records'] as List?)?.length ?? 0,
+            'record_count': (data['learning_records'] as List?)?.length ?? 0,
             'wrong_count': (data['wrong_answers'] as List?)?.length ?? 0,
             'feedback_count': (data['feedback'] as List?)?.length ?? 0,
             'favorite_count': (data['favorites'] as List?)?.length ?? 0,
@@ -1439,8 +1525,8 @@ class SyncService {
         }
       }
 
-      students.sort((a, b) =>
-          (a['user_id'] as String).compareTo(b['user_id'] as String));
+      students.sort(
+          (a, b) => (a['user_id'] as String).compareTo(b['user_id'] as String));
       return students;
     } catch (e) {
       debugPrint('SyncService: 列出已同步学生失败: $e');
@@ -1457,7 +1543,8 @@ class SyncService {
       final db = await DatabaseHelper.instance.database;
 
       // 查询通知详情
-      final notifRows = await db.query('notifications', where: 'id = ?', whereArgs: [notificationId]);
+      final notifRows = await db
+          .query('notifications', where: 'id = ?', whereArgs: [notificationId]);
       if (notifRows.isEmpty) {
         debugPrint('SyncService: 通知 $notificationId 不存在');
         return;
@@ -1562,8 +1649,15 @@ class SyncService {
       // 检查是否已存在
       final existing = await db.query(
         'notifications',
-        where: 'related_entity_type = ? AND related_entity_id = ? AND created_at = ? AND target_type = ? AND target_id = ?',
-        whereArgs: [entityType, entityId, createdAt, notif['target_type'], targetId],
+        where:
+            'related_entity_type = ? AND related_entity_id = ? AND created_at = ? AND target_type = ? AND target_id = ?',
+        whereArgs: [
+          entityType,
+          entityId,
+          createdAt,
+          notif['target_type'],
+          targetId
+        ],
         limit: 1,
       );
 

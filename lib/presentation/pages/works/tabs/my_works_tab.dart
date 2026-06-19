@@ -1,4 +1,4 @@
-﻿// part of works_page.dart — 学生专属"我的作品"Tab
+// part of works_page.dart — 学生专属"我的作品"Tab
 //
 // 仅显示当前学生本人的作品 + 教师评分历史 + 同学互评。
 // 教师/管理员视角不会看到这个 tab（works_page.dart 用 _isStudent 判断）。
@@ -96,19 +96,24 @@ class _MyWorksTabState extends State<_MyWorksTab> {
 
   Widget _buildSummaryCard(Color primary) {
     final scoredCount = _works.where((w) {
-      final s = (w['teacher_score'] as num?) ?? (w['avg_score'] as num?) ?? 0;
+      final s = (w['score'] as num?) ??
+          (w['teacher_score'] as num?) ??
+          (w['avg_score'] as num?) ??
+          0;
       return s > 0;
     }).length;
     final scores = _works
-        .map((w) =>
-            ((w['teacher_score'] as num?) ?? (w['avg_score'] as num?) ?? 0)
-                .toDouble())
+        .map((w) => ((w['score'] as num?) ??
+                (w['teacher_score'] as num?) ??
+                (w['avg_score'] as num?) ??
+                0)
+            .toDouble())
         .where((s) => s > 0)
         .toList();
-    final avg = scores.isEmpty
-        ? 0.0
-        : scores.reduce((a, b) => a + b) / scores.length;
-    final maxScore = scores.isEmpty ? 0.0 : scores.reduce((a, b) => a > b ? a : b);
+    final avg =
+        scores.isEmpty ? 0.0 : scores.reduce((a, b) => a + b) / scores.length;
+    final maxScore =
+        scores.isEmpty ? 0.0 : scores.reduce((a, b) => a > b ? a : b);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -167,7 +172,8 @@ class _MyWorksTabState extends State<_MyWorksTab> {
     final desc = work['description'] as String? ?? '';
     final views = (work['view_count'] as num?)?.toInt() ?? 0;
     final likes = (work['like_count'] as num?)?.toInt() ?? 0;
-    final teacherScore = (work['teacher_score'] as num?)?.toInt();
+    final teacherScore =
+        ((work['score'] as num?) ?? (work['teacher_score'] as num?))?.toInt();
     final peerAvg = (work['avg_score'] as num?)?.toDouble();
     final status = work['status'] as String? ?? '草稿';
 
@@ -201,8 +207,8 @@ class _MyWorksTabState extends State<_MyWorksTab> {
               if (tech.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Text(tech,
-                    style: const TextStyle(
-                        fontSize: 12, color: Colors.black54)),
+                    style:
+                        const TextStyle(fontSize: 12, color: Colors.black54)),
               ],
               if (desc.isNotEmpty) ...[
                 const SizedBox(height: 8),

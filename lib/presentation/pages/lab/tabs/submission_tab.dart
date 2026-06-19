@@ -1231,6 +1231,17 @@ class _SubmissionTabState extends State<_SubmissionTab> {
               onPressed: isAiGrading
                   ? null
                   : () async {
+                      if (!await SettingsService.isTeacherAiGradingEnabled()) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  '教师 AI 批阅已关闭，请在「系统设置 → 教师 AI 批阅」中开启后再使用。'),
+                            ),
+                          );
+                        }
+                        return;
+                      }
                       if (content.isEmpty && filePaths.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('学生未提交内容，无法AI批阅')),
@@ -1389,7 +1400,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
     );
     if (!prepared.hasBody) {
       reasons.add('内容审核不通过：无法读取 PDF 正文，不能确认报告内容与实验任务一致。');
-    } else {
+    } else if (await SettingsService.isTeacherAiGradingEnabled()) {
       final result = await GradingAgent().gradeSubmission(
         taskTitle: taskTitle,
         content: prepared.content,

@@ -17,12 +17,14 @@ import '../core/init_logger.dart';
 import '../data/local/grading_result_dao.dart';
 import 'agent/agents/grading_agent.dart';
 import 'notification_service.dart';
+import 'settings_service.dart';
 
 /// AI 批阅结果（解析后）—— UI 与服务共享
 class AiGradingDraft {
   final int score;
   final String feedback;
   final Map<String, dynamic>? dimensions;
+  final List<String> basis;
   final List<String> strengths;
   final List<String> improvements;
   final bool aiFlag;
@@ -32,6 +34,7 @@ class AiGradingDraft {
     required this.score,
     required this.feedback,
     this.dimensions,
+    this.basis = const [],
     this.strengths = const [],
     this.improvements = const [],
     this.aiFlag = false,
@@ -68,6 +71,7 @@ class AutoGradingService {
     bool notifyStudent = true,
   }) async {
     try {
+      if (!await SettingsService.isTeacherAiGradingEnabled()) return null;
       final agent = GradingAgent();
       final result = await agent.gradeSubmission(
         taskTitle: taskTitle,
@@ -120,6 +124,7 @@ class AutoGradingService {
     bool notifyStudent = true,
   }) async {
     try {
+      if (!await SettingsService.isTeacherAiGradingEnabled()) return null;
       final agent = GradingAgent();
       final result = await agent.gradeReport(
         reportType: reportType,
@@ -168,18 +173,24 @@ class AutoGradingService {
     required String description,
     String? techStack,
     String? groupName,
+    String? videoPath,
+    String? videoUrl,
     bool returnDraft = false,
     bool notifyStudent = true,
   }) async {
     try {
+      if (!await SettingsService.isTeacherAiGradingEnabled()) return null;
       final agent = GradingAgent();
-      final result = await agent.gradeWork(
+      final compResult = await agent.gradeWorkComprehensive(
         title: workTitle,
         description: description,
         techStack: techStack,
         studentName: studentName,
         groupName: groupName,
+        videoPath: videoPath,
+        videoUrl: videoUrl,
       );
+      final result = compResult.content;
       final draft = await _parseAndSave(
         domain: 'works',
         targetId: workId,
@@ -233,6 +244,8 @@ class AutoGradingService {
     final feedback = _formatGradingFeedback(parsed);
     final dims = parsed['dimensions'] as Map<String, dynamic>? ??
         parsed['scores'] as Map<String, dynamic>?;
+    final basis =
+        (parsed['basis'] as List?)?.map((e) => e.toString()).toList() ?? [];
     final strengths =
         (parsed['strengths'] as List?)?.map((e) => e.toString()).toList() ?? [];
     final improvements =
@@ -265,6 +278,7 @@ class AutoGradingService {
       score: score,
       feedback: feedback,
       dimensions: dims,
+      basis: basis,
       strengths: strengths,
       improvements: improvements,
       aiFlag: aiFlag,
@@ -349,6 +363,13 @@ class AutoGradingService {
     }
     final dims = parsed['dimensions'] as Map<String, dynamic>? ??
         parsed['scores'] as Map<String, dynamic>?;
+    if (parsed['basis'] is List && (parsed['basis'] as List).isNotEmpty) {
+      sb.writeln('【评分依据】');
+      for (final s in parsed['basis'] as List) {
+        sb.writeln('  - $s');
+      }
+      sb.writeln();
+    }
     if (dims != null && dims.isNotEmpty) {
       sb.writeln('【各维度评分】');
       for (final entry in dims.entries) {

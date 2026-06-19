@@ -126,6 +126,7 @@ class _StudentLabPageState extends State<StudentLabPage> {
                   const SizedBox(height: 6),
                   Text(
                     '文件名格式：学号+姓名+任务名称.pdf\n'
+                    '示例：206004+刘东良+实验一 开发环境搭建.pdf\n'
                     '提交后自动同步到仓库目录：\n'
                     '  实验 → sync/students/$_userId/实验/\n'
                     '  考核 → sync/students/$_userId/考核/\n'
@@ -571,7 +572,7 @@ class _StudentLabPageState extends State<StudentLabPage> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          '提交的PDF将同步到仓库：\nsync/students/$_userId/实验/文件名.pdf\n\n文件名格式：学号+姓名+任务名称.pdf',
+                          '提交的PDF将同步到仓库：\nsync/students/$_userId/实验/文件名.pdf\n\n文件名格式：学号+姓名+任务名称.pdf\n示例：206004+刘东良+实验一 开发环境搭建.pdf',
                           style:
                               TextStyle(fontSize: 11, color: Colors.amber[900]),
                         ),
@@ -756,6 +757,13 @@ class _StudentLabPageState extends State<StudentLabPage> {
                           fileName: selectedFileName!,
                           extractedText: extractedText!,
                         );
+                        final teacherAiEnabled =
+                            await SettingsService.isTeacherAiGradingEnabled();
+                        if (!teacherAiEnabled) {
+                          final proceed =
+                              await _confirmDirectSubmitWithoutTeacherAi();
+                          if (proceed != true) return;
+                        }
                         savedSubmissionId = await _dao.submitTask(
                           taskId: task['id'] as int,
                           userId: _userId,
@@ -764,41 +772,47 @@ class _StudentLabPageState extends State<StudentLabPage> {
                           fileNames: selectedFileName,
                         );
                         final taskTitle = task['title'] as String? ?? '实验任务';
-                        final draft = await AutoGradingService.instance
-                            .gradeLabSubmission(
-                          submissionId: savedSubmissionId,
-                          studentId: _userId,
-                          studentName:
-                              _authService.currentUser?.realName ?? _userId,
-                          taskId: task['id'] as int,
-                          taskTitle: taskTitle,
-                          content: content,
-                          requirements: task['requirements'] as String? ?? '',
-                          maxScore: (task['max_score'] as int?) ?? 100,
-                          returnDraft: true,
-                          notifyStudent: false,
-                        );
-                        final passScore =
-                            await SettingsService.getEvaluationPassScore();
-                        if (draft == null ||
-                            !draft.isUsable ||
-                            draft.score < passScore) {
-                          await _dao.deleteSubmission(savedSubmissionId);
-                          await GradingResultDao()
-                              .deletePendingForTarget('lab', savedSubmissionId);
-                          savedSubmissionId = null;
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(draft == null
-                                    ? '提交失败：AI 审核未完成，请稍后重试'
-                                    : '提交失败：AI 初评 ${draft.score} 分，未达到 $passScore 分达标线，请修改后重新提交'),
-                                backgroundColor: Colors.red,
-                                duration: const Duration(seconds: 5),
-                              ),
-                            );
+                        AiGradingDraft? draft;
+                        if (teacherAiEnabled) {
+                          draft = await AutoGradingService.instance
+                              .gradeLabSubmission(
+                            submissionId: savedSubmissionId,
+                            studentId: _userId,
+                            studentName:
+                                _authService.currentUser?.realName ?? _userId,
+                            taskId: task['id'] as int,
+                            taskTitle: taskTitle,
+                            content: content,
+                            requirements: task['requirements'] as String? ?? '',
+                            maxScore: (task['max_score'] as int?) ?? 100,
+                            returnDraft: true,
+                            notifyStudent: false,
+                          );
+                          final passScore =
+                              await SettingsService.getEvaluationPassScore();
+                          if (draft == null ||
+                              !draft.isUsable ||
+                              draft.score < passScore) {
+                            await _dao.deleteSubmission(savedSubmissionId);
+                            await GradingResultDao().deletePendingForTarget(
+                                'lab', savedSubmissionId);
+                            savedSubmissionId = null;
+                            if (mounted) {
+                              if (draft == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                        '提交失败：AI 服务暂时不可用，请检查网络连接和 AI 配置后重试'),
+                                    backgroundColor: Colors.red,
+                                    duration: Duration(seconds: 5),
+                                  ),
+                                );
+                              } else {
+                                _showAiDraftBlockedDialog(draft, passScore);
+                              }
+                            }
+                            return;
                           }
-                          return;
                         }
                         // 通知教师
                         NotificationService().notifyLabSubmission(
@@ -815,8 +829,9 @@ class _StudentLabPageState extends State<StudentLabPage> {
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content:
-                                  Text('提交成功！AI 初评 ${draft.score} 分，等待教师复核。'),
+                              content: Text(teacherAiEnabled && draft != null
+                                  ? '提交成功！AI 初评 ${draft.score} 分，等待教师复核。'
+                                  : '提交成功！当前教师未开启系统 AI 初评，等待教师批阅。'),
                               backgroundColor: Colors.green,
                             ),
                           );
@@ -846,6 +861,90 @@ class _StudentLabPageState extends State<StudentLabPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showAiDraftBlockedDialog(AiGradingDraft draft, int passScore) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('AI 初评未达标'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: _buildAiDraftFeedback(draft, passScore),
+          ),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('知道了，修改后再提交'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<bool?> _confirmDirectSubmitWithoutTeacherAi() {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('当前可直接提交'),
+        content: const Text(
+          '教师当前未开启系统 AI 批阅，本次作业可以直接提交，提交后等待教师批阅。\n\n'
+          '建议你自行进行 AI 自检：进入「系统设置 → AI 配置」，选择服务商，填写 API Key，保存后可使用学习助手或相关 AI 功能检查报告内容是否完整、是否符合任务要求。',
+          style: TextStyle(height: 1.45),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('先不提交'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('直接提交'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAiDraftFeedback(AiGradingDraft draft, int passScore) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+            'AI 初评 ${draft.score} 分，未达到 $passScore 分达标线。教师尚未审核，请按以下意见修改后再次提交。'),
+        const SizedBox(height: 12),
+        _draftList('评分依据', draft.basis),
+        _draftList('做得好的地方', draft.strengths),
+        _draftList('需要改进', draft.improvements),
+        if (draft.feedback.trim().isNotEmpty) ...[
+          const SizedBox(height: 8),
+          const Text('详细反馈', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text(draft.feedback, style: const TextStyle(height: 1.45)),
+        ],
+      ],
+    );
+  }
+
+  Widget _draftList(String title, List<String> items) {
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          ...items.map((item) => Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Text('• $item', style: const TextStyle(height: 1.35)),
+              )),
+        ],
       ),
     );
   }

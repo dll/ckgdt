@@ -90,6 +90,16 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
         return;
       }
 
+      final wasUnsubmitted = (_work['status'] as String? ?? '待提交') == '待提交';
+      final isStudent =
+          !widget.authService.isTeacher && !widget.authService.isAdmin;
+      final teacherAiEnabled =
+          await SettingsService.isTeacherAiGradingEnabled();
+      if (wasUnsubmitted && isStudent && !teacherAiEnabled) {
+        final proceed = await _confirmDirectSubmitWithoutTeacherAi();
+        if (proceed != true) return;
+      }
+
       setState(() => _isUploading = true);
 
       final workId = _work['id'] as int;
@@ -144,13 +154,10 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
         whereArgs: [workId],
       );
 
-      final wasUnsubmitted = (_work['status'] as String? ?? '待提交') == '待提交';
-      final isStudent =
-          !widget.authService.isTeacher && !widget.authService.isAdmin;
       var successMessage = '视频上传成功';
 
       // 学生首次提交：AI 初评达到评价分数线后才切换为已提交并通知教师。
-      if (wasUnsubmitted && isStudent) {
+      if (wasUnsubmitted && isStudent && teacherAiEnabled) {
         final refreshedDraft = await widget.worksDao.getWork(workId);
         if (refreshedDraft != null && mounted) {
           final title = (refreshedDraft['title'] as String?) ??
@@ -171,6 +178,8 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
             description: description,
             techStack: techStack,
             groupName: groupName,
+            videoPath: refreshedDraft['file_path'] as String? ?? savedPath,
+            videoUrl: refreshedDraft['video_url'] as String? ?? savedPath,
             returnDraft: true,
             notifyStudent: false,
           );
@@ -182,15 +191,17 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                 if (refreshed != null) _work = refreshed;
                 _isUploading = false;
               });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(draft == null
-                      ? '提交失败：AI 审核未完成，请稍后重试'
-                      : '提交失败：AI 初评 ${draft.score} 分，未达到 $passScore 分达标线，请修改后重新提交'),
-                  backgroundColor: Colors.red,
-                  duration: const Duration(seconds: 5),
-                ),
-              );
+              if (draft == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('提交失败：AI 服务暂时不可用，请检查网络连接和 AI 配置后重试'),
+                    backgroundColor: Colors.red,
+                    duration: Duration(seconds: 5),
+                  ),
+                );
+              } else {
+                _showAiDraftBlockedDialog(draft, passScore);
+              }
               widget.onChanged?.call();
             }
             return;
@@ -200,7 +211,12 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
         }
       } else if (wasUnsubmitted) {
         await widget.worksDao.submitWork(workId);
+        if (isStudent && !teacherAiEnabled) {
+          successMessage = '作品提交成功！当前教师未开启系统 AI 初评，等待教师批阅。';
+        }
       }
+
+      unawaited(SyncService().uploadStudentData(userId));
 
       // 刷新
       final refreshed = await widget.worksDao.getWork(workId);
@@ -228,6 +244,102 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
         );
       }
     }
+  }
+
+  String _resolveVideoPath(Map<String, dynamic> work) {
+    final candidates = [
+      work['video_url'] as String?,
+      work['file_path'] as String?,
+    ].whereType<String>().map((e) => e.trim()).where((e) => e.isNotEmpty);
+    for (final path in candidates) {
+      if (path.startsWith('http')) return path;
+      if (File(path).existsSync()) return path;
+    }
+    return candidates.isEmpty ? '' : candidates.first;
+  }
+
+  void _showAiDraftBlockedDialog(AiGradingDraft draft, int passScore) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('AI 初评未达标'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: _buildAiDraftFeedback(draft, passScore),
+          ),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('知道了，修改后再提交'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<bool?> _confirmDirectSubmitWithoutTeacherAi() {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('当前可直接提交'),
+        content: const Text(
+          '教师当前未开启系统 AI 批阅，本次作品视频可以直接提交，提交后等待教师批阅。\n\n'
+          '建议你自行进行 AI 自检：进入「系统设置 → AI 配置」，选择服务商，填写 API Key，保存后可使用学习助手或相关 AI 功能检查作品说明、技术栈、演示视频和考核要求是否一致。',
+          style: TextStyle(height: 1.45),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('先不提交'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('直接提交'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAiDraftFeedback(AiGradingDraft draft, int passScore) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+            'AI 初评 ${draft.score} 分，未达到 $passScore 分达标线。教师尚未审核，请按以下意见修改后再次提交。'),
+        const SizedBox(height: 12),
+        _draftList('评分依据', draft.basis),
+        _draftList('做得好的地方', draft.strengths),
+        _draftList('需要改进', draft.improvements),
+        if (draft.feedback.trim().isNotEmpty) ...[
+          const SizedBox(height: 8),
+          const Text('详细反馈', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text(draft.feedback, style: const TextStyle(height: 1.45)),
+        ],
+      ],
+    );
+  }
+
+  Widget _draftList(String title, List<String> items) {
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          ...items.map((item) => Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Text('• $item', style: const TextStyle(height: 1.35)),
+              )),
+        ],
+      ),
+    );
   }
 
   Future<void> _toggleLike() async {
@@ -346,8 +458,8 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                     icon: const Icon(Icons.play_arrow,
                         color: Colors.white, size: 32),
                     onPressed: () {
-                      final videoUrl = _work['video_url'] as String? ?? '';
-                      if (videoUrl.isEmpty) {
+                      final videoPath = _resolveVideoPath(_work);
+                      if (videoPath.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('该作品尚未上传演示视频'),
@@ -356,21 +468,11 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                         );
                         return;
                       }
-                      // 如果是本地文件路径，直接打开
-                      if (File(videoUrl).existsSync()) {
-                        FileOpenerService.openFile(
-                          context,
-                          videoUrl,
-                          '${_work['title'] ?? '作品'}-演示视频',
-                        );
-                      } else {
-                        // Gitee URL 或远程路径
-                        FileOpenerService.openFile(
-                          context,
-                          videoUrl,
-                          '${_work['title'] ?? '作品'}-演示视频',
-                        );
-                      }
+                      FileOpenerService.openFile(
+                        context,
+                        videoPath,
+                        '${_work['title'] ?? '作品'}-演示视频',
+                      );
                     },
                   ),
                 ),
@@ -1012,17 +1114,38 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                   onPressed: isAiGrading
                       ? null
                       : () async {
+                          if (!await SettingsService
+                              .isTeacherAiGradingEnabled()) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      '教师 AI 批阅已关闭，请在「系统设置 → 教师 AI 批阅」中开启后再使用。'),
+                                ),
+                              );
+                            }
+                            return;
+                          }
                           setDialogState(() => isAiGrading = true);
                           try {
                             final agent = GradingAgent();
-                            final result = await agent.gradeWork(
+                            final resolvedVideo = _resolveVideoPath(_work);
+                            final compResult =
+                                await agent.gradeWorkComprehensive(
                               title: _work['title'] as String? ?? '',
                               description: _work['description'] as String?,
                               techStack: _work['tech_stack'] as String?,
                               studentName: _work['student_name'] as String? ??
                                   _work['leader_name'] as String?,
                               groupName: _work['group_name'] as String?,
+                              videoPath: resolvedVideo.startsWith('http')
+                                  ? null
+                                  : resolvedVideo,
+                              videoUrl: resolvedVideo.startsWith('http')
+                                  ? resolvedVideo
+                                  : null,
                             );
+                            final result = compResult.content;
                             final parsed = _tryParseGradingJson(result);
                             if (parsed != null) {
                               final scores =
@@ -1051,7 +1174,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                                       documentation;
                                 }
                                 commentCtrl.text =
-                                    parsed['feedback'] as String? ?? '';
+                                    _formatWorkAiFeedback(parsed);
                               });
                             } else {
                               setDialogState(() {
@@ -1168,6 +1291,48 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
       swallow(e, tag: 'WorkDetailSheet.parseAiJson');
       return null;
     }
+  }
+
+  String _formatWorkAiFeedback(Map<String, dynamic> parsed) {
+    final sb = StringBuffer();
+    final summary = parsed['summary'] as String?;
+    if (summary != null && summary.isNotEmpty) {
+      sb
+        ..writeln('【总评】$summary')
+        ..writeln();
+    }
+    final basis = parsed['basis'] as List?;
+    if (basis != null && basis.isNotEmpty) {
+      sb.writeln('【评分依据】');
+      for (final s in basis) {
+        sb.writeln('  - $s');
+      }
+      sb.writeln();
+    }
+    final strengths = parsed['strengths'] as List?;
+    if (strengths != null && strengths.isNotEmpty) {
+      sb.writeln('【优点】');
+      for (final s in strengths) {
+        sb.writeln('  - $s');
+      }
+      sb.writeln();
+    }
+    final improvements = parsed['improvements'] as List?;
+    if (improvements != null && improvements.isNotEmpty) {
+      sb.writeln('【改进建议】');
+      for (final s in improvements) {
+        sb.writeln('  - $s');
+      }
+      sb.writeln();
+    }
+    final feedback = parsed['feedback'] as String?;
+    if (feedback != null && feedback.isNotEmpty) {
+      sb
+        ..writeln('【详细反馈】')
+        ..writeln(feedback);
+    }
+    final result = sb.toString().trim();
+    return result.isNotEmpty ? result : (feedback ?? '');
   }
 
   Widget _scoreSlider(
