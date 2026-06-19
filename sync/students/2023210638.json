@@ -3,8 +3,8 @@
   "user_id": "2023210638",
   "user_name": "谢宇翰",
   "role": "student",
-  "synced_at": "2026-06-19T21:36:38.092335",
-  "last_active": "2026-06-19T21:36:38.092358",
+  "synced_at": "2026-06-19T21:48:19.736189",
+  "last_active": "2026-06-19T21:48:19.736222",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
@@ -121,7 +121,22 @@
       "teacher_confirmed": 0
     }
   ],
-  "student_reports": [],
+  "student_reports": [
+    {
+      "template_id": null,
+      "task_id": null,
+      "user_id": "2023210638",
+      "title": "项目报告",
+      "content_json": "2023210638谢宇翰项目报告.pdf",
+      "file_path": "/data/user/0/cn.edu.chzu.madkg/cache/file_picker/1781876290108/2023210638谢宇翰项目报告.pdf",
+      "status": "已提交",
+      "submit_time": "2026-06-19T21:38:15.357637",
+      "score": null,
+      "feedback": null,
+      "created_at": "2026-06-19T21:38:15.357641",
+      "updated_at": null
+    }
+  ],
   "student_works": [
     {
       "course_id": "mad",
