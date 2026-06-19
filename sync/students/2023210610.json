@@ -3,8 +3,8 @@
   "user_id": "2023210610",
   "user_name": "马建钰",
   "role": "student",
-  "synced_at": "2026-06-19T22:14:17.788455",
-  "last_active": "2026-06-19T22:14:17.788455",
+  "synced_at": "2026-06-19T22:17:14.681450",
+  "last_active": "2026-06-19T22:17:14.681450",
   "quiz_results": [
     {
       "user_id": "2023210610",
@@ -35,6 +35,24 @@
   "feedback": [],
   "learning_paths": [],
   "lab_submissions": [
+    {
+      "task_id": 4,
+      "user_id": "2023210610",
+      "content": "PDF实验报告：2023210610马建钰实验四 微信小程序开发.pdf\n\n--- 报告正文（自动提取）---\n实验四\n微信⼩程序开发\n⼀、实验项⽬基本信息\n实验名称：微信⼩程序开发\n实验类型：验证型\n学时分配：\n4\n学时\n对应课程⽬标：课程⽬标\n2\n实验⽇期：\n2026-04-17\n⼆、实验⽬标\n2.1\n实验⽬标\n完成通知列表⻚开发，⽀持\nwx:for\n渲染数据与点击跳转详情。\n完成通知详情⻚开发，⽀持路由参数解析与内容展⽰。\n使⽤本地存储实现\n“\n已读\n/\n未读\n”\n状态持久化，并在列表⻚统计未读数量。\n完成下拉刷新与⻚⾯联动，保证返回列表⻚后状态与统计同步更新。\n进⾏\nUI\n优化，形成统⼀主题⾊、卡⽚式列表与详情⻚底部操作栏的可预览界⾯。\n2.2\n成功标准\n通知列表⻚⾯功能完整（渲染、跳转、刷新）\n通知详情⻚⾯功能完整（展⽰、已读标记、操作栏）\n已读状态本地存储正常（\nreadIds\n持久化）\n真机预览正常，可完成运⾏结果留存\n⻚⾯样式统⼀（导航栏标题、统计栏、卡⽚化、主题⾊）\n三、实验环境\n操作系统：\nWindows\n开发⼯具：微信开发者⼯具\n项⽬路径：\n微信小程序开发\n/miniprogram\n技术栈：\nWXML + LESS + TypeScript\n运⾏终端：微信开发者⼯具模拟器\n+\n微信真机扫码预览\n四、总体设计\n4.1\n⼩程序整体框架\n总体介绍：\n该部分从整体视⻆描述通知⼩程序的代码组织与数据流转关系，包含数据源、⻚⾯层与本地存储三部分，以及\n列表⻚与详情⻚之间的跳转与状态同步。\n实验四微信⼩程序开发\n.md\n2026-04-30\n1\n/\n11\n图\n1\n⼩程序整体框架\n⼩程序采⽤\n“\n数据源（\nutils\n）\n-\n⻚⾯（\npages\n）\n-\n本地存储（\nStorage\n）\n”\n的分层组织。\n列表⻚与详情⻚共享同⼀份通知数据源，避免数据结构不⼀致。\n已读状态仅存储通知\nid\n列表，减少冗余数据写⼊，并通过⻚⾯⽣命周期（如列表⻚\nonShow\n）完成状态\n同步与统计刷新。\n4.2\n通知模块类图\n总体介绍：\n该部分以通知功能为核⼼，展⽰数据模型、列表⻚与详情⻚的职责划分，以及类之间的继承与依赖关系，⽤于\n说明\n“\n数据如何被⻚⾯读取、状态如何被存储并回流到⻚⾯\n”\n。\n图\n2\n通知模块类图\nNoticeListItem\n继承\n/\n扩展⾃\nCommunityNotice\n，在不改变原始通知数据结构的前提下增加\nisRead\n字\n段，⽤于列表⻚渲染与状态展⽰。\nIndexPage\n依赖数据源读取\nCommunityNotice\n列表，并依赖本地存储读取\nreadIds\n，将数据映射为\nNoticeListItem\n后进⾏统计与渲染。\nDetailPage\n依赖数据源按\nid\n定位单条\nCommunityNotice\n，并依赖本地存储写⼊\n/\n更新\nreadIds\n，从⽽\n驱动列表⻚返回后的状态刷新。\nCommunityNotice\n定义通知实体字段（\nid/title/content/author/time\n），作为列表与详情共享的基\n础数据模型。\n实验四微信⼩程序开发\n.md\n2026-04-30\n2\n/\n11\nIndexPage\n负责列表数据装载、统计计算、下拉刷新与详情跳转。\nDetailPage\n负责详情展⽰与交互（标记已读\n/\n未读、复制内容）。\n4.3\n通知查看与已读状态同步顺序\n总体介绍：\n该部分从⽤⼾操作视⻆描述进⼊列表、查看详情、返回列表三个阶段中，⻚⾯与本地存储之间的数据读写顺序\n与触发点，⽤于解释已读状态同步的实现逻辑。\n图\n3\n通知查看与已读状态同步顺序\n实验四微信⼩程序开发\n.md\n2026-04-30\n3\n/\n11\n⽤⼾进⼊列表⻚时，⻚⾯读取本地\nreadIds\n，将数据源映射为带\nisRead\n的列表项，并计算未读数量。\n⽤⼾点击某条通知后跳转详情⻚，详情⻚按\nid\n查找数据并展⽰，同时写⼊已读状态到本地存储。\n⽤⼾返回列表⻚触发\nonShow\n，列表⻚再次读取\nreadIds\n并刷新\nUI\n，保证已读\n/\n未读与统计栏⼀致。\n五、功能需求与数据模型\n5.1\n⻚⾯流程\n通知列表⻚\n->\n通知详情⻚\n->\n返回列表⻚（同步已读状态）\n5.2\n通知数据模型\ntype\nCommunityNotice\n= {\nid\n:\nnumber\ntitle\n:\nstring\ncontent\n:\nstring\nauthor\n:\nstring\ntime\n:\nstring\n}\n5.3\n已读状态模型\n存储介质：⼩程序本地存储（\nStorage\n）\n存储键名：\nreadIds\n存储内容：\nnumber[]\n（只保存已读通知的\nid\n列表）\n设计理由：仅保存\nid\n列表可减少冗余写⼊，且便于在列表⻚快速映射\nisRead\n并统计未读数。\n六、实验实现过程\n6.1\n准备与创建项⽬\n1.\n打开微信开发者⼯具，选择\n“\n新建项⽬\n”\n。\n2.\n选择项⽬⽬录为\ncg2sclspdi/\n微信小程序开发\n，并确保⼩程序源码⽬录为\nminiprogram/\n。\n3.\n选择\nAppID\n（⽆\nAppID\n可使⽤测试号），创建后进⼊项⽬⾸⻚。\n4.\n确认可正常编译预览，保证后续调试与真机扫码流程可⽤。\n6.2\n需求分析阶段\n1.\n确定⻚⾯结构：列表⻚展⽰通知摘要，详情⻚展⽰通知正⽂。\n2.\n确定核⼼交互：\n列表点击跳转详情（携带\nid\n）。\n详情打开即标记已读，返回列表后同步更新。\n⽀持下拉刷新，刷新后统计栏与列表状态⼀致。\n3.\n确定\nUI\n⽬标：\n导航栏使⽤⼩程序原⽣标题。\n列表采⽤卡⽚式设计，未读更醒⽬。\n详情⻚排版统⼀，并提供底部操作栏（标记已读\n/\n未读、复制内容）。\n实验四微信⼩程序开发\n.md\n2026-04-30\n4\n/\n11\n6.3 AI\n辅助编码阶段\n1.\n使⽤\nAI\n⼯具分模块⽣成代码⻣架：\n列表⻚：\nwx:for\n渲染、点击跳转、下拉刷新⽣命周期。\n详情⻚：路由参数解析、内容展⽰、本地存储写⼊。\n2.\n结合项⽬实际⽬录与\nTypeScript/LESS\n规范，⼿动调整：\n路由与⻚⾯路径保持⼀致（\npages/index/index\n、\npages/detail/detail\n）。\n避免使⽤部分真机环境不兼容语法，确保真机可正常运⾏。\n6.4\n通知列表⻚开发\n在\npages/index/index.wxml\n中使⽤\nwx:for\n循环渲染通知列表。\n列表项点击后通过\nwx.navigateTo\n跳转详情⻚并传递\nid\n。\n⻚⾯⽀持\nonPullDownRefresh\n和\nscroll-view\n刷新交互。\n顶部设置统计栏，展⽰\n“\n全部数量\n”\n和\n“\n未读数量\n”\n。\n关键实现要点：\n数据装载：从\nutils/notices.ts\n读取通知数组，并结合本地\nreadIds\n映射\nisRead\n。\n统计计算：\ntotalCount = list.length\n，\nunreadCount = list.filter(!isRead).length\n。\n⽣命周期同步：列表⻚在\nonShow\n触发重新装载，确保从详情⻚返回后状态⽴刻刷新。\n6.5\n通知详情⻚开发\n在\npages/detail/detail.ts\n中接收路由参数，按\nid\n匹配通知数据。\n详情⻚展⽰标题、发布部⻔、发布时间、正⽂内容。\n⻚⾯打开时⾃动标记为已读，并写⼊本地存储。\n新增底部操作栏，⽀持\n“\n标为已读\n/\n未读\n”\n和\n“\n复制内容\n”\n。\n关键实现要点：\n参数解析：从\nquery\n读取\nid\n并转换为数字，查找对应通知。\n已读写⼊：详情⻚在\nonLoad\n内调⽤标记⽅法，将\nid\n写⼊\nreadIds\n。\n操作栏：\n“\n标为已读\n/\n未读\n”\n：对\nreadIds\n做加⼊\n/\n移除，并实时更新\nisRead\n。\n“\n复制内容\n”\n：调⽤剪贴板接⼝，将通知内容复制到系统剪贴板。\n6.6\n本地存储实现\n使⽤\nwx.getStorageSync('readIds')\n读取已读列表。\n使⽤\nwx.setStorageSync('readIds', ids)\n持久化更新已读状态。\n列表⻚在\nonShow\n⽣命周期内重新计算已读\n/\n未读状态，保证详情返回后状态正确。\n补充说明：\n列表⻚展⽰层使⽤\nisRead\n控制\n“\n已读\n/\n未读\n”\n徽标、透明度与未读提⽰点。\n本地存储仅保存\nid\n，避免将完整通知内容写⼊缓存导致冗余与⼀致性问题。\n6.7\n配置与导航栏设置\n全局路由配置：在\nminiprogram/app.json\n中配置⻚⾯路径，保证可以跳转到详情⻚。\n实验四微信⼩程序开发\n.md\n2026-04-30\n5\n/\n11\n⻚⾯标题配置：在\npages/index/index.json\n、\npages/detail/detail.json\n中设置\nnavigationBarTitleText\n，使⽤原⽣导航栏标题展⽰。\n6.8 UI\n优化与⼀致性改造\n⻚⾯标题改为原⽣导航栏标题（列表⻚、详情⻚）。\n移除⾃定义导航栏组件依赖，减少⻚⾯冗余元素。\n列表项改为卡⽚式布局，增强层次和可读性。\n部⻔与⽇期同⼀⾏显⽰：部⻔左对⻬（\n#666\n）、⽇期右对⻬（\n#999\n）、字号\n12px\n。\n已读\n/\n未读状态采⽤徽标\n+\n视觉弱化（已读）\n+\n主题⾊强化（未读）表达。\n引⼊统⼀主题⾊变量，统⼀列表⻚与详情⻚视觉⻛格。\n七、项⽬关键⽂件说明\n7.1\n⽬录结构（核⼼）\n微信小程序开发\n/\nminiprogram/\napp.json\napp.ts\napp.less\npages/\nindex/\nindex.wxml\nindex.ts\nindex.less\nindex.json\ndetail/\ndetail.wxml\ndetail.ts\ndetail.less\ndetail.json\nutils/\nnotices.ts\n7.2\n关键⽂件作⽤\nminiprogram/app.json\n：全局窗⼝与导航栏配置。\nminiprogram/pages/index/index.wxml\n：通知列表结构与统计栏。\nminiprogram/pages/index/index.ts\n：列表加载、刷新、跳转与统计逻辑。\nminiprogram/pages/index/index.less\n：列表卡⽚与状态样式。\nminiprogram/pages/detail/detail.wxml\n：详情⻚主体与底部操作栏结构。\nminiprogram/pages/detail/detail.ts\n：详情数据读取、已读切换、复制内容逻辑。\nminiprogram/pages/detail/detail.less\n：详情⻚排版、间距、底部栏样式。\nminiprogram/utils/notices.ts\n：通知数据源定义。\n⼋、功能测试记录\n8.1\n测试步骤\n实验四微信⼩程序开发\n.md\n2026-04-30\n6\n/\n11\n1.\n在微信开发者⼯具中点击\n“\n编译\n”\n，确认列表⻚正常展⽰。\n2.\n点击任意通知，验证可进⼊详情⻚并展⽰标题、部⻔、时间与正⽂。\n3.\n从详情⻚返回列表⻚，验证该通知变为已读，未读数量同步减少。\n4.\n在详情⻚使⽤底部操作栏：\n点击\n“\n标为未读\n/\n标为已读\n”\n，返回列表验证状态变化。\n点击\n“\n复制内容\n”\n，验证提⽰与剪贴板内容正确。\n5.\n执⾏下拉刷新，验证刷新结束后统计栏与列表状态保持⼀致。\n6.\n使⽤\n“\n预览\n/\n真机调试\n”\n，扫码在⼿机端验证功能与布局⼀致性，并保存运⾏结果图像⽂件。\n8.2\n测试项与结果\n测试项\n预期结果\n测试结果\n列表渲染\n通知可正常显⽰\n通过\n详情跳转\n点击列表项进⼊对应详情\n通过\n已读持久化\n打开详情后返回列表显⽰已读\n通过\n下拉刷新\n下拉后状态与统计正确更新\n通过\n底部操作栏\n可切换已读状态、可复制内容\n通过\n⻚⾯样式\n卡⽚化、统计栏、主题⾊统⼀\n通过\n8.3\n运⾏测试\n实验四微信⼩程序开发\n.md\n2026-04-30\n7\n/\n11\n图\n4\n通知列表⻚\n图\n5\n通知详情⻚\n实验四微信⼩程序开发\n.md\n2026-04-30\n8\n/\n11\n图\n6\n已读\n/\n未读状态对⽐\n图\n7\n详情⻚底部操作栏\n实验四微信⼩程序开发\n.md\n2026-04-30\n9\n/\n11\n图\n8\n⼩程序验证码\n图\n9\n真机预览与验证\n九、部署运维\n1.\n在微信开发者⼯具中点击\n“\n上传\n”\n，填写版本号与项⽬备注。\n2.\n上传完成后，在⼩程序管理后台或⼯具内获取体验版⼆维码。\n3.\n使⽤真机微信扫码进⼊体验版，重点验证：\n⻚⾯是否可正常打开与跳转。\n已读状态是否可写⼊并在返回列表后同步刷新。\nUI\n是否在不同机型上保持合理间距与可读性。\n⼗、问题与解决\n问题：真机调试报\nUnexpected token .\n。\n原因：使⽤了可选链语法，部分环境解析失败。\n解决：改为安全对象判空写法，避免使⽤可选链。\n实验四微信⼩程序开发\n.md\n2026-04-30\n10\n/\n11\n⼗⼀、实验总结\n本实验完成了\n“\n列表\n+\n详情\n+\n本地存储\n+\n下拉刷新\n”\n的⼩程序核⼼流程。\n通过样式统⼀、状态强化、底部操作栏等⽅式完成了界⾯优化。\n对微信⼩程序⻚⾯路由、⽣命周期、本地缓存和交互设计有了更完整的实践认识。\n实验四微信⼩程序开发\n.md\n2026-04-30\n11\n/\n11\n",
+      "file_paths": "D:\\滁州学院作业\\大三下\\移动应用开发\\项目仓库（国际版）\\cg2sclspdi\\docs\\实验四微信小程序开发\\2023210610马建钰实验四 微信小程序开发.pdf",
+      "file_names": "2023210610马建钰实验四 微信小程序开发.pdf",
+      "submit_time": "2026-06-19T22:16:53.896066",
+      "status": "已提交",
+      "score": null,
+      "feedback": null,
+      "scorer_id": null,
+      "scored_at": null,
+      "created_at": "2026-04-24T09:03:01.324714",
+      "updated_at": "2026-06-19T22:16:53.896066",
+      "ai_suspicion": 0.0,
+      "ai_evidence": null,
+      "teacher_confirmed": 0
+    },
     {
       "task_id": 6,
       "user_id": "2023210610",
@@ -85,24 +103,6 @@
       "scored_at": null,
       "created_at": "2026-04-24T09:02:06.413846",
       "updated_at": "2026-05-04T23:58:51.678406",
-      "ai_suspicion": 0.0,
-      "ai_evidence": null,
-      "teacher_confirmed": 0
-    },
-    {
-      "task_id": 4,
-      "user_id": "2023210610",
-      "content": "PDF实验报告：2023210610马建钰实验四 微信小程序开发.pdf",
-      "file_paths": "D:\\滁州学院作业\\大三下\\移动应用开发\\项目仓库（国际版）\\cg2sclspdi\\docs\\实验四微信小程序开发\\2023210610马建钰实验四 微信小程序开发.pdf",
-      "file_names": "2023210610马建钰实验四 微信小程序开发.pdf",
-      "submit_time": "2026-04-30T08:58:50.839797",
-      "status": "已提交",
-      "score": null,
-      "feedback": null,
-      "scorer_id": null,
-      "scored_at": null,
-      "created_at": "2026-04-24T09:03:01.324714",
-      "updated_at": "2026-04-30T08:58:50.839797",
       "ai_suspicion": 0.0,
       "ai_evidence": null,
       "teacher_confirmed": 0
