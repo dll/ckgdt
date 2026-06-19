@@ -3,8 +3,8 @@
   "user_id": "2023210610",
   "user_name": "马建钰",
   "role": "student",
-  "synced_at": "2026-06-18T14:04:46.268476",
-  "last_active": "2026-06-18T14:04:46.268476",
+  "synced_at": "2026-06-19T21:59:00.745441",
+  "last_active": "2026-06-19T21:59:00.745441",
   "quiz_results": [
     {
       "user_id": "2023210610",
@@ -145,12 +145,52 @@
     }
   ],
   "student_reports": [],
-  "student_works": [],
+  "student_works": [
+    {
+      "course_id": "mad",
+      "title": "智慧社区生活服务平台开发与整合",
+      "description": "【功能模块系统】将社区各项服务（报修、缴费、投票、活动报名）封装为独立的可插拔Cordova模块，支持灵活配置和版本管理。【跨平台组件复用】开发通用的社区服务组件库（工单状态卡、公告轮播、缴费表单），在不同平台上保持一致的交互体验。【AI服务推荐】调用AI大模型根据住户的使用历史和需求特征，智能推荐可能需要的社区服务。",
+      "tech_stack": "HTML + CSS + JavaScript",
+      "work_type": "综合项目",
+      "group_name": "cg2-sclspdi",
+      "leader_name": "马建钰",
+      "user_id": "2023210610",
+      "file_path": "C:\\Users\\jianyuma\\Documents/works_videos/2023210610/演示视频_马建钰_2023210610.mp4",
+      "file_size": "49.9MB",
+      "status": "待提交",
+      "submit_time": null,
+      "tags": "[\"HTML\",\"CSS\",\"JavaScript\"]",
+      "created_at": "2026-06-18T14:05:25.099214",
+      "updated_at": "2026-06-18T14:05:25.099214",
+      "related_node_ids": null,
+      "ai_suspicion": 0.0,
+      "teacher_confirmed": 0,
+      "project_id": null,
+      "group_id": null,
+      "video_url": "C:\\Users\\jianyuma\\Documents/works_videos/2023210610/演示视频_马建钰_2023210610.mp4",
+      "thumbnail_url": null,
+      "video_duration": null,
+      "view_count": 0,
+      "like_count": 0,
+      "comment_count": 0,
+      "repo": "cg2-sclspdi",
+      "class_group": "cg2",
+      "project": "智慧社区生活服务平台开发与整合",
+      "student_role": "Cordova开发工程师",
+      "student_name": "马建钰"
+    }
+  ],
   "survey_responses": [],
   "checkin_records": [],
   "work_comments": [],
   "work_likes": [],
-  "work_views": [],
+  "work_views": [
+    {
+      "work_id": 86,
+      "user_id": "2023210610",
+      "viewed_at": "2026-06-18T14:06:36.142232"
+    }
+  ],
   "peer_reviews": [],
   "collaboration_messages": [],
   "contribution_scores": [],
