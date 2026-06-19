@@ -1,11 +1,11 @@
 {
     "name": "课程图谱与数字孪生v2.0.2",
-    "short_name": "移动图谱与数字孪生",
+    "short_name": "课程图谱与数字孪生",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "移动图谱与数字孪生 — 移动应用开发课程的知识图谱与数字孪生教学平台",
+    "description": "课程图谱与数字孪生 — 移动应用开发课程的知识图谱与数字孪生教学平台",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
