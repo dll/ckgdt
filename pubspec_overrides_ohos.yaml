@@ -32,3 +32,9 @@ dependency_overrides:
   path_provider: "<2.1.4"
   # package_info_plus 8.3.1 要 Dart 3.6+
   package_info_plus: "<8.3.0"
+  # webview_flutter 4.x 要 Dart 3.5+
+  webview_flutter: "<=3.0.4"
+  # webview_flutter_android 4.x 要 Dart 3.5+ (transitive dep)
+  webview_flutter_android: "<=3.16.0"
+  # webview_flutter_wkwebview 3.x 要 Dart 3.5+ (transitive dep)
+  webview_flutter_wkwebview: "<=3.25.0"
