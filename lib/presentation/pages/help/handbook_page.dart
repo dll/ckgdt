@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../widgets/back_button_bar.dart';
 
 /// 用户手册页面 — 根据角色显示对应的操作指南

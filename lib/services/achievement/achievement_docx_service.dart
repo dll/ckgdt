@@ -43,6 +43,8 @@ class AchievementDocxService {
     String? qualitativeText,
     String? improvementText,
     double expectation = 0.6,
+    Uint8List? barChartPng,
+    List<Uint8List?> scatterChartPngs = const [],
   }) async {
     final template = await _findTemplateForCourse(courseName);
     if (template != null) {
@@ -61,6 +63,8 @@ class AchievementDocxService {
           qualitativeText: qualitativeText,
           improvementText: improvementText,
           expectation: expectation,
+          barChartPng: barChartPng,
+          scatterChartPngs: scatterChartPngs,
         );
       } catch (_) {
         // Fall through to the generated OOXML report if a user-supplied
@@ -83,6 +87,8 @@ class AchievementDocxService {
       qualitativeText: qualitativeText,
       improvementText: improvementText,
       expectation: expectation,
+      barChartPng: barChartPng,
+      scatterChartPngs: scatterChartPngs,
     );
 
     archive.addFile(
@@ -92,12 +98,18 @@ class AchievementDocxService {
     archive.addFile(
         ArchiveFile.string('word/_rels/document.xml.rels', _buildDocRels()));
 
+    // 嵌入图表 PNG（条形图 + 4 张散点图）→ 返回合并后的新 archive
+    final packaged = (barChartPng != null || scatterChartPngs.isNotEmpty)
+        ? _embedChartImages(archive,
+            barChartPng: barChartPng, scatterChartPngs: scatterChartPngs)
+        : archive;
+
     final dir = await OutputPathService.getOutputDirectory();
     final safeName = '${courseName}_${className}_达成评价报告'
         .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
     final filePath = '${dir.path}/$safeName.docx';
 
-    final zipBytes = ZipEncoder().encode(archive) ?? <int>[];
+    final zipBytes = ZipEncoder().encode(packaged) ?? <int>[];
     await File(filePath).writeAsBytes(Uint8List.fromList(zipBytes));
     return filePath;
   }
@@ -145,6 +157,8 @@ class AchievementDocxService {
     String? qualitativeText,
     String? improvementText,
     required double expectation,
+    Uint8List? barChartPng,
+    List<Uint8List?> scatterChartPngs = const [],
   }) async {
     final archive = ZipDecoder().decodeBytes(await template.readAsBytes());
     final files = <String, List<int>>{};
@@ -176,11 +190,21 @@ class AchievementDocxService {
       teacherName,
     );
 
+    // 五图插入正文（剥离的图片在 _embedChartImages 写入，正文这里挂引用）
+    final chartsXml = _chartsBodyXml(barChartPng, scatterChartPngs);
+    if (chartsXml.isNotEmpty) _insertBodyCharts(doc, chartsXml);
+
     files['word/document.xml'] = utf8.encode(doc.toXmlString());
-    final out = Archive();
+    var out = Archive();
     files.forEach((name, content) {
       out.addFile(ArchiveFile(name, content.length, content));
     });
+
+    // 嵌入图表 PNG → 返回合并后的新 archive
+    if (barChartPng != null || scatterChartPngs.isNotEmpty) {
+      out = _embedChartImages(out,
+          barChartPng: barChartPng, scatterChartPngs: scatterChartPngs);
+    }
 
     final dir = await OutputPathService.getOutputDirectory();
     final safeName = '${courseName}_${className}_达成评价报告'
@@ -448,7 +472,163 @@ class AchievementDocxService {
 
   String _buildDocRels() =>
       '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>''';
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>''';
+
+  /// 将图表 PNG 嵌入 DOCX archive（word/media/imageN.png），
+  /// 并**合并**（而非覆盖）[Content_Types].xml 与 document.xml.rels，
+  /// 保留模板原有的 styles/numbering/settings 等 Override 与关系。
+  /// relId 顺序：条形图 rImg1，其后散点图 rImg2..N（须与 _chartsBodyXml 一致）。
+  Archive _embedChartImages(
+    Archive archive, {
+    Uint8List? barChartPng,
+    List<Uint8List?> scatterChartPngs = const [],
+  }) {
+    final images = <Uint8List>[];
+    if (barChartPng != null) images.add(barChartPng);
+    for (final png in scatterChartPngs) {
+      if (png != null) images.add(png);
+    }
+    if (images.isEmpty) return archive;
+
+    // 合并 [Content_Types].xml：补 png Default，保留原有内容。
+    var ct = _readArchiveString(archive, '[Content_Types].xml') ??
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+            '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+            '<Default Extension="xml" ContentType="application/xml"/>'
+            '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
+            '</Types>';
+    if (!ct.contains('Extension="png"')) {
+      ct = ct.replaceFirst('</Types>',
+          '<Default Extension="png" ContentType="image/png"/></Types>');
+    }
+
+    // 合并 word/_rels/document.xml.rels：追加图片关系，保留原有关系。
+    var rels = _readArchiveString(archive, 'word/_rels/document.xml.rels') ??
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+    final add = StringBuffer();
+    for (var i = 0; i < images.length; i++) {
+      if (rels.contains('Id="rImg${i + 1}"')) continue;
+      add.write('<Relationship Id="rImg${i + 1}" '
+          'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" '
+          'Target="media/image${i + 1}.png"/>');
+    }
+    if (add.isNotEmpty) {
+      rels = rels.replaceFirst('</Relationships>', '$add</Relationships>');
+    }
+
+    // archive 包的 files 列表不可变 → 重建：跳过将被替换的两项与旧 media，
+    // 其余原样保留，再追加合并后的 content-types/rels 与新图片。
+    final out = Archive();
+    final mediaRe = RegExp(r'^word/media/image\d+\.png$');
+    for (final f in archive.files) {
+      if (f.name == '[Content_Types].xml') continue;
+      if (f.name == 'word/_rels/document.xml.rels') continue;
+      if (mediaRe.hasMatch(f.name)) continue;
+      out.addFile(f);
+    }
+    for (var i = 0; i < images.length; i++) {
+      out.addFile(ArchiveFile(
+          'word/media/image${i + 1}.png', images[i].length, images[i]));
+    }
+    out.addFile(ArchiveFile.string('[Content_Types].xml', ct));
+    out.addFile(ArchiveFile.string('word/_rels/document.xml.rels', rels));
+    return out;
+  }
+
+  String? _readArchiveString(Archive a, String name) {
+    for (final f in a.files) {
+      if (f.name == name) {
+        return utf8.decode(f.content as List<int>);
+      }
+    }
+    return null;
+  }
+
+  /// 生成"可视化图表"正文段落 XML（标题 + 各图 inline drawing + 图注）。
+  /// relId 顺序必须与 _embedChartImages 写 rels 的顺序一致：条形图优先、散点图其后。
+  String _chartsBodyXml(
+      Uint8List? barChartPng, List<Uint8List?> scatterChartPngs) {
+    final hasBar = barChartPng != null;
+    final scatters = scatterChartPngs.whereType<Uint8List>().toList();
+    if (!hasBar && scatters.isEmpty) return '';
+    final b = StringBuffer();
+    b.write('<w:p><w:pPr><w:spacing w:before="240" w:after="120"/>'
+        '<w:rPr><w:b/><w:sz w:val="28"/></w:rPr></w:pPr>'
+        '<w:r><w:rPr><w:b/><w:sz w:val="28"/></w:rPr>'
+        '<w:t>五、课程目标达成度可视化图表</w:t></w:r></w:p>');
+    var rel = 1;
+    var picId = 1000;
+    const cx = 5029200; // ≈5.5 inch
+    const cy = 3018600; // ≈3.3 inch
+    void img(String caption) {
+      b.write(_imageParagraph(rel, picId, cx, cy));
+      b.write('<w:p><w:pPr><w:jc w:val="center"/></w:pPr>'
+          '<w:r><w:rPr><w:sz w:val="18"/></w:rPr>'
+          '<w:t>${_xmlEsc(caption)}</w:t></w:r></w:p>');
+      rel++;
+      picId++;
+    }
+
+    if (hasBar) img('图1 课程目标达成度对比');
+    for (var i = 0; i < scatters.length; i++) {
+      img('图${hasBar ? i + 2 : i + 1} 课程目标${i + 1}学生个体达成度分布与趋势');
+    }
+    return b.toString();
+  }
+
+  String _imageParagraph(int relId, int picId, int cx, int cy) {
+    return '<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:drawing>'
+        '<wp:inline distT="0" distB="0" distL="0" distR="0" '
+        'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">'
+        '<wp:extent cx="$cx" cy="$cy"/><wp:docPr id="$picId" name="chart$picId"/>'
+        '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+        '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+        '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+        '<pic:nvPicPr><pic:cNvPr id="$picId" name="chart$picId"/><pic:cNvPicPr/></pic:nvPicPr>'
+        '<pic:blipFill><a:blip r:embed="rImg$relId"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
+        '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="$cx" cy="$cy"/></a:xfrm>'
+        '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'
+        '</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>';
+  }
+
+  /// 把图表段落 XML 插入模板 document.xml 的 <w:body> 内、<w:sectPr> 之前。
+  void _insertBodyCharts(XmlDocument doc, String fragmentXml) {
+    final bodies = doc.findAllElements('body',
+        namespace: 'http://schemas.openxmlformats.org/wordprocessingml/2006/main');
+    final body = bodies.isNotEmpty
+        ? bodies.first
+        : (doc.findAllElements('w:body').isNotEmpty
+            ? doc.findAllElements('w:body').first
+            : null);
+    if (body == null) return;
+    final wrapper = XmlDocument.parse(
+        '<w:wrap xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" '
+        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+        '$fragmentXml</w:wrap>');
+    final nodes = wrapper.rootElement.children
+        .whereType<XmlElement>()
+        .map((e) => e.copy())
+        .toList();
+    final sectPr = body.children
+        .whereType<XmlElement>()
+        .where((e) => e.name.local == 'sectPr')
+        .toList();
+    if (sectPr.isNotEmpty) {
+      final idx = body.children.indexOf(sectPr.first);
+      body.children.insertAll(idx, nodes);
+    } else {
+      body.children.addAll(nodes);
+    }
+  }
+
+  String _xmlEsc(String s) => s
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;');
+
+
 
   String _buildDocumentXml({
     required String courseName,
@@ -463,6 +643,8 @@ class AchievementDocxService {
     String? qualitativeText,
     String? improvementText,
     required double expectation,
+    Uint8List? barChartPng,
+    List<Uint8List?> scatterChartPngs = const [],
   }) {
     final b = StringBuffer();
     b.write('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>');
@@ -515,6 +697,8 @@ class AchievementDocxService {
     _heading(b, '四、达成结果分析与持续改进');
     _buildAnalysisTable(b, objectives, classStats, analysisText,
         qualitativeText, improvementText, teacherName);
+
+    b.write(_chartsBodyXml(barChartPng, scatterChartPngs));
 
     b.write('</w:body></w:document>');
     return b.toString();

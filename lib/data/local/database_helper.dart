@@ -70,7 +70,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 30,
+      version: 31,
       singleInstance: true, // 启用单例模式
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
@@ -129,7 +129,7 @@ class DatabaseHelper {
         // 重新打开（版本号必须与主初始化一致）
         final db2 = await openDatabase(
           dbName,
-          version: 30,
+          version: 31,
           singleInstance: true, // 启用单例模式
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
@@ -212,7 +212,7 @@ class DatabaseHelper {
     Database db;
     db = await openDatabase(
       dbPath,
-      version: 30,
+      version: 31,
       singleInstance: true, // 启用单例模式，防止多实例同时访问
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
@@ -837,7 +837,7 @@ class DatabaseHelper {
         {
           'id': 1,
           'provider': 'deepseek',
-          'api_key': 'sk-717ef9146311424daa2fbead8ed4682b',
+          'api_key': 'sk-c93a22110da94aebb834d6d0ddec802e',
           'model': 'deepseek-v4-pro',
           'base_url': 'https://api.deepseek.com',
           'temperature': 0.7,
@@ -938,6 +938,9 @@ class DatabaseHelper {
     if (oldVersion < 30) {
       await _migrateToV30(db);
     }
+    if (oldVersion < 31) {
+      await _migrateToV31(db);
+    }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
   }
@@ -1014,6 +1017,7 @@ class DatabaseHelper {
     await _migrateToV28(db);
     await _migrateToV29(db);
     await _migrateToV30(db);
+    await _migrateToV31(db);
     await _ensureAchievementColumns(db);
     await _ensureCourseObjectivesColumns(db);
   }
@@ -1989,7 +1993,7 @@ class DatabaseHelper {
           {
             'id': 1,
             'provider': 'deepseek',
-            'api_key': 'sk-717ef9146311424daa2fbead8ed4682b',
+            'api_key': 'sk-c93a22110da94aebb834d6d0ddec802e',
             'model': 'deepseek-v4-pro',
             'base_url': 'https://api.deepseek.com',
             'temperature': 0.7,
@@ -2571,6 +2575,57 @@ class DatabaseHelper {
           'CREATE INDEX IF NOT EXISTS idx_learning_paths_course_user ON learning_paths(course_id, user_id)');
     } catch (e) {
       swallow(e, tag: 'V30.index_course_scope');
+    }
+  }
+
+  /// V31: 新建 assessment_reports 表，将考核报告从 student_reports 中分离。
+  ///
+  /// 问题根因：student_reports 被实验系统和考核系统共用，导致考核报告
+  /// 混入实验报告 tab。解决：创建独立的 assessment_reports 表，
+  /// 迁移 template_id IS NULL 的记录（考核报告），然后删除旧记录。
+  Future<void> _migrateToV31(Database db) async {
+    // 1. 创建 assessment_reports 表
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS assessment_reports(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id INTEGER,
+        user_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        content_json TEXT,
+        file_path TEXT,
+        status TEXT DEFAULT '草稿',
+        submit_time TEXT,
+        score INTEGER,
+        feedback TEXT,
+        created_at TEXT,
+        updated_at TEXT
+      )
+    ''');
+
+    // 2. 迁移 student_reports 中 template_id IS NULL 的记录（考核报告）
+    try {
+      final count = await db.rawInsert('''
+        INSERT INTO assessment_reports
+          (task_id, user_id, title, content_json, file_path, status,
+           submit_time, score, feedback, created_at, updated_at)
+        SELECT
+          task_id, user_id, title, content_json, file_path, status,
+          submit_time, score, feedback, created_at, updated_at
+        FROM student_reports
+        WHERE template_id IS NULL
+      ''');
+      InitLogger.log('db', 'V31: migrated $count assessment reports');
+
+      // 3. 删除已迁移的记录
+      if (count > 0) {
+        final deleted = await db.delete(
+          'student_reports',
+          where: 'template_id IS NULL',
+        );
+        InitLogger.log('db', 'V31: deleted $deleted old assessment reports from student_reports');
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'V31.migrate_assessment_reports', stack: st);
     }
   }
 

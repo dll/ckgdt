@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../data/local/user_dao.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/local/class_dao.dart';

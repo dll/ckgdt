@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../../data/local/survey_dao.dart';
 import '../../../services/auth_service.dart';

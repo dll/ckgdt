@@ -9,6 +9,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../../../../data/local/achievement_dao.dart';
+import '../../../../services/achievement/achievement_chart_service.dart';
 import '../../../../services/achievement/achievement_docx_service.dart';
 import '../../../../services/achievement/achievement_template_excel_service.dart';
 import '../../../../services/achievement/excel_chart_injector.dart';
@@ -798,6 +799,8 @@ class _ReportTabState extends State<ReportTab> {
               _stdDevOf(scores, (s) => (s['total_score'] as double?) ?? 0),
         },
         students: scores,
+        barChartPng: await _generateBarChartPng(scores),
+        scatterChartPngs: await _generateScatterChartPngs(scores),
       );
 
       if (mounted) {
@@ -913,10 +916,28 @@ class _ReportTabState extends State<ReportTab> {
           examAverage: avgMap(xs),
           weightedAchievement: _weightedAchievement,
         );
-        final bytes = AchievementTemplateExcelService.instance.fillTemplate(
+        final filled = AchievementTemplateExcelService.instance.fillTemplate(
           Uint8List.fromList(await templateFile.readAsBytes()),
           payload,
+          studentCount: scores.length,
         );
+        // 五图按计算结果重绘：剥离模板内嵌旧图，注入绑定数据区的原生 OOXML 图表
+        // （条形图数据在 B7:C10；各目标散点图数据在 B/C/D/E 第 1 行起）。
+        final specs = <ChartSpec>[
+          ChartSpec.barRange(
+              sheetName: '课程目标条形图',
+              title: '课程目标达成度',
+              startRow: 7,
+              endRow: 10),
+          for (int i = 0; i < 4; i++)
+            ChartSpec.scatterRange(
+              sheetName: '目标${i + 1}散点趋势图',
+              title: '学生个体课程目标${i + 1}达成评价结果',
+              startRow: 1,
+              endRow: scores.isEmpty ? 1 : scores.length,
+            ),
+        ];
+        final bytes = ExcelChartInjector.inject(filled, specs);
         await file.writeAsBytes(bytes);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -1444,6 +1465,49 @@ class _ReportTabState extends State<ReportTab> {
         values.map((v) => (v - mean) * (v - mean)).reduce((a, b) => a + b) /
             values.length;
     return sqrt(variance);
+  }
+
+  /// 生成条形图 PNG（课程目标达成度）。
+  Future<Uint8List?> _generateBarChartPng(
+      List<Map<String, dynamic>> scores) async {
+    if (!mounted || scores.isEmpty) return null;
+    try {
+      return await AchievementChartService.instance.generateBarChart(
+        context,
+        objectiveNames: _config.objectiveNames,
+        achievements: _objectiveAchievements,
+        expectationLine: [0.6],
+      );
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ReportTab.barChartPng', stack: st);
+      return null;
+    }
+  }
+
+  /// 生成 4 张散点图 PNG（每个课程目标一张）。
+  Future<List<Uint8List?>> _generateScatterChartPngs(
+      List<Map<String, dynamic>> scores) async {
+    if (!mounted || scores.isEmpty) return List.filled(4, null);
+    final results = <Uint8List?>[];
+    for (var i = 0; i < 4; i++) {
+      try {
+        final studentAch = scores
+            .map((s) => (s['obj${i + 1}_achievement'] as num?)?.toDouble() ?? 0)
+            .toList();
+        final png = await AchievementChartService.instance.generateScatterChart(
+          context,
+          objectiveIndex: i,
+          studentAchievements: studentAch,
+          classAverage: _objectiveAchievements[i],
+          expectation: 0.6,
+        );
+        results.add(png);
+      } catch (e, st) {
+        swallowDebug(e, tag: 'ReportTab.scatterPng$i', stack: st);
+        results.add(null);
+      }
+    }
+    return results;
   }
 
   Future<void> _exportReport() async {

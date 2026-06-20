@@ -1,4 +1,4 @@
-﻿/// 构建发布中心 — admin 一键发布 4 端 + 双仓库 Release。
+/// 构建发布中心 — admin 一键发布 4 端 + 双仓库 Release。
 ///
 /// **运行场景**：仅装了完整工具链的 dev/admin 机器（Flutter SDK / Android SDK /
 /// DevEco Studio / Git / gh CLI / Python+requests）。生产部署的普通学生/教师

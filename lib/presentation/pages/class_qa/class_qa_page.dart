@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../widgets/back_button_bar.dart';
 import '../../../data/local/class_qa_dao.dart';
 import '../../../data/models/class_qa_model.dart';

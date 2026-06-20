@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'noir_tokens.dart';
 
 /// Noir 设计系统 — 公共 Widget 组件

@@ -312,7 +312,7 @@ class AssessmentDao {
     }
 
     // 条件2：过程报告 + 最终报告均 ≥ 95
-    final reportRows = await db.query('student_reports',
+    final reportRows = await db.query('assessment_reports',
         where: 'user_id = ?', whereArgs: [userId]);
     final reportScores = <String, dynamic>{};
     for (final t in ['过程报告', '最终报告']) {
@@ -491,12 +491,12 @@ class AssessmentDao {
       {String? userId}) async {
     final db = await DatabaseHelper.instance.database;
     if (userId != null) {
-      return db.query('student_reports',
+      return db.query('assessment_reports',
           where: 'user_id = ?',
           whereArgs: [userId],
           orderBy: 'created_at DESC');
     }
-    return db.query('student_reports', orderBy: 'created_at DESC');
+    return db.query('assessment_reports', orderBy: 'created_at DESC');
   }
 
   Future<int> submitReport({
@@ -508,7 +508,7 @@ class AssessmentDao {
     String? groupId,
   }) async {
     final db = await DatabaseHelper.instance.database;
-    return db.insert('student_reports', {
+    return db.insert('assessment_reports', {
       'user_id': userId,
       'title': reportType ?? '考核报告',
       'content_json': fileName ?? '',
@@ -520,9 +520,25 @@ class AssessmentDao {
     });
   }
 
+  Future<int> returnStudentReport(int reportId, {required String reason, String? reviewerId}) async {
+    final db = await DatabaseHelper.instance.database;
+    final now = DateTime.now().toIso8601String();
+    return db.update(
+      'assessment_reports',
+      {
+        'status': '已打回',
+        'score': null,
+        'feedback': reason,
+        'updated_at': now,
+      },
+      where: 'id = ?',
+      whereArgs: [reportId],
+    );
+  }
+
   Future<int> deleteSubmittedReport(int id) async {
     final db = await DatabaseHelper.instance.database;
-    return db.delete('student_reports', where: 'id = ?', whereArgs: [id]);
+    return db.delete('assessment_reports', where: 'id = ?', whereArgs: [id]);
   }
 
   // ══════════════════════════════════════════════════════════
@@ -756,7 +772,7 @@ class AssessmentDao {
       break;
     }
 
-    final reports = await db.query('student_reports',
+    final reports = await db.query('assessment_reports',
         where: 'user_id = ?', whereArgs: [userId]);
     final scores = <String, int>{};
     final feedbacks = <String, String>{};

@@ -27,7 +27,7 @@ const bool kShowApiKeyInput = bool.fromEnvironment(
 );
 
 const Map<String, String> builtinApiKeys = {
-  'deepseek': 'sk-717ef9146311424daa2fbead8ed4682b',
+  'deepseek': 'sk-c93a22110da94aebb834d6d0ddec802e',
   'zhipu': '5dc44da8d9dd4c28bf38cde316950f1e.nNIf7AXWrJXIcSyQ',
   'zhipu:glm-4.6v': '20322a4a95bf4bd68161b1f705aa6603.yHEHABcNAcOWy8WH',
 };

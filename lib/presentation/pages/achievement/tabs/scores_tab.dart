@@ -87,6 +87,27 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
     }
   }
 
+  /// 重新拉取批次（含 student_count 子查询），保留当前选择。
+  /// 导入成绩后调用，使"学生数"即时刷新。
+  Future<void> _refreshBatches() async {
+    try {
+      final batches = await widget.achievementDao.getBatches();
+      if (mounted) setState(() => _batches = batches);
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ScoresTab.refreshBatches', stack: st);
+    }
+  }
+
+  /// 当前批次学生总数（来自 getBatches 的 COUNT(achievement_scores) 子查询）。
+  int get _selectedStudentCount {
+    if (_selectedBatchId == null) return 0;
+    final b = _batches.firstWhere(
+      (e) => e['id'] == _selectedBatchId,
+      orElse: () => const <String, dynamic>{},
+    );
+    return (b['student_count'] as num?)?.toInt() ?? 0;
+  }
+
   Future<void> _showAddScoreDialog({Map<String, dynamic>? existing}) async {
     if (_selectedBatchId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -338,6 +359,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
         await widget.achievementDao.recalculateAndSaveBatch(_selectedBatchId!);
         _loadComponentScores();
         widget.dataRevision?.value++;
+        await _refreshBatches();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -370,6 +392,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
           .importComponentsToDatabase(_selectedBatchId!, components);
       _loadComponentScores();
       widget.dataRevision?.value++;
+      await _refreshBatches();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -512,6 +535,26 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
             children: [
               // 批次下拉
               _buildBatchDropdown(primary),
+              if (_selectedBatchId != null)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 6, left: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.people_alt_outlined,
+                            size: 15, color: primary),
+                        const SizedBox(width: 4),
+                        Text('学生数：$_selectedStudentCount 人',
+                            style: TextStyle(
+                                fontSize: 12.5,
+                                color: primary,
+                                fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                ),
               const SizedBox(height: 10),
               // 操作按钮行
               SingleChildScrollView(
@@ -918,7 +961,6 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
           'exp4_score',
           'exp5_score',
           'exp6_score',
-          'exp7_score',
           'total_score'
         ];
       default:

@@ -1,4 +1,4 @@
-﻿part of '../git_repo_page.dart';
+part of '../git_repo_page.dart';
 
 class _SubmissionGuidelinesTab extends StatelessWidget {
   const _SubmissionGuidelinesTab();

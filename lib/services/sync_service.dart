@@ -303,6 +303,7 @@ class SyncService {
           (data['learning_paths'] as List).length +
           (data['lab_submissions'] as List).length +
           (data['student_reports'] as List).length +
+          (data['assessment_reports'] as List).length +
           (data['student_works'] as List).length +
           (data['survey_responses'] as List).length +
           (data['checkin_records'] as List).length;
@@ -404,6 +405,11 @@ class SyncService {
     for (final report in reports) {
       await _uploadSingleFile(userId, report, '考核');
     }
+    // 考核报告（assessment_reports 表 — 分离后的考核报告）
+    final assessmentReports = data['assessment_reports'] as List? ?? [];
+    for (final report in assessmentReports) {
+      await _uploadSingleFile(userId, report, '考核');
+    }
     // 项目考核
     final projectScores = data['project_scores'] as List? ?? [];
     for (final score in projectScores) {
@@ -486,6 +492,7 @@ class SyncService {
       'learning_paths': 'created_at DESC',
       'lab_submissions': 'submit_time DESC',
       'student_reports': 'updated_at DESC',
+      'assessment_reports': 'updated_at DESC',
       'student_works': 'created_at DESC',
       'survey_responses': 'submitted_at DESC',
       'checkin_records': 'checked_at DESC',
@@ -945,6 +952,7 @@ class SyncService {
           'work_likes',
           // notification_recipients 不同步：notification_id 跨设备不匹配，导入会产生孤儿行
           'work_views',
+          'assessment_reports',
         ];
 
         for (final table in userIdTables) {

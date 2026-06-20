@@ -199,6 +199,7 @@ class AchievementTemplateExcelService {
     Uint8List templateBytes,
     AchievementExcelTemplatePayload payload, {
     AchievementExcelTemplateProfile? profile,
+    int? studentCount,
   }) {
     final activeProfile =
         profile ?? AchievementExcelTemplateProfile.schoolMobile48();
@@ -211,12 +212,36 @@ class AchievementTemplateExcelService {
     final sheetPaths = _sheetPaths(files);
     if (sheetPaths.isEmpty) return templateBytes;
 
-    _fillPingshi(files, sheetPaths, activeProfile, payload);
-    _fillExperiment(files, sheetPaths, activeProfile, payload);
-    _fillExam(files, sheetPaths, activeProfile, payload);
-    _fillIndividual(files, sheetPaths, activeProfile, payload);
-    _fillObjective(files, sheetPaths, activeProfile, payload);
-    _fillChartData(files, sheetPaths, activeProfile, payload);
+    // 动态汇总行：紧跟在最后一行学生数据之后
+    final count = studentCount ??
+        math.max(math.max(payload.pingshi.length, payload.experiment.length),
+            payload.exam.length);
+    final dynamicProfile = AchievementExcelTemplateProfile(
+      examSheet: activeProfile.examSheet,
+      experimentSheet: activeProfile.experimentSheet,
+      pingshiSheet: activeProfile.pingshiSheet,
+      individualSheet: activeProfile.individualSheet,
+      objectiveSheet: activeProfile.objectiveSheet,
+      barSheet: activeProfile.barSheet,
+      scatterSheets: activeProfile.scatterSheets,
+      componentDataStartRow: activeProfile.componentDataStartRow,
+      individualDataStartRow: activeProfile.individualDataStartRow,
+      scatterDataStartRow: activeProfile.scatterDataStartRow,
+      pingshiSummaryRow: activeProfile.componentDataStartRow + count,
+      experimentSummaryRow: activeProfile.componentDataStartRow + count,
+      examSummaryRow: activeProfile.componentDataStartRow + count,
+      individualSummaryRow: activeProfile.individualDataStartRow + count + 1,
+      objectiveDataStartRow: activeProfile.objectiveDataStartRow,
+      objectiveSummaryRow: activeProfile.objectiveSummaryRow,
+      barDataStartRow: activeProfile.barDataStartRow,
+    );
+
+    _fillPingshi(files, sheetPaths, dynamicProfile, payload);
+    _fillExperiment(files, sheetPaths, dynamicProfile, payload);
+    _fillExam(files, sheetPaths, dynamicProfile, payload);
+    _fillIndividual(files, sheetPaths, dynamicProfile, payload);
+    _fillObjective(files, sheetPaths, dynamicProfile, payload);
+    _fillChartData(files, sheetPaths, dynamicProfile, payload);
 
     files.remove('xl/calcChain.xml');
     final out = Archive();
@@ -237,11 +262,15 @@ class AchievementTemplateExcelService {
       ws.text(1, 0, _title(p, '课程目标达成度计算表（平时）'));
       ws.text(2, 0, '班级：${p.className}');
       ws.text(2, 1, '评价方式:平时');
-      _clearRows(ws, profile.componentDataStartRow,
-          profile.pingshiSummaryRow - 1, 0, 38);
+      final start = profile.componentDataStartRow;
+      final avgRow = profile.pingshiSummaryRow; // 倒数第二行：班平均值
+      final achRow = avgRow + 1; // 倒数第一行：课程目标达成度
+      // 学生行恒在汇总两行之上；清除模板预置的旧学生区与旧汇总行残留
+      final clearEnd = math.max(achRow + 1, start + 80);
+      _clearRows(ws, start, clearEnd, 0, 38);
       for (int i = 0; i < p.pingshi.length; i++) {
         final row = p.pingshi[i];
-        final r = profile.componentDataStartRow + i;
+        final r = start + i;
         final classActivity = _num(row, 'class_activity_score');
         final quizHomework = _num(row, 'quiz_homework_score');
         final extraLearning = _num(row, 'extra_learning_score');
@@ -258,12 +287,24 @@ class AchievementTemplateExcelService {
         ws.number(r, 37, _num(row, 'extra_learning_achievement'), 4);
         ws.number(r, 38, _num(row, 'total_score'), 1);
       }
-      final row = profile.pingshiSummaryRow;
-      ws.text(row, 0, '课程目标达成度');
-      ws.number(row, 1, _avg(p.pingshiAverage, 0), 4);
-      ws.number(row, 15, _avg(p.pingshiAverage, 1), 4);
-      ws.number(row, 27, _avg(p.pingshiAverage, 3), 4);
-      ws.number(row, 38, _averageTotal(p.pingshi, 'total_score') / 100, 4);
+      // 倒数第二行：班平均值（三项原始平均分 + 各达成度均值 + 总评均值）
+      ws.text(avgRow, 0, '班平均值');
+      ws.number(avgRow, 2, _avgF(p.pingshi, 'class_activity_score'), 1);
+      ws.number(avgRow, 13, _avgF(p.pingshi, 'class_activity_score'), 1);
+      ws.number(avgRow, 14, _avgF(p.pingshi, 'class_activity_achievement'), 4);
+      ws.number(avgRow, 15, _avgF(p.pingshi, 'quiz_homework_score'), 1);
+      ws.number(avgRow, 25, _avgF(p.pingshi, 'quiz_homework_score'), 1);
+      ws.number(avgRow, 26, _avgF(p.pingshi, 'quiz_homework_achievement'), 4);
+      ws.number(avgRow, 27, _avgF(p.pingshi, 'extra_learning_score'), 1);
+      ws.number(avgRow, 36, _avgF(p.pingshi, 'extra_learning_score'), 1);
+      ws.number(avgRow, 37, _avgF(p.pingshi, 'extra_learning_achievement'), 4);
+      ws.number(avgRow, 38, _avgF(p.pingshi, 'total_score'), 1);
+      // 倒数第一行：课程目标达成度（仅达成度列 O/AA/AL/AM = 14/26/37/38）
+      ws.text(achRow, 0, '课程目标达成度');
+      ws.number(achRow, 14, _avg(p.pingshiAverage, 0), 4);
+      ws.number(achRow, 26, _avg(p.pingshiAverage, 1), 4);
+      ws.number(achRow, 37, _avg(p.pingshiAverage, 3), 4);
+      ws.number(achRow, 38, _averageTotal(p.pingshi, 'total_score') / 100, 4);
     });
   }
 
@@ -277,11 +318,14 @@ class AchievementTemplateExcelService {
       ws.text(1, 0, _title(p, '课程目标达成度计算表（实验）'));
       ws.text(2, 0, '班级：${p.className}');
       ws.text(2, 1, '评价方式:实验');
-      _clearRows(ws, profile.componentDataStartRow,
-          profile.experimentSummaryRow - 1, 0, 13);
+      final start = profile.componentDataStartRow;
+      final avgRow = profile.experimentSummaryRow; // 倒数第二行：班平均值
+      final achRow = avgRow + 1; // 倒数第一行：课程目标达成度
+      final clearEnd = math.max(achRow + 1, start + 80);
+      _clearRows(ws, start, clearEnd, 0, 13);
       for (int i = 0; i < p.experiment.length; i++) {
         final row = p.experiment[i];
-        final r = profile.componentDataStartRow + i;
+        final r = start + i;
         ws.text(r, 0, row['student_id']);
         ws.text(r, 1, row['student_name']);
         ws.number(r, 2, _num(row, 'exp1_score'), 1);
@@ -293,17 +337,32 @@ class AchievementTemplateExcelService {
         ws.number(r, 8, _num(row, 'exp5_score'), 1);
         ws.number(r, 9, _num(row, 'exp6_score'), 1);
         ws.number(r, 10, _num(row, 'obj3_achievement'), 4);
-        ws.number(r, 11, _experimentTarget4Score(row), 1);
+        // 实验七已删除：L 列(11)留空，目标4 达成度仍取 obj4_achievement
+        ws.clear(r, 11);
         ws.number(r, 12, _num(row, 'obj4_achievement'), 4);
         ws.number(r, 13, _num(row, 'total_score'), 1);
       }
-      final row = profile.experimentSummaryRow;
-      ws.text(row, 0, '课程目标达成度');
-      ws.number(row, 1, _avg(p.experimentAverage, 0), 4);
-      ws.number(row, 5, _avg(p.experimentAverage, 1), 4);
-      ws.number(row, 8, _avg(p.experimentAverage, 2), 4);
-      ws.number(row, 11, _avg(p.experimentAverage, 3), 4);
-      ws.number(row, 13, _averageTotal(p.experiment, 'total_score') / 100, 4);
+      // 倒数第二行：班平均值（各列均值，实验七 L 列留空）
+      ws.text(avgRow, 0, '班平均值');
+      ws.number(avgRow, 2, _avgF(p.experiment, 'exp1_score'), 1);
+      ws.number(avgRow, 3, _avgF(p.experiment, 'exp2_score'), 1);
+      ws.number(avgRow, 4, _avgF(p.experiment, 'obj1_achievement'), 4);
+      ws.number(avgRow, 5, _avgF(p.experiment, 'exp3_score'), 1);
+      ws.number(avgRow, 6, _avgF(p.experiment, 'exp4_score'), 1);
+      ws.number(avgRow, 7, _avgF(p.experiment, 'obj2_achievement'), 4);
+      ws.number(avgRow, 8, _avgF(p.experiment, 'exp5_score'), 1);
+      ws.number(avgRow, 9, _avgF(p.experiment, 'exp6_score'), 1);
+      ws.number(avgRow, 10, _avgF(p.experiment, 'obj3_achievement'), 4);
+      ws.clear(avgRow, 11);
+      ws.number(avgRow, 12, _avgF(p.experiment, 'obj4_achievement'), 4);
+      ws.number(avgRow, 13, _avgF(p.experiment, 'total_score'), 1);
+      // 倒数第一行：课程目标达成度（E/H/K/M/N = 4/7/10/12/13）
+      ws.text(achRow, 0, '课程目标达成度');
+      ws.number(achRow, 4, _avg(p.experimentAverage, 0), 4);
+      ws.number(achRow, 7, _avg(p.experimentAverage, 1), 4);
+      ws.number(achRow, 10, _avg(p.experimentAverage, 2), 4);
+      ws.number(achRow, 12, _avg(p.experimentAverage, 3), 4);
+      ws.number(achRow, 13, _averageTotal(p.experiment, 'total_score') / 100, 4);
     });
   }
 
@@ -320,11 +379,14 @@ class AchievementTemplateExcelService {
       for (int i = 0; i < math.min(4, p.objectiveWeights.length); i++) {
         ws.text(4, 1 + i * 2, '满分${_fmtInt(_fullMarkFor(p, i))}');
       }
-      _clearRows(
-          ws, profile.componentDataStartRow, profile.examSummaryRow - 1, 0, 10);
+      final start = profile.componentDataStartRow;
+      final avgRow = profile.examSummaryRow; // 倒数第二行：班平均值
+      final achRow = avgRow + 1; // 倒数第一行：课程目标达成度
+      final clearEnd = math.max(achRow + 1, start + 80);
+      _clearRows(ws, start, clearEnd, 0, 10);
       for (int i = 0; i < p.exam.length; i++) {
         final row = p.exam[i];
-        final r = profile.componentDataStartRow + i;
+        final r = start + i;
         ws.text(r, 0, row['student_id']);
         ws.text(r, 1, row['student_name']);
         ws.number(r, 2, _num(row, 'project_score'), 1);
@@ -337,13 +399,24 @@ class AchievementTemplateExcelService {
         ws.number(r, 9, _num(row, 'obj4_achievement'), 4);
         ws.number(r, 10, _num(row, 'total_score'), 1);
       }
-      final row = profile.examSummaryRow;
-      ws.text(row, 0, '课程目标达成度');
-      ws.number(row, 1, _avg(p.examAverage, 0), 4);
-      ws.number(row, 4, _avg(p.examAverage, 1), 4);
-      ws.number(row, 6, _avg(p.examAverage, 2), 4);
-      ws.number(row, 8, _avg(p.examAverage, 3), 4);
-      ws.number(row, 10, _averageTotal(p.exam, 'total_score') / 100, 4);
+      // 倒数第二行：班平均值（各列均值）
+      ws.text(avgRow, 0, '班平均值');
+      ws.number(avgRow, 2, _avgF(p.exam, 'project_score'), 1);
+      ws.number(avgRow, 3, _avgF(p.exam, 'obj1_achievement'), 4);
+      ws.number(avgRow, 4, _avgF(p.exam, 'group_score'), 1);
+      ws.number(avgRow, 5, _avgF(p.exam, 'obj2_achievement'), 4);
+      ws.number(avgRow, 6, _avgF(p.exam, 'individual_score'), 1);
+      ws.number(avgRow, 7, _avgF(p.exam, 'obj3_achievement'), 4);
+      ws.number(avgRow, 8, _avgF(p.exam, 'defense_score'), 1);
+      ws.number(avgRow, 9, _avgF(p.exam, 'obj4_achievement'), 4);
+      ws.number(avgRow, 10, _avgF(p.exam, 'total_score'), 1);
+      // 倒数第一行：课程目标达成度（D/F/H/J/K = 3/5/7/9/10）
+      ws.text(achRow, 0, '课程目标达成度');
+      ws.number(achRow, 3, _avg(p.examAverage, 0), 4);
+      ws.number(achRow, 5, _avg(p.examAverage, 1), 4);
+      ws.number(achRow, 7, _avg(p.examAverage, 2), 4);
+      ws.number(achRow, 9, _avg(p.examAverage, 3), 4);
+      ws.number(achRow, 10, _averageTotal(p.exam, 'total_score') / 100, 4);
     });
   }
 
@@ -557,11 +630,14 @@ class AchievementTemplateExcelService {
     return _num(row, 'extra_learning_achievement');
   }
 
-  static double _experimentTarget4Score(Map<String, dynamic>? row) {
-    final exp7 = _num(row, 'exp7_score');
-    if (exp7 > 0) return exp7;
-    final obj4 = _num(row, 'obj4_achievement');
-    return obj4 > 0 ? obj4 * 100 : 0;
+  /// 某字段在全班学生上的平均值（班平均值行用）。
+  static double _avgF(List<Map<String, dynamic>> rows, String key) {
+    if (rows.isEmpty) return 0;
+    var sum = 0.0;
+    for (final row in rows) {
+      sum += _num(row, key);
+    }
+    return sum / rows.length;
   }
 
   static double _averageTotal(List<Map<String, dynamic>> rows, String key) {

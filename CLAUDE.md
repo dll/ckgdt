@@ -5,7 +5,7 @@
 **移动图谱与数字孪生教学系统（MAD-KG）** 是面向《移动应用开发》课程的 Flutter 全平台教学平台。系统围绕"教—学—练—评—管"五个维度构建：知识图谱浏览、章节测验、视频教程、课程资料、实验管理、作品展示、成绩达成、AI 多智能体辅助。支持教师端和学生端差异化导航，通过 Gitee 仓库实现师生数据双向同步。
 
 - **仓库**：https://gitee.com/osgisOne/mad-fd
-- **当前版本**：`0.11.0`（`pubspec.yaml` → `version: 0.11.0+0`）
+- **当前版本**：`2.0.2`（`pubspec.yaml` → `version: 2.0.2+0`）
 - **Flutter SDK**：`>=3.0.0 <4.0.0`
 - **主题色**：`#667eea`（紫蓝渐变 `[0xFF667eea, 0xFF764ba2]`）
 - **用户角色**：学生 / 教师 / 管理员
@@ -798,6 +798,39 @@ python scripts/gitee_upload_assets.py
 5. **不要提交中间产物**：`docs/video/**/audio/`、`slides/`、`sent/`、`temp/`、`crops/` 已 gitignore
 6. **LEFT JOIN**：`lab_task_dao.getSubmissions()` 必须用 LEFT JOIN（非 INNER JOIN），否则跨设备 task_id 不匹配时提交不可见
 7. **DAO 中的 CREATE TABLE IF NOT EXISTS**：部分表在 `database_helper.dart` 和对应 DAO 中都有建表语句，靠 `IF NOT EXISTS` 防冲突
+
+---
+
+## 已知问题与构建修补
+
+### 1. sqlite3.dll Windows 发布版崩溃（0xC0000005）
+
+**症状**：发布版 EXE 启动后立即崩溃 `0xC0000005`（null ptr at +0x8 in ntdll）。调试版正常。
+
+**根因**：`sqlite3_flutter_libs v0.5.42` 预置的 `sqlite3.dll`（1,541,112 bytes）编译参数错误，首次调用 sqlite3 原生函数（`sqlite3_openInMemory`）时在 ntdll 堆管理器中触发访问违例。
+
+**修复**：替换为 `sqflite_common_ffi` 包自带的 sqlite3.dll（3,231,232 bytes，含 FTS5 等扩展）：
+
+```powershell
+# 每次 flutter pub get 后执行（pub 会重新下载原包，覆盖修补）
+Copy-Item "$env:PUB_CACHE\hosted\pub.flutter-io.cn\sqflite_common_ffi-2.3.7+1\lib\src\windows\sqlite3.dll" `
+  "$env:PUB_CACHE\hosted\pub.flutter-io.cn\sqlite3_flutter_libs-0.5.42\windows\prebuilt_sqlite3\sqlite3.dll" -Force
+```
+
+或运行项目自带脚本：
+```powershell
+# 修补
+.\scripts\patch_sqlite3.ps1
+# 恢复原版
+.\scripts\patch_sqlite3.ps1 -Restore
+```
+
+修补后需重新构建 Windows：
+```powershell
+flutter build windows --release
+```
+
+> **原理**：`sqflite_common_ffi` 的 sqlite3.dll 编译配置更完善，与当前 Windows 运行库兼容。两个 DLL 都是纯 sqlite3 二进制，API 兼容，直接替换不影响功能。
 
 ---
 

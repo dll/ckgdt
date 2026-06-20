@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../data/local/ai_history_dao.dart';
 import '../../../services/auth_service.dart';
 

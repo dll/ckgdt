@@ -383,7 +383,7 @@ class LabTaskDao {
   // ═══════════ 学生报告 ═══════════
 
   Future<List<Map<String, dynamic>>> getStudentReports(
-      {String? userId, int? taskId}) async {
+      {String? userId, int? taskId, bool onlyWithTask = false}) async {
     final db = await _dbHelper.database;
     String sql = '''
       SELECT r.*, t.name as template_name, lt.title as task_title
@@ -391,7 +391,12 @@ class LabTaskDao {
       LEFT JOIN report_templates t ON t.id = r.template_id
       LEFT JOIN lab_tasks lt ON lt.id = r.task_id
       WHERE 1=1
+      AND r.template_id IS NOT NULL
     ''';
+    if (onlyWithTask) {
+      // 只保留 task_id 确实指向 lab_tasks 表的记录（排除考核报告的 assessment_group id）
+      sql += ' AND lt.id IS NOT NULL';
+    }
     final args = <dynamic>[];
     if (userId != null) {
       sql += ' AND r.user_id = ?';
@@ -453,6 +458,26 @@ class LabTaskDao {
         'feedback': feedback,
         'status': '已批改',
         'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// 打回 student_reports 报告：清空分数、写入打回理由、状态置「已打回」。
+  Future<int> returnReport({
+    required int id,
+    required String reason,
+  }) async {
+    final db = await _dbHelper.database;
+    final now = DateTime.now().toIso8601String();
+    return db.update(
+      'student_reports',
+      {
+        'score': null,
+        'feedback': reason,
+        'status': '已打回',
+        'updated_at': now,
       },
       where: 'id = ?',
       whereArgs: [id],

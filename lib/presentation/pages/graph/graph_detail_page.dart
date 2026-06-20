@@ -1,4 +1,4 @@
-﻿import 'dart:math' as math;
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../data/local/graph_dao.dart';
 import '../../../data/local/learning_record_dao.dart';

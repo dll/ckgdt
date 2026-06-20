@@ -1,4 +1,4 @@
-﻿part of '../assessment_page.dart';
+part of '../assessment_page.dart';
 
 class _ContributionTab extends StatefulWidget {
   final AuthService authService;

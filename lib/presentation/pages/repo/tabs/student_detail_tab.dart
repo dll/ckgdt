@@ -1,4 +1,4 @@
-﻿part of '../git_repo_page.dart';
+part of '../git_repo_page.dart';
 
 class _StudentDetailTab extends StatefulWidget {
   final GiteeService gitee;

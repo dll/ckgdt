@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 /// 成绩预览对话框：以 DataTable 形式展示成绩列表。
 ///
