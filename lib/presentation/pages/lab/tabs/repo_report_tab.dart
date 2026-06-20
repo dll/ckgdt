@@ -1,4 +1,4 @@
-﻿part of '../lab_tasks_page.dart';
+part of '../lab_tasks_page.dart';
 
 class _RepoReportTab extends StatefulWidget {
   const _RepoReportTab();

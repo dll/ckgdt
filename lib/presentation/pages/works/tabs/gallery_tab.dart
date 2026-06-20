@@ -1,4 +1,4 @@
-﻿part of '../works_page.dart';
+part of '../works_page.dart';
 
 class _GalleryTab extends StatefulWidget {
   final AuthService authService;

@@ -1,4 +1,4 @@
-﻿// lib/core/constants/tech_logo_painter.dart
+// lib/core/constants/tech_logo_painter.dart
 //
 // Mini official-style tech-stack logos drawn with CustomPainter.
 // Designed for chip selectors at 18–24 px.

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../core/build_info.dart';
 import '../../../services/update_service.dart';
 import '../../widgets/back_button_bar.dart';

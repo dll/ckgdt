@@ -98,7 +98,7 @@ class _ReportTabState extends State<_ReportTab> {
       List<Map<String, dynamic>> reports;
       if (_isTeacherOrAdmin) {
         reports = List<Map<String, dynamic>>.from(
-            await widget.labTaskDao.getStudentReports());
+            await widget.labTaskDao.getStudentReports(onlyWithTask: true));
         // 同时加载 lab_submissions 中的提交（学生通过 submitTask 提交的）
         // 将其转换为与 student_reports 兼容的格式合并显示
         final submissions = await _cleanupInvalidSubmissions(
@@ -130,6 +130,22 @@ class _ReportTabState extends State<_ReportTab> {
             '=== _ReportTab: Teacher/Admin - ${reports.length} reports (incl. submissions)');
       } else if (userId != null && userId.isNotEmpty) {
         reports = await widget.labTaskDao.getStudentReports(userId: userId);
+        // 同时加载该学生的 lab_submissions（实验提交）
+        final submissions = await widget.labTaskDao.getSubmissions(userId: userId);
+        for (final sub in submissions) {
+          reports.add({
+            ...sub,
+            'title': sub['task_title'] as String? ??
+                sub['content'] as String? ??
+                '实验提交',
+            'status': sub['status'] as String? ?? '已提交',
+            'updated_at': sub['submit_time'] as String? ??
+                sub['created_at'] as String? ??
+                '',
+            'template_name': '',
+            '_from_submissions': true,
+          });
+        }
       } else {
         debugPrint('=== _ReportTab: userId is null/empty, loading all reports');
         reports = await widget.labTaskDao.getStudentReports();
@@ -218,12 +234,7 @@ class _ReportTabState extends State<_ReportTab> {
                     )
                   : _isTeacherOrAdmin
                       ? _buildGroupedReportsList()
-                      : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
-                          itemCount: _reports.length,
-                          itemBuilder: (ctx, i) =>
-                              _buildReportCard(context, _reports[i]),
-                        ),
+                      : _buildStudentGroupedView(),
         ),
         if (!_isTeacherOrAdmin)
           Positioned(
@@ -244,16 +255,23 @@ class _ReportTabState extends State<_ReportTab> {
   Widget _buildGroupedReportsList() {
     final groups = <String, List<Map<String, dynamic>>>{};
     for (final r in _reports) {
-      final key = _groupBy == 'byTask'
-          ? ((r['task_title'] as String?)?.trim().isNotEmpty == true
-              ? r['task_title'] as String
-              : (r['title'] as String? ?? '未知任务'))
-          : _groupBy == 'byGrade'
-              ? _gradeBand((r['score'] as num?)?.round() ??
-                  (r['_ai_score'] as num?)?.round())
-              : ((r['user_id'] as String?)?.trim().isNotEmpty == true
-                  ? r['user_id'] as String
-                  : '未知学生');
+      String key;
+      if (_groupBy == 'byTask') {
+        final taskTitle = (r['task_title'] as String?)?.trim();
+        if (taskTitle != null && taskTitle.isNotEmpty) {
+          key = taskTitle;
+        } else {
+          // 没有关联实验的报告归入"未关联实验"组，不使用 title 作为分组键
+          key = '未关联实验';
+        }
+      } else if (_groupBy == 'byGrade') {
+        key = _gradeBand((r['score'] as num?)?.round() ??
+            (r['_ai_score'] as num?)?.round());
+      } else {
+        key = ((r['user_id'] as String?)?.trim().isNotEmpty == true
+            ? r['user_id'] as String
+            : '未知学生');
+      }
       (groups[key] ??= []).add(r);
     }
 
@@ -361,6 +379,131 @@ class _ReportTabState extends State<_ReportTab> {
     );
   }
 
+  /// 学生视图：按「实验」分类分组
+  Widget _buildStudentGroupedView() {
+    // 分类：实验
+    final labReports = <String, List<Map<String, dynamic>>>{};
+
+    for (final r in _reports) {
+      final isFromSubmissions = r['_from_submissions'] == true;
+      final taskTitle = (r['task_title'] as String?)?.trim();
+      final title = (r['title'] as String? ?? '').trim();
+
+      if (isFromSubmissions || (taskTitle != null && taskTitle.isNotEmpty)) {
+        // 实验提交 → 按实验名分组
+        final key = taskTitle ?? (title.isNotEmpty ? title : '实验提交');
+        (labReports[key] ??= []).add(r);
+      } else {
+        // 有 template 但无 task → 归入实验-自由报告
+        final key = title.isNotEmpty ? title : '自由报告';
+        (labReports[key] ??= []).add(r);
+      }
+    }
+
+    final primary = Theme.of(context).colorScheme.primary;
+    final total = _reports.length;
+    final labCount = labReports.values.fold<int>(0, (s, l) => s + l.length);
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Text('共 $total 份报告',
+              style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+        ),
+
+        // ═══ 实验 ═══
+        if (labReports.isNotEmpty) ...[
+          _buildSectionHeader('实验', Icons.science, labCount, primary),
+          for (final entry in labReports.entries) ...[
+            _buildSubCategoryHeader(entry.key, primary, entry.value.length),
+            for (final r in entry.value) _buildReportCard(context, r),
+          ],
+        ],
+
+        // 空状态
+        if (labReports.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 60),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(Icons.description_outlined,
+                      size: 48, color: Colors.grey[300]),
+                  const SizedBox(height: 12),
+                  Text('暂无报告', style: TextStyle(color: Colors.grey[500])),
+                  const SizedBox(height: 8),
+                  Text('点击右下角按钮新建报告',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[400])),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSubCategoryHeader(String label, Color color, int? count) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+      child: Row(
+        children: [
+          Icon(Icons.label_important, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[700])),
+          if (count != null) ...[
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text('$count',
+                  style: TextStyle(fontSize: 10, color: color)),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String label, IconData icon, int count, Color color) {
+    return Container(
+      margin: const EdgeInsets.only(top: 8, bottom: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 8),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 15, fontWeight: FontWeight.bold, color: color)),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text('$count',
+                style: const TextStyle(
+                    fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildReportCard(BuildContext context, Map<String, dynamic> report) {
     final primary = Theme.of(context).colorScheme.primary;
     final title = report['title'] as String? ?? '未命名报告';
@@ -372,17 +515,23 @@ class _ReportTabState extends State<_ReportTab> {
     final isFromSubmissions = report['_from_submissions'] == true;
     final aiScore = (report['_ai_score'] as num?)?.round();
     final aiFeedback = report['_ai_feedback'] as String? ?? '';
+    final feedback = report['feedback'] as String? ?? '';
+    final isReturned = status == '已打回';
 
     final statusColor = status == '已批改'
         ? Colors.blue
-        : status == '已提交' || status == '待批改'
-            ? Colors.green
-            : Colors.orange;
+        : isReturned
+            ? Colors.red
+            : status == '已提交' || status == '待批改'
+                ? Colors.green
+                : Colors.orange;
     final statusIcon = status == '已批改'
         ? Icons.check_circle
-        : status == '已提交' || status == '待批改'
-            ? Icons.hourglass_bottom
-            : Icons.edit_note;
+        : isReturned
+            ? Icons.assignment_return
+            : status == '已提交' || status == '待批改'
+                ? Icons.hourglass_bottom
+                : Icons.edit_note;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
@@ -601,6 +750,45 @@ class _ReportTabState extends State<_ReportTab> {
                           ),
                         ),
                       ],
+                    ],
+                  ),
+                ),
+              ],
+              if (isReturned && feedback.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.withValues(alpha: 0.25)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: const [
+                          Icon(Icons.assignment_return,
+                              size: 15, color: Colors.red),
+                          SizedBox(width: 6),
+                          Text(
+                            '已被教师打回，请修改后重新提交',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '打回理由：$feedback',
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey[800], height: 1.4),
+                      ),
                     ],
                   ),
                 ),
@@ -1005,6 +1193,103 @@ class _ReportTabState extends State<_ReportTab> {
               ),
             ),
             actions: [
+              OutlinedButton.icon(
+                onPressed: isGrading
+                    ? null
+                    : () async {
+                        if (reportId == null) return;
+                        final reasonCtrl = TextEditingController(
+                            text: feedbackCtrl.text.trim());
+                        final confirmedReason = await showDialog<String>(
+                          context: context,
+                          builder: (dialogCtx) => AlertDialog(
+                            title: const Text('确认打回'),
+                            content: SizedBox(
+                              width: 520,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('以下理由将通知学生，可在发送前修改。'),
+                                  const SizedBox(height: 12),
+                                  TextField(
+                                    controller: reasonCtrl,
+                                    minLines: 6,
+                                    maxLines: 10,
+                                    decoration: InputDecoration(
+                                      labelText: '打回理由',
+                                      hintText: '请输入打回原因，学生将收到此通知...',
+                                      border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(dialogCtx),
+                                child: const Text('取消'),
+                              ),
+                              FilledButton.icon(
+                                onPressed: () => Navigator.pop(
+                                    dialogCtx, reasonCtrl.text.trim()),
+                                icon: const Icon(Icons.assignment_return,
+                                    size: 18),
+                                label: const Text('确认打回'),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirmedReason == null ||
+                            confirmedReason.trim().isEmpty) return;
+                        setDialogState(() => isGrading = true);
+                        try {
+                          await widget.labTaskDao.returnReport(
+                            id: reportId,
+                            reason: confirmedReason.trim(),
+                          );
+                          await GradingResultDao()
+                              .deletePendingForTarget('lab', reportId);
+                          if (userId.isNotEmpty) {
+                            await NotificationService()
+                                .notifyLabSubmissionReturned(
+                              studentId: userId,
+                              taskTitle: title,
+                              reason: confirmedReason.trim(),
+                            );
+                            unawaited(
+                                SyncService().uploadStudentData(userId));
+                          }
+                          if (ctx.mounted) {
+                            Navigator.pop(ctx);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('已打回并通知学生'),
+                                backgroundColor: Colors.orange,
+                              ),
+                            );
+                            _loadData();
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('打回失败: $e')),
+                            );
+                          }
+                        } finally {
+                          if (ctx.mounted) {
+                            setDialogState(() => isGrading = false);
+                          }
+                        }
+                      },
+                icon: const Icon(Icons.assignment_return, size: 16),
+                label: const Text('打回'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.orange,
+                ),
+              ),
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
                 child: const Text('取消'),
@@ -1427,6 +1712,106 @@ class _ReportTabState extends State<_ReportTab> {
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
                 child: const Text('取消'),
+              ),
+              OutlinedButton.icon(
+                onPressed: isGrading
+                    ? null
+                    : () async {
+                        if (subId == null) return;
+                        final reasonCtrl = TextEditingController(
+                            text: feedbackCtrl.text.trim());
+                        final confirmedReason = await showDialog<String>(
+                          context: context,
+                          builder: (dialogCtx) => AlertDialog(
+                            title: const Text('确认打回'),
+                            content: SizedBox(
+                              width: 520,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('以下理由将通知学生，可在发送前修改。'),
+                                  const SizedBox(height: 12),
+                                  TextField(
+                                    controller: reasonCtrl,
+                                    minLines: 6,
+                                    maxLines: 10,
+                                    decoration: InputDecoration(
+                                      labelText: '打回理由',
+                                      hintText: '请输入打回原因，学生将收到此通知...',
+                                      border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(dialogCtx),
+                                child: const Text('取消'),
+                              ),
+                              FilledButton.icon(
+                                onPressed: () => Navigator.pop(
+                                    dialogCtx, reasonCtrl.text.trim()),
+                                icon: const Icon(Icons.assignment_return,
+                                    size: 18),
+                                label: const Text('确认打回'),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirmedReason == null ||
+                            confirmedReason.trim().isEmpty) return;
+                        setDialogState(() => isGrading = true);
+                        try {
+                          await widget.labTaskDao.returnSubmission(
+                            subId,
+                            reason: confirmedReason.trim(),
+                            reviewerId: widget.authService.getCurrentUserId(),
+                          );
+                          if (aiResultId != null) {
+                            await GradingResultDao()
+                                .deletePendingForTarget('lab', subId);
+                          }
+                          if (userId.isNotEmpty) {
+                            await NotificationService()
+                                .notifyLabSubmissionReturned(
+                              studentId: userId,
+                              taskTitle: title,
+                              reason: confirmedReason.trim(),
+                            );
+                            unawaited(
+                                SyncService().uploadStudentData(userId));
+                          }
+                          if (context.mounted) {
+                            Navigator.pop(ctx);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('已打回并通知学生'),
+                                backgroundColor: Colors.orange,
+                              ),
+                            );
+                            _loadData();
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('打回失败: $e')),
+                            );
+                          }
+                        } finally {
+                          if (ctx.mounted) {
+                            setDialogState(() => isGrading = false);
+                          }
+                        }
+                      },
+                icon: const Icon(Icons.assignment_return, size: 16),
+                label: const Text('打回'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.orange,
+                ),
               ),
               ElevatedButton.icon(
                 onPressed: isGrading

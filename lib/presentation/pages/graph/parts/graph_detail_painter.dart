@@ -1,4 +1,4 @@
-﻿part of '../graph_detail_page.dart';
+part of '../graph_detail_page.dart';
 
 class GraphPainter extends CustomPainter {
   final List<NodeModel> nodes;

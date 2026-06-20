@@ -121,6 +121,29 @@ class NotificationService {
     }
   }
 
+  /// 通知学生：考核报告被教师打回，需要重新提交
+  Future<void> notifyAssessmentReportReturned({
+    required String studentId,
+    required String reportTitle,
+    required String reason,
+  }) async {
+    try {
+      final preview =
+          reason.length > 160 ? '${reason.substring(0, 160)}...' : reason;
+      await _notificationDao.createNotification(
+        title: '考核报告已打回',
+        content: '你的「$reportTitle」未通过审核，需要修改后重新提交。原因：$preview',
+        creatorId: 'system',
+        targetType: 'individual',
+        targetId: studentId,
+        type: 'return',
+        relatedEntityType: 'assessment_report',
+      );
+    } catch (e) {
+      debugPrint('NotificationService: 考核打回通知学生失败 — $e');
+    }
+  }
+
   /// 学生提交考核报告时通知所有教师
   Future<void> notifyAssessmentSubmission({
     required String studentId,

@@ -1,8 +1,7 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'l10n/gen/app_localizations.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:path/path.dart' as p;
 import 'core/app_keys.dart';
@@ -15,6 +14,7 @@ import 'services/data_loading_service.dart';
 import 'services/theme_manager.dart';
 import 'services/settings_service.dart';
 import 'presentation/pages/login/login_page.dart';
+import 'l10n/gen/app_localizations.dart';
 import 'presentation/pages/feedback/feedback_dialog.dart';
 import 'presentation/pages/feedback/ai_help_dialog.dart';
 import 'presentation/pages/cross_platform/cross_platform_hub_page.dart';

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../data/local/ai_config_dao.dart';
 import '../../../data/models/ai_config_model.dart';

@@ -1,4 +1,4 @@
-﻿part of '../assessment_page.dart';
+part of '../assessment_page.dart';
 
 enum _GroupDimension {
   repo('仓库', 'repo', Icons.folder_copy, Colors.blue),

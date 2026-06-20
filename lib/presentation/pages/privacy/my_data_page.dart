@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -43,6 +43,7 @@ class _MyDataPageState extends State<MyDataPage> {
     'favorites': '收藏夹',
     'lab_submissions': '实验提交',
     'student_reports': '实验报告',
+    'assessment_reports': '考核报告',
     'student_works': '学生作品',
     'work_comments': '作品评论',
     'work_likes': '作品点赞',

@@ -80,10 +80,13 @@ class ExcelChartInjector {
       final drawRelId = _appendDrawingRel(
           files, sheetRelsPath, _str(files[sheetRelsPath]), drawingNo);
 
-      if (!sheetXml.contains('<drawing ')) {
-        files[sheetPath] = _bytes(sheetXml.replaceFirst(
-            '</worksheet>', '<drawing r:id="$drawRelId"/></worksheet>'));
-      }
+      // 替换模板内嵌旧图：移除该 sheet 已有 <drawing>，再挂上本次注入的图。
+      // 旧 drawing/chart 部件成为孤儿（无引用），Excel 忽略，不影响渲染。
+      final cleaned = sheetXml
+          .replaceAll(RegExp(r'<drawing\b[^>]*/>'), '')
+          .replaceAll(RegExp(r'<drawing\b[^>]*>[\s\S]*?</drawing>'), '');
+      files[sheetPath] = _bytes(cleaned.replaceFirst(
+          '</worksheet>', '<drawing r:id="$drawRelId"/></worksheet>'));
 
       final addCt = StringBuffer();
       if (!contentTypes.contains('/xl/charts/chart$chartNo.xml')) {
@@ -164,35 +167,80 @@ class ExcelChartInjector {
       .replaceAll('&amp;', '&');
 }
 
-/// 一张图表的规格：目标 sheet 名 + 类型 + 数据区行数。
+/// 一张图表的规格：目标 sheet 名 + 类型 + 数据区行列引用。
+///
+/// `.bar`/`.scatter` 用默认 A/B/C/D 列、第 1 行起（配合本系统自建 excel）。
+/// `.barRange`/`.scatterRange` 可指定列字母与起止行，用于学校模板（数据落在
+/// 非 A 列、非第 1 行的固定区域）。
 class ChartSpec {
   final String sheetName;
   final String title;
   final ChartType type;
-  final int rowCount;
+  final int startRow;
+  final int endRow;
+
+  // 柱状图：catCol=类目列，valCol=数值列。
+  // 散点图：catCol=X 列，valCol=个体 Y 列，avgCol=班级平均列，expCol=期望列。
+  final String catCol;
+  final String valCol;
+  final String avgCol;
+  final String expCol;
 
   const ChartSpec.bar({
     required this.sheetName,
     required this.title,
-    required this.rowCount,
-  }) : type = ChartType.bar;
+    required int rowCount,
+  })  : type = ChartType.bar,
+        startRow = 1,
+        endRow = rowCount,
+        catCol = 'A',
+        valCol = 'B',
+        avgCol = 'C',
+        expCol = 'D';
 
   const ChartSpec.scatter({
     required this.sheetName,
     required this.title,
-    required this.rowCount,
+    required int rowCount,
+  })  : type = ChartType.scatter,
+        startRow = 1,
+        endRow = rowCount,
+        catCol = 'A',
+        valCol = 'B',
+        avgCol = 'C',
+        expCol = 'D';
+
+  const ChartSpec.barRange({
+    required this.sheetName,
+    required this.title,
+    required this.startRow,
+    required this.endRow,
+    this.catCol = 'B',
+    this.valCol = 'C',
+  })  : type = ChartType.bar,
+        avgCol = 'C',
+        expCol = 'D';
+
+  const ChartSpec.scatterRange({
+    required this.sheetName,
+    required this.title,
+    required this.startRow,
+    required this.endRow,
+    this.catCol = 'B',
+    this.valCol = 'C',
+    this.avgCol = 'D',
+    this.expCol = 'E',
   }) : type = ChartType.scatter;
 
-  String _sheetRef(String col) {
+  String _ref(String col) {
     final esc = sheetName
         .replaceAll('&', '&amp;')
         .replaceAll('<', '&lt;')
         .replaceAll('>', '&gt;');
-    return "'$esc'!\$$col\$1:\$$col\$$rowCount";
+    return "'$esc'!\$$col\$$startRow:\$$col\$$endRow";
   }
 
-  String buildChartXml() =>
-      type == ChartType.bar ? _barXml() : _scatterXml();
+  String buildChartXml() => type == ChartType.bar ? _barXml() : _scatterXml();
 
   String _head() =>
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
@@ -210,8 +258,8 @@ class ChartSpec {
         '<c:barChart><c:barDir val="col"/><c:grouping val="clustered"/><c:varyColors val="1"/>'
         '<c:ser><c:idx val="0"/><c:order val="0"/>'
         '<c:tx><c:v>达成度</c:v></c:tx>'
-        '<c:cat><c:strRef><c:f>${_sheetRef('A')}</c:f></c:strRef></c:cat>'
-        '<c:val><c:numRef><c:f>${_sheetRef('B')}</c:f></c:numRef></c:val>'
+        '<c:cat><c:strRef><c:f>${_ref(catCol)}</c:f></c:strRef></c:cat>'
+        '<c:val><c:numRef><c:f>${_ref(valCol)}</c:f></c:numRef></c:val>'
         '</c:ser>'
         '<c:axId val="111111111"/><c:axId val="222222222"/>'
         '</c:barChart>'
@@ -229,18 +277,18 @@ class ChartSpec {
         '<c:ser><c:idx val="0"/><c:order val="0"/><c:tx><c:v>个体达成度</c:v></c:tx>'
         '<c:spPr><a:ln w="19050"><a:noFill/></a:ln></c:spPr>'
         '<c:trendline><c:trendlineType val="linear"/><c:dispRSqr val="0"/><c:dispEq val="0"/></c:trendline>'
-        '<c:xVal><c:numRef><c:f>${_sheetRef('A')}</c:f></c:numRef></c:xVal>'
-        '<c:yVal><c:numRef><c:f>${_sheetRef('B')}</c:f></c:numRef></c:yVal>'
+        '<c:xVal><c:numRef><c:f>${_ref(catCol)}</c:f></c:numRef></c:xVal>'
+        '<c:yVal><c:numRef><c:f>${_ref(valCol)}</c:f></c:numRef></c:yVal>'
         '<c:smooth val="0"/></c:ser>'
         '<c:ser><c:idx val="1"/><c:order val="1"/><c:tx><c:v>班级平均</c:v></c:tx>'
         '<c:marker><c:symbol val="none"/></c:marker>'
-        '<c:xVal><c:numRef><c:f>${_sheetRef('A')}</c:f></c:numRef></c:xVal>'
-        '<c:yVal><c:numRef><c:f>${_sheetRef('C')}</c:f></c:numRef></c:yVal>'
+        '<c:xVal><c:numRef><c:f>${_ref(catCol)}</c:f></c:numRef></c:xVal>'
+        '<c:yVal><c:numRef><c:f>${_ref(avgCol)}</c:f></c:numRef></c:yVal>'
         '<c:smooth val="0"/></c:ser>'
         '<c:ser><c:idx val="2"/><c:order val="2"/><c:tx><c:v>期望(0.6)</c:v></c:tx>'
         '<c:marker><c:symbol val="none"/></c:marker>'
-        '<c:xVal><c:numRef><c:f>${_sheetRef('A')}</c:f></c:numRef></c:xVal>'
-        '<c:yVal><c:numRef><c:f>${_sheetRef('D')}</c:f></c:numRef></c:yVal>'
+        '<c:xVal><c:numRef><c:f>${_ref(catCol)}</c:f></c:numRef></c:xVal>'
+        '<c:yVal><c:numRef><c:f>${_ref(expCol)}</c:f></c:numRef></c:yVal>'
         '<c:smooth val="0"/></c:ser>'
         '<c:axId val="333333333"/><c:axId val="444444444"/>'
         '</c:scatterChart>'

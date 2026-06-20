@@ -1,4 +1,4 @@
-﻿part of '../classroom_page.dart';
+part of '../classroom_page.dart';
 
 class _ClassroomInteractionTab extends StatefulWidget {
   final ClassroomDao classroomDao;

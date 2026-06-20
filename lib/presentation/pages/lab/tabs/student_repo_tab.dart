@@ -1,4 +1,4 @@
-﻿part of '../lab_tasks_page.dart';
+part of '../lab_tasks_page.dart';
 
 class _StudentRepoTab extends StatefulWidget {
   final AuthService authService;

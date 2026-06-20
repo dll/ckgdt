@@ -1,4 +1,4 @@
-﻿part of '../knowledge_graph_page.dart';
+part of '../knowledge_graph_page.dart';
 
 class _MaskDropdownButton extends StatelessWidget {
   final MaskShape selectedShape;

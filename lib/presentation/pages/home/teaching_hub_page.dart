@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../learning/learning_hub_page.dart';
 import '../classroom/classroom_page.dart';
 import '../../../services/navigation_service.dart';

@@ -338,7 +338,7 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
     String? reportType;
     try {
       final row = await db.query(
-        'student_reports',
+        'assessment_reports',
         columns: ['user_id', 'title'],
         where: 'id = ?',
         whereArgs: [reportId],
@@ -353,7 +353,7 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
     }
 
     await db.update(
-      'student_reports',
+      'assessment_reports',
       {
         'score': result.score,
         'feedback': result.feedback,
