@@ -3,8 +3,8 @@
   "user_id": "2023210630",
   "user_name": "王天慧",
   "role": "student",
-  "synced_at": "2026-06-20T21:39:20.250168",
-  "last_active": "2026-06-20T21:39:20.250168",
+  "synced_at": "2026-06-20T21:58:53.129347",
+  "last_active": "2026-06-20T21:58:53.129347",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
@@ -70,7 +70,7 @@
       "task_id": 3,
       "user_id": "2023210630",
       "content": "PDF实验报告：2023210630王天慧实验三 跨平台应用开发.pdf\n\n--- 报告正文（自动提取）---\n实验三：跨平台应用开发报告\n一、实验项目基本信息\n项目\n内容\n实验编号\nd20301035103\n、\nd20301009203\n学时分配\n4\n学时\n实验类型\n验证型\n每组人数\n6\n人\n对应课程目标\n课程目标\n2\n二、实验概览\n2.1\n核心步骤\n1.\n需求分析阶段\n：定义列表页数据结构、\nAPI\n接口规范与传感器调用需求\n2.\nAI\n辅助编码阶段\n：使用\nTRAE\n生成网络请求与\nJSON\n解析代码，辅助生成传感器\n调用模板\n3.\n测试验证阶段\n：模拟\nAPI\n异常响应测试容错能力，验证传感器数据采集\n4.\n部署运维阶段\n：多框架性能对比测试，输出框架适用性分析报告\n2.2\n开发任务清单\n任务阶段\n主要内容\n关键技术点\nFlutter\n列表\nDart\n+\nProvider\nHTTP\n请求、\nJSON\n解析、\n下拉刷新\nReact\nNative\n列表\nJSX\n+\nHooks\nAxios\n、\nFlatList\n、下拉刷新\nUniapp\n列表\nVue\n+\nPinia\nuni.request\n、下拉刷新\nMAUI\n列表\nC#\n+\nMVVM\nHttpClient\n、数据绑定\n2.3\n成功标准\n\n各框架列表页功能完整\n\nRESTful\nAPI\n数据请求正常\n\nJSON\n数据解析正确\n\n下拉刷新功能正常\n\n框架对比报告完成\n三、实验任务与案例\n3.1\n核心任务\n开发业务数据列表页（\nRESTful\nAPI\n网络数据请求\n+\nJSON\n解析\n+\n下拉刷新），组内\n成员分别使用\nFlutter\n、\nReact\nNative\n、\nUniapp\n、\nMAUI\n等不同框架实现同一功能需求。\n3.2\n实战案例\n开发\n“\n智慧校园\n”\n新闻列表模块，从\nRESTful\nAPI\n获取新闻数据，解析\nJSON\n并展示列表\n，实现下拉刷新功能。\n四、需求分析阶段\n4.1\n数据模型定义\n{\n\"code\":\n200,\n\"data\":\n{\n\"items\":\n[\n{\n\"id\":\n1,\n\"title\":\n\"\n智慧校园更新通知\n\",\n\"content\":\n\"\n系统升级通知\n...\",\n\"author\":\n\"\n管理员\n\",\n\"time\":\n\"2024-01-01\n10:00:00\"\n},\n{\n\"id\":\n2,\n\"title\":\n\"\n期末考试安排\n\",\n\"content\":\n\"\n期末考试时间为\n...\",\n\"author\":\n\"\n教务处\n\",\n\"time\":\n\"2024-01-02\n14:30:00\"\n}\n4.2\nAPI\n接口规范\n项目\n内容\nURL\nhttps://api.example.com/news\nMethod\nGET\nRequest\nHeaders\nContent-Type:\napplication/json\nResponse\nJSON\n格式\n五、\nFlutter\n跨平台开发\n5.1\n项目创建\nflutter\ncreate\nnews_list\ncd\nnews_list\n5.2\n依赖配置\n#\npubspec.yaml\ndependencies:\nflutter:\nsdk:\nflutter\nhttp:\n^1.1.0\nprovider:\n^6.1.0\n5.3\nAI\n辅助编码（使用\nTRAE\n）\nTRAE\n需求描述\n：\n生成\nFlutter\n新闻列表页，使用\nProvider\n状态管理，实现网络请求获取\nJSON\n数据，支持\n下拉刷新功能。\n5.4\n核心代码实现\n数据模型（\nNews\n类）\nclass\nNews\n{\nfinal\nint\nid;\nfinal\nString\ntitle;\nfinal\nString\ncontent;\nfinal\nString\nauthor;\nfinal\nString\ntime;\nNews({\nrequired\nthis.id,\nrequired\nthis.title,\nrequired\nthis.content,\nrequired\nthis.author,\nrequired\nthis.time\n});\nfactory\nNews.fromJson(Map<String,\ndynamic>\njson)\n{\nreturn\nNews(\nid:\njson['id'],\ntitle:\njson['title'],\ncontent:\njson['content'],\nauthor:\njson['author'],\ntime:\njson['time'],\n状态管理（\nNewsProvider\n）\nclass\nNewsProvider\nextends\nChangeNotifier\n{\nList<News>\n_newsList\n=\n[];\nbool\n_isLoading\n=\nfalse;\nString?\n_errorMessage;\nList<News>\nget\nnewsList\n=>\n_newsList;\nbool\nget\nisLoading\n=>\n_isLoading;\nString?\nget\nerrorMessage\n=>\n_errorMessage;\nFuture<void>\nfetchNews()\nasync\n{\n_isLoading\n=\ntrue;\n_errorMessage\n=\nnull;\nnotifyListeners();\ntry\n{\nfinal\nresponse\n=\nawait\nhttp.get(\nUri.parse('https://api.example.com/news')\n);\nif\n(response.statusCode\n==\n200)\n{\nfinal\ndata\n=\njson.decode(response.body);\nfinal\nitems\n=\ndata['data']['items']\nas\nList;\n_newsList\n=\nitems.map((item)\n=>\nNews.fromJson(item)).toList();\n}\nelse\n{\n_errorMessage\n=\n'\n请求失败\n:\n${response.statusCode}';\n}\n}\ncatch\n(e)\n{\n_errorMessage\n=\n'\n网络错误\n:\n${e.toString()}';\n}\nfinally\n{\n_isLoading\n=\nfalse;\nnotifyListeners();\n新闻列表页面\nclass\nNewsListPage\nextends\nStatelessWidget\n{\n@override\nWidget\nbuild(BuildContext\ncontext)\n{\nreturn\nScaffold(\nappBar:\nAppBar(\ntitle:\nText('\n智慧校园新闻\n'),\nbackgroundColor:\nColors.blue,\nforegroundColor:\nColors.white,\n),\nbody:\nConsumer<NewsProvider>(\nbuilder:\n(context,\nprovider,\nchild)\n{\nif\n(provider.isLoading\n&&\nprovider.newsList.isEmpty)\n{\nreturn\nCenter(child:\nCircularProgressIndicator());\n}\nif\n(provider.errorMessage\n!=\nnull)\n{\nreturn\nCenter(\nchild:\nColumn(\nmainAxisAlignment:\nMainAxisAlignment.center,\nchildren:\n[\nText('\n加载失败\n:\n${provider.errorMessage}'),\nSizedBox(height:\n16),\nElevatedButton(\nonPressed:\n()\n=>\nprovider.fetchNews(),\nchild:\nText('\n重试\n'),\nreturn\nRefreshIndicator(\nonRefresh:\n()\n=>\nprovider.fetchNews(),\nchild:\nListView.builder(\nitemCount:\nprovider.newsList.length,\nitemBuilder:\n(context,\nindex)\n{\nfinal\nnews\n=\nprovider.newsList[index];\nreturn\nCard(\nmargin:\nEdgeInsets.symmetric(horizontal:\n12,\nvertical:\n6),\nchild:\nListTile(\ntitle:\nText(\nnews.title,\nstyle:\nTextStyle(fontWeight:\nFontWeight.bold),\n),\nsubtitle:\nText('${news.author}\n·\n${news.time}'),\ntrailing:\nIcon(Icons.chevron_right),\nonTap:\n()\n{\nshowDialog(\ncontext:\ncontext,\nbuilder:\n(ctx)\n=>\nAlertDialog(\ntitle:\nText(news.title),\ncontent:\nText(news.content),\nactions:\n[\nTextButton(\nonPressed:\n()\n=>\nNavigator.pop(ctx),\nchild:\nText('\n关闭\n'),\n),\n5.5\n架构设计图\n六、\nReact\nNative\n跨平台开发\n6.1\n项目创建\nnpx\nreact-native\ninit\nNewsList\ncd\nNewsList\n6.2\n依赖安装\nnpm\ninstall\naxios\n6.3\n核心代码实现\nimport\nReact,\n{\nuseState,\nuseEffect\n}\nfrom\n'react';\nimport\n{\nFlatList,\nRefreshControl,\nText,\nView,\nStyleSheet,\nActivityIndicator,\nAlert,\n}\nfrom\n'react-native';\nimport\naxios\nfrom\n'axios';\nconst\nAPI_URL\n=\n'https://api.example.com/news';\nconst\nApp\n=\n()\n=>\n{\nconst\n[news,\nsetNews]\n=\nuseState([]);\nconst\n[refreshing,\nsetRefreshing]\n=\nuseState(false);\nconst\n[loading,\nsetLoading]\n=\nuseState(true);\nconst\nfetchNews\n=\nasync\n()\n=>\n{\ntry\n{\nconst\nresponse\n=\nawait\naxios.get(API_URL);\nif\n(response.data.code\n===\n200)\n{\nsetNews(response.data.data.items);\n}\n}\ncatch\n(error)\n{\nAlert.alert('\n错误\n',\n'\n网络请求失败\n');\nconsole.error(error);\n}\nfinally\n{\nsetLoading(false);\n}\n};\nuseEffect(()\n=>\n{\nfetchNews();\n},\n[]);\nconst\nonRefresh\n=\nasync\n()\n=>\n{\nsetRefreshing(true);\nawait\nfetchNews();\nsetRefreshing(false);\n};\nconst\nrenderItem\n=\n({\nitem\n})\n=>\n(\n<View\nstyle={styles.item}>\n<Text\nstyle={styles.title}>{item.title}</Text>\n<Text\nstyle={styles.info}>{item.author}\n-\n{item.time}</Text>\n</View>\n);\nif\n(loading)\n{\nreturn\n(\n<View\nstyle={styles.center}>\n<ActivityIndicator\nsize=\"large\"\ncolor=\"#0066cc\"\n/>\n</View>\n);\n}\nreturn\n(\n<FlatList\ndata={news}\nkeyExtractor={item\n=>\nitem.id.toString()}\nrenderItem={renderItem}\nrefreshControl={\n<RefreshControl\nrefreshing={refreshing}\nonRefresh={onRefresh}\n/>\n}\n/>\n);\n};\nconst\nstyles\n=\nStyleSheet.create({\ncenter:\n{\nflex:\n1,\njustifyContent:\n'center',\nalignItems:\n'center',\n},\nitem:\n{\npadding:\n16,\nborderBottomWidth:\n1,\nborderBottomColor:\n'#eee',\nbackgroundColor:\n'#fff',\n},\ntitle:\n{\nfontSize:\n16,\nfontWeight:\n'bold',\nmarginBottom:\n4,\n},\ninfo:\n{\nfontSize:\n12,\ncolor:\n'#666',\n},\n});\nexport\ndefault\nApp;\n七、\nUniapp\n跨平台开发\n7.1\n项目创建\n1.\n打开\nHBuilderX\n2.\n选择：文件\n→\n新建\n→\n项目\n3.\n选择：\nuni-app\n→\n默认模板\n7.2\n核心代码实现\n<!--\npages/index/index.vue\n-->\n<template>\n<view\nclass=\"container\">\n<!--\n加载状态\n-->\n<view\nv-if=\"loading\"\nclass=\"loading\">\n<text>\n加载中\n...</text>\n</view>\n<!--\n错误状态\n-->\n<view\nv-else-if=\"error\"\nclass=\"error\">\n<text>{{\nerror\n}}</text>\n<button\n@click=\"fetchNews\"\nsize=\"mini\">\n重试\n</button>\n</view>\n<!--\n新闻列表\n-->\n<view\nv-else>\n<view\nclass=\"news-item\"\nv-for=\"item\nin\nnewsList\"\n:key=\"item.id\"\n@click=\"showDetail(item)\"\n>\n<text\nclass=\"title\">{{\nitem.title\n}}</text>\n<text\nclass=\"info\">{{\nitem.author\n}}\n-\n{{\nitem.time\n}}</text>\n</view>\n</view>\n</view>\n</template>\n<script>\nexport\ndefault\n{\ndata()\n{\nreturn\n{\nnewsList:\n[],\nloading:\ntrue,\nerror:\n''\n}\nonLoad()\n{\nthis.fetchNews();\n},\nonPullDownRefresh()\n{\nthis.fetchNews().then(()\n=>\n{\nuni.stopPullDownRefresh();\n});\nmethods:\n{\nasync\nfetchNews()\n{\nthis.loading\n=\ntrue;\nthis.error\n=\n'';\ntry\n{\nconst\nres\n=\nawait\nuni.request({\nurl:\n'https://api.example.com/news'\n});\nif\n(res.data.code\n===\n200)\n{\nthis.newsList\n=\nres.data.data.items;\n}\nelse\n{\nthis.error\n=\n'\n数据加载失败\n';\n}\n}\ncatch\n(err)\n{\nthis.error\n=\n'\n网络请求失败\n';\nconsole.error(err);\n}\nfinally\n{\nthis.loading\n=\nfalse;\n}\nshowDetail(item)\n{\nuni.showModal({\ntitle:\nitem.title,\ncontent:\nitem.content,\nshowCancel:\nfalse,\nconfirmText:\n'\n关闭\n'\n</script>\n<style>\n.container\n{\npadding:\n20rpx;\n}\n.news-item\n{\npadding:\n30rpx;\nborder-bottom:\n1rpx\nsolid\n#eee;\nbackground-color:\n#fff;\nmargin-bottom:\n10rpx;\nborder-radius:\n10rpx;\n}\n.title\n{\nfont-size:\n32rpx;\nfont-weight:\nbold;\ndisplay:\nblock;\nmargin-bottom:\n10rpx;\n}\n.info\n{\nfont-size:\n24rpx;\ncolor:\n#666;\n}\n.loading,\n.error\n{\ntext-align:\ncenter;\npadding:\n100rpx;\n}\n</style>\n八、\nMAUI\n跨平台开发\n8.1\n项目创建\n1.\n打开\nVisual\nStudio\n2022\n2.\n选择：创建新项目\n→\n.NET\nMAUI\n应用\n3.\n配置项目名称和位置\n8.2\n核心代码实现\n数据模型\n//\nModels/NewsItem.cs\npublic\nclass\nNewsItem\n{\npublic\nint\nId\n{\nget;\nset;\n}\npublic\nstring\nTitle\n{\nget;\nset;\n}\npublic\nstring\nContent\n{\nget;\nset;\n}\npublic\nstring\nAuthor\n{\nget;\nset;\n}\npublic\nstring\nTime\n{\nget;\nset;\n}\n}\npublic\nclass\nNewsResponse\n{\npublic\nint\nCode\n{\nget;\nset;\n}\npublic\nNewsData\nData\n{\nget;\nset;\n}\n}\npublic\nclass\nNewsData\n{\npublic\nList<NewsItem>\nItems\n{\nget;\nset;\n}\n}\nViewModel\n（\nMVVM\n）\n//\nViewModels/MainViewModel.cs\npublic\npartial\nclass\nMainViewModel\n:\nObservableObject\n{\n[ObservableProperty]\nprivate\nObservableCollection<NewsItem>\nnewsList\n=\nnew();\n[ObservableProperty]\nprivate\nbool\nisLoading;\n[ObservableProperty]\nprivate\nstring\nerrorMessage;\npublic\nMainViewModel()\n{\nLoadNewsCommand\n=\nnew\nCommand(async\n()\n=>\nawait\nFetchNewsAsync());\nLoadNewsCommand.Execute(null);\n}\npublic\nICommand\nLoadNewsCommand\n{\nget;\n}\npublic\nasync\nTask\nFetchNewsAsync()\n{\nIsLoading\n=\ntrue;\nErrorMessage\n=\nstring.Empty;\ntry\n{\nusing\nvar\nclient\n=\nnew\nHttpClient();\nvar\nresponse\n=\nawait\nclient.GetAsync(\"https://api.example.com/news\");\nif\n(response.IsSuccessStatusCode)\n{\nvar\njson\n=\nawait\nresponse.Content.ReadAsStringAsync();\nvar\ndata\n=\nJsonSerializer.Deserialize<NewsResponse>(json);\nif\n(data?.Code\n==\n200\n&&\ndata.Data?.Items\n!=\nnull)\n{\nNewsList\n=\nnew\nObservableCollection<NewsItem>(data.Data.Items);\n}\n}\nelse\n{\nErrorMessage\n=\n$\"\n请求失败\n:\n{response.StatusCode}\";\n}\n}\ncatch\n(Exception\nex)\n{\nErrorMessage\n=\n$\"\n网络错误\n:\n{ex.Message}\";\n}\nfinally\n{\nIsLoading\n=\nfalse;\n视图层（\nXAML\n）\n<!--\nViews/MainPage.xaml\n-->\n<?xml\nversion=\"1.0\"\nencoding=\"utf-8\"\n?>\n<ContentPage\nxmlns=\"http://schemas.microsoft.com/dotnet/2021/maui\"\nxmlns:x=\"http://schemas.microsoft.com/winfx/2009/xaml\"\nx:Class=\"NewsList.Views.MainPage\"\nTitle=\"\n智慧校园新闻\n\">\n<RefreshView\nIsRefreshing=\"{Binding\nIsLoading}\"\nCommand=\"{Binding\nLoadNewsCommand}\">\n<CollectionView\nItemsSource=\"{Binding\nNewsList}\">\n<CollectionView.ItemTemplate>\n<DataTemplate>\n<Frame\nMargin=\"10,5\"\nPadding=\"10\">\n<VerticalStackLayout>\n<Label\nText=\"{Binding\nTitle}\"\nFontAttributes=\"Bold\"\nFontSize=\"16\"/>\n<Label\nText=\"{Binding\nAuthor}\"\nFontSize=\"12\"\nTextColor=\"Gray\"/>\n<Label\nText=\"{Binding\nTime}\"\nFontSize=\"11\"\nTextColor=\"Gray\"/>\n</VerticalStackLayout>\n</Frame>\n</DataTemplate>\n</CollectionView.ItemTemplate>\n</CollectionView>\n</RefreshView>\n</ContentPage>\n九、传感器集成扩展（\nFlutter\n示例）\n9.1\nGPS\n定位功能\n//\n添加依赖\n:\ngeolocator:\n^10.1.0\nimport\n'package:geolocator/geolocator.dart';\nclass\nLocationService\n{\nFuture<Position>\ngetCurrentLocation()\nasync\n{\n//\n检查定位服务是否开启\nbool\nserviceEnabled\n=\nawait\nGeolocator.isLocationServiceEnabled();\nif\n(!serviceEnabled)\n{\nthrow\nException('\n定位服务未开启\n');\n}\n//\n检查权限\nLocationPermission\npermission\n=\nawait\nGeolocator.checkPermission();\nif\n(permission\n==\nLocationPermission.denied)\n{\npermission\n=\nawait\nGeolocator.requestPermission();\nif\n(permission\n==\nLocationPermission.denied)\n{\nthrow\nException('\n定位权限被拒绝\n');\n}\n}\n//\n获取当前位置\nreturn\nawait\nGeolocator.getCurrentPosition(\nlocationSettings:\nLocationSettings(\naccuracy:\nLocationAccuracy.high,\ndistanceFilter:\n10,\n),\n9.2\n加速度计功能\n//\n添加依赖\n:\nsensors_plus:\n^4.0.0\nimport\n'package:sensors_plus/sensors_plus.dart';\nclass\nAccelerometerService\n{\nvoid\nlistenAccelerometer()\n{\naccelerometerEvents.listen((AccelerometerEvent\nevent)\n{\nprint('\n加速度计数据\n:');\nprint('X\n轴\n:\n${event.x}');\nprint('Y\n轴\n:\n${event.y}');\nprint('Z\n轴\n:\n${event.z}');\n//\n检测摇动手势\nif\n(event.x.abs()\n>\n15\n||\nevent.y.abs()\n>\n15)\n{\n//\n触发刷新操作\nonShakeDetected?.call();\n}\n});\n}\nVoidCallback?\nonShakeDetected;\n}\n十、测试验证阶段\n10.1\n测试用例设计\n测试编号\n测试类型\n测试内容\n预期结果\nTC-01\n正常请求\n网络正常，\nAPI\n返\n回\n200\n列表正常显示数据\nTC-02\n下拉刷新\n下拉列表触发刷新\n数据更新，界面刷\n新\nTC-03\n网络异常\n断开网络请求\n显示网络错误提示\nTC-04\n空数据处理\nAPI\n返回空数组\n显示空状态页面\nTC-05\n加载状态\n请求过程中\n显示加载动画\nTC-06\n点击详情\n点击新闻项\n弹出详情对话框\n10.2\n测试结果记录\n测试编号\nFlutter\nReact\nNative\nUniapp\nMAUI\nTC-01\n✅\n通过\n✅\n通过\n✅\n通过\n✅\n通过\nTC-02\n✅\n通过\n✅\n通过\n✅\n通过\n✅\n通过\nTC-03\n✅\n通过\n✅\n通过\n✅\n通过\n✅\n通过\nTC-04\n✅\n通过\n✅\n通过\n✅\n通过\n✅\n通过\nTC-05\n✅\n通过\n✅\n通过\n✅\n通过\n✅\n通过\nTC-06\n✅\n通过\n✅\n通过\n✅\n通过\n✅\n通过\n10.3\n时序图\n十一、框架对比分析报告\n11.1\n多维度对比\n对比项\nFlutter\nReact\nNative\nUniapp\nMAUI\n开发语言\nDart\nJavaScript/Typ\neScript\nVue/React\nC#\n性能表现\n★★★★★\n★★★★☆\n★★★☆☆\n★★★★☆\n学习成本\n中等\n低\n低\n中等\nUI\n一致性\n★★★★★\n★★★☆☆\n★★★★☆\n★★★★☆\n热重载\n✅\n优秀\n✅\n优秀\n✅\n支持\n✅\n支持\n社区生态\n活跃\n非常活跃\n国内活跃\n一般\n包体积\n中等\n较大\n较小\n较大\n设备\nAPI\n丰富\n丰富\n中等\n丰富\n企业应用\n广泛\n非常广泛\n国内广泛\n企业级\n调试体验\n优秀\n良好\n良好\n优秀\n11.2\n适用场景分析\n框架\n推荐场景\n不推荐场景\nFlutter\n高性能\nUI\n、跨平台一致性\n要求高、初创产品\n与原生\nSDK\n深度集成、包\n体积敏感\nReact\nNative\n快速迭代、\nWeb\n技术栈团\n队、大型应用\n高性能动画、复杂手势交\n互\nUniapp\n小程序为主、国内应用、\n中小型项目\n复杂原生功能、国际化应\n用\nMAUI\n.NET\n生态企业、\nWindows\n应用、企业内部工具\n移动端独占应用、社区生\n态依赖\n十二、总结与思考\n12.1\n实验总结\n通过本次实验，我成功完成了以下任务：\n1.\n✅\n掌握\n4\n种跨平台框架（\nFlutter\n、\nReact\nNative\n、\nUniapp\n、\nMAUI\n）的列表页开\n发\n2.\n✅\n学会\nRESTful\nAPI\n网络数据请求与\nJSON\n解析\n3.\n✅\n实现下拉刷新功能\n4.\n✅\n了解移动设备传感器（\nGPS\n、加速度计）调用方法\n5.\n✅\n完成框架适用性对比分析报告\n12.2\n开发体验对比\n框架\n开发体验\n上手难度\n代码量\n调试效率\nFlutter\n优秀，声明式\nUI\n中等\n中等\n高\nReact\nNative\n良好，\nJSX\n熟\n悉\n低\n较少\n中等\nUniapp\n良好，\nVue\n语\n法\n低\n较少\n中等\nMAUI\n良好，\nXAML+MVVM\n中等\n较多\n高\n12.3\n课后思考\n思考\n1\n：各跨平台框架的适用场景分析\n\nFlutter\n：适合对\nUI\n一致性要求高、追求性能的应用，如设计感强的消费级应用\n\nReact\nNative\n：适合\nWeb\n技术栈团队、需要快速迭代的创业产品\n\nUniapp\n：适合需要同时覆盖小程序和\nApp\n的中小型项目\n\nMAUI\n：适合已有\n.NET\n技术栈的企业内部应用\n思考\n2\n：如何选择合适的跨平台框架\n选择时应考虑以下因素：\n1.\n团队技术栈\n：优先选择团队熟悉的技术\n2.\n性能要求\n：高性能场景选\nFlutter\n3.\n发布平台\n：小程序为主选\nUniapp\n4.\n项目规模\n：大型项目考虑生态成熟度\n5.\n维护成本\n：社区活跃度决定长期维护成本\n思考\n3\n：传感器在移动应用中的创新应用\n\n教育应用\n：利用加速度计实现摇一摇答题、计步学习\n\n家长管控\n：利用\nGPS\n实现电子围栏、位置追踪\n\nAR\n学习\n：结合陀螺仪实现\nAR\n互动教学\n\n健康监测\n：结合多种传感器实现坐姿检测、用眼提醒\n十三、实验完成情况确认\n检查项\n完成情况\nFlutter\n列表页开发\n✅\n已完成\nReact\nNative\n列表页开发\n✅\n已完成\nUniapp\n列表页开发\n✅\n已完成\nMAUI\n列表页开发\n✅\n已完成\nRESTful\nAPI\n请求\n✅\n已完成\nJSON\n数据解析\n✅\n已完成\n下拉刷新功能\n✅\n已完成\n传感器集成\n✅\n已完成\n框架对比报告\n✅\n已完成\n实验完成日期\n：\n202\n6\n年\n实验人签名\n：\n______________\n指导教师评分\n：\n______________\n",
-      "file_paths": "D:\\浏览器下载\\2023210630王天慧实验三 跨平台应用开发.pdf",
+      "file_paths": "C:\\Users\\24738\\Documents/sync_files/2023210630/2023210630王天慧实验三 跨平台应用开发.pdf",
       "file_names": "2023210630王天慧实验三 跨平台应用开发.pdf",
       "submit_time": "2026-06-19T20:18:54.808276",
       "status": "已提交",
@@ -88,7 +88,7 @@
       "task_id": 5,
       "user_id": "2023210630",
       "content": "PDF实验报告：2023210630王天慧实验五 鸿蒙多端应用开发.pdf\n\n--- 报告正文（自动提取）---\n实验五\n鸿蒙多端应用开发\n一、实验项目基本信息\n2023210630\n王天慧\n实验环境\n二、核心步骤列表\n2.1\n需求分析阶段\n主要完成工作：\n1.\n明确实验目标：开发一款支持多端设备自适应的鸿蒙天气应用\n2.\n梳理功能模块清单：天气数据展示模块、多端适配模块、传感器\n数据采集模块、分布式数据同步模块\n3.\n制定技术选型方案：采用\nArkTS\n+\nArkUI\n声明式开发范式，基\n于\nHarmonyOS\n4.0\nSDK\n进行开发\n4.\n分析不同设备的屏幕特性\n：\n手机\n（\n竖屏为主\n）\n、\n平板\n（\n横屏大屏\n）\n、\n手表（小屏圆形\n/\n方形）、车机（横屏宽屏）\n实现方式：\n通过绘制功能流程图和界面原型草图\n，\n明确各模块之间的数据交互关\n系\n，\n定义核心数据结构\n（\n天气数据模型\n、\n传感器数据模型\n）\n，\n编写详\n细的需求规格说明书。\n遇到的问题与解决办法：\n1.\n问题\n1\n：不同设备的交互模式差异大，手表端触控区域小，车机\n端需要考虑驾驶安全\n2.\n解决办法：采用\nHarmonyOS\n提供的断点系统，为不同设备断点定\n义独立的交互组件和布局策略，手表端简化为关键信息展示，车\n机端增大按钮点击热区\n2.2\nAI\n辅助编码阶段\n主要完成工作：\n1.\n搭建项目基础工程结构，配置\nmodule.json5\n设备支持属性\n2.\n基\n于\nA\nI\n辅助生\n成\nArkU\nI\n声明式基础组件代码\n，\n快速完成天气卡片\n、\n温度曲线等核心\nUI\n元素\n3.\n编写状态管理逻辑，实现\n@State\n装饰器驱动的数据绑定\n4.\n集成传感器管理模块，封装光线传感器和陀螺仪的监听回调\n5.\n实现分布式数据同步服务，通过分布式数据对象进行跨设备数据\n传递\n实现方式：\n在\nDevEco\nStudio\n中创建新的\nStage\n模型项目，利用代码补全和\nA\nI\n辅助开发工具快速生成基础代码框架\n，\n在此基础上进行业务逻辑的二\n次开发和优化调试。\n遇到的问题与解决办法：\n1.\n问题\n1\n：\nAI\n生成的代码存在版本兼容性问题，部分\nAPI\n已在新版\n本\nSDK\n中废弃\n2.\n解决办法：查阅\nHarmonyOS\n官方\nAPI\n参考文档，将废弃\nAPI\n替换\n为最新的推荐实现方式\n，\n例如将旧的\n@Watch\n装饰器使用场景优化\n为使用\n@Prop/@Link\n状态管理组合\n2.3\n测试验证阶段\n主要完成工作：\n1.\n进行组件级单元测试，验证天气数据展示、状态更新的正确性\n2.\n在不同设备模拟器中进行界面适配测试，检查响应式布局在各断\n点下的表现\n3.\n进行传感器功能测试，验证光线传感器数值变化、陀螺仪姿态检\n测的准确性\n4.\n跨设备分布式连通性测试，验证同一局域网下多设备数据同步的\n实时性\n实现方式：\n使用\nDevEco\nStudio\n内置的设备模拟器\n，\n分别启动手机\n、\n平板\n、\n手表\n、\n车机四个模拟设备，在每个设备上逐一运行应用并进行功能点验证\n，\n记录测试结果和发现的界面适配问题。\n遇到的问题与解决办法：\n1.\n问题\n1\n：在车机模拟器上运行时，部分文本组件显示不全\n2.\n解决办法：针对车机断点配置独立的字体大小和组件间距，使用\n媒体查询动态调整文本最大行数和字号\n2.4\n部署运维阶段\n主要完成工作：\n1.\n完成应用的\nHAP\n包构建配置，配置不同设备的分发维度\n2.\n生成签名证书，完成应用调试签名配置\n3.\n将应用部署到真实测试设备进行真机验证\n4.\n记录部署过程中的设备兼容性问题，持续优化应用性能表现\n实现方式：\n通过\nDevEco\nStudio\n的\nProject\nStructure\n配置界面完成签名证书的\n导入\n，\n点击运行按钮将应用直接安装到连接的真机设备上进行实际场\n景的验证。\n遇到的问题与解决办法：\n1.\n问题\n1\n：真机设备应用安装失败，提示签名不匹配\n2.\n解决办法\n：\n重新生成调试证书和\nProfile\n文件\n，\n确保设备的\nUDI\nD\n已正确添加到\nProfile\n配置中，在工程配置中正确引用证书文件\n三、开发任务清单的对应完成情况\n3.1\n天气应用\nArkUI\n开发\n实现说明\n采用\nHarmonyOS\nArkTS\n声明式开发范式，使用\n@State\n装饰器定义组\n件内部状态变量\n，\n当状态变量发生变更时\n，\nArkUI\n框架会自动触发关\n联\nUI\n组件的重新渲染，实现数据与视图的双向绑定效果。天气应用\n的核心状态变量包括当前温度\n、\n天气状况图标\n、\n未来几小时预报列表\n等，通过状态的改变驱动界面自动更新，无需手动操作\nDOM\n元素。\n关键代码\ntypescript\n@\nEntry\n@\nComponent\nstruct\nWeatherMainPage\n{\n@\nState\nweatherData\n:\nWeatherData\n=\n{\ncityName:\n'\n滁州市\n',\ncurrentTemp:\n26\n,\nweatherDesc:\n'\n晴\n',\nhumidity:\n65\n,\nwindSpeed:\n3.2\n,\nfutureHours:\n[]\n};\n@\nState\nisRefreshing\n:\nboolean\n=\nfalse\n;\nbuild\n()\n{\nColumn\n()\n{\nText\n(\nthis\n.\nweatherData\n.\ncityName\n).\nfontSize\n(\n24\n);\nText\n(`\n${\nthis\n.\nweatherData\n.\ncurrentTemp\n}\n°\nC`).\nfontSize\n(\n80\n);\nText\n(\nthis\n.\nweatherData\n.\nweatherDesc\n).\nfontSize\n(\n20\n);\nButton\n('\n刷新天气数据\n')\n.\nonClick\n(()\n=>\n{\nthis\n.\nisRefreshing\n=\ntrue\n;\nsetTimeout\n(()\n=>\n{\nthis\n.\nweatherData\n.\ncurrentTemp\n=\nMath\n.\nfloor\n(\n20\n+\nMath\n.\nrandom\n()\n*\n15\n);\n3.2\n多端适配实现\n实现说明\n基于\nHarmonyOS\n断点系统，定义\nxs\n、\nsm\n、\nmd\n、\nlg\n四个标准断点，分\n别对应小屏穿戴设备\n、\n竖屏手机\n、\n平板设备\n、\n大屏车机四个设备形态\n。\n配合媒体查询\nAPI\n获取当前设备的窗口尺寸和设备类型信息\n，\n动态调\n整组件的排列方式\n、\n字体大小\n、\n间距等样式属性\n，\n实现一套代码多端\n运行的响应式布局效果\n。\n使用\nRow/Column\n的\nlayoutWeight\n属性实现\n弹性空间分配，确保界面元素在任意尺寸屏幕上都能合理布局。\n关键代码\n3.3\n传感器调用实现\n实现说明\n通过\nHarmonyOS\n统一的传感器管理\nAPI\n，调用设备的光线传感器和\n陀螺仪传感器\n。\n光线传感器用于检测环境光强\n；\n陀螺仪传感器用于检\n测设备的姿态变化，实现摇一摇刷新天气数据的交互功能。\n关键代码\ntypescript\nimport\nmediaquery\nfrom\n'@ohos.mediaquery';\nenum\nBreakPoint\n{\nXS\n=\n'xs',\nSM\n=\n'sm',\nMD\n=\n'md',\nLG\n=\n'lg'\n}\n@\nEntry\n@\nComponent\nstruct\nAdaptiveWeatherPage\n{\n@\nState\ncurrentBreakPoint\n:\nBreakPoint\n=\nBreakPoint\n.\nSM\n;\naboutToAppear\n()\n{\nconst\nsmListener\n=\nmediaquery\n.\nmatchMediaSync\n('(360vp\n<=\nwidth\n<=\n599vp)');\nsmListener\n.\non\n('change',\n(\ndata\n)\n=>\n{\nif\n(\ndata\n.\nmatches\n)\nthis\n.\ncurrentBreakPoint\n=\nBreakPoint\n.\nSM\n;\n});\n}\nbuild\n()\n{\nColumn\n()\n{\nif\n(\nthis\n.\ncurrentBreakPoint\n===\nBreakPoint\n.\nLG\n)\n{\n//\n车机大屏横屏双栏布局\nRow\n()\n{\nColumn\n()\n{\nText\n('\n主天气信息\n').\nfontSize\n(\n40\n)\n}.\nlayoutWeight\n(\n1\n);\nColumn\n()\n{\nText\n('\n详细预报信息\n').\nfontSize\n(\n40\n)\n}.\nlayoutWeight\n(\n1\n);\n}\n}\nelse\nif\n(\nthis\n.\ncurrentBreakPoint\n===\nBreakPoint\n.\nXS\n)\n{\n//\n手表小屏极简布局\nColumn\n()\n{\ntypescript\nimport\nsensor\nfrom\n'@ohos.sensor';\n@\nEntry\n@\nComponent\nstruct\nSensorDemoPage\n{\n@\nState\nlightIntensity\n:\nnumber\n=\n0\n;\n@\nState\ngyroX\n:\nnumber\n=\n0\n;\n@\nState\ngyroY\n:\nnumber\n=\n0\n;\n@\nState\ngyroZ\n:\nnumber\n=\n0\n;\naboutToAppear\n()\n{\n//\n订阅光线传感器\nsensor\n.\non\n(\nsensor\n.\nSensorId\n.\nLIGHT\n,\n(\ndata\n)\n=>\n{\nthis\n.\nlightIntensity\n=\ndata\n.\nilluminance\n;\n},\n{\ninterval:\n1000000\n});\n//\n订阅陀螺仪传感器\nsensor\n.\non\n(\nsensor\n.\nSensorId\n.\nGYROSCOPE\n,\n(\ndata\n)\n=>\n{\nthis\n.\ngyroX\n=\ndata\n.\nx\n;\nthis\n.\ngyroY\n=\ndata\n.\ny\n;\nthis\n.\ngyroZ\n=\ndata\n.\nz\n;\nthis\n.\ndetectShakeAction\n();\n},\n{\ninterval:\n200000\n});\n}\nprivate\ndetectShakeAction\n():\nvoid\n{\nconst\nthreshold\n:\nnumber\n=\n5\n;\nif\n(\nMath\n.\nabs\n(\nthis\n.\ngyroX\n)\n>\nthreshold\n||\nMath\n.\nabs\n(\nthis\n.\ngyroY\n)\n>\nthreshold\n||\n3.4\n分布式数据同步与分布式能力演示\n实现说明\n使用\nHarmonyOS\n分布式数据管理框架\n，\n通过创建分布式数据对象\n，\n实\n现同一华为账号下多设备之间的天气数据实时同步\n。\n在手机端更新城\n市选择后\n，\n平板\n、\n手表等其他连接设备上的天气应用会自动接收到数\n据变更通知并刷新界面\n，\n无需额外的云端服务器即可完成跨端数据流\n转\n。\n通过分布式设备发现能力\n，\n还可以手动选择将当前手机的天气详\n情页面直接跨端拉起显示在车机屏幕上，实现多端协同的流畅体验\n。\n分布式能力演示场景包括：\n1.\n手机端修改天气城市，平板端自动同步更新\n2.\n手机端摇一摇，手表端同步显示刷新状态动画\n3.\n一键将手机天气详情流转到车机端显示\n四、成功标准验证\n4.1\n天气应用功能完整性验证\n验证说明\n：\n依次启动应用\n，\n检查所有功能点的运行情况\n。\n手动点击刷\n新天气数据按钮\n，\n确认界面温度\n、\n湿度等数值能够正常随机更新\n，\n所\n有组件元素均正常渲染无报错\n。\n通过查\n看\nDevEco\nStudi\no\n的\nLo\ng\n窗口\n，\n确认整个数据更新流程没有抛出异常信息\n，\nArkU\nI\n状态绑定响应及时\n，\n用户交互操作无明显卡顿感\n，\n应用在后台切换后再返回前台状态能够\n正确保持。\n4.2\n手机\n/\n平板界面自适应性验证\n验证说明\n：\n分别在手机模拟器和平板模拟器中启动应用\n，\n通过拖拽调\n整窗口尺寸\n，\n观察界面布局是否能够平滑过渡\n。\n在手机竖屏时保持纵\n向单列布局\n，\n所有内容在一屏内合理展示\n；\n在平板大屏模式下自动切\n换为横向多卡片并排布局\n，\n充分利用大屏空间\n。\n横竖屏切换过程中没\n有出现布局错乱\n、\n文本截断\n、\n组件溢出屏幕等不良现象\n，\n断点切换响\n应延迟小于\n1\n秒。\n4.3\n传感器数据正常采集验证\n验证说明\n：\n进入传感器演示页面\n，\n观察光线传感器数值随环境光线变\n化\n（\n在模拟器中通过修改传感器模拟数据\n）\n，\n确认数值能够实时动态\n更新\n；\n通过模拟器控制面板输入陀螺仪模拟角速度数值\n，\n确认三个轴\n的读数都能够正常在界面上显示\n。\n当角速度数值超过设定阈值时\n，\n成\n功触发预设的摇一摇响应逻辑\n，\n传感器回调函数运行稳定无崩溃现象。\n五、关键截图说明\n截图位置\n1\n：手机端运行界面\n展示内容说明\n：\n应用在手机模拟器竖屏状态下正常运行\n，\n页面采用单\n列布局\n，\n从上至下依次展示滁州天气信息卡片\n、\n环境传感器数据面板\n与分布式数据同步功能区。界面布局规整、适配良好，温度、湿度\n、\n风速\n、\nAQI\n等天气数据\n、\n光线与陀螺仪传感器数据均正常显示\n，\n刷新\n天气\n、\n同步城市等交互按钮功能可见\n，\n整体\nUI\n风格统一\n，\n运行状态\n稳定。\n截图位置\n2\n：平板\n/\n手表\n/\n车机端适配界面\n展示内容说明\n：\n应用在平板模拟器横屏状态下正常运行\n，\n页面自动切\n换为宽屏响应式布局\n，\n顶部展示滁州天气信息卡片\n，\n下方分为环境传\n感器数据与分布式数据同步两个功能区\n。\n界面根据平板屏幕尺寸自适\n应调整了组件宽度与间距\n，\n布局更加舒展\n，\n所有数据模块与交互控件\n均完整显示\n，\n多端适配效果良好\n，\n符合鸿蒙\n“\n一次开发\n、\n多端部署\n”\n的设计目标。\n截图位置\n3\n传感器数据同步展示截图\n展示内容说明\n：模拟器运行过程中，光线传感器、陀螺仪数据实\n时动态刷新，数值随设备状态模拟变化，传感器采集功能运行正\n常。\n六、实验总结与分析\n实验收获\n通过本次综合性实验\n，\n深入理解了\nHarmonyOS\n分布式操作系统的核心\n理念，掌握了\nArkTS\n声明式\nUI\n开发的完整流程。以前端开发的视角\n来看，\nArkUI\n的状态驱动开发模式相比传统的命令式\nUI\n开发方式代\n码量显著减少\n，\n逻辑更加清晰不易出错\n。\n多端适配部分\n，\n通过断点系\n统和媒体查询的组合使用\n，\n真正体会到了\n\"\n一次开发\n，\n多端部署\n\"\n的鸿\n蒙开发优势\n，\n不需要为手机\n、\n平板等不同设备分别维护多套独立的应\n用代码\n，\n极大地提升了跨设备应用的开发效率\n。\n在传感器调用和分布\n式数据同步的实践过程中\n，\n也感受到了鸿蒙系统在硬件能力开放和多\n设备互联协同方面的强大实力\n，\n这些能力是传统单设备操作系统难以\n提供的。\n遇到的主要问题\n实验过程中遇到了几个典型问题：第一个是刚开始对\n@State\n、\n@Lin\nk\n等不同装饰器的使用场景理解不够透彻\n，\n在父子组件状态传递时出现\n了状态不同步的问题\n；\n第二个是断点适配初期简单地硬编码写死像素\n值\n，\n导致在某些特殊分辨率的设备上出现了布局错位的情况\n；\n第三个\n是传感器使用完毕后忘记在\naboutToDisappear\n生命周期函数中取消\n订阅\n，\n导致应用退出后传感器后台仍在持续运行造成不必要的电量消\n耗。\n后续改进方向\n后续可以在现有基础上继续扩展几个方面的功能优化\n：\n第一\n，\n接入真\n实的公开天气\nAPI\n接口\n，\n替换当前模拟生成的天气数据\n，\n实现真实的\n网络天气数据获取和解析展示\n；\n第二\n，\n完善深色模式适配逻辑\n，\n结合\n光线传感器的读数自动切换应用的明\n/\n暗主题\n，\n进一步提升用户体验\n；\n第三\n，\n扩展更多的分布式协同场景\n，\n例如使用鸿蒙的分布式任务调度\n能力\n，\n实现手机上设置好天气闹钟后\n，\n到点自动在车机端弹出天气语\n音播报提示，进一步深化多端设备之间的业务联动体验。\n评分\n：\n教师评语\n：\n",
-      "file_paths": "D:\\浏览器下载\\2023210630王天慧实验五 鸿蒙多端应用开发.pdf",
+      "file_paths": "C:\\Users\\24738\\Documents/sync_files/2023210630/2023210630王天慧实验五 鸿蒙多端应用开发.pdf",
       "file_names": "2023210630王天慧实验五 鸿蒙多端应用开发.pdf",
       "submit_time": "2026-06-19T20:13:14.685214",
       "status": "已提交",
@@ -438,13 +438,13 @@
       "description": "搭建 Android Studio、Flutter、微信开发者工具、DevEco Studio、HBuilderX（Uniapp）、Visual Studio（MAUI）开发环境，各成员根据分工完成对应平台环境配置并成功运行 Hello World 项目。\n\n【实验学时】2学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标1 | 【分组人数】6人/组",
       "requirements": "AI新范式开发流程：\n① 需求分析：明确各平台环境依赖与版本要求；\n② AI辅助编码：使用 TRAE 生成 Hello World 模板代码；\n③ 测试验证：在模拟器/真机上验证项目运行；\n④ 部署运维：记录环境配置文档，总结常见问题与解决方案。",
       "deliverables": "各平台Hello World运行截图、环境配置文档、常见问题解决方案、实验报告",
-      "due_date": "2026-07-01T23:17:02.607624",
+      "due_date": "2026-06-30T01:10:18.139698",
       "difficulty": "简单",
       "max_score": 100,
       "status": "active",
       "creator_id": "206004",
-      "created_at": "2026-06-17T23:17:02.606584",
-      "updated_at": "2026-06-17T23:17:02.606584",
+      "created_at": "2026-06-16T01:10:18.138699",
+      "updated_at": "2026-06-16T01:10:18.138699",
       "related_node_ids": null
     },
     {
@@ -455,13 +455,13 @@
       "description": "Android方向：使用 Kotlin 实现\"智慧校园\"登录页面（EditText输入验证、Activity跳转与数据传递）。iOS方向（演示/模拟器）：使用 SwiftUI 实现登录页面，理解 ViewController 生命周期。组内每人选择不同平台或技术方案实现同一功能，完成后进行组内技术对比分享。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标1 | 【分组人数】6人/组",
       "requirements": "AI新范式开发流程：\n① 需求分析：编写登录功能需求文档（输入验证规则、页面跳转逻辑）；\n② AI辅助编码：使用 TRAE 生成登录页面骨架代码并手动完善业务逻辑；\n③ 测试验证：编写输入验证测试用例，验证边界条件；\n④ 部署运维：打包调试版本，记录平台差异对比报告。",
       "deliverables": "登录页面运行截图及录屏、输入验证测试报告、平台差异对比分析报告、实验报告",
-      "due_date": "2026-07-08T23:17:02.615720",
+      "due_date": "2026-07-07T01:10:18.147711",
       "difficulty": "中等",
       "max_score": 100,
       "status": "active",
       "creator_id": "206004",
-      "created_at": "2026-06-17T23:17:02.606584",
-      "updated_at": "2026-06-17T23:17:02.606584",
+      "created_at": "2026-06-16T01:10:18.138699",
+      "updated_at": "2026-06-16T01:10:18.138699",
       "related_node_ids": null
     },
     {
@@ -472,13 +472,13 @@
       "description": "开发\"智慧校园\"业务数据列表页（RESTful API 网络数据请求 + JSON 解析 + 下拉刷新），组内成员分别使用 Flutter（Dart）、React Native（JSX）、Uniapp（Vue）、MAUI（C#）等不同框架实现同一功能需求。扩展案例：集成设备传感器（如GPS定位、加速度计），体验移动硬件能力调用。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标2 | 【分组人数】6人/组",
       "requirements": "AI新范式开发流程：\n① 需求分析：定义列表页数据结构、API接口规范与传感器调用需求；\n② AI辅助编码：使用 TRAE 生成网络请求与JSON解析代码，辅助生成传感器调用模板；\n③ 测试验证：模拟API异常响应测试容错能力，验证传感器数据采集准确性；\n④ 部署运维：多框架性能对比测试，输出框架适用性分析报告。",
       "deliverables": "列表页运行截图及录屏、API交互测试报告、多框架性能对比报告、实验报告",
-      "due_date": "2026-07-15T23:17:02.621022",
+      "due_date": "2026-07-14T01:10:18.153712",
       "difficulty": "中等",
       "max_score": 100,
       "status": "active",
       "creator_id": "206004",
-      "created_at": "2026-06-17T23:17:02.606584",
-      "updated_at": "2026-06-17T23:17:02.606584",
+      "created_at": "2026-06-16T01:10:18.138699",
+      "updated_at": "2026-06-16T01:10:18.138699",
       "related_node_ids": null
     },
     {
@@ -489,13 +489,13 @@
       "description": "借助 AI 编程工具辅助开发\"智慧校园通知\"小程序（列表 + 详情页路由 + 本地存储），体验 AI 工具在代码生成与调试中的作用。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标2 | 【分组人数】6人/组",
       "requirements": "AI新范式开发流程：\n① 需求分析：绘制小程序页面流程图与数据模型；\n② AI辅助编码：使用 TRAE 生成小程序页面代码与数据绑定逻辑；\n③ 测试验证：使用微信开发者工具进行真机预览与功能测试；\n④ 部署运维：体验小程序审核与发布流程（体验版）。",
       "deliverables": "小程序预览码截图、页面流程图、功能测试报告、实验报告",
-      "due_date": "2026-07-22T23:17:02.624831",
+      "due_date": "2026-07-21T01:10:18.158720",
       "difficulty": "中等",
       "max_score": 100,
       "status": "active",
       "creator_id": "206004",
-      "created_at": "2026-06-17T23:17:02.606584",
-      "updated_at": "2026-06-17T23:17:02.606584",
+      "created_at": "2026-06-16T01:10:18.138699",
+      "updated_at": "2026-06-16T01:10:18.138699",
       "related_node_ids": null
     },
     {
@@ -506,13 +506,13 @@
       "description": "使用 DevEco Studio 开发\"智慧天气\"应用，实现手机/平板界面自适应布局；通过模拟器演示分布式数据同步原理。扩展案例：调用设备传感器（如光线传感器、陀螺仪）实现简单的物联网数据采集与展示场景。\n\n【实验学时】4学时 | 【实验类型】验证型 | 【实验要求】必做 | 【对应课程目标】目标3 | 【分组人数】6人/组",
       "requirements": "AI新范式开发流程：\n① 需求分析：定义天气应用功能需求与多端适配策略，明确传感器数据采集需求；\n② AI辅助编码：使用 TRAE 辅助生成 ArkUI 页面布局与传感器调用代码；\n③ 测试验证：在不同设备模拟器上验证UI适配效果与传感器数据准确性；\n④ 部署运维：编写多端适配与硬件集成技术分析报告。",
       "deliverables": "天气应用运行截图（手机+平板）、多端适配效果对比截图、技术分析报告、实验报告",
-      "due_date": "2026-07-29T23:17:02.630536",
+      "due_date": "2026-07-28T01:10:18.163242",
       "difficulty": "较难",
       "max_score": 100,
       "status": "active",
       "creator_id": "206004",
-      "created_at": "2026-06-17T23:17:02.606584",
-      "updated_at": "2026-06-17T23:17:02.606584",
+      "created_at": "2026-06-16T01:10:18.138699",
+      "updated_at": "2026-06-16T01:10:18.138699",
       "related_node_ids": null
     },
     {
@@ -523,13 +523,13 @@
       "description": "团队开发\"智慧健康\"等业务应用（建议选题涉及传感器或硬件交互场景），每人负责一个技术栈（Android/Flutter/React Native/Uniapp/MAUI/微信小程序），使用 Git 进行版本控制与协作，借助 AI 编程工具辅助代码生成与调试。每组6人，实验中每人选择一个技术栈独立完成对应实验任务，组内进行技术分享与对比分析。\n\n【实验学时】6学时 | 【实验类型】综合型 | 【实验要求】必做 | 【对应课程目标】目标1-4 | 【分组人数】6人/组",
       "requirements": "AI新范式开发流程：\n① 需求分析：团队协作完成项目需求文档与技术选型方案；\n② AI辅助编码：各成员使用 TRAE 辅助各技术栈端的代码开发；\n③ 测试验证：制定测试计划，进行功能测试与跨端兼容性测试；\n④ 部署运维：完成多端应用打包部署，撰写技术选型对比报告与项目总结。",
       "deliverables": "可运行的多端应用安装包、Git仓库地址、技术选型对比报告、答辩PPT、演示视频、项目总结报告",
-      "due_date": "2026-08-12T23:17:02.635143",
+      "due_date": "2026-08-11T01:10:18.167872",
       "difficulty": "较难",
       "max_score": 100,
       "status": "active",
       "creator_id": "206004",
-      "created_at": "2026-06-17T23:17:02.606584",
-      "updated_at": "2026-06-17T23:17:02.606584",
+      "created_at": "2026-06-16T01:10:18.138699",
+      "updated_at": "2026-06-16T01:10:18.138699",
       "related_node_ids": null
     }
   ],
@@ -542,8 +542,8 @@
       "description": "适用于各章节实验的标准报告模板",
       "creator_id": "206004",
       "is_default": 1,
-      "created_at": "2026-06-17T23:17:02.638771",
-      "updated_at": "2026-06-17T23:17:02.638771"
+      "created_at": "2026-06-16T01:10:18.174252",
+      "updated_at": "2026-06-16T01:10:18.174252"
     },
     {
       "id": 2,
@@ -553,8 +553,8 @@
       "description": "适用于综合项目的完整开发文档模板",
       "creator_id": "206004",
       "is_default": 0,
-      "created_at": "2026-06-17T23:17:02.638771",
-      "updated_at": "2026-06-17T23:17:02.638771"
+      "created_at": "2026-06-16T01:10:18.174252",
+      "updated_at": "2026-06-16T01:10:18.174252"
     },
     {
       "id": 3,
@@ -564,8 +564,8 @@
       "description": "适用于项目答辩准备的PPT大纲模板",
       "creator_id": "206004",
       "is_default": 0,
-      "created_at": "2026-06-17T23:17:02.638771",
-      "updated_at": "2026-06-17T23:17:02.638771"
+      "created_at": "2026-06-16T01:10:18.174252",
+      "updated_at": "2026-06-16T01:10:18.174252"
     }
   ],
   "classroom_messages": [],
