@@ -37,4 +37,4 @@ dependency_overrides:
   # webview_flutter_android 4.x 要 Dart 3.5+ (transitive dep)
   webview_flutter_android: "<=3.16.0"
   # webview_flutter_wkwebview 3.x 要 Dart 3.5+ (transitive dep)
-  webview_flutter_wkwebview: "<=3.25.0"
+  webview_flutter_wkwebview: "<=3.9.4"

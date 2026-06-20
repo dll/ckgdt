@@ -50,4 +50,16 @@ $c = $c -replace 'AppL10n\.supportedLocales', 'const [Locale("zh"), Locale("en")
 $c = $c -replace 'AppL10n\.localizationsDelegates', 'const []'
 Set-Content -Path $mainPath -Value $c -Encoding UTF8 -NoNewline
 
+# 4) webview 页桩替换 — OHOS flutter fork (Dart 3.4) 只能用 webview_flutter 3.0.4，
+#    teaching_task_authorized_fetch_page.dart 用了 4.x API，编译会失败。
+#    用 ohos/stubs/ 下的同名桩（保持公开 API）覆盖；ohos_restore.ps1 还原。
+$webviewPage = 'lib/presentation/pages/archive/teaching_task_authorized_fetch_page.dart'
+$webviewStub = 'ohos/stubs/teaching_task_authorized_fetch_page.dart'
+if (Test-Path $webviewStub) {
+    Copy-Item -Path $webviewStub -Destination $webviewPage -Force
+    Write-Host "stubbed webview page for OHOS"
+} else {
+    Write-Warning "webview stub not found: $webviewStub"
+}
+
 Write-Host "OHOS patch done"
