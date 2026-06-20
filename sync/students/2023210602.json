@@ -3,8 +3,8 @@
   "user_id": "2023210602",
   "user_name": "匡林",
   "role": "student",
-  "synced_at": "2026-06-20T20:07:50.222736",
-  "last_active": "2026-06-20T20:07:50.222736",
+  "synced_at": "2026-06-20T20:08:17.979812",
+  "last_active": "2026-06-20T20:08:17.979812",
   "quiz_results": [],
   "learning_records": [],
   "wrong_answers": [],
@@ -134,6 +134,20 @@
       "score": null,
       "feedback": null,
       "created_at": "2026-06-16T21:24:11.697751",
+      "updated_at": null
+    },
+    {
+      "template_id": null,
+      "task_id": null,
+      "user_id": "2023210602",
+      "title": "第二周报告",
+      "content_json": "2023210602匡林第二周报告.pdf",
+      "file_path": "C:\\Users\\29026\\Downloads\\2023210602匡林第二周报告.pdf",
+      "status": "已提交",
+      "submit_time": "2026-06-20T20:08:07.372632",
+      "score": null,
+      "feedback": null,
+      "created_at": "2026-06-20T20:08:07.373634",
       "updated_at": null
     }
   ],
