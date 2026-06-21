@@ -398,7 +398,7 @@ class _ChatDetailPageState extends State<_ChatDetailPage> {
             icon: const Icon(Icons.star_border),
             onPressed: () async {
               await _dao.toggleStar(widget.sessionId);
-              if (mounted) {
+              if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('已切换收藏状态')),
                 );

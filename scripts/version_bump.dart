@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+// 本文件是命令行工具（dart run scripts/version_bump.dart），print 是正确的控制台输出方式。
 /// 版本自动管理脚本 — 单一来源升级。
 ///
 /// 用法:

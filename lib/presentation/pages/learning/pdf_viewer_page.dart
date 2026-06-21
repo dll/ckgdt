@@ -117,7 +117,7 @@ class _InAppPdfViewerPageState extends State<InAppPdfViewerPage> {
                 final bytes = await File(widget.filePath).readAsBytes();
                 await Printing.layoutPdf(onLayout: (_) => bytes);
               } catch (e) {
-                if (mounted) {
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('打印失败: $e'), backgroundColor: Colors.red),
                   );

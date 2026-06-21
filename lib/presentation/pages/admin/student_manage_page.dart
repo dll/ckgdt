@@ -119,7 +119,7 @@ class _StudentManagePageState extends State<StudentManagePage> {
       );
 
       final success = await _authService.createStudent(student);
-      if (success && mounted) {
+      if (success && context.mounted) {
         // 如果选择了班级，自动加入 class_members
         final classId = result['classId'] as int?;
         if (classId != null) {
