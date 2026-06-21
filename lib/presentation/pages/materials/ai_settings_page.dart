@@ -301,7 +301,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
 
   Widget _buildProviderDropdown(Color primary, bool isDark) {
     return DropdownButtonFormField<String>(
-      value: _provider,
+      initialValue: _provider,
       isExpanded: true,
       decoration: InputDecoration(
         prefixIcon: const Icon(Icons.cloud_outlined),

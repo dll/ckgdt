@@ -248,14 +248,14 @@ class _MyDataPageState extends State<MyDataPage> {
     final theme = Theme.of(context);
 
     if (user == null) {
-      return Scaffold(
+      return const Scaffold(
         appBar: BackButtonBar(title: '我的数据'),
-        body: const Center(child: Text('请先登录')),
+        body: Center(child: Text('请先登录')),
       );
     }
 
     return Scaffold(
-      appBar: BackButtonBar(title: '我的数据'),
+      appBar: const BackButtonBar(title: '我的数据'),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(

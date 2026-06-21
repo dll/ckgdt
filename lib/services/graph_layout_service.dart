@@ -84,8 +84,8 @@ class GraphLayoutService {
     final levels = levelGroups.keys.toList()..sort();
 
     final positioned = <PositionedNode>[];
-    final verticalSpacing = 120.0;
-    final startY = 100.0;
+    const verticalSpacing = 120.0;
+    const startY = 100.0;
 
     for (int i = 0; i < levels.length; i++) {
       final level = levels[i];
@@ -120,7 +120,7 @@ class GraphLayoutService {
     const damping = 0.8;
 
     for (int iter = 0; iter < iterations; iter++) {
-      final forces = List.generate(positioned.length, (_) => Offset(0, 0));
+      final forces = List.generate(positioned.length, (_) => const Offset(0, 0));
 
       for (int i = 0; i < positioned.length; i++) {
         for (int j = i + 1; j < positioned.length; j++) {
@@ -151,7 +151,7 @@ class GraphLayoutService {
     if (nodes.isEmpty) return [];
 
     final centerX = canvasWidth / 2;
-    final centerY = 300.0;
+    const centerY = 300.0;
     final radius = math.min(canvasWidth, 600) / 2 - 50;
     final angleStep = 2 * math.pi / nodes.length;
 
@@ -174,8 +174,8 @@ class GraphLayoutService {
       List<NodeModel> nodes, List<EdgeModel> edges) {
     if (nodes.isEmpty) return [];
 
-    final centerX = 400.0;
-    final centerY = 300.0;
+    const centerX = 400.0;
+    const centerY = 300.0;
 
     final inDegree = <String, int>{};
     final outDegree = <String, int>{};
@@ -228,9 +228,9 @@ class GraphLayoutService {
     if (nodes.isEmpty) return [];
 
     final cols = (math.sqrt(nodes.length)).ceil();
-    final spacing = 100.0;
-    final startX = 50.0;
-    final startY = 50.0;
+    const spacing = 100.0;
+    const startX = 50.0;
+    const startY = 50.0;
 
     return List.generate(nodes.length, (i) {
       final col = i % cols;
@@ -251,8 +251,8 @@ class GraphLayoutService {
   List<PositionedNode> _starLayout(List<NodeModel> nodes) {
     if (nodes.isEmpty) return [];
 
-    final centerX = 400.0;
-    final centerY = 300.0;
+    const centerX = 400.0;
+    const centerY = 300.0;
     final positioned = <PositionedNode>[];
 
     final centerNode = nodes.first;
@@ -260,7 +260,7 @@ class GraphLayoutService {
 
     final remainingNodes = nodes.sublist(1);
     final angleStep = 2 * math.pi / remainingNodes.length;
-    final radius = 200.0;
+    const radius = 200.0;
 
     for (int i = 0; i < remainingNodes.length; i++) {
       final angle = i * angleStep - math.pi / 2;
@@ -302,14 +302,14 @@ class GraphLayoutService {
           final dy = positioned[j].y - positioned[i].y;
           final dist = math.sqrt(dx * dx + dy * dy).clamp(1.0, double.infinity);
 
-          final l = restLength;
+          const l = restLength;
           force = Offset(
             force.dx + (dx / dist) * (dist - l),
             force.dy + (dy / dist) * (dist - l),
           );
         }
 
-        final maxMove = 50.0;
+        const maxMove = 50.0;
         final move = math.sqrt(force.dx * force.dx + force.dy * force.dy);
         if (move > epsilon) {
           positioned[i].x += (force.dx / move) * math.min(move, maxMove);
@@ -325,8 +325,8 @@ class GraphLayoutService {
       List<NodeModel> nodes, List<EdgeModel> edges) {
     if (nodes.isEmpty) return [];
 
-    final centerX = 400.0;
-    final centerY = 300.0;
+    const centerX = 400.0;
+    const centerY = 300.0;
 
     final degree = <String, int>{};
     for (final edge in edges) {
@@ -341,7 +341,7 @@ class GraphLayoutService {
     positioned.add(PositionedNode(sortedNodes[0], centerX, centerY));
 
     if (sortedNodes.length > 1) {
-      final shell1Radius = 150.0;
+      const shell1Radius = 150.0;
       final shell1Count = math.min(sortedNodes.length - 1, 6);
       final angleStep = 2 * math.pi / shell1Count;
 
@@ -356,7 +356,7 @@ class GraphLayoutService {
     }
 
     if (sortedNodes.length > 7) {
-      final shell2Radius = 300.0;
+      const shell2Radius = 300.0;
       final shell2Count = sortedNodes.length - 7;
       final angleStep = 2 * math.pi / shell2Count;
 

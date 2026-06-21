@@ -366,7 +366,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
                   ),
                   const SizedBox(height: 10),
                   DropdownButtonFormField<String>(
-                    value: selectedChapter,
+                    initialValue: selectedChapter,
                     decoration: InputDecoration(
                       labelText: '所属章节',
                       border: OutlineInputBorder(
@@ -382,7 +382,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
                   ),
                   const SizedBox(height: 10),
                   DropdownButtonFormField<String>(
-                    value: selectedDifficulty,
+                    initialValue: selectedDifficulty,
                     decoration: InputDecoration(
                       labelText: '难度等级',
                       border: OutlineInputBorder(

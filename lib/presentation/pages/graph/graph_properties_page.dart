@@ -749,7 +749,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
                       const SizedBox(height: 12),
                       // Type dropdown
                       DropdownButtonFormField<String>(
-                        value: selectedType,
+                        initialValue: selectedType,
                         decoration: const InputDecoration(
                           labelText: '类型',
                           border: OutlineInputBorder(),
@@ -785,7 +785,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
                         children: [
                           Expanded(
                             child: DropdownButtonFormField<int>(
-                              value: selectedChapter,
+                              initialValue: selectedChapter,
                               decoration: const InputDecoration(
                                 labelText: '章节',
                                 border: OutlineInputBorder(),
@@ -806,7 +806,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
                           const SizedBox(width: 8),
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              value: selectedImportance,
+                              initialValue: selectedImportance,
                               decoration: const InputDecoration(
                                 labelText: '重要性',
                                 border: OutlineInputBorder(),
@@ -973,7 +973,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
                     children: [
                       // Source concept
                       DropdownButtonFormField<int>(
-                        value: selectedSource,
+                        initialValue: selectedSource,
                         isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: '源节点 *',
@@ -987,7 +987,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
                       const SizedBox(height: 12),
                       // Target concept
                       DropdownButtonFormField<int>(
-                        value: selectedTarget,
+                        initialValue: selectedTarget,
                         isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: '目标节点 *',
@@ -1001,7 +1001,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
                       const SizedBox(height: 12),
                       // Relation type
                       DropdownButtonFormField<String>(
-                        value: selectedRelType,
+                        initialValue: selectedRelType,
                         isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: '关系类型',

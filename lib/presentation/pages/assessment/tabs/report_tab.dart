@@ -127,7 +127,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
 
-    final indigo = Colors.indigo;
+    const indigo = Colors.indigo;
     return Column(
       children: [
         Container(
@@ -1399,7 +1399,9 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                           ),
                         );
                         if (confirmedReason == null ||
-                            confirmedReason.trim().isEmpty) return;
+                            confirmedReason.trim().isEmpty) {
+                          return;
+                        }
                         setDialogState(() => isGrading = true);
                         try {
                           if (reportId != null) {

@@ -1018,7 +1018,7 @@ class _ClassFormDialogState extends State<_ClassFormDialog> {
                         child: LinearProgressIndicator(),
                       )
                     : DropdownButtonFormField<String>(
-                        value: _selectedTeacherId,
+                        initialValue: _selectedTeacherId,
                         decoration: const InputDecoration(
                           labelText: '授课教师',
                           border: OutlineInputBorder(),

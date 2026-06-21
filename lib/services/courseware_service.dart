@@ -130,7 +130,7 @@ ${additionalRequirements != null ? '额外要求: $additionalRequirements' : ''}
     // 标题
     buf.writeln('# $title');
     if (chapter.toString().isNotEmpty) buf.writeln('\n> $chapter');
-    buf.writeln('\n**课时**: ${classHours}课时\n');
+    buf.writeln('\n**课时**: $classHours课时\n');
 
     // 教学目标
     final objectives = lessonPlan['objectives'] as List? ?? [];
@@ -451,7 +451,7 @@ ${context != null ? '上下文说明: $context' : ''}
         pageFormat: PdfPageFormat.a4.landscape,
         theme: theme,
         build: (_) => pw.Container(
-          decoration: pw.BoxDecoration(
+          decoration: const pw.BoxDecoration(
             gradient: pw.LinearGradient(
               colors: [
                 PdfColor.fromInt(0xFF1677FF),
@@ -571,7 +571,7 @@ ${context != null ? '上下文说明: $context' : ''}
                           font: font,
                           fontSize: 24,
                           fontWeight: pw.FontWeight.bold,
-                          color: PdfColor.fromInt(0xFF1677FF))),
+                          color: const PdfColor.fromInt(0xFF1677FF))),
                   pw.SizedBox(height: 16),
                   pw.Expanded(
                     child: pw.Center(
@@ -614,7 +614,7 @@ ${context != null ? '上下文说明: $context' : ''}
         pageFormat: PdfPageFormat.a4.landscape,
         theme: theme,
         build: (_) => pw.Container(
-          decoration: pw.BoxDecoration(
+          decoration: const pw.BoxDecoration(
             gradient: pw.LinearGradient(
               colors: [
                 PdfColor.fromInt(0xFF0958D9),
@@ -893,9 +893,9 @@ ${context != null ? '上下文说明: $context' : ''}
               width: double.infinity,
               padding: const pw.EdgeInsets.all(12),
               decoration: pw.BoxDecoration(
-                color: PdfColor.fromInt(0xFFF5F5F5),
+                color: const PdfColor.fromInt(0xFFF5F5F5),
                 border: pw.Border.all(
-                    color: PdfColor.fromInt(0xFFE0E0E0), width: 0.5),
+                    color: const PdfColor.fromInt(0xFFE0E0E0), width: 0.5),
                 borderRadius: const pw.BorderRadius.only(
                     topRight: pw.Radius.circular(4),
                     bottomLeft: pw.Radius.circular(4),
@@ -905,7 +905,7 @@ ${context != null ? '上下文说明: $context' : ''}
                   style: pw.TextStyle(
                       font: pw.Font.courier(),
                       fontSize: 11,
-                      color: PdfColor.fromInt(0xFF37474F),
+                      color: const PdfColor.fromInt(0xFF37474F),
                       lineSpacing: 4)),
             ),
           ],
@@ -925,9 +925,9 @@ ${context != null ? '上下文说明: $context' : ''}
               margin: const pw.EdgeInsets.only(top: 2, right: 8),
               width: 18,
               height: 18,
-              decoration: pw.BoxDecoration(
+              decoration: const pw.BoxDecoration(
                 color: PdfColor.fromInt(0xFFFF9800),
-                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(9)),
+                borderRadius: pw.BorderRadius.all(pw.Radius.circular(9)),
               ),
               child: pw.Center(
                 child: pw.Text('▶',
@@ -945,14 +945,14 @@ ${context != null ? '上下文说明: $context' : ''}
                           font: font,
                           fontSize: 13,
                           fontWeight: pw.FontWeight.bold,
-                          color: PdfColor.fromInt(0xFFE65100)),
+                          color: const PdfColor.fromInt(0xFFE65100)),
                     ),
                     pw.TextSpan(
                       text: activity,
                       style: pw.TextStyle(
                           font: font,
                           fontSize: 13,
-                          color: PdfColor.fromInt(0xFF424242)),
+                          color: const PdfColor.fromInt(0xFF424242)),
                     ),
                   ],
                 ),
@@ -977,7 +977,7 @@ ${context != null ? '上下文说明: $context' : ''}
           padding: const pw.EdgeInsets.only(bottom: 12),
           child: pw.Table(
             border: pw.TableBorder.all(
-                color: PdfColor.fromInt(0xFFBDBDBD), width: 0.5),
+                color: const PdfColor.fromInt(0xFFBDBDBD), width: 0.5),
             children: [
               pw.TableRow(
                 decoration:
@@ -990,7 +990,7 @@ ${context != null ? '上下文说明: $context' : ''}
                                   font: font,
                                   fontSize: 11,
                                   fontWeight: pw.FontWeight.bold,
-                                  color: PdfColor.fromInt(0xFF1565C0))),
+                                  color: const PdfColor.fromInt(0xFF1565C0))),
                         ))
                     .toList(),
               ),
@@ -1018,7 +1018,7 @@ ${context != null ? '上下文说明: $context' : ''}
                 style: pw.TextStyle(
                     font: font,
                     fontSize: 14,
-                    color: PdfColor.fromInt(0xFF333333),
+                    color: const PdfColor.fromInt(0xFF333333),
                     lineSpacing: 3)),
           ),
         ],
@@ -1052,7 +1052,7 @@ ${context != null ? '上下文说明: $context' : ''}
             // 标题
             pw.Container(
               padding: const pw.EdgeInsets.only(bottom: 10),
-              decoration: pw.BoxDecoration(
+              decoration: const pw.BoxDecoration(
                 border: pw.Border(
                   bottom: pw.BorderSide(
                     color: PdfColor.fromInt(0xFF1677FF),
@@ -1069,7 +1069,7 @@ ${context != null ? '上下文说明: $context' : ''}
                             font: font,
                             fontSize: 24,
                             fontWeight: pw.FontWeight.bold,
-                            color: PdfColor.fromInt(0xFF1677FF))),
+                            color: const PdfColor.fromInt(0xFF1677FF))),
                   ),
                   pw.Text('$slideNum',
                       style: pw.TextStyle(
@@ -1094,7 +1094,7 @@ ${context != null ? '上下文说明: $context' : ''}
             pw.SizedBox(height: 8),
             // 额外信息
             if (extras != null) ...[
-              pw.Divider(color: PdfColor.fromInt(0xFFE0E0E0), thickness: 0.5),
+              pw.Divider(color: const PdfColor.fromInt(0xFFE0E0E0), thickness: 0.5),
               pw.SizedBox(height: 6),
               ...extras.map((e) => pw.Padding(
                     padding: const pw.EdgeInsets.only(bottom: 6),
@@ -1112,10 +1112,10 @@ ${context != null ? '上下文说明: $context' : ''}
               pw.Container(
                 width: double.infinity,
                 padding: const pw.EdgeInsets.all(10),
-                decoration: pw.BoxDecoration(
+                decoration: const pw.BoxDecoration(
                   color: PdfColor.fromInt(0xFFF5F7FA),
                   borderRadius:
-                      const pw.BorderRadius.all(pw.Radius.circular(6)),
+                      pw.BorderRadius.all(pw.Radius.circular(6)),
                   border: pw.Border(
                     left: pw.BorderSide(
                         color: PdfColor.fromInt(0xFF1677FF), width: 3),
@@ -1190,7 +1190,7 @@ ${context != null ? '上下文说明: $context' : ''}
     final keyPoints = lessonPlan['keyPoints'] as List? ?? [];
     slides.add({
       'title': '课程概览',
-      'subtitle': '$title | $chapter | ${classHours}课时',
+      'subtitle': '$title | $chapter | $classHours课时',
       'bullets': [
         '【教学目标】',
         ...objectives.map((o) => '• $o'),

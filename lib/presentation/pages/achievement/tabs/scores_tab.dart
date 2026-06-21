@@ -21,7 +21,7 @@ class ScoreManagementTab extends StatefulWidget {
   final AchievementDao achievementDao;
   final ValueNotifier<int>? dataRevision;
 
-  const ScoreManagementTab({
+  const ScoreManagementTab({super.key, 
     required this.authService,
     required this.achievementDao,
     this.dataRevision,
@@ -42,7 +42,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
   List<Map<String, dynamic>> _ps = [], _es = [], _xs = [], _agg = [];
   List<String> _activeEnvs = ['pingshi', 'experiment', 'exam'];
   List<int> _activeObjectiveIndexes = [0, 1, 2, 3];
-  ScoreSort _sort = ScoreSort.idAsc;
+  final ScoreSort _sort = ScoreSort.idAsc;
 
   @override
   void initState() {
@@ -890,8 +890,9 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
                                 : 'achievement_exam_scores';
                         final db = await DatabaseHelper.instance.database;
                         final data = <String, dynamic>{};
-                        for (int i = 0; i < cols.length; i++)
+                        for (int i = 0; i < cols.length; i++) {
                           data[cols[i]] = double.tryParse(ctrls[i].text) ?? 0;
+                        }
                         data['updated_at'] = DateTime.now().toIso8601String();
                         await db.update(tn, data,
                             where: 'id=?', whereArgs: [row['id']]);
@@ -906,11 +907,12 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
                         await widget.achievementDao.importComponentsToDatabase(
                             _selectedBatchId!, components);
                         _loadComponentScores();
-                        if (mounted)
+                        if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                   content: Text('已保存并重算达成度'),
                                   backgroundColor: Colors.green));
+                        }
                       },
                       child: const Text('保存')),
                 ]));
@@ -1441,7 +1443,7 @@ class PingshiAchievementTab extends StatefulWidget {
   final AchievementDao achievementDao;
   final ValueNotifier<int>? dataRevision;
   const PingshiAchievementTab(
-      {required this.achievementDao, this.dataRevision});
+      {super.key, required this.achievementDao, this.dataRevision});
 
   @override
   State<PingshiAchievementTab> createState() => _PingshiAchievementTabState();
@@ -1516,7 +1518,7 @@ class _PingshiAchievementTabState extends State<PingshiAchievementTab> {
             children: [
               Expanded(
                 child: DropdownButtonFormField<int>(
-                  value: _selectedBatchId,
+                  initialValue: _selectedBatchId,
                   decoration: const InputDecoration(
                     labelText: '选择批次',
                     border: OutlineInputBorder(),
@@ -1604,17 +1606,17 @@ class _PingshiAchievementTabState extends State<PingshiAchievementTab> {
         // 学生成绩表
         Expanded(
           child: _scores.isEmpty
-              ? Center(
+              ? const Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.school_outlined,
+                      Icon(Icons.school_outlined,
                           size: 64, color: Colors.grey),
-                      const SizedBox(height: 16),
-                      const Text('暂无平时成绩数据',
+                      SizedBox(height: 16),
+                      Text('暂无平时成绩数据',
                           style: TextStyle(color: Colors.grey)),
-                      const SizedBox(height: 8),
-                      const Text('请在成绩管理中导入或录入成绩数据',
+                      SizedBox(height: 8),
+                      Text('请在成绩管理中导入或录入成绩数据',
                           style: TextStyle(color: Colors.grey, fontSize: 12)),
                     ],
                   ),
@@ -1685,7 +1687,7 @@ class ExperimentAchievementTab extends StatefulWidget {
   final AchievementDao achievementDao;
   final ValueNotifier<int>? dataRevision;
   const ExperimentAchievementTab(
-      {required this.achievementDao, this.dataRevision});
+      {super.key, required this.achievementDao, this.dataRevision});
 
   @override
   State<ExperimentAchievementTab> createState() =>
@@ -1761,7 +1763,7 @@ class _ExperimentAchievementTabState extends State<ExperimentAchievementTab> {
             children: [
               Expanded(
                 child: DropdownButtonFormField<int>(
-                  value: _selectedBatchId,
+                  initialValue: _selectedBatchId,
                   decoration: const InputDecoration(
                     labelText: '选择批次',
                     border: OutlineInputBorder(),
@@ -1849,17 +1851,17 @@ class _ExperimentAchievementTabState extends State<ExperimentAchievementTab> {
         // 学生成绩表
         Expanded(
           child: _scores.isEmpty
-              ? Center(
+              ? const Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.science_outlined,
+                      Icon(Icons.science_outlined,
                           size: 64, color: Colors.grey),
-                      const SizedBox(height: 16),
-                      const Text('暂无实验成绩数据',
+                      SizedBox(height: 16),
+                      Text('暂无实验成绩数据',
                           style: TextStyle(color: Colors.grey)),
-                      const SizedBox(height: 8),
-                      const Text('请在成绩管理中导入或录入成绩数据',
+                      SizedBox(height: 8),
+                      Text('请在成绩管理中导入或录入成绩数据',
                           style: TextStyle(color: Colors.grey, fontSize: 12)),
                     ],
                   ),
@@ -1921,7 +1923,7 @@ class _ExperimentAchievementTabState extends State<ExperimentAchievementTab> {
 class ExamAchievementTab extends StatefulWidget {
   final AchievementDao achievementDao;
   final ValueNotifier<int>? dataRevision;
-  const ExamAchievementTab({required this.achievementDao, this.dataRevision});
+  const ExamAchievementTab({super.key, required this.achievementDao, this.dataRevision});
 
   @override
   State<ExamAchievementTab> createState() => _ExamAchievementTabState();
@@ -1995,7 +1997,7 @@ class _ExamAchievementTabState extends State<ExamAchievementTab> {
             children: [
               Expanded(
                 child: DropdownButtonFormField<int>(
-                  value: _selectedBatchId,
+                  initialValue: _selectedBatchId,
                   decoration: const InputDecoration(
                     labelText: '选择批次',
                     border: OutlineInputBorder(),
@@ -2083,17 +2085,17 @@ class _ExamAchievementTabState extends State<ExamAchievementTab> {
         // 学生成绩表
         Expanded(
           child: _scores.isEmpty
-              ? Center(
+              ? const Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.assignment_outlined,
+                      Icon(Icons.assignment_outlined,
                           size: 64, color: Colors.grey),
-                      const SizedBox(height: 16),
-                      const Text('暂无期末考核数据',
+                      SizedBox(height: 16),
+                      Text('暂无期末考核数据',
                           style: TextStyle(color: Colors.grey)),
-                      const SizedBox(height: 8),
-                      const Text('请在成绩管理中导入或录入成绩数据',
+                      SizedBox(height: 8),
+                      Text('请在成绩管理中导入或录入成绩数据',
                           style: TextStyle(color: Colors.grey, fontSize: 12)),
                     ],
                   ),
@@ -2185,11 +2187,12 @@ class _ComponentExpandTileState extends State<_ComponentExpandTile> {
         where: 'batch_id=?',
         whereArgs: [widget.batchId],
         orderBy: 'student_id ASC');
-    if (mounted)
+    if (mounted) {
       setState(() {
         _rows = r;
         _loading = false;
       });
+    }
   }
 
   @override

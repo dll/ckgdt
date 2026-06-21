@@ -95,7 +95,7 @@ class GraphImportService {
       await _insertNode(db, catNodeId, graphId, cat.label, '', 'category', 1,
           color: cat.color, parentId: rootId);
       await _insertEdge(
-          db, 'edge_main_${i}', graphId, rootId, catNodeId, 'contains', '包含');
+          db, 'edge_main_$i', graphId, rootId, catNodeId, 'contains', '包含');
 
       // 加载该分类下的 MD 文件名作为子节点
       final fileNames = await _listMdFiles(cat.dir);

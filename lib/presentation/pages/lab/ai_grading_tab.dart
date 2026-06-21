@@ -805,7 +805,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
             const SizedBox(height: 12),
             // 任务下拉选择
             DropdownButtonFormField<int>(
-              value: _selectedTaskId,
+              initialValue: _selectedTaskId,
               decoration: const InputDecoration(
                 labelText: '选择实验任务',
                 border: OutlineInputBorder(),
@@ -1203,7 +1203,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
         const SizedBox(height: 8),
         // 优秀报告
         _buildReportSection(
-          title: '优秀报告 (前${topCount}名)',
+          title: '优秀报告 (前$topCount名)',
           icon: Icons.emoji_events,
           color: Colors.green,
           entries: topEntries,
@@ -1212,7 +1212,7 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
         const SizedBox(height: 8),
         // 待改进报告
         _buildReportSection(
-          title: '待改进报告 (后${bottomCount}名)',
+          title: '待改进报告 (后$bottomCount名)',
           icon: Icons.trending_down,
           color: Colors.red,
           entries: bottomEntries,
@@ -1321,11 +1321,11 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        const Row(
           children: [
-            const Icon(Icons.bar_chart, size: 18),
-            const SizedBox(width: 8),
-            const Text('统计分析',
+            Icon(Icons.bar_chart, size: 18),
+            SizedBox(width: 8),
+            Text('统计分析',
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
           ],
         ),
@@ -1499,8 +1499,9 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                       BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
                   radarBorderData: const BorderSide(color: Colors.transparent),
                   getTitle: (index, _) {
-                    if (index >= keys.length)
+                    if (index >= keys.length) {
                       return const RadarChartTitle(text: '');
+                    }
                     return RadarChartTitle(
                       text: _dimLabel(keys[index]),
                       angle: 0,
@@ -1554,15 +1555,15 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
     }
 
     if (taskAvgs.length < 2) {
-      return Card(
+      return const Card(
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('趋势分析',
+              Text('趋势分析',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-              const Expanded(
+              Expanded(
                 child: Center(
                     child: Text('至少需要批阅2个实验的数据',
                         style: TextStyle(color: Colors.grey))),

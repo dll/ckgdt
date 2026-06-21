@@ -1090,7 +1090,7 @@ class _AddTeacherDialogState extends State<_AddTeacherDialog> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedRole,
+                initialValue: _selectedRole,
                 decoration: const InputDecoration(
                   labelText: '角色 *',
                   prefixIcon: Icon(Icons.assignment_ind_outlined),
@@ -1241,7 +1241,7 @@ class _EditTeacherDialogState extends State<_EditTeacherDialog> {
               const SizedBox(height: 16),
               // 角色
               DropdownButtonFormField<String>(
-                value: _selectedRole,
+                initialValue: _selectedRole,
                 decoration: const InputDecoration(
                   labelText: '角色',
                   prefixIcon: Icon(Icons.assignment_ind_outlined),

@@ -26,13 +26,13 @@ class ScorePreviewDialog extends StatelessWidget {
   factory ScorePreviewDialog.lab(List<Map<String, dynamic>> data,
       {VoidCallback? onExport}) {
     final columns = [
-      ScoreColumn('学号', flex: 2),
-      ScoreColumn('姓名', flex: 2),
-      ScoreColumn('章节', flex: 2),
-      ScoreColumn('实验任务', flex: 3),
-      ScoreColumn('满分', flex: 1),
-      ScoreColumn('得分', flex: 1),
-      ScoreColumn('状态', flex: 1),
+      const ScoreColumn('学号', flex: 2),
+      const ScoreColumn('姓名', flex: 2),
+      const ScoreColumn('章节', flex: 2),
+      const ScoreColumn('实验任务', flex: 3),
+      const ScoreColumn('满分', flex: 1),
+      const ScoreColumn('得分', flex: 1),
+      const ScoreColumn('状态', flex: 1),
     ];
     final rows = data.map((r) => [
       r['user_id'] ?? '',
@@ -56,14 +56,14 @@ class ScorePreviewDialog extends StatelessWidget {
   factory ScorePreviewDialog.assessment(List<Map<String, dynamic>> data,
       {VoidCallback? onExport}) {
     final columns = [
-      ScoreColumn('小组', flex: 2),
-      ScoreColumn('项目', flex: 2),
-      ScoreColumn('功能(25)', flex: 1),
-      ScoreColumn('技术(20)', flex: 1),
-      ScoreColumn('整合(25)', flex: 1),
-      ScoreColumn('质量(15)', flex: 1),
-      ScoreColumn('文档(15)', flex: 1),
-      ScoreColumn('总分', flex: 1),
+      const ScoreColumn('小组', flex: 2),
+      const ScoreColumn('项目', flex: 2),
+      const ScoreColumn('功能(25)', flex: 1),
+      const ScoreColumn('技术(20)', flex: 1),
+      const ScoreColumn('整合(25)', flex: 1),
+      const ScoreColumn('质量(15)', flex: 1),
+      const ScoreColumn('文档(15)', flex: 1),
+      const ScoreColumn('总分', flex: 1),
     ];
     final rows = data.map((r) => [
       r['group_name'] ?? '',
@@ -88,16 +88,16 @@ class ScorePreviewDialog extends StatelessWidget {
   factory ScorePreviewDialog.works(List<Map<String, dynamic>> data,
       {VoidCallback? onExport}) {
     final columns = [
-      ScoreColumn('学生', flex: 2),
-      ScoreColumn('仓库', flex: 2),
-      ScoreColumn('作品', flex: 2),
-      ScoreColumn('功能(25)', flex: 1),
-      ScoreColumn('技术(20)', flex: 1),
-      ScoreColumn('整合(25)', flex: 1),
-      ScoreColumn('质量(15)', flex: 1),
-      ScoreColumn('文档(15)', flex: 1),
-      ScoreColumn('总分', flex: 1),
-      ScoreColumn('评分人', flex: 2),
+      const ScoreColumn('学生', flex: 2),
+      const ScoreColumn('仓库', flex: 2),
+      const ScoreColumn('作品', flex: 2),
+      const ScoreColumn('功能(25)', flex: 1),
+      const ScoreColumn('技术(20)', flex: 1),
+      const ScoreColumn('整合(25)', flex: 1),
+      const ScoreColumn('质量(15)', flex: 1),
+      const ScoreColumn('文档(15)', flex: 1),
+      const ScoreColumn('总分', flex: 1),
+      const ScoreColumn('评分人', flex: 2),
     ];
     final rows = data.map((r) => [
       r['student_name'] ?? '',

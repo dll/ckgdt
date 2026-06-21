@@ -45,7 +45,7 @@ class BackButtonBar extends StatelessWidget implements PreferredSizeWidget {
       ],
       bottom: bottom != null
           ? PreferredSize(
-              preferredSize: Size.fromHeight(kToolbarHeight * 0.6),
+              preferredSize: const Size.fromHeight(kToolbarHeight * 0.6),
               child: bottom!,
             )
           : null,

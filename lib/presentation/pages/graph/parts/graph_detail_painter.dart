@@ -95,7 +95,7 @@ class GraphPainter extends CustomPainter {
       canvas.drawPath(path, edgePaint);
 
       // 箭头（调整到节点边缘而非中心）
-      final nodeRadius = 28.0;
+      const nodeRadius = 28.0;
       final dist = (tgtOff - srcOff).distance;
       if (dist > nodeRadius * 2) {
         final t = 1 - nodeRadius / dist;
@@ -383,7 +383,7 @@ class GraphPainter extends CustomPainter {
       if (hasChildren) {
         final indicator = isCollapsed ? '+' : '−';
         final indColor = isCollapsed ? Colors.orange : Colors.green;
-        final indRadius = 9.0;
+        const indRadius = 9.0;
         final indCenter =
             Offset(center.dx + radius - 4, center.dy - radius + 4);
         canvas.drawCircle(

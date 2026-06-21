@@ -457,7 +457,7 @@ class _UpdateProgressPageState extends State<UpdateProgressPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: BackButtonBar(title: '版本更新'),
+      appBar: const BackButtonBar(title: '版本更新'),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),

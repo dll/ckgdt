@@ -524,7 +524,7 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
             const SizedBox(width: 8),
             Expanded(
               child: Text('课程大纲 · $_currentCourseName',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
             TextButton.icon(
               onPressed: _importing ? null : _openAssessmentMatrixEditor,

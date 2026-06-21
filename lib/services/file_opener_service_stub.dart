@@ -1,4 +1,5 @@
 /// Stub 实现 — Web 平台（不使用 dart:io）
+library;
 import 'package:flutter/material.dart';
 
 Future<String?> copyAssetToTemp(String assetPath, String fileName) async {

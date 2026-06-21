@@ -196,7 +196,9 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
         if (key == null || key.isEmpty) continue;
         // 跳过与全局配置完全相同的
         if (preset.id == currentConfig.provider &&
-            modelId == currentConfig.model) continue;
+            modelId == currentConfig.model) {
+          continue;
+        }
         models.add(_ModelOption(
           label: '${preset.name} - $modelId',
           providerId: preset.id,
@@ -210,7 +212,7 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
     // 添加 OpenRouter 占位（即使没有 key，也显示以引导用户配置）
     final hasOpenRouter = models.any((m) => m.providerId == 'openrouter');
     if (!hasOpenRouter) {
-      models.add(_ModelOption(
+      models.add(const _ModelOption(
         label: 'OpenRouter - Claude Opus 4.6（需配置 API Key）',
         providerId: 'openrouter',
         modelId: 'anthropic/claude-opus-4-6',
@@ -314,7 +316,7 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
             label: const Text('导入 MD 文件'),
             selected: _fromMdImport,
             onSelected: (s) {
-              if (s)
+              if (s) {
                 setState(() {
                   _fromMdImport = true;
                   // 清除 AI 流程的旧数据，避免状态污染
@@ -322,6 +324,7 @@ class _CoursewareWorkshopPageState extends State<CoursewareWorkshopPage> {
                   _pptxPath = null;
                   _mdVideoPath = null;
                 });
+              }
             },
           ),
         ],
@@ -2174,7 +2177,7 @@ class Example {
 
           // 章节选择
           DropdownButtonFormField<String>(
-            value: _selectedChapter,
+            initialValue: _selectedChapter,
             decoration: const InputDecoration(
               labelText: '所属章节',
               border: OutlineInputBorder(),
@@ -2707,7 +2710,7 @@ class Example {
 
           // 语音选择
           DropdownButtonFormField<String>(
-            value: _ttsVoice,
+            initialValue: _ttsVoice,
             decoration: const InputDecoration(
               labelText: '语音角色',
               border: OutlineInputBorder(),

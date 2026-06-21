@@ -291,8 +291,9 @@ class _TokenStatsPageState extends State<TokenStatsPage>
                         showTitles: true,
                         reservedSize: 42,
                         getTitlesWidget: (value, meta) {
-                          if (value == meta.max && value == meta.min)
+                          if (value == meta.max && value == meta.min) {
                             return const SizedBox.shrink();
+                          }
                           return Text(
                             _formatTokens(value.toInt()),
                             style: TextStyle(
@@ -310,8 +311,9 @@ class _TokenStatsPageState extends State<TokenStatsPage>
                             .clamp(1, 100),
                         getTitlesWidget: (value, meta) {
                           final idx = value.toInt();
-                          if (idx < 0 || idx >= _dailyStats.length)
+                          if (idx < 0 || idx >= _dailyStats.length) {
                             return const SizedBox.shrink();
+                          }
                           final dateStr =
                               _dailyStats[idx]['date'] as String? ?? '';
                           final parts = dateStr.split('-');
@@ -434,8 +436,9 @@ class _TokenStatsPageState extends State<TokenStatsPage>
                         reservedSize: 60,
                         getTitlesWidget: (value, meta) {
                           final idx = value.toInt();
-                          if (idx < 0 || idx >= stats.length)
+                          if (idx < 0 || idx >= stats.length) {
                             return const SizedBox.shrink();
+                          }
                           final model = stats[idx]['model'] as String? ?? '';
                           return Padding(
                             padding: const EdgeInsets.only(top: 6),

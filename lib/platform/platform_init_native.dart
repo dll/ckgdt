@@ -1,10 +1,10 @@
 /// 平台初始化 — 原生平台（Windows/macOS/Linux/Android/iOS）
+library;
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:sqflite/sqflite.dart';
 import '../core/init_logger.dart';
 
 Future<void> initPlatform() async {

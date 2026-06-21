@@ -351,7 +351,7 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
                     const SizedBox(width: 12),
                     Expanded(
                       child: DropdownButtonFormField<String>(
-                        value: difficulty,
+                        initialValue: difficulty,
                         decoration: const InputDecoration(labelText: '难度', border: OutlineInputBorder()),
                         items: ['简单', '中等', '较难']
                             .map((d) => DropdownMenuItem(value: d, child: Text(d)))
@@ -799,7 +799,7 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: category,
+                    initialValue: category,
                     decoration: const InputDecoration(
                       labelText: '模板类型',
                       border: OutlineInputBorder(),
@@ -827,7 +827,7 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
             FilledButton(
               onPressed: () async {
                 if (nameCtrl.text.trim().isEmpty) return;
-                final defaultSections = '''[
+                const defaultSections = '''[
                   {"title":"实验目的","hint":"描述本次实验的目标","required":true},
                   {"title":"实验步骤","hint":"详细操作步骤","required":true},
                   {"title":"实验结果","hint":"运行结果与分析","required":true},

@@ -58,9 +58,9 @@ class _AgentCallsDashboardPageState extends State<AgentCallsDashboardPage>
     // 角色守卫 — 学生侧无入口，但若手输路由仍可能进入；这里兜底拦截
     final role = AuthService().currentUser?.role ?? 'student';
     if (!RoleGuard.isTeacherOrAdmin(role)) {
-      return Scaffold(
+      return const Scaffold(
         appBar: BackButtonBar(title: 'AI 调用统计'),
-        body: const Center(
+        body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

@@ -1,6 +1,7 @@
 /// Web 平台桩文件 — dart:io 不可用时提供空实现
 ///
 /// 在 Web 上 SyncServer 所有方法均为空操作。
+library;
 import 'session_manager.dart';
 
 class SyncServerImpl {

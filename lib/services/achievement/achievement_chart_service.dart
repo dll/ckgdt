@@ -132,19 +132,19 @@ class AchievementChartService {
       LineChartData(
         minY: 0,
         maxY: 1.0,
-        titlesData: FlTitlesData(
-          leftTitles: const AxisTitles(
+        titlesData: const FlTitlesData(
+          leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 36,
               interval: 0.2,
             ),
           ),
-          bottomTitles: const AxisTitles(
+          bottomTitles: AxisTitles(
               sideTitles: SideTitles(showTitles: false)),
-          topTitles: const AxisTitles(
+          topTitles: AxisTitles(
               sideTitles: SideTitles(showTitles: false)),
-          rightTitles: const AxisTitles(
+          rightTitles: AxisTitles(
               sideTitles: SideTitles(showTitles: false)),
         ),
         gridData: FlGridData(

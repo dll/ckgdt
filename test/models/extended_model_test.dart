@@ -33,7 +33,7 @@ void main() {
     });
 
     test('toMap should serialize fields correctly', () {
-      final model = MaterialModel(
+      const model = MaterialModel(
         id: 5,
         title: '测试素材',
         type: 'slide',
@@ -55,7 +55,7 @@ void main() {
     });
 
     test('toMap without id should omit id field', () {
-      final model = MaterialModel(
+      const model = MaterialModel(
         title: '无ID素材',
         type: 'script',
       );
@@ -81,33 +81,33 @@ void main() {
 
     test('typeLabel should return correct Chinese labels', () {
       expect(
-        MaterialModel(title: '', type: 'pdf').typeLabel,
+        const MaterialModel(title: '', type: 'pdf').typeLabel,
         'PDF课件',
       );
       expect(
-        MaterialModel(title: '', type: 'slide').typeLabel,
+        const MaterialModel(title: '', type: 'slide').typeLabel,
         '幻灯片',
       );
       expect(
-        MaterialModel(title: '', type: 'script').typeLabel,
+        const MaterialModel(title: '', type: 'script').typeLabel,
         '视频脚本',
       );
       expect(
-        MaterialModel(title: '', type: 'uml').typeLabel,
+        const MaterialModel(title: '', type: 'uml').typeLabel,
         'UML图',
       );
       expect(
-        MaterialModel(title: '', type: 'video_script').typeLabel,
+        const MaterialModel(title: '', type: 'video_script').typeLabel,
         '教学脚本',
       );
       expect(
-        MaterialModel(title: '', type: 'unknown_type').typeLabel,
+        const MaterialModel(title: '', type: 'unknown_type').typeLabel,
         '素材',
       );
     });
 
     test('size should default to 0', () {
-      final model = MaterialModel(title: 'test', type: 'pdf');
+      const model = MaterialModel(title: 'test', type: 'pdf');
       expect(model.size, 0);
     });
   });
@@ -134,7 +134,7 @@ void main() {
     });
 
     test('toMap should serialize with fixed id=1', () {
-      final model = AiConfigModel(
+      const model = AiConfigModel(
         provider: 'deepseek',
         apiKey: 'sk-abc',
         model: 'deepseek-chat',
@@ -170,7 +170,7 @@ void main() {
     });
 
     test('effectiveBaseUrl should return custom URL when set', () {
-      final model = AiConfigModel(
+      const model = AiConfigModel(
         provider: 'deepseek',
         baseUrl: 'https://my-proxy.com',
       );
@@ -287,7 +287,7 @@ void main() {
     });
 
     test('toMap should serialize correctly with id', () {
-      final model = PumlFileModel(
+      const model = PumlFileModel(
         id: 7,
         title: '顺序图',
         content: '@startuml\nA -> B\n@enduml',
@@ -304,7 +304,7 @@ void main() {
     });
 
     test('toMap without id should omit id field', () {
-      final model = PumlFileModel(
+      const model = PumlFileModel(
         title: '无ID图',
         content: '@startuml\n@enduml',
       );
@@ -327,37 +327,37 @@ void main() {
 
     test('typeLabel should return correct Chinese labels', () {
       expect(
-        PumlFileModel(title: '', content: '', diagramType: 'class').typeLabel,
+        const PumlFileModel(title: '', content: '', diagramType: 'class').typeLabel,
         '类图',
       );
       expect(
-        PumlFileModel(title: '', content: '', diagramType: 'sequence').typeLabel,
+        const PumlFileModel(title: '', content: '', diagramType: 'sequence').typeLabel,
         '顺序图',
       );
       expect(
-        PumlFileModel(title: '', content: '', diagramType: 'activity').typeLabel,
+        const PumlFileModel(title: '', content: '', diagramType: 'activity').typeLabel,
         '活动图',
       );
       expect(
-        PumlFileModel(title: '', content: '', diagramType: 'component').typeLabel,
+        const PumlFileModel(title: '', content: '', diagramType: 'component').typeLabel,
         '组件图',
       );
       expect(
-        PumlFileModel(title: '', content: '', diagramType: 'usecase').typeLabel,
+        const PumlFileModel(title: '', content: '', diagramType: 'usecase').typeLabel,
         '用例图',
       );
       expect(
-        PumlFileModel(title: '', content: '', diagramType: 'flowchart').typeLabel,
+        const PumlFileModel(title: '', content: '', diagramType: 'flowchart').typeLabel,
         '流程图',
       );
       expect(
-        PumlFileModel(title: '', content: '', diagramType: 'custom').typeLabel,
+        const PumlFileModel(title: '', content: '', diagramType: 'custom').typeLabel,
         'custom',
       );
     });
 
     test('copyWith should create modified copy', () {
-      final original = PumlFileModel(
+      const original = PumlFileModel(
         id: 1,
         title: '原始标题',
         content: '原始内容',
@@ -382,7 +382,7 @@ void main() {
     });
 
     test('copyWith should preserve fields not specified', () {
-      final original = PumlFileModel(
+      const original = PumlFileModel(
         id: 2,
         title: '保持不变',
         content: '保持不变内容',

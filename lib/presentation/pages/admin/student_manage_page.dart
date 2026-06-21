@@ -493,7 +493,7 @@ class _AddStudentDialogState extends State<_AddStudentDialog> {
               const SizedBox(height: 16),
               // 班级下拉框
               DropdownButtonFormField<int>(
-                value: _selectedClassId,
+                initialValue: _selectedClassId,
                 decoration: const InputDecoration(
                   labelText: '班级',
                   border: OutlineInputBorder(),

@@ -1,4 +1,5 @@
 /// 原生平台文件操作实现（使用 dart:io）
+library;
 import 'dart:io';
 import 'package:excel/excel.dart' hide Border;
 import 'package:file_picker/file_picker.dart';

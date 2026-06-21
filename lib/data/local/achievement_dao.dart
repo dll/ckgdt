@@ -410,7 +410,7 @@ class AchievementDao {
     buf.writeln('通过本次课程达成度评价，我们可以看到：');
     buf.writeln();
     buf.writeln(
-        '1. **整体表现**：学生在${courseName}课程的学习中取得了一定的成果，加权总达成度为${weighted.toStringAsFixed(2)}。');
+        '1. **整体表现**：学生在$courseName课程的学习中取得了一定的成果，加权总达成度为${weighted.toStringAsFixed(2)}。');
     buf.writeln();
     buf.writeln('2. **达成度等级**：$level');
     buf.writeln();
@@ -990,7 +990,7 @@ class AchievementDao {
                   'resource_id': res['id'],
                   'resource_type': res['file_type'],
                   'chapter_number': chapter,
-                  'chapter_title': '第${chapter}章',
+                  'chapter_title': '第$chapter章',
                   'match_confidence': confidence,
                   'created_at': now,
                 },

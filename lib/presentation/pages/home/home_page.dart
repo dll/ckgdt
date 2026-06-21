@@ -255,20 +255,20 @@ class _HomePageState extends State<HomePage> {
               Colors.red.withValues(alpha: 0.85),
             ]),
           ),
-          child: Row(
+          child: const Row(
             children: [
-              const Icon(Icons.sensors, color: Colors.white, size: 18),
-              const SizedBox(width: 8),
-              const Expanded(
+              Icon(Icons.sensors, color: Colors.white, size: 18),
+              SizedBox(width: 8),
+              Expanded(
                 child: Text('教师正在答辩直播 — 点击连接',
                     style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
                         fontSize: 13)),
               ),
-              const Text('连接',
+              Text('连接',
                   style: TextStyle(color: Colors.white, fontSize: 12)),
-              const Icon(Icons.chevron_right, color: Colors.white, size: 18),
+              Icon(Icons.chevron_right, color: Colors.white, size: 18),
             ],
           ),
         ),
@@ -630,7 +630,7 @@ class _HomePageState extends State<HomePage> {
             ? 'INSTRUCTOR'
             : 'STUDENT';
     final greetName = user?.realName ?? user?.userId ?? '同学';
-    final accent = NoirTokens.accent;
+    const accent = NoirTokens.accent;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 28),
@@ -1195,8 +1195,8 @@ class _HomePageState extends State<HomePage> {
             children: [
               Icon(Icons.lock_outline,
                   color: Theme.of(ctx).colorScheme.primary),
-              SizedBox(width: 8),
-              Text('修改密码', style: TextStyle(fontSize: 18)),
+              const SizedBox(width: 8),
+              const Text('修改密码', style: TextStyle(fontSize: 18)),
             ],
           ),
           content: SizedBox(

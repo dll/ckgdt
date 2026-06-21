@@ -63,8 +63,9 @@ class _DefenseTabState extends State<_DefenseTab> {
             if (classId != null) {
               final cls = await db.query('classes',
                   where: 'id = ?', whereArgs: [classId], limit: 1);
-              if (cls.isNotEmpty)
+              if (cls.isNotEmpty) {
                 groupClassMap[gid] = cls.first['name'] as String?;
+              }
             }
           }
         } catch (_) {}
@@ -126,7 +127,7 @@ class _DefenseTabState extends State<_DefenseTab> {
               children: [
                 DropdownButtonFormField<int>(
                   decoration: const InputDecoration(labelText: '答辩小组'),
-                  value: selectedGroupId,
+                  initialValue: selectedGroupId,
                   items: groups
                       .map((g) => DropdownMenuItem<int>(
                             value: g['id'] as int,
@@ -138,7 +139,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                 const SizedBox(height: 8),
                 DropdownButtonFormField<int>(
                   decoration: const InputDecoration(labelText: '答辩项目（可选）'),
-                  value: selectedProjectId,
+                  initialValue: selectedProjectId,
                   items: projects
                       .map((p) => DropdownMenuItem<int>(
                             value: p['id'] as int,
@@ -168,8 +169,9 @@ class _DefenseTabState extends State<_DefenseTab> {
                 onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
             FilledButton(
               onPressed: () async {
-                if (selectedGroupId == null || timeCtrl.text.trim().isEmpty)
+                if (selectedGroupId == null || timeCtrl.text.trim().isEmpty) {
                   return;
+                }
                 final newId = await _dao.addDefenseRecord(
                   groupId: selectedGroupId!,
                   projectId: selectedProjectId,

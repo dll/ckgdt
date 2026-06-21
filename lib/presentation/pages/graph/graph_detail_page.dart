@@ -55,7 +55,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
   Set<String> _availableNodeTypes = {};
 
   // ── 展开/折叠 ────────────────────────────────────────────────────────────
-  Set<String> _collapsedNodes = {}; // 被折叠的父节点 ID
+  final Set<String> _collapsedNodes = {}; // 被折叠的父节点 ID
   List<PositionedNode> _visiblePositionedNodes = [];
 
   // ── 邻居高亮 ────────────────────────────────────────────────────────────
@@ -63,7 +63,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
 
   // ── 节点拖拽 ────────────────────────────────────────────────────────────
   String? _draggingNodeId; // 正在拖拽的节点 ID
-  Map<String, Offset> _nodeOffsets = {}; // 节点自定义偏移（拖拽结果）
+  final Map<String, Offset> _nodeOffsets = {}; // 节点自定义偏移（拖拽结果）
   bool _dragHasMoved = false; // 拖拽期间是否移动过
   NodeModel? _longPressedNode; // 长按的节点（用于区分拖拽和上下文菜单）
 
@@ -1422,7 +1422,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
   void _resetView() {
     final bounds = _computeNodesBounds();
     final viewport = _getViewportSize();
-    final scale = 0.8;
+    const scale = 0.8;
     final cx = viewport.width / 2;
     final cy = viewport.height / 2;
     final centerX = bounds.center.dx;

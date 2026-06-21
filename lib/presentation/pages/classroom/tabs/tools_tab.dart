@@ -187,9 +187,9 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
 
     // 确定学生所属层级
     String tier = 'mid';
-    if (_highStudents.any((s) => s['user_id'] == userId))
+    if (_highStudents.any((s) => s['user_id'] == userId)) {
       tier = 'high';
-    else if (_lowStudents.any((s) => s['user_id'] == userId)) tier = 'low';
+    } else if (_lowStudents.any((s) => s['user_id'] == userId)) tier = 'low';
 
     // 确保有会话
     _currentSessionId ??= await _classroomDao.createRollCallSession(
@@ -223,10 +223,11 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
       // 刷新排行
       final scores =
           await _classroomDao.getRollCallScoreboard(classId: widget.classId);
-      if (mounted)
+      if (mounted) {
         setState(() {
           _scoreboard = scores;
         });
+      }
     }
   }
 
@@ -363,8 +364,9 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                             onSelected: _isRolling || _showResult
                                 ? null
                                 : (v) {
-                                    if (v)
+                                    if (v) {
                                       setState(() => _selectedDifficulty = d);
+                                    }
                                   },
                           ),
                         )),
@@ -681,7 +683,7 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                           color: Colors.blue.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
-                        child: Text('${String.fromCharCode(65 + i)}',
+                        child: Text(String.fromCharCode(65 + i),
                             style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -829,7 +831,7 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
             children: [1, 2, 3, 5, 10, 15, 20, 30]
                 .map((m) => ChoiceChip(
                       label:
-                          Text('${m}分钟', style: const TextStyle(fontSize: 12)),
+                          Text('$m分钟', style: const TextStyle(fontSize: 12)),
                       selected: _timerSeconds == m * 60,
                       onSelected: (v) => setState(() => _timerSeconds = m * 60),
                     ))

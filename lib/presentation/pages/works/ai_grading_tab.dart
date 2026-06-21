@@ -308,13 +308,17 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
     final strengths = parsed['strengths'] as List?;
     if (strengths != null && strengths.isNotEmpty) {
       sb.writeln('【优点】');
-      for (final s in strengths) sb.writeln('  - $s');
+      for (final s in strengths) {
+        sb.writeln('  - $s');
+      }
       sb.writeln();
     }
     final improvements = parsed['improvements'] as List?;
     if (improvements != null && improvements.isNotEmpty) {
       sb.writeln('【改进建议】');
-      for (final s in improvements) sb.writeln('  - $s');
+      for (final s in improvements) {
+        sb.writeln('  - $s');
+      }
       sb.writeln();
     }
     final feedback = parsed['feedback'] as String?;
@@ -862,7 +866,7 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
         ]),
         const SizedBox(height: 8),
         _buildReportSection(
-          title: '优秀作品 (前${topCount}名)',
+          title: '优秀作品 (前$topCount名)',
           icon: Icons.emoji_events,
           color: Colors.green,
           entries: scored.take(topCount).toList(),
@@ -870,7 +874,7 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
         ),
         const SizedBox(height: 8),
         _buildReportSection(
-          title: '待改进作品 (后${bottomCount}名)',
+          title: '待改进作品 (后$bottomCount名)',
           icon: Icons.trending_down,
           color: Colors.red,
           entries: scored.reversed.take(bottomCount).toList(),
@@ -967,10 +971,10 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(children: [
-          const Icon(Icons.bar_chart, size: 18),
-          const SizedBox(width: 8),
-          const Text('统计分析',
+        const Row(children: [
+          Icon(Icons.bar_chart, size: 18),
+          SizedBox(width: 8),
+          Text('统计分析',
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
         ]),
         const SizedBox(height: 8),
@@ -1116,8 +1120,9 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
                     BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
                 radarBorderData: const BorderSide(color: Colors.transparent),
                 getTitle: (index, _) {
-                  if (index >= keys.length)
+                  if (index >= keys.length) {
                     return const RadarChartTitle(text: '');
+                  }
                   return RadarChartTitle(
                       text: _dimLabel(keys[index]), angle: 0);
                 },

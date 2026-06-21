@@ -75,7 +75,7 @@ class RepoAgent extends BaseAgent {
           '可查询提交规范和代码审查建议',
         ],
         classicCases: [
-          AgentCase(title: 'Git 操作指导', userInput: '如何创建分支并提交代码？', agentReply: '## Git 分支操作\n\n```bash\ngit checkout -b feature/new-feature\ngit add .\ngit commit -m "feat: 添加新功能"\ngit push -u origin feature/new-feature\n```\n\n提交消息格式：`<类型>: <描述>`'),
+          const AgentCase(title: 'Git 操作指导', userInput: '如何创建分支并提交代码？', agentReply: '## Git 分支操作\n\n```bash\ngit checkout -b feature/new-feature\ngit add .\ngit commit -m "feat: 添加新功能"\ngit push -u origin feature/new-feature\n```\n\n提交消息格式：`<类型>: <描述>`'),
         ],
       );
 

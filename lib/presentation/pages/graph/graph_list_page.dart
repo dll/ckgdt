@@ -236,7 +236,7 @@ class _GraphListPageState extends State<GraphListPage>
                           _mainGraph?.title.isNotEmpty == true
                               ? _mainGraph!.title
                               : '$_courseName图谱',
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -378,7 +378,7 @@ class _GraphListPageState extends State<GraphListPage>
                   color: primary.withValues(alpha: 0.3),
                 ),
                 if (isLast)
-                  Container(
+                  const SizedBox(
                     width: 2,
                     height: 0,
                   ),

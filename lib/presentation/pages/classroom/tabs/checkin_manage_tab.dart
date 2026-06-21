@@ -590,11 +590,11 @@ class _CheckinManageTabState extends State<_CheckinManageTab> {
   _StatusConfig _getStatusConfig(String status) {
     switch (status) {
       case 'present':
-        return _StatusConfig('已签到', Icons.check_circle, Colors.green);
+        return const _StatusConfig('已签到', Icons.check_circle, Colors.green);
       case 'late':
-        return _StatusConfig('迟到', Icons.access_time, Colors.orange);
+        return const _StatusConfig('迟到', Icons.access_time, Colors.orange);
       default:
-        return _StatusConfig('未签到', Icons.cancel, Colors.red);
+        return const _StatusConfig('未签到', Icons.cancel, Colors.red);
     }
   }
 

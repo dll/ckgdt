@@ -436,7 +436,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
         if (n.y + n.radius > maxY) maxY = n.y + n.radius;
       }
 
-      final margin = 40.0;
+      const margin = 40.0;
       final bgRect = RRect.fromRectAndRadius(
         Rect.fromLTRB(
             minX - margin, minY - margin - 25, maxX + margin, maxY + margin),

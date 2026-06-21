@@ -428,7 +428,7 @@ class _GalleryTabState extends State<_GalleryTab> {
                             Colors.blue[300]!),
                         const Spacer(),
                         if (score != null)
-                          Text('${score}分',
+                          Text('$score分',
                               style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,

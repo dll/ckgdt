@@ -1,4 +1,5 @@
 /// 原生平台 PDF 文件保存实现
+library;
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:path_provider/path_provider.dart';

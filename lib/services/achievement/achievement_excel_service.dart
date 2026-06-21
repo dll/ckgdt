@@ -64,7 +64,9 @@ class AchievementExcelService {
       if (studentId.isEmpty) continue;
       if (studentId.contains('合计') ||
           studentId.contains('平均') ||
-          studentId.contains('备注')) continue;
+          studentId.contains('备注')) {
+        continue;
+      }
 
       results.add(_extractGrade(cells, studentId, studentName));
     }
@@ -98,7 +100,9 @@ class AchievementExcelService {
       if (sid.isEmpty ||
           sid.contains('合计') ||
           sid.contains('平均') ||
-          sid.contains('备注')) continue;
+          sid.contains('备注')) {
+        continue;
+      }
       final name = cells.length > 1 ? cells[1].trim() : '';
       final ach = List<double>.generate(
           4,
@@ -985,8 +989,9 @@ $rawText
             final range = targetStr.split('-');
             final start = int.tryParse(range[0]) ?? 0;
             final end = int.tryParse(range[1]) ?? start;
-            for (int t = start; t <= end; t++)
+            for (int t = start; t <= end; t++) {
               expMap.putIfAbsent(t, () => []).add('实验$expNum');
+            }
           } else {
             final t = int.tryParse(targetStr) ?? 0;
             if (t > 0) expMap.putIfAbsent(t, () => []).add('实验$expNum');
@@ -1017,11 +1022,12 @@ $rawText
             final range = targetStr.split('-');
             final start = int.tryParse(range[0]) ?? 0;
             final end = int.tryParse(range[1]) ?? start;
-            for (int t = start; t <= end; t++)
-              chMap.putIfAbsent(t, () => []).add('第${chNum}章');
+            for (int t = start; t <= end; t++) {
+              chMap.putIfAbsent(t, () => []).add('第$chNum章');
+            }
           } else {
             final t = int.tryParse(targetStr) ?? 0;
-            if (t > 0) chMap.putIfAbsent(t, () => []).add('第${chNum}章');
+            if (t > 0) chMap.putIfAbsent(t, () => []).add('第$chNum章');
           }
         }
         if (line.trim().isEmpty && chMap.isNotEmpty) inChTable = false;

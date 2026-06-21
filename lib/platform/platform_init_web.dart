@@ -1,4 +1,5 @@
 /// 平台初始化 — Web 平台
+library;
 import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'package:sqflite/sqflite.dart';

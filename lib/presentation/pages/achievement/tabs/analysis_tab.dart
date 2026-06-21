@@ -177,10 +177,11 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
           .substring(0, 19);
       final file = File('${dir.path}/${name}_$ts.png');
       await file.writeAsBytes(byteData.buffer.asUint8List());
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text('图表已保存：${file.path}'),
             duration: const Duration(seconds: 3)));
+      }
     } catch (e, st) {
       swallowDebug(e, tag: 'CalcTab.savePng', stack: st);
     }
@@ -260,19 +261,24 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
             avgs[i] += (s['obj${i + 1}_achievement'] as num?)?.toDouble() ?? 0;
           }
         }
-        for (int i = 0; i < 4; i++) avgs[i] /= scores.length;
+        for (int i = 0; i < 4; i++) {
+          avgs[i] /= scores.length;
+        }
         double weighted = 0;
-        for (int i = 0; i < 4; i++) weighted += avgs[i] * objectiveWeights[i];
+        for (int i = 0; i < 4; i++) {
+          weighted += avgs[i] * objectiveWeights[i];
+        }
         _classAvgAchievements = avgs;
         _weightedAchievement = weighted;
       }
-      if (mounted)
+      if (mounted) {
         setState(() {
           _config = cfg;
           _envWeightsByObjective = envWeights;
           _scores = scores;
           _loading = false;
         });
+      }
     } catch (e, st) {
       swallowDebug(e, tag: 'CalcTab.loadScoresAndCalc', stack: st);
       if (mounted) setState(() => _loading = false);
@@ -281,8 +287,9 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading && _batches.isEmpty)
+    if (_loading && _batches.isEmpty) {
       return const Center(child: CircularProgressIndicator());
+    }
     final primary = Theme.of(context).colorScheme.primary;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -929,7 +936,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                           ),
                         ]),
                   ],
-                  gridData: FlGridData(
+                  gridData: const FlGridData(
                     show: true,
                     drawVerticalLine: false,
                     horizontalInterval: 0.2,
@@ -1159,9 +1166,9 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
     int cLow = 0, cMid = 0, cGood = 0, cExcel = 0;
     for (final s in _scores) {
       final v = (s[key] as num?)?.toDouble() ?? 0;
-      if (v >= 0.85)
+      if (v >= 0.85) {
         cExcel++;
-      else if (v >= 0.70)
+      } else if (v >= 0.70)
         cGood++;
       else if (v >= 0.60)
         cMid++;
@@ -1316,11 +1323,12 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                           targetType: 'all',
                           type: 'survey',
                           relatedEntityType: 'survey');
-                      if (mounted)
+                      if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                                 content: Text('已通知全体学生填写问卷'),
                                 backgroundColor: Colors.green));
+                      }
                     } catch (e, st) {
                       swallowDebug(e, tag: 'CalcTab.notifySurvey', stack: st);
                     }

@@ -71,7 +71,7 @@ class SyncServerImpl {
     }
 
     if (_server == null) {
-      throw StateError('无法绑定任何端口（$port–${_port}）');
+      throw StateError('无法绑定任何端口（$port–$_port）');
     }
 
     debugPrint('SyncServer: 启动于 http://$_host:$_port');

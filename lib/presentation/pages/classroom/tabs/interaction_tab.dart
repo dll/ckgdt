@@ -406,13 +406,13 @@ class _ClassroomInteractionTabState
   _MsgTypeConfig _getTypeConfig(String type) {
     switch (type) {
       case 'announcement':
-        return _MsgTypeConfig('公告', Icons.campaign, Colors.blue);
+        return const _MsgTypeConfig('公告', Icons.campaign, Colors.blue);
       case 'question':
-        return _MsgTypeConfig('提问', Icons.help_outline, Colors.green);
+        return const _MsgTypeConfig('提问', Icons.help_outline, Colors.green);
       case 'answer':
-        return _MsgTypeConfig('回答', Icons.question_answer, Colors.orange);
+        return const _MsgTypeConfig('回答', Icons.question_answer, Colors.orange);
       default:
-        return _MsgTypeConfig('消息', Icons.message, Colors.grey);
+        return const _MsgTypeConfig('消息', Icons.message, Colors.grey);
     }
   }
 

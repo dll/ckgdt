@@ -21,17 +21,17 @@ class PrivacyPolicyPage extends StatelessWidget {
     return DefaultTabController(
       length: 2,
       initialIndex: initialTab,
-      child: Scaffold(
+      child: const Scaffold(
         appBar: BackButtonBar(
           title: '用户协议与隐私声明',
-          bottom: const TabBar(
+          bottom: TabBar(
             tabs: [
               Tab(text: '用户协议'),
               Tab(text: '隐私声明'),
             ],
           ),
         ),
-        body: const TabBarView(
+        body: TabBarView(
           children: [
             _MarkdownPanel(content: _userAgreement),
             _MarkdownPanel(content: _privacyPolicy),

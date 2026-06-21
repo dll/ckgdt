@@ -75,7 +75,7 @@ class PumlDao {
     if (c > 0) return;
 
     final samples = [
-      PumlFileModel(
+      const PumlFileModel(
         title: '知识图谱系统架构图',
         content: '''@startuml
 title 知识图谱教学系统架构图
@@ -109,7 +109,7 @@ database "SQLite" as DB
         diagramType: 'component',
         chapter: '系统架构',
       ),
-      PumlFileModel(
+      const PumlFileModel(
         title: '图谱功能时序图',
         content: '''@startuml
 title 图谱浏览时序图

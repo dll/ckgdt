@@ -568,7 +568,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                 style: TextStyle(
                     fontSize: 15, fontWeight: FontWeight.bold, color: primary)),
             const Spacer(),
-            Text('$studentCount人 · ${totalGraded}份批改',
+            Text('$studentCount人 · $totalGraded份批改',
                 style: TextStyle(fontSize: 12, color: Colors.grey[600])),
           ]),
           const SizedBox(height: 12),
@@ -669,11 +669,10 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      [
+                      '${[
                             if (failCount > 0) '$failCount人实验不及格',
                             if (ungradedCount > 0) '$ungradedCount份未批改',
-                          ].join('，') +
-                          ' — 部分学生不满足答辩条件①',
+                          ].join('，')} — 部分学生不满足答辩条件①',
                       style: TextStyle(fontSize: 12, color: Colors.orange[800]),
                     ),
                   ),

@@ -219,7 +219,7 @@ class _ComposeNotificationPageState extends State<ComposeNotificationPage> {
               if (_targetType == 'class') ...[
                 const SizedBox(height: 12),
                 DropdownButtonFormField<int>(
-                  value: _selectedClassId,
+                  initialValue: _selectedClassId,
                   decoration: InputDecoration(
                     labelText: '选择班级',
                     prefixIcon: const Icon(Icons.class_outlined),

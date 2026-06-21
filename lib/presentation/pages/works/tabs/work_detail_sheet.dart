@@ -924,7 +924,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
             children: [
               Row(
                 children: [
-                  Text('${peerAvg.toStringAsFixed(1)}',
+                  Text(peerAvg.toStringAsFixed(1),
                       style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,

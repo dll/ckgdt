@@ -504,10 +504,12 @@ class _GroupTabState extends State<_GroupTab>
     switch (_currentDim) {
       case _GroupDimension.repo:
         // 仓库维度：显示核心职责 + 特色功能
-        if (coreDuty.isNotEmpty)
+        if (coreDuty.isNotEmpty) {
           widgets.add(_infoLine(Icons.work_outline, '职责', coreDuty));
-        if (features.isNotEmpty)
+        }
+        if (features.isNotEmpty) {
           widgets.add(_infoLine(Icons.auto_awesome, '功能', features));
+        }
       case _GroupDimension.classGroup:
         // 班组维度：显示项目 + 角色
         widgets.add(_infoLine(
@@ -518,28 +520,32 @@ class _GroupTabState extends State<_GroupTab>
         // 项目维度：显示角色 + 核心职责
         widgets.add(
             _infoLine(Icons.engineering, '角色', m['role'] as String? ?? ''));
-        if (coreDuty.isNotEmpty)
+        if (coreDuty.isNotEmpty) {
           widgets.add(_infoLine(Icons.work_outline, '职责', coreDuty));
+        }
       case _GroupDimension.role:
         // 角色维度：显示项目 + 核心职责
         widgets.add(_infoLine(
             Icons.science, '项目', m['project'] as String? ?? ''));
-        if (coreDuty.isNotEmpty)
+        if (coreDuty.isNotEmpty) {
           widgets.add(_infoLine(Icons.work_outline, '职责', coreDuty));
+        }
       case _GroupDimension.techStack:
         // 技术栈维度：显示项目 + 特色功能
         widgets.add(_infoLine(
             Icons.science, '项目', m['project'] as String? ?? ''));
-        if (features.isNotEmpty)
+        if (features.isNotEmpty) {
           widgets.add(_infoLine(Icons.auto_awesome, '功能', features));
+        }
       case _GroupDimension.features:
         // 特色功能维度：显示项目 + 角色 + 核心职责
         widgets.add(_infoLine(
             Icons.science, '项目', m['project'] as String? ?? ''));
         widgets.add(
             _infoLine(Icons.engineering, '角色', m['role'] as String? ?? ''));
-        if (coreDuty.isNotEmpty)
+        if (coreDuty.isNotEmpty) {
           widgets.add(_infoLine(Icons.work_outline, '职责', coreDuty));
+        }
     }
     return widgets;
   }
@@ -807,52 +813,52 @@ class _GroupTabState extends State<_GroupTab>
   List<_ColDef> _getColumnsForDimension() {
     // 基础列：学号、姓名
     final base = [
-      _ColDef('学号', 'userId', 100),
-      _ColDef('姓名', 'name', 70),
+      const _ColDef('学号', 'userId', 100),
+      const _ColDef('姓名', 'name', 70),
     ];
     switch (_currentDim) {
       case _GroupDimension.repo:
         return [
           ...base,
-          _ColDef('班组', 'classGroup', 60),
-          _ColDef('角色', 'role', 140),
-          _ColDef('特色功能', 'features', 350),
+          const _ColDef('班组', 'classGroup', 60),
+          const _ColDef('角色', 'role', 140),
+          const _ColDef('特色功能', 'features', 350),
         ];
       case _GroupDimension.classGroup:
         return [
           ...base,
-          _ColDef('仓库', 'repo', 100),
-          _ColDef('项目', 'project', 160),
-          _ColDef('角色', 'role', 140),
+          const _ColDef('仓库', 'repo', 100),
+          const _ColDef('项目', 'project', 160),
+          const _ColDef('角色', 'role', 140),
         ];
       case _GroupDimension.project:
         return [
           ...base,
-          _ColDef('仓库', 'repo', 100),
-          _ColDef('角色', 'role', 140),
-          _ColDef('技术栈', 'techStack', 140),
+          const _ColDef('仓库', 'repo', 100),
+          const _ColDef('角色', 'role', 140),
+          const _ColDef('技术栈', 'techStack', 140),
         ];
       case _GroupDimension.role:
         return [
           ...base,
-          _ColDef('仓库', 'repo', 100),
-          _ColDef('技术栈', 'techStack', 140),
-          _ColDef('特色功能', 'features', 350),
+          const _ColDef('仓库', 'repo', 100),
+          const _ColDef('技术栈', 'techStack', 140),
+          const _ColDef('特色功能', 'features', 350),
         ];
       case _GroupDimension.techStack:
         return [
           ...base,
-          _ColDef('仓库', 'repo', 100),
-          _ColDef('角色', 'role', 140),
-          _ColDef('特色功能', 'features', 350),
+          const _ColDef('仓库', 'repo', 100),
+          const _ColDef('角色', 'role', 140),
+          const _ColDef('特色功能', 'features', 350),
         ];
       case _GroupDimension.features:
         return [
           ...base,
-          _ColDef('仓库', 'repo', 100),
-          _ColDef('项目', 'project', 160),
-          _ColDef('角色', 'role', 140),
-          _ColDef('技术栈', 'techStack', 140),
+          const _ColDef('仓库', 'repo', 100),
+          const _ColDef('项目', 'project', 160),
+          const _ColDef('角色', 'role', 140),
+          const _ColDef('技术栈', 'techStack', 140),
         ];
     }
   }

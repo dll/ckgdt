@@ -110,7 +110,7 @@ class _ContributionTabState extends State<_ContributionTab>
       return const Center(child: CircularProgressIndicator());
     }
 
-    final green = Colors.green;
+    const green = Colors.green;
     return Column(
       children: [
         Container(

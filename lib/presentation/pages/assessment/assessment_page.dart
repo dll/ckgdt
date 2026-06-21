@@ -258,10 +258,10 @@ class _AssessmentPageState extends State<AssessmentPage>
                   ],
                 ),
                 const SizedBox(height: 4),
-                Wrap(
+                const Wrap(
                   spacing: 4,
                   runSpacing: 4,
-                  children: const [
+                  children: [
                     _AssessmentTopStat(
                         label: '分组', value: '5类', icon: Icons.groups),
                     _AssessmentTopStat(

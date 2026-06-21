@@ -98,7 +98,7 @@ class _TeacherApplicationPageState extends State<TeacherApplicationPage> {
     final isAlreadyTeacher = _authService.isTeacher || _authService.isAdmin;
 
     return Scaffold(
-      appBar: BackButtonBar(title: '教师申请'),
+      appBar: const BackButtonBar(title: '教师申请'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(

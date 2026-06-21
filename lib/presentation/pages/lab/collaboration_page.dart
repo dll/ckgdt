@@ -757,7 +757,7 @@ class _CollaborationPageState extends State<CollaborationPage>
                                 Expanded(
                                   flex: 3,
                                   child: DropdownButtonFormField<String>(
-                                    value: roleValues[i].isNotEmpty &&
+                                    initialValue: roleValues[i].isNotEmpty &&
                                             roles.contains(roleValues[i])
                                         ? roleValues[i]
                                         : roles.first,

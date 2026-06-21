@@ -536,8 +536,8 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: const [
+            const Row(
+              children: [
                 Icon(Icons.tune, size: 18, color: Colors.indigo),
                 SizedBox(width: 6),
                 Text('PDF 包含内容',

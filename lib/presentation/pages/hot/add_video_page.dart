@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../data/local/hot_video_dao.dart';
 import '../../../data/models/hot_video_model.dart';
 
@@ -144,7 +144,7 @@ class _AddVideoPageState extends State<AddVideoPage> {
           children: [
             Text('选择平台', style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
             const SizedBox(height: 8),
-            DropdownButtonFormField<String>(value: _platform,
+            DropdownButtonFormField<String>(initialValue: _platform,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.language),

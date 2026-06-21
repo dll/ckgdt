@@ -270,11 +270,12 @@ class _LearningHubPageState extends State<LearningHubPage>
       final dao = HotVideoDao();
       final allVideos = await dao.getVideos(sortBy: 'latest', limit: 50);
       if (allVideos.isEmpty) {
-        if (mounted)
+        if (mounted) {
           setState(() {
             _recommendLoading = false;
             _recommendError = '视频池为空，请先添加视频';
           });
+        }
         return;
       }
 
@@ -308,11 +309,12 @@ class _LearningHubPageState extends State<LearningHubPage>
       // 4. 解析AI返回的索引
       final match = RegExp(r'\[[\d,\s]*\]').firstMatch(result);
       if (match == null) {
-        if (mounted)
+        if (mounted) {
           setState(() {
             _recommendLoading = false;
             _recommendError = 'AI 未返回有效筛选结果';
           });
+        }
         return;
       }
 
@@ -1014,12 +1016,12 @@ class _LearningHubPageState extends State<LearningHubPage>
   /// 快捷提问条（对话进行中时显示）
   Widget _buildQuickPromptBar() {
     final prompts = [
-      '${_courseName}核心知识点',
-      '${_courseName}学习路线',
-      '${_courseName}常见难点',
-      '${_courseName}案例分析',
-      '${_courseName}复习提纲',
-      '${_courseName}章节测验建议',
+      '$_courseName核心知识点',
+      '$_courseName学习路线',
+      '$_courseName常见难点',
+      '$_courseName案例分析',
+      '$_courseName复习提纲',
+      '$_courseName章节测验建议',
     ];
 
     return Container(
@@ -1120,7 +1122,7 @@ class _LearningHubPageState extends State<LearningHubPage>
           const SizedBox(height: 8),
           Text(
             '随时向我提问关于$_courseName的问题',
-            style: TextStyle(color: Colors.grey, fontSize: 14),
+            style: const TextStyle(color: Colors.grey, fontSize: 14),
           ),
           const SizedBox(height: 32),
           // 快捷问题
@@ -1129,8 +1131,8 @@ class _LearningHubPageState extends State<LearningHubPage>
             runSpacing: 8,
             alignment: WrapAlignment.center,
             children: [
-              _buildQuickQuestion('${_courseName}的核心知识体系是什么？'),
-              _buildQuickQuestion('${_courseName}有哪些常见难点？'),
+              _buildQuickQuestion('$_courseName的核心知识体系是什么？'),
+              _buildQuickQuestion('$_courseName有哪些常见难点？'),
               _buildQuickQuestion('请生成$_courseName复习提纲'),
               _buildQuickQuestion('请设计$_courseName实践任务'),
               _buildQuickQuestion('如何准备$_courseName章节测验？'),
@@ -1811,7 +1813,7 @@ class _ExtendedCoursewareSheetState extends State<_ExtendedCoursewareSheet> {
 
             // 所属章节（可选）
             DropdownButtonFormField<String>(
-              value: _selectedChapter,
+              initialValue: _selectedChapter,
               decoration: InputDecoration(
                 labelText: '关联章节（可选）',
                 prefixIcon: const Icon(Icons.bookmark),
@@ -2122,7 +2124,7 @@ class _ExtendedCoursewareSheetState extends State<_ExtendedCoursewareSheet> {
     // Step 1: AI 生成幻灯片内容
     _log('正在生成幻灯片内容（$_slideCount 页）...');
 
-    final systemPrompt = '''你是一位资深的${courseName}课程讲师，擅长制作清晰、结构化的教学课件。
+    final systemPrompt = '''你是一位资深的$courseName课程讲师，擅长制作清晰、结构化的教学课件。
 请用中文回复，回复必须是合法的 JSON 数组。
 ${extra.isNotEmpty ? '额外要求：$extra' : ''}''';
 

@@ -135,8 +135,8 @@ D. Text
           '答题后获得解析和错题分析',
         ],
         classicCases: [
-          AgentCase(title: '按章节出题', userInput: '帮我出5道第3章 Flutter 的选择题', agentReply: '## 第3章 Flutter 测验\n\n**第1题** Flutter 中用于构建 UI 的基本单元是？\nA. Activity  B. Widget  C. View  D. Component\n\n**答案：B**\nFlutter 中一切皆 Widget，它是构建 UI 的基本单元。'),
-          AgentCase(title: '错题分析', userInput: '分析我最近的错题', agentReply: '你最近的错题集中在：\n1. Widget 生命周期（错2次）\n2. 路由导航方式（错1次）\n\n建议复习 StatefulWidget 的 initState/dispose 生命周期。'),
+          const AgentCase(title: '按章节出题', userInput: '帮我出5道第3章 Flutter 的选择题', agentReply: '## 第3章 Flutter 测验\n\n**第1题** Flutter 中用于构建 UI 的基本单元是？\nA. Activity  B. Widget  C. View  D. Component\n\n**答案：B**\nFlutter 中一切皆 Widget，它是构建 UI 的基本单元。'),
+          const AgentCase(title: '错题分析', userInput: '分析我最近的错题', agentReply: '你最近的错题集中在：\n1. Widget 生命周期（错2次）\n2. 路由导航方式（错1次）\n\n建议复习 StatefulWidget 的 initState/dispose 生命周期。'),
         ],
       );
 

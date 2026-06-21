@@ -149,14 +149,14 @@ class _VoiceSettingsPageState extends State<VoiceSettingsPage> {
     final primary = theme.colorScheme.primary;
 
     if (_loading) {
-      return Scaffold(
+      return const Scaffold(
         appBar: BackButtonBar(title: '讯飞语音设置'),
-        body: const Center(child: CircularProgressIndicator()),
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      appBar: BackButtonBar(
+      appBar: const BackButtonBar(
         title: '讯飞语音设置',
       ),
       body: SingleChildScrollView(

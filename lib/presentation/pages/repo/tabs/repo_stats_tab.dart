@@ -69,7 +69,7 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
     // 1. 测试 Gitee 连接
     try {
       await widget.gitee.testConnection();
-      results['gitee_connection'] = _AuditResult(true, 'Token 有效，API 连接正常');
+      results['gitee_connection'] = const _AuditResult(true, 'Token 有效，API 连接正常');
     } catch (e) {
       results['gitee_connection'] = _AuditResult(false, '连接失败: $e');
     }
@@ -141,7 +141,7 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
                   .hasMatch(b['name'].toString())).length;
           results['student_branches'] = _AuditResult(
               branches.isNotEmpty,
-              '$firstRepo: ${branches.length} 分支 (${studentBranches} 学生分支)');
+              '$firstRepo: ${branches.length} 分支 ($studentBranches 学生分支)');
         } catch (e) {
           results['student_branches'] = _AuditResult(false, '获取失败: $e');
         }
@@ -152,7 +152,7 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
     try {
       final rawUrl = await widget.gitee.getRawUrl(
           'chzcldl', 'mad-data', 'course_config/lab_tasks.json');
-      results['raw_download'] = _AuditResult(true, 'Raw URL 生成正常');
+      results['raw_download'] = const _AuditResult(true, 'Raw URL 生成正常');
       // 不实际下载，仅验证 URL 生成
       debugPrint('Audit: raw URL = $rawUrl');
     } catch (e) {

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../data/local/lab_task_dao.dart';
@@ -447,7 +446,7 @@ class _StudentLabPageState extends State<StudentLabPage> {
                           size: 16, color: Colors.blue),
                       const SizedBox(width: 6),
                       Text(isReturned ? '打回理由：' : '教师批改反馈：',
-                          style: TextStyle(
+                          style: const TextStyle(
                               fontSize: 12, fontWeight: FontWeight.w600)),
                     ],
                   ),

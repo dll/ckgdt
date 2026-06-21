@@ -1,4 +1,5 @@
 /// Stub 实现 — Web 平台（不支持文件操作）
+library;
 import 'package:file_picker/file_picker.dart';
 
 Future<String?> saveStringToFile(String content, String prefix) async {

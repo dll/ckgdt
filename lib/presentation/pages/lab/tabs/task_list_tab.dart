@@ -178,10 +178,10 @@ class _TaskListTabState extends State<_TaskListTab> {
           dueDateDisplay = '今天截止';
           dueDateColor = Colors.orange;
         } else if (diff <= 3) {
-          dueDateDisplay = '剩余${diff}天';
+          dueDateDisplay = '剩余$diff天';
           dueDateColor = Colors.orange;
         } else {
-          dueDateDisplay = '剩余${diff}天';
+          dueDateDisplay = '剩余$diff天';
           dueDateColor = Colors.green;
         }
       } catch (_) {}

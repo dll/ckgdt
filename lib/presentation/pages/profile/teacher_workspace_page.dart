@@ -151,9 +151,9 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
     // 权限守卫：仅教师/管理员可访问
     final role = user?.role ?? 'student';
     if (!RoleGuard.isTeacherOrAdmin(role)) {
-      return Scaffold(
+      return const Scaffold(
         appBar: BackButtonBar(title: '教师工作台'),
-        body: const Center(
+        body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -177,7 +177,7 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
     }
 
     return Scaffold(
-      appBar: BackButtonBar(
+      appBar: const BackButtonBar(
         title: '教师工作台',
       ),
       body: RefreshIndicator(

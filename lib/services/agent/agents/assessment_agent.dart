@@ -115,7 +115,7 @@ class AssessmentAgent extends BaseAgent {
           '可查询答辩安排和成绩统计',
         ],
         classicCases: [
-          AgentCase(title: '查询评分标准', userInput: '项目答辩的评分标准是什么？', agentReply: '## 项目答辩评分标准\n\n| 维度 | 分值 |\n|------|------|\n| 功能完整性 | 25分 |\n| 技术深度 | 20分 |\n| 跨框架整合 | 25分 |\n| 性能质量 | 15分 |\n| 文档协作 | 15分 |'),
+          const AgentCase(title: '查询评分标准', userInput: '项目答辩的评分标准是什么？', agentReply: '## 项目答辩评分标准\n\n| 维度 | 分值 |\n|------|------|\n| 功能完整性 | 25分 |\n| 技术深度 | 20分 |\n| 跨框架整合 | 25分 |\n| 性能质量 | 15分 |\n| 文档协作 | 15分 |'),
         ],
       );
 

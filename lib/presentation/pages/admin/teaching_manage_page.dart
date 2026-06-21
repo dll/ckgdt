@@ -313,11 +313,11 @@ class _SyllabusTabState extends State<_SyllabusTab>
   _StatusInfo _getStatusInfo(String status) {
     switch (status) {
       case 'in_progress':
-        return _StatusInfo('进行中', Colors.orange);
+        return const _StatusInfo('进行中', Colors.orange);
       case 'completed':
-        return _StatusInfo('已完成', Colors.green);
+        return const _StatusInfo('已完成', Colors.green);
       default:
-        return _StatusInfo('计划中', Colors.grey);
+        return const _StatusInfo('计划中', Colors.grey);
     }
   }
 
@@ -1337,7 +1337,7 @@ class _ProgressTabState extends State<_ProgressTab>
     final attendanceCtrl = TextEditingController(
         text: '${item['attendance'] ?? 0}');
     final hwCtrl = TextEditingController(
-        text: '${(item['homework_completion'] as num? ?? 0).toStringAsFixed(0)}');
+        text: (item['homework_completion'] as num? ?? 0).toStringAsFixed(0));
 
     await showDialog(
       context: context,

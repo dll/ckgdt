@@ -230,7 +230,7 @@ class _QuizPageState extends State<QuizPage> {
     final wrongCount = _questions.length - _correctCount;
     final voiceText = wrongCount == 0
         ? '恭喜你，全部答对！得分${result.score}分。'
-        : '测验完成，得分${result.score}分，答对${_correctCount}题，答错${wrongCount}题。'
+        : '测验完成，得分${result.score}分，答对$_correctCount题，答错$wrongCount题。'
             '错题已自动收录到错题本并生成解析。';
     TtsFlutterService.instance.speak(voiceText);
 
@@ -373,9 +373,9 @@ class _QuizPageState extends State<QuizPage> {
     if (widget.embedded) return body;
 
     return Scaffold(
-      appBar: BackButtonBar(
+      appBar: const BackButtonBar(
         title: '章节测验',
-        actions: const [AgentEntryButton(agentId: 'quiz')],
+        actions: [AgentEntryButton(agentId: 'quiz')],
       ),
       body: body,
     );
@@ -1040,9 +1040,9 @@ class _QuizPageState extends State<QuizPage> {
         Card(
           color: Colors.red[50],
           child: ListTile(
-            leading: CircleAvatar(
+            leading: const CircleAvatar(
               backgroundColor: Colors.red,
-              child: const Icon(Icons.error, color: Colors.white),
+              child: Icon(Icons.error, color: Colors.white),
             ),
             title: const Text('错题本'),
             subtitle: const Text('查看和复习做错的题目'),

@@ -453,7 +453,7 @@ class _SkillsHubPageState extends State<SkillsHubPage> {
     final gradient = AppGradientTheme.of(context);
 
     return Scaffold(
-      appBar: BackButtonBar(title: 'AI 技能中心'),
+      appBar: const BackButtonBar(title: 'AI 技能中心'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

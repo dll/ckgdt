@@ -451,12 +451,15 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
     final p = _studentProfile ?? StudentTwinProfile.empty();
     final items = <String>[];
     if (p.quizAvg > 0) items.add('测验${p.quizAvg.toStringAsFixed(0)}分');
-    if (p.labCompletionRate > 0)
+    if (p.labCompletionRate > 0) {
       items.add('实验${p.labCompletionRate.toStringAsFixed(0)}%');
-    if (p.conceptCoverage > 0)
+    }
+    if (p.conceptCoverage > 0) {
       items.add('覆盖${p.conceptCoverage.toStringAsFixed(0)}%');
-    if (p.studyMinutesTotal > 0)
+    }
+    if (p.studyMinutesTotal > 0) {
       items.add('累计${(p.studyMinutesTotal / 60).toStringAsFixed(1)}h');
+    }
     return items.isEmpty ? '开始学习以解锁您的数字画像' : items.join(' · ');
   }
 
@@ -904,23 +907,23 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
   Widget _buildQuickActions(bool isDark) {
     final actions = _isTeacher
         ? [
-            _QuickAction('进度汇报', Icons.assessment, Colors.blue,
+            const _QuickAction('进度汇报', Icons.assessment, Colors.blue,
                 '请汇报全班学习进度，包括成绩分布、薄弱环节和需要关注的学生'),
-            _QuickAction('教学建议', Icons.lightbulb, Colors.amber,
+            const _QuickAction('教学建议', Icons.lightbulb, Colors.amber,
                 '根据当前班级数据，给出教学改进建议'),
-            _QuickAction('批阅提醒', Icons.notifications_active, Colors.red,
+            const _QuickAction('批阅提醒', Icons.notifications_active, Colors.red,
                 '列出需要批阅的内容和优先级建议'),
-            _QuickAction('班级诊断', Icons.analytics, Colors.green,
+            const _QuickAction('班级诊断', Icons.analytics, Colors.green,
                 '分析班级整体表现趋势和优劣势，给出精准教学建议'),
           ]
         : [
-            _QuickAction('今日计划', Icons.today, Colors.blue,
+            const _QuickAction('今日计划', Icons.today, Colors.blue,
                 '根据我的学习进度和薄弱环节，帮我制定今天的学习计划'),
-            _QuickAction('进度汇报', Icons.assessment, Colors.green,
+            const _QuickAction('进度汇报', Icons.assessment, Colors.green,
                 '汇报我的整体学习进度，包括各章节掌握度和趋势变化'),
-            _QuickAction('薄弱诊断', Icons.warning_amber, Colors.orange,
+            const _QuickAction('薄弱诊断', Icons.warning_amber, Colors.orange,
                 '智能诊断我的薄弱知识点，给出针对性提升路径'),
-            _QuickAction('成长激励', Icons.favorite, Colors.pink,
+            const _QuickAction('成长激励', Icons.favorite, Colors.pink,
                 '根据我的进步情况和里程碑成就，给我继续学习的动力'),
           ];
 
@@ -1086,7 +1089,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                     SizedBox(
                       width: 48,
                       child: Text(
-                        score > 0 ? '${score.toStringAsFixed(0)}' : '-',
+                        score > 0 ? score.toStringAsFixed(0) : '-',
                         style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,

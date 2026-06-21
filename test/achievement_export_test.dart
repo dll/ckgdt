@@ -122,7 +122,7 @@ void main() {
     );
 
     final specs = <ChartSpec>[
-      ChartSpec.barRange(
+      const ChartSpec.barRange(
           sheetName: '课程目标条形图', title: '课程目标达成度', startRow: 7, endRow: 10),
       for (int i = 0; i < 4; i++)
         ChartSpec.scatterRange(

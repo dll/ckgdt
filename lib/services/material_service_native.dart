@@ -1,4 +1,5 @@
 /// 原生平台文件删除实现
+library;
 import 'dart:io';
 
 Future<void> deleteFileIfExists(String filePath) async {

@@ -90,7 +90,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final user = authService.currentUser;
 
     return Scaffold(
-      appBar: BackButtonBar(
+      appBar: const BackButtonBar(
         title: '设置',
       ),
       body: ListView(

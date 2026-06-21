@@ -111,7 +111,7 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
     }
 
     return Scaffold(
-      appBar: BackButtonBar(
+      appBar: const BackButtonBar(
         title: '我的学习中心',
       ),
       body: RefreshIndicator(
@@ -454,9 +454,9 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
   Widget _buildAchievementBadges() {
     final badges = [
       _BadgeData('初学者', Icons.emoji_events, Colors.brown[300]!, '0-20分'),
-      _BadgeData('进阶者', Icons.star, Colors.blue, '20-40分'),
-      _BadgeData('探索者', Icons.explore, Colors.teal, '40-60分'),
-      _BadgeData('精通者', Icons.workspace_premium, Colors.orange, '60-80分'),
+      const _BadgeData('进阶者', Icons.star, Colors.blue, '20-40分'),
+      const _BadgeData('探索者', Icons.explore, Colors.teal, '40-60分'),
+      const _BadgeData('精通者', Icons.workspace_premium, Colors.orange, '60-80分'),
       _BadgeData('专家级', Icons.military_tech, Colors.amber[700]!, '80分以上'),
     ];
 

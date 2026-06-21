@@ -381,7 +381,7 @@ class RagService {
         }
         tokens.add(buf.toString());
       } else if (ch.trim().isNotEmpty &&
-          !RegExp(r'[，。！？、；：""' '（）[\]{}【】,.!?;:()-]').hasMatch(ch)) {
+          !RegExp(r'[，。！？、；：""' '（）[]{}【】,.!?;:()-]').hasMatch(ch)) {
         // 中文字符：uni-gram
         final uni = ch.toLowerCase();
         if (!_stopWords.contains(uni)) {
@@ -391,7 +391,7 @@ class RagService {
         if (i > 0) {
           final prev = chars[i - 1];
           if (prev.trim().isNotEmpty &&
-              !RegExp(r'[a-zA-Z0-9，。！？、；：""' '（）[\]{}【】,.!?;:()-]')
+              !RegExp(r'[a-zA-Z0-9，。！？、；：""' '（）[]{}【】,.!?;:()-]')
                   .hasMatch(prev)) {
             final bi = '${prev.toLowerCase()}$uni';
             tokens.add(bi);
@@ -584,7 +584,7 @@ class RagService {
   /// 从用户查询中提取搜索关键词
   List<String> _extractKeywords(String query) {
     final words = query
-        .replaceAll(RegExp(r'[，。！？、；：""' '（）[\]{}【】]'), ' ')
+        .replaceAll(RegExp(r'[，。！？、；：""' '（）[]{}【】]'), ' ')
         .split(RegExp(r'\s+'))
         .where((w) => w.length >= 2 && !_stopWords.contains(w))
         .toList();

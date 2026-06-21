@@ -26,7 +26,7 @@ Future<void> main(List<String> args) async {
 String _resolveProjectRoot() {
   final cwd = Directory.current.path;
   if (File(p.join(cwd, 'pubspec.yaml')).existsSync()) return cwd;
-  final alt = r'D:\FlutterProjects\knowledge_graph_app';
+  const alt = r'D:\FlutterProjects\knowledge_graph_app';
   if (File(p.join(alt, 'pubspec.yaml')).existsSync()) return alt;
   throw StateError('找不到项目根目录（pubspec.yaml 不存在）');
 }

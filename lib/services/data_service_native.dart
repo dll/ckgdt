@@ -1,4 +1,5 @@
 /// 原生平台文件操作实现
+library;
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 

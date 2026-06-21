@@ -768,8 +768,8 @@ class _ReportTabState extends State<_ReportTab> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: const [
+                      const Row(
+                        children: [
                           Icon(Icons.assignment_return,
                               size: 15, color: Colors.red),
                           SizedBox(width: 6),
@@ -1243,7 +1243,9 @@ class _ReportTabState extends State<_ReportTab> {
                           ),
                         );
                         if (confirmedReason == null ||
-                            confirmedReason.trim().isEmpty) return;
+                            confirmedReason.trim().isEmpty) {
+                          return;
+                        }
                         setDialogState(() => isGrading = true);
                         try {
                           await widget.labTaskDao.returnReport(
@@ -1763,7 +1765,9 @@ class _ReportTabState extends State<_ReportTab> {
                           ),
                         );
                         if (confirmedReason == null ||
-                            confirmedReason.trim().isEmpty) return;
+                            confirmedReason.trim().isEmpty) {
+                          return;
+                        }
                         setDialogState(() => isGrading = true);
                         try {
                           await widget.labTaskDao.returnSubmission(

@@ -527,7 +527,7 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
               style: TextStyle(
                   fontSize: 12, color: color, fontWeight: FontWeight.bold)),
           const SizedBox(width: 4),
-          Text('(${attempts}次)',
+          Text('($attempts次)',
               style: TextStyle(fontSize: 10, color: Colors.grey[400])),
         ],
       ),
@@ -800,7 +800,7 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
             ],
           );
         }),
-        gridData: FlGridData(
+        gridData: const FlGridData(
           show: true,
           drawVerticalLine: false,
           horizontalInterval: 20,
@@ -1106,7 +1106,7 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
         ),
         title: Text(name,
             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-        subtitle: Text('测验${quizCount}次 · 学习记录${learnCount}条',
+        subtitle: Text('测验$quizCount次 · 学习记录$learnCount条',
             style: TextStyle(fontSize: 11, color: Colors.grey[500])),
         trailing: Text(avgScore.toStringAsFixed(1),
             style: TextStyle(

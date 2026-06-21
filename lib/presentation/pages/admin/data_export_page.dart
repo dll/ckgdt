@@ -143,12 +143,12 @@ class _DataExportPageState extends State<DataExportPage> {
 
     final buf = StringBuffer();
     buf.writeln('班级成绩总表');
-    buf.writeln('${'=' * 72}');
+    buf.writeln('=' * 72);
     buf.writeln(
       _padRow(['排名', '学号', '姓名', '次数', '平均分', '最高分', '最低分', '正确率'],
           [4, 12, 10, 4, 8, 8, 8, 8]),
     );
-    buf.writeln('${'-' * 72}');
+    buf.writeln('-' * 72);
 
     for (var i = 0; i < results.length; i++) {
       final r = results[i];
@@ -181,7 +181,7 @@ class _DataExportPageState extends State<DataExportPage> {
       );
     }
 
-    buf.writeln('${'-' * 72}');
+    buf.writeln('-' * 72);
     buf.writeln('共 ${results.length} 名学生参加测验');
 
     // Per-chapter breakdown
@@ -205,11 +205,11 @@ class _DataExportPageState extends State<DataExportPage> {
     if (chapterResults.isNotEmpty) {
       buf.writeln('');
       buf.writeln('各章节成绩概览');
-      buf.writeln('${'=' * 60}');
+      buf.writeln('=' * 60);
       buf.writeln(
         _padRow(['章节', '参与人数', '测验次数', '平均分', '正确率'], [16, 10, 10, 10, 10]),
       );
-      buf.writeln('${'-' * 60}');
+      buf.writeln('-' * 60);
 
       for (final r in chapterResults) {
         final totalCorrect = (r['total_correct'] as num?) ?? 0;
@@ -246,7 +246,7 @@ class _DataExportPageState extends State<DataExportPage> {
 
     final buf = StringBuffer();
     buf.writeln('学情预警报告');
-    buf.writeln('${'=' * 72}');
+    buf.writeln('=' * 72);
 
     // 1. Students with low average score (< 60)
     final lowScoreStudents = await db.rawQuery('''
@@ -267,7 +267,7 @@ class _DataExportPageState extends State<DataExportPage> {
 
     buf.writeln('');
     buf.writeln('一、成绩预警（平均分 < 60）');
-    buf.writeln('${'-' * 60}');
+    buf.writeln('-' * 60);
 
     if (lowScoreStudents.isEmpty) {
       buf.writeln('  无预警学生，所有学生平均分均达标。');
@@ -275,7 +275,7 @@ class _DataExportPageState extends State<DataExportPage> {
       buf.writeln(
         _padRow(['学号', '姓名', '测验次数', '平均分', '正确率'], [12, 10, 10, 10, 10]),
       );
-      buf.writeln('${'-' * 60}');
+      buf.writeln('-' * 60);
       for (final r in lowScoreStudents) {
         final totalCorrect = (r['total_correct'] as num?) ?? 0;
         final totalQuestions = (r['total_questions'] as num?) ?? 0;
@@ -321,7 +321,7 @@ class _DataExportPageState extends State<DataExportPage> {
 
     buf.writeln('');
     buf.writeln('二、错题频次预警（累计错误 ≥ 5 次）');
-    buf.writeln('${'-' * 50}');
+    buf.writeln('-' * 50);
 
     if (highWrongStudents.isEmpty) {
       buf.writeln('  无预警学生。');
@@ -329,7 +329,7 @@ class _DataExportPageState extends State<DataExportPage> {
       buf.writeln(
         _padRow(['学号', '姓名', '错题数', '累计错误次数'], [12, 10, 10, 14]),
       );
-      buf.writeln('${'-' * 50}');
+      buf.writeln('-' * 50);
       for (final r in highWrongStudents) {
         buf.writeln(
           _padRow([
@@ -369,13 +369,13 @@ class _DataExportPageState extends State<DataExportPage> {
 
     buf.writeln('');
     buf.writeln('三、零活跃预警（无测验记录且无学习记录）');
-    buf.writeln('${'-' * 40}');
+    buf.writeln('-' * 40);
 
     if (inactiveStudents.isEmpty) {
       buf.writeln('  所有学生均有学习活动记录。');
     } else {
       buf.writeln(_padRow(['学号', '姓名'], [12, 14]));
-      buf.writeln('${'-' * 40}');
+      buf.writeln('-' * 40);
       for (final r in inactiveStudents) {
         buf.writeln(
           _padRow(['${r['user_id']}', '${r['name']}'], [12, 14]),
@@ -395,7 +395,7 @@ class _DataExportPageState extends State<DataExportPage> {
 
     final buf = StringBuffer();
     buf.writeln('章节掌握度分析');
-    buf.writeln('${'=' * 72}');
+    buf.writeln('=' * 72);
 
     // Overall chapter stats from quiz_results
     final chapterStats = await db.rawQuery('''
@@ -423,7 +423,7 @@ class _DataExportPageState extends State<DataExportPage> {
       _padRow(['章节', '人次', '平均分', '最高', '最低', '正确率', '掌握等级'],
           [16, 6, 8, 6, 6, 10, 10]),
     );
-    buf.writeln('${'-' * 72}');
+    buf.writeln('-' * 72);
 
     for (final r in chapterStats) {
       final totalCorrect = (r['total_correct'] as num?) ?? 0;
@@ -454,7 +454,7 @@ class _DataExportPageState extends State<DataExportPage> {
       );
     }
 
-    buf.writeln('${'-' * 72}');
+    buf.writeln('-' * 72);
     buf.writeln('');
     buf.writeln('掌握等级标准: 优秀(≥90%) | 良好(≥75%) | 中等(≥60%) | 待加强(<60%)');
 
@@ -480,7 +480,7 @@ class _DataExportPageState extends State<DataExportPage> {
     if (wrongHotspots.isNotEmpty) {
       buf.writeln('');
       buf.writeln('高频错题 TOP 10');
-      buf.writeln('${'=' * 72}');
+      buf.writeln('=' * 72);
 
       for (var i = 0; i < wrongHotspots.length; i++) {
         final r = wrongHotspots[i];
@@ -505,7 +505,7 @@ class _DataExportPageState extends State<DataExportPage> {
 
     final buf = StringBuffer();
     buf.writeln('作品评分汇总');
-    buf.writeln('${'=' * 80}');
+    buf.writeln('=' * 80);
 
     final works = await db.rawQuery('''
       SELECT
@@ -552,7 +552,7 @@ class _DataExportPageState extends State<DataExportPage> {
       _padRow(['序号', '作品名称', '类型', '提交者/组长', '评分次数', '平均总分', '状态'],
           [4, 18, 10, 12, 8, 10, 8]),
     );
-    buf.writeln('${'-' * 80}');
+    buf.writeln('-' * 80);
 
     for (var i = 0; i < works.length; i++) {
       final r = works[i];
@@ -593,12 +593,12 @@ class _DataExportPageState extends State<DataExportPage> {
     if (scoredWorks.isNotEmpty) {
       buf.writeln('');
       buf.writeln('评分维度明细');
-      buf.writeln('${'=' * 80}');
+      buf.writeln('=' * 80);
       buf.writeln(
         _padRow(['作品', '功能性', '技术深度', '集成度', '质量', '文档', '总分'],
             [18, 10, 10, 10, 10, 10, 10]),
       );
-      buf.writeln('${'-' * 80}');
+      buf.writeln('-' * 80);
 
       for (final r in scoredWorks) {
         final title = '${r['title']}';
@@ -626,7 +626,7 @@ class _DataExportPageState extends State<DataExportPage> {
       }
     }
 
-    buf.writeln('${'-' * 80}');
+    buf.writeln('-' * 80);
     buf.writeln('共 ${works.length} 个作品，其中 ${scoredWorks.length} 个已评分');
 
     return buf.toString();
@@ -678,7 +678,7 @@ class _DataExportPageState extends State<DataExportPage> {
     final overallAvg = avgScore.first['avg'] ?? 'N/A';
 
     buf.writeln('一、总体概况');
-    buf.writeln('${'─' * 40}');
+    buf.writeln('─' * 40);
     buf.writeln('  在册学生数:     $students 人');
     buf.writeln('  测验总次数:     $quizzes 次');
     buf.writeln('  学习记录总数:   $learnings 条');
@@ -688,7 +688,7 @@ class _DataExportPageState extends State<DataExportPage> {
 
     // Section 2: Grade summary (abbreviated)
     buf.writeln('二、班级成绩概况');
-    buf.writeln('${'─' * 40}');
+    buf.writeln('─' * 40);
 
     try {
       final gradeReport = await _generateGradeSummary();
@@ -706,7 +706,7 @@ class _DataExportPageState extends State<DataExportPage> {
 
     // Section 3: Learning alerts (abbreviated)
     buf.writeln('三、学情预警');
-    buf.writeln('${'─' * 40}');
+    buf.writeln('─' * 40);
 
     try {
       final alertReport = await _generateLearningAlert();
@@ -723,7 +723,7 @@ class _DataExportPageState extends State<DataExportPage> {
 
     // Section 4: Chapter mastery
     buf.writeln('四、章节掌握度');
-    buf.writeln('${'─' * 40}');
+    buf.writeln('─' * 40);
 
     try {
       final masteryReport = await _generateChapterMastery();
@@ -740,7 +740,7 @@ class _DataExportPageState extends State<DataExportPage> {
 
     // Section 5: Work scores
     buf.writeln('五、作品评分');
-    buf.writeln('${'─' * 40}');
+    buf.writeln('─' * 40);
 
     try {
       final workReport = await _generateWorkScores();
@@ -755,7 +755,7 @@ class _DataExportPageState extends State<DataExportPage> {
     }
 
     buf.writeln('');
-    buf.writeln('${'═' * 70}');
+    buf.writeln('═' * 70);
     buf.writeln('报告结束 — 生成于 $timestamp');
 
     return buf.toString();

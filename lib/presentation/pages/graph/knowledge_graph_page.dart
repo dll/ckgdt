@@ -459,8 +459,8 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
     if (nodes.isEmpty) return;
 
     final rng = math.Random(42);
-    final cx = _canvasWidth / 2;
-    final cy = _canvasHeight / 2;
+    const cx = _canvasWidth / 2;
+    const cy = _canvasHeight / 2;
     final spreadRadius = math.min(_canvasWidth, _canvasHeight) * 0.35;
 
     // 初始化随机位置
@@ -689,7 +689,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
     if (_focusedNode == null || _nodes.isEmpty) return;
 
     final focus = _focusedNode!;
-    final center = Offset(_canvasWidth / 2, _canvasHeight / 2);
+    const center = Offset(_canvasWidth / 2, _canvasHeight / 2);
     focus.x = center.dx;
     focus.y = center.dy;
 
@@ -2119,7 +2119,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
               style: const TextStyle(color: NoirTokens.paper),
               onChanged: _performSearch,
             )
-          : Text('知识图谱', style: const TextStyle(color: NoirTokens.paper)),
+          : const Text('知识图谱', style: TextStyle(color: NoirTokens.paper)),
       bottom: TabBar(
         controller: _topTabController,
         labelColor: NoirTokens.paper,
@@ -2152,7 +2152,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
           IconButton(
             icon: Badge(
               isLabelVisible: _chapterFilter != null,
-              label: _chapterFilter != null ? Text('${_chapterFilter}') : null,
+              label: _chapterFilter != null ? Text('$_chapterFilter') : null,
               child: const Icon(Icons.filter_list),
             ),
             tooltip: '章节筛选',
@@ -2197,8 +2197,8 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                 value: 'properties',
                 child: ListTile(
                   leading: Icon(Icons.table_chart, color: primary),
-                  title: Text('属性管理'),
-                  subtitle: Text('查看和编辑节点/关系', style: TextStyle(fontSize: 11)),
+                  title: const Text('属性管理'),
+                  subtitle: const Text('查看和编辑节点/关系', style: TextStyle(fontSize: 11)),
                 ),
               ),
             ],
@@ -2213,8 +2213,8 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircularProgressIndicator(color: NoirTokens.accent),
-          SizedBox(height: 16),
+          const CircularProgressIndicator(color: NoirTokens.accent),
+          const SizedBox(height: 16),
           Text(
             '正在加载知识图谱...',
             style: TextStyle(
@@ -2232,7 +2232,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline, size: 64, color: NoirTokens.danger),
+            const Icon(Icons.error_outline, size: 64, color: NoirTokens.danger),
             const SizedBox(height: 16),
             Text(
               _errorMessage!,
@@ -3410,8 +3410,8 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
       List<_ConceptNode> visibleNodes, List<_ConceptEdge> visibleEdges) {
     const mapW = 140.0;
     const mapH = 120.0;
-    final scaleX = mapW / _canvasWidth;
-    final scaleY = mapH / _canvasHeight;
+    const scaleX = mapW / _canvasWidth;
+    const scaleY = mapH / _canvasHeight;
 
     return GestureDetector(
       onTapDown: (details) {

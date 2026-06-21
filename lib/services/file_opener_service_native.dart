@@ -1,4 +1,5 @@
 /// 原生平台文件打开实现（使用 dart:io + open_filex + path_provider）
+library;
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';

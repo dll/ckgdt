@@ -805,7 +805,7 @@ class LabTaskDao {
       final chapter = chapters[i];
       await db.insert('lab_tasks', {
         'course_id': courseId,
-        'title': '实验${i + 1} ${chapter}实践任务',
+        'title': '实验${i + 1} $chapter实践任务',
         'chapter': chapter,
         'description':
             '围绕《${course.name}》$chapter 设计一次课程实践任务，要求学生完成资料查阅、问题分析、过程记录和结果展示。',

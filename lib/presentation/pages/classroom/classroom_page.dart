@@ -208,8 +208,8 @@ class _ClassroomPageState extends State<ClassroomPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('课堂管理',
-                    style: const TextStyle(
+                const Text('课堂管理',
+                    style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: Colors.white)),

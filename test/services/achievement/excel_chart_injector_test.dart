@@ -28,8 +28,8 @@ void main() {
       sc.appendRow([
         xl.DoubleCellValue((k + 1).toDouble()),
         xl.DoubleCellValue(0.7 + k * 0.02),
-        xl.DoubleCellValue(0.75),
-        xl.DoubleCellValue(0.6),
+        const xl.DoubleCellValue(0.75),
+        const xl.DoubleCellValue(0.6),
       ]);
     }
 

@@ -68,8 +68,9 @@ class ChapterHelper {
     if (input == null || input.isEmpty) return null;
 
     final directInt = int.tryParse(input.trim());
-    if (directInt != null && directInt >= 1 && directInt <= 99)
+    if (directInt != null && directInt >= 1 && directInt <= 99) {
       return directInt;
+    }
 
     final arabicMatch = RegExp(r'第(\d+)章').firstMatch(input);
     if (arabicMatch != null) return int.tryParse(arabicMatch.group(1)!);
@@ -83,10 +84,14 @@ class ChapterHelper {
     final lower = input.toLowerCase();
     if (lower.contains('flutter') ||
         lower.contains('react native') ||
-        lower.contains('混合')) return 3;
+        lower.contains('混合')) {
+      return 3;
+    }
     if (lower.contains('android') ||
         lower.contains('ios') ||
-        lower.contains('原生')) return 2;
+        lower.contains('原生')) {
+      return 2;
+    }
     if (lower.contains('harmonyos') || lower.contains('鸿蒙')) return 5;
     if (lower.contains('小程序') || lower.contains('微信')) return 4;
     if (lower.contains('综合') || lower.contains('实践')) return 6;

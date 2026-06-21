@@ -284,7 +284,7 @@ class SyncClient {
   void _connectWebSocket() {
     if (_serverUrl == null) return;
     try {
-      final wsUrl = _serverUrl!.replaceFirst('http', 'ws') + '/api/ws';
+      final wsUrl = '${_serverUrl!.replaceFirst('http', 'ws')}/api/ws';
       _wsChannel = WebSocketChannel.connect(Uri.parse(wsUrl));
 
       _wsChannel!.stream.listen(

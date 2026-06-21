@@ -924,7 +924,7 @@ class _ReportTabState extends State<ReportTab> {
         // 五图按计算结果重绘：剥离模板内嵌旧图，注入绑定数据区的原生 OOXML 图表
         // （条形图数据在 B7:C10；各目标散点图数据在 B/C/D/E 第 1 行起）。
         final specs = <ChartSpec>[
-          ChartSpec.barRange(
+          const ChartSpec.barRange(
               sheetName: '课程目标条形图',
               title: '课程目标达成度',
               startRow: 7,
@@ -1272,7 +1272,7 @@ class _ReportTabState extends State<ReportTab> {
             xl.DoubleCellValue(double.parse(a.toStringAsFixed(4))),
             xl.DoubleCellValue(
                 double.parse(_objectiveAchievements[i].toStringAsFixed(4))),
-            xl.DoubleCellValue(0.6),
+            const xl.DoubleCellValue(0.6),
           ]);
         }
       }
@@ -1281,7 +1281,7 @@ class _ReportTabState extends State<ReportTab> {
       if (bytes == null) throw StateError('Excel生成失败');
       // 注入原生 OOXML 图表：条形图(4目标) + 每目标散点+趋势线+参考线
       final specs = <ChartSpec>[
-        ChartSpec.bar(sheetName: '课程目标条形图', title: '课程目标达成度', rowCount: 4),
+        const ChartSpec.bar(sheetName: '课程目标条形图', title: '课程目标达成度', rowCount: 4),
         for (int i = 0; i < 4; i++)
           ChartSpec.scatter(
               sheetName: '目标${i + 1}散点趋势图',
@@ -1290,12 +1290,13 @@ class _ReportTabState extends State<ReportTab> {
       ];
       bytes = ExcelChartInjector.inject(Uint8List.fromList(bytes), specs);
       await file.writeAsBytes(bytes);
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text('Excel已导出:${file.path}'),
             duration: const Duration(seconds: 4),
             action: SnackBarAction(
                 label: '打开', onPressed: () => OpenFilex.open(file.path))));
+      }
     } catch (e, st) {
       swallowDebug(e, tag: 'ReportTab.exportExcel', stack: st);
     }
@@ -2787,7 +2788,7 @@ class _ReportTabState extends State<ReportTab> {
                                 color: kObjectiveColors[i],
                               ),
                               Text(
-                                '${(achievement * 100).toStringAsFixed(0)}',
+                                (achievement * 100).toStringAsFixed(0),
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
@@ -2988,7 +2989,7 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog> {
                     selected: {_showSource},
                     onSelectionChanged: (v) =>
                         setState(() => _showSource = v.first),
-                    style: ButtonStyle(
+                    style: const ButtonStyle(
                       visualDensity: VisualDensity.compact,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),

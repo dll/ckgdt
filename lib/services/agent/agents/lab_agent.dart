@@ -92,7 +92,7 @@ class LabAgent extends BaseAgent {
           '获取实验指导和常见问题解答',
         ],
         classicCases: [
-          AgentCase(title: '查看实验任务', userInput: '最近有哪些实验任务？', agentReply: '## 当前实验任务\n\n1. **实验3：Flutter UI 开发** — 截止 4月20日\n   - 要求：实现一个包含列表和详情页的应用\n2. **实验4：状态管理** — 截止 5月5日\n   - 要求：使用 Provider 管理应用状态'),
+          const AgentCase(title: '查看实验任务', userInput: '最近有哪些实验任务？', agentReply: '## 当前实验任务\n\n1. **实验3：Flutter UI 开发** — 截止 4月20日\n   - 要求：实现一个包含列表和详情页的应用\n2. **实验4：状态管理** — 截止 5月5日\n   - 要求：使用 Provider 管理应用状态'),
         ],
       );
 

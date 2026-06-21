@@ -587,9 +587,9 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
                 final isSelected = _selectedBranch == name;
                 final isDefault = name == 'master' || name == 'main';
                 Color color = Colors.grey;
-                if (isDefault)
+                if (isDefault) {
                   color = Colors.blue;
-                else if (name == 'develop')
+                } else if (name == 'develop')
                   color = Colors.cyan;
                 else if (name.startsWith('feature'))
                   color = Colors.orange;

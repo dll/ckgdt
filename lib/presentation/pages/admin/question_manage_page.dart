@@ -621,7 +621,7 @@ class _QuestionManagePageState extends State<QuestionManagePage> {
                   const SizedBox(height: 12),
                   // 正确答案
                   DropdownButtonFormField<int>(
-                    value: selectedAnswer,
+                    initialValue: selectedAnswer,
                     decoration: InputDecoration(
                       labelText: '正确答案 *',
                       border: OutlineInputBorder(
@@ -629,11 +629,11 @@ class _QuestionManagePageState extends State<QuestionManagePage> {
                       contentPadding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 12),
                     ),
-                    items: [
-                      const DropdownMenuItem(value: 0, child: Text('A')),
-                      const DropdownMenuItem(value: 1, child: Text('B')),
-                      const DropdownMenuItem(value: 2, child: Text('C')),
-                      const DropdownMenuItem(value: 3, child: Text('D')),
+                    items: const [
+                      DropdownMenuItem(value: 0, child: Text('A')),
+                      DropdownMenuItem(value: 1, child: Text('B')),
+                      DropdownMenuItem(value: 2, child: Text('C')),
+                      DropdownMenuItem(value: 3, child: Text('D')),
                     ],
                     onChanged: (v) => setDialogState(() => selectedAnswer = v!),
                   ),

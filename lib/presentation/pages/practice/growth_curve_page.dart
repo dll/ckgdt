@@ -26,19 +26,19 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
 
   // 学习模式参数
   final _modes = <_LearningMode>[
-    _LearningMode('冲刺模式', '每周5学2休，增长率2.4%',
+    const _LearningMode('冲刺模式', '每周5学2休，增长率2.4%',
         studyDays: 5, restDays: 2, rate: 0.024, color: Colors.purple),
-    _LearningMode('标准模式', '每周5学2休，增长率1%',
+    const _LearningMode('标准模式', '每周5学2休，增长率1%',
         studyDays: 5, restDays: 2, rate: 0.01, color: Colors.blue),
-    _LearningMode('内卷模式', '每天学习不休息，增长率1%',
+    const _LearningMode('内卷模式', '每天学习不休息，增长率1%',
         studyDays: 7, restDays: 0, rate: 0.01, color: Colors.red),
-    _LearningMode('佛系模式', '每周2学5休，增长率1%',
+    const _LearningMode('佛系模式', '每周2学5休，增长率1%',
         studyDays: 2, restDays: 5, rate: 0.01, color: Colors.green),
-    _LearningMode('课程模式', '每周2学5休，增长率0.5%',
+    const _LearningMode('课程模式', '每周2学5休，增长率0.5%',
         studyDays: 2, restDays: 5, rate: 0.005, color: Colors.orange),
   ];
 
-  Set<int> _activeModes = {0, 1, 3}; // 默认显示的模式
+  final Set<int> _activeModes = {0, 1, 3}; // 默认显示的模式
   int _totalDays = 120; // 学期天数
   bool _showLog = false; // 对数坐标
 
@@ -240,10 +240,11 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
                 selectedColor: mode.color,
                 checkmarkColor: Colors.white,
                 onSelected: (v) => setState(() {
-                  if (v)
+                  if (v) {
                     _activeModes.add(i);
-                  else
+                  } else {
                     _activeModes.remove(i);
+                  }
                 }),
               );
             }),
@@ -936,14 +937,14 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
         suggestions.add({
           'icon': Icons.trending_up,
           'color': Colors.green,
-          'text': '已坚持${days}天，继续保持！30天后效果将非常明显。'
+          'text': '已坚持$days天，继续保持！30天后效果将非常明显。'
         });
       } else {
         suggestions.add({
           'icon': Icons.stars,
           'color': Colors.purple,
           'text':
-              '太棒了！已坚持${days}天，能力提升了${((val - 1) * 100).toStringAsFixed(0)}%！'
+              '太棒了！已坚持$days天，能力提升了${((val - 1) * 100).toStringAsFixed(0)}%！'
         });
       }
 

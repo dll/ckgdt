@@ -90,12 +90,13 @@ class _NotificationManagePageState extends State<NotificationManagePage>
           }
         }
       }
-      if (mounted)
+      if (mounted) {
         setState(() {
           _notifications = list;
           _unreadCount = unread;
           _isLoadingList = false;
         });
+      }
     } catch (e) {
       if (mounted) setState(() => _isLoadingList = false);
     }
@@ -109,13 +110,14 @@ class _NotificationManagePageState extends State<NotificationManagePage>
       final ds = await _dao.getDailyStats(uid);
       Map<String, dynamic> gs = {};
       if (_isTeacherOrAdmin) gs = await _dao.getGlobalStats();
-      if (mounted)
+      if (mounted) {
         setState(() {
           _userStats = us;
           _globalStats = gs;
           _dailyStats = ds;
           _isLoadingStats = false;
         });
+      }
     } catch (e) {
       if (mounted) setState(() => _isLoadingStats = false);
     }
@@ -217,7 +219,7 @@ class _NotificationManagePageState extends State<NotificationManagePage>
                 style: const TextStyle(fontSize: 13)),
             const SizedBox(height: 12),
             Row(children: [
-              Icon(Icons.person_outline, size: 14, color: Colors.grey),
+              const Icon(Icons.person_outline, size: 14, color: Colors.grey),
               const SizedBox(width: 4),
               Text(n['creator_name'] as String? ?? '系统',
                   style: TextStyle(fontSize: 11, color: Colors.grey[600])),
@@ -228,7 +230,7 @@ class _NotificationManagePageState extends State<NotificationManagePage>
             if (n['read_count'] != null && n['total_recipients'] != null) ...[
               const Divider(height: 20),
               Row(children: [
-                Icon(Icons.visibility, size: 14, color: Colors.green),
+                const Icon(Icons.visibility, size: 14, color: Colors.green),
                 const SizedBox(width: 4),
                 Text('${n['read_count']}/${n['total_recipients']} 已读',
                     style: TextStyle(fontSize: 12, color: Colors.green[700])),
@@ -330,7 +332,7 @@ class _NotificationManagePageState extends State<NotificationManagePage>
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text('全部已读 ($_unreadCount)',
-                          style: TextStyle(
+                          style: const TextStyle(
                               fontSize: 11,
                               color: NoirTokens.accent,
                               fontWeight: FontWeight.w600)),
@@ -361,11 +363,12 @@ class _NotificationManagePageState extends State<NotificationManagePage>
 
     return GestureDetector(
       onLongPress: () {
-        if (!_isSelectionMode)
+        if (!_isSelectionMode) {
           setState(() {
             _isSelectionMode = true;
             _selectedIds.add(id);
           });
+        }
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
@@ -377,7 +380,7 @@ class _NotificationManagePageState extends State<NotificationManagePage>
                   : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: isUnread
-              ? Border(left: BorderSide(color: NoirTokens.accent, width: 3))
+              ? const Border(left: BorderSide(color: NoirTokens.accent, width: 3))
               : null,
         ),
         child: ListTile(
@@ -527,7 +530,7 @@ class _NotificationManagePageState extends State<NotificationManagePage>
           if (_targetType == 'class') ...[
             const SizedBox(height: 12),
             DropdownButtonFormField<int>(
-              value: _selectedClassId,
+              initialValue: _selectedClassId,
               decoration: InputDecoration(
                 labelText: '选择班级',
                 prefixIcon: const Icon(Icons.class_outlined),
@@ -570,8 +573,9 @@ class _NotificationManagePageState extends State<NotificationManagePage>
   }
 
   Widget _buildStats() {
-    if (_isLoadingStats)
+    if (_isLoadingStats) {
       return const Center(child: CircularProgressIndicator());
+    }
     final us = _userStats;
     final total = us['total'] as int? ?? 0;
     final unread = us['unread'] as int? ?? 0;
@@ -583,7 +587,7 @@ class _NotificationManagePageState extends State<NotificationManagePage>
       padding: const EdgeInsets.all(16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         // 概览卡片
-        Text('我的通知',
+        const Text('我的通知',
             style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -608,7 +612,7 @@ class _NotificationManagePageState extends State<NotificationManagePage>
         const SizedBox(height: 24),
 
         // 近 7 天趋势
-        Text('近 7 天趋势',
+        const Text('近 7 天趋势',
             style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -619,7 +623,7 @@ class _NotificationManagePageState extends State<NotificationManagePage>
         // 管理员额外全局统计
         if (_isTeacherOrAdmin && _globalStats.isNotEmpty) ...[
           const SizedBox(height: 24),
-          Text('通知类型分布',
+          const Text('通知类型分布',
               style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -630,7 +634,7 @@ class _NotificationManagePageState extends State<NotificationManagePage>
 
         // 月度统计
         const SizedBox(height: 24),
-        Text('月度统计',
+        const Text('月度统计',
             style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -787,7 +791,7 @@ class _NotificationManagePageState extends State<NotificationManagePage>
             Icon(_typeIcon(type), size: 14, color: NoirTokens.accent),
             const SizedBox(width: 8),
             Text(_typeLabel(type),
-                style: TextStyle(fontSize: 12, color: NoirTokens.paper)),
+                style: const TextStyle(fontSize: 12, color: NoirTokens.paper)),
             const Spacer(),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -796,7 +800,7 @@ class _NotificationManagePageState extends State<NotificationManagePage>
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text('$count',
-                  style: TextStyle(
+                  style: const TextStyle(
                       fontSize: 11,
                       color: NoirTokens.accent,
                       fontWeight: FontWeight.w600)),
@@ -839,7 +843,7 @@ class _NotificationManagePageState extends State<NotificationManagePage>
           child: Row(children: [
             SizedBox(
                 width: 32,
-                child: Text('${m}月',
+                child: Text('$m月',
                     style: TextStyle(
                         fontSize: 11,
                         color: NoirTokens.paper.withValues(alpha: 0.6)))),

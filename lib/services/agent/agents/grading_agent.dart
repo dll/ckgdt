@@ -386,16 +386,21 @@ class GradingAgent extends BaseAgent {
                 final quality = (params['quality'] as num).toInt();
                 final documentation = (params['documentation'] as num).toInt();
                 // 范围校验
-                if (functionality < 0 || functionality > 25)
+                if (functionality < 0 || functionality > 25) {
                   return '功能完整性（0-25）超出范围：$functionality';
-                if (techDepth < 0 || techDepth > 20)
+                }
+                if (techDepth < 0 || techDepth > 20) {
                   return '技术实现深度（0-20）超出范围：$techDepth';
-                if (integration < 0 || integration > 25)
+                }
+                if (integration < 0 || integration > 25) {
                   return '跨框架整合（0-25）超出范围：$integration';
-                if (quality < 0 || quality > 15)
+                }
+                if (quality < 0 || quality > 15) {
                   return '性能与质量（0-15）超出范围：$quality';
-                if (documentation < 0 || documentation > 15)
+                }
+                if (documentation < 0 || documentation > 15) {
                   return '文档与协作（0-15）超出范围：$documentation';
+                }
                 final scorerId = params['scorerId'] as String?;
                 final comment = params['comment'] as String? ?? '';
                 final total = functionality +
@@ -533,16 +538,21 @@ class GradingAgent extends BaseAgent {
                 final quality = (params['quality'] as num).toInt();
                 final documentation = (params['documentation'] as num).toInt();
                 // 范围校验
-                if (functionality < 0 || functionality > 25)
+                if (functionality < 0 || functionality > 25) {
                   return '功能完整性（0-25）超出范围：$functionality';
-                if (techDepth < 0 || techDepth > 20)
+                }
+                if (techDepth < 0 || techDepth > 20) {
                   return '技术实现深度（0-20）超出范围：$techDepth';
-                if (integration < 0 || integration > 20)
+                }
+                if (integration < 0 || integration > 20) {
                   return '跨框架整合（0-20）超出范围：$integration';
-                if (quality < 0 || quality > 20)
+                }
+                if (quality < 0 || quality > 20) {
                   return '性能与质量（0-20）超出范围：$quality';
-                if (documentation < 0 || documentation > 15)
+                }
+                if (documentation < 0 || documentation > 15) {
                   return '文档与协作（0-15）超出范围：$documentation';
+                }
                 final comment = params['comment'] as String? ?? '';
                 final total = functionality +
                     techDepth +

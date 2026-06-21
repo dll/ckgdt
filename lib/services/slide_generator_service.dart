@@ -159,14 +159,14 @@ class SlideGeneratorService {
     pw.Font? font,
   ) {
     return pw.Container(
-      decoration: pw.BoxDecoration(
+      decoration: const pw.BoxDecoration(
         gradient: pw.LinearGradient(
           colors: [
             PdfColor.fromInt(0xFF1677FF),
             PdfColor.fromInt(0xFF0958D9),
           ],
-          begin: const pw.Alignment(0, 0),
-          end: const pw.Alignment(1, 0),
+          begin: pw.Alignment(0, 0),
+          end: pw.Alignment(1, 0),
         ),
       ),
       child: pw.Center(
@@ -225,7 +225,7 @@ class SlideGeneratorService {
           // 标题区域（底部蓝色边框）
           pw.Container(
             padding: const pw.EdgeInsets.only(bottom: 8),
-            decoration: pw.BoxDecoration(
+            decoration: const pw.BoxDecoration(
               border: pw.Border(
                 bottom: pw.BorderSide(
                   color: PdfColor.fromInt(0xFF1677FF),
@@ -243,7 +243,7 @@ class SlideGeneratorService {
                       font: font,
                       fontSize: 24,
                       fontWeight: pw.FontWeight.bold,
-                      color: PdfColor.fromInt(0xFF1677FF),
+                      color: const PdfColor.fromInt(0xFF1677FF),
                     ),
                   ),
                 ),
@@ -270,7 +270,7 @@ class SlideGeneratorService {
                     width: 6,
                     height: 6,
                     margin: const pw.EdgeInsets.only(top: 6, right: 12),
-                    decoration: pw.BoxDecoration(
+                    decoration: const pw.BoxDecoration(
                       color: PdfColor.fromInt(0xFF1677FF),
                       shape: pw.BoxShape.circle,
                     ),
@@ -290,9 +290,9 @@ class SlideGeneratorService {
           if ((slide['notes'] as String?)?.isNotEmpty == true)
             pw.Container(
               padding: const pw.EdgeInsets.all(8),
-              decoration: pw.BoxDecoration(
+              decoration: const pw.BoxDecoration(
                 color: PdfColor.fromInt(0xFFF5F7FA),
-                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+                borderRadius: pw.BorderRadius.all(pw.Radius.circular(4)),
               ),
               child: pw.Text(
                 '备注：${slide['notes']}',

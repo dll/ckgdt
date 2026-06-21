@@ -241,7 +241,7 @@ class _SearchPageState extends State<SearchPage> {
           child: Icon(Icons.account_tree, color: Colors.blue[700]),
         ),
         title: Text(graph.title),
-        subtitle: Text('图谱'),
+        subtitle: const Text('图谱'),
         trailing: const Icon(Icons.chevron_right),
         onTap: () {
           Navigator.push(

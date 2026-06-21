@@ -384,7 +384,7 @@ class _ProjectTabState extends State<_ProjectTab> {
         children: [
           SizedBox(
             width: 72,
-            child: Text('$label',
+            child: Text(label,
                 style: TextStyle(
                     fontSize: 13,
                     color: Colors.grey[600],

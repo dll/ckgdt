@@ -124,7 +124,7 @@ class _HotVideosPageState extends State<HotVideosPage> {
   Widget build(BuildContext context) {
     if (!_authService.isLoggedIn) {
       return Scaffold(
-        appBar: BackButtonBar(title: '推荐视频'),
+        appBar: const BackButtonBar(title: '推荐视频'),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,

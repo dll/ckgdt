@@ -231,8 +231,8 @@ class _MyAppState extends State<MyApp> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Color(0xFF1677FF),
-                  Color(0xFF0958D9).withValues(alpha: 0.9),
+                  const Color(0xFF1677FF),
+                  const Color(0xFF0958D9).withValues(alpha: 0.9),
                 ],
               ),
             ),

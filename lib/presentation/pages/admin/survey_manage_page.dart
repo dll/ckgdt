@@ -554,7 +554,7 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
 
                   // 关联班级
                   DropdownButtonFormField<int?>(
-                    value: selectedClassId,
+                    initialValue: selectedClassId,
                     decoration: InputDecoration(
                       labelText: '关联班级（可选）',
                       border: OutlineInputBorder(
@@ -1289,7 +1289,7 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
 
                     // 题型选择
                     DropdownButtonFormField<String>(
-                      value: selectedType,
+                      initialValue: selectedType,
                       decoration: InputDecoration(
                         labelText: '题目类型 *',
                         border: OutlineInputBorder(

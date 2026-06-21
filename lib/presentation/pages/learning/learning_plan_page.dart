@@ -938,7 +938,7 @@ class _PathGraphPainter extends CustomPainter {
     if (nodes.length < 2) return;
 
     final n = nodes.length;
-    final padding = 40.0;
+    const padding = 40.0;
     final usableWidth = size.width - padding * 2;
     final usableHeight = size.height - padding * 2;
     final centerY = size.height / 2;

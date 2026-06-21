@@ -958,7 +958,7 @@ class _ClassroomQuestionTabState extends State<ClassroomQuestionTab> {
                     children: [
                       Expanded(
                         child: DropdownButtonFormField<String>(
-                          value: sourceType,
+                          initialValue: sourceType,
                           decoration: const InputDecoration(
                             labelText: '来源',
                             isDense: true,
@@ -976,7 +976,7 @@ class _ClassroomQuestionTabState extends State<ClassroomQuestionTab> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: DropdownButtonFormField<String>(
-                          value: difficulty,
+                          initialValue: difficulty,
                           decoration: const InputDecoration(
                             labelText: '难度',
                             isDense: true,
@@ -1177,7 +1177,7 @@ class _ClassroomQuestionTabState extends State<ClassroomQuestionTab> {
                     children: [
                       Expanded(
                         child: DropdownButtonFormField<String>(
-                          value: sourceType,
+                          initialValue: sourceType,
                           decoration: const InputDecoration(
                             labelText: '来源',
                             isDense: true,
@@ -1195,7 +1195,7 @@ class _ClassroomQuestionTabState extends State<ClassroomQuestionTab> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: DropdownButtonFormField<String>(
-                          value: difficulty,
+                          initialValue: difficulty,
                           decoration: const InputDecoration(
                             labelText: '难度',
                             isDense: true,

@@ -213,7 +213,7 @@ class ArchiveContextService {
       final avg = await _achievementDao.calculateClassAverage(batchId);
       final b = StringBuffer('### 7. 成绩达成\n');
       b.writeln('- 批次：${latest['batch_name'] ?? '未命名'}');
-      final cfg = AchievementConfig.defaults;
+      const cfg = AchievementConfig.defaults;
       double weighted = 0;
       for (int i = 1; i <= 4; i++) {
         final a = avg['课程目标$i'] ?? 0;

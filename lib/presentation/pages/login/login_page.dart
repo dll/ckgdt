@@ -321,8 +321,8 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                 border: OutlineInputBorder(
                     borderSide:
                         BorderSide(color: _ink.withValues(alpha: 0.25))),
-                focusedBorder: OutlineInputBorder(
-                    borderSide: const BorderSide(color: _ink, width: 1.5)),
+                focusedBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: _ink, width: 1.5)),
               ),
             ),
           ],
