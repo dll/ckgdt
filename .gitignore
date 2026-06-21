@@ -156,3 +156,12 @@ avd_features.ini
 data/达成/
 data/图像/
 sqlite-autoconf-*.zip
+
+# ── 构建/运行残留日志（不入库）──
+*.err
+pubspec.lock.std
+/build_log*.txt
+/build_win_log.txt
+/build_*.log
+/flutter_*.log
+/windows_build.log
