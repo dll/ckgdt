@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'database_helper.dart';
 import '../../services/course_context_service.dart';
 import '../../services/notification_service.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 作品管理 DAO — 每位同学一个作品（视频演示）/ 视频互动 / 多维排行
 class WorksDao {
@@ -45,7 +46,7 @@ class WorksDao {
     for (final sql in newColumns) {
       try {
         await db.execute(sql);
-      } catch (_) {} // 列已存在则静默跳过
+      } catch (e) { swallowDebug(e, tag: 'works_dao'); } // 列已存在则静默跳过
     }
     try {
       await db.update(
@@ -53,7 +54,7 @@ class WorksDao {
         {'course_id': CourseContextService.defaultCourseId},
         where: "course_id IS NULL OR course_id = ''",
       );
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'works_dao'); }
 
     // 评论表
     await db.execute('''

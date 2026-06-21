@@ -127,7 +127,7 @@ class ClassroomDao {
         {'course_id': CourseContextService.defaultCourseId},
         where: "course_id IS NULL OR course_id = ''",
       );
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'classroom_dao'); }
 
     _tableEnsured = true;
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'database_helper.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 问题反馈 DAO
 class FeedbackDao {
@@ -30,7 +31,7 @@ class FeedbackDao {
     // 确保 screenshot_data 列存在（兼容旧表）
     try {
       await db.execute('ALTER TABLE feedback ADD COLUMN screenshot_data TEXT');
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'feedback_dao'); }
     _tableEnsured = true;
   }
 

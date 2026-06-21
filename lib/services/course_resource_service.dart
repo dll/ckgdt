@@ -4,6 +4,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'gitee_service.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 课程资源同步服务
 /// 职责：
@@ -197,7 +198,7 @@ class CourseResourceService {
       } else if (decoded is Map) {
         return [Map<String, dynamic>.from(decoded)];
       }
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'course_resource_service'); }
     return null;
   }
 
@@ -232,7 +233,7 @@ class CourseResourceService {
                 .toList();
             if (filtered.isNotEmpty) return filtered;
             // 旧缓存全被过滤掉了，跳过缓存重新拉取
-          } catch (_) {}
+          } catch (e) { swallowDebug(e, tag: 'course_resource_service'); }
         }
       }
     }
@@ -289,7 +290,7 @@ class CourseResourceService {
                 (r['namespace']?['path']?.toString() ?? '').toLowerCase() ==
                 enterprise.toLowerCase())
             .toList();
-      } catch (_) {}
+      } catch (e) { swallowDebug(e, tag: 'course_resource_service'); }
     }
     return [];
   }

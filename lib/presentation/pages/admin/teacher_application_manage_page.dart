@@ -4,6 +4,7 @@ import '../../../data/local/notification_dao.dart';
 import '../../../services/auth_service.dart';
 
 import '../../widgets/back_button_bar.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 教师申请审核页面 — 管理员查看、审核教师申请
 class TeacherApplicationManagePage extends StatefulWidget {
@@ -44,7 +45,7 @@ class _TeacherApplicationManagePageState
       _pending = all.where((a) => a['status'] == 'pending').toList();
       _reviewed =
           all.where((a) => a['status'] != 'pending').toList();
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'teacher_application_manage_page'); }
     if (mounted) setState(() => _isLoading = false);
   }
 
@@ -290,7 +291,7 @@ class _TeacherApplicationManagePageState
           targetType: 'individual',
           targetId: app['applicant_id'] as String,
         );
-      } catch (_) {}
+      } catch (e) { swallowDebug(e, tag: 'teacher_application_manage_page'); }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -368,7 +369,7 @@ class _TeacherApplicationManagePageState
           targetType: 'individual',
           targetId: app['applicant_id'] as String,
         );
-      } catch (_) {}
+      } catch (e) { swallowDebug(e, tag: 'teacher_application_manage_page'); }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

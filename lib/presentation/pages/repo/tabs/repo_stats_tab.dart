@@ -55,7 +55,7 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
         final detail = await widget.gitee.getRepoDetail(
             CourseResourceService.enterprise, path);
         details[path] = detail;
-      } catch (_) {}
+      } catch (e) { swallowDebug(e, tag: 'repo_stats_tab'); }
     }
     if (mounted) {
       setState(() { _repoDetails = details; _isLoadingDetails = false; });

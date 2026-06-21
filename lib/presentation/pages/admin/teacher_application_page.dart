@@ -3,6 +3,7 @@ import '../../../data/local/teacher_application_dao.dart';
 import '../../../data/local/notification_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../widgets/back_button_bar.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 教师申请页面 — 学生填写工号即可提交申请
 class TeacherApplicationPage extends StatefulWidget {
@@ -70,7 +71,7 @@ class _TeacherApplicationPageState extends State<TeacherApplicationPage> {
           creatorId: user.userId,
           targetType: 'teachers',
         );
-      } catch (_) {}
+      } catch (e) { swallowDebug(e, tag: 'teacher_application_page'); }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

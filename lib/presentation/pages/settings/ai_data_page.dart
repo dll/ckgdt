@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../data/local/ai_history_dao.dart';
 import '../../../services/agent/agent_registry.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// AI 数据管理页面
 ///
@@ -613,7 +614,7 @@ class _AiDataPageState extends State<AiDataPage> {
                   } else if (Platform.isMacOS) {
                     Process.run('open', [exportDir.path]);
                   }
-                } catch (_) {}
+                } catch (e) { swallowDebug(e, tag: 'ai_data_page'); }
               },
             ),
           ),

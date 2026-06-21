@@ -5,6 +5,7 @@ import '../../../services/auth_service.dart';
 import '../../widgets/markdown_bubble.dart';
 
 import '../../widgets/back_button_bar.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 深度实践中心 — 每章提供多层次深入学习内容
 /// 借鉴天天向上"学前-学中-学后"闭环，解决课时不足问题
@@ -542,7 +543,7 @@ class _DeepPracticePageState extends State<DeepPracticePage>
         }
       }
       if (mounted) setState(() => _completedSections = completed);
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'deep_practice_page'); }
   }
 
   Future<void> _markCompleted(String chapter, int sectionIdx) async {
@@ -565,7 +566,7 @@ class _DeepPracticePageState extends State<DeepPracticePage>
               content: Text('已标记完成 ✓'), duration: Duration(seconds: 1)),
         );
       }
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'deep_practice_page'); }
   }
 
   Future<void> _askAi(String question) async {

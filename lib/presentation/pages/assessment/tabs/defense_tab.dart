@@ -68,7 +68,7 @@ class _DefenseTabState extends State<_DefenseTab> {
               }
             }
           }
-        } catch (_) {}
+        } catch (e) { swallowDebug(e, tag: 'defense_tab'); }
       }
 
       if (_isStudent) {
@@ -88,7 +88,7 @@ class _DefenseTabState extends State<_DefenseTab> {
         if (gid != null && !eligibility.containsKey(gid)) {
           try {
             eligibility[gid] = await _dao.checkGroupDefenseEligibility(gid);
-          } catch (_) {}
+          } catch (e) { swallowDebug(e, tag: 'defense_tab'); }
         }
       }
 
@@ -191,7 +191,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                     scorerName: widget.authService.currentUser?.realName,
                     op: 'create',
                   );
-                } catch (_) {}
+                } catch (e) { swallowDebug(e, tag: 'defense_tab'); }
                 if (ctx.mounted) Navigator.pop(ctx);
                 _loadData();
               },

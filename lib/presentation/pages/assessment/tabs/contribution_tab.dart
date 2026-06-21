@@ -1010,7 +1010,7 @@ class _ContributionTabState extends State<_ContributionTab>
                       scorerName: userName,
                       op: 'create',
                     );
-                  } catch (_) {}
+                  } catch (e) { swallowDebug(e, tag: 'contribution_tab'); }
                   // 通知教师
                   NotificationService().notifyContributionScore(
                     scorerId: userId,

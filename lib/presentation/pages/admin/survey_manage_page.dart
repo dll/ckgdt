@@ -4,6 +4,7 @@ import '../../../data/local/survey_dao.dart';
 import '../../../data/local/class_dao.dart';
 import '../../../services/auth_service.dart';
 import 'survey_stats_page.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 问卷管理页面 — 教师/管理员专用
 /// 功能：问卷列表、创建/编辑/删除问卷、题目管理、发布/关闭、查看统计
@@ -506,7 +507,7 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
     List<Map<String, dynamic>> classes = [];
     try {
       classes = await _classDao.getAllClasses();
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'survey_manage_page'); }
 
     if (!mounted) return;
 
@@ -1019,7 +1020,7 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
     if (optionsJson != null && optionsJson.isNotEmpty) {
       try {
         options = List<String>.from(json.decode(optionsJson));
-      } catch (_) {}
+      } catch (e) { swallowDebug(e, tag: 'survey_manage_page'); }
     }
 
     return Container(
@@ -1239,7 +1240,7 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
           for (final opt in opts) {
             optionControllers.add(TextEditingController(text: opt));
           }
-        } catch (_) {}
+        } catch (e) { swallowDebug(e, tag: 'survey_manage_page'); }
       }
     }
     // 默认至少 2 个选项（选择题）

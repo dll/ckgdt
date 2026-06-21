@@ -151,7 +151,7 @@ class _MaterialsTabState extends State<_MaterialsTab> {
       try {
         final content = await rootBundle.loadString('AssetManifest.json');
         manifest = json.decode(content) as Map<String, dynamic>;
-      } catch (_) {}
+      } catch (e) { swallowDebug(e, tag: 'materials_tab'); }
 
       for (int i = 0; i < _categories.length; i++) {
         final dir = _categories[i].assetDir;
@@ -205,7 +205,7 @@ class _MaterialsTabState extends State<_MaterialsTab> {
                 ))
             .toList();
       }
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'materials_tab'); }
   }
 
   /// 当 AssetManifest 匹配失败时，尝试直接加载已知的 asset 文件

@@ -8,6 +8,7 @@ import '../../../services/file_opener_service.dart';
 import '../../../services/gitee_service.dart';
 import '../../../services/tts_flutter_service.dart';
 import '../../pages/quiz/quiz_page.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 应用内 PDF 查看器
 /// 使用 printing 包的 PdfPreview 组件渲染 PDF 页面
@@ -81,7 +82,7 @@ class _InAppPdfViewerPageState extends State<InAppPdfViewerPage> {
             branch: 'master',
           );
           if (bytes != null && bytes.isNotEmpty) break;
-        } catch (_) {}
+        } catch (e) { swallowDebug(e, tag: 'pdf_viewer_page'); }
       }
       if (bytes == null || bytes.isEmpty) return null;
       final appDir = await getApplicationDocumentsDirectory();

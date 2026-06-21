@@ -7,6 +7,7 @@ import 'package:record/record.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../core/init_logger.dart';
 import '../services/settings_service.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 讯飞语音听写（IAT）服务
 ///
@@ -385,7 +386,7 @@ class VoiceService {
     final rec = _recorder;
     _recorder = null;
     _cleanupRecorder(rec);
-    try { _wsChannel?.sink.close(); } catch (_) {}
+    try { _wsChannel?.sink.close(); } catch (e) { swallowDebug(e, tag: 'voice_service'); }
     _wsChannel = null;
     _isListening = false;
     _firstFrame = true;
@@ -427,14 +428,14 @@ class VoiceService {
     _isListening = false;
     try {
       await _audioSub?.cancel();
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'voice_service'); }
     _audioSub = null;
     final rec = _recorder;
     _recorder = null;
     await _cleanupRecorder(rec);
     try {
       await _wsChannel?.sink.close();
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'voice_service'); }
     _wsChannel = null;
     _firstFrame = true;
     _cleaningUp = false;

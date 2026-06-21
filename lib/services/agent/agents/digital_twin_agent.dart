@@ -4,6 +4,7 @@ import '../../twin_service.dart';
 import '../../auth_service.dart';
 import '../agent_model.dart';
 import '../base_agent.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 🔄 数字孪生智能体 — 虚拟学生 + 虚拟教师双模式
 ///
@@ -447,7 +448,7 @@ ${jsonEncode(profile.toJson())}
 ${jsonEncode(profile.toJson())}
 ''';
         }
-      } catch (_) {}
+      } catch (e) { swallowDebug(e, tag: 'digital_twin_agent'); }
     }
 
     final messages = buildAiMessages(userMessage, session);

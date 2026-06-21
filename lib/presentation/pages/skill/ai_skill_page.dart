@@ -9,6 +9,7 @@ import '../../../services/plantuml_service.dart';
 import '../../../data/local/skill_dao.dart';
 import '../../../data/local/ai_history_dao.dart';
 import '../../widgets/markdown_bubble.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 技能定义
@@ -445,7 +446,7 @@ class _SkillsHubPageState extends State<SkillsHubPage> {
     try {
       final counts = await _skillDao.getResultCounts();
       if (mounted) setState(() => _counts = counts);
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'ai_skill_page'); }
   }
 
   @override
@@ -643,7 +644,7 @@ class _AiSkillPageState extends State<AiSkillPage>
     try {
       final results = await _skillDao.getResults(widget.skillId);
       if (mounted) setState(() => _savedResults = results);
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'ai_skill_page'); }
   }
 
   Future<void> _generate() async {
@@ -1494,7 +1495,7 @@ class _AiSkillPageState extends State<AiSkillPage>
                   } else if (Platform.isMacOS) {
                     Process.run('open', [skillDir.path]);
                   }
-                } catch (_) {}
+                } catch (e) { swallowDebug(e, tag: 'ai_skill_page'); }
               },
             ),
           ),

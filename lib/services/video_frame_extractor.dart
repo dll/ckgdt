@@ -15,6 +15,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:path/path.dart' as p;
 import '../core/dev_paths.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 class VideoFrameExtractor {
   VideoFrameExtractor._();
@@ -93,7 +94,7 @@ class VideoFrameExtractor {
     } finally {
       try {
         await tmpDir.delete(recursive: true);
-      } catch (_) {}
+      } catch (e) { swallowDebug(e, tag: 'video_frame_extractor'); }
     }
   }
 

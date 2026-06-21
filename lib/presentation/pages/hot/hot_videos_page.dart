@@ -5,6 +5,7 @@ import '../../../data/models/hot_video_model.dart';
 import '../../../services/auth_service.dart';
 import 'add_video_page.dart';
 import '../../widgets/back_button_bar.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 class HotVideosPage extends StatefulWidget {
   const HotVideosPage({super.key});
@@ -84,7 +85,7 @@ class _HotVideosPageState extends State<HotVideosPage> {
         await _dao.addFavorite(_userId, video.id!);
       }
       await _loadData();
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'hot_videos_page'); }
   }
 
   Future<void> _deleteVideo(HotVideoModel video) async {

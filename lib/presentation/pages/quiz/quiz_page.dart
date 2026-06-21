@@ -17,6 +17,7 @@ import '../learning/video_page.dart';
 import '../practice/deep_practice_page.dart';
 import 'wrong_answers_page.dart';
 import '../../widgets/back_button_bar.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 class QuizPage extends StatefulWidget {
   final bool embedded;
@@ -91,7 +92,7 @@ class _QuizPageState extends State<QuizPage> {
           _chapterStats = chStats;
         });
       }
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'quiz_page'); }
   }
 
   Future<void> _startQuiz(String chapter) async {

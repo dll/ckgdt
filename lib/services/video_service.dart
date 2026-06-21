@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 视频合成服务
 /// 使用 FFmpeg 将幻灯片图片 + 音频合成为 MP4 教学视频
@@ -216,7 +217,7 @@ class VideoService {
     // 清理临时片段
     try {
       if (clipDir.existsSync()) clipDir.deleteSync(recursive: true);
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'video_service'); }
 
     return success;
   }
@@ -309,7 +310,7 @@ except ImportError:
       if (result.exitCode == 0) {
         return double.tryParse(result.stdout.toString().trim());
       }
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'video_service'); }
     return null;
   }
 

@@ -12,6 +12,7 @@ import '../../services/tts_flutter_service.dart';
 import '../../services/voice_service.dart';
 import '../pages/profile/chat_history_page.dart';
 import 'markdown_bubble.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 多智能体对话浮层 — 全局 BottomSheet 对话面板
 ///
@@ -509,7 +510,7 @@ $dialogText
       Map<String, dynamic>? parsed;
       try {
         parsed = _tryParseJsonMap(jsonStr);
-      } catch (_) {}
+      } catch (e) { swallowDebug(e, tag: 'agent_chat_overlay'); }
 
       if (parsed == null) {
         if (mounted) {
@@ -598,7 +599,7 @@ $dialogText
         final result = _jsonDecode(jsonStr);
         if (result is List) return result;
       }
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'agent_chat_overlay'); }
     return [];
   }
 
@@ -612,7 +613,7 @@ $dialogText
         final result = _jsonDecode(jsonStr);
         if (result is Map<String, dynamic>) return result;
       }
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'agent_chat_overlay'); }
     return null;
   }
 

@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import '../data/local/database_helper.dart';
 import 'ai_service.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 抄袭 / AI 特征检测服务
 class PlagiarismService {
@@ -211,7 +212,7 @@ ${content.substring(0, min(content.length, 800))}''',
       for (final r in workRows) {
         results.add({...r, 'source_type': 'student_work'});
       }
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'plagiarism_service'); }
 
     return results;
   }

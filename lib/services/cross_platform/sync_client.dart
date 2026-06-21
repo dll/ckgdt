@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'sync_protocol.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 同步客户端 — 连接到同步服务器进行认证和数据传输
 ///
@@ -95,7 +96,7 @@ class SyncClient {
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       }
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'sync_client'); }
     return null;
   }
 
@@ -273,7 +274,7 @@ class SyncClient {
         final devices = data['devices'] as List<dynamic>? ?? [];
         return devices.cast<Map<String, dynamic>>();
       }
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'sync_client'); }
     return [];
   }
 
@@ -296,7 +297,7 @@ class SyncClient {
             final payload =
                 data['data'] as Map<String, dynamic>? ?? {};
             onEvent?.call(event, payload);
-          } catch (_) {}
+          } catch (e) { swallowDebug(e, tag: 'sync_client'); }
         },
         onError: (_) => _reconnectWebSocket(),
         onDone: () => _reconnectWebSocket(),

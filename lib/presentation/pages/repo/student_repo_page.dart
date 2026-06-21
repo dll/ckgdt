@@ -3,6 +3,7 @@ import '../../../core/constants/app_theme.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/course_resource_service.dart';
 import '../../widgets/agent_entry_button.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 学生仓库页面 — 学生专属视图
 ///
@@ -178,7 +179,7 @@ class _StudentRepoPageState extends State<StudentRepoPage>
           _myCommits = commits;
         });
       }
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'student_repo_page'); }
   }
 
   @override

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import '../models/user_model.dart';
 import 'database_helper.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 class UserDao {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
@@ -301,7 +302,7 @@ class UserDao {
         where: 'user_id = ?',
         whereArgs: [userId],
       );
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'user_dao'); }
   }
 
   // ── 密码管理 ──────────────────────────────────────────────────────────

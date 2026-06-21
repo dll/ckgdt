@@ -7,6 +7,7 @@ import '../../../services/auth_service.dart';
 import '../../../services/assessment_pdf_service.dart';
 import '../../../services/settings_service.dart';
 import '../../../services/agent/agents/grading_agent.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 审核打印面板 — 替代原"提交"Tab。
 ///
@@ -115,7 +116,7 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
     if (uid.isNotEmpty) {
       try {
         coverData = await AssessmentDao().getCoverData(uid);
-      } catch (_) {}
+      } catch (e) { swallowDebug(e, tag: 'audit_print_panel'); }
     }
 
     if (!mounted) return;
@@ -813,7 +814,7 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
       final body = s.substring(m.start, m.end);
       final fb = RegExp(r'"feedback"\s*:\s*"([^"]+)"').firstMatch(body);
       if (fb != null) return fb.group(1)!.trim();
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'audit_print_panel'); }
     return s.trim();
   }
 

@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../services/auth_service.dart';
 import '../../widgets/back_button_bar.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// "我的数据"页 — 学生 / 教师都可访问的隐私权利入口。
 ///
@@ -228,7 +229,7 @@ class _MyDataPageState extends State<MyDataPage> {
               where: 'user_id = ? OR author_id = ?',
               whereArgs: [userId, userId],
             );
-          } catch (_) {}
+          } catch (e) { swallowDebug(e, tag: 'my_data_page'); }
         }
       });
       if (!mounted) return;

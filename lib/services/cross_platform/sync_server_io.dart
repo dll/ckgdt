@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'session_manager.dart';
 import 'sync_protocol.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 嵌入式同步服务器 — 基于 dart:io HttpServer
 ///
@@ -85,7 +86,7 @@ class SyncServerImpl {
     for (final ws in _wsClients) {
       try {
         await ws.close();
-      } catch (_) {}
+      } catch (e) { swallowDebug(e, tag: 'sync_server_io'); }
     }
     _wsClients.clear();
     await _server?.close(force: true);

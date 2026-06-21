@@ -17,6 +17,7 @@ import '../../data/models/syllabus_data.dart';
 import '../../services/ai_service.dart';
 import '../../services/course_context_service.dart';
 import '../../services/syllabus_parser.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 一键生课 — 底部弹出表单
 class CourseGeneratorSheet extends StatefulWidget {
@@ -810,7 +811,7 @@ $outline
                 });
               }
             }
-          } catch (_) {}
+          } catch (e) { swallowDebug(e, tag: 'course_generator_sheet'); }
         }
       } catch (e) {
         _log('知识图谱生成失败：$e');
@@ -874,7 +875,7 @@ $outline
           if (items.isNotEmpty) return items;
         }
       }
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'course_generator_sheet'); }
 
     // 回退：按行解析
     final lines = response

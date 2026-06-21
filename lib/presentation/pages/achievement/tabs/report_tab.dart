@@ -2142,7 +2142,7 @@ class _ReportTabState extends State<ReportTab> {
         final fontData = await rootBundle.load('assets/fonts/msyh.ttc');
         chineseFont = pw.Font.ttf(fontData);
         chineseBoldFont = chineseFont;
-      } catch (_) {}
+      } catch (e) { swallowDebug(e, tag: 'report_tab'); }
     }
     final theme = chineseFont != null
         ? pw.ThemeData.withFont(

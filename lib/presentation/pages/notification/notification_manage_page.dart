@@ -4,6 +4,7 @@ import '../../../core/design/noir_tokens.dart';
 import '../../../data/local/class_dao.dart';
 import '../../../data/local/notification_dao.dart';
 import '../../../services/auth_service.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 class NotificationManagePage extends StatefulWidget {
   const NotificationManagePage({super.key});
@@ -127,7 +128,7 @@ class _NotificationManagePageState extends State<NotificationManagePage>
     try {
       final list = await _classDao.getActiveClasses();
       if (mounted) setState(() => _classes = list);
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'notification_manage_page'); }
   }
 
   Future<void> _markAllAsRead() async {

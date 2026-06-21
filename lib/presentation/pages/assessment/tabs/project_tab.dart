@@ -37,7 +37,7 @@ class _ProjectTabState extends State<_ProjectTab> {
             await rootBundle.loadString('assets/project_features.json');
         final decoded = jsonDecode(featuresStr) as Map<String, dynamic>;
         projectFeatures = decoded.map((k, v) => MapEntry(k, v.toString()));
-      } catch (_) {}
+      } catch (e) { swallowDebug(e, tag: 'project_tab'); }
 
       // 同时从JSON加载项目分组数据
       final jsonStr =

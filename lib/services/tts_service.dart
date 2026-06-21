@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// TTS 语音合成服务
 /// 使用 edge_tts (Python 包) 或 pyttsx3 生成中文语音
@@ -204,7 +205,7 @@ asyncio.run(main())
       if (result.exitCode == 0) {
         return double.tryParse(result.stdout.toString().trim());
       }
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'tts_service'); }
     return null;
   }
 }

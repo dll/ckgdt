@@ -184,7 +184,7 @@ class _TaskListTabState extends State<_TaskListTab> {
           dueDateDisplay = '剩余$diff天';
           dueDateColor = Colors.green;
         }
-      } catch (_) {}
+      } catch (e) { swallowDebug(e, tag: 'task_list_tab'); }
     }
 
     return Card(

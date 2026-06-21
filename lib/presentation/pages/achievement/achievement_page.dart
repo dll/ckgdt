@@ -257,7 +257,7 @@ class _AchievementPageState extends State<AchievementPage>
         if (tempFile != null && await tempFile.exists()) {
           await tempFile.delete();
         }
-      } catch (_) {}
+      } catch (e) { swallowDebug(e, tag: 'achievement_page'); }
       return null;
     }
   }

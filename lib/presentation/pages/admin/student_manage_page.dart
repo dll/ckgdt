@@ -4,6 +4,7 @@ import '../../../data/models/user_model.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/default_class_service.dart';
 import 'student_detail_page.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 class StudentManagePage extends StatefulWidget {
   const StudentManagePage({super.key});
@@ -44,7 +45,7 @@ class _StudentManagePageState extends State<StudentManagePage> {
           await _defaultClassService.setDefaultClassId(_selectedClassId!);
         }
       }
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'student_manage_page'); }
   }
 
   Future<void> _loadStudents() async {

@@ -3,6 +3,7 @@ import '../../../data/local/database_helper.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/sync_service.dart';
 import '../../../core/constants/app_theme.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 数据同步管理页面
 ///
@@ -53,7 +54,7 @@ class _DataSyncPageState extends State<DataSyncPage> {
       _intervalMinutes = config.intervalMinutes.clamp(5, 60);
       _lastUpload = config.lastUpload;
       _lastDownload = config.lastDownload;
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'data_sync_page'); }
     setState(() => _isLoading = false);
   }
 
@@ -762,7 +763,7 @@ class _DataSyncPageState extends State<DataSyncPage> {
         isOnline = DateTime.now().difference(dt).inMinutes < 5;
         lastActiveExact =
             '${dt.month}月${dt.day}日 ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-      } catch (_) {}
+      } catch (e) { swallowDebug(e, tag: 'data_sync_page'); }
     }
 
     // 构建统计 chips（只显示有数据的或核心的）

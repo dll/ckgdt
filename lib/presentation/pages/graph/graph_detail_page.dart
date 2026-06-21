@@ -10,6 +10,7 @@ import '../../../data/models/learning_path_model.dart';
 import '../../../services/graph_layout_service.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/clipboard_helper.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 
 // ── Painter 拆分到 parts/（part / part of 模式）─────────────
@@ -799,7 +800,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
           SnackBar(content: Text('已记录学习: ${node.title}')),
         );
       }
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'graph_detail_page'); }
   }
 
   void _toggleFavorite(NodeModel node) async {
@@ -822,7 +823,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
           );
         }
       }
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'graph_detail_page'); }
   }
 
   // ── Build ───────────────────────────────────────────────────────────────

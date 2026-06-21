@@ -15,6 +15,7 @@ import '../../../data/local/works_dao.dart';
 import '../agent_model.dart';
 import '../base_agent.dart';
 import '../orchestrator_agent.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 批阅官 — 统一批阅智能体
 ///
@@ -1245,7 +1246,7 @@ class GradingAgent extends BaseAgent {
           ..writeln('### $path')
           ..writeln(text.trim())
           ..writeln();
-      } catch (_) {}
+      } catch (e) { swallowDebug(e, tag: 'grading_agent'); }
       if (buffer.length >= maxChars) break;
     }
     if (buffer.isEmpty) return null;

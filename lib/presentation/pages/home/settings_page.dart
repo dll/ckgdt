@@ -593,7 +593,7 @@ class _SettingsPageState extends State<SettingsPage> {
     try {
       final course = await CourseDao().getActiveCourse();
       if (course != null) platformName = course.name;
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'settings_page'); }
 
     if (!context.mounted) return;
     showDialog(

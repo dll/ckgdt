@@ -1,4 +1,5 @@
 import 'database_helper.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 教学管理 DAO — 课程大纲 / 教案 / 教学进度
 class TeachingDao {
@@ -154,12 +155,12 @@ class TeachingDao {
     try {
       await db.rawQuery('SELECT plan_type FROM lesson_plans LIMIT 1');
     } catch (_) {
-      try { await db.execute('ALTER TABLE lesson_plans ADD COLUMN plan_type TEXT DEFAULT \'theory\''); } catch (_) {}
+      try { await db.execute('ALTER TABLE lesson_plans ADD COLUMN plan_type TEXT DEFAULT \'theory\''); } catch (e) { swallowDebug(e, tag: 'teaching_dao'); }
     }
     try {
       await db.rawQuery('SELECT hours FROM lesson_plans LIMIT 1');
     } catch (_) {
-      try { await db.execute('ALTER TABLE lesson_plans ADD COLUMN hours INTEGER DEFAULT 2'); } catch (_) {}
+      try { await db.execute('ALTER TABLE lesson_plans ADD COLUMN hours INTEGER DEFAULT 2'); } catch (e) { swallowDebug(e, tag: 'teaching_dao'); }
     }
 
     final count = await db.rawQuery('SELECT COUNT(*) as c FROM lesson_plans');

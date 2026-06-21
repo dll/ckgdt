@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:intl/intl.dart';
 import '../../../services/gitee_service.dart';
 import '../../../services/clipboard_helper.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 仓库成员分析 & 学生进度排行
 /// 直接从教师 Gitee 账号拉取仓库，仓库协作者 = 学生
@@ -400,7 +401,7 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
                 final diff = now.difference(date).inDays;
                 if (diff <= 7) stats.last7Days++;
                 if (diff <= 30) stats.last30Days++;
-              } catch (_) {}
+              } catch (e) { swallowDebug(e, tag: 'repo_analytics_page'); }
             }
             stats.repoNames.add(repo.name);
           }

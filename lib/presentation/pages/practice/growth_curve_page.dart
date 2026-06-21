@@ -6,6 +6,7 @@ import '../../../data/local/quiz_dao.dart';
 import '../../../data/local/learning_record_dao.dart';
 
 import '../../widgets/back_button_bar.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 能力增长曲线 — 灵感来自"天天向上"项目
 /// 用数学模型展示不同学习模式的长期效果差异
@@ -83,7 +84,7 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
             try {
               final d = DateTime.parse(dateStr);
               if (earliest == null || d.isBefore(earliest)) earliest = d;
-            } catch (_) {}
+            } catch (e) { swallowDebug(e, tag: 'growth_curve_page'); }
           }
         }
 
@@ -106,7 +107,7 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
                       rd.day == date.day) {
                     activities++;
                   }
-                } catch (_) {}
+                } catch (e) { swallowDebug(e, tag: 'growth_curve_page'); }
               }
             }
             // 有学习活动则能力增长
@@ -133,7 +134,7 @@ class _GrowthCurvePageState extends State<GrowthCurvePage>
           });
         }
       }
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'growth_curve_page'); }
   }
 
   /// 计算某模式在第 day 天的能力值

@@ -26,6 +26,7 @@ import 'graph_properties_page.dart';
 
 import '../../../core/design/noir_tokens.dart';
 import '../../widgets/noir_page_shell.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 // ── 私有类拆分到 parts/ 子目录（part / part of 模式）─────────
 part 'parts/concept_model.dart';
@@ -250,7 +251,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   Future<void> _loadStats() async {
     try {
       _stats = await _dao.getStats();
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'knowledge_graph_page'); }
   }
 
   Future<void> _loadConceptProgress() async {
@@ -318,7 +319,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
         _applyStatusProgress(_conceptProgress);
       }
       if (mounted) setState(() {});
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'knowledge_graph_page'); }
   }
 
   Future<bool> _loadNodeAchievementProgress({
@@ -2026,7 +2027,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
       try {
         await _learningPathDao.createPath(path);
         created++;
-      } catch (_) {}
+      } catch (e) { swallowDebug(e, tag: 'knowledge_graph_page'); }
     }
 
     if (mounted) {

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'database_helper.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 考核管理 DAO — 分组 / 项目 / 评分 / 答辩
 class AssessmentDao {
@@ -61,7 +62,7 @@ class AssessmentDao {
       if (names != null && names.isNotEmpty) {
         try {
           totalMembers += (jsonDecode(names) as List).length;
-        } catch (_) {}
+        } catch (e) { swallowDebug(e, tag: 'assessment_dao'); }
       }
     }
     return {

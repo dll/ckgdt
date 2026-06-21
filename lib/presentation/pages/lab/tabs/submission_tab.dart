@@ -36,7 +36,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
       if (_isTeacherOrAdmin) {
         try {
           await SyncService().downloadAllStudentData();
-        } catch (_) {}
+        } catch (e) { swallowDebug(e, tag: 'submission_tab'); }
       }
       List<Map<String, dynamic>> submissions;
       final passScore = await SettingsService.getEvaluationPassScore();

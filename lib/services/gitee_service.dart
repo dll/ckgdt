@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants/app_urls.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// Gitee API v5 服务
 /// 用于获取仓库列表、分支、提交等信息
@@ -354,7 +355,7 @@ class GiteeService {
       if (segments.length >= 2) {
         return (owner: segments[0], repo: segments[1]);
       }
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'gitee_service'); }
     return null;
   }
 

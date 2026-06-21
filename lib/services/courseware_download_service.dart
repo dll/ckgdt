@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'gitee_service.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 课件下载服务 — 本地优先 + Gitee 远程兜底
 ///
@@ -207,7 +208,7 @@ class CoursewareDownloadService {
         if (await file.exists()) {
           await file.delete();
         }
-      } catch (_) {}
+      } catch (e) { swallowDebug(e, tag: 'courseware_download_service'); }
       return false;
     }
   }

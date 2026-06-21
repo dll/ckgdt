@@ -496,7 +496,7 @@ class GraphPainter extends CustomPainter {
     if (node.color != null && node.color!.isNotEmpty) {
       try {
         return Color(int.parse(node.color!.replaceFirst('#', '0xFF')));
-      } catch (_) {}
+      } catch (e) { swallowDebug(e, tag: 'graph_detail_painter'); }
     }
     // 按层级着色
     const levelColors = [

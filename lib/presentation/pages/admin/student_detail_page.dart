@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../data/models/user_model.dart';
 import '../../../services/gitee_service.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 学生详情页 — 展示学生 Gitee 仓库信息、提交记录等
 class StudentDetailPage extends StatefulWidget {
@@ -338,7 +339,7 @@ class _StudentDetailPageState extends State<StudentDetailPage> {
           final date = DateTime.parse(dateStr);
           final diff = now.difference(date).inDays;
           if (diff <= 7) last7++;
-        } catch (_) {}
+        } catch (e) { swallowDebug(e, tag: 'student_detail_page'); }
       }
     }
 

@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 使用系统安装的 PowerPoint / WPS 将 PPTX 幻灯片导出为高清 PNG 图片
 ///
@@ -75,7 +76,7 @@ class PptExportService {
     // 清理失败的导出目录
     try {
       await outDir.delete(recursive: true);
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'ppt_export_service'); }
     return null;
   }
 
@@ -87,7 +88,7 @@ class PptExportService {
       if (await cacheDir.exists()) {
         await cacheDir.delete(recursive: true);
       }
-    } catch (_) {}
+    } catch (e) { swallowDebug(e, tag: 'ppt_export_service'); }
   }
 
   // ── 内部实现 ──────────────────────────────────────────────────────────

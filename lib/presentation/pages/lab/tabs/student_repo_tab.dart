@@ -89,7 +89,7 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
           // 自动使用匹配到的第一个仓库
           repoUrl = myRepos.first['html_url']?.toString();
         }
-      } catch (_) {}
+      } catch (e) { swallowDebug(e, tag: 'student_repo_tab'); }
 
       if (repoUrl == null || repoUrl.isEmpty) {
         setState(() {
@@ -154,7 +154,7 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
         if (dateStr != null) {
           try {
             date = DateTime.parse(dateStr).toLocal();
-          } catch (_) {}
+          } catch (e) { swallowDebug(e, tag: 'student_repo_tab'); }
         }
         return _StudentCommitRow(
           sha: sha,
@@ -219,7 +219,7 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
             _statsProgress = (i + 1) / maxLoad;
           });
         }
-      } catch (_) {}
+      } catch (e) { swallowDebug(e, tag: 'student_repo_tab'); }
     }
     setState(() => _loadingStats = false);
   }
@@ -247,7 +247,7 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
         if (dateStr != null) {
           try {
             date = DateTime.parse(dateStr).toLocal();
-          } catch (_) {}
+          } catch (e) { swallowDebug(e, tag: 'student_repo_tab'); }
         }
         return _StudentCommitRow(
           sha: sha,

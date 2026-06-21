@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../services/gitee_service.dart';
 import '../../../services/clipboard_helper.dart';
+import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 仓库详情页（参照 毕设进度管家 /student/:id 页面）
 /// 显示：仓库基本信息 / 4个统计卡片 / 分支列表 / 发布版本 / 提交记录表格
@@ -103,7 +104,7 @@ class _RepoDetailPageState extends State<RepoDetailPage> {
         if (dateStr != null) {
           try {
             date = DateTime.parse(dateStr).toLocal();
-          } catch (_) {}
+          } catch (e) { swallowDebug(e, tag: 'repo_detail_page'); }
         }
         return _CommitRow(
           sha: sha,
@@ -210,7 +211,7 @@ class _RepoDetailPageState extends State<RepoDetailPage> {
         final dateStr = authorMap['date']?.toString();
         DateTime? date;
         if (dateStr != null) {
-          try { date = DateTime.parse(dateStr).toLocal(); } catch (_) {}
+          try { date = DateTime.parse(dateStr).toLocal(); } catch (e) { swallowDebug(e, tag: 'repo_detail_page'); }
         }
         return _CommitRow(
           sha: sha,
