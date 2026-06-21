@@ -121,25 +121,60 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
         swallowDebug(e, tag: 'WorkDetailSheet.saveVideoLocal', stack: st);
       }
 
-      // 同步上传到 Gitee 仓库（通过 SyncService 的文件上传）
-      // 注意：Gitee Contents API 限制约 1MB，≤1MB 走 base64 内联，
-      // >1MB 仅存本地 + 由 SyncService._uploadSubmissionFiles 尝试走大文件上传到组仓库
+      // 上传到学生的分组项目仓库（教师/同学通过同步直接下载）
       try {
         final gitee = GiteeService();
-        final remotePath = '作品/$userId/$fileName';
-        if (fileSize <= 1 * 1024 * 1024) {
+        final db = await widget.worksDao.getDatabase();
+        final userRows = await db.query(
+          'users',
+          columns: ['repository_url'],
+          where: 'user_id = ?',
+          whereArgs: [userId],
+          limit: 1,
+        );
+        final repoUrl = userRows.isNotEmpty
+            ? userRows.first['repository_url'] as String?
+            : null;
+        final parsed =
+            repoUrl != null ? GiteeService.parseRepoUrl(repoUrl) : null;
+        if (parsed != null) {
           final bytes = await File(savedPath).readAsBytes();
-          await gitee.createFile(
-            owner: SyncService.systemRepoOwner,
-            repo: SyncService.systemRepoName,
-            path: remotePath,
-            content: base64Encode(bytes),
-            message: '上传作品视频: $fileName',
-            branch: 'master',
-          );
+          final remotePath =
+              '${SyncService.madDir}/files/$userId/作品/$fileName';
+          debugPrint(
+              '上传演示视频到 ${parsed.owner}/${parsed.repo}/$remotePath (${bytes.length} bytes)');
+          if (bytes.length <= 1 * 1024 * 1024) {
+            // ≤1MB → Contents API
+            await gitee.createOrUpdateBinaryFile(
+              owner: parsed.owner,
+              repo: parsed.repo,
+              path: remotePath,
+              bytes: bytes,
+              message: '上传作品视频: $fileName',
+              branch: SyncService.repoBranch,
+            );
+          } else if (bytes.length <= 100 * 1024 * 1024) {
+            // >1MB ≤100MB → Git Data API（绕过 Contents API 限制）
+            try {
+              await gitee.uploadBinaryViaGitDataApi(
+                owner: parsed.owner,
+                repo: parsed.repo,
+                path: remotePath,
+                bytes: bytes,
+                message: '上传作品视频: $fileName (${bytes.length} bytes)',
+                branch: SyncService.repoBranch,
+              );
+            } catch (e2) {
+              debugPrint('Git Data API 上传失败, 仅保留本地: $e2');
+            }
+          } else {
+            debugPrint('视频超过 100MB, 仅保留本地: $fileName');
+          }
+        } else {
+          debugPrint('学生 $userId 未配置分组仓库(repository_url)，无法同步视频');
         }
       } catch (e) {
-        debugPrint('视频上传到 Gitee 失败（文件可能过大）: $e');
+        debugPrint('视频上传到 Gitee 失败: $e');
       }
 
       // 更新数据库

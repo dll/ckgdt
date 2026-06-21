@@ -833,6 +833,244 @@ class GiteeService {
       message: 'deleteFile($path): ${utf8.decode(resp.bodyBytes)}',
     );
   }
+
+  // ════════════════════════════════════════════════════════════════
+  //  Git Data API（大文件替代方案，绕过 Contents API 1MB 限制）
+  // ════════════════════════════════════════════════════════════════
+
+  /// 创建 Git Blob，返回 blob SHA
+  Future<String> createBlob({
+    required String owner,
+    required String repo,
+    required List<int> bytes,
+  }) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      throw GiteeApiException(statusCode: 401, message: '未配置 Gitee Token');
+    }
+
+    final uri = Uri.parse('$_baseUrl/repos/$owner/$repo/git/blobs');
+    final body = {
+      'access_token': token,
+      'content': base64Encode(bytes),
+      'encoding': 'base64',
+    };
+
+    debugPrint('GiteeService: POST git/blobs (${bytes.length} bytes)');
+    final resp = await http
+        .post(uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(body))
+        .timeout(const Duration(seconds: 120));
+
+    if (resp.statusCode != 200 && resp.statusCode != 201) {
+      throw GiteeApiException(
+        statusCode: resp.statusCode,
+        message: 'createBlob: ${utf8.decode(resp.bodyBytes)}',
+      );
+    }
+    final data = jsonDecode(utf8.decode(resp.bodyBytes));
+    return data['sha'] as String;
+  }
+
+  /// 获取分支最新的 commit SHA
+  Future<String?> getRefSha(
+    String owner,
+    String repo, {
+    String branch = 'master',
+  }) async {
+    try {
+      final result = await _get('/repos/$owner/$repo/git/refs/heads/$branch');
+      final obj = result['object'] as Map?;
+      return obj?['sha'] as String?;
+    } catch (e) {
+      swallowDebug(e, tag: 'GiteeService.getRefSha');
+      return null;
+    }
+  }
+
+  /// 创建 Git Tree，返回 tree SHA
+  Future<String> createTree({
+    required String owner,
+    required String repo,
+    required String baseTree,
+    required List<Map<String, dynamic>> entries,
+  }) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      throw GiteeApiException(statusCode: 401, message: '未配置 Gitee Token');
+    }
+
+    final uri = Uri.parse('$_baseUrl/repos/$owner/$repo/git/trees');
+    final body = {
+      'access_token': token,
+      'base_tree': baseTree,
+      'tree': entries,
+    };
+
+    debugPrint('GiteeService: POST git/trees');
+    final resp = await http
+        .post(uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(body))
+        .timeout(const Duration(seconds: 30));
+
+    if (resp.statusCode != 200 && resp.statusCode != 201) {
+      throw GiteeApiException(
+        statusCode: resp.statusCode,
+        message: 'createTree: ${utf8.decode(resp.bodyBytes)}',
+      );
+    }
+    final data = jsonDecode(utf8.decode(resp.bodyBytes));
+    return data['sha'] as String;
+  }
+
+  /// 创建 Git Commit，返回 commit SHA
+  Future<String> createCommit({
+    required String owner,
+    required String repo,
+    required String message,
+    required String tree,
+    required String parent,
+  }) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      throw GiteeApiException(statusCode: 401, message: '未配置 Gitee Token');
+    }
+
+    final uri = Uri.parse('$_baseUrl/repos/$owner/$repo/git/commits');
+    final body = {
+      'access_token': token,
+      'message': message,
+      'tree': tree,
+      'parents': [parent],
+    };
+
+    debugPrint('GiteeService: POST git/commits');
+    final resp = await http
+        .post(uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(body))
+        .timeout(const Duration(seconds: 30));
+
+    if (resp.statusCode != 200 && resp.statusCode != 201) {
+      throw GiteeApiException(
+        statusCode: resp.statusCode,
+        message: 'createCommit: ${utf8.decode(resp.bodyBytes)}',
+      );
+    }
+    final data = jsonDecode(utf8.decode(resp.bodyBytes));
+    return data['sha'] as String;
+  }
+
+  /// 更新分支引用
+  Future<void> updateRef({
+    required String owner,
+    required String repo,
+    required String branch,
+    required String sha,
+  }) async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      throw GiteeApiException(statusCode: 401, message: '未配置 Gitee Token');
+    }
+
+    final uri = Uri.parse('$_baseUrl/repos/$owner/$repo/git/refs/heads/$branch');
+    final body = {
+      'access_token': token,
+      'sha': sha,
+      'force': true,
+    };
+
+    debugPrint('GiteeService: PATCH git/refs/heads/$branch');
+    final resp = await http
+        .patch(uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(body))
+        .timeout(const Duration(seconds: 30));
+
+    if (resp.statusCode != 200) {
+      throw GiteeApiException(
+        statusCode: resp.statusCode,
+        message: 'updateRef: ${utf8.decode(resp.bodyBytes)}',
+      );
+    }
+  }
+
+  /// 通过 Git Data API 上传文件（绕过 Contents API 1MB 限制）
+  /// 完整流程：blob → 基于 parent commit 的 tree → commit → 更新 ref
+  /// 返回 raw URL（可用于视频流播放）
+  Future<String> uploadBinaryViaGitDataApi({
+    required String owner,
+    required String repo,
+    required String path,
+    required List<int> bytes,
+    required String message,
+    String branch = 'master',
+  }) async {
+    // 1. 创建 blob
+    final blobSha = await createBlob(owner: owner, repo: repo, bytes: bytes);
+
+    // 2. 获取当前分支的最新 commit SHA
+    final parentCommitSha = await getRefSha(owner, repo, branch: branch);
+
+    // 3. 构建 tree entry
+    final treeEntry = <String, dynamic>{
+      'path': path,
+      'mode': '100644',
+      'type': 'blob',
+      'sha': blobSha,
+    };
+
+    if (parentCommitSha != null) {
+      // 4a. 获取 base tree SHA
+      final commitData =
+          await _get('/repos/$owner/$repo/git/commits/$parentCommitSha');
+      final baseTreeSha = (commitData['tree'] as Map)['sha'] as String;
+
+      // 5a. 基于 base tree 创建新 tree（替换/新增文件条目）
+      final newTreeSha = await createTree(
+        owner: owner,
+        repo: repo,
+        baseTree: baseTreeSha,
+        entries: [treeEntry],
+      );
+
+      // 6a. 创建 commit
+      final commitSha = await createCommit(
+        owner: owner,
+        repo: repo,
+        message: message,
+        tree: newTreeSha,
+        parent: parentCommitSha,
+      );
+
+      // 7a. 更新分支引用
+      await updateRef(
+          owner: owner, repo: repo, branch: branch, sha: commitSha);
+    } else {
+      // 分支不存在或为空 — 创建全新 tree（无 base_tree）
+      final newTreeSha = await createTree(
+        owner: owner,
+        repo: repo,
+        baseTree: '',
+        entries: [treeEntry],
+      );
+
+      final commitSha = await createCommit(
+        owner: owner,
+        repo: repo,
+        message: message,
+        tree: newTreeSha,
+        parent: '0' * 40,
+      );
+
+      await updateRef(
+          owner: owner, repo: repo, branch: branch, sha: commitSha);
+    }
+
+    return 'https://gitee.com/$owner/$repo/raw/$branch/$path';
+  }
 }
 
 /// Gitee API 异常

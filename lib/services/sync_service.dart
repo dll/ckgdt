@@ -33,7 +33,7 @@ class SyncService {
   static const groupRepoOwner = 'chzuczldl';
 
   /// 组仓库内存放 App 同步数据的目录（mad/{userId}.json + mad/files/...）
-  static const _madDir = 'mad';
+  static const madDir = 'mad';
 
   /// 系统仓库（通知广播 / 连接诊断等非学生数据用）
   static const systemRepoOwner = 'chzcldl';
@@ -310,7 +310,7 @@ class SyncService {
       }
 
       // 4. 写入组仓库 mad/{userId}.json
-      final path = '$_madDir/$userId.json';
+      final path = '$madDir/$userId.json';
       await _gitee.createOrUpdateFile(
         owner: repo.owner,
         repo: repo.repo,
@@ -381,7 +381,7 @@ class SyncService {
         return SyncResult(success: true, message: '未配置分组仓库', recordCount: 0);
       }
 
-      final path = '$_madDir/$userId.json';
+      final path = '$madDir/$userId.json';
       String? content;
       try {
         content = await _gitee.getFileContent(
@@ -488,7 +488,7 @@ class SyncService {
     final fileName = fileNames.isNotEmpty
         ? fileNames
         : filePaths.split('/').last.split('\\').last;
-    final remotePath = '$_madDir/files/$userId/$category/$fileName';
+    final remotePath = '$madDir/files/$userId/$category/$fileName';
 
     try {
       final bytes = await file.readAsBytes();
@@ -497,15 +497,41 @@ class SyncService {
         debugPrint('SyncService: 跳过超大文件 $fileName (${bytes.length} bytes)');
         return;
       }
-      await _gitee.createOrUpdateBinaryFile(
-        owner: repo.owner,
-        repo: repo.repo,
-        path: remotePath,
-        bytes: bytes,
-        message: '上传$category文件: $fileName ($userId)',
-        branch: repoBranch,
-      );
-      debugPrint('SyncService: PDF 已上传 $remotePath');
+      if (bytes.length <= 500 * 1024) {
+        // ≤500KB → Contents API（快速写入）
+        await _gitee.createOrUpdateBinaryFile(
+          owner: repo.owner,
+          repo: repo.repo,
+          path: remotePath,
+          bytes: bytes,
+          message: '上传$category文件: $fileName ($userId)',
+          branch: repoBranch,
+        );
+      } else {
+        // >500KB → Git Data API（绕过 Contents API 1MB 限制）
+        try {
+          await _gitee.uploadBinaryViaGitDataApi(
+            owner: repo.owner,
+            repo: repo.repo,
+            path: remotePath,
+            bytes: bytes,
+            message: '上传$category文件: $fileName ($userId)',
+            branch: repoBranch,
+          );
+        } catch (e2) {
+          debugPrint('Git Data API 上传 $fileName 失败，回退 Contents API: $e2');
+          // 回退：Git Data API 失败时尝试 Contents API（小文件或网络问题）
+          await _gitee.createOrUpdateBinaryFile(
+            owner: repo.owner,
+            repo: repo.repo,
+            path: remotePath,
+            bytes: bytes,
+            message: '上传$category文件: $fileName ($userId)',
+            branch: repoBranch,
+          );
+        }
+      }
+      debugPrint('SyncService: 已上传 $remotePath (${bytes.length} bytes)');
     } catch (e) {
       debugPrint('SyncService: 上传 $fileName 失败: $e');
     }
@@ -726,7 +752,7 @@ class SyncService {
       for (final repo in groupRepos) {
         List<Map<String, dynamic>> files;
         try {
-          files = await _gitee.listDir(repo.owner, repo.repo, _madDir,
+          files = await _gitee.listDir(repo.owner, repo.repo, madDir,
               ref: repoBranch);
         } catch (e) {
           // 该仓库还没有 mad/ 目录（学生未同步过）
@@ -1257,7 +1283,7 @@ class SyncService {
       if (repo == null) return;
 
       List<int>? bytes;
-      final remotePath = '$_madDir/files/$userId/$category/$fileName';
+      final remotePath = '$madDir/files/$userId/$category/$fileName';
       try {
         bytes = await _gitee.downloadBinaryFile(
           owner: repo.owner,
@@ -1545,7 +1571,7 @@ class SyncService {
       for (final repo in groupRepos) {
         List<Map<String, dynamic>> files;
         try {
-          files = await _gitee.listDir(repo.owner, repo.repo, _madDir,
+          files = await _gitee.listDir(repo.owner, repo.repo, madDir,
               ref: repoBranch);
         } catch (e) {
           // 该仓库还没有 mad/ 目录（学生未同步过）
