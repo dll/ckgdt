@@ -173,8 +173,8 @@ class _HomePageState extends State<HomePage> {
     try {
       final gitee = GiteeService();
       final json = await gitee.getFileContent(
-        SyncService.repoOwner,
-        SyncService.repoName,
+        SyncService.systemRepoOwner,
+        SyncService.systemRepoName,
         'defense/teacher_server.json',
         ref: SyncService.repoBranch,
       );

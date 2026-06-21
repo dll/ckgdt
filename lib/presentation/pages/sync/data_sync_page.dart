@@ -373,7 +373,7 @@ class _DataSyncPageState extends State<DataSyncPage> {
             _buildInfoRow(
               icon: Icons.link,
               label: '仓库',
-              value: '${SyncService.repoOwner}/${SyncService.repoName}',
+              value: '${SyncService.systemRepoOwner}/${SyncService.systemRepoName}',
               color: Colors.blue,
             ),
             const SizedBox(height: 8),

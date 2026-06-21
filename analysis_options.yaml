@@ -16,6 +16,8 @@ analyzer:
     - lib.backup/**
     - "**/*.g.dart"
     - "**/*.freezed.dart"
+    # OHOS 构建模板桩：相对 import 仅在被拷入 lib/ 后成立，原位分析会误报。
+    - ohos/stubs/**
 
 linter:
   # The lint rules applied to this project can be customized in the

@@ -1934,8 +1934,8 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
         'timestamp': DateTime.now().toIso8601String(),
       });
       await gitee.createOrUpdateFile(
-        owner: SyncService.repoOwner,
-        repo: SyncService.repoName,
+        owner: SyncService.systemRepoOwner,
+        repo: SyncService.systemRepoName,
         path: 'defense/teacher_server.json',
         content: payload,
         message: 'defense: 教师开播通知 (${students.length} 名学生)',
