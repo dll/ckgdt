@@ -6,7 +6,6 @@ import '../data/local/user_dao.dart';
 import '../data/local/database_helper.dart';
 import '../data/models/user_model.dart';
 import 'sync_service.dart';
-import 'gitee_service.dart';
 import '../core/error_handler.dart';
 
 class AuthService {
@@ -156,9 +155,8 @@ class AuthService {
     // 2. 删除用户记录
     final deleted = await _userDao.deleteUser(userId);
 
-    // 3. 删除远程 Gitee 同步文件（异步，静默失败）
-    _deleteRemoteSyncFile(userId);
-
+    // 分组项目仓库模型下，学生数据在各组仓库 mad/{userId}.json，
+    // 删除用户不再清理中心仓库文件（中心 sync/students 已移除）。
     return deleted;
   }
 
@@ -231,57 +229,11 @@ class AuthService {
   }
 
   /// 异步清理远程孤立同步文件
-  void _cleanOrphanedRemoteFiles() async {
-    try {
-      final db = await DatabaseHelper.instance.database;
-      final gitee = GiteeService();
-
-      // 获取远程文件列表
-      List<Map<String, dynamic>> files;
-      try {
-        files = await gitee.listDir(
-          SyncService.repoOwner,
-          SyncService.repoName,
-          'sync/students',
-          ref: SyncService.repoBranch,
-        );
-      } catch (e) {
-        swallow(e, tag: 'AuthService.listRemoteDir');
-        return;
-      }
-
-      // 获取本地所有学生 user_id
-      final users = await db.query('users', columns: ['user_id']);
-      final localUserIds = users.map((u) => u['user_id'] as String).toSet();
-
-      // 找出远程存在但本地不存在的文件
-      for (final file in files) {
-        final name = file['name']?.toString() ?? '';
-        if (!name.endsWith('.json')) continue;
-        final userId = name.replaceAll('.json', '');
-        if (!localUserIds.contains(userId)) {
-          _deleteRemoteSyncFile(userId);
-        }
-      }
-    } catch (e) {
-      debugPrint('AuthService: 清理远程孤立文件失败: $e');
-    }
-  }
-
-  /// 异步删除远程同步文件
-  void _deleteRemoteSyncFile(String userId) {
-    final gitee = GiteeService();
-    gitee.deleteFile(
-      owner: SyncService.repoOwner,
-      repo: SyncService.repoName,
-      path: 'sync/students/$userId.json',
-      message: '删除学生同步数据: $userId',
-      branch: SyncService.repoBranch,
-    ).then((_) {
-      debugPrint('AuthService: 已删除远程同步文件 $userId.json');
-    }).catchError((e) {
-      debugPrint('AuthService: 删除远程同步文件失败: $e');
-    });
+  ///
+  /// 分组项目仓库模型下，学生数据分散在各组仓库的 mad/{userId}.json，
+  /// 不再有中心仓库的 sync/students 目录，故此清理已废弃（保留空实现）。
+  void _cleanOrphanedRemoteFiles() {
+    // no-op（中心仓库 sync/students 已移除）
   }
 
   String? getCurrentUserId() {

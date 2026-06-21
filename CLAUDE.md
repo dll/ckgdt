@@ -4,8 +4,9 @@
 
 **移动图谱与数字孪生教学系统（MAD-KG）** 是面向《移动应用开发》课程的 Flutter 全平台教学平台。系统围绕"教—学—练—评—管"五个维度构建：知识图谱浏览、章节测验、视频教程、课程资料、实验管理、作品展示、成绩达成、AI 多智能体辅助。支持教师端和学生端差异化导航，通过 Gitee 仓库实现师生数据双向同步。
 
-- **仓库**：https://gitee.com/osgisOne/mad-fd
-- **当前版本**：`2.0.2`（`pubspec.yaml` → `version: 2.0.2+0`）
+- **代码仓库**：Gitee `https://gitee.com/chzcldl/mad-kgdt`（主） · GitHub `dll/mad-fd`（镜像 + gh-pages + Release）
+- **数据仓库**：`chzcldl/mad-data`（课程资源/通知） · 学生项目组仓库 `chzuczldl/cg*-*`（**详见 `docs/项目仓库设计.md`**）
+- **当前版本**：`2.0.3`（`pubspec.yaml` → `version: 2.0.3+1`）
 - **Flutter SDK**：`>=3.0.0 <4.0.0`
 - **主题色**：`#667eea`（紫蓝渐变 `[0xFF667eea, 0xFF764ba2]`）
 - **用户角色**：学生 / 教师 / 管理员
@@ -342,26 +343,34 @@ AgentRegistry (单例)
 
 ## 数据同步架构
 
-### 同步机制
+> 完整仓库与数据流设计（含架构图/时序图）见 **`docs/项目仓库设计.md`**。
 
-通过 Gitee 仓库实现师生数据双向同步（无服务器）：
+### 同步机制（分组项目仓库模型）
+
+学生数据**分散**存储在各自的分组项目仓库（命名空间 `chzuczldl`，**一组一仓库**，仓库名来自实验分组 Excel 的"仓库"列），教师端 App 按需拉取——不再集中到单一中心仓库（避免膨胀超配额）。
 
 ```
-学生设备 → JSON 文件 → Gitee 仓库 → JSON 文件 → 教师设备
-            uploadStudentData()              downloadStudentData()
+学生端 → 写 mad/{学号}.json + mad/files/{学号}/{实验|考核|作品}/ → 自己组仓库 chzuczldl/cg*-*
+教师端 → 遍历去重组仓库读 mad/*.json                              → 合并到本地 DB
+        uploadStudentData()                                       downloadAllStudentData()
 ```
+
+通知广播 / 连接诊断走系统仓库 `chzcldl/mad-data`（`sync/notifications/`）。
 
 ### 同步关键文件
 
-- `SyncService`：`sync_service.dart` — 收集/导入学生数据
-- `GiteeService`：`gitee_service.dart` — Gitee API 上传下载
-- `FileUploadService`：`file_upload_service.dart` — 实验报告文件上传
+- `SyncService`：`sync_service.dart` — 组仓库解析(`_resolveRepoForUser`/`_allGroupRepos`/`_parseRepoSpec`) + 收集/写/拉取/导入
+- `GiteeService`：`gitee_service.dart` — Gitee Contents API 读写文件 / 列目录
+- 仓库映射来源：实验分组 Excel『仓库』列 → `users.repository_url`（`admin/data_import_page_native.dart` 导入）
 
 ### 同步注意事项
 
-- **task_id 重映射**：每台设备的 `lab_tasks` 自增 ID 不同，同步时通过 `title` 字段做自然键匹配，构建 `Map<int,int>` 映射表
-- **批改数据保护**：导入学生数据时，已批改的 `lab_submissions`（有 `score`/`feedback`）不被覆盖
-- **即时同步**：学生提交实验报告后立即触发 `unawaited(SyncService().uploadStudentData(userId))`，不等定时器
+- **仓库解析**：`users.repository_url` 支持 完整 URL / `owner/repo` / 裸仓库名（裸名拼到命名空间 `chzuczldl` 下）
+- **task_id 重映射**：每台设备 `lab_tasks` 自增 ID 不同，按 `title` 自然键匹配重映射
+- **批改数据保护**：导入时已批改的 `lab_submissions`/`student_reports`/`student_works`（有 `score`）不被覆盖
+- **SHA 去重**：`mad/{学号}.json` 内容无变化则跳过 commit
+- **即时同步**：学生提交后立即触发 `unawaited(SyncService().uploadStudentData(userId))`，不等定时器
+- 旧中心仓 `osgisOne/mad-fd:sync/students` 已**废弃**；旧同步数据已迁至 `chzcldl/mad-data` 的 `同步/sync`
 
 ---
 

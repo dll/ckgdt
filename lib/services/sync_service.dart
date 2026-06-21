@@ -10,12 +10,16 @@ import '../core/error_handler.dart';
 import '../data/local/database_helper.dart';
 import 'gitee_service.dart';
 
-/// 数据同步服务
+/// 数据同步服务（分组项目仓库模型）
 ///
-/// 直接使用本项目的 Gitee 仓库 osgisOne/mad-fd。
-/// 同步使用独立的读写 Token（sync_gitee_token），与 GiteeService 的只读 Token 分开。
-/// 学生端：定时将本地学习数据上传到 sync/students/{user_id}.json
-/// 教师端：定时从 sync/students/ 拉取所有学生数据合并到本地 DB
+/// 学生数据**分散存储**在各自的"分组项目仓库"中，不再集中到单一仓库（避免仓库膨胀）。
+/// - 仓库归属：命名空间 [groupRepoOwner]（chzuczldl），仓库名来自实验分组 Excel 的
+///   "仓库"列（已导入 users.repository_url，如 cg1-cifms）。
+/// - 学生端：把本地学习数据写到**自己组仓库**的 `mad/{user_id}.json` + 附件
+///   `mad/files/{user_id}/{分类}/...`。
+/// - 教师端：遍历所有去重的组仓库，从每个仓库的 `mad/*.json` 拉取并合并到本地 DB。
+/// 同步使用独立的读写 Token（sync_gitee_token），需对 chzuczldl 命名空间有写权限。
+/// 通知广播 / 连接诊断仍走系统仓库 [systemRepoOwner]/[systemRepoName]（chzcldl/mad-data）。
 class SyncService {
   static final SyncService _instance = SyncService._internal();
   factory SyncService() => _instance;
@@ -23,12 +27,18 @@ class SyncService {
 
   final GiteeService _gitee = GiteeService();
 
-  // ── 固定仓库配置（本项目仓库）──────────────────────────────────────────
+  // ── 仓库配置 ──────────────────────────────────────────────────────────
 
-  static const repoOwner = 'osgisOne';
-  static const repoName = 'mad-fd';
+  /// 学生分组仓库默认命名空间（"仓库"列仅给裸仓库名时拼到此命名空间下）
+  static const groupRepoOwner = 'chzuczldl';
+
+  /// 组仓库内存放 App 同步数据的目录（mad/{userId}.json + mad/files/...）
+  static const _madDir = 'mad';
+
+  /// 系统仓库（通知广播 / 连接诊断等非学生数据用）
+  static const systemRepoOwner = 'chzcldl';
+  static const systemRepoName = 'mad-data';
   static const repoBranch = 'master';
-  static const _syncDir = 'sync/students';
 
   // ── SharedPreferences 键名 ──────────────────────────────────────────
 
@@ -173,7 +183,7 @@ class SyncService {
       (_) => _doAutoSync(userId, role),
     );
     debugPrint(
-        'SyncService: 自动同步已启动 (每 $interval 分钟, 仓库: $repoOwner/$repoName)');
+        'SyncService: 自动同步已启动 (每 $interval 分钟, 分组项目仓库模式)');
   }
 
   /// 停止自动同步
@@ -195,6 +205,66 @@ class SyncService {
     } catch (e) {
       debugPrint('SyncService: 自动同步失败: $e');
     }
+  }
+
+  // ── 分组项目仓库解析 ──────────────────────────────────────────────────
+
+  /// 把"仓库列"的值解析成 (owner, repo)。支持完整 Gitee URL、owner/repo、或裸仓库名。
+  ({String owner, String repo})? _parseRepoSpec(String? raw) {
+    final v = raw?.trim() ?? '';
+    if (v.isEmpty) return null;
+    if (v.contains('gitee.com')) {
+      final parsed = GiteeService.parseRepoUrl(v);
+      if (parsed != null) return (owner: parsed.owner, repo: parsed.repo);
+      return null;
+    }
+    if (v.contains('/')) {
+      final parts = v.split('/').where((s) => s.isNotEmpty).toList();
+      if (parts.length >= 2) {
+        return (
+          owner: parts[parts.length - 2],
+          repo: parts.last.replaceAll('.git', '')
+        );
+      }
+      return null;
+    }
+    // 裸仓库名（如 cg1-cifms）→ 默认命名空间下的该仓库
+    return (owner: groupRepoOwner, repo: v.replaceAll('.git', ''));
+  }
+
+  /// 解析某学生的分组项目仓库（来自 users.repository_url ← 实验分组 Excel 仓库列）。
+  Future<({String owner, String repo})?> _resolveRepoForUser(
+      dynamic db, String userId) async {
+    try {
+      final rows = await db.query('users',
+          columns: ['repository_url'],
+          where: 'user_id = ?',
+          whereArgs: [userId],
+          limit: 1);
+      final raw =
+          rows.isNotEmpty ? (rows.first['repository_url'] as String?) : null;
+      return _parseRepoSpec(raw);
+    } catch (e, st) {
+      swallowDebug(e, tag: 'SyncService.resolveRepo', stack: st);
+      return null;
+    }
+  }
+
+  /// 教师端：收集所有学生的去重分组仓库列表。
+  Future<List<({String owner, String repo})>> _allGroupRepos(dynamic db) async {
+    final repos = <String, ({String owner, String repo})>{};
+    try {
+      final rows = await db.query('users',
+          columns: ['repository_url'],
+          where: "repository_url IS NOT NULL AND repository_url != ''");
+      for (final r in rows) {
+        final spec = _parseRepoSpec(r['repository_url'] as String?);
+        if (spec != null) repos['${spec.owner}/${spec.repo}'] = spec;
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'SyncService.allGroupRepos', stack: st);
+    }
+    return repos.values.toList();
   }
 
   // ── 学生端：上传数据 ──────────────────────────────────────────────────
@@ -242,52 +312,31 @@ class SyncService {
         return SyncResult(success: true, message: '数据未变更，已检查附件同步');
       }
 
-      // 3. 上传到课程共享仓库 (mad-fd)
-      final path = '$_syncDir/$userId.json';
+      // 3. 解析该学生的分组项目仓库（来自实验分组 Excel 仓库列 → users.repository_url）
+      final repo = await _resolveRepoForUser(db, userId);
+      if (repo == null) {
+        status.value = SyncStatus.idle;
+        debugPrint('SyncService: $userId 未配置分组仓库(repository_url)，跳过上传');
+        return SyncResult(
+            success: false, message: '未配置分组项目仓库，请联系教师导入实验分组');
+      }
+
+      // 4. 写入组仓库 mad/{userId}.json
+      final path = '$_madDir/$userId.json';
       await _gitee.createOrUpdateFile(
-        owner: repoOwner,
-        repo: repoName,
+        owner: repo.owner,
+        repo: repo.repo,
         path: path,
         content: jsonStr,
         message: '同步学生数据: $userId (${DateTime.now().toIso8601String()})',
         branch: repoBranch,
       );
 
-      // 2.2 上传实验提交的 PDF 文件到仓库（静默失败，不影响主流程）
+      // 5. 上传实验/考核/作品附件到组仓库（静默失败，不影响主流程）
       try {
         await _uploadSubmissionFiles(userId, data);
       } catch (e) {
-        debugPrint('SyncService: PDF 文件上传失败（不影响主同步）: $e');
-      }
-
-      // 2.5 同时备份到学生个人仓库（静默失败，不影响主流程）
-      try {
-        final userInfo = await db.query(
-          'users',
-          columns: ['repository_url'],
-          where: 'user_id = ?',
-          whereArgs: [userId],
-          limit: 1,
-        );
-        final repoUrl = userInfo.isNotEmpty
-            ? (userInfo.first['repository_url'] as String?)
-            : null;
-        if (repoUrl != null && repoUrl.isNotEmpty) {
-          final parsed = GiteeService.parseRepoUrl(repoUrl);
-          if (parsed != null) {
-            await _gitee.createOrUpdateFile(
-              owner: parsed.owner,
-              repo: parsed.repo,
-              path: 'sync/learning_data.json',
-              content: jsonStr,
-              message: '备份学习数据: $userId (${DateTime.now().toIso8601String()})',
-              branch: 'master',
-            );
-            debugPrint('SyncService: 已备份到个人仓库 ${parsed.owner}/${parsed.repo}');
-          }
-        }
-      } catch (e) {
-        debugPrint('SyncService: 个人仓库备份失败（不影响主同步）: $e');
+        debugPrint('SyncService: 附件上传失败（不影响主同步）: $e');
       }
 
       // 3. 记录同步时间
@@ -336,12 +385,20 @@ class SyncService {
     try {
       await _ensureSyncToken();
 
-      final path = '$_syncDir/$userId.json';
+      final db = await DatabaseHelper.instance.database;
+      final repo = await _resolveRepoForUser(db, userId);
+      if (repo == null) {
+        status.value = SyncStatus.idle;
+        _isSyncing = false;
+        return SyncResult(success: true, message: '未配置分组仓库', recordCount: 0);
+      }
+
+      final path = '$_madDir/$userId.json';
       String? content;
       try {
         content = await _gitee.getFileContent(
-          repoOwner,
-          repoName,
+          repo.owner,
+          repo.repo,
           path,
           ref: repoBranch,
         );
@@ -368,7 +425,6 @@ class SyncService {
       }
 
       final data = jsonDecode(content) as Map<String, dynamic>;
-      final db = await DatabaseHelper.instance.database;
       final count = await _importStudentSyncData(db, data);
 
       debugPrint('SyncService: 学生 $userId 跨设备同步完成，$count 条记录');
@@ -395,35 +451,38 @@ class SyncService {
   ///   sync/students/{userId}/作品/{fileName}  — 学生作品
   Future<void> _uploadSubmissionFiles(
       String userId, Map<String, dynamic> data) async {
+    final db = await DatabaseHelper.instance.database;
+    final repo = await _resolveRepoForUser(db, userId);
+    if (repo == null) return;
     // 实验报告
     final submissions = data['lab_submissions'] as List? ?? [];
     for (final sub in submissions) {
-      await _uploadSingleFile(userId, sub, '实验');
+      await _uploadSingleFile(repo, userId, sub, '实验');
     }
     // 考核报告（student_reports 表）
     final reports = data['student_reports'] as List? ?? [];
     for (final report in reports) {
-      await _uploadSingleFile(userId, report, '考核');
+      await _uploadSingleFile(repo, userId, report, '考核');
     }
     // 考核报告（assessment_reports 表 — 分离后的考核报告）
     final assessmentReports = data['assessment_reports'] as List? ?? [];
     for (final report in assessmentReports) {
-      await _uploadSingleFile(userId, report, '考核');
+      await _uploadSingleFile(repo, userId, report, '考核');
     }
     // 项目考核
     final projectScores = data['project_scores'] as List? ?? [];
     for (final score in projectScores) {
-      await _uploadSingleFile(userId, score, '考核');
+      await _uploadSingleFile(repo, userId, score, '考核');
     }
     // 学生作品
     final works = data['student_works'] as List? ?? [];
     for (final work in works) {
-      await _uploadSingleFile(userId, work, '作品');
+      await _uploadSingleFile(repo, userId, work, '作品');
     }
   }
 
-  /// 上传单个文件到指定分类目录
-  Future<void> _uploadSingleFile(
+  /// 上传单个文件到组仓库的分类目录（mad/files/{userId}/{category}/）
+  Future<void> _uploadSingleFile(({String owner, String repo}) repo,
       String userId, Map<String, dynamic> row, String category) async {
     final filePaths = (row['file_paths'] as String?) ??
         (row['file_path'] as String?) ??
@@ -441,7 +500,7 @@ class SyncService {
     final fileName = fileNames.isNotEmpty
         ? fileNames
         : filePaths.split('/').last.split('\\').last;
-    final remotePath = '$_syncDir/$userId/$category/$fileName';
+    final remotePath = '$_madDir/files/$userId/$category/$fileName';
 
     try {
       final bytes = await file.readAsBytes();
@@ -451,8 +510,8 @@ class SyncService {
         return;
       }
       await _gitee.createOrUpdateBinaryFile(
-        owner: repoOwner,
-        repo: repoName,
+        owner: repo.owner,
+        repo: repo.repo,
         path: remotePath,
         bytes: bytes,
         message: '上传$category文件: $fileName ($userId)',
@@ -657,66 +716,58 @@ class SyncService {
     try {
       // 确保同步 Token 可用
       await _ensureSyncToken();
-      // 1. 列出 sync/students/ 目录下的所有文件
-      List<Map<String, dynamic>> files;
-      try {
-        files = await _gitee.listDir(repoOwner, repoName, _syncDir,
-            ref: repoBranch);
-      } catch (e) {
-        // 目录不存在说明还没有学生上传过数据
+      // 1. 收集所有去重的分组项目仓库（来自 users.repository_url ← 实验分组 Excel 仓库列）
+      final db = await DatabaseHelper.instance.database;
+      final groupRepos = await _allGroupRepos(db);
+      if (groupRepos.isEmpty) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(
             _lastDownloadTimeKey, DateTime.now().toIso8601String());
         status.value = SyncStatus.idle;
         return SyncResult(
           success: true,
-          message: '暂无学生同步数据（sync 目录尚未创建）',
+          message: '暂无分组仓库（请先导入实验分组 Excel 设置 repository_url）',
           recordCount: 0,
         );
       }
 
-      final jsonFiles = files
-          .where((f) =>
-              f['type'] == 'file' &&
-              (f['name']?.toString() ?? '').endsWith('.json'))
-          .toList();
-
-      if (jsonFiles.isEmpty) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(
-            _lastDownloadTimeKey, DateTime.now().toIso8601String());
-        status.value = SyncStatus.idle;
-        return SyncResult(
-          success: true,
-          message: '暂无学生数据',
-          recordCount: 0,
-        );
-      }
-
-      // 2. 逐个下载并解析
+      // 2. 逐个仓库拉取 mad/*.json 并导入
       int totalRecords = 0;
       int studentCount = 0;
-      final db = await DatabaseHelper.instance.database;
 
-      for (final file in jsonFiles) {
-        final filePath = file['path']?.toString() ?? '';
-        if (filePath.isEmpty) continue;
-
+      for (final repo in groupRepos) {
+        List<Map<String, dynamic>> files;
         try {
-          final content = await _gitee.getFileContent(
-            repoOwner,
-            repoName,
-            filePath,
-            ref: repoBranch,
-          );
-          if (content == null) continue;
-
-          final data = jsonDecode(content) as Map<String, dynamic>;
-          final count = await _importStudentSyncData(db, data);
-          totalRecords += count;
-          studentCount++;
+          files = await _gitee.listDir(repo.owner, repo.repo, _madDir,
+              ref: repoBranch);
         } catch (e) {
-          debugPrint('SyncService: 解析 $filePath 失败: $e');
+          // 该仓库还没有 mad/ 目录（学生未同步过）
+          continue;
+        }
+        final jsonFiles = files
+            .where((f) =>
+                f['type'] == 'file' &&
+                (f['name']?.toString() ?? '').endsWith('.json'))
+            .toList();
+        for (final file in jsonFiles) {
+          final filePath = file['path']?.toString() ?? '';
+          if (filePath.isEmpty) continue;
+          try {
+            final content = await _gitee.getFileContent(
+              repo.owner,
+              repo.repo,
+              filePath,
+              ref: repoBranch,
+            );
+            if (content == null) continue;
+            final data = jsonDecode(content) as Map<String, dynamic>;
+            final count = await _importStudentSyncData(db, data);
+            totalRecords += count;
+            studentCount++;
+          } catch (e) {
+            debugPrint(
+                'SyncService: 解析 ${repo.owner}/${repo.repo}/$filePath 失败: $e');
+          }
         }
       }
 
@@ -1211,21 +1262,22 @@ class SyncService {
       if (fileName.isEmpty) return;
       if (filePaths.isNotEmpty && File(filePaths).existsSync()) return;
 
-      // 按新目录规范下载，失败则回退旧路径
+      // 解析该学生的分组仓库，从 mad/files/{userId}/{category}/ 下载
+      final db = await DatabaseHelper.instance.database;
+      final repo = await _resolveRepoForUser(db, userId);
+      if (repo == null) return;
+
       List<int>? bytes;
-      for (final subDir in [category, 'files']) {
-        final remotePath = '$_syncDir/$userId/$subDir/$fileName';
-        try {
-          bytes = await _gitee.downloadBinaryFile(
-            owner: repoOwner,
-            repo: repoName,
-            path: remotePath,
-            branch: repoBranch,
-          );
-          if (bytes != null && bytes.isNotEmpty) break;
-        } catch (e, st) {
-          swallowDebug(e, tag: 'SyncService', stack: st);
-        }
+      final remotePath = '$_madDir/files/$userId/$category/$fileName';
+      try {
+        bytes = await _gitee.downloadBinaryFile(
+          owner: repo.owner,
+          repo: repo.repo,
+          path: remotePath,
+          branch: repoBranch,
+        );
+      } catch (e, st) {
+        swallowDebug(e, tag: 'SyncService', stack: st);
       }
       if (bytes == null || bytes.isEmpty) return;
 
@@ -1491,45 +1543,55 @@ class SyncService {
   /// 列出已同步的学生文件概览
   Future<List<Map<String, dynamic>>> listSyncedStudents() async {
     try {
-      final files =
-          await _gitee.listDir(repoOwner, repoName, _syncDir, ref: repoBranch);
-      final jsonFiles = files
-          .where((f) =>
-              f['type'] == 'file' &&
-              (f['name']?.toString() ?? '').endsWith('.json'))
-          .toList();
-
+      final db = await DatabaseHelper.instance.database;
+      final groupRepos = await _allGroupRepos(db);
       final students = <Map<String, dynamic>>[];
 
-      for (final file in jsonFiles) {
-        final filePath = file['path']?.toString() ?? '';
-        if (filePath.isEmpty) continue;
-
+      for (final repo in groupRepos) {
+        List<Map<String, dynamic>> files;
         try {
-          final content = await _gitee
-              .getFileContent(repoOwner, repoName, filePath, ref: repoBranch);
-          if (content == null) continue;
-
-          final data = jsonDecode(content) as Map<String, dynamic>;
-          students.add({
-            'user_id': data['user_id'] ?? '',
-            'user_name': data['user_name'] ?? '',
-            'synced_at': data['synced_at'] ?? '',
-            'last_active': data['last_active'] ?? '',
-            'quiz_count': (data['quiz_results'] as List?)?.length ?? 0,
-            'record_count': (data['learning_records'] as List?)?.length ?? 0,
-            'wrong_count': (data['wrong_answers'] as List?)?.length ?? 0,
-            'feedback_count': (data['feedback'] as List?)?.length ?? 0,
-            'favorite_count': (data['favorites'] as List?)?.length ?? 0,
-            'path_count': (data['learning_paths'] as List?)?.length ?? 0,
-            'lab_count': (data['lab_submissions'] as List?)?.length ?? 0,
-            'report_count': (data['student_reports'] as List?)?.length ?? 0,
-            'work_count': (data['student_works'] as List?)?.length ?? 0,
-            'checkin_count': (data['checkin_records'] as List?)?.length ?? 0,
-            'survey_count': (data['survey_responses'] as List?)?.length ?? 0,
-          });
+          files = await _gitee.listDir(repo.owner, repo.repo, _madDir,
+              ref: repoBranch);
         } catch (e) {
-          debugPrint('SyncService: 读取 $filePath 概览失败: $e');
+          continue;
+        }
+        final jsonFiles = files
+            .where((f) =>
+                f['type'] == 'file' &&
+                (f['name']?.toString() ?? '').endsWith('.json'))
+            .toList();
+
+        for (final file in jsonFiles) {
+          final filePath = file['path']?.toString() ?? '';
+          if (filePath.isEmpty) continue;
+
+          try {
+            final content = await _gitee.getFileContent(
+                repo.owner, repo.repo, filePath,
+                ref: repoBranch);
+            if (content == null) continue;
+
+            final data = jsonDecode(content) as Map<String, dynamic>;
+            students.add({
+              'user_id': data['user_id'] ?? '',
+              'user_name': data['user_name'] ?? '',
+              'synced_at': data['synced_at'] ?? '',
+              'last_active': data['last_active'] ?? '',
+              'quiz_count': (data['quiz_results'] as List?)?.length ?? 0,
+              'record_count': (data['learning_records'] as List?)?.length ?? 0,
+              'wrong_count': (data['wrong_answers'] as List?)?.length ?? 0,
+              'feedback_count': (data['feedback'] as List?)?.length ?? 0,
+              'favorite_count': (data['favorites'] as List?)?.length ?? 0,
+              'path_count': (data['learning_paths'] as List?)?.length ?? 0,
+              'lab_count': (data['lab_submissions'] as List?)?.length ?? 0,
+              'report_count': (data['student_reports'] as List?)?.length ?? 0,
+              'work_count': (data['student_works'] as List?)?.length ?? 0,
+              'checkin_count': (data['checkin_records'] as List?)?.length ?? 0,
+              'survey_count': (data['survey_responses'] as List?)?.length ?? 0,
+            });
+          } catch (e) {
+            debugPrint('SyncService: 读取 $filePath 概览失败: $e');
+          }
         }
       }
 
@@ -1580,8 +1642,8 @@ class SyncService {
 
       // 上传到 sync/notifications/
       await _gitee.createOrUpdateFile(
-        owner: repoOwner,
-        repo: repoName,
+        owner: systemRepoOwner,
+        repo: systemRepoName,
         path: 'sync/notifications/$fileName',
         content: content,
         message: 'upload notification $notificationId',
@@ -1601,8 +1663,8 @@ class SyncService {
 
       // 列出 sync/notifications/ 目录下的所有文件
       final files = await _gitee.listDir(
-        repoOwner,
-        repoName,
+        systemRepoOwner,
+        systemRepoName,
         'sync/notifications',
         ref: repoBranch,
       );
@@ -1614,8 +1676,8 @@ class SyncService {
         try {
           // 下载文件内容
           final content = await _gitee.getFileContent(
-            repoOwner,
-            repoName,
+            systemRepoOwner,
+            systemRepoName,
             path,
             ref: repoBranch,
           );
@@ -1714,8 +1776,8 @@ class SyncService {
   Future<SyncResult> testConnection() async {
     try {
       await _ensureSyncToken();
-      final detail = await _gitee.getRepoDetail(repoOwner, repoName);
-      final fullName = detail['full_name'] ?? '$repoOwner/$repoName';
+      final detail = await _gitee.getRepoDetail(systemRepoOwner, systemRepoName);
+      final fullName = detail['full_name'] ?? '$systemRepoOwner/$systemRepoName';
       final isPrivate = detail['private'] == true ? '私有' : '公开';
 
       return SyncResult(
