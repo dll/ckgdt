@@ -122,15 +122,16 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
       }
 
       // 同步上传到 Gitee 仓库（通过 SyncService 的文件上传）
+      // 注意：Gitee Contents API 限制约 1MB，≤1MB 走 base64 内联，
+      // >1MB 仅存本地 + 由 SyncService._uploadSubmissionFiles 尝试走大文件上传到组仓库
       try {
         final gitee = GiteeService();
         final remotePath = '作品/$userId/$fileName';
-        // Gitee 文件限制 1MB base64，大文件只存本地路径
         if (fileSize <= 1 * 1024 * 1024) {
           final bytes = await File(savedPath).readAsBytes();
           await gitee.createFile(
-            owner: 'osgisOne',
-            repo: 'mad-data',
+            owner: SyncService.systemRepoOwner,
+            repo: SyncService.systemRepoName,
             path: remotePath,
             content: base64Encode(bytes),
             message: '上传作品视频: $fileName',
@@ -460,10 +461,15 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                     onPressed: () {
                       final videoPath = _resolveVideoPath(_work);
                       if (videoPath.isEmpty) {
+                        final status = _work['status'] as String? ?? '待提交';
+                        final msg = status == '待提交'
+                            ? '该作品尚未上传演示视频'
+                            : '该作品已上传演示视频，但文件较大未能同步到 Gitee（Gitee 文件限制约 1MB），请通知学生直接提供视频文件或压缩后重新上传';
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('该作品尚未上传演示视频'),
+                          SnackBar(
+                            content: Text(msg),
                             backgroundColor: Colors.orange,
+                            duration: const Duration(seconds: 5),
                           ),
                         );
                         return;

@@ -82,23 +82,11 @@ class SyncService {
     }
   }
 
-  /// 获取同步专用 Token
+  /// 获取同步专用 Token（首次使用时自动 bootstrap，见 [_ensureSyncToken]）
   Future<String?> getSyncToken() async {
+    await _ensureSyncToken();
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString(_syncTokenKey);
-    if (token == null ||
-        token.isEmpty ||
-        token == GiteeCredentials.legacyTokenForMigration) {
-      await prefs.setString(_syncTokenKey, _defaultSyncToken);
-      final giteeToken = await _gitee.getToken();
-      if (giteeToken == null ||
-          giteeToken.isEmpty ||
-          giteeToken == GiteeCredentials.legacyTokenForMigration) {
-        await _gitee.saveToken(_defaultSyncToken);
-      }
-      return _defaultSyncToken;
-    }
-    return token;
+    return prefs.getString(_syncTokenKey);
   }
 
   /// 设置同步 Token
@@ -443,12 +431,12 @@ class SyncService {
     }
   }
 
-  /// 上传实验提交中引用的 PDF 文件到 Gitee 仓库
+  /// 上传提交引用的附件文件到组仓库
   ///
-  /// 目录规范：
-  ///   sync/students/{userId}/实验/{fileName}  — 实验报告
-  ///   sync/students/{userId}/考核/{fileName}  — 项目考核
-  ///   sync/students/{userId}/作品/{fileName}  — 学生作品
+  /// 目录规范（写入学生自己的组仓库）：
+  ///   mad/files/{userId}/实验/{fileName}  — 实验报告
+  ///   mad/files/{userId}/考核/{fileName}  — 项目考核
+  ///   mad/files/{userId}/作品/{fileName}  — 学生作品
   Future<void> _uploadSubmissionFiles(
       String userId, Map<String, dynamic> data) async {
     final db = await DatabaseHelper.instance.database;
@@ -742,6 +730,7 @@ class SyncService {
               ref: repoBranch);
         } catch (e) {
           // 该仓库还没有 mad/ 目录（学生未同步过）
+          swallow(e, tag: 'SyncService.downloadAll.listMadDir');
           continue;
         }
         final jsonFiles = files
@@ -808,7 +797,7 @@ class SyncService {
                   content:
                       const JsonEncoder.withIndent('  ').convert(backupData),
                   message: '教师同步备份 ($studentCount 学生, $totalRecords 条记录)',
-                  branch: 'master',
+                  branch: repoBranch,
                 );
                 debugPrint(
                     'SyncService: 已备份到教师仓库 ${parsed.owner}/${parsed.repo}');
@@ -1290,9 +1279,10 @@ class SyncService {
       final localFile = File('${syncFilesDir.path}/$fileName');
       await localFile.writeAsBytes(bytes);
 
-      // 更新 file_paths 为本地路径
+      // 更新 file_paths / file_path / video_url 为本地同步路径
       row['file_paths'] = localFile.path;
       row['file_path'] = localFile.path;
+      row['video_url'] = localFile.path;
       debugPrint('SyncService: 已下载 $fileName -> ${localFile.path}');
     } catch (e) {
       debugPrint('SyncService: 下载 PDF 失败: $e');
@@ -1409,27 +1399,21 @@ class SyncService {
       }
 
       // 构建已有作品的 title → id 映射（用于匹配跨设备数据）
-      final existingByTitle = <String, Map<String, dynamic>>{};
+      final existingById = <int, Map<String, dynamic>>{};
+      final existingByTitle = <String, int>{};
       try {
         final existing = await db
             .query('student_works', where: 'user_id = ?', whereArgs: [userId]);
         for (final r in existing) {
+          final id = r['id'] as int?;
           final title = r['title'] as String? ?? '';
-          existingByTitle[title] = Map<String, dynamic>.from(r as Map);
+          if (id != null) {
+            existingById[id] = Map<String, dynamic>.from(r as Map);
+            if (title.isNotEmpty) existingByTitle[title] = id;
+          }
         }
       } catch (e, st) {
         swallowDebug(e, tag: 'SyncService', stack: st);
-      }
-
-      // 删除未评分的作品（已评分的保留）
-      if (scoredWorkIds.isEmpty) {
-        await db
-            .delete('student_works', where: 'user_id = ?', whereArgs: [userId]);
-      } else {
-        final placeholders = scoredWorkIds.map((_) => '?').join(',');
-        await db.delete('student_works',
-            where: 'user_id = ? AND id NOT IN ($placeholders)',
-            whereArgs: [userId, ...scoredWorkIds]);
       }
 
       for (final r in list) {
@@ -1439,13 +1423,24 @@ class SyncService {
           row['user_id'] = userId;
 
           final title = row['title'] as String? ?? '';
-          final existing = existingByTitle[title];
           await _downloadSubmissionFile(row, userId, category: '作品');
 
-          if (existing != null && scoredWorkIds.contains(existing['id'])) {
-            // 已评分 → 更新内容字段，保留 id 不变（work_scores 外键依赖）
-            await db.update('student_works', row,
-                where: 'id = ?', whereArgs: [existing['id']]);
+          final existingId = existingByTitle[title];
+          if (existingId != null) {
+            final isScored = scoredWorkIds.contains(existingId);
+            if (!isScored) {
+              // 未评分 → 全量更新，保持本地 id 不变
+              await db.update('student_works', row,
+                  where: 'id = ?', whereArgs: [existingId]);
+            } else {
+              // 已评分 → 只更新非评分字段（评分由 work_scores 管理）
+              row.remove('score');
+              row.remove('score_comment');
+              row.remove('scorer_name');
+              row.remove('scored_at');
+              await db.update('student_works', row,
+                  where: 'id = ?', whereArgs: [existingId]);
+            }
             count++;
           } else {
             await db.insert('student_works', row);
@@ -1553,6 +1548,8 @@ class SyncService {
           files = await _gitee.listDir(repo.owner, repo.repo, _madDir,
               ref: repoBranch);
         } catch (e) {
+          // 该仓库还没有 mad/ 目录（学生未同步过）
+          swallow(e, tag: 'SyncService.listSynced.listMadDir');
           continue;
         }
         final jsonFiles = files
