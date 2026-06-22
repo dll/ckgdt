@@ -838,6 +838,26 @@ class AchievementDao {
     return count;
   }
 
+  /// 将平台自动汇总的平时成绩同步到指定达成度批次。
+  ///
+  /// 仅替换该批次的平时分项；实验、期末分项会先读取保留，然后复用
+  /// [importComponentsToDatabase] 重新合成 achievement_scores，避免覆盖教师
+  /// 已导入或已录入的实验/考核成绩。
+  Future<int> importPlatformPingshiScores(
+    int batchId,
+    List<Map<String, dynamic>> pingshiRows,
+  ) async {
+    if (pingshiRows.isEmpty) return 0;
+
+    final experiment = await getExperimentScores(batchId);
+    final exam = await getExamScores(batchId);
+    return importComponentsToDatabase(batchId, {
+      'pingshi': pingshiRows,
+      'experiment': experiment,
+      'exam': exam,
+    });
+  }
+
   /// 从本系统已有数据自动获取各环节成绩，返回与 parseComponentSheets 同结构的
   /// {pingshi, experiment, exam}，供与导入数据对比合并。
   /// - 平时：quiz_results 按学生平均分 → 期间测验项(其余环节项缺省0)

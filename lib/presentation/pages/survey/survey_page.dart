@@ -5,7 +5,9 @@ import '../../../services/auth_service.dart';
 
 /// 学生问卷调查页面 — 展示已发布的问卷，支持填写和提交
 class SurveyPage extends StatefulWidget {
-  const SurveyPage({super.key});
+  final int? initialSurveyId;
+
+  const SurveyPage({super.key, this.initialSurveyId});
 
   @override
   State<SurveyPage> createState() => _SurveyPageState();
@@ -18,6 +20,7 @@ class _SurveyPageState extends State<SurveyPage> {
   List<Map<String, dynamic>> _surveys = [];
   Set<int> _completedSurveyIds = {};
   bool _isLoading = true;
+  bool _openedInitialSurvey = false;
 
   @override
   void initState() {
@@ -49,16 +52,40 @@ class _SurveyPageState extends State<SurveyPage> {
           _completedSurveyIds = completed;
           _isLoading = false;
         });
+        _openInitialSurveyIfNeeded(published, completed);
       }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  void _openInitialSurveyIfNeeded(
+    List<Map<String, dynamic>> surveys,
+    Set<int> completed,
+  ) {
+    final targetId = widget.initialSurveyId;
+    if (_openedInitialSurvey || targetId == null) return;
+    Map<String, dynamic>? target;
+    for (final survey in surveys) {
+      if (survey['id'] == targetId) {
+        target = survey;
+        break;
+      }
+    }
+    final surveyToOpen = target;
+    if (surveyToOpen == null || completed.contains(targetId)) return;
+    _openedInitialSurvey = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _openSurvey(surveyToOpen);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
-    final pending = _surveys.where((s) => !_completedSurveyIds.contains(s['id'])).length;
+    final pending =
+        _surveys.where((s) => !_completedSurveyIds.contains(s['id'])).length;
     final done = _completedSurveyIds.length;
 
     return Scaffold(
@@ -145,9 +172,7 @@ class _SurveyPageState extends State<SurveyPage> {
           child: Center(
             child: Text('$count',
                 style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: color)),
+                    fontSize: 16, fontWeight: FontWeight.bold, color: color)),
           ),
         ),
         const SizedBox(height: 2),
@@ -215,8 +240,8 @@ class _SurveyPageState extends State<SurveyPage> {
                   ),
                   const Spacer(),
                   Text('$responses 人已填',
-                      style: TextStyle(
-                          fontSize: 11, color: Colors.grey.shade500)),
+                      style:
+                          TextStyle(fontSize: 11, color: Colors.grey.shade500)),
                 ],
               ),
               const SizedBox(height: 10),
@@ -226,8 +251,7 @@ class _SurveyPageState extends State<SurveyPage> {
               if (desc.isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Text(desc,
-                    style:
-                        TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis),
               ],
@@ -235,8 +259,7 @@ class _SurveyPageState extends State<SurveyPage> {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(Icons.schedule,
-                        size: 14, color: Colors.grey.shade500),
+                    Icon(Icons.schedule, size: 14, color: Colors.grey.shade500),
                     const SizedBox(width: 4),
                     Text('截止：${deadline.substring(0, 10)}',
                         style: TextStyle(
@@ -355,8 +378,7 @@ class _SurveyFillPageState extends State<_SurveyFillPage> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('提交失败，请重试'),
-              backgroundColor: Colors.red),
+              content: Text('提交失败，请重试'), backgroundColor: Colors.red),
         );
       }
     } catch (e) {
@@ -384,8 +406,7 @@ class _SurveyFillPageState extends State<_SurveyFillPage> {
             const Text('提交成功',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Text('感谢您参与问卷调查！',
-                style: TextStyle(color: Colors.grey.shade600)),
+            Text('感谢您参与问卷调查！', style: TextStyle(color: Colors.grey.shade600)),
           ],
         ),
         actions: [
@@ -518,8 +539,7 @@ class _SurveyFillPageState extends State<_SurveyFillPage> {
                         style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color:
-                                Theme.of(context).colorScheme.primary)),
+                            color: Theme.of(context).colorScheme.primary)),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -708,8 +728,7 @@ class _SurveyFillPageState extends State<_SurveyFillPage> {
             final star = i + 1;
             final isActive = star <= current;
             return GestureDetector(
-              onTap: () =>
-                  setState(() => _answers[qId] = star.toString()),
+              onTap: () => setState(() => _answers[qId] = star.toString()),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Icon(

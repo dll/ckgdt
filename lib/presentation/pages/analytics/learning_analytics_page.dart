@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../../../core/design/noir_tokens.dart';
 import '../../../core/error_handler.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../services/course_context_service.dart';
+import '../learning/ordinary_score_tab.dart';
 
 /// 学情分析仪表板 — 教师专用
 /// 提供班级整体学习数据分析、预警学生识别、章节掌握度分析
@@ -43,7 +45,7 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _loadAllData();
   }
 
@@ -321,7 +323,8 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
           unselectedLabelColor: Colors.grey,
           tabs: const [
             Tab(icon: Icon(Icons.dashboard, size: 18), text: '总览'),
-            Tab(icon: Icon(Icons.bar_chart, size: 18), text: '成绩分析'),
+            Tab(icon: Icon(Icons.fact_check, size: 18), text: '平时成绩'),
+            Tab(icon: Icon(Icons.bar_chart, size: 18), text: '测验分析'),
             Tab(icon: Icon(Icons.warning_amber, size: 18), text: '学情预警'),
             Tab(icon: Icon(Icons.leaderboard, size: 18), text: '学生排行'),
           ],
@@ -333,6 +336,10 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
               controller: _tabController,
               children: [
                 _buildOverviewTab(),
+                const ColoredBox(
+                  color: NoirTokens.ink,
+                  child: OrdinaryScoreTab(),
+                ),
                 _buildScoreAnalysisTab(),
                 _buildWarningTab(),
                 _buildRankingTab(),

@@ -131,7 +131,8 @@ class AssessmentDao {
     final db = await DatabaseHelper.instance.database;
     if (projectId != null) {
       return db.rawQuery('''
-        SELECT s.*, p.name as project_name, g.name as group_name
+        SELECT s.*, p.name as project_name, g.name as group_name,
+               g.member_ids, g.member_names
         FROM project_scores s
         LEFT JOIN assessment_projects p ON s.project_id = p.id
         LEFT JOIN assessment_groups g ON s.group_id = g.id
@@ -140,7 +141,8 @@ class AssessmentDao {
       ''', [projectId]);
     }
     return db.rawQuery('''
-      SELECT s.*, p.name as project_name, g.name as group_name
+      SELECT s.*, p.name as project_name, g.name as group_name,
+             g.member_ids, g.member_names
       FROM project_scores s
       LEFT JOIN assessment_projects p ON s.project_id = p.id
       LEFT JOIN assessment_groups g ON s.group_id = g.id
@@ -181,7 +183,8 @@ class AssessmentDao {
   Future<List<Map<String, dynamic>>> getScoreRanking() async {
     final db = await DatabaseHelper.instance.database;
     return db.rawQuery('''
-      SELECT s.*, p.name as project_name, g.name as group_name
+      SELECT s.*, p.name as project_name, g.name as group_name,
+             g.member_ids, g.member_names
       FROM project_scores s
       LEFT JOIN assessment_projects p ON s.project_id = p.id
       LEFT JOIN assessment_groups g ON s.group_id = g.id

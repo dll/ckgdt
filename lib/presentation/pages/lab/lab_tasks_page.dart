@@ -32,6 +32,7 @@ import '../../../core/error_handler.dart';
 // ── Tab 实现拆分到 tabs/ 子目录（part / part of 模式）─────────────
 part 'tabs/task_list_tab.dart';
 part 'tabs/submission_tab.dart';
+part 'tabs/student_score_tab.dart';
 part 'tabs/report_tab.dart';
 part 'tabs/task_manage_tab.dart';
 part 'tabs/student_repo_tab.dart';
@@ -39,7 +40,7 @@ part 'tabs/repo_report_tab.dart';
 part 'tabs/materials_tab.dart';
 
 /// 实验任务页面
-/// 学生: 5 Tab（任务列表 / 我的提交 / 实验报告 / 实验材料 / 仓库报表）
+/// 学生: 6 Tab（任务列表 / 我的提交 / 成绩 / 实验报告 / 实验材料 / 仓库报表）
 /// 教师/管理员: 7 Tab（任务列表 / 提交管理 / 实验报告 / 实验材料 / 任务管理 / AI批阅 / 仓库报表）
 class LabTasksPage extends StatefulWidget {
   const LabTasksPage({super.key});
@@ -368,12 +369,12 @@ class _LabTasksPageState extends State<LabTasksPage>
   @override
   List<String> innerTabLabels() => _isTeacherOrAdmin
       ? const ['任务列表', '提交管理', '实验报告', '实验材料', '任务管理', 'AI批阅', '仓库报表']
-      : const ['任务列表', '我的提交', '实验报告', '实验材料', '仓库报表'];
+      : const ['任务列表', '我的提交', '成绩', '实验报告', '实验材料', '仓库报表'];
 
   @override
   void initState() {
     super.initState();
-    final tabCount = _isTeacherOrAdmin ? 7 : 5;
+    final tabCount = _isTeacherOrAdmin ? 7 : 6;
     _tabController = TabController(length: tabCount, vsync: this);
     _initData();
     bindInnerTabRequest();
@@ -506,6 +507,9 @@ class _LabTasksPageState extends State<LabTasksPage>
                       icon: const Icon(Icons.assignment_turned_in, size: 20),
                       text: _isTeacherOrAdmin ? '提交管理' : '我的提交',
                     ),
+                    if (!_isTeacherOrAdmin)
+                      const Tab(
+                          icon: Icon(Icons.leaderboard, size: 20), text: '成绩'),
                     const Tab(
                         icon: Icon(Icons.description, size: 20), text: '实验报告'),
                     const Tab(
@@ -538,6 +542,9 @@ class _LabTasksPageState extends State<LabTasksPage>
               _TaskListTab(authService: _authService, labTaskDao: _labTaskDao),
               _SubmissionTab(
                   authService: _authService, labTaskDao: _labTaskDao),
+              if (!_isTeacherOrAdmin)
+                _StudentLabScoreTab(
+                    authService: _authService, labTaskDao: _labTaskDao),
               _ReportTab(authService: _authService, labTaskDao: _labTaskDao),
               _MaterialsTab(authService: _authService),
               if (!_isTeacherOrAdmin)

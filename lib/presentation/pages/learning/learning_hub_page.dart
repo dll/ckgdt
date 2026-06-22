@@ -15,6 +15,7 @@ import '../../../services/slide_generator_service.dart';
 import '../../../services/file_opener_service.dart';
 import '../../../services/courseware_download_service.dart';
 import '../../../data/local/ai_config_dao.dart';
+import '../../../data/local/learning_record_dao.dart';
 import '../materials/courseware_workshop_page.dart';
 import '../materials/ai_settings_page.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -27,6 +28,8 @@ import '../admin/data_import_page.dart';
 import '../quiz/quiz_page.dart';
 import 'video_player_page.dart';
 import 'pdf_viewer_page.dart';
+import 'ordinary_score_tab.dart';
+import 'student_ordinary_score_tab.dart';
 
 /// 学习中心页面 — 合并原"视频"和"课件"菜单
 /// 4 个 Tab：视频、PPT、PDF、AI助手
@@ -44,6 +47,7 @@ class _LearningHubPageState extends State<LearningHubPage>
   late TabController _tabController;
   final _authService = AuthService();
   final _courseContext = CourseContextService();
+  final _learningRecordDao = LearningRecordDao();
 
   bool get _isTeacherOrAdmin => _authService.isTeacher || _authService.isAdmin;
 
@@ -75,10 +79,11 @@ class _LearningHubPageState extends State<LearningHubPage>
   @override
   void initState() {
     super.initState();
+    const tabLength = 6;
     _tabController = TabController(
-      length: 5,
+      length: tabLength,
       vsync: this,
-      initialIndex: widget.initialTab,
+      initialIndex: widget.initialTab.clamp(0, tabLength - 1).toInt(),
     );
     _loadAllData();
     bindInnerTabRequest();
@@ -91,7 +96,9 @@ class _LearningHubPageState extends State<LearningHubPage>
   @override
   TabController get innerTabController => _tabController;
   @override
-  List<String> innerTabLabels() => const ['视频', 'PPT', 'PDF', '测验', '助手'];
+  List<String> innerTabLabels() => _isTeacherOrAdmin
+      ? const ['视频', 'PPT', 'PDF', '测验', '助手', '平时成绩']
+      : const ['视频', 'PPT', 'PDF', '测验', '助手', '成绩'];
 
   @override
   void dispose() {
@@ -439,7 +446,10 @@ class _LearningHubPageState extends State<LearningHubPage>
                 itemCount: _recommendedVideos.length,
                 itemBuilder: (context, index) {
                   final v = _recommendedVideos[index];
-                  return _RecommendVideoCard(video: v);
+                  return _RecommendVideoCard(
+                    video: v,
+                    userId: _authService.currentUser?.userId,
+                  );
                 },
               ),
             ),
@@ -517,6 +527,10 @@ class _LearningHubPageState extends State<LearningHubPage>
                 text: 'PDF (${_pdfLoading ? "..." : _pdfFiles.length})'),
             const Tab(icon: Icon(Icons.quiz_outlined), text: '测验'),
             const Tab(icon: Icon(Icons.assistant_outlined), text: '助手'),
+            Tab(
+              icon: const Icon(Icons.fact_check_outlined),
+              text: _isTeacherOrAdmin ? '平时成绩' : '成绩',
+            ),
           ],
         ),
       ),
@@ -539,6 +553,10 @@ class _LearningHubPageState extends State<LearningHubPage>
                         _pdfFiles, _pdfLoading, '📄', 'PDF', _loadPDFs),
                     const QuizPage(embedded: true),
                     _buildAiAssistTab(),
+                    if (_isTeacherOrAdmin)
+                      const OrdinaryScoreTab()
+                    else
+                      const StudentOrdinaryScoreTab(),
                   ],
                 ),
               ),
@@ -1335,6 +1353,29 @@ class _LearningHubPageState extends State<LearningHubPage>
     }
   }
 
+  Future<void> _recordResourceLearning(Map<String, dynamic> file) async {
+    final user = _authService.currentUser;
+    if (user == null || !user.isStudent) return;
+    try {
+      final fileId = file['id']?.toString();
+      final fileName = (file['file_name'] as String?) ??
+          (file['chapter'] as String?) ??
+          '教学资源';
+      final filePath = file['file_path'] as String? ?? '';
+      final nodeId = fileId != null && fileId.isNotEmpty
+          ? 'resource_$fileId'
+          : 'resource_${filePath.hashCode}';
+      await _learningRecordDao.addRecord(
+        userId: user.userId,
+        nodeId: nodeId,
+        nodeTitle: fileName,
+        studyTime: '1',
+      );
+    } catch (e, st) {
+      swallowDebug(e, tag: 'LearningHub.recordResourceLearning', stack: st);
+    }
+  }
+
   void _openFile(Map<String, dynamic> file) async {
     final filePath = file['file_path'] as String? ?? '';
     final fileName = file['file_name'] as String? ?? '${file['chapter']}';
@@ -1359,6 +1400,7 @@ class _LearningHubPageState extends State<LearningHubPage>
       final localFile = File(filePath);
       if (await localFile.exists()) {
         if (!mounted) return;
+        await _recordResourceLearning(file);
         _openWithInAppViewer(filePath, fileName);
         return;
       }
@@ -1385,6 +1427,7 @@ class _LearningHubPageState extends State<LearningHubPage>
       fileName: fileName,
       fileType: fileType,
       chapter: chapter,
+      sourceFile: file,
     );
   }
 
@@ -1394,6 +1437,7 @@ class _LearningHubPageState extends State<LearningHubPage>
     required String fileName,
     required String fileType,
     required String chapter,
+    required Map<String, dynamic> sourceFile,
   }) async {
     final downloadService = CoursewareDownloadService();
     double progress = 0.0;
@@ -1475,6 +1519,7 @@ class _LearningHubPageState extends State<LearningHubPage>
 
     if (resultPath != null) {
       if (!mounted) return;
+      await _recordResourceLearning(sourceFile);
       _openWithInAppViewer(resultPath, fileName);
     } else {
       if (!mounted) return;
@@ -1526,6 +1571,7 @@ class _LearningHubPageState extends State<LearningHubPage>
                 final db = await DatabaseHelper.instance.database;
                 await db.delete('resource_files',
                     where: 'id = ?', whereArgs: [fileId]);
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('已删除占位条目')),
                 );
@@ -1604,6 +1650,7 @@ class _LearningHubPageState extends State<LearningHubPage>
           );
         }
 
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('课件「$chapter」生成成功！'),
@@ -2201,7 +2248,12 @@ ${extra.isNotEmpty ? '额外要求：$extra' : ''}''';
 
 class _RecommendVideoCard extends StatelessWidget {
   final Map<String, dynamic> video;
-  const _RecommendVideoCard({required this.video});
+  final String? userId;
+
+  const _RecommendVideoCard({
+    required this.video,
+    this.userId,
+  });
 
   static const _platformColors = {
     'bilibili': Color(0xFFFB7299),
@@ -2232,6 +2284,7 @@ class _RecommendVideoCard extends StatelessWidget {
         onTap: () async {
           if (url.isNotEmpty) {
             try {
+              await _recordOpen();
               await launchUrl(Uri.parse(url),
                   mode: LaunchMode.externalApplication);
             } catch (e, st) {
@@ -2318,5 +2371,28 @@ class _RecommendVideoCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _recordOpen() async {
+    try {
+      final rawId = video['id'];
+      final videoId =
+          rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '');
+      if (videoId != null) {
+        await HotVideoDao().incrementViewCount(videoId);
+      }
+      final uid = userId;
+      if (uid == null || uid.isEmpty) return;
+      await LearningRecordDao().addRecord(
+        userId: uid,
+        nodeId: videoId != null
+            ? 'hot_video_$videoId'
+            : 'hot_video_${(video['video_url'] ?? '').toString().hashCode}',
+        nodeTitle: '推荐视频：${video['title'] ?? '未命名'}',
+        studyTime: '1',
+      );
+    } catch (e, st) {
+      swallowDebug(e, tag: 'LearningHub.recordRecommendVideo', stack: st);
+    }
   }
 }

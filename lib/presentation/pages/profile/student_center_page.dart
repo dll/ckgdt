@@ -8,12 +8,13 @@ import '../graph/favorites_page.dart';
 import '../learning/learning_plan_page.dart';
 import '../learning/progress_page.dart';
 import '../learning/weakness_diagnosis_page.dart';
-import '../learning/student_lab_page.dart';
+import '../lab/lab_tasks_page.dart';
 import '../lab/productization_guide_page.dart';
 import '../privacy/privacy_policy_page.dart';
 import '../privacy/my_data_page.dart';
 
 import '../../widgets/back_button_bar.dart';
+
 class StudentCenterPage extends StatefulWidget {
   const StudentCenterPage({super.key});
 
@@ -218,8 +219,8 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
                   ),
                   const SizedBox(height: 4),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
@@ -368,9 +369,8 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
             final dateStr = completedAt.length >= 10
                 ? completedAt.substring(0, 10)
                 : completedAt;
-            final timeStr = completedAt.length >= 16
-                ? completedAt.substring(11, 16)
-                : '';
+            final timeStr =
+                completedAt.length >= 16 ? completedAt.substring(11, 16) : '';
             final isLast = index == _recentRecords.length - 1;
 
             return IntrinsicHeight(
@@ -582,7 +582,7 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
         color: Colors.brown,
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const StudentLabPage()),
+          MaterialPageRoute(builder: (_) => const LabTasksPage()),
         ),
       ),
       _QuickAction(

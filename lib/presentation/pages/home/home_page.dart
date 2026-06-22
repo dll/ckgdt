@@ -27,7 +27,7 @@ import '../quiz/wrong_answers_page.dart';
 import '../learning/progress_page.dart';
 import '../learning/learning_hub_page.dart';
 import '../learning/learning_plan_page.dart';
-import '../learning/student_lab_page.dart';
+import '../lab/lab_tasks_page.dart';
 import '../assessment/assessment_page.dart';
 import '../survey/survey_page.dart';
 import '../class_qa/class_qa_page.dart';
@@ -63,6 +63,7 @@ import '../practice/deep_practice_page.dart';
 import '../practice/growth_curve_page.dart';
 import '../cross_platform/cross_platform_hub_page.dart';
 import '../settings/course_manage_page.dart';
+import '../course/course_objectives_page.dart';
 import '../profile/virtual_twin_page.dart';
 import '../../widgets/course_generator_sheet.dart';
 import '../../../data/local/course_dao.dart';
@@ -72,6 +73,7 @@ import 'search_page.dart';
 
 const _cardColors = {
   '知识图谱': Color(0xFF667eea),
+  '课程目标': Color(0xFFf4b942),
   '学习路径': Color(0xFF764ba2),
   '章节测验': Color(0xFFf093fb),
   'Git仓库': Color(0xFF4facfe),
@@ -266,8 +268,7 @@ class _HomePageState extends State<HomePage> {
                         fontWeight: FontWeight.w700,
                         fontSize: 13)),
               ),
-              Text('连接',
-                  style: TextStyle(color: Colors.white, fontSize: 12)),
+              Text('连接', style: TextStyle(color: Colors.white, fontSize: 12)),
               Icon(Icons.chevron_right, color: Colors.white, size: 18),
             ],
           ),
@@ -384,7 +385,7 @@ class _HomePageState extends State<HomePage> {
         selectedIcon: Icon(Icons.science),
         label: '实验',
       ));
-      bodyMap[3] = () => const StudentLabPage();
+      bodyMap[3] = () => const LabTasksPage();
 
       // 4: 考核
       destinations.add(const NavigationDestination(
@@ -731,6 +732,13 @@ class _HomePageState extends State<HomePage> {
                   onTap: () => setState(() => _selectedIndex = 1),
                   cardColor: _cardColors['知识图谱'],
                   description: '可视化学科知识结构',
+                ),
+                _buildMenuCard(
+                  icon: Icons.flag_circle_outlined,
+                  title: '课程目标',
+                  destinationPage: const CourseObjectivesPage(),
+                  cardColor: _cardColors['课程目标'],
+                  description: '目标与毕业要求支撑',
                 ),
                 _buildMenuCard(
                   icon: Icons.route,

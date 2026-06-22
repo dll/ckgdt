@@ -6,6 +6,7 @@ import '../../../services/update_service.dart';
 import 'compose_notification_page.dart';
 import '../settings/update_dialog.dart';
 import '../assessment/defense/defense_broadcast_page.dart';
+import '../survey/survey_page.dart';
 
 /// 通知列表页面 — 展示用户的通知消息
 ///
@@ -400,6 +401,21 @@ class _NotificationListPageState extends State<NotificationListPage> {
               initialRole: 'defender',
               serverIp: serverIp,
             ),
+          ),
+        );
+      });
+      return;
+    }
+
+    if (entityType == 'survey') {
+      final surveyId =
+          int.tryParse(notification?['related_entity_id']?.toString() ?? '');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SurveyPage(initialSurveyId: surveyId),
           ),
         );
       });
