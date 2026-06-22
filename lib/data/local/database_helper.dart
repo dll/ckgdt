@@ -1250,6 +1250,7 @@ class DatabaseHelper {
         work_id INTEGER NOT NULL,
         scorer_id TEXT,
         scorer_name TEXT,
+        scorer_role TEXT,
         score_functionality INTEGER DEFAULT 0,
         score_tech_depth INTEGER DEFAULT 0,
         score_integration INTEGER DEFAULT 0,
@@ -1979,6 +1980,7 @@ class DatabaseHelper {
         content TEXT NOT NULL,
         created_at TEXT NOT NULL,
         tokens_used INTEGER DEFAULT 0,
+        course_id TEXT,
         starred INTEGER DEFAULT 0,
         title TEXT
       )
@@ -2188,6 +2190,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS hot_videos(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT,
         user_id TEXT NOT NULL,
         platform TEXT NOT NULL,
         video_url TEXT NOT NULL,
@@ -2209,6 +2212,7 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id TEXT NOT NULL,
         video_id INTEGER NOT NULL,
+        course_id TEXT,
         favorite_time TEXT NOT NULL,
         FOREIGN KEY (video_id) REFERENCES hot_videos(id) ON DELETE CASCADE,
         UNIQUE(user_id, video_id)

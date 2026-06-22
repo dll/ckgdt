@@ -172,4 +172,44 @@ void main() {
     expect(fake['like_count'], 0);
     expect(fake['comment_count'], 0);
   });
+
+  test('scorer_role identifies teacher score without local teacher user',
+      () async {
+    final db = await openInMemoryDb();
+    DatabaseHelper.databaseForTest = db;
+    await createSchema(db);
+    final dao = WorksDao();
+    await dao.getDatabase();
+
+    final workId = await db.insert('student_works', {
+      'course_id': 'mad',
+      'title': '同步回传作品',
+      'user_id': 's001',
+      'status': '已评分',
+      'created_at': '2026-06-01T09:00:00',
+      'updated_at': '2026-06-01T10:00:00',
+    });
+    await db.insert('work_scores', {
+      'work_id': workId,
+      'scorer_id': 't001',
+      'scorer_name': '刘老师',
+      'scorer_role': 'teacher',
+      'score_functionality': 13,
+      'score_tech_depth': 10,
+      'score_integration': 10,
+      'score_quality': 10,
+      'score_documentation': 10,
+      'total_score': 53,
+      'comment': '已完成教师审核',
+      'scored_at': '2026-06-02T10:00:00',
+    });
+
+    final work = await dao.getWork(workId);
+    expect(work?['score'], 53);
+    expect(work?['scorer_name'], '刘老师');
+
+    final leaderboard = await dao.getLeaderboard(dimension: 'score');
+    expect(leaderboard, hasLength(1));
+    expect(leaderboard.single['score'], 53);
+  });
 }

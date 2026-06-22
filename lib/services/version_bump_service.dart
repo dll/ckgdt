@@ -18,13 +18,13 @@ class VersionBumpService {
   /// 项目根目录 — 委派给 [DevPaths.projectRoot]（统一兜底逻辑）。
   static String get projectRoot => DevPaths.projectRoot;
 
-  /// 解析当前 BuildInfo.appVersion。
+  /// 解析当前 Version.display（SSOT）。
   static Future<String> readCurrentVersion() async {
-    final f = File(p.join(projectRoot, 'lib', 'core', 'build_info.dart'));
+    final f = File(p.join(projectRoot, 'lib', 'core', 'version.dart'));
     final s = await f.readAsString();
-    final m = RegExp(r"appVersion\s*=\s*'([0-9]+\.[0-9]+\.[0-9]+)'").firstMatch(s);
+    final m = RegExp(r"static const String display\s*=\s*'([0-9]+\.[0-9]+\.[0-9]+)'").firstMatch(s);
     if (m == null) {
-      throw StateError('build_info.dart 里找不到 appVersion 常量');
+      throw StateError('version.dart 里找不到 display 常量');
     }
     return m.group(1)!;
   }
@@ -88,7 +88,7 @@ class VersionBumpService {
     // 3. Android strings.xml — app_name
     await patch(
       'android/app/src/main/res/values/strings.xml',
-      RegExp(r'(移动图谱与数字孪生v)[0-9.]+'),
+      RegExp(r'(课程图谱与数字孪生v)[0-9.]+'),
       (m) => '${m.group(1)}$newVersion',
       tag: 'android strings.xml',
     );
@@ -96,13 +96,13 @@ class VersionBumpService {
     // 4-6. Windows
     await patch(
       'windows/CMakeLists.txt',
-      RegExp(r'(BINARY_OUTPUT_NAME\s+"移动图谱与数字孪生v)[0-9.]+(")'),
+      RegExp(r'(BINARY_OUTPUT_NAME\s+"课程图谱与数字孪生v)[0-9.]+(")'),
       (m) => '${m.group(1)}$newVersion${m.group(2)}',
       tag: 'CMakeLists.txt',
     );
     await patch(
       'windows/runner/main.cpp',
-      RegExp(r'(window\.Create\(L"移动图谱与数字孪生v)[0-9.]+(")'),
+      RegExp(r'(window\.Create\(L"课程图谱与数字孪生v)[0-9.]+(")'),
       (m) => '${m.group(1)}$newVersion${m.group(2)}',
       tag: 'main.cpp',
     );
@@ -112,7 +112,7 @@ class VersionBumpService {
       // 不动 InternalName（按 CLAUDE.md 规则不带版本号）
       // 注：用 \d+\.\d+\.\d+ 而非 [0-9.]+ 以避免误吞 .exe 后缀
       RegExp(
-          r'(FileDescription|OriginalFilename|ProductName)(",\s*"移动图谱与数字孪生v)\d+\.\d+\.\d+'),
+          r'(FileDescription|OriginalFilename|ProductName)(",\s*"课程图谱与数字孪生v)\d+\.\d+\.\d+'),
       (m) => '${m.group(1)}${m.group(2)}$newVersion',
       tag: 'Runner.rc (3 处)',
     );
@@ -121,13 +121,13 @@ class VersionBumpService {
     await patch(
       'web/index.html',
       RegExp(
-          r'(<meta name="application-name" content="移动图谱与数字孪生v|<meta name="apple-mobile-web-app-title" content="移动图谱与数字孪生v|<title>移动图谱与数字孪生v)[0-9.]+'),
+          r'(<meta name="application-name" content="课程图谱与数字孪生v|<meta name="apple-mobile-web-app-title" content="课程图谱与数字孪生v|<title>课程图谱与数字孪生v)[0-9.]+'),
       (m) => '${m.group(1)}$newVersion',
       tag: 'web/index.html (3 处)',
     );
     await patch(
       'web/manifest.json',
-      RegExp(r'("name":\s*"移动图谱与数字孪生v)[0-9.]+'),
+      RegExp(r'("name":\s*"课程图谱与数字孪生v)[0-9.]+'),
       (m) => '${m.group(1)}$newVersion',
       tag: 'web/manifest.json',
     );
@@ -181,25 +181,25 @@ class VersionBumpService {
     await probe('pubspec.yaml', RegExp(r'version:\s*([0-9.]+)'));
     await probe(
         'android/app/src/main/res/values/strings.xml',
-        RegExp(r'移动图谱与数字孪生v([0-9.]+)'));
+        RegExp(r'课程图谱与数字孪生v([0-9.]+)'));
     await probe('windows/CMakeLists.txt',
-        RegExp(r'BINARY_OUTPUT_NAME\s+"移动图谱与数字孪生v([0-9.]+)"'));
+        RegExp(r'BINARY_OUTPUT_NAME\s+"课程图谱与数字孪生v([0-9.]+)"'));
     await probe('windows/runner/main.cpp',
-        RegExp(r'window\.Create\(L"移动图谱与数字孪生v([0-9.]+)"'));
+        RegExp(r'window\.Create\(L"课程图谱与数字孪生v([0-9.]+)"'));
     // Runner.rc 有 3 处版本号字段（FileDescription/OriginalFilename/ProductName），
     // 必须**全部**对齐。早期只 probe ProductName，导致其它两处的回归 bug 不会被
     // verifyConsistency 抓到。这里独立 probe 三处。
     await probe('windows/runner/Runner.rc',
-        RegExp(r'FileDescription",\s*"移动图谱与数字孪生v(\d+\.\d+\.\d+)'));
+        RegExp(r'FileDescription",\s*"课程图谱与数字孪生v(\d+\.\d+\.\d+)'));
     await probe('windows/runner/Runner.rc#OriginalFilename',
-        RegExp(r'OriginalFilename",\s*"移动图谱与数字孪生v(\d+\.\d+\.\d+)'),
+        RegExp(r'OriginalFilename",\s*"课程图谱与数字孪生v(\d+\.\d+\.\d+)'),
         sourceFile: 'windows/runner/Runner.rc');
     await probe('windows/runner/Runner.rc#ProductName',
-        RegExp(r'ProductName",\s*"移动图谱与数字孪生v(\d+\.\d+\.\d+)'),
+        RegExp(r'ProductName",\s*"课程图谱与数字孪生v(\d+\.\d+\.\d+)'),
         sourceFile: 'windows/runner/Runner.rc');
-    await probe('web/index.html', RegExp(r'<title>移动图谱与数字孪生v([0-9.]+)'));
+    await probe('web/index.html', RegExp(r'<title>课程图谱与数字孪生v([0-9.]+)'));
     await probe('web/manifest.json',
-        RegExp(r'"name":\s*"移动图谱与数字孪生v([0-9.]+)'));
+        RegExp(r'"name":\s*"课程图谱与数字孪生v([0-9.]+)'));
     await probe('ohos/AppScope/app.json5',
         RegExp(r'"versionName":\s*"([0-9.]+)"'));
 

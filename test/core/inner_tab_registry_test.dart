@@ -15,19 +15,39 @@ void main() {
   // InnerTabRequestMixin.innerTabLabels() 的两支并集逐字对齐。
   final pageDeclaredLabels = <String, List<String>>{
     'assessment': [
-      '分组', '项目', '贡献', '材料', '答辩', '报告', '成绩', 'AI批阅',
+      '分组',
+      '项目',
+      '贡献',
+      '材料',
+      '答辩',
+      '报告',
+      '成绩',
+      'AI批阅',
     ],
-    'works': ['我的作品', '作品展示', '作品记录', '排行榜', 'AI批阅'],
+    'works': ['我的作品', '成绩', '作品展示', '作品记录', '排行榜', 'AI批阅'],
     'achievement': [
-      '达成度概览', '成绩管理', '平时达成', '实验达成',
-      '考核达成', '计算过程', '报告生成', '持续改进',
+      '达成度概览',
+      '成绩管理',
+      '平时达成',
+      '实验达成',
+      '考核达成',
+      '计算过程',
+      '报告生成',
+      '持续改进',
     ],
     'classroom': ['在线状态', '课堂签到', '课堂互动', '课堂工具', '课堂提问'],
     'lab': [
-      '任务列表', '我的提交', '提交管理', '实验报告',
-      '实验材料', '任务管理', 'AI批阅', '仓库报表',
+      '任务列表',
+      '我的提交',
+      '成绩',
+      '提交管理',
+      '实验报告',
+      '实验材料',
+      '任务管理',
+      'AI批阅',
+      '仓库报表',
     ],
-    'learning': ['视频', 'PPT', 'PDF', '测验', '助手'],
+    'learning': ['视频', 'PPT', 'PDF', '测验', '助手', '成绩', '平时成绩'],
     'archive': archivePeriodLabels,
   };
 
@@ -53,6 +73,20 @@ void main() {
       });
     });
 
+    test('注册表中的 tab labels 均存在于页面声明（无反向漂移）', () {
+      pageDeclaredLabels.forEach((pageKey, labels) {
+        final declared = labels.toSet();
+        final extraRegistered = (kInnerTabRegistry[pageKey] ?? const [])
+            .where((label) => !declared.contains(label))
+            .toList();
+        expect(
+          extraRegistered,
+          isEmpty,
+          reason: 'kInnerTabRegistry "$pageKey" 的 tab $extraRegistered 未在页面声明',
+        );
+      });
+    });
+
     test('每个登记的 pageKey 都有对应朗读名 kInnerTabPageLabels', () {
       for (final pageKey in kInnerTabRegistry.keys) {
         expect(
@@ -65,7 +99,8 @@ void main() {
 
     test('archive 页内层 tab 已纳入注册表（历史漂移回归守护）', () {
       // archive 曾整段缺失于 VoiceAgent prompt，导致语音点不开归档子页。
-      final unregistered = unregisteredInnerTabs('archive', archivePeriodLabels);
+      final unregistered =
+          unregisteredInnerTabs('archive', archivePeriodLabels);
       expect(unregistered, isEmpty);
     });
 

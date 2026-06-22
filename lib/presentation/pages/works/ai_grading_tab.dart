@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -7,6 +8,7 @@ import '../../../data/local/grading_result_dao.dart';
 import '../../../data/local/ai_config_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/notification_service.dart';
+import '../../../services/sync_service.dart';
 import '../../../services/agent/agents/grading_agent.dart';
 import '../../../services/settings_service.dart';
 
@@ -504,6 +506,7 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
       workId: workId,
       scorerId: widget.authService.getCurrentUserId(),
       scorerName: widget.authService.currentUser?.realName ?? '教师',
+      scorerRole: widget.authService.currentUser?.role ?? 'teacher',
       functionality: func,
       techDepth: tech,
       integration: integ,
@@ -553,7 +556,7 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
     try {
       final work = await _worksDao.getWork(workId);
       if (work != null) {
-        final studentId = work['student_id'] as String?;
+        final studentId = work['user_id'] as String?;
         final workTitle = work['title'] as String? ?? '作品';
         if (studentId != null && studentId.isNotEmpty) {
           await NotificationService().notifyWorkGradeApproved(
@@ -561,6 +564,7 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
             workTitle: workTitle,
             score: result.score,
           );
+          unawaited(SyncService().uploadStudentData(studentId));
         }
       }
     } catch (e) {

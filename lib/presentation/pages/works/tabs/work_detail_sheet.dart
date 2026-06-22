@@ -1355,10 +1355,18 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                   try {
                     final user = widget.authService.currentUser;
                     final workId = _work['id'] as int;
+                    final totalScore = (functionality +
+                            techDepth +
+                            integration +
+                            quality +
+                            documentation)
+                        .round();
                     await widget.worksDao.scoreWork(
                       workId: workId,
                       scorerId: widget.authService.getCurrentUserId(),
                       scorerName: user?.realName ?? (isPeer ? '同学' : '教师'),
+                      scorerRole:
+                          isPeer ? 'student' : (user?.role ?? 'teacher'),
                       functionality: functionality.round(),
                       techDepth: techDepth.round(),
                       integration: integration.round(),
@@ -1374,13 +1382,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                         tableName: 'work_scores',
                         rowId: workId,
                         field: 'total',
-                        newValue: (functionality +
-                                techDepth +
-                                integration +
-                                quality +
-                                documentation)
-                            .round()
-                            .toString(),
+                        newValue: totalScore.toString(),
                         scorerId: widget.authService.getCurrentUserId() ?? '',
                         scorerName: user?.realName,
                         op: 'create',
@@ -1388,6 +1390,21 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                     } catch (e) {
                       // 审计日志失败不阻塞评分主流程
                       swallow(e, tag: 'WorkDetailSheet.scoreAudit');
+                    }
+                    if (!isPeer) {
+                      final studentId = (_work['user_id'] as String?)?.trim();
+                      final workTitle =
+                          (_work['title'] as String?)?.trim().isNotEmpty == true
+                              ? _work['title'] as String
+                              : '作品';
+                      if (studentId != null && studentId.isNotEmpty) {
+                        unawaited(NotificationService().notifyWorkGradeApproved(
+                          studentId: studentId,
+                          workTitle: workTitle,
+                          score: totalScore,
+                        ));
+                        unawaited(SyncService().uploadStudentData(studentId));
+                      }
                     }
                     if (context.mounted) {
                       Navigator.pop(ctx);

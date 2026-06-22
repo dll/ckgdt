@@ -1,11 +1,35 @@
 import 'package:sqflite/sqflite.dart';
 import 'database_helper.dart';
+import '../../core/error_handler.dart';
+import '../../services/course_context_service.dart';
 
 /// AI 聊天历史 DAO
 ///
 /// 管理 ai_chat_history 表，支持智能体和技能的对话持久化。
 class AiHistoryDao {
+  final CourseContextService _courseContext = CourseContextService();
+  bool _courseColumnEnsured = false;
+
   Future<Database> get _db async => DatabaseHelper.instance.database;
+
+  Future<void> _ensureCourseColumn(Database db) async {
+    if (_courseColumnEnsured) return;
+    try {
+      await db.execute('ALTER TABLE ai_chat_history ADD COLUMN course_id TEXT');
+    } catch (e) {
+      swallow(e, tag: 'AiHistoryDao.courseColumn');
+    }
+    try {
+      await db.update(
+        'ai_chat_history',
+        {'course_id': CourseContextService.defaultCourseId},
+        where: "course_id IS NULL OR course_id = ''",
+      );
+    } catch (e) {
+      swallow(e, tag: 'AiHistoryDao.defaultCourse');
+    }
+    _courseColumnEnsured = true;
+  }
 
   /// 保存一条消息
   Future<int> saveMessage({
@@ -20,8 +44,11 @@ class AiHistoryDao {
     String? provider,
     String? model,
     String? userId,
+    String? courseId,
   }) async {
     final db = await _db;
+    await _ensureCourseColumn(db);
+    final resolvedCourseId = courseId ?? await _courseContext.activeCourseId();
     return db.insert('ai_chat_history', {
       'session_id': sessionId,
       'agent_id': agentId,
@@ -35,13 +62,15 @@ class AiHistoryDao {
       'provider': provider,
       'model': model,
       'user_id': userId ?? '',
+      'course_id': resolvedCourseId,
     });
   }
 
   /// 获取 Token 统计：按天汇总
   Future<List<Map<String, dynamic>>> getDailyTokenStats({int days = 30}) async {
     final db = await _db;
-    final since = DateTime.now().subtract(Duration(days: days)).toIso8601String();
+    final since =
+        DateTime.now().subtract(Duration(days: days)).toIso8601String();
     return db.rawQuery('''
       SELECT DATE(created_at) as date,
              SUM(prompt_tokens) as prompt_tokens,
@@ -115,7 +144,8 @@ class AiHistoryDao {
   }
 
   /// 获取按用户分组的 Token 统计（教师/管理员查看）
-  Future<List<Map<String, dynamic>>> getTokenTotalsByUser({String? classId}) async {
+  Future<List<Map<String, dynamic>>> getTokenTotalsByUser(
+      {String? classId}) async {
     final db = await _db;
     if (classId != null && classId.isNotEmpty) {
       return db.rawQuery('''
@@ -173,9 +203,11 @@ class AiHistoryDao {
   }
 
   /// 获取指定用户的每日 Token 趋势
-  Future<List<Map<String, dynamic>>> getDailyTokenStatsByUser(String userId, {int days = 30}) async {
+  Future<List<Map<String, dynamic>>> getDailyTokenStatsByUser(String userId,
+      {int days = 30}) async {
     final db = await _db;
-    final since = DateTime.now().subtract(Duration(days: days)).toIso8601String();
+    final since =
+        DateTime.now().subtract(Duration(days: days)).toIso8601String();
     return db.rawQuery('''
       SELECT DATE(created_at) as date,
              SUM(prompt_tokens) as prompt_tokens,
@@ -190,7 +222,8 @@ class AiHistoryDao {
   }
 
   /// 获取某个会话的所有消息
-  Future<List<Map<String, dynamic>>> getSessionMessages(String sessionId) async {
+  Future<List<Map<String, dynamic>>> getSessionMessages(
+      String sessionId) async {
     final db = await _db;
     return db.query(
       'ai_chat_history',

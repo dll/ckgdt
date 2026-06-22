@@ -331,18 +331,9 @@ class SyncService {
           _lastUploadTimeKey, DateTime.now().toIso8601String());
       await prefs.setString('sync_hash_$userId', hash);
 
-      final recordCount = (data['quiz_results'] as List).length +
-          (data['learning_records'] as List).length +
-          (data['wrong_answers'] as List).length +
-          (data['favorites'] as List).length +
-          (data['feedback'] as List).length +
-          (data['learning_paths'] as List).length +
-          (data['lab_submissions'] as List).length +
-          (data['student_reports'] as List).length +
-          (data['assessment_reports'] as List).length +
-          (data['student_works'] as List).length +
-          (data['survey_responses'] as List).length +
-          (data['checkin_records'] as List).length;
+      final recordCount = data.values
+          .whereType<List>()
+          .fold<int>(0, (sum, rows) => sum + rows.length);
 
       debugPrint('SyncService: 上传成功 ($recordCount 条记录)');
       status.value = SyncStatus.idle;
@@ -539,6 +530,7 @@ class SyncService {
   /// 收集学生本地数据（全量）
   Future<Map<String, dynamic>> _collectStudentData(String userId) async {
     final db = await DatabaseHelper.instance.database;
+    await _ensureStudentSyncSchema(db);
 
     // 用户基本信息
     final userRows = await db.query(
@@ -568,6 +560,8 @@ class SyncService {
       'student_works': 'created_at DESC',
       'survey_responses': 'submitted_at DESC',
       'checkin_records': 'checked_at DESC',
+      'ai_chat_history': 'created_at DESC',
+      'hot_video_favorites': 'favorite_time DESC',
       // notification_recipients 不同步：notification_id 是本地自增主键，
       // 跨设备导入会导致孤儿行（引用不存在的通知），造成 badge 计数与列表不一致
     };
@@ -638,14 +632,9 @@ class SyncService {
       whereArgs: [userId, userId],
     );
 
-    // work_scores — 学生作为评分人（同学互评）
-    result['work_scores'] = await _safeWorkScopedQuery(
-      db,
-      'work_scores',
-      userIdColumn: 'scorer_id',
-      userId: userId,
-      orderBy: 'scored_at DESC',
-    );
+    // work_scores — 学生互评 + 该学生作品上的教师/管理员评分。
+    // 教师审核后会把学生 JSON 更新回仓库，学生端导入时必须拿到教师评分。
+    result['work_scores'] = await _collectWorkScoresForStudent(db, userId);
 
     // project_scores — 学生作为评分人（项目互评）
     result['project_scores'] = await _safeQuery(
@@ -733,6 +722,84 @@ class SyncService {
     } catch (e, st) {
       swallowDebug(e, tag: 'SyncService.safeQuery', stack: st);
       return []; // 表可能不存在
+    }
+  }
+
+  Future<void> _ensureStudentSyncSchema(dynamic db) async {
+    const alterSql = [
+      'ALTER TABLE work_scores ADD COLUMN scorer_role TEXT',
+      'ALTER TABLE ai_chat_history ADD COLUMN course_id TEXT',
+      'ALTER TABLE hot_videos ADD COLUMN course_id TEXT',
+      'ALTER TABLE hot_video_favorites ADD COLUMN course_id TEXT',
+      'ALTER TABLE checkin_sessions ADD COLUMN course_id TEXT',
+      'ALTER TABLE classroom_messages ADD COLUMN course_id TEXT',
+      'ALTER TABLE roll_call_sessions ADD COLUMN course_id TEXT',
+    ];
+    for (final sql in alterSql) {
+      try {
+        await db.execute(sql);
+      } catch (e) {
+        swallow(e, tag: 'SyncService.ensureSyncSchema');
+      }
+    }
+
+    for (final table in const [
+      'ai_chat_history',
+      'hot_videos',
+      'hot_video_favorites',
+      'checkin_sessions',
+      'classroom_messages',
+      'roll_call_sessions',
+    ]) {
+      try {
+        await db.update(
+          table,
+          {'course_id': CourseContextService.defaultCourseId},
+          where: "course_id IS NULL OR course_id = ''",
+        );
+      } catch (e) {
+        swallow(e, tag: 'SyncService.ensureSyncSchema.defaultCourse');
+      }
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _collectWorkScoresForStudent(
+    dynamic db,
+    String userId,
+  ) async {
+    try {
+      final rows = await db.rawQuery('''
+        SELECT ws.id,
+               ws.work_id,
+               ws.scorer_id,
+               ws.scorer_name,
+               COALESCE(ws.scorer_role, u.role,
+                 CASE WHEN ws.scorer_id = ? THEN 'student' ELSE NULL END
+               ) AS scorer_role,
+               ws.score_functionality,
+               ws.score_tech_depth,
+               ws.score_integration,
+               ws.score_quality,
+               ws.score_documentation,
+               ws.total_score,
+               ws.comment,
+               ws.scored_at,
+               w.user_id AS work_user_id,
+               w.title AS work_title,
+               w.course_id AS work_course_id
+        FROM work_scores ws
+        LEFT JOIN student_works w ON w.id = ws.work_id
+        LEFT JOIN users u ON u.user_id = ws.scorer_id
+        WHERE ws.scorer_id = ?
+           OR (w.user_id = ? AND COALESCE(ws.scorer_role, u.role) IN ('teacher','admin'))
+        ORDER BY ws.scored_at DESC
+      ''', [userId, userId, userId]);
+      return (rows as List)
+          .map((r) => Map<String, dynamic>.from(r as Map)..remove('id'))
+          .toList();
+    } catch (e, st) {
+      swallowDebug(e, tag: 'SyncService.collectWorkScores', stack: st);
+      return [];
     }
   }
 
@@ -907,6 +974,8 @@ class SyncService {
     final userId = data['user_id'] as String?;
     if (userId == null || userId.isEmpty) return 0;
 
+    await _ensureStudentSyncSchema(db);
+
     int count = 0;
 
     // ── 确保用户记录存在（INSERT OR UPDATE）────────────────────────────
@@ -1060,6 +1129,8 @@ class SyncService {
           'learning_paths',
           'survey_responses',
           'checkin_records',
+          'ai_chat_history',
+          'hot_video_favorites',
           // notification_recipients 不同步：notification_id 跨设备不匹配，导入会产生孤儿行
           'assessment_reports',
         ];
@@ -1723,8 +1794,9 @@ class SyncService {
   }
 
   /// work_scores 导入：
-  /// - 仅导入该学生作为评分人（scorer_id）的互评记录
-  /// - 不删除/覆盖其他评分人（教师或其他同学）的评分
+  /// - 导入该学生作为评分人的互评记录
+  /// - 同时导入该学生作品上的教师/管理员评分，供学生端展示最终成绩
+  /// - 保留真实 scorer_id / scorer_role，避免教师评分被误写成学生互评
   Future<int> _importWorkScores(
     dynamic db,
     Map<String, dynamic> data,
@@ -1735,16 +1807,53 @@ class SyncService {
 
     int count = 0;
     try {
-      // 删除该学生作为评分人的旧评分（重新导入）
+      await _ensureStudentSyncSchema(db);
+      // 删除该学生作为评分人的旧互评；再删除该学生作品上的旧教师评分，重新导入同步包版本。
       await db
           .delete('work_scores', where: 'scorer_id = ?', whereArgs: [userId]);
+      await db.rawDelete('''
+        DELETE FROM work_scores
+        WHERE work_id IN (SELECT id FROM student_works WHERE user_id = ?)
+          AND (
+            scorer_role IN ('teacher','admin')
+            OR scorer_id IN (
+              SELECT user_id FROM users WHERE role IN ('teacher','admin')
+            )
+          )
+      ''', [userId]);
       if (list.isEmpty) return 0;
+      final incomingTeacherScorers = list
+          .whereType<Map>()
+          .map((r) => (
+                id: (r['scorer_id']?.toString() ?? '').trim(),
+                role: (r['scorer_role']?.toString() ?? '').trim(),
+              ))
+          .where(
+              (s) => s.id.isNotEmpty && s.id != userId && s.role != 'student')
+          .map((s) => s.id)
+          .toSet()
+          .toList();
+      if (incomingTeacherScorers.isNotEmpty) {
+        final placeholders =
+            List.filled(incomingTeacherScorers.length, '?').join(',');
+        await db.rawDelete('''
+          DELETE FROM work_scores
+          WHERE work_id IN (SELECT id FROM student_works WHERE user_id = ?)
+            AND scorer_id IN ($placeholders)
+        ''', [userId, ...incomingTeacherScorers]);
+      }
 
       for (final r in list) {
         try {
           final row = Map<String, dynamic>.from(r as Map);
           row.remove('id');
-          row['scorer_id'] = userId; // 确保 scorer_id 一致
+          final scorerId = (row['scorer_id']?.toString() ?? '').trim();
+          row['scorer_id'] = scorerId.isNotEmpty ? scorerId : userId;
+          final role = (row['scorer_role']?.toString() ?? '').trim();
+          if (role.isEmpty) {
+            row['scorer_role'] =
+                row['scorer_id'] == userId ? 'student' : 'teacher';
+          }
 
           final localWorkId = await _resolveLocalWorkId(db, row);
           if (localWorkId == null) continue;

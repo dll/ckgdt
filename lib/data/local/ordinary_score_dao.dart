@@ -48,9 +48,23 @@ class OrdinaryScoreDao {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS roll_call_sessions(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT,
         class_id INTEGER,
         created_by TEXT,
         created_at TEXT
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS checkin_sessions(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT,
+        class_id INTEGER,
+        title TEXT,
+        started_at TEXT,
+        ended_at TEXT,
+        late_minutes INTEGER DEFAULT 10,
+        status TEXT DEFAULT 'active',
+        created_by TEXT
       )
     ''');
     await db.execute('''
@@ -80,6 +94,7 @@ class OrdinaryScoreDao {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS classroom_messages(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT,
         class_id INTEGER,
         sender_id TEXT,
         sender_name TEXT,
@@ -90,6 +105,37 @@ class OrdinaryScoreDao {
         created_at TEXT
       )
     ''');
+
+    for (final sql in const [
+      'ALTER TABLE roll_call_sessions ADD COLUMN course_id TEXT',
+      'ALTER TABLE checkin_sessions ADD COLUMN course_id TEXT',
+      'ALTER TABLE classroom_messages ADD COLUMN course_id TEXT',
+      'ALTER TABLE ai_chat_history ADD COLUMN course_id TEXT',
+      'ALTER TABLE hot_video_favorites ADD COLUMN course_id TEXT',
+    ]) {
+      try {
+        await db.execute(sql);
+      } catch (e) {
+        swallow(e, tag: 'OrdinaryScore.ensureCourseColumns');
+      }
+    }
+    for (final table in const [
+      'roll_call_sessions',
+      'checkin_sessions',
+      'classroom_messages',
+      'ai_chat_history',
+      'hot_video_favorites',
+    ]) {
+      try {
+        await db.update(
+          table,
+          {'course_id': CourseContextService.defaultCourseId},
+          where: "course_id IS NULL OR course_id = ''",
+        );
+      } catch (e) {
+        swallow(e, tag: 'OrdinaryScore.defaultCourse');
+      }
+    }
 
     _tablesEnsured = true;
   }
@@ -262,16 +308,19 @@ class OrdinaryScoreDao {
   Future<Map<String, _ClassroomMetrics>> _loadClassroomMetrics() async {
     final db = await DatabaseHelper.instance.database;
     final result = <String, _ClassroomMetrics>{};
+    final rollScope = await _courseContext.scopedWhere(column: 's.course_id');
 
     final rollCallRows = await db.rawQuery('''
-      SELECT user_id,
-             COALESCE(SUM(score_delta), 0) AS earned_points,
+      SELECT r.user_id,
+             COALESCE(SUM(r.score_delta), 0) AS earned_points,
              COUNT(*) AS call_count,
-             COALESCE(SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END), 0)
+             COALESCE(SUM(CASE WHEN r.is_correct = 1 THEN 1 ELSE 0 END), 0)
                AS correct_count
-      FROM roll_call_records
-      GROUP BY user_id
-    ''');
+      FROM roll_call_records r
+      LEFT JOIN roll_call_sessions s ON s.id = r.session_id
+      WHERE ${rollScope.where}
+      GROUP BY r.user_id
+    ''', rollScope.args);
     for (final row in rollCallRows) {
       final userId = row['user_id']?.toString() ?? '';
       if (userId.isEmpty) continue;
@@ -285,19 +334,23 @@ class OrdinaryScoreDao {
       );
     }
 
+    final checkinScope =
+        await _courseContext.scopedWhere(column: 's.course_id');
     final checkinRows = await db.rawQuery('''
-      SELECT user_id,
+      SELECT cr.user_id,
              COUNT(*) AS checkin_count,
              COALESCE(SUM(
-               CASE status
+               CASE cr.status
                  WHEN 'present' THEN 1.0
                  WHEN 'late' THEN 0.6
                  ELSE 0.0
                END
              ), 0) AS checkin_credit
-      FROM checkin_records
-      GROUP BY user_id
-    ''');
+      FROM checkin_records cr
+      LEFT JOIN checkin_sessions s ON s.id = cr.session_id
+      WHERE ${checkinScope.where}
+      GROUP BY cr.user_id
+    ''', checkinScope.args);
     for (final row in checkinRows) {
       final userId = row['user_id']?.toString() ?? '';
       if (userId.isEmpty) continue;
@@ -307,13 +360,17 @@ class OrdinaryScoreDao {
       );
     }
 
+    final answerScope = await _courseContext.scopedWhere(
+      column: 'cm.course_id',
+      extraWhere:
+          "cm.sender_role = 'student' AND cm.message_type IN ('answer', 'reply')",
+    );
     final answerRows = await db.rawQuery('''
       SELECT sender_id AS user_id, COUNT(*) AS answer_count
-      FROM classroom_messages
-      WHERE sender_role = 'student'
-        AND message_type IN ('answer', 'reply')
+      FROM classroom_messages cm
+      WHERE ${answerScope.where}
       GROUP BY sender_id
-    ''');
+    ''', answerScope.args);
     for (final row in answerRows) {
       final userId = row['user_id']?.toString() ?? '';
       if (userId.isEmpty) continue;
@@ -402,15 +459,19 @@ class OrdinaryScoreDao {
 
   Future<Map<String, _AiMetrics>> _loadAiMetrics() async {
     final db = await DatabaseHelper.instance.database;
+    final scope = await _courseContext.scopedWhere(
+      extraWhere:
+          "role = 'assistant' AND user_id IS NOT NULL AND user_id != ''",
+    );
     final rows = await db.rawQuery('''
       SELECT user_id,
              COUNT(*) AS request_count,
              COALESCE(SUM(tokens_used), 0) AS total_tokens,
              COUNT(DISTINCT DATE(created_at)) AS active_days
       FROM ai_chat_history
-      WHERE role = 'assistant' AND user_id IS NOT NULL AND user_id != ''
+      WHERE ${scope.where}
       GROUP BY user_id
-    ''');
+    ''', scope.args);
     return {
       for (final row in rows)
         if ((row['user_id']?.toString() ?? '').isNotEmpty)
@@ -424,11 +485,13 @@ class OrdinaryScoreDao {
 
   Future<Map<String, _RecommendMetrics>> _loadRecommendMetrics() async {
     final db = await DatabaseHelper.instance.database;
+    final scope = await _courseContext.scopedWhere();
     final rows = await db.rawQuery('''
       SELECT user_id, COUNT(*) AS favorite_count
       FROM hot_video_favorites
+      WHERE ${scope.where}
       GROUP BY user_id
-    ''');
+    ''', scope.args);
     return {
       for (final row in rows)
         if ((row['user_id']?.toString() ?? '').isNotEmpty)

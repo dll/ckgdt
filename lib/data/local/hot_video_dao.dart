@@ -1,8 +1,38 @@
 import '../models/hot_video_model.dart';
 import 'database_helper.dart';
+import '../../core/error_handler.dart';
+import '../../services/course_context_service.dart';
 
 class HotVideoDao {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
+  final CourseContextService _courseContext = CourseContextService();
+  bool _courseColumnsEnsured = false;
+
+  Future<void> _ensureCourseColumns(dynamic db) async {
+    if (_courseColumnsEnsured) return;
+    for (final sql in const [
+      'ALTER TABLE hot_videos ADD COLUMN course_id TEXT',
+      'ALTER TABLE hot_video_favorites ADD COLUMN course_id TEXT',
+    ]) {
+      try {
+        await db.execute(sql);
+      } catch (e) {
+        swallow(e, tag: 'HotVideoDao.courseColumns');
+      }
+    }
+    for (final table in const ['hot_videos', 'hot_video_favorites']) {
+      try {
+        await db.update(
+          table,
+          {'course_id': CourseContextService.defaultCourseId},
+          where: "course_id IS NULL OR course_id = ''",
+        );
+      } catch (e) {
+        swallow(e, tag: 'HotVideoDao.defaultCourse');
+      }
+    }
+    _courseColumnsEnsured = true;
+  }
 
   // ── 视频 CRUD ──
 
@@ -19,8 +49,11 @@ class HotVideoDao {
     String? publishDate,
   }) async {
     final db = await _dbHelper.database;
+    await _ensureCourseColumns(db);
+    final courseId = await _courseContext.activeCourseId();
     final now = DateTime.now().toIso8601String();
     return await db.insert('hot_videos', {
+      'course_id': courseId,
       'user_id': userId,
       'platform': platform,
       'video_url': videoUrl,
@@ -50,6 +83,7 @@ class HotVideoDao {
     String? publishDate,
   }) async {
     final db = await _dbHelper.database;
+    await _ensureCourseColumns(db);
     final updates = <String, dynamic>{
       'updated_at': DateTime.now().toIso8601String(),
     };
@@ -72,13 +106,14 @@ class HotVideoDao {
 
   Future<void> deleteVideo(int id) async {
     final db = await _dbHelper.database;
+    await _ensureCourseColumns(db);
     await db.delete('hot_videos', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<HotVideoModel?> getVideo(int id, {String? userId}) async {
     final db = await _dbHelper.database;
-    final rows = await db.query('hot_videos',
-        where: 'id = ?', whereArgs: [id]);
+    await _ensureCourseColumns(db);
+    final rows = await db.query('hot_videos', where: 'id = ?', whereArgs: [id]);
     if (rows.isEmpty) return null;
     final model = HotVideoModel.fromMap(rows.first);
     if (userId != null) {
@@ -98,9 +133,11 @@ class HotVideoDao {
     int? offset,
   }) async {
     final db = await _dbHelper.database;
+    await _ensureCourseColumns(db);
+    final scope = await _courseContext.scopedWhere();
 
-    final where = <String>[];
-    final whereArgs = <dynamic>[];
+    final where = <String>[scope.where];
+    final whereArgs = <dynamic>[...scope.args];
 
     if (platform != null && platform != 'all') {
       where.add('platform = ?');
@@ -151,9 +188,11 @@ class HotVideoDao {
 
   Future<int> getVideoCount({String? platform, String? searchQuery}) async {
     final db = await _dbHelper.database;
+    await _ensureCourseColumns(db);
+    final scope = await _courseContext.scopedWhere();
 
-    final where = <String>[];
-    final whereArgs = <dynamic>[];
+    final where = <String>[scope.where];
+    final whereArgs = <dynamic>[...scope.args];
 
     if (platform != null && platform != 'all') {
       where.add('platform = ?');
@@ -176,54 +215,94 @@ class HotVideoDao {
 
   Future<int> addFavorite(String userId, int videoId) async {
     final db = await _dbHelper.database;
+    await _ensureCourseColumns(db);
+    final courseId = await _courseContext.activeCourseId();
+    final scope = await _courseContext.scopedWhere(
+      extraWhere: 'user_id = ? AND video_id = ?',
+      extraArgs: [userId, videoId],
+    );
     final existing = await db.query(
       'hot_video_favorites',
-      where: 'user_id = ? AND video_id = ?',
-      whereArgs: [userId, videoId],
+      where: scope.where,
+      whereArgs: scope.args,
     );
     if (existing.isNotEmpty) {
       return (existing.first['id'] as int?) ?? 0;
     }
+    final sameVideo = await db.query(
+      'hot_video_favorites',
+      where: 'user_id = ? AND video_id = ?',
+      whereArgs: [userId, videoId],
+    );
+    if (sameVideo.isNotEmpty) {
+      final id = (sameVideo.first['id'] as int?) ?? 0;
+      await db.update(
+        'hot_video_favorites',
+        {'course_id': courseId},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      return id;
+    }
     return await db.insert('hot_video_favorites', {
       'user_id': userId,
       'video_id': videoId,
+      'course_id': courseId,
       'favorite_time': DateTime.now().toIso8601String(),
     });
   }
 
   Future<void> removeFavorite(String userId, int videoId) async {
     final db = await _dbHelper.database;
+    await _ensureCourseColumns(db);
+    final scope = await _courseContext.scopedWhere(
+      extraWhere: 'user_id = ? AND video_id = ?',
+      extraArgs: [userId, videoId],
+    );
     await db.delete(
       'hot_video_favorites',
-      where: 'user_id = ? AND video_id = ?',
-      whereArgs: [userId, videoId],
+      where: scope.where,
+      whereArgs: scope.args,
     );
   }
 
   Future<bool> isFavorited(String userId, int videoId) async {
     final db = await _dbHelper.database;
+    await _ensureCourseColumns(db);
+    final scope = await _courseContext.scopedWhere(
+      extraWhere: 'user_id = ? AND video_id = ?',
+      extraArgs: [userId, videoId],
+    );
     final result = await db.query(
       'hot_video_favorites',
-      where: 'user_id = ? AND video_id = ?',
-      whereArgs: [userId, videoId],
+      where: scope.where,
+      whereArgs: scope.args,
     );
     return result.isNotEmpty;
   }
 
   Future<List<HotVideoModel>> getFavoritedVideos(String userId) async {
     final db = await _dbHelper.database;
+    await _ensureCourseColumns(db);
+    final scope = await _courseContext.scopedWhere(
+      column: 'hvf.course_id',
+      extraWhere: 'hvf.user_id = ?',
+      extraArgs: [userId],
+    );
     final rows = await db.rawQuery('''
       SELECT hv.*, 1 as is_favorited,
         (SELECT COUNT(*) FROM hot_video_favorites hvf WHERE hvf.video_id = hv.id) as favorite_count
       FROM hot_videos hv
-      INNER JOIN hot_video_favorites hvf ON hv.id = hvf.video_id AND hvf.user_id = ?
+      INNER JOIN hot_video_favorites hvf ON hv.id = hvf.video_id
+      WHERE ${scope.where}
       ORDER BY hvf.favorite_time DESC
-    ''', [userId]);
+    ''', scope.args);
     return rows.map((r) => HotVideoModel.fromMap(r)).toList();
   }
 
   Future<int> getFavoriteCount(int videoId) async {
     final db = await _dbHelper.database;
+    await _ensureCourseColumns(db);
     final result = await db.rawQuery(
       'SELECT COUNT(*) as count FROM hot_video_favorites WHERE video_id = ?',
       [videoId],
@@ -233,6 +312,7 @@ class HotVideoDao {
 
   Future<void> incrementViewCount(int videoId) async {
     final db = await _dbHelper.database;
+    await _ensureCourseColumns(db);
     await db.rawUpdate(
       'UPDATE hot_videos SET view_count = CAST(COALESCE(view_count, \'0\') AS INTEGER) + 1 WHERE id = ?',
       [videoId],

@@ -53,6 +53,7 @@ class WorksDao {
       'ALTER TABLE student_works ADD COLUMN project TEXT',
       'ALTER TABLE student_works ADD COLUMN student_role TEXT',
       'ALTER TABLE student_works ADD COLUMN student_name TEXT',
+      'ALTER TABLE work_scores ADD COLUMN scorer_role TEXT',
     ];
     for (final sql in newColumns) {
       try {
@@ -149,8 +150,8 @@ class WorksDao {
       FROM student_works w
       LEFT JOIN (
         SELECT ws.* FROM work_scores ws
-        INNER JOIN users u ON u.user_id = ws.scorer_id AND u.role IN ('teacher','admin')
-        WHERE 1=1
+        LEFT JOIN users u ON u.user_id = ws.scorer_id
+        WHERE COALESCE(ws.scorer_role, u.role) IN ('teacher','admin')
       ) ts ON ts.work_id = w.id
       LEFT JOIN (
         SELECT work_id,
@@ -158,7 +159,7 @@ class WorksDao {
                COUNT(*) as peer_count
         FROM work_scores ws2
         LEFT JOIN users u2 ON u2.user_id = ws2.scorer_id
-        WHERE u2.role IS NULL OR u2.role = 'student'
+        WHERE COALESCE(ws2.scorer_role, u2.role, 'student') = 'student'
         GROUP BY work_id
       ) peer ON peer.work_id = w.id
       WHERE ${scope.where}
@@ -201,7 +202,8 @@ class WorksDao {
       FROM student_works w
       LEFT JOIN (
         SELECT ws.* FROM work_scores ws
-        INNER JOIN users u ON u.user_id = ws.scorer_id AND u.role IN ('teacher','admin')
+        LEFT JOIN users u ON u.user_id = ws.scorer_id
+        WHERE COALESCE(ws.scorer_role, u.role) IN ('teacher','admin')
       ) ts ON ts.work_id = w.id
       LEFT JOIN (
         SELECT work_id,
@@ -209,7 +211,7 @@ class WorksDao {
                COUNT(*) as peer_count
         FROM work_scores ws2
         LEFT JOIN users u2 ON u2.user_id = ws2.scorer_id
-        WHERE u2.role IS NULL OR u2.role = 'student'
+        WHERE COALESCE(ws2.scorer_role, u2.role, 'student') = 'student'
         GROUP BY work_id
       ) peer ON peer.work_id = w.id
       WHERE ${scope.where}
@@ -435,10 +437,30 @@ class WorksDao {
   //  作品评分
   // ══════════════════════════════════════════════════════════
 
+  Future<String?> _resolveScorerRole(dynamic db, String? scorerId) async {
+    final id = scorerId?.trim();
+    if (id == null || id.isEmpty) return null;
+    try {
+      final rows = await db.query(
+        'users',
+        columns: ['role'],
+        where: 'user_id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      final role = rows.isNotEmpty ? rows.first['role']?.toString() : null;
+      return role != null && role.isNotEmpty ? role : null;
+    } catch (e) {
+      swallowDebug(e, tag: 'works_dao.resolveScorerRole');
+      return null;
+    }
+  }
+
   Future<int> scoreWork({
     required int workId,
     String? scorerId,
     String? scorerName,
+    String? scorerRole,
     required int functionality,
     required int techDepth,
     required int integration,
@@ -446,9 +468,12 @@ class WorksDao {
     required int documentation,
     String? comment,
   }) async {
+    await _ensureWorksTable();
     final total =
         functionality + techDepth + integration + quality + documentation;
     final db = await DatabaseHelper.instance.database;
+    final resolvedScorerRole =
+        scorerRole ?? await _resolveScorerRole(db, scorerId);
 
     // 先检查该评分人是否已为此作品评分
     final existing = await db.query('work_scores',
@@ -459,6 +484,7 @@ class WorksDao {
           'work_scores',
           {
             'scorer_name': scorerName,
+            'scorer_role': resolvedScorerRole,
             'score_functionality': functionality,
             'score_tech_depth': techDepth,
             'score_integration': integration,
@@ -479,6 +505,7 @@ class WorksDao {
       'work_id': workId,
       'scorer_id': scorerId,
       'scorer_name': scorerName,
+      'scorer_role': resolvedScorerRole,
       'score_functionality': functionality,
       'score_tech_depth': techDepth,
       'score_integration': integration,
@@ -509,7 +536,7 @@ class WorksDao {
   Future<List<Map<String, dynamic>>> getWorkScores(int workId) async {
     final db = await DatabaseHelper.instance.database;
     return db.rawQuery('''
-      SELECT ws.*, COALESCE(u.role, 'student') as scorer_role
+      SELECT ws.*, COALESCE(ws.scorer_role, u.role, 'student') as scorer_role
       FROM work_scores ws
       LEFT JOIN users u ON u.user_id = ws.scorer_id
       WHERE ws.work_id = ?
@@ -546,7 +573,8 @@ class WorksDao {
         FROM student_works sw
         JOIN (
           SELECT ws.* FROM work_scores ws
-          INNER JOIN users u ON u.user_id = ws.scorer_id AND u.role IN ('teacher','admin')
+          LEFT JOIN users u ON u.user_id = ws.scorer_id
+          WHERE COALESCE(ws.scorer_role, u.role) IN ('teacher','admin')
         ) ts ON ts.work_id = sw.id
         WHERE ${scope.where}
         ORDER BY ts.total_score DESC
@@ -561,7 +589,8 @@ class WorksDao {
         FROM student_works sw
         LEFT JOIN (
           SELECT ws.* FROM work_scores ws
-          INNER JOIN users u ON u.user_id = ws.scorer_id AND u.role IN ('teacher','admin')
+          LEFT JOIN users u ON u.user_id = ws.scorer_id
+          WHERE COALESCE(ws.scorer_role, u.role) IN ('teacher','admin')
         ) ts ON ts.work_id = sw.id
         WHERE ${scope.where} AND sw.status IN ('已提交', '已评分')
         ORDER BY sw.view_count DESC
@@ -576,7 +605,8 @@ class WorksDao {
         FROM student_works sw
         LEFT JOIN (
           SELECT ws.* FROM work_scores ws
-          INNER JOIN users u ON u.user_id = ws.scorer_id AND u.role IN ('teacher','admin')
+          LEFT JOIN users u ON u.user_id = ws.scorer_id
+          WHERE COALESCE(ws.scorer_role, u.role) IN ('teacher','admin')
         ) ts ON ts.work_id = sw.id
         WHERE ${scope.where} AND sw.status IN ('已提交', '已评分')
         ORDER BY sw.like_count DESC
@@ -591,7 +621,8 @@ class WorksDao {
         FROM student_works sw
         LEFT JOIN (
           SELECT ws.* FROM work_scores ws
-          INNER JOIN users u ON u.user_id = ws.scorer_id AND u.role IN ('teacher','admin')
+          LEFT JOIN users u ON u.user_id = ws.scorer_id
+          WHERE COALESCE(ws.scorer_role, u.role) IN ('teacher','admin')
         ) ts ON ts.work_id = sw.id
         WHERE ${scope.where} AND sw.status IN ('已提交', '已评分')
         ORDER BY sw.comment_count DESC
@@ -607,7 +638,8 @@ class WorksDao {
       FROM student_works sw
       LEFT JOIN (
         SELECT ws.* FROM work_scores ws
-        INNER JOIN users u ON u.user_id = ws.scorer_id AND u.role IN ('teacher','admin')
+        LEFT JOIN users u ON u.user_id = ws.scorer_id
+        WHERE COALESCE(ws.scorer_role, u.role) IN ('teacher','admin')
       ) ts ON ts.work_id = sw.id
       WHERE ${scope.where} AND sw.status IN ('已提交', '已评分')
     ''', scope.args);

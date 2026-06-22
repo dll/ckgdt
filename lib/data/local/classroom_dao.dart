@@ -28,6 +28,7 @@ class ClassroomDao {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS checkin_sessions(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT,
         class_id INTEGER,
         title TEXT,
         started_at TEXT,
@@ -55,6 +56,7 @@ class ClassroomDao {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS classroom_messages(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT,
         class_id INTEGER,
         sender_id TEXT,
         sender_name TEXT,
@@ -70,6 +72,7 @@ class ClassroomDao {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS roll_call_sessions(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT,
         class_id INTEGER,
         created_by TEXT,
         created_at TEXT
@@ -91,6 +94,33 @@ class ClassroomDao {
         FOREIGN KEY (session_id) REFERENCES roll_call_sessions(id)
       )
     ''');
+
+    for (final sql in const [
+      'ALTER TABLE checkin_sessions ADD COLUMN course_id TEXT',
+      'ALTER TABLE classroom_messages ADD COLUMN course_id TEXT',
+      'ALTER TABLE roll_call_sessions ADD COLUMN course_id TEXT',
+    ]) {
+      try {
+        await db.execute(sql);
+      } catch (e) {
+        swallow(e, tag: 'ClassroomDao.migrate.course_id');
+      }
+    }
+    for (final table in const [
+      'checkin_sessions',
+      'classroom_messages',
+      'roll_call_sessions',
+    ]) {
+      try {
+        await db.update(
+          table,
+          {'course_id': CourseContextService.defaultCourseId},
+          where: "course_id IS NULL OR course_id = ''",
+        );
+      } catch (e) {
+        swallow(e, tag: 'ClassroomDao.migrate.defaultCourse');
+      }
+    }
 
     // 7) 课堂提问题库
     await db.execute('''
@@ -127,7 +157,9 @@ class ClassroomDao {
         {'course_id': CourseContextService.defaultCourseId},
         where: "course_id IS NULL OR course_id = ''",
       );
-    } catch (e) { swallowDebug(e, tag: 'classroom_dao'); }
+    } catch (e) {
+      swallowDebug(e, tag: 'classroom_dao');
+    }
 
     _tableEnsured = true;
   }
@@ -254,8 +286,10 @@ class ClassroomDao {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
     final now = DateTime.now().toIso8601String();
+    final courseId = await _courseContext.activeCourseId();
 
     final sessionId = await db.insert('checkin_sessions', {
+      'course_id': courseId,
       'class_id': classId,
       'title': title,
       'started_at': now,
@@ -308,12 +342,17 @@ class ClassroomDao {
   Future<Map<String, dynamic>?> getActiveSession({int? classId}) async {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
-    final where = classId != null
-        ? "status = 'active' AND class_id = ?"
-        : "status = 'active'";
-    final args = classId != null ? [classId] : null;
+    final scope = await _scope(
+      extraWhere: classId != null
+          ? "status = 'active' AND class_id = ?"
+          : "status = 'active'",
+      extraArgs: classId != null ? [classId] : const [],
+    );
     final results = await db.query('checkin_sessions',
-        where: where, whereArgs: args, orderBy: 'id DESC', limit: 1);
+        where: scope.where,
+        whereArgs: scope.args,
+        orderBy: 'id DESC',
+        limit: 1);
     return results.isNotEmpty ? Map<String, dynamic>.from(results.first) : null;
   }
 
@@ -324,10 +363,15 @@ class ClassroomDao {
   }) async {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
-    final where = classId != null ? 'class_id = ?' : null;
-    final args = classId != null ? [classId] : null;
+    final scope = await _scope(
+      extraWhere: classId != null ? 'class_id = ?' : null,
+      extraArgs: classId != null ? [classId] : const [],
+    );
     return await db.query('checkin_sessions',
-        where: where, whereArgs: args, orderBy: 'id DESC', limit: limit);
+        where: scope.where,
+        whereArgs: scope.args,
+        orderBy: 'id DESC',
+        limit: limit);
   }
 
   /// 获取某次签到的所有记录
@@ -402,7 +446,9 @@ class ClassroomDao {
   }) async {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
+    final courseId = await _courseContext.activeCourseId();
     return await db.insert('classroom_messages', {
+      'course_id': courseId,
       'class_id': classId,
       'sender_id': senderId,
       'sender_name': senderName,
@@ -422,8 +468,9 @@ class ClassroomDao {
   }) async {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
-    final conditions = <String>[];
-    final args = <Object?>[];
+    final scope = await _scope();
+    final conditions = <String>[scope.where];
+    final args = <Object?>[...scope.args];
     if (classId != null) {
       conditions.add('class_id = ?');
       args.add(classId);
@@ -455,13 +502,19 @@ class ClassroomDao {
   Future<Map<String, int>> getMessageStats({int? classId}) async {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
-    final classWhere = classId != null ? ' AND class_id = $classId' : '';
+    final scope = await _scope(
+      extraWhere: classId != null ? 'class_id = ?' : null,
+      extraArgs: classId != null ? [classId] : const [],
+    );
     final ann = await db.rawQuery(
-        "SELECT COUNT(*) as c FROM classroom_messages WHERE message_type='announcement'$classWhere");
+        "SELECT COUNT(*) as c FROM classroom_messages WHERE ${scope.where} AND message_type='announcement'",
+        scope.args);
     final que = await db.rawQuery(
-        "SELECT COUNT(*) as c FROM classroom_messages WHERE message_type='question'$classWhere");
+        "SELECT COUNT(*) as c FROM classroom_messages WHERE ${scope.where} AND message_type='question'",
+        scope.args);
     final ans = await db.rawQuery(
-        "SELECT COUNT(*) as c FROM classroom_messages WHERE message_type='answer'$classWhere");
+        "SELECT COUNT(*) as c FROM classroom_messages WHERE ${scope.where} AND message_type='answer'",
+        scope.args);
     return {
       'announcement': (ann.first['c'] as int?) ?? 0,
       'question': (que.first['c'] as int?) ?? 0,
@@ -478,7 +531,9 @@ class ClassroomDao {
       {int? classId, required String createdBy}) async {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
+    final courseId = await _courseContext.activeCourseId();
     return await db.insert('roll_call_sessions', {
+      'course_id': courseId,
       'class_id': classId,
       'created_by': createdBy,
       'created_at': DateTime.now().toIso8601String(),
@@ -514,17 +569,20 @@ class ClassroomDao {
       {int? classId, int limit = 20}) async {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
-    final classWhere = classId != null ? 'WHERE class_id = ?' : '';
-    final args = classId != null ? [classId] : <dynamic>[];
+    final scope = await _scope(
+      column: 's.course_id',
+      extraWhere: classId != null ? 's.class_id = ?' : null,
+      extraArgs: classId != null ? [classId] : const [],
+    );
     return await db.rawQuery('''
       SELECT s.*,
         (SELECT COUNT(*) FROM roll_call_records WHERE session_id = s.id) as record_count,
         (SELECT SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) FROM roll_call_records WHERE session_id = s.id) as correct_count
       FROM roll_call_sessions s
-      $classWhere
+      WHERE ${scope.where}
       ORDER BY s.created_at DESC
       LIMIT ?
-    ''', [...args, limit]);
+    ''', [...scope.args, limit]);
   }
 
   /// 获取某次会话的所有点名记录
@@ -542,20 +600,22 @@ class ClassroomDao {
       {int? classId}) async {
     await _ensureTable();
     final db = await DatabaseHelper.instance.database;
-    final classWhere = classId != null
-        ? 'WHERE r.session_id IN (SELECT id FROM roll_call_sessions WHERE class_id = ?)'
-        : '';
-    final args = classId != null ? [classId] : <dynamic>[];
+    final scope = await _scope(
+      column: 's.course_id',
+      extraWhere: classId != null ? 's.class_id = ?' : null,
+      extraArgs: classId != null ? [classId] : const [],
+    );
     return await db.rawQuery('''
       SELECT r.user_id, r.user_name,
         SUM(r.score_delta) as total_score,
         COUNT(*) as call_count,
         SUM(CASE WHEN r.is_correct = 1 THEN 1 ELSE 0 END) as correct_count
       FROM roll_call_records r
-      $classWhere
+      LEFT JOIN roll_call_sessions s ON s.id = r.session_id
+      WHERE ${scope.where}
       GROUP BY r.user_id
       ORDER BY total_score DESC
-    ''', args);
+    ''', scope.args);
   }
 
   /// 根据测验成绩对学生分层（优/中/差）
