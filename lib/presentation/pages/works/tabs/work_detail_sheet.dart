@@ -26,6 +26,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
   final _commentCtrl = TextEditingController();
   bool _loadingComments = true;
   bool _isUploading = false;
+  bool _isOpeningVideo = false;
 
   bool get _isOwnerOrTeacher {
     final auth = widget.authService;
@@ -281,53 +282,136 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
     }
   }
 
+  List<String> _videoCandidates(Map<String, dynamic> work) {
+    return [
+      work['video_url'] as String?,
+      work['file_path'] as String?,
+    ]
+        .whereType<String>()
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+  }
+
   String _resolveVideoPath(Map<String, dynamic> work) {
+    final candidates = _videoCandidates(work);
+    for (final path in candidates) {
+      if (path.startsWith('http')) return path;
+      if (File(path).existsSync()) return path;
+    }
+    return '';
+  }
+
+  String _videoFileName(Map<String, dynamic> work) {
     final candidates = [
       work['video_url'] as String?,
       work['file_path'] as String?,
     ].whereType<String>().map((e) => e.trim()).where((e) => e.isNotEmpty);
     for (final path in candidates) {
-      if (path.startsWith('http')) return path;
-      if (File(path).existsSync()) return path;
+      try {
+        final uri = Uri.parse(path);
+        if (uri.pathSegments.isNotEmpty) {
+          return Uri.decodeComponent(uri.pathSegments.last);
+        }
+      } catch (e, st) {
+        swallowDebug(e, tag: 'WorkDetailSheet.videoFileName', stack: st);
+      }
+      final name = path.split('/').last.split('\\').last;
+      if (name.isNotEmpty) return name;
     }
-    return candidates.isEmpty ? '' : candidates.first;
+    return '演示视频';
   }
 
   Future<void> _playVideo() async {
-    final videoPath = _resolveVideoPath(_work);
-    if (videoPath.isEmpty) {
-      final status = _work['status'] as String? ?? '待提交';
-      final msg = status == '待提交'
-          ? '该学生尚未提交作品或演示视频'
-          : '该作品已提交，但演示视频尚未同步到本机，请先同步学生数据或让学生重新上传';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(msg),
-          backgroundColor: Colors.orange,
-          duration: const Duration(seconds: 5),
-        ),
-      );
-      return;
-    }
+    if (_isOpeningVideo) return;
+    setState(() => _isOpeningVideo = true);
 
-    final status = _work['status'] as String?;
-    if (WorksDao.isSubmittedStatus(status) ||
-        WorksDao.hasVideoReference(_work)) {
-      final userId = widget.authService.getCurrentUserId() ?? '';
-      await widget.worksDao.recordView(_work['id'] as int, userId);
-      final refreshed = await widget.worksDao.getWork(_work['id'] as int);
-      if (mounted && refreshed != null) {
-        setState(() => _work = refreshed);
-        widget.onChanged?.call();
+    try {
+      var videoPath = _resolveVideoPath(_work);
+      if (videoPath.isEmpty) {
+        final hasReference = _videoCandidates(_work).isNotEmpty;
+        if (hasReference) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('正在同步演示视频...'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+          final downloaded =
+              await SyncService().ensureWorkVideoAvailable(_work);
+          if (downloaded != null && downloaded.isNotEmpty) {
+            videoPath = downloaded;
+            final refreshed = await widget.worksDao.getWork(_work['id'] as int);
+            if (mounted && refreshed != null) {
+              setState(() => _work = refreshed);
+              widget.onChanged?.call();
+            }
+          }
+        }
       }
-    }
 
-    if (!mounted) return;
-    await FileOpenerService.openFile(
-      context,
-      videoPath,
-      '${_work['title'] ?? '作品'}-演示视频',
-    );
+      if (!mounted) return;
+      if (videoPath.isEmpty) {
+        final status = _work['status'] as String? ?? '待提交';
+        final msg = status == '待提交'
+            ? '该学生尚未提交作品或演示视频'
+            : '该作品已有提交记录，但演示视频附件未同步到本机或组仓库。请让学生重新同步/上传：${_videoFileName(_work)}';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 6),
+          ),
+        );
+        return;
+      }
+
+      final status = _work['status'] as String?;
+      if (WorksDao.isSubmittedStatus(status) ||
+          WorksDao.hasVideoReference(_work)) {
+        final userId = widget.authService.getCurrentUserId() ?? '';
+        await widget.worksDao.recordView(_work['id'] as int, userId);
+        final refreshed = await widget.worksDao.getWork(_work['id'] as int);
+        if (mounted && refreshed != null) {
+          setState(() => _work = refreshed);
+          widget.onChanged?.call();
+        }
+      }
+
+      if (!mounted) return;
+      if (videoPath.startsWith('http')) {
+        final launched = await launchUrl(
+          Uri.parse(videoPath),
+          mode: LaunchMode.externalApplication,
+        );
+        if (!launched && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('无法打开演示视频链接: $videoPath'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } else {
+        await FileOpenerService.openFile(
+          context,
+          videoPath,
+          '${_work['title'] ?? '作品'}-演示视频',
+        );
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'WorkDetailSheet.playVideo', stack: st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('打开演示视频失败: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isOpeningVideo = false);
+    }
   }
 
   void _showAiDraftBlockedDialog(AiGradingDraft draft, int passScore) {
@@ -530,7 +614,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                   child: IconButton(
                     icon: const Icon(Icons.play_arrow,
                         color: Colors.white, size: 32),
-                    onPressed: _playVideo,
+                    onPressed: _isOpeningVideo ? null : _playVideo,
                   ),
                 ),
                 // 上传按钮（仅作品所有者或教师可见）
@@ -862,8 +946,8 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
     final dims = [
       {'name': '功能完整性', 'key': 'score_functionality', 'max': 25},
       {'name': '技术深度', 'key': 'score_tech_depth', 'max': 20},
-      {'name': '跨框架整合', 'key': 'score_integration', 'max': 25},
-      {'name': '性能质量', 'key': 'score_quality', 'max': 15},
+      {'name': '跨框架整合', 'key': 'score_integration', 'max': 20},
+      {'name': '性能质量', 'key': 'score_quality', 'max': 20},
       {'name': '文档协作', 'key': 'score_documentation', 'max': 15},
     ];
 
@@ -1094,13 +1178,16 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
   // ── 评分对话框 ──────────────────────────────────────────
 
   void _showScoreDialog(BuildContext context, {bool isPeer = false}) {
-    double functionality =
-        (_work['score_functionality'] as int?)?.toDouble() ?? 15;
-    double techDepth = (_work['score_tech_depth'] as int?)?.toDouble() ?? 12;
-    double integration = (_work['score_integration'] as int?)?.toDouble() ?? 15;
-    double quality = (_work['score_quality'] as int?)?.toDouble() ?? 9;
-    double documentation =
-        (_work['score_documentation'] as int?)?.toDouble() ?? 9;
+    double boundedScore(String key, double fallback, double max) {
+      final value = (_work[key] as num?)?.toDouble() ?? fallback;
+      return value.clamp(0.0, max).toDouble();
+    }
+
+    double functionality = boundedScore('score_functionality', 15, 25);
+    double techDepth = boundedScore('score_tech_depth', 12, 20);
+    double integration = boundedScore('score_integration', 12, 20);
+    double quality = boundedScore('score_quality', 12, 20);
+    double documentation = boundedScore('score_documentation', 9, 15);
     final commentCtrl =
         TextEditingController(text: _work['score_comment'] as String? ?? '');
     bool isAiGrading = false;
@@ -1135,9 +1222,9 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                         (v) => setDialogState(() => functionality = v)),
                     _scoreSlider('技术实现深度', techDepth, 20,
                         (v) => setDialogState(() => techDepth = v)),
-                    _scoreSlider('跨框架整合', integration, 25,
+                    _scoreSlider('跨框架整合', integration, 20,
                         (v) => setDialogState(() => integration = v)),
-                    _scoreSlider('性能与质量', quality, 15,
+                    _scoreSlider('性能与质量', quality, 20,
                         (v) => setDialogState(() => quality = v)),
                     _scoreSlider('文档与协作', documentation, 15,
                         (v) => setDialogState(() => documentation = v)),
@@ -1207,28 +1294,28 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                             if (parsed != null) {
                               final scores =
                                   parsed['scores'] as Map<String, dynamic>?;
+                              double? scoreFrom(Object? raw, double max) {
+                                final value = ((raw as Map?)?['score'] as num?)
+                                    ?.toDouble();
+                                return value?.clamp(0.0, max).toDouble();
+                              }
+
                               setDialogState(() {
                                 if (scores != null) {
-                                  functionality = ((scores['functionality']
-                                              as Map?)?['score'] as num?)
-                                          ?.toDouble() ??
-                                      functionality;
-                                  techDepth = ((scores['tech_depth']
-                                              as Map?)?['score'] as num?)
-                                          ?.toDouble() ??
-                                      techDepth;
-                                  integration = ((scores['integration']
-                                              as Map?)?['score'] as num?)
-                                          ?.toDouble() ??
-                                      integration;
-                                  quality = ((scores['quality']
-                                              as Map?)?['score'] as num?)
-                                          ?.toDouble() ??
+                                  functionality =
+                                      scoreFrom(scores['functionality'], 25) ??
+                                          functionality;
+                                  techDepth =
+                                      scoreFrom(scores['tech_depth'], 20) ??
+                                          techDepth;
+                                  integration =
+                                      scoreFrom(scores['integration'], 20) ??
+                                          integration;
+                                  quality = scoreFrom(scores['quality'], 20) ??
                                       quality;
-                                  documentation = ((scores['documentation']
-                                              as Map?)?['score'] as num?)
-                                          ?.toDouble() ??
-                                      documentation;
+                                  documentation =
+                                      scoreFrom(scores['documentation'], 15) ??
+                                          documentation;
                                 }
                                 commentCtrl.text =
                                     _formatWorkAiFeedback(parsed);

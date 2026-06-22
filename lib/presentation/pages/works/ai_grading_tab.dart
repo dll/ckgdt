@@ -29,6 +29,14 @@ class WorksAiGradingTab extends StatefulWidget {
 }
 
 class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
+  static const Map<String, int> _workDimensionMax = {
+    'functionality': 25,
+    'tech_depth': 20,
+    'integration': 20,
+    'quality': 20,
+    'documentation': 15,
+  };
+
   final _gradingAgent = GradingAgent();
   final _worksDao = WorksDao();
   final _gradingDao = GradingResultDao();
@@ -73,10 +81,14 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
   }
 
   Future<void> _loadWorks() async {
+    await _worksDao.repairSubmissionState();
     final works = await _worksDao.getWorks();
     // 过滤出已提交的
-    final submitted =
-        works.where((w) => (w['status'] as String?) != '待提交').toList();
+    final submitted = works
+        .where((w) =>
+            WorksDao.isSubmittedStatus(w['status'] as String?) ||
+            WorksDao.hasVideoReference(w))
+        .toList();
     // 标记已批改的
     _approvedIds.clear();
     for (final w in submitted) {
@@ -98,34 +110,8 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
       for (final p in pending) {
         final tid = p['target_id'] as int;
         if (!_approvedIds.contains(tid) && !_gradingResults.containsKey(tid)) {
-          Map<String, dynamic>? dims;
-          try {
-            dims = jsonDecode(p['dimensions'] as String? ?? '');
-          } catch (e, st) {
-            swallowDebug(e, tag: 'WorksAiGrading.dims', stack: st);
-          }
-          List<String> strengths = [];
-          try {
-            strengths = (jsonDecode(p['strengths'] as String? ?? '[]') as List)
-                .cast<String>();
-          } catch (e, st) {
-            swallowDebug(e, tag: 'WorksAiGrading.strengths', stack: st);
-          }
-          List<String> improvements = [];
-          try {
-            improvements =
-                (jsonDecode(p['improvements'] as String? ?? '[]') as List)
-                    .cast<String>();
-          } catch (e, st) {
-            swallowDebug(e, tag: 'WorksAiGrading.improvements', stack: st);
-          }
-          _gradingResults[tid] = _GradingResult(
-            score: (p['score'] as num?)?.toInt() ?? 0,
-            feedback: (p['feedback'] as String?) ?? '',
-            dimensions: dims,
-            strengths: strengths,
-            improvements: improvements,
-          );
+          final restored = await _restorePendingResult(p);
+          if (restored != null) _gradingResults[tid] = restored;
         }
       }
     } catch (e, st) {
@@ -203,9 +189,8 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
     final title = (work['title'] as String?) ?? '未命名作品';
     final desc = (work['description'] as String?) ?? '';
     final techStack = (work['tech_stack'] as String?) ?? '';
-    final studentName = (work['student_name'] as String?) ??
-        (work['user_id'] as String?) ??
-        '';
+    final studentName =
+        (work['student_name'] as String?) ?? (work['user_id'] as String?) ?? '';
     final groupName = (work['group_name'] as String?) ?? '';
 
     try {
@@ -225,26 +210,7 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
       final result = compRes.content;
       final parsed = _tryParseJson(result);
       if (parsed != null) {
-        final score = (parsed['total_score'] as num?)?.toInt() ??
-            (parsed['score'] as num?)?.toInt() ??
-            0;
-        final dims = parsed['scores'] as Map<String, dynamic>?;
-        final strengths =
-            (parsed['strengths'] as List?)?.map((e) => e.toString()).toList() ??
-                [];
-        final improvements = (parsed['improvements'] as List?)
-                ?.map((e) => e.toString())
-                .toList() ??
-            [];
-        final feedback = _formatFeedback(parsed);
-
-        _gradingResults[wid] = _GradingResult(
-          score: score,
-          feedback: feedback,
-          dimensions: dims,
-          strengths: strengths,
-          improvements: improvements,
-        );
+        _gradingResults[wid] = _resultFromParsedJson(parsed);
       } else {
         _gradingResults[wid] = _GradingResult(
           score: 0,
@@ -302,20 +268,170 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
   }
 
   Map<String, dynamic>? _tryParseJson(String text) {
-    try {
-      final match = RegExp(r'\{[\s\S]*\}').firstMatch(text);
-      if (match == null) return null;
-      final map = jsonDecode(match.group(0)!) as Map<String, dynamic>;
-      if (map.containsKey('total_score') ||
-          map.containsKey('score') ||
-          map.containsKey('feedback')) {
-        return map;
+    final candidates = <String>[];
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return null;
+    candidates.add(trimmed);
+    final fenced =
+        RegExp(r'```(?:json)?\s*([\s\S]*?)\s*```', caseSensitive: false)
+            .firstMatch(trimmed);
+    if (fenced != null) candidates.add(fenced.group(1)!.trim());
+    candidates.addAll(_balancedJsonObjects(trimmed));
+
+    for (final candidate in candidates) {
+      try {
+        final decoded = jsonDecode(candidate);
+        if (decoded is! Map<String, dynamic>) continue;
+        if (decoded.containsKey('total_score') ||
+            decoded.containsKey('score') ||
+            decoded.containsKey('feedback') ||
+            decoded.containsKey('summary') ||
+            decoded.containsKey('scores') ||
+            decoded.containsKey('dimensions')) {
+          return decoded;
+        }
+      } catch (e, st) {
+        swallowDebug(e, tag: 'WorksAiGrading.parseJson', stack: st);
       }
-      return null;
+    }
+    return null;
+  }
+
+  List<String> _balancedJsonObjects(String text) {
+    final objects = <String>[];
+    var start = -1;
+    var depth = 0;
+    var inString = false;
+    var escaping = false;
+    for (var i = 0; i < text.length; i++) {
+      final ch = text[i];
+      if (escaping) {
+        escaping = false;
+        continue;
+      }
+      if (ch == '\\') {
+        escaping = inString;
+        continue;
+      }
+      if (ch == '"') {
+        inString = !inString;
+        continue;
+      }
+      if (inString) continue;
+      if (ch == '{') {
+        if (depth == 0) start = i;
+        depth++;
+      } else if (ch == '}' && depth > 0) {
+        depth--;
+        if (depth == 0 && start >= 0) {
+          objects.add(text.substring(start, i + 1));
+          start = -1;
+        }
+      }
+    }
+    return objects;
+  }
+
+  _GradingResult _resultFromParsedJson(Map<String, dynamic> parsed) {
+    final score = _clampedScore(
+      _numValue(parsed['total_score']) ?? _numValue(parsed['score']),
+    );
+    final dims = _asStringDynamicMap(parsed['dimensions']) ??
+        _asStringDynamicMap(parsed['scores']);
+    return _GradingResult(
+      score: score,
+      feedback: _formatFeedback(parsed),
+      dimensions: dims,
+      strengths:
+          (parsed['strengths'] as List?)?.map((e) => e.toString()).toList() ??
+              [],
+      improvements: (parsed['improvements'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+    );
+  }
+
+  Future<_GradingResult?> _restorePendingResult(
+      Map<String, dynamic> pending) async {
+    final rawJson = (pending['raw_json'] as String?)?.trim() ?? '';
+    final feedback = (pending['feedback'] as String?) ?? '';
+    final parsed = _tryParseJson(rawJson.isNotEmpty ? rawJson : feedback);
+
+    if (parsed != null) {
+      final normalized = _resultFromParsedJson(parsed);
+      final needsPersist =
+          _clampedScore(_numValue(pending['score'])) != normalized.score ||
+              feedback.trim().startsWith('{') ||
+              rawJson.isEmpty ||
+              (pending['dimensions'] as String?) == null;
+      if (needsPersist) {
+        try {
+          await _gradingDao.updateDraftResult(
+            id: pending['id'] as int,
+            rawJson: jsonEncode(parsed),
+            score: normalized.score.toDouble(),
+            feedback: normalized.feedback,
+            dimensions: normalized.dimensions,
+            strengths: normalized.strengths,
+            improvements: normalized.improvements,
+            aiFlag: parsed['ai_flag'] == true,
+          );
+        } catch (e, st) {
+          swallowDebug(e, tag: 'WorksAiGrading.normalizePending', stack: st);
+        }
+      }
+      return normalized;
+    }
+
+    return _GradingResult(
+      score: _clampedScore(pending['score'] as num?),
+      feedback: feedback,
+      dimensions: _decodeJsonMap(pending['dimensions'] as String?),
+      strengths: _decodeStringList(pending['strengths'] as String?),
+      improvements: _decodeStringList(pending['improvements'] as String?),
+    );
+  }
+
+  Map<String, dynamic>? _decodeJsonMap(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      return _asStringDynamicMap(decoded);
     } catch (e, st) {
-      swallowDebug(e, tag: 'WorksAiGrading.parseJson', stack: st);
+      swallowDebug(e, tag: 'WorksAiGrading.decodeJsonMap', stack: st);
       return null;
     }
+  }
+
+  List<String> _decodeStringList(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return [];
+    try {
+      final decoded = jsonDecode(raw);
+      return decoded is List ? decoded.map((e) => e.toString()).toList() : [];
+    } catch (e, st) {
+      swallowDebug(e, tag: 'WorksAiGrading.decodeStringList', stack: st);
+      return [];
+    }
+  }
+
+  Map<String, dynamic>? _asStringDynamicMap(Object? value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) {
+      return value.map((key, value) => MapEntry(key.toString(), value));
+    }
+    return null;
+  }
+
+  int _clampedScore(num? value, [int max = 100]) {
+    if (value == null) return 0;
+    return value.round().clamp(0, max).toInt();
+  }
+
+  num? _numValue(Object? value) {
+    if (value is num) return value;
+    if (value is String) return num.tryParse(value.trim());
+    return null;
   }
 
   String _formatFeedback(Map<String, dynamic> parsed) {
@@ -332,11 +448,12 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
       }
       sb.writeln();
     }
-    final scores = parsed['scores'] as Map<String, dynamic>?;
+    final scores = _asStringDynamicMap(parsed['scores']) ??
+        _asStringDynamicMap(parsed['dimensions']);
     if (scores != null) {
       sb.writeln('【各维度评分】');
       for (final e in scores.entries) {
-        final d = e.value as Map<String, dynamic>? ?? {};
+        final d = _asStringDynamicMap(e.value) ?? {};
         sb.writeln(
             '  ${_dimLabel(e.key)}: ${d['score'] ?? ''}/${d['max'] ?? ''} — ${d['comment'] ?? ''}');
       }
@@ -372,41 +489,16 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
     final result = _gradingResults[workId];
     if (result == null) return;
 
-    // 从维度数据解析各维度分数，如果没有则按比例分配
-    int func = 0, tech = 0, integ = 0, qual = 0, doc = 0;
-    if (result.dimensions != null) {
-      func = ((result.dimensions!['functionality']
-                  as Map<String, dynamic>?)?['score'] as num?)
-              ?.toInt() ??
-          0;
-      tech = ((result.dimensions!['tech_depth']
-                  as Map<String, dynamic>?)?['score'] as num?)
-              ?.toInt() ??
-          0;
-      integ = ((result.dimensions!['integration']
-                  as Map<String, dynamic>?)?['score'] as num?)
-              ?.toInt() ??
-          0;
-      qual = ((result.dimensions!['quality'] as Map<String, dynamic>?)?['score']
-                  as num?)
-              ?.toInt() ??
-          0;
-      doc = ((result.dimensions!['documentation']
-                  as Map<String, dynamic>?)?['score'] as num?)
-              ?.toInt() ??
-          0;
-    } else {
-      // 按各维度满分占比分配（功能25/技术20/集成20/质量20/文档15）
-      final s = result.score;
-      func = (s * 25 ~/ 100).clamp(0, 25);
-      tech = (s * 20 ~/ 100).clamp(0, 20);
-      integ = (s * 20 ~/ 100).clamp(0, 20);
-      qual = (s * 20 ~/ 100).clamp(0, 20);
-      doc = (s * 15 ~/ 100).clamp(0, 15);
-      // 保证各维度和不超过总分（用整数除法有可能少1-2分，分摊到功能分）
-      final diff = result.score - (func + tech + integ + qual + doc);
-      if (diff > 0) func = (func + diff).clamp(0, 25);
-    }
+    final normalizedDimensions = _normalizedDimensionsForResult(result);
+    result.dimensions = normalizedDimensions;
+    final scores = _dimensionScoresForResult(result);
+    final func = scores['functionality'] ?? 0;
+    final tech = scores['tech_depth'] ?? 0;
+    final integ = scores['integration'] ?? 0;
+    final qual = scores['quality'] ?? 0;
+    final doc = scores['documentation'] ?? 0;
+    final approvedTotal = func + tech + integ + qual + doc;
+    result.score = approvedTotal;
 
     await _worksDao.scoreWork(
       workId: workId,
@@ -425,7 +517,7 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
         tableName: 'work_scores',
         rowId: workId,
         field: 'total',
-        newValue: (func + tech + integ + qual + doc).toString(),
+        newValue: approvedTotal.toString(),
         reason: 'AI 批阅',
         scorerId: widget.authService.getCurrentUserId() ?? '',
         scorerName: widget.authService.currentUser?.realName ?? '教师',
@@ -440,6 +532,16 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
       final pending =
           await _gradingDao.getPendingResults('works', targetId: workId);
       for (final p in pending) {
+        await _gradingDao.updateDraftResult(
+          id: p['id'] as int,
+          rawJson: '',
+          score: approvedTotal.toDouble(),
+          feedback: result.feedback,
+          dimensions: normalizedDimensions,
+          strengths: result.strengths,
+          improvements: result.improvements,
+          aiFlag: false,
+        );
         await _gradingDao.approveResult(
             p['id'] as int, widget.authService.getCurrentUserId() ?? '');
       }
@@ -556,16 +658,38 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
             TextButton(
                 onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
             FilledButton(
-              onPressed: () {
-                _gradingResults[workId] = _GradingResult(
+              onPressed: () async {
+                final updated = _GradingResult(
                   score: adjustedScore,
                   feedback: feedbackCtrl.text,
                   dimensions: result.dimensions,
                   strengths: result.strengths,
                   improvements: result.improvements,
                 );
-                Navigator.pop(ctx);
-                setState(() {});
+                updated.dimensions = _normalizedDimensionsForResult(updated);
+                _gradingResults[workId] = updated;
+                try {
+                  final pending = await _gradingDao.getPendingResults(
+                    'works',
+                    targetId: workId,
+                  );
+                  for (final p in pending) {
+                    await _gradingDao.updateDraftResult(
+                      id: p['id'] as int,
+                      rawJson: '',
+                      score: adjustedScore.toDouble(),
+                      feedback: updated.feedback,
+                      dimensions: updated.dimensions,
+                      strengths: updated.strengths,
+                      improvements: updated.improvements,
+                      aiFlag: false,
+                    );
+                  }
+                } catch (e, st) {
+                  swallowDebug(e, tag: 'WorksAiGrading.adjustDraft', stack: st);
+                }
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (mounted) setState(() {});
               },
               child: const Text('保存调整'),
             ),
@@ -593,6 +717,124 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
       'documentation': '文档与协作',
     };
     return labels[key] ?? key;
+  }
+
+  Map<String, dynamic> _normalizedDimensionsForResult(_GradingResult result) {
+    final scores = _dimensionScoresForResult(result);
+    final normalized = <String, dynamic>{};
+    for (final entry in _workDimensionMax.entries) {
+      final comment = _dimensionComment(result.dimensions?[entry.key]);
+      normalized[entry.key] = {
+        'score': scores[entry.key] ?? 0,
+        'max': entry.value,
+        if (comment.isNotEmpty) 'comment': comment,
+      };
+    }
+    return normalized;
+  }
+
+  Map<String, int> _dimensionScoresForResult(_GradingResult result) {
+    final targetScore = _clampedScore(result.score);
+    final baseScores = <String, int>{};
+    var hasDimensionScore = false;
+
+    for (final entry in _workDimensionMax.entries) {
+      final value = _dimensionNumericScore(result.dimensions?[entry.key]);
+      if (value != null) hasDimensionScore = true;
+      baseScores[entry.key] = _clampedScore(value, entry.value);
+    }
+
+    final baseTotal = baseScores.values.fold<int>(0, (sum, v) => sum + v);
+    if (hasDimensionScore && baseTotal == targetScore) {
+      return baseScores;
+    }
+
+    final weights = <String, int>{};
+    for (final entry in _workDimensionMax.entries) {
+      final score = baseScores[entry.key] ?? 0;
+      weights[entry.key] =
+          hasDimensionScore && baseTotal > 0 ? score : entry.value;
+    }
+    return _apportionDimensionScores(weights, targetScore);
+  }
+
+  Map<String, int> _apportionDimensionScores(
+    Map<String, int> weights,
+    int targetScore,
+  ) {
+    final target = _clampedScore(targetScore);
+    final scores = <String, int>{};
+    if (target == 0) {
+      for (final key in _workDimensionMax.keys) {
+        scores[key] = 0;
+      }
+      return scores;
+    }
+
+    final effectiveWeights = <String, int>{};
+    for (final entry in _workDimensionMax.entries) {
+      effectiveWeights[entry.key] =
+          (weights[entry.key] ?? 0).clamp(0, entry.value).toInt();
+    }
+    var weightTotal = effectiveWeights.values.fold<int>(0, (sum, v) => sum + v);
+    if (weightTotal <= 0) {
+      effectiveWeights
+        ..clear()
+        ..addAll(_workDimensionMax);
+      weightTotal = effectiveWeights.values.fold<int>(0, (sum, v) => sum + v);
+    }
+
+    final fractions = <String, double>{};
+    for (final entry in _workDimensionMax.entries) {
+      final raw = target * (effectiveWeights[entry.key] ?? 0) / weightTotal;
+      fractions[entry.key] = raw - raw.floor();
+      scores[entry.key] = raw.floor().clamp(0, entry.value).toInt();
+    }
+
+    var diff = target - scores.values.fold<int>(0, (sum, v) => sum + v);
+    while (diff > 0) {
+      final candidates = _workDimensionMax.keys
+          .where((key) => (scores[key] ?? 0) < (_workDimensionMax[key] ?? 0))
+          .toList()
+        ..sort((a, b) {
+          final fractionCompare =
+              (fractions[b] ?? 0).compareTo(fractions[a] ?? 0);
+          if (fractionCompare != 0) return fractionCompare;
+          final capA = (_workDimensionMax[a] ?? 0) - (scores[a] ?? 0);
+          final capB = (_workDimensionMax[b] ?? 0) - (scores[b] ?? 0);
+          return capB.compareTo(capA);
+        });
+      if (candidates.isEmpty) break;
+      for (final key in candidates) {
+        if (diff <= 0) break;
+        scores[key] = (scores[key] ?? 0) + 1;
+        diff--;
+      }
+    }
+
+    while (diff < 0) {
+      final candidates = _workDimensionMax.keys
+          .where((key) => (scores[key] ?? 0) > 0)
+          .toList()
+        ..sort((a, b) => (fractions[a] ?? 0).compareTo(fractions[b] ?? 0));
+      if (candidates.isEmpty) break;
+      for (final key in candidates) {
+        if (diff >= 0) break;
+        scores[key] = (scores[key] ?? 0) - 1;
+        diff++;
+      }
+    }
+
+    return scores;
+  }
+
+  num? _dimensionNumericScore(Object? raw) {
+    return _numValue(raw) ?? _numValue(_asStringDynamicMap(raw)?['score']);
+  }
+
+  String _dimensionComment(Object? raw) {
+    final comment = _asStringDynamicMap(raw)?['comment']?.toString().trim();
+    return comment ?? '';
   }
 
   // ═══════════ 构建 UI ═══════════

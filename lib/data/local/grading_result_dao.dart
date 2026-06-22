@@ -60,21 +60,60 @@ class GradingResultDao {
   /// 审核通过
   Future<void> approveResult(int id, String approvedBy) async {
     final db = await _dbHelper.database;
-    await db.update('grading_results', {
-      'status': 'approved',
-      'approved_at': DateTime.now().toIso8601String(),
-      'approved_by': approvedBy,
-    }, where: 'id = ?', whereArgs: [id]);
+    await db.update(
+        'grading_results',
+        {
+          'status': 'approved',
+          'approved_at': DateTime.now().toIso8601String(),
+          'approved_by': approvedBy,
+        },
+        where: 'id = ?',
+        whereArgs: [id]);
   }
 
   /// 拒绝
   Future<void> rejectResult(int id, String rejectedBy) async {
     final db = await _dbHelper.database;
-    await db.update('grading_results', {
-      'status': 'rejected',
-      'approved_at': DateTime.now().toIso8601String(),
-      'approved_by': rejectedBy,
-    }, where: 'id = ?', whereArgs: [id]);
+    await db.update(
+        'grading_results',
+        {
+          'status': 'rejected',
+          'approved_at': DateTime.now().toIso8601String(),
+          'approved_by': rejectedBy,
+        },
+        where: 'id = ?',
+        whereArgs: [id]);
+  }
+
+  /// 更新待审核草稿内容。用于教师手工调整，或修复历史 raw JSON 未结构化的问题。
+  Future<void> updateDraftResult({
+    required int id,
+    String? rawJson,
+    double? score,
+    String? feedback,
+    Map<String, dynamic>? dimensions,
+    List<String>? strengths,
+    List<String>? improvements,
+    bool? aiFlag,
+  }) async {
+    final db = await _dbHelper.database;
+    final updates = <String, dynamic>{};
+    if (rawJson != null) updates['raw_json'] = rawJson;
+    if (score != null) updates['score'] = score;
+    if (feedback != null) updates['feedback'] = feedback;
+    if (dimensions != null) updates['dimensions'] = jsonEncode(dimensions);
+    if (strengths != null) updates['strengths'] = jsonEncode(strengths);
+    if (improvements != null) {
+      updates['improvements'] = jsonEncode(improvements);
+    }
+    if (aiFlag != null) updates['ai_flag'] = aiFlag ? 1 : 0;
+    if (updates.isEmpty) return;
+    await db.update(
+      'grading_results',
+      updates,
+      where: 'id = ? AND status = ?',
+      whereArgs: [id, 'pending'],
+    );
   }
 
   /// 获取批阅历史

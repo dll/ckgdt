@@ -473,6 +473,7 @@ class SyncService {
       String userId, Map<String, dynamic> row, String category) async {
     final filePaths = (row['file_paths'] as String?) ??
         (row['file_path'] as String?) ??
+        (row['video_url'] as String?) ??
         (row['attachment_url'] as String?) ??
         '';
     final fileNames = (row['file_names'] as String?) ??
@@ -484,9 +485,8 @@ class SyncService {
     final file = File(filePaths);
     if (!file.existsSync()) return;
 
-    final fileName = fileNames.isNotEmpty
-        ? fileNames
-        : filePaths.split('/').last.split('\\').last;
+    final fileName =
+        fileNames.isNotEmpty ? fileNames : _fileNameFromPathOrUrl(filePaths);
     final remotePath = '$madDir/files/$userId/$category/$fileName';
 
     try {
@@ -1321,10 +1321,54 @@ class SyncService {
     return count;
   }
 
-  /// 从 Gitee 仓库下载实验提交的 PDF 文件到本地
+  /// 确保作品演示视频在本机可用。
+  ///
+  /// 教师/同学端常见情况：`student_works` 已同步到提交状态，但
+  /// `file_path/video_url` 仍是学生设备上的本地路径或文件名。本方法会按
+  /// `mad/files/{userId}/作品/{fileName}` 从学生组仓库补下载，并回写本地路径。
+  Future<String?> ensureWorkVideoAvailable(Map<String, dynamic> work) async {
+    final userId = (work['user_id'] as String?)?.trim() ?? '';
+    if (userId.isEmpty) return null;
+
+    for (final path in [
+      work['video_url'] as String?,
+      work['file_path'] as String?,
+    ].whereType<String>().map((e) => e.trim()).where((e) => e.isNotEmpty)) {
+      if (path.startsWith('http')) return path;
+      if (File(path).existsSync()) return path;
+    }
+
+    final row = Map<String, dynamic>.from(work);
+    final localPath =
+        await _downloadSubmissionFile(row, userId, category: '作品');
+    if (localPath == null || localPath.isEmpty) return null;
+
+    final workId = work['id'] as int?;
+    if (workId != null) {
+      try {
+        final db = await DatabaseHelper.instance.database;
+        await db.update(
+          'student_works',
+          {
+            'file_path': localPath,
+            'video_url': localPath,
+            'updated_at': DateTime.now().toIso8601String(),
+          },
+          where: 'id = ?',
+          whereArgs: [workId],
+        );
+      } catch (e, st) {
+        swallowDebug(e, tag: 'SyncService.ensureWorkVideoAvailable', stack: st);
+      }
+    }
+    return localPath;
+  }
+
+  /// 从 Gitee 仓库下载提交附件到本地
   ///
   /// 按新目录规范依次尝试：实验/ → files/（兼容旧数据）
-  Future<void> _downloadSubmissionFile(Map<String, dynamic> row, String userId,
+  Future<String?> _downloadSubmissionFile(
+      Map<String, dynamic> row, String userId,
       {String category = '实验'}) async {
     try {
       final fileNames = (row['file_names'] as String?) ??
@@ -1333,18 +1377,21 @@ class SyncService {
           '';
 
       // 本地已存在则跳过
-      final filePaths =
-          (row['file_paths'] as String?) ?? (row['file_path'] as String?) ?? '';
-      final fileName = fileNames.isNotEmpty
-          ? fileNames
-          : filePaths.split('/').last.split('\\').last;
-      if (fileName.isEmpty) return;
-      if (filePaths.isNotEmpty && File(filePaths).existsSync()) return;
+      final filePaths = (row['file_paths'] as String?) ??
+          (row['file_path'] as String?) ??
+          (row['video_url'] as String?) ??
+          '';
+      final fileName =
+          fileNames.isNotEmpty ? fileNames : _fileNameFromPathOrUrl(filePaths);
+      if (fileName.isEmpty) return null;
+      if (filePaths.isNotEmpty && File(filePaths).existsSync()) {
+        return filePaths;
+      }
 
       // 解析该学生的分组仓库，从 mad/files/{userId}/{category}/ 下载
       final db = await DatabaseHelper.instance.database;
       final repo = await _resolveRepoForUser(db, userId);
-      if (repo == null) return;
+      if (repo == null) return null;
 
       List<int>? bytes;
       final remotePath = '$madDir/files/$userId/$category/$fileName';
@@ -1358,11 +1405,12 @@ class SyncService {
       } catch (e, st) {
         swallowDebug(e, tag: 'SyncService', stack: st);
       }
-      if (bytes == null || bytes.isEmpty) return;
+      if (bytes == null || bytes.isEmpty) return null;
 
       // 保存到本地应用文档目录
       final appDir = await getApplicationDocumentsDirectory();
-      final syncFilesDir = Directory('${appDir.path}/sync_files/$userId');
+      final syncFilesDir =
+          Directory('${appDir.path}/sync_files/$userId/$category');
       if (!syncFilesDir.existsSync()) {
         syncFilesDir.createSync(recursive: true);
       }
@@ -1374,9 +1422,25 @@ class SyncService {
       row['file_path'] = localFile.path;
       row['video_url'] = localFile.path;
       debugPrint('SyncService: 已下载 $fileName -> ${localFile.path}');
+      return localFile.path;
     } catch (e) {
-      debugPrint('SyncService: 下载 PDF 失败: $e');
+      debugPrint('SyncService: 下载 $category 附件失败: $e');
+      return null;
     }
+  }
+
+  String _fileNameFromPathOrUrl(String raw) {
+    final value = raw.trim();
+    if (value.isEmpty) return '';
+    try {
+      final uri = Uri.parse(value);
+      if (uri.pathSegments.isNotEmpty) {
+        return Uri.decodeComponent(uri.pathSegments.last);
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'SyncService.fileNameFromUrl', stack: st);
+    }
+    return value.split('/').last.split('\\').last;
   }
 
   /// student_reports 特殊导入：
