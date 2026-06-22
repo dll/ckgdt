@@ -139,8 +139,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
             repoUrl != null ? GiteeService.parseRepoUrl(repoUrl) : null;
         if (parsed != null) {
           final bytes = await File(savedPath).readAsBytes();
-          final remotePath =
-              '${SyncService.madDir}/files/$userId/作品/$fileName';
+          final remotePath = '${SyncService.madDir}/files/$userId/作品/$fileName';
           debugPrint(
               '上传演示视频到 ${parsed.owner}/${parsed.repo}/$remotePath (${bytes.length} bytes)');
           if (bytes.length <= 1 * 1024 * 1024) {
@@ -294,6 +293,43 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
     return candidates.isEmpty ? '' : candidates.first;
   }
 
+  Future<void> _playVideo() async {
+    final videoPath = _resolveVideoPath(_work);
+    if (videoPath.isEmpty) {
+      final status = _work['status'] as String? ?? '待提交';
+      final msg = status == '待提交'
+          ? '该学生尚未提交作品或演示视频'
+          : '该作品已提交，但演示视频尚未同步到本机，请先同步学生数据或让学生重新上传';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+      return;
+    }
+
+    final status = _work['status'] as String?;
+    if (WorksDao.isSubmittedStatus(status) ||
+        WorksDao.hasVideoReference(_work)) {
+      final userId = widget.authService.getCurrentUserId() ?? '';
+      await widget.worksDao.recordView(_work['id'] as int, userId);
+      final refreshed = await widget.worksDao.getWork(_work['id'] as int);
+      if (mounted && refreshed != null) {
+        setState(() => _work = refreshed);
+        widget.onChanged?.call();
+      }
+    }
+
+    if (!mounted) return;
+    await FileOpenerService.openFile(
+      context,
+      videoPath,
+      '${_work['title'] ?? '作品'}-演示视频',
+    );
+  }
+
   void _showAiDraftBlockedDialog(AiGradingDraft draft, int passScore) {
     showDialog(
       context: context,
@@ -435,7 +471,8 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
     final isTeacherOrAdmin =
         widget.authService.isTeacher || widget.authService.isAdmin;
     final workStatus = _work['status'] as String? ?? '待提交';
-    final isSubmitted = workStatus == '已提交';
+    final isSubmitted = WorksDao.isSubmittedStatus(workStatus) ||
+        WorksDao.hasVideoReference(_work);
     final canInteract = isTeacherOrAdmin || isSubmitted;
     final viewCount = (_work['view_count'] as int?) ?? 0;
     final likeCount = (_work['like_count'] as int?) ?? 0;
@@ -493,28 +530,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                   child: IconButton(
                     icon: const Icon(Icons.play_arrow,
                         color: Colors.white, size: 32),
-                    onPressed: () {
-                      final videoPath = _resolveVideoPath(_work);
-                      if (videoPath.isEmpty) {
-                        final status = _work['status'] as String? ?? '待提交';
-                        final msg = status == '待提交'
-                            ? '该作品尚未上传演示视频'
-                            : '该作品已上传演示视频，但文件较大未能同步到 Gitee（Gitee 文件限制约 1MB），请通知学生直接提供视频文件或压缩后重新上传';
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(msg),
-                            backgroundColor: Colors.orange,
-                            duration: const Duration(seconds: 5),
-                          ),
-                        );
-                        return;
-                      }
-                      FileOpenerService.openFile(
-                        context,
-                        videoPath,
-                        '${_work['title'] ?? '作品'}-演示视频',
-                      );
-                    },
+                    onPressed: _playVideo,
                   ),
                 ),
                 // 上传按钮（仅作品所有者或教师可见）
@@ -676,7 +692,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                   ),
                 ),
               if (!isTeacherOrAdmin &&
-                  (isSubmitted || workStatus == '已评分') &&
+                  isSubmitted &&
                   _work['user_id'] != widget.authService.getCurrentUserId())
                 ElevatedButton.icon(
                   onPressed: () => _showScoreDialog(context, isPeer: true),

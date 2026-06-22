@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants/app_urls.dart';
 import '../core/error_handler.dart';
 import '../data/local/database_helper.dart';
+import 'course_context_service.dart';
 import 'gitee_service.dart';
 
 /// 数据同步服务（分组项目仓库模型）
@@ -170,8 +171,7 @@ class SyncService {
       Duration(minutes: interval),
       (_) => _doAutoSync(userId, role),
     );
-    debugPrint(
-        'SyncService: 自动同步已启动 (每 $interval 分钟, 分组项目仓库模式)');
+    debugPrint('SyncService: 自动同步已启动 (每 $interval 分钟, 分组项目仓库模式)');
   }
 
   /// 停止自动同步
@@ -305,8 +305,7 @@ class SyncService {
       if (repo == null) {
         status.value = SyncStatus.idle;
         debugPrint('SyncService: $userId 未配置分组仓库(repository_url)，跳过上传');
-        return SyncResult(
-            success: false, message: '未配置分组项目仓库，请联系教师导入实验分组');
+        return SyncResult(success: false, message: '未配置分组项目仓库，请联系教师导入实验分组');
       }
 
       // 4. 写入组仓库 mad/{userId}.json
@@ -569,11 +568,8 @@ class SyncService {
       'student_works': 'created_at DESC',
       'survey_responses': 'submitted_at DESC',
       'checkin_records': 'checked_at DESC',
-      'work_comments': 'created_at DESC',
-      'work_likes': null,
       // notification_recipients 不同步：notification_id 是本地自增主键，
       // 跨设备导入会导致孤儿行（引用不存在的通知），造成 badge 计数与列表不一致
-      'work_views': 'viewed_at DESC',
     };
 
     final result = <String, dynamic>{
@@ -594,6 +590,28 @@ class SyncService {
         orderBy: entry.value,
       );
     }
+
+    // 作品互动表需要携带作品自然键，导入端不能直接复用本机自增 work_id。
+    result['work_comments'] = await _safeWorkScopedQuery(
+      db,
+      'work_comments',
+      userIdColumn: 'user_id',
+      userId: userId,
+      orderBy: 'created_at DESC',
+    );
+    result['work_likes'] = await _safeWorkScopedQuery(
+      db,
+      'work_likes',
+      userIdColumn: 'user_id',
+      userId: userId,
+    );
+    result['work_views'] = await _safeWorkScopedQuery(
+      db,
+      'work_views',
+      userIdColumn: 'user_id',
+      userId: userId,
+      orderBy: 'viewed_at DESC',
+    );
 
     // ── 按其他字段收集的表 ────────────────────────────────────────────
     // peer_reviews 使用 reviewer_id
@@ -621,11 +639,11 @@ class SyncService {
     );
 
     // work_scores — 学生作为评分人（同学互评）
-    result['work_scores'] = await _safeQuery(
+    result['work_scores'] = await _safeWorkScopedQuery(
       db,
       'work_scores',
-      where: 'scorer_id = ?',
-      whereArgs: [userId],
+      userIdColumn: 'scorer_id',
+      userId: userId,
       orderBy: 'scored_at DESC',
     );
 
@@ -715,6 +733,34 @@ class SyncService {
     } catch (e, st) {
       swallowDebug(e, tag: 'SyncService.safeQuery', stack: st);
       return []; // 表可能不存在
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _safeWorkScopedQuery(
+    dynamic db,
+    String table, {
+    required String userIdColumn,
+    required String userId,
+    String? orderBy,
+  }) async {
+    try {
+      final orderSql = orderBy == null ? '' : 'ORDER BY i.$orderBy';
+      final rows = await db.rawQuery('''
+        SELECT i.*,
+               w.user_id AS work_user_id,
+               w.title AS work_title,
+               w.course_id AS work_course_id
+        FROM $table i
+        LEFT JOIN student_works w ON w.id = i.work_id
+        WHERE i.$userIdColumn = ?
+        $orderSql
+      ''', [userId]);
+      return (rows as List)
+          .map((r) => Map<String, dynamic>.from(r as Map)..remove('id'))
+          .toList();
+    } catch (e, st) {
+      swallowDebug(e, tag: 'SyncService.safeWorkScopedQuery', stack: st);
+      return [];
     }
   }
 
@@ -1014,10 +1060,7 @@ class SyncService {
           'learning_paths',
           'survey_responses',
           'checkin_records',
-          'work_comments',
-          'work_likes',
           // notification_recipients 不同步：notification_id 跨设备不匹配，导入会产生孤儿行
-          'work_views',
           'assessment_reports',
         ];
 
@@ -1077,6 +1120,27 @@ class SyncService {
         // ── student_works 特殊处理 ──────────────────────────────────
         // 保护已评分的作品不被覆盖
         txnCount += await _importStudentWorks(txn, data, userId);
+
+        // ── 作品互动表：按作品自然键重映射 work_id ───────────────────
+        txnCount += await _importWorkInteractionTable(
+          txn,
+          data,
+          'work_comments',
+          userId,
+        );
+        txnCount += await _importWorkInteractionTable(
+          txn,
+          data,
+          'work_likes',
+          userId,
+        );
+        txnCount += await _importWorkInteractionTable(
+          txn,
+          data,
+          'work_views',
+          userId,
+        );
+        await _recalculateWorkInteractionCounts(txn);
 
         // ── work_scores — 学生互评（按 scorer_id 导入）────────────────
         // 保护教师评分不被覆盖
@@ -1482,6 +1546,118 @@ class SyncService {
     return count;
   }
 
+  Future<int?> _resolveLocalWorkId(
+    dynamic db,
+    Map<String, dynamic> row,
+  ) async {
+    final workUserId = (row['work_user_id'] as String?)?.trim() ?? '';
+    final workTitle = (row['work_title'] as String?)?.trim() ?? '';
+    final workCourseId = (row['work_course_id'] as String?)?.trim() ?? '';
+
+    if (workUserId.isNotEmpty && workTitle.isNotEmpty) {
+      final where = workCourseId.isEmpty
+          ? 'user_id = ? AND title = ?'
+          : "user_id = ? AND title = ? AND (course_id = ? OR course_id IS NULL OR course_id = '')";
+      final args = workCourseId.isEmpty
+          ? <Object?>[workUserId, workTitle]
+          : <Object?>[workUserId, workTitle, workCourseId];
+      final matches = await db.query(
+        'student_works',
+        columns: ['id'],
+        where: where,
+        whereArgs: args,
+        limit: 1,
+      );
+      if (matches.isNotEmpty) return matches.first['id'] as int?;
+
+      final now = DateTime.now().toIso8601String();
+      return db.insert('student_works', {
+        'course_id': workCourseId.isNotEmpty
+            ? workCourseId
+            : CourseContextService.defaultCourseId,
+        'title': workTitle,
+        'user_id': workUserId,
+        'status': '待提交',
+        'created_at': now,
+        'updated_at': now,
+      });
+    }
+
+    final rawWorkId = row['work_id'];
+    final workId = rawWorkId is int ? rawWorkId : int.tryParse('$rawWorkId');
+    if (workId == null) return null;
+    final exists = await db.query(
+      'student_works',
+      columns: ['id'],
+      where: 'id = ?',
+      whereArgs: [workId],
+      limit: 1,
+    );
+    return exists.isNotEmpty ? workId : null;
+  }
+
+  void _stripWorkSyncMetadata(Map<String, dynamic> row) {
+    row
+      ..remove('work_user_id')
+      ..remove('work_title')
+      ..remove('work_course_id');
+  }
+
+  Future<int> _importWorkInteractionTable(
+    dynamic db,
+    Map<String, dynamic> data,
+    String table,
+    String userId,
+  ) async {
+    final list = data[table] as List?;
+    if (list == null) return 0;
+
+    int count = 0;
+    try {
+      await db.delete(table, where: 'user_id = ?', whereArgs: [userId]);
+      if (list.isEmpty) return 0;
+      for (final r in list) {
+        try {
+          final row = Map<String, dynamic>.from(r as Map);
+          row.remove('id');
+          row['user_id'] = userId;
+          final localWorkId = await _resolveLocalWorkId(db, row);
+          if (localWorkId == null) continue;
+          row['work_id'] = localWorkId;
+          _stripWorkSyncMetadata(row);
+          await db.insert(table, row);
+          count++;
+        } catch (e) {
+          debugPrint('SyncService: 导入 $table 失败: $e');
+        }
+      }
+    } catch (e, st) {
+      swallowDebug(e,
+          tag: 'SyncService.importWorkInteraction.$table', stack: st);
+    }
+    return count;
+  }
+
+  Future<void> _recalculateWorkInteractionCounts(dynamic db) async {
+    try {
+      await db.rawUpdate('''
+        UPDATE student_works
+        SET view_count = (
+              SELECT COUNT(*) FROM work_views v WHERE v.work_id = student_works.id
+            ),
+            like_count = (
+              SELECT COUNT(*) FROM work_likes l WHERE l.work_id = student_works.id
+            ),
+            comment_count = (
+              SELECT COUNT(*) FROM work_comments c WHERE c.work_id = student_works.id
+            )
+      ''');
+    } catch (e, st) {
+      swallowDebug(e,
+          tag: 'SyncService.recalculateWorkInteractionCounts', stack: st);
+    }
+  }
+
   /// work_scores 导入：
   /// - 仅导入该学生作为评分人（scorer_id）的互评记录
   /// - 不删除/覆盖其他评分人（教师或其他同学）的评分
@@ -1491,13 +1667,14 @@ class SyncService {
     String userId,
   ) async {
     final list = data['work_scores'] as List?;
-    if (list == null || list.isEmpty) return 0;
+    if (list == null) return 0;
 
     int count = 0;
     try {
       // 删除该学生作为评分人的旧评分（重新导入）
       await db
           .delete('work_scores', where: 'scorer_id = ?', whereArgs: [userId]);
+      if (list.isEmpty) return 0;
 
       for (final r in list) {
         try {
@@ -1505,13 +1682,10 @@ class SyncService {
           row.remove('id');
           row['scorer_id'] = userId; // 确保 scorer_id 一致
 
-          // work_id 需要匹配本地的 student_works.id
-          // 通过 work_id 对应的作品标题来重映射
-          final remoteWorkId = row['work_id'];
-          if (remoteWorkId == null) continue;
-
-          // 尝试直接插入（如果 work_id 在本地存在）
-          // ON DELETE CASCADE 保证外键完整性
+          final localWorkId = await _resolveLocalWorkId(db, row);
+          if (localWorkId == null) continue;
+          row['work_id'] = localWorkId;
+          _stripWorkSyncMetadata(row);
           await db.insert('work_scores', row);
           count++;
         } catch (e) {
@@ -1799,8 +1973,10 @@ class SyncService {
   Future<SyncResult> testConnection() async {
     try {
       await _ensureSyncToken();
-      final detail = await _gitee.getRepoDetail(systemRepoOwner, systemRepoName);
-      final fullName = detail['full_name'] ?? '$systemRepoOwner/$systemRepoName';
+      final detail =
+          await _gitee.getRepoDetail(systemRepoOwner, systemRepoName);
+      final fullName =
+          detail['full_name'] ?? '$systemRepoOwner/$systemRepoName';
       final isPrivate = detail['private'] == true ? '私有' : '公开';
 
       return SyncResult(

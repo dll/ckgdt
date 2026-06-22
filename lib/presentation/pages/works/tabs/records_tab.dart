@@ -23,8 +23,18 @@ class _RecordsTabState extends State<_RecordsTab> {
   Future<void> _loadRecords() async {
     setState(() => _isLoading = true);
     try {
-      final records = await _worksDao.getWorks(sortBy: _dimension);
-      if (mounted) setState(() { _records = records; _isLoading = false; });
+      await _worksDao.repairSubmissionState();
+      final records = (await _worksDao.getWorks(sortBy: _dimension))
+          .where((w) =>
+              WorksDao.isSubmittedStatus(w['status'] as String?) ||
+              WorksDao.hasVideoReference(w))
+          .toList();
+      if (mounted) {
+        setState(() {
+          _records = records;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -44,11 +54,9 @@ class _RecordsTabState extends State<_RecordsTab> {
             children: [
               _dimChip('最新发布', 'latest', Icons.schedule, primary),
               const SizedBox(width: 8),
-              _dimChip(
-                  '最多播放', 'most_viewed', Icons.visibility, primary),
+              _dimChip('最多播放', 'most_viewed', Icons.visibility, primary),
               const SizedBox(width: 8),
-              _dimChip('最热门', 'hottest',
-                  Icons.local_fire_department, primary),
+              _dimChip('最热门', 'hottest', Icons.local_fire_department, primary),
             ],
           ),
           const SizedBox(height: 16),
@@ -81,8 +89,7 @@ class _RecordsTabState extends State<_RecordsTab> {
     );
   }
 
-  Widget _dimChip(
-      String label, String value, IconData icon, Color primary) {
+  Widget _dimChip(String label, String value, IconData icon, Color primary) {
     final selected = _dimension == value;
     return Expanded(
       child: InkWell(
@@ -94,30 +101,24 @@ class _RecordsTabState extends State<_RecordsTab> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: selected
-                ? primary.withValues(alpha: 0.12)
-                : Colors.grey[100],
+            color:
+                selected ? primary.withValues(alpha: 0.12) : Colors.grey[100],
             borderRadius: BorderRadius.circular(10),
             border: selected
-                ? Border.all(
-                    color: primary.withValues(alpha: 0.3))
+                ? Border.all(color: primary.withValues(alpha: 0.3))
                 : null,
           ),
           child: Column(
             children: [
               Icon(icon,
-                  size: 20,
-                  color: selected ? primary : Colors.grey[500]),
+                  size: 20, color: selected ? primary : Colors.grey[500]),
               const SizedBox(height: 4),
               Text(label,
                   style: TextStyle(
                       fontSize: 12,
-                      fontWeight: selected
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                      color: selected
-                          ? primary
-                          : Colors.grey[600])),
+                      fontWeight:
+                          selected ? FontWeight.bold : FontWeight.normal,
+                      color: selected ? primary : Colors.grey[600])),
             ],
           ),
         ),
@@ -132,8 +133,7 @@ class _RecordsTabState extends State<_RecordsTab> {
     final likeCount = (work['like_count'] as int?) ?? 0;
     final commentCount = (work['comment_count'] as int?) ?? 0;
     final score = work['score'] as int?;
-    final showReal =
-        widget.authService.isTeacher || widget.authService.isAdmin;
+    final showReal = widget.authService.isTeacher || widget.authService.isAdmin;
     final studentName = _studentDisplayName(work, showReal);
 
     final rankColor = rank == 1
@@ -152,8 +152,7 @@ class _RecordsTabState extends State<_RecordsTab> {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
@@ -161,15 +160,13 @@ class _RecordsTabState extends State<_RecordsTab> {
             left: BorderSide(color: rankColor, width: 3),
           ),
         ),
-        padding: const EdgeInsets.symmetric(
-            horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
           children: [
             SizedBox(
               width: 36,
               child: rank <= 3
-                  ? Icon(Icons.emoji_events,
-                      size: 24, color: rankColor)
+                  ? Icon(Icons.emoji_events, size: 24, color: rankColor)
                   : Text('#$rank',
                       textAlign: TextAlign.center,
                       style: TextStyle(
@@ -184,8 +181,7 @@ class _RecordsTabState extends State<_RecordsTab> {
                 children: [
                   Text(studentName,
                       style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600),
+                          fontSize: 14, fontWeight: FontWeight.w600),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 4),
@@ -194,32 +190,25 @@ class _RecordsTabState extends State<_RecordsTab> {
                       if (work['repo'] != null)
                         Text(work['repo'] as String,
                             style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey[500])),
+                                fontSize: 11, color: Colors.grey[500])),
                       const SizedBox(width: 8),
-                      Icon(Icons.visibility,
-                          size: 12, color: Colors.grey[400]),
+                      Icon(Icons.visibility, size: 12, color: Colors.grey[400]),
                       const SizedBox(width: 2),
                       Text('$viewCount',
-                          style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey[500])),
+                          style:
+                              TextStyle(fontSize: 11, color: Colors.grey[500])),
                       const SizedBox(width: 8),
-                      Icon(Icons.favorite,
-                          size: 12, color: Colors.grey[400]),
+                      Icon(Icons.favorite, size: 12, color: Colors.grey[400]),
                       const SizedBox(width: 2),
                       Text('$likeCount',
-                          style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey[500])),
+                          style:
+                              TextStyle(fontSize: 11, color: Colors.grey[500])),
                       const SizedBox(width: 8),
-                      Icon(Icons.comment,
-                          size: 12, color: Colors.grey[400]),
+                      Icon(Icons.comment, size: 12, color: Colors.grey[400]),
                       const SizedBox(width: 2),
                       Text('$commentCount',
-                          style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey[500])),
+                          style:
+                              TextStyle(fontSize: 11, color: Colors.grey[500])),
                     ],
                   ),
                 ],
@@ -249,7 +238,8 @@ class _RecordsTabState extends State<_RecordsTab> {
                   const SizedBox(height: 2),
                   Text(
                       '互评${(work['peer_avg'] as num?)?.toStringAsFixed(0) ?? '0'}分',
-                      style: TextStyle(fontSize: 10, color: Colors.orange[600])),
+                      style:
+                          TextStyle(fontSize: 10, color: Colors.orange[600])),
                 ],
               ],
             ),
@@ -263,4 +253,3 @@ class _RecordsTabState extends State<_RecordsTab> {
 // ╔══════════════════════════════════════════════════════════════════════════════╗
 // ║  Tab 2: 排行榜 (Leaderboard) — 多维度排行                                  ║
 // ╚══════════════════════════════════════════════════════════════════════════════╝
-

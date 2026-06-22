@@ -31,8 +31,14 @@ class _GalleryTabState extends State<_GalleryTab> {
   Future<void> _loadWorks() async {
     setState(() => _isLoading = true);
     try {
+      await _worksDao.repairSubmissionState();
       final works = await _worksDao.getWorks(sortBy: _sortBy);
-      if (mounted) setState(() { _works = works; _isLoading = false; });
+      if (mounted) {
+        setState(() {
+          _works = works;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -126,8 +132,7 @@ class _GalleryTabState extends State<_GalleryTab> {
                         showCheckmark: false,
                         selectedColor: dim.color.withValues(alpha: 0.15),
                         padding: EdgeInsets.zero,
-                        materialTapTargetSize:
-                            MaterialTapTargetSize.shrinkWrap,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                     ))
                 .toList(),
@@ -143,10 +148,8 @@ class _GalleryTabState extends State<_GalleryTab> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
                 _sortChip('最新', 'latest', Icons.schedule, primary),
-                _sortChip(
-                    '最多播放', 'most_viewed', Icons.visibility, primary),
-                _sortChip(
-                    '最多点赞', 'most_liked', Icons.favorite, primary),
+                _sortChip('最多播放', 'most_viewed', Icons.visibility, primary),
+                _sortChip('最多点赞', 'most_liked', Icons.favorite, primary),
                 _sortChip(
                     '最热', 'hottest', Icons.local_fire_department, primary),
               ]
@@ -168,9 +171,7 @@ class _GalleryTabState extends State<_GalleryTab> {
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())
               : filtered.isEmpty
-                  ? Center(
-                      child:
-                          _emptyHint('没有找到匹配的作品', Icons.search_off))
+                  ? Center(child: _emptyHint('没有找到匹配的作品', Icons.search_off))
                   : _currentDim == _WorkDimension.all
                       ? _buildFlatView(context, filtered)
                       : _buildGroupedView(context, filtered),
@@ -185,8 +186,7 @@ class _GalleryTabState extends State<_GalleryTab> {
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         children: [
-          Icon(_currentDim.icon,
-              size: 14, color: _currentDim.color),
+          Icon(_currentDim.icon, size: 14, color: _currentDim.color),
           const SizedBox(width: 6),
           Text(
             '${_currentDim.label}视角 · ${grouped.length}组 · ${works.length}人',
@@ -200,12 +200,11 @@ class _GalleryTabState extends State<_GalleryTab> {
     );
   }
 
-  Widget _sortChip(
-      String label, String value, IconData icon, Color primary) {
+  Widget _sortChip(String label, String value, IconData icon, Color primary) {
     final selected = _sortBy == value;
     return FilterChip(
-      avatar: Icon(icon,
-          size: 14, color: selected ? primary : Colors.grey[500]),
+      avatar:
+          Icon(icon, size: 14, color: selected ? primary : Colors.grey[500]),
       label: Text(label, style: const TextStyle(fontSize: 11)),
       selected: selected,
       onSelected: (_) {
@@ -227,14 +226,16 @@ class _GalleryTabState extends State<_GalleryTab> {
       onRefresh: _loadWorks,
       child: LayoutBuilder(
         builder: (ctx, box) {
-          final cols =
-              box.maxWidth > 900 ? 3 : box.maxWidth > 600 ? 2 : 1;
+          final cols = box.maxWidth > 900
+              ? 3
+              : box.maxWidth > 600
+                  ? 2
+                  : 1;
           if (cols == 1) {
             return ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: works.length,
-              itemBuilder: (_, i) =>
-                  _buildVideoCard(context, works[i]),
+              itemBuilder: (_, i) => _buildVideoCard(context, works[i]),
             );
           }
           return GridView.builder(
@@ -246,8 +247,7 @@ class _GalleryTabState extends State<_GalleryTab> {
               childAspectRatio: 1.15,
             ),
             itemCount: works.length,
-            itemBuilder: (_, i) =>
-                _buildVideoCard(context, works[i]),
+            itemBuilder: (_, i) => _buildVideoCard(context, works[i]),
           );
         },
       ),
@@ -268,8 +268,7 @@ class _GalleryTabState extends State<_GalleryTab> {
         children: [
           for (int gi = 0; gi < sortedKeys.length; gi++) ...[
             if (gi > 0) const SizedBox(height: 14),
-            _buildGroupHeader(
-                sortedKeys[gi], grouped[sortedKeys[gi]]!.length),
+            _buildGroupHeader(sortedKeys[gi], grouped[sortedKeys[gi]]!.length),
             ...grouped[sortedKeys[gi]]!
                 .map((w) => _buildCompactCard(context, w)),
           ],
@@ -285,13 +284,11 @@ class _GalleryTabState extends State<_GalleryTab> {
       decoration: BoxDecoration(
         color: _currentDim.color.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(10),
-        border: Border(
-            left: BorderSide(color: _currentDim.color, width: 3)),
+        border: Border(left: BorderSide(color: _currentDim.color, width: 3)),
       ),
       child: Row(
         children: [
-          Icon(_currentDim.icon,
-              size: 16, color: _currentDim.color),
+          Icon(_currentDim.icon, size: 16, color: _currentDim.color),
           const SizedBox(width: 8),
           Expanded(
             child: Text(groupName,
@@ -319,8 +316,7 @@ class _GalleryTabState extends State<_GalleryTab> {
 
   // ── 紧凑型作品卡片（分组视图使用） ──────────────────────
 
-  Widget _buildCompactCard(
-      BuildContext context, Map<String, dynamic> work) {
+  Widget _buildCompactCard(BuildContext context, Map<String, dynamic> work) {
     final primary = Theme.of(context).colorScheme.primary;
     final score = work['score'] as int?;
     final viewCount = (work['view_count'] as int?) ?? 0;
@@ -332,13 +328,11 @@ class _GalleryTabState extends State<_GalleryTab> {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 6),
-      shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: InkWell(
         onTap: () => _showWorkDetail(context, work),
-        onLongPress: isTeacherOrAdmin
-            ? () => _confirmDeleteWork(context, work)
-            : null,
+        onLongPress:
+            isTeacherOrAdmin ? () => _confirmDeleteWork(context, work) : null,
         borderRadius: BorderRadius.circular(10),
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -390,8 +384,7 @@ class _GalleryTabState extends State<_GalleryTab> {
                           child: Text(
                             _studentDisplayName(work, isTeacherOrAdmin),
                             style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600),
+                                fontSize: 13, fontWeight: FontWeight.w600),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -401,16 +394,13 @@ class _GalleryTabState extends State<_GalleryTab> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 1),
                             decoration: BoxDecoration(
-                              color:
-                                  Colors.orange.withValues(alpha: 0.1),
+                              color: Colors.orange.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              _shortRole(
-                                  work['student_role'] as String?),
+                              _shortRole(work['student_role'] as String?),
                               style: TextStyle(
-                                  fontSize: 9,
-                                  color: Colors.orange[700]),
+                                  fontSize: 9, color: Colors.orange[700]),
                             ),
                           ),
                       ],
@@ -418,14 +408,14 @@ class _GalleryTabState extends State<_GalleryTab> {
                     const SizedBox(height: 3),
                     Row(
                       children: [
-                        _miniStat(Icons.visibility, '$viewCount',
-                            Colors.grey[500]!),
+                        _miniStat(
+                            Icons.visibility, '$viewCount', Colors.grey[500]!),
                         const SizedBox(width: 10),
-                        _miniStat(Icons.favorite, '$likeCount',
-                            Colors.red[300]!),
+                        _miniStat(
+                            Icons.favorite, '$likeCount', Colors.red[300]!),
                         const SizedBox(width: 10),
-                        _miniStat(Icons.comment, '$commentCount',
-                            Colors.blue[300]!),
+                        _miniStat(
+                            Icons.comment, '$commentCount', Colors.blue[300]!),
                         const Spacer(),
                         if (score != null)
                           Text('$score分',
@@ -441,8 +431,7 @@ class _GalleryTabState extends State<_GalleryTab> {
                           Text(
                               '互评${(work['peer_avg'] as num?)?.toStringAsFixed(0) ?? '0'}',
                               style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.orange[600])),
+                                  fontSize: 10, color: Colors.orange[600])),
                         ],
                       ],
                     ),
@@ -458,10 +447,12 @@ class _GalleryTabState extends State<_GalleryTab> {
 
   // ── 完整视频作品卡片（全部视图使用） ────────────────────
 
-  Widget _buildVideoCard(
-      BuildContext context, Map<String, dynamic> work) {
+  Widget _buildVideoCard(BuildContext context, Map<String, dynamic> work) {
     final primary = Theme.of(context).colorScheme.primary;
-    final status = work['status'] as String? ?? '待提交';
+    final rawStatus = work['status'] as String? ?? '待提交';
+    final status = WorksDao.hasVideoReference(work) && rawStatus == '待提交'
+        ? '已提交'
+        : rawStatus;
     final score = work['score'] as int?;
     final viewCount = (work['view_count'] as int?) ?? 0;
     final likeCount = (work['like_count'] as int?) ?? 0;
@@ -469,8 +460,7 @@ class _GalleryTabState extends State<_GalleryTab> {
     final duration = work['video_duration'] as String? ?? '';
     final isTeacherOrAdmin =
         widget.authService.isTeacher || widget.authService.isAdmin;
-    final needsScore =
-        isTeacherOrAdmin && status == '已提交' && score == null;
+    final needsScore = isTeacherOrAdmin && status == '已提交' && score == null;
     // 学生身份时本人作品视觉强调（边框 + 角标），引导学生在全班 grid 里
     // 一眼找到自己。
     final currentUid = widget.authService.getCurrentUserId();
@@ -482,17 +472,16 @@ class _GalleryTabState extends State<_GalleryTab> {
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: isMine
-            ? BorderSide(color: primary, width: 2.5)
-            : BorderSide.none,
+        side: isMine ? BorderSide(color: primary, width: 2.5) : BorderSide.none,
       ),
       clipBehavior: Clip.antiAlias,
       elevation: isMine ? 4 : 2,
       child: InkWell(
         onTap: () => _showWorkDetail(context, work),
-        onLongPress: (widget.authService.isTeacher || widget.authService.isAdmin)
-            ? () => _confirmDeleteWork(context, work)
-            : null,
+        onLongPress:
+            (widget.authService.isTeacher || widget.authService.isAdmin)
+                ? () => _confirmDeleteWork(context, work)
+                : null,
         child: Stack(
           children: [
             Column(
@@ -505,217 +494,211 @@ class _GalleryTabState extends State<_GalleryTab> {
                     fit: StackFit.expand,
                     children: [
                       Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          primary.withValues(alpha: 0.15),
-                          primary.withValues(alpha: 0.05),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              primary.withValues(alpha: 0.15),
+                              primary.withValues(alpha: 0.05),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: Center(
+                          child: Icon(Icons.play_circle_outline,
+                              size: 52, color: primary.withValues(alpha: 0.3)),
+                        ),
+                      ),
+                      Center(
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.5),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.play_arrow,
+                              color: Colors.white, size: 28),
+                        ),
+                      ),
+                      if (duration.isNotEmpty)
+                        Positioned(
+                          right: 8,
+                          bottom: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.7),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(duration,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500)),
+                          ),
+                        ),
+                      if (needsScore)
+                        Positioned(
+                          left: 8,
+                          top: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.orange,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text('待评分',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      if (score != null)
+                        Positioned(
+                          left: 8,
+                          top: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: score >= 90
+                                  ? Colors.green
+                                  : score >= 80
+                                      ? Colors.blue
+                                      : Colors.orange,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text('$score分',
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      if ((work['peer_count'] as int?) != null &&
+                          (work['peer_count'] as int) > 0)
+                        Positioned(
+                          left: 8,
+                          top: score != null ? 32 : 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.orange[700],
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                                '互评${(work['peer_avg'] as num?)?.toStringAsFixed(0) ?? '0'}',
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      if (score == null && !needsScore && status == '待提交')
+                        Positioned(
+                          left: 8,
+                          top: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.grey,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text('待提交',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                // ── 信息区 ────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 学生姓名 + 角色
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _studentDisplayName(work, isTeacherOrAdmin),
+                              style: const TextStyle(
+                                  fontSize: 14, fontWeight: FontWeight.w600),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (work['student_role'] != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                _shortRole(work['student_role'] as String?),
+                                style: TextStyle(
+                                    fontSize: 9,
+                                    color: Colors.orange[700],
+                                    fontWeight: FontWeight.w500),
+                              ),
+                            ),
                         ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
                       ),
-                    ),
-                    child: Center(
-                      child: Icon(Icons.play_circle_outline,
-                          size: 52,
-                          color: primary.withValues(alpha: 0.3)),
-                    ),
-                  ),
-                  Center(
-                    child: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.5),
-                        shape: BoxShape.circle,
+                      const SizedBox(height: 3),
+                      // 项目名称
+                      Text(
+                        work['title'] as String? ?? '',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      child: const Icon(Icons.play_arrow,
-                          color: Colors.white, size: 28),
-                    ),
-                  ),
-                  if (duration.isNotEmpty)
-                    Positioned(
-                      right: 8,
-                      bottom: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.7),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(duration,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 8),
+                      // 交互数据行
+                      Row(
+                        children: [
+                          _miniStat(Icons.visibility, '$viewCount',
+                              Colors.grey[600]!),
+                          const SizedBox(width: 14),
+                          _miniStat(
+                              Icons.favorite, '$likeCount', Colors.red[300]!),
+                          const SizedBox(width: 14),
+                          _miniStat(Icons.comment, '$commentCount',
+                              Colors.blue[300]!),
+                          const Spacer(),
+                          if (work['tech_stack'] != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: primary.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                (work['tech_stack'] as String).length > 12
+                                    ? '${(work['tech_stack'] as String).substring(0, 12)}…'
+                                    : work['tech_stack'] as String,
+                                style: TextStyle(fontSize: 9, color: primary),
+                              ),
+                            ),
+                        ],
                       ),
-                    ),
-                  if (needsScore)
-                    Positioned(
-                      left: 8,
-                      top: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: Colors.orange,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Text('待评分',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-                  if (score != null)
-                    Positioned(
-                      left: 8,
-                      top: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: score >= 90
-                              ? Colors.green
-                              : score >= 80
-                                  ? Colors.blue
-                                  : Colors.orange,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text('$score分',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-                  if ((work['peer_count'] as int?) != null &&
-                      (work['peer_count'] as int) > 0)
-                    Positioned(
-                      left: 8,
-                      top: score != null ? 32 : 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: Colors.orange[700],
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                            '互评${(work['peer_avg'] as num?)?.toStringAsFixed(0) ?? '0'}',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-                  if (score == null && !needsScore && status == '待提交')
-                    Positioned(
-                      left: 8,
-                      top: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: Colors.grey,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Text('待提交',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            // ── 信息区 ────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 学生姓名 + 角色
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _studentDisplayName(work, isTeacherOrAdmin),
-                          style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (work['student_role'] != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color:
-                                Colors.orange.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            _shortRole(
-                                work['student_role'] as String?),
-                            style: TextStyle(
-                                fontSize: 9,
-                                color: Colors.orange[700],
-                                fontWeight: FontWeight.w500),
-                          ),
-                        ),
                     ],
                   ),
-                  const SizedBox(height: 3),
-                  // 项目名称
-                  Text(
-                    work['title'] as String? ?? '',
-                    style: TextStyle(
-                        fontSize: 12, color: Colors.grey[600]),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  // 交互数据行
-                  Row(
-                    children: [
-                      _miniStat(Icons.visibility, '$viewCount',
-                          Colors.grey[600]!),
-                      const SizedBox(width: 14),
-                      _miniStat(Icons.favorite, '$likeCount',
-                          Colors.red[300]!),
-                      const SizedBox(width: 14),
-                      _miniStat(Icons.comment, '$commentCount',
-                          Colors.blue[300]!),
-                      const Spacer(),
-                      if (work['tech_stack'] != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: primary.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            (work['tech_stack'] as String).length > 12
-                                ? '${(work['tech_stack'] as String).substring(0, 12)}…'
-                                : work['tech_stack'] as String,
-                            style: TextStyle(
-                                fontSize: 9, color: primary),
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
+                ),
+              ],
             ),
             // 学生本人作品角标
             if (isMine)
@@ -723,8 +706,8 @@ class _GalleryTabState extends State<_GalleryTab> {
                 top: 8,
                 right: 8,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: primary,
                     borderRadius: BorderRadius.circular(10),
@@ -753,9 +736,7 @@ class _GalleryTabState extends State<_GalleryTab> {
         const SizedBox(width: 3),
         Text(value,
             style: TextStyle(
-                fontSize: 11,
-                color: color,
-                fontWeight: FontWeight.w500)),
+                fontSize: 11, color: color, fontWeight: FontWeight.w500)),
       ],
     );
   }
@@ -772,7 +753,8 @@ class _GalleryTabState extends State<_GalleryTab> {
       context: ctx,
       builder: (c) => AlertDialog(
         title: const Text('删除作品'),
-        content: Text('确定要删除「$userName」的作品「$title」吗？\n\n此操作将同时删除评分、评论、点赞记录，不可撤销。'),
+        content:
+            Text('确定要删除「$userName」的作品「$title」吗？\n\n此操作将同时删除评分、评论、点赞记录，不可撤销。'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(c, false),
@@ -791,16 +773,14 @@ class _GalleryTabState extends State<_GalleryTab> {
       await _worksDao.deleteWork(workId);
       if (ctx.mounted) {
         ScaffoldMessenger.of(ctx).showSnackBar(
-          const SnackBar(
-              content: Text('已删除'), backgroundColor: Colors.green),
+          const SnackBar(content: Text('已删除'), backgroundColor: Colors.green),
         );
         _loadWorks();
       }
     } catch (e) {
       if (ctx.mounted) {
         ScaffoldMessenger.of(ctx).showSnackBar(
-          SnackBar(
-              content: Text('删除失败: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('删除失败: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -809,23 +789,17 @@ class _GalleryTabState extends State<_GalleryTab> {
   // ── 作品详情 BottomSheet ─────────────────────────────────
 
   void _showWorkDetail(BuildContext ctx, Map<String, dynamic> work) {
-    final workId = work['id'] as int;
-    final userId = widget.authService.getCurrentUserId() ?? '';
-
     // 从 JSON 查找该学生的丰富信息
     final workUserId = work['user_id'] as String?;
     Map<String, dynamic>? studentInfo;
     if (workUserId != null && widget.allStudents.isNotEmpty) {
       try {
-        studentInfo = widget.allStudents
-            .firstWhere((s) => s['userId'] == workUserId);
+        studentInfo =
+            widget.allStudents.firstWhere((s) => s['userId'] == workUserId);
       } catch (_) {
         studentInfo = null;
       }
     }
-
-    // 记录播放
-    _worksDao.recordView(workId, userId);
 
     showModalBottomSheet(
       context: ctx,
@@ -850,4 +824,3 @@ class _GalleryTabState extends State<_GalleryTab> {
 // ╔══════════════════════════════════════════════════════════════════════════════╗
 // ║  作品详情 BottomSheet                                                       ║
 // ╚══════════════════════════════════════════════════════════════════════════════╝
-

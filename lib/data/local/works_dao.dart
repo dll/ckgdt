@@ -9,6 +9,17 @@ import 'package:knowledge_graph_app/core/error_handler.dart';
 class WorksDao {
   final CourseContextService _courseContext = CourseContextService();
 
+  static const submittedStatuses = {'已提交', '已评分'};
+
+  static bool isSubmittedStatus(String? status) =>
+      submittedStatuses.contains((status ?? '').trim());
+
+  static bool hasVideoReference(Map<String, dynamic> work) {
+    final videoUrl = (work['video_url'] as String?)?.trim() ?? '';
+    final filePath = (work['file_path'] as String?)?.trim() ?? '';
+    return videoUrl.isNotEmpty || filePath.isNotEmpty;
+  }
+
   // ══════════════════════════════════════════════════════════
   //  表结构保障（懒迁移，不修改 database_helper）
   // ══════════════════════════════════════════════════════════
@@ -46,7 +57,9 @@ class WorksDao {
     for (final sql in newColumns) {
       try {
         await db.execute(sql);
-      } catch (e) { swallowDebug(e, tag: 'works_dao'); } // 列已存在则静默跳过
+      } catch (e) {
+        swallowDebug(e, tag: 'works_dao');
+      } // 列已存在则静默跳过
     }
     try {
       await db.update(
@@ -54,7 +67,9 @@ class WorksDao {
         {'course_id': CourseContextService.defaultCourseId},
         where: "course_id IS NULL OR course_id = ''",
       );
-    } catch (e) { swallowDebug(e, tag: 'works_dao'); }
+    } catch (e) {
+      swallowDebug(e, tag: 'works_dao');
+    }
 
     // 评论表
     await db.execute('''
@@ -90,6 +105,9 @@ class WorksDao {
         viewed_at TEXT
       )
     ''');
+
+    await _repairSubmissionState(db);
+    await _recalculateInteractionCounts(db);
 
     _tableEnsured = true;
   }
@@ -304,6 +322,19 @@ class WorksDao {
   Future<void> recordView(int workId, String userId) async {
     await _ensureWorksTable();
     final db = await DatabaseHelper.instance.database;
+    if (userId.trim().isEmpty) return;
+    final workRows = await db.query(
+      'student_works',
+      where: 'id = ?',
+      whereArgs: [workId],
+      limit: 1,
+    );
+    if (workRows.isEmpty) return;
+    final work = Map<String, dynamic>.from(workRows.first as Map);
+    if (!isSubmittedStatus(work['status'] as String?) &&
+        !hasVideoReference(work)) {
+      return;
+    }
     await db.insert('work_views', {
       'work_id': workId,
       'user_id': userId,
@@ -741,29 +772,97 @@ class WorksDao {
     }
   }
 
-  /// 清除旧版虚假互动数据（评分、评论、虚假播放/点赞计数）
-  /// 调用一次后，将所有作品还原为"待提交"状态（无视频、无分数、无互动）
+  /// 清除旧版虚假互动数据。
+  ///
+  /// 旧逻辑曾经无差别重置所有作品，可能把真实提交清成"待提交"。
+  /// 这里只删除孤儿互动、重算计数，并只重置没有视频/提交时间/评分证据的假提交。
   Future<void> cleanupFakeData() async {
     await _ensureWorksTable();
     final db = await DatabaseHelper.instance.database;
 
-    // 删除所有评分、评论、点赞、浏览记录
-    await db.delete('work_scores');
-    await db.delete('work_comments');
-    await db.delete('work_likes');
-    await db.delete('work_views');
+    for (final table in const [
+      'work_scores',
+      'work_comments',
+      'work_likes',
+      'work_views',
+    ]) {
+      try {
+        await db.rawDelete('''
+          DELETE FROM $table
+          WHERE work_id IS NULL
+             OR work_id NOT IN (SELECT id FROM student_works)
+        ''');
+      } catch (e, st) {
+        swallowDebug(e, tag: 'WorksDao.cleanupFakeData.$table', stack: st);
+      }
+    }
 
-    // 重置所有作品的状态和虚假计数
-    await db.update('student_works', {
-      'status': '待提交',
-      'video_url': null,
-      'video_duration': null,
-      'view_count': 0,
-      'like_count': 0,
-      'comment_count': 0,
-      'submit_time': null,
-    });
-    debugPrint('WorksDao: 已清除旧版虚假互动数据');
+    await _repairSubmissionState(db);
+    await _recalculateInteractionCounts(db);
+
+    try {
+      await db.rawUpdate('''
+        UPDATE student_works
+        SET status = '待提交',
+            video_url = NULL,
+            video_duration = NULL,
+            submit_time = NULL
+        WHERE status IN ('已提交', '已评分')
+          AND (submit_time IS NULL OR TRIM(submit_time) = '')
+          AND (video_url IS NULL OR TRIM(video_url) = '')
+          AND (file_path IS NULL OR TRIM(file_path) = '')
+          AND id NOT IN (SELECT DISTINCT work_id FROM work_scores)
+      ''');
+    } catch (e, st) {
+      swallowDebug(e, tag: 'WorksDao.cleanupFakeData.resetFake', stack: st);
+    }
+    debugPrint('WorksDao: 已校正旧版作品虚假数据，保留真实提交与互动');
+  }
+
+  Future<void> repairSubmissionState() async {
+    await _ensureWorksTable();
+    final db = await DatabaseHelper.instance.database;
+    await _repairSubmissionState(db);
+    await _recalculateInteractionCounts(db);
+  }
+
+  Future<void> _repairSubmissionState(dynamic db) async {
+    final now = DateTime.now().toIso8601String();
+    try {
+      await db.rawUpdate('''
+        UPDATE student_works
+        SET status = '已提交',
+            submit_time = COALESCE(NULLIF(TRIM(submit_time), ''), updated_at, created_at, ?),
+            updated_at = COALESCE(updated_at, ?)
+        WHERE (status IS NULL OR TRIM(status) = '' OR status = '待提交')
+          AND (
+            (submit_time IS NOT NULL AND TRIM(submit_time) != '')
+            OR (video_url IS NOT NULL AND TRIM(video_url) != '')
+            OR (file_path IS NOT NULL AND TRIM(file_path) != '')
+          )
+      ''', [now, now]);
+    } catch (e, st) {
+      swallowDebug(e, tag: 'WorksDao.repairSubmissionState.restore', stack: st);
+    }
+  }
+
+  Future<void> _recalculateInteractionCounts(dynamic db) async {
+    try {
+      await db.rawUpdate('''
+        UPDATE student_works
+        SET view_count = (
+              SELECT COUNT(*) FROM work_views v WHERE v.work_id = student_works.id
+            ),
+            like_count = (
+              SELECT COUNT(*) FROM work_likes l WHERE l.work_id = student_works.id
+            ),
+            comment_count = (
+              SELECT COUNT(*) FROM work_comments c WHERE c.work_id = student_works.id
+            )
+      ''');
+    } catch (e, st) {
+      swallowDebug(e, tag: 'WorksDao.recalculateInteractionCounts', stack: st);
+    }
   }
 
   // ══════════════════════════════════════════════════════════
