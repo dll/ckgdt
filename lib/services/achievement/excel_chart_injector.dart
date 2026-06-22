@@ -36,7 +36,8 @@ class ExcelChartInjector {
       if (name != null && rid != null) nameToRid[_unescape(name)] = rid;
     }
     final ridToTarget = <String, String>{};
-    for (final m in RegExp(r'<Relationship\b[^>]*?>').allMatches(workbookRels)) {
+    for (final m
+        in RegExp(r'<Relationship\b[^>]*?>').allMatches(workbookRels)) {
       final tag = m.group(0)!;
       final id = RegExp(r'Id="([^"]*)"').firstMatch(tag)?.group(1);
       final tgt = RegExp(r'Target="([^"]*)"').firstMatch(tag)?.group(1);
@@ -68,7 +69,13 @@ class ExcelChartInjector {
       final chartNo = ++maxChart;
 
       files['xl/charts/chart$chartNo.xml'] = _bytes(spec.buildChartXml());
-      files['xl/drawings/drawing$drawingNo.xml'] = _bytes(_drawingXml());
+      // 散点图锚到数据右侧（数据占 A-E 列），条形图沿用模板比例。
+      final fromCol = spec.type == ChartType.scatter ? 7 : 3;
+      final fromRow = spec.type == ChartType.scatter ? 1 : 3;
+      final toCol = spec.type == ChartType.scatter ? 22 : 15;
+      final toRow = spec.type == ChartType.scatter ? 27 : 23;
+      files['xl/drawings/drawing$drawingNo.xml'] =
+          _bytes(_drawingXml(fromCol, fromRow, toCol, toRow));
       files['xl/drawings/_rels/drawing$drawingNo.xml.rels'] = _bytes(
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
@@ -114,14 +121,14 @@ class ExcelChartInjector {
     return Uint8List.fromList(encoded ?? bytes);
   }
 
-  static String _drawingXml() {
+  static String _drawingXml(int fromCol, int fromRow, int toCol, int toRow) {
     return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         '<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" '
         'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '
         'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
         '<xdr:twoCellAnchor>'
-        '<xdr:from><xdr:col>3</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>1</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>'
-        '<xdr:to><xdr:col>13</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>24</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>'
+        '<xdr:from><xdr:col>$fromCol</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>$fromRow</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>'
+        '<xdr:to><xdr:col>$toCol</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>$toRow</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>'
         '<xdr:graphicFrame macro="">'
         '<xdr:nvGraphicFramePr><xdr:cNvPr id="2" name="Chart"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr>'
         '<xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm>'
@@ -133,8 +140,8 @@ class ExcelChartInjector {
         '</xdr:twoCellAnchor></xdr:wsDr>';
   }
 
-  static String _appendDrawingRel(Map<String, List<int>> files,
-      String relsPath, String? existing, int drawingNo) {
+  static String _appendDrawingRel(Map<String, List<int>> files, String relsPath,
+      String? existing, int drawingNo) {
     final target = '../drawings/drawing$drawingNo.xml';
     const type =
         'http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing';
@@ -242,8 +249,7 @@ class ChartSpec {
 
   String buildChartXml() => type == ChartType.bar ? _barXml() : _scatterXml();
 
-  String _head() =>
-      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+  String _head() => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
       '<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" '
       'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '
       'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
@@ -258,6 +264,13 @@ class ChartSpec {
         '<c:barChart><c:barDir val="col"/><c:grouping val="clustered"/><c:varyColors val="1"/>'
         '<c:ser><c:idx val="0"/><c:order val="0"/>'
         '<c:tx><c:v>达成度</c:v></c:tx>'
+        '<c:dLbls>'
+        '<c:numFmt formatCode="0.00" sourceLinked="0"/>'
+        '<c:spPr><a:noFill/><a:ln><a:noFill/></a:ln></c:spPr>'
+        '<c:dLblPos val="outEnd"/>'
+        '<c:showLegendKey val="0"/><c:showVal val="1"/><c:showCatName val="0"/>'
+        '<c:showSerName val="0"/><c:showPercent val="0"/><c:showBubbleSize val="0"/>'
+        '</c:dLbls>'
         '<c:cat><c:strRef><c:f>${_ref(catCol)}</c:f></c:strRef></c:cat>'
         '<c:val><c:numRef><c:f>${_ref(valCol)}</c:f></c:numRef></c:val>'
         '</c:ser>'
@@ -268,27 +281,27 @@ class ChartSpec {
         '<c:valAx><c:axId val="222222222"/><c:scaling><c:orientation val="minMax"/>'
         '<c:max val="1"/><c:min val="0"/></c:scaling>'
         '<c:delete val="0"/><c:axPos val="l"/><c:crossAx val="111111111"/></c:valAx>'
-        '</c:plotArea><c:plotVisOnly val="1"/></c:chart></c:chartSpace>';
+        '</c:plotArea>'
+        '<c:legend><c:legendPos val="b"/><c:overlay val="0"/></c:legend>'
+        '<c:plotVisOnly val="1"/></c:chart></c:chartSpace>';
   }
 
   String _scatterXml() {
     return '${_head()}<c:plotArea><c:layout/>'
         '<c:scatterChart><c:scatterStyle val="lineMarker"/><c:varyColors val="0"/>'
-        '<c:ser><c:idx val="0"/><c:order val="0"/><c:tx><c:v>个体达成度</c:v></c:tx>'
-        '<c:spPr><a:ln w="19050"><a:noFill/></a:ln></c:spPr>'
-        '<c:trendline><c:trendlineType val="linear"/><c:dispRSqr val="0"/><c:dispEq val="0"/></c:trendline>'
-        '<c:xVal><c:numRef><c:f>${_ref(catCol)}</c:f></c:numRef></c:xVal>'
-        '<c:yVal><c:numRef><c:f>${_ref(valCol)}</c:f></c:numRef></c:yVal>'
-        '<c:smooth val="0"/></c:ser>'
-        '<c:ser><c:idx val="1"/><c:order val="1"/><c:tx><c:v>班级平均</c:v></c:tx>'
+        '<c:ser><c:idx val="0"/><c:order val="0"/><c:tx><c:v>平均达成度</c:v></c:tx>'
         '<c:marker><c:symbol val="none"/></c:marker>'
         '<c:xVal><c:numRef><c:f>${_ref(catCol)}</c:f></c:numRef></c:xVal>'
         '<c:yVal><c:numRef><c:f>${_ref(avgCol)}</c:f></c:numRef></c:yVal>'
         '<c:smooth val="0"/></c:ser>'
-        '<c:ser><c:idx val="2"/><c:order val="2"/><c:tx><c:v>期望(0.6)</c:v></c:tx>'
+        '<c:ser><c:idx val="1"/><c:order val="1"/><c:tx><c:v>期望达成度(0.6)</c:v></c:tx>'
         '<c:marker><c:symbol val="none"/></c:marker>'
         '<c:xVal><c:numRef><c:f>${_ref(catCol)}</c:f></c:numRef></c:xVal>'
         '<c:yVal><c:numRef><c:f>${_ref(expCol)}</c:f></c:numRef></c:yVal>'
+        '<c:smooth val="0"/></c:ser>'
+        '<c:ser><c:idx val="2"/><c:order val="2"/><c:tx><c:v>个体达成度</c:v></c:tx>'
+        '<c:xVal><c:numRef><c:f>${_ref(catCol)}</c:f></c:numRef></c:xVal>'
+        '<c:yVal><c:numRef><c:f>${_ref(valCol)}</c:f></c:numRef></c:yVal>'
         '<c:smooth val="0"/></c:ser>'
         '<c:axId val="333333333"/><c:axId val="444444444"/>'
         '</c:scatterChart>'
@@ -297,7 +310,9 @@ class ChartSpec {
         '<c:valAx><c:axId val="444444444"/><c:scaling><c:orientation val="minMax"/>'
         '<c:max val="1"/><c:min val="0"/></c:scaling>'
         '<c:delete val="0"/><c:axPos val="l"/><c:crossAx val="333333333"/></c:valAx>'
-        '</c:plotArea><c:plotVisOnly val="1"/></c:chart></c:chartSpace>';
+        '</c:plotArea>'
+        '<c:legend><c:legendPos val="b"/><c:overlay val="0"/></c:legend>'
+        '<c:plotVisOnly val="1"/></c:chart></c:chartSpace>';
   }
 }
 

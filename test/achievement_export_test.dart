@@ -5,7 +5,6 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:knowledge_graph_app/services/achievement/achievement_template_excel_service.dart';
-import 'package:knowledge_graph_app/services/achievement/excel_chart_injector.dart';
 import 'package:knowledge_graph_app/services/achievement/achievement_docx_service.dart';
 
 /// 提取 xlsx 内某 worksheet 的某单元格内容（数值或 inlineStr 文本）。
@@ -31,7 +30,7 @@ double? _num(String xml, String ref) {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('达成度模板：两行汇总落正确列 + 实验七留空 + 注入5图', () async {
+  test('达成度模板：两行汇总落正确列 + 实验七留空 + 保留模板5图', () async {
     final tpl = File(
         'assets/achievement_templates/mobile_achievement_template_48.xlsx');
     expect(tpl.existsSync(), isTrue, reason: '内置模板缺失');
@@ -104,7 +103,12 @@ void main() {
       pingshi: [for (final e in ids) ps(e[0], e[1])],
       experiment: [for (final e in ids) es(e[0], e[1])],
       exam: [for (final e in ids) xs(e[0], e[1])],
-      pingshiAverage: const {'obj1': 0.8, 'obj2': 0.9, 'obj3': 0.0, 'obj4': 0.7},
+      pingshiAverage: const {
+        'obj1': 0.8,
+        'obj2': 0.9,
+        'obj3': 0.0,
+        'obj4': 0.7
+      },
       experimentAverage: const {
         'obj1': 0.8,
         'obj2': 0.9,
@@ -121,19 +125,7 @@ void main() {
       studentCount: 3,
     );
 
-    final specs = <ChartSpec>[
-      const ChartSpec.barRange(
-          sheetName: '课程目标条形图', title: '课程目标达成度', startRow: 7, endRow: 10),
-      for (int i = 0; i < 4; i++)
-        ChartSpec.scatterRange(
-            sheetName: '目标${i + 1}散点趋势图',
-            title: '目标${i + 1}',
-            startRow: 1,
-            endRow: 3),
-    ];
-    final out = ExcelChartInjector.inject(filled, specs);
-
-    final archive = ZipDecoder().decodeBytes(out);
+    final archive = ZipDecoder().decodeBytes(filled);
     final files = <String, String>{};
     int chartCount = 0;
     for (final f in archive.files) {
@@ -175,8 +167,14 @@ void main() {
     expect(_num(exam, 'H10'), closeTo(0.7, 1e-6));
     expect(_num(exam, 'J10'), closeTo(0.7, 1e-6));
 
-    // 注入了 5 张新图（模板原图被剥离引用，仍可能残留为孤儿，故用 ≥5）
+    // 保留模板原生5张图，只更新数据引用、系列名和锚点。
     expect(chartCount, greaterThanOrEqualTo(5));
+    final scatterChart = files.values.firstWhere(
+      (xml) => xml.contains('scatterChart') && xml.contains('目标1'),
+    );
+    expect(scatterChart.contains('<c:trendline>'), isFalse);
+    expect(scatterChart.contains('0.80平均'), isTrue);
+    expect(scatterChart.contains('0.60期望'), isTrue);
   });
 
   test('达成度 Word：5图嵌入正文 + content-types/rels 合并', () async {
@@ -194,8 +192,20 @@ void main() {
           'assess_content': '考核内容$i',
           'achievement': 0.78,
           'envs': [
-            {'name': '平时', 'full': 20.0, 'avg': 16.0, 'ach': 0.8, 'weight': 0.2},
-            {'name': '实验', 'full': 30.0, 'avg': 24.0, 'ach': 0.8, 'weight': 0.3},
+            {
+              'name': '平时',
+              'full': 20.0,
+              'avg': 16.0,
+              'ach': 0.8,
+              'weight': 0.2
+            },
+            {
+              'name': '实验',
+              'full': 30.0,
+              'avg': 24.0,
+              'ach': 0.8,
+              'weight': 0.3
+            },
             {
               'name': '期末考试',
               'full': 50.0,
@@ -241,28 +251,28 @@ void main() {
 
     final archive = ZipDecoder().decodeBytes(file.readAsBytesSync());
     final names = archive.files.map((f) => f.name).toSet();
-    String text(String n) =>
-        utf8.decode(archive.files.firstWhere((f) => f.name == n).content
-            as List<int>);
+    String text(String n) => utf8.decode(
+        archive.files.firstWhere((f) => f.name == n).content as List<int>);
 
     // 5 张图片落盘
     for (var i = 1; i <= 5; i++) {
-      expect(names.contains('word/media/image$i.png'), isTrue,
-          reason: '缺 image$i.png');
+      expect(names.contains('word/media/achievement_chart$i.png'), isTrue,
+          reason: '缺 achievement_chart$i.png');
     }
 
-    // 正文确实引用了 rImg1..rImg5（之前的 bug：图片在包里但正文没引用）
+    // 正文确实引用了 achChartImg1..5（之前的 bug：图片在包里但正文没引用）
     final doc = text('word/document.xml');
     expect(doc.contains('五、课程目标达成度可视化图表'), isTrue);
     for (var i = 1; i <= 5; i++) {
-      expect(doc.contains('r:embed="rImg$i"'), isTrue,
-          reason: '正文缺 rImg$i 引用');
+      expect(doc.contains('r:embed="achChartImg$i"'), isTrue,
+          reason: '正文缺 achChartImg$i 引用');
     }
 
-    // rels 合并：rImg1..5 关系齐全
+    // rels 合并：achChartImg1..5 关系齐全
     final rels = text('word/_rels/document.xml.rels');
     for (var i = 1; i <= 5; i++) {
-      expect(rels.contains('Id="rImg$i"'), isTrue, reason: 'rels 缺 rImg$i');
+      expect(rels.contains('Id="achChartImg$i"'), isTrue,
+          reason: 'rels 缺 achChartImg$i');
     }
 
     // content-types 合并：png 扩展名 + 仍保留 document.xml override
@@ -271,4 +281,3 @@ void main() {
     expect(ct.contains('/word/document.xml'), isTrue);
   });
 }
-

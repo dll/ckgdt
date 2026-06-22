@@ -40,28 +40,28 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
             .hasMatch(baseName)) {
       return '提交失败：文件名不规范，不允许包含(1)、new、copy、副本等后缀\n'
           '正确格式：$userId+$realName+$reportType.pdf\n'
-          '示例：206004+刘东良+实验一 开发环境搭建.pdf';
+          '示例：$userId+$realName+$reportType.pdf';
     }
 
     // 检查学号是否匹配当前登录用户
     if (!baseName.startsWith(userId)) {
       return '提交失败：文件名中的学号与当前登录用户不匹配\n'
           '正确格式：$userId+$realName+$reportType.pdf\n'
-          '示例：206004+刘东良+实验一 开发环境搭建.pdf';
+          '示例：$userId+$realName+$reportType.pdf';
     }
 
     // 检查是否包含姓名
     if (!baseName.contains(realName)) {
       return '提交失败：文件名中未包含姓名"$realName"\n'
           '正确格式：$userId+$realName+$reportType.pdf\n'
-          '示例：206004+刘东良+实验一 开发环境搭建.pdf';
+          '示例：$userId+$realName+$reportType.pdf';
     }
 
     // 检查是否包含报告类型
     if (!baseName.contains(reportType)) {
       return '提交失败：文件名中未包含报告类型"$reportType"\n'
           '正确格式：$userId+$realName+$reportType.pdf\n'
-          '示例：206004+刘东良+实验一 开发环境搭建.pdf';
+          '示例：$userId+$realName+$reportType.pdf';
     }
 
     final expected = '$userId+$realName+$reportType';
@@ -69,7 +69,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
     if (baseName != expected && baseName != legacyExpected) {
       return '提交失败：文件命名不规范\n'
           '正确格式：$expected.pdf\n'
-          '示例：206004+刘东良+实验一 开发环境搭建.pdf';
+          '示例：$expected.pdf';
     }
 
     return null; // 验证通过
@@ -502,7 +502,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
     final score = hasSubmitted ? matched.first['score'] as int? : null;
     final status =
         hasSubmitted ? (matched.first['status'] as String? ?? '已提交') : '未提交';
-    final isReturned = status == '已打回';
+    final isReturned = status == '已打回' || status == '审核未通过';
     final returnFeedback =
         isReturned ? (matched.first['feedback'] as String?) : null;
 
@@ -565,7 +565,9 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
             ],
           ),
           const SizedBox(height: 6),
-          if (isReturned && returnFeedback != null && returnFeedback.isNotEmpty) ...[
+          if (isReturned &&
+              returnFeedback != null &&
+              returnFeedback.isNotEmpty) ...[
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(8),
@@ -674,110 +676,33 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
   }
 
   // ══════════════════════════════════════════════════════════
-  //  Tab2: 4份最终报告要求
+  //  Tab2: 最终大作业报告要求
   // ══════════════════════════════════════════════════════════
   Widget _buildAssessmentReports() {
-    final reports = [
-      {
-        'num': '1',
-        'title': '答辩报告',
-        'subtitle': '演示答辩 · 占大作业25%',
-        'color': Colors.red,
-        'icon': Icons.record_voice_over,
-        'requirements': [
-          '回答三个必答题（核心技术20分+架构设计30分+创新点40分）',
-          '回答一个随机题（10分）',
-          '提交视频演示（≤10分钟）',
-          '答辩现场实时录音 + 录音转文本',
-          '提交个人源码压缩包和部署说明',
-        ],
-        'keyContent': [
-          '项目概述与分工说明',
-          '核心技术实现方案（必答题1）',
-          '系统架构设计图与说明（必答题2）',
-          '创新点与技术亮点展示（必答题3）',
-          '现场演示与录音记录',
-        ],
-        'tips': '答辩前3天提交初稿，答辩当天提交最终版。录音和转录文本必须一致。',
-      },
-      {
-        'num': '2',
-        'title': '个人报告',
-        'subtitle': '个人贡献总结 · 占大作业25%',
-        'color': Colors.blue,
-        'icon': Icons.person,
-        'requirements': [
-          '系统核心类图（UML Class Diagram）— 必须',
-          '核心功能顺序图（UML Sequence Diagram）— 必须',
-          '系统架构图（Architecture Diagram）— 必须',
-          '个人代码贡献统计（提交次数/代码行数）',
-          '技术难点与解决方案记录',
-        ],
-        'keyContent': [
-          '个人基本信息与技术栈',
-          '个人负责模块的详细实现',
-          '3种必须的UML/架构图（图表不规范=0分）',
-          '个人代码贡献量化数据',
-          '学习收获与技术成长总结',
-        ],
-        'tips': '图表必须规范（PlantUML/EA/StarUML），必须与个人负责模块相关，图表不规范则此报告0分。',
-      },
-      {
-        'num': '3',
-        'title': '小组报告',
-        'subtitle': '团队协作总结 · 占大作业25%',
-        'color': Colors.green,
-        'icon': Icons.groups,
-        'requirements': [
-          '每位成员独立整合完成（禁止复制他人报告）',
-          '个人贡献度与个人报告保持一致',
-          '团队数据由全体成员共同确认',
-          '包含团队协作流程与沟通记录',
-          '禁止修改他人个人贡献数据',
-        ],
-        'keyContent': [
-          '小组基本信息与成员分工表',
-          '团队协作流程（Git工作流/代码审查/会议）',
-          '成员贡献度矩阵（自评+互评）',
-          '团队问题与解决方案',
-          '团队协作反思与改进',
-        ],
-        'tips': '每人独立提交，内容相同但需独立整合。个人贡献部分必须与个人报告数据一致。',
-      },
-      {
-        'num': '4',
-        'title': '项目报告',
-        'subtitle': '技术文档 · 占大作业25%',
-        'color': Colors.orange,
-        'icon': Icons.folder_special,
-        'requirements': [
-          '每位成员独立整合完成',
-          '技术栈描述与实际开发一致',
-          '包含完整的技术架构文档',
-          '测试报告与性能数据',
-          '部署文档与用户手册',
-        ],
-        'keyContent': [
-          '项目基本信息（名称/类型/周期/版本）',
-          '技术栈详解（≥5种技术栈对比分析）',
-          '系统架构设计（分层/模块/数据流）',
-          '核心功能实现详解',
-          '测试报告（功能测试+性能测试+安全审计）',
-          '项目总结与未来展望',
-        ],
-        'tips': '技术文档必须真实准确，与实际代码一致。推荐包含部署步骤截图。',
-      },
+    const reportType = AssessmentDao.finalAssessmentReportType;
+    const color = Colors.indigo;
+    final requirements = [
+      '只提交一份最终大作业报告 PDF，不再分别提交项目、小组、个人、答辩四份报告',
+      '正文必须覆盖项目技术文档、团队协作、个人贡献、答辩演示与问题回答',
+      '封面信息由系统根据登录学生 ID 自动填充，教师评语由 AI 辅助生成后可人工修订',
+      '成绩由教师在审核页填写，审核通过后进入打印页',
+      '审核不通过时，学生按问题和改进建议修改后重新提交终稿',
+    ];
+    final sections = [
+      '项目报告内容：项目背景、需求分析、技术栈、系统架构、核心功能、测试与部署',
+      '小组报告内容：成员分工、协作流程、代码管理、团队贡献矩阵、问题处理',
+      '个人报告内容：个人负责模块、关键代码、UML/架构图、贡献数据、学习反思',
+      '答辩报告内容：演示说明、必答题回答、随机题记录、亮点展示、答辩反馈',
     ];
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // 警告卡片
         Card(
-          color: Colors.red.withValues(alpha: 0.06),
+          color: color.withValues(alpha: 0.06),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: Colors.red.withValues(alpha: 0.3)),
+            side: BorderSide(color: color.withValues(alpha: 0.20)),
           ),
           child: Padding(
             padding: const EdgeInsets.all(14),
@@ -786,163 +711,108 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.warning_amber,
-                        size: 18, color: Colors.red),
+                    Icon(Icons.assignment_turned_in,
+                        size: 18, color: color[700]),
                     const SizedBox(width: 6),
-                    Text('重要提示',
+                    Text('最终提交要求',
                         style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color: Colors.red[700])),
+                            color: color[700])),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '• 四份报告必须全部提交，缺一不可\n'
-                  '• 缺少任何一份报告，大作业成绩为0分（占总成绩50%）\n'
-                  '• 迟交任何一份报告，按缺交处理\n'
-                  '• 建议顺序：答辩 → 个人 → 小组 → 项目',
-                  style: TextStyle(
-                      fontSize: 12, color: Colors.red[600], height: 1.6),
+                  '提交的是最终大作业报告，不是四个子报告的简单拼接。终稿必须形成一份完整、连贯、可审核、可打印的课程考核报告。',
+                  style:
+                      TextStyle(fontSize: 12, color: color[700], height: 1.6),
                 ),
               ],
             ),
           ),
         ),
         const SizedBox(height: 12),
-        // 四份报告
-        ...reports.map((r) => _buildReportRequirementCard(r)),
-      ],
-    );
-  }
-
-  Widget _buildReportRequirementCard(Map<String, dynamic> r) {
-    final color = r['color'] as Color;
-    final requirements = r['requirements'] as List<String>;
-    final keyContent = r['keyContent'] as List<String>;
-    final tips = r['tips'] as String;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      elevation: 2,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border(
-              left: BorderSide(color: color, width: 4),
-            ),
-          ),
-          child: ExpansionTile(
-            tilePadding: const EdgeInsets.symmetric(horizontal: 14),
-            childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-            leading: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: color.withValues(alpha: 0.25)),
-              ),
-              child: Center(
-                child: Text(r['num'] as String,
-                    style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: color)),
-              ),
-            ),
-            title: Text(r['title'] as String,
-                style: TextStyle(
-                    fontSize: 14, fontWeight: FontWeight.bold, color: color)),
-            subtitle: Text(r['subtitle'] as String,
-                style: TextStyle(fontSize: 11, color: Colors.grey[500])),
-            children: [
-              // 基本要求
-              _reportSubHeader('基本要求', Icons.rule, color),
-              const SizedBox(height: 6),
-              ...requirements.map((req) => Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.check_box_outlined,
-                            size: 14, color: color.withValues(alpha: 0.6)),
-                        const SizedBox(width: 6),
-                        Expanded(
-                            child: Text(req,
-                                style: const TextStyle(fontSize: 12))),
-                      ],
-                    ),
-                  )),
-              const SizedBox(height: 10),
-              // 核心内容
-              _reportSubHeader('核心内容（每项都要写）', Icons.edit_note, Colors.indigo),
-              const SizedBox(height: 6),
-              ...keyContent.asMap().entries.map((e) => Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 18,
-                          height: 18,
-                          margin: const EdgeInsets.only(right: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.indigo.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Center(
-                            child: Text('${e.key + 1}',
-                                style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.indigo[700])),
-                          ),
-                        ),
-                        Expanded(
-                            child: Text(e.value,
-                                style: const TextStyle(fontSize: 12))),
-                      ],
-                    ),
-                  )),
-              const SizedBox(height: 8),
-              // 提示
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.amber.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border:
-                      Border.all(color: Colors.amber.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        Card(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          elevation: 2,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Icon(Icons.lightbulb, size: 14, color: Colors.amber[700]),
-                    const SizedBox(width: 6),
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                        border:
+                            Border.all(color: color.withValues(alpha: 0.25)),
+                      ),
+                      child: Icon(Icons.picture_as_pdf, color: color[700]),
+                    ),
+                    const SizedBox(width: 10),
                     Expanded(
-                      child: Text(tips,
-                          style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.amber[800],
-                              height: 1.4)),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(reportType,
+                              style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: color[700])),
+                          Text('单份终稿 · 覆盖项目/小组/个人/答辩四类内容',
+                              style: TextStyle(
+                                  fontSize: 11, color: Colors.grey[600])),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 10),
-              // 上传/批阅 操作行
-              _buildReportActions(
-                reportType: r['title'] as String,
-                color: color,
-              ),
-            ],
+                const SizedBox(height: 14),
+                _reportSubHeader('基本要求', Icons.rule, color),
+                const SizedBox(height: 6),
+                ...requirements.map((req) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.check_circle_outline,
+                              size: 14, color: color.withValues(alpha: 0.7)),
+                          const SizedBox(width: 6),
+                          Expanded(
+                              child: Text(req,
+                                  style: const TextStyle(fontSize: 12))),
+                        ],
+                      ),
+                    )),
+                const SizedBox(height: 10),
+                _reportSubHeader('正文必须覆盖', Icons.edit_document, Colors.teal),
+                const SizedBox(height: 6),
+                ...sections.map((item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.article_outlined,
+                              size: 14, color: Colors.teal[600]),
+                          const SizedBox(width: 6),
+                          Expanded(
+                              child: Text(item,
+                                  style: const TextStyle(fontSize: 12))),
+                        ],
+                      ),
+                    )),
+                const SizedBox(height: 12),
+                _buildReportActions(reportType: reportType, color: color),
+              ],
+            ),
           ),
         ),
-      ),
+      ],
     );
   }
 
@@ -1391,8 +1261,8 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                               FilledButton.icon(
                                 onPressed: () => Navigator.pop(
                                     dialogCtx, reasonCtrl.text.trim()),
-                                icon:
-                                    const Icon(Icons.assignment_return, size: 18),
+                                icon: const Icon(Icons.assignment_return,
+                                    size: 18),
                                 label: const Text('确认打回'),
                               ),
                             ],
@@ -1418,7 +1288,8 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                               reason: confirmedReason.trim(),
                             );
                             if (userId.isNotEmpty) {
-                              unawaited(SyncService().uploadStudentData(userId));
+                              unawaited(
+                                  SyncService().uploadStudentData(userId));
                             }
                           }
                           if (context.mounted) {

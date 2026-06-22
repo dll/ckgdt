@@ -807,7 +807,9 @@ class _ReportTabState extends State<ReportTab> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text('Word 报告已保存: $path'),
-              duration: const Duration(seconds: 4)),
+              duration: const Duration(seconds: 4),
+              action: SnackBarAction(
+                  label: '打开', onPressed: () => OpenFilex.open(path))),
         );
       }
     } catch (e, st) {
@@ -921,24 +923,7 @@ class _ReportTabState extends State<ReportTab> {
           payload,
           studentCount: scores.length,
         );
-        // 五图按计算结果重绘：剥离模板内嵌旧图，注入绑定数据区的原生 OOXML 图表
-        // （条形图数据在 B7:C10；各目标散点图数据在 B/C/D/E 第 1 行起）。
-        final specs = <ChartSpec>[
-          const ChartSpec.barRange(
-              sheetName: '课程目标条形图',
-              title: '课程目标达成度',
-              startRow: 7,
-              endRow: 10),
-          for (int i = 0; i < 4; i++)
-            ChartSpec.scatterRange(
-              sheetName: '目标${i + 1}散点趋势图',
-              title: '学生个体课程目标${i + 1}达成评价结果',
-              startRow: 1,
-              endRow: scores.isEmpty ? 1 : scores.length,
-            ),
-        ];
-        final bytes = ExcelChartInjector.inject(filled, specs);
-        await file.writeAsBytes(bytes);
+        await file.writeAsBytes(filled);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text('Excel模板已填充:${file.path}'),
@@ -1279,9 +1264,10 @@ class _ReportTabState extends State<ReportTab> {
 
       var bytes = excel.save();
       if (bytes == null) throw StateError('Excel生成失败');
-      // 注入原生 OOXML 图表：条形图(4目标) + 每目标散点+趋势线+参考线
+      // 注入原生 OOXML 图表：条形图(4目标) + 每目标散点参考线
       final specs = <ChartSpec>[
-        const ChartSpec.bar(sheetName: '课程目标条形图', title: '课程目标达成度', rowCount: 4),
+        const ChartSpec.bar(
+            sheetName: '课程目标条形图', title: '课程目标达成度', rowCount: 4),
         for (int i = 0; i < 4; i++)
           ChartSpec.scatter(
               sheetName: '目标${i + 1}散点趋势图',
@@ -2142,7 +2128,9 @@ class _ReportTabState extends State<ReportTab> {
         final fontData = await rootBundle.load('assets/fonts/msyh.ttc');
         chineseFont = pw.Font.ttf(fontData);
         chineseBoldFont = chineseFont;
-      } catch (e) { swallowDebug(e, tag: 'report_tab'); }
+      } catch (e) {
+        swallowDebug(e, tag: 'report_tab');
+      }
     }
     final theme = chineseFont != null
         ? pw.ThemeData.withFont(
@@ -2784,7 +2772,8 @@ class _ReportTabState extends State<ReportTab> {
                               CircularProgressIndicator(
                                 value: achievement.clamp(0.0, 1.0),
                                 strokeWidth: 4,
-                                backgroundColor: Colors.grey.withValues(alpha: 0.15),
+                                backgroundColor:
+                                    Colors.grey.withValues(alpha: 0.15),
                                 color: kObjectiveColors[i],
                               ),
                               Text(
@@ -2832,7 +2821,8 @@ class _ReportTabState extends State<ReportTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: i.isEven ? Colors.transparent : Colors.grey.withValues(alpha: 0.04),
+        color:
+            i.isEven ? Colors.transparent : Colors.grey.withValues(alpha: 0.04),
         border: isLast
             ? null
             : Border(
@@ -2935,7 +2925,9 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text('Word 已导出：${file.path}'),
-              duration: const Duration(seconds: 4)),
+              duration: const Duration(seconds: 4),
+              action: SnackBarAction(
+                  label: '打开', onPressed: () => OpenFilex.open(file.path))),
         );
       }
     } catch (e, st) {

@@ -5,6 +5,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../../data/local/assessment_dao.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../data/local/grading_result_dao.dart';
+import '../../../data/local/ai_config_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../services/agent/agents/grading_agent.dart';
@@ -32,6 +33,13 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
   final _gradingAgent = GradingAgent();
   final _assessmentDao = AssessmentDao();
   final _gradingDao = GradingResultDao();
+  final _aiConfigDao = AiConfigDao();
+
+  // ── 当前大模型名称（显示用）──
+  String _modelLabel = '';
+
+  // ── 单份批阅进行中的报告 id（行内 spinner）──
+  int? _singleGradingId;
 
   // ── 报告数据 ──
   List<Map<String, dynamic>> _reports = [];
@@ -52,7 +60,19 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
   @override
   void initState() {
     super.initState();
+    _loadModelLabel();
     _loadReports();
+  }
+
+  Future<void> _loadModelLabel() async {
+    try {
+      final cfg = await _aiConfigDao.getConfig();
+      if (mounted) {
+        setState(() => _modelLabel = '${cfg.providerLabel} · ${cfg.model}');
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AssessmentAiGrading.loadModelLabel', stack: st);
+    }
   }
 
   Future<void> _loadReports() async {
@@ -159,76 +179,91 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
       if (!_isBatchGrading) break;
 
       final report = ungraded[i];
-      final rid = report['id'] as int;
-      final reportType = (report['title'] as String?) ?? '考核报告';
       final userId = (report['user_id'] as String?) ?? '';
-      final content = await _reportContentForGrading(report);
 
       setState(() {
         _gradingProgress = i;
         _gradingStatus = '正在批阅 ${i + 1}/$_gradingTotal: $userId';
       });
 
-      try {
-        final result = await _gradingAgent.gradeReport(
-          reportType: reportType,
-          studentName: userId,
-          content: content.isNotEmpty ? content : '（学生提交了报告文件：$reportType）',
+      await _gradeOne(report);
+
+      if (mounted) setState(() {});
+    }
+
+    if (mounted) {
+      setState(() {
+        _isBatchGrading = false;
+        _gradingProgress = _gradingTotal;
+        _gradingStatus = '批阅完成';
+      });
+    }
+  }
+
+  /// 批阅单份报告：调用 AI → 解析 → 存内存 → 持久化为待审核结果。
+  ///
+  /// 批量与单份批阅共用此方法。已核准的报告不再覆盖其持久化结果。
+  Future<void> _gradeOne(Map<String, dynamic> report) async {
+    final rid = report['id'] as int;
+    final reportType = (report['title'] as String?) ?? '考核报告';
+    final userId = (report['user_id'] as String?) ?? '';
+    final content = await _reportContentForGrading(report);
+
+    try {
+      final result = await _gradingAgent.gradeReport(
+        reportType: reportType,
+        studentName: userId,
+        content: content.isNotEmpty ? content : '（学生提交了报告文件：$reportType）',
+      );
+
+      final parsed = _tryParseJson(result);
+      if (parsed != null) {
+        final score = (parsed['total_score'] as num?)?.toInt() ??
+            (parsed['score'] as num?)?.toInt() ??
+            0;
+        final dims = parsed['scores'] as Map<String, dynamic>?;
+        final strengths =
+            (parsed['strengths'] as List?)?.map((e) => e.toString()).toList() ??
+                [];
+        final improvements = (parsed['improvements'] as List?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            [];
+        final feedback = _formatFeedback(parsed);
+
+        _gradingResults[rid] = _GradingResult(
+          score: score,
+          feedback: feedback,
+          dimensions: dims,
+          strengths: strengths,
+          improvements: improvements,
         );
-
-        final parsed = _tryParseJson(result);
-        if (parsed != null) {
-          final score = (parsed['total_score'] as num?)?.toInt() ??
-              (parsed['score'] as num?)?.toInt() ??
-              0;
-          final dims = parsed['scores'] as Map<String, dynamic>?;
-          final strengths = (parsed['strengths'] as List?)
-                  ?.map((e) => e.toString())
-                  .toList() ??
-              [];
-          final improvements = (parsed['improvements'] as List?)
-                  ?.map((e) => e.toString())
-                  .toList() ??
-              [];
-          final feedback = _formatFeedback(parsed);
-
-          _gradingResults[rid] = _GradingResult(
-            score: score,
-            feedback: feedback,
-            dimensions: dims,
-            strengths: strengths,
-            improvements: improvements,
-          );
-        } else {
-          _gradingResults[rid] = _GradingResult(
-            score: 0,
-            feedback: result,
-            dimensions: null,
-            strengths: [],
-            improvements: [],
-          );
-        }
-      } catch (e) {
+      } else {
         _gradingResults[rid] = _GradingResult(
           score: 0,
-          feedback: '批阅失败: $e',
+          feedback: result,
           dimensions: null,
           strengths: [],
           improvements: [],
         );
       }
-
-      if (mounted) setState(() {});
+    } catch (e) {
+      _gradingResults[rid] = _GradingResult(
+        score: 0,
+        feedback: '批阅失败: $e',
+        dimensions: null,
+        strengths: [],
+        improvements: [],
+      );
     }
 
-    // 持久化所有批阅结果
-    for (final e in _gradingResults.entries) {
-      if (_approvedIds.contains(e.key)) continue;
-      final r = e.value;
-      await _gradingDao.deletePendingForTarget('assessment', e.key);
+    // 持久化（已核准的不覆盖）
+    if (!_approvedIds.contains(rid)) {
+      final r = _gradingResults[rid]!;
+      await _gradingDao.deletePendingForTarget('assessment', rid);
       await _gradingDao.saveResult(
         domain: 'assessment',
-        targetId: e.key,
+        targetId: rid,
         scorerId: widget.authService.getCurrentUserId() ?? '',
         rawJson: null,
         score: r.score.toDouble(),
@@ -239,14 +274,24 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
         aiFlag: false,
       );
     }
+  }
 
-    if (mounted) {
-      setState(() {
-        _isBatchGrading = false;
-        _gradingProgress = _gradingTotal;
-        _gradingStatus = '批阅完成';
-      });
+  /// 单份 AI 批阅（行内触发）。带教师 AI 批阅总开关检查 + 行内 spinner。
+  Future<void> _gradeSingle(Map<String, dynamic> report) async {
+    if (!await SettingsService.isTeacherAiGradingEnabled()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('教师 AI 批阅已关闭，请在「系统设置 → 教师 AI 批阅」中开启后再使用。'),
+          ),
+        );
+      }
+      return;
     }
+    final rid = report['id'] as int;
+    setState(() => _singleGradingId = rid);
+    await _gradeOne(report);
+    if (mounted) setState(() => _singleGradingId = null);
   }
 
   Map<String, dynamic>? _tryParseJson(String text) {
@@ -565,6 +610,8 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
               const SizedBox(width: 8),
               const Text('考核报告 AI 批阅',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const Spacer(),
+              if (_modelLabel.isNotEmpty) _modelBadge(primary),
             ]),
             const SizedBox(height: 12),
             Wrap(
@@ -618,6 +665,27 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _modelBadge(Color primary) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: primary.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.smart_toy_outlined, size: 13, color: primary),
+          const SizedBox(width: 4),
+          Text(_modelLabel,
+              style: TextStyle(
+                  fontSize: 11, color: primary, fontWeight: FontWeight.w600)),
+        ],
       ),
     );
   }
@@ -803,25 +871,51 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
                 overflow: TextOverflow.ellipsis,
               )
             : null,
-        trailing: result != null && !isApproved
-            ? Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.edit, size: 18),
-                    tooltip: '调整',
-                    onPressed: () => _showAdjustDialog(rid, report),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.check_circle_outline, size: 18),
-                    tooltip: '核准',
-                    color: Colors.green,
-                    onPressed: () => _approveOne(rid),
-                  ),
-                ],
-              )
-            : null,
+        trailing: _buildTrailing(report, rid, result, isApproved, primary),
       ),
+    );
+  }
+
+  Widget? _buildTrailing(
+    Map<String, dynamic> report,
+    int rid,
+    _GradingResult? result,
+    bool isApproved,
+    Color primary,
+  ) {
+    if (result != null && !isApproved) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.edit, size: 18),
+            tooltip: '调整',
+            onPressed: () => _showAdjustDialog(rid, report),
+          ),
+          IconButton(
+            icon: const Icon(Icons.check_circle_outline, size: 18),
+            tooltip: '核准',
+            color: Colors.green,
+            onPressed: () => _approveOne(rid),
+          ),
+        ],
+      );
+    }
+    if (isApproved) return null;
+    if (_singleGradingId == rid) {
+      return const SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+    return IconButton(
+      icon: const Icon(Icons.auto_awesome, size: 18),
+      tooltip: 'AI 批阅此份',
+      color: primary,
+      onPressed: (_isBatchGrading || _singleGradingId != null)
+          ? null
+          : () => _gradeSingle(report),
     );
   }
 

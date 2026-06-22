@@ -188,11 +188,9 @@ class AchievementDocxService {
       qualitativeText,
       improvementText,
       teacherName,
+      barChartPng: barChartPng,
+      scatterChartPngs: scatterChartPngs,
     );
-
-    // 五图插入正文（剥离的图片在 _embedChartImages 写入，正文这里挂引用）
-    final chartsXml = _chartsBodyXml(barChartPng, scatterChartPngs);
-    if (chartsXml.isNotEmpty) _insertBodyCharts(doc, chartsXml);
 
     files['word/document.xml'] = utf8.encode(doc.toXmlString());
     var out = Archive();
@@ -371,8 +369,10 @@ class AchievementDocxService {
     String? analysisText,
     String? qualitativeText,
     String? improvementText,
-    String teacherName,
-  ) {
+    String teacherName, {
+    Uint8List? barChartPng,
+    List<Uint8List?> scatterChartPngs = const [],
+  }) {
     final quantitative = (analysisText?.trim().isNotEmpty ?? false)
         ? analysisText!
         : _defaultAnalysis(objectives, classStats);
@@ -383,7 +383,13 @@ class AchievementDocxService {
         ? improvementText!
         : _defaultImprovement(objectives);
     _setCell(table, 1, 0, '课程目标达成情况(定量)');
-    _setCell(table, 1, 1, quantitative);
+    final chartCellXml =
+        _chartsCellXml(barChartPng, scatterChartPngs, quantitative);
+    if (chartCellXml.isEmpty) {
+      _setCell(table, 1, 1, quantitative);
+    } else {
+      _setCellXml(table, 1, 1, chartCellXml);
+    }
     _setCell(table, 2, 0, '调查问卷评价情况(定性)');
     _setCell(table, 2, 1, qualitative);
     _setCell(table, 3, 0, '达成情况分析及持续改进');
@@ -409,21 +415,74 @@ class AchievementDocxService {
     _setCellText(cells[cellIndex], text);
   }
 
+  void _setCellXml(XmlElement table, int rowIndex, int cellIndex, String xml) {
+    final rows = _children(table, 'tr');
+    if (rowIndex < 0 || rowIndex >= rows.length) return;
+    final cells = _children(rows[rowIndex], 'tc');
+    if (cellIndex < 0 || cellIndex >= cells.length) return;
+    _setCellRichContent(cells[cellIndex], xml);
+  }
+
   void _setCellText(XmlElement cell, String text) {
+    final templateParagraph =
+        _children(cell, 'p').isNotEmpty ? _children(cell, 'p').first : null;
+    final templateRun = templateParagraph == null
+        ? null
+        : _children(templateParagraph, 'r').isNotEmpty
+            ? _children(templateParagraph, 'r').first
+            : null;
+    final pPr = templateParagraph == null
+        ? null
+        : _children(templateParagraph, 'pPr').isNotEmpty
+            ? _children(templateParagraph, 'pPr').first.copy()
+            : null;
+    final rPr = templateRun == null
+        ? null
+        : _children(templateRun, 'rPr').isNotEmpty
+            ? _children(templateRun, 'rPr').first.copy()
+            : null;
     cell.children.removeWhere(
         (node) => node is! XmlElement || node.name.local != 'tcPr');
     final lines = text.split('\n');
     for (final line in lines.isEmpty ? const [''] : lines) {
-      cell.children.add(XmlElement(XmlName('w:p'), [], [
-        XmlElement(XmlName('w:r'), [], [
-          XmlElement(
-            XmlName('w:t'),
-            [XmlAttribute(XmlName('xml:space'), 'preserve')],
-            [XmlText(line)],
-          )
-        ])
-      ]));
+      cell.children.add(_textParagraphElement(line, pPr: pPr, rPr: rPr));
     }
+  }
+
+  void _setCellRichContent(XmlElement cell, String fragmentXml) {
+    cell.children.removeWhere(
+        (node) => node is! XmlElement || node.name.local != 'tcPr');
+    final wrapper = XmlDocument.parse(
+        '<w:wrap xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" '
+        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+        '$fragmentXml</w:wrap>');
+    final nodes = wrapper.rootElement.children
+        .whereType<XmlElement>()
+        .map((e) => e.copy())
+        .toList();
+    if (nodes.isEmpty) {
+      cell.children.add(_textParagraphElement(''));
+      return;
+    }
+    cell.children.addAll(nodes);
+  }
+
+  XmlElement _textParagraphElement(
+    String line, {
+    XmlElement? pPr,
+    XmlElement? rPr,
+  }) {
+    return XmlElement(XmlName('w:p'), [], [
+      if (pPr != null) pPr.copy(),
+      XmlElement(XmlName('w:r'), [], [
+        if (rPr != null) rPr.copy(),
+        XmlElement(
+          XmlName('w:t'),
+          [XmlAttribute(XmlName('xml:space'), 'preserve')],
+          [XmlText(line)],
+        )
+      ])
+    ]);
   }
 
   void _setParagraphText(XmlElement paragraph, String text) {
@@ -474,10 +533,10 @@ class AchievementDocxService {
       '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>''';
 
-  /// 将图表 PNG 嵌入 DOCX archive（word/media/imageN.png），
+  /// 将图表 PNG 嵌入 DOCX archive（word/media/achievement_chartN.png），
   /// 并**合并**（而非覆盖）[Content_Types].xml 与 document.xml.rels，
   /// 保留模板原有的 styles/numbering/settings 等 Override 与关系。
-  /// relId 顺序：条形图 rImg1，其后散点图 rImg2..N（须与 _chartsBodyXml 一致）。
+  /// relId 顺序：条形图 achChartImg1，其后散点图 achChartImg2..N。
   Archive _embedChartImages(
     Archive archive, {
     Uint8List? barChartPng,
@@ -509,28 +568,29 @@ class AchievementDocxService {
             '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
     final add = StringBuffer();
     for (var i = 0; i < images.length; i++) {
-      if (rels.contains('Id="rImg${i + 1}"')) continue;
-      add.write('<Relationship Id="rImg${i + 1}" '
+      final relId = _chartRelId(i + 1);
+      if (rels.contains('Id="$relId"')) continue;
+      add.write('<Relationship Id="$relId" '
           'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" '
-          'Target="media/image${i + 1}.png"/>');
+          'Target="media/${_chartImageName(i + 1)}"/>');
     }
     if (add.isNotEmpty) {
       rels = rels.replaceFirst('</Relationships>', '$add</Relationships>');
     }
 
-    // archive 包的 files 列表不可变 → 重建：跳过将被替换的两项与旧 media，
+    // archive 包的 files 列表不可变 → 重建：跳过将被替换的两项与旧达成图表截图，
     // 其余原样保留，再追加合并后的 content-types/rels 与新图片。
     final out = Archive();
-    final mediaRe = RegExp(r'^word/media/image\d+\.png$');
+    final chartMediaRe = RegExp(r'^word/media/achievement_chart\d+\.png$');
     for (final f in archive.files) {
       if (f.name == '[Content_Types].xml') continue;
       if (f.name == 'word/_rels/document.xml.rels') continue;
-      if (mediaRe.hasMatch(f.name)) continue;
+      if (chartMediaRe.hasMatch(f.name)) continue;
       out.addFile(f);
     }
     for (var i = 0; i < images.length; i++) {
       out.addFile(ArchiveFile(
-          'word/media/image${i + 1}.png', images[i].length, images[i]));
+          'word/media/${_chartImageName(i + 1)}', images[i].length, images[i]));
     }
     out.addFile(ArchiveFile.string('[Content_Types].xml', ct));
     out.addFile(ArchiveFile.string('word/_rels/document.xml.rels', rels));
@@ -563,10 +623,8 @@ class AchievementDocxService {
     const cx = 5029200; // ≈5.5 inch
     const cy = 3018600; // ≈3.3 inch
     void img(String caption) {
-      b.write(_imageParagraph(rel, picId, cx, cy));
-      b.write('<w:p><w:pPr><w:jc w:val="center"/></w:pPr>'
-          '<w:r><w:rPr><w:sz w:val="18"/></w:rPr>'
-          '<w:t>${_xmlEsc(caption)}</w:t></w:r></w:p>');
+      b.write(_imageParagraph(_chartRelId(rel), picId, cx, cy));
+      b.write(_captionParagraphXml(caption));
       rel++;
       picId++;
     }
@@ -578,7 +636,44 @@ class AchievementDocxService {
     return b.toString();
   }
 
-  String _imageParagraph(int relId, int picId, int cx, int cy) {
+  String _chartsCellXml(
+    Uint8List? barChartPng,
+    List<Uint8List?> scatterChartPngs,
+    String quantitativeText,
+  ) {
+    final hasBar = barChartPng != null;
+    final scatters = scatterChartPngs.whereType<Uint8List>().toList();
+    if (!hasBar && scatters.isEmpty) return '';
+    final b = StringBuffer();
+    var rel = 1;
+    var picId = 1200;
+    const barCx = 5029200;
+    const barCy = 3018600;
+    const scatterCx = 5029200;
+    const scatterCy = 2514600;
+
+    void img(String caption, int cx, int cy) {
+      b.write(_imageParagraph(_chartRelId(rel), picId, cx, cy));
+      b.write(_captionParagraphXml(caption));
+      rel++;
+      picId++;
+    }
+
+    if (hasBar) {
+      img('图1 各课程目标达成情况评价结果', barCx, barCy);
+    }
+    for (var i = 0; i < scatters.length; i++) {
+      img('图${hasBar ? i + 2 : i + 1} 学生个体课程目标${i + 1}达成情况评价结果', scatterCx,
+          scatterCy);
+    }
+    for (final line in quantitativeText.split('\n')) {
+      if (line.trim().isEmpty) continue;
+      b.write(_bodyParagraphXml(line));
+    }
+    return b.toString();
+  }
+
+  String _imageParagraph(String relId, int picId, int cx, int cy) {
     return '<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:drawing>'
         '<wp:inline distT="0" distB="0" distL="0" distR="0" '
         'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">'
@@ -587,48 +682,32 @@ class AchievementDocxService {
         '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
         '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
         '<pic:nvPicPr><pic:cNvPr id="$picId" name="chart$picId"/><pic:cNvPicPr/></pic:nvPicPr>'
-        '<pic:blipFill><a:blip r:embed="rImg$relId"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
+        '<pic:blipFill><a:blip r:embed="$relId"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
         '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="$cx" cy="$cy"/></a:xfrm>'
         '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'
         '</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>';
   }
 
-  /// 把图表段落 XML 插入模板 document.xml 的 <w:body> 内、<w:sectPr> 之前。
-  void _insertBodyCharts(XmlDocument doc, String fragmentXml) {
-    final bodies = doc.findAllElements('body',
-        namespace: 'http://schemas.openxmlformats.org/wordprocessingml/2006/main');
-    final body = bodies.isNotEmpty
-        ? bodies.first
-        : (doc.findAllElements('w:body').isNotEmpty
-            ? doc.findAllElements('w:body').first
-            : null);
-    if (body == null) return;
-    final wrapper = XmlDocument.parse(
-        '<w:wrap xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" '
-        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
-        '$fragmentXml</w:wrap>');
-    final nodes = wrapper.rootElement.children
-        .whereType<XmlElement>()
-        .map((e) => e.copy())
-        .toList();
-    final sectPr = body.children
-        .whereType<XmlElement>()
-        .where((e) => e.name.local == 'sectPr')
-        .toList();
-    if (sectPr.isNotEmpty) {
-      final idx = body.children.indexOf(sectPr.first);
-      body.children.insertAll(idx, nodes);
-    } else {
-      body.children.addAll(nodes);
-    }
+  String _captionParagraphXml(String text) {
+    return '<w:p><w:pPr><w:jc w:val="center"/></w:pPr>'
+        '<w:r><w:rPr><w:sz w:val="18"/></w:rPr>'
+        '<w:t>${_xmlEsc(text)}</w:t></w:r></w:p>';
   }
+
+  String _bodyParagraphXml(String text) {
+    return '<w:p><w:pPr><w:spacing w:after="80"/></w:pPr>'
+        '<w:r><w:rPr><w:sz w:val="21"/></w:rPr>'
+        '<w:t xml:space="preserve">${_xmlEsc(text)}</w:t></w:r></w:p>';
+  }
+
+  String _chartRelId(int index) => 'achChartImg$index';
+
+  String _chartImageName(int index) => 'achievement_chart$index.png';
 
   String _xmlEsc(String s) => s
       .replaceAll('&', '&amp;')
       .replaceAll('<', '&lt;')
       .replaceAll('>', '&gt;');
-
-
 
   String _buildDocumentXml({
     required String courseName,

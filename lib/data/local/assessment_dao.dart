@@ -5,6 +5,8 @@ import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 考核管理 DAO — 分组 / 项目 / 评分 / 答辩
 class AssessmentDao {
+  static const finalAssessmentReportType = '课程考核大作业报告';
+
   // ══════════════════════════════════════════════════════════
   //  分组管理
   // ══════════════════════════════════════════════════════════
@@ -62,7 +64,9 @@ class AssessmentDao {
       if (names != null && names.isNotEmpty) {
         try {
           totalMembers += (jsonDecode(names) as List).length;
-        } catch (e) { swallowDebug(e, tag: 'assessment_dao'); }
+        } catch (e) {
+          swallowDebug(e, tag: 'assessment_dao');
+        }
       }
     }
     return {
@@ -313,8 +317,8 @@ class AssessmentDao {
     }
 
     // 条件2：过程报告 + 最终报告均 ≥ 95
-    final reportRows = await db.query('assessment_reports',
-        where: 'user_id = ?', whereArgs: [userId]);
+    final reportRows = await db
+        .query('assessment_reports', where: 'user_id = ?', whereArgs: [userId]);
     final reportScores = <String, dynamic>{};
     for (final t in ['过程报告', '最终报告']) {
       final match = reportRows.where((r) => r['title'] == t).toList();
@@ -344,7 +348,11 @@ class AssessmentDao {
   Future<Map<String, dynamic>> checkGroupDefenseEligibility(int groupId) async {
     final group = await getGroup(groupId);
     if (group == null) {
-      return {'eligible': false, 'reasons': ['小组不存在'], 'members': []};
+      return {
+        'eligible': false,
+        'reasons': ['小组不存在'],
+        'members': []
+      };
     }
 
     List<String> memberIds = _parseMemberIds(group['member_ids'] as String?);
@@ -397,8 +405,8 @@ class AssessmentDao {
       if (!validRepos.contains(groupName)) {
         final gId = g['id'] as int;
         // 级联删除关联的答辩、评分、项目
-        await db.delete('defense_records',
-            where: 'group_id = ?', whereArgs: [gId]);
+        await db
+            .delete('defense_records', where: 'group_id = ?', whereArgs: [gId]);
         final linkedProjects = await db.query('assessment_projects',
             where: 'group_id = ?', whereArgs: [gId]);
         for (final p in linkedProjects) {
@@ -407,8 +415,7 @@ class AssessmentDao {
         }
         await db.delete('assessment_projects',
             where: 'group_id = ?', whereArgs: [gId]);
-        await db.delete('assessment_groups',
-            where: 'id = ?', whereArgs: [gId]);
+        await db.delete('assessment_groups', where: 'id = ?', whereArgs: [gId]);
       }
     }
 
@@ -431,8 +438,8 @@ class AssessmentDao {
       final members = entry.value;
 
       // 已存在则跳过
-      final existing = await db.query('assessment_groups',
-          where: 'name = ?', whereArgs: [repo]);
+      final existing = await db
+          .query('assessment_groups', where: 'name = ?', whereArgs: [repo]);
       if (existing.isNotEmpty) continue;
 
       final leader = members.first;
@@ -491,6 +498,7 @@ class AssessmentDao {
   Future<List<Map<String, dynamic>>> getSubmittedReports(
       {String? userId}) async {
     final db = await DatabaseHelper.instance.database;
+    await _ensureAssessmentReportReviewColumns();
     if (userId != null) {
       return db.query('assessment_reports',
           where: 'user_id = ?',
@@ -509,6 +517,8 @@ class AssessmentDao {
     String? groupId,
   }) async {
     final db = await DatabaseHelper.instance.database;
+    await _ensureAssessmentReportReviewColumns();
+    final now = DateTime.now().toIso8601String();
     return db.insert('assessment_reports', {
       'user_id': userId,
       'title': reportType ?? '考核报告',
@@ -516,13 +526,16 @@ class AssessmentDao {
       'file_path': filePath ?? '',
       'status': '已提交',
       'task_id': groupId != null ? int.tryParse(groupId) : null,
-      'submit_time': DateTime.now().toIso8601String(),
-      'created_at': DateTime.now().toIso8601String(),
+      'submit_time': now,
+      'created_at': now,
+      'updated_at': now,
     });
   }
 
-  Future<int> returnStudentReport(int reportId, {required String reason, String? reviewerId}) async {
+  Future<int> returnStudentReport(int reportId,
+      {required String reason, String? reviewerId}) async {
     final db = await DatabaseHelper.instance.database;
+    await _ensureAssessmentReportReviewColumns();
     final now = DateTime.now().toIso8601String();
     return db.update(
       'assessment_reports',
@@ -530,6 +543,14 @@ class AssessmentDao {
         'status': '已打回',
         'score': null,
         'feedback': reason,
+        'review_json': jsonEncode({
+          'status': 'rejected',
+          'reason': reason,
+          'reviewedAt': now,
+          if (reviewerId != null) 'reviewerId': reviewerId,
+        }),
+        'reviewed_at': now,
+        'reviewer_id': reviewerId,
         'updated_at': now,
       },
       where: 'id = ?',
@@ -537,9 +558,107 @@ class AssessmentDao {
     );
   }
 
+  Future<List<Map<String, dynamic>>> getFinalAssessmentReports(
+      {String? userId}) async {
+    final db = await DatabaseHelper.instance.database;
+    await _ensureAssessmentReportReviewColumns();
+    final where = userId == null ? 'title = ?' : 'title = ? AND user_id = ?';
+    final args = userId == null
+        ? <Object?>[finalAssessmentReportType]
+        : <Object?>[finalAssessmentReportType, userId];
+    return db.query(
+      'assessment_reports',
+      where: where,
+      whereArgs: args,
+      orderBy: 'created_at DESC',
+    );
+  }
+
+  Future<Map<String, dynamic>?> getLatestFinalAssessmentReport(
+      String userId) async {
+    final reports = await getFinalAssessmentReports(userId: userId);
+    return reports.isEmpty ? null : reports.first;
+  }
+
+  Future<int> approveFinalAssessmentReport({
+    required int reportId,
+    required int score,
+    required String feedback,
+    required Map<String, dynamic> reviewData,
+    String? reviewerId,
+  }) async {
+    final db = await DatabaseHelper.instance.database;
+    await _ensureAssessmentReportReviewColumns();
+    final now = DateTime.now().toIso8601String();
+    return db.update(
+      'assessment_reports',
+      {
+        'status': '审核通过',
+        'score': score,
+        'feedback': feedback.isNotEmpty ? feedback : null,
+        'review_json': jsonEncode({
+          ...reviewData,
+          'status': 'approved',
+          'reviewedAt': now,
+          if (reviewerId != null) 'reviewerId': reviewerId,
+        }),
+        'reviewed_at': now,
+        'reviewer_id': reviewerId,
+        'updated_at': now,
+      },
+      where: 'id = ?',
+      whereArgs: [reportId],
+    );
+  }
+
+  Future<int> markFinalAssessmentReportPrinted({
+    required int reportId,
+    required Map<String, dynamic> printSettings,
+  }) async {
+    final db = await DatabaseHelper.instance.database;
+    await _ensureAssessmentReportReviewColumns();
+    final now = DateTime.now().toIso8601String();
+    return db.rawUpdate(
+      '''
+      UPDATE assessment_reports
+      SET printed_at = ?,
+          print_count = COALESCE(print_count, 0) + 1,
+          print_settings_json = ?,
+          updated_at = ?
+      WHERE id = ?
+      ''',
+      [now, jsonEncode(printSettings), now, reportId],
+    );
+  }
+
   Future<int> deleteSubmittedReport(int id) async {
     final db = await DatabaseHelper.instance.database;
+    await _ensureAssessmentReportReviewColumns();
     return db.delete('assessment_reports', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> _ensureAssessmentReportReviewColumns() async {
+    final db = await DatabaseHelper.instance.database;
+    Future<void> addText(String column) async {
+      try {
+        await db
+            .execute('ALTER TABLE assessment_reports ADD COLUMN $column TEXT');
+      } catch (e) {
+        swallow(e, tag: 'assessment_reports.add_$column');
+      }
+    }
+
+    await addText('review_json');
+    await addText('reviewed_at');
+    await addText('reviewer_id');
+    await addText('printed_at');
+    await addText('print_settings_json');
+    try {
+      await db.execute(
+          'ALTER TABLE assessment_reports ADD COLUMN print_count INTEGER DEFAULT 0');
+    } catch (e) {
+      swallow(e, tag: 'assessment_reports.add_print_count');
+    }
   }
 
   // ══════════════════════════════════════════════════════════
@@ -590,13 +709,15 @@ class AssessmentDao {
   }) async {
     await _ensureContributionTable();
     final db = await DatabaseHelper.instance.database;
-    final overall = codeContribution + docContribution + teamworkScore +
-        initiativeScore + qualityScore;
+    final overall = codeContribution +
+        docContribution +
+        teamworkScore +
+        initiativeScore +
+        qualityScore;
 
     // 先查是否已存在
     final existing = await db.query('contribution_scores',
-        where:
-            'target_user_id = ? AND scorer_user_id = ? AND dimension = ?',
+        where: 'target_user_id = ? AND scorer_user_id = ? AND dimension = ?',
         whereArgs: [targetUserId, scorerUserId, dimension]);
 
     if (existing.isNotEmpty) {
@@ -616,8 +737,7 @@ class AssessmentDao {
             'comment': comment,
             'scored_at': DateTime.now().toIso8601String(),
           },
-          where:
-              'target_user_id = ? AND scorer_user_id = ? AND dimension = ?',
+          where: 'target_user_id = ? AND scorer_user_id = ? AND dimension = ?',
           whereArgs: [targetUserId, scorerUserId, dimension]);
     }
 
@@ -699,7 +819,15 @@ class AssessmentDao {
         'totalReviews': (r['total_reviews'] as num?)?.toDouble() ?? 0,
       };
     }
-    return {'code': 0, 'doc': 0, 'teamwork': 0, 'initiative': 0, 'quality': 0, 'overall': 0, 'totalReviews': 0};
+    return {
+      'code': 0,
+      'doc': 0,
+      'teamwork': 0,
+      'initiative': 0,
+      'quality': 0,
+      'overall': 0,
+      'totalReviews': 0
+    };
   }
 
   /// 检查是否已评分
@@ -708,8 +836,7 @@ class AssessmentDao {
     await _ensureContributionTable();
     final db = await DatabaseHelper.instance.database;
     final result = await db.query('contribution_scores',
-        where:
-            'scorer_user_id = ? AND target_user_id = ? AND dimension = ?',
+        where: 'scorer_user_id = ? AND target_user_id = ? AND dimension = ?',
         whereArgs: [scorerUserId, targetUserId, dimension]);
     return result.isNotEmpty;
   }
@@ -747,6 +874,18 @@ class AssessmentDao {
   Future<Map<String, dynamic>> getCoverData(String userId) async {
     final db = await DatabaseHelper.instance.database;
 
+    String? studentName;
+    final studentRows = await db.query(
+      'users',
+      columns: ['real_name'],
+      where: 'user_id = ?',
+      whereArgs: [userId],
+      limit: 1,
+    );
+    if (studentRows.isNotEmpty) {
+      studentName = studentRows.first['real_name'] as String?;
+    }
+
     String? className;
     final cls = await db.rawQuery(
       'SELECT c.name FROM classes c '
@@ -773,8 +912,8 @@ class AssessmentDao {
       break;
     }
 
-    final reports = await db.query('assessment_reports',
-        where: 'user_id = ?', whereArgs: [userId]);
+    final reports = await db
+        .query('assessment_reports', where: 'user_id = ?', whereArgs: [userId]);
     final scores = <String, int>{};
     final feedbacks = <String, String>{};
     for (final r in reports) {
@@ -791,6 +930,7 @@ class AssessmentDao {
     }
 
     return {
+      'studentName': studentName ?? '',
       'className': className ?? '',
       'groupName': groupName ?? '',
       'projectName': projectName ?? '',

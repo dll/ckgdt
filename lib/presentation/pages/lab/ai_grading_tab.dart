@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:convert';
 import '../../../data/local/lab_task_dao.dart';
 import '../../../data/local/grading_result_dao.dart';
+import '../../../data/local/ai_config_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../services/sync_service.dart';
@@ -36,6 +37,13 @@ class LabAiGradingTab extends StatefulWidget {
 class _LabAiGradingTabState extends State<LabAiGradingTab> {
   final _gradingAgent = GradingAgent();
   final _gradingDao = GradingResultDao();
+  final _aiConfigDao = AiConfigDao();
+
+  // ── 当前大模型名称（显示用）──
+  String _modelLabel = '';
+
+  // ── 单份批阅进行中的提交 id（行内 spinner）──
+  int? _singleGradingId;
 
   // ── 任务数据 ──
   List<Map<String, dynamic>> _tasks = [];
@@ -65,7 +73,19 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
   @override
   void initState() {
     super.initState();
+    _loadModelLabel();
     _loadTasks();
+  }
+
+  Future<void> _loadModelLabel() async {
+    try {
+      final cfg = await _aiConfigDao.getConfig();
+      if (mounted) {
+        setState(() => _modelLabel = '${cfg.providerLabel} · ${cfg.model}');
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'LabAiGrading.loadModelLabel', stack: st);
+    }
   }
 
   Future<void> _loadTasks() async {
@@ -195,13 +215,6 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
       if (!_isBatchGrading) break; // 用户取消
 
       final sub = ungradedSubs[i];
-      final sid = sub['id'] as int;
-      final content = (sub['content'] as String?) ?? '';
-      final filePaths = (sub['file_paths'] as String?) ?? '';
-      final fileNames = (sub['file_names'] as String?) ?? '';
-      final taskTitle =
-          (sub['task_title'] as String?) ?? _selectedTask?['title'] ?? '';
-      final requirements = _selectedTask?['requirements'] as String?;
       final userName = (sub['user_id'] as String?) ?? '未知';
 
       setState(() {
@@ -209,27 +222,50 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
         _gradingStatus = '正在批阅 ${i + 1}/$_gradingTotal: $userName';
       });
 
-      try {
-        // 兜底：从 PDF 提取正文（旧提交只存了文件名）
-        final prepared = await prepareGradingContent(
-          rawContent: content,
-          filePaths: filePaths,
-          fileNames: fileNames,
-        );
-        if (!prepared.hasBody) {
-          _gradingResults[sid] = _GradingResult(
-            score: 0,
-            feedback: '无法读取报告正文：PDF 文件未同步到本机或损坏，需手动批改',
-            dimensions: null,
-            strengths: [],
-            improvements: [],
-            aiFlag: false,
-            raw: null,
-          );
-          if (mounted) setState(() {});
-          continue;
-        }
+      await _gradeOne(sub);
 
+      if (mounted) setState(() {});
+    }
+
+    if (mounted) {
+      setState(() {
+        _isBatchGrading = false;
+        _gradingProgress = _gradingTotal;
+        _gradingStatus = '批阅完成';
+      });
+    }
+  }
+
+  /// 批阅单份实验提交：PDF 兜底 → AI（标准/增强）→ 解析 → 存内存 → 持久化。
+  ///
+  /// 批量与单份批阅共用此方法。已核准的提交不再覆盖其持久化结果。
+  Future<void> _gradeOne(Map<String, dynamic> sub) async {
+    final sid = sub['id'] as int;
+    final content = (sub['content'] as String?) ?? '';
+    final filePaths = (sub['file_paths'] as String?) ?? '';
+    final fileNames = (sub['file_names'] as String?) ?? '';
+    final taskTitle =
+        (sub['task_title'] as String?) ?? _selectedTask?['title'] ?? '';
+    final requirements = _selectedTask?['requirements'] as String?;
+
+    try {
+      // 兜底：从 PDF 提取正文（旧提交只存了文件名）
+      final prepared = await prepareGradingContent(
+        rawContent: content,
+        filePaths: filePaths,
+        fileNames: fileNames,
+      );
+      if (!prepared.hasBody) {
+        _gradingResults[sid] = _GradingResult(
+          score: 0,
+          feedback: '无法读取报告正文：PDF 文件未同步到本机或损坏，需手动批改',
+          dimensions: null,
+          strengths: [],
+          improvements: [],
+          aiFlag: false,
+          raw: null,
+        );
+      } else {
         // 增强模式 → Orchestrator 链路（safety → grading → ethics）
         // 标准模式 → 单 Agent 直接批阅
         String result;
@@ -276,10 +312,9 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
             if (extra.isNotEmpty) feedback = '$feedback${extra.toString()}';
           }
           final dims = parsed['dimensions'] as Map<String, dynamic>?;
-          final strengths = (parsed['strengths'] as List?)
-                  ?.map((e) => e.toString())
-                  .toList() ??
-              [];
+          final strengths =
+              (parsed['strengths'] as List?)?.map((e) => e.toString()).toList() ??
+                  [];
           final improvements = (parsed['improvements'] as List?)
                   ?.map((e) => e.toString())
                   .toList() ??
@@ -307,29 +342,26 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
             raw: null,
           );
         }
-      } catch (e) {
-        _gradingResults[sid] = _GradingResult(
-          score: 0,
-          feedback: '批阅失败: $e',
-          dimensions: null,
-          strengths: [],
-          improvements: [],
-          aiFlag: false,
-          raw: null,
-        );
       }
-
-      if (mounted) setState(() {});
+    } catch (e) {
+      _gradingResults[sid] = _GradingResult(
+        score: 0,
+        feedback: '批阅失败: $e',
+        dimensions: null,
+        strengths: [],
+        improvements: [],
+        aiFlag: false,
+        raw: null,
+      );
     }
 
-    // 持久化所有批阅结果
-    for (final e in _gradingResults.entries) {
-      if (_approvedIds.contains(e.key)) continue;
-      final r = e.value;
-      await _gradingDao.deletePendingForTarget('lab', e.key);
+    // 持久化（已核准的不覆盖）
+    if (!_approvedIds.contains(sid)) {
+      final r = _gradingResults[sid]!;
+      await _gradingDao.deletePendingForTarget('lab', sid);
       await _gradingDao.saveResult(
         domain: 'lab',
-        targetId: e.key,
+        targetId: sid,
         scorerId: widget.authService.getCurrentUserId() ?? '',
         rawJson: r.raw != null ? jsonEncode(r.raw) : null,
         score: r.score.toDouble(),
@@ -340,14 +372,25 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
         aiFlag: r.aiFlag,
       );
     }
+  }
 
-    if (mounted) {
-      setState(() {
-        _isBatchGrading = false;
-        _gradingProgress = _gradingTotal;
-        _gradingStatus = '批阅完成';
-      });
+  /// 单份 AI 批阅（行内触发）。带教师 AI 批阅总开关检查 + 行内 spinner。
+  /// 沿用当前 _enhancedMode 开关（标准/增强链路）。
+  Future<void> _gradeSingle(Map<String, dynamic> sub) async {
+    if (!await SettingsService.isTeacherAiGradingEnabled()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('教师 AI 批阅已关闭，请在「系统设置 → 教师 AI 批阅」中开启后再使用。'),
+          ),
+        );
+      }
+      return;
     }
+    final sid = sub['id'] as int;
+    setState(() => _singleGradingId = sid);
+    await _gradeOne(sub);
+    if (mounted) setState(() => _singleGradingId = null);
   }
 
   // ═══════════ 核准操作 ═══════════
@@ -800,6 +843,8 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                 const Text('AI 智能批阅',
                     style:
                         TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const Spacer(),
+                if (_modelLabel.isNotEmpty) _modelBadge(primary),
               ],
             ),
             const SizedBox(height: 12),
@@ -917,6 +962,27 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _modelBadge(Color primary) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: primary.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.smart_toy_outlined, size: 13, color: primary),
+          const SizedBox(width: 4),
+          Text(_modelLabel,
+              style: TextStyle(
+                  fontSize: 11, color: primary, fontWeight: FontWeight.w600)),
+        ],
       ),
     );
   }
@@ -1126,36 +1192,63 @@ class _LabAiGradingTabState extends State<LabAiGradingTab> {
                 sub['content'] != null ? '等待批阅' : '未提交',
                 style: TextStyle(fontSize: 11, color: Colors.grey[500]),
               ),
-        trailing: result != null && !isApproved
-            ? Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.visibility, size: 18),
-                    tooltip: '查看详情',
-                    onPressed: () => _showDetailDialog(sid, sub),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.edit, size: 18),
-                    tooltip: '调整',
-                    onPressed: () => _showAdjustDialog(sid, sub),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.check_circle_outline, size: 18),
-                    tooltip: '核准',
-                    color: Colors.green,
-                    onPressed: () => _approveOne(sid),
-                  ),
-                ],
-              )
-            : (isApproved
-                ? IconButton(
-                    icon: const Icon(Icons.visibility, size: 18),
-                    tooltip: '查看详情',
-                    onPressed: () => _showDetailDialog(sid, sub),
-                  )
-                : null),
+        trailing: _buildTrailing(sub, sid, result, isApproved, primary),
       ),
+    );
+  }
+
+  Widget? _buildTrailing(
+    Map<String, dynamic> sub,
+    int sid,
+    _GradingResult? result,
+    bool isApproved,
+    Color primary,
+  ) {
+    if (result != null && !isApproved) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.visibility, size: 18),
+            tooltip: '查看详情',
+            onPressed: () => _showDetailDialog(sid, sub),
+          ),
+          IconButton(
+            icon: const Icon(Icons.edit, size: 18),
+            tooltip: '调整',
+            onPressed: () => _showAdjustDialog(sid, sub),
+          ),
+          IconButton(
+            icon: const Icon(Icons.check_circle_outline, size: 18),
+            tooltip: '核准',
+            color: Colors.green,
+            onPressed: () => _approveOne(sid),
+          ),
+        ],
+      );
+    }
+    if (isApproved) {
+      return IconButton(
+        icon: const Icon(Icons.visibility, size: 18),
+        tooltip: '查看详情',
+        onPressed: () => _showDetailDialog(sid, sub),
+      );
+    }
+    if (sub['content'] == null) return null;
+    if (_singleGradingId == sid) {
+      return const SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+    return IconButton(
+      icon: const Icon(Icons.auto_awesome, size: 18),
+      tooltip: 'AI 批阅此份',
+      color: primary,
+      onPressed: (_isBatchGrading || _singleGradingId != null)
+          ? null
+          : () => _gradeSingle(sub),
     );
   }
 

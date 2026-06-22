@@ -141,7 +141,8 @@ void main() {
     expect(experiment['A6'], 'S001');
     expect(experiment['C6'], '100.0');
     expect(experiment['E6'], '0.95');
-    expect(experiment['L7'], '83.3', reason: '6实验数据导出到学校模板时，目标4得分不能显示为0');
+    expect(experiment['L7'], isEmpty, reason: '实验七已删除，L列应留空');
+    expect(experiment['M7'], '0.833');
     expect(experiment['N6'], '70.0');
 
     final individual = _sheetCells(output, '学生个体课程目标达成度');
@@ -150,9 +151,9 @@ void main() {
     expect(individual['R7'], '0.92');
 
     final objective = _sheetCells(output, '课程目标点达成度');
-    expect(objective['A6'], '目标1');
-    expect(objective['B6'], '0.1');
-    expect(objective['H6'], '0.8123');
+    expect(objective['A8'], '目标1');
+    expect(objective['B8'], '0.1');
+    expect(objective['H8'], '0.8123');
     expect(objective['G20'], '0.8012');
 
     final scatter = _sheetCells(output, '目标1散点趋势图');

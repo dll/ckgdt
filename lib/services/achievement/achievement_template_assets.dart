@@ -30,6 +30,13 @@ class AchievementTemplateAssets {
 
     addRoot(Directory('data/达成'));
     addRoot(Directory(p.join(Directory.current.path, 'data', '达成')));
+    var current = Directory.current.absolute;
+    for (var i = 0; i < 5; i++) {
+      addRoot(Directory(p.join(current.path, 'mad-data', '达成')));
+      final parent = current.parent;
+      if (parent.path == current.path) break;
+      current = parent;
+    }
 
     if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
       var dir = File(Platform.resolvedExecutable).parent;

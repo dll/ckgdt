@@ -2597,6 +2597,12 @@ class DatabaseHelper {
         submit_time TEXT,
         score INTEGER,
         feedback TEXT,
+        review_json TEXT,
+        reviewed_at TEXT,
+        reviewer_id TEXT,
+        printed_at TEXT,
+        print_count INTEGER DEFAULT 0,
+        print_settings_json TEXT,
         created_at TEXT,
         updated_at TEXT
       )
@@ -2622,10 +2628,32 @@ class DatabaseHelper {
           'student_reports',
           where: 'template_id IS NULL',
         );
-        InitLogger.log('db', 'V31: deleted $deleted old assessment reports from student_reports');
+        InitLogger.log('db',
+            'V31: deleted $deleted old assessment reports from student_reports');
       }
     } catch (e, st) {
       swallowDebug(e, tag: 'V31.migrate_assessment_reports', stack: st);
+    }
+
+    await _ensureAssessmentReportReviewColumns(db);
+  }
+
+  Future<void> _ensureAssessmentReportReviewColumns(Database db) async {
+    await _addTextColumnIfMissing(
+        db, 'assessment_reports', 'review_json', 'assessment_reports');
+    await _addTextColumnIfMissing(
+        db, 'assessment_reports', 'reviewed_at', 'assessment_reports');
+    await _addTextColumnIfMissing(
+        db, 'assessment_reports', 'reviewer_id', 'assessment_reports');
+    await _addTextColumnIfMissing(
+        db, 'assessment_reports', 'printed_at', 'assessment_reports');
+    await _addTextColumnIfMissing(
+        db, 'assessment_reports', 'print_settings_json', 'assessment_reports');
+    try {
+      await db.execute(
+          'ALTER TABLE assessment_reports ADD COLUMN print_count INTEGER DEFAULT 0');
+    } catch (e) {
+      swallow(e, tag: 'assessment_reports.add_print_count');
     }
   }
 

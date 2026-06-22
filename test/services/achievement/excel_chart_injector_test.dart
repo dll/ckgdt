@@ -71,8 +71,10 @@ void main() {
         charts.contains(f.name) &&
         utf8.decode(f.content as List<int>).contains('scatterChart'));
     final scXml = utf8.decode(scChart.content as List<int>);
-    expect(scXml.contains('<c:trendline>'), isTrue, reason: '散点图含线性趋势线');
+    expect(scXml.contains('<c:trendline>'), isFalse, reason: '散点图不应含线性趋势线');
     expect('<c:ser>'.allMatches(scXml).length, 3, reason: '散点图3个系列');
+    expect(scXml.indexOf('平均达成度'), lessThan(scXml.indexOf('期望达成度')));
+    expect(scXml.indexOf('期望达成度'), lessThan(scXml.indexOf('个体达成度')));
 
     final sheetXmls = arch.files.where((f) =>
         f.name.startsWith('xl/worksheets/sheet') && f.name.endsWith('.xml'));

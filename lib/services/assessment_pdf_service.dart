@@ -1,10 +1,14 @@
 import 'dart:io';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart' as sf;
 import '../core/constants/score_colors.dart';
+import '../core/error_handler.dart';
 
 /// 考核报告打印服务 — 生成对齐学院模板的整合 PDF。
 ///
@@ -18,6 +22,8 @@ class AssessmentPdfService {
     bool includeCover = true,
     bool includeGrading = true,
     bool includeReports = true,
+    bool includeFinalReport = true,
+    double pageMarginMm = 20,
   }) async {
     final fonts = await _loadChineseFonts();
     final theme = pw.ThemeData.withFont(
@@ -27,20 +33,51 @@ class AssessmentPdfService {
     final pdf = pw.Document(theme: theme);
 
     if (includeCover) {
-      pdf.addPage(_buildCover(data.cover));
+      pdf.addPage(_buildCover(data.cover, pageMarginMm));
     }
     if (includeGrading) {
-      pdf.addPage(_buildGradingPage(data.grading));
+      pdf.addPage(_buildGradingPage(data.grading, pageMarginMm));
     }
+    final finalReport = data.finalReport;
+    final hasLocalFinalReport = finalReport?.filePath.isNotEmpty == true &&
+        File(finalReport!.filePath).existsSync();
     if (includeReports && data.reports.isNotEmpty) {
-      pdf.addPage(_buildReportsPage(data.reports));
+      pdf.addPage(_buildReportsPage(data.reports, pageMarginMm));
+    }
+    if (includeFinalReport && finalReport != null && !hasLocalFinalReport) {
+      pdf.addPage(_buildFinalReportReferencePage(finalReport, pageMarginMm));
     }
 
-    return pdf.save();
+    final generatedBytes = await pdf.save();
+    if (!includeFinalReport || finalReport == null || !hasLocalFinalReport) {
+      return generatedBytes;
+    }
+
+    final attachmentBytes = await File(finalReport.filePath).readAsBytes();
+    return _appendPdfPages(
+      baseBytes: generatedBytes,
+      attachmentBytes: attachmentBytes,
+      pageMarginMm: pageMarginMm,
+    );
   }
 
-  static Future<void> printPdf(Uint8List bytes, {String name = '考核报告'}) async {
-    await Printing.layoutPdf(onLayout: (_) async => bytes, name: name);
+  static Future<bool> printPdf(
+    Uint8List bytes, {
+    String name = '考核报告',
+    double pageMarginMm = 20,
+  }) async {
+    final margin = _mmToPdf(pageMarginMm);
+    return Printing.layoutPdf(
+      onLayout: (_) async => bytes,
+      name: name,
+      format: PdfPageFormat.a4.copyWith(
+        marginLeft: margin,
+        marginRight: margin,
+        marginTop: margin,
+        marginBottom: margin,
+      ),
+      usePrinterSettings: true,
+    );
   }
 
   static Future<String?> saveToFile(Uint8List bytes, String fileName) async {
@@ -60,10 +97,10 @@ class AssessmentPdfService {
   // ════════════════════════════════════════════════════════
   //  封面（对齐学院模板首页）
   // ════════════════════════════════════════════════════════
-  static pw.Page _buildCover(CoverInfo c) {
+  static pw.Page _buildCover(CoverInfo c, double pageMarginMm) {
     return pw.Page(
       pageFormat: PdfPageFormat.a4,
-      margin: const pw.EdgeInsets.symmetric(horizontal: 80, vertical: 60),
+      margin: pw.EdgeInsets.all(_mmToPdf(pageMarginMm)),
       build: (context) => pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.center,
         children: [
@@ -126,10 +163,10 @@ class AssessmentPdfService {
   // ════════════════════════════════════════════════════════
   //  指导教师评语 + 成绩评定（对齐模板第 2 页）
   // ════════════════════════════════════════════════════════
-  static pw.Page _buildGradingPage(GradingInfo g) {
+  static pw.Page _buildGradingPage(GradingInfo g, double pageMarginMm) {
     return pw.Page(
       pageFormat: PdfPageFormat.a4,
-      margin: const pw.EdgeInsets.all(40),
+      margin: pw.EdgeInsets.all(_mmToPdf(pageMarginMm)),
       build: (context) => pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
@@ -227,10 +264,11 @@ class AssessmentPdfService {
   // ════════════════════════════════════════════════════════
   //  4 项支撑材料审核明细（最终仍输出为一份完整报告）
   // ════════════════════════════════════════════════════════
-  static pw.Page _buildReportsPage(List<AuditedReport> reports) {
+  static pw.Page _buildReportsPage(
+      List<AuditedReport> reports, double pageMarginMm) {
     return pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
-      margin: const pw.EdgeInsets.all(40),
+      margin: pw.EdgeInsets.all(_mmToPdf(pageMarginMm)),
       build: (context) => [
         pw.Center(
           child: pw.Text('附：课程考核大作业支撑材料审核明细',
@@ -307,6 +345,112 @@ class AssessmentPdfService {
     );
   }
 
+  static pw.Page _buildFinalReportReferencePage(
+      FinalReportAttachment report, double pageMarginMm) {
+    return pw.Page(
+      pageFormat: PdfPageFormat.a4,
+      margin: pw.EdgeInsets.all(_mmToPdf(pageMarginMm)),
+      build: (context) => pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Center(
+            child: pw.Text('附：学生终稿 PDF',
+                style:
+                    pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+          ),
+          pw.SizedBox(height: 24),
+          _referenceRow('报告名称', report.title),
+          _referenceRow('提交文件', report.fileName),
+          _referenceRow('提交状态', report.status),
+          if (report.submittedAt.isNotEmpty)
+            _referenceRow('提交时间', report.submittedAt),
+          pw.SizedBox(height: 20),
+          pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.all(12),
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: PdfColors.grey700),
+              color: PdfColors.grey100,
+            ),
+            child: pw.Text(
+              '当前设备未找到学生提交的原始 PDF 文件，审核版本已保留封面、指导教师评语和成绩页。请先同步或在提交设备上生成全文审核版本。',
+              style: const pw.TextStyle(fontSize: 12, lineSpacing: 4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _referenceRow(String label, String value) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(bottom: 8),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.SizedBox(
+            width: 72,
+            child: pw.Text('$label：',
+                style:
+                    pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+          ),
+          pw.Expanded(
+            child: pw.Text(value.isNotEmpty ? value : '—',
+                style: const pw.TextStyle(fontSize: 12)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static Future<Uint8List> _appendPdfPages({
+    required Uint8List baseBytes,
+    required Uint8List attachmentBytes,
+    required double pageMarginMm,
+  }) async {
+    sf.PdfDocument? target;
+    sf.PdfDocument? source;
+    try {
+      target = sf.PdfDocument(inputBytes: baseBytes);
+      source = sf.PdfDocument(inputBytes: attachmentBytes);
+      final margin = _mmToPdf(pageMarginMm);
+
+      for (var i = 0; i < source.pages.count; i++) {
+        final sourcePage = source.pages[i];
+        final template = sourcePage.createTemplate();
+        final templateSize = template.size;
+        final page = target.pages.add();
+        final pageSize = page.getClientSize();
+        final usableWidth = math.max(1.0, pageSize.width - margin * 2);
+        final usableHeight = math.max(1.0, pageSize.height - margin * 2);
+        final scale = math.min(
+          usableWidth / templateSize.width,
+          usableHeight / templateSize.height,
+        );
+        final drawWidth = templateSize.width * scale;
+        final drawHeight = templateSize.height * scale;
+        final dx = margin + (usableWidth - drawWidth) / 2;
+        final dy = margin + (usableHeight - drawHeight) / 2;
+        page.graphics.drawPdfTemplate(
+          template,
+          ui.Offset(dx, dy),
+          ui.Size(drawWidth, drawHeight),
+        );
+      }
+
+      final saved = await target.save();
+      return Uint8List.fromList(saved);
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AssessmentPdfService.appendPdfPages', stack: st);
+      return baseBytes;
+    } finally {
+      source?.dispose();
+      target?.dispose();
+    }
+  }
+
+  static double _mmToPdf(double mm) => mm * PdfPageFormat.mm;
+
   static Future<_ChineseFonts>? _fontsFuture;
 
   static Future<_ChineseFonts> _loadChineseFonts() {
@@ -338,11 +482,13 @@ class AuditedReportData {
   final CoverInfo cover;
   final GradingInfo grading;
   final List<AuditedReport> reports;
+  final FinalReportAttachment? finalReport;
 
   const AuditedReportData({
     required this.cover,
     required this.grading,
     required this.reports,
+    this.finalReport,
   });
 }
 
@@ -421,6 +567,22 @@ class AuditedReport {
     this.score,
     this.feedback,
     this.status = '已提交',
+  });
+}
+
+class FinalReportAttachment {
+  final String title;
+  final String fileName;
+  final String filePath;
+  final String status;
+  final String submittedAt;
+
+  const FinalReportAttachment({
+    required this.title,
+    required this.fileName,
+    required this.filePath,
+    this.status = '已提交',
+    this.submittedAt = '',
   });
 }
 

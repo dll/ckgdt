@@ -365,7 +365,9 @@ void main() {
   });
 
   test('软件23三表数据导入：平时不丢分，6实验模板目标4不为0', () async {
-    final file = File('data/达成/软件23《移动应用开发》课程达成评价表格86.xlsx');
+    final file86 = File('data/达成/软件23《移动应用开发》课程达成评价表格86.xlsx');
+    final file85 = File('data/达成/软件23《移动应用开发》课程达成评价表格85.xlsx');
+    final file = await file86.exists() ? file86 : file85;
     expect(await file.exists(), isTrue, reason: '软件23达成数据文件必须存在');
 
     final batchId = await dao.addBatch(

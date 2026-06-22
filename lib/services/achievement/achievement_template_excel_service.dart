@@ -112,11 +112,11 @@ class AchievementExcelTemplateProfile {
       componentDataStartRow: 6,
       individualDataStartRow: 7,
       scatterDataStartRow: 1,
-      pingshiSummaryRow: 55,
-      experimentSummaryRow: 55,
-      examSummaryRow: 55,
+      pingshiSummaryRow: 54,
+      experimentSummaryRow: 54,
+      examSummaryRow: 54,
       individualSummaryRow: 56,
-      objectiveDataStartRow: 6,
+      objectiveDataStartRow: 8,
       objectiveSummaryRow: 20,
       barDataStartRow: 7,
     );
@@ -186,10 +186,16 @@ class AchievementTemplateExcelService {
         profile.pingshiSheet,
         profile.individualSheet,
         profile.objectiveSheet,
-        profile.barSheet,
-        ...profile.scatterSheets,
       };
-      return sheets.containsAll(requiredSheets);
+      final hasBaseSheets = sheets.containsAll(requiredSheets);
+      final hasBarSheet =
+          _barSheetNames(profile).any((name) => sheets.contains(name));
+      final hasScatterSheets = List<bool>.generate(
+        math.min(4, profile.scatterSheets.length),
+        (i) =>
+            _scatterSheetNames(profile, i).any((name) => sheets.contains(name)),
+      ).every((present) => present);
+      return hasBaseSheets && hasBarSheet && hasScatterSheets;
     } catch (_) {
       return false;
     }
@@ -213,9 +219,16 @@ class AchievementTemplateExcelService {
     if (sheetPaths.isEmpty) return templateBytes;
 
     // 动态汇总行：紧跟在最后一行学生数据之后
-    final count = studentCount ??
-        math.max(math.max(payload.pingshi.length, payload.experiment.length),
-            payload.exam.length);
+    final count = math.max(
+      0,
+      studentCount ??
+          [
+            payload.scores.length,
+            payload.pingshi.length,
+            payload.experiment.length,
+            payload.exam.length,
+          ].reduce(math.max),
+    );
     final dynamicProfile = AchievementExcelTemplateProfile(
       examSheet: activeProfile.examSheet,
       experimentSheet: activeProfile.experimentSheet,
@@ -236,12 +249,54 @@ class AchievementTemplateExcelService {
       barDataStartRow: activeProfile.barDataStartRow,
     );
 
+    _resizeSheetDataRegion(
+      files,
+      sheetPaths,
+      [activeProfile.pingshiSheet],
+      dataStartRow: activeProfile.componentDataStartRow,
+      templateSummaryStartRow: activeProfile.pingshiSummaryRow,
+      summaryRowCount: 2,
+      targetDataRows: count,
+      maxCol: 38,
+    );
+    _resizeSheetDataRegion(
+      files,
+      sheetPaths,
+      [activeProfile.experimentSheet],
+      dataStartRow: activeProfile.componentDataStartRow,
+      templateSummaryStartRow: activeProfile.experimentSummaryRow,
+      summaryRowCount: 2,
+      targetDataRows: count,
+      maxCol: 13,
+    );
+    _resizeSheetDataRegion(
+      files,
+      sheetPaths,
+      [activeProfile.examSheet],
+      dataStartRow: activeProfile.componentDataStartRow,
+      templateSummaryStartRow: activeProfile.examSummaryRow,
+      summaryRowCount: 2,
+      targetDataRows: count,
+      maxCol: 10,
+    );
+    _resizeSheetDataRegion(
+      files,
+      sheetPaths,
+      [activeProfile.individualSheet],
+      dataStartRow: activeProfile.individualDataStartRow,
+      templateSummaryStartRow: activeProfile.individualSummaryRow - 1,
+      summaryRowCount: 2,
+      targetDataRows: count,
+      maxCol: 17,
+    );
+
     _fillPingshi(files, sheetPaths, dynamicProfile, payload);
     _fillExperiment(files, sheetPaths, dynamicProfile, payload);
     _fillExam(files, sheetPaths, dynamicProfile, payload);
     _fillIndividual(files, sheetPaths, dynamicProfile, payload);
     _fillObjective(files, sheetPaths, dynamicProfile, payload);
     _fillChartData(files, sheetPaths, dynamicProfile, payload);
+    _updateTemplateCharts(files, sheetPaths, dynamicProfile, payload, count);
 
     files.remove('xl/calcChain.xml');
     final out = Archive();
@@ -265,11 +320,11 @@ class AchievementTemplateExcelService {
       final start = profile.componentDataStartRow;
       final avgRow = profile.pingshiSummaryRow; // 倒数第二行：班平均值
       final achRow = avgRow + 1; // 倒数第一行：课程目标达成度
-      // 学生行恒在汇总两行之上；清除模板预置的旧学生区与旧汇总行残留
-      final clearEnd = math.max(achRow + 1, start + 80);
-      _clearRows(ws, start, clearEnd, 0, 38);
-      for (int i = 0; i < p.pingshi.length; i++) {
-        final row = p.pingshi[i];
+      final rows = _rowsInScoreOrder(p.scores, p.pingshi);
+      _clearRows(ws, start, math.max(start, avgRow - 1), 0, 38);
+      _clearRows(ws, avgRow, achRow, 0, 38);
+      for (int i = 0; i < rows.length; i++) {
+        final row = rows[i];
         final r = start + i;
         final classActivity = _num(row, 'class_activity_score');
         final quizHomework = _num(row, 'quiz_homework_score');
@@ -289,22 +344,22 @@ class AchievementTemplateExcelService {
       }
       // 倒数第二行：班平均值（三项原始平均分 + 各达成度均值 + 总评均值）
       ws.text(avgRow, 0, '班平均值');
-      ws.number(avgRow, 2, _avgF(p.pingshi, 'class_activity_score'), 1);
-      ws.number(avgRow, 13, _avgF(p.pingshi, 'class_activity_score'), 1);
-      ws.number(avgRow, 14, _avgF(p.pingshi, 'class_activity_achievement'), 4);
-      ws.number(avgRow, 15, _avgF(p.pingshi, 'quiz_homework_score'), 1);
-      ws.number(avgRow, 25, _avgF(p.pingshi, 'quiz_homework_score'), 1);
-      ws.number(avgRow, 26, _avgF(p.pingshi, 'quiz_homework_achievement'), 4);
-      ws.number(avgRow, 27, _avgF(p.pingshi, 'extra_learning_score'), 1);
-      ws.number(avgRow, 36, _avgF(p.pingshi, 'extra_learning_score'), 1);
-      ws.number(avgRow, 37, _avgF(p.pingshi, 'extra_learning_achievement'), 4);
-      ws.number(avgRow, 38, _avgF(p.pingshi, 'total_score'), 1);
+      ws.number(avgRow, 2, _avgF(rows, 'class_activity_score'), 1);
+      ws.number(avgRow, 13, _avgF(rows, 'class_activity_score'), 1);
+      ws.number(avgRow, 14, _avgF(rows, 'class_activity_achievement'), 4);
+      ws.number(avgRow, 15, _avgF(rows, 'quiz_homework_score'), 1);
+      ws.number(avgRow, 25, _avgF(rows, 'quiz_homework_score'), 1);
+      ws.number(avgRow, 26, _avgF(rows, 'quiz_homework_achievement'), 4);
+      ws.number(avgRow, 27, _avgF(rows, 'extra_learning_score'), 1);
+      ws.number(avgRow, 36, _avgF(rows, 'extra_learning_score'), 1);
+      ws.number(avgRow, 37, _avgF(rows, 'extra_learning_achievement'), 4);
+      ws.number(avgRow, 38, _avgF(rows, 'total_score'), 1);
       // 倒数第一行：课程目标达成度（仅达成度列 O/AA/AL/AM = 14/26/37/38）
       ws.text(achRow, 0, '课程目标达成度');
       ws.number(achRow, 14, _avg(p.pingshiAverage, 0), 4);
       ws.number(achRow, 26, _avg(p.pingshiAverage, 1), 4);
       ws.number(achRow, 37, _avg(p.pingshiAverage, 3), 4);
-      ws.number(achRow, 38, _averageTotal(p.pingshi, 'total_score') / 100, 4);
+      ws.number(achRow, 38, _averageTotal(rows, 'total_score') / 100, 4);
     });
   }
 
@@ -321,10 +376,11 @@ class AchievementTemplateExcelService {
       final start = profile.componentDataStartRow;
       final avgRow = profile.experimentSummaryRow; // 倒数第二行：班平均值
       final achRow = avgRow + 1; // 倒数第一行：课程目标达成度
-      final clearEnd = math.max(achRow + 1, start + 80);
-      _clearRows(ws, start, clearEnd, 0, 13);
-      for (int i = 0; i < p.experiment.length; i++) {
-        final row = p.experiment[i];
+      final rows = _rowsInScoreOrder(p.scores, p.experiment);
+      _clearRows(ws, start, math.max(start, avgRow - 1), 0, 13);
+      _clearRows(ws, avgRow, achRow, 0, 13);
+      for (int i = 0; i < rows.length; i++) {
+        final row = rows[i];
         final r = start + i;
         ws.text(r, 0, row['student_id']);
         ws.text(r, 1, row['student_name']);
@@ -344,25 +400,25 @@ class AchievementTemplateExcelService {
       }
       // 倒数第二行：班平均值（各列均值，实验七 L 列留空）
       ws.text(avgRow, 0, '班平均值');
-      ws.number(avgRow, 2, _avgF(p.experiment, 'exp1_score'), 1);
-      ws.number(avgRow, 3, _avgF(p.experiment, 'exp2_score'), 1);
-      ws.number(avgRow, 4, _avgF(p.experiment, 'obj1_achievement'), 4);
-      ws.number(avgRow, 5, _avgF(p.experiment, 'exp3_score'), 1);
-      ws.number(avgRow, 6, _avgF(p.experiment, 'exp4_score'), 1);
-      ws.number(avgRow, 7, _avgF(p.experiment, 'obj2_achievement'), 4);
-      ws.number(avgRow, 8, _avgF(p.experiment, 'exp5_score'), 1);
-      ws.number(avgRow, 9, _avgF(p.experiment, 'exp6_score'), 1);
-      ws.number(avgRow, 10, _avgF(p.experiment, 'obj3_achievement'), 4);
+      ws.number(avgRow, 2, _avgF(rows, 'exp1_score'), 1);
+      ws.number(avgRow, 3, _avgF(rows, 'exp2_score'), 1);
+      ws.number(avgRow, 4, _avgF(rows, 'obj1_achievement'), 4);
+      ws.number(avgRow, 5, _avgF(rows, 'exp3_score'), 1);
+      ws.number(avgRow, 6, _avgF(rows, 'exp4_score'), 1);
+      ws.number(avgRow, 7, _avgF(rows, 'obj2_achievement'), 4);
+      ws.number(avgRow, 8, _avgF(rows, 'exp5_score'), 1);
+      ws.number(avgRow, 9, _avgF(rows, 'exp6_score'), 1);
+      ws.number(avgRow, 10, _avgF(rows, 'obj3_achievement'), 4);
       ws.clear(avgRow, 11);
-      ws.number(avgRow, 12, _avgF(p.experiment, 'obj4_achievement'), 4);
-      ws.number(avgRow, 13, _avgF(p.experiment, 'total_score'), 1);
+      ws.number(avgRow, 12, _avgF(rows, 'obj4_achievement'), 4);
+      ws.number(avgRow, 13, _avgF(rows, 'total_score'), 1);
       // 倒数第一行：课程目标达成度（E/H/K/M/N = 4/7/10/12/13）
       ws.text(achRow, 0, '课程目标达成度');
       ws.number(achRow, 4, _avg(p.experimentAverage, 0), 4);
       ws.number(achRow, 7, _avg(p.experimentAverage, 1), 4);
       ws.number(achRow, 10, _avg(p.experimentAverage, 2), 4);
       ws.number(achRow, 12, _avg(p.experimentAverage, 3), 4);
-      ws.number(achRow, 13, _averageTotal(p.experiment, 'total_score') / 100, 4);
+      ws.number(achRow, 13, _averageTotal(rows, 'total_score') / 100, 4);
     });
   }
 
@@ -382,10 +438,11 @@ class AchievementTemplateExcelService {
       final start = profile.componentDataStartRow;
       final avgRow = profile.examSummaryRow; // 倒数第二行：班平均值
       final achRow = avgRow + 1; // 倒数第一行：课程目标达成度
-      final clearEnd = math.max(achRow + 1, start + 80);
-      _clearRows(ws, start, clearEnd, 0, 10);
-      for (int i = 0; i < p.exam.length; i++) {
-        final row = p.exam[i];
+      final rows = _rowsInScoreOrder(p.scores, p.exam);
+      _clearRows(ws, start, math.max(start, avgRow - 1), 0, 10);
+      _clearRows(ws, avgRow, achRow, 0, 10);
+      for (int i = 0; i < rows.length; i++) {
+        final row = rows[i];
         final r = start + i;
         ws.text(r, 0, row['student_id']);
         ws.text(r, 1, row['student_name']);
@@ -401,22 +458,22 @@ class AchievementTemplateExcelService {
       }
       // 倒数第二行：班平均值（各列均值）
       ws.text(avgRow, 0, '班平均值');
-      ws.number(avgRow, 2, _avgF(p.exam, 'project_score'), 1);
-      ws.number(avgRow, 3, _avgF(p.exam, 'obj1_achievement'), 4);
-      ws.number(avgRow, 4, _avgF(p.exam, 'group_score'), 1);
-      ws.number(avgRow, 5, _avgF(p.exam, 'obj2_achievement'), 4);
-      ws.number(avgRow, 6, _avgF(p.exam, 'individual_score'), 1);
-      ws.number(avgRow, 7, _avgF(p.exam, 'obj3_achievement'), 4);
-      ws.number(avgRow, 8, _avgF(p.exam, 'defense_score'), 1);
-      ws.number(avgRow, 9, _avgF(p.exam, 'obj4_achievement'), 4);
-      ws.number(avgRow, 10, _avgF(p.exam, 'total_score'), 1);
+      ws.number(avgRow, 2, _avgF(rows, 'project_score'), 1);
+      ws.number(avgRow, 3, _avgF(rows, 'obj1_achievement'), 4);
+      ws.number(avgRow, 4, _avgF(rows, 'group_score'), 1);
+      ws.number(avgRow, 5, _avgF(rows, 'obj2_achievement'), 4);
+      ws.number(avgRow, 6, _avgF(rows, 'individual_score'), 1);
+      ws.number(avgRow, 7, _avgF(rows, 'obj3_achievement'), 4);
+      ws.number(avgRow, 8, _avgF(rows, 'defense_score'), 1);
+      ws.number(avgRow, 9, _avgF(rows, 'obj4_achievement'), 4);
+      ws.number(avgRow, 10, _avgF(rows, 'total_score'), 1);
       // 倒数第一行：课程目标达成度（D/F/H/J/K = 3/5/7/9/10）
       ws.text(achRow, 0, '课程目标达成度');
       ws.number(achRow, 3, _avg(p.examAverage, 0), 4);
       ws.number(achRow, 5, _avg(p.examAverage, 1), 4);
       ws.number(achRow, 7, _avg(p.examAverage, 2), 4);
       ws.number(achRow, 9, _avg(p.examAverage, 3), 4);
-      ws.number(achRow, 10, _averageTotal(p.exam, 'total_score') / 100, 4);
+      ws.number(achRow, 10, _averageTotal(rows, 'total_score') / 100, 4);
     });
   }
 
@@ -430,8 +487,11 @@ class AchievementTemplateExcelService {
       ws.text(
           1, 0, '${p.semester}${p.className}《${p.courseName}》学生个体课程目标达成度计算表');
       ws.text(2, 0, '班级：${p.className}');
+      final avgRow = profile.individualSummaryRow - 1;
+      final indicatorRow = profile.individualSummaryRow;
       _clearRows(ws, profile.individualDataStartRow,
-          profile.individualSummaryRow - 1, 0, 17);
+          math.max(profile.individualDataStartRow, avgRow - 1), 0, 17);
+      _clearRows(ws, avgRow, indicatorRow, 0, 17);
       final pById = {for (final r in p.pingshi) '${r['student_id']}': r};
       final eById = {for (final r in p.experiment) '${r['student_id']}': r};
       final xById = {for (final r in p.exam) '${r['student_id']}': r};
@@ -450,12 +510,19 @@ class AchievementTemplateExcelService {
           ws.number(r, offset + 3, _num(s, 'obj${obj + 1}_achievement'), 4);
         }
       }
-      final row = profile.individualSummaryRow;
-      ws.text(row, 0, '指标点达成度');
-      ws.number(row, 1, _achievement(p, 0), 4);
-      ws.number(row, 3, _achievement(p, 1), 4);
-      ws.number(row, 7, _achievement(p, 2), 4);
-      ws.number(row, 11, _achievement(p, 3), 4);
+      ws.text(avgRow, 0, '班平均值');
+      for (int obj = 0; obj < 4; obj++) {
+        final offset = 2 + obj * 4;
+        ws.number(avgRow, offset, _avg(p.pingshiAverage, obj), 4);
+        ws.number(avgRow, offset + 1, _avg(p.experimentAverage, obj), 4);
+        ws.number(avgRow, offset + 2, _avg(p.examAverage, obj), 4);
+        ws.number(avgRow, offset + 3, _achievement(p, obj), 4);
+      }
+      ws.text(indicatorRow, 0, '指标点达成度');
+      ws.number(indicatorRow, 2, _achievement(p, 0), 4);
+      ws.number(indicatorRow, 6, _achievement(p, 1), 4);
+      ws.number(indicatorRow, 10, _achievement(p, 2), 4);
+      ws.number(indicatorRow, 14, _achievement(p, 3), 4);
     });
   }
 
@@ -480,10 +547,10 @@ class AchievementTemplateExcelService {
           final row = profile.objectiveDataStartRow + obj * 3 + env;
           if (env == 0) {
             ws.text(row, 0, '目标${obj + 1}');
-            ws.number(row, 1, _weight(p, obj), 2);
-            ws.number(row, 7, _achievement(p, obj), 4);
+            ws.numberPlain(row, 1, _weight(p, obj), 2);
+            ws.numberPlain(row, 7, _achievement(p, obj), 4);
             ws.text(row, 8, _indicator(p, obj));
-            ws.number(row, 9, _achievement(p, obj), 4);
+            ws.numberPlain(row, 9, _achievement(p, obj), 4);
           } else {
             ws.clear(row, 0);
             ws.clear(row, 1);
@@ -492,17 +559,17 @@ class AchievementTemplateExcelService {
             ws.clear(row, 9);
           }
           ws.text(row, 2, envNames[env]);
-          ws.number(row, 3, envFull[env], 0);
-          ws.number(row, 4, envAch[env] * envFull[env], 2);
-          ws.number(row, 5, envAch[env], 4);
-          ws.number(row, 6, envWeights[env], 1);
+          ws.numberPlain(row, 3, envFull[env], 0);
+          ws.numberPlain(row, 4, envAch[env] * envFull[env], 2);
+          ws.numberPlain(row, 5, envAch[env], 4);
+          ws.numberPlain(row, 6, envWeights[env], 1);
         }
       }
       final row = profile.objectiveSummaryRow;
       ws.text(row, 0, '课程总体目标期望值');
-      ws.number(row, 1, p.expectation, 1);
+      ws.numberPlain(row, 1, p.expectation, 1);
       ws.text(row, 2, '课程总体目标达成度(cc)');
-      ws.number(row, 6, p.weightedAchievement, 4);
+      ws.numberPlain(row, 6, p.weightedAchievement, 4);
     });
   }
 
@@ -512,7 +579,7 @@ class AchievementTemplateExcelService {
     AchievementExcelTemplateProfile profile,
     AchievementExcelTemplatePayload p,
   ) {
-    _editSheet(files, sheetPaths, profile.barSheet, (ws) {
+    _editFirstSheet(files, sheetPaths, _barSheetNames(profile), (ws) {
       for (int i = 0; i < 4; i++) {
         final row = profile.barDataStartRow + i;
         ws.text(row, 1, _objectiveName(p, i));
@@ -521,7 +588,8 @@ class AchievementTemplateExcelService {
     });
 
     for (int obj = 0; obj < math.min(4, profile.scatterSheets.length); obj++) {
-      _editSheet(files, sheetPaths, profile.scatterSheets[obj], (ws) {
+      _editFirstSheet(files, sheetPaths, _scatterSheetNames(profile, obj),
+          (ws) {
         _clearRows(ws, profile.scatterDataStartRow,
             profile.scatterDataStartRow + 199, 1, 4);
         for (int i = 0; i < p.scores.length; i++) {
@@ -533,6 +601,221 @@ class AchievementTemplateExcelService {
         }
       });
     }
+  }
+
+  void _resizeSheetDataRegion(
+    Map<String, List<int>> files,
+    Map<String, String> sheetPaths,
+    Iterable<String> sheetNames, {
+    required int dataStartRow,
+    required int templateSummaryStartRow,
+    required int summaryRowCount,
+    required int targetDataRows,
+    required int maxCol,
+  }) {
+    _editFirstSheet(files, sheetPaths, sheetNames, (ws) {
+      ws.resizeDataRegion(
+        dataStartRow: dataStartRow,
+        templateSummaryStartRow: templateSummaryStartRow,
+        summaryRowCount: summaryRowCount,
+        targetDataRows: targetDataRows,
+        maxCol: maxCol,
+      );
+    });
+  }
+
+  void _updateTemplateCharts(
+    Map<String, List<int>> files,
+    Map<String, String> sheetPaths,
+    AchievementExcelTemplateProfile profile,
+    AchievementExcelTemplatePayload p,
+    int studentCount,
+  ) {
+    final barSheet =
+        _firstExistingSheetName(sheetPaths, _barSheetNames(profile));
+    if (barSheet != null) {
+      final chartRefs = _chartRefsForSheet(files, sheetPaths[barSheet]!);
+      for (final chart in chartRefs) {
+        _updateBarChart(
+          files,
+          chart,
+          sheetName: barSheet,
+          startRow: profile.barDataStartRow,
+          endRow: profile.barDataStartRow + 3,
+        );
+      }
+    }
+
+    final endRow = math.max(1, studentCount);
+    for (var obj = 0; obj < math.min(4, profile.scatterSheets.length); obj++) {
+      final sheetName =
+          _firstExistingSheetName(sheetPaths, _scatterSheetNames(profile, obj));
+      if (sheetName == null) continue;
+      final chartRefs = _chartRefsForSheet(files, sheetPaths[sheetName]!);
+      for (final chart in chartRefs) {
+        _setDrawingAnchor(
+          files,
+          chart.drawingPath,
+          fromCol: 7,
+          fromRow: 1,
+          toCol: 22,
+          toRow: 27,
+        );
+        _updateScatterChart(
+          files,
+          chart,
+          sheetName: sheetName,
+          objectiveIndex: obj,
+          endRow: endRow,
+          average: _achievement(p, obj),
+          expectation: p.expectation,
+        );
+      }
+    }
+  }
+
+  void _updateBarChart(
+    Map<String, List<int>> files,
+    _ChartRef chart, {
+    required String sheetName,
+    required int startRow,
+    required int endRow,
+  }) {
+    final raw = files[chart.chartPath];
+    if (raw == null) return;
+    final doc = XmlDocument.parse(utf8.decode(raw));
+    if (doc.findAllElements('barChart', namespace: '*').isEmpty) return;
+    final series = doc.findAllElements('ser', namespace: '*').toList();
+    if (series.isNotEmpty) {
+      _setSeriesName(series.first, '达成度');
+      _setSeriesRefs(series.first, [
+        _chartRef(sheetName, 'B', startRow, endRow),
+        _chartRef(sheetName, 'C', startRow, endRow),
+      ]);
+      _ensureBarDataLabels(series.first);
+    }
+    files[chart.chartPath] = utf8.encode(doc.toXmlString());
+  }
+
+  void _updateScatterChart(
+    Map<String, List<int>> files,
+    _ChartRef chart, {
+    required String sheetName,
+    required int objectiveIndex,
+    required int endRow,
+    required double average,
+    required double expectation,
+  }) {
+    final raw = files[chart.chartPath];
+    if (raw == null) return;
+    final doc = XmlDocument.parse(utf8.decode(raw));
+    if (doc.findAllElements('scatterChart', namespace: '*').isEmpty) return;
+    final series = doc.findAllElements('ser', namespace: '*').toList();
+    if (series.length >= 3) {
+      _setSeriesName(series[0], '${average.toStringAsFixed(2)}平均');
+      _setSeriesRefs(series[0], [
+        _chartRef(sheetName, 'B', 1, endRow),
+        _chartRef(sheetName, 'D', 1, endRow),
+      ]);
+      _setSeriesName(series[1], '${expectation.toStringAsFixed(2)}期望');
+      _setSeriesRefs(series[1], [
+        _chartRef(sheetName, 'B', 1, endRow),
+        _chartRef(sheetName, 'E', 1, endRow),
+      ]);
+      _setSeriesName(series[2], '个体达成度');
+      _setSeriesRefs(series[2], [
+        _chartRef(sheetName, 'B', 1, endRow),
+        _chartRef(sheetName, 'C', 1, endRow),
+      ]);
+    }
+    for (final ser in series) {
+      ser.children.removeWhere(
+          (node) => node is XmlElement && node.name.local == 'trendline');
+    }
+    _ensureBottomLegend(doc);
+    files[chart.chartPath] = utf8.encode(doc.toXmlString());
+  }
+
+  List<_ChartRef> _chartRefsForSheet(
+    Map<String, List<int>> files,
+    String sheetPath,
+  ) {
+    final raw = files[sheetPath];
+    if (raw == null) return const [];
+    final sheet = XmlDocument.parse(utf8.decode(raw));
+    final sheetRelsPath = _relsPathForPart(sheetPath);
+    final sheetRels = _relationships(files, sheetRelsPath);
+    final charts = <_ChartRef>[];
+    for (final drawing in sheet.findAllElements('drawing')) {
+      final rid = _relationshipId(drawing);
+      final drawingTarget = rid == null ? null : sheetRels[rid];
+      if (drawingTarget == null) continue;
+      final drawingPath = _resolvePartPath(sheetPath, drawingTarget);
+      final drawingRaw = files[drawingPath];
+      if (drawingRaw == null) continue;
+      final drawingDoc = XmlDocument.parse(utf8.decode(drawingRaw));
+      final drawingRels = _relationships(files, _relsPathForPart(drawingPath));
+      for (final chartEl
+          in drawingDoc.findAllElements('chart', namespace: '*')) {
+        final chartRid = _relationshipId(chartEl);
+        final chartTarget = chartRid == null ? null : drawingRels[chartRid];
+        if (chartTarget == null) continue;
+        final chartPath = _resolvePartPath(drawingPath, chartTarget);
+        if (files.containsKey(chartPath)) {
+          charts.add(_ChartRef(drawingPath: drawingPath, chartPath: chartPath));
+        }
+      }
+    }
+    return charts;
+  }
+
+  Map<String, String> _relationships(
+    Map<String, List<int>> files,
+    String relsPath,
+  ) {
+    final raw = files[relsPath];
+    if (raw == null) return const {};
+    final doc = XmlDocument.parse(utf8.decode(raw));
+    return {
+      for (final rel in doc.findAllElements('Relationship'))
+        if (rel.getAttribute('Id') != null &&
+            rel.getAttribute('Target') != null)
+          rel.getAttribute('Id')!: rel.getAttribute('Target')!,
+    };
+  }
+
+  void _setDrawingAnchor(
+    Map<String, List<int>> files,
+    String drawingPath, {
+    required int fromCol,
+    required int fromRow,
+    required int toCol,
+    required int toRow,
+  }) {
+    final raw = files[drawingPath];
+    if (raw == null) return;
+    final doc = XmlDocument.parse(utf8.decode(raw));
+    for (final anchor in doc.findAllElements('twoCellAnchor', namespace: '*')) {
+      final from = _firstChild(anchor, 'from');
+      final to = _firstChild(anchor, 'to');
+      if (from == null || to == null) continue;
+      _setChildText(from, 'col', fromCol.toString());
+      _setChildText(from, 'row', fromRow.toString());
+      _setChildText(to, 'col', toCol.toString());
+      _setChildText(to, 'row', toRow.toString());
+    }
+    files[drawingPath] = utf8.encode(doc.toXmlString());
+  }
+
+  void _editFirstSheet(
+    Map<String, List<int>> files,
+    Map<String, String> sheetPaths,
+    Iterable<String> sheetNames,
+    void Function(_WorksheetEditor ws) edit,
+  ) {
+    final sheetName = _firstExistingSheetName(sheetPaths, sheetNames);
+    if (sheetName == null) return;
+    _editSheet(files, sheetPaths, sheetName, edit);
   }
 
   void _editSheet(
@@ -582,8 +865,204 @@ class AchievementTemplateExcelService {
     return t.replaceAll('/../', '/');
   }
 
+  static List<String> _barSheetNames(AchievementExcelTemplateProfile profile) {
+    return [profile.barSheet, 'Sheet1'];
+  }
+
+  static List<String> _scatterSheetNames(
+    AchievementExcelTemplateProfile profile,
+    int index,
+  ) {
+    return [
+      if (index >= 0 && index < profile.scatterSheets.length)
+        profile.scatterSheets[index],
+      'Sheet2(${index + 1})',
+    ];
+  }
+
+  static String? _firstExistingSheetName(
+    Map<String, String> sheetPaths,
+    Iterable<String> names,
+  ) {
+    for (final name in names) {
+      if (sheetPaths.containsKey(name)) return name;
+    }
+    return null;
+  }
+
+  static String? _relationshipId(XmlElement element) {
+    for (final attribute in element.attributes) {
+      final name = attribute.name;
+      if (name.qualified == 'r:id' ||
+          (name.prefix == 'r' && name.local == 'id') ||
+          name.local == 'id') {
+        return attribute.value;
+      }
+    }
+    return null;
+  }
+
+  static String _chartRef(
+    String sheetName,
+    String col,
+    int startRow,
+    int endRow,
+  ) {
+    final safeName = sheetName.replaceAll("'", "''");
+    return "'$safeName'!\$$col\$$startRow:\$$col\$$endRow";
+  }
+
+  static String _relsPathForPart(String partPath) {
+    final slash = partPath.lastIndexOf('/');
+    if (slash < 0) return '_rels/$partPath.rels';
+    return '${partPath.substring(0, slash)}/_rels/${partPath.substring(slash + 1)}.rels';
+  }
+
+  static String _resolvePartPath(String basePart, String target) {
+    var t = target.replaceAll('\\', '/');
+    if (t.startsWith('/')) return t.substring(1);
+    final slash = basePart.lastIndexOf('/');
+    final baseDir = slash < 0 ? '' : basePart.substring(0, slash);
+    final parts = <String>[];
+    for (final part in '$baseDir/$t'.split('/')) {
+      if (part.isEmpty || part == '.') continue;
+      if (part == '..') {
+        if (parts.isNotEmpty) parts.removeLast();
+      } else {
+        parts.add(part);
+      }
+    }
+    return parts.join('/');
+  }
+
+  static void _setSeriesName(XmlElement series, String name) {
+    var tx = _firstChild(series, 'tx');
+    if (tx == null) {
+      tx = _c('tx');
+      series.children.insert(math.min(2, series.children.length), tx);
+    }
+    tx.children.clear();
+    tx.children.add(_c('v', children: [XmlText(name)]));
+  }
+
+  static void _setSeriesRefs(XmlElement series, List<String> refs) {
+    final formulas = series.findAllElements('f', namespace: '*').toList();
+    for (var i = 0; i < math.min(refs.length, formulas.length); i++) {
+      _setElementText(formulas[i], refs[i]);
+    }
+  }
+
+  static void _ensureBarDataLabels(XmlElement series) {
+    series.children.removeWhere(
+        (node) => node is XmlElement && node.name.local == 'dLbls');
+    final labels = _c('dLbls', children: [
+      _c('numFmt', attributes: [
+        XmlAttribute(XmlName('formatCode'), '0.00'),
+        XmlAttribute(XmlName('sourceLinked'), '0'),
+      ]),
+      _c('dLblPos', attributes: [XmlAttribute(XmlName('val'), 'outEnd')]),
+      _c('showLegendKey', attributes: [XmlAttribute(XmlName('val'), '0')]),
+      _c('showVal', attributes: [XmlAttribute(XmlName('val'), '1')]),
+      _c('showCatName', attributes: [XmlAttribute(XmlName('val'), '0')]),
+      _c('showSerName', attributes: [XmlAttribute(XmlName('val'), '0')]),
+      _c('showPercent', attributes: [XmlAttribute(XmlName('val'), '0')]),
+      _c('showBubbleSize', attributes: [XmlAttribute(XmlName('val'), '0')]),
+    ]);
+    final cat = _firstChild(series, 'cat');
+    final index =
+        cat == null ? series.children.length : series.children.indexOf(cat);
+    series.children.insert(index, labels);
+  }
+
+  static void _ensureBottomLegend(XmlDocument doc) {
+    final charts = doc.findAllElements('chart', namespace: '*').toList();
+    if (charts.isEmpty) return;
+    final chart = charts.first;
+    var legend = _firstChild(chart, 'legend');
+    if (legend == null) {
+      legend = _c('legend', children: [
+        _c('legendPos', attributes: [XmlAttribute(XmlName('val'), 'b')]),
+        _c('overlay', attributes: [XmlAttribute(XmlName('val'), '0')]),
+      ]);
+      final plotVisOnly = _firstChild(chart, 'plotVisOnly');
+      final index = plotVisOnly == null
+          ? chart.children.length
+          : chart.children.indexOf(plotVisOnly);
+      chart.children.insert(index, legend);
+      return;
+    }
+    _upsertValChild(legend, 'legendPos', 'b');
+    _upsertValChild(legend, 'overlay', '0');
+  }
+
+  static void _upsertValChild(XmlElement parent, String localName, String val) {
+    var child = _firstChild(parent, localName);
+    if (child == null) {
+      child = _c(localName);
+      parent.children.add(child);
+    }
+    child.setAttribute('val', val);
+  }
+
+  static XmlElement? _firstChild(XmlElement parent, String localName) {
+    for (final child in parent.children.whereType<XmlElement>()) {
+      if (child.name.local == localName) return child;
+    }
+    return null;
+  }
+
+  static void _setChildText(
+    XmlElement parent,
+    String localName,
+    String value,
+  ) {
+    final child = _firstChild(parent, localName);
+    if (child == null) return;
+    _setElementText(child, value);
+  }
+
+  static void _setElementText(XmlElement element, String value) {
+    element.children.clear();
+    element.children.add(XmlText(value));
+  }
+
+  static XmlElement _c(
+    String localName, {
+    List<XmlAttribute> attributes = const [],
+    List<XmlNode> children = const [],
+  }) {
+    return XmlElement(XmlName(localName, 'c'), attributes, children);
+  }
+
   static String _title(AchievementExcelTemplatePayload p, String suffix) {
     return '${p.semester}${p.className}《${p.courseName}》$suffix';
+  }
+
+  static List<Map<String, dynamic>> _rowsInScoreOrder(
+    List<Map<String, dynamic>> scores,
+    List<Map<String, dynamic>> rows,
+  ) {
+    if (scores.isEmpty) return rows;
+    final byId = {for (final r in rows) '${r['student_id']}': r};
+    final used = <String>{};
+    final ordered = <Map<String, dynamic>>[];
+    for (final score in scores) {
+      final sid = '${score['student_id'] ?? score['user_id'] ?? ''}';
+      if (sid.isEmpty) continue;
+      used.add(sid);
+      ordered.add(Map<String, dynamic>.from(byId[sid] ??
+          {
+            'student_id': sid,
+            'student_name': score['student_name'] ?? score['real_name'] ?? '',
+          }));
+    }
+    for (final row in rows) {
+      final sid = '${row['student_id'] ?? ''}';
+      if (sid.isNotEmpty && used.add(sid)) {
+        ordered.add(Map<String, dynamic>.from(row));
+      }
+    }
+    return ordered;
   }
 
   static double _num(Map<String, dynamic>? row, String key) {
@@ -673,6 +1152,54 @@ class _WorksheetEditor {
     sheetData = document.findAllElements('sheetData').first;
   }
 
+  void resizeDataRegion({
+    required int dataStartRow,
+    required int templateSummaryStartRow,
+    required int summaryRowCount,
+    required int targetDataRows,
+    required int maxCol,
+  }) {
+    final normalizedTargetRows = math.max(0, targetDataRows);
+    final targetSummaryStartRow = dataStartRow + normalizedTargetRows;
+    final delta = targetSummaryStartRow - templateSummaryStartRow;
+    if (delta == 0) {
+      _ensureDataRows(dataStartRow, normalizedTargetRows, maxCol);
+      return;
+    }
+
+    final cloneSource =
+        (_findRow(templateSummaryStartRow - 1) ?? _findRow(dataStartRow))
+            ?.copy();
+    if (delta < 0) {
+      final deleteStart = targetSummaryStartRow;
+      final deleteEnd = templateSummaryStartRow - 1;
+      sheetData.children.removeWhere((node) {
+        if (node is! XmlElement || node.name.local != 'row') return false;
+        final row = int.tryParse(node.getAttribute('r') ?? '') ?? 0;
+        return row >= deleteStart && row <= deleteEnd;
+      });
+      _shiftRows(templateSummaryStartRow, delta);
+      _shiftMergeCells(templateSummaryStartRow, delta,
+          deleteStart: deleteStart, deleteEnd: deleteEnd);
+    } else {
+      _shiftRows(templateSummaryStartRow, delta);
+      _shiftMergeCells(templateSummaryStartRow, delta);
+      if (cloneSource != null) {
+        for (var row = templateSummaryStartRow;
+            row < targetSummaryStartRow;
+            row++) {
+          final created = cloneSource.copy();
+          _setRowNumber(created, row);
+          _clearRowValues(created);
+          _insertRowElement(created);
+        }
+      }
+    }
+
+    _ensureDataRows(dataStartRow, normalizedTargetRows, maxCol);
+    _refreshDimension();
+  }
+
   void text(int row, int col, Object? value) {
     final text = value?.toString() ?? '';
     final cell = _cell(row, col);
@@ -690,7 +1217,21 @@ class _WorksheetEditor {
     cell.removeAttribute('t');
     final rounded = double.parse(value.toDouble().toStringAsFixed(digits));
     final text = digits == 0 ? rounded.round().toString() : rounded.toString();
-    _removeValueChildren(cell, keepFormula: true);
+    _removeValueChildren(cell, keepFormula: false);
+    cell.children.add(XmlElement(XmlName('v'), [], [XmlText(text)]));
+    _updateDimension(row, col);
+  }
+
+  /// 写入静态数值并剥离单元格原有公式。
+  /// 用于「课程目标点达成度」等汇总表：模板里这些格是跨表公式
+  /// （如 ='平时成绩'!O54），学生人数变化后汇总行移位，公式指向空行会重算成
+  /// 空白，覆盖我们写入的值。改写为静态值后所见即所得，不再依赖重算。
+  void numberPlain(int row, int col, num value, int digits) {
+    final cell = _cell(row, col);
+    cell.removeAttribute('t');
+    final rounded = double.parse(value.toDouble().toStringAsFixed(digits));
+    final text = digits == 0 ? rounded.round().toString() : rounded.toString();
+    _removeValueChildren(cell, keepFormula: false);
     cell.children.add(XmlElement(XmlName('v'), [], [XmlText(text)]));
     _updateDimension(row, col);
   }
@@ -702,6 +1243,123 @@ class _WorksheetEditor {
     _removeValueChildren(cell, keepFormula: false);
   }
 
+  void _ensureDataRows(int startRow, int count, int maxCol) {
+    if (count <= 0) return;
+    final template =
+        (_findRow(startRow) ?? _findRow(startRow + count - 1))?.copy();
+    for (var i = 0; i < count; i++) {
+      final rowNumber = startRow + i;
+      if (_findRow(rowNumber) != null) continue;
+      final row = template?.copy() ??
+          XmlElement(
+            XmlName('row'),
+            [XmlAttribute(XmlName('r'), rowNumber.toString())],
+            [],
+          );
+      _setRowNumber(row, rowNumber);
+      _clearRowValues(row);
+      for (var col = 0; col <= maxCol; col++) {
+        if (_findCellInRow(row, col) != null) continue;
+        final style = _styleForColumn(col, rowNumber);
+        row.children.add(XmlElement(
+          XmlName('c'),
+          [
+            XmlAttribute(XmlName('r'), _cellRef(rowNumber, col)),
+            if (style != null) XmlAttribute(XmlName('s'), style),
+          ],
+          [],
+        ));
+      }
+      _insertRowElement(row);
+    }
+  }
+
+  XmlElement? _findRow(int row) {
+    for (final rowEl in sheetData.findElements('row')) {
+      final r = int.tryParse(rowEl.getAttribute('r') ?? '');
+      if (r == row) return rowEl;
+    }
+    return null;
+  }
+
+  void _shiftRows(int fromRow, int delta) {
+    final rows = sheetData.findElements('row').toList()
+      ..sort((a, b) {
+        final ar = int.tryParse(a.getAttribute('r') ?? '') ?? 0;
+        final br = int.tryParse(b.getAttribute('r') ?? '') ?? 0;
+        return delta > 0 ? br.compareTo(ar) : ar.compareTo(br);
+      });
+    for (final rowEl in rows) {
+      final row = int.tryParse(rowEl.getAttribute('r') ?? '') ?? 0;
+      if (row < fromRow) continue;
+      _setRowNumber(rowEl, row + delta);
+    }
+  }
+
+  void _setRowNumber(XmlElement rowEl, int row) {
+    rowEl.setAttribute('r', row.toString());
+    for (final cell in rowEl.findElements('c')) {
+      final col = _columnIndex(cell.getAttribute('r') ?? '');
+      if (col >= 0) cell.setAttribute('r', _cellRef(row, col));
+    }
+  }
+
+  void _clearRowValues(XmlElement rowEl) {
+    for (final cell in rowEl.findElements('c')) {
+      cell.removeAttribute('t');
+      _removeValueChildren(cell, keepFormula: false);
+    }
+  }
+
+  void _insertRowElement(XmlElement rowEl) {
+    final row = int.tryParse(rowEl.getAttribute('r') ?? '') ?? 0;
+    final rows = sheetData.findElements('row').toList();
+    for (final current in rows) {
+      final currentRow = int.tryParse(current.getAttribute('r') ?? '') ?? 0;
+      if (currentRow > row) {
+        sheetData.children.insert(sheetData.children.indexOf(current), rowEl);
+        return;
+      }
+    }
+    sheetData.children.add(rowEl);
+  }
+
+  XmlElement? _findCellInRow(XmlElement rowEl, int col) {
+    for (final cell in rowEl.findElements('c')) {
+      if (_columnIndex(cell.getAttribute('r') ?? '') == col) return cell;
+    }
+    return null;
+  }
+
+  void _shiftMergeCells(
+    int fromRow,
+    int delta, {
+    int? deleteStart,
+    int? deleteEnd,
+  }) {
+    for (final mergeCell in document.findAllElements('mergeCell').toList()) {
+      final ref = mergeCell.getAttribute('ref');
+      final range = ref == null ? null : _CellRange.parse(ref);
+      if (range == null) continue;
+      if (deleteStart != null &&
+          deleteEnd != null &&
+          range.startRow >= deleteStart &&
+          range.endRow <= deleteEnd) {
+        mergeCell.parent?.children.remove(mergeCell);
+        continue;
+      }
+      if (range.startRow >= fromRow) {
+        mergeCell.setAttribute('ref', range.shiftRows(delta).toRef());
+      }
+    }
+    final mergeCellsElements = document.findAllElements('mergeCells').toList();
+    if (mergeCellsElements.isNotEmpty) {
+      final mergeCells = mergeCellsElements.first;
+      final count = mergeCells.findElements('mergeCell').length;
+      mergeCells.setAttribute('count', count.toString());
+    }
+  }
+
   XmlElement _cell(int row, int col) {
     final existing = _findCell(row, col);
     if (existing != null) return existing;
@@ -709,6 +1367,9 @@ class _WorksheetEditor {
     final ref = _cellRef(row, col);
     final cell =
         XmlElement(XmlName('c'), [XmlAttribute(XmlName('r'), ref)], []);
+    // 新建格继承同列上方已有格的样式，保证学号/姓名等列与模板数据行边框字体一致。
+    final style = _styleForColumn(col, row);
+    if (style != null) cell.setAttribute('s', style);
     final cells = rowEl.findElements('c').toList();
     var inserted = false;
     for (final current in cells) {
@@ -721,6 +1382,26 @@ class _WorksheetEditor {
     }
     if (!inserted) rowEl.children.add(cell);
     return cell;
+  }
+
+  /// 找同列、目标行上方最近一行已有格的样式索引（继承边框/字体）。
+  String? _styleForColumn(int col, int belowRow) {
+    String? best;
+    var bestRow = -1;
+    for (final rowEl in sheetData.findElements('row')) {
+      final r = int.tryParse(rowEl.getAttribute('r') ?? '') ?? 0;
+      if (r <= 0 || r >= belowRow) continue;
+      for (final c in rowEl.findElements('c')) {
+        if (_columnIndex(c.getAttribute('r') ?? '') == col) {
+          final s = c.getAttribute('s');
+          if (s != null && r > bestRow) {
+            best = s;
+            bestRow = r;
+          }
+        }
+      }
+    }
+    return best;
   }
 
   XmlElement _row(int row) {
@@ -781,6 +1462,36 @@ class _WorksheetEditor {
     dimension.setAttribute('ref', '$first:${_columnName(maxCol)}$maxRow');
   }
 
+  void _refreshDimension() {
+    final dimensions = document.findAllElements('dimension');
+    if (dimensions.isEmpty) return;
+    var minRow = 1;
+    var minCol = 0;
+    var maxRow = 1;
+    var maxCol = 0;
+    var seen = false;
+    for (final rowEl in sheetData.findElements('row')) {
+      final row = int.tryParse(rowEl.getAttribute('r') ?? '') ?? 0;
+      if (row <= 0) continue;
+      if (!seen) {
+        minRow = maxRow = row;
+        seen = true;
+      } else {
+        minRow = math.min(minRow, row);
+        maxRow = math.max(maxRow, row);
+      }
+      for (final cell in rowEl.findElements('c')) {
+        final col = _columnIndex(cell.getAttribute('r') ?? '');
+        if (col < 0) continue;
+        minCol = seen ? math.min(minCol, col) : col;
+        maxCol = math.max(maxCol, col);
+      }
+    }
+    if (!seen) return;
+    dimensions.first.setAttribute(
+        'ref', '${_columnName(minCol)}$minRow:${_columnName(maxCol)}$maxRow');
+  }
+
   static String _cellRef(int row, int col) => '${_columnName(col)}$row';
 
   static int _rowIndex(String ref) {
@@ -807,5 +1518,75 @@ class _WorksheetEditor {
       n ~/= 26;
     }
     return chars.join();
+  }
+}
+
+class _ChartRef {
+  const _ChartRef({
+    required this.drawingPath,
+    required this.chartPath,
+  });
+
+  final String drawingPath;
+  final String chartPath;
+}
+
+class _CellRange {
+  const _CellRange({
+    required this.startCol,
+    required this.startRow,
+    required this.endCol,
+    required this.endRow,
+  });
+
+  final int startCol;
+  final int startRow;
+  final int endCol;
+  final int endRow;
+
+  static _CellRange? parse(String ref) {
+    final parts = ref.split(':');
+    final first = _CellRef.parse(parts.first);
+    final last = _CellRef.parse(parts.length > 1 ? parts.last : parts.first);
+    if (first == null || last == null) return null;
+    return _CellRange(
+      startCol: first.col,
+      startRow: first.row,
+      endCol: last.col,
+      endRow: last.row,
+    );
+  }
+
+  _CellRange shiftRows(int delta) {
+    return _CellRange(
+      startCol: startCol,
+      startRow: startRow + delta,
+      endCol: endCol,
+      endRow: endRow + delta,
+    );
+  }
+
+  String toRef() {
+    final start = '${_WorksheetEditor._columnName(startCol)}$startRow';
+    final end = '${_WorksheetEditor._columnName(endCol)}$endRow';
+    return start == end ? start : '$start:$end';
+  }
+}
+
+class _CellRef {
+  const _CellRef(this.col, this.row);
+
+  final int col;
+  final int row;
+
+  static _CellRef? parse(String ref) {
+    final colMatch = RegExp(r'^([A-Z]+)').firstMatch(ref);
+    final rowMatch = RegExp(r'(\d+)').firstMatch(ref);
+    if (colMatch == null || rowMatch == null) return null;
+    var col = 0;
+    for (final code in colMatch.group(1)!.codeUnits) {
+      col = col * 26 + code - 64;
+    }
+    return _CellRef(col - 1, int.parse(rowMatch.group(1)!));
   }
 }

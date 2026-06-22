@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../../data/local/score_audit_dao.dart';
 import '../../../data/local/works_dao.dart';
 import '../../../data/local/grading_result_dao.dart';
+import '../../../data/local/ai_config_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../services/agent/agents/grading_agent.dart';
@@ -31,6 +32,13 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
   final _gradingAgent = GradingAgent();
   final _worksDao = WorksDao();
   final _gradingDao = GradingResultDao();
+  final _aiConfigDao = AiConfigDao();
+
+  // ── 当前大模型名称（显示用）──
+  String _modelLabel = '';
+
+  // ── 单份批阅进行中的作品 id（行内 spinner）──
+  int? _singleGradingId;
 
   // ── 作品数据 ──
   List<Map<String, dynamic>> _works = [];
@@ -49,7 +57,19 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
   @override
   void initState() {
     super.initState();
+    _loadModelLabel();
     _loadWorks();
+  }
+
+  Future<void> _loadModelLabel() async {
+    try {
+      final cfg = await _aiConfigDao.getConfig();
+      if (mounted) {
+        setState(() => _modelLabel = '${cfg.providerLabel} · ${cfg.model}');
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'WorksAiGrading.loadModelLabel', stack: st);
+    }
   }
 
   Future<void> _loadWorks() async {
@@ -152,98 +172,105 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
       if (!_isBatchGrading) break;
 
       final work = ungraded[i];
-      final wid = work['id'] as int;
-      final title = (work['title'] as String?) ?? '未命名作品';
-      final desc = (work['description'] as String?) ?? '';
-      final techStack = (work['tech_stack'] as String?) ?? '';
       final studentName = (work['student_name'] as String?) ??
           (work['user_id'] as String?) ??
           '';
-      final groupName = (work['group_name'] as String?) ?? '';
 
       setState(() {
         _gradingProgress = i;
         _gradingStatus = '正在批阅 ${i + 1}/$_gradingTotal: $studentName';
       });
 
-      try {
-        // 用综合批阅版（读视频帧 + 加载考核材料）。
-        // 旧版 gradeWork(title/desc) 仍保留，但不再被 UI 直接调用 — 它没看视频，
-        // 评语是空泛幻觉。
-        final videoUrl = work['video_url'] as String?;
-        final videoPath = work['file_path'] as String?;
-        final compRes = await _gradingAgent.gradeWorkComprehensive(
-          title: title,
-          description: desc,
-          techStack: techStack,
-          studentName: studentName,
-          groupName: groupName.isNotEmpty ? groupName : null,
-          videoPath: videoPath,
-          videoUrl: videoUrl,
-          frameCount: 5,
+      await _gradeOne(work);
+
+      if (mounted) setState(() {});
+    }
+
+    if (mounted) {
+      setState(() {
+        _isBatchGrading = false;
+        _gradingProgress = _gradingTotal;
+        _gradingStatus = '批阅完成';
+      });
+    }
+  }
+
+  /// 批阅单份作品：调用 AI → 解析 → 存内存 → 持久化为待审核结果。
+  ///
+  /// 批量与单份批阅共用此方法。已核准的作品不再覆盖其持久化结果。
+  Future<void> _gradeOne(Map<String, dynamic> work) async {
+    final wid = work['id'] as int;
+    final title = (work['title'] as String?) ?? '未命名作品';
+    final desc = (work['description'] as String?) ?? '';
+    final techStack = (work['tech_stack'] as String?) ?? '';
+    final studentName = (work['student_name'] as String?) ??
+        (work['user_id'] as String?) ??
+        '';
+    final groupName = (work['group_name'] as String?) ?? '';
+
+    try {
+      // 综合批阅版（读视频帧 + 加载考核材料）。
+      final videoUrl = work['video_url'] as String?;
+      final videoPath = work['file_path'] as String?;
+      final compRes = await _gradingAgent.gradeWorkComprehensive(
+        title: title,
+        description: desc,
+        techStack: techStack,
+        studentName: studentName,
+        groupName: groupName.isNotEmpty ? groupName : null,
+        videoPath: videoPath,
+        videoUrl: videoUrl,
+        frameCount: 5,
+      );
+      final result = compRes.content;
+      final parsed = _tryParseJson(result);
+      if (parsed != null) {
+        final score = (parsed['total_score'] as num?)?.toInt() ??
+            (parsed['score'] as num?)?.toInt() ??
+            0;
+        final dims = parsed['scores'] as Map<String, dynamic>?;
+        final strengths =
+            (parsed['strengths'] as List?)?.map((e) => e.toString()).toList() ??
+                [];
+        final improvements = (parsed['improvements'] as List?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            [];
+        final feedback = _formatFeedback(parsed);
+
+        _gradingResults[wid] = _GradingResult(
+          score: score,
+          feedback: feedback,
+          dimensions: dims,
+          strengths: strengths,
+          improvements: improvements,
         );
-        final result = compRes.content;
-        if (mounted) {
-          setState(() {
-            _gradingStatus = compRes.usedVideo
-                ? '已分析 ${compRes.frameCount} 帧视频画面 (${i + 1}/$_gradingTotal)'
-                : '${i + 1}/$_gradingTotal — 未读到视频，按描述+材料评分';
-          });
-        }
-
-        final parsed = _tryParseJson(result);
-        if (parsed != null) {
-          final score = (parsed['total_score'] as num?)?.toInt() ??
-              (parsed['score'] as num?)?.toInt() ??
-              0;
-          final dims = parsed['scores'] as Map<String, dynamic>?;
-          final strengths = (parsed['strengths'] as List?)
-                  ?.map((e) => e.toString())
-                  .toList() ??
-              [];
-          final improvements = (parsed['improvements'] as List?)
-                  ?.map((e) => e.toString())
-                  .toList() ??
-              [];
-          final feedback = _formatFeedback(parsed);
-
-          _gradingResults[wid] = _GradingResult(
-            score: score,
-            feedback: feedback,
-            dimensions: dims,
-            strengths: strengths,
-            improvements: improvements,
-          );
-        } else {
-          _gradingResults[wid] = _GradingResult(
-            score: 0,
-            feedback: result,
-            dimensions: null,
-            strengths: [],
-            improvements: [],
-          );
-        }
-      } catch (e) {
+      } else {
         _gradingResults[wid] = _GradingResult(
           score: 0,
-          feedback: '批阅失败: $e',
+          feedback: result,
           dimensions: null,
           strengths: [],
           improvements: [],
         );
       }
-
-      if (mounted) setState(() {});
+    } catch (e) {
+      _gradingResults[wid] = _GradingResult(
+        score: 0,
+        feedback: '批阅失败: $e',
+        dimensions: null,
+        strengths: [],
+        improvements: [],
+      );
     }
 
-    // 持久化所有批阅结果
-    for (final e in _gradingResults.entries) {
-      if (_approvedIds.contains(e.key)) continue;
-      final r = e.value;
-      await _gradingDao.deletePendingForTarget('works', e.key);
+    // 持久化（已核准的不覆盖）
+    if (!_approvedIds.contains(wid)) {
+      final r = _gradingResults[wid]!;
+      await _gradingDao.deletePendingForTarget('works', wid);
       await _gradingDao.saveResult(
         domain: 'works',
-        targetId: e.key,
+        targetId: wid,
         scorerId: widget.authService.getCurrentUserId() ?? '',
         rawJson: null,
         score: r.score.toDouble(),
@@ -254,14 +281,24 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
         aiFlag: false,
       );
     }
+  }
 
-    if (mounted) {
-      setState(() {
-        _isBatchGrading = false;
-        _gradingProgress = _gradingTotal;
-        _gradingStatus = '批阅完成';
-      });
+  /// 单份 AI 批阅（行内触发）。带教师 AI 批阅总开关检查 + 行内 spinner。
+  Future<void> _gradeSingle(Map<String, dynamic> work) async {
+    if (!await SettingsService.isTeacherAiGradingEnabled()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('教师 AI 批阅已关闭，请在「系统设置 → 教师 AI 批阅」中开启后再使用。'),
+          ),
+        );
+      }
+      return;
     }
+    final wid = work['id'] as int;
+    setState(() => _singleGradingId = wid);
+    await _gradeOne(work);
+    if (mounted) setState(() => _singleGradingId = null);
   }
 
   Map<String, dynamic>? _tryParseJson(String text) {
@@ -603,6 +640,8 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
               const SizedBox(width: 8),
               const Text('作品 AI 批阅',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const Spacer(),
+              if (_modelLabel.isNotEmpty) _modelBadge(primary),
             ]),
             const SizedBox(height: 10),
             Wrap(
@@ -641,6 +680,27 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _modelBadge(Color primary) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: primary.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.smart_toy_outlined, size: 13, color: primary),
+          const SizedBox(width: 4),
+          Text(_modelLabel,
+              style: TextStyle(
+                  fontSize: 11, color: primary, fontWeight: FontWeight.w600)),
+        ],
       ),
     );
   }
@@ -799,31 +859,52 @@ class _WorksAiGradingTabState extends State<WorksAiGradingTab> {
                       ),
                     ],
                   ]),
-                  trailing: result != null && !isApproved
-                      ? Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit, size: 18),
-                              tooltip: '调整',
-                              onPressed: () => _showAdjustDialog(wid, work),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.check_circle_outline,
-                                  size: 18),
-                              tooltip: '核准',
-                              color: Colors.green,
-                              onPressed: () => _approveOne(wid),
-                            ),
-                          ],
-                        )
-                      : null,
+                  trailing:
+                      _buildTrailing(work, wid, result, isApproved, primary),
                 ),
               );
             }),
           ],
         ),
       ),
+    );
+  }
+
+  Widget? _buildTrailing(Map<String, dynamic> work, int wid,
+      _GradingResult? result, bool isApproved, Color primary) {
+    if (result != null && !isApproved) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.edit, size: 18),
+            tooltip: '调整',
+            onPressed: () => _showAdjustDialog(wid, work),
+          ),
+          IconButton(
+            icon: const Icon(Icons.check_circle_outline, size: 18),
+            tooltip: '核准',
+            color: Colors.green,
+            onPressed: () => _approveOne(wid),
+          ),
+        ],
+      );
+    }
+    if (isApproved) return null;
+    if (_singleGradingId == wid) {
+      return const SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+    return IconButton(
+      icon: const Icon(Icons.auto_awesome, size: 18),
+      tooltip: 'AI 批阅此份',
+      color: primary,
+      onPressed: (_isBatchGrading || _singleGradingId != null)
+          ? null
+          : () => _gradeSingle(work),
     );
   }
 

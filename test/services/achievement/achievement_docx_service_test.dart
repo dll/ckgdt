@@ -32,6 +32,10 @@ void main() {
         },
     ];
 
+    final tinyPng = base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/lLw9WQAAAABJRU5ErkJggg==',
+    );
+
     final path = await AchievementDocxService.instance.generateReport(
       batchName: '测试批次',
       courseName: '移动应用开发',
@@ -47,9 +51,17 @@ void main() {
         'weights': const [],
       },
       objectives: objectives,
-      classStats: {'studentCount': 48, 'avgTotal': 80, 'maxTotal': 95, 'minTotal': 42, 'stdDev': 8},
+      classStats: {
+        'studentCount': 48,
+        'avgTotal': 80,
+        'maxTotal': 95,
+        'minTotal': 42,
+        'stdDev': 8
+      },
       students: const [],
       qualitativeText: '共回收有效问卷 48 份，综合满意度为 90.0%。',
+      barChartPng: tinyPng,
+      scatterChartPngs: [tinyPng, tinyPng, tinyPng, tinyPng],
     );
 
     final bytes = await File(path).readAsBytes();
@@ -63,6 +75,18 @@ void main() {
     expect(xml.contains('调查问卷评价情况(定性)'), isTrue, reason: '缺定性问卷行');
     expect(xml.contains('课程群建设工作组意见'), isTrue, reason: '缺课程群工作组意见行');
     expect(xml.contains('共回收有效问卷 48 份'), isTrue, reason: '问卷定性文字未注入');
+    expect(xml.contains('achChartImg1'), isTrue, reason: '图表截图未插入分析表');
+    expect(xml.contains('图1 各课程目标达成情况评价结果'), isTrue, reason: '缺图表说明');
+    expect(xml.contains('五、课程目标达成度可视化图表'), isFalse, reason: '模板模式不应追加额外图表章节');
+
+    final rels = utf8.decode(archive.files
+        .firstWhere((f) => f.name == 'word/_rels/document.xml.rels')
+        .content as List<int>);
+    expect(rels.contains('Target="media/achievement_chart1.png"'), isTrue);
+    expect(
+      archive.files.any((f) => f.name == 'word/media/achievement_chart1.png'),
+      isTrue,
+    );
 
     await File(path).delete();
   });
