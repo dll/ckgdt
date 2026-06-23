@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../data/local/class_dao.dart';
 import '../../../data/models/user_model.dart';
 import '../../../services/auth_service.dart';
@@ -493,8 +493,7 @@ class _AddStudentDialogState extends State<_AddStudentDialog> {
               ),
               const SizedBox(height: 16),
               // 班级下拉框
-              DropdownButtonFormField<int>(
-                initialValue: _selectedClassId,
+              DropdownButtonFormField<int>(value: _selectedClassId,
                 decoration: const InputDecoration(
                   labelText: '班级',
                   border: OutlineInputBorder(),

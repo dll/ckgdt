@@ -123,6 +123,22 @@ void main() {
       'assessment_plan': '综合考核方案',
       'survey': '问卷',
     };
+    const expectedPrefixes = {
+      'teaching_task': '01-',
+      'syllabus': '02-',
+      'syllabus_evaluation': '03-',
+      'syllabus_review': '04-',
+      'calendar': '06-',
+      'course_schedule': '07-',
+      'teaching_schedule': '08-',
+      'lesson_plan': '09-',
+      'courseware': '10-',
+      'roll_call': '11-',
+      'teacher_guide': '12-',
+      'student_guide': '13-',
+      'assessment_plan': '14-',
+      'survey': '15-',
+    };
 
     for (final entry in docs.entries) {
       final doc = await ArchiveTemplateSourceService.parseBestSource(
@@ -132,6 +148,65 @@ void main() {
       );
       expect(doc, isNotNull, reason: '${entry.key} should resolve');
       expect(doc!.content.trim(), isNotEmpty);
+      expect(
+          p.basename(doc.sourcePath), startsWith(expectedPrefixes[entry.key]!),
+          reason: '${entry.key} should match numbered beginning template');
+      if (entry.key == 'course_schedule') {
+        expect(doc.content, contains('课程课表：移动应用开发'));
+        expect(doc.content, isNot(contains('此资料以原始文件为准')));
+      }
+      if (entry.key == 'survey') {
+        expect(doc.content, contains('达成度统计'));
+        expect(doc.content, isNot(contains('此资料以原始文件为准')));
+      }
+      if (entry.key == 'assessment_plan') {
+        expect(doc.content, contains('PDF 原件'));
+      }
+    }
+  });
+
+  test(
+      'real beginning direct imports support schedule docx guides md and plan pdf',
+      () async {
+    final files = {
+      'teaching_schedule': (
+        '教学进度表',
+        File('data/归档/期初/模板/08-软件23+《移动应用开发》教学进度表+刘东良.docx'),
+        '教学进度'
+      ),
+      'teacher_guide': (
+        '教师教学指导手册',
+        File('data/归档/期初/模板/12-移动应用开发教师教学指导手册+new.md'),
+        '移动应用开发教师教学指导手册'
+      ),
+      'student_guide': (
+        '学生学习指导手册',
+        File('data/归档/期初/模板/13-移动应用开发学生学习指导手册+new.md'),
+        '移动应用开发学生学习指导手册'
+      ),
+      'assessment_plan': (
+        '综合考核方案',
+        File('data/归档/期初/模板/14-课程考查大作业方案.pdf'),
+        'PDF 原件'
+      ),
+      'survey': (
+        '问卷',
+        File('data/归档/期初/模板/15-课程目标支撑毕业要求达成度调查问卷.xlsx'),
+        '达成度统计'
+      ),
+    };
+
+    for (final entry in files.entries) {
+      final (label, file, expected) = entry.value;
+      if (!file.existsSync()) continue;
+      final doc = await ArchiveTemplateSourceService.parseFile(
+        file: file,
+        documentType: entry.key,
+        label: label,
+      );
+      expect(doc, isNotNull, reason: '${entry.key} should import');
+      expect(doc!.sourcePath, file.path);
+      expect(doc.content, contains(expected));
     }
   });
 

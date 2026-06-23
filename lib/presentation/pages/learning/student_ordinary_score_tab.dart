@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../../../core/design/noir_tokens.dart';
 import '../../../core/error_handler.dart';
@@ -100,7 +100,7 @@ class _StudentOrdinaryScoreTabState extends State<StudentOrdinaryScoreTab> {
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: NoirTokens.accent.withValues(alpha: 0.16),
+                    color: NoirTokens.accent.withOpacity(0.16),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(Icons.fact_check_outlined,
@@ -118,7 +118,7 @@ class _StudentOrdinaryScoreTabState extends State<StudentOrdinaryScoreTab> {
                         '$displayName · ${snapshot?.courseName ?? '当前课程'}',
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: NoirTokens.paper.withValues(alpha: 0.56),
+                          color: NoirTokens.paper.withOpacity(0.56),
                           fontSize: 12,
                         ),
                       ),
@@ -245,7 +245,7 @@ class _StudentOrdinaryScoreTabState extends State<StudentOrdinaryScoreTab> {
               child: LinearProgressIndicator(
                 value: ratio,
                 minHeight: 8,
-                backgroundColor: NoirTokens.paper.withValues(alpha: 0.10),
+                backgroundColor: NoirTokens.paper.withOpacity(0.10),
                 valueColor:
                     const AlwaysStoppedAnimation<Color>(NoirTokens.accent),
               ),
@@ -255,7 +255,7 @@ class _StudentOrdinaryScoreTabState extends State<StudentOrdinaryScoreTab> {
               '${_fmt(percent)}% · $caption',
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: NoirTokens.paper.withValues(alpha: 0.52),
+                color: NoirTokens.paper.withOpacity(0.52),
                 fontSize: 12,
               ),
             ),
@@ -312,7 +312,7 @@ class _StudentOrdinaryScoreTabState extends State<StudentOrdinaryScoreTab> {
             child: Text(
               value,
               style: TextStyle(
-                color: NoirTokens.paper.withValues(alpha: 0.72),
+                color: NoirTokens.paper.withOpacity(0.72),
                 fontSize: 12,
                 height: 1.45,
               ),
@@ -330,9 +330,9 @@ class _StudentOrdinaryScoreTabState extends State<StudentOrdinaryScoreTab> {
     return Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: NoirTokens.paper.withValues(alpha: 0.055),
+        color: NoirTokens.paper.withOpacity(0.055),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: NoirTokens.paper.withValues(alpha: 0.10)),
+        border: Border.all(color: NoirTokens.paper.withOpacity(0.10)),
       ),
       child: child,
     );
@@ -344,7 +344,7 @@ class _StudentOrdinaryScoreTabState extends State<StudentOrdinaryScoreTab> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: NoirTokens.paper.withValues(alpha: 0.45), size: 42),
+          Icon(icon, color: NoirTokens.paper.withOpacity(0.45), size: 42),
           const SizedBox(height: 10),
           Text(title,
               style: const TextStyle(
@@ -357,7 +357,7 @@ class _StudentOrdinaryScoreTabState extends State<StudentOrdinaryScoreTab> {
             subtitle,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: NoirTokens.paper.withValues(alpha: 0.52),
+              color: NoirTokens.paper.withOpacity(0.52),
               fontSize: 12,
             ),
           ),

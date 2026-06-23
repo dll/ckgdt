@@ -1,4 +1,4 @@
-part of '../works_page.dart';
+﻿part of '../works_page.dart';
 
 class _WorkDetailSheet extends StatefulWidget {
   final Map<String, dynamic> work;
@@ -593,8 +593,8 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
               borderRadius: BorderRadius.circular(14),
               gradient: LinearGradient(
                 colors: [
-                  primary.withValues(alpha: 0.12),
-                  primary.withValues(alpha: 0.04),
+                  primary.withOpacity(0.12),
+                  primary.withOpacity(0.04),
                 ],
               ),
             ),
@@ -602,13 +602,13 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
               alignment: Alignment.center,
               children: [
                 Icon(Icons.videocam,
-                    size: 64, color: primary.withValues(alpha: 0.2)),
+                    size: 64, color: primary.withOpacity(0.2)),
                 // 播放按钮
                 Container(
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: primary.withValues(alpha: 0.8),
+                    color: primary.withOpacity(0.8),
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
@@ -623,7 +623,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                     right: 12,
                     top: 12,
                     child: Material(
-                      color: Colors.black.withValues(alpha: 0.5),
+                      color: Colors.black.withOpacity(0.5),
                       borderRadius: BorderRadius.circular(20),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(20),
@@ -664,7 +664,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.6),
+                        color: Colors.black.withOpacity(0.6),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(_work['video_duration'] as String,
@@ -684,7 +684,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
               // 头像
               CircleAvatar(
                 radius: 22,
-                backgroundColor: primary.withValues(alpha: 0.15),
+                backgroundColor: primary.withOpacity(0.15),
                 child: Text(
                   _avatarChar(_work, isTeacherOrAdmin),
                   style: TextStyle(
@@ -711,7 +711,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: Colors.orange.withValues(alpha: 0.1),
+                              color: Colors.orange.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
@@ -726,7 +726,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: Colors.blue.withValues(alpha: 0.1),
+                              color: Colors.blue.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
@@ -841,7 +841,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: primary.withValues(alpha: 0.08),
+                          color: primary.withOpacity(0.08),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(t.toString(),
@@ -910,7 +910,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
                   onPressed: _submitComment,
                   icon: Icon(Icons.send, color: primary),
                   style: IconButton.styleFrom(
-                    backgroundColor: primary.withValues(alpha: 0.1),
+                    backgroundColor: primary.withOpacity(0.1),
                   ),
                 ),
               ],
@@ -954,7 +954,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: scoreColor.withValues(alpha: 0.04),
+        color: scoreColor.withOpacity(0.04),
         borderRadius: BorderRadius.circular(12),
         border: Border(left: BorderSide(color: scoreColor, width: 3)),
       ),
@@ -1052,7 +1052,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.orange.withValues(alpha: 0.04),
+        color: Colors.orange.withOpacity(0.04),
         borderRadius: BorderRadius.circular(12),
         border: const Border(left: BorderSide(color: Colors.orange, width: 3)),
       ),
@@ -1101,10 +1101,10 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color:
-            isTeacher ? Colors.blue.withValues(alpha: 0.03) : Colors.grey[50],
+            isTeacher ? Colors.blue.withOpacity(0.03) : Colors.grey[50],
         borderRadius: BorderRadius.circular(10),
         border: Border(
-          left: BorderSide(color: roleColor.withValues(alpha: 0.4), width: 3),
+          left: BorderSide(color: roleColor.withOpacity(0.4), width: 3),
         ),
       ),
       child: Column(
@@ -1114,7 +1114,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
             children: [
               CircleAvatar(
                 radius: 14,
-                backgroundColor: roleColor.withValues(alpha: 0.15),
+                backgroundColor: roleColor.withOpacity(0.15),
                 child: Text(
                   commentAvatar,
                   style: TextStyle(
@@ -1131,7 +1131,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(
-                  color: roleColor.withValues(alpha: 0.1),
+                  color: roleColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(roleLabel,

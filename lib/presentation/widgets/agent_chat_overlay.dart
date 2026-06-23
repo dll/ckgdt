@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../data/local/ai_history_dao.dart';
@@ -730,7 +730,7 @@ $dialogText
                                         width: 22,
                                         height: 22,
                                         decoration: BoxDecoration(
-                                          color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                          color: theme.colorScheme.primary.withOpacity(0.1),
                                           shape: BoxShape.circle,
                                         ),
                                         child: Center(
@@ -780,9 +780,9 @@ $dialogText
                                   padding: const EdgeInsets.all(10),
                                   margin: const EdgeInsets.only(bottom: 8),
                                   decoration: BoxDecoration(
-                                    color: Colors.blue.withValues(alpha: 0.05),
+                                    color: Colors.blue.withOpacity(0.05),
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+                                    border: Border.all(color: Colors.blue.withOpacity(0.2)),
                                   ),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -798,9 +798,9 @@ $dialogText
                                   width: double.infinity,
                                   padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                    color: Colors.green.withValues(alpha: 0.05),
+                                    color: Colors.green.withOpacity(0.05),
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
+                                    border: Border.all(color: Colors.green.withOpacity(0.2)),
                                   ),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -824,7 +824,7 @@ $dialogText
                                     label: const Text('发送这条消息', style: TextStyle(fontSize: 12)),
                                     style: OutlinedButton.styleFrom(
                                       foregroundColor: theme.colorScheme.primary,
-                                      side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.5)),
+                                      side: BorderSide(color: theme.colorScheme.primary.withOpacity(0.5)),
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                       padding: const EdgeInsets.symmetric(vertical: 8),
                                     ),
@@ -848,7 +848,7 @@ $dialogText
                             return Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                                color: theme.colorScheme.primary.withOpacity(0.08),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(kw, style: TextStyle(fontSize: 11, color: theme.colorScheme.primary)),
@@ -1216,7 +1216,7 @@ $dialogText
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               margin: const EdgeInsets.only(right: 8),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                color: theme.colorScheme.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -1315,7 +1315,7 @@ $dialogText
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+            color: theme.colorScheme.primaryContainer.withOpacity(0.3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
@@ -1475,7 +1475,7 @@ $dialogText
           color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: Colors.black.withOpacity(0.05),
               blurRadius: 4,
               offset: const Offset(0, -1),
             ),
@@ -1493,7 +1493,7 @@ $dialogText
                 decoration: BoxDecoration(
                   color: _isVoiceListening
                       ? Colors.red
-                      : theme.colorScheme.primary.withValues(alpha: 0.1),
+                      : theme.colorScheme.primary.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/design/noir_tokens.dart';
 
@@ -46,9 +46,9 @@ class DefenseControlsPanel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: NoirTokens.ink.withValues(alpha: 0.95),
+        color: NoirTokens.ink.withOpacity(0.95),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: NoirTokens.accent.withValues(alpha: 0.2)),
+        border: Border.all(color: NoirTokens.accent.withOpacity(0.2)),
       ),
       child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -65,7 +65,7 @@ class DefenseControlsPanel extends StatelessWidget {
               const Spacer(),
               Text('$viewerCount 观看',
                   style: TextStyle(
-                      color: NoirTokens.paper.withValues(alpha: 0.5),
+                      color: NoirTokens.paper.withOpacity(0.5),
                       fontSize: 12)),
             ]),
             const SizedBox(height: 12),
@@ -93,7 +93,7 @@ class DefenseControlsPanel extends StatelessWidget {
                       },
                       child: Icon(Icons.copy,
                           size: 14,
-                          color: NoirTokens.paper.withValues(alpha: 0.5))),
+                          color: NoirTokens.paper.withOpacity(0.5))),
                 ]),
               ),
             const SizedBox(height: 12),
@@ -124,7 +124,7 @@ class DefenseControlsPanel extends StatelessWidget {
             Row(children: [
               Text('布局：',
                   style: TextStyle(
-                      color: NoirTokens.paper.withValues(alpha: 0.6),
+                      color: NoirTokens.paper.withOpacity(0.6),
                       fontSize: 12)),
               const SizedBox(width: 8),
               ...['dual', 'winOnly', 'phoneOnly'].map((m) => Padding(
@@ -138,7 +138,7 @@ class DefenseControlsPanel extends StatelessWidget {
                                   : '仅手机',
                           style: const TextStyle(fontSize: 11)),
                       selected: layoutMode == m,
-                      selectedColor: NoirTokens.accent.withValues(alpha: 0.3),
+                      selectedColor: NoirTokens.accent.withOpacity(0.3),
                       onSelected: (_) => onLayoutChanged(m),
                       visualDensity: VisualDensity.compact,
                     ),
@@ -157,7 +157,7 @@ class DefenseControlsPanel extends StatelessWidget {
           boxShadow: on
               ? [
                   BoxShadow(
-                      color: Colors.green.withValues(alpha: 0.5), blurRadius: 8)
+                      color: Colors.green.withOpacity(0.5), blurRadius: 8)
                 ]
               : null,
         ),
@@ -172,9 +172,9 @@ class DefenseControlsPanel extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
+            color: color.withOpacity(0.12),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: color.withValues(alpha: 0.3)),
+            border: Border.all(color: color.withOpacity(0.3)),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Icon(icon, size: 14, color: color),

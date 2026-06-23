@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'dart:ui' as ui;
@@ -326,7 +326,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
               child: Center(
                   child: Column(children: [
                 Icon(Icons.info_outline,
-                    size: 64, color: Colors.grey.withValues(alpha: 0.4)),
+                    size: 64, color: Colors.grey.withOpacity(0.4)),
                 const SizedBox(height: 12),
                 const Text('暂无成绩数据，请先在"成绩管理"中录入',
                     style: TextStyle(color: Colors.grey)),
@@ -339,7 +339,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-          border: Border.all(color: primary.withValues(alpha: 0.3)),
+          border: Border.all(color: primary.withOpacity(0.3)),
           borderRadius: BorderRadius.circular(12)),
       child: DropdownButtonHideUnderline(
           child: DropdownButton<int>(
@@ -406,7 +406,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                                   vertical: 2, horizontal: 6),
                               decoration: BoxDecoration(
                                   color: kObjectiveColors[i]
-                                      .withValues(alpha: 0.1),
+                                      .withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(6)),
                               child: Column(children: [
                                 Text(o['id'] as String,
@@ -477,11 +477,11 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                   decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                          color: Colors.grey.withValues(alpha: 0.2))),
+                          color: Colors.grey.withOpacity(0.2))),
                   child: Table(
                       border: TableBorder.symmetric(
                           inside: BorderSide(
-                              color: Colors.grey.withValues(alpha: 0.15))),
+                              color: Colors.grey.withOpacity(0.15))),
                       columnWidths: const {
                         0: FlexColumnWidth(2),
                         1: FlexColumnWidth(1.5),
@@ -518,9 +518,9 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
           child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.08),
+            color: color.withOpacity(0.08),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: color.withValues(alpha: 0.2))),
+            border: Border.all(color: color.withOpacity(0.2))),
         child: Column(children: [
           Text(value,
               style: TextStyle(
@@ -532,7 +532,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
 
   TableRow _tRow(List<String> c, {bool h = false, Color? p}) => TableRow(
         decoration: h
-            ? BoxDecoration(color: (p ?? Colors.grey).withValues(alpha: 0.06))
+            ? BoxDecoration(color: (p ?? Colors.grey).withOpacity(0.06))
             : null,
         children: c
             .map((t) => Padding(
@@ -567,10 +567,10 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
               Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.05),
+                      color: Colors.blue.withOpacity(0.05),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                          color: Colors.blue.withValues(alpha: 0.15))),
+                          color: Colors.blue.withOpacity(0.15))),
                   child: Row(children: [
                     const Icon(Icons.info_outline,
                         size: 16, color: Colors.blue),
@@ -590,7 +590,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
         Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-                color: Colors.indigo.withValues(alpha: 0.1),
+                color: Colors.indigo.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(6)),
             child: Text(step,
                 style: const TextStyle(
@@ -650,7 +650,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                         Container(
                             height: 22,
                             decoration: BoxDecoration(
-                                color: Colors.grey.withValues(alpha: 0.1),
+                                color: Colors.grey.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(4))),
                         FractionallySizedBox(
                             widthFactor: val.clamp(0.0, 1.0),
@@ -658,7 +658,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                                 height: 22,
                                 decoration: BoxDecoration(
                                     color: kObjectiveColors[i]
-                                        .withValues(alpha: 0.7),
+                                        .withOpacity(0.7),
                                     borderRadius: BorderRadius.circular(4)))),
                       ])),
                       const SizedBox(width: 8),
@@ -685,7 +685,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                   Container(
                       height: 26,
                       decoration: BoxDecoration(
-                          color: Colors.grey.withValues(alpha: 0.1),
+                          color: Colors.grey.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(5))),
                   FractionallySizedBox(
                       widthFactor: _weightedAchievement.clamp(0.0, 1.0),
@@ -693,8 +693,8 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                           height: 26,
                           decoration: BoxDecoration(
                               gradient: LinearGradient(colors: [
-                                primary.withValues(alpha: 0.8),
-                                primary.withValues(alpha: 0.5)
+                                primary.withOpacity(0.8),
+                                primary.withOpacity(0.5)
                               ]),
                               borderRadius: BorderRadius.circular(5)))),
                 ])),
@@ -716,7 +716,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                           horizontal: 16, vertical: 6),
                       decoration: BoxDecoration(
                           color: achievementLevelColor(_weightedAchievement)
-                              .withValues(alpha: 0.1),
+                              .withOpacity(0.1),
                           borderRadius: BorderRadius.circular(16)),
                       child: Text(
                           '达成等级：${achievementLevel(_weightedAchievement)}',
@@ -746,7 +746,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                   padding:
                       const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
                   decoration: BoxDecoration(
-                      color: primary.withValues(alpha: 0.06),
+                      color: primary.withOpacity(0.06),
                       borderRadius:
                           const BorderRadius.vertical(top: Radius.circular(8))),
                   child: Row(children: [
@@ -787,10 +787,10 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                     decoration: BoxDecoration(
                         color: i.isEven
                             ? Colors.transparent
-                            : Colors.grey.withValues(alpha: 0.03),
+                            : Colors.grey.withOpacity(0.03),
                         border: Border(
                             bottom: BorderSide(
-                                color: Colors.grey.withValues(alpha: 0.08)))),
+                                color: Colors.grey.withOpacity(0.08)))),
                     child: Row(children: [
                       SizedBox(
                           width: 70,
@@ -981,7 +981,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                         ],
                       ),
                       RadarDataSet(
-                        fillColor: primary.withValues(alpha: 0.25),
+                        fillColor: primary.withOpacity(0.25),
                         borderColor: primary,
                         borderWidth: 2,
                         entryRadius: 3,
@@ -1117,7 +1117,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
             return FlLine(color: color, strokeWidth: 1.5);
           }
           return FlLine(
-              color: Colors.grey.withValues(alpha: 0.15), strokeWidth: 0.5);
+              color: Colors.grey.withOpacity(0.15), strokeWidth: 0.5);
         },
       ),
       titlesData: const FlTitlesData(
@@ -1130,7 +1130,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
       ),
       borderData: FlBorderData(
           show: true,
-          border: Border.all(color: Colors.grey.withValues(alpha: 0.3))),
+          border: Border.all(color: Colors.grey.withOpacity(0.3))),
     );
   }
 
@@ -1220,7 +1220,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
           Container(
               height: 20,
               decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.6),
+                  color: color.withOpacity(0.6),
                   borderRadius: BorderRadius.circular(3)),
               child: Center(
                   child: Text(count > 0 ? '$count' : '',
@@ -1262,7 +1262,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.1),
+                    color: Colors.green.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text('$totalResponses份回收',
@@ -1275,10 +1275,10 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.05),
+                  color: Colors.orange.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(8),
                   border:
-                      Border.all(color: Colors.orange.withValues(alpha: 0.2)),
+                      Border.all(color: Colors.orange.withOpacity(0.2)),
                 ),
                 child: const Row(children: [
                   Icon(Icons.info_outline, color: Colors.orange, size: 18),
@@ -1345,7 +1345,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: achievementLevelColor(overallSat)
-                          .withValues(alpha: 0.08),
+                          .withOpacity(0.08),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Column(children: [
@@ -1370,7 +1370,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: primary.withValues(alpha: 0.05),
+                      color: primary.withOpacity(0.05),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Column(children: [
@@ -1479,14 +1479,14 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                     Container(
                         height: 14,
                         decoration: BoxDecoration(
-                            color: Colors.grey.withValues(alpha: 0.1),
+                            color: Colors.grey.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(3))),
                     FractionallySizedBox(
                       widthFactor: pct,
                       child: Container(
                           height: 14,
                           decoration: BoxDecoration(
-                              color: Colors.blue.withValues(alpha: 0.5),
+                              color: Colors.blue.withOpacity(0.5),
                               borderRadius: BorderRadius.circular(3))),
                     ),
                   ]),
@@ -1665,7 +1665,7 @@ class _ContinuousImprovementTabState extends State<ContinuousImprovementTab> {
                     Container(
                         height: 16,
                         decoration: BoxDecoration(
-                            color: Colors.grey.withValues(alpha: 0.1),
+                            color: Colors.grey.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(3))),
                     FractionallySizedBox(
                       widthFactor: (v / maxV).clamp(0.0, 1.0),
@@ -1714,7 +1714,7 @@ class _ContinuousImprovementTabState extends State<ContinuousImprovementTab> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              border: Border.all(color: primary.withValues(alpha: 0.3)),
+              border: Border.all(color: primary.withOpacity(0.3)),
               borderRadius: BorderRadius.circular(12),
             ),
             child: DropdownButtonHideUnderline(
@@ -1799,7 +1799,7 @@ class _ContinuousImprovementTabState extends State<ContinuousImprovementTab> {
               child: Center(
                 child: Column(children: [
                   Icon(Icons.build_outlined,
-                      size: 80, color: Colors.grey.withValues(alpha: 0.3)),
+                      size: 80, color: Colors.grey.withOpacity(0.3)),
                   const SizedBox(height: 16),
                   const Text('选择批次后点击"分析达成度"查看改进建议',
                       style: TextStyle(color: Colors.grey, fontSize: 14)),
@@ -1854,7 +1854,7 @@ class _ContinuousImprovementTabState extends State<ContinuousImprovementTab> {
             width: 22,
             height: 22,
             decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.1),
+              color: statusColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Center(
@@ -1909,7 +1909,7 @@ class _ContinuousImprovementTabState extends State<ContinuousImprovementTab> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
+                  color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(objName,
@@ -1928,7 +1928,7 @@ class _ContinuousImprovementTabState extends State<ContinuousImprovementTab> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: achievementLevelColor(ach).withValues(alpha: 0.1),
+                  color: achievementLevelColor(ach).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(level,
@@ -1945,7 +1945,7 @@ class _ContinuousImprovementTabState extends State<ContinuousImprovementTab> {
               width: double.infinity,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.grey.withValues(alpha: 0.04),
+                color: Colors.grey.withOpacity(0.04),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(
@@ -1980,7 +1980,7 @@ class _ContinuousImprovementTabState extends State<ContinuousImprovementTab> {
                       height: 20,
                       margin: const EdgeInsets.only(right: 6),
                       decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.1),
+                        color: color.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Center(
@@ -2067,9 +2067,9 @@ class _ContinuousImprovementTabState extends State<ContinuousImprovementTab> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.06),
+          color: color.withOpacity(0.06),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withValues(alpha: 0.15)),
+          border: Border.all(color: color.withOpacity(0.15)),
         ),
         child: Column(children: [
           Text(value,
@@ -2117,7 +2117,7 @@ class _ContinuousImprovementTabState extends State<ContinuousImprovementTab> {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: achievementLevelColor(overallSat)
-                          .withValues(alpha: 0.08),
+                          .withOpacity(0.08),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Column(children: [
@@ -2135,7 +2135,7 @@ class _ContinuousImprovementTabState extends State<ContinuousImprovementTab> {
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: primary.withValues(alpha: 0.05),
+                      color: primary.withOpacity(0.05),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Column(children: [

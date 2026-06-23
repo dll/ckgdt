@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../data/models/user_model.dart';
 import '../../../services/gitee_service.dart';
@@ -292,9 +292,9 @@ class _StudentDetailPageState extends State<StudentDetailPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -435,12 +435,12 @@ class _StudentDetailPageState extends State<StudentDetailPage> {
                     ),
                     label: Text(name),
                     backgroundColor: isDefault
-                        ? Colors.amber.withValues(alpha: 0.1)
-                        : Colors.grey.withValues(alpha: 0.1),
+                        ? Colors.amber.withOpacity(0.1)
+                        : Colors.grey.withOpacity(0.1),
                     side: BorderSide(
                       color: isDefault
-                          ? Colors.amber.withValues(alpha: 0.3)
-                          : Colors.grey.withValues(alpha: 0.3),
+                          ? Colors.amber.withOpacity(0.3)
+                          : Colors.grey.withOpacity(0.3),
                     ),
                   );
                 }).toList(),

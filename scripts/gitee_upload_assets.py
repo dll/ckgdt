@@ -1,12 +1,17 @@
 import os, sys, requests
 TOKEN = os.environ['GITEE_TOKEN']
-RELEASE_ID = 716952
-REPO = 'osgisOne/mad-fd'
+RELEASE_ID = 722286
+REPO = 'chzcldl/mad-kgdt'
 URL = f'https://gitee.com/api/v5/repos/{REPO}/releases/{RELEASE_ID}/attach_files'
 def safe_name(name): return name.replace('+', '%2B')
+BRAND = '课程图谱与数字孪生'
+DIST = os.path.join(os.path.dirname(__file__), os.pardir, 'dist')
+v = '2.1.0'
 ASSETS = [
-	(r'D:\FlutterProjects\knowledge_graph_app\dist\课程图谱与数字孪生+windows+v2.0.2.zip',   '课程图谱与数字孪生+windows+v2.0.2.zip'),
-	(r'D:\FlutterProjects\knowledge_graph_app\dist\课程图谱与数字孪生+web+v2.0.2.zip',       '课程图谱与数字孪生+web+v2.0.2.zip'),
+	(os.path.join(DIST, f'{BRAND}+windows+v{v}.zip'),   f'{BRAND}+windows+v{v}.zip'),
+	(os.path.join(DIST, f'{BRAND}+android+v{v}.zip'),   f'{BRAND}+android+v{v}.zip'),
+	(os.path.join(DIST, f'{BRAND}+web+v{v}.zip'),       f'{BRAND}+web+v{v}.zip'),
+	(os.path.join(DIST, f'{BRAND}+harmonyos+v{v}.zip'), f'{BRAND}+harmonyos+v{v}.zip'),
 ]
 session = requests.Session()
 for path, display in ASSETS:

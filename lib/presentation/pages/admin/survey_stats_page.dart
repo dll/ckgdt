@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../data/local/survey_dao.dart';
 
@@ -216,7 +216,7 @@ class _SurveyStatsPageState extends State<SurveyStatsPage> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.12),
+                    color: statusColor.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -322,7 +322,7 @@ class _SurveyStatsPageState extends State<SurveyStatsPage> {
               width: 52,
               height: 52,
               decoration: BoxDecoration(
-                color: primary.withValues(alpha: 0.1),
+                color: primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(Icons.trending_up, color: primary, size: 28),
@@ -349,8 +349,8 @@ class _SurveyStatsPageState extends State<SurveyStatsPage> {
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: totalResponses > 0
-                    ? Colors.green.withValues(alpha: 0.1)
-                    : Colors.orange.withValues(alpha: 0.1),
+                    ? Colors.green.withOpacity(0.1)
+                    : Colors.orange.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -416,7 +416,7 @@ class _SurveyStatsPageState extends State<SurveyStatsPage> {
               children: [
                 CircleAvatar(
                   radius: 15,
-                  backgroundColor: primary.withValues(alpha: 0.1),
+                  backgroundColor: primary.withOpacity(0.1),
                   child: Text(
                     '$index',
                     style: TextStyle(
@@ -443,7 +443,7 @@ class _SurveyStatsPageState extends State<SurveyStatsPage> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: typeColor.withValues(alpha: 0.1),
+                          color: typeColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Row(
@@ -560,7 +560,7 @@ class _SurveyStatsPageState extends State<SurveyStatsPage> {
                               gradient: LinearGradient(
                                 colors: [
                                   barColor,
-                                  barColor.withValues(alpha: 0.7),
+                                  barColor.withOpacity(0.7),
                                 ],
                               ),
                               borderRadius: BorderRadius.circular(9),
@@ -606,7 +606,7 @@ class _SurveyStatsPageState extends State<SurveyStatsPage> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.amber.withValues(alpha: 0.08),
+            color: Colors.amber.withOpacity(0.08),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
@@ -750,7 +750,7 @@ class _SurveyStatsPageState extends State<SurveyStatsPage> {
                   children: [
                     CircleAvatar(
                       radius: 12,
-                      backgroundColor: Colors.teal.withValues(alpha: 0.1),
+                      backgroundColor: Colors.teal.withOpacity(0.1),
                       child: Text(
                         '${i + 1}',
                         style: const TextStyle(

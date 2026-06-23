@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -973,7 +973,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
         child: ChoiceChip(
             label: Text(label, style: const TextStyle(fontSize: 12)),
             selected: _role == role,
-            selectedColor: NoirTokens.accent.withValues(alpha: 0.3),
+            selectedColor: NoirTokens.accent.withOpacity(0.3),
             onSelected: (_) {
               _switchRole(role);
             },
@@ -1042,16 +1042,16 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: NoirTokens.ink.withValues(alpha: 0.95),
+          color: NoirTokens.ink.withOpacity(0.95),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: action.color.withValues(alpha: 0.28)),
+          border: Border.all(color: action.color.withOpacity(0.28)),
         ),
         child: Row(children: [
           Container(
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: action.color.withValues(alpha: 0.14),
+              color: action.color.withOpacity(0.14),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(action.icon, color: action.color, size: 24),
@@ -1072,13 +1072,13 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        color: NoirTokens.paper.withValues(alpha: 0.55),
+                        color: NoirTokens.paper.withOpacity(0.55),
                         fontSize: 12)),
               ],
             ),
           ),
           Icon(Icons.chevron_right,
-              color: NoirTokens.paper.withValues(alpha: 0.35)),
+              color: NoirTokens.paper.withOpacity(0.35)),
         ]),
       ),
     );
@@ -1150,9 +1150,9 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
       height: 34,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: NoirTokens.ink.withValues(alpha: 0.72),
+        color: NoirTokens.ink.withOpacity(0.72),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
+        border: Border.all(color: color.withOpacity(0.35)),
       ),
       child: Row(children: [
         Icon(icon, size: 16, color: color),
@@ -1163,7 +1163,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-                fontSize: 11, color: NoirTokens.paper.withValues(alpha: 0.78)),
+                fontSize: 11, color: NoirTokens.paper.withOpacity(0.78)),
           ),
         ),
       ]),
@@ -1223,7 +1223,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
         Container(
           width: constraints.maxWidth < 600 ? double.infinity : 2,
           height: constraints.maxWidth < 600 ? 2 : double.infinity,
-          color: NoirTokens.paper.withValues(alpha: 0.1),
+          color: NoirTokens.paper.withOpacity(0.1),
         ),
         Expanded(
           child: DefenseViewerWidget(
@@ -1279,7 +1279,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
         Container(
           width: constraints.maxWidth < 600 ? double.infinity : 2,
           height: constraints.maxWidth < 600 ? 2 : double.infinity,
-          color: NoirTokens.paper.withValues(alpha: 0.1),
+          color: NoirTokens.paper.withOpacity(0.1),
         ),
         Expanded(child: streams[1]),
       ];
@@ -1301,7 +1301,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
               gradient: LinearGradient(colors: [
-                NoirTokens.accent.withValues(alpha: 0.8),
+                NoirTokens.accent.withOpacity(0.8),
                 NoirTokens.accent
               ]),
               borderRadius: BorderRadius.circular(12)),
@@ -1314,7 +1314,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
                     color: Colors.red,
                     boxShadow: [
                       BoxShadow(
-                          color: Colors.red.withValues(alpha: 0.6),
+                          color: Colors.red.withOpacity(0.6),
                           blurRadius: 6)
                     ])),
             const SizedBox(width: 8),
@@ -1326,7 +1326,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
             const Spacer(),
             Text(isScreenSharing ? '投屏中' : '已连接',
                 style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.8), fontSize: 12)),
+                    color: Colors.white.withOpacity(0.8), fontSize: 12)),
           ])),
       const SizedBox(height: 10),
       DefenseProjectInfoPanel(
@@ -1348,11 +1348,11 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
                     child: Column(mainAxisSize: MainAxisSize.min, children: [
                     Icon(Icons.videocam,
                         size: 48,
-                        color: NoirTokens.paper.withValues(alpha: 0.2)),
+                        color: NoirTokens.paper.withOpacity(0.2)),
                     const SizedBox(height: 12),
                     Text('点击下方按钮开启摄像头',
                         style: TextStyle(
-                            color: NoirTokens.paper.withValues(alpha: 0.4),
+                            color: NoirTokens.paper.withOpacity(0.4),
                             fontSize: 14)),
                   ])),
           ),
@@ -1415,10 +1415,10 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
       Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-              color: NoirTokens.ink.withValues(alpha: 0.95),
+              color: NoirTokens.ink.withOpacity(0.95),
               borderRadius: BorderRadius.circular(12),
               border:
-                  Border.all(color: NoirTokens.accent.withValues(alpha: 0.2))),
+                  Border.all(color: NoirTokens.accent.withOpacity(0.2))),
           child: Column(children: [
             Row(children: [
               Expanded(
@@ -1463,7 +1463,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
                           : '请输入教师机的 IP 地址后点击"开始答辩"',
                   style: TextStyle(
                       fontSize: 11,
-                      color: NoirTokens.paper.withValues(alpha: 0.4)),
+                      color: NoirTokens.paper.withOpacity(0.4)),
                 ),
               ),
             ]),
@@ -1496,17 +1496,17 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
             color: active
-                ? Colors.green.withValues(alpha: 0.15)
-                : NoirTokens.ink.withValues(alpha: 0.8),
+                ? Colors.green.withOpacity(0.15)
+                : NoirTokens.ink.withOpacity(0.8),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
                 color: active
-                    ? Colors.green.withValues(alpha: 0.4)
-                    : NoirTokens.paper.withValues(alpha: 0.15))),
+                    ? Colors.green.withOpacity(0.4)
+                    : NoirTokens.paper.withOpacity(0.15))),
         child: Column(children: [
           Icon(icon,
               color:
-                  active ? Colors.green : Colors.white.withValues(alpha: 0.6),
+                  active ? Colors.green : Colors.white.withOpacity(0.6),
               size: 22),
           const SizedBox(height: 4),
           Text(label,
@@ -1514,7 +1514,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
                   fontSize: 11,
                   color: active
                       ? Colors.green
-                      : Colors.white.withValues(alpha: 0.6))),
+                      : Colors.white.withOpacity(0.6))),
         ]),
       ),
     );
@@ -1527,13 +1527,13 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-            color: NoirTokens.ink.withValues(alpha: 0.8),
+            color: NoirTokens.ink.withOpacity(0.8),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
                 color: (color ?? NoirTokens.paper)
-                    .withValues(alpha: color != null ? 0.5 : 0.15))),
+                    .withOpacity(color != null ? 0.5 : 0.15))),
         child: Icon(icon,
-            color: color ?? Colors.white.withValues(alpha: 0.6), size: 20),
+            color: color ?? Colors.white.withOpacity(0.6), size: 20),
       ),
     );
   }
@@ -1558,15 +1558,15 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
         Icon(isSharing ? Icons.screen_share : Icons.live_tv,
             size: 64,
             color: isSharing
-                ? Colors.green.withValues(alpha: 0.6)
-                : NoirTokens.paper.withValues(alpha: 0.2)),
+                ? Colors.green.withOpacity(0.6)
+                : NoirTokens.paper.withOpacity(0.2)),
         const SizedBox(height: 12),
         Text(isSharing ? '屏幕录制中...\n请演示你的应用' : '已连接 · 点击下方按钮开始投屏',
             textAlign: TextAlign.center,
             style: TextStyle(
                 color: isSharing
-                    ? Colors.green.withValues(alpha: 0.8)
-                    : NoirTokens.paper.withValues(alpha: 0.4),
+                    ? Colors.green.withOpacity(0.8)
+                    : NoirTokens.paper.withOpacity(0.4),
                 fontSize: 14)),
         if (isSharing) ...[
           const SizedBox(height: 8),
@@ -1575,7 +1575,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
             const SizedBox(width: 6),
             Text('REC',
                 style: TextStyle(
-                    color: Colors.red.withValues(alpha: 0.9),
+                    color: Colors.red.withOpacity(0.9),
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 2)),
@@ -1593,7 +1593,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                  color: NoirTokens.accent.withValues(alpha: 0.5), width: 2),
+                  color: NoirTokens.accent.withOpacity(0.5), width: 2),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(7),
@@ -1661,13 +1661,13 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
             Icon(Icons.co_present,
                 size: 52,
                 color: (winLive || phoneLive)
-                    ? Colors.green.withValues(alpha: 0.75)
-                    : NoirTokens.paper.withValues(alpha: 0.2)),
+                    ? Colors.green.withOpacity(0.75)
+                    : NoirTokens.paper.withOpacity(0.2)),
             const SizedBox(height: 12),
             Text(
               winLive || phoneLive ? '教师演示源已开启' : '等待教师演示源',
               style: TextStyle(
-                  color: NoirTokens.paper.withValues(alpha: 0.86),
+                  color: NoirTokens.paper.withOpacity(0.86),
                   fontSize: 18,
                   fontWeight: FontWeight.w700),
             ),
@@ -1676,7 +1676,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
               '本页不显示本机直播画面，避免桌面录制递归。观看端会看到教师 Windows 桌面、教师手机桌面或两者并排。',
               textAlign: TextAlign.center,
               style: TextStyle(
-                  color: NoirTokens.paper.withValues(alpha: 0.5), fontSize: 12),
+                  color: NoirTokens.paper.withOpacity(0.5), fontSize: 12),
             ),
             const SizedBox(height: 18),
             LayoutBuilder(builder: (context, constraints) {
@@ -1739,9 +1739,9 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: NoirTokens.ink.withValues(alpha: 0.85),
+        color: NoirTokens.ink.withOpacity(0.85),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
+        border: Border.all(color: color.withOpacity(0.35)),
       ),
       child: Row(children: [
         Icon(icon, color: color, size: 24),
@@ -1759,7 +1759,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
             const SizedBox(height: 4),
             Text(status,
                 style: TextStyle(
-                    color: color.withValues(alpha: 0.86), fontSize: 12)),
+                    color: color.withOpacity(0.86), fontSize: 12)),
           ]),
         ),
       ]),
@@ -1778,7 +1778,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
             url: screenUrl,
             label: '学生手机/桌面',
           )),
-          Container(width: 2, color: NoirTokens.paper.withValues(alpha: 0.1)),
+          Container(width: 2, color: NoirTokens.paper.withOpacity(0.1)),
           Expanded(
               child: DefenseViewerWidget(
             onFullscreenToggle: _toggleFullscreen,
@@ -1820,21 +1820,21 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
   Widget _empty(String t) => Center(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.live_tv,
-            size: 48, color: NoirTokens.paper.withValues(alpha: 0.15)),
+            size: 48, color: NoirTokens.paper.withOpacity(0.15)),
         const SizedBox(height: 8),
         Text(t,
             style: TextStyle(
-                color: NoirTokens.paper.withValues(alpha: 0.3), fontSize: 14)),
+                color: NoirTokens.paper.withOpacity(0.3), fontSize: 14)),
       ]));
 
   Widget _buildViewer() => Column(children: [
         Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-                color: NoirTokens.ink.withValues(alpha: 0.95),
+                color: NoirTokens.ink.withOpacity(0.95),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                    color: NoirTokens.accent.withValues(alpha: 0.2))),
+                    color: NoirTokens.accent.withOpacity(0.2))),
             child: Row(children: [
               Expanded(
                   child: TextField(
@@ -1864,7 +1864,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
             child: Text('发现局域网直播源（点击连接）：',
                 style: TextStyle(
                     fontSize: 11,
-                    color: NoirTokens.paper.withValues(alpha: 0.5))),
+                    color: NoirTokens.paper.withOpacity(0.5))),
           ),
           const SizedBox(height: 6),
           Wrap(spacing: 8, runSpacing: 8, children: [
@@ -2108,10 +2108,10 @@ class _StudentSelectionDialogState extends State<_StudentSelectionDialog> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: Colors.green.withValues(alpha: 0.2),
+                              color: Colors.green.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(4),
                               border: Border.all(
-                                  color: Colors.green.withValues(alpha: 0.5)),
+                                  color: Colors.green.withOpacity(0.5)),
                             ),
                             child: const Row(
                               mainAxisSize: MainAxisSize.min,

@@ -28,6 +28,13 @@ void main() {
       expect(
           ArchiveImporters.decodeQuotedPrintable('hello world'), 'hello world');
     });
+
+    test('普通 Unicode HTML 不应被重复解码破坏', () {
+      expect(
+        ArchiveImporters.decodeQuotedPrintable('2026-2027学年第一学期'),
+        '2026-2027学年第一学期',
+      );
+    });
   });
 
   group('ArchiveImporters.extractHtmlFromMhtml', () {
@@ -139,7 +146,25 @@ Content-Location: http://x/
       final md = ArchiveImporters.parseCalendar(html, now: fixedNow);
       expect(md, isNotNull);
       expect(md, contains('# 校 历'));
-      expect(md, contains('节假日安排'));
+      expect(md, contains('校历总览'));
+      expect(md, contains('未识别学年学期'));
+    });
+
+    test('从网页文本提取学期、日期和节日，不写死固定校历', () {
+      const html = '''
+<html><body>
+<div>2026-2027学年第一学期</div>
+<table>
+<tr><td></td><td></td><td>九月</td></tr>
+<tr><td></td><td></td><td>7</td><td>8</td><td>9</td><td>10中秋</td><td>11</td><td>12</td><td>13</td></tr>
+</table>
+</body></html>''';
+      final md = ArchiveImporters.parseCalendar(html, now: fixedNow);
+      expect(md, isNotNull);
+      expect(md, contains('2026-2027学年第一学期'));
+      expect(md, contains('9月7日（周一）'));
+      expect(md, contains('中秋节'));
+      expect(md, isNot(contains('2025-2026学年第二学期')));
     });
   });
 
@@ -155,6 +180,45 @@ Content-Location: http://x/
       final r = ArchiveImporters.parseCourseSchedule(const []);
       expect(r.markdown, isNull);
       expect(r.allCourseNames, isEmpty);
+    });
+
+    test('真实实验系统矩阵课表可解析移动应用开发', () {
+      final file = File('data/归档/期初/模板/07-教师“刘东良”的课表.xlsx');
+      if (!file.existsSync()) return;
+
+      final r = ArchiveImporters.parseCourseSchedule(
+        file.readAsBytesSync(),
+        targetCourseName: '移动应用开发',
+        now: fixedNow,
+      );
+
+      expect(r.markdown, isNotNull);
+      expect(r.allCourseNames, contains('移动应用开发'));
+      expect(r.markdown, contains('课程课表：移动应用开发'));
+      expect(r.markdown, contains('星期二'));
+      expect(r.markdown, contains('YF2504'));
+      expect(r.markdown, contains('班组1'));
+      expect(r.markdown, contains('X506'));
+      expect(r.markdown, contains('2025-2026学年第2学期'));
+    });
+  });
+
+  group('ArchiveImporters.parseSurveyExcel', () {
+    test('真实课程目标达成度问卷 Excel 可解析为统计与明细', () {
+      final file = File('data/归档/期初/模板/15-课程目标支撑毕业要求达成度调查问卷.xlsx');
+      if (!file.existsSync()) return;
+
+      final md = ArchiveImporters.parseSurveyExcel(
+        file.readAsBytesSync(),
+        now: fixedNow,
+      );
+
+      expect(md, isNotNull);
+      expect(md, contains('课程目标支撑毕业要求达成度调查问卷'));
+      expect(md, contains('有效答卷'));
+      expect(md, contains('达成度统计'));
+      expect(md, contains('| Q1 |'));
+      expect(md, contains('作答明细'));
     });
   });
 

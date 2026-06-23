@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../data/local/knowledge_graph_dao.dart';
 import '../../../services/ai_service.dart';
 
@@ -595,7 +595,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
                 )
               : null,
           filled: true,
-          fillColor: primary.withValues(alpha: 0.06),
+          fillColor: primary.withOpacity(0.06),
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           border: OutlineInputBorder(
@@ -615,7 +615,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: color.withOpacity(0.12),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
@@ -748,8 +748,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
                       ),
                       const SizedBox(height: 12),
                       // Type dropdown
-                      DropdownButtonFormField<String>(
-                        initialValue: selectedType,
+                      DropdownButtonFormField<String>(value: selectedType,
                         decoration: const InputDecoration(
                           labelText: '类型',
                           border: OutlineInputBorder(),
@@ -784,8 +783,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
                       Row(
                         children: [
                           Expanded(
-                            child: DropdownButtonFormField<int>(
-                              initialValue: selectedChapter,
+                            child: DropdownButtonFormField<int>(value: selectedChapter,
                               decoration: const InputDecoration(
                                 labelText: '章节',
                                 border: OutlineInputBorder(),
@@ -805,8 +803,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
                           ),
                           const SizedBox(width: 8),
                           Expanded(
-                            child: DropdownButtonFormField<String>(
-                              initialValue: selectedImportance,
+                            child: DropdownButtonFormField<String>(value: selectedImportance,
                               decoration: const InputDecoration(
                                 labelText: '重要性',
                                 border: OutlineInputBorder(),
@@ -972,8 +969,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Source concept
-                      DropdownButtonFormField<int>(
-                        initialValue: selectedSource,
+                      DropdownButtonFormField<int>(value: selectedSource,
                         isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: '源节点 *',
@@ -986,8 +982,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
                       ),
                       const SizedBox(height: 12),
                       // Target concept
-                      DropdownButtonFormField<int>(
-                        initialValue: selectedTarget,
+                      DropdownButtonFormField<int>(value: selectedTarget,
                         isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: '目标节点 *',
@@ -1000,8 +995,7 @@ class _GraphPropertiesPageState extends State<GraphPropertiesPage>
                       ),
                       const SizedBox(height: 12),
                       // Relation type
-                      DropdownButtonFormField<String>(
-                        initialValue: selectedRelType,
+                      DropdownButtonFormField<String>(value: selectedRelType,
                         isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: '关系类型',
@@ -1267,7 +1261,7 @@ class _AiRecommendDialogState extends State<_AiRecommendDialog> {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
       decoration: BoxDecoration(
-        color: primary.withValues(alpha: 0.06),
+        color: primary.withOpacity(0.06),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
       ),
       child: Row(
@@ -1453,7 +1447,7 @@ class _AiRecommendDialogState extends State<_AiRecommendDialog> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: BoxDecoration(
-            color: _aiGold.withValues(alpha: 0.15),
+            color: _aiGold.withOpacity(0.15),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Text(
@@ -1491,7 +1485,7 @@ class _AiRecommendDialogState extends State<_AiRecommendDialog> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: checked
-            ? BorderSide(color: primary.withValues(alpha: 0.3), width: 1)
+            ? BorderSide(color: primary.withOpacity(0.3), width: 1)
             : BorderSide.none,
       ),
       elevation: checked ? 2 : 0.5,
@@ -1530,7 +1524,7 @@ class _AiRecommendDialogState extends State<_AiRecommendDialog> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: badgeColor.withValues(alpha: 0.12),
+                            color: badgeColor.withOpacity(0.12),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(

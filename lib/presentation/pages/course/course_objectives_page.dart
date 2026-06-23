@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../../../core/design/noir_tokens.dart';
 import '../../widgets/noir_page_shell.dart';
@@ -83,7 +83,7 @@ class CourseObjectivesPage extends StatelessWidget {
                 Text(
                   _intro,
                   style: TextStyle(
-                    color: NoirTokens.paper.withValues(alpha: 0.82),
+                    color: NoirTokens.paper.withOpacity(0.82),
                     fontSize: 13,
                     height: 1.7,
                   ),
@@ -198,9 +198,9 @@ class CourseObjectivesPage extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: NoirTokens.paper.withValues(alpha: 0.055),
+        color: NoirTokens.paper.withOpacity(0.055),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: NoirTokens.paper.withValues(alpha: 0.10)),
+        border: Border.all(color: NoirTokens.paper.withOpacity(0.10)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -209,7 +209,7 @@ class CourseObjectivesPage extends StatelessWidget {
             width: 90,
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
             decoration: BoxDecoration(
-              color: objective.color.withValues(alpha: 0.14),
+              color: objective.color.withOpacity(0.14),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Column(
@@ -226,7 +226,7 @@ class CourseObjectivesPage extends StatelessWidget {
                 Text(
                   '权重${objective.weight}',
                   style: TextStyle(
-                    color: NoirTokens.paper.withValues(alpha: 0.62),
+                    color: NoirTokens.paper.withOpacity(0.62),
                     fontSize: 11,
                   ),
                 ),
@@ -251,7 +251,7 @@ class CourseObjectivesPage extends StatelessWidget {
                 Text(
                   '支撑毕业要求 ${objective.graduationRequirement} · 考核：${objective.assessment}',
                   style: TextStyle(
-                    color: NoirTokens.paper.withValues(alpha: 0.64),
+                    color: NoirTokens.paper.withOpacity(0.64),
                     fontSize: 12,
                     height: 1.45,
                   ),
@@ -260,7 +260,7 @@ class CourseObjectivesPage extends StatelessWidget {
                 Text(
                   '章节：${objective.chapters}    实验：${objective.labs}',
                   style: TextStyle(
-                    color: objective.color.withValues(alpha: 0.86),
+                    color: objective.color.withOpacity(0.86),
                     fontSize: 12,
                     height: 1.35,
                   ),
@@ -276,17 +276,17 @@ class CourseObjectivesPage extends StatelessWidget {
   DataTableThemeData _darkTableTheme() {
     return DataTableThemeData(
       headingTextStyle: TextStyle(
-        color: NoirTokens.paper.withValues(alpha: 0.86),
+        color: NoirTokens.paper.withOpacity(0.86),
         fontWeight: FontWeight.w800,
         fontSize: 13,
       ),
       dataTextStyle: TextStyle(
-        color: NoirTokens.paper.withValues(alpha: 0.82),
+        color: NoirTokens.paper.withOpacity(0.82),
         fontSize: 13,
         height: 1.4,
       ),
       headingRowColor: WidgetStatePropertyAll(
-        NoirTokens.paper.withValues(alpha: 0.06),
+        NoirTokens.paper.withOpacity(0.06),
       ),
       dividerThickness: 0.4,
     );
@@ -299,9 +299,9 @@ class CourseObjectivesPage extends StatelessWidget {
     return Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: NoirTokens.paper.withValues(alpha: 0.055),
+        color: NoirTokens.paper.withOpacity(0.055),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: NoirTokens.paper.withValues(alpha: 0.10)),
+        border: Border.all(color: NoirTokens.paper.withOpacity(0.10)),
       ),
       child: child,
     );

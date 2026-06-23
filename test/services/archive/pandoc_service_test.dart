@@ -5,11 +5,13 @@ import 'package:knowledge_graph_app/services/archive/pandoc_service.dart';
 
 /// PandocService 集成测试。
 ///
-/// **前置条件**：本机 PATH 中有 pandoc 3.x。Windows 教师端默认有，CI 没有时
-/// 测试会跳过（不挂红）。
+/// docx 高保真转换仍可选用 pandoc；PDF 生成必须能在没有 pandoc /
+/// LibreOffice 的机器上走内置渲染回退。
 ///
 /// **运行**：`flutter test test/services/archive/pandoc_service_test.dart`
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('PandocService', () {
     late PandocService svc;
 
@@ -34,7 +36,7 @@ void main() {
       final installed = await svc.isInstalled;
       // 不强制要求装：装了 pass，没装也不挂红，只打印警告
       if (!installed) {
-        debugPrint('⚠️ pandoc 未安装。归档打印功能不可用。');
+        debugPrint('⚠️ pandoc 未安装。docx 高保真模板转换将使用内置回退。');
       }
       expect(installed, isA<bool>());
     });
@@ -86,25 +88,23 @@ void main() {
       expect(bytes[0], equals(0x50));
     });
 
-    test('markdownToPdf produces valid PDF bytes (needs pandoc + libreoffice)',
+    test('markdownToPdf produces valid PDF bytes without external converters',
         () async {
-      if (!svc.isAvailable || !await svc.isInstalled) {
-        debugPrint('⏭️ skip: pandoc not available');
-        return;
-      }
+      final bytes = await svc.markdownToPdf('''
+# Hello
 
-      try {
-        final bytes = await svc.markdownToPdf('# Hello\n\n这是一段测试文本。');
-        // PDF magic: %PDF-
-        expect(bytes.length, greaterThan(100));
-        expect(bytes[0], equals(0x25)); // '%'
-        expect(bytes[1], equals(0x50)); // 'P'
-        expect(bytes[2], equals(0x44)); // 'D'
-        expect(bytes[3], equals(0x46)); // 'F'
-      } on PandocException catch (e) {
-        // LibreOffice 未装时不挂红，只打印警告
-        debugPrint('⏭️ skip: ${e.message}');
-      }
+这是一段测试文本。
+
+| 项目 | 内容 |
+|------|------|
+| 教学大纲 | 可独立生成 PDF |
+''');
+      // PDF magic: %PDF-
+      expect(bytes.length, greaterThan(100));
+      expect(bytes[0], equals(0x25)); // '%'
+      expect(bytes[1], equals(0x50)); // 'P'
+      expect(bytes[2], equals(0x44)); // 'D'
+      expect(bytes[3], equals(0x46)); // 'F'
     });
 
     test('markdownToPdf rejects empty input', () async {

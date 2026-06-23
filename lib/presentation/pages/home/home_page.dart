@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -253,8 +253,8 @@ class _HomePageState extends State<HomePage> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
             gradient: LinearGradient(colors: [
-              Colors.orange.withValues(alpha: 0.9),
-              Colors.red.withValues(alpha: 0.85),
+              Colors.orange.withOpacity(0.9),
+              Colors.red.withOpacity(0.85),
             ]),
           ),
           child: const Row(
@@ -612,7 +612,7 @@ class _HomePageState extends State<HomePage> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
-        indicatorColor: NoirTokens.accent.withValues(alpha: 0.35),
+        indicatorColor: NoirTokens.accent.withOpacity(0.35),
         surfaceTintColor: Colors.transparent,
         onDestinationSelected: (index) {
           setState(() => _selectedIndex = index);
@@ -681,7 +681,7 @@ class _HomePageState extends State<HomePage> {
                           ? '教学视角 · 班级 / 实验 / 考核 / 达成'
                           : '学习视角 · 图谱 / 路径 / 实验 / 测验',
                   style: TextStyle(
-                    color: NoirTokens.paper.withValues(alpha: 0.85),
+                    color: NoirTokens.paper.withOpacity(0.85),
                     fontSize: 12,
                     letterSpacing: 1.6,
                     fontWeight: FontWeight.w500,
@@ -1428,7 +1428,7 @@ class _AdminToolsPage extends StatelessWidget {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(NoirTokens.radius),
                     ),
                     child: const Icon(Icons.admin_panel_settings,
@@ -1456,7 +1456,7 @@ class _AdminToolsPage extends StatelessWidget {
                         Text(
                           '系统级权限 · 管理各项功能与数据',
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.85),
+                            color: Colors.white.withOpacity(0.85),
                             fontSize: 12,
                             letterSpacing: 1.4,
                           ),
@@ -1667,14 +1667,14 @@ class _MenuCardImage extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             cardColor,
-            cardColor.withValues(alpha: 0.6),
+            cardColor.withOpacity(0.6),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
       ),
       child: Center(
-        child: Icon(icon, size: 40, color: Colors.white.withValues(alpha: 0.8)),
+        child: Icon(icon, size: 40, color: Colors.white.withOpacity(0.8)),
       ),
     );
   }

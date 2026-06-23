@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../data/local/class_dao.dart';
 import '../../../data/local/notification_dao.dart';
 import '../../../services/auth_service.dart';
@@ -218,8 +218,7 @@ class _ComposeNotificationPageState extends State<ComposeNotificationPage> {
               // ── 班级选择器（仅 targetType='class' 时显示）──────────────
               if (_targetType == 'class') ...[
                 const SizedBox(height: 12),
-                DropdownButtonFormField<int>(
-                  initialValue: _selectedClassId,
+                DropdownButtonFormField<int>(value: _selectedClassId,
                   decoration: InputDecoration(
                     labelText: '选择班级',
                     prefixIcon: const Icon(Icons.class_outlined),

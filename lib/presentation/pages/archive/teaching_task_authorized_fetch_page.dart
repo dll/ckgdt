@@ -25,10 +25,34 @@ class TeachingTaskAuthorizedFetchResult {
 
 class TeachingTaskAuthorizedFetchPage extends StatefulWidget {
   final String initialUrl;
+  final String targetUrl;
+  final String title;
+  final String loginHint;
+  final String targetButtonTooltip;
+  final String targetReadyMessage;
+  final String targetMissingMessage;
+  final String extractingMessage;
+  final String extractFailedHint;
+  final String profileName;
+  final List<String> readyUrlKeywords;
+  final List<String> readyTextKeywords;
+  final bool autoExtractWhenReady;
 
   const TeachingTaskAuthorizedFetchPage({
     super.key,
     this.initialUrl = TeachingTaskSourceService.printLessonBookUrl,
+    this.targetUrl = TeachingTaskSourceService.printLessonBookUrl,
+    this.title = '教务授权获取教学任务单',
+    this.loginHint = '请在教务网页中完成登录，然后进入教学任务书打印页。',
+    this.targetButtonTooltip = '任务书页',
+    this.targetReadyMessage = '已进入教学任务书打印页，可提取当前页。',
+    this.targetMissingMessage = '请登录后进入教学任务书打印页，或点击右上角“任务书页”。',
+    this.extractingMessage = '正在提取当前页面 HTML...',
+    this.extractFailedHint = '请确认当前页是教学任务书打印页。',
+    this.profileName = 'archive-teaching-task',
+    this.readyUrlKeywords = const ['printLessonBook'],
+    this.readyTextKeywords = const [],
+    this.autoExtractWhenReady = false,
   });
 
   @override
@@ -39,8 +63,8 @@ class TeachingTaskAuthorizedFetchPage extends StatefulWidget {
 class _TeachingTaskAuthorizedFetchPageState
     extends State<TeachingTaskAuthorizedFetchPage> {
   WebViewController? _controller;
-  String _currentUrl = TeachingTaskSourceService.printLessonBookUrl;
-  String _status = '请在教务网页中完成登录，然后进入教学任务书打印页。';
+  late String _currentUrl;
+  late String _status;
   bool _loading = true;
   bool _extracting = false;
   Object? _initError;
@@ -48,6 +72,8 @@ class _TeachingTaskAuthorizedFetchPageState
   @override
   void initState() {
     super.initState();
+    _currentUrl = widget.initialUrl;
+    _status = widget.loginHint;
     _init();
   }
 
@@ -62,7 +88,7 @@ class _TeachingTaskAuthorizedFetchPageState
             setState(() {
               _loading = true;
               _currentUrl = url;
-              _status = '正在打开教务系统...';
+              _status = '正在打开网页...';
             });
           },
           onUrlChange: (change) {
@@ -74,9 +100,16 @@ class _TeachingTaskAuthorizedFetchPageState
             setState(() {
               _loading = false;
               _currentUrl = url;
-              _status = url.contains('printLessonBook')
-                  ? '已进入教学任务书打印页，可提取当前页。'
-                  : '请登录后进入教学任务书打印页，或点击右上角“任务书页”。';
+              final targetReady = _isTargetUrl(url);
+              _status = targetReady
+                  ? widget.targetReadyMessage
+                  : widget.targetMissingMessage;
+              if (targetReady && widget.autoExtractWhenReady) {
+                Future<void>.delayed(const Duration(milliseconds: 800), () {
+                  if (!mounted || _extracting) return;
+                  _extractCurrentPageIfReady();
+                });
+              }
             });
           },
           onWebResourceError: (error) {
@@ -100,22 +133,27 @@ class _TeachingTaskAuthorizedFetchPageState
     }
   }
 
+  bool _isTargetUrl(String url) {
+    final normalized = url.toLowerCase();
+    return widget.readyUrlKeywords
+        .map((keyword) => keyword.toLowerCase())
+        .any(normalized.contains);
+  }
+
   Future<WebViewController> _createController() async {
     if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {
       final supportDir = await getApplicationSupportDirectory();
       final params = WindowsWebViewControllerCreationParams(
-        userDataFolder: p.join(supportDir.path, 'jwgl_webview'),
-        profileName: 'archive-teaching-task',
+        userDataFolder: p.join(supportDir.path, 'archive_webview'),
+        profileName: widget.profileName,
       );
       return WebViewController.fromPlatformCreationParams(params);
     }
     return WebViewController();
   }
 
-  Future<void> _loadPrintPage() async {
-    await _controller?.loadRequest(
-      Uri.parse(TeachingTaskSourceService.printLessonBookUrl),
-    );
+  Future<void> _loadTargetPage() async {
+    await _controller?.loadRequest(Uri.parse(widget.targetUrl));
   }
 
   Future<void> _extractCurrentPage() async {
@@ -123,7 +161,7 @@ class _TeachingTaskAuthorizedFetchPageState
     if (controller == null) return;
     setState(() {
       _extracting = true;
-      _status = '正在提取当前页面 HTML...';
+      _status = widget.extractingMessage;
     });
     try {
       final value = await controller.runJavaScriptReturningResult('''
@@ -153,9 +191,27 @@ class _TeachingTaskAuthorizedFetchPageState
       if (!mounted) return;
       setState(() {
         _extracting = false;
-        _status = '提取失败：$e。请确认当前页是教学任务书打印页。';
+        _status = '提取失败：$e。${widget.extractFailedHint}';
       });
     }
+  }
+
+  Future<void> _extractCurrentPageIfReady() async {
+    final controller = _controller;
+    if (controller == null) return;
+    if (widget.readyTextKeywords.isNotEmpty) {
+      try {
+        final value = await controller.runJavaScriptReturningResult(
+          'document.body ? document.body.innerText : ""',
+        );
+        final text = _decodeJsString(value);
+        final ready = widget.readyTextKeywords.every(text.contains);
+        if (!ready) return;
+      } catch (_) {
+        return;
+      }
+    }
+    await _extractCurrentPage();
   }
 
   String _decodeJsString(Object value) {
@@ -172,12 +228,12 @@ class _TeachingTaskAuthorizedFetchPageState
     final controller = _controller;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('教务授权获取教学任务单'),
+        title: Text(widget.title),
         actions: [
           IconButton(
-            tooltip: '任务书页',
-            onPressed: controller == null ? null : () => _loadPrintPage(),
-            icon: const Icon(Icons.assignment_outlined),
+            tooltip: widget.targetButtonTooltip,
+            onPressed: controller == null ? null : _loadTargetPage,
+            icon: const Icon(Icons.public),
           ),
           IconButton(
             tooltip: '刷新',
@@ -292,7 +348,7 @@ class _ErrorPanel extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  '无法打开内嵌教务网页',
+                  '无法打开内嵌网页',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 12),

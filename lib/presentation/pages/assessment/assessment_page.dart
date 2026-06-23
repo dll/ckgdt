@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -202,7 +202,7 @@ class _AssessmentPageState extends State<AssessmentPage>
             gradient: gradient.linearGradient,
             boxShadow: [
               BoxShadow(
-                color: gradient.gradientStart.withValues(alpha: 0.12),
+                color: gradient.gradientStart.withOpacity(0.12),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -218,7 +218,7 @@ class _AssessmentPageState extends State<AssessmentPage>
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.18),
+                        color: Colors.white.withOpacity(0.18),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(Icons.assessment,
@@ -243,7 +243,7 @@ class _AssessmentPageState extends State<AssessmentPage>
                                 : '统一管理分组、评分、答辩、报告与成绩，形成完整考核流程。',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.white.withValues(alpha: 0.85),
+                              color: Colors.white.withOpacity(0.85),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -286,9 +286,9 @@ class _AssessmentPageState extends State<AssessmentPage>
           margin: const EdgeInsets.fromLTRB(12, 0, 12, 4),
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-            color: primary.withValues(alpha: 0.06),
+            color: primary.withOpacity(0.06),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: primary.withValues(alpha: 0.12)),
+            border: Border.all(color: primary.withOpacity(0.12)),
           ),
           child: TabBar(
             controller: _tabController,
@@ -301,7 +301,7 @@ class _AssessmentPageState extends State<AssessmentPage>
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: primary.withValues(alpha: 0.10),
+                  color: primary.withOpacity(0.10),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -354,9 +354,9 @@ class _AssessmentPageState extends State<AssessmentPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.16),
+        color: Colors.white.withOpacity(0.16),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
+        border: Border.all(color: Colors.white.withOpacity(0.22)),
       ),
       child: Text(
         label,
@@ -389,19 +389,19 @@ class _AssessmentTopStat extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.14),
+        color: Colors.white.withOpacity(0.14),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 15, color: Colors.white.withValues(alpha: 0.85)),
+          Icon(icon, size: 15, color: Colors.white.withOpacity(0.85)),
           const SizedBox(width: 4),
           Text(
             '$label $value',
             style: TextStyle(
               fontSize: 12,
-              color: Colors.white.withValues(alpha: 0.92),
+              color: Colors.white.withOpacity(0.92),
               fontWeight: FontWeight.w500,
             ),
           ),

@@ -1,4 +1,4 @@
-part of '../git_repo_page.dart';
+﻿part of '../git_repo_page.dart';
 
 class _GiteeSettingsTab extends StatefulWidget {
   final GiteeService gitee;
@@ -207,11 +207,11 @@ class _GiteeSettingsTabState extends State<_GiteeSettingsTab> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: (_testSuccess ? Colors.green : Colors.red)
-                    .withValues(alpha: 0.1),
+                    .withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                     color: (_testSuccess ? Colors.green : Colors.red)
-                        .withValues(alpha: 0.3)),
+                        .withOpacity(0.3)),
               ),
               child: Row(
                 children: [

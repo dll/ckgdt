@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../services/settings_service.dart';
 import '../../../services/voice_service.dart';
 
@@ -172,8 +172,8 @@ class _VoiceSettingsPageState extends State<VoiceSettingsPage> {
                   borderRadius: BorderRadius.circular(12),
                   gradient: LinearGradient(
                     colors: [
-                      primary.withValues(alpha: 0.1),
-                      primary.withValues(alpha: 0.03),
+                      primary.withOpacity(0.1),
+                      primary.withOpacity(0.03),
                     ],
                   ),
                 ),
@@ -297,8 +297,8 @@ class _VoiceSettingsPageState extends State<VoiceSettingsPage> {
             if (_testResult != null)
               Card(
                 color: _testSuccess
-                    ? Colors.green.withValues(alpha: 0.1)
-                    : Colors.red.withValues(alpha: 0.1),
+                    ? Colors.green.withOpacity(0.1)
+                    : Colors.red.withOpacity(0.1),
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Row(
@@ -386,10 +386,10 @@ class _VoiceSettingsPageState extends State<VoiceSettingsPage> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.amber.withValues(alpha: 0.1),
+                        color: Colors.amber.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                            color: Colors.amber.withValues(alpha: 0.3)),
+                            color: Colors.amber.withOpacity(0.3)),
                       ),
                       child: const Row(
                         children: [
@@ -425,7 +425,7 @@ class _VoiceSettingsPageState extends State<VoiceSettingsPage> {
           CircleAvatar(
             radius: 12,
             backgroundColor:
-                Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+                Theme.of(context).colorScheme.primary.withOpacity(0.15),
             child: Text(num,
                 style: TextStyle(
                     fontSize: 12,

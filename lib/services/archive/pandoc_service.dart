@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import '../../core/error_handler.dart';
+import 'native_pdf_service.dart';
 
 /// Pandoc 子进程封装。
 ///
@@ -75,14 +76,9 @@ class PandocService {
 
   /// markdown → PDF 字节。
   ///
-  /// **两步走**：pandoc md → docx（继承学校样式）→ LibreOffice headless docx → pdf。
-  /// 这样保证打印产出和归档 docx 视觉一致，避免直接 pandoc + LaTeX 的字体 / 中文坑。
-  ///
-  /// **依赖**：用户机器上需装 LibreOffice（`soffice.exe`）。校区一般已装；
-  /// 没装时抛 [PandocException] 提示安装地址。
-  ///
-  /// 检测顺序：PATH `soffice` → `C:\Program Files\LibreOffice\program\soffice.exe`
-  /// → `C:\Program Files (x86)\LibreOffice\program\soffice.exe`。
+  /// 优先使用高保真链路：pandoc md → docx（继承学校样式）→ LibreOffice
+  /// headless docx → pdf。任一外部程序缺失或失败时，自动回退到纯 Dart
+  /// PDF 渲染，保证教师端无 LibreOffice/pandoc 也能独立生成和打印。
   Future<Uint8List> markdownToPdf(
     String markdown, {
     String? referenceDocPath,
@@ -91,14 +87,29 @@ class PandocService {
       throw const PandocException('markdown 内容为空，无法转 PDF');
     }
 
-    // 第 1 步：md → docx（继承样式）
-    final docxBytes = await markdownToDocx(
-      markdown,
-      referenceDocPath: referenceDocPath,
-    );
+    final hasPandoc = await isInstalled;
+    final soffice = hasPandoc ? await _findSoffice() : null;
+    if (!hasPandoc || soffice == null) {
+      if (kDebugMode) {
+        debugPrint('[PandocService] markdownToPdf uses native fallback: '
+            'pandoc=$hasPandoc soffice=${soffice != null}');
+      }
+      return NativePdfService.instance.markdownToPdf(markdown);
+    }
 
-    // 第 2 步：docx → pdf
-    return _docxToPdfViaSoffice(docxBytes);
+    try {
+      // 第 1 步：md → docx（继承样式）
+      final docxBytes = await markdownToDocx(
+        markdown,
+        referenceDocPath: referenceDocPath,
+      );
+
+      // 第 2 步：docx → pdf
+      return _docxToPdfViaSoffice(docxBytes);
+    } on Exception catch (e, st) {
+      swallowDebug(e, tag: 'PandocService.markdownToPdf.fallback', stack: st);
+      return NativePdfService.instance.markdownToPdf(markdown);
+    }
   }
 
   /// 用 LibreOffice headless 把 docx 字节转 PDF 字节。

@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -673,9 +673,9 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: primary.withValues(alpha: 0.1),
+        color: primary.withOpacity(0.1),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: primary.withValues(alpha: 0.3)),
+        border: Border.all(color: primary.withOpacity(0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -694,7 +694,7 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text('$label $value',
@@ -796,9 +796,9 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
       margin: const EdgeInsets.only(bottom: 4),
       decoration: BoxDecoration(
         color: isApproved
-            ? Colors.green.withValues(alpha: 0.05)
+            ? Colors.green.withOpacity(0.05)
             : result != null
-                ? Colors.blue.withValues(alpha: 0.05)
+                ? Colors.blue.withOpacity(0.05)
                 : null,
         borderRadius: BorderRadius.circular(8),
       ),
@@ -828,7 +828,7 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
             decoration: BoxDecoration(
-              color: primary.withValues(alpha: 0.1),
+              color: primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(reportType,
@@ -839,7 +839,7 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: _scoreColor(result.score).withValues(alpha: 0.15),
+                color: _scoreColor(result.score).withOpacity(0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text('${result.score}分',
@@ -853,7 +853,7 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
               decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.2),
+                color: Colors.green.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Text('已核准',
@@ -995,7 +995,7 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
                   leading: CircleAvatar(
                     radius: 18,
                     backgroundColor:
-                        _scoreColor(e.score).withValues(alpha: 0.15),
+                        _scoreColor(e.score).withOpacity(0.15),
                     child: Text('${e.score}',
                         style: TextStyle(
                             fontSize: 13,
@@ -1204,9 +1204,9 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
                 tickCount: 4,
                 ticksTextStyle: const TextStyle(fontSize: 0),
                 tickBorderData:
-                    BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
+                    BorderSide(color: Colors.grey.withOpacity(0.2)),
                 gridBorderData:
-                    BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
+                    BorderSide(color: Colors.grey.withOpacity(0.2)),
                 radarBorderData: const BorderSide(color: Colors.transparent),
                 getTitle: (index, _) {
                   if (index >= keys.length) {
@@ -1220,7 +1220,7 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
                     dataEntries: avgRates
                         .map((r) => RadarEntry(value: r * 100))
                         .toList(),
-                    fillColor: primary.withValues(alpha: 0.2),
+                    fillColor: primary.withOpacity(0.2),
                     borderColor: primary,
                     borderWidth: 2,
                     entryRadius: 3,
@@ -1283,7 +1283,7 @@ class _AssessmentAiGradingTabState extends State<AssessmentAiGradingTab> {
                     const SizedBox(height: 4),
                     LinearProgressIndicator(
                       value: (obj.$2 / obj.$3).clamp(0.0, 1.0),
-                      backgroundColor: Colors.grey.withValues(alpha: 0.2),
+                      backgroundColor: Colors.grey.withOpacity(0.2),
                       color: achieved ? Colors.green : Colors.orange,
                       minHeight: 8,
                       borderRadius: BorderRadius.circular(4),

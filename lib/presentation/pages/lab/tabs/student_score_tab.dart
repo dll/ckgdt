@@ -1,4 +1,4 @@
-part of '../lab_tasks_page.dart';
+﻿part of '../lab_tasks_page.dart';
 
 class _StudentLabScoreTab extends StatefulWidget {
   final AuthService authService;
@@ -106,7 +106,7 @@ class _StudentLabScoreTabState extends State<_StudentLabScoreTab> {
                       Text(
                         '已提交 $submitted/$total · 已评分 $graded',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.78),
+                          color: Colors.white.withOpacity(0.78),
                           fontSize: 12,
                         ),
                       ),
@@ -156,9 +156,9 @@ class _StudentLabScoreTabState extends State<_StudentLabScoreTab> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: primary.withValues(alpha: 0.06),
+        color: primary.withOpacity(0.06),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: primary.withValues(alpha: 0.10)),
+        border: Border.all(color: primary.withOpacity(0.10)),
       ),
       child: Column(
         children: [
@@ -237,7 +237,7 @@ class _StudentLabScoreTabState extends State<_StudentLabScoreTab> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.10),
+                    color: color.withOpacity(0.10),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
@@ -257,7 +257,7 @@ class _StudentLabScoreTabState extends State<_StudentLabScoreTab> {
               child: LinearProgressIndicator(
                 value: ratio,
                 minHeight: 8,
-                backgroundColor: color.withValues(alpha: 0.08),
+                backgroundColor: color.withOpacity(0.08),
                 valueColor: AlwaysStoppedAnimation<Color>(color),
               ),
             ),

@@ -1,4 +1,4 @@
-part of '../classroom_page.dart';
+﻿part of '../classroom_page.dart';
 
 class _OnlineStatusTab extends StatefulWidget {
   final ClassroomDao classroomDao;
@@ -175,9 +175,9 @@ class _OnlineStatusTabState extends State<_OnlineStatusTab> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: primary.withValues(alpha: 0.06),
+              color: primary.withOpacity(0.06),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: primary.withValues(alpha: 0.15)),
+              border: Border.all(color: primary.withOpacity(0.15)),
             ),
             child: Row(
               children: [
@@ -194,13 +194,13 @@ class _OnlineStatusTabState extends State<_OnlineStatusTab> {
                 ),
                 const Spacer(),
                 Icon(Icons.access_time, size: 14,
-                    color: Colors.grey.withValues(alpha: 0.6)),
+                    color: Colors.grey.withOpacity(0.6)),
                 const SizedBox(width: 4),
                 Text(
                   '上次同步: ${_formatTimeAgo(_lastSyncedTime)}',
                   style: TextStyle(
                       fontSize: 11,
-                      color: Colors.grey.withValues(alpha: 0.8)),
+                      color: Colors.grey.withOpacity(0.8)),
                 ),
               ],
             ),
@@ -271,7 +271,7 @@ class _OnlineStatusTabState extends State<_OnlineStatusTab> {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
+                  color: color.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(icon, size: 18, color: color),
@@ -313,7 +313,7 @@ class _OnlineStatusTabState extends State<_OnlineStatusTab> {
           borderRadius: BorderRadius.circular(10),
           border: Border(
             left: BorderSide(
-                color: statusColor.withValues(alpha: 0.6), width: 3),
+                color: statusColor.withOpacity(0.6), width: 3),
           ),
         ),
         padding: const EdgeInsets.all(12),
@@ -328,7 +328,7 @@ class _OnlineStatusTabState extends State<_OnlineStatusTab> {
                 shape: BoxShape.circle,
                 boxShadow: isOnline
                     ? [BoxShadow(
-                        color: Colors.green.withValues(alpha: 0.4),
+                        color: Colors.green.withOpacity(0.4),
                         blurRadius: 6)]
                     : null,
               ),
@@ -337,7 +337,7 @@ class _OnlineStatusTabState extends State<_OnlineStatusTab> {
             // 头像
             CircleAvatar(
               radius: 18,
-              backgroundColor: primary.withValues(alpha: 0.1),
+              backgroundColor: primary.withOpacity(0.1),
               child: Text(
                 name.isNotEmpty ? name.characters.first : '?',
                 style: TextStyle(
@@ -383,7 +383,7 @@ class _OnlineStatusTabState extends State<_OnlineStatusTab> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.1),
+                    color: statusColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
@@ -421,7 +421,7 @@ class _OnlineStatusTabState extends State<_OnlineStatusTab> {
         margin: const EdgeInsets.only(bottom: 6),
         padding: const EdgeInsets.only(right: 20),
         decoration: BoxDecoration(
-          color: Colors.red.withValues(alpha: 0.9),
+          color: Colors.red.withOpacity(0.9),
           borderRadius: BorderRadius.circular(10),
         ),
         child: const Column(

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'dart:convert';
 import '../../../data/local/survey_dao.dart';
 import '../../../data/local/class_dao.dart';
@@ -147,7 +147,7 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: primary.withValues(alpha: 0.1),
+                  color: primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
@@ -216,7 +216,7 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
+          color: color.withOpacity(0.08),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -288,7 +288,7 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.1),
+              color: statusColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(statusIcon, color: statusColor, size: 22),
@@ -310,7 +310,7 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 6, vertical: 1),
                     decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.12),
+                      color: statusColor.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -466,9 +466,9 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
+          color: color.withOpacity(0.08),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
+          border: Border.all(color: color.withOpacity(0.2)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -554,8 +554,7 @@ class _SurveyManagePageState extends State<SurveyManagePage> {
                   const SizedBox(height: 12),
 
                   // 关联班级
-                  DropdownButtonFormField<int?>(
-                    initialValue: selectedClassId,
+                  DropdownButtonFormField<int?>(value: selectedClassId,
                     decoration: InputDecoration(
                       labelText: '关联班级（可选）',
                       border: OutlineInputBorder(
@@ -934,7 +933,7 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: primary.withValues(alpha: 0.1),
+                  color: primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Row(
@@ -1040,7 +1039,7 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
               // 序号
               CircleAvatar(
                 radius: 12,
-                backgroundColor: primary.withValues(alpha: 0.1),
+                backgroundColor: primary.withOpacity(0.1),
                 child: Text(
                   '$seq',
                   style: TextStyle(
@@ -1072,7 +1071,7 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 1),
                           decoration: BoxDecoration(
-                            color: typeColor.withValues(alpha: 0.1),
+                            color: typeColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Row(
@@ -1094,7 +1093,7 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 5, vertical: 1),
                             decoration: BoxDecoration(
-                              color: Colors.red.withValues(alpha: 0.1),
+                              color: Colors.red.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: const Text(
@@ -1289,8 +1288,7 @@ class _SurveyQuestionsSectionState extends State<_SurveyQuestionsSection> {
                     const SizedBox(height: 12),
 
                     // 题型选择
-                    DropdownButtonFormField<String>(
-                      initialValue: selectedType,
+                    DropdownButtonFormField<String>(value: selectedType,
                       decoration: InputDecoration(
                         labelText: '题目类型 *',
                         border: OutlineInputBorder(

@@ -1,4 +1,4 @@
-part of '../classroom_page.dart';
+﻿part of '../classroom_page.dart';
 
 class _CheckinManageTab extends StatefulWidget {
   final ClassroomDao classroomDao;
@@ -258,7 +258,7 @@ class _CheckinManageTabState extends State<_CheckinManageTab> {
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: primary.withValues(alpha: 0.05),
+      color: primary.withOpacity(0.05),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -279,7 +279,7 @@ class _CheckinManageTabState extends State<_CheckinManageTab> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.15),
+                    color: Colors.green.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Text('进行中',
@@ -335,7 +335,7 @@ class _CheckinManageTabState extends State<_CheckinManageTab> {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: primary.withValues(alpha: 0.1),
+                  color: primary.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(Icons.add_task, size: 28, color: primary),
@@ -450,7 +450,7 @@ class _CheckinManageTabState extends State<_CheckinManageTab> {
             borderRadius: BorderRadius.circular(8),
             border: Border(
               left: BorderSide(
-                  color: statusConfig.color.withValues(alpha: 0.6),
+                  color: statusConfig.color.withOpacity(0.6),
                   width: 3),
             ),
           ),
@@ -479,7 +479,7 @@ class _CheckinManageTabState extends State<_CheckinManageTab> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: statusConfig.color.withValues(alpha: 0.12),
+                      color: statusConfig.color.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(statusConfig.label,

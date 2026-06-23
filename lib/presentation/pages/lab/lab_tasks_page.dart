@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -488,7 +488,7 @@ class _LabTasksPageState extends State<LabTasksPage>
       children: [
         // Tab 栏 + Agent 入口
         Container(
-          color: primary.withValues(alpha: 0.05),
+          color: primary.withOpacity(0.05),
           child: Row(
             children: [
               Expanded(

@@ -7,6 +7,8 @@ import 'package:knowledge_graph_app/data/models/archive_document_model.dart';
 import 'package:knowledge_graph_app/services/archive_package_service.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('ArchiveNaming', () {
     test('fileBase concatenates with + separator', () {
       final n = ArchiveNaming(
@@ -89,6 +91,45 @@ void main() {
         final out = await ArchivePackageService.instance.archiveDocxOf(
           doc,
           docLabel: '课程档案袋目录',
+          naming: naming,
+        );
+
+        expect(out, endsWith('.docx'));
+        expect(File(out).readAsBytesSync(), isNot(equals([1, 2, 3])));
+      } finally {
+        ArchivePackageService.outputRoot = oldRoot;
+        if (temp.existsSync()) temp.deleteSync(recursive: true);
+      }
+    });
+
+    test(
+        'parsed beginning survey archives generated docx instead of source xlsx',
+        () async {
+      final oldRoot = ArchivePackageService.outputRoot;
+      final temp = Directory.systemTemp.createTempSync('archive_survey_docx_');
+      try {
+        ArchivePackageService.outputRoot = temp.path;
+        final source = File(p.join(temp.path, 'survey.xlsx'))
+          ..writeAsBytesSync([1, 2, 3]);
+        final doc = ArchiveDocument(
+          title: '期初问卷',
+          documentType: 'survey',
+          period: 'beginning',
+          courseType: 'assess',
+          content: '# 课程目标支撑毕业要求达成度调查问卷\n\n## 一、达成度统计',
+          filePath: source.path,
+        );
+        final naming = ArchiveNaming(
+          department: '信息学院',
+          course: '移动应用开发',
+          docLabel: '问卷',
+          teacher: '刘东良',
+          semester: '2025-2026-2',
+        );
+
+        final out = await ArchivePackageService.instance.archiveDocxOf(
+          doc,
+          docLabel: '问卷',
           naming: naming,
         );
 

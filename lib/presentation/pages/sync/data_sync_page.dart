@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/sync_service.dart';
@@ -254,8 +254,8 @@ class _DataSyncPageState extends State<DataSyncPage> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isDark
-            ? Colors.blue.withValues(alpha: 0.15)
-            : Colors.blue.withValues(alpha: 0.06),
+            ? Colors.blue.withOpacity(0.15)
+            : Colors.blue.withOpacity(0.06),
         borderRadius: BorderRadius.circular(12),
         border: Border(
           left: BorderSide(
@@ -289,7 +289,7 @@ class _DataSyncPageState extends State<DataSyncPage> {
                       : '从课程仓库拉取所有学生的学习数据（测验成绩、学习记录、错题等）到本地查看。',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.textTheme.bodySmall?.color
-                        ?.withValues(alpha: 0.7),
+                        ?.withOpacity(0.7),
                   ),
                 ),
               ],
@@ -308,13 +308,13 @@ class _DataSyncPageState extends State<DataSyncPage> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: isSuccess
-            ? Colors.green.withValues(alpha: 0.1)
-            : Colors.red.withValues(alpha: 0.1),
+            ? Colors.green.withOpacity(0.1)
+            : Colors.red.withOpacity(0.1),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: isSuccess
-              ? Colors.green.withValues(alpha: 0.3)
-              : Colors.red.withValues(alpha: 0.3),
+              ? Colors.green.withOpacity(0.3)
+              : Colors.red.withOpacity(0.3),
         ),
       ),
       child: Row(
@@ -430,7 +430,7 @@ class _DataSyncPageState extends State<DataSyncPage> {
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
+            color: color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, size: 16, color: color),
@@ -598,7 +598,7 @@ class _DataSyncPageState extends State<DataSyncPage> {
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
+            color: color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, size: 16, color: color),
@@ -723,8 +723,8 @@ class _DataSyncPageState extends State<DataSyncPage> {
                   avatar: Icon(Icons.person_outline, size: 14,
                       color: Colors.red[300]),
                   label: Text(name, style: const TextStyle(fontSize: 12)),
-                  backgroundColor: Colors.red.withValues(alpha: 0.05),
-                  side: BorderSide(color: Colors.red.withValues(alpha: 0.2)),
+                  backgroundColor: Colors.red.withOpacity(0.05),
+                  side: BorderSide(color: Colors.red.withOpacity(0.2)),
                   padding: EdgeInsets.zero,
                   visualDensity: VisualDensity.compact,
                 );
@@ -801,8 +801,8 @@ class _DataSyncPageState extends State<DataSyncPage> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isDark
-            ? Colors.white.withValues(alpha: 0.05)
-            : Colors.grey.withValues(alpha: 0.05),
+            ? Colors.white.withOpacity(0.05)
+            : Colors.grey.withOpacity(0.05),
         borderRadius: BorderRadius.circular(10),
         border: Border(
           left: BorderSide(

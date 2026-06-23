@@ -4,7 +4,8 @@
 // 保持公开 API（类名/构造函数/结果类型）与原文件一致，确保调用方编译通过。
 import 'package:flutter/material.dart';
 
-import '../../../services/archive/teaching_task_source_service.dart';
+const _defaultTeachingTaskUrl =
+    'https://jwgl.chzu.edu.cn/eams/courseTableForTeacher!printLessonBook.action?';
 
 class TeachingTaskAuthorizedFetchResult {
   final String html;
@@ -20,16 +21,40 @@ class TeachingTaskAuthorizedFetchResult {
 
 class TeachingTaskAuthorizedFetchPage extends StatelessWidget {
   final String initialUrl;
+  final String targetUrl;
+  final String title;
+  final String loginHint;
+  final String targetButtonTooltip;
+  final String targetReadyMessage;
+  final String targetMissingMessage;
+  final String extractingMessage;
+  final String extractFailedHint;
+  final String profileName;
+  final List<String> readyUrlKeywords;
+  final List<String> readyTextKeywords;
+  final bool autoExtractWhenReady;
 
   const TeachingTaskAuthorizedFetchPage({
     super.key,
-    this.initialUrl = TeachingTaskSourceService.printLessonBookUrl,
+    this.initialUrl = _defaultTeachingTaskUrl,
+    this.targetUrl = _defaultTeachingTaskUrl,
+    this.title = '授权抓取',
+    this.loginHint = '',
+    this.targetButtonTooltip = '',
+    this.targetReadyMessage = '',
+    this.targetMissingMessage = '',
+    this.extractingMessage = '',
+    this.extractFailedHint = '',
+    this.profileName = 'archive-webview',
+    this.readyUrlKeywords = const [],
+    this.readyTextKeywords = const [],
+    this.autoExtractWhenReady = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('授权抓取')),
+      appBar: AppBar(title: Text(title)),
       body: const Center(
         child: Padding(
           padding: EdgeInsets.all(24),

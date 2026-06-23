@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import '../../core/constants/archive_periods.dart';
+import 'archive_document_policy.dart';
 import 'base_document_processor.dart';
 import 'importers/archive_importers.dart';
 
@@ -151,6 +152,10 @@ class ArchiveTemplateSourceService {
         return ArchiveImporters.parseRollCall(readText(), now: now) ??
             _fileContent(entity, label: label);
       case 'survey':
+        if (ext == '.xlsx' || ext == '.xls') {
+          return ArchiveImporters.parseSurveyExcel(bytes, now: now) ??
+              _fileContent(entity, label: label);
+        }
         if (!_isTextLike(ext)) return null;
         return ArchiveImporters.parseSurvey(readText(), now: now) ??
             _fileContent(entity, label: label);
@@ -207,18 +212,23 @@ class ArchiveTemplateSourceService {
 | 课程信息 | ${hasCourse ? '已识别课程/教师/班级信息' : '未识别完整课程信息'} | ${hasCourse ? '基本具备归档条件' : '需补充'} | 与教学任务书、课表保持一致 |
 | 偏差说明 | 需教师填写实际执行偏差 | 待确认 | 若有调课、补课、滞后或超前，必须说明原因和整改安排 |
 
-## 03 课程进度执行检查表
+## 03 课程进度执行检查表（教师勾选核查）
 
-| 序号 | 检查项目 | 检查要求 | 执行情况 | 结论 |
-|------|----------|----------|----------|------|
-| 1 | 教学周次 | 期中前教学周次应按计划完成 | 依据原始资料和授课记录核对 | 教师确认 |
-| 2 | 教学内容 | 已授章节、知识点、实验项目应与进度表一致 | 依据原始资料逐项核对 | 教师确认 |
-| 3 | 学时安排 | 理论、实验、实践学时应与期初计划一致 | 依据课表和进度记录核对 | 教师确认 |
-| 4 | 教学调整 | 调课、停课、补课、进度偏差应有记录 | 如有偏差需写明原因和补救措施 | 教师确认 |
+| 进度状态 | 勾选 | 说明 |
+|----------|------|------|
+| 对齐 | [ ] | 实际完成周次、章节、实验/实践项目与期初教学进度表一致 |
+| 滞后（延时） | [ ] | 已写明滞后原因、补课或调整安排 |
+| 超前 | [ ] | 已确认未跳过核心知识点、实验或实践环节 |
+
+| 核查项 | 勾选 | 说明 |
+|--------|------|------|
+| 教学内容与期初进度表一致 | [ ] | 核对已授章节、知识点、实验项目 |
+| 理论、实验、实践学时已核对 | [ ] | 与教学任务书和课程课表一致 |
+| 调课、停课、补课有记录 | [ ] | 如有偏差必须说明原因和整改措施 |
 
 ## 04 审核结论
 
-本材料用于期中教学检查。系统已完成源文件识别和要素初筛，最终结论需由任课教师根据实际授课记录、课堂考勤、实验安排和补课记录确认后签字归档。
+本材料用于期中教学检查。教师可在上表勾选进度对齐、滞后或超前状态；若存在滞后或超前，应补充原因、影响范围和后续整改安排后再签字归档。
 
 ## 附：原始进度资料
 
@@ -271,16 +281,18 @@ $source
 | 批阅证据 | 需包含已批阅份数、成绩或反馈记录 | 待确认 | 支持截图、平台记录或汇总表 |
 | 改进说明 | 未批、迟批、反馈不足需说明原因 | 待确认 | 补充后续批阅计划 |
 
-## 03 作业与批阅次数统计表
+## 03 作业与批阅次数统计表（与进度对齐核查）
 
-| 序号 | 作业/测验/实验名称 | 布置周次 | 应提交人数 | 实交人数 | 应批阅份数 | 已批阅份数 | 反馈方式 | 备注 |
-|------|--------------------|----------|------------|----------|------------|------------|----------|------|
-| 01 | 期中前作业或阶段任务 | 待填写 | 待填写 | 待填写 | 待填写 | 待填写 | 分数/评语/课堂反馈 | 教师确认 |
-| 02 | 期中前测验或实验报告 | 待填写 | 待填写 | 待填写 | 待填写 | 待填写 | 分数/评语/平台反馈 | 教师确认 |
+| 项目 | 教师填写/勾选 | 说明 |
+|------|---------------|------|
+| 期中前布置作业次数 | ____ 次 | 含课后作业、阶段测验、实验报告、项目阶段材料 |
+| 已批阅次数 | ____ 次 | 可为分数、评语、课堂讲评或平台反馈 |
+| 作业布置与教学进度对齐 | [ ] | 作业内容对应已授章节、实验或阶段项目 |
+| 已完成批阅与反馈 | [ ] | 未批阅或迟批应说明原因和补批计划 |
 
 ## 04 审核结论
 
-本材料必须能证明期中前作业布置和批阅反馈情况。若源文件初判提示错配，应先替换为真实作业批阅统计表，或在本表中补录统计数据后再审核、打印和归档。
+本材料必须能证明期中前作业布置、批阅和反馈情况，并与课程进度执行检查保持一致。若作业次数、批阅次数或反馈记录不足，应补录统计数据后再审核、打印和归档。
 
 ## 附：原始统计资料
 
@@ -331,18 +343,19 @@ $source
 | 质量分析 | 需说明学生掌握情况和薄弱环节 | 待确认 | 形成后续教学改进措施 |
 | 替代说明 | 无正式期中考试时必须说明阶段考核方式 | 待确认 | 写明测验、项目检查或作业检查依据 |
 
-## 03 期中考试/阶段考核归档表
+## 03 期中考试/阶段考核勾选表
 
-| 序号 | 材料项 | 归档要求 | 当前状态 | 备注 |
-|------|--------|----------|----------|------|
-| 1 | 试题/任务书 | 覆盖期中前核心内容 | 教师确认 | 无正式期中考试时填阶段任务 |
-| 2 | 参考答案/评分标准 | 分值、评分点或等级标准明确 | 教师确认 | 可附评分量规 |
-| 3 | 成绩/结果记录 | 能反映学生阶段学习情况 | 教师确认 | 可为平台成绩或项目检查记录 |
-| 4 | 质量分析 | 说明共性问题和后续改进措施 | 教师确认 | 与期末教学调整衔接 |
+| 材料项 | 勾选 | 归档要求 |
+|--------|------|----------|
+| 已组织期中考试或阶段考核 | [ ] | 无独立期中考试时，应说明替代性阶段考核方式 |
+| 已提交试卷或阶段任务书 | [ ] | 覆盖期中前核心内容 |
+| 已提交参考答案或评分标准 | [ ] | 分值、评分点或量规清晰 |
+| 已提交学生成绩记录 | [ ] | 能反映学生阶段学习情况 |
+| 已提交质量分析与改进措施 | [ ] | 说明共性问题、薄弱环节和后续改进 |
 
 ## 04 审核结论
 
-本材料用于证明课程期中阶段已经开展过程性检查或阶段考核。若课程无独立期中考试，不应空缺，应归档阶段测验、项目检查、实验检查或作业检查材料，并在结论中明确替代考核方式。
+本材料用于证明课程期中阶段已经开展考试、阶段测验、项目检查或其他过程性考核。若课程无独立期中考试，不应空缺，应归档替代考核材料，并在结论中明确依据。
 
 ## 附：原始期中考试资料
 
@@ -483,45 +496,11 @@ $source
       const {'.mhtml', '.mht', '.html', '.htm'}.contains(ext);
 
   static bool _shouldKeepOriginal(String documentType, String ext) {
-    if (documentType == 'teaching_task') return false;
-    if (_adaptiveTemplateDocTypes.contains(documentType)) return false;
-    if (ext == '.md' || ext == '.txt' || _isTextLike(ext)) return false;
-    return const {
-      '.pdf',
-      '.doc',
-      '.docx',
-      '.xls',
-      '.xlsx',
-      '.ppt',
-      '.pptx',
-      '.png',
-      '.jpg',
-      '.jpeg',
-      '.webp',
-      '.bmp',
-    }.contains(ext);
+    return ArchiveDocumentPolicy.shouldKeepOriginalTemplate(
+      documentType: documentType,
+      extension: ext,
+    );
   }
-
-  static const Set<String> _adaptiveTemplateDocTypes = {
-    'syllabus_evaluation',
-    'syllabus_review',
-    'teaching_schedule',
-    'teacher_guide',
-    'student_guide',
-    'midterm_progress_check',
-    'midterm_homework_review',
-    'midterm_exam',
-    'midterm_check',
-    'midterm_analysis',
-    'final_archive_catalog',
-    'final_syllabus',
-    'final_syllabus_evaluation',
-    'final_teaching_schedule',
-    'final_lesson_plan',
-    'final_syllabus_review',
-    'final_assessment_review',
-    'final_assessment_description',
-  };
 
   static String _normalize(String value) => value
       .toLowerCase()
@@ -609,8 +588,8 @@ $source
     ),
     'survey': _TemplateSpec(
       documentType: 'survey',
-      tokens: ['问卷', 'courseTableForTeacher!printLessonBook', '教学任务书'],
-      extensions: ['.mhtml', '.mht', '.html', '.htm'],
+      tokens: ['问卷', '调查问卷', '达成度调查'],
+      extensions: ['.xlsx', '.xls', '.mhtml', '.mht', '.html', '.htm'],
     ),
     'midterm_progress_check': _TemplateSpec(
       documentType: 'midterm_progress_check',

@@ -14,7 +14,9 @@ import '../../../../services/archive/base_document_processor.dart';
 import '../../../../services/archive/pandoc_service.dart';
 import '../../../../services/archive/processor_registry.dart';
 import '../../../../services/archive/review_result.dart';
+import '../../../../services/archive/archive_document_policy.dart';
 import '../../../../services/archive/archive_template_source_service.dart';
+import '../../../../services/archive/calendar_source_service.dart';
 import '../../../../services/archive/teaching_task_pdf.dart';
 import '../../../../services/archive/teaching_task_source_service.dart';
 import '../../../../services/archive/importers/archive_importers.dart';
@@ -115,6 +117,38 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
   }
 
   String _ordinalFor(DocumentTypeDef def, int index) {
+    if (widget.periodKey == 'beginning') {
+      switch (def.key) {
+        case 'teaching_task':
+          return '01';
+        case 'syllabus':
+          return '02';
+        case 'syllabus_evaluation':
+          return '03';
+        case 'syllabus_review':
+          return '04';
+        case 'calendar':
+          return '06';
+        case 'course_schedule':
+          return '07';
+        case 'teaching_schedule':
+          return '08';
+        case 'lesson_plan':
+          return '09';
+        case 'courseware':
+          return '10';
+        case 'roll_call':
+          return '11';
+        case 'teacher_guide':
+          return '12';
+        case 'student_guide':
+          return '13';
+        case 'assessment_plan':
+          return '14';
+        case 'survey':
+          return '15';
+      }
+    }
     if (widget.periodKey == 'midterm') {
       switch (def.key) {
         case 'midterm_progress_check':
@@ -188,6 +222,42 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
           return;
         }
         doc = generated;
+      } else if (def.key == 'calendar') {
+        final generated = await _generateCalendarFromSource();
+        if (generated != null) {
+          doc = generated;
+        } else if (ArchiveTemplateSourceService.supportsDocument(def.key)) {
+          final fromTemplate = await _generateFromTemplate(def);
+          if (fromTemplate != null) {
+            doc = fromTemplate;
+          } else if (processor is AiDraftProcessor) {
+            doc = await processor.generateAsDocument(
+              period: widget.periodKey,
+              courseType: widget.courseType,
+              title: title,
+            );
+          } else {
+            doc = await widget.agent.generateDocument(
+              title: title,
+              documentType: def.key,
+              period: widget.periodKey,
+              courseType: widget.courseType,
+            );
+          }
+        } else if (processor is AiDraftProcessor) {
+          doc = await processor.generateAsDocument(
+            period: widget.periodKey,
+            courseType: widget.courseType,
+            title: title,
+          );
+        } else {
+          doc = await widget.agent.generateDocument(
+            title: title,
+            documentType: def.key,
+            period: widget.periodKey,
+            courseType: widget.courseType,
+          );
+        }
       } else if (ArchiveTemplateSourceService.supportsDocument(def.key)) {
         final generated = await _generateFromTemplate(def);
         if (generated != null) {
@@ -313,7 +383,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
   bool _canEditMarkdown(ArchiveDocument doc) {
     if ((doc.content ?? '').trim().isEmpty) return false;
     if (doc.documentType == 'teaching_task') return true;
-    if (_shouldUseOriginalSource(doc.documentType) &&
+    if (_shouldUseOriginalSource(doc.documentType, content: doc.content) &&
         _hasArchiveOriginal(doc.filePath)) {
       return false;
     }
@@ -323,7 +393,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
   Future<void> _printDoc(ArchiveDocument doc) async {
     if (!mounted) return;
 
-    // 跨平台守门：移动端 / web 不支持 pandoc + libreoffice 子进程
+    // 跨平台守门：移动端 / web 暂不开放系统打印入口。
     if (kIsWeb ||
         !(Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -340,14 +410,17 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       return;
     }
 
-    final loadingText = _shouldUseOriginalSource(doc.documentType) &&
+    final loadingText = _shouldUseOriginalSource(
+              doc.documentType,
+              content: doc.content,
+            ) &&
             _canPreviewOriginalAsPdf(doc.filePath)
         ? '正在按原件版式生成 PDF...'
         : doc.documentType == 'teaching_task'
             ? '正在生成学校版式 PDF...'
-            : '正在生成 PDF（pandoc + LibreOffice）...';
+            : '正在生成 PDF...';
 
-    // loading 提示（普通文档 pandoc + soffice 两步通常 5-15 秒）
+    // loading 提示（普通文档优先高保真转换，失败时自动走内置 PDF）。
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -400,7 +473,10 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
   /// 自动从 `data/归档/<期>/模板/<docType>.docx` 找 reference-doc 继承样式。
   Future<Uint8List> _renderPdfBytes(ArchiveDocument doc) async {
     final sourcePath = doc.filePath;
-    if (_shouldUseOriginalSource(doc.documentType) &&
+    if (_shouldUseOriginalSource(
+          doc.documentType,
+          content: doc.content,
+        ) &&
         _canPreviewOriginalAsPdf(sourcePath)) {
       return PandocService.instance.officeFileToPdf(sourcePath!);
     }
@@ -418,20 +494,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
   }
 
   bool _canPreviewOriginalAsPdf(String? sourcePath) {
-    if (sourcePath == null || sourcePath.trim().isEmpty) return false;
     if (kIsWeb) return false;
-    final ext = p.extension(sourcePath).toLowerCase();
-    const supported = {
-      '.pdf',
-      '.doc',
-      '.docx',
-      '.xls',
-      '.xlsx',
-      '.ppt',
-      '.pptx',
-    };
-    if (!supported.contains(ext)) return false;
-    return File(sourcePath).existsSync();
+    return ArchiveDocumentPolicy.canPreviewOriginalAsPdf(sourcePath);
   }
 
   void _showPrintErrorDialog({required String title, required String message}) {
@@ -624,12 +688,15 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     }
 
     final docLabel = _docLabelFor(doc.documentType);
-    final loadingText = _shouldUseOriginalSource(doc.documentType) &&
+    final loadingText = _shouldUseOriginalSource(
+              doc.documentType,
+              content: doc.content,
+            ) &&
             _hasArchiveOriginal(doc.filePath)
         ? '正在按学校命名保存原件...'
         : doc.documentType == 'teaching_task'
             ? '正在生成学校版式归档件...'
-            : '正在归档（pandoc 生成 docx 并落盘）...';
+            : '正在生成归档件...';
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -692,52 +759,19 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
   }
 
   bool _hasArchiveOriginal(String? sourcePath) {
-    if (sourcePath == null || sourcePath.trim().isEmpty) return false;
     if (kIsWeb) return false;
-    final ext = p.extension(sourcePath).toLowerCase();
-    const preserved = {
-      '.pdf',
-      '.doc',
-      '.docx',
-      '.xls',
-      '.xlsx',
-      '.ppt',
-      '.pptx',
-      '.png',
-      '.jpg',
-      '.jpeg',
-      '.webp',
-      '.bmp',
-    };
-    if (!preserved.contains(ext)) return false;
-    return File(sourcePath).existsSync();
+    return ArchiveDocumentPolicy.hasArchiveOriginal(sourcePath);
   }
 
-  bool _shouldUseOriginalSource(String docType) {
-    return !const {
-      'syllabus_evaluation',
-      'syllabus_review',
-      'teaching_schedule',
-      'teacher_guide',
-      'student_guide',
-      'midterm_progress_check',
-      'midterm_homework_review',
-      'midterm_exam',
-      'midterm_check',
-      'midterm_analysis',
-      'final_archive_catalog',
-      'final_syllabus',
-      'final_syllabus_evaluation',
-      'final_teaching_schedule',
-      'final_lesson_plan',
-      'final_syllabus_review',
-      'final_assessment_review',
-      'final_assessment_description',
-    }.contains(docType);
+  bool _shouldUseOriginalSource(String docType, {String? content}) {
+    return ArchiveDocumentPolicy.shouldUseOriginalSource(
+      docType,
+      content: content,
+    );
   }
 
   String _archiveSuccessMessage(ArchiveDocument doc) {
-    if (_shouldUseOriginalSource(doc.documentType) &&
+    if (_shouldUseOriginalSource(doc.documentType, content: doc.content) &&
         _hasArchiveOriginal(doc.filePath)) {
       final ext =
           p.extension(doc.filePath!).replaceFirst('.', '').toUpperCase();
@@ -913,7 +947,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
               : '当前课程';
           final msg = found.isNotEmpty
               ? '课表中未找到"$courseName"。找到的课程：$found'
-              : '未在课表中找到"$courseName"，请确认Excel文件包含"课程名称"列';
+              : '未在课表中找到"$courseName"，请确认Excel为课程明细表，或为含“节次/星期”表头的矩阵课表';
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
                 content: Text(msg),
@@ -1046,8 +1080,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     if (def.key == 'syllabus') {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['txt', 'md', 'htm', 'html'],
-        dialogTitle: '选择教学大纲文件（txt/md/html）',
+        allowedExtensions: ['docx', 'txt', 'md', 'htm', 'html'],
+        dialogTitle: '选择教学大纲文件（docx/txt/md/html）',
       );
       if (result == null || result.files.isEmpty) return;
       final file = File(result.files.single.path!);
@@ -1059,14 +1093,28 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         }
         return;
       }
-      final parsed = await file.readAsString();
+      final parsed = await ArchiveTemplateSourceService.parseFile(
+        file: file,
+        documentType: def.key,
+        label: def.label,
+      );
+      if (parsed == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('教学大纲解析失败，请确认文件为docx/txt/md/html格式'),
+                backgroundColor: Colors.red),
+          );
+        }
+        return;
+      }
       final doc = ArchiveDocument(
         title: title,
         documentType: def.key,
         period: widget.periodKey,
         courseType: widget.courseType,
-        content: parsed.trim(),
-        filePath: file.path,
+        content: parsed.content.trim(),
+        filePath: parsed.sourcePath,
         isGenerated: false,
       );
       await widget.dao.saveDocument(doc);
@@ -1083,8 +1131,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     if (def.key == 'teaching_schedule') {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['md', 'txt', 'htm', 'html'],
-        dialogTitle: '选择教学进度表文件（md/txt/html）',
+        allowedExtensions: ['docx', 'md', 'txt', 'htm', 'html'],
+        dialogTitle: '选择教学进度表文件（docx/md/txt/html）',
       );
       if (result == null || result.files.isEmpty) return;
       final file = File(result.files.single.path!);
@@ -1096,14 +1144,28 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         }
         return;
       }
-      final parsed = await file.readAsString();
+      final parsed = await ArchiveTemplateSourceService.parseFile(
+        file: file,
+        documentType: def.key,
+        label: def.label,
+      );
+      if (parsed == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('教学进度表解析失败，请确认文件为docx/md/txt/html格式'),
+                backgroundColor: Colors.red),
+          );
+        }
+        return;
+      }
       final doc = ArchiveDocument(
         title: title,
         documentType: def.key,
         period: widget.periodKey,
         courseType: widget.courseType,
-        content: parsed.trim(),
-        filePath: file.path,
+        content: parsed.content.trim(),
+        filePath: parsed.sourcePath,
         isGenerated: false,
       );
       await widget.dao.saveDocument(doc);
@@ -1121,10 +1183,15 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         def.key == 'teacher_guide' ||
         def.key == 'student_guide' ||
         def.key == 'assessment_plan') {
+      final allowedExtensions = switch (def.key) {
+        'assessment_plan' => ['pdf', 'docx', 'md', 'txt'],
+        'teacher_guide' || 'student_guide' => ['md', 'txt', 'docx'],
+        _ => ['docx', 'md', 'txt'],
+      };
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['docx'],
-        dialogTitle: '选择${def.label}文件（docx）',
+        allowedExtensions: allowedExtensions,
+        dialogTitle: '选择${def.label}文件（${allowedExtensions.join('/')}）',
       );
       if (result == null || result.files.isEmpty) return;
       final file = File(result.files.single.path!);
@@ -1136,13 +1203,16 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         }
         return;
       }
-      final bytes = await file.readAsBytes();
-      final text = ArchiveImporters.extractDocxText(bytes);
-      if (text == null) {
+      final parsed = await ArchiveTemplateSourceService.parseFile(
+        file: file,
+        documentType: def.key,
+        label: def.label,
+      );
+      if (parsed == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('解析docx文件失败，请确认文件格式'),
+            SnackBar(
+                content: Text('${def.label}解析失败，请确认文件类型与资料要求匹配'),
                 backgroundColor: Colors.red),
           );
         }
@@ -1153,8 +1223,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         documentType: def.key,
         period: widget.periodKey,
         courseType: widget.courseType,
-        content: text.trim(),
-        filePath: file.path,
+        content: parsed.content.trim(),
+        filePath: parsed.sourcePath,
         isGenerated: false,
       );
       await widget.dao.saveDocument(doc);
@@ -1170,8 +1240,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     if (def.key == 'survey') {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['mhtml', 'mht', 'htm', 'html'],
-        dialogTitle: '选择问卷文件（从教务系统另存为.mhtml）',
+        allowedExtensions: ['xlsx', 'xls', 'mhtml', 'mht', 'htm', 'html'],
+        dialogTitle: '选择问卷文件（Excel 或网页保存文件）',
       );
       if (result == null || result.files.isEmpty) return;
       final file = File(result.files.single.path!);
@@ -1183,13 +1253,16 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         }
         return;
       }
-      final raw = await file.readAsString();
-      final parsed = ArchiveImporters.parseSurvey(raw);
+      final parsed = await ArchiveTemplateSourceService.parseFile(
+        file: file,
+        documentType: def.key,
+        label: def.label,
+      );
       if (parsed == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-                content: Text('问卷解析失败，请确认文件为完整的MHTML格式'),
+                content: Text('问卷解析失败，请确认文件为问卷Excel或完整网页保存文件'),
                 backgroundColor: Colors.red),
           );
         }
@@ -1200,8 +1273,8 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         documentType: def.key,
         period: widget.periodKey,
         courseType: widget.courseType,
-        content: parsed,
-        filePath: file.path,
+        content: parsed.content,
+        filePath: parsed.sourcePath,
         isGenerated: false,
       );
       await widget.dao.saveDocument(doc);
@@ -1491,10 +1564,17 @@ ${_templateExcerpt(parsed.content)}
       case 'teaching_schedule':
       case 'midterm_progress_check':
         return '''
-| 周次/阶段 | 计划内容 | 实际执行 | 偏差说明 | 整改措施 |
-|-----------|----------|----------|----------|----------|
-| 期初至期中 | 按教学进度表执行 | 待填写 | 待填写 | 待填写 |
-| 期中至期末 | 按课程目标完成教学任务 | 待填写 | 待填写 | 待填写 |
+| 进度状态 | 勾选 | 说明 |
+|----------|------|------|
+| 对齐 | [ ] | 实际完成周次、章节、实验/实践项目与期初教学进度表一致 |
+| 滞后（延时） | [ ] | 已写明滞后原因、补课或调整安排 |
+| 超前 | [ ] | 已确认未跳过核心知识点、实验或实践环节 |
+
+| 核查项 | 勾选 | 说明 |
+|--------|------|------|
+| 教学内容与期初进度表一致 | [ ] | 核对已授章节、知识点、实验项目 |
+| 理论、实验、实践学时已核对 | [ ] | 与教学任务书和课程课表一致 |
+| 调课、停课、补课有记录 | [ ] | 如有偏差必须说明原因和整改措施 |
 ''';
       case 'final_lesson_plan':
         return '请汇总代表性教案或教案目录，说明章节覆盖、教学目标、重点难点、教学方法与课程目标的对应关系。';
@@ -1511,14 +1591,25 @@ ${_templateExcerpt(parsed.content)}
         return '请说明当前课程考核方式、成绩构成、评分依据、材料构成和归档附件，不得沿用旧课程说明。';
       case 'midterm_homework_review':
         return '''
-| 序号 | 作业/测验/实验名称 | 应交 | 实交 | 应批 | 已批 | 反馈方式 | 备注 |
-|------|--------------------|------|------|------|------|----------|------|
-| 01 | 待填写 | 待填写 | 待填写 | 待填写 | 待填写 | 待填写 | 待填写 |
+| 项目 | 教师填写/勾选 | 说明 |
+|------|---------------|------|
+| 期中前布置作业次数 | ____ 次 | 含课后作业、阶段测验、实验报告、项目阶段材料 |
+| 已批阅次数 | ____ 次 | 可为分数、评语、课堂讲评或平台反馈 |
+| 作业布置与教学进度对齐 | [ ] | 作业内容对应已授章节、实验或阶段项目 |
+| 已完成批阅与反馈 | [ ] | 未批阅或迟批应说明原因和补批计划 |
 ''';
       case 'midterm_exam':
       case 'midterm_check':
       case 'midterm_analysis':
-        return '请根据当前课程是否设置期中考试，整理试题/阶段任务、评分标准、成绩记录、质量分析和改进措施。无正式期中考试时，应明确替代性阶段考核方式。';
+        return '''
+| 材料项 | 勾选 | 归档要求 |
+|--------|------|----------|
+| 已组织期中考试或阶段考核 | [ ] | 无独立期中考试时，应说明替代性阶段考核方式 |
+| 已提交试卷或阶段任务书 | [ ] | 覆盖期中前核心内容 |
+| 已提交参考答案或评分标准 | [ ] | 分值、评分点或量规清晰 |
+| 已提交学生成绩记录 | [ ] | 能反映学生阶段学习情况 |
+| 已提交质量分析与改进措施 | [ ] | 说明共性问题、薄弱环节和后续改进 |
+''';
       case 'teacher_guide':
       case 'student_guide':
         return '请结合当前课程章节、实验任务、学习要求和考核方式，重新整理指导手册正文。';
@@ -1566,6 +1657,21 @@ ${_templateExcerpt(parsed.content)}
     return _saveTeachingTaskDocument(teachingDef, fetched);
   }
 
+  Future<ArchiveDocument?> _generateCalendarFromSource() async {
+    final calendarDef =
+        _expectedDocs.where((d) => d.key == 'calendar').firstOrNull;
+    if (calendarDef == null) return null;
+    final stored = await CalendarSourceService.parseBestStoredSource(
+      periodKey: widget.periodKey,
+    );
+    if (stored != null) {
+      return _saveCalendarDocument(calendarDef, stored);
+    }
+    final fetched = await _captureCalendarFromWeb();
+    if (fetched == null) return null;
+    return _saveCalendarDocument(calendarDef, fetched);
+  }
+
   Future<TeachingTaskParseResult?> _captureTeachingTaskFromWeb() async {
     if (!mounted) return null;
     final result =
@@ -1601,9 +1707,79 @@ ${_templateExcerpt(parsed.content)}
     );
   }
 
+  Future<CalendarParseResult?> _captureCalendarFromWeb() async {
+    if (!mounted) return null;
+    final initialUrl = await CalendarSourceService.preferredCalendarUrl(
+      periodKey: widget.periodKey,
+    );
+    if (!mounted) return null;
+    final result =
+        await Navigator.of(context).push<TeachingTaskAuthorizedFetchResult>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => TeachingTaskAuthorizedFetchPage(
+          initialUrl: initialUrl,
+          targetUrl: initialUrl,
+          title: '网页登录获取教学日历',
+          loginHint: '请完成学校 WebVPN 登录，然后进入校历页面。',
+          targetButtonTooltip: '校历页',
+          targetReadyMessage: '已进入校历页面，可提取当前页。',
+          targetMissingMessage: '请登录后进入校历页面，或点击右上角“校历页”。',
+          extractingMessage: '正在提取当前校历页面 HTML...',
+          extractFailedHint: '请确认当前页是学校校历页面。',
+          profileName: 'archive-calendar',
+          readyUrlKeywords: const ['schcalendar', 'calendar'],
+          readyTextKeywords: const ['学年', '周次'],
+          autoExtractWhenReady: true,
+        ),
+      ),
+    );
+    if (result == null) return null;
+
+    final sourceFile = await CalendarSourceService.saveFetchedHtml(
+      periodKey: widget.periodKey,
+      html: result.html,
+    );
+    final parsed = ArchiveImporters.parseCalendar(result.html);
+    if (parsed == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('当前网页未解析出校历数据，原始页面已保存：${sourceFile.path}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 6),
+          ),
+        );
+      }
+      return null;
+    }
+    return CalendarParseResult(
+      markdown: parsed,
+      sourcePath: sourceFile.path,
+      sourceLabel: '网页登录授权获取',
+    );
+  }
+
   Future<ArchiveDocument> _saveTeachingTaskDocument(
     DocumentTypeDef def,
     TeachingTaskParseResult source,
+  ) async {
+    final doc = ArchiveDocument(
+      title: '${periodLabel(widget.periodKey)}${def.label}',
+      documentType: def.key,
+      period: widget.periodKey,
+      courseType: widget.courseType,
+      content: source.markdown,
+      filePath: source.sourcePath,
+      isGenerated: false,
+    );
+    final id = await widget.dao.saveDocument(doc);
+    return doc.copyWith(id: id);
+  }
+
+  Future<ArchiveDocument> _saveCalendarDocument(
+    DocumentTypeDef def,
+    CalendarParseResult source,
   ) async {
     final doc = ArchiveDocument(
       title: '${periodLabel(widget.periodKey)}${def.label}',
@@ -1630,8 +1806,21 @@ ${_templateExcerpt(parsed.content)}
     _previewDoc(doc);
   }
 
-  Future<void> _showSourceInfo(DocumentTypeDef def) async {
-    final detail = _sourceDetail(def.key);
+  Future<void> _fetchLatestCalendarFromWeb(DocumentTypeDef def) async {
+    final source = await _captureCalendarFromWeb();
+    if (source == null) return;
+    final doc = await _saveCalendarDocument(def, source);
+    await _load();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('已通过网页登录获取：${doc.title}')),
+    );
+    _previewDoc(doc);
+  }
+
+  Future<void> _showSourceInfo(
+      DocumentTypeDef def, ArchiveDocument? doc) async {
+    final detail = await _sourceDetail(def, doc);
     if (!mounted) return;
     showDialog(
       context: context,
@@ -1652,10 +1841,22 @@ ${_templateExcerpt(parsed.content)}
             children: [
               _sourceLine('文档', def.label),
               const SizedBox(height: 8),
+              _sourceLine('获取状态', detail['state'] ?? ''),
+              const SizedBox(height: 8),
+              _sourceLine('获取方式', detail['method'] ?? ''),
+              const SizedBox(height: 8),
               _sourceLine('来源系统', detail['system'] ?? ''),
               if ((detail['description'] ?? '').isNotEmpty) ...[
                 const SizedBox(height: 8),
                 _sourceLine('说明', detail['description']!),
+              ],
+              if ((detail['sourcePath'] ?? '').isNotEmpty) ...[
+                const SizedBox(height: 8),
+                _sourceLine('源文件', detail['sourcePath']!),
+              ],
+              if ((detail['autoCandidate'] ?? '').isNotEmpty) ...[
+                const SizedBox(height: 8),
+                _sourceLine('自动识别', detail['autoCandidate']!),
               ],
               if (detail['url'] != null) ...[
                 const SizedBox(height: 8),
@@ -1665,11 +1866,15 @@ ${_templateExcerpt(parsed.content)}
           ),
         ),
         actions: [
-          if (def.key == 'teaching_task')
+          if (def.key == 'teaching_task' || def.key == 'calendar')
             FilledButton.icon(
               onPressed: () {
                 Navigator.pop(context);
-                _fetchLatestTeachingTaskFromWeb(def);
+                if (def.key == 'calendar') {
+                  _fetchLatestCalendarFromWeb(def);
+                } else {
+                  _fetchLatestTeachingTaskFromWeb(def);
+                }
               },
               icon: const Icon(Icons.public, size: 18),
               label: const Text('网页登录获取'),
@@ -1697,10 +1902,26 @@ ${_templateExcerpt(parsed.content)}
     );
   }
 
-  Map<String, String> _sourceDetail(String key) {
+  Future<Map<String, String>> _sourceDetail(
+    DocumentTypeDef def,
+    ArchiveDocument? doc,
+  ) async {
+    final base = _sourceBaseDetail(def.key);
+    final sourcePath = doc?.filePath?.trim() ?? '';
+    final candidate = await _autoSourceCandidate(def.key);
+    return {
+      ...base,
+      'state': doc == null ? '未形成文档' : '已形成文档',
+      'method': _sourceMethod(def, doc),
+      if (sourcePath.isNotEmpty) 'sourcePath': sourcePath,
+      if (sourcePath.isEmpty && candidate != null) 'autoCandidate': candidate,
+    };
+  }
+
+  Map<String, String> _sourceBaseDetail(String key) {
     if (key.startsWith('final_')) {
       return {
-        'system': '期末模板 / 课程档案袋',
+        'system': '课程档案袋 / 期末归档模板 / 本平台数据',
         'description': _finalSourceDescription(key),
       };
     }
@@ -1710,43 +1931,39 @@ ${_templateExcerpt(parsed.content)}
           'system': '教务管理系统（jwgl.chzu.edu.cn/eams/）',
           'url': TeachingTaskSourceService.printLessonBookUrl,
           'description':
-              '主流程为网页登录授权后读取“打印教学任务书”页面 HTML，自动结构化生成学校版式归档件；手动导入仅作为无网络或 WebView 不可用时的兜底。',
+              '网页登录授权后读取“打印教学任务书”页面 HTML，自动结构化生成学校版式归档件；也支持从已保存的 HTML/MHTML 手动导入。',
         };
       case 'syllabus':
         return {
           'system': '学院 / 教师编写（Markdown）',
-          'description':
-              '教师根据学院规范编写的Markdown教学大纲，课程编码 d203010351/d203010092，含7章教学内容、4项课程目标及考核标准',
+          'description': '来自学院大纲模板、教师维护的 Markdown/Docx 原件，或本平台按当前课程信息辅助生成。',
         };
       case 'syllabus_evaluation':
         return {
           'system': '学院课程群建设工作组',
-          'description':
-              '计算机与信息工程学院课程教学大纲合理性评价表，含10项评价指标、课程群建设工作组意见、学院教学指导委员会意见，docx格式',
+          'description': '来自学院评价表模板或教师导入的评价表原件。',
         };
       case 'syllabus_review':
         return {
           'system': '学院教学指导委员会',
-          'description':
-              '移动应用开发课程过程性考核合理性审核表，依据2023版人才培养方案，含课程目标-毕业要求对应关系、考核方式及成绩评定对照表（平时20%+实验30%+期末50%），docx格式',
+          'description': '来自学院审核表模板，或由本平台根据当前教学大纲审核后生成。',
         };
       case 'calendar':
         return {
-          'system': '校历系统（webvpn.chzu.edu.cn）',
+          'system': '学校校历系统 / WebVPN',
+          'url': CalendarSourceService.webVpnHomeUrl,
           'description':
-              '滁州学院校历（2025-2026第二学期），通过学校WebVPN网关访问的React SPA页面，从浏览器保存为MHTML/HTML文件',
+              '网页登录后进入校历页面提取 HTML；也支持从已保存的校历 HTML/MHTML 手动导入。教学日历是全校通用校历，不绑定具体课程、教师或班级。',
         };
       case 'course_schedule':
         return {
-          'system': '实验教学服务平台',
-          'description':
-              '实验教学服务平台 → 实践教学 → 课表查询 → 我的课表 导出XLSX文件。含★教务（排课）和○实验两种类型标记',
+          'system': '教务/实验教学服务平台',
+          'description': '来自平台导出的课程课表 Excel，系统按当前课程名称过滤理论课和实验课安排。',
         };
       case 'teaching_schedule':
         return {
-          'system': '教师编写（Markdown）',
-          'description':
-              '教师根据教学大纲编写的16周教学进度表（2026年3月2日-6月21日），含6个实验项目及平时20%+实验30%+期末50%考核比例',
+          'system': '教师编写 / 教学进度模板',
+          'description': '来自教师编写的教学进度表、学院模板，或本平台结合大纲和课表生成。',
         };
       case 'lesson_plan':
         return {
@@ -1761,30 +1978,28 @@ ${_templateExcerpt(parsed.content)}
       case 'roll_call':
         return {
           'system': '教务管理系统（jwgl.chzu.edu.cn/eams/）',
-          'description':
-              '从 homeExt.action# 进入 → 打印点名册 → 浏览器另存为MHTML文件。URL路径: courseTableForTeacher!printAttendanceCheckList.action，含85名学生（软件231/232）考勤记录',
+          'description': '来自教务系统打印点名册页面保存的 HTML/MHTML，系统按当前课程解析学生名单。',
         };
       case 'teacher_guide':
         return {
           'system': '学院',
-          'description': '学院编制的教师教学指导手册docx文档，含课程定位、教学目标、教学内容结构和考核方式说明',
+          'description': '来自学院教师教学指导手册模板或教师导入原件。',
         };
       case 'student_guide':
         return {
           'system': '学院',
-          'description': '学院编制的学生学习指导手册docx文档，含课程结构、各章学习要点、实验指导和考核说明',
+          'description': '来自学院学生学习指导手册模板或教师导入原件。',
         };
       case 'assessment_plan':
         return {
-          'system': '学院',
-          'description':
-              '学院编制的综合考核方案docx文档（V1.0版），以SmartCampus智慧校园项目为载体，含4种技术栈的团队项目考核（每组6人，15天）',
+          'system': '学院 / 教师编写',
+          'description': '来自综合考核方案模板、教师导入原件，或本平台考核模块整理结果。',
         };
       case 'survey':
         return {
-          'system': '教务管理系统（jwgl.chzu.edu.cn/eams/）',
+          'system': '问卷系统 / 教务管理系统',
           'description':
-              '课表查询 → 课表查询（实时课表）→ 打印教学任务书 → 浏览器另存为MHTML文件。URL: courseTableForTeacher!printLessonBook.mhtml，含课程教学问卷数据',
+              '来自课程目标达成度调查问卷 Excel，或问卷/教务页面保存的 HTML/MHTML，系统提取题目、作答明细和达成度统计。',
         };
       case 'midterm_progress_check':
         return {
@@ -1806,9 +2021,62 @@ ${_templateExcerpt(parsed.content)}
         };
       default:
         return {
-          'system': '外部系统',
-          'description': '请根据具体材料要求准备',
+          'system': '模板目录 / 手动导入 / 本平台生成',
+          'description': '系统会优先使用已导入源文件或模板目录匹配资料，缺失时按当前课程数据生成草稿。',
         };
+    }
+  }
+
+  String _sourceMethod(DocumentTypeDef def, ArchiveDocument? doc) {
+    if (doc == null) {
+      if (def.key == 'teaching_task' || def.key == 'calendar') {
+        return '可网页登录自动获取，也可手动导入已保存网页文件';
+      }
+      if (ArchiveTemplateSourceService.supportsDocument(def.key)) {
+        return '可从模板目录自动识别，也可手动导入';
+      }
+      if (def.needsGeneration) return '可由本平台生成草稿';
+      return '待手动导入';
+    }
+    final sourcePath = doc.filePath?.trim() ?? '';
+    if (sourcePath.isNotEmpty) {
+      final lower = sourcePath.toLowerCase();
+      if (lower.contains('.fetched.')) return '网页登录自动获取';
+      if (lower.contains('${p.separator}模板${p.separator}')) {
+        return '模板目录自动识别';
+      }
+      if (lower.contains('${p.separator}源文件${p.separator}')) {
+        return '源文件目录自动识别';
+      }
+      return '手动导入源文件';
+    }
+    return doc.isGenerated ? '本平台生成/教师编辑' : '手动创建';
+  }
+
+  Future<String?> _autoSourceCandidate(String key) async {
+    try {
+      if (key == 'teaching_task') {
+        final candidates = TeachingTaskSourceService.storedSourceCandidates(
+          periodKey: widget.periodKey,
+          includeDownloads: false,
+        );
+        if (candidates.isNotEmpty) return candidates.first.path;
+      }
+      if (key == 'calendar') {
+        final candidates = CalendarSourceService.storedSourceCandidates(
+          periodKey: widget.periodKey,
+          includeDownloads: false,
+        );
+        if (candidates.isNotEmpty) return candidates.first.path;
+      }
+      final match = ArchiveTemplateSourceService.bestMatch(
+        periodKey: widget.periodKey,
+        documentType: key,
+      );
+      return match?.entity.path;
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ArchivePeriodTab._autoSourceCandidate', stack: st);
+      return null;
     }
   }
 
@@ -2226,10 +2494,17 @@ ${_templateExcerpt(parsed.content)}
 - 实验或实践教学安排
 
 ## 二、课程进度执行情况
-| 周次 | 计划教学内容 | 实际执行情况 | 理论学时 | 实验/实践学时 | 偏差说明 | 整改安排 |
-|------|--------------|--------------|----------|----------------|----------|----------|
-| 第1周 | [请填写] | [请填写] | [ ] | [ ] | [无/说明] | [请填写] |
-| 第2周 | [请填写] | [请填写] | [ ] | [ ] | [无/说明] | [请填写] |
+| 进度状态 | 勾选 | 说明 |
+|----------|------|------|
+| 对齐 | [ ] | 实际完成周次、章节、实验/实践项目与期初教学进度表一致 |
+| 滞后（延时） | [ ] | 已写明滞后原因、补课或调整安排 |
+| 超前 | [ ] | 已确认未跳过核心知识点、实验或实践环节 |
+
+| 核查项 | 勾选 | 说明 |
+|--------|------|------|
+| 教学内容与期初进度表一致 | [ ] | 核对已授章节、知识点、实验项目 |
+| 理论、实验、实践学时已核对 | [ ] | 与教学任务书和课程课表一致 |
+| 调课、停课、补课有记录 | [ ] | 如有偏差必须说明原因和整改措施 |
 
 ## 三、检查结论
 [一致 / 基本一致需说明 / 不一致需整改]
@@ -2252,10 +2527,12 @@ ${_templateExcerpt(parsed.content)}
 本表统计期中前已布置的课后作业、阶段测验、实验报告、项目阶段材料及其批阅反馈情况。
 
 ## 二、作业与批阅统计表
-| 序号 | 作业/测验/实验名称 | 布置周次 | 应提交人数 | 实交人数 | 应批阅份数 | 已批阅份数 | 反馈方式 | 备注 |
-|------|--------------------|----------|------------|----------|------------|------------|----------|------|
-| 01 | [请填写] | [ ] | [ ] | [ ] | [ ] | [ ] | [分数/评语/课堂反馈] | [请填写] |
-| 02 | [请填写] | [ ] | [ ] | [ ] | [ ] | [ ] | [分数/评语/课堂反馈] | [请填写] |
+| 项目 | 教师填写/勾选 | 说明 |
+|------|---------------|------|
+| 期中前布置作业次数 | ____ 次 | 含课后作业、阶段测验、实验报告、项目阶段材料 |
+| 已批阅次数 | ____ 次 | 可为分数、评语、课堂讲评或平台反馈 |
+| 作业布置与教学进度对齐 | [ ] | 作业内容对应已授章节、实验或阶段项目 |
+| 已完成批阅与反馈 | [ ] | 未批阅或迟批应说明原因和补批计划 |
 
 ## 三、批阅质量检查
 | 检查项 | 结论 | 说明 |
@@ -2280,7 +2557,13 @@ ${_templateExcerpt(parsed.content)}
 **考核日期**：[请填写]
 
 ## 一、考核方式说明
-[说明是否组织正式期中考试；若无正式期中考试，请说明采用阶段测验、实验检查、项目检查或作业检查替代。]
+| 材料项 | 勾选 | 归档要求 |
+|--------|------|----------|
+| 已组织期中考试或阶段考核 | [ ] | 无独立期中考试时，应说明替代性阶段考核方式 |
+| 已提交试卷或阶段任务书 | [ ] | 覆盖期中前核心内容 |
+| 已提交参考答案或评分标准 | [ ] | 分值、评分点或量规清晰 |
+| 已提交学生成绩记录 | [ ] | 能反映学生阶段学习情况 |
+| 已提交质量分析与改进措施 | [ ] | 说明共性问题、薄弱环节和后续改进 |
 
 ## 二、考核内容与课程目标对应
 | 考核内容 | 覆盖章节 | 对应课程目标 | 考核方式 | 分值/权重 |
@@ -2384,6 +2667,27 @@ ${_templateExcerpt(parsed.content)}
       default:
         return '外部系统';
     }
+  }
+
+  String _sourceChipLabel(DocumentTypeDef def, ArchiveDocument? doc) {
+    if (doc == null) {
+      if (def.key == 'teaching_task' || def.key == 'calendar') {
+        return '网页登录/手动导入';
+      }
+      if (ArchiveTemplateSourceService.supportsDocument(def.key)) {
+        return '模板识别/手动导入';
+      }
+      return def.needsGeneration ? '平台生成' : _importSource(def.key);
+    }
+    final sourcePath = doc.filePath?.trim() ?? '';
+    if (sourcePath.isNotEmpty) {
+      final lower = sourcePath.toLowerCase();
+      if (lower.contains('.fetched.')) return '网页登录';
+      if (lower.contains('${p.separator}模板${p.separator}')) return '模板识别';
+      if (lower.contains('${p.separator}源文件${p.separator}')) return '源文件识别';
+      return '手动导入';
+    }
+    return doc.isGenerated ? '平台生成/编辑' : '手动创建';
   }
 
   String _finalSourceDescription(String key) {
@@ -2516,6 +2820,10 @@ ${_templateExcerpt(parsed.content)}
     try {
       if (def.key == 'teaching_task') {
         return _generateTeachingTaskFromSource();
+      }
+      if (def.key == 'calendar') {
+        final fromSource = await _generateCalendarFromSource();
+        if (fromSource != null) return fromSource;
       }
       if (ArchiveTemplateSourceService.supportsDocument(def.key)) {
         final fromTemplate = await _generateFromTemplate(def);
@@ -2914,8 +3222,8 @@ ${_templateExcerpt(parsed.content)}
         def: def,
         ordinal: _ordinalFor(def, i),
         doc: doc,
-        source: _importSource(def.key),
-        onShowSource: () => _showSourceInfo(def),
+        source: _sourceChipLabel(def, doc),
+        onShowSource: () => _showSourceInfo(def, doc),
         onDownloadTemplate: def.canImport ? () => _downloadTemplate(def) : null,
         onImport: def.canImport ? () => _importDoc(def) : null,
         onCreate: def.canCreate ? () => _createDoc(def) : null,
@@ -3001,10 +3309,10 @@ class DocCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
     final badge = _StatusBadge.from(doc);
-    // 桌面才允许打印 / 归档（PandocService + LibreOffice 子进程依赖）
+    // 桌面才允许打印 / 归档（需要本地文件系统和系统打印能力）。
     final canDesktopOps =
         !kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux);
-    final isTeachingTask = def.key == 'teaching_task';
+    final isWebFetchDoc = def.key == 'teaching_task' || def.key == 'calendar';
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
@@ -3039,6 +3347,9 @@ class DocCard extends StatelessWidget {
                         style: TextStyle(
                             fontSize: 11,
                             color: badge.subtitleColor ?? Colors.grey)),
+                  Text('来源：$source',
+                      style:
+                          TextStyle(fontSize: 11, color: Colors.grey.shade600)),
                 ],
               ),
             ),
@@ -3051,7 +3362,7 @@ class DocCard extends StatelessWidget {
             if (onImport != null)
               ActionBtn(
                   icon: Icons.file_download_outlined,
-                  tooltip: isTeachingTask ? '手动导入(兜底)' : '导入',
+                  tooltip: isWebFetchDoc ? '手动导入(兜底)' : '导入',
                   color: Colors.blue,
                   onTap: onImport),
             if (onCreate != null)
@@ -3063,7 +3374,7 @@ class DocCard extends StatelessWidget {
             if (onGenerate != null)
               ActionBtn(
                   icon: Icons.auto_awesome,
-                  tooltip: isTeachingTask ? '自动获取/生成' : '生成',
+                  tooltip: isWebFetchDoc ? '自动获取/生成' : '生成',
                   color: Colors.deepPurple,
                   onTap: onGenerate),
             if (onReview != null)
@@ -3442,9 +3753,8 @@ class _DocumentPreviewSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sourcePath = doc.filePath;
     final usePdfPreview = doc.documentType == 'teaching_task' ||
-        _canUseOriginalPdfPreview(doc.documentType, sourcePath) ||
+        _canUseOriginalPdfPreview(doc) ||
         (doc.content ?? '').trim().isNotEmpty;
     return DraggableScrollableSheet(
       initialChildSize: 0.85,
@@ -3498,41 +3808,13 @@ class _DocumentPreviewSheet extends StatelessWidget {
     );
   }
 
-  bool _canUseOriginalPdfPreview(String docType, String? sourcePath) {
-    if (!_shouldUseOriginalSource(docType)) return false;
-    if (sourcePath == null || sourcePath.trim().isEmpty) return false;
-    final ext = p.extension(sourcePath).toLowerCase();
-    return const {
-      '.pdf',
-      '.doc',
-      '.docx',
-      '.xls',
-      '.xlsx',
-      '.ppt',
-      '.pptx',
-    }.contains(ext);
-  }
-
-  bool _shouldUseOriginalSource(String docType) {
-    return !const {
-      'syllabus_evaluation',
-      'syllabus_review',
-      'teaching_schedule',
-      'teacher_guide',
-      'student_guide',
-      'midterm_progress_check',
-      'midterm_homework_review',
-      'midterm_exam',
-      'midterm_check',
-      'midterm_analysis',
-      'final_archive_catalog',
-      'final_syllabus',
-      'final_syllabus_evaluation',
-      'final_teaching_schedule',
-      'final_lesson_plan',
-      'final_syllabus_review',
-      'final_assessment_review',
-      'final_assessment_description',
-    }.contains(docType);
+  bool _canUseOriginalPdfPreview(ArchiveDocument doc) {
+    if (!ArchiveDocumentPolicy.shouldUseOriginalSource(
+      doc.documentType,
+      content: doc.content,
+    )) {
+      return false;
+    }
+    return ArchiveDocumentPolicy.canPreviewOriginalAsPdf(doc.filePath);
   }
 }

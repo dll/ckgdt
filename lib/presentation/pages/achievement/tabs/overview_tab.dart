@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -421,7 +421,7 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
+                      color: Colors.black.withOpacity(0.2),
                       blurRadius: 6,
                       offset: const Offset(0, 3))
                 ],
@@ -444,7 +444,7 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
           child: Column(
             children: [
               Icon(Icons.analytics_outlined,
-                  size: 80, color: Colors.grey.withValues(alpha: 0.5)),
+                  size: 80, color: Colors.grey.withOpacity(0.5)),
               const SizedBox(height: 16),
               const Text(
                 '暂无达成度批次',
@@ -562,7 +562,7 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
         width: 72,
         padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
+          color: color.withOpacity(0.1),
           borderRadius: BorderRadius.circular(6),
         ),
         child: Column(children: [
@@ -619,9 +619,9 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: primary.withValues(alpha: 0.035),
+        color: primary.withOpacity(0.035),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: primary.withValues(alpha: 0.12)),
+        border: Border.all(color: primary.withOpacity(0.12)),
       ),
       padding: const EdgeInsets.all(10),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -751,7 +751,7 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: statusColor(status).withValues(alpha: 0.15),
+                          color: statusColor(status).withOpacity(0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -903,7 +903,7 @@ class _BatchDetailSheetState extends State<BatchDetailSheet> {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey.withValues(alpha: 0.3),
+              color: Colors.grey.withOpacity(0.3),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -1019,7 +1019,7 @@ class _BatchDetailSheetState extends State<BatchDetailSheet> {
                   backgroundColor: Theme.of(context)
                       .colorScheme
                       .primary
-                      .withValues(alpha: 0.1),
+                      .withOpacity(0.1),
                   child: Text(
                     (score['student_name'] ?? '?').toString().substring(0, 1),
                     style: TextStyle(
@@ -1110,7 +1110,7 @@ class _BatchDetailSheetState extends State<BatchDetailSheet> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: achievementLevelColor(weighted).withValues(alpha: 0.15),
+                color: achievementLevelColor(weighted).withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -1143,7 +1143,7 @@ class _BatchDetailSheetState extends State<BatchDetailSheet> {
                   Container(
                     height: 20,
                     decoration: BoxDecoration(
-                      color: Colors.grey.withValues(alpha: 0.15),
+                      color: Colors.grey.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -1152,7 +1152,7 @@ class _BatchDetailSheetState extends State<BatchDetailSheet> {
                     child: Container(
                       height: 20,
                       decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.7),
+                        color: color.withOpacity(0.7),
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
@@ -1698,10 +1698,10 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
               // ═══ 表1：课程目标达成考核与评价方式及成绩评定对照表 ═══
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.04),
+                  color: Colors.blue.withOpacity(0.04),
                   borderRadius: BorderRadius.circular(8),
                   border:
-                      Border.all(color: Colors.blue.withValues(alpha: 0.15)),
+                      Border.all(color: Colors.blue.withOpacity(0.15)),
                 ),
                 padding: const EdgeInsets.all(10),
                 child: Column(
@@ -1755,10 +1755,10 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
                 const SizedBox(height: 12),
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.teal.withValues(alpha: 0.04),
+                    color: Colors.teal.withOpacity(0.04),
                     borderRadius: BorderRadius.circular(8),
                     border:
-                        Border.all(color: Colors.teal.withValues(alpha: 0.15)),
+                        Border.all(color: Colors.teal.withOpacity(0.15)),
                   ),
                   padding: const EdgeInsets.all(10),
                   child: Column(
@@ -1784,7 +1784,7 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
                                                             1) -
                                                         1)
                                                     .clamp(0, 3)]
-                                            .withValues(alpha: 0.08),
+                                            .withOpacity(0.08),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       child: Text(
@@ -1801,10 +1801,10 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
                 const SizedBox(height: 12),
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.04),
+                    color: Colors.orange.withOpacity(0.04),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                        color: Colors.orange.withValues(alpha: 0.15)),
+                        color: Colors.orange.withOpacity(0.15)),
                   ),
                   padding: const EdgeInsets.all(10),
                   child: Column(
@@ -1829,7 +1829,7 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
                                                             1) -
                                                         1)
                                                     .clamp(0, 3)]
-                                            .withValues(alpha: 0.08),
+                                            .withOpacity(0.08),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       child: Text(

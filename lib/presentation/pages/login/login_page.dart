@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
@@ -268,7 +268,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           TextButton(
             onPressed: () => Navigator.pop(ctx, 'cancel'),
             child: Text('取消',
-                style: TextStyle(color: _ink.withValues(alpha: 0.6))),
+                style: TextStyle(color: _ink.withOpacity(0.6))),
           ),
           OutlinedButton(
             onPressed: () => Navigator.pop(ctx, 'retry'),
@@ -315,12 +315,12 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                   const TextStyle(color: _ink, fontSize: 16, letterSpacing: 2),
               decoration: InputDecoration(
                 hintText: '输入学号/工号',
-                hintStyle: TextStyle(color: _ink.withValues(alpha: 0.3)),
+                hintStyle: TextStyle(color: _ink.withOpacity(0.3)),
                 prefixIcon:
-                    Icon(Icons.badge, color: _ink.withValues(alpha: 0.5)),
+                    Icon(Icons.badge, color: _ink.withOpacity(0.5)),
                 border: OutlineInputBorder(
                     borderSide:
-                        BorderSide(color: _ink.withValues(alpha: 0.25))),
+                        BorderSide(color: _ink.withOpacity(0.25))),
                 focusedBorder: const OutlineInputBorder(
                     borderSide: BorderSide(color: _ink, width: 1.5)),
               ),
@@ -331,7 +331,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text('取消',
-                style: TextStyle(color: _ink.withValues(alpha: 0.6))),
+                style: TextStyle(color: _ink.withOpacity(0.6))),
           ),
           FilledButton(
             onPressed: () {
@@ -661,7 +661,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                     end: Alignment.bottomCenter,
                     colors: [
                       Colors.transparent,
-                      _inkDeep.withValues(alpha: 0.55),
+                      _inkDeep.withOpacity(0.55),
                     ],
                     stops: const [0.55, 1.0],
                   ),
@@ -805,12 +805,12 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                 Container(
                     width: double.infinity,
                     height: 1,
-                    color: _paper.withValues(alpha: 0.35)),
+                    color: _paper.withOpacity(0.35)),
                 const SizedBox(height: 3),
                 Container(
                     width: double.infinity,
                     height: 1,
-                    color: _paper.withValues(alpha: 0.15)),
+                    color: _paper.withOpacity(0.15)),
               ],
             ),
           ),
@@ -822,7 +822,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
             'Knowledge Graph & Digital Twin Platform\nfor Course Teaching and Learning',
             textAlign: wide ? TextAlign.left : TextAlign.center,
             style: TextStyle(
-              color: _paper.withValues(alpha: 0.62),
+              color: _paper.withOpacity(0.62),
               fontSize: 12,
               letterSpacing: 2.2,
               height: 1.7,
@@ -863,7 +863,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           ),
         ),
         const SizedBox(height: 6),
-        Container(width: 24, height: 1, color: _paper.withValues(alpha: 0.4)),
+        Container(width: 24, height: 1, color: _paper.withOpacity(0.4)),
         const SizedBox(height: 8),
         Text(
           n,
@@ -878,7 +878,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         Text(
           label,
           style: TextStyle(
-            color: _paper.withValues(alpha: 0.55),
+            color: _paper.withOpacity(0.55),
             fontSize: 11,
             letterSpacing: 1.4,
           ),
@@ -913,14 +913,14 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
             filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
             child: Container(
               decoration: BoxDecoration(
-                color: _paper.withValues(alpha: 0.97),
+                color: _paper.withOpacity(0.97),
                 borderRadius: BorderRadius.circular(2),
                 border: Border.all(
-                  color: _ink.withValues(alpha: 0.08),
+                  color: _ink.withOpacity(0.08),
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: _inkDeep.withValues(alpha: 0.55),
+                    color: _inkDeep.withOpacity(0.55),
                     blurRadius: 50,
                     offset: const Offset(0, 24),
                   ),
@@ -963,7 +963,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
   /// 登录卡底部协议链接 — 满足"用户使用前可阅读用户协议 / 隐私声明"的合规要求
   Widget _buildPolicyFooter(Color accent) {
-    final faded = TextStyle(fontSize: 11, color: _ink.withValues(alpha: 0.6));
+    final faded = TextStyle(fontSize: 11, color: _ink.withOpacity(0.6));
     Widget link(String label, int tab) => InkWell(
           onTap: () => Navigator.push(
             context,
@@ -1033,7 +1033,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                 Text(
                   '请验证身份以继续',
                   style: TextStyle(
-                    color: _ink.withValues(alpha: 0.55),
+                    color: _ink.withOpacity(0.55),
                     fontSize: 11,
                     letterSpacing: 1,
                   ),
@@ -1044,7 +1044,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           Text(
             '${DateTime.now().year}',
             style: TextStyle(
-              color: _ink.withValues(alpha: 0.4),
+              color: _ink.withOpacity(0.4),
               fontSize: 11,
               fontWeight: FontWeight.w600,
               letterSpacing: 2,
@@ -1078,7 +1078,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                       num,
                       style: TextStyle(
                         color:
-                            selected ? _accent : _ink.withValues(alpha: 0.35),
+                            selected ? _accent : _ink.withOpacity(0.35),
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 1.5,
@@ -1088,7 +1088,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                     Text(
                       label,
                       style: TextStyle(
-                        color: selected ? _ink : _ink.withValues(alpha: 0.45),
+                        color: selected ? _ink : _ink.withOpacity(0.45),
                         fontSize: 13,
                         fontWeight:
                             selected ? FontWeight.w700 : FontWeight.w500,
@@ -1115,14 +1115,14 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     return Container(
       decoration: BoxDecoration(
         border: Border(
-          top: BorderSide(color: _ink.withValues(alpha: 0.08)),
-          bottom: BorderSide(color: _ink.withValues(alpha: 0.08)),
+          top: BorderSide(color: _ink.withOpacity(0.08)),
+          bottom: BorderSide(color: _ink.withOpacity(0.08)),
         ),
       ),
       child: Row(
         children: [
           tab(0, '01', '账号'),
-          Container(width: 1, height: 26, color: _ink.withValues(alpha: 0.08)),
+          Container(width: 1, height: 26, color: _ink.withOpacity(0.08)),
           tab(1, '02', '扫码'),
         ],
       ),
@@ -1165,7 +1165,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                       ? Icons.visibility_outlined
                       : Icons.visibility_off_outlined,
                   size: 18,
-                  color: _ink.withValues(alpha: 0.5),
+                  color: _ink.withOpacity(0.5),
                 ),
                 onPressed: () =>
                     setState(() => _obscurePassword = !_obscurePassword),
@@ -1175,7 +1175,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
             SizedBox(
               height: 50,
               child: Material(
-                color: _isLoading ? _ink.withValues(alpha: 0.6) : _ink,
+                color: _isLoading ? _ink.withOpacity(0.6) : _ink,
                 borderRadius: BorderRadius.circular(2),
                 child: InkWell(
                   onTap: _isLoading ? null : _login,
@@ -1228,7 +1228,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                 Text(
                   '密码默认 = 账号后 6 位',
                   style: TextStyle(
-                    color: _ink.withValues(alpha: 0.5),
+                    color: _ink.withOpacity(0.5),
                     fontSize: 11,
                     letterSpacing: 0.6,
                   ),
@@ -1239,12 +1239,12 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.graphic_eq,
-                          size: 13, color: _ink.withValues(alpha: 0.7)),
+                          size: 13, color: _ink.withOpacity(0.7)),
                       const SizedBox(width: 4),
                       Text(
                         '语音登录',
                         style: TextStyle(
-                          color: _ink.withValues(alpha: 0.7),
+                          color: _ink.withOpacity(0.7),
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 1.2,
@@ -1277,7 +1277,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           child: Text(
             label,
             style: TextStyle(
-              color: _ink.withValues(alpha: 0.55),
+              color: _ink.withOpacity(0.55),
               fontSize: 10,
               letterSpacing: 2.5,
               fontWeight: FontWeight.w700,
@@ -1297,7 +1297,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(
-              color: _ink.withValues(alpha: 0.3),
+              color: _ink.withOpacity(0.3),
               fontSize: 14,
               fontWeight: FontWeight.w400,
             ),
@@ -1309,10 +1309,10 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
               minHeight: 36,
             ),
             border: UnderlineInputBorder(
-              borderSide: BorderSide(color: _ink.withValues(alpha: 0.25)),
+              borderSide: BorderSide(color: _ink.withOpacity(0.25)),
             ),
             enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: _ink.withValues(alpha: 0.25)),
+              borderSide: BorderSide(color: _ink.withOpacity(0.25)),
             ),
             focusedBorder: const UnderlineInputBorder(
               borderSide: BorderSide(color: _ink, width: 1.5),
@@ -1332,7 +1332,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 10),
             decoration: BoxDecoration(
-              border: Border.all(color: _ink.withValues(alpha: 0.15)),
+              border: Border.all(color: _ink.withOpacity(0.15)),
               borderRadius: BorderRadius.circular(2),
             ),
             child: Center(
@@ -1371,14 +1371,14 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         Container(
           width: 80,
           height: 1,
-          color: _paper.withValues(alpha: 0.2),
+          color: _paper.withOpacity(0.2),
         ),
         const SizedBox(height: 18),
         Text(
           'CALMNESS · CRAFT · CONNECTION',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: _paper.withValues(alpha: 0.4),
+            color: _paper.withOpacity(0.4),
             fontSize: 9,
             letterSpacing: 4,
             fontWeight: FontWeight.w600,
@@ -1406,11 +1406,11 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(color: _ink.withValues(alpha: 0.6)),
+              CircularProgressIndicator(color: _ink.withOpacity(0.6)),
               const SizedBox(height: 16),
               Text('正在启动扫码服务…',
                   style: TextStyle(
-                      color: _ink.withValues(alpha: 0.6),
+                      color: _ink.withOpacity(0.6),
                       fontSize: 12,
                       letterSpacing: 1.5)),
             ],
@@ -1427,11 +1427,11 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(Icons.qr_code_2,
-                  size: 56, color: _ink.withValues(alpha: 0.3)),
+                  size: 56, color: _ink.withOpacity(0.3)),
               const SizedBox(height: 16),
               Text('使用手机 APP 扫描以登录桌面端',
                   style: TextStyle(
-                      color: _ink.withValues(alpha: 0.55),
+                      color: _ink.withOpacity(0.55),
                       fontSize: 12,
                       letterSpacing: 1)),
               const SizedBox(height: 16),
@@ -1477,7 +1477,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           size: 180,
           padding: 14,
           background: _paper,
-          borderColor: _ink.withValues(alpha: 0.15),
+          borderColor: _ink.withOpacity(0.15),
           eyeColor: _ink,
           moduleColor: _ink,
           cornerRadius: 2,
@@ -1499,7 +1499,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                 letterSpacing: 1,
                 color: success
                     ? const Color(0xFF2E7D32)
-                    : _ink.withValues(alpha: 0.6),
+                    : _ink.withOpacity(0.6),
               ),
             ),
           ],
@@ -1508,12 +1508,12 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         TextButton.icon(
           onPressed: _generateQrCode,
           icon:
-              Icon(Icons.refresh, size: 13, color: _ink.withValues(alpha: 0.6)),
+              Icon(Icons.refresh, size: 13, color: _ink.withOpacity(0.6)),
           label: Text('刷新二维码',
               style: TextStyle(
                   fontSize: 11,
                   letterSpacing: 1,
-                  color: _ink.withValues(alpha: 0.6))),
+                  color: _ink.withOpacity(0.6))),
           style: TextButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
             minimumSize: Size.zero,
@@ -1539,7 +1539,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                 color: Theme.of(context)
                     .colorScheme
                     .primaryContainer
-                    .withValues(alpha: 0.3),
+                    .withOpacity(0.3),
                 shape: BoxShape.circle,
               ),
               child: Icon(

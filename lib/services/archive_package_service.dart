@@ -7,6 +7,8 @@ import '../core/error_handler.dart';
 import '../data/local/class_dao.dart';
 import '../data/local/course_dao.dart';
 import '../data/models/archive_document_model.dart';
+import 'archive/archive_document_policy.dart';
+import 'archive/native_docx_service.dart';
 import 'archive/pandoc_service.dart';
 import 'archive/processor_registry.dart';
 import 'archive/document_processor.dart';
@@ -146,7 +148,7 @@ class ArchivePackageService {
     if (processor != null) {
       bytes = await processor.toDocx(doc);
     } else {
-      bytes = await PandocService.instance.markdownToDocx(doc.content ?? '');
+      bytes = await _markdownToDocx(doc.content ?? '');
     }
 
     // 2) 写盘
@@ -315,51 +317,22 @@ class ArchivePackageService {
     }
   }
 
-  File? _sourceOriginalFile(ArchiveDocument doc) {
-    if (_contentMustBeRegenerated(doc.documentType)) return null;
-    final path = doc.filePath;
-    if (path == null) return null;
-    final ext = p.extension(path).toLowerCase();
-    const preserved = {
-      '.pdf',
-      '.doc',
-      '.docx',
-      '.xls',
-      '.xlsx',
-      '.ppt',
-      '.pptx',
-      '.png',
-      '.jpg',
-      '.jpeg',
-      '.webp',
-      '.bmp',
-    };
-    if (!preserved.contains(ext)) return null;
-    final file = File(path);
-    return file.existsSync() ? file : null;
+  Future<Uint8List> _markdownToDocx(String content) async {
+    if (content.trim().isEmpty) {
+      throw const ArchivePackageException('文档内容为空，无法生成 docx');
+    }
+    if (await PandocService.instance.isInstalled) {
+      try {
+        return await PandocService.instance.markdownToDocx(content);
+      } on PandocException catch (e) {
+        swallowDebug(e, tag: 'ArchivePackageService.markdownToDocx.pandoc');
+      }
+    }
+    return NativeDocxService.instance.markdownToDocx(content);
   }
 
-  bool _contentMustBeRegenerated(String docType) {
-    return const {
-      'syllabus_evaluation',
-      'syllabus_review',
-      'teaching_schedule',
-      'teacher_guide',
-      'student_guide',
-      'midterm_progress_check',
-      'midterm_homework_review',
-      'midterm_exam',
-      'midterm_check',
-      'midterm_analysis',
-      'final_archive_catalog',
-      'final_syllabus',
-      'final_syllabus_evaluation',
-      'final_teaching_schedule',
-      'final_lesson_plan',
-      'final_syllabus_review',
-      'final_assessment_review',
-      'final_assessment_description',
-    }.contains(docType);
+  File? _sourceOriginalFile(ArchiveDocument doc) {
+    return ArchiveDocumentPolicy.sourceOriginalFile(doc);
   }
 
   bool _isArchiveOutputFile(File f) {

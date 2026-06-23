@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../data/local/class_qa_dao.dart';
 import '../../../data/models/class_qa_model.dart';
 import '../../../services/agent/agent_model.dart';
@@ -221,7 +221,7 @@ class _ClassQaDetailPageState extends State<ClassQaDetailPage> {
       {required bool isAuthor, required ClassQaModel qa}) {
     final isAccepted = qa.acceptedReplyId == r.id;
     final highlight = r.isTeacher
-        ? Colors.amber.withValues(alpha: 0.10)
+        ? Colors.amber.withOpacity(0.10)
         : Colors.transparent;
     return Card(
       color: highlight == Colors.transparent ? null : highlight,

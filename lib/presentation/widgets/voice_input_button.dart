@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../services/navigation_service.dart';
 import '../../services/voice_service.dart';
@@ -328,7 +328,7 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
                         boxShadow: _isListening
                             ? [
                                 BoxShadow(
-                                  color: Colors.red.withValues(alpha: 0.3),
+                                  color: Colors.red.withOpacity(0.3),
                                   blurRadius: 20 * _pulseController.value,
                                   spreadRadius: 5 * _pulseController.value,
                                 ),
@@ -360,12 +360,12 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: theme.colorScheme.surfaceContainerHighest
-                    .withValues(alpha: 0.3),
+                    .withOpacity(0.3),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: _recognizedText.isNotEmpty
-                      ? primary.withValues(alpha: 0.3)
-                      : Colors.grey.withValues(alpha: 0.2),
+                      ? primary.withOpacity(0.3)
+                      : Colors.grey.withOpacity(0.2),
                 ),
               ),
               child: _recognizedText.isNotEmpty
@@ -388,7 +388,7 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
                 padding: const EdgeInsets.symmetric(
                     horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                  color: primary.withValues(alpha: 0.06),
+                  color: primary.withOpacity(0.06),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: SingleChildScrollView(
@@ -402,7 +402,7 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
                           child: Row(
                             children: [
                               Icon(Icons.check_circle,
-                                  color: primary.withValues(alpha: 0.7),
+                                  color: primary.withOpacity(0.7),
                                   size: 14),
                               const SizedBox(width: 6),
                               Expanded(
@@ -577,7 +577,7 @@ class _VoiceRecordDialogState extends State<_VoiceRecordDialog>
                         boxShadow: _isListening
                             ? [
                                 BoxShadow(
-                                  color: Colors.red.withValues(alpha: 0.3),
+                                  color: Colors.red.withOpacity(0.3),
                                   blurRadius: 20 * _pulseController.value,
                                   spreadRadius: 5 * _pulseController.value,
                                 ),
@@ -611,12 +611,12 @@ class _VoiceRecordDialogState extends State<_VoiceRecordDialog>
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: theme.colorScheme.surfaceContainerHighest
-                    .withValues(alpha: 0.3),
+                    .withOpacity(0.3),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: _recognizedText.isNotEmpty
-                      ? primary.withValues(alpha: 0.3)
-                      : Colors.grey.withValues(alpha: 0.2),
+                      ? primary.withOpacity(0.3)
+                      : Colors.grey.withOpacity(0.2),
                 ),
               ),
               child: _recognizedText.isNotEmpty
