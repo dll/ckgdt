@@ -433,6 +433,42 @@ pages    →  只调用 services/dao，不直接操作 DB
 6. **竖屏锁定**：`main()` 中 `SystemChrome.setPreferredOrientations`，不要删除
 7. **跨平台兼容**：涉及文件系统的服务使用 `_native.dart` + `_stub.dart` 条件导入
 
+### MaterialApp 本地化代理不可删除
+
+`lib/main.dart` 的 `MaterialApp` 必须使用生成的 i18n 单一入口：
+
+```dart
+import 'l10n/gen/app_localizations.dart';
+
+supportedLocales: AppL10n.supportedLocales,
+localizationsDelegates: AppL10n.localizationsDelegates,
+```
+
+**禁止**改成 `localizationsDelegates: const []`，也不要手写一份不含 `AppL10n.delegate` 的代理列表。`AppL10n.localizationsDelegates` 内部已经包含 `GlobalMaterialLocalizations.delegate`、`GlobalCupertinoLocalizations.delegate`、`GlobalWidgetsLocalizations.delegate`。
+
+历史事故（已多次出现）：
+
+- 2026-06-02 的 `fix(critical): 恢复 i18n localizationsDelegates` 已经修过一次：第 13 轮自动改动把 `AppL10n.localizationsDelegates` 替换为空 `const []`。
+- 2026-06-23 登录页再次异常：账号登录页不是样式丢失，而是 `TextField/TextFormField` 调用 `MaterialLocalizations.of(context)` 时拿到 `null`，运行期抛 `Null check operator used on a null value`，Flutter 用灰色错误占位撑满表单区域；扫码页因为几乎不渲染输入框，所以看起来正常。
+- 容易误判为登录页 UI 被改坏，因为错误占位显示在登录卡片内部，同时全局悬浮帮助按钮叠在页面上，视觉上像“输入界面完全变了”。
+
+反复发生原因：
+
+1. 自动代理/批量重构把 `localizationsDelegates` 当作可清理的模板字段，未理解 Material 组件运行期依赖。
+2. `flutter analyze` 不会发现 `localizationsDelegates: const []`，这是运行期错误，必须启动含 `TextField` 的页面才能暴露。
+3. 项目有生成的 `AppL10n`，但如果不坚持单一入口，后续手写 locale/delegate 很容易漏掉 `GlobalMaterialLocalizations` 或 `AppL10n.delegate`。
+
+排查登录页“灰色块/输入框消失/NavigationBar 崩溃”时，先看：
+
+```bash
+rg -n "localizationsDelegates|supportedLocales|AppL10n" lib/main.dart lib/l10n/gen/app_localizations.dart
+Get-Content build/windows/x64/runner/Release/logs/mad_init.log -Tail 120
+flutter analyze --no-pub lib/main.dart lib/presentation/pages/login
+flutter test test/app_localization_contract_test.dart
+```
+
+只有确认 `MaterialLocalizations` 正常后，才继续改登录页布局。不要先重写登录页视觉。
+
 ### 新增页面
 
 1. 在 `lib/presentation/pages/<模块>/` 下创建
