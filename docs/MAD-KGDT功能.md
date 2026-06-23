@@ -198,7 +198,7 @@
 - `productization_guide_page.dart`：实验成果产品化指导。
 
 ### 8.3 AI 批阅
-- `lab_grading_agent.dart`：自动批阅实验报告。
+- `grading_agent.dart`：统一批阅官，负责实验报告自动批阅。
 - `ai_grading_tab.dart`：AI 批阅结果展示标签。
 
 ### 8.4 实验数据资源
@@ -220,7 +220,7 @@
 - `ai_grading_tab.dart`：AI 批阅标签。
 
 ### 9.3 AI 批阅
-- `assessment_grading_agent.dart`：自动评分与反馈。
+- `grading_agent.dart`：统一批阅官，负责考核报告自动评分与反馈。
 - `assessment_agent.dart`：考核管理智能体。
 
 ### 9.4 考核数据资源
@@ -239,7 +239,7 @@
 - `ai_grading_tab.dart`：AI 批阅标签。
 
 ### 10.3 AI 批阅
-- `works_grading_agent.dart`：自动评分与反馈。
+- `grading_agent.dart`：统一批阅官，负责作品自动评分与反馈。
 - `works_agent.dart`：作品展示指导智能体。
 
 ---
@@ -281,34 +281,28 @@
 
 ### 13.2 多智能体框架（`services/agent/`）
 - **Director 编排模式**：`agent_registry.dart` 根据消息自动选择最佳智能体（关键词匹配 + AI 意图识别）。
-- **24 个专业智能体**：
+- **18 个专业智能体**：
 
 | 智能体 | 文件 | 功能 |
 |--------|------|------|
 | 语音导航 | `voice_agent.dart` | AI 意图识别，4 层路由（快速路径 → Tab 映射 → 子页面匹配 → AI 兜底） |
 | 图谱专家 | `graph_agent.dart` | 图谱查询与分析，支持数据库工具调用 |
-| 智能辅导 | `tutor_agent.dart` | 个性化学习辅导 |
-| 测验生成 | `quiz_agent.dart` | 根据知识点自动生成题目 |
-| 实验指导 | `lab_agent.dart` | 实验步骤与技巧指导 |
-| 实验批阅 | `lab_grading_agent.dart` | 自动批阅实验报告 |
+| 学习导师 | `tutor_agent.dart` | 个性化学习辅导、学习笔记和路径规划 |
+| 测验教练 | `quiz_agent.dart` | 根据知识点自动生成题目、分析错题 |
+| 实验助手 | `lab_agent.dart` | 跟踪实验任务进度、提交状态和截止提醒 |
 | 考核管理 | `assessment_agent.dart` | 考核流程管理 |
-| 考核批阅 | `assessment_grading_agent.dart` | 自动评分与反馈 |
 | 作品指导 | `works_agent.dart` | 作品展示与优化建议 |
-| 作品批阅 | `works_grading_agent.dart` | 自动评分与反馈 |
+| 批阅官 | `grading_agent.dart` | 统一批阅实验、考核报告和作品 |
 | 安全审查 | `safety_agent.dart` | 内容安全审查 |
 | 课件生成 | `courseware_agent.dart` | AI 生成课件内容 |
-| 一键生课 | `course_gen_agent.dart` | 自动生成完整课程内容 |
 | 通用助手 | `assistant_agent.dart` | 通用问答与辅助 |
-| 学习推荐 | `learning_agent.dart` | 个性化学习路径推荐 |
-| 学习计划 | `path_agent.dart` | 学习计划制定 |
 | 移动开发专家 | `mobile_expert_agent.dart` | 移动开发技术问答 |
 | 学术伦理 | `ethics_agent.dart` | 学术伦理指导 |
 | 成绩分析 | `achievement_agent.dart` | 成绩数据分析 |
 | 文档转换 | `doc_converter_agent.dart` | 文档格式转换 |
 | 仓库分析 | `repo_agent.dart` | Git 仓库分析 |
-| 系统指南 | `madkg_agent.dart` | 系统使用指南 |
-| 虚拟学生 | `virtual_student_agent.dart` | 数字孪生 — 学生人格模拟 |
-| 虚拟教师 | `virtual_teacher_agent.dart` | 数字孪生 — 教师督导辅助 |
+| 归档助手 | `archive_agent.dart` | 教学归档材料生成、审核、打印 |
+| 数字孪生 | `digital_twin_agent.dart` | 学生学习孪生与教师教学孪生双模式分析 |
 
 ### 13.3 对话交互
 - `agent_chat_overlay.dart`：全局智能体对话浮层，支持 **7 种导航动作**（跳转页面、打开资源、生成内容、调用工具等）。
@@ -343,15 +337,11 @@
 - 数字孪生配置管理：学习风格、知识水平、行为模式。
 - 孪生档案持久化与更新。
 
-### 15.2 虚拟学生（`virtual_student_agent.dart`）
-- 模拟学生学习行为，生成个性化学习建议。
-- 基于真实学习数据构建学生画像。
+### 15.2 数字孪生智能体（`digital_twin_agent.dart`）
+- 学生视角：模拟学习状态，生成个性化学习建议。
+- 教师视角：辅助教师决策，基于班级数据生成教学策略。
 
-### 15.3 虚拟教师（`virtual_teacher_agent.dart`）
-- 辅助教师决策，提供教学建议。
-- 基于班级数据生成教学策略。
-
-### 15.4 孪生交互（`virtual_twin_page.dart`）
+### 15.3 孪生交互（`virtual_twin_page.dart`）
 - 数字孪生可视化展示与交互。
 
 ---
@@ -490,7 +480,7 @@
 | **UI 框架** | Flutter 3 + Material Design 3 | 全平台统一 UI |
 | **本地数据库** | sqflite + 自定义 DAO | 61 张表，种子数据预置 |
 | **AI 服务** | DeepSeek / 智谱 GLM-4 | 多 Provider 切换，API Key 存 DB |
-| **多智能体** | 24 个 Agent + Director 编排 | 关键词匹配 + AI 意图识别 |
+| **多智能体** | 18 个 Agent + Director 编排 | 关键词匹配 + AI 意图识别 |
 | **RAG 检索** | RagService | 课程内容知识库增强 |
 | **语音交互** | 讯飞 WebSocket STT + edge-tts / Flutter 本地 TTS | 实时语音识别与合成 |
 | **数据同步** | Gitee 仓库 JSON 双向同步 | 无服务器架构 |
@@ -521,7 +511,7 @@
 │  presentation/widgets (6 个组件)        │
 ├─────────────────────────────────────────┤
 │  services (40+ 服务)                    │  ← 组合 DAO，处理业务逻辑
-│  services/agent (24 个智能体)           │
+│  services/agent (18 个智能体)           │
 ├─────────────────────────────────────────┤
 │  data/local/dao (26 个 DAO)             │  ← 只依赖 sqflite + DatabaseHelper
 │  data/models (12 个模型)                │  ← 纯数据类，无 Flutter 依赖
@@ -658,7 +648,7 @@
 | lab_material_preview_page.dart | ✅ | — | 多源加载/Markdown渲染/下载/复制 |
 | productization_guide_page.dart | ⚠️ | — | 检查清单完整，**但状态无持久化存储**（页面关闭后丢失） |
 | lab_task_dao.dart | ✅ | — | 任务/提交/评分/报告/互评/协作/统计全部有真实SQL |
-| lab_grading_agent.dart | ✅ | — | 完整AI批改逻辑，多维度评分/AI检测/硬规则 |
+| grading_agent.dart（实验批阅链） | ✅ | — | 完整AI批改逻辑，多维度评分/AI检测/硬规则 |
 | ai_grading_tab.dart（实验） | ✅ | ~1600 | 批量批阅/核准/调整/统计图表（fl_chart） |
 
 #### 模块 7：考核与作品
@@ -667,11 +657,11 @@
 |------|------|------|------|
 | assessment_page.dart | ✅ | ~225KB | 7个Tab，6种分组维度，AI批阅集成 |
 | assessment_dao.dart | ✅ | — | 分组/项目/评分/答辩/报告/贡献度全部CRUD+数据同步 |
-| assessment_grading_agent.dart | ✅ | — | AI五维度评分，结构化prompt+JSON输出 |
+| grading_agent.dart（考核批阅链） | ✅ | — | AI五维度评分，结构化prompt+JSON输出 |
 | assessment_agent.dart | ✅ | — | 考务官persona，真实AI调用 |
 | works_page.dart | ✅ | ~3000 | 4个Tab，视频上传/点赞/评论/评分/排行榜 |
 | works_dao.dart | ✅ | — | 完整CRUD+互动+评分+加权排行榜+数据同步 |
-| works_grading_agent.dart | ✅ | — | AI五维度评分，含硬规则约束 |
+| grading_agent.dart（作品批阅链） | ✅ | — | AI五维度评分，含硬规则约束 |
 | works_agent.dart | ✅ | — | 评审团persona，真实AI调用 |
 | plagiarism_service.dart | ✅ | — | 3-gram Jaccard相似度+AI特征检测+综合扫描存储 |
 
@@ -681,7 +671,7 @@
 |------|------|------|------|
 | ai_service.dart | ✅ | — | 真实HTTP调用OpenAI兼容API，余额查询/内容生成/图谱推荐 |
 | rag_service.dart | ⚠️ | — | 检索流程完整，但基于关键词LIKE匹配，**未实现向量嵌入语义检索** |
-| agent_registry.dart | ✅ | — | Director编排算法（匹配度+上下文连续性+兜底），20+智能体注册 |
+| agent_registry.dart | ✅ | — | Director编排算法（匹配度+上下文连续性+兜底），18 个智能体注册 |
 | base_agent.dart | ✅ | — | 关键词匹配/RAG增强/工具调用循环/错误处理 |
 | agent_model.dart | ✅ | — | 完整数据模型（工具/配置/消息/动作/会话） |
 
@@ -702,8 +692,7 @@
 |------|------|------|------|
 | twin_service.dart | ✅ | 847 | 学生14维+教师11维画像构建，风险评估/里程碑/趋势/快照管理 |
 | twin_profile_model.dart | ✅ | 404 | 6个模型类，全部有toJson/fromJson |
-| virtual_student_agent.dart | ✅ | 249 | 真实画像数据注入AI prompt，150行人格定义 |
-| virtual_teacher_agent.dart | ✅ | 265 | 真实教学画像注入，168行督导辅助人格 |
+| digital_twin_agent.dart | ✅ | — | 学生学习孪生与教师教学孪生双模式分析，真实画像数据注入AI prompt |
 | virtual_twin_page.dart | ✅ | 1790 | 12个UI模块，角色自适应，雷达图/热力图/成长曲线/AI诊断 |
 
 #### 模块 11-20：管理/通知/反馈/仓库/课堂/成就等
@@ -752,7 +741,7 @@
 **亮点**：
 1. 代码量充实：审核文件合计超过 **50,000 行**有效代码
 2. 算法实现有数学基础：力导向布局（Coulomb斥力+弹簧引力）、Kamada-Kawai布局、Jaccard相似度查重
-3. AI集成深度：24个智能体均有真实API调用，RAG检索增强，工具调用循环
+3. AI集成深度：18个智能体均有真实API调用，RAG检索增强，工具调用循环
 4. 数据同步健壮：Gitee双向同步+WebSocket局域网同步，task_id重映射，批改数据保护
 5. 数字孪生完整：学生14维+教师11维画像构建，真实数据注入AI prompt
 

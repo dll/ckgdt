@@ -30,7 +30,7 @@
 - 完成一个节点自动解锁下一个
 - 偏离时（学了不在路径上的节点），路径自动重排
 
-**对应**：`LearningPlanPage` + `learning_paths` / `path_nodes` 表 + `path_agent` AI
+**对应**：`LearningPlanPage` + `learning_paths` / `path_nodes` 表 + `tutor` / `assistant` AI
 
 ---
 
@@ -39,12 +39,12 @@
 **作为** 学生，**我想** 提交完实验报告 30 秒内得到一份"你哪里做对、哪里需要改"的反馈，**以便** 在老师批阅前就有迭代机会。
 
 **验收**：
-- PDF 上传后台触发 `lab_grading_agent`
+- PDF 上传后台触发 `grading` 统一批阅链
 - AI 给出 4 维度评分（功能、代码质量、报告完整性、创新）+ 详细反馈
 - AI 评分仅供参考，最终分由老师定
 - 老师可"采纳 AI 评分" 一键写入 `lab_submissions.score`
 
-**对应**：`StudentLabPage` + `lab_grading_agent` + `lab_submissions` 表
+**对应**：`StudentLabPage` + `grading_agent.dart` + `lab_submissions` 表
 
 ---
 
@@ -99,7 +99,7 @@
 - 修改后自动写入 DB 并推送到学生端
 - 4 报告整合的考核 PDF 含封面 + 批阅意见 + 正文章节
 
-**对应**：`lab_grading_agent` / `assessment_grading_agent` / `works_grading_agent` + `audit_print_panel.dart`
+**对应**：`grading_agent.dart` + `audit_print_panel.dart`
 
 ---
 
@@ -109,11 +109,11 @@
 
 **验收**：
 - 弹窗输入课程主题 + 章节数 + 难度
-- `course_gen_agent` 调 LLM 生成图谱 / 测验 / 实验初稿
+- `courseware_agent` 调 LLM 生成图谱 / 测验 / 实验初稿
 - 自动写入 `courses` 表 + 切换激活
 - 平台标题自动同步到新课程名
 
-**对应**：`CourseGeneratorSheet` + `course_gen_agent.dart` + `course_dao.dart`
+**对应**：`CourseGeneratorSheet` + `courseware_agent.dart` + `course_dao.dart`
 
 ---
 
@@ -137,10 +137,10 @@
 
 **验收**：
 - 给学生贴人格标签（成绩段 / 学习风格）
-- `virtual_student_agent` 按人格回答测验题
+- `digital_twin_agent` 按学生画像模拟学习状态和答题倾向
 - 模拟结果与真实答题对比，发现"教学盲区"
 
-**对应**：`virtual_student_agent.dart` + 人格化 prompt
+**对应**：`digital_twin_agent.dart` + 人格化 prompt
 
 ---
 

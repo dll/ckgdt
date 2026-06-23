@@ -17,20 +17,37 @@ class ProviderPreset {
   });
 }
 
-/// 内置默认 API Key 映射（开发版使用，正式发布时移除）
+/// 课堂试用内置 API Key。
+///
+/// 当前校内试用版保留，保证学生开箱即用；同时系统设置中始终允许用户填写
+/// 自己的 Key，用户 Key 优先于内置试用 Key。最终公开发布时使用：
+///
+/// ```shell
+/// flutter build ... --dart-define=USE_BUILTIN_TRIAL_API_KEYS=false
+/// ```
+///
+/// 这样发布包不再启用内置 key，并要求用户自行填写服务商 API Key。
 ///
 /// 格式: 'provider:model' => apiKey
 /// 如果只有 'provider' 则适用于该 provider 的所有模型
-const bool kShowApiKeyInput = bool.fromEnvironment(
-  'SHOW_API_KEY_INPUT',
-  defaultValue: false,
+const bool kUseBuiltinTrialApiKeys = bool.fromEnvironment(
+  'USE_BUILTIN_TRIAL_API_KEYS',
+  defaultValue: true,
 );
 
-const Map<String, String> builtinApiKeys = {
+const bool kShowApiKeyInput = bool.fromEnvironment(
+  'SHOW_API_KEY_INPUT',
+  defaultValue: true,
+);
+
+const Map<String, String> _classroomTrialApiKeys = {
   'deepseek': 'sk-c93a22110da94aebb834d6d0ddec802e',
   'zhipu': '5dc44da8d9dd4c28bf38cde316950f1e.nNIf7AXWrJXIcSyQ',
   'zhipu:glm-4.6v': '20322a4a95bf4bd68161b1f705aa6603.yHEHABcNAcOWy8WH',
 };
+
+const Map<String, String> builtinApiKeys =
+    kUseBuiltinTrialApiKeys ? _classroomTrialApiKeys : <String, String>{};
 
 class AiConfigModel {
   final String provider;
@@ -70,7 +87,8 @@ class AiConfigModel {
       name: '智谱清言 GLM',
       baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
       models: ['glm-4-flash', 'glm-4', 'glm-4-plus', 'glm-4.6v'],
-      description: '智谱 AI 开放平台，glm-4-flash 模型对所有用户永久免费，无需充值即可使用。glm-4.6v 为视觉多模态模型。',
+      description:
+          '智谱 AI 开放平台，glm-4-flash 模型对所有用户永久免费，无需充值即可使用。glm-4.6v 为视觉多模态模型。',
       freeNote: 'glm-4-flash 永久免费',
     ),
     ProviderPreset(
@@ -133,14 +151,19 @@ class AiConfigModel {
         'openai/gpt-4o',
         'deepseek/deepseek-v4-pro',
       ],
-      description: 'OpenRouter 聚合代理，一个 API Key 访问所有主流大模型（Claude/GPT/Gemini/DeepSeek等），推荐课件工坊使用 Claude Opus 生成高质量内容。',
+      description:
+          'OpenRouter 聚合代理，一个 API Key 访问所有主流大模型（Claude/GPT/Gemini/DeepSeek等），推荐课件工坊使用 Claude Opus 生成高质量内容。',
       freeNote: '部分模型有免费额度',
     ),
     ProviderPreset(
       id: 'claude',
       name: 'Anthropic Claude',
       baseUrl: 'https://api.anthropic.com/v1',
-      models: ['claude-sonnet-4-20250514', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
+      models: [
+        'claude-sonnet-4-20250514',
+        'claude-3-5-haiku-20241022',
+        'claude-3-opus-20240229'
+      ],
       description: 'Anthropic Claude 系列模型，擅长长文本分析和代码生成，需要海外网络环境。',
     ),
     ProviderPreset(
@@ -172,8 +195,15 @@ class AiConfigModel {
       id: 'ollama',
       name: 'Ollama（本地）',
       baseUrl: 'http://localhost:11434/v1',
-      models: ['llama3.1:8b', 'qwen2.5:7b', 'qwen2.5:14b', 'mistral:7b', 'gemma2:9b'],
-      description: '本地运行的 Ollama 服务，OpenAI 兼容接口。无需 API Key、完全离线、教学场景内网首选。需先 `ollama pull <model>` 下载模型。',
+      models: [
+        'llama3.1:8b',
+        'qwen2.5:7b',
+        'qwen2.5:14b',
+        'mistral:7b',
+        'gemma2:9b'
+      ],
+      description:
+          '本地运行的 Ollama 服务，OpenAI 兼容接口。无需 API Key、完全离线、教学场景内网首选。需先 `ollama pull <model>` 下载模型。',
       freeNote: '本地免费',
     ),
     ProviderPreset(

@@ -41,7 +41,7 @@ class SafetyAgent extends BaseAgent {
 - **处置方式**：生成安全报告，标注风险等级（高/中/低）
 
 ## 三、智能体质量监控
-- **监控对象**：系统中所有 AI 智能体（当前 22 个）
+- **监控对象**：系统中所有 AI 智能体（当前 18 个）
 - **质量指标**：
   - 响应准确率：AI 回答是否正确且相关
   - 角色一致性：是否偏离预设人设
@@ -115,9 +115,21 @@ YYYY-MM-DD HH:MM
 - 保守对待系统内部信息，仅向管理员披露''',
         priority: 9,
         keywords: [
-          '安全', '监控', '审计', '审核', '风险', '漏洞',
-          '质量', '合规', '可靠', '智能体监控', '内容审核',
-          'security', 'safety', 'audit', 'monitor',
+          '安全',
+          '监控',
+          '审计',
+          '审核',
+          '风险',
+          '漏洞',
+          '质量',
+          '合规',
+          '可靠',
+          '智能体监控',
+          '内容审核',
+          'security',
+          'safety',
+          'audit',
+          'monitor',
         ],
         capabilities: [
           '课程内容安全审核',
@@ -137,17 +149,20 @@ YYYY-MM-DD HH:MM
           AgentCase(
             title: '智能体质量评估',
             userInput: '请对系统所有智能体进行一次质量评估',
-            agentReply: '# 🛡️ 智能体质量评估报告\n\n## 审计时间\n2026-04-20\n\n## 评估结果\n| 智能体 | 准确率 | 角色一致性 | 安全合规 | 评级 |\n|--------|--------|-----------|---------|------|\n| 📝 测验教练 | 高 | 良好 | 通过 | ⭐⭐⭐⭐ |\n| 🕸️ 图谱专家 | 高 | 良好 | 通过 | ⭐⭐⭐⭐ |\n| 🔬 实验批阅 | 高 | 良好 | 通过 | ⭐⭐⭐⭐⭐ |\n\n## 总体评级：良好\n所有智能体运行正常，建议定期更新 Prompt 以适应课程内容变化。',
+            agentReply:
+                '# 🛡️ 智能体质量评估报告\n\n## 审计时间\n2026-04-20\n\n## 评估结果\n| 智能体 | 准确率 | 角色一致性 | 安全合规 | 评级 |\n|--------|--------|-----------|---------|------|\n| 📝 测验教练 | 高 | 良好 | 通过 | ⭐⭐⭐⭐ |\n| 🕸️ 图谱专家 | 高 | 良好 | 通过 | ⭐⭐⭐⭐ |\n| 🔬 实验批阅 | 高 | 良好 | 通过 | ⭐⭐⭐⭐⭐ |\n\n## 总体评级：良好\n所有智能体运行正常，建议定期更新 Prompt 以适应课程内容变化。',
           ),
           AgentCase(
             title: '内容安全审核',
             userInput: '审核课件生成智能体最近生成的内容是否安全合规',
-            agentReply: '{"审核结果": "通过", "安全评分": 92, "问题列表": [{"类型": "技术准确性", "严重程度": "低", "位置": "第3章 Flutter 部分", "描述": "setState 使用示例缺少 mounted 检查", "建议": "添加 if (mounted) setState(() {...}) 保护"}], "总体评价": "生成内容整体安全合规，有1处低风险技术准确性问题，建议修正。"}',
+            agentReply:
+                '{"审核结果": "通过", "安全评分": 92, "问题列表": [{"类型": "技术准确性", "严重程度": "低", "位置": "第3章 Flutter 部分", "描述": "setState 使用示例缺少 mounted 检查", "建议": "添加 if (mounted) setState(() {...}) 保护"}], "总体评价": "生成内容整体安全合规，有1处低风险技术准确性问题，建议修正。"}',
           ),
           AgentCase(
             title: '系统安全审计',
             userInput: '对系统进行一次安全审计，检查 API Key 和数据安全',
-            agentReply: '# 🛡️ 安全审计报告\n\n## 🟡 中风险\n- AI 配置中的 API Key 存储在 SQLite 明文字段 — 建议加密存储\n\n## 🟢 低风险\n- 学生密码使用 SHA-256 哈希，安全性可接受\n- 数据库使用参数化查询，无 SQL 注入风险\n\n## 总体评级：良好\n系统整体安全性达标，建议优先处理 API Key 加密存储问题。',
+            agentReply:
+                '# 🛡️ 安全审计报告\n\n## 🟡 中风险\n- AI 配置中的 API Key 存储在 SQLite 明文字段 — 建议加密存储\n\n## 🟢 低风险\n- 学生密码使用 SHA-256 哈希，安全性可接受\n- 数据库使用参数化查询，无 SQL 注入风险\n\n## 总体评级：良好\n系统整体安全性达标，建议优先处理 API Key 加密存储问题。',
           ),
         ],
       );
@@ -167,9 +182,12 @@ YYYY-MM-DD HH:MM
     final lower = userMessage.toLowerCase();
 
     // 可疑提交列表
-    if (lower.contains('可疑') || lower.contains('ai检测') || lower.contains('疑似')) {
+    if (lower.contains('可疑') ||
+        lower.contains('ai检测') ||
+        lower.contains('疑似')) {
       try {
-        final suspicious = await PlagiarismService().listSuspicious(threshold: 0.7);
+        final suspicious =
+            await PlagiarismService().listSuspicious(threshold: 0.7);
         if (suspicious.isEmpty) {
           return buildReply('当前没有发现 AI 可疑提交（阈值 > 70%）。');
         }
@@ -177,7 +195,8 @@ YYYY-MM-DD HH:MM
         sb.writeln('| 类型 | ID | 用户 | 可疑度 | 证据 |');
         sb.writeln('|------|-----|------|--------|------|');
         for (final r in suspicious) {
-          sb.writeln('| ${r['source_type']} | ${r['id']} | ${r['user_id']} | ${((r['ai_suspicion'] as num?) ?? 0 * 100).toStringAsFixed(0)}% | ${r['ai_evidence'] ?? '-'} |');
+          sb.writeln(
+              '| ${r['source_type']} | ${r['id']} | ${r['user_id']} | ${((r['ai_suspicion'] as num?) ?? 0 * 100).toStringAsFixed(0)}% | ${r['ai_evidence'] ?? '-'} |');
         }
         return buildReply(sb.toString());
       } catch (e) {
@@ -187,7 +206,8 @@ YYYY-MM-DD HH:MM
 
     // 全量扫描
     if (lower.contains('扫描') || lower.contains('全量检测')) {
-      return buildReply('全量扫描功能已集成到提交流程中。每次学生提交实验/作品时会自动进行 Jaccard 相似度 + AI 特征检测。\n\n如需查看可疑列表，请说"列出可疑提交"。');
+      return buildReply(
+          '全量扫描功能已集成到提交流程中。每次学生提交实验/作品时会自动进行 Jaccard 相似度 + AI 特征检测。\n\n如需查看可疑列表，请说"列出可疑提交"。');
     }
 
     // 常规 AI 对话

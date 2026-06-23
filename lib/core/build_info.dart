@@ -34,7 +34,7 @@ class BuildInfo {
   /// 登录页落款年份（年份每年元旦更新一次，与版本号解耦）。
   static const String appEdition = 'EDITION 2026';
 
-  /// 拼成 "移动图谱与数字孪生v{version}"，给窗体标题 / 文件名用。
+  /// 拼成 "课程图谱与数字孪生v{version}"，给窗体标题 / 文件名用。
   static const String appBrandWithVersion = '${appBrand}v$appVersion';
 
   /// 拼成 "V{version}  ·  EDITION 2026"，给登录页副标题用。

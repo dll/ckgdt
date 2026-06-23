@@ -19,17 +19,20 @@ class AppUrls {
 ///
 /// **设计权衡**：本项目是教学场景，所有学生需要往 osgisOne/mad-fd 仓库提交作业。
 /// 不可能让 88 个学生每人申请一把 access_token，因此采用"全班共享一把预置 Token"
-/// 模式 — 这是教学产品的标准取舍，不是安全漏洞。
+/// 模式。它是课堂试用/校内教学同步凭据，不是公开发布凭据。
 ///
 /// 如果泄漏到课程外，作废重发即可（去 Gitee 后台 revoke 旧 token，把 [syncToken]
 /// 改为新值，重新构建发版给学生）。
+///
+/// 最终公开发布时应移除本常量中的真实 token，改为管理员/用户首次启动自填，
+/// 或改为服务端代理签发最小权限临时凭据。
 ///
 /// 上一次旧 Token: `64a07762f8a3ab4415b8c943651bfb91`（已 revoke，仅用于检测旧
 /// SharedPreferences 缓存值并自动覆盖更新）。
 class GiteeCredentials {
   GiteeCredentials._();
 
-  /// 当前预置同步 Token（osgisOne/mad-fd 仓库读写权限）。
+  /// 当前课堂试用预置同步 Token（osgisOne/mad-fd 仓库读写权限）。
   static const String syncToken = '17d6948aabc0764e4f18bb7b215fa32c';
 
   /// 已作废的旧 Token — 检测到学生本地仍存这个值时自动替换为 [syncToken]。

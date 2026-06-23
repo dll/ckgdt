@@ -32,16 +32,16 @@
 |------|------|---------|
 | 知识图谱浏览 + 学习路径推荐 | `graph/` (5 页) + `learning/` (11 页) | `knowledge_graph_page.dart` 4815 行 |
 | 章节测验（52 题预置） | `quiz/` (2 页) + 错题本 | `quiz_dao.dart`、52 题 seed DB |
-| 实验任务管理 + 报告提交 + AI 批阅 | `lab/` (5 页) + `lab_grading_agent` | `lab_tasks_page.dart` 6679 行 |
+| 实验任务管理 + 报告提交 + AI 批阅 | `lab/` (5 页) + `grading` 统一批阅官 | `lab_tasks_page.dart` 6679 行 |
 | 项目考核 + 答辩 + 同行评审 + 贡献分 | `assessment/` (4 页) | 5 张相关表 |
 | 学生作品展示 + 互动 | `works/` (2 页) | `student_works` + 4 张互动表 |
 | 课程达成度（OBE 反向设计 8 Tab） | `achievement/` (6 页) | `achievement_dao.dart` + 三维成绩表 |
 | 班级 / 课堂签到 / 教学管理 | `admin/` (17 页) + `classroom/` | 6 张教学表 |
-| AI 多智能体辅助 | 24 个 Agent + RAG | `lib/services/agent/` |
+| AI 多智能体辅助 | 18 个 Agent + RAG | `lib/services/agent/` |
 | 跨设备同步（无服务器） | Gitee 仓库 JSON 双向同步 | `sync_service.dart` 1471 行 |
 | 三端互通（桌面 + 手机 + Web） | 局域网 P2P + GitHub Pages 公网 | `cross_platform/` (2 页) |
-| 数字孪生（学生/教师人格化） | `virtual_student_agent` / `virtual_teacher_agent` | 2 个 Agent |
-| 一键生课（换课程） | `course_gen_agent` + `CourseGeneratorSheet` | `courses` 表 |
+| 数字孪生（学生/教师双模式） | `digital_twin_agent` | 1 个 Agent |
+| 一键生课（换课程） | `courseware_agent` + `CourseGeneratorSheet` | `courses` 表 |
 
 ## 4 · 非功能要求
 

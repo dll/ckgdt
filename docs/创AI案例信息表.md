@@ -22,7 +22,7 @@
 
 ## 3. 特色与创新
 
-- **24 Agent + Orchestrator 链式批阅**，含 safety / ethics 双护栏，全程 chain_id 可追溯。
+- **18 Agent + Orchestrator 链式批阅**，含 safety / ethics 双护栏，全程 chain_id 可追溯。
 - **数字孪生学生 / 教师**——AI 模拟答题与教学反思。
 - **向量 RAG + LRU 缓存**，开机自动灌入图谱 + 资料 + 题库。
 - **OBE 达成度** + **一键 PDF 批阅报告** + **二维码扫码取卷**。
@@ -41,7 +41,7 @@
   - `CLAUDE.md` 项目总览
   - `docs/case_study/PRD.md` 产品需求 / `user_stories.md` 用户故事 / `demo_script.md` 4 段 120 秒演示脚本
   - `docs/MAD-KGDT 审核报告(Opus4.7-第一/二/三轮).md` 三轮自审报告
-  - 应用内"使用手册"页 + "我的数据"页 + 24 个 Agent 各自 .md persona
+  - 应用内"使用手册"页 + "我的数据"页 + 18 个 Agent 各自 .md persona
 
 ## 6. 案例内容简介
 

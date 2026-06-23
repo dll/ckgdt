@@ -20,10 +20,23 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 
+import '../core/build_info.dart';
 import 'settings_service.dart';
 import 'version_bump_service.dart';
 
 enum ReleaseStepStatus { pending, running, success, failed, skipped }
+
+class _RunningProcess {
+  final int pid;
+  final String name;
+  final String path;
+
+  const _RunningProcess({
+    required this.pid,
+    required this.name,
+    required this.path,
+  });
+}
 
 class ReleaseStep {
   final String id;
@@ -32,10 +45,15 @@ class ReleaseStep {
   String? errorMessage;
   Duration? duration;
 
-  ReleaseStep({required this.id, required this.label, this.status = ReleaseStepStatus.pending});
+  ReleaseStep(
+      {required this.id,
+      required this.label,
+      this.status = ReleaseStepStatus.pending});
 }
 
 class ReleaseService {
+  static const String _brand = BuildInfo.appBrand;
+
   // ── 常量 ──────────────────────────────────────────────────────
   /// bump 时遇 tag/release 已存在 → 自动 +patch 重试上限。
   /// 超出抛错（防止跑飞到 0.13.30）。
@@ -66,6 +84,7 @@ class ReleaseService {
       ];
 
   final List<ReleaseStep> _steps = defaultSteps();
+
   /// 只读视图（防止外部 mutate）。
   List<ReleaseStep> get steps => List.unmodifiable(_steps);
   final StreamController<String> _logCtrl = StreamController.broadcast();
@@ -77,6 +96,20 @@ class ReleaseService {
   Stream<void> get stepStream => _stepCtrl.stream;
   String? get targetVersion => _targetVersion;
   bool get isRunning => _running;
+
+  static String windowsReleaseExePath({
+    required String projectRoot,
+    required String version,
+  }) =>
+      p.join(
+        projectRoot,
+        'build',
+        'windows',
+        'x64',
+        'runner',
+        'Release',
+        '${_brand}v$version.exe',
+      );
 
   void _log(String tag, String msg) {
     if (_logCtrl.isClosed) return;
@@ -161,9 +194,8 @@ class ReleaseService {
     _running = true;
     try {
       // 起始 index：fromStepId 指定的步骤（默认 0）
-      final fromIdx = fromStepId == null
-          ? 0
-          : _steps.indexWhere((s) => s.id == fromStepId);
+      final fromIdx =
+          fromStepId == null ? 0 : _steps.indexWhere((s) => s.id == fromStepId);
       if (fromIdx < 0) {
         _log('orch', '未知 fromStepId: $fromStepId');
         return false;
@@ -246,15 +278,25 @@ class ReleaseService {
 
   Future<void> _stepCheckWindows() async {
     final ver = await _resolveTargetVersion();
-    final exe = File(p.join(VersionBumpService.projectRoot, 'build', 'windows',
-        'x64', 'runner', 'Release', '移动图谱与数字孪生v$ver.exe'));
+    final exe = File(windowsReleaseExePath(
+      projectRoot: VersionBumpService.projectRoot,
+      version: ver,
+    ));
+    final running = await _findRunningProcessesByPath(exe.path);
+    if (running.isNotEmpty) {
+      final details =
+          running.map((p) => 'PID ${p.pid} ${p.name} (${p.path})').join('\n');
+      throw StateError('Windows 发布程序仍在运行，构建/打包前请先关闭：\n$details\n\n'
+          '关闭后重新执行：\n  flutter build windows --release');
+    }
     if (!await exe.exists()) {
       throw StateError(
           'Windows EXE 不存在：${exe.path}\n\nadmin 请先在 PowerShell 终端跑：\n'
           '  flutter build windows --release\n\n（应用内不能构建 Windows——'
           'EXE 自我编译会 LNK1104）');
     }
-    _log('check_windows', '✓ ${exe.path} 已就绪 (${(await exe.length()) ~/ 1024} KB)');
+    _log('check_windows',
+        '✓ ${exe.path} 已就绪 (${(await exe.length()) ~/ 1024} KB)');
   }
 
   Future<void> _stepBuildAndroid() async {
@@ -303,17 +345,20 @@ class ReleaseService {
     final ps1 = p.join(root, 'scripts', 'pack_dist_zip.ps1');
 
     // Windows zip：直接打 build/windows/x64/runner/Release/
-    await _runShell('powershell', [
-      '-NoProfile',
-      '-ExecutionPolicy',
-      'Bypass',
-      '-File',
-      ps1,
-      '-SourceDir',
-      p.join(root, 'build', 'windows', 'x64', 'runner', 'Release'),
-      '-ZipPath',
-      p.join(distDir.path, '移动图谱与数字孪生+windows+v$ver.zip'),
-    ], tag: 'pack:windows');
+    await _runShell(
+        'powershell',
+        [
+          '-NoProfile',
+          '-ExecutionPolicy',
+          'Bypass',
+          '-File',
+          ps1,
+          '-SourceDir',
+          p.join(root, 'build', 'windows', 'x64', 'runner', 'Release'),
+          '-ZipPath',
+          p.join(distDir.path, '$_brand+windows+v$ver.zip'),
+        ],
+        tag: 'pack:windows');
 
     // Android / Web / HarmonyOS：先在 build/_pack/ 各端组装 staging dir + README
     final pack = Directory(p.join(root, 'build', '_pack'));
@@ -323,38 +368,44 @@ class ReleaseService {
     // Android
     final androidDir = Directory(p.join(pack.path, 'android'));
     await androidDir.create();
-    await File(p.join(root, 'build', 'app', 'outputs', 'flutter-apk',
-            'app-release.apk'))
-        .copy(p.join(androidDir.path, '移动图谱与数字孪生v$ver.apk'));
+    await File(p.join(
+            root, 'build', 'app', 'outputs', 'flutter-apk', 'app-release.apk'))
+        .copy(p.join(androidDir.path, '$_brand' 'v$ver.apk'));
     await _writeReadme(p.join(androidDir.path, '安装说明.txt'), 'android', ver);
-    await _runShell('powershell', [
-      '-NoProfile',
-      '-ExecutionPolicy',
-      'Bypass',
-      '-File',
-      ps1,
-      '-SourceDir',
-      androidDir.path,
-      '-ZipPath',
-      p.join(distDir.path, '移动图谱与数字孪生+android+v$ver.zip'),
-    ], tag: 'pack:android');
+    await _runShell(
+        'powershell',
+        [
+          '-NoProfile',
+          '-ExecutionPolicy',
+          'Bypass',
+          '-File',
+          ps1,
+          '-SourceDir',
+          androidDir.path,
+          '-ZipPath',
+          p.join(distDir.path, '$_brand+android+v$ver.zip'),
+        ],
+        tag: 'pack:android');
 
     // Web
     final webDir = Directory(p.join(pack.path, 'web'));
     await webDir.create();
     await _copyDir(Directory(p.join(root, 'build', 'web')), webDir);
     await _writeReadme(p.join(webDir.path, '启动说明.txt'), 'web', ver);
-    await _runShell('powershell', [
-      '-NoProfile',
-      '-ExecutionPolicy',
-      'Bypass',
-      '-File',
-      ps1,
-      '-SourceDir',
-      webDir.path,
-      '-ZipPath',
-      p.join(distDir.path, '移动图谱与数字孪生+web+v$ver.zip'),
-    ], tag: 'pack:web');
+    await _runShell(
+        'powershell',
+        [
+          '-NoProfile',
+          '-ExecutionPolicy',
+          'Bypass',
+          '-File',
+          ps1,
+          '-SourceDir',
+          webDir.path,
+          '-ZipPath',
+          p.join(distDir.path, '$_brand+web+v$ver.zip'),
+        ],
+        tag: 'pack:web');
 
     // HarmonyOS
     final hapDir = Directory(p.join(pack.path, 'harmonyos'));
@@ -364,22 +415,25 @@ class ReleaseService {
     if (!await hapSrc.exists()) {
       throw StateError('HAP 不存在：${hapSrc.path}');
     }
-    await hapSrc.copy(p.join(hapDir.path, '移动图谱与数字孪生v$ver.hap'));
+    await hapSrc.copy(p.join(hapDir.path, '$_brand' 'v$ver.hap'));
     await _writeReadme(p.join(hapDir.path, '安装说明.txt'), 'harmonyos', ver);
-    await _runShell('powershell', [
-      '-NoProfile',
-      '-ExecutionPolicy',
-      'Bypass',
-      '-File',
-      ps1,
-      '-SourceDir',
-      hapDir.path,
-      '-ZipPath',
-      p.join(distDir.path, '移动图谱与数字孪生+harmonyos+v$ver.zip'),
-    ], tag: 'pack:harmonyos');
+    await _runShell(
+        'powershell',
+        [
+          '-NoProfile',
+          '-ExecutionPolicy',
+          'Bypass',
+          '-File',
+          ps1,
+          '-SourceDir',
+          hapDir.path,
+          '-ZipPath',
+          p.join(distDir.path, '$_brand+harmonyos+v$ver.zip'),
+        ],
+        tag: 'pack:harmonyos');
 
     // ASCII 别名（Windows 260 字符路径限制兜底）
-    final winZip = File(p.join(distDir.path, '移动图谱与数字孪生+windows+v$ver.zip'));
+    final winZip = File(p.join(distDir.path, '$_brand+windows+v$ver.zip'));
     final asciiAlias = File(p.join(distDir.path, 'MAD-windows-v$ver.zip'));
     if (await asciiAlias.exists()) await asciiAlias.delete();
     await winZip.copy(asciiAlias.path);
@@ -406,8 +460,7 @@ class ReleaseService {
       'web/manifest.json',
       'ohos/AppScope/app.json5',
     ];
-    await _runShell('git', ['add', ...filesToAdd],
-        tag: 'git', cwd: root);
+    await _runShell('git', ['add', ...filesToAdd], tag: 'git', cwd: root);
 
     // 2. commit（即使无改动也允许，例如 admin 重试 git_push）
     await _runShell(
@@ -420,16 +473,14 @@ class ReleaseService {
     // 3. tag
     await _runShell('git', ['tag', '-d', 'v$ver'],
         tag: 'git', cwd: root, allowFail: true);
-    await _runShell(
-        'git', ['tag', '-a', 'v$ver', '-m', 'release: v$ver'],
+    await _runShell('git', ['tag', '-a', 'v$ver', '-m', 'release: v$ver'],
         tag: 'git', cwd: root);
 
     // 4. push origin / github master + tag（Gitee 易撞学生 push，rebase）
     await _runShell('git', ['fetch', 'origin'], tag: 'git', cwd: root);
     await _runShell('git', ['pull', '--rebase', 'origin', 'master'],
         tag: 'git', cwd: root, allowFail: true);
-    await _runShell('git', ['push', 'origin', 'master'],
-        tag: 'git', cwd: root);
+    await _runShell('git', ['push', 'origin', 'master'], tag: 'git', cwd: root);
     await _runShell('git', ['push', 'origin', 'v$ver', '--force'],
         tag: 'git', cwd: root);
 
@@ -438,8 +489,7 @@ class ReleaseService {
         workingDirectory: root, runInShell: true);
     final remotes = (remotesProc.stdout as String).trim().split('\n');
     if (remotes.contains('github')) {
-      await _runShell(
-          'git', ['push', 'github', 'master', '--force-with-lease'],
+      await _runShell('git', ['push', 'github', 'master', '--force-with-lease'],
           tag: 'git', cwd: root);
       await _runShell('git', ['push', 'github', 'v$ver', '--force'],
           tag: 'git', cwd: root);
@@ -526,10 +576,10 @@ class ReleaseService {
 
     final assets = <String, String>{
       // 中文名（Gitee 用，GitHub 自动 ASCII 化）
-      '移动图谱与数字孪生+windows+v$ver.zip': 'MAD-KGDT-windows-v$ver.zip',
-      '移动图谱与数字孪生+android+v$ver.zip': 'MAD-KGDT-android-v$ver.zip',
-      '移动图谱与数字孪生+web+v$ver.zip': 'MAD-KGDT-web-v$ver.zip',
-      '移动图谱与数字孪生+harmonyos+v$ver.zip': 'MAD-KGDT-harmonyos-v$ver.zip',
+      '$_brand+windows+v$ver.zip': 'MAD-KGDT-windows-v$ver.zip',
+      '$_brand+android+v$ver.zip': 'MAD-KGDT-android-v$ver.zip',
+      '$_brand+web+v$ver.zip': 'MAD-KGDT-web-v$ver.zip',
+      '$_brand+harmonyos+v$ver.zip': 'MAD-KGDT-harmonyos-v$ver.zip',
       'MAD-windows-v$ver.zip': 'MAD-windows-v$ver.zip',
       '一键安装-Windows.bat': 'install-windows.bat',
       '安装手册.pdf': 'install-manual.pdf',
@@ -615,8 +665,7 @@ class ReleaseService {
         tag: 'ghpages', cwd: deployDir.path);
     await _runShell('git', ['config', 'core.longpaths', 'true'],
         tag: 'ghpages', cwd: deployDir.path);
-    await _runShell('git', ['add', '-A'],
-        tag: 'ghpages', cwd: deployDir.path);
+    await _runShell('git', ['add', '-A'], tag: 'ghpages', cwd: deployDir.path);
     await _runShell(
       'git',
       [
@@ -708,6 +757,50 @@ class ReleaseService {
     }
   }
 
+  Future<List<_RunningProcess>> _findRunningProcessesByPath(
+      String targetPath) async {
+    if (!Platform.isWindows) return const [];
+    final escaped = targetPath.replaceAll("'", "''");
+    final script = '''
+\$target = [System.IO.Path]::GetFullPath('$escaped')
+\$matches = @(Get-Process | ForEach-Object {
+  try {
+    if (\$_.Path -eq \$target) {
+      [pscustomobject]@{ Id = \$_.Id; ProcessName = \$_.ProcessName; Path = \$_.Path }
+    }
+  } catch {}
+})
+\$matches | ConvertTo-Json -Compress
+''';
+    final result = await Process.run(
+      'powershell',
+      ['-NoProfile', '-Command', script],
+      runInShell: true,
+    );
+    if (result.exitCode != 0) {
+      _log('check_windows', '! 进程占用检测失败：${result.stderr}');
+      return const [];
+    }
+    final raw = (result.stdout as String).trim();
+    if (raw.isEmpty) return const [];
+    try {
+      final decoded = jsonDecode(raw);
+      final items = decoded is List ? decoded : [decoded];
+      return [
+        for (final item in items)
+          if (item is Map)
+            _RunningProcess(
+              pid: (item['Id'] as num?)?.toInt() ?? 0,
+              name: item['ProcessName']?.toString() ?? '',
+              path: item['Path']?.toString() ?? '',
+            )
+      ];
+    } catch (e) {
+      _log('check_windows', '! 进程占用检测结果解析失败：$e');
+      return const [];
+    }
+  }
+
   Future<bool> _gitTagExists(String tag) async {
     final root = VersionBumpService.projectRoot;
     final r = await Process.run('git', ['tag', '-l', tag],
@@ -729,15 +822,16 @@ class ReleaseService {
         if (isSuccess == null || isSuccess(r)) return r;
         // isSuccess=false 视同瞬时错误，重试
         if (i < _kHttpRetryAttempts - 1) {
-          _log('http', '$label: 上游返回非成功，${_kHttpRetryBackoff[i].inSeconds}s 后重试');
+          _log('http',
+              '$label: 上游返回非成功，${_kHttpRetryBackoff[i].inSeconds}s 后重试');
           await Future<void>.delayed(_kHttpRetryBackoff[i]);
           continue;
         }
         return r;
       } catch (e) {
         if (i < _kHttpRetryAttempts - 1) {
-          _log('http',
-              '$label 异常 ($e)，${_kHttpRetryBackoff[i].inSeconds}s 后重试');
+          _log(
+              'http', '$label 异常 ($e)，${_kHttpRetryBackoff[i].inSeconds}s 后重试');
           await Future<void>.delayed(_kHttpRetryBackoff[i]);
           continue;
         }
@@ -747,8 +841,7 @@ class ReleaseService {
     throw StateError('$label 重试 $_kHttpRetryAttempts 次仍失败');
   }
 
-  Future<bool> _githubReleaseExists(
-      String repo, String tag, String pat) async {
+  Future<bool> _githubReleaseExists(String repo, String tag, String pat) async {
     final r = await _withHttpRetry(
       'github release tags/$tag',
       () => http.get(
@@ -803,10 +896,10 @@ class ReleaseService {
 
     // 上传新资产 — 大文件 multipart 是最容易遭遇 5xx 的；retry 价值最大。
     final assets = <String>[
-      '移动图谱与数字孪生+windows+v$ver.zip',
-      '移动图谱与数字孪生+android+v$ver.zip',
-      '移动图谱与数字孪生+web+v$ver.zip',
-      '移动图谱与数字孪生+harmonyos+v$ver.zip',
+      '$_brand+windows+v$ver.zip',
+      '$_brand+android+v$ver.zip',
+      '$_brand+web+v$ver.zip',
+      '$_brand+harmonyos+v$ver.zip',
       'MAD-windows-v$ver.zip',
       '一键安装-Windows.bat',
       '安装手册.pdf',
@@ -861,7 +954,7 @@ class ReleaseService {
     switch (platform) {
       case 'android':
         content = '''
-移动图谱与数字孪生 — Android 安装说明
+$_brand — Android 安装说明
 ========================================
 版本：v$ver
 包名：cn.edu.chzu.madkgdt
@@ -877,7 +970,7 @@ $defaults
         break;
       case 'web':
         content = '''
-移动图谱与数字孪生 — Web 启动说明
+$_brand — Web 启动说明
 ========================================
 版本：v$ver
 
@@ -901,7 +994,7 @@ $defaults
         break;
       case 'harmonyos':
         content = '''
-移动图谱与数字孪生 — HarmonyOS HAP 安装说明
+$_brand — HarmonyOS HAP 安装说明
 ============================================
 版本：v$ver
 包格式：HAP (OpenHarmony 调试签名)
@@ -912,7 +1005,7 @@ $defaults
 
 安装：
 1. 真机打开"开发者模式"（设置 → 关于手机 → 连点版本号）
-2. 用 hdc 工具：hdc install 移动图谱与数字孪生v$ver.hap
+2. 用 hdc 工具：hdc install ${_brand}v$ver.hap
 3. 或者用 DevEco Studio 安装
 
 $defaults
@@ -934,10 +1027,10 @@ $defaults
 
 | 端 | 包名 | 大小 |
 |----|------|------|
-| Windows | 移动图谱与数字孪生+windows+v$ver.zip | ~66 MB |
-| Android | 移动图谱与数字孪生+android+v$ver.zip | ~76 MB |
-| Web | 移动图谱与数字孪生+web+v$ver.zip | ~39 MB |
-| HarmonyOS | 移动图谱与数字孪生+harmonyos+v$ver.zip | ~39 MB |
+| Windows | $_brand+windows+v$ver.zip | ~66 MB |
+| Android | $_brand+android+v$ver.zip | ~76 MB |
+| Web | $_brand+web+v$ver.zip | ~39 MB |
+| HarmonyOS | $_brand+harmonyos+v$ver.zip | ~39 MB |
 | 一键安装 | 一键安装-Windows.bat | < 2 KB |
 | 安装手册 | 安装手册.pdf | ~4 MB |
 

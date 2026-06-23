@@ -1,10 +1,11 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../data/local/ai_config_dao.dart';
 import '../../../data/models/ai_config_model.dart';
 import '../../../services/ai_service.dart';
 
 import '../../widgets/back_button_bar.dart';
+
 class AiSettingsPage extends StatefulWidget {
   const AiSettingsPage({super.key});
 
@@ -41,10 +42,16 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
   // ── 服务商分组 ────────────────────────────────────────────────────────────
 
   static const _domesticIds = [
-    'deepseek', 'zhipu', 'qwen', 'kimi', 'doubao', 'spark', 'hunyuan',
+    'deepseek',
+    'zhipu',
+    'qwen',
+    'kimi',
+    'doubao',
+    'spark',
+    'hunyuan',
   ];
-  static const _internationalIds = ['openai', 'claude', 'gemini'];
-  static const _localIds = ['ollama', 'lmstudio', 'custom'];
+  static const _internationalIds = ['openai', 'openrouter', 'claude', 'gemini'];
+  static const _localIds = ['ollama', 'lmstudio', 'vllm', 'custom'];
 
   /// 当前选中的预设
   ProviderPreset? get _currentPreset {
@@ -106,7 +113,8 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
       _provider = provider;
       _testResult = null;
       // 自动填入该服务商默认模型
-      _modelController.text = preset.models.isNotEmpty ? preset.models.first : '';
+      _modelController.text =
+          preset.models.isNotEmpty ? preset.models.first : '';
       // 自动填入默认地址
       _baseUrlController.text = preset.baseUrl;
     });
@@ -120,7 +128,8 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     final isLocal = _localIds.contains(_provider);
     // 检查是否有内置 Key
     final hasBuiltinKey = builtinApiKeys.containsKey(_provider) ||
-        builtinApiKeys.containsKey('$_provider:${_modelController.text.trim()}');
+        builtinApiKeys
+            .containsKey('$_provider:${_modelController.text.trim()}');
     if (!isLocal && !hasBuiltinKey && apiKey.isEmpty) {
       _showSnack('请先输入 API Key');
       return;
@@ -140,9 +149,8 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
       setState(() {
         _testing = false;
         _testSuccess = ok;
-        _testResult = ok
-            ? '✅ 连接成功！API Key 有效，模型响应正常。'
-            : '❌ 连接失败，请检查 API Key 和网络。';
+        _testResult =
+            ok ? '✅ 连接成功！API Key 有效，模型响应正常。' : '❌ 连接失败，请检查 API Key 和网络。';
       });
     } catch (e) {
       if (!mounted) return;
@@ -251,9 +259,11 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                   _buildInfoCard(primary, gradient),
                   const SizedBox(height: 20),
 
-                  // ── API Key（开发版隐藏，正式版显示）─────────────────
+                  // ── API Key：课堂试用 Key 兜底，个人 Key 优先 ───────────
                   if (kShowApiKeyInput) ...[
-                    _sectionTitle('API Key'),
+                    _buildBuiltinKeyBanner(primary),
+                    const SizedBox(height: 12),
+                    _sectionTitle('个人 API Key（可选）'),
                     const SizedBox(height: 6),
                     _buildApiKeyHint(primary),
                     const SizedBox(height: 8),
@@ -300,7 +310,8 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
   // ── 服务商下拉选择（分组）──────────────────────────────────────────────────
 
   Widget _buildProviderDropdown(Color primary, bool isDark) {
-    return DropdownButtonFormField<String>(value: _provider,
+    return DropdownButtonFormField<String>(
+      initialValue: _provider,
       isExpanded: true,
       decoration: InputDecoration(
         prefixIcon: const Icon(Icons.cloud_outlined),
@@ -376,10 +387,9 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
             ),
             if (preset.freeNote != null)
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.12),
+                  color: Colors.green.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -432,7 +442,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.25),
+                      color: Colors.white.withValues(alpha: 0.25),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -481,18 +491,20 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
 
   Widget _buildBuiltinKeyBanner(Color primary) {
     final hasKey = builtinApiKeys.containsKey(_provider) ||
-        builtinApiKeys.containsKey('$_provider:${_modelController.text.trim()}');
+        builtinApiKeys
+            .containsKey('$_provider:${_modelController.text.trim()}');
+    const trialEnabled = kUseBuiltinTrialApiKeys;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: hasKey
-            ? Colors.green.withOpacity(0.08)
-            : Colors.orange.withOpacity(0.08),
+            ? Colors.green.withValues(alpha: 0.08)
+            : Colors.orange.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: hasKey
-              ? Colors.green.withOpacity(0.3)
-              : Colors.orange.withOpacity(0.3),
+              ? Colors.green.withValues(alpha: 0.3)
+              : Colors.orange.withValues(alpha: 0.3),
         ),
       ),
       child: Row(
@@ -506,8 +518,10 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
           Expanded(
             child: Text(
               hasKey
-                  ? '已内置 API Key，无需配置即可使用'
-                  : '该服务商暂无内置 Key，请联系管理员',
+                  ? '课堂试用免费 Key 已启用；下方留空将使用免费 Key，填写个人 Key 后优先使用个人 Key。'
+                  : trialEnabled
+                      ? '该服务商暂无课堂试用内置 Key，请联系管理员或切换服务商。'
+                      : '当前发布包未启用内置 Key，请填写个人 API Key。',
               style: TextStyle(
                 fontSize: 13,
                 color: hasKey ? Colors.green.shade700 : Colors.orange.shade700,
@@ -524,16 +538,21 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
 
   Widget _buildApiKeyHint(Color primary) {
     final isLocal = _localIds.contains(_provider);
+    final hasBuiltinKey = builtinApiKeys.containsKey(_provider) ||
+        builtinApiKeys
+            .containsKey('$_provider:${_modelController.text.trim()}');
     final hintText = isLocal
         ? '本地部署无需 API Key，可留空'
-        : '前往服务商官网申请 API Key';
+        : hasBuiltinKey
+            ? '可留空使用课堂免费 Key；若免费 Key 不可用或额度不足，请填写自己的 API Key。'
+            : '该服务商没有课堂免费 Key，请填写自己的 API Key。';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: primary.withOpacity(0.06),
+        color: primary.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: primary.withOpacity(0.15)),
+        border: Border.all(color: primary.withValues(alpha: 0.15)),
       ),
       child: Row(
         children: [
@@ -562,7 +581,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
       controller: _apiKeyController,
       obscureText: _obscureKey,
       decoration: InputDecoration(
-        hintText: 'sk-...',
+        hintText: '留空则使用课堂免费 Key；也可填写自己的 sk-...',
         prefixIcon: const Icon(Icons.key_outlined),
         suffixIcon: IconButton(
           icon: Icon(
@@ -622,10 +641,10 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
             duration: const Duration(milliseconds: 150),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: selected ? primary : primary.withOpacity(0.08),
+              color: selected ? primary : primary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: selected ? primary : primary.withOpacity(0.25),
+                color: selected ? primary : primary.withValues(alpha: 0.25),
                 width: selected ? 1.5 : 1,
               ),
             ),
@@ -647,8 +666,8 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                         const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                     decoration: BoxDecoration(
                       color: selected
-                          ? Colors.white.withOpacity(0.25)
-                          : Colors.green.withOpacity(0.15),
+                          ? Colors.white.withValues(alpha: 0.25)
+                          : Colors.green.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -791,8 +810,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                         max: 2.0,
                         divisions: 20,
                         label: _temperature.toStringAsFixed(1),
-                        onChanged: (v) =>
-                            setState(() => _temperature = v),
+                        onChanged: (v) => setState(() => _temperature = v),
                         primary: primary,
                         hint: '值越高回复越有创造性，越低越稳定',
                       ),
@@ -825,8 +843,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                         max: 120,
                         divisions: 21, // (120-15)/5 = 21
                         label: '$_timeout 秒',
-                        onChanged: (v) =>
-                            setState(() => _timeout = v.round()),
+                        onChanged: (v) => setState(() => _timeout = v.round()),
                         primary: primary,
                         hint: '请求超时时间（秒）',
                       ),
@@ -860,9 +877,9 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
               child: SliderTheme(
                 data: SliderThemeData(
                   activeTrackColor: primary,
-                  inactiveTrackColor: primary.withOpacity(0.15),
+                  inactiveTrackColor: primary.withValues(alpha: 0.15),
                   thumbColor: primary,
-                  overlayColor: primary.withOpacity(0.12),
+                  overlayColor: primary.withValues(alpha: 0.12),
                   valueIndicatorColor: primary,
                   valueIndicatorTextStyle: const TextStyle(
                     color: Colors.white,
@@ -913,8 +930,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
           ? SizedBox(
               width: 18,
               height: 18,
-              child:
-                  CircularProgressIndicator(strokeWidth: 2, color: primary),
+              child: CircularProgressIndicator(strokeWidth: 2, color: primary),
             )
           : const Icon(Icons.network_check_outlined),
       label: Text(_testing ? '测试中…' : '测试连接'),
@@ -937,8 +953,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
       decoration: BoxDecoration(
         color: _testSuccess ? Colors.green.shade50 : Colors.red.shade50,
         border: Border.all(
-          color:
-              _testSuccess ? Colors.green.shade300 : Colors.red.shade300,
+          color: _testSuccess ? Colors.green.shade300 : Colors.red.shade300,
         ),
         borderRadius: BorderRadius.circular(10),
       ),
@@ -947,8 +962,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
         children: [
           Icon(
             _testSuccess ? Icons.check_circle : Icons.error_outline,
-            color:
-                _testSuccess ? Colors.green.shade600 : Colors.red.shade600,
+            color: _testSuccess ? Colors.green.shade600 : Colors.red.shade600,
             size: 20,
           ),
           const SizedBox(width: 10),
@@ -957,9 +971,8 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
               _testResult ?? '',
               style: TextStyle(
                 fontSize: 13,
-                color: _testSuccess
-                    ? Colors.green.shade800
-                    : Colors.red.shade800,
+                color:
+                    _testSuccess ? Colors.green.shade800 : Colors.red.shade800,
               ),
             ),
           ),
@@ -984,12 +997,11 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
             : const Icon(Icons.save_outlined),
         label: Text(
           _saving ? '保存中…' : '保存配置',
-          style:
-              const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
         style: FilledButton.styleFrom(
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         onPressed: _saving ? null : _save,
       ),

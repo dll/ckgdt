@@ -93,7 +93,7 @@ const _userAgreement = '''
 
 ## 五、AI 辅助说明
 
-- 平台内 24 个智能体由 LLM 服务提供商（DeepSeek / 智谱 GLM / 自部署 Ollama 等）驱动；
+- 平台内 18 个智能体由 LLM 服务提供商（DeepSeek / 智谱 GLM / 自部署 Ollama 等）驱动；
 - AI 生成的内容仅作教学辅助，不代表平台官方意见；
 - AI 批阅结果**仅供教师参考**，最终成绩以教师审核后为准。
 

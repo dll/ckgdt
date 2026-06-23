@@ -831,13 +831,14 @@ class DatabaseHelper {
         },
         conflictAlgorithm: ConflictAlgorithm.ignore);
 
-    // 插入默认 AI 配置（DeepSeek），用户无需手动填写 API Key
+    // 插入默认 AI 配置（DeepSeek）。api_key 留空时由 AiConfigModel
+    // 读取课堂试用 Key 兜底；学生也可以在系统设置中填写个人 Key 覆盖。
     await db.insert(
         'ai_configs',
         {
           'id': 1,
           'provider': 'deepseek',
-          'api_key': 'sk-c93a22110da94aebb834d6d0ddec802e',
+          'api_key': null,
           'model': 'deepseek-v4-pro',
           'base_url': 'https://api.deepseek.com',
           'temperature': 0.7,
@@ -1986,7 +1987,8 @@ class DatabaseHelper {
       )
     ''');
 
-    // 如果 ai_configs 为空，插入默认 DeepSeek 配置
+    // 如果 ai_configs 为空，插入默认 DeepSeek 配置。api_key 留空时由
+    // AiConfigModel 读取课堂试用 Key 兜底；用户可自行填写个人 Key 覆盖。
     final existing =
         await db.query('ai_configs', where: 'id = ?', whereArgs: [1]);
     if (existing.isEmpty) {
@@ -1995,7 +1997,7 @@ class DatabaseHelper {
           {
             'id': 1,
             'provider': 'deepseek',
-            'api_key': 'sk-c93a22110da94aebb834d6d0ddec802e',
+            'api_key': null,
             'model': 'deepseek-v4-pro',
             'base_url': 'https://api.deepseek.com',
             'temperature': 0.7,

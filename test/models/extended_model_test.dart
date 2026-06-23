@@ -169,6 +169,27 @@ void main() {
       expect(model.baseUrl, isNull);
     });
 
+    test('API key input should be visible by default', () {
+      expect(kShowApiKeyInput, isTrue);
+    });
+
+    test('effectiveApiKey should use builtin trial key when user key is empty',
+        () {
+      const model = AiConfigModel(provider: 'deepseek');
+
+      expect(model.effectiveApiKey, isNotNull);
+      expect(model.effectiveApiKey, isNotEmpty);
+    });
+
+    test('effectiveApiKey should prefer user key over builtin trial key', () {
+      const model = AiConfigModel(
+        provider: 'deepseek',
+        apiKey: 'sk-user-owned-key',
+      );
+
+      expect(model.effectiveApiKey, 'sk-user-owned-key');
+    });
+
     test('effectiveBaseUrl should return custom URL when set', () {
       const model = AiConfigModel(
         provider: 'deepseek',
@@ -178,7 +199,8 @@ void main() {
       expect(model.effectiveBaseUrl, 'https://my-proxy.com');
     });
 
-    test('effectiveBaseUrl should return deepseek default when baseUrl is null', () {
+    test('effectiveBaseUrl should return deepseek default when baseUrl is null',
+        () {
       const model = AiConfigModel(provider: 'deepseek');
 
       expect(model.effectiveBaseUrl, AiConfigModel.deepseekDefaultUrl);
@@ -190,7 +212,8 @@ void main() {
       expect(model.effectiveBaseUrl, AiConfigModel.zhipuDefaultUrl);
     });
 
-    test('effectiveBaseUrl should return default when baseUrl is empty string', () {
+    test('effectiveBaseUrl should return default when baseUrl is empty string',
+        () {
       const model = AiConfigModel(provider: 'zhipu', baseUrl: '');
 
       expect(model.effectiveBaseUrl, AiConfigModel.zhipuDefaultUrl);
@@ -327,31 +350,38 @@ void main() {
 
     test('typeLabel should return correct Chinese labels', () {
       expect(
-        const PumlFileModel(title: '', content: '', diagramType: 'class').typeLabel,
+        const PumlFileModel(title: '', content: '', diagramType: 'class')
+            .typeLabel,
         '类图',
       );
       expect(
-        const PumlFileModel(title: '', content: '', diagramType: 'sequence').typeLabel,
+        const PumlFileModel(title: '', content: '', diagramType: 'sequence')
+            .typeLabel,
         '顺序图',
       );
       expect(
-        const PumlFileModel(title: '', content: '', diagramType: 'activity').typeLabel,
+        const PumlFileModel(title: '', content: '', diagramType: 'activity')
+            .typeLabel,
         '活动图',
       );
       expect(
-        const PumlFileModel(title: '', content: '', diagramType: 'component').typeLabel,
+        const PumlFileModel(title: '', content: '', diagramType: 'component')
+            .typeLabel,
         '组件图',
       );
       expect(
-        const PumlFileModel(title: '', content: '', diagramType: 'usecase').typeLabel,
+        const PumlFileModel(title: '', content: '', diagramType: 'usecase')
+            .typeLabel,
         '用例图',
       );
       expect(
-        const PumlFileModel(title: '', content: '', diagramType: 'flowchart').typeLabel,
+        const PumlFileModel(title: '', content: '', diagramType: 'flowchart')
+            .typeLabel,
         '流程图',
       );
       expect(
-        const PumlFileModel(title: '', content: '', diagramType: 'custom').typeLabel,
+        const PumlFileModel(title: '', content: '', diagramType: 'custom')
+            .typeLabel,
         'custom',
       );
     });

@@ -43,8 +43,8 @@
 |---|------|---------|
 | 1 | 管理员登录 → 进管理 → 一键生课 → 输入"数据结构"→ 不真生成（演示界面即可） | 不动数据 |
 | 2 | 进个人中心 → AI 技能页 → 滑动看 9 个技能卡 | 不动数据 |
-| 3 | 切到智能体浮层 → 滚动看 24 个 Agent 列表 | 不动数据 |
-| 4 | 进数字孪生学生 → 输入 "模拟成绩 70 分学生答第 3 章测验" → 等 AI 答 | ai_chat_history +1；agent_call_logs +1（virtual_student） |
+| 3 | 切到智能体浮层 → 滚动看 18 个 Agent 列表 | 不动数据 |
+| 4 | 进数字孪生 → 输入 "模拟成绩 70 分学生答第 3 章测验" → 等 AI 答 | ai_chat_history +1；agent_call_logs +1（digital_twin） |
 
 ### Demo 4 AI 闭环（30 秒，Phase 4 新增）— 准备数据 ⚠️ 重点
 
@@ -87,7 +87,7 @@
 1. lab_submissions: 为学生 A/B/C 各种 1 份示范实验报告（含示意 PDF 路径）
 2. agent_call_logs: 直接 INSERT 30 条假调用日志，覆盖：
    - tutor × 8 次（最热）
-   - lab_grading × 6 次
+   - grading × 6 次
    - safety × 4 次  
    - ethics × 4 次
    - quiz × 3 次
