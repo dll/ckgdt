@@ -152,6 +152,29 @@ class VersionBumpService {
       tag: 'ohos versionCode +1',
     );
 
+    // 9c. ohos app label strings
+    for (final relPath in [
+      'ohos/AppScope/resources/base/element/string.json',
+      'ohos/entry/src/main/resources/base/element/string.json',
+      'ohos/entry/src/main/resources/zh_CN/element/string.json',
+      'ohos/entry/src/main/resources/en_US/element/string.json',
+    ]) {
+      await patch(
+        relPath,
+        RegExp(r'(CKGDTv)[0-9.]+'),
+        (m) => '${m.group(1)}$newVersion',
+        tag: relPath,
+      );
+    }
+
+    // 9d. ohos artifact name
+    await patch(
+      'ohos/entry/hvigorfile.ts',
+      RegExp(r"(artifactName:\s*'CKGDTv)[0-9.]+(')"),
+      (m) => '${m.group(1)}$newVersion${m.group(2)}',
+      tag: 'ohos hvigor artifactName',
+    );
+
     // 10. i18n example（占位符示例，无功能影响）
     await patch(
       'lib/l10n/app_zh.arb',
@@ -202,6 +225,16 @@ class VersionBumpService {
     await probe('web/manifest.json', RegExp(r'"name":\s*"CKGDTv([0-9.]+)'));
     await probe(
         'ohos/AppScope/app.json5', RegExp(r'"versionName":\s*"([0-9.]+)"'));
+    await probe('ohos/AppScope/resources/base/element/string.json',
+        RegExp(r'CKGDTv([0-9.]+)'));
+    await probe('ohos/entry/src/main/resources/base/element/string.json',
+        RegExp(r'CKGDTv([0-9.]+)'));
+    await probe('ohos/entry/src/main/resources/zh_CN/element/string.json',
+        RegExp(r'CKGDTv([0-9.]+)'));
+    await probe('ohos/entry/src/main/resources/en_US/element/string.json',
+        RegExp(r'CKGDTv([0-9.]+)'));
+    await probe('ohos/entry/hvigorfile.ts',
+        RegExp(r"artifactName:\s*'CKGDTv([0-9.]+)'"));
 
     final unique = found.values.toSet();
     return {

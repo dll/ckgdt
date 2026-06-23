@@ -6,7 +6,7 @@ from pathlib import Path
 import requests
 
 TOKEN = os.environ['GITEE_TOKEN']
-REPO = 'osgisOne/mad-fd'
+REPO = os.environ.get('GITEE_REPO', 'chzcldl/mad-kgdt')
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -21,25 +21,54 @@ def read_pubspec_version():
 
 
 VER = os.environ.get('GITEE_RELEASE_VERSION') or read_pubspec_version()
+TAG = f'v{VER}'
 
-# Create release
-url = f'https://gitee.com/api/v5/repos/{REPO}/releases'
-data = {
-    'access_token': TOKEN,
-    'tag_name': f'v{VER}',
-    'name': f'v{VER} \u2014 CKGDT \u5168\u7aef\u53d1\u5e03',
-    'body': f'v{VER} CKGDT \u5168\u7aef\u6784\u5efa\u53d1\u5e03\u3002\n\n\u5305\u542b Android / Windows / Web / HarmonyOS \u56db\u7aef\u8d44\u4ea7\uff08\u82e5\u5b58\u5728\uff09\u3002',
-    'target_commitish': 'master',
-}
-print(f'Creating release tag=v{VER}...')
-r = requests.post(url, data=data)
-if r.status_code == 201:
-    rel = r.json()
+
+def find_release_by_tag(tag):
+    url = f'https://gitee.com/api/v5/repos/{REPO}/releases'
+    for page in range(1, 6):
+        r = requests.get(
+            url,
+            params={
+                'access_token': TOKEN,
+                'page': page,
+                'per_page': 100,
+                'direction': 'desc',
+            },
+            timeout=60,
+        )
+        r.raise_for_status()
+        releases = r.json()
+        if not releases:
+            return None
+        for rel in releases:
+            if rel.get('tag_name') == tag:
+                return rel
+    return None
+
+
+rel = find_release_by_tag(TAG)
+if rel:
     rid = rel['id']
-    print(f'Release created: ID={rid} Tag={rel["tag_name"]}')
+    print(f'Using existing release: ID={rid} Tag={rel["tag_name"]}')
 else:
-    print(f'FAILED: {r.status_code} {r.text[:500]}')
-    sys.exit(1)
+    url = f'https://gitee.com/api/v5/repos/{REPO}/releases'
+    data = {
+        'access_token': TOKEN,
+        'tag_name': TAG,
+        'name': f'{TAG} \u2014 CKGDT \u53d1\u5e03',
+        'body': f'{TAG} CKGDT \u6784\u5efa\u53d1\u5e03\u3002\n\n\u53d1\u5e03\u9644\u4ef6\u4ee5 dist/ \u76ee\u5f55\u4e2d\u5b9e\u9645\u5b58\u5728\u7684\u8d44\u4ea7\u4e3a\u51c6\u3002',
+        'target_commitish': 'master',
+    }
+    print(f'Creating release tag={TAG}...')
+    r = requests.post(url, data=data, timeout=60)
+    if r.status_code == 201:
+        rel = r.json()
+        rid = rel['id']
+        print(f'Release created: ID={rid} Tag={rel["tag_name"]}')
+    else:
+        print(f'FAILED: {r.status_code} {r.text[:500]}')
+        sys.exit(1)
 
 # Upload assets
 upload_url = f'https://gitee.com/api/v5/repos/{REPO}/releases/{rid}/attach_files'

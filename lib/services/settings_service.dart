@@ -266,7 +266,7 @@ class SettingsService {
   static const String _releaseGiteeRepoKey = 'release.gitee_repo';
 
   static const String _defaultGithubRepo = 'dll/mad-fd';
-  static const String _defaultGiteeRepo = 'osgisOne/mad-fd';
+  static const String _defaultGiteeRepo = 'chzcldl/mad-kgdt';
 
   static Future<String> getReleaseGithubPat() async {
     final prefs = await SharedPreferences.getInstance();

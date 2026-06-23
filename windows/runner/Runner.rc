@@ -90,12 +90,12 @@ BEGIN
         BLOCK "080404b0"
         BEGIN
             VALUE "CompanyName", "com.edu\0"
-            VALUE "FileDescription", "CKGDTv2.1.0\0"
+            VALUE "FileDescription", "CKGDTv2.1.1\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "CKGDT\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.edu. All rights reserved.\0"
-            VALUE "OriginalFilename", "CKGDTv2.1.0.exe\0"
-            VALUE "ProductName", "CKGDTv2.1.0\0"
+            VALUE "OriginalFilename", "CKGDTv2.1.1.exe\0"
+            VALUE "ProductName", "CKGDTv2.1.1\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
