@@ -175,5 +175,84 @@ void main() {
         if (temp.existsSync()) temp.deleteSync(recursive: true);
       }
     });
+
+    test('zipSelectedFiles skips duplicate file paths', () async {
+      final oldRoot = ArchivePackageService.outputRoot;
+      final temp = Directory.systemTemp.createTempSync('archive_zip_dedupe_');
+      try {
+        ArchivePackageService.outputRoot = temp.path;
+        final naming = ArchiveNaming(
+          department: '软件学院',
+          course: '移动应用开发',
+          docLabel: '结课材料',
+          teacher: '刘东良',
+          semester: '2025-2026-2',
+        );
+        final periodDir =
+            Directory(p.join(temp.path, naming.semester, naming.course, '期末'))
+              ..createSync(recursive: true);
+        final pdf = File(p.join(periodDir.path, '样本.pdf'))
+          ..writeAsBytesSync([1, 2, 3]);
+
+        final zipPath = await ArchivePackageService.instance.zipSelectedFiles(
+          naming: naming,
+          filePaths: [pdf.path, pdf.path],
+          prefix: '一键结课',
+        );
+
+        final zip = ZipDecoder().decodeBytes(File(zipPath).readAsBytesSync());
+        expect(zip.files.where((f) => f.name.endsWith('样本.pdf')), hasLength(1));
+      } finally {
+        ArchivePackageService.outputRoot = oldRoot;
+        if (temp.existsSync()) temp.deleteSync(recursive: true);
+      }
+    });
+
+    test('archives multiple originals with same doc label without overwrite',
+        () async {
+      final oldRoot = ArchivePackageService.outputRoot;
+      final temp = Directory.systemTemp.createTempSync('archive_multi_final_');
+      try {
+        ArchivePackageService.outputRoot = temp.path;
+        final sourceA = File(p.join(temp.path, '12-0-学生A大作业.pdf'))
+          ..writeAsBytesSync([1, 2, 3]);
+        final sourceB = File(p.join(temp.path, '12-1-学生B大作业.pdf'))
+          ..writeAsBytesSync([4, 5, 6]);
+        final naming = ArchiveNaming(
+          department: '信息学院',
+          course: '移动应用开发',
+          docLabel: '课程考核大作业样本',
+          teacher: '刘东良',
+          semester: '2025-2026-2',
+        );
+
+        ArchiveDocument docFor(File file) => ArchiveDocument(
+              title: '期末课程考核大作业样本 - ${p.basenameWithoutExtension(file.path)}',
+              documentType: 'final_sample_works',
+              period: 'final',
+              courseType: 'assess',
+              content: '# 课程考核大作业样本\n\n> 此资料以原始文件为准。',
+              filePath: file.path,
+            );
+
+        final outA = await ArchivePackageService.instance.archiveDocxOf(
+          docFor(sourceA),
+          docLabel: '课程考核大作业样本',
+          naming: naming,
+        );
+        final outB = await ArchivePackageService.instance.archiveDocxOf(
+          docFor(sourceB),
+          docLabel: '课程考核大作业样本',
+          naming: naming,
+        );
+
+        expect(outA, isNot(outB));
+        expect(File(outA).readAsBytesSync(), equals([1, 2, 3]));
+        expect(File(outB).readAsBytesSync(), equals([4, 5, 6]));
+      } finally {
+        ArchivePackageService.outputRoot = oldRoot;
+        if (temp.existsSync()) temp.deleteSync(recursive: true);
+      }
+    });
   });
 }

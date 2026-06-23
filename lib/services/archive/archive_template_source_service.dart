@@ -35,6 +35,29 @@ class ArchiveTemplateSourceService {
     );
   }
 
+  static Future<List<ArchiveTemplateDocument>> parseAllSources({
+    required String periodKey,
+    required String documentType,
+    required String label,
+    DateTime? now,
+  }) async {
+    final matches = allMatches(
+      periodKey: periodKey,
+      documentType: documentType,
+    );
+    final docs = <ArchiveTemplateDocument>[];
+    for (final match in matches) {
+      final content = await _parse(match, label: label, now: now);
+      if (content == null || content.trim().isEmpty) continue;
+      docs.add(ArchiveTemplateDocument(
+        content: content.trim(),
+        sourcePath: match.entity.path,
+        sourceName: p.basename(match.entity.path),
+      ));
+    }
+    return docs;
+  }
+
   static Future<ArchiveTemplateDocument?> parseFile({
     required File file,
     required String documentType,
@@ -64,10 +87,21 @@ class ArchiveTemplateSourceService {
     required String periodKey,
     required String documentType,
   }) {
+    final matches = allMatches(
+      periodKey: periodKey,
+      documentType: documentType,
+    );
+    return matches.isEmpty ? null : matches.first;
+  }
+
+  static List<ArchiveTemplateMatch> allMatches({
+    required String periodKey,
+    required String documentType,
+  }) {
     final spec = _specs[documentType];
-    if (spec == null) return null;
+    if (spec == null) return const [];
     final dir = _templateDirectory(periodKey);
-    if (dir == null || !dir.existsSync()) return null;
+    if (dir == null || !dir.existsSync()) return const [];
 
     final matches = <ArchiveTemplateMatch>[];
     for (final entity in dir.listSync(recursive: false)) {
@@ -75,11 +109,13 @@ class ArchiveTemplateSourceService {
       if (match != null) matches.add(match);
     }
     matches.sort((a, b) {
+      final numberOrder = _compareLeadingNumbers(a.name, b.name);
+      if (numberOrder != 0) return numberOrder;
       final scoreOrder = b.score.compareTo(a.score);
       if (scoreOrder != 0) return scoreOrder;
       return a.name.compareTo(b.name);
     });
-    return matches.isEmpty ? null : matches.first;
+    return matches;
   }
 
   static ArchiveTemplateMatch? _score(
@@ -474,6 +510,9 @@ $source
 
   static String _fileContent(File file, {required String label}) {
     final ext = p.extension(file.path).replaceFirst('.', '').toUpperCase();
+    final imagePreview = _isImageExtension(p.extension(file.path).toLowerCase())
+        ? '\n## 原始图片预览\n\n![${p.basename(file.path)}](${file.path.replaceAll('\\', '/')})\n'
+        : '';
     return '''
 # $label
 
@@ -483,6 +522,7 @@ $source
 **文件大小**：${file.lengthSync()} 字节
 
 > 此资料以原始文件为准。预览、打印和归档会优先使用原始文件；如需编辑，请修改模板目录中的对应资料后重新生成。
+$imagePreview
 ''';
   }
 
@@ -502,12 +542,38 @@ $source
     );
   }
 
+  static bool _isImageExtension(String ext) =>
+      const {'.png', '.jpg', '.jpeg', '.webp', '.bmp'}.contains(ext);
+
   static String _normalize(String value) => value
       .toLowerCase()
       .replaceAll(RegExp(r'^\d+\s*[-_＋+、.．]?\s*'), '')
       .replaceAll(RegExp(r'\s+'), '')
       .replaceAll('《', '')
       .replaceAll('》', '');
+
+  static int _compareLeadingNumbers(String a, String b) {
+    final aa = _leadingNumbers(a);
+    final bb = _leadingNumbers(b);
+    if (aa.isEmpty || bb.isEmpty) return 0;
+    final len = aa.length < bb.length ? aa.length : bb.length;
+    for (var i = 0; i < len; i++) {
+      final order = aa[i].compareTo(bb[i]);
+      if (order != 0) return order;
+    }
+    return aa.length.compareTo(bb.length);
+  }
+
+  static List<int> _leadingNumbers(String value) {
+    final match = RegExp(r'^(\d+(?:[-_]\d+)*)').firstMatch(value.trim());
+    if (match == null) return const [];
+    return match
+        .group(1)!
+        .split(RegExp(r'[-_]'))
+        .map(int.tryParse)
+        .whereType<int>()
+        .toList(growable: false);
+  }
 
   static const Map<String, _TemplateSpec> _specs = {
     'teaching_task': _TemplateSpec(
@@ -619,60 +685,176 @@ $source
     'final_archive_catalog': _TemplateSpec(
       documentType: 'final_archive_catalog',
       tokens: ['课程档案袋目录', '档案袋目录', '课程档案'],
-      extensions: ['.docx', '.doc', '.md', '.txt'],
+      extensions: [
+        '.docx',
+        '.doc',
+        '.pdf',
+        '.md',
+        '.txt',
+        '.html',
+        '.htm',
+        '.mhtml',
+        '.mht'
+      ],
     ),
     'final_syllabus': _TemplateSpec(
       documentType: 'final_syllabus',
       tokens: ['教学大纲', '大纲'],
       excludeTokens: ['合理性', '评价', '审核'],
-      extensions: ['.docx', '.doc', '.md', '.txt'],
+      extensions: [
+        '.docx',
+        '.doc',
+        '.pdf',
+        '.md',
+        '.txt',
+        '.html',
+        '.htm',
+        '.mhtml',
+        '.mht'
+      ],
     ),
     'final_syllabus_evaluation': _TemplateSpec(
       documentType: 'final_syllabus_evaluation',
-      tokens: ['大纲合理性评价', '合理性评价', '评价表'],
+      tokens: ['大纲合理性评价', '合理性评价'],
       excludeTokens: ['审核'],
-      extensions: ['.docx', '.doc', '.md', '.txt'],
+      extensions: [
+        '.docx',
+        '.doc',
+        '.pdf',
+        '.md',
+        '.txt',
+        '.html',
+        '.htm',
+        '.mhtml',
+        '.mht'
+      ],
     ),
     'final_teaching_schedule': _TemplateSpec(
       documentType: 'final_teaching_schedule',
       tokens: ['教学进度表', '进度表', '教学进度'],
-      extensions: ['.docx', '.doc', '.md', '.txt'],
+      extensions: [
+        '.docx',
+        '.doc',
+        '.pdf',
+        '.md',
+        '.txt',
+        '.html',
+        '.htm',
+        '.mhtml',
+        '.mht'
+      ],
     ),
     'final_lesson_plan': _TemplateSpec(
       documentType: 'final_lesson_plan',
       tokens: ['教学教案', '理论教案', '教案'],
-      extensions: ['.docx', '.doc', '.md', '.txt'],
+      extensions: [
+        '.docx',
+        '.doc',
+        '.pdf',
+        '.md',
+        '.txt',
+        '.html',
+        '.htm',
+        '.mhtml',
+        '.mht'
+      ],
     ),
     'final_syllabus_review': _TemplateSpec(
       documentType: 'final_syllabus_review',
       tokens: ['大纲合理性审核', '合理性审核', '审核表'],
       excludeTokens: ['命题', '期末考核', '试卷'],
-      extensions: ['.docx', '.doc', '.md', '.txt'],
+      extensions: [
+        '.docx',
+        '.doc',
+        '.pdf',
+        '.md',
+        '.txt',
+        '.html',
+        '.htm',
+        '.mhtml',
+        '.mht'
+      ],
     ),
     'final_assessment_review': _TemplateSpec(
       documentType: 'final_assessment_review',
       tokens: ['课程期末考核命题审核', '期末考核命题审核', '命题审核', '试卷审核', '考核审核'],
-      extensions: ['.docx', '.doc', '.pdf', '.md', '.txt'],
+      extensions: [
+        '.docx',
+        '.doc',
+        '.pdf',
+        '.md',
+        '.txt',
+        '.html',
+        '.htm',
+        '.mhtml',
+        '.mht'
+      ],
     ),
     'final_grade_book': _TemplateSpec(
       documentType: 'final_grade_book',
       tokens: ['记分册', '成绩册', '课程大作业成绩'],
-      extensions: ['.xlsx', '.xls', '.docx', '.doc', '.md', '.txt'],
+      extensions: [
+        '.xlsx',
+        '.xls',
+        '.docx',
+        '.doc',
+        '.pdf',
+        '.md',
+        '.txt',
+        '.html',
+        '.htm',
+        '.mhtml',
+        '.mht'
+      ],
     ),
     'final_score_register': _TemplateSpec(
       documentType: 'final_score_register',
       tokens: ['成绩登记表', '登记表'],
-      extensions: ['.xls', '.xlsx', '.docx', '.doc', '.md', '.txt'],
+      extensions: [
+        '.xls',
+        '.xlsx',
+        '.docx',
+        '.doc',
+        '.pdf',
+        '.md',
+        '.txt',
+        '.html',
+        '.htm',
+        '.mhtml',
+        '.mht'
+      ],
     ),
     'final_assessment_description': _TemplateSpec(
       documentType: 'final_assessment_description',
-      tokens: ['课程考查说明', '课程考核说明', '考核说明'],
-      extensions: ['.docx', '.doc', '.pdf', '.md', '.txt'],
+      tokens: ['课程考查说明', '课程考核说明', '考核说明', '课程考查方案', '课程考核方案', '考查方案'],
+      extensions: [
+        '.docx',
+        '.doc',
+        '.pdf',
+        '.md',
+        '.txt',
+        '.html',
+        '.htm',
+        '.mhtml',
+        '.mht'
+      ],
     ),
     'final_achievement_report': _TemplateSpec(
       documentType: 'final_achievement_report',
       tokens: ['课程达成评价', '达成评价表格', '达成评价报告', '调查问卷'],
-      extensions: ['.xlsx', '.xls', '.docx', '.doc', '.pdf', '.md', '.txt'],
+      extensions: [
+        '.xlsx',
+        '.xls',
+        '.docx',
+        '.doc',
+        '.pdf',
+        '.md',
+        '.txt',
+        '.html',
+        '.htm',
+        '.mhtml',
+        '.mht'
+      ],
     ),
     'final_textbook_guide': _TemplateSpec(
       documentType: 'final_textbook_guide',
@@ -685,6 +867,7 @@ $source
         '.png',
         '.jpg',
         '.jpeg',
+        '.bmp',
         '.md',
         '.txt'
       ],
@@ -693,7 +876,17 @@ $source
       documentType: 'final_sample_works',
       tokens: ['课程考核大作业', '课程大作业', '大作业'],
       excludeTokens: ['方案'],
-      extensions: ['.docx', '.doc', '.pdf', '.md', '.txt'],
+      extensions: [
+        '.docx',
+        '.doc',
+        '.pdf',
+        '.md',
+        '.txt',
+        '.html',
+        '.htm',
+        '.mhtml',
+        '.mht'
+      ],
     ),
   };
 }

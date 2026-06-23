@@ -84,5 +84,29 @@ void main() {
         if (temp.existsSync()) temp.deleteSync(recursive: true);
       }
     });
+
+    test('image originals are preserved and previewable as image PDFs', () {
+      final temp = Directory.systemTemp.createTempSync('archive_policy_img_');
+      try {
+        final image = File(p.join(temp.path, 'cover.webp'))
+          ..writeAsBytesSync([1, 2, 3]);
+        final doc = ArchiveDocument(
+          title: '教材封面',
+          documentType: 'final_textbook_guide',
+          period: 'final',
+          courseType: 'assess',
+          content: '# 教材封面\n\n> 此资料以原始文件为准。',
+          filePath: image.path,
+        );
+
+        expect(ArchiveDocumentPolicy.sourceOriginalFile(doc)?.path, image.path);
+        expect(ArchiveDocumentPolicy.canPreviewOriginalAsImage(image.path),
+            isTrue);
+        expect(
+            ArchiveDocumentPolicy.canPreviewOriginalAsPdf(image.path), isFalse);
+      } finally {
+        if (temp.existsSync()) temp.deleteSync(recursive: true);
+      }
+    });
   });
 }

@@ -134,8 +134,11 @@ class ArchivePackageService {
     final sourceOriginal = _sourceOriginalFile(doc);
     if (sourceOriginal != null) {
       final ext = p.extension(sourceOriginal.path);
-      final outFile = File(
-        p.join(dir.path, '${n.fileBase(docLabel: n.docLabel)}$ext'),
+      final outFile = _uniqueOutputFile(
+        dir: dir,
+        base: n.fileBase(docLabel: n.docLabel),
+        ext: ext,
+        preferredSuffix: p.basenameWithoutExtension(sourceOriginal.path),
       );
       await sourceOriginal.copy(outFile.path);
       return outFile.path;
@@ -152,15 +155,18 @@ class ArchivePackageService {
     }
 
     // 2) 写盘
-    final fileName = '${n.fileBase(docLabel: n.docLabel)}.docx';
-    final outFile = File(p.join(dir.path, fileName));
+    final outFile = _uniqueOutputFile(
+      dir: dir,
+      base: n.fileBase(docLabel: n.docLabel),
+      ext: '.docx',
+      preferredSuffix: _docTitleSuffix(doc, docLabel),
+    );
     await outFile.writeAsBytes(bytes, flush: true);
 
     await _tryArchivePdf(
       doc: doc,
       processor: processor,
-      outFile:
-          File(p.join(dir.path, '${n.fileBase(docLabel: n.docLabel)}.pdf')),
+      outFile: File(p.setExtension(outFile.path, '.pdf')),
     );
     return outFile.path;
   }
@@ -259,9 +265,12 @@ class ArchivePackageService {
       '${prefix}_${naming.department}+${naming.course}+${naming.teacher}+${naming.semester}.zip',
     );
     encoder.create(zipPath);
+    final seenPaths = <String>{};
     for (final path in filePaths) {
       final file = File(path);
       if (!file.existsSync() || !_isArchiveOutputFile(file)) continue;
+      final normalized = p.normalize(file.absolute.path).toLowerCase();
+      if (!seenPaths.add(normalized)) continue;
       final rel = p.isWithin(courseDir.path, file.path)
           ? p.relative(file.path, from: courseDir.path)
           : p.basename(file.path);
@@ -333,6 +342,42 @@ class ArchivePackageService {
 
   File? _sourceOriginalFile(ArchiveDocument doc) {
     return ArchiveDocumentPolicy.sourceOriginalFile(doc);
+  }
+
+  File _uniqueOutputFile({
+    required Directory dir,
+    required String base,
+    required String ext,
+    String? preferredSuffix,
+  }) {
+    final normalizedExt = ext.startsWith('.') ? ext : '.$ext';
+    final primary = File(p.join(dir.path, '$base$normalizedExt'));
+    if (!primary.existsSync()) return primary;
+
+    final suffix = _safeSegment((preferredSuffix ?? '').trim());
+    if (suffix.isNotEmpty && suffix != '[未填]') {
+      final named = File(p.join(dir.path, '$base+$suffix$normalizedExt'));
+      if (!named.existsSync()) return named;
+    }
+
+    var index = 2;
+    while (true) {
+      final candidate = File(p.join(dir.path, '$base-$index$normalizedExt'));
+      if (!candidate.existsSync()) return candidate;
+      index++;
+    }
+  }
+
+  String _docTitleSuffix(ArchiveDocument doc, String docLabel) {
+    var value = doc.title
+        .replaceFirst(periods.periodLabel(doc.period), '')
+        .replaceFirst(docLabel, '')
+        .replaceFirst(RegExp(r'^\s*[-_＋+、.．]\s*'), '')
+        .trim();
+    if (value.isEmpty && (doc.filePath ?? '').trim().isNotEmpty) {
+      value = p.basenameWithoutExtension(doc.filePath!);
+    }
+    return value;
   }
 
   bool _isArchiveOutputFile(File f) {

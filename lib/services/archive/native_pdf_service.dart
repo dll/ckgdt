@@ -1,6 +1,8 @@
 import 'dart:typed_data';
+import 'dart:io';
 
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:image/image.dart' as img;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
@@ -32,6 +34,33 @@ class NativePdfService {
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.fromLTRB(42, 38, 42, 42),
         build: (_) => widgets,
+      ),
+    );
+    return doc.save();
+  }
+
+  Future<Uint8List> imageFileToPdf(String imagePath) async {
+    await _ensureFonts();
+    final file = File(imagePath);
+    if (!file.existsSync()) {
+      throw StateError('图片文件不存在，无法生成 PDF：$imagePath');
+    }
+    final decoded = img.decodeImage(await file.readAsBytes());
+    if (decoded == null) {
+      throw StateError('图片格式不支持或文件损坏：$imagePath');
+    }
+    final pngBytes = Uint8List.fromList(img.encodePng(decoded));
+    final image = pw.MemoryImage(pngBytes);
+    final doc = pw.Document(
+      theme: pw.ThemeData.withFont(base: _regular!, bold: _bold!),
+    );
+    doc.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.fromLTRB(42, 38, 42, 42),
+        build: (_) => pw.Center(
+          child: pw.Image(image, fit: pw.BoxFit.contain),
+        ),
       ),
     );
     return doc.save();

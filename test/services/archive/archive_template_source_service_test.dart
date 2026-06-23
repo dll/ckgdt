@@ -318,6 +318,42 @@ void main() {
     }
   });
 
+  test('real final template directory resolves all numbered materials',
+      () async {
+    final realRoot = Directory('data/归档').absolute;
+    if (!realRoot.existsSync()) return;
+    BaseDocumentProcessor.archiveDataRoot = realRoot.path;
+
+    const docs = {
+      'final_archive_catalog': ('课程档案袋目录', 1, '00-'),
+      'final_syllabus': ('教学大纲', 1, '01-'),
+      'final_syllabus_evaluation': ('大纲合理性评价表', 1, '02-'),
+      'final_teaching_schedule': ('教学进度表', 1, '03-'),
+      'final_lesson_plan': ('教学教案', 1, '04-'),
+      'final_syllabus_review': ('大纲合理性审核表', 1, '05-'),
+      'final_assessment_review': ('课程期末考核命题审核表', 1, '06-'),
+      'final_grade_book': ('记分册', 3, '07-'),
+      'final_score_register': ('成绩登记表', 1, '08-'),
+      'final_assessment_description': ('课程考核说明', 2, '09-'),
+      'final_achievement_report': ('课程达成评价材料', 3, '10-'),
+      'final_textbook_guide': ('教材与实验指导书', 2, '11-'),
+      'final_sample_works': ('课程考核大作业样本', 5, '12-'),
+    };
+
+    for (final entry in docs.entries) {
+      final (label, count, prefix) = entry.value;
+      final parsed = await ArchiveTemplateSourceService.parseAllSources(
+        periodKey: 'final',
+        documentType: entry.key,
+        label: label,
+      );
+      expect(parsed, hasLength(count), reason: '${entry.key} file count');
+      expect(parsed.first.sourceName, startsWith(prefix),
+          reason: '${entry.key} should match numbered final template');
+      expect(parsed.every((doc) => doc.content.trim().isNotEmpty), isTrue);
+    }
+  });
+
   test('final archive catalog docx template is extracted for regeneration',
       () async {
     final realRoot = Directory('data/归档').absolute;

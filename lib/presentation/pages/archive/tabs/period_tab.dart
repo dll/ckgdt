@@ -11,6 +11,7 @@ import '../../../../services/agent/agents/archive_agent.dart';
 import '../../../../services/archive/ai_audit_processor.dart';
 import '../../../../services/archive/ai_draft_processor.dart';
 import '../../../../services/archive/base_document_processor.dart';
+import '../../../../services/archive/native_pdf_service.dart';
 import '../../../../services/archive/pandoc_service.dart';
 import '../../../../services/archive/processor_registry.dart';
 import '../../../../services/archive/review_result.dart';
@@ -96,16 +97,52 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       docsForPeriod(widget.courseType, widget.periodKey);
 
   ArchiveDocument? _findDoc(DocumentTypeDef def) {
-    for (final d in _documents) {
-      if (d.documentType == def.key) return d;
+    final docs = _findDocs(def);
+    return docs.isEmpty ? null : docs.first;
+  }
+
+  List<ArchiveDocument> _findDocs(DocumentTypeDef def) {
+    final docs = _documents.where((d) => d.documentType == def.key).toList();
+    docs.sort((a, b) => _docSortKey(a).compareTo(_docSortKey(b)));
+    return docs;
+  }
+
+  String _docSortKey(ArchiveDocument doc) {
+    final filePath = doc.filePath?.trim();
+    if (filePath != null && filePath.isNotEmpty) {
+      return p.basename(filePath).toLowerCase();
     }
-    return null;
+    return doc.title.toLowerCase();
   }
 
   bool _canAutoGenerate(DocumentTypeDef def) {
     if (def.needsGeneration) return true;
     return ArchiveTemplateSourceService.supportsDocument(def.key);
   }
+
+  bool _needsAutoGenerate(DocumentTypeDef def) {
+    if (!_canAutoGenerate(def)) return false;
+    if (_findDoc(def) == null) return true;
+    if (widget.periodKey != 'final' ||
+        !ArchiveTemplateSourceService.supportsDocument(def.key)) {
+      return false;
+    }
+    final matches = ArchiveTemplateSourceService.allMatches(
+      periodKey: widget.periodKey,
+      documentType: def.key,
+    );
+    if (matches.isEmpty) return false;
+    final existing = _findDocs(def)
+        .map((d) => _normalizedPath(d.filePath))
+        .where((path) => path.isNotEmpty)
+        .toSet();
+    return matches
+        .map((m) => _normalizedPath(m.entity.path))
+        .any((path) => path.isNotEmpty && !existing.contains(path));
+  }
+
+  String _normalizedPath(String? value) =>
+      (value ?? '').trim().replaceAll('\\', '/').toLowerCase();
 
   Future<String?> _activeCourseName() async {
     try {
@@ -480,6 +517,13 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
         _canPreviewOriginalAsPdf(sourcePath)) {
       return PandocService.instance.officeFileToPdf(sourcePath!);
     }
+    if (_shouldUseOriginalSource(
+          doc.documentType,
+          content: doc.content,
+        ) &&
+        _canPreviewOriginalAsImage(sourcePath)) {
+      return NativePdfService.instance.imageFileToPdf(sourcePath!);
+    }
     final processor = ProcessorRegistry.instance.find(doc.documentType);
     if (processor != null && processor.supportsPrint) {
       return processor.toPdf(doc);
@@ -496,6 +540,11 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
   bool _canPreviewOriginalAsPdf(String? sourcePath) {
     if (kIsWeb) return false;
     return ArchiveDocumentPolicy.canPreviewOriginalAsPdf(sourcePath);
+  }
+
+  bool _canPreviewOriginalAsImage(String? sourcePath) {
+    if (kIsWeb) return false;
+    return ArchiveDocumentPolicy.canPreviewOriginalAsImage(sourcePath);
   }
 
   void _showPrintErrorDialog({required String title, required String message}) {
@@ -525,6 +574,11 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
 
     if (doc.documentType == 'teaching_task') {
       await _reviewTeachingTask(doc);
+      return;
+    }
+
+    if (doc.documentType.startsWith('final_')) {
+      await _reviewFinalDoc(doc);
       return;
     }
 
@@ -604,6 +658,136 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       if (mounted) await _load();
     }
     return result;
+  }
+
+  Future<ReviewResult> _reviewFinalDoc(
+    ArchiveDocument doc, {
+    bool showResult = true,
+  }) async {
+    final result = _buildFinalReviewResult(doc);
+    final updated = doc.copyWith(
+      status: result.isApproved ? 'approved' : 'reviewing',
+      reviewJson: result.toJson(),
+      reviewedAt: DateTime.now().toIso8601String(),
+    );
+    await widget.dao.saveDocument(updated);
+    if (showResult && mounted) {
+      await showDialog(
+        context: context,
+        builder: (_) => ReviewResultDialog(
+          target: updated,
+          initial: result,
+          onUpdated: (_) => _load(),
+        ),
+      );
+      if (mounted) await _load();
+    }
+    return result;
+  }
+
+  ReviewResult _buildFinalReviewResult(ArchiveDocument doc) {
+    final started = DateTime.now();
+    final content = (doc.content ?? '').trim();
+    final hasOriginal = _hasArchiveOriginal(doc.filePath);
+    final errors = <Finding>[];
+    final warnings = <Finding>[];
+    final passed = <Finding>[];
+
+    if (content.isEmpty && !hasOriginal) {
+      errors.add(Finding(
+        key: '${doc.documentType}.missing_material',
+        dimension: '材料完整性',
+        level: '❌ 错误',
+        evidence: '当前材料没有正文内容，也没有可归档的原始文件。',
+        suggestion: '请先从期末模板目录自动生成，或手动导入对应材料后再审核。',
+      ));
+    } else {
+      passed.add(Finding(
+        key: '${doc.documentType}.material_exists',
+        dimension: '材料完整性',
+        level: '✅ 通过',
+        evidence: hasOriginal ? '已关联原始文件：${doc.filePath}' : '已形成可预览正文。',
+        suggestion: '归档前复核课程、教师、学期和签字盖章信息。',
+      ));
+    }
+
+    if (doc.documentType == 'final_archive_catalog') {
+      passed.add(Finding(
+        key: 'final_archive_catalog.catalog_policy',
+        dimension: '目录审核原则',
+        level: '✅ 通过',
+        evidence: '课程档案袋目录用于核对 00-12 材料清单，模板旧数据只作为版式依据。',
+        suggestion: '目录不得因模板旧班级、旧学期或旧文件名直接判不通过；如发现不一致，只提出修改建议。',
+      ));
+      if (content.contains('待补充')) {
+        warnings.add(Finding(
+          key: 'final_archive_catalog.pending_items',
+          dimension: '材料补齐建议',
+          level: '⚠️ 建议',
+          evidence: '目录中仍包含“待补充”项。',
+          suggestion: '请逐项导入或生成缺失材料后，重新生成 00 目录以刷新状态。',
+        ));
+      }
+    }
+
+    if (ArchiveDocumentPolicy.isOriginalReferenceContent(content)) {
+      passed.add(Finding(
+        key: '${doc.documentType}.original_preserved',
+        dimension: '原件保真',
+        level: '✅ 通过',
+        evidence: '该材料以原始文件为准，预览、打印和归档优先使用原件。',
+        suggestion: '不修改学校既定模板；如需调整，请替换源文件后重新导入。',
+      ));
+    }
+
+    final oldDataHints = <String>[];
+    for (final token in const ['计科22', '软件23', '202321', '2025版']) {
+      if (content.contains(token)) oldDataHints.add(token);
+    }
+    if (oldDataHints.isNotEmpty) {
+      warnings.add(Finding(
+        key: '${doc.documentType}.template_legacy_data',
+        dimension: '模板旧数据提示',
+        level: '⚠️ 建议',
+        evidence: '检测到模板或原件中包含：${oldDataHints.join('、')}。',
+        suggestion: '这是模板资料常见情况，不作为不通过依据；归档前请人工确认是否应替换为当前课程、班级和学期信息。',
+      ));
+    }
+
+    final ext = p.extension(doc.filePath ?? '').toLowerCase();
+    if (ext.isNotEmpty) {
+      final previewable = ArchiveDocumentPolicy.canPreviewOriginalAsPdf(
+            doc.filePath,
+          ) ||
+          ArchiveDocumentPolicy.canPreviewOriginalAsImage(doc.filePath) ||
+          content.isNotEmpty;
+      if (previewable) {
+        passed.add(Finding(
+          key: '${doc.documentType}.preview_ready',
+          dimension: '预览打印',
+          level: '✅ 通过',
+          evidence: '文件类型 $ext 已进入当前预览/打印链路。',
+          suggestion: '打印时使用系统打印预览确认页边距、双面打印等设置。',
+        ));
+      } else {
+        warnings.add(Finding(
+          key: '${doc.documentType}.preview_limited',
+          dimension: '预览打印建议',
+          level: '⚠️ 建议',
+          evidence: '文件类型 $ext 可能无法直接转换为 PDF。',
+          suggestion: '如预览失败，请导出为 PDF/Office 常见格式后重新导入。',
+        ));
+      }
+    }
+
+    return ReviewResult(
+      overall: errors.isEmpty ? 'approved' : 'needs_revision',
+      errors: errors,
+      warnings: warnings,
+      passed: passed,
+      confidence: 0.94,
+      latencyMs: DateTime.now().difference(started).inMilliseconds,
+    );
   }
 
   /// 查找该 doc.documentType 对应的全部 AiAuditProcessor。
@@ -1287,6 +1471,98 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
       return;
     }
 
+    if (def.key.startsWith('final_') &&
+        ArchiveTemplateSourceService.supportsDocument(def.key)) {
+      const allowedExtensions = [
+        'doc',
+        'docx',
+        'pdf',
+        'md',
+        'txt',
+        'html',
+        'htm',
+        'mhtml',
+        'mht',
+        'xlsx',
+        'xls',
+        'png',
+        'jpg',
+        'jpeg',
+        'webp',
+        'bmp',
+      ];
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: allowedExtensions,
+        allowMultiple: true,
+        dialogTitle: '选择${def.label}文件（可多选）',
+      );
+      if (result == null || result.files.isEmpty) return;
+
+      final saved = <ArchiveDocument>[];
+      final failures = <String>[];
+      final existingPaths =
+          _findDocs(def).map((d) => _normalizedPath(d.filePath)).toSet();
+      for (var i = 0; i < result.files.length; i++) {
+        final path = result.files[i].path;
+        if (path == null || path.trim().isEmpty) {
+          failures.add('${result.files[i].name}：未获取到文件路径');
+          continue;
+        }
+        if (existingPaths.contains(_normalizedPath(path))) {
+          failures.add('${p.basename(path)}：已导入，跳过重复文件');
+          continue;
+        }
+        final file = File(path);
+        if (!await file.exists()) {
+          failures.add('${p.basename(path)}：文件不存在');
+          continue;
+        }
+        final parsed = await ArchiveTemplateSourceService.parseFile(
+          file: file,
+          documentType: def.key,
+          label: def.label,
+        );
+        if (parsed == null) {
+          failures.add('${p.basename(path)}：文件类型或内容与${def.label}不匹配');
+          continue;
+        }
+        final doc = ArchiveDocument(
+          title: _templateDocTitle(def, parsed, i, result.files.length),
+          documentType: def.key,
+          period: widget.periodKey,
+          courseType: widget.courseType,
+          content: parsed.content,
+          filePath: parsed.sourcePath,
+          isGenerated: false,
+        );
+        final id = await widget.dao.saveDocument(doc);
+        saved.add(doc.copyWith(id: id));
+        existingPaths.add(_normalizedPath(path));
+      }
+
+      await _load();
+      if (mounted) {
+        final suffix = failures.isEmpty ? '' : '，失败 ${failures.length} 份';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('已导入${def.label} ${saved.length} 份$suffix'),
+            backgroundColor: saved.isEmpty ? Colors.red : null,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+        if (failures.isNotEmpty) {
+          _showPrintErrorDialog(
+            title: '${def.label}部分文件未导入',
+            message: failures.join('\n'),
+          );
+        } else if (saved.isNotEmpty) {
+          _previewDoc(saved.first);
+        }
+      }
+      return;
+    }
+
     if (ArchiveTemplateSourceService.supportsDocument(def.key)) {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
@@ -1365,29 +1641,67 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
   }
 
   Future<ArchiveDocument?> _generateFromTemplate(DocumentTypeDef def) async {
-    final parsed = await ArchiveTemplateSourceService.parseBestSource(
-      periodKey: widget.periodKey,
-      documentType: def.key,
-      label: def.label,
-    );
-    if (parsed == null) return null;
-    final draftDoc = ArchiveDocument(
-      title: '${periodLabel(widget.periodKey)}${def.label}',
-      documentType: def.key,
-      period: widget.periodKey,
-      courseType: widget.courseType,
-      filePath: parsed.sourcePath,
-      isGenerated: false,
-    );
-    final content = await _contextualizeTemplateContent(
-      def: def,
-      parsed: parsed,
-      doc: draftDoc,
-    );
-    final doc = draftDoc.copyWith(content: content);
-    final id = await widget.dao.saveDocument(doc);
+    final parsedDocs = <ArchiveTemplateDocument>[];
+    if (widget.periodKey == 'final') {
+      parsedDocs.addAll(
+        await ArchiveTemplateSourceService.parseAllSources(
+          periodKey: widget.periodKey,
+          documentType: def.key,
+          label: def.label,
+        ),
+      );
+    } else {
+      final parsed = await ArchiveTemplateSourceService.parseBestSource(
+        periodKey: widget.periodKey,
+        documentType: def.key,
+        label: def.label,
+      );
+      if (parsed != null) parsedDocs.add(parsed);
+    }
+    if (parsedDocs.isEmpty) return null;
+
+    ArchiveDocument? firstSaved;
+    final existingPaths = widget.periodKey == 'final'
+        ? _findDocs(def).map((d) => _normalizedPath(d.filePath)).toSet()
+        : const <String>{};
+    for (var i = 0; i < parsedDocs.length; i++) {
+      final parsed = parsedDocs[i];
+      if (widget.periodKey == 'final' &&
+          existingPaths.contains(_normalizedPath(parsed.sourcePath))) {
+        continue;
+      }
+      final draftDoc = ArchiveDocument(
+        title: _templateDocTitle(def, parsed, i, parsedDocs.length),
+        documentType: def.key,
+        period: widget.periodKey,
+        courseType: widget.courseType,
+        filePath: parsed.sourcePath,
+        isGenerated: false,
+      );
+      final content = await _contextualizeTemplateContent(
+        def: def,
+        parsed: parsed,
+        doc: draftDoc,
+      );
+      final doc = draftDoc.copyWith(content: content);
+      final id = await widget.dao.saveDocument(doc);
+      firstSaved ??= doc.copyWith(id: id);
+    }
     if (def.key == 'syllabus') widget.onSyllabusChanged?.call();
-    return doc.copyWith(id: id);
+    return firstSaved ?? _findDoc(def);
+  }
+
+  String _templateDocTitle(
+    DocumentTypeDef def,
+    ArchiveTemplateDocument parsed,
+    int index,
+    int total,
+  ) {
+    final base = '${periodLabel(widget.periodKey)}${def.label}';
+    if (total <= 1) return base;
+    final source = p.basenameWithoutExtension(parsed.sourceName).trim();
+    if (source.isEmpty) return '$base-${index + 1}';
+    return '$base - $source';
   }
 
   Future<String> _contextualizeTemplateContent({
@@ -2069,6 +2383,16 @@ ${_templateExcerpt(parsed.content)}
         );
         if (candidates.isNotEmpty) return candidates.first.path;
       }
+      final matches = ArchiveTemplateSourceService.allMatches(
+        periodKey: widget.periodKey,
+        documentType: key,
+      );
+      if (matches.length > 1) {
+        final names = matches.take(5).map((m) => p.basename(m.entity.path));
+        final suffix = matches.length > 5 ? ' 等${matches.length}个文件' : '';
+        return '${names.join('；')}$suffix';
+      }
+      if (matches.length == 1) return matches.first.entity.path;
       final match = ArchiveTemplateSourceService.bestMatch(
         periodKey: widget.periodKey,
         documentType: key,
@@ -2849,9 +3173,14 @@ ${_templateExcerpt(parsed.content)}
     final toGenerate = order
         .map((key) => _expectedDocs.where((d) => d.key == key).firstOrNull)
         .whereType<DocumentTypeDef>()
-        .where(_canAutoGenerate)
-        .where((d) => _findDoc(d) == null)
-        .toList();
+        .where(_needsAutoGenerate)
+        .toList()
+      ..sort((a, b) {
+        if (widget.periodKey != 'final') return 0;
+        if (a.key == 'final_archive_catalog') return 1;
+        if (b.key == 'final_archive_catalog') return -1;
+        return 0;
+      });
     if (toGenerate.isEmpty) {
       return;
     }
@@ -2938,6 +3267,10 @@ ${_templateExcerpt(parsed.content)}
       final result = await _reviewTeachingTask(doc, showResult: false);
       return result.toMarkdown(title: '教学任务单结构化审核');
     }
+    if (doc.documentType.startsWith('final_')) {
+      final result = await _reviewFinalDoc(doc, showResult: false);
+      return result.toMarkdown(title: '${doc.title}结构化审核');
+    }
 
     final processors = _findAuditProcessorsFor(doc);
     if (processors.isNotEmpty) {
@@ -2952,12 +3285,13 @@ ${_templateExcerpt(parsed.content)}
   }
 
   Future<void> _printAll() async {
-    final toPrint =
-        _expectedDocs.where((d) => d.canPrint && _findDoc(d) != null).toList();
+    final toPrint = <ArchiveDocument>[];
+    for (final def in _expectedDocs.where((d) => d.canPrint)) {
+      toPrint.addAll(_findDocs(def));
+    }
     if (toPrint.isEmpty) return;
     // 顺序触发，每次都唤起系统打印框；用户可在框内取消跳过该份
-    for (final def in toPrint) {
-      final doc = _findDoc(def)!;
+    for (final doc in toPrint) {
       if (!mounted) return;
       await _printDoc(doc);
     }
@@ -3130,8 +3464,7 @@ ${_templateExcerpt(parsed.content)}
 
   Widget _buildActionBar() {
     final primary = Theme.of(context).colorScheme.primary;
-    final hasUnfinished =
-        _expectedDocs.any((d) => _canAutoGenerate(d) && _findDoc(d) == null);
+    final hasUnfinished = _expectedDocs.any(_needsAutoGenerate);
     final hasUnreviewed =
         _documents.any((d) => d.content != null && d.content!.isNotEmpty);
     final hasUnprinted =
@@ -3217,27 +3550,52 @@ ${_templateExcerpt(parsed.content)}
     final cards = <Widget>[];
     for (var i = 0; i < docs.length; i++) {
       final def = docs[i];
-      final doc = _findDoc(def);
-      cards.add(DocCard(
-        def: def,
-        ordinal: _ordinalFor(def, i),
-        doc: doc,
-        source: _sourceChipLabel(def, doc),
-        onShowSource: () => _showSourceInfo(def, doc),
-        onDownloadTemplate: def.canImport ? () => _downloadTemplate(def) : null,
-        onImport: def.canImport ? () => _importDoc(def) : null,
-        onCreate: def.canCreate ? () => _createDoc(def) : null,
-        onGenerate: _canAutoGenerate(def) ? () => _generateDoc(def) : null,
-        onReview: doc != null ? () => _reviewDoc(doc) : null,
-        onEdit:
-            doc != null && _canEditMarkdown(doc) ? () => _editDoc(doc) : null,
-        onPreview: doc != null ? () => _previewDoc(doc) : null,
-        onPrint: (doc != null && def.canPrint) ? () => _printDoc(doc) : null,
-        onArchive: doc != null && doc.status != 'archived'
-            ? () => _archiveDoc(doc)
-            : null,
-        onDelete: doc != null ? () => _deleteDoc(doc) : null,
-      ));
+      final relatedDocs = _findDocs(def);
+      if (relatedDocs.isEmpty) {
+        cards.add(DocCard(
+          def: def,
+          ordinal: _ordinalFor(def, i),
+          source: _sourceChipLabel(def, null),
+          onShowSource: () => _showSourceInfo(def, null),
+          onDownloadTemplate:
+              def.canImport ? () => _downloadTemplate(def) : null,
+          onImport: def.canImport ? () => _importDoc(def) : null,
+          onCreate: def.canCreate ? () => _createDoc(def) : null,
+          onGenerate: _canAutoGenerate(def) ? () => _generateDoc(def) : null,
+        ));
+        continue;
+      }
+
+      for (var docIndex = 0; docIndex < relatedDocs.length; docIndex++) {
+        final doc = relatedDocs[docIndex];
+        final ordinal = relatedDocs.length == 1
+            ? _ordinalFor(def, i)
+            : '${_ordinalFor(def, i)}-${docIndex + 1}';
+        final showGroupActions = docIndex == 0;
+        cards.add(DocCard(
+          def: def,
+          ordinal: ordinal,
+          doc: doc,
+          source: _sourceChipLabel(def, doc),
+          onShowSource: () => _showSourceInfo(def, doc),
+          onDownloadTemplate: showGroupActions && def.canImport
+              ? () => _downloadTemplate(def)
+              : null,
+          onImport:
+              showGroupActions && def.canImport ? () => _importDoc(def) : null,
+          onCreate:
+              showGroupActions && def.canCreate ? () => _createDoc(def) : null,
+          onGenerate: showGroupActions && _canAutoGenerate(def)
+              ? () => _generateDoc(def)
+              : null,
+          onReview: () => _reviewDoc(doc),
+          onEdit: _canEditMarkdown(doc) ? () => _editDoc(doc) : null,
+          onPreview: () => _previewDoc(doc),
+          onPrint: def.canPrint ? () => _printDoc(doc) : null,
+          onArchive: doc.status != 'archived' ? () => _archiveDoc(doc) : null,
+          onDelete: () => _deleteDoc(doc),
+        ));
+      }
     }
 
     final body = cards.isEmpty && !hasHeader
@@ -3309,6 +3667,8 @@ class DocCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
     final badge = _StatusBadge.from(doc);
+    final docTitle = doc?.title.trim() ?? '';
+    final showDocTitle = docTitle.isNotEmpty && docTitle != def.label;
     // 桌面才允许打印 / 归档（需要本地文件系统和系统打印能力）。
     final canDesktopOps =
         !kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux);
@@ -3329,9 +3689,12 @@ class DocCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Text(def.label,
-                          style: const TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.w500)),
+                      Expanded(
+                        child: Text(def.label,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 14, fontWeight: FontWeight.w500)),
+                      ),
                       const SizedBox(width: 4),
                       GestureDetector(
                         onTap: onShowSource,
@@ -3347,6 +3710,11 @@ class DocCard extends StatelessWidget {
                         style: TextStyle(
                             fontSize: 11,
                             color: badge.subtitleColor ?? Colors.grey)),
+                  if (showDocTitle)
+                    Text(docTitle,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 11, color: Colors.grey.shade700)),
                   Text('来源：$source',
                       style:
                           TextStyle(fontSize: 11, color: Colors.grey.shade600)),

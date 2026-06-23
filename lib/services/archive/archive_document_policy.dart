@@ -62,6 +62,14 @@ class ArchiveDocumentPolicy {
     '.pptx',
   };
 
+  static const Set<String> imageOriginalExtensions = {
+    '.png',
+    '.jpg',
+    '.jpeg',
+    '.webp',
+    '.bmp',
+  };
+
   static const Set<String> textLikeExtensions = {
     '.mhtml',
     '.mht',
@@ -105,6 +113,13 @@ class ArchiveDocumentPolicy {
     if (sourcePath == null || sourcePath.trim().isEmpty) return false;
     final ext = p.extension(sourcePath).toLowerCase();
     if (!pdfConvertibleOriginalExtensions.contains(ext)) return false;
+    return File(sourcePath).existsSync();
+  }
+
+  static bool canPreviewOriginalAsImage(String? sourcePath) {
+    if (sourcePath == null || sourcePath.trim().isEmpty) return false;
+    final ext = p.extension(sourcePath).toLowerCase();
+    if (!imageOriginalExtensions.contains(ext)) return false;
     return File(sourcePath).existsSync();
   }
 
