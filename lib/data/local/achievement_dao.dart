@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:math' show sqrt;
 import 'package:sqflite/sqflite.dart';
+import 'active_student_scope.dart';
 import 'database_helper.dart';
+import 'ordinary_score_dao.dart';
 import '../../core/error_handler.dart';
 import '../../services/course_context_service.dart';
 
@@ -68,12 +70,29 @@ class AchievementDao {
   /// 获取所有批次（含学生人数子查询）
   Future<List<Map<String, dynamic>>> getAllBatches() async {
     final db = await DatabaseHelper.instance.database;
-    return db.rawQuery('''
-      SELECT ab.*,
-        (SELECT COUNT(*) FROM achievement_scores WHERE batch_id = ab.id) AS student_count
-      FROM achievement_batches ab
-      ORDER BY ab.created_at DESC
-    ''');
+    final activeWhere = ActiveStudentScope.where(alias: 'u');
+    try {
+      return db.rawQuery('''
+        SELECT ab.*,
+          (
+            SELECT COUNT(*)
+            FROM achievement_scores s
+            LEFT JOIN users u ON u.user_id = s.student_id
+            WHERE s.batch_id = ab.id
+              AND (u.user_id IS NULL OR ($activeWhere))
+          ) AS student_count
+        FROM achievement_batches ab
+        ORDER BY ab.created_at DESC
+      ''');
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AchievementDao.getAllBatches.active', stack: st);
+      return db.rawQuery('''
+        SELECT ab.*,
+          (SELECT COUNT(*) FROM achievement_scores WHERE batch_id = ab.id) AS student_count
+        FROM achievement_batches ab
+        ORDER BY ab.created_at DESC
+      ''');
+    }
   }
 
   /// 获取单个批次
@@ -118,11 +137,24 @@ class AchievementDao {
     final db = await DatabaseHelper.instance.database;
     // .toList() 把 sqflite 只读的 QueryResultSet 转成可变 List，
     // 否则调用方 sortScoresInPlace() 原地排序会抛 "Unsupported operation: read-only"。
-    return (await db.query('achievement_scores',
-            where: 'batch_id = ?',
-            whereArgs: [batchId],
-            orderBy: 'student_id ASC'))
-        .toList();
+    final activeWhere = ActiveStudentScope.where(alias: 'u');
+    try {
+      return (await db.rawQuery('''
+        SELECT s.*
+        FROM achievement_scores s
+        LEFT JOIN users u ON u.user_id = s.student_id
+        WHERE s.batch_id = ?
+          AND (u.user_id IS NULL OR ($activeWhere))
+        ORDER BY s.student_id ASC
+      ''', [batchId])).toList();
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AchievementDao.getScores.active', stack: st);
+      return (await db.query('achievement_scores',
+              where: 'batch_id = ?',
+              whereArgs: [batchId],
+              orderBy: 'student_id ASC'))
+          .toList();
+    }
   }
 
   /// 添加学生成绩
@@ -858,6 +890,371 @@ class AchievementDao {
     });
   }
 
+  /// 从平台现有数据聚合平时、实验、考核三类明细，并写入与 Excel 导入
+  /// 完全相同的三张分项表和 achievement_scores 总表。
+  Future<int> importPlatformAchievementScores(int batchId) async {
+    final components = await collectPlatformAchievementComponents();
+    return importComponentsToDatabase(batchId, components);
+  }
+
+  /// 聚合结果结构与 AchievementExcelService.parseComponentSheets 一致：
+  /// {pingshi: [...], experiment: [...], exam: [...]}。
+  Future<Map<String, List<Map<String, dynamic>>>>
+      collectPlatformAchievementComponents() async {
+    final db = await DatabaseHelper.instance.database;
+    final students = await _loadActiveStudents(db);
+    if (students.isEmpty) {
+      return {
+        'pingshi': <Map<String, dynamic>>[],
+        'experiment': <Map<String, dynamic>>[],
+        'exam': <Map<String, dynamic>>[],
+      };
+    }
+
+    final pingshi = await _collectPlatformPingshiRows();
+    final experiment = await _collectPlatformExperimentRows(db, students);
+    final exam = await _collectPlatformExamRows(db, students);
+    return {
+      'pingshi': pingshi,
+      'experiment': experiment,
+      'exam': exam,
+    };
+  }
+
+  Future<List<Map<String, dynamic>>> _loadActiveStudents(Database db) async {
+    final activeWhere = ActiveStudentScope.where(alias: 'u');
+    try {
+      return (await db.rawQuery('''
+        SELECT u.user_id,
+               COALESCE(NULLIF(TRIM(u.real_name), ''), u.user_id) AS real_name
+        FROM users u
+        WHERE $activeWhere
+        ORDER BY u.user_id ASC
+      ''')).toList();
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AchievementDao.loadActiveStudents', stack: st);
+      return (await db.rawQuery('''
+        SELECT user_id,
+               COALESCE(NULLIF(TRIM(real_name), ''), user_id) AS real_name
+        FROM users
+        WHERE role = 'student' AND COALESCE(is_active, 1) = 1
+        ORDER BY user_id ASC
+      ''')).toList();
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _collectPlatformPingshiRows() async {
+    final snapshot = await OrdinaryScoreDao().loadSnapshot();
+    return snapshot.rows.map((row) => row.toPingshiComponentRow()).toList();
+  }
+
+  List<Map<String, dynamic>> _baseExperimentRows(
+      List<Map<String, dynamic>> students) {
+    return [
+      for (final student in students)
+        {
+          'student_id': student['user_id']?.toString() ?? '',
+          'student_name': student['real_name']?.toString() ??
+              student['user_id']?.toString() ??
+              '',
+          'exp1_score': 0.0,
+          'exp2_score': 0.0,
+          'exp3_score': 0.0,
+          'exp4_score': 0.0,
+          'exp5_score': 0.0,
+          'exp6_score': 0.0,
+          'exp7_score': 0.0,
+        }
+    ];
+  }
+
+  Future<List<Map<String, dynamic>>> _collectPlatformExperimentRows(
+    Database db,
+    List<Map<String, dynamic>> students,
+  ) async {
+    final rows = _baseExperimentRows(students);
+    final byStudent = {
+      for (final row in rows) row['student_id'].toString(): row,
+    };
+
+    try {
+      final taskScope =
+          await _courseContext.scopedWhere(column: 'lt.course_id');
+      final tasks = await db.rawQuery('''
+        SELECT lt.id, lt.max_score
+        FROM lab_tasks lt
+        WHERE ${taskScope.where}
+        ORDER BY lt.id ASC
+        LIMIT 7
+      ''', taskScope.args);
+      final taskSlot = <int, String>{
+        for (var i = 0; i < tasks.length; i++)
+          (tasks[i]['id'] as num).toInt(): 'exp${i + 1}_score',
+      };
+      if (taskSlot.isEmpty) return rows;
+
+      final activeWhere = ActiveStudentScope.where(alias: 'u');
+      final scoreScope =
+          await _courseContext.scopedWhere(column: 't.course_id');
+      final scores = await db.rawQuery('''
+        SELECT s.user_id, s.task_id, s.score, t.max_score
+        FROM lab_submissions s
+        JOIN lab_tasks t ON t.id = s.task_id
+        JOIN users u ON u.user_id = s.user_id
+        WHERE ${scoreScope.where}
+          AND $activeWhere
+          AND s.score IS NOT NULL
+      ''', scoreScope.args);
+
+      for (final score in scores) {
+        final sid = score['user_id']?.toString() ?? '';
+        final taskId = (score['task_id'] as num?)?.toInt();
+        final column = taskId == null ? null : taskSlot[taskId];
+        final row = byStudent[sid];
+        if (row == null || column == null) continue;
+        final value = _scoreAsPercent(score['score'], score['max_score']);
+        _setScoreIfHigher(row, column, value);
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AchievementDao.platformExperiment', stack: st);
+    }
+    return rows;
+  }
+
+  List<Map<String, dynamic>> _baseExamRows(
+      List<Map<String, dynamic>> students) {
+    return [
+      for (final student in students)
+        {
+          'student_id': student['user_id']?.toString() ?? '',
+          'student_name': student['real_name']?.toString() ??
+              student['user_id']?.toString() ??
+              '',
+          'project_score': 0.0,
+          'group_score': 0.0,
+          'individual_score': 0.0,
+          'defense_score': 0.0,
+        }
+    ];
+  }
+
+  Future<List<Map<String, dynamic>>> _collectPlatformExamRows(
+    Database db,
+    List<Map<String, dynamic>> students,
+  ) async {
+    final rows = _baseExamRows(students);
+    final byStudent = {
+      for (final row in rows) row['student_id'].toString(): row,
+    };
+    await _mergeAssessmentReportScores(db, byStudent);
+    await _mergeProjectScores(db, byStudent);
+    await _mergeContributionScores(db, byStudent);
+    await _mergeWorkScores(db, byStudent);
+    return rows;
+  }
+
+  Future<void> _mergeAssessmentReportScores(
+    Database db,
+    Map<String, Map<String, dynamic>> byStudent,
+  ) async {
+    try {
+      if (!await _tableExists(db, 'assessment_reports')) return;
+      final activeWhere = ActiveStudentScope.where(alias: 'u');
+      final reports = await db.rawQuery('''
+        SELECT ar.user_id, ar.title, ar.score
+        FROM assessment_reports ar
+        JOIN users u ON u.user_id = ar.user_id
+        WHERE ar.score IS NOT NULL
+          AND $activeWhere
+        ORDER BY COALESCE(ar.reviewed_at, ar.submit_time, ar.updated_at, ar.created_at) ASC
+      ''');
+      for (final report in reports) {
+        final row = byStudent[report['user_id']?.toString() ?? ''];
+        if (row == null) continue;
+        final title = report['title']?.toString() ?? '';
+        final score = _scoreAsPercent(report['score'], 100);
+        final isFinal = title.contains('课程考核大作业报告') ||
+            title.contains('最终') ||
+            title.contains('大作业');
+        if (isFinal) {
+          for (final column in const [
+            'project_score',
+            'group_score',
+            'individual_score',
+            'defense_score',
+          ]) {
+            _setScoreIfHigher(row, column, score);
+          }
+          continue;
+        }
+        if (title.contains('项目')) {
+          _setScoreIfHigher(row, 'project_score', score);
+        }
+        if (title.contains('小组')) {
+          _setScoreIfHigher(row, 'group_score', score);
+        }
+        if (title.contains('个人')) {
+          _setScoreIfHigher(row, 'individual_score', score);
+        }
+        if (title.contains('答辩')) {
+          _setScoreIfHigher(row, 'defense_score', score);
+        }
+      }
+    } catch (e, st) {
+      swallowDebug(e,
+          tag: 'AchievementDao.platformAssessmentReports', stack: st);
+    }
+  }
+
+  Future<void> _mergeProjectScores(
+    Database db,
+    Map<String, Map<String, dynamic>> byStudent,
+  ) async {
+    try {
+      if (!await _tableExists(db, 'project_scores') ||
+          !await _tableExists(db, 'assessment_groups')) {
+        return;
+      }
+      final scores = await db.rawQuery('''
+        SELECT ps.total_score, g.member_ids
+        FROM project_scores ps
+        LEFT JOIN assessment_groups g ON g.id = ps.group_id
+        WHERE ps.total_score IS NOT NULL
+        ORDER BY ps.scored_at ASC
+      ''');
+      for (final score in scores) {
+        final value = _scoreAsPercent(score['total_score'], 100);
+        for (final sid in _parseStringList(score['member_ids'])) {
+          final row = byStudent[sid];
+          if (row != null) _setScoreIfHigher(row, 'project_score', value);
+        }
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AchievementDao.platformProjectScores', stack: st);
+    }
+  }
+
+  Future<void> _mergeContributionScores(
+    Database db,
+    Map<String, Map<String, dynamic>> byStudent,
+  ) async {
+    try {
+      if (!await _tableExists(db, 'contribution_scores')) return;
+      final activeWhere = ActiveStudentScope.where(alias: 'u');
+      final scores = await db.rawQuery('''
+        SELECT cs.target_user_id, cs.dimension, AVG(cs.overall_score) AS avg_score
+        FROM contribution_scores cs
+        JOIN users u ON u.user_id = cs.target_user_id
+        WHERE cs.overall_score IS NOT NULL
+          AND $activeWhere
+        GROUP BY cs.target_user_id, cs.dimension
+      ''');
+      for (final score in scores) {
+        final row = byStudent[score['target_user_id']?.toString() ?? ''];
+        if (row == null) continue;
+        final value = _scoreAsPercent(score['avg_score'], 100);
+        switch (score['dimension']?.toString()) {
+          case 'project':
+            _setScoreIfHigher(row, 'project_score', value);
+            break;
+          case 'group':
+            _setScoreIfHigher(row, 'group_score', value);
+            break;
+          case 'individual':
+            _setScoreIfHigher(row, 'individual_score', value);
+            break;
+        }
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AchievementDao.platformContribution', stack: st);
+    }
+  }
+
+  Future<void> _mergeWorkScores(
+    Database db,
+    Map<String, Map<String, dynamic>> byStudent,
+  ) async {
+    try {
+      if (!await _tableExists(db, 'work_scores') ||
+          !await _tableExists(db, 'student_works')) {
+        return;
+      }
+      final activeWhere = ActiveStudentScope.where(alias: 'u');
+      final scope = await _courseContext.scopedWhere(column: 'sw.course_id');
+      final scores = await db.rawQuery('''
+        SELECT sw.user_id, AVG(ws.total_score) AS avg_score
+        FROM work_scores ws
+        JOIN student_works sw ON sw.id = ws.work_id
+        JOIN users u ON u.user_id = sw.user_id
+        LEFT JOIN users scorer ON scorer.user_id = ws.scorer_id
+        WHERE ${scope.where}
+          AND $activeWhere
+          AND COALESCE(ws.scorer_role, scorer.role, '') IN ('teacher', 'admin')
+          AND ws.total_score IS NOT NULL
+        GROUP BY sw.user_id
+      ''', scope.args);
+      for (final score in scores) {
+        final row = byStudent[score['user_id']?.toString() ?? ''];
+        if (row == null) continue;
+        _setScoreIfHigher(
+            row, 'project_score', _scoreAsPercent(score['avg_score'], 100));
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AchievementDao.platformWorks', stack: st);
+    }
+  }
+
+  List<String> _parseStringList(Object? raw) {
+    final text = raw?.toString() ?? '';
+    if (text.trim().isEmpty) return const [];
+    try {
+      final decoded = jsonDecode(text);
+      if (decoded is List) {
+        return decoded
+            .map((e) => e?.toString().trim() ?? '')
+            .where((e) => e.isNotEmpty)
+            .toList();
+      }
+    } catch (_) {
+      // Fall through to delimiter parsing.
+    }
+    return text
+        .split(RegExp(r'[,，;；\s]+'))
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+  }
+
+  Future<bool> _tableExists(Database db, String tableName) async {
+    final result = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1",
+      [tableName],
+    );
+    return result.isNotEmpty;
+  }
+
+  double _scoreAsPercent(Object? score, Object? fullScore) {
+    double number(Object? value, double fallback) {
+      if (value is num) return value.toDouble();
+      return double.tryParse(value?.toString() ?? '') ?? fallback;
+    }
+
+    final value = number(score, 0);
+    final full = number(fullScore, 100);
+    if (full <= 0) return value.clamp(0.0, 100.0).toDouble();
+    final percent = full == 100 ? value : value / full * 100;
+    return percent.clamp(0.0, 100.0).toDouble();
+  }
+
+  void _setScoreIfHigher(
+    Map<String, dynamic> row,
+    String column,
+    double value,
+  ) {
+    final current = (row[column] as num?)?.toDouble() ?? 0;
+    if (value > current) row[column] = value;
+  }
+
   /// 从本系统已有数据自动获取各环节成绩，返回与 parseComponentSheets 同结构的
   /// {pingshi, experiment, exam}，供与导入数据对比合并。
   /// - 平时：quiz_results 按学生平均分 → 期间测验项(其余环节项缺省0)
@@ -875,20 +1272,42 @@ class AchievementDao {
     // 以全体活跃学生为基准，LEFT JOIN 测验成绩：
     // 没有测验数据的学生也建行（成绩按 0 计），使批次覆盖完整名单而非仅做过测验的人。
     final quizScope = await _courseContext.scopedWhere();
-    final rows = await db.rawQuery('''
-      SELECT u.user_id, u.real_name,
-        q.avg_score, q.total_correct, q.total_questions
-      FROM users u
-      LEFT JOIN (
-        SELECT user_id, AVG(score) AS avg_score,
-          SUM(num_correct) AS total_correct, SUM(num_total) AS total_questions
-        FROM quiz_results
-        WHERE ${quizScope.where}
-        GROUP BY user_id
-      ) q ON q.user_id = u.user_id
-      WHERE u.role = 'student' AND u.is_active = 1
-      ORDER BY u.user_id
-    ''', quizScope.args);
+    final activeWhere = ActiveStudentScope.where(alias: 'u');
+    List<Map<String, dynamic>> rows;
+    try {
+      rows = await db.rawQuery('''
+        SELECT u.user_id, u.real_name,
+          q.avg_score, q.total_correct, q.total_questions
+        FROM users u
+        LEFT JOIN (
+          SELECT user_id, AVG(score) AS avg_score,
+            SUM(num_correct) AS total_correct, SUM(num_total) AS total_questions
+          FROM quiz_results
+          WHERE ${quizScope.where}
+          GROUP BY user_id
+        ) q ON q.user_id = u.user_id
+        WHERE $activeWhere
+        ORDER BY u.user_id
+      ''', quizScope.args);
+    } catch (e, st) {
+      swallowDebug(e,
+          tag: 'AchievementDao.generateScoresFromQuizResults.active',
+          stack: st);
+      rows = await db.rawQuery('''
+        SELECT u.user_id, u.real_name,
+          q.avg_score, q.total_correct, q.total_questions
+        FROM users u
+        LEFT JOIN (
+          SELECT user_id, AVG(score) AS avg_score,
+            SUM(num_correct) AS total_correct, SUM(num_total) AS total_questions
+          FROM quiz_results
+          WHERE ${quizScope.where}
+          GROUP BY user_id
+        ) q ON q.user_id = u.user_id
+        WHERE u.role = 'student' AND COALESCE(u.is_active, 1) = 1
+        ORDER BY u.user_id
+      ''', quizScope.args);
+    }
 
     if (rows.isEmpty) {
       throw Exception('没有活跃学生，请先在班级管理中添加学生');
@@ -1542,11 +1961,24 @@ class AchievementDao {
   Future<List<Map<String, dynamic>>> getPingshiScores(int batchId) async {
     final db = await DatabaseHelper.instance.database;
     await _ensureComponentScoresFromAggregate(batchId);
-    return (await db.query('achievement_pingshi_scores',
-            where: 'batch_id = ?',
-            whereArgs: [batchId],
-            orderBy: 'student_id ASC'))
-        .toList();
+    final activeWhere = ActiveStudentScope.where(alias: 'u');
+    try {
+      return (await db.rawQuery('''
+        SELECT s.*
+        FROM achievement_pingshi_scores s
+        LEFT JOIN users u ON u.user_id = s.student_id
+        WHERE s.batch_id = ?
+          AND (u.user_id IS NULL OR ($activeWhere))
+        ORDER BY s.student_id ASC
+      ''', [batchId])).toList();
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AchievementDao.getPingshiScores.active', stack: st);
+      return (await db.query('achievement_pingshi_scores',
+              where: 'batch_id = ?',
+              whereArgs: [batchId],
+              orderBy: 'student_id ASC'))
+          .toList();
+    }
   }
 
   Future<int> insertPingshiScore(Map<String, dynamic> score) async {
@@ -1613,11 +2045,25 @@ class AchievementDao {
   Future<List<Map<String, dynamic>>> getExperimentScores(int batchId) async {
     final db = await DatabaseHelper.instance.database;
     await _ensureComponentScoresFromAggregate(batchId);
-    return (await db.query('achievement_experiment_scores',
-            where: 'batch_id = ?',
-            whereArgs: [batchId],
-            orderBy: 'student_id ASC'))
-        .toList();
+    final activeWhere = ActiveStudentScope.where(alias: 'u');
+    try {
+      return (await db.rawQuery('''
+        SELECT s.*
+        FROM achievement_experiment_scores s
+        LEFT JOIN users u ON u.user_id = s.student_id
+        WHERE s.batch_id = ?
+          AND (u.user_id IS NULL OR ($activeWhere))
+        ORDER BY s.student_id ASC
+      ''', [batchId])).toList();
+    } catch (e, st) {
+      swallowDebug(e,
+          tag: 'AchievementDao.getExperimentScores.active', stack: st);
+      return (await db.query('achievement_experiment_scores',
+              where: 'batch_id = ?',
+              whereArgs: [batchId],
+              orderBy: 'student_id ASC'))
+          .toList();
+    }
   }
 
   Future<int> insertExperimentScore(Map<String, dynamic> score) async {
@@ -1689,11 +2135,24 @@ class AchievementDao {
   Future<List<Map<String, dynamic>>> getExamScores(int batchId) async {
     final db = await DatabaseHelper.instance.database;
     await _ensureComponentScoresFromAggregate(batchId);
-    return (await db.query('achievement_exam_scores',
-            where: 'batch_id = ?',
-            whereArgs: [batchId],
-            orderBy: 'student_id ASC'))
-        .toList();
+    final activeWhere = ActiveStudentScope.where(alias: 'u');
+    try {
+      return (await db.rawQuery('''
+        SELECT s.*
+        FROM achievement_exam_scores s
+        LEFT JOIN users u ON u.user_id = s.student_id
+        WHERE s.batch_id = ?
+          AND (u.user_id IS NULL OR ($activeWhere))
+        ORDER BY s.student_id ASC
+      ''', [batchId])).toList();
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AchievementDao.getExamScores.active', stack: st);
+      return (await db.query('achievement_exam_scores',
+              where: 'batch_id = ?',
+              whereArgs: [batchId],
+              orderBy: 'student_id ASC'))
+          .toList();
+    }
   }
 
   Future<int> insertExamScore(Map<String, dynamic> score) async {

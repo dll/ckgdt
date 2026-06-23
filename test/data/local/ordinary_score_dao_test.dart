@@ -43,6 +43,21 @@ void main() {
       )
     ''');
     await db.execute('''
+      CREATE TABLE classes(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        is_archived INTEGER DEFAULT 0
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE class_members(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        class_id INTEGER,
+        user_id TEXT,
+        role TEXT DEFAULT 'student'
+      )
+    ''');
+    await db.execute('''
       CREATE TABLE roll_call_records(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         session_id INTEGER,
@@ -278,5 +293,55 @@ void main() {
     expect(component['class_activity_score'], closeTo(85, 0.001));
     expect(component['quiz_homework_score'], closeTo(90, 0.001));
     expect(component['extra_learning_score'], closeTo(100, 0.001));
+  });
+
+  test('平时成绩快照排除只属于归档班级的学生', () async {
+    final db = await openInMemoryDb();
+    DatabaseHelper.databaseForTest = db;
+    await createSchema(db);
+
+    await db.insert('users', {
+      'user_id': '2022001',
+      'real_name': '当前学生',
+      'role': 'student',
+      'is_active': 1,
+    });
+    await db.insert('users', {
+      'user_id': '2022002',
+      'real_name': '归档学生',
+      'role': 'student',
+      'is_active': 1,
+    });
+    await db.insert('users', {
+      'user_id': '2022003',
+      'real_name': '未分班学生',
+      'role': 'student',
+      'is_active': 1,
+    });
+    final activeClass = await db.insert('classes', {
+      'name': '软件23',
+      'is_archived': 0,
+    });
+    final archivedClass = await db.insert('classes', {
+      'name': '计科22',
+      'is_archived': 1,
+    });
+    await db.insert('class_members', {
+      'class_id': activeClass,
+      'user_id': '2022001',
+      'role': 'student',
+    });
+    await db.insert('class_members', {
+      'class_id': archivedClass,
+      'user_id': '2022002',
+      'role': 'student',
+    });
+
+    final snapshot = await OrdinaryScoreDao().loadSnapshot();
+    final ids = snapshot.rows.map((row) => row.studentId).toSet();
+
+    expect(ids, contains('2022001'));
+    expect(ids, contains('2022003'), reason: '未分班新学生仍应保留');
+    expect(ids, isNot(contains('2022002')));
   });
 }

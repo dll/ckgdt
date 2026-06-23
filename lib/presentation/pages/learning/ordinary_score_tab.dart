@@ -17,6 +17,7 @@ class _OrdinaryScoreTabState extends State<OrdinaryScoreTab> {
   final _ordinaryDao = OrdinaryScoreDao();
   final _achievementDao = AchievementDao();
   final _authService = AuthService();
+  final _studentFilterCtrl = TextEditingController();
 
   OrdinaryScoreSnapshot? _snapshot;
   OrdinaryScoreSettings? _settings;
@@ -26,12 +27,20 @@ class _OrdinaryScoreTabState extends State<OrdinaryScoreTab> {
   bool _savingSettings = false;
   bool _syncing = false;
   bool _creatingBatch = false;
+  bool _totalSortAscending = false;
+  String _studentFilter = '';
   String? _error;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _studentFilterCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -678,80 +687,195 @@ class _OrdinaryScoreTabState extends State<OrdinaryScoreTab> {
         ),
       );
     }
+    final rows = _visibleScoreRows(snapshot.rows);
 
     return _panel(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
+          Wrap(
+            spacing: 12,
+            runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              const Icon(Icons.table_chart_outlined,
-                  color: NoirTokens.accent, size: 20),
-              const SizedBox(width: 8),
-              Text('学生平时成绩明细',
-                  style: NoirTokens.title(color: NoirTokens.paper)),
-              const Spacer(),
-              Text(
-                '班均 ${_fmt(snapshot.averageTotalScore)}/100',
-                style: const TextStyle(
-                  color: NoirTokens.accent,
-                  fontWeight: FontWeight.w800,
+              SizedBox(
+                width: 220,
+                child: Row(
+                  children: [
+                    const Icon(Icons.table_chart_outlined,
+                        color: NoirTokens.accent, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '学生平时成绩明细',
+                        style: NoirTokens.title(color: NoirTokens.paper),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                width: 260,
+                height: 40,
+                child: TextField(
+                  controller: _studentFilterCtrl,
+                  style: const TextStyle(color: NoirTokens.paper, fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: '按学号/姓名筛选',
+                    hintStyle: TextStyle(
+                      color: NoirTokens.paper.withValues(alpha: 0.42),
+                    ),
+                    prefixIcon: Icon(Icons.search,
+                        size: 18,
+                        color: NoirTokens.paper.withValues(alpha: 0.56)),
+                    suffixIcon: _studentFilter.isEmpty
+                        ? null
+                        : IconButton(
+                            tooltip: '清除筛选',
+                            icon: const Icon(Icons.close, size: 18),
+                            color: NoirTokens.paper.withValues(alpha: 0.62),
+                            onPressed: () {
+                              _studentFilterCtrl.clear();
+                              setState(() => _studentFilter = '');
+                            },
+                          ),
+                    isDense: true,
+                    filled: true,
+                    fillColor: NoirTokens.paper.withValues(alpha: 0.04),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                          color: NoirTokens.paper.withValues(alpha: 0.14)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(
+                          color: NoirTokens.paper.withValues(alpha: 0.14)),
+                    ),
+                    focusedBorder: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                      borderSide: BorderSide(color: NoirTokens.accent),
+                    ),
+                  ),
+                  onChanged: (value) => setState(
+                    () => _studentFilter = value.trim().toLowerCase(),
+                  ),
+                ),
+              ),
+              SizedBox(
+                height: 40,
+                child: OutlinedButton.icon(
+                  onPressed: () => setState(
+                      () => _totalSortAscending = !_totalSortAscending),
+                  icon: Icon(_totalSortAscending
+                      ? Icons.arrow_upward
+                      : Icons.arrow_downward),
+                  label: Text(_totalSortAscending ? '总分升序' : '总分降序'),
+                ),
+              ),
+              SizedBox(
+                height: 40,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '班均 ${_fmt(snapshot.averageTotalScore)}/100 · 显示 ${rows.length}/${snapshot.rows.length} 人',
+                    style: const TextStyle(
+                      color: NoirTokens.accent,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Theme(
-              data: Theme.of(context).copyWith(
-                dataTableTheme: DataTableThemeData(
-                  headingTextStyle: TextStyle(
-                    color: NoirTokens.paper.withValues(alpha: 0.7),
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12,
+          if (rows.isEmpty)
+            _emptyState(Icons.search_off, '没有匹配学生', '请调整学号或姓名筛选条件')
+          else
+            LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                    child: Theme(
+                      data: Theme.of(context).copyWith(
+                        dataTableTheme: DataTableThemeData(
+                          headingTextStyle: TextStyle(
+                            color: NoirTokens.paper.withValues(alpha: 0.7),
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12,
+                          ),
+                          dataTextStyle: const TextStyle(
+                              color: NoirTokens.paper, fontSize: 12),
+                          headingRowColor: WidgetStatePropertyAll(
+                            NoirTokens.paper.withValues(alpha: 0.06),
+                          ),
+                          dataRowColor:
+                              WidgetStateProperty.resolveWith((states) {
+                            return states.contains(WidgetState.hovered)
+                                ? NoirTokens.accent.withValues(alpha: 0.08)
+                                : null;
+                          }),
+                          dividerThickness: 0.4,
+                        ),
+                      ),
+                      child: DataTable(
+                        sortColumnIndex: 11,
+                        sortAscending: _totalSortAscending,
+                        columnSpacing: 18,
+                        horizontalMargin: 8,
+                        columns: [
+                          const DataColumn(label: Text('排名')),
+                          const DataColumn(label: Text('学号')),
+                          const DataColumn(label: Text('姓名')),
+                          const DataColumn(label: Text('课堂表现')),
+                          const DataColumn(label: Text('期间测验')),
+                          const DataColumn(label: Text('课外学习')),
+                          const DataColumn(label: Text('课堂积分')),
+                          const DataColumn(label: Text('测验')),
+                          const DataColumn(label: Text('课件')),
+                          const DataColumn(label: Text('AI')),
+                          const DataColumn(label: Text('扩展/推荐')),
+                          DataColumn(
+                            numeric: true,
+                            label: const Text('总分'),
+                            onSort: (_, ascending) =>
+                                setState(() => _totalSortAscending = ascending),
+                          ),
+                        ],
+                        rows: [
+                          for (var i = 0; i < rows.length; i++)
+                            _studentRow(i, rows[i], settings),
+                        ],
+                      ),
+                    ),
                   ),
-                  dataTextStyle:
-                      const TextStyle(color: NoirTokens.paper, fontSize: 12),
-                  headingRowColor: WidgetStatePropertyAll(
-                    NoirTokens.paper.withValues(alpha: 0.06),
-                  ),
-                  dataRowColor: WidgetStateProperty.resolveWith((states) {
-                    return states.contains(WidgetState.hovered)
-                        ? NoirTokens.accent.withValues(alpha: 0.08)
-                        : null;
-                  }),
-                  dividerThickness: 0.4,
-                ),
-              ),
-              child: DataTable(
-                columnSpacing: 18,
-                horizontalMargin: 8,
-                columns: const [
-                  DataColumn(label: Text('排名')),
-                  DataColumn(label: Text('学号')),
-                  DataColumn(label: Text('姓名')),
-                  DataColumn(label: Text('课堂表现')),
-                  DataColumn(label: Text('期间测验')),
-                  DataColumn(label: Text('课外学习')),
-                  DataColumn(label: Text('总分')),
-                  DataColumn(label: Text('课堂积分')),
-                  DataColumn(label: Text('测验')),
-                  DataColumn(label: Text('课件')),
-                  DataColumn(label: Text('AI')),
-                  DataColumn(label: Text('扩展/推荐')),
-                ],
-                rows: [
-                  for (var i = 0; i < snapshot.rows.length; i++)
-                    _studentRow(i, snapshot.rows[i], settings),
-                ],
-              ),
+                );
+              },
             ),
-          ),
         ],
       ),
     );
+  }
+
+  List<OrdinaryStudentScore> _visibleScoreRows(
+      List<OrdinaryStudentScore> source) {
+    final filtered = source.where((row) {
+      if (_studentFilter.isEmpty) return true;
+      return row.studentId.toLowerCase().contains(_studentFilter) ||
+          row.studentName.toLowerCase().contains(_studentFilter);
+    }).toList();
+    filtered.sort((a, b) {
+      final byTotal = _totalSortAscending
+          ? a.totalScore.compareTo(b.totalScore)
+          : b.totalScore.compareTo(a.totalScore);
+      if (byTotal != 0) return byTotal;
+      return a.studentId.compareTo(b.studentId);
+    });
+    return filtered;
   }
 
   DataRow _studentRow(
@@ -775,13 +899,6 @@ class _OrdinaryScoreTabState extends State<OrdinaryScoreTab> {
         DataCell(
             _scoreCell(row.extraScore, settings.extraWeight, row.extraPercent)),
         DataCell(Text(
-          _fmt(row.totalScore),
-          style: const TextStyle(
-            color: NoirTokens.accent,
-            fontWeight: FontWeight.w800,
-          ),
-        )),
-        DataCell(Text(
           '${_fmt(m.earnedClassroomPoints)}分 · ${m.rollCallCorrectCount}/${m.rollCallCount}次',
         )),
         DataCell(Text(
@@ -795,6 +912,13 @@ class _OrdinaryScoreTabState extends State<OrdinaryScoreTab> {
         DataCell(Text('${m.aiRequests}次 · ${m.aiActiveDays}天')),
         DataCell(Text(
           '${m.extendedRecords}扩展 · ${m.recommendRecords + m.recommendFavorites}推荐',
+        )),
+        DataCell(Text(
+          _fmt(row.totalScore),
+          style: const TextStyle(
+            color: NoirTokens.accent,
+            fontWeight: FontWeight.w800,
+          ),
         )),
       ],
     );

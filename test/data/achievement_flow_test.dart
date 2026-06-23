@@ -77,6 +77,69 @@ Future<Database> _createAchievementDb() async {
       pingshi_ratio REAL, experiment_ratio REAL, exam_ratio REAL,
       assessment_items_json TEXT,
       created_at TEXT, updated_at TEXT, UNIQUE(course_name, idx))''');
+  await db.execute('''
+    CREATE TABLE courses(
+      id TEXT PRIMARY KEY, name TEXT, description TEXT, chapter_count INTEGER,
+      chapters TEXT, is_active INTEGER, created_at TEXT)''');
+  await db.insert('courses', {
+    'id': 'mad',
+    'name': '移动应用开发',
+    'description': '',
+    'chapter_count': 6,
+    'chapters': '[]',
+    'is_active': 1,
+    'created_at': '2026-01-01T00:00:00',
+  });
+  await db.execute('''
+    CREATE TABLE users(
+      user_id TEXT PRIMARY KEY, real_name TEXT, role TEXT,
+      is_active INTEGER DEFAULT 1)''');
+  await db.execute('''
+    CREATE TABLE classes(
+      id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT,
+      is_archived INTEGER DEFAULT 0)''');
+  await db.execute('''
+    CREATE TABLE class_members(
+      id INTEGER PRIMARY KEY AUTOINCREMENT, class_id INTEGER,
+      user_id TEXT, role TEXT DEFAULT 'student')''');
+  await db.execute('''
+    CREATE TABLE quiz_results(
+      id INTEGER PRIMARY KEY AUTOINCREMENT, course_id TEXT, user_id TEXT,
+      score INTEGER, num_correct INTEGER, num_total INTEGER,
+      chapter TEXT, quiz_timestamp TEXT, completed_at TEXT)''');
+  await db.execute('''
+    CREATE TABLE learning_records(
+      id INTEGER PRIMARY KEY AUTOINCREMENT, course_id TEXT, user_id TEXT,
+      node_id TEXT, node_title TEXT, study_time TEXT, completed_at TEXT)''');
+  await db.execute('''
+    CREATE TABLE resource_files(
+      id INTEGER PRIMARY KEY AUTOINCREMENT, course_id TEXT, file_name TEXT,
+      file_type TEXT, source_type TEXT)''');
+  await db.execute('''
+    CREATE TABLE ai_chat_history(
+      id INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT, role TEXT,
+      content TEXT, created_at TEXT, tokens_used INTEGER DEFAULT 0,
+      user_id TEXT)''');
+  await db.execute('''
+    CREATE TABLE hot_video_favorites(
+      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT, video_id INTEGER,
+      favorite_time TEXT)''');
+  await db.execute('''
+    CREATE TABLE lab_tasks(
+      id INTEGER PRIMARY KEY AUTOINCREMENT, course_id TEXT, title TEXT,
+      chapter TEXT, max_score INTEGER DEFAULT 100, status TEXT DEFAULT 'active')''');
+  await db.execute('''
+    CREATE TABLE lab_submissions(
+      id INTEGER PRIMARY KEY AUTOINCREMENT, task_id INTEGER, user_id TEXT,
+      status TEXT, score INTEGER, submit_time TEXT)''');
+  await db.execute('''
+    CREATE TABLE assessment_reports(
+      id INTEGER PRIMARY KEY AUTOINCREMENT, task_id INTEGER, user_id TEXT,
+      title TEXT, content_json TEXT, file_path TEXT, status TEXT,
+      submit_time TEXT, score INTEGER, feedback TEXT, review_json TEXT,
+      reviewed_at TEXT, reviewer_id TEXT, printed_at TEXT,
+      print_count INTEGER DEFAULT 0, print_settings_json TEXT,
+      created_at TEXT, updated_at TEXT)''');
   return db;
 }
 
@@ -403,5 +466,115 @@ void main() {
       closeTo(0.68, 0.0001),
       reason: '6实验模板中实验6应支撑目标4，不能因为 exp7 为空导出/计算为0',
     );
+  });
+
+  test('平台聚合成绩生成三张分项表并排除归档班级学生', () async {
+    final activeClass = await db.insert('classes', {
+      'name': '软件23',
+      'is_archived': 0,
+    });
+    final archivedClass = await db.insert('classes', {
+      'name': '计科22',
+      'is_archived': 1,
+    });
+    await db.insert('users', {
+      'user_id': '2023001',
+      'real_name': '当前学生',
+      'role': 'student',
+      'is_active': 1,
+    });
+    await db.insert('users', {
+      'user_id': '2022001',
+      'real_name': '归档学生',
+      'role': 'student',
+      'is_active': 1,
+    });
+    await db.insert('class_members', {
+      'class_id': activeClass,
+      'user_id': '2023001',
+      'role': 'student',
+    });
+    await db.insert('class_members', {
+      'class_id': archivedClass,
+      'user_id': '2022001',
+      'role': 'student',
+    });
+
+    await db.insert('quiz_results', {
+      'course_id': 'mad',
+      'user_id': '2023001',
+      'score': 90,
+      'num_correct': 9,
+      'num_total': 10,
+      'chapter': '第1章',
+      'quiz_timestamp': '2026-06-01T10:00:00',
+    });
+    await db.insert('quiz_results', {
+      'course_id': 'mad',
+      'user_id': '2022001',
+      'score': 100,
+      'num_correct': 10,
+      'num_total': 10,
+      'chapter': '第1章',
+      'quiz_timestamp': '2026-06-01T10:00:00',
+    });
+    final taskId = await db.insert('lab_tasks', {
+      'course_id': 'mad',
+      'title': '实验一',
+      'chapter': '第1章',
+      'max_score': 100,
+      'status': 'active',
+    });
+    await db.insert('lab_submissions', {
+      'task_id': taskId,
+      'user_id': '2023001',
+      'status': '已批改',
+      'score': 80,
+      'submit_time': '2026-06-02T10:00:00',
+    });
+    await db.insert('lab_submissions', {
+      'task_id': taskId,
+      'user_id': '2022001',
+      'status': '已批改',
+      'score': 100,
+      'submit_time': '2026-06-02T10:00:00',
+    });
+    await db.insert('assessment_reports', {
+      'user_id': '2023001',
+      'title': '课程考核大作业报告',
+      'status': '审核通过',
+      'score': 88,
+      'submit_time': '2026-06-03T10:00:00',
+      'created_at': '2026-06-03T10:00:00',
+      'updated_at': '2026-06-03T10:00:00',
+    });
+
+    final batchId = await dao.addBatch(
+      batchName: '平台聚合',
+      courseName: '移动应用开发',
+      className: '软件23',
+      semester: '2025-2026-2',
+      teacherId: 't1',
+    );
+    final count = await dao.importPlatformAchievementScores(batchId);
+
+    expect(count, 1);
+    final pingshi = await dao.getPingshiScores(batchId);
+    final experiments = await dao.getExperimentScores(batchId);
+    final exams = await dao.getExamScores(batchId);
+    final aggregate = await dao.getScores(batchId);
+
+    expect(pingshi.map((r) => r['student_id']), ['2023001']);
+    expect(experiments.map((r) => r['student_id']), ['2023001']);
+    expect(exams.map((r) => r['student_id']), ['2023001']);
+    expect(aggregate.map((r) => r['student_id']), ['2023001']);
+    expect((pingshi.single['quiz_homework_score'] as num).toDouble(),
+        closeTo(90, 0.001));
+    expect((experiments.single['exp1_score'] as num).toDouble(),
+        closeTo(80, 0.001));
+    expect(
+        (exams.single['project_score'] as num).toDouble(), closeTo(88, 0.001));
+    expect(
+        (exams.single['defense_score'] as num).toDouble(), closeTo(88, 0.001));
   });
 }

@@ -21,7 +21,8 @@ class ScoreManagementTab extends StatefulWidget {
   final AchievementDao achievementDao;
   final ValueNotifier<int>? dataRevision;
 
-  const ScoreManagementTab({super.key, 
+  const ScoreManagementTab({
+    super.key,
     required this.authService,
     required this.achievementDao,
     this.dataRevision,
@@ -416,6 +417,38 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
     }
   }
 
+  Future<void> _importPlatformScores() async {
+    if (_selectedBatchId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先选择批次')),
+      );
+      return;
+    }
+    try {
+      setState(() => _generating = true);
+      final count = await widget.achievementDao
+          .importPlatformAchievementScores(_selectedBatchId!);
+      _loadComponentScores();
+      widget.dataRevision?.value++;
+      await _refreshBatches();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('平台成绩聚合完成：$count 名学生，已生成平时/实验/考核明细并合成达成度'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ScoresTab.importPlatformScores', stack: st);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('平台成绩聚合失败：$e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _generating = false);
+    }
+  }
+
   /// 导入前确认页：展示目标拆分结构 + 校验结果（计数/缺失/异常/重复）。
   Future<bool?> _showImportConfirm(
       Map<String, List<Map<String, dynamic>>> components,
@@ -576,6 +609,13 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
                     ),
                     const SizedBox(width: 8),
                     _buildActionChip(
+                      icon: Icons.hub_outlined,
+                      label: '从平台聚合',
+                      onTap: _generating ? null : _importPlatformScores,
+                      color: Colors.indigo,
+                    ),
+                    const SizedBox(width: 8),
+                    _buildActionChip(
                       icon: Icons.person_add,
                       label: '添加成绩',
                       onTap: () => _showAddScoreDialog(),
@@ -723,10 +763,12 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
           children: [
             Icon(Icons.info_outline,
                 size: 48,
-                color:
-                    Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.3)),
             const SizedBox(height: 12),
-            Text('暂无数据，请先导入成绩',
+            Text('暂无数据，请先从平台聚合或导入成绩',
                 style: TextStyle(
                     fontSize: 14,
                     color: Theme.of(context)
@@ -963,6 +1005,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
           'exp4_score',
           'exp5_score',
           'exp6_score',
+          'exp7_score',
           'total_score'
         ];
       default:
@@ -1610,11 +1653,9 @@ class _PingshiAchievementTabState extends State<PingshiAchievementTab> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.school_outlined,
-                          size: 64, color: Colors.grey),
+                      Icon(Icons.school_outlined, size: 64, color: Colors.grey),
                       SizedBox(height: 16),
-                      Text('暂无平时成绩数据',
-                          style: TextStyle(color: Colors.grey)),
+                      Text('暂无平时成绩数据', style: TextStyle(color: Colors.grey)),
                       SizedBox(height: 8),
                       Text('请在成绩管理中导入或录入成绩数据',
                           style: TextStyle(color: Colors.grey, fontSize: 12)),
@@ -1858,8 +1899,7 @@ class _ExperimentAchievementTabState extends State<ExperimentAchievementTab> {
                       Icon(Icons.science_outlined,
                           size: 64, color: Colors.grey),
                       SizedBox(height: 16),
-                      Text('暂无实验成绩数据',
-                          style: TextStyle(color: Colors.grey)),
+                      Text('暂无实验成绩数据', style: TextStyle(color: Colors.grey)),
                       SizedBox(height: 8),
                       Text('请在成绩管理中导入或录入成绩数据',
                           style: TextStyle(color: Colors.grey, fontSize: 12)),
@@ -1923,7 +1963,8 @@ class _ExperimentAchievementTabState extends State<ExperimentAchievementTab> {
 class ExamAchievementTab extends StatefulWidget {
   final AchievementDao achievementDao;
   final ValueNotifier<int>? dataRevision;
-  const ExamAchievementTab({super.key, required this.achievementDao, this.dataRevision});
+  const ExamAchievementTab(
+      {super.key, required this.achievementDao, this.dataRevision});
 
   @override
   State<ExamAchievementTab> createState() => _ExamAchievementTabState();
@@ -2092,8 +2133,7 @@ class _ExamAchievementTabState extends State<ExamAchievementTab> {
                       Icon(Icons.assignment_outlined,
                           size: 64, color: Colors.grey),
                       SizedBox(height: 16),
-                      Text('暂无期末考核数据',
-                          style: TextStyle(color: Colors.grey)),
+                      Text('暂无期末考核数据', style: TextStyle(color: Colors.grey)),
                       SizedBox(height: 8),
                       Text('请在成绩管理中导入或录入成绩数据',
                           style: TextStyle(color: Colors.grey, fontSize: 12)),
@@ -2232,7 +2272,10 @@ class _ComponentExpandTileState extends State<_ComponentExpandTile> {
                 return DataRow(
                   color: WidgetStateProperty.all(i.isEven
                       ? Theme.of(context).colorScheme.surface
-                      : Theme.of(context).colorScheme.surface.withValues(alpha: 0.6)),
+                      : Theme.of(context)
+                          .colorScheme
+                          .surface
+                          .withValues(alpha: 0.6)),
                   cells: [
                     DataCell(Text('${r['student_id'] ?? ''}',
                         style: TextStyle(

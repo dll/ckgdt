@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
+import 'active_student_scope.dart';
 import 'database_helper.dart';
 import '../../services/course_resource_service.dart';
 import '../../services/course_context_service.dart';
@@ -90,6 +91,7 @@ class LabTaskDao {
       {int? taskId, String? userId}) async {
     final db = await _dbHelper.database;
     final scope = await _courseContext.scopedWhere(column: 't.course_id');
+    final activeWhere = ActiveStudentScope.where(alias: 'u');
     String sql = '''
       SELECT s.*, t.title as task_title, t.chapter, t.max_score, t.difficulty,
              u.real_name
@@ -97,6 +99,7 @@ class LabTaskDao {
       LEFT JOIN lab_tasks t ON t.id = s.task_id
       LEFT JOIN users u ON u.user_id = s.user_id
       WHERE ${scope.where}
+        AND $activeWhere
     ''';
     final args = <dynamic>[...scope.args];
     if (taskId != null) {
@@ -229,15 +232,18 @@ class LabTaskDao {
 
   Future<Map<String, dynamic>> getTaskStats(int taskId) async {
     final db = await _dbHelper.database;
+    final activeWhere = ActiveStudentScope.where(alias: 'u');
     final result = await db.rawQuery('''
       SELECT
         COUNT(*) as total_submissions,
-        SUM(CASE WHEN score IS NOT NULL THEN 1 ELSE 0 END) as graded_count,
-        AVG(score) as avg_score,
-        MAX(score) as max_score,
-        MIN(score) as min_score
-      FROM lab_submissions
-      WHERE task_id = ?
+        SUM(CASE WHEN s.score IS NOT NULL THEN 1 ELSE 0 END) as graded_count,
+        AVG(s.score) as avg_score,
+        MAX(s.score) as max_score,
+        MIN(s.score) as min_score
+      FROM lab_submissions s
+      JOIN users u ON u.user_id = s.user_id
+      WHERE s.task_id = ?
+        AND $activeWhere
     ''', [taskId]);
     return result.isNotEmpty ? result.first : {};
   }
@@ -264,6 +270,7 @@ class LabTaskDao {
   Future<List<Map<String, dynamic>>> getAllStudentLabScores() async {
     final db = await _dbHelper.database;
     final scope = await _courseContext.scopedWhere(column: 't.course_id');
+    final activeWhere = ActiveStudentScope.where(alias: 'u');
     return db.rawQuery('''
       SELECT
         s.user_id,
@@ -278,7 +285,7 @@ class LabTaskDao {
       FROM lab_submissions s
       LEFT JOIN users u ON u.user_id = s.user_id
       LEFT JOIN lab_tasks t ON t.id = s.task_id
-      WHERE u.role = 'student' AND u.is_active = 1
+      WHERE $activeWhere
         AND ${scope.where}
       ORDER BY u.user_id, t.chapter, t.id
     ''', scope.args);
@@ -312,6 +319,7 @@ class LabTaskDao {
   Future<Map<String, dynamic>> getClassLabOverview({int passScore = 60}) async {
     final db = await _dbHelper.database;
     final scope = await _courseContext.scopedWhere(column: 't.course_id');
+    final activeWhere = ActiveStudentScope.where(alias: 'u');
     final result = await db.rawQuery('''
       SELECT
         COUNT(DISTINCT s.user_id) as student_count,
@@ -326,7 +334,7 @@ class LabTaskDao {
       FROM lab_submissions s
       INNER JOIN users u ON u.user_id = s.user_id
       LEFT JOIN lab_tasks t ON t.id = s.task_id
-      WHERE u.role = 'student' AND u.is_active = 1
+      WHERE $activeWhere
         AND ${scope.where}
     ''', [passScore, passScore, ...scope.args]);
     final row = result.isNotEmpty ? result.first : {};
@@ -893,18 +901,23 @@ class LabTaskDao {
   /// 获取活跃学生总数
   Future<int> getActiveStudentCount() async {
     final db = await _dbHelper.database;
-    final r = await db.rawQuery(
-        "SELECT COUNT(*) as c FROM users WHERE role='student' AND is_active=1");
+    final activeWhere = ActiveStudentScope.where(alias: 'u');
+    final r = await db.rawQuery('''
+      SELECT COUNT(*) as c
+      FROM users u
+      WHERE $activeWhere
+    ''');
     return (r.first['c'] as int?) ?? 0;
   }
 
   /// 获取某任务的未提交学生列表
   Future<List<Map<String, dynamic>>> getUnsubmittedStudents(int taskId) async {
     final db = await _dbHelper.database;
+    final activeWhere = ActiveStudentScope.where(alias: 'u');
     return db.rawQuery('''
       SELECT u.user_id, u.real_name
       FROM users u
-      WHERE u.role = 'student' AND u.is_active = 1
+      WHERE $activeWhere
         AND u.user_id NOT IN (
           SELECT s.user_id FROM lab_submissions s WHERE s.task_id = ?
         )

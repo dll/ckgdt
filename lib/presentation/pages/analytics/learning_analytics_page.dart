@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../core/design/noir_tokens.dart';
 import '../../../core/error_handler.dart';
+import '../../../data/local/active_student_scope.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../services/course_context_service.dart';
 import '../learning/ordinary_score_tab.dart';
@@ -59,27 +60,41 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
     setState(() => _isLoading = true);
     try {
       final db = await DatabaseHelper.instance.database;
+      final activeWhere = ActiveStudentScope.where(alias: 'u');
 
       // ── 1. 班级概览 ──────────────────────────────────────
-      final studentCount = await db
-          .rawQuery("SELECT COUNT(*) as c FROM users WHERE role='student'");
+      final studentCount = await db.rawQuery('''
+        SELECT COUNT(*) as c
+        FROM users u
+        WHERE $activeWhere
+      ''');
       _totalStudents = (studentCount.first['c'] as int?) ?? 0;
 
       // 有学习记录的学生数
-      final learningScope = await _courseContext.scopedWhere();
+      final learningScope =
+          await _courseContext.scopedWhere(column: 'lr.course_id');
       final activeCount = await db.rawQuery(
-        'SELECT COUNT(DISTINCT user_id) as c FROM learning_records WHERE ${learningScope.where}',
+        '''
+        SELECT COUNT(DISTINCT lr.user_id) as c
+        FROM learning_records lr
+        JOIN users u ON u.user_id = lr.user_id
+        WHERE ${learningScope.where}
+          AND $activeWhere
+        ''',
         learningScope.args,
       );
       _activeStudents = (activeCount.first['c'] as int?) ?? 0;
 
       // 测验统计
-      final quizScope = await _courseContext.scopedWhere();
+      final quizScope =
+          await _courseContext.scopedWhere(column: 'qr.course_id');
       final quizStats = await db.rawQuery('''
         SELECT COUNT(*) as total_attempts,
-               AVG(score) as avg_score
-        FROM quiz_results
+               AVG(qr.score) as avg_score
+        FROM quiz_results qr
+        JOIN users u ON u.user_id = qr.user_id
         WHERE ${quizScope.where}
+          AND $activeWhere
       ''', quizScope.args);
       _totalQuizAttempts = (quizStats.first['total_attempts'] as int?) ?? 0;
       _classAvgScore =
@@ -116,13 +131,16 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
       '90-100': 0,
     };
     try {
-      final scope = await _courseContext.scopedWhere();
+      final scope = await _courseContext.scopedWhere(column: 'qr.course_id');
+      final activeWhere = ActiveStudentScope.where(alias: 'u');
       // 取每个学生的最新成绩
       final results = await db.rawQuery('''
-        SELECT user_id, AVG(score) as avg_score
-        FROM quiz_results
+        SELECT qr.user_id, AVG(qr.score) as avg_score
+        FROM quiz_results qr
+        JOIN users u ON u.user_id = qr.user_id
         WHERE ${scope.where}
-        GROUP BY user_id
+          AND $activeWhere
+        GROUP BY qr.user_id
       ''', scope.args);
       for (final r in results) {
         final score = (r['avg_score'] as num?)?.toDouble() ?? 0;
@@ -147,16 +165,20 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
   Future<List<Map<String, dynamic>>> _computeChapterMastery(dynamic db) async {
     try {
       final scope = await _courseContext.scopedWhere(
+        column: 'qr.course_id',
         extraWhere: "chapter IS NOT NULL AND chapter != ''",
       );
+      final activeWhere = ActiveStudentScope.where(alias: 'u');
       final chapters = await db.rawQuery('''
-        SELECT chapter,
+        SELECT qr.chapter,
                COUNT(*) as attempt_count,
-               AVG(CAST(num_correct AS REAL) / CASE WHEN num_total = 0 THEN 1 ELSE num_total END * 100) as mastery
-        FROM quiz_results
+               AVG(CAST(qr.num_correct AS REAL) / CASE WHEN qr.num_total = 0 THEN 1 ELSE qr.num_total END * 100) as mastery
+        FROM quiz_results qr
+        JOIN users u ON u.user_id = qr.user_id
         WHERE ${scope.where}
-        GROUP BY chapter
-        ORDER BY chapter
+          AND $activeWhere
+        GROUP BY qr.chapter
+        ORDER BY qr.chapter
       ''', scope.args);
       return chapters
           .map<Map<String, dynamic>>((r) => {
@@ -173,8 +195,11 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
 
   Future<List<Map<String, dynamic>>> _computeWarningStudents(dynamic db) async {
     try {
-      final quizScope = await _courseContext.scopedWhere();
-      final learningScope = await _courseContext.scopedWhere();
+      final quizScope =
+          await _courseContext.scopedWhere(column: 'qr.course_id');
+      final learningScope =
+          await _courseContext.scopedWhere(column: 'lr.course_id');
+      final activeWhere = ActiveStudentScope.where(alias: 'u');
       // 低分学生（平均分 < 60）或 无活跃记录学生
       final lowScoreStudents = await db.rawQuery('''
         SELECT u.user_id, u.real_name,
@@ -183,19 +208,19 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
                COALESCE(l.learn_count, 0) as learn_count
         FROM users u
         LEFT JOIN (
-          SELECT user_id, AVG(score) as avg_score, COUNT(*) as quiz_count
-          FROM quiz_results
+          SELECT qr.user_id, AVG(qr.score) as avg_score, COUNT(*) as quiz_count
+          FROM quiz_results qr
           WHERE ${quizScope.where}
-          GROUP BY user_id
+          GROUP BY qr.user_id
         ) q ON u.user_id = q.user_id
         LEFT JOIN (
-          SELECT user_id, COUNT(*) as learn_count
-          FROM learning_records
+          SELECT lr.user_id, COUNT(*) as learn_count
+          FROM learning_records lr
           WHERE ${learningScope.where}
-          GROUP BY user_id
+          GROUP BY lr.user_id
         ) l ON u.user_id = l.user_id
-        WHERE u.role = 'student'
-        AND (COALESCE(q.avg_score, 0) < 60 OR COALESCE(l.learn_count, 0) = 0)
+        WHERE $activeWhere
+          AND (COALESCE(q.avg_score, 0) < 60 OR COALESCE(l.learn_count, 0) = 0)
         ORDER BY COALESCE(q.avg_score, 0) ASC
         LIMIT 20
       ''', [...quizScope.args, ...learningScope.args]);
@@ -240,16 +265,20 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
   Future<List<Map<String, dynamic>>> _computeActivityTrend(dynamic db) async {
     try {
       final scope = await _courseContext.scopedWhere(
-        extraWhere: 'completed_at IS NOT NULL',
+        column: 'lr.course_id',
+        extraWhere: 'lr.completed_at IS NOT NULL',
       );
+      final activeWhere = ActiveStudentScope.where(alias: 'u');
       // 按天统计最近14天的学习活跃度
       final records = await db.rawQuery('''
-        SELECT DATE(completed_at) as day,
+        SELECT DATE(lr.completed_at) as day,
                COUNT(*) as record_count,
-               COUNT(DISTINCT user_id) as active_users
-        FROM learning_records
+               COUNT(DISTINCT lr.user_id) as active_users
+        FROM learning_records lr
+        JOIN users u ON u.user_id = lr.user_id
         WHERE ${scope.where}
-        GROUP BY DATE(completed_at)
+          AND $activeWhere
+        GROUP BY DATE(lr.completed_at)
         ORDER BY day DESC
         LIMIT 14
       ''', scope.args);
@@ -273,7 +302,9 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
       final quizScope = await _courseContext.scopedWhere(
         column: 'qr.course_id',
       );
-      final learningScope = await _courseContext.scopedWhere();
+      final learningScope =
+          await _courseContext.scopedWhere(column: 'lr.course_id');
+      final activeWhere = ActiveStudentScope.where(alias: 'u');
       return await db.rawQuery('''
         SELECT u.user_id, u.real_name,
                AVG(qr.score) as avg_score,
@@ -282,12 +313,12 @@ class _LearningAnalyticsPageState extends State<LearningAnalyticsPage>
         FROM users u
         JOIN quiz_results qr ON u.user_id = qr.user_id
         LEFT JOIN (
-          SELECT user_id, COUNT(*) as learn_count
-          FROM learning_records
+          SELECT lr.user_id, COUNT(*) as learn_count
+          FROM learning_records lr
           WHERE ${learningScope.where}
-          GROUP BY user_id
+          GROUP BY lr.user_id
         ) lr ON u.user_id = lr.user_id
-        WHERE u.role = 'student' AND ${quizScope.where}
+        WHERE $activeWhere AND ${quizScope.where}
         GROUP BY u.user_id
         ORDER BY avg_score DESC
         LIMIT 30

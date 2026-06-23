@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:sqflite/sqflite.dart';
 
+import 'active_student_scope.dart';
 import 'database_helper.dart';
 import '../../core/error_handler.dart';
 import '../../services/course_context_service.dart';
@@ -288,18 +289,19 @@ class OrdinaryScoreDao {
   Future<List<Map<String, dynamic>>> _loadStudents() async {
     final db = await DatabaseHelper.instance.database;
     try {
+      final activeWhere = ActiveStudentScope.where(alias: 'u');
       return await db.rawQuery('''
-        SELECT user_id, real_name
-        FROM users
-        WHERE role = 'student' AND COALESCE(is_active, 1) = 1
-        ORDER BY user_id ASC
+        SELECT u.user_id, u.real_name
+        FROM users u
+        WHERE $activeWhere
+        ORDER BY u.user_id ASC
       ''');
     } catch (e, st) {
       swallowDebug(e, tag: 'OrdinaryScore.loadStudents', stack: st);
       return await db.rawQuery('''
         SELECT user_id, real_name
         FROM users
-        WHERE role = 'student'
+        WHERE role = 'student' AND COALESCE(is_active, 1) = 1
         ORDER BY user_id ASC
       ''');
     }
