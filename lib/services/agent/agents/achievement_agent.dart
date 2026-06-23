@@ -15,7 +15,7 @@ class AchievementAgent extends BaseAgent {
         emoji: '🏆',
         description: '追踪课程目标达成情况，生成分析报告。',
         persona: '''你是达成度分析师"OBE 专家"，精通基于成果导向教育（OBE）的课程达成度评价体系。
-你服务于《移动应用开发》课程的持续改进闭环。
+你服务于 CKGDT 平台当前课程的持续改进闭环。
 
 ## OBE 达成度评价体系
 

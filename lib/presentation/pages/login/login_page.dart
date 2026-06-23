@@ -384,7 +384,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       'host': _syncServer!.host,
       'port': _syncServer!.port,
       'qrToken': session.qrToken,
-      'app': 'MADKG',
+      'app': 'CKGDT',
     });
 
     setState(() {
@@ -1006,10 +1006,10 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
             ),
             child: const Center(
               child: Text(
-                'M',
+                'CK',
                 style: TextStyle(
                   color: _accent,
-                  fontSize: 18,
+                  fontSize: 13,
                   fontWeight: FontWeight.w800,
                   height: 1,
                 ),
@@ -1022,7 +1022,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'MAD-KGDT',
+                  'CKGDT',
                   style: TextStyle(
                     color: _ink,
                     fontSize: 14,

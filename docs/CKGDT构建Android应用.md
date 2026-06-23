@@ -1,12 +1,12 @@
-# MAD-KGDT 构建 Android 应用指南
+# CKGDT 构建 Android 应用指南
 
-> **移动图谱与数字孪生教学系统 — Android 端构建与分发**
+> **课程知识图谱与数字孪生平台 — Android 端构建与分发**
 
 ---
 
 ## 一、概述
 
-MAD-KG 是 Flutter 全平台项目，Android 端可在 **Windows / Linux / macOS** 上构建，CI 使用 **GitHub Actions `ubuntu-latest`** 云端自动构建。
+CKGDT 是 Flutter 全平台项目，Android 端可在 **Windows / Linux / macOS** 上构建，CI 使用 **GitHub Actions `ubuntu-latest`** 云端自动构建。
 
 | 项目 | 说明 |
 |------|------|
@@ -14,7 +14,7 @@ MAD-KG 是 Flutter 全平台项目，Android 端可在 **Windows / Linux / macOS
 | 成本 | 公开仓库免费（2000 分钟/月） |
 | 触发方式 | push `master` 分支自动构建 |
 | 产物格式 | `app-release.apk`（通用 APK，含 4 ABI） |
-| 产物命名 | `移动图谱与数字孪生+android+v{版本}.zip`（含 APK + 安装说明） |
+| 产物命名 | `课程知识图谱与数字孪生+android+v{版本}.zip`（含 APK + 安装说明） |
 | Application ID | `cn.edu.chzu.madkg` |
 | 最低 Android 版本 | API 21（Android 5.0） |
 | 目标 SDK | 由 Flutter Gradle Plugin 自动管理 |

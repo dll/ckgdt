@@ -12,7 +12,7 @@ class MobileExpertAgent extends BaseAgent {
         name: '移动专家',
         emoji: '\u{1F4F1}',
         description: '解答各种移动应用开发技术栈问题。',
-        persona: '''你是移动开发技术专家"全栈通"，精通《移动应用开发》课程覆盖的全部 6 大技术栈，
+        persona: '''你是移动开发技术专家"全栈通"，精通移动开发相关课程常见的 6 大技术栈，
 拥有 Android、iOS、Flutter、React Native、微信小程序、HarmonyOS 的深度实战经验。
 
 ## 技术栈能力矩阵
@@ -66,10 +66,25 @@ class MobileExpertAgent extends BaseAgent {
 - 鼓励动手实践："建议你先跑一下这段代码，看看效果"''',
         priority: 6,
         keywords: [
-          'Android', 'iOS', 'Flutter', 'Dart', 'React Native',
-          '小程序', 'HarmonyOS', '鸿蒙', 'Kotlin', 'Swift',
-          '跨平台', '原生', '移动开发', '技术栈', 'Compose',
-          'SwiftUI', 'ArkTS', 'Widget', '状态管理',
+          'Android',
+          'iOS',
+          'Flutter',
+          'Dart',
+          'React Native',
+          '小程序',
+          'HarmonyOS',
+          '鸿蒙',
+          'Kotlin',
+          'Swift',
+          '跨平台',
+          '原生',
+          '移动开发',
+          '技术栈',
+          'Compose',
+          'SwiftUI',
+          'ArkTS',
+          'Widget',
+          '状态管理',
         ],
         capabilities: ['技术解答', '代码示例', '技术对比', '最佳实践'],
         requiresAi: true,
@@ -81,7 +96,11 @@ class MobileExpertAgent extends BaseAgent {
           '可请求不同技术栈的对比分析',
         ],
         classicCases: [
-          AgentCase(title: '技术栈对比', userInput: 'Flutter 和 React Native 哪个更适合新项目？', agentReply: '## Flutter vs React Native 对比\n\n| 维度 | Flutter | React Native |\n|------|---------|---------------|\n| 语言 | Dart | JavaScript/TS |\n| 渲染 | 自绘引擎 | 原生组件桥接 |\n| 性能 | 接近原生 | 略低（JS桥接） |\n| 生态 | 快速增长 | 成熟丰富 |\n| 热重载 | ✅ 优秀 | ✅ 良好 |\n\n**建议**：新项目优先 Flutter（性能好、UI 一致性强）'),
+          AgentCase(
+              title: '技术栈对比',
+              userInput: 'Flutter 和 React Native 哪个更适合新项目？',
+              agentReply:
+                  '## Flutter vs React Native 对比\n\n| 维度 | Flutter | React Native |\n|------|---------|---------------|\n| 语言 | Dart | JavaScript/TS |\n| 渲染 | 自绘引擎 | 原生组件桥接 |\n| 性能 | 接近原生 | 略低（JS桥接） |\n| 生态 | 快速增长 | 成熟丰富 |\n| 热重载 | ✅ 优秀 | ✅ 良好 |\n\n**建议**：新项目优先 Flutter（性能好、UI 一致性强）'),
         ],
       );
 
@@ -93,7 +112,8 @@ class MobileExpertAgent extends BaseAgent {
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
     final messages = buildAiMessages(userMessage, session);
-    final result = await safeAiChatWithRag(userMessage, messages, aiService: _ai);
+    final result =
+        await safeAiChatWithRag(userMessage, messages, aiService: _ai);
     return buildReplyFromResult(result);
   }
 }

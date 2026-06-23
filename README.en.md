@@ -1,36 +1,34 @@
-# mad-fd
+# CKGDT
 
-#### Description
-移动应用开发知识图谱的教学系统
+CKGDT (Course Knowledge Graph and Digital Twin Platform) is a multi-course teaching platform built with Flutter. It covers course knowledge graphs, learning digital twins, lab/assessment/works evaluation, OBE attainment analysis, and AI multi-agent collaboration.
 
-#### Software Architecture
-Software architecture description
+## Capabilities
 
-#### Installation
+- Multi-course knowledge graph: course objectives, concepts, resources, quizzes, and learning paths.
+- Teaching digital twin: student learning, labs, assessments, works, regular grades, and attainment data.
+- Full-cycle evaluation: classroom, learning, labs, assessments, works, attainment, and archiving workflows.
+- AI collaboration: 18 specialized agents for Q&A, navigation, grading assistance, archiving, course generation, and safety review.
+- Multi-platform delivery: Windows, Android, Web, HarmonyOS, and other Flutter targets.
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+## Stack
 
-#### Instructions
+- Flutter / Dart
+- sqflite / sqlite3
+- Material Design 3
+- Gitee/GitHub sync and release workflows
+- LLM APIs, RAG, and multi-agent orchestration
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+## Development
 
-#### Contribution
+```powershell
+flutter pub get
+flutter analyze
+flutter test
+flutter run -d windows
+```
 
-1.  Fork the repository
-2.  Create Feat_xxx branch
-3.  Commit your code
-4.  Create Pull Request
+## Brand
 
-
-#### Gitee Feature
-
-1.  You can use Readme\_XXX.md to support different languages, such as Readme\_en.md, Readme\_zh.md
-2.  Gitee blog [blog.gitee.com](https://blog.gitee.com)
-3.  Explore open source project [https://gitee.com/explore](https://gitee.com/explore)
-4.  The most valuable open source project [GVP](https://gitee.com/gvp)
-5.  The manual of Gitee [https://gitee.com/help](https://gitee.com/help)
-6.  The most popular members  [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+- Chinese: 课程知识图谱与数字孪生平台
+- English: Course Knowledge Graph and Digital Twin Platform
+- Short name: CKGDT

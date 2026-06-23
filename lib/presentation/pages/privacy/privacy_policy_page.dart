@@ -61,13 +61,13 @@ class _MarkdownPanel extends StatelessWidget {
 }
 
 const _userAgreement = '''
-# 《MAD-KGDT 移动图谱与数字孪生教学平台》用户协议
+# 《CKGDT 课程知识图谱与数字孪生平台》用户协议
 
 **版本：${PrivacyPolicyPage.version}**
 
 ## 一、协议范围
 
-本协议适用于 MAD-KGDT 教学平台的所有终端用户，包括学生、教师、管理员。
+本协议适用于 CKGDT 课程知识图谱与数字孪生平台的所有终端用户，包括学生、教师、管理员。
 登录使用本平台即视为同意本协议。
 
 ## 二、账号规则
@@ -103,11 +103,11 @@ const _userAgreement = '''
 
 ## 七、本协议解释
 
-本协议由 MAD-KGDT 项目组保留最终解释权，修订内容会通过"版本"字段告知用户。
+本协议由 CKGDT 项目组保留最终解释权，修订内容会通过"版本"字段告知用户。
 ''';
 
 const _privacyPolicy = '''
-# 《MAD-KGDT 移动图谱与数字孪生教学平台》隐私声明
+# 《CKGDT 课程知识图谱与数字孪生平台》隐私声明
 
 **版本：${PrivacyPolicyPage.version}**
 

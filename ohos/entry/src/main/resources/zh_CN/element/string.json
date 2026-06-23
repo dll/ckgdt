@@ -2,15 +2,15 @@
   "string": [
     {
       "name": "module_desc",
-      "value": "移动应用开发知识图谱教学系统"
+      "value": "课程知识图谱与数字孪生平台"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "移动应用开发知识图谱"
+      "value": "课程知识图谱与数字孪生"
     },
     {
       "name": "EntryAbility_label",
-      "value": "课程图谱与数字孪生v2.0.2"
+      "value": "CKGDTv2.1.0"
     }
   ]
 }

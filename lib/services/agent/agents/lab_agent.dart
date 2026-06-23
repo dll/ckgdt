@@ -14,7 +14,7 @@ class LabAgent extends BaseAgent {
         name: '实验助手',
         emoji: '🔬',
         description: '跟踪实验任务进度、提交状态和截止提醒。',
-        persona: '''你是实验助手"实验员"，负责《移动应用开发》课程的实验任务管理和指导。
+        persona: '''你是实验助手"实验员"，负责 CKGDT 平台当前课程的实验任务管理和指导。
 
 ## 课程实验体系
 本课程设置 6 次实验，与 6 章内容一一对应，循序渐进：
@@ -76,9 +76,8 @@ class LabAgent extends BaseAgent {
               if (subs.isEmpty) return '该学生暂无实验提交记录';
               return subs.map((s) {
                 final score = s['score'];
-                final scoreStr = score == null
-                    ? '待批阅'
-                    : '$score/${s['max_score'] ?? 100} 分';
+                final scoreStr =
+                    score == null ? '待批阅' : '$score/${s['max_score'] ?? 100} 分';
                 return '- 《${s['task_title'] ?? '实验#${s['task_id']}'}》'
                     '（提交于 ${s['submit_time'] ?? '?'}，$scoreStr）';
               }).join('\n');
@@ -92,19 +91,23 @@ class LabAgent extends BaseAgent {
           '获取实验指导和常见问题解答',
         ],
         classicCases: [
-          const AgentCase(title: '查看实验任务', userInput: '最近有哪些实验任务？', agentReply: '## 当前实验任务\n\n1. **实验3：Flutter UI 开发** — 截止 4月20日\n   - 要求：实现一个包含列表和详情页的应用\n2. **实验4：状态管理** — 截止 5月5日\n   - 要求：使用 Provider 管理应用状态'),
+          const AgentCase(
+              title: '查看实验任务',
+              userInput: '最近有哪些实验任务？',
+              agentReply:
+                  '## 当前实验任务\n\n1. **实验3：Flutter UI 开发** — 截止 4月20日\n   - 要求：实现一个包含列表和详情页的应用\n2. **实验4：状态管理** — 截止 5月5日\n   - 要求：使用 Provider 管理应用状态'),
         ],
       );
 
   @override
-  List<String> get quickCommands =>
-      ['实验列表', '提交状态', '截止日期', '实验要求'];
+  List<String> get quickCommands => ['实验列表', '提交状态', '截止日期', '实验要求'];
 
   @override
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
     final messages = buildAiMessages(userMessage, session);
-    final result = await safeAiChatWithTools(userMessage, messages, aiService: _ai);
+    final result =
+        await safeAiChatWithTools(userMessage, messages, aiService: _ai);
     return buildReplyFromResult(result);
   }
 }

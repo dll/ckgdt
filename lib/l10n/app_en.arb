@@ -1,7 +1,7 @@
 {
   "@@locale": "en",
-  "appName": "MAD-KGDT",
-  "appNameWithVersion": "MAD-KGDT v{version}",
+  "appName": "CKGDT",
+  "appNameWithVersion": "CKGDT v{version}",
 
   "navHome": "Home",
   "navGraph": "Graph",

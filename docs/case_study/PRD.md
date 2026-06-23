@@ -1,7 +1,7 @@
-# MAD-KGDT 产品需求文档（PRD）
+# CKGDT 产品需求文档（PRD）
 
-> **MAD-KGDT** = Mobile Application Development - Knowledge Graph & Digital Twin
-> 移动图谱与数字孪生教学平台
+> **CKGDT** = Course Knowledge Graph and Digital Twin Platform
+> 课程知识图谱与数字孪生平台
 
 | 项 | 内容 |
 |----|------|
@@ -16,7 +16,7 @@
 
 ## 1 · 一句话定位
 
-**面向《移动应用开发》课程的全栈式教学平台**：把"教—学—练—评—管"五大场景装进 Flutter 单体应用，靠 Gitee 仓库做无服务器跨设备同步，靠 24 个 LLM Agent 串起 AI 辅助的全链路。
+**面向多课程的全栈式教学平台**：把"教—学—练—评—管"五大场景装进 Flutter 单体应用，靠 Gitee 仓库做无服务器跨设备同步，靠 18 个专业 Agent 串起 AI 辅助的全链路。
 
 ## 2 · 目标用户与场景
 
@@ -56,7 +56,7 @@
 
 ## 5 · 路线图
 
-参见 [审核报告](../MAD-KGDT审核报告(Opus4.7).md) 第 7 节。
+参见 [审核报告](../CKGDT审核报告(Opus4.7).md) 第 7 节。
 
 ## 6 · 关键设计决策
 

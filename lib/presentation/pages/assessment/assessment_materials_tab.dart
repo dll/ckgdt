@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../services/course_context_service.dart';
 import '../lab/lab_material_preview_page.dart';
 
@@ -73,7 +73,7 @@ class AssessmentMaterialsTab extends StatelessWidget {
 
   static const _references = [
     _AssessmentMaterial(
-      title: '《移动应用开发》考核说明',
+      title: '课程考核说明',
       assetPath: 'data/考核/《移动应用开发》考核说明.md',
       week: '说明',
       icon: Icons.info_outline,
@@ -94,7 +94,7 @@ class AssessmentMaterialsTab extends StatelessWidget {
       color: Colors.deepPurple,
     ),
     _AssessmentMaterial(
-      title: '移动应用开发综合考核方案',
+      title: '课程综合考核方案',
       assetPath: 'data/考核/移动应用开发综合考核方案+new.md',
       week: '方案',
       icon: Icons.description,

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-MAD-KGDT Demo Video Generator (6 segments, moviepy + edge_tts)
+CKGDT Demo Video Generator (6 segments, moviepy + edge_tts)
 
 Generates the 6 demo segments from demo_script.md as slide-based videos
 with TTS narration, subtitle burn-in, and SRT output.
@@ -9,7 +9,7 @@ with TTS narration, subtitle burn-in, and SRT output.
 Segments:
   #0 Opening         15s — PPT Slide 1-3
   #1 Knowledge Graph 30s — PPT Slide 6
-  #2 AI 24 Agents    30s — PPT Slide 7
+  #2 AI 18 Agents    30s — PPT Slide 7
   #3 Digital Twin    45s — PPT Slide 8-10
   #4 4-Platform      30s — PPT Slide 11-13
   #5 Closing         15s — PPT Slide 14-16
@@ -562,8 +562,8 @@ SEGMENTS = [
         "slides": [
             SlideSpec(
                 seg_id="#0",
-                title="MAD-KGDT 整体定位",
-                subtitle="移动应用开发知识图谱与数字孪生教学系统",
+                title="CKGDT 整体定位",
+                subtitle="课程知识图谱与数字孪生平台",
                 image_path=_ss("01_login.png"),
                 bullets=[
                     "4 大支柱：知识图谱 / AI Agent / 数字孪生 / Flutter 四端",
@@ -571,18 +571,18 @@ SEGMENTS = [
                     "技术栈：Flutter + Dart + SQLite + 24 AI Agent + RAG",
                     "目标：教—学—练—评—管 全链路数字化",
                 ],
-                narration="MAD-KGDT，移动应用开发知识图谱与数字孪生教学系统，"
+                narration="CKGDT，课程知识图谱与数字孪生平台，"
                          "面向《移动应用开发》课程的全平台教学平台。"
                          "系统以知识图谱、AI Agent、数字孪生和Flutter四端为四大支柱，"
                          "致力于解决知识碎片化、实践薄弱、个性化不足和数据孤岛四大教学痛点。"
-                         "采用Flutter加Dart技术栈，集成24个AI Agent和RAG检索增强，"
+                         "采用Flutter加Dart技术栈，集成18个AI Agent和RAG检索增强，"
                          "覆盖教、学、练、评、管全链路数字化。",
                 voice_segments=[
-                    "MAD-KGDT，移动应用开发知识图谱与数字孪生教学系统，",
+                    "CKGDT，课程知识图谱与数字孪生平台，",
                     "面向《移动应用开发》课程的全平台教学平台。",
                     "系统以知识图谱、AI Agent、数字孪生和Flutter四端为四大支柱，",
                     "致力于解决知识碎片化、实践薄弱、个性化不足和数据孤岛四大教学痛点。",
-                    "采用Flutter加Dart技术栈，集成24个AI Agent和RAG检索增强。",
+                    "采用Flutter加Dart技术栈，集成18个AI Agent和RAG检索增强。",
                 ],
             ),
             SlideSpec(
@@ -599,13 +599,13 @@ SEGMENTS = [
                 narration="项目共十三万三千行Dart代码，263个Dart文件，66张数据库表。"
                          "覆盖Android、Windows、Web和HarmonyOS四个平台。"
                          "代码采用三层架构：页面层只负责展示，DAO层只访问数据库，"
-                         "Service层组合业务逻辑。集成24个AI专业智能体和协调器，"
+                         "Service层组合业务逻辑。集成18个AI专业智能体和协调器，"
                          "内置6张知识图谱，200多个节点，支持11种布局算法。",
                 voice_segments=[
                     "项目共13万3千行Dart代码，263个Dart文件，66张数据库表。",
                     "覆盖Android、Windows、Web和HarmonyOS四个平台。",
                     "代码采用三层架构：页面层展示，DAO层访问数据库，Service层组合业务逻辑。",
-                    "集成24个AI专业智能体和协调器，内置6张知识图谱，200多个节点。",
+                    "集成18个AI专业智能体和协调器，内置6张知识图谱，200多个节点。",
                 ],
             ),
             SlideSpec(
@@ -732,7 +732,7 @@ SEGMENTS = [
         "slides": [
             SlideSpec(
                 seg_id="#2",
-                title="24 个专业 AI Agent",
+                title="18 个专业 AI Agent",
                 subtitle="4 大类别 · 秒级响应 · 10000+ 调用记录",
                 image_path=_ss("05_agents.png"),
                 bullets=[
@@ -741,7 +741,7 @@ SEGMENTS = [
                     "评价批阅 5 个：lab_grading / works_grading / assessment_grading",
                     "辅助工具 11 个：voice / graph / safety / ethics / repo …",
                 ],
-                narration="系统集成了24个专业AI智能体，统一由AgentRegistry单例管理。"
+                narration="系统集成了18个专业AI智能体，统一由AgentRegistry单例管理。"
                          "每个Agent由AgentConfig定义人格、工具列表和用例，"
                          "通过BaseAgent基类统一处理会话管理和AI推理。"
                          "教学辅导类5个，包括课堂助教tutor、测验生成quiz、实验指导lab、"
@@ -751,7 +751,7 @@ SEGMENTS = [
                          "辅助工具类11个，包括语音导航voice、图谱分析graph、安全审查safety、"
                          "学术伦理ethics、仓库分析repo等。",
                 voice_segments=[
-                    "系统集成了24个专业AI智能体，统一由AgentRegistry单例管理。",
+                    "系统集成了18个专业AI智能体，统一由AgentRegistry单例管理。",
                     "教学辅导类5个，包括课堂助教、测验生成、实验指导、路径规划和学生学习助手。",
                     "内容生成类3个，一键生课、课件生成和文档转换。",
                     "评价批阅类5个，覆盖实验、作品和考核的AI自动批阅。",
@@ -1090,7 +1090,7 @@ def write_srt(entries: list[tuple[str, float, float]], srt_path: Path) -> None:
 # ═══════════════════════════════════════════════════════════════════════════
 def write_script(slides_map: dict[str, list[SlideSpec]], scp_path: Path) -> None:
     lines = [
-        "# MAD-KGDT 案例评比 Demo 视频脚本",
+        "# CKGDT 案例评比 Demo 视频脚本",
         "",
         "## 技术特性",
         "",
@@ -1316,7 +1316,7 @@ def main() -> None:
         d.mkdir(parents=True, exist_ok=True)
 
     print("=" * 60)
-    print("  MAD-KGDT 案例评比 Demo 视频生成器")
+    print("  CKGDT 案例评比 Demo 视频生成器")
     print("  edge_tts + moviepy  严格帧级同步")
     print("=" * 60)
 

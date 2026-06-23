@@ -27,15 +27,15 @@ class VoiceAgent extends BaseAgent {
   static const _navPages = <String, String>{
     '首页': 'home',
     '知识图谱': 'graph',
-    '教学中心': 'learning',    // 教师：教学中心（教学+课堂聚合）
-    '学习中心': 'learning',    // 学生：学习中心
-    '评价中心': 'assessment',  // 教师：评价中心（实验+考核+作品聚合）
-    '实验任务': 'experiment',  // 学生：实验
-    '考核管理': 'assessment',  // 学生：考核
-    '作品展评': 'showcase',    // 学生：作品
-    '达成度': 'achievement',   // 教师：达成
-    '归档': 'archive',         // 教师：归档
-    '管理面板': 'admin',       // 管理员：管理
+    '教学中心': 'learning', // 教师：教学中心（教学+课堂聚合）
+    '学习中心': 'learning', // 学生：学习中心
+    '评价中心': 'assessment', // 教师：评价中心（实验+考核+作品聚合）
+    '实验任务': 'experiment', // 学生：实验
+    '考核管理': 'assessment', // 学生：考核
+    '作品展评': 'showcase', // 学生：作品
+    '达成度': 'achievement', // 教师：达成
+    '归档': 'archive', // 教师：归档
+    '管理面板': 'admin', // 管理员：管理
   };
 
   /// 子页面导航清单（供 AI prompt 引用）
@@ -108,7 +108,7 @@ class VoiceAgent extends BaseAgent {
         name: '语音助手',
         emoji: '🎙️',
         description: '智能语音交互，自然语言导航、登录退出、多轮对话。',
-        persona: '''你是"小知"，移动图谱与数字孪生教学系统的语音导航助手。
+        persona: '''你是"小知"，CKGDT 课程知识图谱与数字孪生平台的语音导航助手。
 你的职责是理解用户的自然语言指令，执行导航、返回、退出等操作，并在用户提问时直接回答。
 
 ## 核心能力
@@ -182,11 +182,34 @@ $_innerTabListForPrompt
         priority: 9,
         requiresAi: true,
         keywords: [
-          '登录', '退出', '打开', '去', '导航', '你好', '帮我',
-          '跳转', '切换', '看看', '进入', '回到', '显示',
-          '返回', '回去', '上一页', '后退', '关闭',
+          '登录',
+          '退出',
+          '打开',
+          '去',
+          '导航',
+          '你好',
+          '帮我',
+          '跳转',
+          '切换',
+          '看看',
+          '进入',
+          '回到',
+          '显示',
+          '返回',
+          '回去',
+          '上一页',
+          '后退',
+          '关闭',
         ],
-        capabilities: ['自然语言导航', '子页面操作', '返回导航', '语音登录', '退出登录', '退出系统', '多轮对话'],
+        capabilities: [
+          '自然语言导航',
+          '子页面操作',
+          '返回导航',
+          '语音登录',
+          '退出登录',
+          '退出系统',
+          '多轮对话'
+        ],
         usageSteps: [
           '点击全局悬浮按钮"助手"或首页"多智能体"',
           '选择 🎙️ 语音助手（或直接语音输入）',
@@ -233,10 +256,27 @@ $_innerTabListForPrompt
   /// 中文数字转阿拉伯数字
   static String chineseToDigits(String text) {
     const map = {
-      '零': '0', '〇': '0', '一': '1', '壹': '1', '二': '2', '贰': '2',
-      '两': '2', '三': '3', '叁': '3', '四': '4', '肆': '4', '五': '5',
-      '伍': '5', '六': '6', '陆': '6', '七': '7', '柒': '7', '八': '8',
-      '捌': '8', '九': '9', '玖': '9',
+      '零': '0',
+      '〇': '0',
+      '一': '1',
+      '壹': '1',
+      '二': '2',
+      '贰': '2',
+      '两': '2',
+      '三': '3',
+      '叁': '3',
+      '四': '4',
+      '肆': '4',
+      '五': '5',
+      '伍': '5',
+      '六': '6',
+      '陆': '6',
+      '七': '7',
+      '柒': '7',
+      '八': '8',
+      '捌': '8',
+      '九': '9',
+      '玖': '9',
     };
     var result = text;
     for (final e in map.entries) {
@@ -248,8 +288,7 @@ $_innerTabListForPrompt
   @override
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
-    final normalized =
-        userMessage.toLowerCase().replaceAll(RegExp(r'\s+'), '');
+    final normalized = userMessage.toLowerCase().replaceAll(RegExp(r'\s+'), '');
 
     // ══════════════════════════════════════════════════════════════════════
     // 快速通道（不经过 AI，保证离线也能用）
@@ -351,9 +390,8 @@ $_innerTabListForPrompt
   Future<AgentMessage> _handleLogin(String rawMessage) async {
     final digits = extractDigits(chineseToDigits(rawMessage));
     if (digits.isNotEmpty) {
-      final password = digits.length >= 6
-          ? digits.substring(digits.length - 6)
-          : digits;
+      final password =
+          digits.length >= 6 ? digits.substring(digits.length - 6) : digits;
       final ok = await _auth.login(digits, password);
       if (ok) {
         final name = _auth.currentUser?.realName ?? digits;
@@ -410,14 +448,17 @@ $_innerTabListForPrompt
     try {
       // 尝试从响应中提取 JSON
       final raw = result.content.trim();
-      InitLogger.log('voice', '_parseAiResponse rawLen=${raw.length} raw="${raw.length > 200 ? '${raw.substring(0, 200)}...' : raw}"');
+      InitLogger.log('voice',
+          '_parseAiResponse rawLen=${raw.length} raw="${raw.length > 200 ? '${raw.substring(0, 200)}...' : raw}"');
       final jsonStr = _extractJson(raw);
-      InitLogger.log('voice', '_parseAiResponse jsonStrLen=${jsonStr.length} jsonStr="${jsonStr.length > 200 ? '${jsonStr.substring(0, 200)}...' : jsonStr}"');
+      InitLogger.log('voice',
+          '_parseAiResponse jsonStrLen=${jsonStr.length} jsonStr="${jsonStr.length > 200 ? '${jsonStr.substring(0, 200)}...' : jsonStr}"');
       final json = jsonDecode(jsonStr) as Map<String, dynamic>;
 
       final intent = json['intent'] as String? ?? 'chat';
       final reply = json['reply'] as String? ?? '我没听清，请再说一遍。';
-      InitLogger.log('voice', '_parseAiResponse intent=$intent keyword=${json['keyword']} label=${json['label']} page=${json['page']} tab=${json['tab']}');
+      InitLogger.log('voice',
+          '_parseAiResponse intent=$intent keyword=${json['keyword']} label=${json['label']} page=${json['page']} tab=${json['tab']}');
 
       switch (intent) {
         case 'navigate':
@@ -531,7 +572,10 @@ $_innerTabListForPrompt
       }
     } catch (e, st) {
       // JSON 解析失败，直接返回 AI 原文
-      InitLogger.error('voice', 'VoiceAgent JSON 解析失败 raw="${result.content.length > 100 ? '${result.content.substring(0, 100)}...' : result.content}" error=$e', st);
+      InitLogger.error(
+          'voice',
+          'VoiceAgent JSON 解析失败 raw="${result.content.length > 100 ? '${result.content.substring(0, 100)}...' : result.content}" error=$e',
+          st);
       return buildReply(
         result.content,
         modelProvider: result.provider,

@@ -27,9 +27,9 @@ else:
 upload_url = f'https://gitee.com/api/v5/repos/{REPO}/releases/{rid}/attach_files'
 
 assets = [
-    (r'D:\FlutterProjects\knowledge_graph_app\dist\课程图谱与数字孪生+windows+v2.0.2.zip', '课程图谱与数字孪生+windows+v2.0.2.zip'),
-    (r'D:\FlutterProjects\knowledge_graph_app\dist\课程图谱与数字孪生+android+v2.0.2.zip', '课程图谱与数字孪生+android+v2.0.2.zip'),
-    (r'D:\FlutterProjects\knowledge_graph_app\dist\课程图谱与数字孪生+web+v2.0.2.zip', '课程图谱与数字孪生+web+v2.0.2.zip'),
+    (r'D:\FlutterProjects\knowledge_graph_app\dist\CKGDT+windows+v2.0.2.zip', 'CKGDT+windows+v2.0.2.zip'),
+    (r'D:\FlutterProjects\knowledge_graph_app\dist\CKGDT+android+v2.0.2.zip', 'CKGDT+android+v2.0.2.zip'),
+    (r'D:\FlutterProjects\knowledge_graph_app\dist\CKGDT+web+v2.0.2.zip', 'CKGDT+web+v2.0.2.zip'),
 ]
 
 session = requests.Session()

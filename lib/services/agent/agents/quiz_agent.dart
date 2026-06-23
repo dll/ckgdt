@@ -15,8 +15,8 @@ class QuizAgent extends BaseAgent {
         name: '测验教练',
         emoji: '📝',
         description: '出题练习、批改答案、分析错题。',
-        persona: '''你是测验教练"考官"，精通教育测量学和移动应用开发知识评估。
-你服务于《移动应用开发》课程（6章：技术体系 → Android/iOS → Flutter/RN → 小程序 → HarmonyOS → 综合实践）。
+        persona: '''你是测验教练"考官"，精通教育测量学和课程知识评估。
+你服务于 CKGDT 平台当前课程，优先依据已导入的课程目标、知识点和测验数据工作。
 
 ## 核心能力
 1. **命题出题**：根据章节、难度、知识点生成高质量选择题
@@ -88,7 +88,8 @@ D. Text
               if (rows.isEmpty) return '该学生暂无错题记录，表现不错！';
               final buf = StringBuffer('共 ${rows.length} 道错题：\n');
               for (final r in rows.take(20)) {
-                final q = (r['question'] as String? ?? '').replaceAll('\n', ' ');
+                final q =
+                    (r['question'] as String? ?? '').replaceAll('\n', ' ');
                 final shortQ = q.length > 50 ? '${q.substring(0, 50)}…' : q;
                 buf.writeln('- [第${r['chapter'] ?? '?'}章] $shortQ '
                     '(你答:${r['user_answer'] ?? '?'} / 正确:${r['correct_answer'] ?? '?'}'
@@ -110,7 +111,8 @@ D. Text
               }
               final correct = (s['total_correct'] as num?)?.toInt() ?? 0;
               final total = (s['total_questions'] as num?)?.toInt() ?? 0;
-              final rate = total > 0 ? (correct * 100 / total).toStringAsFixed(1) : '0';
+              final rate =
+                  total > 0 ? (correct * 100 / total).toStringAsFixed(1) : '0';
               final avg = (s['avg_score'] as num?)?.toStringAsFixed(1) ?? '0';
               return '测验次数：${s['total_count']}，累计答对 $correct/$total（正确率 $rate%），平均分 $avg';
             },
@@ -135,20 +137,28 @@ D. Text
           '答题后获得解析和错题分析',
         ],
         classicCases: [
-          const AgentCase(title: '按章节出题', userInput: '帮我出5道第3章 Flutter 的选择题', agentReply: '## 第3章 Flutter 测验\n\n**第1题** Flutter 中用于构建 UI 的基本单元是？\nA. Activity  B. Widget  C. View  D. Component\n\n**答案：B**\nFlutter 中一切皆 Widget，它是构建 UI 的基本单元。'),
-          const AgentCase(title: '错题分析', userInput: '分析我最近的错题', agentReply: '你最近的错题集中在：\n1. Widget 生命周期（错2次）\n2. 路由导航方式（错1次）\n\n建议复习 StatefulWidget 的 initState/dispose 生命周期。'),
+          const AgentCase(
+              title: '按章节出题',
+              userInput: '帮我出5道第3章 Flutter 的选择题',
+              agentReply:
+                  '## 第3章 Flutter 测验\n\n**第1题** Flutter 中用于构建 UI 的基本单元是？\nA. Activity  B. Widget  C. View  D. Component\n\n**答案：B**\nFlutter 中一切皆 Widget，它是构建 UI 的基本单元。'),
+          const AgentCase(
+              title: '错题分析',
+              userInput: '分析我最近的错题',
+              agentReply:
+                  '你最近的错题集中在：\n1. Widget 生命周期（错2次）\n2. 路由导航方式（错1次）\n\n建议复习 StatefulWidget 的 initState/dispose 生命周期。'),
         ],
       );
 
   @override
-  List<String> get quickCommands =>
-      ['出5道Flutter题', '分析我的错题', '第三章测验', '复习建议'];
+  List<String> get quickCommands => ['出5道Flutter题', '分析我的错题', '第三章测验', '复习建议'];
 
   @override
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
     final messages = buildAiMessages(userMessage, session);
-    final result = await safeAiChatWithTools(userMessage, messages, aiService: _ai);
+    final result =
+        await safeAiChatWithTools(userMessage, messages, aiService: _ai);
     return buildReplyFromResult(result);
   }
 }

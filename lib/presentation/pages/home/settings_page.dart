@@ -589,10 +589,10 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _showAboutDialog(BuildContext context) async {
-    String platformName = '移动应用开发';
+    String courseName = '当前课程';
     try {
       final course = await CourseDao().getActiveCourse();
-      if (course != null) platformName = course.name;
+      if (course != null) courseName = course.name;
     } catch (e) {
       swallowDebug(e, tag: 'settings_page');
     }
@@ -605,7 +605,7 @@ class _SettingsPageState extends State<SettingsPage> {
           children: [
             Icon(Icons.school, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 12),
-            Text('$platformName知识图谱'),
+            const Text(BuildInfo.appBrand),
           ],
         ),
         content: Column(
@@ -614,7 +614,11 @@ class _SettingsPageState extends State<SettingsPage> {
           children: [
             const Text('版本：${BuildInfo.appVersion}'),
             const SizedBox(height: 8),
-            Text('面向$platformName学习者的知识图谱与数字孪生教学平台（KGDT-MAD）。'),
+            const Text(
+              '${BuildInfo.appFullName}（${BuildInfo.appEnglishName}）。',
+            ),
+            const SizedBox(height: 8),
+            Text('当前课程：$courseName。'),
             const SizedBox(height: 16),
             const Text('功能特点：', style: TextStyle(fontWeight: FontWeight.bold)),
             const Text('• 知识图谱可视化学习'),

@@ -1,10 +1,10 @@
 {
   "@@locale": "zh",
-  "appName": "移动图谱与数字孪生",
+  "appName": "课程知识图谱与数字孪生",
   "@appName": {
     "description": "应用主标题（不含版本号）"
   },
-  "appNameWithVersion": "移动图谱与数字孪生 v{version}",
+  "appNameWithVersion": "CKGDT v{version}",
   "@appNameWithVersion": {
     "description": "带版本号的应用标题",
     "placeholders": {

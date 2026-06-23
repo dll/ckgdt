@@ -1,7 +1,7 @@
 {
-  "name": "mad-kg-harness",
+  "name": "ckgdt-harness",
   "private": true,
-  "description": "Harness/test entrypoint for the MAD-KG Flutter project (delegates to flutter test). Not an npm package — Flutter is the real build system.",
+  "description": "Harness/test entrypoint for the CKGDT Flutter project (delegates to flutter test). Not an npm package — Flutter is the real build system.",
   "scripts": {
     "test": "flutter test",
     "test:unit": "flutter test test/core test/models test/services",

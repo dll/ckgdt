@@ -9,11 +9,11 @@ class AppL10nZh extends AppL10n {
   AppL10nZh([String locale = 'zh']) : super(locale);
 
   @override
-  String get appName => '移动图谱与数字孪生';
+  String get appName => '课程知识图谱与数字孪生';
 
   @override
   String appNameWithVersion(String version) {
-    return '移动图谱与数字孪生 v$version';
+    return 'CKGDT v$version';
   }
 
   @override

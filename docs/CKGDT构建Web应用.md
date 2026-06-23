@@ -1,12 +1,12 @@
-# MAD-KGDT 构建 Web 应用指南
+# CKGDT 构建 Web 应用指南
 
-> **移动图谱与数字孪生教学系统 — Web 端构建与 GitHub Pages 部署**
+> **课程知识图谱与数字孪生平台 — Web 端构建与 GitHub Pages 部署**
 
 ---
 
 ## 一、概述
 
-MAD-KG 是 Flutter 全平台项目，Web 端编译为 **JavaScript（dart2js）**，部署在 **GitHub Pages** 公网访问。
+CKGDT 是 Flutter 全平台项目，Web 端编译为 **JavaScript（dart2js）**，部署在 **GitHub Pages** 公网访问。
 
 | 项目 | 说明 |
 |------|------|
@@ -14,7 +14,7 @@ MAD-KG 是 Flutter 全平台项目，Web 端编译为 **JavaScript（dart2js）*
 | 成本 | 公开仓库免费（GitHub Pages 免费托管） |
 | 触发方式 | push `master` 分支自动构建 + 自动部署 gh-pages |
 | 产物格式 | 静态 HTML/CSS/JS 文件 |
-| 产物命名 | `移动图谱与数字孪生+web+v{版本}.zip`（含启动说明） |
+| 产物命名 | `课程知识图谱与数字孪生+web+v{版本}.zip`（含启动说明） |
 | 公网地址 | https://dll.github.io/mad-fd/ |
 | Base Href | `/mad-fd/`（**首尾必须各有一个斜杠**） |
 | Flutter 版本 | 3.35.1 |
@@ -110,7 +110,7 @@ rm -rf build/_gh-pages-deploy
 
 ### 4.2 离线本地启动
 
-下载 `移动图谱与数字孪生+web+v{版本}.zip`，解压后：
+下载 `课程知识图谱与数字孪生+web+v{版本}.zip`，解压后：
 
 **方法 1 — Python**：
 ```bash

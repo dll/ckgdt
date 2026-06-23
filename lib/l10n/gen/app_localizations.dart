@@ -100,13 +100,13 @@ abstract class AppL10n {
   /// 应用主标题（不含版本号）
   ///
   /// In zh, this message translates to:
-  /// **'移动图谱与数字孪生'**
+  /// **'课程知识图谱与数字孪生'**
   String get appName;
 
   /// 带版本号的应用标题
   ///
   /// In zh, this message translates to:
-  /// **'移动图谱与数字孪生 v{version}'**
+  /// **'CKGDT v{version}'**
   String appNameWithVersion(String version);
 
   /// No description provided for @navHome.

@@ -15,7 +15,7 @@ class RepoAgent extends BaseAgent {
         emoji: '📦',
         description: '管理 Git 仓库、检查提交规范、分析代码。',
         persona: '''你是代码仓库管家"仓管"，精通 Git/Gitee 工作流和代码版本管理。
-你服务于《移动应用开发》课程的代码实践环节。
+你服务于 CKGDT 平台当前课程的代码实践环节。
 
 ## 课程仓库规范
 - **组织**：Gitee 课程组织下的项目仓库
@@ -43,13 +43,24 @@ class RepoAgent extends BaseAgent {
 - 概念类问题：用图示说明（如分支合并图）
 - 错误场景：先诊断原因，再给恢复步骤''',
         priority: 5,
-        keywords: ['仓库', '代码', '提交', 'git', 'gitee', '分支', 'commit', '推送', 'push'],
+        keywords: [
+          '仓库',
+          '代码',
+          '提交',
+          'git',
+          'gitee',
+          '分支',
+          'commit',
+          '推送',
+          'push'
+        ],
         capabilities: ['仓库状态', '提交记录', '规范检查', 'Git指导'],
         requiresAi: true,
         tools: [
           AgentTool(
             name: 'get_my_contribution',
-            description: '获取当前登录学生在小组项目中的贡献度评价（代码/文档/团队协作/主动性/质量五维 + 综合得分），用于回答"我的贡献""贡献分布"',
+            description:
+                '获取当前登录学生在小组项目中的贡献度评价（代码/文档/团队协作/主动性/质量五维 + 综合得分），用于回答"我的贡献""贡献分布"',
             parameters: {},
             execute: (params) async {
               final userId = AuthService().currentUser?.userId;
@@ -75,19 +86,23 @@ class RepoAgent extends BaseAgent {
           '可查询提交规范和代码审查建议',
         ],
         classicCases: [
-          const AgentCase(title: 'Git 操作指导', userInput: '如何创建分支并提交代码？', agentReply: '## Git 分支操作\n\n```bash\ngit checkout -b feature/new-feature\ngit add .\ngit commit -m "feat: 添加新功能"\ngit push -u origin feature/new-feature\n```\n\n提交消息格式：`<类型>: <描述>`'),
+          const AgentCase(
+              title: 'Git 操作指导',
+              userInput: '如何创建分支并提交代码？',
+              agentReply:
+                  '## Git 分支操作\n\n```bash\ngit checkout -b feature/new-feature\ngit add .\ngit commit -m "feat: 添加新功能"\ngit push -u origin feature/new-feature\n```\n\n提交消息格式：`<类型>: <描述>`'),
         ],
       );
 
   @override
-  List<String> get quickCommands =>
-      ['提交规范', 'Git常用命令', '分支管理', '仓库命名规则'];
+  List<String> get quickCommands => ['提交规范', 'Git常用命令', '分支管理', '仓库命名规则'];
 
   @override
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
     final messages = buildAiMessages(userMessage, session);
-    final result = await safeAiChatWithTools(userMessage, messages, aiService: _ai);
+    final result =
+        await safeAiChatWithTools(userMessage, messages, aiService: _ai);
     return buildReplyFromResult(result);
   }
 }

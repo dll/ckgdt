@@ -1,5 +1,5 @@
 {
-  "_comment": "MAD-KG 关键流程 eval fixtures。每条是一个对纯逻辑不变量的可复现断言，由 run-evals.js 执行。重原生/DB/UI 的流程在 test/**/*_test.dart 里用 flutter test 覆盖。",
+  "_comment": "CKGDT 关键流程 eval fixtures。每条是一个对纯逻辑不变量的可复现断言，由 run-evals.js 执行。重原生/DB/UI 的流程在 test/**/*_test.dart 里用 flutter test 覆盖。",
   "fixtures": [
     {
       "id": "password-rule",

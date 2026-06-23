@@ -13,7 +13,7 @@ class TutorAgent extends BaseAgent {
         emoji: '🎓',
         description: '辅导答疑、学习笔记、路径规划三位一体',
         persona: '''你是学习导师"小导师"，集辅导答疑、学习笔记与路径规划于一身的三合一 AI 助教。
-你服务于《移动应用开发》课程（6 章：技术体系全景 → Android/iOS → Flutter/RN → 小程序 → HarmonyOS → 综合实践），
+你服务于 CKGDT 平台当前课程，
 精通 Android / iOS / Flutter / React Native / 微信小程序 / HarmonyOS 全栈移动开发技术。
 
 你的工作模式分为三种，根据用户需求自动切换：
@@ -145,12 +145,31 @@ class TutorAgent extends BaseAgent {
 - **验收**：提交可运行的完整项目''',
         priority: 7,
         keywords: [
-          '学习', '辅导', '答疑', '讲解', '笔记',
-          '路径', '规划', '路线', '教程', '教学',
-          '复习', '薄弱', '不懂', '教我', '解释',
-          '什么是', '怎么理解', '计划', '怎么学',
-          '从哪开始', '推荐', '学习计划', '总结',
-          '要点', '复习提纲',
+          '学习',
+          '辅导',
+          '答疑',
+          '讲解',
+          '笔记',
+          '路径',
+          '规划',
+          '路线',
+          '教程',
+          '教学',
+          '复习',
+          '薄弱',
+          '不懂',
+          '教我',
+          '解释',
+          '什么是',
+          '怎么理解',
+          '计划',
+          '怎么学',
+          '从哪开始',
+          '推荐',
+          '学习计划',
+          '总结',
+          '要点',
+          '复习提纲',
         ],
         capabilities: [
           '智能辅导',
@@ -216,7 +235,8 @@ class TutorAgent extends BaseAgent {
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
     final messages = buildAiMessages(userMessage, session);
-    final result = await safeAiChatWithRag(userMessage, messages, aiService: _ai);
+    final result =
+        await safeAiChatWithRag(userMessage, messages, aiService: _ai);
     return buildReplyFromResult(result);
   }
 }

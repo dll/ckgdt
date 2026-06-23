@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +14,7 @@ import 'qr_scan_page.dart';
 
 import '../../../core/constants/app_urls.dart';
 import '../../../services/clipboard_helper.dart';
+
 /// 多端互通 Hub 页面
 ///
 /// 根据平台角色自动展示不同功能区：
@@ -127,7 +128,7 @@ class _CrossPlatformHubPageState extends State<CrossPlatformHubPage> {
       'host': _syncServer!.host,
       'port': _syncServer!.port,
       'qrToken': session.qrToken,
-      'app': 'MADKG',
+      'app': 'CKGDT',
     });
 
     setState(() {
@@ -139,8 +140,8 @@ class _CrossPlatformHubPageState extends State<CrossPlatformHubPage> {
     _qrPollTimer?.cancel();
     _qrPollTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (_currentQrSession == null) return;
-      final updated =
-          _syncServer!.sessionManager.checkQrSession(_currentQrSession!.qrToken);
+      final updated = _syncServer!.sessionManager
+          .checkQrSession(_currentQrSession!.qrToken);
       if (updated != null && updated.isConfirmed) {
         _qrPollTimer?.cancel();
         _syncServer!.sessionManager.consumeQrSession(updated.qrToken);
@@ -509,9 +510,7 @@ class _CrossPlatformHubPageState extends State<CrossPlatformHubPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _isDesktop
-                      ? '启动服务器 → 手机扫码或浏览器访问'
-                      : '扫描桌面端 QR 码或手动输入地址',
+                  _isDesktop ? '启动服务器 → 手机扫码或浏览器访问' : '扫描桌面端 QR 码或手动输入地址',
                   style: const TextStyle(color: Colors.white70, fontSize: 13),
                 ),
               ],
@@ -632,22 +631,19 @@ class _CrossPlatformHubPageState extends State<CrossPlatformHubPage> {
               data: _qrData!,
               size: 200,
               padding: 12,
-              borderColor:
-                  theme.colorScheme.outline.withOpacity(0.2),
+              borderColor: theme.colorScheme.outline.withValues(alpha: 0.2),
               eyeColor: theme.colorScheme.primary,
               moduleColor: const Color(0xFF333333),
             ),
             const SizedBox(height: 12),
             Text(
               '使用手机 APP 扫描二维码连接',
-              style: TextStyle(
-                  fontSize: 13, color: theme.colorScheme.outline),
+              style: TextStyle(fontSize: 13, color: theme.colorScheme.outline),
             ),
             const SizedBox(height: 4),
             SelectableText(
               _syncServer?.serverUrl ?? '',
-              style: TextStyle(
-                  fontSize: 12, color: theme.colorScheme.primary),
+              style: TextStyle(fontSize: 12, color: theme.colorScheme.primary),
             ),
           ],
         ),
@@ -856,7 +852,8 @@ class _CrossPlatformHubPageState extends State<CrossPlatformHubPage> {
               const SizedBox(height: 4),
               Text(
                 _syncMessage!,
-                style: TextStyle(fontSize: 13, color: theme.colorScheme.primary),
+                style:
+                    TextStyle(fontSize: 13, color: theme.colorScheme.primary),
               ),
             ],
             const Divider(height: 24),
@@ -926,8 +923,8 @@ class _CrossPlatformHubPageState extends State<CrossPlatformHubPage> {
                 ),
                 trailing: Text(
                   _formatTime(d['lastSeen'] as String?),
-                  style: TextStyle(
-                      fontSize: 11, color: theme.colorScheme.outline),
+                  style:
+                      TextStyle(fontSize: 11, color: theme.colorScheme.outline),
                 ),
                 dense: true,
               );

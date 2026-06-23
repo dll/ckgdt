@@ -68,7 +68,7 @@ class UpdateService {
         uri,
         headers: {
           'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'MAD-KG-App/$_githubOwner',
+          'User-Agent': 'CKGDT-App/$_githubOwner',
         },
       );
       if (response.statusCode != 200) {
@@ -93,7 +93,9 @@ class UpdateService {
       if (targetAsset == null && assets.isNotEmpty) {
         for (final asset in assets) {
           final name = asset['name'] as String? ?? '';
-          if (name.endsWith('.apk') || name.endsWith('.zip') || name.endsWith('.exe')) {
+          if (name.endsWith('.apk') ||
+              name.endsWith('.zip') ||
+              name.endsWith('.exe')) {
             targetAsset = asset as Map<String, dynamic>;
             break;
           }
@@ -222,8 +224,7 @@ class UpdateService {
     }
     final ignoredVersion = prefs.getString(_prefIgnoredVersionKey);
     if (ignoredVersion == info.version) return false;
-    await prefs.setString(
-        _prefLastCheckKey, DateTime.now().toIso8601String());
+    await prefs.setString(_prefLastCheckKey, DateTime.now().toIso8601String());
     return true;
   }
 

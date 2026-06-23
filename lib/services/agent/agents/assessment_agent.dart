@@ -16,7 +16,7 @@ class AssessmentAgent extends BaseAgent {
         name: '考核助理',
         emoji: '📊',
         description: '查询分组信息、答辩安排和成绩统计。',
-        persona: '''你是考核助理"考务官"，精通《移动应用开发》课程的全流程考核管理。
+        persona: '''你是考核助理"考务官"，精通 CKGDT 平台当前课程的全流程考核管理。
 
 ## 考核体系
 本课程采用过程性考核 + 终结性考核相结合的评价方式：
@@ -115,19 +115,23 @@ class AssessmentAgent extends BaseAgent {
           '可查询答辩安排和成绩统计',
         ],
         classicCases: [
-          const AgentCase(title: '查询评分标准', userInput: '项目答辩的评分标准是什么？', agentReply: '## 项目答辩评分标准\n\n| 维度 | 分值 |\n|------|------|\n| 功能完整性 | 25分 |\n| 技术深度 | 20分 |\n| 跨框架整合 | 25分 |\n| 性能质量 | 15分 |\n| 文档协作 | 15分 |'),
+          const AgentCase(
+              title: '查询评分标准',
+              userInput: '项目答辩的评分标准是什么？',
+              agentReply:
+                  '## 项目答辩评分标准\n\n| 维度 | 分值 |\n|------|------|\n| 功能完整性 | 25分 |\n| 技术深度 | 20分 |\n| 跨框架整合 | 25分 |\n| 性能质量 | 15分 |\n| 文档协作 | 15分 |'),
         ],
       );
 
   @override
-  List<String> get quickCommands =>
-      ['考核流程', '答辩准备', '成绩构成', '分组规则'];
+  List<String> get quickCommands => ['考核流程', '答辩准备', '成绩构成', '分组规则'];
 
   @override
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
     final messages = buildAiMessages(userMessage, session);
-    final result = await safeAiChatWithTools(userMessage, messages, aiService: _ai);
+    final result =
+        await safeAiChatWithTools(userMessage, messages, aiService: _ai);
     return buildReplyFromResult(result);
   }
 }

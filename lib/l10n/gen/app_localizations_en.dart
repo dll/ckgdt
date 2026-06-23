@@ -9,11 +9,11 @@ class AppL10nEn extends AppL10n {
   AppL10nEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appName => 'MAD-KGDT';
+  String get appName => 'CKGDT';
 
   @override
   String appNameWithVersion(String version) {
-    return 'MAD-KGDT v$version';
+    return 'CKGDT v$version';
   }
 
   @override

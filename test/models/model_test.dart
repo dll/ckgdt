@@ -11,13 +11,13 @@ void main() {
     test('fromMap should parse values correctly', () {
       final model = GraphModel.fromMap({
         'id': 'graph_01',
-        'title': '移动应用开发知识图谱',
+        'title': '课程知识图谱',
         'graph_type': 'knowledge_system',
         'layout': 'spring',
       });
 
       expect(model.id, 'graph_01');
-      expect(model.title, '移动应用开发知识图谱');
+      expect(model.title, '课程知识图谱');
       expect(model.graphType, 'knowledge_system');
       expect(model.layout, 'spring');
     });
@@ -242,7 +242,8 @@ void main() {
       });
     });
 
-    test('correctAnswer should return empty string for invalid answerIndex', () {
+    test('correctAnswer should return empty string for invalid answerIndex',
+        () {
       final model = QuestionModel(
         question: '测试题',
         optionA: 'A',
@@ -374,7 +375,8 @@ void main() {
       expect(model.isTeacher, isFalse);
     });
 
-    test('password should return full userId when userId is shorter than 6', () {
+    test('password should return full userId when userId is shorter than 6',
+        () {
       final model = UserModel(userId: '12345');
 
       expect(model.password, '12345');

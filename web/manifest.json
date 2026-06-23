@@ -1,11 +1,11 @@
 {
-    "name": "课程图谱与数字孪生v2.1.0",
-    "short_name": "课程图谱与数字孪生",
+    "name": "CKGDTv2.1.0",
+    "short_name": "CKGDT",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "课程图谱与数字孪生 — 移动应用开发课程的知识图谱与数字孪生教学平台",
+    "description": "CKGDT — Course Knowledge Graph and Digital Twin Platform",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

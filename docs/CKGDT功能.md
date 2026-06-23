@@ -1,6 +1,6 @@
-# MAD-KGDT 移动图谱与数字孪生教学系统 — 功能点清单
+# CKGDT 课程知识图谱与数字孪生平台 — 功能点清单
 
-> **项目名称**：MAD-KGDT（Mobile Application Development - Knowledge Graph & Digital Twin）
+> **项目名称**：CKGDT（Course Knowledge Graph and Digital Twin Platform）
 > **当前版本**：0.10.0+11
 > **技术栈**：Flutter 3 + Material Design 3 + sqflite + 多智能体 + RAG
 > **目标平台**：Android、Windows、Web、HarmonyOS（OHOS）、iOS、macOS、Linux
@@ -526,7 +526,7 @@
 ## 25. 关键设计特点
 
 1. **无服务器架构**：通过 Gitee 仓库 JSON 文件实现师生数据双向同步，无需部署后端服务器。
-2. **多智能体 Director 模式**：24 个专业 Agent + Director 编排，关键词匹配 + AI 意图识别自动路由。
+2. **多智能体 Director 模式**：18 个专业 Agent + Director 编排，关键词匹配 + AI 意图识别自动路由。
 3. **角色感知导航**：同一应用根据用户角色（学生/教师/管理员）动态构建不同的导航栏。
 4. **条件导入跨平台**：涉及文件系统的服务统一使用 `_native.dart` + `_stub.dart` 条件导入模式。
 5. **三层数据库防御**：种子 DB 复制 → 版本匹配跳过迁移 → 异常时自动修复空数据。

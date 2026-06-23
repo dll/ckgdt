@@ -1,10 +1,10 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../services/auth_service.dart';
 import 'agent_chat_overlay.dart';
 import '../pages/profile/virtual_twin_page.dart';
 import '../pages/admin/teacher_application_page.dart';
 
-/// MAD 精灵悬浮菜单 — 展开式 FAB，集成智能体对话 + 数字孪生入口
+/// CKGDT 助手悬浮菜单 — 展开式 FAB，集成智能体对话 + 数字孪生入口
 ///
 /// 点击展开两个子按钮：
 /// - 数字孪生仪表盘（虚拟教师/虚拟学生）
@@ -76,7 +76,8 @@ class _MadMascotButtonState extends State<MadMascotButton>
               _collapse();
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const TeacherApplicationPage()),
+                MaterialPageRoute(
+                    builder: (_) => const TeacherApplicationPage()),
               );
             },
           ),
@@ -113,16 +114,16 @@ class _MadMascotButtonState extends State<MadMascotButton>
           mini: true,
           heroTag: 'mad_mascot',
           backgroundColor: Theme.of(context).colorScheme.primary,
-          tooltip: 'MAD 精灵',
+          tooltip: 'CKGDT 助手',
           onPressed: _toggle,
           child: AnimatedBuilder(
             animation: _animController,
             builder: (_, __) => Transform.rotate(
               angle: _expandAnimation.value * 0.5,
               child: Text(
-                _isExpanded ? '✕' : 'M',
+                _isExpanded ? '✕' : 'CK',
                 style: const TextStyle(
-                  fontSize: 18,
+                  fontSize: 14,
                   fontWeight: FontWeight.w900,
                   color: Colors.white,
                   fontFamily: 'monospace',

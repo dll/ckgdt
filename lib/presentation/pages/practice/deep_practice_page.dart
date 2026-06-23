@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../services/ai_service.dart';
 import '../../../data/local/learning_record_dao.dart';
 import '../../../services/auth_service.dart';
@@ -543,7 +543,9 @@ class _DeepPracticePageState extends State<DeepPracticePage>
         }
       }
       if (mounted) setState(() => _completedSections = completed);
-    } catch (e) { swallowDebug(e, tag: 'deep_practice_page'); }
+    } catch (e) {
+      swallowDebug(e, tag: 'deep_practice_page');
+    }
   }
 
   Future<void> _markCompleted(String chapter, int sectionIdx) async {
@@ -566,7 +568,9 @@ class _DeepPracticePageState extends State<DeepPracticePage>
               content: Text('已标记完成 ✓'), duration: Duration(seconds: 1)),
         );
       }
-    } catch (e) { swallowDebug(e, tag: 'deep_practice_page'); }
+    } catch (e) {
+      swallowDebug(e, tag: 'deep_practice_page');
+    }
   }
 
   Future<void> _askAi(String question) async {
@@ -582,7 +586,7 @@ class _DeepPracticePageState extends State<DeepPracticePage>
         [
           {'role': 'user', 'content': question}
         ],
-        systemPrompt: '你是移动应用开发课程的AI助教。请用简洁、专业的语言回答问题。',
+        systemPrompt: '你是课程 AI 助教。请用简洁、专业的语言回答问题。',
       );
       if (mounted) {
         setState(() {
@@ -861,9 +865,9 @@ class _DeepPracticePageState extends State<DeepPracticePage>
                                     decoration: BoxDecoration(
                                       color: isDark
                                           ? Colors.indigo
-                                              .withOpacity(0.15)
+                                              .withValues(alpha: 0.15)
                                           : Colors.indigo
-                                              .withOpacity(0.05),
+                                              .withValues(alpha: 0.05),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Row(
@@ -876,7 +880,7 @@ class _DeepPracticePageState extends State<DeepPracticePage>
                                           alignment: Alignment.center,
                                           decoration: BoxDecoration(
                                             color: chapter.color
-                                                .withOpacity(0.15),
+                                                .withValues(alpha: 0.15),
                                             shape: BoxShape.circle,
                                           ),
                                           child: Text('${e.key + 1}',
@@ -937,7 +941,7 @@ class _DeepPracticePageState extends State<DeepPracticePage>
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
                                     color: Colors.deepPurple
-                                        .withOpacity(0.2)),
+                                        .withValues(alpha: 0.2)),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,

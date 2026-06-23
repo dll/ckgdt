@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 /// QR 码扫描页面 — 移动端扫码连接桌面端
@@ -31,8 +31,10 @@ class _QrScanPageState extends State<QrScanPage> {
     for (final barcode in barcodes) {
       final value = barcode.rawValue;
       if (value != null && value.isNotEmpty) {
-        // 校验是否是我们的 QR 码（包含 app: MADKG）
-        if (value.contains('MADKG') || value.contains('qrToken')) {
+        // 校验是否是 CKGDT QR 码；兼容早期 MADKG 二维码。
+        if (value.contains('CKGDT') ||
+            value.contains('MADKG') ||
+            value.contains('qrToken')) {
           _hasResult = true;
           Navigator.pop(context, value);
           return;
@@ -173,14 +175,15 @@ class _ScanOverlayPainter extends CustomPainter {
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, top), maskPaint);
     // 下方遮罩
     canvas.drawRect(
-        Rect.fromLTWH(0, top + scanSize, size.width, size.height - top - scanSize),
+        Rect.fromLTWH(
+            0, top + scanSize, size.width, size.height - top - scanSize),
         maskPaint);
     // 左侧遮罩
-    canvas.drawRect(
-        Rect.fromLTWH(0, top, left, scanSize), maskPaint);
+    canvas.drawRect(Rect.fromLTWH(0, top, left, scanSize), maskPaint);
     // 右侧遮罩
     canvas.drawRect(
-        Rect.fromLTWH(left + scanSize, top, size.width - left - scanSize, scanSize),
+        Rect.fromLTWH(
+            left + scanSize, top, size.width - left - scanSize, scanSize),
         maskPaint);
 
     // 扫描框四角
@@ -192,18 +195,20 @@ class _ScanOverlayPainter extends CustomPainter {
     const cornerLen = 24.0;
 
     // 左上
-    canvas.drawLine(Offset(left, top), Offset(left + cornerLen, top), cornerPaint);
-    canvas.drawLine(Offset(left, top), Offset(left, top + cornerLen), cornerPaint);
+    canvas.drawLine(
+        Offset(left, top), Offset(left + cornerLen, top), cornerPaint);
+    canvas.drawLine(
+        Offset(left, top), Offset(left, top + cornerLen), cornerPaint);
     // 右上
-    canvas.drawLine(
-        Offset(left + scanSize, top), Offset(left + scanSize - cornerLen, top), cornerPaint);
-    canvas.drawLine(
-        Offset(left + scanSize, top), Offset(left + scanSize, top + cornerLen), cornerPaint);
+    canvas.drawLine(Offset(left + scanSize, top),
+        Offset(left + scanSize - cornerLen, top), cornerPaint);
+    canvas.drawLine(Offset(left + scanSize, top),
+        Offset(left + scanSize, top + cornerLen), cornerPaint);
     // 左下
-    canvas.drawLine(
-        Offset(left, top + scanSize), Offset(left + cornerLen, top + scanSize), cornerPaint);
-    canvas.drawLine(
-        Offset(left, top + scanSize), Offset(left, top + scanSize - cornerLen), cornerPaint);
+    canvas.drawLine(Offset(left, top + scanSize),
+        Offset(left + cornerLen, top + scanSize), cornerPaint);
+    canvas.drawLine(Offset(left, top + scanSize),
+        Offset(left, top + scanSize - cornerLen), cornerPaint);
     // 右下
     canvas.drawLine(Offset(left + scanSize, top + scanSize),
         Offset(left + scanSize - cornerLen, top + scanSize), cornerPaint);

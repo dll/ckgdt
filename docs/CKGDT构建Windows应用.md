@@ -1,12 +1,12 @@
-# MAD-KGDT 构建 Windows 应用指南
+# CKGDT 构建 Windows 应用指南
 
-> **移动图谱与数字孪生教学系统 — Windows 桌面端构建与分发**
+> **课程知识图谱与数字孪生平台 — Windows 桌面端构建与分发**
 
 ---
 
 ## 一、概述
 
-MAD-KG 是 Flutter 全平台项目，Windows 端使用 **Visual Studio Build Tools + CMake** 编译。CI 使用 **GitHub Actions `windows-latest`** 云端构建。
+CKGDT 是 Flutter 全平台项目，Windows 端使用 **Visual Studio Build Tools + CMake** 编译。CI 使用 **GitHub Actions `windows-latest`** 云端构建。
 
 | 项目 | 说明 |
 |------|------|
@@ -14,8 +14,8 @@ MAD-KG 是 Flutter 全平台项目，Windows 端使用 **Visual Studio Build Too
 | 成本 | 公开仓库免费（2000 分钟/月） |
 | 触发方式 | push `master` 分支自动构建 |
 | 产物格式 | `.exe` + 全部 `.dll` + `data/` 目录 |
-| 产物命名 | `移动图谱与数字孪生+windows+v{版本}.zip`（解压即用） |
-| 窗口标题 | `移动图谱与数字孪生v{版本}`（由 `windows/runner/main.cpp` 控制） |
+| 产物命名 | `课程知识图谱与数字孪生+windows+v{版本}.zip`（解压即用） |
+| 窗口标题 | `课程知识图谱与数字孪生v{版本}`（由 `windows/runner/main.cpp` 控制） |
 | 最低 Windows | Windows 10（Flutter 3.x 要求） |
 | Flutter 版本 | 3.35.1 |
 | 包大小 | ~66 MB（zip） |
@@ -64,7 +64,7 @@ flutter build windows --release
 ```
 
 产物：`build/windows/x64/runner/Release/` 整个目录。
-- `移动图谱与数字孪生v{版本}.exe` — 入口程序
+- `课程知识图谱与数字孪生v{版本}.exe` — 入口程序
 - `*.dll` — 运行时依赖
 - `data/` — Flutter assets（字体、图片等）
 

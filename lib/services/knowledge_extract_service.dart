@@ -33,7 +33,7 @@ class KnowledgeExtractService {
     if (text.trim().isEmpty) return [];
 
     const systemPrompt = '''
-你是一位移动应用开发课程的知识图谱构建专家。
+你是一位课程知识图谱构建专家。
 请从给定的教学内容中提取知识概念，每个概念包含以下字段：
 - concept_name: 概念名称（简洁，2-8个字）
 - concept_type: 类型（concept/technology/tool/framework/language/platform/pattern 之一）
@@ -95,8 +95,7 @@ class KnowledgeExtractService {
         }
       }
 
-      debugPrint(
-          '[KnowledgeExtractService] 成功提取并插入 ${inserted.length} 个概念');
+      debugPrint('[KnowledgeExtractService] 成功提取并插入 ${inserted.length} 个概念');
       return inserted;
     } catch (e) {
       debugPrint('[KnowledgeExtractService] extractConceptsFromText 异常: $e');
@@ -117,7 +116,7 @@ class KnowledgeExtractService {
     if (conceptNames.length < 2) return [];
 
     const systemPrompt = '''
-你是一位移动应用开发课程的知识图谱构建专家。
+你是一位课程知识图谱构建专家。
 请分析以下知识概念之间的语义关系，每条关系包含：
 - source: 源概念名称
 - target: 目标概念名称
@@ -137,8 +136,7 @@ class KnowledgeExtractService {
 
 请提取15-30条关系。''';
 
-    final userPrompt =
-        '以下是需要分析关系的知识概念列表：\n${conceptNames.join(', ')}';
+    final userPrompt = '以下是需要分析关系的知识概念列表：\n${conceptNames.join(', ')}';
 
     try {
       final raw = await _aiService.chat(
@@ -203,8 +201,7 @@ class KnowledgeExtractService {
         }
       }
 
-      debugPrint(
-          '[KnowledgeExtractService] 成功提取并插入 ${inserted.length} 条关系');
+      debugPrint('[KnowledgeExtractService] 成功提取并插入 ${inserted.length} 条关系');
       return inserted;
     } catch (e) {
       debugPrint(
@@ -231,9 +228,8 @@ class KnowledgeExtractService {
     // Step 2 – also include existing concepts for the same chapter so the
     //          AI can discover cross-concept relations
     final existingRows = await _dao.getConceptsByChapter(chapter);
-    final existingNames = existingRows
-        .map((r) => r['concept_name']?.toString() ?? '')
-        .toList();
+    final existingNames =
+        existingRows.map((r) => r['concept_name']?.toString() ?? '').toList();
 
     // Merge & deduplicate
     final allNames = <String>{...newNames, ...existingNames}
@@ -268,8 +264,7 @@ class KnowledgeExtractService {
     final keywords = concept['keywords'] ?? '';
     final chapter = concept['chapter'];
 
-    const systemPrompt =
-        '你是移动应用开发课程的教学专家。请用中文为给定的知识概念撰写一段详细的'
+    const systemPrompt = '你是课程教学专家。请用中文为给定的知识概念撰写一段详细的'
         '教学描述（150-250字），包含定义、核心要点和在课程中的作用。';
 
     final chapterHint = chapter != null ? '（第$chapter章）' : '';

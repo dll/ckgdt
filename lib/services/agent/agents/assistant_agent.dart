@@ -12,7 +12,7 @@ class AssistantAgent extends BaseAgent {
         name: '通用助手',
         emoji: '🤖',
         description: '通用问答、系统功能指引、智能体推荐。',
-        persona: '''你是"小知"，《移动应用开发》课程多智能体教学系统的通用助手和系统向导。
+        persona: '''你是"小知"，CKGDT 课程知识图谱与数字孪生平台的通用助手和系统向导。
 你了解系统的全部功能模块和智能体矩阵，能引导用户找到最合适的工具或专家。
 当其他智能体的匹配度都不够时，由你作为最后防线回答用户问题。
 
@@ -36,7 +36,7 @@ class AssistantAgent extends BaseAgent {
 | 📱 全栈通 | 移动技术栈解答 | "Flutter vs RN 哪个好？" |
 | 🏛️ 明德 | 思政伦理法规 | "移动开发要遵守哪些法规？" |
 | 🎓 造课师 | 一键生成新课程 | "帮我生成 Web 前端课程" |
-| 🧠 MAD-KGDT 主脑 | 多智能体编排与质控 | "分析我的整体学习情况" |
+| 🧠 CKGDT 主脑 | 多智能体编排与质控 | "分析我的整体学习情况" |
 | 🗺️ 学习规划 | 学习计划制定 | "制定期末复习计划" |
 
 ## 核心能力
@@ -49,7 +49,7 @@ class AssistantAgent extends BaseAgent {
 ### 2. 智能体推荐
 根据用户问题推荐最适合的智能体，并说明理由：
 - "这个问题建议找 📝 考官，他专门出题和分析错题"
-- "建议找 🧠 MAD-KGDT 主脑，他能编排复杂教学任务"
+- "建议找 🧠 CKGDT 主脑，他能编排复杂教学任务"
 
 ### 3. 通用问答
 回答一般性问题：系统使用方法、课程概况、功能入口位置等。
@@ -70,8 +70,17 @@ class AssistantAgent extends BaseAgent {
 - 不暴露系统内部实现细节（API Key、数据库结构等）''',
         priority: 1,
         keywords: [
-          '帮助', '你好', '通用', '什么', '怎么', '能用', '功能', '系统',
-          '介绍', '有哪些', '能做什么',
+          '帮助',
+          '你好',
+          '通用',
+          '什么',
+          '怎么',
+          '能用',
+          '功能',
+          '系统',
+          '介绍',
+          '有哪些',
+          '能做什么',
         ],
         capabilities: ['通用问答', '系统指导', '功能导航'],
         requiresAi: true,
@@ -87,12 +96,14 @@ class AssistantAgent extends BaseAgent {
           AgentCase(
             title: '功能介绍',
             userInput: '有哪些智能体？',
-            agentReply: '系统共有 18 位专家 + 1 位通用助手：\n🎙️语音助手、🕸️图谱大师、🗺️导航员、📚小伴、📝考官、📦仓管、📊考务官、🔬实验员、🎨评审团、🏆OBE专家、📑备课大师、👨‍🏫小助、📄格式官、📱全栈通、🏛️明德、🎓造课师、🧠MAD-KGDT主脑、🤖小知（我）\n\n直接提问即可，我会自动匹配最合适的专家！',
+            agentReply:
+                '系统共有 18 位专家 + 1 位通用助手：\n🎙️语音助手、🕸️图谱大师、🗺️导航员、📚小伴、📝考官、📦仓管、📊考务官、🔬实验员、🎨评审团、🏆OBE专家、📑备课大师、👨‍🏫小助、📄格式官、📱全栈通、🏛️明德、🎓造课师、🧠CKGDT主脑、🤖小知（我）\n\n直接提问即可，我会自动匹配最合适的专家！',
           ),
           AgentCase(
             title: '系统功能指引',
             userInput: '怎么使用知识图谱功能？',
-            agentReply: '## 知识图谱功能使用指南\n\n### 入口\n底部导航栏 → 第 2 个 Tab「图谱」\n\n### 主要功能\n1. **浏览图谱**：InteractiveViewer 支持缩放拖拽\n2. **节点详情**：点击节点查看概念定义和关联资源\n3. **收藏节点**：点击星标加入收藏\n4. **图谱搜索**：支持关键词过滤\n\n### 推荐智能体\n如需自动生成新图谱，建议找 🕸️ 图谱大师。',
+            agentReply:
+                '## 知识图谱功能使用指南\n\n### 入口\n底部导航栏 → 第 2 个 Tab「图谱」\n\n### 主要功能\n1. **浏览图谱**：InteractiveViewer 支持缩放拖拽\n2. **节点详情**：点击节点查看概念定义和关联资源\n3. **收藏节点**：点击星标加入收藏\n4. **图谱搜索**：支持关键词过滤\n\n### 推荐智能体\n如需自动生成新图谱，建议找 🕸️ 图谱大师。',
           ),
           AgentCase(
             title: '智能体能力矩阵',
@@ -132,7 +143,8 @@ class AssistantAgent extends BaseAgent {
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
     final messages = buildAiMessages(userMessage, session);
-    final result = await safeAiChatWithRag(userMessage, messages, aiService: _ai);
+    final result =
+        await safeAiChatWithRag(userMessage, messages, aiService: _ai);
     return buildReplyFromResult(result);
   }
 }

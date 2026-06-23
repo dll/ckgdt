@@ -434,7 +434,7 @@ class ReleaseService {
 
     // ASCII 别名（Windows 260 字符路径限制兜底）
     final winZip = File(p.join(distDir.path, '$_brand+windows+v$ver.zip'));
-    final asciiAlias = File(p.join(distDir.path, 'MAD-windows-v$ver.zip'));
+    final asciiAlias = File(p.join(distDir.path, 'CKGDT-windows-v$ver.zip'));
     if (await asciiAlias.exists()) await asciiAlias.delete();
     await winZip.copy(asciiAlias.path);
     _log('pack', '✓ ASCII 别名: ${p.basename(asciiAlias.path)}');
@@ -576,11 +576,11 @@ class ReleaseService {
 
     final assets = <String, String>{
       // 中文名（Gitee 用，GitHub 自动 ASCII 化）
-      '$_brand+windows+v$ver.zip': 'MAD-KGDT-windows-v$ver.zip',
-      '$_brand+android+v$ver.zip': 'MAD-KGDT-android-v$ver.zip',
-      '$_brand+web+v$ver.zip': 'MAD-KGDT-web-v$ver.zip',
-      '$_brand+harmonyos+v$ver.zip': 'MAD-KGDT-harmonyos-v$ver.zip',
-      'MAD-windows-v$ver.zip': 'MAD-windows-v$ver.zip',
+      '$_brand+windows+v$ver.zip': 'CKGDT-windows-v$ver.zip',
+      '$_brand+android+v$ver.zip': 'CKGDT-android-v$ver.zip',
+      '$_brand+web+v$ver.zip': 'CKGDT-web-v$ver.zip',
+      '$_brand+harmonyos+v$ver.zip': 'CKGDT-harmonyos-v$ver.zip',
+      'CKGDT-windows-v$ver.zip': 'CKGDT-windows-v$ver.zip',
       '一键安装-Windows.bat': 'install-windows.bat',
       '安装手册.pdf': 'install-manual.pdf',
     };
@@ -900,7 +900,7 @@ class ReleaseService {
       '$_brand+android+v$ver.zip',
       '$_brand+web+v$ver.zip',
       '$_brand+harmonyos+v$ver.zip',
-      'MAD-windows-v$ver.zip',
+      'CKGDT-windows-v$ver.zip',
       '一键安装-Windows.bat',
       '安装手册.pdf',
     ];
@@ -1034,7 +1034,7 @@ $defaults
 | 一键安装 | 一键安装-Windows.bat | < 2 KB |
 | 安装手册 | 安装手册.pdf | ~4 MB |
 
-> Windows 端额外提供 ASCII 别名包 `MAD-windows-v$ver.zip`，用于绕开 Windows 260 字符路径限制。
+> Windows 端额外提供 ASCII 别名包 `CKGDT-windows-v$ver.zip`，用于绕开 Windows 260 字符路径限制。
 > 鸿蒙 HAP 用 OpenHarmony 调试签名，仅可装到鸿蒙真机（arm64-v8a），不兼容华为模拟器（x86_64）。
 
 ## Web 在线访问

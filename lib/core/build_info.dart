@@ -26,15 +26,19 @@ class BuildInfo {
   static const String appVersion = Version.display;
 
   /// 窗体标题用简称（窗口边框、任务栏、浏览器标签页）。
-  static const String appBrand = '课程图谱与数字孪生';
+  static const String appBrand = 'CKGDT';
 
   /// 完整产品名（登录页 Logo 下方、关于对话框标题）。
   static const String appFullName = '课程知识图谱与数字孪生平台';
 
+  /// 英文完整产品名（登录页、关于对话框、英文说明）。
+  static const String appEnglishName =
+      'Course Knowledge Graph and Digital Twin Platform';
+
   /// 登录页落款年份（年份每年元旦更新一次，与版本号解耦）。
   static const String appEdition = 'EDITION 2026';
 
-  /// 拼成 "课程图谱与数字孪生v{version}"，给窗体标题 / 文件名用。
+  /// 拼成 "CKGDTv{version}"，给窗体标题 / 文件名用。
   static const String appBrandWithVersion = '${appBrand}v$appVersion';
 
   /// 拼成 "V{version}  ·  EDITION 2026"，给登录页副标题用。

@@ -2,15 +2,15 @@
   "string": [
     {
       "name": "module_desc",
-      "value": "MADKG"
+      "value": "CKGDT"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "Mobile App Dev Knowledge Graph"
+      "value": "Course Knowledge Graph and Digital Twin"
     },
     {
       "name": "EntryAbility_label",
-      "value": "课程图谱与数字孪生v2.0.2"
+      "value": "CKGDTv2.1.0"
     }
   ]
 }

@@ -1,12 +1,12 @@
-# MAD-KGDT 构建 HarmonyOS 应用指南
+# CKGDT 构建 HarmonyOS 应用指南
 
-> **移动图谱与数字孪生教学系统 — HarmonyOS 端（OpenHarmony）本地构建与分发**
+> **课程知识图谱与数字孪生平台 — HarmonyOS 端（OpenHarmony）本地构建与分发**
 
 ---
 
 ## 一、概述
 
-MAD-KG 是 Flutter 全平台项目，HarmonyOS 端使用 **flutter_ohos** 社区分支构建。该分支基于 Flutter 3.16 且内置 **Dart SDK 3.4**，与项目主工具链（Flutter 3.35.1 / Dart 3.7+）存在显著 API 差异。本方案通过 **源码补丁 + 依赖降级** 双重策略实现兼容编译。
+CKGDT 是 Flutter 全平台项目，HarmonyOS 端使用 **flutter_ohos** 社区分支构建。该分支基于 Flutter 3.16 且内置 **Dart SDK 3.4**，与项目主工具链（Flutter 3.35.1 / Dart 3.7+）存在显著 API 差异。本方案通过 **源码补丁 + 依赖降级** 双重策略实现兼容编译。
 
 | 项目 | 说明 |
 |------|------|
@@ -323,7 +323,7 @@ flutter_ohos 工具链目前只产 arm64-v8a 引擎，不含 x86_64 变体。
 分发 zip 命名遵循 DevEco Studio 官方风格：
 
 ```
-移动图谱与数字孪生+harmonyos+v1.16.2.zip
+课程知识图谱与数字孪生+harmonyos+v1.16.2.zip
 ```
 
 内含：

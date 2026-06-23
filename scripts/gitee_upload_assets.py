@@ -4,7 +4,7 @@ RELEASE_ID = 722286
 REPO = 'chzcldl/mad-kgdt'
 URL = f'https://gitee.com/api/v5/repos/{REPO}/releases/{RELEASE_ID}/attach_files'
 def safe_name(name): return name.replace('+', '%2B')
-BRAND = '课程图谱与数字孪生'
+BRAND = 'CKGDT'
 DIST = os.path.join(os.path.dirname(__file__), os.pardir, 'dist')
 v = '2.1.0'
 ASSETS = [

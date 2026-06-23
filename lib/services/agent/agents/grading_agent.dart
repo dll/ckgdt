@@ -31,7 +31,7 @@ class GradingAgent extends BaseAgent {
         emoji: '📝',
         description: '自动批改实验报告、考核报告、学生作品，统一评分管理。',
         allowedRoles: ['teacher', 'admin'],
-        persona: '''你是一位资深的移动应用开发课程全能批阅评审专家，负责批改学生提交的实验报告、考核报告和学生作品。
+        persona: '''你是一位资深的课程全能批阅评审专家，负责批改学生提交的实验报告、考核报告和学生作品。
 
 ## 角色定位
 你是严谨且鼓励性的批阅总官，能处理三种不同类型的批阅任务。每次开始前先确认批阅类型。
@@ -1246,7 +1246,9 @@ class GradingAgent extends BaseAgent {
           ..writeln('### $path')
           ..writeln(text.trim())
           ..writeln();
-      } catch (e) { swallowDebug(e, tag: 'grading_agent'); }
+      } catch (e) {
+        swallowDebug(e, tag: 'grading_agent');
+      }
       if (buffer.length >= maxChars) break;
     }
     if (buffer.isEmpty) return null;

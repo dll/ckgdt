@@ -57,8 +57,8 @@ class SurveyDao {
   Future<bool> updateSurvey(int surveyId, Map<String, dynamic> data) async {
     final db = await _dbHelper.database;
     data['updated_at'] = DateTime.now().toIso8601String();
-    final count = await db.update('surveys', data,
-        where: 'id = ?', whereArgs: [surveyId]);
+    final count = await db
+        .update('surveys', data, where: 'id = ?', whereArgs: [surveyId]);
     return count > 0;
   }
 
@@ -126,8 +126,8 @@ class SurveyDao {
   /// 删除题目
   Future<bool> deleteQuestion(int questionId) async {
     final db = await _dbHelper.database;
-    final count = await db.delete('survey_questions',
-        where: 'id = ?', whereArgs: [questionId]);
+    final count = await db
+        .delete('survey_questions', where: 'id = ?', whereArgs: [questionId]);
     return count > 0;
   }
 
@@ -178,8 +178,7 @@ class SurveyDao {
   Future<bool> hasResponded(int surveyId, String userId) async {
     final db = await _dbHelper.database;
     final result = await db.query('survey_responses',
-        where: 'survey_id = ? AND user_id = ?',
-        whereArgs: [surveyId, userId]);
+        where: 'survey_id = ? AND user_id = ?', whereArgs: [surveyId, userId]);
     return result.isNotEmpty;
   }
 
@@ -200,8 +199,9 @@ class SurveyDao {
       final qId = q['id'].toString();
       final qType = q['question_type'] as String? ?? 'single_choice';
       final optionsJson = q['options_json'] as String?;
-      final options =
-          optionsJson != null ? List<String>.from(json.decode(optionsJson)) : <String>[];
+      final options = optionsJson != null
+          ? List<String>.from(json.decode(optionsJson))
+          : <String>[];
 
       if (qType == 'single_choice' || qType == 'multi_choice') {
         // 统计每个选项的选择次数
@@ -374,10 +374,10 @@ class SurveyDao {
     final total = await db.rawQuery('SELECT COUNT(*) as c FROM surveys');
     final published = await db.rawQuery(
         "SELECT COUNT(*) as c FROM surveys WHERE status = 'published'");
-    final draft = await db.rawQuery(
-        "SELECT COUNT(*) as c FROM surveys WHERE status = 'draft'");
-    final closed = await db.rawQuery(
-        "SELECT COUNT(*) as c FROM surveys WHERE status = 'closed'");
+    final draft = await db
+        .rawQuery("SELECT COUNT(*) as c FROM surveys WHERE status = 'draft'");
+    final closed = await db
+        .rawQuery("SELECT COUNT(*) as c FROM surveys WHERE status = 'closed'");
     final responses =
         await db.rawQuery('SELECT COUNT(*) as c FROM survey_responses');
     return {
@@ -398,11 +398,22 @@ class SurveyDao {
     final db = await _dbHelper.database;
     final count = await db.rawQuery('SELECT COUNT(*) as c FROM surveys');
     if (((count.first['c'] as int?) ?? 0) > 0) return;
+    final activeCourses = await db.query(
+      'courses',
+      columns: ['name'],
+      where: 'is_active = ?',
+      whereArgs: [1],
+      limit: 1,
+    );
+    final courseName = activeCourses.isNotEmpty
+        ? (activeCourses.first['name']?.toString().trim() ?? '')
+        : '';
+    final displayCourseName = courseName.isEmpty ? '当前课程' : courseName;
 
     // 创建示例问卷1：课程满意度
     final sid1 = await createSurvey(
-      title: '《移动应用开发》课程满意度调查',
-      description: '请对本学期《移动应用开发》课程各方面进行评价，帮助我们改进教学质量。',
+      title: '《$displayCourseName》课程满意度调查',
+      description: '请对本学期《$displayCourseName》课程各方面进行评价，帮助我们改进教学质量。',
       creatorId: '419116',
     );
     await addQuestion(
@@ -415,13 +426,17 @@ class SurveyDao {
         surveyId: sid1,
         question: '您认为课程中哪些内容最有用？（可多选）',
         questionType: 'multi_choice',
-        options: ['Flutter开发', 'Android原生', 'React Native', '小程序开发', 'HarmonyOS', '综合实践'],
+        options: [
+          'Flutter开发',
+          'Android原生',
+          'React Native',
+          '小程序开发',
+          'HarmonyOS',
+          '综合实践'
+        ],
         seq: 2);
     await addQuestion(
-        surveyId: sid1,
-        question: '请为课程教学打分',
-        questionType: 'rating',
-        seq: 3);
+        surveyId: sid1, question: '请为课程教学打分', questionType: 'rating', seq: 3);
     await addQuestion(
         surveyId: sid1,
         question: '您对课程改进的建议',
@@ -487,10 +502,7 @@ class SurveyDao {
         options: ['观看视频', '阅读文档', '动手实践', '小组讨论'],
         seq: 2);
     await addQuestion(
-        surveyId: sid2,
-        question: '您在学习中遇到的主要困难',
-        questionType: 'text',
-        seq: 3);
+        surveyId: sid2, question: '您在学习中遇到的主要困难', questionType: 'text', seq: 3);
 
     debugPrint('SurveyDao: 示例数据生成完成 — sid1=$sid1 (已发布+8回答), sid2=$sid2 (草稿)');
   }

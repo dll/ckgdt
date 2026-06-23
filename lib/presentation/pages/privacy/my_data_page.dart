@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -126,8 +126,8 @@ class _MyDataPageState extends State<MyDataPage> {
       '_meta': {
         'exported_at': exportedAt.toIso8601String(),
         'user_id': userId,
-        'platform': 'MAD-KGDT',
-        'note': '本文件包含您在 MAD-KGDT 平台上的全部个人数据。请妥善保管。',
+        'platform': 'CKGDT',
+        'note': '本文件包含您在 CKGDT 平台上的全部个人数据。请妥善保管。',
       },
     };
     // 并行 SELECT
@@ -147,7 +147,7 @@ class _MyDataPageState extends State<MyDataPage> {
 
     final json = const JsonEncoder.withIndent('  ').convert(dump);
     final fileName =
-        'mad-kgdt-mydata-$userId-${exportedAt.millisecondsSinceEpoch}.json';
+        'ckgdt-mydata-$userId-${exportedAt.millisecondsSinceEpoch}.json';
 
     if (kIsWeb) {
       await Clipboard.setData(ClipboardData(text: json));
@@ -229,7 +229,9 @@ class _MyDataPageState extends State<MyDataPage> {
               where: 'user_id = ? OR author_id = ?',
               whereArgs: [userId, userId],
             );
-          } catch (e) { swallowDebug(e, tag: 'my_data_page'); }
+          } catch (e) {
+            swallowDebug(e, tag: 'my_data_page');
+          }
         }
       });
       if (!mounted) return;
@@ -281,7 +283,8 @@ class _MyDataPageState extends State<MyDataPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('${user.realName ?? user.userId} (${user.userId})',
+                                Text(
+                                    '${user.realName ?? user.userId} (${user.userId})',
                                     style: const TextStyle(
                                         fontSize: 15,
                                         fontWeight: FontWeight.bold)),
@@ -319,8 +322,7 @@ class _MyDataPageState extends State<MyDataPage> {
                                 style: const TextStyle(fontSize: 13)),
                             trailing: Text('${e.value} 条',
                                 style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600)),
+                                    fontSize: 12, fontWeight: FontWeight.w600)),
                           );
                         }).toList(),
                       ),
@@ -350,7 +352,7 @@ class _MyDataPageState extends State<MyDataPage> {
                           style: TextStyle(color: Colors.red)),
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(
-                            color: Colors.red.withOpacity(0.3)),
+                            color: Colors.red.withValues(alpha: 0.3)),
                       ),
                     ),
                   ),

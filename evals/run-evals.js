@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * MAD-KG 关键流程 eval 运行器。
+ * CKGDT 关键流程 eval 运行器。
  * 读取 evals/critical-flows.json，对每条 fixture 用此处的参考实现断言不变量。
  * 这些参考实现必须与 lib/ 真实逻辑保持一致——任一断言失败即代表 lib/ 行为或本文件漂移。
  * 运行：node evals/run-evals.js   （或 npm run eval）

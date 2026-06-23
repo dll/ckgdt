@@ -23,8 +23,7 @@ void main() {
           '${BuildInfo.appBrand}v2.1.0.exe',
         ),
       );
-      expect(path, contains('课程图谱与数字孪生'));
-      expect(path, isNot(contains('移动图谱与数字孪生')));
+      expect(path, contains('CKGDT'));
     });
   });
 }

@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../widgets/back_button_bar.dart';
@@ -19,7 +19,10 @@ class _SkillCase {
   final String title;
   final String userInput;
   final String resultSummary;
-  const _SkillCase({required this.title, required this.userInput, required this.resultSummary});
+  const _SkillCase(
+      {required this.title,
+      required this.userInput,
+      required this.resultSummary});
 }
 
 class _SkillDef {
@@ -66,7 +69,12 @@ const _skills = <_SkillDef>[
       '标注概念难度等级和学习顺序',
       '输出结构化 JSON 可导入系统',
     ],
-    examples: ['Flutter 跨平台开发技术体系', 'Android 四大组件', '微信小程序开发流程', 'RESTful API 设计'],
+    examples: [
+      'Flutter 跨平台开发技术体系',
+      'Android 四大组件',
+      '微信小程序开发流程',
+      'RESTful API 设计'
+    ],
     systemPrompt: '你是知识图谱设计专家。请根据用户给出的主题，生成一份知识图谱方案。'
         '输出格式为 Markdown，包含：\n'
         '1. 核心概念列表（8-15个），每个注明难度（初级/中级/高级）\n'
@@ -82,8 +90,16 @@ const _skills = <_SkillDef>[
       '将图谱方案导入系统知识图谱模块使用',
     ],
     classicCases: [
-      _SkillCase(title: 'Flutter 跨平台技术体系', userInput: 'Flutter 跨平台开发技术体系', resultSummary: '生成 12 个核心概念节点（Widget/State/BuildContext 等），建立包含、依赖、关联三类关系 18 条，标注初/中/高级难度。'),
-      _SkillCase(title: 'Android 四大组件', userInput: 'Android 四大组件知识图谱', resultSummary: '生成 Activity/Service/BroadcastReceiver/ContentProvider 四大核心节点及其子概念共 15 个，含生命周期、Intent 通信等关系。'),
+      _SkillCase(
+          title: 'Flutter 跨平台技术体系',
+          userInput: 'Flutter 跨平台开发技术体系',
+          resultSummary:
+              '生成 12 个核心概念节点（Widget/State/BuildContext 等），建立包含、依赖、关联三类关系 18 条，标注初/中/高级难度。'),
+      _SkillCase(
+          title: 'Android 四大组件',
+          userInput: 'Android 四大组件知识图谱',
+          resultSummary:
+              '生成 Activity/Service/BroadcastReceiver/ContentProvider 四大核心节点及其子概念共 15 个，含生命周期、Intent 通信等关系。'),
     ],
   ),
   _SkillDef(
@@ -101,7 +117,12 @@ const _skills = <_SkillDef>[
       '推荐配套学习资源和练习项目',
       '支持不同基础水平的差异化路径',
     ],
-    examples: ['零基础学 Flutter 到独立开发 App', 'Android 开发者转型鸿蒙开发', '前端工程师学习移动端开发', '大学生 4 周掌握 Dart 语言'],
+    examples: [
+      '零基础学 Flutter 到独立开发 App',
+      'Android 开发者转型鸿蒙开发',
+      '前端工程师学习移动端开发',
+      '大学生 4 周掌握 Dart 语言'
+    ],
     systemPrompt: '你是学习规划专家。请根据用户的学习目标，设计一份详细的学习路径。'
         '输出格式为 Markdown，包含：\n'
         '1. 路径概览（总时长、阶段数、目标）\n'
@@ -117,8 +138,16 @@ const _skills = <_SkillDef>[
       '保存路径方案，按计划执行学习',
     ],
     classicCases: [
-      _SkillCase(title: '零基础学 Flutter', userInput: '零基础学 Flutter 到独立开发 App', resultSummary: '规划 12 周学习路径，分 4 阶段：Dart 基础(2周)→Flutter 入门(3周)→进阶组件(4周)→实战项目(3周)，每阶段含具体学习目标和练习项目。'),
-      _SkillCase(title: 'Android 转鸿蒙', userInput: 'Android 开发者转型鸿蒙开发', resultSummary: '规划 8 周转型路径，重点对比 Android/HarmonyOS 差异，涵盖 ArkTS 语言、ArkUI 框架、分布式能力等核心模块。'),
+      _SkillCase(
+          title: '零基础学 Flutter',
+          userInput: '零基础学 Flutter 到独立开发 App',
+          resultSummary:
+              '规划 12 周学习路径，分 4 阶段：Dart 基础(2周)→Flutter 入门(3周)→进阶组件(4周)→实战项目(3周)，每阶段含具体学习目标和练习项目。'),
+      _SkillCase(
+          title: 'Android 转鸿蒙',
+          userInput: 'Android 开发者转型鸿蒙开发',
+          resultSummary:
+              '规划 8 周转型路径，重点对比 Android/HarmonyOS 差异，涵盖 ArkTS 语言、ArkUI 框架、分布式能力等核心模块。'),
     ],
   ),
   _SkillDef(
@@ -136,8 +165,13 @@ const _skills = <_SkillDef>[
       '常见易错点和面试高频问题',
       '思维导图式的知识结构梳理',
     ],
-    examples: ['Flutter Widget 生命周期', 'Dart 异步编程 Future/Stream', 'Android Activity 启动模式', '状态管理 Provider vs Riverpod'],
-    systemPrompt: '你是移动应用开发课程的教学助手。请根据用户给出的知识点，生成一份结构化学习笔记。'
+    examples: [
+      'Flutter Widget 生命周期',
+      'Dart 异步编程 Future/Stream',
+      'Android Activity 启动模式',
+      '状态管理 Provider vs Riverpod'
+    ],
+    systemPrompt: '你是课程教学助手。请根据用户给出的知识点，生成一份结构化学习笔记。'
         '输出格式为 Markdown，包含：\n'
         '1. 知识点概述（2-3句话）\n'
         '2. 核心概念详解（每个概念配代码示例）\n'
@@ -153,8 +187,16 @@ const _skills = <_SkillDef>[
       '保存笔记用于课前预习或考前复习',
     ],
     classicCases: [
-      _SkillCase(title: 'Widget 生命周期', userInput: 'Flutter Widget 生命周期', resultSummary: '生成 StatelessWidget/StatefulWidget 生命周期对比笔记，含 initState→build→dispose 流程图解、6 个代码示例、5 个易错点。'),
-      _SkillCase(title: 'Dart 异步编程', userInput: 'Dart 异步编程 Future/Stream', resultSummary: '生成 Future/Stream/async-await 对比笔记，含 then 链式调用、StreamBuilder 使用、错误处理等 8 个代码示例。'),
+      _SkillCase(
+          title: 'Widget 生命周期',
+          userInput: 'Flutter Widget 生命周期',
+          resultSummary:
+              '生成 StatelessWidget/StatefulWidget 生命周期对比笔记，含 initState→build→dispose 流程图解、6 个代码示例、5 个易错点。'),
+      _SkillCase(
+          title: 'Dart 异步编程',
+          userInput: 'Dart 异步编程 Future/Stream',
+          resultSummary:
+              '生成 Future/Stream/async-await 对比笔记，含 then 链式调用、StreamBuilder 使用、错误处理等 8 个代码示例。'),
     ],
   ),
   _SkillDef(
@@ -172,8 +214,13 @@ const _skills = <_SkillDef>[
       '每题附正确答案和解析说明',
       '可直接导入系统题库使用',
     ],
-    examples: ['第1章 移动开发技术体系', '第3章 Flutter 混合开发', 'Dart 面向对象编程', '第5章 HarmonyOS 开发'],
-    systemPrompt: '你是移动应用开发课程的出题专家。请根据用户给出的主题，生成选择题。'
+    examples: [
+      '第1章 移动开发技术体系',
+      '第3章 Flutter 混合开发',
+      'Dart 面向对象编程',
+      '第5章 HarmonyOS 开发'
+    ],
+    systemPrompt: '你是课程出题专家。请根据用户给出的主题，生成选择题。'
         '输出格式为 Markdown，每题包含：\n'
         '- 题目编号和题干\n'
         '- A/B/C/D 四个选项\n'
@@ -188,8 +235,15 @@ const _skills = <_SkillDef>[
       '可保存题目，后续导入系统题库',
     ],
     classicCases: [
-      _SkillCase(title: 'Flutter 混合开发', userInput: '第3章 Flutter 混合开发', resultSummary: '生成 5 道选择题，覆盖 Hot Reload 原理、Widget 树构建、状态管理选择、路由导航、平台通道等知识点，难度从易到难。'),
-      _SkillCase(title: 'Dart 面向对象', userInput: 'Dart 面向对象编程', resultSummary: '生成 5 道选择题，涵盖类继承、Mixin、抽象类、工厂构造函数、泛型等核心概念，每题含详细解析。'),
+      _SkillCase(
+          title: 'Flutter 混合开发',
+          userInput: '第3章 Flutter 混合开发',
+          resultSummary:
+              '生成 5 道选择题，覆盖 Hot Reload 原理、Widget 树构建、状态管理选择、路由导航、平台通道等知识点，难度从易到难。'),
+      _SkillCase(
+          title: 'Dart 面向对象',
+          userInput: 'Dart 面向对象编程',
+          resultSummary: '生成 5 道选择题，涵盖类继承、Mixin、抽象类、工厂构造函数、泛型等核心概念，每题含详细解析。'),
     ],
   ),
   _SkillDef(
@@ -207,8 +261,12 @@ const _skills = <_SkillDef>[
       '性能瓶颈分析和优化方向',
       '重构优先级排序和具体建议',
     ],
-    examples: ['Flutter 知识图谱 App（sqflite + CustomPainter）', 'Android 天气预报 App（Retrofit + Room）',
-      'React Native 电商 App', '微信小程序校园服务平台'],
+    examples: [
+      'Flutter 知识图谱 App（sqflite + CustomPainter）',
+      'Android 天气预报 App（Retrofit + Room）',
+      'React Native 电商 App',
+      '微信小程序校园服务平台'
+    ],
     systemPrompt: '你是代码审查和架构评估专家。请根据用户描述的项目信息，生成一份代码仓库分析报告。'
         '输出格式为 Markdown，包含：\n'
         '1. 项目概览（技术栈总结）\n'
@@ -226,7 +284,11 @@ const _skills = <_SkillDef>[
       '保存报告用于项目改进或教学评估',
     ],
     classicCases: [
-      _SkillCase(title: 'Flutter 知识图谱 App', userInput: 'Flutter 知识图谱 App（sqflite + CustomPainter）', resultSummary: '生成架构评估报告：5 层分层合理，CustomPainter 性能优化建议 3 条，数据库索引优化 2 条，Top 5 改进建议。'),
+      _SkillCase(
+          title: 'Flutter 知识图谱 App',
+          userInput: 'Flutter 知识图谱 App（sqflite + CustomPainter）',
+          resultSummary:
+              '生成架构评估报告：5 层分层合理，CustomPainter 性能优化建议 3 条，数据库索引优化 2 条，Top 5 改进建议。'),
     ],
   ),
   _SkillDef(
@@ -244,7 +306,12 @@ const _skills = <_SkillDef>[
       '权重分配和总分计算方案',
       '支持 OBE 达成度映射',
     ],
-    examples: ['移动应用开发期末项目考核', 'Flutter App 开发实践评分', '小组协作项目答辩评分', '课程综合达成度评价方案'],
+    examples: [
+      '移动应用开发期末项目考核',
+      'Flutter App 开发实践评分',
+      '小组协作项目答辩评分',
+      '课程综合达成度评价方案'
+    ],
     systemPrompt: '你是课程考核设计专家，熟悉 OBE（成果导向教育）理念。'
         '请根据用户给出的考核主题，设计一份考核方案。'
         '输出格式为 Markdown，包含：\n'
@@ -262,7 +329,11 @@ const _skills = <_SkillDef>[
       '保存方案用于课程考核实施',
     ],
     classicCases: [
-      _SkillCase(title: '期末项目考核', userInput: '移动应用开发期末项目考核', resultSummary: '设计 6 维考核方案：功能完整性(25%)、代码质量(20%)、UI 设计(15%)、技术难度(15%)、文档规范(15%)、答辩表现(10%)，每维度含 4 级评分标准。'),
+      _SkillCase(
+          title: '期末项目考核',
+          userInput: '移动应用开发期末项目考核',
+          resultSummary:
+              '设计 6 维考核方案：功能完整性(25%)、代码质量(20%)、UI 设计(15%)、技术难度(15%)、文档规范(15%)、答辩表现(10%)，每维度含 4 级评分标准。'),
     ],
   ),
   _SkillDef(
@@ -280,8 +351,13 @@ const _skills = <_SkillDef>[
       '验收标准和评分要点',
       '扩展挑战任务（选做加分）',
     ],
-    examples: ['Flutter 计数器 App 入门实验', 'SQLite 数据库 CRUD 实验', '自定义 Widget 绘制实验', 'RESTful API 对接实验'],
-    systemPrompt: '你是移动应用开发课程的实验设计专家。请根据用户给出的主题，设计一个实验任务。'
+    examples: [
+      'Flutter 计数器 App 入门实验',
+      'SQLite 数据库 CRUD 实验',
+      '自定义 Widget 绘制实验',
+      'RESTful API 对接实验'
+    ],
+    systemPrompt: '你是课程实验设计专家。请根据用户给出的主题，设计一个实验任务。'
         '输出格式为 Markdown，包含：\n'
         '1. 实验名称和学时\n'
         '2. 实验目标（3-4条）\n'
@@ -298,7 +374,11 @@ const _skills = <_SkillDef>[
       '保存方案用于实验教学',
     ],
     classicCases: [
-      _SkillCase(title: 'SQLite CRUD 实验', userInput: 'SQLite 数据库 CRUD 实验', resultSummary: '设计 4 学时实验：含 sqflite 配置、表创建、增删改查 4 步操作指导，每步含关键代码片段，验收标准 5 项 + 加分项 2 项。'),
+      _SkillCase(
+          title: 'SQLite CRUD 实验',
+          userInput: 'SQLite 数据库 CRUD 实验',
+          resultSummary:
+              '设计 4 学时实验：含 sqflite 配置、表创建、增删改查 4 步操作指导，每步含关键代码片段，验收标准 5 项 + 加分项 2 项。'),
     ],
   ),
   _SkillDef(
@@ -335,7 +415,11 @@ const _skills = <_SkillDef>[
       '保存指南，按里程碑推进开发',
     ],
     classicCases: [
-      _SkillCase(title: '校园二手交易 App', userInput: '校园二手交易 App', resultSummary: '生成完整开发指南：6 个核心功能模块、Flutter + Firebase 技术选型、5 张数据库表设计、4 周开发里程碑、答辩展示建议。'),
+      _SkillCase(
+          title: '校园二手交易 App',
+          userInput: '校园二手交易 App',
+          resultSummary:
+              '生成完整开发指南：6 个核心功能模块、Flutter + Firebase 技术选型、5 张数据库表设计、4 周开发里程碑、答辩展示建议。'),
     ],
   ),
   _SkillDef(
@@ -353,7 +437,7 @@ const _skills = <_SkillDef>[
       '持续改进措施（CQI）建议',
       '教学策略优化方案',
     ],
-    examples: ['移动应用开发课程达成度分析', '程序设计基础课程改进报告', 'OBE 课程目标与毕业要求映射分析', '实践教学环节达成度评价'],
+    examples: ['课程达成度分析', '程序设计基础课程改进报告', 'OBE 课程目标与毕业要求映射分析', '实践教学环节达成度评价'],
     systemPrompt: '你是 OBE（成果导向教育）达成度分析专家。'
         '请根据用户给出的课程信息，生成一份达成度分析报告。'
         '输出格式为 Markdown，包含：\n'
@@ -372,7 +456,11 @@ const _skills = <_SkillDef>[
       '保存报告用于持续改进（CQI）',
     ],
     classicCases: [
-      _SkillCase(title: '移动开发课程达成度', userInput: '移动应用开发课程达成度分析', resultSummary: '生成 5 个课程目标的达成度分析：含评价方法矩阵、计算公式模板、3 个薄弱环节诊断、5 条 CQI 改进措施。'),
+      _SkillCase(
+          title: '课程达成度',
+          userInput: '课程达成度分析',
+          resultSummary:
+              '生成 5 个课程目标的达成度分析：含评价方法矩阵、计算公式模板、3 个薄弱环节诊断、5 条 CQI 改进措施。'),
     ],
   ),
   _SkillDef(
@@ -412,8 +500,14 @@ const _skills = <_SkillDef>[
       '保存 Markdown 文档，用于打印或归档',
     ],
     classicCases: [
-      _SkillCase(title: '期末课程总结', userInput: '请生成期末课程总结', resultSummary: '生成包含教学概况、成绩分析、经验反思的完整课程总结报告，含数据表格和下一步改进建议。'),
-      _SkillCase(title: '试卷审核表', userInput: '请生成试卷审核表', resultSummary: '生成包含命题质量评估、难度分布分析、审核意见的试卷审核表，适用于考试课程归档。'),
+      _SkillCase(
+          title: '期末课程总结',
+          userInput: '请生成期末课程总结',
+          resultSummary: '生成包含教学概况、成绩分析、经验反思的完整课程总结报告，含数据表格和下一步改进建议。'),
+      _SkillCase(
+          title: '试卷审核表',
+          userInput: '请生成试卷审核表',
+          resultSummary: '生成包含命题质量评估、难度分布分析、审核意见的试卷审核表，适用于考试课程归档。'),
     ],
   ),
 ];
@@ -446,7 +540,9 @@ class _SkillsHubPageState extends State<SkillsHubPage> {
     try {
       final counts = await _skillDao.getResultCounts();
       if (mounted) setState(() => _counts = counts);
-    } catch (e) { swallowDebug(e, tag: 'ai_skill_page'); }
+    } catch (e) {
+      swallowDebug(e, tag: 'ai_skill_page');
+    }
   }
 
   @override
@@ -541,8 +637,7 @@ class _SkillsHubPageState extends State<SkillsHubPage> {
         onTap: () async {
           await Navigator.push(
             context,
-            MaterialPageRoute(
-                builder: (_) => AiSkillPage(skillId: skill.id)),
+            MaterialPageRoute(builder: (_) => AiSkillPage(skillId: skill.id)),
           );
           _loadCounts();
         },
@@ -644,7 +739,9 @@ class _AiSkillPageState extends State<AiSkillPage>
     try {
       final results = await _skillDao.getResults(widget.skillId);
       if (mounted) setState(() => _savedResults = results);
-    } catch (e) { swallowDebug(e, tag: 'ai_skill_page'); }
+    } catch (e) {
+      swallowDebug(e, tag: 'ai_skill_page');
+    }
   }
 
   Future<void> _generate() async {
@@ -679,19 +776,24 @@ class _AiSkillPageState extends State<AiSkillPage>
       }
 
       // 保存到聊天历史
-      final sessionId = 'skill_${_skill.id}_${DateTime.now().millisecondsSinceEpoch}';
-      _historyDao.saveMessage(
-        sessionId: sessionId,
-        skillId: _skill.id,
-        role: 'user',
-        content: topic,
-      ).catchError((_) => 0);
-      _historyDao.saveMessage(
-        sessionId: sessionId,
-        skillId: _skill.id,
-        role: 'assistant',
-        content: chatResult.content,
-      ).catchError((_) => 0);
+      final sessionId =
+          'skill_${_skill.id}_${DateTime.now().millisecondsSinceEpoch}';
+      _historyDao
+          .saveMessage(
+            sessionId: sessionId,
+            skillId: _skill.id,
+            role: 'user',
+            content: topic,
+          )
+          .catchError((_) => 0);
+      _historyDao
+          .saveMessage(
+            sessionId: sessionId,
+            skillId: _skill.id,
+            role: 'assistant',
+            content: chatResult.content,
+          )
+          .catchError((_) => 0);
     } catch (e) {
       if (mounted) {
         setState(() => _result = '❌ 生成失败：$e');
@@ -822,8 +924,7 @@ class _AiSkillPageState extends State<AiSkillPage>
                       color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child:
-                        Icon(_skill.icon, color: Colors.white, size: 36),
+                    child: Icon(_skill.icon, color: Colors.white, size: 36),
                   ),
                   const SizedBox(height: 12),
                   Text(_skill.name,
@@ -833,8 +934,8 @@ class _AiSkillPageState extends State<AiSkillPage>
                           color: Colors.white)),
                   const SizedBox(height: 4),
                   Text(_skill.subtitle,
-                      style: const TextStyle(
-                          fontSize: 13, color: Colors.white70)),
+                      style:
+                          const TextStyle(fontSize: 13, color: Colors.white70)),
                 ],
               ),
             ),
@@ -870,12 +971,11 @@ class _AiSkillPageState extends State<AiSkillPage>
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.check_circle,
-                            color: _skill.color, size: 20),
+                        Icon(Icons.check_circle, color: _skill.color, size: 20),
                         const SizedBox(width: 10),
                         Expanded(
-                            child: Text(f,
-                                style: const TextStyle(fontSize: 13))),
+                            child:
+                                Text(f, style: const TextStyle(fontSize: 13))),
                       ],
                     ),
                   );
@@ -910,7 +1010,8 @@ class _AiSkillPageState extends State<AiSkillPage>
             _sectionTitle('使用步骤'),
             const SizedBox(height: 8),
             Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -940,7 +1041,9 @@ class _AiSkillPageState extends State<AiSkillPage>
                           ),
                           const SizedBox(width: 10),
                           Expanded(
-                            child: Text(entry.value, style: const TextStyle(fontSize: 13, height: 1.4)),
+                            child: Text(entry.value,
+                                style:
+                                    const TextStyle(fontSize: 13, height: 1.4)),
                           ),
                         ],
                       ),
@@ -958,11 +1061,14 @@ class _AiSkillPageState extends State<AiSkillPage>
             const SizedBox(height: 8),
             ..._skill.classicCases.map((c) {
               return Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ExpansionTile(
                   leading: Icon(Icons.lightbulb, color: _skill.color, size: 20),
-                  title: Text(c.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  title: Text(c.title,
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w600)),
                   childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                   children: [
                     // 用户输入
@@ -978,9 +1084,14 @@ class _AiSkillPageState extends State<AiSkillPage>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('输入示例', style: TextStyle(fontSize: 11, color: Colors.grey[500], fontWeight: FontWeight.w600)),
+                          Text('输入示例',
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey[500],
+                                  fontWeight: FontWeight.w600)),
                           const SizedBox(height: 4),
-                          Text(c.userInput, style: const TextStyle(fontSize: 13)),
+                          Text(c.userInput,
+                              style: const TextStyle(fontSize: 13)),
                         ],
                       ),
                     ),
@@ -991,14 +1102,21 @@ class _AiSkillPageState extends State<AiSkillPage>
                       decoration: BoxDecoration(
                         color: Colors.green.withOpacity(0.05),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.green.withOpacity(0.2)),
+                        border: Border.all(
+                            color: Colors.green.withValues(alpha: 0.2)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('生成结果摘要', style: TextStyle(fontSize: 11, color: Colors.grey[500], fontWeight: FontWeight.w600)),
+                          Text('生成结果摘要',
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey[500],
+                                  fontWeight: FontWeight.w600)),
                           const SizedBox(height: 4),
-                          Text(c.resultSummary, style: const TextStyle(fontSize: 13, height: 1.4)),
+                          Text(c.resultSummary,
+                              style:
+                                  const TextStyle(fontSize: 13, height: 1.4)),
                         ],
                       ),
                     ),
@@ -1012,11 +1130,14 @@ class _AiSkillPageState extends State<AiSkillPage>
                           _tabController.animateTo(1);
                         },
                         icon: const Icon(Icons.play_arrow, size: 16),
-                        label: const Text('试一试', style: TextStyle(fontSize: 12)),
+                        label:
+                            const Text('试一试', style: TextStyle(fontSize: 12)),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: _skill.color,
-                          side: BorderSide(color: _skill.color.withOpacity(0.5)),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          side: BorderSide(
+                              color: _skill.color.withValues(alpha: 0.5)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
                           padding: const EdgeInsets.symmetric(vertical: 8),
                         ),
                       ),
@@ -1126,8 +1247,8 @@ class _AiSkillPageState extends State<AiSkillPage>
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Text(e,
-                              style: TextStyle(
-                                  fontSize: 11, color: _skill.color)),
+                              style:
+                                  TextStyle(fontSize: 11, color: _skill.color)),
                         ),
                       ),
                     );
@@ -1169,8 +1290,7 @@ class _AiSkillPageState extends State<AiSkillPage>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(_skill.icon,
-                          size: 64,
-                          color: _skill.color.withOpacity(0.2)),
+                          size: 64, color: _skill.color.withValues(alpha: 0.2)),
                       const SizedBox(height: 12),
                       Text('输入主题，点击 AI 生成',
                           style: TextStyle(color: Colors.grey[400])),
@@ -1202,8 +1322,8 @@ class _AiSkillPageState extends State<AiSkillPage>
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border(
-                                  left: BorderSide(
-                                      color: _skill.color, width: 4),
+                                  left:
+                                      BorderSide(color: _skill.color, width: 4),
                                 ),
                               ),
                               child: _buildMarkdownContent(
@@ -1224,8 +1344,7 @@ class _AiSkillPageState extends State<AiSkillPage>
                               children: [
                                 Expanded(
                                   child: ElevatedButton.icon(
-                                    onPressed: () =>
-                                        _copyToClipboard(_result!),
+                                    onPressed: () => _copyToClipboard(_result!),
                                     icon: const Icon(Icons.copy, size: 18),
                                     label: const Text('复制'),
                                     style: ElevatedButton.styleFrom(
@@ -1275,8 +1394,7 @@ class _AiSkillPageState extends State<AiSkillPage>
             Icon(Icons.download_done,
                 size: 64, color: Colors.grey.withOpacity(0.3)),
             const SizedBox(height: 12),
-            const Text('暂无保存的生成结果',
-                style: TextStyle(color: Colors.grey)),
+            const Text('暂无保存的生成结果', style: TextStyle(color: Colors.grey)),
             const SizedBox(height: 6),
             Text('在「使用」页面生成内容后点击保存',
                 style: TextStyle(color: Colors.grey[400], fontSize: 12)),
@@ -1320,8 +1438,7 @@ class _AiSkillPageState extends State<AiSkillPage>
                     ? createdAt.substring(0, 10)
                     : createdAt;
                 final id = item['id'] as int;
-                final previewLen =
-                    content.length > 80 ? 80 : content.length;
+                final previewLen = content.length > 80 ? 80 : content.length;
 
                 return Card(
                   shape: RoundedRectangleBorder(
@@ -1337,8 +1454,7 @@ class _AiSkillPageState extends State<AiSkillPage>
                         children: [
                           Row(
                             children: [
-                              Icon(_skill.icon,
-                                  size: 18, color: _skill.color),
+                              Icon(_skill.icon, size: 18, color: _skill.color),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(title,
@@ -1349,8 +1465,7 @@ class _AiSkillPageState extends State<AiSkillPage>
                               ),
                               Text(dateStr,
                                   style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey[400])),
+                                      fontSize: 11, color: Colors.grey[400])),
                             ],
                           ),
                           const SizedBox(height: 8),
@@ -1424,8 +1539,7 @@ class _AiSkillPageState extends State<AiSkillPage>
         ),
         const SizedBox(width: 8),
         Text(title,
-            style:
-                const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -1474,7 +1588,8 @@ class _AiSkillPageState extends State<AiSkillPage>
     try {
       final dir = await getApplicationDocumentsDirectory();
       final safeTitle = title.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
-      final fileName = '${safeTitle.length > 60 ? safeTitle.substring(0, 60) : safeTitle}.md';
+      final fileName =
+          '${safeTitle.length > 60 ? safeTitle.substring(0, 60) : safeTitle}.md';
       final skillDir = Directory('${dir.path}/skill_exports');
       if (!await skillDir.exists()) {
         await skillDir.create(recursive: true);
@@ -1495,7 +1610,9 @@ class _AiSkillPageState extends State<AiSkillPage>
                   } else if (Platform.isMacOS) {
                     Process.run('open', [skillDir.path]);
                   }
-                } catch (e) { swallowDebug(e, tag: 'ai_skill_page'); }
+                } catch (e) {
+                  swallowDebug(e, tag: 'ai_skill_page');
+                }
               },
             ),
           ),
