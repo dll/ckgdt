@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +8,7 @@ import 'core/app_keys.dart';
 import 'core/build_info.dart';
 import 'core/dev_paths.dart';
 import 'core/init_logger.dart';
+import 'l10n/gen/app_localizations.dart';
 import 'presentation/pages/assessment/defense/defense_broadcast_page.dart';
 import 'data/local/database_helper.dart';
 import 'services/data_loading_service.dart';
@@ -32,8 +33,7 @@ import 'presentation/pages/profile/virtual_twin_page.dart';
 // 条件导入：Web 端使用 ffi_web，桌面端使用 ffi
 import 'platform/platform_init_stub.dart'
     if (dart.library.io) 'platform/platform_init_native.dart'
-    if (dart.library.html) 'platform/platform_init_web.dart'
-    as platform_init;
+    if (dart.library.html) 'platform/platform_init_web.dart' as platform_init;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -241,7 +241,8 @@ class _MyAppState extends State<MyApp> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.warning_amber, size: 80, color: Colors.white),
+                    const Icon(Icons.warning_amber,
+                        size: 80, color: Colors.white),
                     const SizedBox(height: 24),
                     const Text(
                       '应用已在运行',
@@ -292,8 +293,8 @@ class _MyAppState extends State<MyApp> {
       darkTheme: ThemeManager.dark(_colorIndex),
       navigatorKey: _navigatorKey,
       locale: _locale,
-      supportedLocales: const [Locale("zh"), Locale("en")],
-      localizationsDelegates: const [],
+      supportedLocales: AppL10n.supportedLocales,
+      localizationsDelegates: AppL10n.localizationsDelegates,
       home: const LoginPage(),
       builder: (context, child) {
         // 用 RepaintBoundary 包裹，供截图用
@@ -356,13 +357,17 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
 
   @override
   void dispose() {
-    VoiceAssistantController.instance.isListening.removeListener(_onVoiceChanged);
+    VoiceAssistantController.instance.isListening
+        .removeListener(_onVoiceChanged);
     _animController.dispose();
     super.dispose();
   }
 
   void _onVoiceChanged() {
-    if (mounted) setState(() => _voiceActive = VoiceAssistantController.instance.isListening.value);
+    if (mounted) {
+      setState(() =>
+          _voiceActive = VoiceAssistantController.instance.isListening.value);
+    }
   }
 
   void _toggle() {
@@ -596,10 +601,10 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 200),
                   child: _expanded
-                      ? const Icon(Icons.close, color: Colors.white,
-                          size: 22, key: ValueKey('close'))
-                      : const Icon(Icons.headset_mic, color: Colors.white,
-                          size: 22, key: ValueKey('open')),
+                      ? const Icon(Icons.close,
+                          color: Colors.white, size: 22, key: ValueKey('close'))
+                      : const Icon(Icons.headset_mic,
+                          color: Colors.white, size: 22, key: ValueKey('open')),
                 ),
               ),
             ),
@@ -667,9 +672,7 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
       ),
       child: Text(label,
           style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: color)),
+              fontSize: 12, fontWeight: FontWeight.w600, color: color)),
     );
 
     final iconWidget = Container(
