@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -9,7 +9,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../core/error_handler.dart';
-import '../../../data/local/grading_result_dao.dart';
 import '../../../data/local/score_audit_dao.dart';
 import '../../../data/local/works_dao.dart';
 import '../../widgets/score_history_dialog.dart';

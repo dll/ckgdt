@@ -1,6 +1,8 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../data/local/lab_task_dao.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/notification_service.dart';
+import '../../../services/sync_service.dart';
 
 /// 实验任务管理页面 — 教师发布/管理实验任务，查看提交情况
 class LabTaskManagePage extends StatefulWidget {
@@ -112,9 +114,11 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.assignment, size: 64, color: Colors.grey[300]),
+                        Icon(Icons.assignment,
+                            size: 64, color: Colors.grey[300]),
                         const SizedBox(height: 16),
-                        Text('暂无实验任务', style: TextStyle(color: Colors.grey[500])),
+                        Text('暂无实验任务',
+                            style: TextStyle(color: Colors.grey[500])),
                       ],
                     ),
                   )
@@ -214,7 +218,8 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
                 ],
                 Row(
                   children: [
-                    Icon(Icons.calendar_today, size: 14, color: Colors.grey[400]),
+                    Icon(Icons.calendar_today,
+                        size: 14, color: Colors.grey[400]),
                     const SizedBox(width: 4),
                     Text(
                       '截止：${(task['due_date'] as String? ?? '').split('T').first}',
@@ -245,7 +250,8 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
                       onPressed: () => _showEditTaskDialog(task),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+                      icon:
+                          const Icon(Icons.delete, size: 20, color: Colors.red),
                       tooltip: '删除',
                       onPressed: () => _confirmDeleteTask(task),
                     ),
@@ -269,11 +275,16 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
 
   Future<void> _showTaskEditor(Map<String, dynamic>? task) async {
     final isEdit = task != null;
-    final titleCtrl = TextEditingController(text: task?['title'] as String? ?? '');
-    final chapterCtrl = TextEditingController(text: task?['chapter'] as String? ?? '');
-    final descCtrl = TextEditingController(text: task?['description'] as String? ?? '');
-    final reqCtrl = TextEditingController(text: task?['requirements'] as String? ?? '');
-    final delivCtrl = TextEditingController(text: task?['deliverables'] as String? ?? '');
+    final titleCtrl =
+        TextEditingController(text: task?['title'] as String? ?? '');
+    final chapterCtrl =
+        TextEditingController(text: task?['chapter'] as String? ?? '');
+    final descCtrl =
+        TextEditingController(text: task?['description'] as String? ?? '');
+    final reqCtrl =
+        TextEditingController(text: task?['requirements'] as String? ?? '');
+    final delivCtrl =
+        TextEditingController(text: task?['deliverables'] as String? ?? '');
     String difficulty = task?['difficulty'] as String? ?? '中等';
 
     await showModalBottomSheet(
@@ -298,9 +309,12 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
                   children: [
                     Expanded(
                       child: Text(isEdit ? '编辑实验' : '发布实验',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          style: const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold)),
                     ),
-                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+                    TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('取消')),
                     const SizedBox(width: 8),
                     FilledButton(
                       onPressed: () async {
@@ -317,7 +331,9 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
                         } else {
                           await _dao.addTask(
                             title: titleCtrl.text.trim(),
-                            chapter: chapterCtrl.text.trim().isNotEmpty ? chapterCtrl.text.trim() : null,
+                            chapter: chapterCtrl.text.trim().isNotEmpty
+                                ? chapterCtrl.text.trim()
+                                : null,
                             description: descCtrl.text.trim(),
                             requirements: reqCtrl.text.trim(),
                             deliverables: delivCtrl.text.trim(),
@@ -336,7 +352,8 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
                 const SizedBox(height: 8),
                 TextField(
                   controller: titleCtrl,
-                  decoration: const InputDecoration(labelText: '实验标题 *', border: OutlineInputBorder()),
+                  decoration: const InputDecoration(
+                      labelText: '实验标题 *', border: OutlineInputBorder()),
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -345,17 +362,24 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
                       width: 120,
                       child: TextField(
                         controller: chapterCtrl,
-                        decoration: const InputDecoration(labelText: '所属章节', border: OutlineInputBorder(), hintText: '如：第1章'),
+                        decoration: const InputDecoration(
+                            labelText: '所属章节',
+                            border: OutlineInputBorder(),
+                            hintText: '如：第1章'),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: DropdownButtonFormField<String>(value: difficulty,
-                        decoration: const InputDecoration(labelText: '难度', border: OutlineInputBorder()),
+                      child: DropdownButtonFormField<String>(
+                        value: difficulty,
+                        decoration: const InputDecoration(
+                            labelText: '难度', border: OutlineInputBorder()),
                         items: ['简单', '中等', '较难']
-                            .map((d) => DropdownMenuItem(value: d, child: Text(d)))
+                            .map((d) =>
+                                DropdownMenuItem(value: d, child: Text(d)))
                             .toList(),
-                        onChanged: (v) => setSheetState(() => difficulty = v ?? '中等'),
+                        onChanged: (v) =>
+                            setSheetState(() => difficulty = v ?? '中等'),
                       ),
                     ),
                   ],
@@ -363,19 +387,26 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
                 const SizedBox(height: 12),
                 TextField(
                   controller: descCtrl,
-                  decoration: const InputDecoration(labelText: '实验描述', border: OutlineInputBorder()),
+                  decoration: const InputDecoration(
+                      labelText: '实验描述', border: OutlineInputBorder()),
                   maxLines: 3,
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: reqCtrl,
-                  decoration: const InputDecoration(labelText: '实验要求', border: OutlineInputBorder(), hintText: '1. 步骤一\n2. 步骤二'),
+                  decoration: const InputDecoration(
+                      labelText: '实验要求',
+                      border: OutlineInputBorder(),
+                      hintText: '1. 步骤一\n2. 步骤二'),
                   maxLines: 5,
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: delivCtrl,
-                  decoration: const InputDecoration(labelText: '提交物', border: OutlineInputBorder(), hintText: '源码、截图、实验报告'),
+                  decoration: const InputDecoration(
+                      labelText: '提交物',
+                      border: OutlineInputBorder(),
+                      hintText: '源码、截图、实验报告'),
                   maxLines: 2,
                 ),
                 const SizedBox(height: 30),
@@ -394,7 +425,9 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
         title: const Text('确认删除'),
         content: Text('确定删除"${task['title']}"？\n相关提交也将被删除。'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('取消')),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
@@ -443,16 +476,19 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.upload_file, size: 64, color: Colors.grey[300]),
+                        Icon(Icons.upload_file,
+                            size: 64, color: Colors.grey[300]),
                         const SizedBox(height: 16),
-                        Text('暂无学生提交', style: TextStyle(color: Colors.grey[500])),
+                        Text('暂无学生提交',
+                            style: TextStyle(color: Colors.grey[500])),
                       ],
                     ),
                   )
                 : ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     itemCount: _submissions.length,
-                    itemBuilder: (ctx, i) => _buildSubmissionCard(_submissions[i]),
+                    itemBuilder: (ctx, i) =>
+                        _buildSubmissionCard(_submissions[i]),
                   ),
           ),
         ],
@@ -471,7 +507,8 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
             color: Colors.green.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Text('已批 $graded', style: const TextStyle(fontSize: 11, color: Colors.green)),
+          child: Text('已批 $graded',
+              style: const TextStyle(fontSize: 11, color: Colors.green)),
         ),
         const SizedBox(width: 6),
         Container(
@@ -480,7 +517,8 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
             color: Colors.orange.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Text('待批 $pending', style: const TextStyle(fontSize: 11, color: Colors.orange)),
+          child: Text('待批 $pending',
+              style: const TextStyle(fontSize: 11, color: Colors.orange)),
         ),
       ],
     );
@@ -495,7 +533,9 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: isGraded ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+          backgroundColor: isGraded
+              ? Colors.green.withValues(alpha: 0.1)
+              : Colors.orange.withValues(alpha: 0.1),
           child: Icon(
             isGraded ? Icons.check_circle : Icons.hourglass_bottom,
             color: isGraded ? Colors.green : Colors.orange,
@@ -514,12 +554,15 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
         ),
         trailing: isGraded
             ? Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.green.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Text('$score分', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                child: Text('$score分',
+                    style: const TextStyle(
+                        color: Colors.green, fontWeight: FontWeight.bold)),
               )
             : FilledButton.tonal(
                 onPressed: () => _showGradeDialog(sub),
@@ -532,7 +575,8 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
 
   Future<void> _showGradeDialog(Map<String, dynamic> sub) async {
     final scoreCtrl = TextEditingController(text: '${sub['score'] ?? ''}');
-    final feedbackCtrl = TextEditingController(text: sub['feedback'] as String? ?? '');
+    final feedbackCtrl =
+        TextEditingController(text: sub['feedback'] as String? ?? '');
 
     await showDialog(
       context: context,
@@ -566,7 +610,8 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
           FilledButton(
             onPressed: () async {
               final score = int.tryParse(scoreCtrl.text);
@@ -577,6 +622,15 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
                 feedback: feedbackCtrl.text.trim(),
                 scorerId: _authService.currentUser?.userId,
               );
+              final studentId = (sub['user_id'] as String? ?? '').trim();
+              if (studentId.isNotEmpty) {
+                await NotificationService().notifyLabGradeApproved(
+                  studentId: studentId,
+                  taskTitle: sub['task_title'] as String? ?? '实验任务',
+                  score: score,
+                );
+                await SyncService().uploadStudentData(studentId);
+              }
               if (ctx.mounted) Navigator.pop(ctx);
               _loadAll();
             },
@@ -609,7 +663,8 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
                 children: [
                   const Expanded(
                     child: Text('提交详情',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(ctx),
@@ -620,14 +675,16 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
               const Divider(),
               _detailRow('实验', sub['task_title'] as String? ?? ''),
               _detailRow('学号', sub['user_id'] as String? ?? ''),
-              _detailRow('提交时间', (sub['submit_time'] as String? ?? '').replaceAll('T', ' ')),
+              _detailRow('提交时间',
+                  (sub['submit_time'] as String? ?? '').replaceAll('T', ' ')),
               _detailRow('状态', sub['status'] as String? ?? ''),
               if (sub['content'] != null)
                 _detailRow('提交内容', sub['content'] as String),
               if (sub['file_names'] != null)
                 _detailRow('附件', sub['file_names'] as String),
               if (sub['score'] != null)
-                _detailRow('评分', '${sub['score']} / ${sub['max_score'] ?? 100}'),
+                _detailRow(
+                    '评分', '${sub['score']} / ${sub['max_score'] ?? 100}'),
               if (sub['feedback'] != null)
                 _detailRow('批改反馈', sub['feedback'] as String),
               const SizedBox(height: 16),
@@ -655,7 +712,8 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
         children: [
           SizedBox(
             width: 80,
-            child: Text(label, style: TextStyle(fontSize: 13, color: Colors.grey[600])),
+            child: Text(label,
+                style: TextStyle(fontSize: 13, color: Colors.grey[600])),
           ),
           Expanded(
             child: Text(value, style: const TextStyle(fontSize: 13)),
@@ -697,9 +755,11 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.description, size: 64, color: Colors.grey[300]),
+                        Icon(Icons.description,
+                            size: 64, color: Colors.grey[300]),
                         const SizedBox(height: 16),
-                        Text('暂无报告模板', style: TextStyle(color: Colors.grey[500])),
+                        Text('暂无报告模板',
+                            style: TextStyle(color: Colors.grey[500])),
                       ],
                     ),
                   )
@@ -735,7 +795,8 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
           children: [
             Expanded(
               child: Text(template['name'] as String? ?? '',
-                  style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w500, fontSize: 14)),
             ),
             if (isDefault)
               Container(
@@ -744,7 +805,8 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
                   color: Colors.blue.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Text('默认', style: TextStyle(fontSize: 10, color: Colors.blue)),
+                child: const Text('默认',
+                    style: TextStyle(fontSize: 10, color: Colors.blue)),
               ),
           ],
         ),
@@ -797,7 +859,8 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
                     ),
                   ),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(value: category,
+                  DropdownButtonFormField<String>(
+                    value: category,
                     decoration: const InputDecoration(
                       labelText: '模板类型',
                       border: OutlineInputBorder(),
@@ -805,7 +868,8 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
                     items: ['实验报告', '项目文档', '答辩材料']
                         .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                         .toList(),
-                    onChanged: (v) => setDialogState(() => category = v ?? '实验报告'),
+                    onChanged: (v) =>
+                        setDialogState(() => category = v ?? '实验报告'),
                   ),
                   const SizedBox(height: 12),
                   TextField(
@@ -821,7 +885,8 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
             FilledButton(
               onPressed: () async {
                 if (nameCtrl.text.trim().isEmpty) return;

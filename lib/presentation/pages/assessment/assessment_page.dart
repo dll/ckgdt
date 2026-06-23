@@ -20,7 +20,6 @@ import '../../widgets/agent_entry_button.dart';
 import '../../widgets/inner_tab_request_mixin.dart';
 import '../../widgets/score_preview_dialog.dart';
 import '../learning/pdf_viewer_page.dart';
-import '../materials/ai_settings_page.dart';
 import 'ai_grading_tab.dart';
 import 'assessment_materials_tab.dart';
 import 'audit_print_panel.dart';

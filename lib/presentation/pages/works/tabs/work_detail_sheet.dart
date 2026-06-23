@@ -1,4 +1,4 @@
-﻿part of '../works_page.dart';
+part of '../works_page.dart';
 
 class _WorkDetailSheet extends StatefulWidget {
   final Map<String, dynamic> work;
@@ -96,10 +96,6 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
           !widget.authService.isTeacher && !widget.authService.isAdmin;
       final teacherAiEnabled =
           await SettingsService.isTeacherAiGradingEnabled();
-      if (wasUnsubmitted && isStudent && !teacherAiEnabled) {
-        final proceed = await _confirmDirectSubmitWithoutTeacherAi();
-        if (proceed != true) return;
-      }
 
       setState(() => _isUploading = true);
 
@@ -192,10 +188,13 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
 
       var successMessage = '视频上传成功';
 
-      // 学生首次提交：AI 初评达到评价分数线后才切换为已提交并通知教师。
-      if (wasUnsubmitted && isStudent && teacherAiEnabled) {
+      if (wasUnsubmitted) {
+        await widget.worksDao.submitWork(workId);
+        successMessage = isStudent && teacherAiEnabled
+            ? '作品提交成功！已进入教师审核，系统将后台生成 AI 批阅草稿。'
+            : '作品提交成功！等待教师批阅。';
         final refreshedDraft = await widget.worksDao.getWork(workId);
-        if (refreshedDraft != null && mounted) {
+        if (isStudent && teacherAiEnabled && refreshedDraft != null) {
           final title = (refreshedDraft['title'] as String?) ??
               (refreshedDraft['project'] as String?) ??
               '作品';
@@ -205,8 +204,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
           final studentName = (refreshedDraft['student_name'] as String?) ??
               widget.authService.currentUser?.realName ??
               userId;
-          final passScore = await SettingsService.getEvaluationPassScore();
-          final draft = await AutoGradingService.instance.gradeWork(
+          unawaited(AutoGradingService.instance.gradeWork(
             workId: workId,
             studentId: userId,
             studentName: studentName,
@@ -216,39 +214,9 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
             groupName: groupName,
             videoPath: refreshedDraft['file_path'] as String? ?? savedPath,
             videoUrl: refreshedDraft['video_url'] as String? ?? savedPath,
-            returnDraft: true,
-            notifyStudent: false,
-          );
-          if (draft == null || !draft.isUsable || draft.score < passScore) {
-            await GradingResultDao().deletePendingForTarget('works', workId);
-            final refreshed = await widget.worksDao.getWork(workId);
-            if (mounted) {
-              setState(() {
-                if (refreshed != null) _work = refreshed;
-                _isUploading = false;
-              });
-              if (draft == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('提交失败：AI 服务暂时不可用，请检查网络连接和 AI 配置后重试'),
-                    backgroundColor: Colors.red,
-                    duration: Duration(seconds: 5),
-                  ),
-                );
-              } else {
-                _showAiDraftBlockedDialog(draft, passScore);
-              }
-              widget.onChanged?.call();
-            }
-            return;
-          }
-          await widget.worksDao.submitWork(workId);
-          successMessage = '作品提交成功！AI 初评 ${draft.score} 分，等待教师复核。';
-        }
-      } else if (wasUnsubmitted) {
-        await widget.worksDao.submitWork(workId);
-        if (isStudent && !teacherAiEnabled) {
-          successMessage = '作品提交成功！当前教师未开启系统 AI 初评，等待教师批阅。';
+            returnDraft: false,
+            notifyStudent: true,
+          ));
         }
       }
 
@@ -414,90 +382,6 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
     }
   }
 
-  void _showAiDraftBlockedDialog(AiGradingDraft draft, int passScore) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('AI 初评未达标'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: SingleChildScrollView(
-            child: _buildAiDraftFeedback(draft, passScore),
-          ),
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('知道了，修改后再提交'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<bool?> _confirmDirectSubmitWithoutTeacherAi() {
-    return showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('当前可直接提交'),
-        content: const Text(
-          '教师当前未开启系统 AI 批阅，本次作品视频可以直接提交，提交后等待教师批阅。\n\n'
-          '建议你自行进行 AI 自检：进入「系统设置 → AI 配置」，选择服务商，填写 API Key，保存后可使用学习助手或相关 AI 功能检查作品说明、技术栈、演示视频和考核要求是否一致。',
-          style: TextStyle(height: 1.45),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('先不提交'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('直接提交'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAiDraftFeedback(AiGradingDraft draft, int passScore) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-            'AI 初评 ${draft.score} 分，未达到 $passScore 分达标线。教师尚未审核，请按以下意见修改后再次提交。'),
-        const SizedBox(height: 12),
-        _draftList('评分依据', draft.basis),
-        _draftList('做得好的地方', draft.strengths),
-        _draftList('需要改进', draft.improvements),
-        if (draft.feedback.trim().isNotEmpty) ...[
-          const SizedBox(height: 8),
-          const Text('详细反馈', style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Text(draft.feedback, style: const TextStyle(height: 1.45)),
-        ],
-      ],
-    );
-  }
-
-  Widget _draftList(String title, List<String> items) {
-    if (items.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          ...items.map((item) => Padding(
-                padding: const EdgeInsets.only(bottom: 3),
-                child: Text('• $item', style: const TextStyle(height: 1.35)),
-              )),
-        ],
-      ),
-    );
-  }
-
   Future<void> _toggleLike() async {
     final userId = widget.authService.getCurrentUserId() ?? '';
     final workId = _work['id'] as int;
@@ -602,7 +486,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
               alignment: Alignment.center,
               children: [
                 Icon(Icons.videocam,
-                    size: 64, color: primary.withOpacity(0.2)),
+                    size: 64, color: primary.withValues(alpha: 0.2)),
                 // 播放按钮
                 Container(
                   width: 56,
@@ -1101,7 +985,7 @@ class _WorkDetailSheetState extends State<_WorkDetailSheet> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color:
-            isTeacher ? Colors.blue.withOpacity(0.03) : Colors.grey[50],
+            isTeacher ? Colors.blue.withValues(alpha: 0.03) : Colors.grey[50],
         borderRadius: BorderRadius.circular(10),
         border: Border(
           left: BorderSide(color: roleColor.withOpacity(0.4), width: 3),

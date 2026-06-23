@@ -190,8 +190,8 @@ class _SettingsPageState extends State<SettingsPage> {
               icon: Icons.fact_check_outlined,
               title: '教师 AI 批阅',
               subtitle: _teacherAiGradingEnabled
-                  ? '已开启：学生提交实验、考核、作品时进行 AI 初评与反馈'
-                  : '已关闭：学生可直接提交，教师可后续手动批阅或单独 AI 批阅',
+                  ? '已开启：学生提交后后台生成 AI 批阅草稿，教师复核后通知成绩'
+                  : '已关闭：学生仍可正常提交，教师可手动批阅或单独 AI 批阅',
               trailing: Switch(
                 value: _teacherAiGradingEnabled,
                 onChanged: (value) async {
@@ -201,8 +201,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(value
-                          ? '教师 AI 批阅已开启'
-                          : '教师 AI 批阅已关闭，学生提交将不再被 AI 初评拦截'),
+                          ? '教师 AI 批阅已开启，学生提交后将后台生成草稿'
+                          : '教师 AI 批阅已关闭，学生仍可正常提交'),
                     ),
                   );
                 },

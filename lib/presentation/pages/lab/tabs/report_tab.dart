@@ -1,4 +1,4 @@
-﻿part of '../lab_tasks_page.dart';
+part of '../lab_tasks_page.dart';
 
 class _ReportTab extends StatefulWidget {
   final AuthService authService;
@@ -131,7 +131,8 @@ class _ReportTabState extends State<_ReportTab> {
       } else if (userId != null && userId.isNotEmpty) {
         reports = await widget.labTaskDao.getStudentReports(userId: userId);
         // 同时加载该学生的 lab_submissions（实验提交）
-        final submissions = await widget.labTaskDao.getSubmissions(userId: userId);
+        final submissions =
+            await widget.labTaskDao.getSubmissions(userId: userId);
         for (final sub in submissions) {
           reports.add({
             ...sub,
@@ -265,8 +266,8 @@ class _ReportTabState extends State<_ReportTab> {
           key = '未关联实验';
         }
       } else if (_groupBy == 'byGrade') {
-        key = _gradeBand((r['score'] as num?)?.round() ??
-            (r['_ai_score'] as num?)?.round());
+        key = _gradeBand(
+            (r['score'] as num?)?.round() ?? (r['_ai_score'] as num?)?.round());
       } else {
         key = ((r['user_id'] as String?)?.trim().isNotEmpty == true
             ? r['user_id'] as String
@@ -464,8 +465,8 @@ class _ReportTabState extends State<_ReportTab> {
                 color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Text('$count',
-                  style: TextStyle(fontSize: 10, color: color)),
+              child:
+                  Text('$count', style: TextStyle(fontSize: 10, color: color)),
             ),
           ],
         ],
@@ -473,7 +474,8 @@ class _ReportTabState extends State<_ReportTab> {
     );
   }
 
-  Widget _buildSectionHeader(String label, IconData icon, int count, Color color) {
+  Widget _buildSectionHeader(
+      String label, IconData icon, int count, Color color) {
     return Container(
       margin: const EdgeInsets.only(top: 8, bottom: 4),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -497,7 +499,9 @@ class _ReportTabState extends State<_ReportTab> {
             ),
             child: Text('$count',
                 style: const TextStyle(
-                    fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
+                    fontSize: 11,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -723,7 +727,7 @@ class _ReportTabState extends State<_ReportTab> {
                     color: Colors.purple.withOpacity(0.06),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                        color: Colors.purple.withOpacity(0.18)),
+                        color: Colors.purple.withValues(alpha: 0.18)),
                   ),
                   child: Row(
                     children: [
@@ -902,7 +906,7 @@ class _ReportTabState extends State<_ReportTab> {
                       color: Colors.red.withOpacity(0.04),
                       borderRadius: BorderRadius.circular(8),
                       border:
-                          Border.all(color: Colors.red.withOpacity(0.2)),
+                          Border.all(color: Colors.red.withValues(alpha: 0.2)),
                     ),
                     child: Row(
                       children: [
@@ -1033,7 +1037,7 @@ class _ReportTabState extends State<_ReportTab> {
                       color: Colors.blue.withOpacity(0.05),
                       borderRadius: BorderRadius.circular(8),
                       border:
-                          Border.all(color: Colors.blue.withOpacity(0.2)),
+                          Border.all(color: Colors.blue.withValues(alpha: 0.2)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1261,8 +1265,7 @@ class _ReportTabState extends State<_ReportTab> {
                               taskTitle: title,
                               reason: confirmedReason.trim(),
                             );
-                            unawaited(
-                                SyncService().uploadStudentData(userId));
+                            unawaited(SyncService().uploadStudentData(userId));
                           }
                           if (ctx.mounted) {
                             Navigator.pop(ctx);
@@ -1308,6 +1311,15 @@ class _ReportTabState extends State<_ReportTab> {
                             score: scoreValue.round(),
                             feedback: feedbackCtrl.text.trim(),
                           );
+                          if (userId.isNotEmpty) {
+                            unawaited(
+                                NotificationService().notifyLabGradeApproved(
+                              studentId: userId,
+                              taskTitle: title,
+                              score: scoreValue.round(),
+                            ));
+                            unawaited(SyncService().uploadStudentData(userId));
+                          }
                           if (ctx.mounted) {
                             Navigator.pop(ctx);
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -1531,7 +1543,7 @@ class _ReportTabState extends State<_ReportTab> {
                         color: Colors.purple.withOpacity(0.06),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                            color: Colors.purple.withOpacity(0.18)),
+                            color: Colors.purple.withValues(alpha: 0.18)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1786,8 +1798,7 @@ class _ReportTabState extends State<_ReportTab> {
                               taskTitle: title,
                               reason: confirmedReason.trim(),
                             );
-                            unawaited(
-                                SyncService().uploadStudentData(userId));
+                            unawaited(SyncService().uploadStudentData(userId));
                           }
                           if (context.mounted) {
                             Navigator.pop(ctx);
@@ -1838,6 +1849,16 @@ class _ReportTabState extends State<_ReportTab> {
                                 widget.authService.getCurrentUserId() ??
                                     'teacher',
                               );
+                            }
+                            if (userId.isNotEmpty) {
+                              unawaited(
+                                  NotificationService().notifyLabGradeApproved(
+                                studentId: userId,
+                                taskTitle: title,
+                                score: scoreValue.round(),
+                              ));
+                              unawaited(
+                                  SyncService().uploadStudentData(userId));
                             }
                           }
                           if (context.mounted) {

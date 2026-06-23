@@ -75,48 +75,6 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
     return null; // 验证通过
   }
 
-  bool _isAiUnavailableMessage(String text) {
-    final lower = text.toLowerCase();
-    return text.contains('AI 服务暂时不可用') ||
-        text.contains('AI 请求失败') ||
-        text.contains('API 配置') ||
-        lower.contains('api key') ||
-        lower.contains('400') ||
-        lower.contains('401') ||
-        lower.contains('429');
-  }
-
-  Future<void> _showAiConfigRequiredDialog(String error) async {
-    if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('AI 服务暂时不可用'),
-        content: Text(
-          '当前免费 Key 可能额度不足、无权限或被服务商拒绝。本次提交需要 AI 初评，请进入「系统设置 → AI 配置」填写自己的 API Key，保存并测试连接后再提交。\n\n错误：$error',
-          style: const TextStyle(height: 1.45),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('稍后配置'),
-          ),
-          FilledButton.icon(
-            onPressed: () {
-              Navigator.pop(ctx);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AiSettingsPage()),
-              );
-            },
-            icon: const Icon(Icons.settings),
-            label: const Text('去 AI 配置'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   void initState() {
     super.initState();
@@ -896,56 +854,16 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
       }
       final teacherAiEnabled =
           await SettingsService.isTeacherAiGradingEnabled();
-      if (_isStudent && !teacherAiEnabled) {
-        final proceed = await _confirmDirectSubmitWithoutTeacherAi();
-        if (proceed != true) return;
-      }
 
-      // AI 检查：报告内容是否匹配小组技术栈和特色功能
       String? pdfTextForGrading;
       if (_isStudent && teacherAiEnabled && file.path != null) {
-        final techInfo = await _dao.getStudentGroupTechInfo(userId);
-        if (techInfo != null &&
-            (techInfo['techStack']?.isNotEmpty == true ||
-                techInfo['features']?.isNotEmpty == true)) {
-          final pdfText = await PdfTextService.extractFromFile(
+        try {
+          pdfTextForGrading = await PdfTextService.extractFromFile(
             file.path!,
-            maxChars: 2000,
+            maxChars: 6000,
           );
-          pdfTextForGrading = pdfText;
-          if (pdfText != null && pdfText.isNotEmpty) {
-            String? reason;
-            try {
-              reason = await GradingAgent().checkReportTechStackAlignment(
-                reportContent: pdfText,
-                groupTechStack: techInfo['techStack'] ?? '',
-                groupFeatures: techInfo['features'] ?? '',
-              );
-            } catch (e) {
-              if (mounted) {
-                await _showAiConfigRequiredDialog(e.toString());
-              }
-              return;
-            }
-            if (reason != null && mounted) {
-              final isAiUnavailable = _isAiUnavailableMessage(reason);
-              if (isAiUnavailable) {
-                await _showAiConfigRequiredDialog(reason);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      '提交失败：报告内容未体现小组技术栈和特色功能 — $reason',
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                    backgroundColor: Colors.red[700],
-                    duration: const Duration(seconds: 6),
-                  ),
-                );
-              }
-              return;
-            }
-          }
+        } catch (e, st) {
+          swallowDebug(e, tag: 'AssessmentReportTab.pdfText', stack: st);
         }
       }
 
@@ -957,8 +875,7 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
         filePath: file.path ?? '',
       );
 
-      // 没拿到 PDF 文本前先尝试解析（学生路径走过 alignment 检查会有，
-      // 教师代上传 / 验证跳过的情况下这里需要补抽一次）
+      // 没拿到 PDF 文本前先尝试解析，解析失败不影响提交。
       if (pdfTextForGrading == null && file.path != null) {
         try {
           pdfTextForGrading =
@@ -970,63 +887,35 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
 
       if (!mounted) return;
 
-      // 学生路径：AI 初评达到评价分数线后才算提交成功；教师代上传则不拦截。
-      if (_isStudent && teacherAiEnabled && reportId > 0) {
-        if (pdfTextForGrading == null || pdfTextForGrading.isEmpty) {
-          await _dao.deleteSubmittedReport(reportId);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('提交失败：无法读取 PDF 正文，不能进行 AI 审核'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-          return;
-        }
-
-        final passScore = await SettingsService.getEvaluationPassScore();
-        final draft = await AutoGradingService.instance.gradeAssessmentReport(
+      if (_isStudent &&
+          teacherAiEnabled &&
+          reportId > 0 &&
+          pdfTextForGrading?.trim().isNotEmpty == true) {
+        unawaited(AutoGradingService.instance.gradeAssessmentReport(
           reportId: reportId,
           studentId: userId,
           studentName: userName,
           reportType: reportType,
-          content: pdfTextForGrading,
-          returnDraft: true,
-          notifyStudent: false,
-        );
-
-        if (draft == null || !draft.isUsable || draft.score < passScore) {
-          await _dao.deleteSubmittedReport(reportId);
-          await GradingResultDao()
-              .deletePendingForTarget('assessment', reportId);
-          if (mounted) {
-            if (draft == null) {
-              await _showAiConfigRequiredDialog(
-                'AI 初评未返回可用结果，请检查网络连接、免费 Key 状态或填写个人 API Key。',
-              );
-            } else {
-              _showAiDraftBlockedDialog(draft, passScore);
-            }
-          }
-          return;
-        }
+          content: pdfTextForGrading!.trim(),
+          returnDraft: false,
+          notifyStudent: true,
+        ));
       }
 
       // 通知教师
-      NotificationService().notifyAssessmentSubmission(
+      unawaited(NotificationService().notifyAssessmentSubmission(
         studentId: userId,
         studentName: userName,
         reportType: reportType,
-      );
+      ));
 
       await _loadSubmissions();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(teacherAiEnabled
-                ? '$reportType 已提交: ${file.name}'
-                : '$reportType 已直接提交，当前教师未开启系统 AI 初评。'),
+                ? '$reportType 已提交: ${file.name}，系统将后台生成 AI 批阅草稿。'
+                : '$reportType 已提交: ${file.name}，等待教师审核。'),
           ),
         );
       }
@@ -1436,6 +1325,16 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
                               where: 'id = ?',
                               whereArgs: [reportId],
                             );
+                            if (userId.isNotEmpty) {
+                              unawaited(NotificationService()
+                                  .notifyAssessmentGradeApproved(
+                                studentId: userId,
+                                reportType: title,
+                                score: scoreValue.round(),
+                              ));
+                              unawaited(
+                                  SyncService().uploadStudentData(userId));
+                            }
                           }
                           if (!mounted) return;
                           Navigator.of(context).pop();
@@ -1470,90 +1369,6 @@ class _AssessmentReportTabState extends State<_AssessmentReportTab>
             ],
           );
         },
-      ),
-    );
-  }
-
-  void _showAiDraftBlockedDialog(AiGradingDraft draft, int passScore) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('AI 初评未达标'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: SingleChildScrollView(
-            child: _buildAiDraftFeedback(draft, passScore),
-          ),
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('知道了，修改后再提交'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<bool?> _confirmDirectSubmitWithoutTeacherAi() {
-    return showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('当前可直接提交'),
-        content: const Text(
-          '教师当前未开启系统 AI 批阅，本次考核报告可以直接提交，提交后等待教师审核。\n\n'
-          '建议你自行进行 AI 自检：进入「系统设置 → AI 配置」，选择服务商，填写 API Key，保存后可使用学习助手或相关 AI 功能检查报告是否覆盖项目技术栈、特色功能和考核要求。',
-          style: TextStyle(height: 1.45),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('先不提交'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('直接提交'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAiDraftFeedback(AiGradingDraft draft, int passScore) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-            'AI 初评 ${draft.score} 分，未达到 $passScore 分达标线。教师尚未审核，请按以下意见修改后再次提交。'),
-        const SizedBox(height: 12),
-        _draftList('评分依据', draft.basis),
-        _draftList('做得好的地方', draft.strengths),
-        _draftList('需要改进', draft.improvements),
-        if (draft.feedback.trim().isNotEmpty) ...[
-          const SizedBox(height: 8),
-          const Text('详细反馈', style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Text(draft.feedback, style: const TextStyle(height: 1.45)),
-        ],
-      ],
-    );
-  }
-
-  Widget _draftList(String title, List<String> items) {
-    if (items.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          ...items.map((item) => Padding(
-                padding: const EdgeInsets.only(bottom: 3),
-                child: Text('• $item', style: const TextStyle(height: 1.35)),
-              )),
-        ],
       ),
     );
   }

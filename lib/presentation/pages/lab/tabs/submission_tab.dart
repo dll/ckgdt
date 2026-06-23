@@ -1,4 +1,4 @@
-﻿part of '../lab_tasks_page.dart';
+part of '../lab_tasks_page.dart';
 
 class _SubmissionTab extends StatefulWidget {
   final AuthService authService;
@@ -36,7 +36,9 @@ class _SubmissionTabState extends State<_SubmissionTab> {
       if (_isTeacherOrAdmin) {
         try {
           await SyncService().downloadAllStudentData();
-        } catch (e) { swallowDebug(e, tag: 'submission_tab'); }
+        } catch (e) {
+          swallowDebug(e, tag: 'submission_tab');
+        }
       }
       List<Map<String, dynamic>> submissions;
       final passScore = await SettingsService.getEvaluationPassScore();
@@ -266,7 +268,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
           const SizedBox(height: 2),
           Text(label,
               style:
-                  TextStyle(fontSize: 10, color: color.withOpacity(0.8))),
+                  TextStyle(fontSize: 10, color: color.withValues(alpha: 0.8))),
         ]),
       ),
     );
@@ -552,8 +554,8 @@ class _SubmissionTabState extends State<_SubmissionTab> {
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
             colors: [
-              primary.withOpacity(0.05),
-              primary.withOpacity(0.12)
+              primary.withValues(alpha: 0.05),
+              primary.withValues(alpha: 0.12)
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -661,7 +663,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                   color: Colors.orange.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(8),
                   border:
-                      Border.all(color: Colors.orange.withOpacity(0.2)),
+                      Border.all(color: Colors.orange.withValues(alpha: 0.2)),
                 ),
                 child: Row(children: [
                   Icon(Icons.warning_amber,
@@ -670,9 +672,9 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                   Expanded(
                     child: Text(
                       '${[
-                            if (failCount > 0) '$failCount人实验不及格',
-                            if (ungradedCount > 0) '$ungradedCount份未批改',
-                          ].join('，')} — 部分学生不满足答辩条件①',
+                        if (failCount > 0) '$failCount人实验不及格',
+                        if (ungradedCount > 0) '$ungradedCount份未批改',
+                      ].join('，')} — 部分学生不满足答辩条件①',
                       style: TextStyle(fontSize: 12, color: Colors.orange[800]),
                     ),
                   ),
@@ -977,7 +979,7 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                   color: Colors.green.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(12),
                   border:
-                      Border.all(color: Colors.green.withOpacity(0.2)),
+                      Border.all(color: Colors.green.withValues(alpha: 0.2)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1338,6 +1340,15 @@ class _SubmissionTabState extends State<_SubmissionTab> {
                               : null,
                           scorerId: widget.authService.getCurrentUserId(),
                         );
+                        if (studentId.isNotEmpty) {
+                          unawaited(
+                              NotificationService().notifyLabGradeApproved(
+                            studentId: studentId,
+                            taskTitle: taskTitle,
+                            score: scoreValue.round(),
+                          ));
+                          unawaited(SyncService().uploadStudentData(studentId));
+                        }
                         if (context.mounted) {
                           Navigator.pop(ctx);
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -1407,14 +1418,9 @@ class _SubmissionTabState extends State<_SubmissionTab> {
       );
       final parsed = _tryParseGradingJson(result);
       if (parsed != null) {
-        final passScore = await SettingsService.getEvaluationPassScore();
-        final score = (parsed['score'] as num?)?.round() ??
-            (parsed['total_score'] as num?)?.round() ??
-            0;
         final aiFlag = parsed['ai_flag'] == true;
-        if (score < passScore || aiFlag) {
-          reasons.add('AI 审核建议打回：评分 $score/$maxScore，未达到 $passScore 分达标线'
-              '${aiFlag ? '，且疑似 AI 生成' : ''}。');
+        if (aiFlag) {
+          reasons.add('AI 审核提示：报告疑似 AI 生成，请教师结合报告内容复核。');
         }
         final formatted = _formatGradingFeedback(parsed);
         if (formatted.isNotEmpty) {
