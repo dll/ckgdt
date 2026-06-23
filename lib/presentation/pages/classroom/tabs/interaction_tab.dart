@@ -199,7 +199,7 @@ class _ClassroomInteractionTabState
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -243,7 +243,7 @@ class _ClassroomInteractionTabState
             borderRadius: BorderRadius.circular(10),
             border: Border(
               left: BorderSide(
-                  color: typeConfig.color.withOpacity(0.5),
+                  color: typeConfig.color.withValues(alpha: 0.5),
                   width: 3),
             ),
           ),
@@ -269,7 +269,7 @@ class _ClassroomInteractionTabState
                             horizontal: 5, vertical: 1),
                         decoration: BoxDecoration(
                           color: (isTeacherMsg ? Colors.blue : Colors.green)
-                              .withOpacity(0.1),
+                              .withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
@@ -308,7 +308,7 @@ class _ClassroomInteractionTabState
         color: Theme.of(context).cardColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -326,7 +326,7 @@ class _ClassroomInteractionTabState
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 decoration: BoxDecoration(
-                  color: primary.withOpacity(0.08),
+                  color: primary.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -373,7 +373,7 @@ class _ClassroomInteractionTabState
               onPressed: _sendMessage,
               icon: Icon(Icons.send, color: primary),
               style: IconButton.styleFrom(
-                backgroundColor: primary.withOpacity(0.1),
+                backgroundColor: primary.withValues(alpha: 0.1),
               ),
             ),
           ],
@@ -426,7 +426,8 @@ class _ClassroomInteractionTabState
       if (diff.inHours < 24) return '${diff.inHours}小时前';
       if (diff.inDays < 7) return '${diff.inDays}天前';
       return '${dt.month}/${dt.day}';
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'interaction_tab._formatTimeAgo', stack: st);
       return '';
     }
   }

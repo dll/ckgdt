@@ -96,7 +96,7 @@ class _DefenseProjectInfoPanelState extends State<DefenseProjectInfoPanel> {
           child: Text('暂无答辩项目信息',
               style: TextStyle(
                   fontSize: 12,
-                  color: NoirTokens.paper.withOpacity(0.4)))));
+                  color: NoirTokens.paper.withValues(alpha: 0.4)))));
     }
 
     final className = cover['className'] as String? ?? '';
@@ -142,9 +142,9 @@ class _DefenseProjectInfoPanelState extends State<DefenseProjectInfoPanel> {
   Widget _wrap(Widget child) => Container(
         padding: EdgeInsets.all(widget.compact ? 10 : 14),
         decoration: BoxDecoration(
-          color: NoirTokens.ink.withOpacity(0.95),
+          color: NoirTokens.ink.withValues(alpha: 0.95),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: NoirTokens.accent.withOpacity(0.2)),
+          border: Border.all(color: NoirTokens.accent.withValues(alpha: 0.2)),
         ),
         child: child,
       );
@@ -152,7 +152,7 @@ class _DefenseProjectInfoPanelState extends State<DefenseProjectInfoPanel> {
   Widget _line(IconData icon, String text, {bool bold = false}) => Padding(
         padding: const EdgeInsets.only(bottom: 4),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(icon, size: 13, color: NoirTokens.paper.withOpacity(0.5)),
+          Icon(icon, size: 13, color: NoirTokens.paper.withValues(alpha: 0.5)),
           const SizedBox(width: 6),
           Expanded(
               child: Text(text,
@@ -160,16 +160,16 @@ class _DefenseProjectInfoPanelState extends State<DefenseProjectInfoPanel> {
                       fontSize: 12,
                       fontWeight: bold ? FontWeight.w600 : FontWeight.normal,
                       color: NoirTokens.paper
-                          .withOpacity(bold ? 0.95 : 0.7)))),
+                          .withValues(alpha: bold ? 0.95 : 0.7)))),
         ]),
       );
 
   Widget _scoreChip(String label, int score) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: NoirTokens.accent.withOpacity(0.12),
+          color: NoirTokens.accent.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: NoirTokens.accent.withOpacity(0.25)),
+          border: Border.all(color: NoirTokens.accent.withValues(alpha: 0.25)),
         ),
         child: Text('$label $score',
             style: const TextStyle(

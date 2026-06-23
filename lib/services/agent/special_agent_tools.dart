@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math' as math;
 
+import '../../core/error_handler.dart';
 import '../../data/local/achievement_dao.dart';
 import '../../data/local/knowledge_graph_dao.dart';
 import '../achievement/achievement_docx_service.dart';
@@ -404,7 +405,8 @@ ${pptxPath == null ? pptxNote : '- PPTX：$pptxPath'}
     try {
       final decoded = jsonDecode(cleaned.substring(start, end + 1));
       return decoded is Map<String, dynamic> ? decoded : null;
-    } catch (_) {
+    } catch (e) {
+      swallow(e, tag: 'SpecialAgentTools._tryParseJsonMap');
       return null;
     }
   }

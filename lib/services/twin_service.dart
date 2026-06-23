@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import '../core/error_handler.dart';
+import '../data/local/active_student_scope.dart';
 import '../data/local/database_helper.dart';
 import '../data/models/twin_profile_model.dart';
 import 'course_context_service.dart';
@@ -295,8 +296,9 @@ class TwinService {
     // 班级人数
     int classSize = 0;
     try {
+      final activeWhere = ActiveStudentScope.where(alias: 'u');
       final r = await db.rawQuery(
-        "SELECT COUNT(*) as c FROM users WHERE role = 'student' AND is_active = 1",
+        'SELECT COUNT(*) as c FROM users u WHERE $activeWhere',
       );
       classSize = (r.first['c'] as int?) ?? 0;
     } catch (e, st) {
@@ -306,9 +308,10 @@ class TwinService {
     // 班级均分（测验）
     double classAvg = 0;
     try {
+      final activeWhere = ActiveStudentScope.where(alias: 'u');
       final scope = await _courseContext.scopedWhere(
         extraWhere:
-            "user_id IN (SELECT user_id FROM users WHERE role = 'student')",
+            'user_id IN (SELECT u.user_id FROM users u WHERE $activeWhere)',
       );
       final r = await db.rawQuery(
         'SELECT AVG(score) as avg FROM quiz_results WHERE ${scope.where}',
@@ -758,6 +761,8 @@ class TwinService {
       Database db, int classSize) async {
     final alerts = <StudentAlert>[];
     try {
+      final activeWhere = ActiveStudentScope.where(alias: 'u');
+
       // 预警1：超过7天未学习的学生
       final weekAgo =
           DateTime.now().subtract(const Duration(days: 7)).toIso8601String();
@@ -768,7 +773,7 @@ class TwinService {
       final inactiveStudents = await db.rawQuery('''
         SELECT u.user_id, u.real_name
         FROM users u
-        WHERE u.role = 'student' AND u.is_active = 1
+        WHERE $activeWhere
         AND u.user_id NOT IN (
           SELECT DISTINCT user_id FROM learning_records WHERE ${activeScope.where}
         )
@@ -791,7 +796,7 @@ class TwinService {
         SELECT qr.user_id, u.real_name, AVG(qr.score) as avg_score
         FROM quiz_results qr
         LEFT JOIN users u ON qr.user_id = u.user_id
-        WHERE u.role = 'student' AND ${quizScope.where}
+        WHERE $activeWhere AND ${quizScope.where}
         GROUP BY qr.user_id
         HAVING avg_score < 50
         LIMIT 10
@@ -813,7 +818,7 @@ class TwinService {
       final noSubStudents = await db.rawQuery('''
         SELECT u.user_id, u.real_name
         FROM users u
-        WHERE u.role = 'student' AND u.is_active = 1
+        WHERE $activeWhere
         AND u.user_id NOT IN (
           SELECT DISTINCT ls.user_id
           FROM lab_submissions ls

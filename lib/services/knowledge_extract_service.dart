@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
+import '../core/error_handler.dart';
 import '../data/local/knowledge_graph_dao.dart';
 import 'ai_service.dart';
 
@@ -375,8 +376,8 @@ class KnowledgeExtractService {
     // Attempt 1: direct parse
     try {
       return jsonDecode(stripped);
-    } catch (_) {
-      // fall through
+    } catch (e) {
+      swallow(e, tag: 'KnowledgeExtractService._parseJsonFromResponse');
     }
 
     // Attempt 2: extract the first JSON array from the text
@@ -384,8 +385,8 @@ class KnowledgeExtractService {
     if (arrayMatch != null) {
       try {
         return jsonDecode(arrayMatch.group(0)!);
-      } catch (_) {
-        // fall through
+      } catch (e) {
+        swallow(e, tag: 'KnowledgeExtractService._parseJsonFromResponse');
       }
     }
 
@@ -395,8 +396,8 @@ class KnowledgeExtractService {
       try {
         final obj = jsonDecode(objMatch.group(0)!);
         return obj is Map ? [obj] : obj;
-      } catch (_) {
-        // fall through
+      } catch (e) {
+        swallow(e, tag: 'KnowledgeExtractService._parseJsonFromResponse');
       }
     }
 

@@ -1,6 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// 课堂试用内置讯飞语音凭据。
+///
+/// 与 AI 课堂试用 Key 保持同一发布策略：校内试用包默认可用，公开发布时使用：
+///
+/// ```shell
+/// flutter build ... --dart-define=USE_BUILTIN_TRIAL_VOICE_KEYS=false
+/// ```
+///
+/// 关闭后系统不再回退到内置语音凭据，用户需要在系统设置中自行填写。
+const bool kUseBuiltinTrialVoiceKeys = bool.fromEnvironment(
+  'USE_BUILTIN_TRIAL_VOICE_KEYS',
+  defaultValue: true,
+);
+
 class SettingsService {
   SettingsService._();
 
@@ -179,11 +193,18 @@ class SettingsService {
   // 讯飞语音配置（AppID / APIKey / APISecret）
   // ═════════════════════════════════════════════════════════════════════════
 
-  // 讯飞默认配置
-  static const String _defaultXunfeiAppId = 'ae4a0e4a';
-  static const String _defaultXunfeiApiKey = '7385e5cb32d3465474e613dfbfc69310';
-  static const String _defaultXunfeiApiSecret =
+  // 讯飞课堂试用配置。用户填写的配置始终优先于内置试用值。
+  static const String _trialXunfeiAppId = 'ae4a0e4a';
+  static const String _trialXunfeiApiKey = '7385e5cb32d3465474e613dfbfc69310';
+  static const String _trialXunfeiApiSecret =
       'NTI2NzVlOWQ0ZTM5YTgzNGYzZDI5NjQx';
+
+  static String get _defaultXunfeiAppId =>
+      kUseBuiltinTrialVoiceKeys ? _trialXunfeiAppId : '';
+  static String get _defaultXunfeiApiKey =>
+      kUseBuiltinTrialVoiceKeys ? _trialXunfeiApiKey : '';
+  static String get _defaultXunfeiApiSecret =>
+      kUseBuiltinTrialVoiceKeys ? _trialXunfeiApiSecret : '';
 
   static Future<String> getXunfeiAppId() async {
     final prefs = await SharedPreferences.getInstance();

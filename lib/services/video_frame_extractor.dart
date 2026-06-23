@@ -120,7 +120,8 @@ class VideoFrameExtractor {
       );
       if (r.exitCode != 0) return 0;
       return double.tryParse((r.stdout as String).trim()) ?? 0;
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'VideoFrameExtractor._getVideoDuration', stack: st);
       return 0;
     }
   }

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/services.dart' show rootBundle;
+import '../../core/error_handler.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -55,8 +56,8 @@ class AchievementTemplateAssets {
       final bundledDir = Directory(p.join(supportDir.path, 'data', '达成'));
       await _extractBundledTemplates(bundledDir);
       addRoot(bundledDir);
-    } catch (_) {
-      // 无 path_provider（单测）或写入失败：忽略，使用其它根。
+    } catch (e) {
+      swallow(e, tag: 'AchievementTemplateAssets.templateRoots');
     }
 
     return roots;
@@ -77,9 +78,8 @@ class AchievementTemplateAssets {
           continue;
         }
         await file.writeAsBytes(bytes, flush: true);
-      } catch (_) {
-        // Asset may be absent in older builds. Template lookup will then fall
-        // back to external roots or generated reports.
+      } catch (e) {
+        swallow(e, tag: 'AchievementTemplateAssets._extractBundledTemplates');
       }
     }
   }

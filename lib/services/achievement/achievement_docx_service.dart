@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:archive/archive_io.dart';
 import 'package:xml/xml.dart';
+import '../../core/error_handler.dart';
 import '../output_path_service.dart';
 import 'achievement_template_assets.dart';
 
@@ -66,9 +67,8 @@ class AchievementDocxService {
           barChartPng: barChartPng,
           scatterChartPngs: scatterChartPngs,
         );
-      } catch (_) {
-        // Fall through to the generated OOXML report if a user-supplied
-        // template is malformed or no longer matches the expected tables.
+      } catch (e, st) {
+        swallowDebug(e, tag: 'AchievementDocxService.generateReport', stack: st);
       }
     }
 

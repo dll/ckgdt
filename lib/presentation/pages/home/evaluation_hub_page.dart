@@ -50,7 +50,7 @@ class _EvaluationHubPageState extends State<EvaluationHubPage> {
     return Column(
       children: [
         Container(
-          color: primary.withOpacity(0.05),
+          color: primary.withValues(alpha: 0.05),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [

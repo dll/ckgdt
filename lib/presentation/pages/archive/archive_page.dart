@@ -75,7 +75,7 @@ class _ArchivePageState extends State<ArchivePage>
     return Column(
       children: [
         Container(
-          color: primary.withOpacity(0.05),
+          color: primary.withValues(alpha: 0.05),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Row(
             children: [
@@ -87,7 +87,7 @@ class _ArchivePageState extends State<ArchivePage>
           ),
         ),
         Container(
-          color: primary.withOpacity(0.05),
+          color: primary.withValues(alpha: 0.05),
           child: Row(
             children: [
               Expanded(

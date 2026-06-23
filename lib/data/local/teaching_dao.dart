@@ -154,13 +154,15 @@ class TeachingDao {
     // Ensure plan_type and hours columns exist
     try {
       await db.rawQuery('SELECT plan_type FROM lesson_plans LIMIT 1');
-    } catch (_) {
-      try { await db.execute('ALTER TABLE lesson_plans ADD COLUMN plan_type TEXT DEFAULT \'theory\''); } catch (e) { swallowDebug(e, tag: 'teaching_dao'); }
+    } catch (e) {
+      swallow(e, tag: 'TeachingDao.initDefaultLessonPlans');
+      try { await db.execute('ALTER TABLE lesson_plans ADD COLUMN plan_type TEXT DEFAULT \'theory\''); } catch (e2) { swallowDebug(e2, tag: 'TeachingDao.initDefaultLessonPlans'); }
     }
     try {
       await db.rawQuery('SELECT hours FROM lesson_plans LIMIT 1');
-    } catch (_) {
-      try { await db.execute('ALTER TABLE lesson_plans ADD COLUMN hours INTEGER DEFAULT 2'); } catch (e) { swallowDebug(e, tag: 'teaching_dao'); }
+    } catch (e) {
+      swallow(e, tag: 'TeachingDao.initDefaultLessonPlans');
+      try { await db.execute('ALTER TABLE lesson_plans ADD COLUMN hours INTEGER DEFAULT 2'); } catch (e2) { swallowDebug(e2, tag: 'TeachingDao.initDefaultLessonPlans'); }
     }
 
     final count = await db.rawQuery('SELECT COUNT(*) as c FROM lesson_plans');

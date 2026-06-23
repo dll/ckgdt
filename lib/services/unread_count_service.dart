@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../core/error_handler.dart';
 import '../data/local/notification_dao.dart';
 
 /// 全局未读通知计数服务。
@@ -34,7 +35,8 @@ class UnreadCountService {
       final n = await _dao.getUnreadCount(userId);
       // 只有真变了才赋值——ValueNotifier 默认 == 比较通过就不通知
       if (count.value != n) count.value = n;
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'UnreadCountService.refresh', stack: st);
       // 数据库异常时静默保持上次值，不打扰 UI
     }
   }

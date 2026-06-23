@@ -318,7 +318,8 @@ class UserDao {
         whereArgs: [userId],
       );
       return count > 0;
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'UserDao.updatePassword', stack: st);
       return false;
     }
   }
@@ -334,7 +335,8 @@ class UserDao {
         whereArgs: [userId],
       );
       return count > 0;
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'UserDao.resetPassword', stack: st);
       return false;
     }
   }

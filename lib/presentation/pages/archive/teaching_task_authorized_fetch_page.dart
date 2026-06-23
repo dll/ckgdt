@@ -10,6 +10,7 @@ import 'package:webview_win_floating/webview_win_floating.dart'
     show WindowsWebViewControllerCreationParams;
 
 import '../../../services/archive/teaching_task_source_service.dart';
+import '../../../core/error_handler.dart';
 
 class TeachingTaskAuthorizedFetchResult {
   final String html;
@@ -207,7 +208,8 @@ class _TeachingTaskAuthorizedFetchPageState
         final text = _decodeJsString(value);
         final ready = widget.readyTextKeywords.every(text.contains);
         if (!ready) return;
-      } catch (_) {
+      } catch (e, st) {
+        swallowDebug(e, tag: 'TeachingTaskAuthorizedFetchPage._checkPageReady', stack: st);
         return;
       }
     }

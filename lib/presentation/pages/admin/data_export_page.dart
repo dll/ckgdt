@@ -1,5 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../data/local/active_student_scope.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../services/course_context_service.dart';
 
@@ -34,8 +35,9 @@ class _DataExportPageState extends State<DataExportPage> {
     try {
       final db = await DatabaseHelper.instance.database;
 
+      final activeStudentWhere = ActiveStudentScope.where(alias: 'u');
       final studentCount = await db.rawQuery(
-        "SELECT COUNT(*) as c FROM users WHERE role = 'student'",
+        'SELECT COUNT(*) as c FROM users u WHERE $activeStudentWhere',
       );
       final quizScope = await _courseContext.scopedWhere();
       final learningScope = await _courseContext.scopedWhere();
@@ -348,6 +350,7 @@ class _DataExportPageState extends State<DataExportPage> {
     }
 
     // 3. Inactive students (registered but no quiz or learning records)
+    final activeStudentWhere = ActiveStudentScope.where(alias: 'u');
     final inactiveQuizScope = await _courseContext.scopedWhere();
     final inactiveLearningScope = await _courseContext.scopedWhere();
     final inactiveStudents = await db.rawQuery('''
@@ -355,7 +358,7 @@ class _DataExportPageState extends State<DataExportPage> {
         u.user_id,
         COALESCE(u.real_name, u.user_id) AS name
       FROM users u
-      WHERE u.role = 'student' AND u.is_active = 1
+      WHERE $activeStudentWhere
         AND u.user_id NOT IN (
           SELECT DISTINCT user_id FROM quiz_results
           WHERE ${inactiveQuizScope.where}
@@ -650,8 +653,9 @@ class _DataExportPageState extends State<DataExportPage> {
     final quizScope = await _courseContext.scopedWhere();
     final learningScope = await _courseContext.scopedWhere();
 
+    final activeStudentWhere = ActiveStudentScope.where(alias: 'u');
     final studentCount = await db.rawQuery(
-      "SELECT COUNT(*) as c FROM users WHERE role = 'student' AND is_active = 1",
+      'SELECT COUNT(*) as c FROM users u WHERE $activeStudentWhere',
     );
     final quizCount = await db.rawQuery(
       'SELECT COUNT(*) as c FROM quiz_results WHERE ${quizScope.where}',
@@ -867,7 +871,7 @@ class _DataExportPageState extends State<DataExportPage> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.4),
+                  color: Colors.grey.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -1063,13 +1067,13 @@ class _DataExportPageState extends State<DataExportPage> {
             end: Alignment.bottomRight,
             colors: [
               color,
-              color.withOpacity(0.7),
+              color.withValues(alpha: 0.7),
             ],
           ),
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.3),
+              color: color.withValues(alpha: 0.3),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -1091,7 +1095,7 @@ class _DataExportPageState extends State<DataExportPage> {
             Text(
               label,
               style: TextStyle(
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 fontSize: 11,
               ),
               maxLines: 1,
@@ -1124,7 +1128,7 @@ class _DataExportPageState extends State<DataExportPage> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: template.color.withOpacity(0.12),
+                  color: template.color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -1175,7 +1179,7 @@ class _DataExportPageState extends State<DataExportPage> {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: template.color,
                         side: BorderSide(
-                          color: template.color.withOpacity(0.5),
+                          color: template.color.withValues(alpha: 0.5),
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),

@@ -14,6 +14,7 @@ import 'qr_scan_page.dart';
 
 import '../../../core/constants/app_urls.dart';
 import '../../../services/clipboard_helper.dart';
+import '../../../core/error_handler.dart';
 
 /// 多端互通 Hub 页面
 ///
@@ -487,7 +488,7 @@ class _CrossPlatformHubPageState extends State<CrossPlatformHubPage> {
         gradient: LinearGradient(
           colors: [
             theme.colorScheme.primary,
-            theme.colorScheme.primary.withOpacity(0.7),
+            theme.colorScheme.primary.withValues(alpha: 0.7),
           ],
         ),
         borderRadius: BorderRadius.circular(14),
@@ -521,8 +522,8 @@ class _CrossPlatformHubPageState extends State<CrossPlatformHubPage> {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color: (_isServerRunning || _isConnected)
-                  ? Colors.green.withOpacity(0.3)
-                  : Colors.white.withOpacity(0.2),
+                  ? Colors.green.withValues(alpha: 0.3)
+                  : Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
@@ -719,7 +720,7 @@ class _CrossPlatformHubPageState extends State<CrossPlatformHubPage> {
         children: [
           StyledQr(
             data: AppUrls.webApp,
-            borderColor: theme.colorScheme.outline.withOpacity(0.2),
+            borderColor: theme.colorScheme.outline.withValues(alpha: 0.2),
             eyeColor: theme.colorScheme.primary,
           ),
           const SizedBox(height: 8),
@@ -943,7 +944,8 @@ class _CrossPlatformHubPageState extends State<CrossPlatformHubPage> {
       if (diff.inMinutes < 1) return '刚刚';
       if (diff.inMinutes < 60) return '${diff.inMinutes}分钟前';
       return '${diff.inHours}小时前';
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'cross_platform_hub_page._formatTime', stack: st);
       return '';
     }
   }

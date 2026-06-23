@@ -1,5 +1,6 @@
 import '../../core/error_handler.dart';
 import '../../services/course_context_service.dart';
+import 'active_student_scope.dart';
 import 'database_helper.dart';
 
 /// 课堂管理 DAO — 在线状态 / 签到管理 / 课堂互动
@@ -233,11 +234,14 @@ class ClassroomDao {
         ORDER BY u.real_name
       ''', [classId]);
     } else {
-      students = await db.query(
-        'users',
-        where: "role = 'student' AND is_active = 1",
-        orderBy: 'real_name',
-      );
+      final activeWhere = ActiveStudentScope.where(alias: 'u');
+      students = await db.rawQuery('''
+        SELECT u.user_id, u.real_name, u.role, u.last_login, u.last_active,
+               u.is_active, u.repository_url
+        FROM users u
+        WHERE $activeWhere
+        ORDER BY u.real_name
+      ''');
     }
 
     final now = DateTime.now();
@@ -307,8 +311,12 @@ class ClassroomDao {
         WHERE cm.class_id = ? AND u.role = 'student' AND u.is_active = 1
       ''', [classId]);
     } else {
-      students =
-          await db.query('users', where: "role = 'student' AND is_active = 1");
+      final activeWhere = ActiveStudentScope.where(alias: 'u');
+      students = await db.rawQuery('''
+        SELECT u.user_id, u.real_name
+        FROM users u
+        WHERE $activeWhere
+      ''');
     }
 
     // 批量插入签到记录
@@ -639,10 +647,12 @@ class ClassroomDao {
       ''';
       args = [classId];
     } else {
+      final activeWhere = ActiveStudentScope.where(alias: 'u');
       studentQuery = '''
-        SELECT user_id, real_name FROM users
-        WHERE role = 'student' AND is_active = 1
-        ORDER BY user_id
+        SELECT u.user_id, u.real_name
+        FROM users u
+        WHERE $activeWhere
+        ORDER BY u.user_id
       ''';
       args = [];
     }

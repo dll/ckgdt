@@ -2,6 +2,7 @@
 library;
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+import '../core/error_handler.dart';
 
 Future<String?> saveJsonToFile(String jsonString) async {
   try {
@@ -9,7 +10,8 @@ Future<String?> saveJsonToFile(String jsonString) async {
     final file = File('${directory.path}/knowledge_graph_backup.json');
     await file.writeAsString(jsonString);
     return file.path;
-  } catch (_) {
+  } catch (e, st) {
+    swallowDebug(e, tag: 'saveJsonToFile', stack: st);
     return null;
   }
 }
@@ -29,7 +31,8 @@ Future<bool> copyDBFile(String destPath) async {
       return true;
     }
     return false;
-  } catch (_) {
+  } catch (e, st) {
+    swallowDebug(e, tag: 'copyDBFile', stack: st);
     return false;
   }
 }

@@ -173,7 +173,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: diffColor.withOpacity(0.1),
+                    color: diffColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(difficulty,
@@ -193,7 +193,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.1),
+                      color: Colors.grey.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: const Text('已归档',
@@ -216,7 +216,7 @@ class _TaskManageTabState extends State<_TaskManageTab> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: primary.withOpacity(0.04),
+                color: primary.withValues(alpha: 0.04),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
@@ -333,7 +333,8 @@ class _TaskManageTabState extends State<_TaskManageTab> {
     if (isEditing && existingTask['due_date'] != null) {
       try {
         dueDate = DateTime.parse(existingTask['due_date'] as String);
-      } catch (_) {
+      } catch (e, st) {
+        swallowDebug(e, tag: 'task_manage_tab._showAddTaskDialog', stack: st);
         dueDate = DateTime.now().add(const Duration(days: 14));
       }
     } else {

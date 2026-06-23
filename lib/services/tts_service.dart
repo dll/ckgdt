@@ -30,7 +30,8 @@ class TtsService {
         runInShell: true,
       );
       return result.exitCode == 0;
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TtsService.isEdgeTtsInstalled', stack: st);
       return false;
     }
   }
@@ -44,7 +45,8 @@ class TtsService {
         runInShell: true,
       );
       return result.exitCode == 0;
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TtsService.installEdgeTts', stack: st);
       return false;
     }
   }

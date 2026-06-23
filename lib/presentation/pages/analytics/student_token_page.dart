@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../../data/local/ai_history_dao.dart';
 import '../../../data/local/class_dao.dart';
 import '../../../services/auth_service.dart';
+import '../../../core/error_handler.dart';
 
 class StudentTokenPage extends StatefulWidget {
   const StudentTokenPage({super.key});
@@ -160,7 +161,7 @@ class _StudentTokenPageState extends State<StudentTokenPage> {
                     show: true,
                     drawVerticalLine: false,
                     getDrawingHorizontalLine: (value) =>
-                        FlLine(color: Colors.grey.withOpacity(0.15), strokeWidth: 1),
+                        FlLine(color: Colors.grey.withValues(alpha: 0.15), strokeWidth: 1),
                   ),
                   titlesData: FlTitlesData(
                     leftTitles: AxisTitles(
@@ -203,7 +204,7 @@ class _StudentTokenPageState extends State<StudentTokenPage> {
                       isCurved: true,
                       color: primary,
                       barWidth: 2.5,
-                      belowBarData: BarAreaData(show: true, color: primary.withOpacity(0.1)),
+                      belowBarData: BarAreaData(show: true, color: primary.withValues(alpha: 0.1)),
                     ),
                   ],
                 ),
@@ -324,7 +325,7 @@ class _StudentTokenPageState extends State<StudentTokenPage> {
                 borderRadius: BorderRadius.circular(3),
                 child: LinearProgressIndicator(
                   value: ratio,
-                  backgroundColor: primary.withOpacity(0.08),
+                  backgroundColor: primary.withValues(alpha: 0.08),
                   valueColor: AlwaysStoppedAnimation(primary),
                   minHeight: 4,
                 ),
@@ -363,7 +364,8 @@ class _StudentTokenPageState extends State<StudentTokenPage> {
     try {
       final dt = DateTime.parse(iso);
       return '${dt.month}/${dt.day} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'StudentTokenPage._formatDateTime', stack: st);
       return iso.length > 10 ? iso.substring(0, 10) : iso;
     }
   }

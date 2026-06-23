@@ -337,7 +337,7 @@ class _ReportTabState extends State<_ReportTab> {
             margin: const EdgeInsets.fromLTRB(4, 8, 4, 4),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: primary.withOpacity(0.08),
+              color: primary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(6),
               border: Border(
                 left: BorderSide(color: primary, width: 3),
@@ -462,7 +462,7 @@ class _ReportTabState extends State<_ReportTab> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child:
@@ -480,7 +480,7 @@ class _ReportTabState extends State<_ReportTab> {
       margin: const EdgeInsets.only(top: 8, bottom: 4),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.06),
+        color: color.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
@@ -560,7 +560,7 @@ class _ReportTabState extends State<_ReportTab> {
                 children: [
                   CircleAvatar(
                     radius: 18,
-                    backgroundColor: statusColor.withOpacity(0.1),
+                    backgroundColor: statusColor.withValues(alpha: 0.1),
                     child: Icon(statusIcon, color: statusColor, size: 20),
                   ),
                   const SizedBox(width: 12),
@@ -607,7 +607,7 @@ class _ReportTabState extends State<_ReportTab> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
+                      color: statusColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(status,
@@ -724,7 +724,7 @@ class _ReportTabState extends State<_ReportTab> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.purple.withOpacity(0.06),
+                    color: Colors.purple.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                         color: Colors.purple.withValues(alpha: 0.18)),
@@ -765,9 +765,9 @@ class _ReportTabState extends State<_ReportTab> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.06),
+                    color: Colors.red.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red.withOpacity(0.25)),
+                    border: Border.all(color: Colors.red.withValues(alpha: 0.25)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -877,8 +877,8 @@ class _ReportTabState extends State<_ReportTab> {
                             horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
                           color: status == '已批改'
-                              ? Colors.blue.withOpacity(0.1)
-                              : Colors.green.withOpacity(0.1),
+                              ? Colors.blue.withValues(alpha: 0.1)
+                              : Colors.green.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(status,
@@ -903,7 +903,7 @@ class _ReportTabState extends State<_ReportTab> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.04),
+                      color: Colors.red.withValues(alpha: 0.04),
                       borderRadius: BorderRadius.circular(8),
                       border:
                           Border.all(color: Colors.red.withValues(alpha: 0.2)),
@@ -1034,7 +1034,7 @@ class _ReportTabState extends State<_ReportTab> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.05),
+                      color: Colors.blue.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(8),
                       border:
                           Border.all(color: Colors.blue.withValues(alpha: 0.2)),
@@ -1540,7 +1540,7 @@ class _ReportTabState extends State<_ReportTab> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.purple.withOpacity(0.06),
+                        color: Colors.purple.withValues(alpha: 0.06),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                             color: Colors.purple.withValues(alpha: 0.18)),
@@ -1920,7 +1920,7 @@ class _ReportTabState extends State<_ReportTab> {
                     if (i == 0) {
                       return ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: Colors.grey.withOpacity(0.1),
+                          backgroundColor: Colors.grey.withValues(alpha: 0.1),
                           child: const Icon(Icons.article,
                               color: Colors.grey, size: 20),
                         ),
@@ -1938,7 +1938,7 @@ class _ReportTabState extends State<_ReportTab> {
                     final desc = tmpl['description'] as String? ?? '';
                     return ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: primary.withOpacity(0.1),
+                        backgroundColor: primary.withValues(alpha: 0.1),
                         child:
                             Icon(Icons.description, color: primary, size: 20),
                       ),

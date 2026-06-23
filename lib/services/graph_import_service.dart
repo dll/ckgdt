@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:sqflite/sqflite.dart';
+import '../core/error_handler.dart';
 import '../data/local/database_helper.dart';
 import 'course_context_service.dart';
 
@@ -398,7 +399,8 @@ class GraphImportService {
       final ng = (g + (255 - g) * factor).clamp(0, 255).toInt();
       final nb = (b + (255 - b) * factor).clamp(0, 255).toInt();
       return '#${nr.toRadixString(16).padLeft(2, '0')}${ng.toRadixString(16).padLeft(2, '0')}${nb.toRadixString(16).padLeft(2, '0')}';
-    } catch (_) {
+    } catch (e) {
+      swallow(e, tag: 'GraphImportService._lightenHexColor');
       return hexColor;
     }
   }

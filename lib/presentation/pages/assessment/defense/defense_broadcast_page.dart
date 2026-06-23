@@ -21,6 +21,8 @@ import '../../../../services/sync_service.dart';
 import '../../../widgets/live_stream_panel.dart';
 import 'defense_controls_panel.dart';
 import 'defense_project_info_panel.dart';
+import 'defense_role_action.dart';
+import 'defense_student_selector.dart';
 import 'defense_viewer_widget.dart';
 
 class DefenseBroadcastPage extends StatefulWidget {
@@ -973,7 +975,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
         child: ChoiceChip(
             label: Text(label, style: const TextStyle(fontSize: 12)),
             selected: _role == role,
-            selectedColor: NoirTokens.accent.withOpacity(0.3),
+            selectedColor: NoirTokens.accent.withValues(alpha: 0.3),
             onSelected: (_) {
               _switchRole(role);
             },
@@ -983,21 +985,21 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
   Widget _buildRoleLanding() {
     final actions = _isTeacherOrAdmin
         ? const [
-            _RoleAction(
+            DefenseRoleAction(
               role: 'presenter',
               label: '主播',
               subtitle: '发起答辩活动，通知学生答辩，查看答辩学生屏幕和摄像头',
               icon: Icons.campaign,
               color: Colors.green,
             ),
-            _RoleAction(
+            DefenseRoleAction(
               role: 'viewer',
               label: '观看',
               subtitle: '作为非主播教师观看正在进行的答辩或演示',
               icon: Icons.visibility,
               color: Colors.blue,
             ),
-            _RoleAction(
+            DefenseRoleAction(
               role: 'present',
               label: '演示',
               subtitle: '展示教师 Windows/手机桌面，可与另一台教师设备合并演示',
@@ -1006,14 +1008,14 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
             ),
           ]
         : const [
-            _RoleAction(
+            DefenseRoleAction(
               role: 'viewer',
               label: '观看',
               subtitle: '观看其他同学答辩或教师演示',
               icon: Icons.visibility,
               color: Colors.blue,
             ),
-            _RoleAction(
+            DefenseRoleAction(
               role: 'defender',
               label: '答辩',
               subtitle: '连接教师主播，推送本机/手机屏幕和摄像头，可开启录屏',
@@ -1035,23 +1037,23 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
     });
   }
 
-  Widget _roleActionCard(_RoleAction action) {
+  Widget _roleActionCard(DefenseRoleAction action) {
     return InkWell(
       onTap: () => _switchRole(action.role),
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: NoirTokens.ink.withOpacity(0.95),
+          color: NoirTokens.ink.withValues(alpha: 0.95),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: action.color.withOpacity(0.28)),
+          border: Border.all(color: action.color.withValues(alpha: 0.28)),
         ),
         child: Row(children: [
           Container(
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: action.color.withOpacity(0.14),
+              color: action.color.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(action.icon, color: action.color, size: 24),
@@ -1072,13 +1074,13 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        color: NoirTokens.paper.withOpacity(0.55),
+                        color: NoirTokens.paper.withValues(alpha: 0.55),
                         fontSize: 12)),
               ],
             ),
           ),
           Icon(Icons.chevron_right,
-              color: NoirTokens.paper.withOpacity(0.35)),
+              color: NoirTokens.paper.withValues(alpha: 0.35)),
         ]),
       ),
     );
@@ -1150,9 +1152,9 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
       height: 34,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: NoirTokens.ink.withOpacity(0.72),
+        color: NoirTokens.ink.withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.35)),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
       child: Row(children: [
         Icon(icon, size: 16, color: color),
@@ -1163,7 +1165,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-                fontSize: 11, color: NoirTokens.paper.withOpacity(0.78)),
+                fontSize: 11, color: NoirTokens.paper.withValues(alpha: 0.78)),
           ),
         ),
       ]),
@@ -1223,7 +1225,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
         Container(
           width: constraints.maxWidth < 600 ? double.infinity : 2,
           height: constraints.maxWidth < 600 ? 2 : double.infinity,
-          color: NoirTokens.paper.withOpacity(0.1),
+          color: NoirTokens.paper.withValues(alpha: 0.1),
         ),
         Expanded(
           child: DefenseViewerWidget(
@@ -1279,7 +1281,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
         Container(
           width: constraints.maxWidth < 600 ? double.infinity : 2,
           height: constraints.maxWidth < 600 ? 2 : double.infinity,
-          color: NoirTokens.paper.withOpacity(0.1),
+          color: NoirTokens.paper.withValues(alpha: 0.1),
         ),
         Expanded(child: streams[1]),
       ];
@@ -1301,7 +1303,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
               gradient: LinearGradient(colors: [
-                NoirTokens.accent.withOpacity(0.8),
+                NoirTokens.accent.withValues(alpha: 0.8),
                 NoirTokens.accent
               ]),
               borderRadius: BorderRadius.circular(12)),
@@ -1314,7 +1316,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
                     color: Colors.red,
                     boxShadow: [
                       BoxShadow(
-                          color: Colors.red.withOpacity(0.6),
+                          color: Colors.red.withValues(alpha: 0.6),
                           blurRadius: 6)
                     ])),
             const SizedBox(width: 8),
@@ -1326,7 +1328,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
             const Spacer(),
             Text(isScreenSharing ? '投屏中' : '已连接',
                 style: TextStyle(
-                    color: Colors.white.withOpacity(0.8), fontSize: 12)),
+                    color: Colors.white.withValues(alpha: 0.8), fontSize: 12)),
           ])),
       const SizedBox(height: 10),
       DefenseProjectInfoPanel(
@@ -1348,11 +1350,11 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
                     child: Column(mainAxisSize: MainAxisSize.min, children: [
                     Icon(Icons.videocam,
                         size: 48,
-                        color: NoirTokens.paper.withOpacity(0.2)),
+                        color: NoirTokens.paper.withValues(alpha: 0.2)),
                     const SizedBox(height: 12),
                     Text('点击下方按钮开启摄像头',
                         style: TextStyle(
-                            color: NoirTokens.paper.withOpacity(0.4),
+                            color: NoirTokens.paper.withValues(alpha: 0.4),
                             fontSize: 14)),
                   ])),
           ),
@@ -1415,10 +1417,10 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
       Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-              color: NoirTokens.ink.withOpacity(0.95),
+              color: NoirTokens.ink.withValues(alpha: 0.95),
               borderRadius: BorderRadius.circular(12),
               border:
-                  Border.all(color: NoirTokens.accent.withOpacity(0.2))),
+                  Border.all(color: NoirTokens.accent.withValues(alpha: 0.2))),
           child: Column(children: [
             Row(children: [
               Expanded(
@@ -1463,7 +1465,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
                           : '请输入教师机的 IP 地址后点击"开始答辩"',
                   style: TextStyle(
                       fontSize: 11,
-                      color: NoirTokens.paper.withOpacity(0.4)),
+                      color: NoirTokens.paper.withValues(alpha: 0.4)),
                 ),
               ),
             ]),
@@ -1496,17 +1498,17 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
             color: active
-                ? Colors.green.withOpacity(0.15)
-                : NoirTokens.ink.withOpacity(0.8),
+                ? Colors.green.withValues(alpha: 0.15)
+                : NoirTokens.ink.withValues(alpha: 0.8),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
                 color: active
-                    ? Colors.green.withOpacity(0.4)
-                    : NoirTokens.paper.withOpacity(0.15))),
+                    ? Colors.green.withValues(alpha: 0.4)
+                    : NoirTokens.paper.withValues(alpha: 0.15))),
         child: Column(children: [
           Icon(icon,
               color:
-                  active ? Colors.green : Colors.white.withOpacity(0.6),
+                  active ? Colors.green : Colors.white.withValues(alpha: 0.6),
               size: 22),
           const SizedBox(height: 4),
           Text(label,
@@ -1514,7 +1516,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
                   fontSize: 11,
                   color: active
                       ? Colors.green
-                      : Colors.white.withOpacity(0.6))),
+                      : Colors.white.withValues(alpha: 0.6))),
         ]),
       ),
     );
@@ -1527,13 +1529,13 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-            color: NoirTokens.ink.withOpacity(0.8),
+            color: NoirTokens.ink.withValues(alpha: 0.8),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
                 color: (color ?? NoirTokens.paper)
-                    .withOpacity(color != null ? 0.5 : 0.15))),
+                    .withValues(alpha: color != null ? 0.5 : 0.15))),
         child: Icon(icon,
-            color: color ?? Colors.white.withOpacity(0.6), size: 20),
+            color: color ?? Colors.white.withValues(alpha: 0.6), size: 20),
       ),
     );
   }
@@ -1558,15 +1560,15 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
         Icon(isSharing ? Icons.screen_share : Icons.live_tv,
             size: 64,
             color: isSharing
-                ? Colors.green.withOpacity(0.6)
-                : NoirTokens.paper.withOpacity(0.2)),
+                ? Colors.green.withValues(alpha: 0.6)
+                : NoirTokens.paper.withValues(alpha: 0.2)),
         const SizedBox(height: 12),
         Text(isSharing ? '屏幕录制中...\n请演示你的应用' : '已连接 · 点击下方按钮开始投屏',
             textAlign: TextAlign.center,
             style: TextStyle(
                 color: isSharing
-                    ? Colors.green.withOpacity(0.8)
-                    : NoirTokens.paper.withOpacity(0.4),
+                    ? Colors.green.withValues(alpha: 0.8)
+                    : NoirTokens.paper.withValues(alpha: 0.4),
                 fontSize: 14)),
         if (isSharing) ...[
           const SizedBox(height: 8),
@@ -1575,7 +1577,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
             const SizedBox(width: 6),
             Text('REC',
                 style: TextStyle(
-                    color: Colors.red.withOpacity(0.9),
+                    color: Colors.red.withValues(alpha: 0.9),
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 2)),
@@ -1593,7 +1595,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                  color: NoirTokens.accent.withOpacity(0.5), width: 2),
+                  color: NoirTokens.accent.withValues(alpha: 0.5), width: 2),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(7),
@@ -1661,13 +1663,13 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
             Icon(Icons.co_present,
                 size: 52,
                 color: (winLive || phoneLive)
-                    ? Colors.green.withOpacity(0.75)
-                    : NoirTokens.paper.withOpacity(0.2)),
+                    ? Colors.green.withValues(alpha: 0.75)
+                    : NoirTokens.paper.withValues(alpha: 0.2)),
             const SizedBox(height: 12),
             Text(
               winLive || phoneLive ? '教师演示源已开启' : '等待教师演示源',
               style: TextStyle(
-                  color: NoirTokens.paper.withOpacity(0.86),
+                  color: NoirTokens.paper.withValues(alpha: 0.86),
                   fontSize: 18,
                   fontWeight: FontWeight.w700),
             ),
@@ -1676,7 +1678,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
               '本页不显示本机直播画面，避免桌面录制递归。观看端会看到教师 Windows 桌面、教师手机桌面或两者并排。',
               textAlign: TextAlign.center,
               style: TextStyle(
-                  color: NoirTokens.paper.withOpacity(0.5), fontSize: 12),
+                  color: NoirTokens.paper.withValues(alpha: 0.5), fontSize: 12),
             ),
             const SizedBox(height: 18),
             LayoutBuilder(builder: (context, constraints) {
@@ -1739,9 +1741,9 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: NoirTokens.ink.withOpacity(0.85),
+        color: NoirTokens.ink.withValues(alpha: 0.85),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.35)),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
       child: Row(children: [
         Icon(icon, color: color, size: 24),
@@ -1759,7 +1761,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
             const SizedBox(height: 4),
             Text(status,
                 style: TextStyle(
-                    color: color.withOpacity(0.86), fontSize: 12)),
+                    color: color.withValues(alpha: 0.86), fontSize: 12)),
           ]),
         ),
       ]),
@@ -1778,7 +1780,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
             url: screenUrl,
             label: '学生手机/桌面',
           )),
-          Container(width: 2, color: NoirTokens.paper.withOpacity(0.1)),
+          Container(width: 2, color: NoirTokens.paper.withValues(alpha: 0.1)),
           Expanded(
               child: DefenseViewerWidget(
             onFullscreenToggle: _toggleFullscreen,
@@ -1820,21 +1822,21 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
   Widget _empty(String t) => Center(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.live_tv,
-            size: 48, color: NoirTokens.paper.withOpacity(0.15)),
+            size: 48, color: NoirTokens.paper.withValues(alpha: 0.15)),
         const SizedBox(height: 8),
         Text(t,
             style: TextStyle(
-                color: NoirTokens.paper.withOpacity(0.3), fontSize: 14)),
+                color: NoirTokens.paper.withValues(alpha: 0.3), fontSize: 14)),
       ]));
 
   Widget _buildViewer() => Column(children: [
         Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-                color: NoirTokens.ink.withOpacity(0.95),
+                color: NoirTokens.ink.withValues(alpha: 0.95),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                    color: NoirTokens.accent.withOpacity(0.2))),
+                    color: NoirTokens.accent.withValues(alpha: 0.2))),
             child: Row(children: [
               Expanded(
                   child: TextField(
@@ -1864,7 +1866,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
             child: Text('发现局域网直播源（点击连接）：',
                 style: TextStyle(
                     fontSize: 11,
-                    color: NoirTokens.paper.withOpacity(0.5))),
+                    color: NoirTokens.paper.withValues(alpha: 0.5))),
           ),
           const SizedBox(height: 6),
           Wrap(spacing: 8, runSpacing: 8, children: [
@@ -1994,7 +1996,7 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
 
       final selected = await showDialog<Map<String, String>>(
         context: context,
-        builder: (ctx) => _StudentSelectionDialog(
+        builder: (ctx) => DefenseStudentSelector(
           students: allStudents,
           notifiedStudents: notifiedStudents,
         ),
@@ -2028,139 +2030,5 @@ class _DefenseBroadcastPageState extends State<DefenseBroadcastPage> {
       swallowDebug(e, tag: 'Defense.getNotifiedStudents', stack: st);
       return {};
     }
-  }
-}
-
-class _RoleAction {
-  final String role;
-  final String label;
-  final String subtitle;
-  final IconData icon;
-  final Color color;
-
-  const _RoleAction({
-    required this.role,
-    required this.label,
-    required this.subtitle,
-    required this.icon,
-    required this.color,
-  });
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// 学生选择对话框
-// ══════════════════════════════════════════════════════════════════════════════
-
-class _StudentSelectionDialog extends StatefulWidget {
-  final Map<String, String> students; // userId -> realName
-  final Set<String> notifiedStudents; // 已发送过通知的学生 ID 集合
-  const _StudentSelectionDialog({
-    required this.students,
-    required this.notifiedStudents,
-  });
-
-  @override
-  State<_StudentSelectionDialog> createState() =>
-      _StudentSelectionDialogState();
-}
-
-class _StudentSelectionDialogState extends State<_StudentSelectionDialog> {
-  final Map<String, String> _selected = {};
-  bool _selectAll = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('选择答辩学生'),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CheckboxListTile(
-              title: const Text('全选',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              value: _selectAll,
-              onChanged: (v) {
-                setState(() {
-                  _selectAll = v ?? false;
-                  if (_selectAll) {
-                    _selected.addAll(widget.students);
-                  } else {
-                    _selected.clear();
-                  }
-                });
-              },
-            ),
-            const Divider(),
-            Flexible(
-              child: ListView(
-                shrinkWrap: true,
-                children: widget.students.entries.map((e) {
-                  final isNotified = widget.notifiedStudents.contains(e.key);
-                  return CheckboxListTile(
-                    title: Row(
-                      children: [
-                        Text(e.value),
-                        if (isNotified) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(
-                                  color: Colors.green.withOpacity(0.5)),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.check_circle,
-                                    size: 12, color: Colors.green),
-                                SizedBox(width: 2),
-                                Text(
-                                  '已通知',
-                                  style: TextStyle(
-                                      fontSize: 10, color: Colors.green),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    subtitle: Text(e.key, style: const TextStyle(fontSize: 11)),
-                    value: _selected.containsKey(e.key),
-                    onChanged: (v) {
-                      setState(() {
-                        if (v == true) {
-                          _selected[e.key] = e.value;
-                        } else {
-                          _selected.remove(e.key);
-                        }
-                        _selectAll = _selected.length == widget.students.length;
-                      });
-                    },
-                  );
-                }).toList(),
-              ),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('取消'),
-        ),
-        FilledButton(
-          onPressed: _selected.isEmpty
-              ? null
-              : () => Navigator.pop(context, _selected),
-          child: Text('确定 (${_selected.length})'),
-        ),
-      ],
-    );
   }
 }

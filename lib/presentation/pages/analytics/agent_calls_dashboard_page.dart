@@ -166,7 +166,7 @@ class _AgentCallsDashboardPageState extends State<AgentCallsDashboardPage>
                     const SizedBox(height: 4),
                     LinearProgressIndicator(
                       value: percent,
-                      backgroundColor: Colors.grey.withOpacity(0.2),
+                      backgroundColor: Colors.grey.withValues(alpha: 0.2),
                     ),
                     const SizedBox(height: 4),
                     Text(

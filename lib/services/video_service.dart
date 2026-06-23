@@ -17,7 +17,8 @@ class VideoService {
         runInShell: true,
       );
       return result.exitCode == 0;
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'VideoService.isFfmpegInstalled', stack: st);
       return false;
     }
   }

@@ -651,7 +651,7 @@ class _SkillsHubPageState extends State<SkillsHubPage> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: skill.color.withOpacity(0.1),
+                  color: skill.color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(skill.icon, color: skill.color, size: 26),
@@ -677,7 +677,7 @@ class _SkillsHubPageState extends State<SkillsHubPage> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: skill.color.withOpacity(0.1),
+                    color: skill.color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text('$count 条',
@@ -909,7 +909,7 @@ class _AiSkillPageState extends State<AiSkillPage>
                 gradient: LinearGradient(
                   colors: [
                     _skill.color,
-                    _skill.color.withOpacity(0.7),
+                    _skill.color.withValues(alpha: 0.7),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -921,7 +921,7 @@ class _AiSkillPageState extends State<AiSkillPage>
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Icon(_skill.icon, color: Colors.white, size: 36),
@@ -1025,7 +1025,7 @@ class _AiSkillPageState extends State<AiSkillPage>
                             width: 24,
                             height: 24,
                             decoration: BoxDecoration(
-                              color: _skill.color.withOpacity(0.1),
+                              color: _skill.color.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
                             child: Center(
@@ -1077,9 +1077,9 @@ class _AiSkillPageState extends State<AiSkillPage>
                       padding: const EdgeInsets.all(10),
                       margin: const EdgeInsets.only(bottom: 8),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.05),
+                        color: Colors.blue.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                        border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1100,7 +1100,7 @@ class _AiSkillPageState extends State<AiSkillPage>
                       width: double.infinity,
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.05),
+                        color: Colors.green.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                             color: Colors.green.withValues(alpha: 0.2)),
@@ -1186,7 +1186,7 @@ class _AiSkillPageState extends State<AiSkillPage>
             color: Theme.of(context).cardColor,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
@@ -1243,7 +1243,7 @@ class _AiSkillPageState extends State<AiSkillPage>
                               horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             border: Border.all(
-                                color: _skill.color.withOpacity(0.3)),
+                                color: _skill.color.withValues(alpha: 0.3)),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Text(e,
@@ -1392,7 +1392,7 @@ class _AiSkillPageState extends State<AiSkillPage>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.download_done,
-                size: 64, color: Colors.grey.withOpacity(0.3)),
+                size: 64, color: Colors.grey.withValues(alpha: 0.3)),
             const SizedBox(height: 12),
             const Text('暂无保存的生成结果', style: TextStyle(color: Colors.grey)),
             const SizedBox(height: 6),
@@ -1409,7 +1409,7 @@ class _AiSkillPageState extends State<AiSkillPage>
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          color: _skill.color.withOpacity(0.05),
+          color: _skill.color.withValues(alpha: 0.05),
           child: Row(
             children: [
               Icon(Icons.folder, color: _skill.color, size: 20),
@@ -1560,7 +1560,8 @@ class _AiSkillPageState extends State<AiSkillPage>
       try {
         final url = pumlService.getKrokiUrl(wrapped);
         return '\n![UML 模型图]($url)\n';
-      } catch (_) {
+      } catch (e, st) {
+        swallowDebug(e, tag: 'ai_skill_page._preprocessMarkdown', stack: st);
         return '\n```\n$pumlCode\n```\n';
       }
     });
@@ -1636,7 +1637,7 @@ class _AiSkillPageState extends State<AiSkillPage>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          border: Border.all(color: c.withOpacity(0.3)),
+          border: Border.all(color: c.withValues(alpha: 0.3)),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(

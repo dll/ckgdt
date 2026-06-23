@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import '../../../core/error_handler.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/course_context_service.dart';
 import '../../../data/local/database_helper.dart';
@@ -139,8 +140,8 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
         final s = (results[3].first['s'] as num?)?.toDouble() ?? 0;
         _avgScorePercent = s.clamp(0, 100).toInt();
       });
-    } catch (_) {
-      // 表可能不存在 / 字段缺失 — 静默
+    } catch (e, st) {
+      swallowDebug(e, tag: 'teacher_workspace_page._loadTeacherWorkload', stack: st);
     }
   }
 
@@ -258,7 +259,7 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.25),
+                color: Colors.white.withValues(alpha: 0.25),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.school, size: 28, color: Colors.white),
@@ -282,7 +283,7 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Text(
@@ -644,7 +645,7 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: tool.color.withOpacity(0.1),
+                    color: tool.color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
@@ -720,7 +721,7 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: activity.color.withOpacity(0.1),
+                color: activity.color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(

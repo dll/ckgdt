@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../../../core/error_handler.dart';
 import '../../../data/local/database_helper.dart';
 import '../video_source_provider.dart';
 
@@ -72,8 +73,8 @@ class BilibiliProvider implements VideoSourceProvider {
           }).toList();
         }
       }
-    } catch (_) {
-      // API failed, fallback to local DB
+    } catch (e, st) {
+      swallowDebug(e, tag: 'BilibiliProvider.getRecommendedVideos', stack: st);
     }
     return _fallbackToLocal(keyword);
   }
@@ -87,8 +88,8 @@ class BilibiliProvider implements VideoSourceProvider {
       try {
         whereParts.add('platform_source = ?');
         whereArgs.add('bilibili');
-      } catch (_) {
-        // column doesn't exist yet
+      } catch (e) {
+        swallow(e, tag: 'BilibiliProvider._fallbackToLocal');
       }
 
       if (keyword != null && keyword.isNotEmpty) {
@@ -126,7 +127,8 @@ class BilibiliProvider implements VideoSourceProvider {
           hotScore: (row['hot_score'] as num?)?.toDouble() ?? 0,
         );
       }).toList();
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'BilibiliProvider._fallbackToLocal', stack: st);
       return [];
     }
   }

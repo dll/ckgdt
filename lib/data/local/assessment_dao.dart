@@ -276,7 +276,8 @@ class AssessmentDao {
     if (raw == null || raw.isEmpty) return [];
     try {
       return (jsonDecode(raw) as List).cast<String>();
-    } catch (_) {
+    } catch (e) {
+      swallow(e, tag: 'AssessmentDao._parseMemberIds');
       return [];
     }
   }

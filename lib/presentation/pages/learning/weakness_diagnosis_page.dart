@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../data/local/wrong_answer_dao.dart';
 import '../../../data/local/quiz_dao.dart';
 import '../../../data/local/learning_record_dao.dart';
@@ -7,6 +7,7 @@ import '../../../services/ai_service.dart';
 import '../../../services/course_context_service.dart';
 import '../../widgets/markdown_bubble.dart';
 import '../../widgets/back_button_bar.dart';
+import '../../../core/error_handler.dart';
 
 class WeaknessDiagnosisPage extends StatefulWidget {
   /// 如果为 null，则分析当前登录用户；教师可传入学生 userId
@@ -186,7 +187,8 @@ class _WeaknessDiagnosisPageState extends State<WeaknessDiagnosisPage> {
         _diagnosisExpanded = true;
         _isDiagnosing = false;
       });
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'WeaknessDiagnosisPage._runDiagnosis', stack: st);
       // AI 不可用，使用本地算法
       final fallback = _localDiagnosis();
       if (!mounted) return;
@@ -457,7 +459,7 @@ $wrongSummary
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: color, size: 24),
@@ -563,7 +565,7 @@ $wrongSummary
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: errorColor.withOpacity(0.1),
+            color: errorColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Center(
@@ -653,10 +655,10 @@ $wrongSummary
                       child: Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.04),
+                          color: Colors.red.withValues(alpha: 0.04),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: Colors.red.withOpacity(0.12),
+                            color: Colors.red.withValues(alpha: 0.12),
                           ),
                         ),
                         child: Column(
@@ -680,7 +682,7 @@ $wrongSummary
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Colors.red.withOpacity(0.1),
+                                    color: Colors.red.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Text(
@@ -770,7 +772,7 @@ $wrongSummary
                     height: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                     ),
                   )
                 : const Icon(Icons.auto_awesome),
@@ -833,8 +835,8 @@ $wrongSummary
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        primary.withOpacity(0.1),
-                        primary.withOpacity(0.05),
+                        primary.withValues(alpha: 0.1),
+                        primary.withValues(alpha: 0.05),
                       ],
                     ),
                   ),

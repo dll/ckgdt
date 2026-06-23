@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_markdown/flutter_markdown.dart';
+import '../../../../core/error_handler.dart';
 import '../../../widgets/back_button_bar.dart';
 
 /// 达成度评价系统帮助手册页面
@@ -60,8 +61,8 @@ class _AchievementHelpPageState extends State<AchievementHelpPage> {
     try {
       final raw = await rootBundle.loadString(_assetPath);
       if (raw.trim().isNotEmpty) return raw;
-    } catch (_) {
-      // 继续尝试读取开发目录或安装目录旁边的 Markdown 文件。
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AchievementHelpPage.readHelpMarkdown', stack: st);
     }
 
     for (final file in _localHelpCandidates()) {
@@ -197,7 +198,7 @@ class _AchievementHelpPageState extends State<AchievementHelpPage> {
           tableScrollbarThumbVisibility: true,
           codeblockPadding: const EdgeInsets.all(12),
           codeblockDecoration: BoxDecoration(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           blockquotePadding: const EdgeInsets.fromLTRB(12, 8, 12, 8),

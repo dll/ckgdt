@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import '../../../core/error_handler.dart';
 import '../../widgets/back_button_bar.dart';
 import '../../../data/local/notification_dao.dart';
 import '../../../services/auth_service.dart';
@@ -538,7 +539,8 @@ class _NotificationListPageState extends State<NotificationListPage> {
       if (diff.inHours < 24) return '${diff.inHours}小时前';
       if (diff.inDays < 7) return '${diff.inDays}天前';
       return '${time.month}月${time.day}日';
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'notification_list_page._formatTime', stack: st);
       return isoString;
     }
   }
@@ -664,7 +666,7 @@ class _NotificationListPageState extends State<NotificationListPage> {
                 Icon(
                   Icons.notifications_none,
                   size: 64,
-                  color: theme.colorScheme.outline.withOpacity(0.4),
+                  color: theme.colorScheme.outline.withValues(alpha: 0.4),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -679,7 +681,7 @@ class _NotificationListPageState extends State<NotificationListPage> {
                   '新的通知将显示在这里',
                   style: TextStyle(
                     fontSize: 13,
-                    color: theme.colorScheme.outline.withOpacity(0.6),
+                    color: theme.colorScheme.outline.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -714,7 +716,7 @@ class _NotificationListPageState extends State<NotificationListPage> {
             : isRead
                 ? BorderSide.none
                 : BorderSide(
-                    color: theme.colorScheme.primary.withOpacity(0.2),
+                    color: theme.colorScheme.primary.withValues(alpha: 0.2),
                     width: 1,
                   ),
       ),
@@ -757,7 +759,7 @@ class _NotificationListPageState extends State<NotificationListPage> {
                           _getTypeIcon(notifType),
                           size: 20,
                           color:
-                              theme.colorScheme.outline.withOpacity(0.4),
+                              theme.colorScheme.outline.withValues(alpha: 0.4),
                         )
                       : Stack(
                           children: [
@@ -794,7 +796,7 @@ class _NotificationListPageState extends State<NotificationListPage> {
                         fontWeight:
                             isRead ? FontWeight.normal : FontWeight.w600,
                         color: isRead
-                            ? theme.colorScheme.onSurface.withOpacity(0.7)
+                            ? theme.colorScheme.onSurface.withValues(alpha: 0.7)
                             : theme.colorScheme.onSurface,
                       ),
                       maxLines: 1,

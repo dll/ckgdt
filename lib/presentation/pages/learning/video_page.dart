@@ -12,6 +12,7 @@ import '../../../services/video_source/video_source_manager.dart';
 import 'video_player_page.dart';
 import '../../widgets/back_button_bar.dart';
 import 'video_source_selector.dart';
+import '../../../core/error_handler.dart';
 
 class VideoListPage extends StatefulWidget {
   final String? filterChapter; // 可选：按章节过滤
@@ -81,8 +82,8 @@ class _VideoListPageState extends State<VideoListPage> {
         try {
           whereParts.add('platform_source = ?');
           whereArgs.add(_selectedPlatformId);
-        } catch (_) {
-          // column doesn't exist yet
+        } catch (e, st) {
+          swallowDebug(e, tag: 'VideoListPage._loadVideos', stack: st);
         }
       }
 

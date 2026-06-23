@@ -130,7 +130,8 @@ class SyncServerImpl {
     for (final ws in _wsClients) {
       try {
         ws.add(msg);
-      } catch (_) {
+      } catch (e, st) {
+        swallowDebug(e, tag: 'sync_server_io', stack: st);
         stale.add(ws);
       }
     }

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import '../core/error_handler.dart';
 
 Future<String?> copyAssetToTemp(String assetPath, String fileName) async {
   final tempDir = await getTemporaryDirectory();
@@ -22,7 +23,8 @@ Future<String?> copyAssetToTemp(String assetPath, String fileName) async {
         byteData.lengthInBytes,
       );
       await tempFile.writeAsBytes(bytes, flush: true);
-    } on FlutterError catch (_) {
+    } on FlutterError catch (e, st) {
+      swallowDebug(e, tag: 'copyAssetToTemp', stack: st);
       return null;
     }
   }
@@ -94,7 +96,7 @@ Future<void> clearCacheNative() async {
     if (await cacheDir.exists()) {
       await cacheDir.delete(recursive: true);
     }
-  } catch (_) {
-    // 静默失败
+  } catch (e, st) {
+    swallowDebug(e, tag: 'clearCacheNative', stack: st);
   }
 }

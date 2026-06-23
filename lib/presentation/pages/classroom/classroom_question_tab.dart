@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import '../../../data/local/classroom_dao.dart';
 import '../../../services/auth_service.dart';
+import '../../../core/error_handler.dart';
 
 // ╔══════════════════════════════════════════════════════════════════════════════╗
 // ║  课堂提问 Tab — 多源题库浏览、编辑、发布提问                                 ║
@@ -219,11 +220,11 @@ class _ClassroomQuestionTabState extends State<ClassroomQuestionTab> {
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
             color: isActive
-                ? color.withOpacity(0.15)
-                : color.withOpacity(0.05),
+                ? color.withValues(alpha: 0.15)
+                : color.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(8),
             border: isActive
-                ? Border.all(color: color.withOpacity(0.5))
+                ? Border.all(color: color.withValues(alpha: 0.5))
                 : null,
           ),
           child: Column(
@@ -316,7 +317,7 @@ class _ClassroomQuestionTabState extends State<ClassroomQuestionTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.withOpacity(0.3)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(8),
       ),
       child: DropdownButtonHideUnderline(
@@ -341,10 +342,10 @@ class _ClassroomQuestionTabState extends State<ClassroomQuestionTab> {
     final q = _currentQuestion!;
 
     return Card(
-      color: primary.withOpacity(0.05),
+      color: primary.withValues(alpha: 0.05),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: primary.withOpacity(0.3), width: 2),
+        side: BorderSide(color: primary.withValues(alpha: 0.3), width: 2),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -386,10 +387,10 @@ class _ClassroomQuestionTabState extends State<ClassroomQuestionTab> {
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.08),
+                color: Colors.green.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                    color: Colors.green.withOpacity(0.3)),
+                    color: Colors.green.withValues(alpha: 0.3)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -439,7 +440,7 @@ class _ClassroomQuestionTabState extends State<ClassroomQuestionTab> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
           border: Border(
-            left: BorderSide(color: color.withOpacity(0.6), width: 3),
+            left: BorderSide(color: color.withValues(alpha: 0.6), width: 3),
           ),
         ),
         child: InkWell(
@@ -523,7 +524,7 @@ class _ClassroomQuestionTabState extends State<ClassroomQuestionTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
@@ -564,8 +565,8 @@ class _ClassroomQuestionTabState extends State<ClassroomQuestionTab> {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: isAnswer
-                      ? Colors.green.withOpacity(0.15)
-                      : Colors.grey.withOpacity(0.08),
+                      ? Colors.green.withValues(alpha: 0.15)
+                      : Colors.grey.withValues(alpha: 0.08),
                   shape: BoxShape.circle,
                 ),
                 child: Text(letter,
@@ -612,11 +613,11 @@ class _ClassroomQuestionTabState extends State<ClassroomQuestionTab> {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
             color: isAnswer
-                ? Colors.green.withOpacity(0.1)
-                : Colors.grey.withOpacity(0.05),
+                ? Colors.green.withValues(alpha: 0.1)
+                : Colors.grey.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(6),
             border: isAnswer
-                ? Border.all(color: Colors.green.withOpacity(0.4))
+                ? Border.all(color: Colors.green.withValues(alpha: 0.4))
                 : null,
           ),
           child: Row(
@@ -627,8 +628,8 @@ class _ClassroomQuestionTabState extends State<ClassroomQuestionTab> {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: isAnswer
-                      ? Colors.green.withOpacity(0.2)
-                      : Colors.grey.withOpacity(0.15),
+                      ? Colors.green.withValues(alpha: 0.2)
+                      : Colors.grey.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
                 child: Text(letter,
@@ -664,7 +665,7 @@ class _ClassroomQuestionTabState extends State<ClassroomQuestionTab> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(6),
         ),
         child: Row(
@@ -755,10 +756,10 @@ class _ClassroomQuestionTabState extends State<ClassroomQuestionTab> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.06),
+                  color: Colors.green.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                      color: Colors.green.withOpacity(0.2)),
+                      color: Colors.green.withValues(alpha: 0.2)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1420,8 +1421,10 @@ class _ClassroomQuestionTabState extends State<ClassroomQuestionTab> {
     try {
       final dt = DateTime.parse(isoTime);
       return '${dt.month}/${dt.day} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'classroom_question_tab._formatTime', stack: st);
       return '';
     }
   }
 }
+

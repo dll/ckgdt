@@ -150,7 +150,7 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: Colors.blue.withOpacity(0.1),
+            color: Colors.blue.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: const Icon(Icons.assignment, color: Colors.blue, size: 22),
@@ -166,7 +166,7 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
               decoration: BoxDecoration(
-                color: diffColor.withOpacity(0.1),
+                color: diffColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(difficulty,
@@ -181,7 +181,7 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.1),
+                  color: Colors.grey.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(status == 'closed' ? '已关闭' : status,
@@ -504,7 +504,7 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: Colors.green.withOpacity(0.1),
+            color: Colors.green.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text('已批 $graded',
@@ -514,7 +514,7 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: Colors.orange.withOpacity(0.1),
+            color: Colors.orange.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text('待批 $pending',
@@ -557,7 +557,7 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
+                  color: Colors.green.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text('$score分',
@@ -786,7 +786,7 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: Colors.purple.withOpacity(0.1),
+            color: Colors.purple.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: const Icon(Icons.article, color: Colors.purple, size: 22),
@@ -802,7 +802,7 @@ class _LabTaskManagePageState extends State<LabTaskManagePage>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
+                  color: Colors.blue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: const Text('默认',

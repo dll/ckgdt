@@ -177,8 +177,8 @@ class _StudentDetailTabState extends State<_StudentDetailTab>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            gradient.gradientStart.withOpacity(0.08),
-            gradient.gradientEnd.withOpacity(0.04),
+            gradient.gradientStart.withValues(alpha: 0.08),
+            gradient.gradientEnd.withValues(alpha: 0.04),
           ],
         ),
       ),
@@ -233,7 +233,7 @@ class _StudentDetailTabState extends State<_StudentDetailTab>
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -356,7 +356,7 @@ class _StudentDetailTabState extends State<_StudentDetailTab>
     return ListTile(
       dense: true,
       selected: isSelected,
-      selectedTileColor: color.withOpacity(0.1),
+      selectedTileColor: color.withValues(alpha: 0.1),
       leading: Icon(isStudent ? Icons.person : Icons.alt_route,
           size: 16, color: isSelected ? color : Colors.grey),
       title: Text(displayName,
@@ -415,7 +415,7 @@ class _StudentDetailTabState extends State<_StudentDetailTab>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: Colors.teal.withOpacity(0.1),
+                  color: Colors.teal.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text('${_commits.length} 提交',

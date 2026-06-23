@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import '../../core/error_handler.dart';
 import '../models/user_model.dart';
+import 'active_student_scope.dart';
 import 'database_helper.dart';
 
 /// 班级管理 DAO — 班级 CRUD、成员管理、归档功能
@@ -38,7 +39,8 @@ class ClassDao {
   /// 获取所有班级（含归档）
   Future<List<Map<String, dynamic>>> getAllClasses() async {
     final db = await _dbHelper.database;
-    return await db.query('classes', orderBy: 'is_archived ASC, created_at DESC');
+    return await db.query('classes',
+        orderBy: 'is_archived ASC, created_at DESC');
   }
 
   /// 获取单个班级
@@ -90,8 +92,10 @@ class ClassDao {
   /// 删除班级（同时删除成员关联）
   Future<bool> deleteClass(int classId) async {
     final db = await _dbHelper.database;
-    await db.delete('class_members', where: 'class_id = ?', whereArgs: [classId]);
-    final count = await db.delete('classes', where: 'id = ?', whereArgs: [classId]);
+    await db
+        .delete('class_members', where: 'class_id = ?', whereArgs: [classId]);
+    final count =
+        await db.delete('classes', where: 'id = ?', whereArgs: [classId]);
     return count > 0;
   }
 
@@ -139,7 +143,8 @@ class ClassDao {
   }
 
   /// 添加成员到班级
-  Future<bool> addMember(int classId, String userId, {String role = 'student'}) async {
+  Future<bool> addMember(int classId, String userId,
+      {String role = 'student'}) async {
     final db = await _dbHelper.database;
     try {
       await db.insert('class_members', {
@@ -157,7 +162,8 @@ class ClassDao {
   }
 
   /// 批量添加成员
-  Future<int> addMembers(int classId, List<String> userIds, {String role = 'student'}) async {
+  Future<int> addMembers(int classId, List<String> userIds,
+      {String role = 'student'}) async {
     final db = await _dbHelper.database;
     int added = 0;
     final batch = db.batch();
@@ -202,10 +208,11 @@ class ClassDao {
   /// 获取未分配到任何班级的学生
   Future<List<UserModel>> getUnassignedStudents() async {
     final db = await _dbHelper.database;
+    final activeWhere = ActiveStudentScope.where(alias: 'u');
     final maps = await db.rawQuery('''
       SELECT u.*
       FROM users u
-      WHERE u.role = 'student' AND u.is_active = 1
+      WHERE $activeWhere
         AND u.user_id NOT IN (
           SELECT cm.user_id FROM class_members cm
           INNER JOIN classes c ON cm.class_id = c.id
@@ -247,10 +254,10 @@ class ClassDao {
   Future<Map<String, int>> getClassStats() async {
     final db = await _dbHelper.database;
     final total = await db.rawQuery('SELECT COUNT(*) as c FROM classes');
-    final active = await db.rawQuery(
-        'SELECT COUNT(*) as c FROM classes WHERE is_archived = 0');
-    final archived = await db.rawQuery(
-        'SELECT COUNT(*) as c FROM classes WHERE is_archived = 1');
+    final active = await db
+        .rawQuery('SELECT COUNT(*) as c FROM classes WHERE is_archived = 0');
+    final archived = await db
+        .rawQuery('SELECT COUNT(*) as c FROM classes WHERE is_archived = 1');
     return {
       'total': (total.first['c'] as int?) ?? 0,
       'active': (active.first['c'] as int?) ?? 0,
@@ -284,17 +291,15 @@ class ClassDao {
     Map<String, List<String>> classStudents = {}; // className -> [userId]
     Map<String, bool> classArchived = {}; // className -> 是否全部 is_active=0
     try {
-      final jsonStr =
-          await rootBundle.loadString('assets/students.json');
+      final jsonStr = await rootBundle.loadString('assets/students.json');
       final students = json.decode(jsonStr) as List;
       for (final s in students) {
         final uid = s['user_id'] as String?;
         final className = s['class_name'] as String?;
         final isActive = (s['is_active'] as int?) ?? 1;
         if (uid == null) continue;
-        final key = (className != null && className.isNotEmpty)
-            ? className
-            : '未分班';
+        final key =
+            (className != null && className.isNotEmpty) ? className : '未分班';
         classStudents.putIfAbsent(key, () => []).add(uid);
         // 只要有一个 is_active=1 的学生，班级就不归档
         if (isActive == 1) {
@@ -335,9 +340,7 @@ class ClassDao {
       final shouldArchive = classArchived[className] ?? false;
 
       // 根据班级名推断学期
-      final semester = shouldArchive
-          ? '2024-2025学年第二学期'
-          : '2025-2026学年第二学期';
+      final semester = shouldArchive ? '2024-2025学年第二学期' : '2025-2026学年第二学期';
 
       final classId = await createClass(
         name: className,
@@ -378,57 +381,66 @@ class ClassDao {
       'group_name': '班组1',
       'project_name': '适老居家生活辅助系统',
       'project_abbr': 'EHLAS',
-      'tech_stacks': 'Android开发, iOS/HarmonyOS开发, Uniapp开发, Flutter开发, 小程序开发, MAUI开发',
+      'tech_stacks':
+          'Android开发, iOS/HarmonyOS开发, Uniapp开发, Flutter开发, 小程序开发, MAUI开发',
     },
     {
       'group_name': '班组1',
       'project_name': '智慧社区生活服务平台开发与整合',
       'project_abbr': 'SCLSPDI',
-      'tech_stacks': 'Android开发, iOS/HarmonyOS开发, Uniapp开发, Flutter开发, 小程序开发, MAUI开发',
+      'tech_stacks':
+          'Android开发, iOS/HarmonyOS开发, Uniapp开发, Flutter开发, 小程序开发, MAUI开发',
     },
     {
       'group_name': '班组1',
       'project_name': '智能健康运动记录平台开发与整合',
       'project_abbr': 'IHFTPDI',
-      'tech_stacks': 'Android开发, iOS/HarmonyOS开发, Uniapp开发, Flutter开发, 小程序开发, MAUI开发',
+      'tech_stacks':
+          'Android开发, iOS/HarmonyOS开发, Uniapp开发, Flutter开发, 小程序开发, MAUI开发',
     },
     // ── 班组2 ──
     {
       'group_name': '班组2',
       'project_name': '云端智能畜牧养殖管理系统',
       'project_abbr': 'CIFMS',
-      'tech_stacks': 'Android开发, iOS/HarmonyOS开发, Uniapp开发, Flutter开发, 小程序开发, MAUI开发',
+      'tech_stacks':
+          'Android开发, iOS/HarmonyOS开发, Uniapp开发, Flutter开发, 小程序开发, MAUI开发',
     },
     {
       'group_name': '班组2',
       'project_name': '线上购物平台开发与整合',
       'project_abbr': 'OSPDI',
-      'tech_stacks': 'Android开发, iOS/HarmonyOS开发, Uniapp开发, Flutter开发, 小程序开发, MAUI开发',
+      'tech_stacks':
+          'Android开发, iOS/HarmonyOS开发, Uniapp开发, Flutter开发, 小程序开发, MAUI开发',
     },
     {
       'group_name': '班组2',
       'project_name': '二手物品交易平台开发与整合',
       'project_abbr': 'SGTPDI',
-      'tech_stacks': 'Android开发, iOS/HarmonyOS开发, Uniapp开发, Flutter开发, 小程序开发, MAUI开发',
+      'tech_stacks':
+          'Android开发, iOS/HarmonyOS开发, Uniapp开发, Flutter开发, 小程序开发, MAUI开发',
     },
     // ── 班组3 ──
     {
       'group_name': '班组3',
       'project_name': '在线学习辅助平台开发与整合',
       'project_abbr': 'OLAPDI',
-      'tech_stacks': 'Android开发, iOS/HarmonyOS开发, Uniapp开发, Flutter开发, 小程序开发, MAUI开发',
+      'tech_stacks':
+          'Android开发, iOS/HarmonyOS开发, Uniapp开发, Flutter开发, 小程序开发, MAUI开发',
     },
     {
       'group_name': '班组3',
       'project_name': '智慧校园生活服务平台开发与整合',
       'project_abbr': 'SCLSPI',
-      'tech_stacks': 'Android开发, iOS/HarmonyOS开发, Uniapp开发, Flutter开发, 小程序开发, MAUI开发',
+      'tech_stacks':
+          'Android开发, iOS/HarmonyOS开发, Uniapp开发, Flutter开发, 小程序开发, MAUI开发',
     },
     {
       'group_name': '班组3',
       'project_name': '农业大棚监控系统',
       'project_abbr': 'AGMS',
-      'tech_stacks': 'Android开发, iOS/HarmonyOS开发, Uniapp开发, Flutter开发, 小程序开发, MAUI开发',
+      'tech_stacks':
+          'Android开发, iOS/HarmonyOS开发, Uniapp开发, Flutter开发, 小程序开发, MAUI开发',
     },
   ];
 
@@ -509,12 +521,13 @@ class ClassDao {
   Future<int> syncAllStudentsToClass(int classId) async {
     final db = await _dbHelper.database;
     try {
+      final activeWhere = ActiveStudentScope.where(alias: 'u');
       final count = await db.rawInsert('''
         INSERT OR IGNORE INTO class_members (class_id, user_id, role, joined_at)
-        SELECT ?, user_id, 'student', ?
-        FROM users
-        WHERE role = 'student' AND is_active = 1
-          AND user_id NOT IN (
+        SELECT ?, u.user_id, 'student', ?
+        FROM users u
+        WHERE $activeWhere
+          AND u.user_id NOT IN (
             SELECT user_id FROM class_members WHERE class_id = ?
           )
       ''', [classId, DateTime.now().toIso8601String(), classId]);

@@ -292,9 +292,9 @@ class _StudentDetailPageState extends State<StudentDetailPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -435,12 +435,12 @@ class _StudentDetailPageState extends State<StudentDetailPage> {
                     ),
                     label: Text(name),
                     backgroundColor: isDefault
-                        ? Colors.amber.withOpacity(0.1)
-                        : Colors.grey.withOpacity(0.1),
+                        ? Colors.amber.withValues(alpha: 0.1)
+                        : Colors.grey.withValues(alpha: 0.1),
                     side: BorderSide(
                       color: isDefault
-                          ? Colors.amber.withOpacity(0.3)
-                          : Colors.grey.withOpacity(0.3),
+                          ? Colors.amber.withValues(alpha: 0.3)
+                          : Colors.grey.withValues(alpha: 0.3),
                     ),
                   );
                 }).toList(),
@@ -512,7 +512,8 @@ class _StudentDetailPageState extends State<StudentDetailPage> {
         final date = DateTime.parse(dateStr);
         formattedDate = DateFormat('MM-dd HH:mm').format(date);
         relativeDate = _relativeTime(date);
-      } catch (_) {
+      } catch (e, st) {
+        swallowDebug(e, tag: 'StudentDetailPage.buildCommitItem', stack: st);
         formattedDate = dateStr;
       }
     }
@@ -601,7 +602,8 @@ class _StudentDetailPageState extends State<StudentDetailPage> {
     try {
       final date = DateTime.parse(dateStr.toString());
       return DateFormat('yyyy-MM-dd HH:mm').format(date);
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'StudentDetailPage.formatDate', stack: st);
       return dateStr.toString();
     }
   }

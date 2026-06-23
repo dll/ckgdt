@@ -15,7 +15,8 @@ void main() {
       expect(mode, ThemeMode.dark);
     });
 
-    test('setThemeMode and getThemeMode should round-trip light mode', () async {
+    test('setThemeMode and getThemeMode should round-trip light mode',
+        () async {
       SharedPreferences.setMockInitialValues({});
       await SettingsService.setThemeMode(ThemeMode.light);
       final mode = await SettingsService.getThemeMode();
@@ -29,7 +30,8 @@ void main() {
       expect(mode, ThemeMode.dark);
     });
 
-    test('setThemeMode and getThemeMode should round-trip system mode', () async {
+    test('setThemeMode and getThemeMode should round-trip system mode',
+        () async {
       SharedPreferences.setMockInitialValues({});
       await SettingsService.setThemeMode(ThemeMode.system);
       final mode = await SettingsService.getThemeMode();
@@ -195,6 +197,33 @@ void main() {
 
       await SettingsService.setQuickLoginEnabled(false);
       expect(await SettingsService.isQuickLoginEnabled(), isFalse);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SettingsService — Xunfei voice trial keys
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  group('SettingsService - Xunfei voice keys', () {
+    test('builtin trial voice keys are enabled by default', () async {
+      SharedPreferences.setMockInitialValues({});
+
+      expect(kUseBuiltinTrialVoiceKeys, isTrue);
+      expect(await SettingsService.getXunfeiAppId(), isNotEmpty);
+      expect(await SettingsService.getXunfeiApiKey(), isNotEmpty);
+      expect(await SettingsService.getXunfeiApiSecret(), isNotEmpty);
+    });
+
+    test('user configured voice keys should override trial keys', () async {
+      SharedPreferences.setMockInitialValues({});
+
+      await SettingsService.setXunfeiAppId('user-app-id');
+      await SettingsService.setXunfeiApiKey('user-api-key');
+      await SettingsService.setXunfeiApiSecret('user-api-secret');
+
+      expect(await SettingsService.getXunfeiAppId(), 'user-app-id');
+      expect(await SettingsService.getXunfeiApiKey(), 'user-api-key');
+      expect(await SettingsService.getXunfeiApiSecret(), 'user-api-secret');
     });
   });
 }

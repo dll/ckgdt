@@ -21,6 +21,7 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 
 import '../core/build_info.dart';
+import '../core/error_handler.dart';
 import 'settings_service.dart';
 import 'version_bump_service.dart';
 
@@ -697,7 +698,8 @@ class ReleaseService {
     // 清理（占用解除后）
     try {
       await deployDir.delete(recursive: true);
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ReleaseService._deployGhPages', stack: st);
       _log('ghpages', '! 清理临时目录失败（不致命，下次启动重试）');
     }
   }

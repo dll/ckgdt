@@ -151,7 +151,7 @@ class _TeacherApplicationManagePageState
             Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: statusColor.withOpacity(0.15),
+                  backgroundColor: statusColor.withValues(alpha: 0.15),
                   child: Icon(Icons.person, color: statusColor),
                 ),
                 const SizedBox(width: 12),
@@ -172,7 +172,7 @@ class _TeacherApplicationManagePageState
                   avatar: Icon(statusIcon, size: 16, color: statusColor),
                   label: Text(statusLabel,
                       style: TextStyle(color: statusColor, fontSize: 12)),
-                  backgroundColor: statusColor.withOpacity(0.1),
+                  backgroundColor: statusColor.withValues(alpha: 0.1),
                   side: BorderSide.none,
                   padding: EdgeInsets.zero,
                   visualDensity: VisualDensity.compact,
@@ -244,7 +244,8 @@ class _TeacherApplicationManagePageState
     try {
       final dt = DateTime.parse(iso);
       return '${dt.year}-${_p(dt.month)}-${_p(dt.day)} ${_p(dt.hour)}:${_p(dt.minute)}';
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TeacherApplicationManagePage._formatTime', stack: st);
       return iso;
     }
   }

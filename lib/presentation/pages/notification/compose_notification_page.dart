@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import '../../../core/error_handler.dart';
 import '../../../data/local/class_dao.dart';
 import '../../../data/local/notification_dao.dart';
 import '../../../services/auth_service.dart';
@@ -52,8 +53,8 @@ class _ComposeNotificationPageState extends State<ComposeNotificationPage> {
       if (mounted) {
         setState(() => _classes = classes);
       }
-    } catch (_) {
-      // 静默失败
+    } catch (e, st) {
+      swallowDebug(e, tag: 'compose_notification_page._loadClasses', stack: st);
     }
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'active_student_scope.dart';
 import 'database_helper.dart';
 
 /// 通知管理 DAO — 通知创建、查询、已读标记、阅读统计
@@ -48,12 +49,13 @@ class NotificationDao {
 
       switch (targetType) {
         case 'all':
-          // 查询所有活跃学生
-          recipients = await txn.query(
-            'users',
-            columns: ['user_id'],
-            where: "role = 'student' AND is_active = 1",
-          );
+          // 查询当前教学范围内的活跃学生，排除只属于归档班级的学生。
+          final activeWhere = ActiveStudentScope.where(alias: 'u');
+          recipients = await txn.rawQuery('''
+            SELECT u.user_id
+            FROM users u
+            WHERE $activeWhere
+          ''');
           break;
 
         case 'class':
@@ -212,8 +214,7 @@ class NotificationDao {
     final placeholders = List.filled(ids.length, '?').join(',');
     await db.transaction((txn) async {
       await txn.delete('notification_recipients',
-          where: 'notification_id IN ($placeholders)',
-          whereArgs: ids);
+          where: 'notification_id IN ($placeholders)', whereArgs: ids);
       await txn.delete(
         'notifications',
         where: 'id IN ($placeholders)',
@@ -270,8 +271,7 @@ class NotificationDao {
   }
 
   /// 获取某条通知的已读/总人数统计
-  Future<Map<String, int>> getNotificationReadStats(
-      int notificationId) async {
+  Future<Map<String, int>> getNotificationReadStats(int notificationId) async {
     final db = await _dbHelper.database;
     final result = await db.rawQuery('''
       SELECT
@@ -293,14 +293,22 @@ class NotificationDao {
   /// 获取全局通知概览统计
   Future<Map<String, dynamic>> getGlobalStats() async {
     final db = await _dbHelper.database;
-    final totalNotif = (await db.rawQuery(
-        'SELECT COUNT(*) AS c FROM notifications')).first['c'] as int? ?? 0;
-    final totalRecip = (await db.rawQuery(
-        'SELECT COUNT(*) AS c FROM notification_recipients')).first['c'] as int? ?? 0;
+    final totalNotif =
+        (await db.rawQuery('SELECT COUNT(*) AS c FROM notifications'))
+                .first['c'] as int? ??
+            0;
+    final totalRecip =
+        (await db.rawQuery('SELECT COUNT(*) AS c FROM notification_recipients'))
+                .first['c'] as int? ??
+            0;
     final totalRead = (await db.rawQuery(
-        "SELECT COUNT(*) AS c FROM notification_recipients WHERE is_read = 1")).first['c'] as int? ?? 0;
+                "SELECT COUNT(*) AS c FROM notification_recipients WHERE is_read = 1"))
+            .first['c'] as int? ??
+        0;
     final sentToday = (await db.rawQuery(
-        "SELECT COUNT(*) AS c FROM notifications WHERE date(created_at) = date('now')")).first['c'] as int? ?? 0;
+                "SELECT COUNT(*) AS c FROM notifications WHERE date(created_at) = date('now')"))
+            .first['c'] as int? ??
+        0;
     final typeDist = await db.rawQuery(
         "SELECT type, COUNT(*) AS count FROM notifications GROUP BY type ORDER BY count DESC");
     return {
@@ -316,11 +324,20 @@ class NotificationDao {
   Future<Map<String, dynamic>> getUserStats(String userId) async {
     final db = await _dbHelper.database;
     final total = (await db.rawQuery(
-        'SELECT COUNT(*) AS c FROM notification_recipients WHERE user_id = ?', [userId])).first['c'] as int? ?? 0;
+                'SELECT COUNT(*) AS c FROM notification_recipients WHERE user_id = ?',
+                [userId]))
+            .first['c'] as int? ??
+        0;
     final unread = (await db.rawQuery(
-        'SELECT COUNT(*) AS c FROM notification_recipients WHERE user_id = ? AND is_read = 0', [userId])).first['c'] as int? ?? 0;
+                'SELECT COUNT(*) AS c FROM notification_recipients WHERE user_id = ? AND is_read = 0',
+                [userId]))
+            .first['c'] as int? ??
+        0;
     final readToday = (await db.rawQuery(
-        "SELECT COUNT(*) AS c FROM notification_recipients WHERE user_id = ? AND is_read = 1 AND date(read_at) = date('now')", [userId])).first['c'] as int? ?? 0;
+                "SELECT COUNT(*) AS c FROM notification_recipients WHERE user_id = ? AND is_read = 1 AND date(read_at) = date('now')",
+                [userId]))
+            .first['c'] as int? ??
+        0;
     final monthly = await db.rawQuery('''
       SELECT strftime('%m', created_at) AS month, COUNT(*) AS count
       FROM notification_recipients nr

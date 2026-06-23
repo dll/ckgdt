@@ -135,7 +135,7 @@ class ScorePreviewDialog extends StatelessWidget {
           Container(
             padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
             decoration: BoxDecoration(
-              color: primary.withOpacity(0.06),
+              color: primary.withValues(alpha: 0.06),
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(16)),
             ),
@@ -226,7 +226,7 @@ class ScorePreviewDialog extends StatelessWidget {
                               return DataRow(
                                 color: WidgetStateProperty.resolveWith(
                                     (states) => i.isEven
-                                        ? Colors.grey.withOpacity(0.03)
+                                        ? Colors.grey.withValues(alpha: 0.03)
                                         : null),
                                 cells: List.generate(
                                   columns.length,
@@ -284,9 +284,9 @@ class _ActionChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

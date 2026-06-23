@@ -5,6 +5,7 @@ import 'package:excel/excel.dart' hide Border;
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import '../../../core/error_handler.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../data/local/class_dao.dart';
 import '../../../services/course_context_service.dart';
@@ -16,7 +17,8 @@ Future<String?> saveStringToFile(String content, String prefix) async {
     final file = File('${directory.path}/${prefix}_$timestamp.csv');
     await file.writeAsString(content);
     return file.path;
-  } catch (_) {
+  } catch (e, st) {
+    swallowDebug(e, tag: 'DataImport.saveStringToFile', stack: st);
     return null;
   }
 }
@@ -217,7 +219,8 @@ String _cellValue(List<Data?> row, int col) {
 Future<String?> readFileAsString(String filePath) async {
   try {
     return await File(filePath).readAsString();
-  } catch (_) {
+  } catch (e, st) {
+    swallowDebug(e, tag: 'DataImport.readFileAsString', stack: st);
     return null;
   }
 }

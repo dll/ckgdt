@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../core/constants/chapter_sorter.dart';
 import '../../../data/local/database_helper.dart';
@@ -13,6 +13,7 @@ import 'ai_settings_page.dart';
 import 'puml_manager_page.dart';
 import 'slide_generator_page.dart';
 import 'courseware_workshop_page.dart';
+import '../../../core/error_handler.dart';
 
 class MaterialsHubPage extends StatefulWidget {
   const MaterialsHubPage({super.key});
@@ -86,7 +87,8 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
         _pptFiles = sortedPpts;
         _resourceLoading = false;
       });
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'MaterialsHubPage._loadResourceFiles', stack: st);
       if (!mounted) return;
       setState(() => _resourceLoading = false);
     }
@@ -101,7 +103,8 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
         _pumlFiles = files;
         _pumlLoading = false;
       });
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'MaterialsHubPage._loadPumlFiles', stack: st);
       if (!mounted) return;
       setState(() => _pumlLoading = false);
     }
@@ -115,7 +118,8 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
         _materials = items;
         _materialLoading = false;
       });
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'MaterialsHubPage._loadMaterials', stack: st);
       if (!mounted) return;
       setState(() => _materialLoading = false);
     }
@@ -457,7 +461,7 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: f.color.withOpacity(0.12),
+                  color: f.color.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(f.icon, color: f.color, size: 28),
@@ -542,7 +546,7 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: primary.withOpacity(0.10),
+          color: primary.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(10),
         ),
         child: const Center(
@@ -561,7 +565,7 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
-              color: primary.withOpacity(0.12),
+              color: primary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(item.typeLabel,
@@ -612,7 +616,7 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          color: primary.withOpacity(0.07),
+          color: primary.withValues(alpha: 0.07),
           child: Text(
             '共 ${_materials.length} 个素材  •  长按可删除',
             style: TextStyle(color: primary, fontWeight: FontWeight.w500),
@@ -661,7 +665,7 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: primary.withOpacity(0.10),
+          color: primary.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Center(
@@ -680,7 +684,7 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
             decoration: BoxDecoration(
-              color: primary.withOpacity(0.10),
+              color: primary.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(item.typeLabel,
@@ -712,7 +716,8 @@ class _MaterialsHubPageState extends State<MaterialsHubPage> {
       return '${dt.month}/${dt.day} '
           '${dt.hour.toString().padLeft(2, '0')}:'
           '${dt.minute.toString().padLeft(2, '0')}';
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'MaterialsHubPage._formatDate', stack: st);
       return isoDate;
     }
   }

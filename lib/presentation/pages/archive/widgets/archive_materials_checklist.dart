@@ -141,7 +141,8 @@ class _ArchiveMaterialsChecklistState extends State<ArchiveMaterialsChecklist> {
     if (kIsWeb) return true;
     try {
       return File(filePath).existsSync();
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ArchiveMaterialsChecklist._hasContent', stack: st);
       return true;
     }
   }

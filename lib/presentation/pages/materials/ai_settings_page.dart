@@ -5,6 +5,7 @@ import '../../../data/models/ai_config_model.dart';
 import '../../../services/ai_service.dart';
 
 import '../../widgets/back_button_bar.dart';
+import '../../../core/error_handler.dart';
 
 class AiSettingsPage extends StatefulWidget {
   const AiSettingsPage({super.key});
@@ -57,7 +58,8 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
   ProviderPreset? get _currentPreset {
     try {
       return AiConfigModel.providers.firstWhere((p) => p.id == _provider);
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AiSettingsPage._currentPreset', stack: st);
       return null;
     }
   }
@@ -95,7 +97,8 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
         _timeout = config.timeout;
         _loading = false;
       });
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AiSettingsPage._loadConfig', stack: st);
       if (!mounted) return;
       setState(() => _loading = false);
     }

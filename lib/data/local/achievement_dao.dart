@@ -1215,8 +1215,8 @@ class AchievementDao {
             .where((e) => e.isNotEmpty)
             .toList();
       }
-    } catch (_) {
-      // Fall through to delimiter parsing.
+    } catch (e) {
+      swallow(e, tag: 'AchievementDao._parseStringList');
     }
     return text
         .split(RegExp(r'[,，;；\s]+'))

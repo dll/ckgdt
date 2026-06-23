@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import '../core/error_handler.dart';
 
 /// Flutter TTS 封装 — 实时语音合成（中文）
 ///
@@ -82,8 +83,8 @@ class TtsFlutterService {
           // 仍然尝试初始化
           try {
             await _tts!.setLanguage('zh-CN');
-          } catch (_) {
-            // 忽略语言设置失败
+          } catch (e) {
+            swallow(e, tag: 'TtsFlutterService.initialize');
           }
         }
       } else {

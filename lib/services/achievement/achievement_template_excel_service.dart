@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:xml/xml.dart';
 
+import '../../core/error_handler.dart';
 import 'achievement_template_assets.dart';
 
 /// Data used to fill a school-owned achievement Excel template.
@@ -196,7 +197,8 @@ class AchievementTemplateExcelService {
             _scatterSheetNames(profile, i).any((name) => sheets.contains(name)),
       ).every((present) => present);
       return hasBaseSheets && hasBarSheet && hasScatterSheets;
-    } catch (_) {
+    } catch (e) {
+      swallow(e, tag: 'AchievementTemplateExcelService._isSupportedTemplate');
       return false;
     }
   }

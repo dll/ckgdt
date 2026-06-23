@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/design/noir_tokens.dart';
 import '../../../data/local/class_dao.dart';
@@ -259,7 +259,7 @@ class _NotificationManagePageState extends State<NotificationManagePage>
           child: TabBar(
             controller: _tabCtrl,
             labelColor: NoirTokens.accent,
-            unselectedLabelColor: NoirTokens.paper.withOpacity(0.5),
+            unselectedLabelColor: NoirTokens.paper.withValues(alpha: 0.5),
             indicatorColor: NoirTokens.accent,
             tabs: [
               Tab(text: '通知列表 ($_unreadCount)'),
@@ -297,11 +297,11 @@ class _NotificationManagePageState extends State<NotificationManagePage>
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.notifications_none,
-                size: 64, color: NoirTokens.paper.withOpacity(0.15)),
+                size: 64, color: NoirTokens.paper.withValues(alpha: 0.15)),
             const SizedBox(height: 12),
             Text('暂无通知',
                 style: TextStyle(
-                    color: NoirTokens.paper.withOpacity(0.3),
+                    color: NoirTokens.paper.withValues(alpha: 0.3),
                     fontSize: 14)),
           ],
         ),
@@ -320,7 +320,7 @@ class _NotificationManagePageState extends State<NotificationManagePage>
                 Text('共 ${_notifications.length} 条',
                     style: TextStyle(
                         fontSize: 12,
-                        color: NoirTokens.paper.withOpacity(0.4))),
+                        color: NoirTokens.paper.withValues(alpha: 0.4))),
                 const Spacer(),
                 if (_unreadCount > 0)
                   GestureDetector(
@@ -329,7 +329,7 @@ class _NotificationManagePageState extends State<NotificationManagePage>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: NoirTokens.accent.withOpacity(0.12),
+                        color: NoirTokens.accent.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text('全部已读 ($_unreadCount)',
@@ -375,9 +375,9 @@ class _NotificationManagePageState extends State<NotificationManagePage>
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
         decoration: BoxDecoration(
           color: _isSelectionMode && selected
-              ? NoirTokens.accent.withOpacity(0.08)
+              ? NoirTokens.accent.withValues(alpha: 0.08)
               : isUnread
-                  ? NoirTokens.accent.withOpacity(0.03)
+                  ? NoirTokens.accent.withValues(alpha: 0.03)
                   : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: isUnread
@@ -393,7 +393,7 @@ class _NotificationManagePageState extends State<NotificationManagePage>
                 )
               : CircleAvatar(
                   radius: 18,
-                  backgroundColor: NoirTokens.accent.withOpacity(0.12),
+                  backgroundColor: NoirTokens.accent.withValues(alpha: 0.12),
                   child:
                       Icon(_typeIcon(type), size: 18, color: NoirTokens.accent),
                 ),
@@ -423,27 +423,27 @@ class _NotificationManagePageState extends State<NotificationManagePage>
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                     fontSize: 12,
-                    color: NoirTokens.paper.withOpacity(0.5))),
+                    color: NoirTokens.paper.withValues(alpha: 0.5))),
             const SizedBox(height: 4),
             Row(children: [
               Text(sender,
                   style: TextStyle(
                       fontSize: 10,
-                      color: NoirTokens.paper.withOpacity(0.35))),
+                      color: NoirTokens.paper.withValues(alpha: 0.35))),
               const SizedBox(width: 8),
               Text(_formatTime(createdAt),
                   style: TextStyle(
                       fontSize: 10,
-                      color: NoirTokens.paper.withOpacity(0.35))),
+                      color: NoirTokens.paper.withValues(alpha: 0.35))),
               if (rc != null && tr != null) ...[
                 const Spacer(),
                 Icon(Icons.visibility,
-                    size: 10, color: Colors.green.withOpacity(0.5)),
+                    size: 10, color: Colors.green.withValues(alpha: 0.5)),
                 const SizedBox(width: 2),
                 Text('$rc/$tr',
                     style: TextStyle(
                         fontSize: 10,
-                        color: Colors.green.withOpacity(0.6))),
+                        color: Colors.green.withValues(alpha: 0.6))),
               ],
             ]),
           ]),
@@ -653,9 +653,9 @@ class _NotificationManagePageState extends State<NotificationManagePage>
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.07),
+          color: color.withValues(alpha: 0.07),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.15)),
+          border: Border.all(color: color.withValues(alpha: 0.15)),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
@@ -664,7 +664,7 @@ class _NotificationManagePageState extends State<NotificationManagePage>
             Text(label,
                 style: TextStyle(
                     fontSize: 11,
-                    color: NoirTokens.paper.withOpacity(0.6))),
+                    color: NoirTokens.paper.withValues(alpha: 0.6))),
           ]),
           const SizedBox(height: 6),
           Text(value,
@@ -685,7 +685,7 @@ class _NotificationManagePageState extends State<NotificationManagePage>
         ),
         child: Center(
           child: Text('暂无数据',
-              style: TextStyle(color: NoirTokens.paper.withOpacity(0.3))),
+              style: TextStyle(color: NoirTokens.paper.withValues(alpha: 0.3))),
         ),
       );
     }
@@ -702,17 +702,17 @@ class _NotificationManagePageState extends State<NotificationManagePage>
           Text('日期',
               style: TextStyle(
                   fontSize: 10,
-                  color: NoirTokens.paper.withOpacity(0.4))),
+                  color: NoirTokens.paper.withValues(alpha: 0.4))),
           const Spacer(),
           Text('收到',
               style: TextStyle(
                   fontSize: 10,
-                  color: NoirTokens.paper.withOpacity(0.4))),
+                  color: NoirTokens.paper.withValues(alpha: 0.4))),
           const SizedBox(width: 24),
           Text('已读',
               style: TextStyle(
                   fontSize: 10,
-                  color: NoirTokens.paper.withOpacity(0.4))),
+                  color: NoirTokens.paper.withValues(alpha: 0.4))),
         ]),
         const SizedBox(height: 8),
         ..._dailyStats.map((d) {
@@ -728,16 +728,16 @@ class _NotificationManagePageState extends State<NotificationManagePage>
                   child: Text(shortDay,
                       style: TextStyle(
                           fontSize: 10,
-                          color: NoirTokens.paper.withOpacity(0.5)))),
+                          color: NoirTokens.paper.withValues(alpha: 0.5)))),
               const SizedBox(width: 8),
               Expanded(
                   child: ClipRRect(
                 borderRadius: BorderRadius.circular(3),
                 child: LinearProgressIndicator(
                   value: maxCount > 0 ? count / maxCount : 0,
-                  backgroundColor: Colors.blue.withOpacity(0.12),
+                  backgroundColor: Colors.blue.withValues(alpha: 0.12),
                   valueColor: AlwaysStoppedAnimation(
-                      Colors.blue.withOpacity(0.6)),
+                      Colors.blue.withValues(alpha: 0.6)),
                   minHeight: 8,
                 ),
               )),
@@ -746,16 +746,16 @@ class _NotificationManagePageState extends State<NotificationManagePage>
                   child: Text('$count',
                       style: TextStyle(
                           fontSize: 10,
-                          color: NoirTokens.paper.withOpacity(0.5)))),
+                          color: NoirTokens.paper.withValues(alpha: 0.5)))),
               const SizedBox(width: 8),
               Expanded(
                   child: ClipRRect(
                 borderRadius: BorderRadius.circular(3),
                 child: LinearProgressIndicator(
                   value: maxCount > 0 ? readCount / maxCount : 0,
-                  backgroundColor: Colors.green.withOpacity(0.12),
+                  backgroundColor: Colors.green.withValues(alpha: 0.12),
                   valueColor: AlwaysStoppedAnimation(
-                      Colors.green.withOpacity(0.6)),
+                      Colors.green.withValues(alpha: 0.6)),
                   minHeight: 8,
                 ),
               )),
@@ -764,7 +764,7 @@ class _NotificationManagePageState extends State<NotificationManagePage>
                   child: Text('$readCount',
                       style: TextStyle(
                           fontSize: 10,
-                          color: NoirTokens.paper.withOpacity(0.5)))),
+                          color: NoirTokens.paper.withValues(alpha: 0.5)))),
             ]),
           );
         }),
@@ -796,7 +796,7 @@ class _NotificationManagePageState extends State<NotificationManagePage>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: NoirTokens.accent.withOpacity(0.1),
+                color: NoirTokens.accent.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text('$count',
@@ -822,7 +822,7 @@ class _NotificationManagePageState extends State<NotificationManagePage>
         ),
         child: Center(
           child: Text('暂无月度数据',
-              style: TextStyle(color: NoirTokens.paper.withOpacity(0.3))),
+              style: TextStyle(color: NoirTokens.paper.withValues(alpha: 0.3))),
         ),
       );
     }
@@ -846,14 +846,14 @@ class _NotificationManagePageState extends State<NotificationManagePage>
                 child: Text('$m月',
                     style: TextStyle(
                         fontSize: 11,
-                        color: NoirTokens.paper.withOpacity(0.6)))),
+                        color: NoirTokens.paper.withValues(alpha: 0.6)))),
             const SizedBox(width: 8),
             Expanded(
                 child: ClipRRect(
               borderRadius: BorderRadius.circular(3),
               child: LinearProgressIndicator(
                 value: maxM > 0 ? count / maxM : 0,
-                backgroundColor: NoirTokens.accent.withOpacity(0.1),
+                backgroundColor: NoirTokens.accent.withValues(alpha: 0.1),
                 valueColor: const AlwaysStoppedAnimation(NoirTokens.accent),
                 minHeight: 10,
               ),
@@ -864,7 +864,7 @@ class _NotificationManagePageState extends State<NotificationManagePage>
                 child: Text('$count',
                     style: TextStyle(
                         fontSize: 11,
-                        color: NoirTokens.paper.withOpacity(0.6)))),
+                        color: NoirTokens.paper.withValues(alpha: 0.6)))),
           ]),
         );
       }).toList()),
@@ -881,7 +881,8 @@ class _NotificationManagePageState extends State<NotificationManagePage>
       if (diff.inHours < 24) return '${diff.inHours}小时前';
       if (diff.inDays < 7) return '${diff.inDays}天前';
       return '${dt.month}月${dt.day}日';
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'notification_manage_page._formatTime', stack: st);
       return iso;
     }
   }

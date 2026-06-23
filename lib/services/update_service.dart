@@ -264,7 +264,8 @@ class UpdateService {
         if (l < c) return false;
       }
       return false;
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'UpdateService._compareVersions', stack: st);
       return false;
     }
   }

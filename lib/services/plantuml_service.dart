@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../core/error_handler.dart';
 
 // 条件导入用于 deflate 压缩
 import 'plantuml_service_stub.dart'
@@ -46,7 +47,8 @@ class PlantUmlService {
       final deflated = impl.deflate(utf8.encode(pumlContent));
       final encoded = base64Url.encode(Uint8List.fromList(deflated));
       return 'https://kroki.io/plantuml/png/$encoded';
-    } catch (_) {
+    } catch (e) {
+      swallow(e, tag: 'PlantUmlService.getKrokiUrl');
       // fallback to PlantUML encoding
       final encoded = _encodePlantUml(pumlContent);
       return '$_plantUmlUrl$encoded';

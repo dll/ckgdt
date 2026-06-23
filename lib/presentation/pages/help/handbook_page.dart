@@ -64,7 +64,7 @@ class HandbookPage extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [bannerColor, bannerColor.withOpacity(0.7)],
+          colors: [bannerColor, bannerColor.withValues(alpha: 0.7)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -554,7 +554,7 @@ class HandbookPage extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.12),
+                      color: color.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(icon, size: 22, color: color),
@@ -583,7 +583,7 @@ class HandbookPage extends StatelessWidget {
                         height: 24,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: color.withOpacity(0.1),
+                          color: color.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Text('${idx + 1}',
@@ -618,10 +618,10 @@ class HandbookPage extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.amber.withOpacity(0.08),
+                    color: Colors.amber.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                        color: Colors.amber.withOpacity(0.2)),
+                        color: Colors.amber.withValues(alpha: 0.2)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

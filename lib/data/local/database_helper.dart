@@ -1051,7 +1051,8 @@ class DatabaseHelper {
     ]) {
       try {
         await db.rawQuery('SELECT $col FROM course_objectives LIMIT 1');
-      } catch (_) {
+      } catch (e) {
+        swallow(e, tag: 'DatabaseHelper.alterCourseObjectives');
         try {
           await db
               .execute('ALTER TABLE course_objectives ADD COLUMN $col TEXT');
@@ -2819,7 +2820,8 @@ class DatabaseHelper {
               .toList();
           if (chapters.isNotEmpty) return chapters;
         }
-      } catch (_) {
+      } catch (e) {
+        swallow(e, tag: 'DatabaseHelper.parseCourseChapters');
         final chapters = raw
             .split(',')
             .map((s) => s.trim())

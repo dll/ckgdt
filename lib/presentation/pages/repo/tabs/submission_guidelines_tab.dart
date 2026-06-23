@@ -17,10 +17,10 @@ class _SubmissionGuidelinesTab extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.orange.withOpacity(0.15), Colors.red.withOpacity(0.08)],
+              colors: [Colors.orange.withValues(alpha: 0.15), Colors.red.withValues(alpha: 0.08)],
             ),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.orange.withOpacity(0.3)),
+            border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
           ),
           child: Row(
             children: [
@@ -272,7 +272,7 @@ class _SubmissionGuidelinesTab extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.12),
+                    color: color.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(icon, size: 20, color: color),
@@ -333,7 +333,7 @@ class _SubmissionGuidelinesTab extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: Colors.grey.withOpacity(0.08),
+          color: Colors.grey.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(6),
         ),
         child: Text(text,
@@ -371,7 +371,7 @@ class _SubmissionGuidelinesTab extends StatelessWidget {
             width: 70,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
+              color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(type,

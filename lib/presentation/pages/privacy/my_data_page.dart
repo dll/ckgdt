@@ -83,7 +83,8 @@ class _MyDataPageState extends State<MyDataPage> {
             'SELECT COUNT(*) as c FROM $table WHERE user_id = ? OR author_id = ?',
             [userId, userId]);
         return MapEntry(table, (rows.first['c'] as int?) ?? 0);
-      } catch (_) {
+      } catch (e, st) {
+        swallowDebug(e, tag: 'my_data_page._loadCounts', stack: st);
         return MapEntry(table, 0);
       }
     }));
@@ -137,7 +138,8 @@ class _MyDataPageState extends State<MyDataPage> {
             'SELECT * FROM $table WHERE user_id = ? OR author_id = ?',
             [userId, userId]);
         return MapEntry(table, rows);
-      } catch (_) {
+      } catch (e, st) {
+        swallowDebug(e, tag: 'my_data_page._doExport', stack: st);
         return MapEntry(table, const <Map<String, dynamic>>[]);
       }
     }));
@@ -274,7 +276,7 @@ class _MyDataPageState extends State<MyDataPage> {
                           CircleAvatar(
                             radius: 22,
                             backgroundColor:
-                                theme.colorScheme.primary.withOpacity(0.15),
+                                theme.colorScheme.primary.withValues(alpha: 0.15),
                             child: Icon(Icons.person,
                                 color: theme.colorScheme.primary),
                           ),

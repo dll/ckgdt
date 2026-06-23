@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import '../core/error_handler.dart';
 import '../data/local/material_dao.dart';
 import '../data/models/material_model.dart';
 import 'course_context_service.dart';
@@ -51,12 +52,14 @@ class SlideGeneratorService {
       try {
         final fontData = await rootBundle.load('assets/fonts/msyh.ttc');
         font = pw.Font.ttf(fontData);
-      } catch (_) {
+      } catch (e) {
+        swallow(e, tag: 'SlideGeneratorService.generatePdf');
         try {
           final fontData =
               await rootBundle.load('assets/fonts/NotoSansSC-Regular.ttf');
           font = pw.Font.ttf(fontData);
-        } catch (_) {
+        } catch (e) {
+          swallow(e, tag: 'SlideGeneratorService.generatePdf');
           // 无中文字体则用默认字体（部分中文可能显示为方块）
         }
       }
@@ -146,7 +149,8 @@ class SlideGeneratorService {
         chapter: material.chapter,
         createdAt: material.createdAt,
       );
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'SlideGeneratorService.saveScript', stack: st);
       return null;
     }
   }

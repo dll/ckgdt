@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/error_handler.dart';
 import '../video_source_provider.dart';
 
 class KuaishouProvider implements VideoSourceProvider {
@@ -173,7 +174,8 @@ class KuaishouProvider implements VideoSourceProvider {
   Future<VideoItem?> getVideoDetail(String videoId) async {
     try {
       return _mockVideos.firstWhere((v) => v.id == videoId);
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'KuaishouProvider.getVideoDetail', stack: st);
       return null;
     }
   }

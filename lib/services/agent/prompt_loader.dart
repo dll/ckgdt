@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import '../../core/error_handler.dart';
 
 /// Agent system prompt 异步加载器（按 agentId）。
 ///
@@ -42,7 +43,8 @@ class PromptLoader {
       value = trimmed.isEmpty ? null : trimmed;
     } on FlutterError {
       value = null;
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'PromptLoader.load', stack: st);
       value = null;
     }
 

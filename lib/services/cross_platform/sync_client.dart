@@ -310,7 +310,8 @@ class SyncClient {
         (_) {
           try {
             _wsChannel?.sink.add('ping');
-          } catch (_) {
+          } catch (e, st) {
+            swallowDebug(e, tag: 'sync_client', stack: st);
             _reconnectWebSocket();
           }
         },

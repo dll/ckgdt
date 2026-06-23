@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/error_handler.dart';
 import '../../widgets/back_button_bar.dart';
 import '../../../data/local/ai_history_dao.dart';
 import '../../../services/agent/agent_registry.dart';
@@ -75,7 +76,8 @@ class _ChatHistoryPageState extends State<ChatHistoryPage>
       if (diff.inDays < 1) return '${diff.inHours}小时前';
       if (diff.inDays < 7) return '${diff.inDays}天前';
       return '${dt.month}/${dt.day}';
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'chat_history_page._formatTime', stack: st);
       return '';
     }
   }

@@ -1,3 +1,5 @@
+import '../../core/error_handler.dart';
+
 /// AI 服务商预设信息
 class ProviderPreset {
   final String id;
@@ -234,7 +236,8 @@ class AiConfigModel {
   ProviderPreset? get providerPreset {
     try {
       return providers.firstWhere((p) => p.id == provider);
-    } catch (_) {
+    } catch (e) {
+      swallow(e, tag: 'AiConfigModel.providerPreset');
       return null;
     }
   }

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../../core/error_handler.dart';
 
 /// 课程数据模型
 class CourseModel {
@@ -36,7 +37,8 @@ class CourseModel {
                   .where((s) => s.isNotEmpty)
                   .toList();
             }
-          } catch (_) {
+          } catch (e) {
+            swallow(e, tag: 'CourseModel.fromMap');
             return raw
                 .split(',')
                 .map((s) => s.trim())

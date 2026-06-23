@@ -166,7 +166,7 @@ class _MadMascotButtonState extends State<MadMascotButton>
             FloatingActionButton(
               mini: true,
               heroTag: heroTag,
-              backgroundColor: color.withOpacity(0.9),
+              backgroundColor: color.withValues(alpha: 0.9),
               onPressed: onPressed,
               child: Icon(icon, size: 20, color: Colors.white),
             ),

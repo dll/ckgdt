@@ -89,7 +89,8 @@ class AssessmentPdfService {
       final file = File('${reportsDir.path}/$safe.pdf');
       await file.writeAsBytes(bytes);
       return file.path;
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AssessmentPdfService._savePdfFile', stack: st);
       return null;
     }
   }

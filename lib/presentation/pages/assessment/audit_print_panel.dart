@@ -857,7 +857,7 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.1),
+              color: Colors.grey.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text('$weight%',
@@ -915,8 +915,8 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
       visualDensity: VisualDensity.compact,
       avatar: Icon(_statusIcon(status), size: 14, color: color),
       label: Text(status, style: TextStyle(fontSize: 11, color: color)),
-      side: BorderSide(color: color.withOpacity(0.3)),
-      backgroundColor: color.withOpacity(0.08),
+      side: BorderSide(color: color.withValues(alpha: 0.3)),
+      backgroundColor: color.withValues(alpha: 0.08),
     );
   }
 
@@ -925,9 +925,9 @@ class _AuditPrintPanelState extends State<AuditPrintPanel> {
       width: double.infinity,
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.06),
+        color: Colors.red.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.red.withOpacity(0.2)),
+        border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
       ),
       child: Text(text,
           style: TextStyle(fontSize: 12, color: Colors.red[700], height: 1.4)),
