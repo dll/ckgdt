@@ -254,5 +254,60 @@ void main() {
         if (temp.existsSync()) temp.deleteSync(recursive: true);
       }
     });
+
+    test('re-archiving the same original reuses the same output path',
+        () async {
+      final oldRoot = ArchivePackageService.outputRoot;
+      final temp =
+          Directory.systemTemp.createTempSync('archive_same_original_');
+      try {
+        ArchivePackageService.outputRoot = temp.path;
+        final source = File(p.join(temp.path, '08-成绩登记表.xls'))
+          ..writeAsBytesSync([1, 2, 3]);
+        final naming = ArchiveNaming(
+          department: '信息学院',
+          course: '移动应用开发',
+          docLabel: '成绩登记表',
+          teacher: '刘东良',
+          semester: '2025-2026-2',
+        );
+        final doc = ArchiveDocument(
+          title: '期末成绩登记表',
+          documentType: 'final_score_register',
+          period: 'final',
+          courseType: 'assess',
+          content: '# 成绩登记表\n\n> 此资料以原始文件为准。',
+          filePath: source.path,
+        );
+
+        final first = await ArchivePackageService.instance.archiveDocxOf(
+          doc,
+          docLabel: '成绩登记表',
+          naming: naming,
+        );
+        final second = await ArchivePackageService.instance.archiveDocxOf(
+          doc,
+          docLabel: '成绩登记表',
+          naming: naming,
+        );
+
+        expect(second, first);
+        final periodDir = Directory(p.join(
+          temp.path,
+          naming.semester,
+          naming.course,
+          '期末',
+        ));
+        final files = periodDir
+            .listSync()
+            .whereType<File>()
+            .where((f) => p.extension(f.path).toLowerCase() == '.xls')
+            .toList();
+        expect(files, hasLength(1));
+      } finally {
+        ArchivePackageService.outputRoot = oldRoot;
+        if (temp.existsSync()) temp.deleteSync(recursive: true);
+      }
+    });
   });
 }

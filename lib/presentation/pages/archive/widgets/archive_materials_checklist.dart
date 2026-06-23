@@ -162,6 +162,13 @@ class _ArchiveMaterialsChecklistState extends State<ArchiveMaterialsChecklist> {
     return _expectedDefs.where((def) => !existing.contains(def.key)).toList();
   }
 
+  List<DocumentTypeDef> get _closureMissingDefs {
+    final selectedTypes = _selectedDocs.map((d) => d.documentType).toSet();
+    return _expectedDefs
+        .where((def) => !selectedTypes.contains(def.key))
+        .toList();
+  }
+
   int _docCountFor(String period) =>
       _docs.where((d) => d.period == period).length;
 
@@ -176,7 +183,7 @@ class _ArchiveMaterialsChecklistState extends State<ArchiveMaterialsChecklist> {
 
   bool get _canCloseCourse =>
       _selectedDocs.isNotEmpty &&
-      _missingDefs.isEmpty &&
+      _closureMissingDefs.isEmpty &&
       _selectedReviewBlockers.isEmpty;
 
   bool _isReviewPassed(ArchiveDocument doc) {
@@ -225,7 +232,7 @@ class _ArchiveMaterialsChecklistState extends State<ArchiveMaterialsChecklist> {
 
     final selectedDocs = _selectedDocs;
     if (selectedDocs.isEmpty) return;
-    final missing = _missingDefs;
+    final missing = _closureMissingDefs;
     final blockers = _selectedReviewBlockers;
     if (missing.isNotEmpty || blockers.isNotEmpty) {
       _showClosurePreview();
@@ -324,6 +331,10 @@ class _ArchiveMaterialsChecklistState extends State<ArchiveMaterialsChecklist> {
       period: 'archive',
       documentType: 'archive_form',
     );
+    for (final duplicate in existing.skip(1)) {
+      final id = duplicate.id;
+      if (id != null) await widget.dao.deleteDocument(id);
+    }
     final now = DateTime.now();
     final content = _closureFormContent(
       docs: docs,
@@ -517,19 +528,22 @@ class _ArchiveMaterialsChecklistState extends State<ArchiveMaterialsChecklist> {
 
   String _closureBlockedText() {
     final missing = _missingDefs.length;
+    final unselected = _closureMissingDefs.length - missing;
     final blockers = _selectedReviewBlockers.length;
-    if (missing > 0 && blockers > 0) {
-      return '暂不能结课：缺 $missing 项材料，且 $blockers 份材料未审核通过。';
+    if (missing > 0 || unselected > 0 || blockers > 0) {
+      final parts = <String>[];
+      if (missing > 0) parts.add('缺 $missing 项材料');
+      if (unselected > 0) parts.add('$unselected 项必备材料未选入');
+      if (blockers > 0) parts.add('$blockers 份材料未审核通过');
+      return '暂不能结课：${parts.join('，')}。';
     }
-    if (missing > 0) return '暂不能结课：仍缺 $missing 项材料。';
-    if (blockers > 0) return '暂不能结课：$blockers 份材料未审核通过。';
     return '暂不能结课：请先选择材料。';
   }
 
   Future<void> _showClosurePreview() async {
     if (!mounted) return;
     final selectedDocs = _selectedDocs;
-    final missing = _missingDefs;
+    final missing = _closureMissingDefs;
     final blockers = _selectedReviewBlockers;
     await showDialog<void>(
       context: context,
@@ -554,12 +568,16 @@ class _ArchiveMaterialsChecklistState extends State<ArchiveMaterialsChecklist> {
                 _previewMetrics(selectedDocs, missing, blockers),
                 if (missing.isNotEmpty) ...[
                   const SizedBox(height: 12),
-                  _previewSectionTitle('缺项材料'),
+                  _previewSectionTitle('未进入结课包的必备材料'),
                   ...missing.map(
                     (d) => _previewLine(
-                      Icons.warning_amber_outlined,
+                      _missingDefs.any((m) => m.key == d.key)
+                          ? Icons.warning_amber_outlined
+                          : Icons.check_box_outline_blank,
                       d.label,
-                      '请先在${_expectedPeriodLabel(d)}完成生成、导入和审核。',
+                      _missingDefs.any((m) => m.key == d.key)
+                          ? '请先在${_expectedPeriodLabel(d)}完成生成、导入和审核。'
+                          : '材料已形成，但未勾选进入结课包。',
                       Colors.orange,
                     ),
                   ),

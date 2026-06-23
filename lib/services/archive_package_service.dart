@@ -134,10 +134,11 @@ class ArchivePackageService {
     final sourceOriginal = _sourceOriginalFile(doc);
     if (sourceOriginal != null) {
       final ext = p.extension(sourceOriginal.path);
-      final outFile = _uniqueOutputFile(
+      final outFile = _outputFileForOriginal(
         dir: dir,
         base: n.fileBase(docLabel: n.docLabel),
         ext: ext,
+        sourceOriginal: sourceOriginal,
         preferredSuffix: p.basenameWithoutExtension(sourceOriginal.path),
       );
       await sourceOriginal.copy(outFile.path);
@@ -155,7 +156,7 @@ class ArchivePackageService {
     }
 
     // 2) 写盘
-    final outFile = _uniqueOutputFile(
+    final outFile = _stableOutputFile(
       dir: dir,
       base: n.fileBase(docLabel: n.docLabel),
       ext: '.docx',
@@ -344,20 +345,22 @@ class ArchivePackageService {
     return ArchiveDocumentPolicy.sourceOriginalFile(doc);
   }
 
-  File _uniqueOutputFile({
+  File _outputFileForOriginal({
     required Directory dir,
     required String base,
     required String ext,
+    required File sourceOriginal,
     String? preferredSuffix,
   }) {
     final normalizedExt = ext.startsWith('.') ? ext : '.$ext';
     final primary = File(p.join(dir.path, '$base$normalizedExt'));
-    if (!primary.existsSync()) return primary;
+    if (!primary.existsSync() || _sameBytes(primary, sourceOriginal)) {
+      return primary;
+    }
 
     final suffix = _safeSegment((preferredSuffix ?? '').trim());
     if (suffix.isNotEmpty && suffix != '[未填]') {
-      final named = File(p.join(dir.path, '$base+$suffix$normalizedExt'));
-      if (!named.existsSync()) return named;
+      return File(p.join(dir.path, '$base+$suffix$normalizedExt'));
     }
 
     var index = 2;
@@ -365,6 +368,36 @@ class ArchivePackageService {
       final candidate = File(p.join(dir.path, '$base-$index$normalizedExt'));
       if (!candidate.existsSync()) return candidate;
       index++;
+    }
+  }
+
+  File _stableOutputFile({
+    required Directory dir,
+    required String base,
+    required String ext,
+    String? preferredSuffix,
+  }) {
+    final normalizedExt = ext.startsWith('.') ? ext : '.$ext';
+    final suffix = _safeSegment((preferredSuffix ?? '').trim());
+    if (suffix.isNotEmpty && suffix != '[未填]') {
+      return File(p.join(dir.path, '$base+$suffix$normalizedExt'));
+    }
+    return File(p.join(dir.path, '$base$normalizedExt'));
+  }
+
+  bool _sameBytes(File a, File b) {
+    try {
+      if (!a.existsSync() || !b.existsSync()) return false;
+      if (a.lengthSync() != b.lengthSync()) return false;
+      final aa = a.readAsBytesSync();
+      final bb = b.readAsBytesSync();
+      for (var i = 0; i < aa.length; i++) {
+        if (aa[i] != bb[i]) return false;
+      }
+      return true;
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ArchivePackageService.sameBytes', stack: st);
+      return false;
     }
   }
 
