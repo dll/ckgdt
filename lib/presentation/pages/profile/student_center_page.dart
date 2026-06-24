@@ -198,7 +198,7 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.25),
+                color: Colors.white.withOpacity(0.25),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.person, size: 28, color: Colors.white),
@@ -222,7 +222,7 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -395,7 +395,7 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
                                   ? Theme.of(context)
                                       .colorScheme
                                       .primary
-                                      .withValues(alpha: 0.3)
+                                      .withOpacity(0.3)
                                   : Colors.grey[300]!,
                               width: 2,
                             ),
@@ -480,7 +480,7 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
             borderRadius: BorderRadius.circular(12),
             side: BorderSide(
               color: isUnlocked
-                  ? badge.color.withValues(alpha: 0.5)
+                  ? badge.color.withOpacity(0.5)
                   : Colors.grey[300]!,
               width: isUnlocked ? 2 : 1,
             ),
@@ -642,7 +642,7 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: action.color.withValues(alpha: 0.1),
+                      color: action.color.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(

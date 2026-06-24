@@ -119,7 +119,7 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
         color: NoirTokens.inkDeep,
         border: Border(
           bottom: BorderSide(
-            color: NoirTokens.accent.withValues(alpha: 0.15),
+            color: NoirTokens.accent.withOpacity(0.15),
             width: 0.5,
           ),
         ),
@@ -133,7 +133,7 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
             style: TextStyle(
               color: _state?.status == LiveStreamStatus.recording
                   ? NoirTokens.accent
-                  : NoirTokens.paper.withValues(alpha: 0.7),
+                  : NoirTokens.paper.withOpacity(0.7),
               fontSize: 11,
               fontWeight: FontWeight.w600,
               letterSpacing: 2,
@@ -174,12 +174,12 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
           width: 8,
           height: 8,
           decoration: BoxDecoration(
-            color: dotColor.withValues(alpha: opacity),
+            color: dotColor.withOpacity(opacity),
             shape: BoxShape.circle,
             boxShadow: status == LiveStreamStatus.recording
                 ? [
                     BoxShadow(
-                      color: Colors.red.withValues(alpha: 0.6 * _pulseAnim.value),
+                      color: Colors.red.withOpacity(0.6 * _pulseAnim.value),
                       blurRadius: 6,
                     ),
                   ]
@@ -221,7 +221,7 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
         icon: Icon(icon, size: 14),
         color: active
             ? NoirTokens.accent
-            : NoirTokens.paper.withValues(alpha: 0.6),
+            : NoirTokens.paper.withOpacity(0.6),
         onPressed: onTap,
         padding: EdgeInsets.zero,
         splashRadius: 14,
@@ -274,7 +274,7 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.5),
+                color: Colors.black.withOpacity(0.5),
                 borderRadius: BorderRadius.circular(2),
               ),
               child: Text(
@@ -299,7 +299,7 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
                   width: 10,
                   height: 10,
                   decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.4 + 0.6 * _pulseAnim.value),
+                    color: Colors.red.withOpacity(0.4 + 0.6 * _pulseAnim.value),
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -329,11 +329,11 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 28,
-                color: NoirTokens.paper.withValues(alpha: 0.3)),
+                color: NoirTokens.paper.withOpacity(0.3)),
             const SizedBox(height: 6),
             Text(text,
                 style: TextStyle(
-                  color: NoirTokens.paper.withValues(alpha: 0.4),
+                  color: NoirTokens.paper.withOpacity(0.4),
                   fontSize: 10,
                 )),
           ],
@@ -355,7 +355,7 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
         color: NoirTokens.inkDeep,
         border: Border(
           top: BorderSide(
-            color: NoirTokens.accent.withValues(alpha: 0.15),
+            color: NoirTokens.accent.withOpacity(0.15),
             width: 0.5,
           ),
         ),
@@ -387,7 +387,7 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.15),
+                color: Colors.red.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
@@ -406,7 +406,7 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
             width: 24,
             height: 4,
             decoration: BoxDecoration(
-              color: NoirTokens.paper.withValues(alpha: 0.2),
+              color: NoirTokens.paper.withOpacity(0.2),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -423,11 +423,11 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
         height: widget.compact ? 26 : 32,
         decoration: BoxDecoration(
           color: isRecording
-              ? Colors.red.withValues(alpha: 0.15)
-              : Colors.red.withValues(alpha: 0.08),
+              ? Colors.red.withOpacity(0.15)
+              : Colors.red.withOpacity(0.08),
           shape: BoxShape.circle,
           border: Border.all(
-            color: isRecording ? Colors.red : Colors.red.withValues(alpha: 0.5),
+            color: isRecording ? Colors.red : Colors.red.withOpacity(0.5),
             width: 2,
           ),
         ),
@@ -463,7 +463,7 @@ class _LiveStreamPanelState extends State<LiveStreamPanel>
         icon: Icon(icon, size: widget.compact ? 14 : 16),
         color: active
             ? NoirTokens.accent
-            : NoirTokens.paper.withValues(alpha: 0.6),
+            : NoirTokens.paper.withOpacity(0.6),
         onPressed: onTap,
         tooltip: tooltip,
         padding: EdgeInsets.zero,

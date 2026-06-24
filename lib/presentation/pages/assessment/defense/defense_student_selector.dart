@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 class DefenseStudentSelector extends StatefulWidget {
   final Map<String, String> students;
@@ -57,10 +57,10 @@ class _DefenseStudentSelectorState extends State<DefenseStudentSelector> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: Colors.green.withValues(alpha: 0.2),
+                              color: Colors.green.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(4),
                               border: Border.all(
-                                  color: Colors.green.withValues(alpha: 0.5)),
+                                  color: Colors.green.withOpacity(0.5)),
                             ),
                             child: const Row(
                               mainAxisSize: MainAxisSize.min,

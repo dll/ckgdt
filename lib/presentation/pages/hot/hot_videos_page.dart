@@ -172,7 +172,7 @@ class _HotVideosPageState extends State<HotVideosPage> {
                       )
                     : null,
                 filled: true,
-                fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
@@ -419,14 +419,14 @@ class _VideoCard extends StatelessWidget {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          platformColor.withValues(alpha: 0.3),
-                          platformColor.withValues(alpha: 0.1),
+                          platformColor.withOpacity(0.3),
+                          platformColor.withOpacity(0.1),
                         ],
                       ),
                     ),
                     child: Center(
                       child: Icon(Icons.play_circle_fill,
-                          size: 40, color: platformColor.withValues(alpha: 0.6)),
+                          size: 40, color: platformColor.withOpacity(0.6)),
                     ),
                   ),
                   // 平台角标

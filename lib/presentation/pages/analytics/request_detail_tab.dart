@@ -129,7 +129,7 @@ class _RequestDetailTabState extends State<RequestDetailTab> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.history, size: 48, color: Colors.grey.withValues(alpha: 0.3)),
+            Icon(Icons.history, size: 48, color: Colors.grey.withOpacity(0.3)),
             const SizedBox(height: 12),
             const Text('暂无请求记录', style: TextStyle(color: Colors.grey)),
           ],
@@ -211,7 +211,7 @@ class _RequestDetailTabState extends State<RequestDetailTab> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: _providerColor(provider).withValues(alpha: 0.1),
+                    color: _providerColor(provider).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -250,13 +250,13 @@ class _RequestDetailTabState extends State<RequestDetailTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
+        color: color.withOpacity(0.08),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label, style: TextStyle(fontSize: 10, color: color.withValues(alpha: 0.7))),
+          Text(label, style: TextStyle(fontSize: 10, color: color.withOpacity(0.7))),
           const SizedBox(width: 3),
           Text(_formatTokens(tokens), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color)),
         ],

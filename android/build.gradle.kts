@@ -9,6 +9,23 @@ allprojects {
     }
 }
 
+// AGP 8.9+ 要求所有 android library 显式声明 namespace，老插件(camera_android 等)未设置。
+// 对所有未设置 namespace 的 android 模块，fallback 到 com.{project.name}
+subprojects {
+    afterEvaluate {
+        if (project.plugins.hasPlugin("com.android.library") ||
+            project.plugins.hasPlugin("com.android.application")
+        ) {
+            @Suppress("UnstableApiUsage")
+            extensions.findByType(com.android.build.gradle.BaseExtension::class.java)?.let {
+                if (it.namespace == null) {
+                    it.namespace = "com.${project.name}"
+                }
+            }
+        }
+    }
+}
+
 val newBuildDir: Directory =
     rootProject.layout.buildDirectory
         .dir("../../build")

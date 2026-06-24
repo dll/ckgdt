@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../core/build_info.dart';
 import '../../../services/update_service.dart';
 import '../../widgets/back_button_bar.dart';
@@ -156,7 +156,7 @@ class _UpdateAvailableDialogState extends State<_UpdateAvailableDialog> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+        color: theme.colorScheme.primaryContainer.withOpacity(0.3),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -245,7 +245,7 @@ class _UpdateAvailableDialogState extends State<_UpdateAvailableDialog> {
           width: double.maxFinite,
           constraints: const BoxConstraints(maxHeight: 200),
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
             borderRadius: BorderRadius.circular(8),
           ),
           padding: const EdgeInsets.all(10),
@@ -255,7 +255,7 @@ class _UpdateAvailableDialogState extends State<_UpdateAvailableDialog> {
               style: TextStyle(
                 fontSize: 12,
                 height: 1.5,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                color: theme.colorScheme.onSurface.withOpacity(0.8),
               ),
             ),
           ),
@@ -291,7 +291,7 @@ class _UpdateAvailableDialogState extends State<_UpdateAvailableDialog> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.green.withValues(alpha: 0.1),
+        color: Colors.green.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -317,7 +317,7 @@ class _UpdateAvailableDialogState extends State<_UpdateAvailableDialog> {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: theme.colorScheme.errorContainer.withValues(alpha: 0.3),
+        color: theme.colorScheme.errorContainer.withOpacity(0.3),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -509,7 +509,7 @@ class _UpdateProgressPageState extends State<UpdateProgressPage> {
                   '请勿关闭此页面',
                   style: TextStyle(
                     fontSize: 12,
-                    color: theme.colorScheme.outline.withValues(alpha: 0.6),
+                    color: theme.colorScheme.outline.withOpacity(0.6),
                   ),
                 ),
               ],

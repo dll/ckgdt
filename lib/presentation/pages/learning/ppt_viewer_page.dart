@@ -960,12 +960,12 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
             boxShadow: sel
                 ? [
                     BoxShadow(
-                        color: primary.withValues(alpha: 0.4),
+                        color: primary.withOpacity(0.4),
                         blurRadius: 12)
                   ]
                 : [
                     BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.3),
+                        color: Colors.black.withOpacity(0.3),
                         blurRadius: 4,
                         offset: const Offset(0, 2))
                   ],
@@ -1028,12 +1028,12 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
           boxShadow: sel
               ? [
                   BoxShadow(
-                      color: primary.withValues(alpha: 0.4),
+                      color: primary.withOpacity(0.4),
                       blurRadius: 12)
                 ]
               : [
                   BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.3),
+                      color: Colors.black.withOpacity(0.3),
                       blurRadius: 4,
                       offset: const Offset(0, 2))
                 ],
@@ -1070,7 +1070,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
                             fontWeight: FontWeight.bold,
                             shadows: [
                               Shadow(
-                                  color: Colors.black.withValues(alpha: 0.5),
+                                  color: Colors.black.withOpacity(0.5),
                                   blurRadius: 4)
                             ],
                           ),
@@ -1081,7 +1081,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
                         const SizedBox(height: 4),
                         Text(slide.subtitle!,
                             style: TextStyle(
-                                color: tc.withValues(alpha: 0.7),
+                                color: tc.withOpacity(0.7),
                                 fontSize: 9),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis),
@@ -1155,7 +1155,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
                   : null,
               boxShadow: [
                 BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.6),
+                    color: Colors.black.withOpacity(0.6),
                     blurRadius: 24,
                     offset: const Offset(0, 8)),
               ],
@@ -1187,7 +1187,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
                       '${slide.slideNumber}',
                       style: TextStyle(
                         color: _textColorFor(slide.bgColor)
-                            .withValues(alpha: 0.25),
+                            .withOpacity(0.25),
                         fontSize: 12,
                       ),
                     ),
@@ -1282,7 +1282,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
                 height: 1.4,
                 shadows: [
                   Shadow(
-                      color: Colors.black.withValues(alpha: 0.3),
+                      color: Colors.black.withOpacity(0.3),
                       blurRadius: 6)
                 ],
               ),
@@ -1291,7 +1291,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
             const SizedBox(height: 16),
             Text(slide.subtitle!,
                 style: TextStyle(
-                  color: tc.withValues(alpha: 0.7),
+                  color: tc.withOpacity(0.7),
                   fontSize: 18,
                   height: 1.5,
                 ),
@@ -1314,7 +1314,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
               height: 1.3,
               shadows: [
                 Shadow(
-                    color: Colors.black.withValues(alpha: 0.2),
+                    color: Colors.black.withOpacity(0.2),
                     blurRadius: 4)
               ],
             ),
@@ -1326,7 +1326,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
           width: 60,
           height: 3,
           decoration: BoxDecoration(
-            gradient: LinearGradient(colors: [primary, primary.withValues(alpha: 0.7)]),
+            gradient: LinearGradient(colors: [primary, primary.withOpacity(0.7)]),
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -1334,7 +1334,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
           const SizedBox(height: 8),
           Text(slide.subtitle!,
               style: TextStyle(
-                color: tc.withValues(alpha: 0.65),
+                color: tc.withOpacity(0.65),
                 fontSize: 14,
                 fontStyle: FontStyle.italic,
               )),
@@ -1361,7 +1361,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
     final indent = para.level * 24.0;
     final fs = para.fontSize?.clamp(10.0, 28.0) ??
         (para.isBold ? 17.0 : 15.0);
-    final color = para.color ?? defaultColor.withValues(alpha: para.isBold ? 1.0 : 0.9);
+    final color = para.color ?? defaultColor.withOpacity(para.isBold ? 1.0 : 0.9);
 
     // 项目符号
     final String bullet;
@@ -1438,8 +1438,8 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.black.withValues(alpha: 0.7),
-            Colors.black.withValues(alpha: 0.0),
+            Colors.black.withOpacity(0.7),
+            Colors.black.withOpacity(0.0),
           ],
         ),
       ),
@@ -1520,8 +1520,8 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
           begin: Alignment.bottomCenter,
           end: Alignment.topCenter,
           colors: [
-            Colors.black.withValues(alpha: 0.7),
-            Colors.black.withValues(alpha: 0.0),
+            Colors.black.withOpacity(0.7),
+            Colors.black.withOpacity(0.0),
           ],
         ),
       ),
@@ -1556,7 +1556,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: primary.withValues(alpha: 0.3),
+                    color: primary.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text('${_autoPlaySec}s',
@@ -1570,7 +1570,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
+              color: Colors.white.withOpacity(0.12),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -1605,7 +1605,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
           padding: const EdgeInsets.all(8),
           decoration: highlight
               ? BoxDecoration(
-                  color: primary.withValues(alpha: 0.2),
+                  color: primary.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(8),
                 )
               : null,
@@ -1623,7 +1623,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
 
   Widget _buildThumbnailStrip() {
     return Container(
-      color: Colors.black.withValues(alpha: 0.6),
+      color: Colors.black.withOpacity(0.6),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1644,7 +1644,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
                   border: sel
                       ? Border.all(color: primary, width: 2)
                       : Border.all(
-                          color: Colors.white.withValues(alpha: 0.2),
+                          color: Colors.white.withOpacity(0.2),
                           width: 1),
                 ),
                 child: ClipRRect(
@@ -1677,7 +1677,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
                 border: sel
                     ? Border.all(color: primary, width: 2)
                     : Border.all(
-                        color: Colors.white.withValues(alpha: 0.2),
+                        color: Colors.white.withOpacity(0.2),
                         width: 1),
               ),
               child: ClipRRect(
@@ -1695,13 +1695,13 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
                         '${i + 1}',
                         style: TextStyle(
                           color: _textColorFor(slide.bgColor)
-                              .withValues(alpha: sel ? 1.0 : 0.5),
+                              .withOpacity(sel ? 1.0 : 0.5),
                           fontSize: sel ? 16 : 13,
                           fontWeight:
                               sel ? FontWeight.bold : FontWeight.normal,
                           shadows: [
                             Shadow(
-                                color: Colors.black.withValues(alpha: 0.5),
+                                color: Colors.black.withOpacity(0.5),
                                 blurRadius: 4)
                           ],
                         ),
@@ -1722,7 +1722,7 @@ class _InAppPptViewerPageState extends State<InAppPptViewerPage> {
   Widget _buildProgressBar() {
     return LinearProgressIndicator(
       value: _slides.isEmpty ? 0 : (_currentIndex + 1) / _slides.length,
-      backgroundColor: Colors.white.withValues(alpha: 0.08),
+      backgroundColor: Colors.white.withOpacity(0.08),
       valueColor:
           AlwaysStoppedAnimation<Color>(primary),
       minHeight: 3,

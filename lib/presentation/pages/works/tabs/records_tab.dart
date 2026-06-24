@@ -1,4 +1,4 @@
-part of '../works_page.dart';
+﻿part of '../works_page.dart';
 
 class _RecordsTab extends StatefulWidget {
   final AuthService authService;
@@ -102,10 +102,10 @@ class _RecordsTabState extends State<_RecordsTab> {
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
             color:
-                selected ? primary.withValues(alpha: 0.12) : Colors.grey[100],
+                selected ? primary.withOpacity(0.12) : Colors.grey[100],
             borderRadius: BorderRadius.circular(10),
             border: selected
-                ? Border.all(color: primary.withValues(alpha: 0.3))
+                ? Border.all(color: primary.withOpacity(0.3))
                 : null,
           ),
           child: Column(

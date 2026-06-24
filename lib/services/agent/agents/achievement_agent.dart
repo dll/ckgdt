@@ -422,13 +422,22 @@ class AchievementAgent extends BaseAgent {
       await dao.saveCourseObjectives(courseName, _pendingObjectives);
       await _activateCourse(courseName);
       AchievementContext.instance.courseName = courseName;
+      // 重新计算该课程下所有已有批次的达成度
+      await _recalculateBatchesForCourse(dao, courseName);
       _pendingObjectives = [];
       _currentAnalysisCourse = '';
+      // 验证写入是否成功
+      final saved =
+          await dao.getCourseObjectives(courseName);
+      final verifyMsg = saved.isEmpty
+          ? '⚠️ 保存后查询返回空！course_name=「$courseName」'
+          : '✅ 验证：DB 中有 ${saved.length} 条记录，'
+              '权重=[${saved.map((r) => r['weight']).join(', ')}]';
       return _SubmitResult(
         true,
         courseName,
         count,
-        '✅ 已成功提交 $count 个课程目标到「$courseName」。页面将自动刷新。',
+        '✅ 已成功提交 $count 个课程目标到「$courseName」。\n$verifyMsg',
       );
     } catch (e, st) {
       swallowDebug(e, tag: 'AchievementAgent.submit', stack: st);
@@ -464,6 +473,23 @@ class AchievementAgent extends BaseAgent {
       }
     } catch (e, st) {
       swallowDebug(e, tag: 'AchievementAgent.activateCourse', stack: st);
+    }
+  }
+
+  /// 重新计算该课程所有已有批次的达成度（权重更新后同步刷新）
+  Future<void> _recalculateBatchesForCourse(
+      AchievementDao dao, String courseName) async {
+    try {
+      final batches = await dao.getAllBatches(courseName: courseName);
+      for (final b in batches) {
+        final id = b['id'];
+        if (id is int && id > 0) {
+          await dao.recalculateAndSaveBatch(id);
+        }
+      }
+    } catch (e, st) {
+      swallowDebug(
+          e, tag: 'AchievementAgent.recalculateBatches', stack: st);
     }
   }
 

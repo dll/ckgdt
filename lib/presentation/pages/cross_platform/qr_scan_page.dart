@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 /// QR 码扫描页面 — 移动端扫码连接桌面端
@@ -92,7 +92,7 @@ class _QrScanPageState extends State<QrScanPage> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.6),
+                    color: Colors.black.withOpacity(0.6),
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: const Text(
@@ -169,7 +169,7 @@ class _ScanOverlayPainter extends CustomPainter {
     final top = (size.height - scanSize) / 2.5;
 
     // 半透明遮罩
-    final maskPaint = Paint()..color = Colors.black.withValues(alpha: 0.5);
+    final maskPaint = Paint()..color = Colors.black.withOpacity(0.5);
 
     // 上方遮罩
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, top), maskPaint);

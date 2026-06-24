@@ -159,7 +159,7 @@ class _GradeEntryCenterPageState extends State<GradeEntryCenterPage> {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: theme.colorScheme.surfaceContainerHighest
-                    .withValues(alpha: 0.4),
+                    .withOpacity(0.4),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Text('暂无修改记录',
@@ -180,9 +180,9 @@ class _GradeEntryCenterPageState extends State<GradeEntryCenterPage> {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
+          color: color.withOpacity(0.08),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
+          border: Border.all(color: color.withOpacity(0.3)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,7 +220,7 @@ class _GradeEntryCenterPageState extends State<GradeEntryCenterPage> {
       child: ListTile(
         leading: CircleAvatar(
           radius: 16,
-          backgroundColor: _opColor(op).withValues(alpha: 0.15),
+          backgroundColor: _opColor(op).withOpacity(0.15),
           child: Icon(_opIcon(op), size: 16, color: _opColor(op)),
         ),
         title: Text('$tableLabel · $field',

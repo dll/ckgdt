@@ -229,7 +229,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                     gradient: LinearGradient(
                       colors: [
                         Colors.amber.shade50,
-                        Colors.orange.shade50.withValues(alpha: 0.3),
+                        Colors.orange.shade50.withOpacity(0.3),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -244,7 +244,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.amber.withValues(alpha: 0.2),
+                              color: Colors.amber.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Icon(Icons.info_outline,
@@ -279,7 +279,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                     gradient: LinearGradient(
                       colors: [
                         Colors.indigo.shade50,
-                        Colors.blue.shade50.withValues(alpha: 0.3)
+                        Colors.blue.shade50.withOpacity(0.3)
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -358,7 +358,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                     borderRadius: BorderRadius.circular(16),
                     gradient: LinearGradient(
                       colors: [
-                        NoirTokens.accent.withValues(alpha: 0.08),
+                        NoirTokens.accent.withOpacity(0.08),
                         NoirTokens.inkDeep
                       ],
                       begin: Alignment.topLeft,
@@ -371,7 +371,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.green.withValues(alpha: 0.15),
+                          color: Colors.green.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(Icons.wifi_tethering,
@@ -392,7 +392,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                                 style: TextStyle(
                                     fontSize: 11,
                                     color: NoirTokens.paper
-                                        .withValues(alpha: 0.5))),
+                                        .withOpacity(0.5))),
                           ],
                         ),
                       ),
@@ -415,7 +415,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                                       foregroundColor: Colors.blue,
                                       side: BorderSide(
                                           color: Colors.blue
-                                              .withValues(alpha: 0.4)),
+                                              .withOpacity(0.4)),
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 16, vertical: 10),
                                       shape: RoundedRectangleBorder(
@@ -435,7 +435,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                                     label: const Text('答辩'),
                                     style: FilledButton.styleFrom(
                                       backgroundColor:
-                                          Colors.green.withValues(alpha: 0.15),
+                                          Colors.green.withOpacity(0.15),
                                       foregroundColor: Colors.green,
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 16, vertical: 10),
@@ -457,7 +457,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                                     label: const Text('主播'),
                                     style: FilledButton.styleFrom(
                                       backgroundColor:
-                                          Colors.green.withValues(alpha: 0.15),
+                                          Colors.green.withOpacity(0.15),
                                       foregroundColor: Colors.green,
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 16, vertical: 10),
@@ -475,10 +475,10 @@ class _DefenseTabState extends State<_DefenseTab> {
                                                     initialRole: 'viewer'))),
                                     style: OutlinedButton.styleFrom(
                                       foregroundColor: NoirTokens.paper
-                                          .withValues(alpha: 0.7),
+                                          .withOpacity(0.7),
                                       side: BorderSide(
                                           color: NoirTokens.paper
-                                              .withValues(alpha: 0.2)),
+                                              .withOpacity(0.2)),
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 16, vertical: 10),
                                       shape: RoundedRectangleBorder(
@@ -498,7 +498,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                                       foregroundColor: Colors.blue,
                                       side: BorderSide(
                                           color: Colors.blue
-                                              .withValues(alpha: 0.4)),
+                                              .withOpacity(0.4)),
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 16, vertical: 10),
                                       shape: RoundedRectangleBorder(
@@ -530,7 +530,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                                 style: TextStyle(fontSize: 12)),
                             selected: _selectedClass == 'all',
                             selectedColor:
-                                NoirTokens.accent.withValues(alpha: 0.3),
+                                NoirTokens.accent.withOpacity(0.3),
                             onSelected: (_) =>
                                 setState(() => _selectedClass = 'all'),
                             visualDensity: VisualDensity.compact,
@@ -543,7 +543,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                                       style: const TextStyle(fontSize: 12)),
                                   selected: _selectedClass == cn,
                                   selectedColor:
-                                      NoirTokens.accent.withValues(alpha: 0.3),
+                                      NoirTokens.accent.withOpacity(0.3),
                                   onSelected: (_) =>
                                       setState(() => _selectedClass = cn),
                                   visualDensity: VisualDensity.compact,
@@ -560,11 +560,11 @@ class _DefenseTabState extends State<_DefenseTab> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.grey.withValues(alpha: 0.06),
+                  color: Colors.grey.withOpacity(0.06),
                   borderRadius: BorderRadius.circular(10),
                   border: Border(
                     left: BorderSide(
-                        color: Colors.indigo.withValues(alpha: 0.5), width: 3),
+                        color: Colors.indigo.withOpacity(0.5), width: 3),
                   ),
                 ),
                 child: Row(
@@ -589,7 +589,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.grey.withValues(alpha: 0.06),
+                            color: Colors.grey.withOpacity(0.06),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Icon(Icons.event_busy,
@@ -629,9 +629,9 @@ class _DefenseTabState extends State<_DefenseTab> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.05),
+          color: color.withOpacity(0.05),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withValues(alpha: 0.12)),
+          border: Border.all(color: color.withOpacity(0.12)),
         ),
         child: Row(
           children: [
@@ -639,7 +639,7 @@ class _DefenseTabState extends State<_DefenseTab> {
               width: 26,
               height: 26,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
+                color: color.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Center(
@@ -659,7 +659,7 @@ class _DefenseTabState extends State<_DefenseTab> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
+                color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(time,
@@ -680,7 +680,7 @@ class _DefenseTabState extends State<_DefenseTab> {
           width: 22,
           height: 22,
           decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
+              color: color.withOpacity(0.12),
               borderRadius: BorderRadius.circular(6)),
           child: Center(
               child: Text(num,
@@ -736,7 +736,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.indigo.withValues(alpha: 0.08),
+                        color: Colors.indigo.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(Icons.record_voice_over,
@@ -761,10 +761,10 @@ class _DefenseTabState extends State<_DefenseTab> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.1),
+                        color: statusColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                            color: statusColor.withValues(alpha: 0.3)),
+                            color: statusColor.withOpacity(0.3)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -786,7 +786,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.grey.withValues(alpha: 0.05),
+                    color: Colors.grey.withOpacity(0.05),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
@@ -802,7 +802,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                       Container(
                           width: 1,
                           height: 16,
-                          color: Colors.grey.withValues(alpha: 0.2)),
+                          color: Colors.grey.withOpacity(0.2)),
                       const SizedBox(width: 8),
                       Icon(Icons.location_on,
                           size: 14, color: Colors.indigo[300]),
@@ -814,7 +814,7 @@ class _DefenseTabState extends State<_DefenseTab> {
                       Container(
                           width: 1,
                           height: 16,
-                          color: Colors.grey.withValues(alpha: 0.2)),
+                          color: Colors.grey.withOpacity(0.2)),
                       const SizedBox(width: 8),
                       Icon(Icons.timer_outlined,
                           size: 14, color: Colors.indigo[300]),

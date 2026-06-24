@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import '../../../data/local/collaboration_dao.dart';
@@ -285,7 +285,7 @@ class _CollaborationPageState extends State<CollaborationPage>
             // 头像
             CircleAvatar(
               radius: 18,
-              backgroundColor: primary.withValues(alpha: 0.15),
+              backgroundColor: primary.withOpacity(0.15),
               child: Text(
                 senderName.isNotEmpty ? senderName[0] : '?',
                 style: TextStyle(
@@ -323,8 +323,8 @@ class _CollaborationPageState extends State<CollaborationPage>
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     color: isMine
-                        ? primary.withValues(alpha: 0.12)
-                        : Colors.grey.withValues(alpha: 0.1),
+                        ? primary.withOpacity(0.12)
+                        : Colors.grey.withOpacity(0.1),
                     borderRadius: BorderRadius.only(
                       topLeft: const Radius.circular(16),
                       topRight: const Radius.circular(16),
@@ -377,7 +377,7 @@ class _CollaborationPageState extends State<CollaborationPage>
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
         border: Border(
-          top: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
+          top: BorderSide(color: Colors.grey.withOpacity(0.2)),
         ),
       ),
       child: SafeArea(
@@ -391,7 +391,7 @@ class _CollaborationPageState extends State<CollaborationPage>
                   hintText: '输入消息...',
                   hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
                   filled: true,
-                  fillColor: Colors.grey.withValues(alpha: 0.08),
+                  fillColor: Colors.grey.withOpacity(0.08),
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   border: OutlineInputBorder(
@@ -410,7 +410,7 @@ class _CollaborationPageState extends State<CollaborationPage>
               onPressed: _sendMessage,
               icon: Icon(Icons.send_rounded, color: primary),
               style: IconButton.styleFrom(
-                backgroundColor: primary.withValues(alpha: 0.1),
+                backgroundColor: primary.withOpacity(0.1),
               ),
             ),
           ],
@@ -531,7 +531,7 @@ class _CollaborationPageState extends State<CollaborationPage>
           gradient: LinearGradient(
             colors: [
               primary,
-              primary.withValues(alpha: 0.7),
+              primary.withOpacity(0.7),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -559,7 +559,7 @@ class _CollaborationPageState extends State<CollaborationPage>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
+                    color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -583,7 +583,7 @@ class _CollaborationPageState extends State<CollaborationPage>
                     child: LinearProgressIndicator(
                       value: totalProgress,
                       minHeight: 8,
-                      backgroundColor: Colors.white.withValues(alpha: 0.2),
+                      backgroundColor: Colors.white.withOpacity(0.2),
                       valueColor:
                           const AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
@@ -633,8 +633,8 @@ class _CollaborationPageState extends State<CollaborationPage>
             CircleAvatar(
               radius: 22,
               backgroundColor: isCompleted
-                  ? Colors.green.withValues(alpha: 0.15)
-                  : primary.withValues(alpha: 0.12),
+                  ? Colors.green.withOpacity(0.15)
+                  : primary.withOpacity(0.12),
               child: isCompleted
                   ? const Icon(Icons.check, color: Colors.green, size: 22)
                   : Text(
@@ -666,7 +666,7 @@ class _CollaborationPageState extends State<CollaborationPage>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: statusColor.withValues(alpha: 0.1),
+                          color: statusColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -771,8 +771,7 @@ class _CollaborationPageState extends State<CollaborationPage>
                                 const SizedBox(width: 8),
                                 Expanded(
                                   flex: 3,
-                                  child: DropdownButtonFormField<String>(
-                                    initialValue: roleValues[i].isNotEmpty &&
+                                  child: DropdownButtonFormField<String>(value: roleValues[i].isNotEmpty &&
                                             roles.contains(roleValues[i])
                                         ? roleValues[i]
                                         : roles.first,
@@ -925,7 +924,7 @@ class _CollaborationPageState extends State<CollaborationPage>
             Container(
               width: 1,
               height: 40,
-              color: Colors.grey.withValues(alpha: 0.2),
+              color: Colors.grey.withOpacity(0.2),
             ),
             Expanded(
               child: _buildStatItem(
@@ -938,7 +937,7 @@ class _CollaborationPageState extends State<CollaborationPage>
             Container(
               width: 1,
               height: 40,
-              color: Colors.grey.withValues(alpha: 0.2),
+              color: Colors.grey.withOpacity(0.2),
             ),
             Expanded(
               child: _buildStatItem(
@@ -1020,7 +1019,7 @@ class _CollaborationPageState extends State<CollaborationPage>
                   backgroundColor: Theme.of(context)
                       .colorScheme
                       .primary
-                      .withValues(alpha: 0.12),
+                      .withOpacity(0.12),
                   child: Text(
                     submitterName.isNotEmpty ? submitterName[0] : '?',
                     style: TextStyle(
@@ -1056,8 +1055,8 @@ class _CollaborationPageState extends State<CollaborationPage>
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: hasReviewed
-                        ? Colors.green.withValues(alpha: 0.1)
-                        : Colors.orange.withValues(alpha: 0.1),
+                        ? Colors.green.withOpacity(0.1)
+                        : Colors.orange.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -1111,7 +1110,7 @@ class _CollaborationPageState extends State<CollaborationPage>
                   backgroundColor: Theme.of(context)
                       .colorScheme
                       .primary
-                      .withValues(alpha: 0.1),
+                      .withOpacity(0.1),
                   child: Text(
                     reviewerName.isNotEmpty ? reviewerName[0] : '?',
                     style: TextStyle(
@@ -1166,7 +1165,7 @@ class _CollaborationPageState extends State<CollaborationPage>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: scoreColor.withValues(alpha: 0.1),
+                    color: scoreColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
@@ -1186,7 +1185,7 @@ class _CollaborationPageState extends State<CollaborationPage>
                 width: double.infinity,
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.grey.withValues(alpha: 0.06),
+                  color: Colors.grey.withOpacity(0.06),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
@@ -1260,7 +1259,7 @@ class _CollaborationPageState extends State<CollaborationPage>
                           color: Theme.of(context)
                               .colorScheme
                               .primary
-                              .withValues(alpha: 0.06),
+                              .withOpacity(0.06),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Column(
@@ -1360,17 +1359,17 @@ class _CollaborationPageState extends State<CollaborationPage>
                           hintStyle:
                               TextStyle(color: Colors.grey[400], fontSize: 13),
                           filled: true,
-                          fillColor: Colors.grey.withValues(alpha: 0.06),
+                          fillColor: Colors.grey.withOpacity(0.06),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(
-                              color: Colors.grey.withValues(alpha: 0.2),
+                              color: Colors.grey.withOpacity(0.2),
                             ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(
-                              color: Colors.grey.withValues(alpha: 0.2),
+                              color: Colors.grey.withOpacity(0.2),
                             ),
                           ),
                           focusedBorder: OutlineInputBorder(
