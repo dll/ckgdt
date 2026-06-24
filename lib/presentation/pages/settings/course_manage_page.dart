@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../data/local/course_dao.dart';
 import '../../../data/models/course_model.dart';
 import '../../../services/knowledge_seed_service.dart';
+import '../admin/course_objectives_manage_page.dart';
 import '../../widgets/course_generator_sheet.dart';
 
 import '../../widgets/back_button_bar.dart';
@@ -51,6 +52,11 @@ class _CourseManagePageState extends State<CourseManagePage> {
       appBar: BackButtonBar(
         title: '课程管理',
         actions: [
+          IconButton(
+            icon: const Icon(Icons.fact_check_outlined),
+            tooltip: '课程目标管理',
+            onPressed: _openCourseObjectivesManager,
+          ),
           IconButton(
             icon: const Icon(Icons.add),
             tooltip: '一键生课',
@@ -173,6 +179,14 @@ class _CourseManagePageState extends State<CourseManagePage> {
                             contentPadding: EdgeInsets.zero,
                           ),
                         ),
+                      const PopupMenuItem(
+                        value: 'objectives',
+                        child: ListTile(
+                          leading: Icon(Icons.fact_check_outlined),
+                          title: Text('课程目标管理'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
                       if (!isActive)
                         const PopupMenuItem(
                           value: 'delete',
@@ -385,7 +399,23 @@ class _CourseManagePageState extends State<CourseManagePage> {
           if (ok) _loadCourses();
         }
         break;
+
+      case 'objectives':
+        if (!course.isActive) {
+          await _courseDao.setActiveCourse(course.id);
+          await _loadCourses();
+        }
+        await _openCourseObjectivesManager();
+        break;
     }
+  }
+
+  Future<void> _openCourseObjectivesManager() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const CourseObjectivesManagePage()),
+    );
+    if (mounted) await _loadCourses();
   }
 
   Future<void> _showGenerator() async {

@@ -1,108 +1,150 @@
-﻿import 'package:flutter/material.dart';
-
+import 'dart:convert';
+import 'package:flutter/material.dart';
 import '../../../core/design/noir_tokens.dart';
+import '../../../data/local/achievement_dao.dart';
+import '../../../services/auth_service.dart';
+import '../../../services/achievement_context.dart';
+import '../../../services/course_context_service.dart';
 import '../../widgets/noir_page_shell.dart';
+import '../admin/course_objectives_manage_page.dart';
 
-class CourseObjectivesPage extends StatelessWidget {
+/// 课程目标展示页 — 从 course_objectives 表动态读取数据。
+/// 学生只读查看；教师/管理员看到编辑按钮跳转到管理页。
+class CourseObjectivesPage extends StatefulWidget {
   const CourseObjectivesPage({super.key});
+
+  @override
+  State<CourseObjectivesPage> createState() => _CourseObjectivesPageState();
+}
+
+class _CourseObjectivesPageState extends State<CourseObjectivesPage> {
+  final _dao = AchievementDao();
+  final _ctx = AchievementContext.instance;
+  final _auth = AuthService();
+  final _courseContext = CourseContextService();
+  List<Map<String, dynamic>> _objectives = [];
+  String _courseName = '';
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+    _ctx.addListener(_onCourseChanged);
+  }
+
+  @override
+  void dispose() {
+    _ctx.removeListener(_onCourseChanged);
+    super.dispose();
+  }
+
+  void _onCourseChanged() => _load();
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    try {
+      _courseName = await _courseContext.activeCourseName(
+        fallback: CourseContextService.defaultCourseName,
+      );
+      _ctx.courseName = _courseName;
+      _objectives = (await _dao.getCourseObjectives(_courseName))
+          .where((o) => _asInt(o['idx']) >= 1)
+          .toList();
+    } catch (_) {}
+    if (mounted) setState(() => _loading = false);
+  }
 
   static const _intro =
       '通过本课程的学习，掌握移动应用开发的多元技术体系（原生/混合/小程序/多端），理解不同开发模式的适用场景，熟悉主流跨平台开发框架及 AI 编程工具的使用，具备跨平台应用系统分析、设计和开发能力，能够运用 RESTful API 实现移动端与后端的数据交互，培养学生科学思维、创新意识和良好的职业道德，为从事移动开发工作及毕业设计奠定基础。';
 
-  static const _objectives = [
-    _CourseObjective(
-      index: 1,
-      weight: '15%',
-      objective:
-          '掌握移动应用开发技术体系（原生/混合/跨平台）及主流平台特性，理解技术选型逻辑，熟悉跨平台开发框架和 AI 编程工具的基本使用。',
-      graduationRequirement:
-          '1.4 能够将数学、自然科学、工程基础和专业知识综合应用于解决计算机领域复杂工程问题，能够判别计算机系统的复杂性',
-      chapters: '第1章、第2章、第6章',
-      labs: '实验1、实验2',
-      assessment: '项目架构设计：主流框架项目结构设计与技术选型分析',
-      color: Color(0xFFE53935),
-    ),
-    _CourseObjective(
-      index: 2,
-      weight: '25%',
-      objective:
-          '运用跨平台开发框架及小程序技术，结合 AI 编程工具与后端 API 交互，设计实现跨平台应用，具备需求建模与创新应用能力。',
-      graduationRequirement: '3.2 能够针对特定工程需求设计计算机应用系统，并在设计环节中体现创新意识',
-      chapters: '第3章、第4章、第6章',
-      labs: '实验3、实验4',
-      assessment: '数据交互实现：RESTful API 对接、数据存储方案设计与实现',
-      color: Color(0xFF1E88E5),
-    ),
-    _CourseObjective(
-      index: 3,
-      weight: '30%',
-      objective: '调研对比多端开发方案，分析不同技术栈在跨设备适配场景中的优劣，具备技术方案评估与选型能力。',
-      graduationRequirement:
-          '4.2 针对计算机领域复杂工程问题，能够收集、分析与解释已存在的相关产品、模型、系统、方案、开源资料库等资料，并通过信息综合得到合理有效的结论',
-      chapters: '第5章、第6章',
-      labs: '实验5',
-      assessment: '技术方案评估：多端适配方案对比分析与选型论证',
-      color: Color(0xFF43A047),
-    ),
-    _CourseObjective(
-      index: 4,
-      weight: '30%',
-      objective: '遵循软件工程规范，使用现代开发工具（含 AI 编程工具、Git 版本控制）完成应用测试与优化，具备工程实践能力。',
-      graduationRequirement: '5.1 能够运用现代信息技术和工具获取计算机专业重要资料与信息',
-      chapters: '第6章',
-      labs: '实验6',
-      assessment: '工程实践能力：AI 工具深度应用、代码重构、性能优化与 Git 协作规范',
-      color: Color(0xFFFF9800),
-    ),
-  ];
-
-  static const _achievementRows = [
-    ['课程目标1', '0.15', '支撑毕业要求 1.4', '15（20%）', '15（30%）', '15（50%）'],
-    ['课程目标2', '0.25', '支撑毕业要求 3.2', '25（20%）', '25（30%）', '25（50%）'],
-    ['课程目标3', '0.30', '支撑毕业要求 4.2', '30（20%）', '30（30%）', '30（50%）'],
-    ['课程目标4', '0.30', '支撑毕业要求 5.1', '30（20%）', '30（30%）', '30（50%）'],
-    ['合计', '1', '', '100（20%）', '100（30%）', '100（50%）'],
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final canManage = _auth.isTeacher || _auth.isAdmin;
+    if (_loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
     return NoirPageShell(
       title: '课程目标',
       eyebrow: 'COURSE OBJECTIVES',
       showBackdrop: false,
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(18, 14, 18, 24),
-        children: [
-          _panel(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      actions: [
+        Text(_courseName,
+            style: TextStyle(
+                color: NoirTokens.paper.withValues(alpha: 0.6), fontSize: 12)),
+        if (canManage)
+          IconButton(
+            tooltip: '管理课程目标',
+            icon: const Icon(Icons.edit_note_outlined),
+            onPressed: _openManager,
+          ),
+      ],
+      body: _objectives.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.flag_outlined,
+                      size: 64, color: NoirTokens.paper.withValues(alpha: 0.3)),
+                  const SizedBox(height: 16),
+                  Text('暂无课程目标数据',
+                      style: TextStyle(
+                          color: NoirTokens.paper.withValues(alpha: 0.5))),
+                  if (canManage) ...[
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      onPressed: _openManager,
+                      icon: const Icon(Icons.edit_note_outlined),
+                      label: const Text('管理课程目标'),
+                    ),
+                  ],
+                ],
+              ),
+            )
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(18, 14, 18, 24),
               children: [
-                Text('二、课程目标及其对毕业要求的支撑',
-                    style: NoirTokens.title(color: NoirTokens.paper)),
-                const SizedBox(height: 12),
-                Text(
-                  _intro,
-                  style: TextStyle(
-                    color: NoirTokens.paper.withValues(alpha: 0.82),
-                    fontSize: 13,
-                    height: 1.7,
+                _panel(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('二、课程目标及其对毕业要求的支撑',
+                          style: NoirTokens.title(color: NoirTokens.paper)),
+                      const SizedBox(height: 12),
+                      Text(
+                        _intro,
+                        style: TextStyle(
+                          color: NoirTokens.paper.withValues(alpha: 0.82),
+                          fontSize: 13,
+                          height: 1.7,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                const SizedBox(height: 12),
+                _buildSupportTable(context),
+                const SizedBox(height: 12),
+                _buildAchievementTable(context),
+                const SizedBox(height: 12),
+                ..._objectives.map(_buildObjectiveCard),
               ],
             ),
-          ),
-          const SizedBox(height: 12),
-          _buildObjectiveTable(context),
-          const SizedBox(height: 12),
-          _buildAchievementTable(context),
-          const SizedBox(height: 12),
-          ..._objectives.map(_buildObjectiveCard),
-        ],
-      ),
     );
   }
 
-  Widget _buildObjectiveTable(BuildContext context) {
+  Future<void> _openManager() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const CourseObjectivesManagePage()),
+    );
+    await _load();
+  }
+
+  Widget _buildSupportTable(BuildContext context) {
+    final columns = ['序号', '课程目标', '支撑的毕业要求'];
     return _panel(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
       child: Column(
@@ -120,22 +162,20 @@ class CourseObjectivesPage extends StatelessWidget {
               child: DataTable(
                 columnSpacing: 22,
                 horizontalMargin: 8,
-                columns: const [
-                  DataColumn(label: Text('序号')),
-                  DataColumn(label: Text('课程目标')),
-                  DataColumn(label: Text('支撑的毕业要求')),
+                columns: [
+                  for (final c in columns) DataColumn(label: Text(c)),
                 ],
                 rows: [
-                  for (final objective in _objectives)
+                  for (final o in _objectives)
                     DataRow(cells: [
-                      DataCell(Text('${objective.index}')),
+                      DataCell(Text('${o['idx']}')),
                       DataCell(SizedBox(
                         width: 420,
-                        child: Text(objective.objective),
+                        child: Text(o['description'] ?? o['name'] ?? ''),
                       )),
                       DataCell(SizedBox(
                         width: 460,
-                        child: Text(objective.graduationRequirement),
+                        child: Text(o['indicator'] ?? ''),
                       )),
                     ]),
                 ],
@@ -148,6 +188,16 @@ class CourseObjectivesPage extends StatelessWidget {
   }
 
   Widget _buildAchievementTable(BuildContext context) {
+    final extraColumns = _collectExtraColumnNames();
+    final columns = [
+      '课程目标',
+      '权重',
+      '毕业要求',
+      '平时',
+      '实验',
+      '考核',
+      ...extraColumns,
+    ];
     return _panel(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
       child: Column(
@@ -165,25 +215,49 @@ class CourseObjectivesPage extends StatelessWidget {
               child: DataTable(
                 columnSpacing: 24,
                 horizontalMargin: 8,
-                columns: const [
-                  DataColumn(label: Text('课程目标')),
-                  DataColumn(label: Text('权重')),
-                  DataColumn(label: Text('毕业要求')),
-                  DataColumn(label: Text('平时')),
-                  DataColumn(label: Text('实验')),
-                  DataColumn(label: Text('考核')),
+                columns: [
+                  for (final c in columns) DataColumn(label: Text(c)),
                 ],
                 rows: [
-                  for (final row in _achievementRows)
-                    DataRow(cells: [
-                      for (final cell in row)
-                        DataCell(Text(
-                          cell,
-                          style: row.first == '合计'
-                              ? const TextStyle(fontWeight: FontWeight.w800)
-                              : null,
-                        )),
-                    ]),
+                  ..._objectives.map((o) {
+                    final w = _asDouble(o['weight']);
+                    final fm = _asDouble(o['full_mark']);
+                    final pr = _asRatio(o['pingshi_ratio']);
+                    final er = _asRatio(o['experiment_ratio']);
+                    final exr = _asRatio(o['exam_ratio']);
+                    final extra = _parseExtraMap(o);
+                    return DataRow(cells: [
+                      DataCell(Text(o['name'] ?? '目标${o['idx']}')),
+                      DataCell(Text(w.toStringAsFixed(2))),
+                      DataCell(Text(o['indicator'] ?? '')),
+                      DataCell(Text(
+                          '${fm.toStringAsFixed(0)}（${(pr * 100).toStringAsFixed(0)}%）')),
+                      DataCell(Text(
+                          '${fm.toStringAsFixed(0)}（${(er * 100).toStringAsFixed(0)}%）')),
+                      DataCell(Text(
+                          '${fm.toStringAsFixed(0)}（${(exr * 100).toStringAsFixed(0)}%）')),
+                      for (final c in extraColumns)
+                        DataCell(Text(extra[c] ?? '')),
+                    ]);
+                  }),
+                  DataRow(cells: [
+                    const DataCell(Text('合计',
+                        style: TextStyle(fontWeight: FontWeight.w800))),
+                    DataCell(Text(
+                      _objectives
+                          .fold<double>(0, (s, o) => s + _asDouble(o['weight']))
+                          .toStringAsFixed(2),
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    )),
+                    const DataCell(Text('')),
+                    DataCell(Text(
+                      '${_objectives.fold<double>(0, (s, o) => s + _asDouble(o['full_mark'])).toStringAsFixed(0)}（100%）',
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    )),
+                    const DataCell(Text('')),
+                    const DataCell(Text('')),
+                    for (final _ in extraColumns) const DataCell(Text('')),
+                  ]),
                 ],
               ),
             ),
@@ -193,7 +267,38 @@ class CourseObjectivesPage extends StatelessWidget {
     );
   }
 
-  Widget _buildObjectiveCard(_CourseObjective objective) {
+  List<String> _collectExtraColumnNames() {
+    final names = <String>{};
+    for (final o in _objectives) {
+      final map = _parseExtraMap(o);
+      names.addAll(map.keys);
+    }
+    return names.toList()..sort();
+  }
+
+  Map<String, String> _parseExtraMap(Map<String, dynamic> row) {
+    final json = (row['extra_columns_json'] ?? '{}').toString();
+    if (json.trim().isEmpty) return {};
+    try {
+      return Map<String, String>.from((jsonDecode(json) as Map)
+          .map((k, v) => MapEntry(k.toString(), v.toString())));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Widget _buildObjectiveCard(Map<String, dynamic> o) {
+    final idx = _asInt(o['idx'], 1);
+    final colors = [
+      const Color(0xFFE53935),
+      const Color(0xFF1E88E5),
+      const Color(0xFF43A047),
+      const Color(0xFFFF9800),
+      const Color(0xFF9C27B0),
+      const Color(0xFF00BCD4),
+    ];
+    final color = colors[(idx - 1).clamp(0, colors.length - 1)];
+    final w = _asDouble(o['weight']);
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
@@ -209,22 +314,22 @@ class CourseObjectivesPage extends StatelessWidget {
             width: 90,
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
             decoration: BoxDecoration(
-              color: objective.color.withValues(alpha: 0.14),
+              color: color.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Column(
               children: [
                 Text(
-                  '目标${objective.index}',
+                  '目标$idx',
                   style: TextStyle(
-                    color: objective.color,
+                    color: color,
                     fontSize: 13,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '权重${objective.weight}',
+                  '权重${w.toStringAsFixed(2)}',
                   style: TextStyle(
                     color: NoirTokens.paper.withValues(alpha: 0.62),
                     fontSize: 11,
@@ -239,7 +344,7 @@ class CourseObjectivesPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  objective.objective,
+                  o['description'] ?? o['name'] ?? '',
                   style: const TextStyle(
                     color: NoirTokens.paper,
                     fontSize: 14,
@@ -249,7 +354,7 @@ class CourseObjectivesPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '支撑毕业要求 ${objective.graduationRequirement} · 考核：${objective.assessment}',
+                  '支撑毕业要求 ${o['indicator'] ?? ''} · 考核：${o['assess_content'] ?? ''}',
                   style: TextStyle(
                     color: NoirTokens.paper.withValues(alpha: 0.64),
                     fontSize: 12,
@@ -258,9 +363,9 @@ class CourseObjectivesPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '章节：${objective.chapters}    实验：${objective.labs}',
+                  '章节：${o['chapters'] ?? ''}    实验：${o['experiments'] ?? ''}',
                   style: TextStyle(
-                    color: objective.color.withValues(alpha: 0.86),
+                    color: color.withValues(alpha: 0.86),
                     fontSize: 12,
                     height: 1.35,
                   ),
@@ -306,26 +411,25 @@ class CourseObjectivesPage extends StatelessWidget {
       child: child,
     );
   }
-}
 
-class _CourseObjective {
-  final int index;
-  final String weight;
-  final String objective;
-  final String graduationRequirement;
-  final String chapters;
-  final String labs;
-  final String assessment;
-  final Color color;
+  static int _asInt(Object? value, [int fallback = 0]) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value.trim()) ?? fallback;
+    return fallback;
+  }
 
-  const _CourseObjective({
-    required this.index,
-    required this.weight,
-    required this.objective,
-    required this.graduationRequirement,
-    required this.chapters,
-    required this.labs,
-    required this.assessment,
-    required this.color,
-  });
+  static double _asDouble(Object? value, [double fallback = 0]) {
+    if (value is num) return value.toDouble();
+    if (value is String) {
+      final text = value.trim().replaceAll('%', '');
+      return double.tryParse(text) ?? fallback;
+    }
+    return fallback;
+  }
+
+  static double _asRatio(Object? value, [double fallback = 0]) {
+    final ratio = _asDouble(value, fallback);
+    return ratio > 1 ? ratio / 100 : ratio;
+  }
 }

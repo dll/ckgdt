@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'dart:ui' as ui;
@@ -14,6 +14,40 @@ import '../../../../services/output_path_service.dart';
 import '../../../../core/error_handler.dart';
 import '../achievement_shared.dart';
 import '../achievement_config.dart';
+
+double _numAsDouble(Object? value, [double fallback = 0.0]) {
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value) ?? fallback;
+  return fallback;
+}
+
+int _numAsInt(Object? value, [int fallback = 0]) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? fallback;
+  return fallback;
+}
+
+List<Map<String, dynamic>> _mapList(Object? value) {
+  if (value is! List) return const [];
+  return [
+    for (final item in value)
+      if (item is Map) Map<String, dynamic>.from(item),
+  ];
+}
+
+Map<String, int> _stringIntMap(Object? value) {
+  if (value is! Map) return const {};
+  return {
+    for (final entry in value.entries)
+      entry.key.toString(): _numAsInt(entry.value),
+  };
+}
+
+List<String> _stringList(Object? value) {
+  if (value is! List) return const [];
+  return [for (final item in value) item.toString()];
+}
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Tab 4 — 计算过程（大纲目标 + 考核结构 + 公式 + 班级概览 + 学生表 + 分布图）
@@ -1168,12 +1202,13 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
       final v = (s[key] as num?)?.toDouble() ?? 0;
       if (v >= 0.85) {
         cExcel++;
-      } else if (v >= 0.70)
+      } else if (v >= 0.70) {
         cGood++;
-      else if (v >= 0.60)
+      } else if (v >= 0.60) {
         cMid++;
-      else
+      } else {
         cLow++;
+      }
     }
     final total = _scores.length;
     return Padding(
@@ -1236,11 +1271,9 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
   /// 七、问卷满意度调查
   Widget _buildSurveySatisfaction(Color primary) {
     final hasSurvey = _surveySummary?['hasSurveyData'] == true;
-    final totalResponses = _surveySummary?['totalResponses'] as int? ?? 0;
-    final overallSat =
-        (_surveySummary?['overallSatisfaction'] as double?) ?? 0.0;
-    final questionStats =
-        (_surveySummary?['questionStats'] as List<Map<String, dynamic>>?) ?? [];
+    final totalResponses = _numAsInt(_surveySummary?['totalResponses']);
+    final overallSat = _numAsDouble(_surveySummary?['overallSatisfaction']);
+    final questionStats = _mapList(_surveySummary?['questionStats']);
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -1389,14 +1422,14 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
               const SizedBox(height: 12),
               // 逐题统计
               ...questionStats.take(6).map((qs) {
-                final type = qs['type'] as String;
+                final type = qs['type']?.toString() ?? '';
                 final question = qs['question'] as String? ?? '';
                 if (type == 'single_choice') {
-                  final counts = qs['counts'] as Map<String, int>? ?? {};
-                  final total = (qs['total'] as int?) ?? 1;
+                  final counts = _stringIntMap(qs['counts']);
+                  final total = _numAsInt(qs['total']);
                   return _buildSurveyQuestion(question, counts, total);
                 } else if (type == 'rating') {
-                  final avg = (qs['average'] as double?) ?? 0;
+                  final avg = _numAsDouble(qs['average']);
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Row(children: [
@@ -1419,7 +1452,7 @@ class _CalculationProcessTabState extends State<CalculationProcessTab> {
                     ]),
                   );
                 } else if (type == 'text') {
-                  final answers = qs['answers'] as List<String>? ?? [];
+                  final answers = _stringList(qs['answers']);
                   if (answers.isEmpty) return const SizedBox.shrink();
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),
@@ -1633,7 +1666,7 @@ class _ContinuousImprovementTabState extends State<ContinuousImprovementTab> {
       );
     }
     final maxV = _comparison
-        .map((c) => (c['weighted'] as double))
+        .map((c) => _numAsDouble(c['weighted']))
         .fold<double>(0.0, (a, b) => a > b ? a : b)
         .clamp(0.01, 1.0);
     return Card(
@@ -1649,9 +1682,9 @@ class _ContinuousImprovementTabState extends State<ContinuousImprovementTab> {
           ]),
           const Divider(height: 20),
           ..._comparison.map((c) {
-            final v = c['weighted'] as double;
+            final v = _numAsDouble(c['weighted']);
             final label = '${c['name']}'
-                '${(c['semester'] as String).isNotEmpty ? ' · ${c['semester']}' : ''}';
+                '${(c['semester']?.toString() ?? '').isNotEmpty ? ' · ${c['semester']}' : ''}';
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Row(children: [
@@ -1886,15 +1919,15 @@ class _ContinuousImprovementTabState extends State<ContinuousImprovementTab> {
 
   Widget _buildObjectiveImprovementCard(
       Map<String, dynamic> suggestion, Color primary) {
-    final objIdx = suggestion['objectiveIndex'] as int;
-    final objName = suggestion['objectiveName'] as String;
-    final ach = (suggestion['achievement'] as double?) ?? 0;
+    final objIdx = _numAsInt(suggestion['objectiveIndex']);
+    final objName = suggestion['objectiveName']?.toString() ?? '';
+    final ach = _numAsDouble(suggestion['achievement']);
     final level = suggestion['level'] as String? ?? '';
-    final lowCount = suggestion['lowStudentCount'] as int? ?? 0;
-    final totalStudents = suggestion['totalStudents'] as int? ?? 0;
+    final lowCount = _numAsInt(suggestion['lowStudentCount']);
+    final totalStudents = _numAsInt(suggestion['totalStudents']);
     final chapters = suggestion['chapters'] as String? ?? '';
-    final topics = (suggestion['topics'] as List<String>?) ?? [];
-    final actions = (suggestion['actions'] as List<String>?) ?? [];
+    final topics = _stringList(suggestion['topics']);
+    final actions = _stringList(suggestion['actions']);
     final color = kObjectiveColors[objIdx.clamp(0, 3)];
 
     return Card(
@@ -2007,10 +2040,10 @@ class _ContinuousImprovementTabState extends State<ContinuousImprovementTab> {
 
   Widget _buildOverallImprovementCard(
       Map<String, dynamic> suggestion, Color primary) {
-    final ach = (suggestion['achievement'] as double?) ?? 0;
-    final actions = (suggestion['actions'] as List<String>?) ?? [];
-    final graphNodes = suggestion['graphNodeCount'] as int? ?? 0;
-    final quizCount = suggestion['quizQuestionCount'] as int? ?? 0;
+    final ach = _numAsDouble(suggestion['achievement']);
+    final actions = _stringList(suggestion['actions']);
+    final graphNodes = _numAsInt(suggestion['graphNodeCount']);
+    final quizCount = _numAsInt(suggestion['quizQuestionCount']);
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -2084,11 +2117,9 @@ class _ContinuousImprovementTabState extends State<ContinuousImprovementTab> {
 
   Widget _buildSurveyFeedbackCard(Color primary) {
     final hasSurvey = _surveySummary?['hasSurveyData'] == true;
-    final overallSat =
-        (_surveySummary?['overallSatisfaction'] as double?) ?? 0.0;
-    final totalResponses = _surveySummary?['totalResponses'] as int? ?? 0;
-    final questionStats =
-        (_surveySummary?['questionStats'] as List<Map<String, dynamic>>?) ?? [];
+    final overallSat = _numAsDouble(_surveySummary?['overallSatisfaction']);
+    final totalResponses = _numAsInt(_surveySummary?['totalResponses']);
+    final questionStats = _mapList(_surveySummary?['questionStats']);
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -2171,7 +2202,7 @@ class _ContinuousImprovementTabState extends State<ContinuousImprovementTab> {
     ];
 
     for (final q in textQuestions) {
-      final answers = q['answers'] as List<String>? ?? [];
+      final answers = _stringList(q['answers']);
       for (final a in answers.take(5)) {
         widgets.add(Padding(
           padding: const EdgeInsets.only(left: 8, bottom: 4),

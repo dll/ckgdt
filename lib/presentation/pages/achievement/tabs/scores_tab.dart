@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:flutter/material.dart';
@@ -1563,7 +1563,8 @@ class _PingshiAchievementTabState extends State<PingshiAchievementTab> {
           child: Row(
             children: [
               Expanded(
-                child: DropdownButtonFormField<int>(value: _selectedBatchId,
+                child: DropdownButtonFormField<int>(
+                  initialValue: _selectedBatchId,
                   decoration: const InputDecoration(
                     labelText: '选择批次',
                     border: OutlineInputBorder(),
@@ -1805,7 +1806,8 @@ class _ExperimentAchievementTabState extends State<ExperimentAchievementTab> {
           child: Row(
             children: [
               Expanded(
-                child: DropdownButtonFormField<int>(value: _selectedBatchId,
+                child: DropdownButtonFormField<int>(
+                  initialValue: _selectedBatchId,
                   decoration: const InputDecoration(
                     labelText: '选择批次',
                     border: OutlineInputBorder(),
@@ -2038,7 +2040,8 @@ class _ExamAchievementTabState extends State<ExamAchievementTab> {
           child: Row(
             children: [
               Expanded(
-                child: DropdownButtonFormField<int>(value: _selectedBatchId,
+                child: DropdownButtonFormField<int>(
+                  initialValue: _selectedBatchId,
                   decoration: const InputDecoration(
                     labelText: '选择批次',
                     border: OutlineInputBorder(),

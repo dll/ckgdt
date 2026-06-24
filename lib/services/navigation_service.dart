@@ -44,6 +44,7 @@ import '../presentation/pages/admin/student_manage_page.dart';
 import '../presentation/pages/admin/survey_manage_page.dart';
 import '../presentation/pages/admin/teacher_manage_page.dart';
 import '../presentation/pages/admin/teaching_manage_page.dart';
+import '../presentation/pages/admin/course_objectives_manage_page.dart';
 import '../presentation/pages/admin/teacher_application_page.dart';
 import '../presentation/pages/admin/teacher_application_manage_page.dart';
 import '../presentation/pages/notification/notification_manage_page.dart';
@@ -331,6 +332,8 @@ class NavigationService {
     '计划': 'plan', '学习计划': 'plan',
     '学习链': 'learning_chain',
     '薄弱': 'weakness', '薄弱诊断': 'weakness',
+    '课程目标管理': 'course_objectives_manage',
+    '目标管理': 'course_objectives_manage',
 
     // ── 设置 ──
     '设置': 'settings', '配置': 'settings',
@@ -469,6 +472,8 @@ class NavigationService {
         return const SurveyManagePage();
       case 'teaching_manage':
         return const TeachingManagePage();
+      case 'course_objectives_manage':
+        return const CourseObjectivesManagePage();
       case 'lab_manage':
         return const LabTaskManagePage();
       case 'repo_analytics':

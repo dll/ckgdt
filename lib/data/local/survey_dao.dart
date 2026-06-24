@@ -2,6 +2,12 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'database_helper.dart';
 
+double _asDouble(Object? value, [double fallback = 0.0]) {
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value) ?? fallback;
+  return fallback;
+}
+
 /// 问卷调查 DAO — 问卷 CRUD、题目管理、回答统计
 class SurveyDao {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
@@ -324,7 +330,7 @@ class SurveyDao {
           buf.writeln('    ${entry.key}：${entry.value} 人（$pct%）');
         }
       } else if (qs['type'] == 'rating') {
-        final avg = qs['average'] as double? ?? 0;
+        final avg = _asDouble(qs['average']);
         buf.writeln('  平均评分：${avg.toStringAsFixed(2)} / 5.0');
         final dist = qs['distribution'] as Map<int, int>? ?? {};
         for (int s = 5; s >= 1; s--) {

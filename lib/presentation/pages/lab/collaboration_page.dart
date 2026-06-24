@@ -1,9 +1,18 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import '../../../data/local/collaboration_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../core/error_handler.dart';
+
+double _asProgress(Object? value) {
+  final raw = switch (value) {
+    num v => v.toDouble(),
+    String v => double.tryParse(v) ?? 0.0,
+    _ => 0.0,
+  };
+  return raw.clamp(0.0, 1.0).toDouble();
+}
 
 /// 协作讨论页面 — 讨论区 / 分工管理 / 互评中心（3 Tab）
 class CollaborationPage extends StatefulWidget {
@@ -87,9 +96,8 @@ class _CollaborationPageState extends State<CollaborationPage>
       }
       myRepo ??= allStudents.first['repo'] as String?;
 
-      final repoMembers = allStudents
-          .where((s) => s['repo'] == myRepo)
-          .toList();
+      final repoMembers =
+          allStudents.where((s) => s['repo'] == myRepo).toList();
       if (repoMembers.isEmpty) return;
 
       // 分工角色列表
@@ -108,7 +116,13 @@ class _CollaborationPageState extends State<CollaborationPage>
           'member_name': m['name'] as String? ?? '',
           'member_id': m['userId'] as String? ?? '',
           'role': m['coreDuty'] as String? ?? roles[i % roles.length],
-          'progress': (i == 0) ? 0.75 : (i == 1) ? 0.60 : (i == 2) ? 1.0 : 0.30 + (i % 5) * 0.1,
+          'progress': (i == 0)
+              ? 0.75
+              : (i == 1)
+                  ? 0.60
+                  : (i == 2)
+                      ? 1.0
+                      : 0.30 + (i % 5) * 0.1,
           'status': i == 2 ? '已完成' : '进行中',
         });
       }
@@ -192,7 +206,8 @@ class _CollaborationPageState extends State<CollaborationPage>
           controller: _tabController,
           labelColor: Theme.of(context).colorScheme.primary,
           unselectedLabelColor: Colors.grey,
-          labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          labelStyle:
+              const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
           indicatorColor: Theme.of(context).colorScheme.primary,
           tabs: const [
             Tab(icon: Icon(Icons.forum, size: 20), text: '讨论区'),
@@ -235,8 +250,8 @@ class _CollaborationPageState extends State<CollaborationPage>
                   onRefresh: _loadMessages,
                   child: ListView.builder(
                     controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     itemCount: _messages.length,
                     itemBuilder: (context, index) {
                       final msg = _messages[index];
@@ -377,8 +392,8 @@ class _CollaborationPageState extends State<CollaborationPage>
                   hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
                   filled: true,
                   fillColor: Colors.grey.withValues(alpha: 0.08),
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 10),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
                     borderSide: BorderSide.none,
@@ -471,8 +486,7 @@ class _CollaborationPageState extends State<CollaborationPage>
           Row(
             children: [
               Icon(Icons.people,
-                  size: 20,
-                  color: Theme.of(context).colorScheme.primary),
+                  size: 20, color: Theme.of(context).colorScheme.primary),
               const SizedBox(width: 8),
               const Text(
                 '成员分工',
@@ -500,11 +514,11 @@ class _CollaborationPageState extends State<CollaborationPage>
   Widget _buildTaskOverviewCard() {
     final primary = Theme.of(context).colorScheme.primary;
     final completedCount =
-        _taskDivisions.where((d) => d['progress'] == 1.0).length;
+        _taskDivisions.where((d) => _asProgress(d['progress']) >= 1.0).length;
     final totalProgress = _taskDivisions.isEmpty
         ? 0.0
         : _taskDivisions
-                .map<double>((d) => (d['progress'] as double?) ?? 0.0)
+                .map<double>((d) => _asProgress(d['progress']))
                 .reduce((a, b) => a + b) /
             _taskDivisions.length;
 
@@ -594,7 +608,7 @@ class _CollaborationPageState extends State<CollaborationPage>
 
   Widget _buildMemberCard(Map<String, dynamic> member, int index) {
     final primary = Theme.of(context).colorScheme.primary;
-    final progress = (member['progress'] as double?) ?? 0.0;
+    final progress = _asProgress(member['progress']);
     final isCompleted = progress >= 1.0;
     final memberName = member['member_name'] ?? '未知';
     final role = member['role'] ?? '未分配';
@@ -757,7 +771,8 @@ class _CollaborationPageState extends State<CollaborationPage>
                                 const SizedBox(width: 8),
                                 Expanded(
                                   flex: 3,
-                                  child: DropdownButtonFormField<String>(value: roleValues[i].isNotEmpty &&
+                                  child: DropdownButtonFormField<String>(
+                                    initialValue: roleValues[i].isNotEmpty &&
                                             roles.contains(roleValues[i])
                                         ? roleValues[i]
                                         : roles.first,
@@ -765,9 +780,8 @@ class _CollaborationPageState extends State<CollaborationPage>
                                         .map((r) => DropdownMenuItem(
                                               value: r,
                                               child: Text(r,
-                                                  style:
-                                                      const TextStyle(
-                                                          fontSize: 13)),
+                                                  style: const TextStyle(
+                                                      fontSize: 13)),
                                             ))
                                         .toList(),
                                     onChanged: (val) {
@@ -838,8 +852,7 @@ class _CollaborationPageState extends State<CollaborationPage>
           Row(
             children: [
               Icon(Icons.assignment,
-                  size: 20,
-                  color: Theme.of(context).colorScheme.primary),
+                  size: 20, color: Theme.of(context).colorScheme.primary),
               const SizedBox(width: 8),
               const Text(
                 '待评作品',
@@ -854,8 +867,7 @@ class _CollaborationPageState extends State<CollaborationPage>
           Row(
             children: [
               Icon(Icons.reviews,
-                  size: 20,
-                  color: Theme.of(context).colorScheme.primary),
+                  size: 20, color: Theme.of(context).colorScheme.primary),
               const SizedBox(width: 8),
               const Text(
                 '互评记录',
@@ -892,9 +904,8 @@ class _CollaborationPageState extends State<CollaborationPage>
             _peerReviews.length;
 
     final currentUserId = _authService.getCurrentUserId();
-    final myReviewCount = _peerReviews
-        .where((r) => r['reviewer_id'] == currentUserId)
-        .length;
+    final myReviewCount =
+        _peerReviews.where((r) => r['reviewer_id'] == currentUserId).length;
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -967,9 +978,8 @@ class _CollaborationPageState extends State<CollaborationPage>
 
   List<Widget> _buildSubmissionsList(String? currentUserId) {
     // 排除自己的提交
-    final otherSubmissions = _submissions
-        .where((s) => s['submitter_id'] != currentUserId)
-        .toList();
+    final otherSubmissions =
+        _submissions.where((s) => s['submitter_id'] != currentUserId).toList();
 
     if (otherSubmissions.isEmpty) {
       return [
@@ -1035,8 +1045,7 @@ class _CollaborationPageState extends State<CollaborationPage>
                       const SizedBox(height: 2),
                       Text(
                         '$submitterName  $submitTime',
-                        style:
-                            TextStyle(fontSize: 12, color: Colors.grey[500]),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                       ),
                     ],
                   ),
@@ -1147,8 +1156,7 @@ class _CollaborationPageState extends State<CollaborationPage>
                       ),
                       Text(
                         _formatTime(createdAt),
-                        style:
-                            TextStyle(fontSize: 11, color: Colors.grey[400]),
+                        style: TextStyle(fontSize: 11, color: Colors.grey[400]),
                       ),
                     ],
                   ),
@@ -1212,8 +1220,7 @@ class _CollaborationPageState extends State<CollaborationPage>
     // 如果已有评价，预填
     final existing = _peerReviews.firstWhere(
       (r) =>
-          r['reviewer_id'] == currentUserId &&
-          r['reviewee_id'] == submitterId,
+          r['reviewer_id'] == currentUserId && r['reviewee_id'] == submitterId,
       orElse: () => <String, dynamic>{},
     );
     if (existing.isNotEmpty) {
@@ -1235,8 +1242,7 @@ class _CollaborationPageState extends State<CollaborationPage>
                       color: Theme.of(context).colorScheme.primary, size: 22),
                   const SizedBox(width: 8),
                   const Expanded(
-                    child: Text('互评打分',
-                        style: TextStyle(fontSize: 17)),
+                    child: Text('互评打分', style: TextStyle(fontSize: 17)),
                   ),
                 ],
               ),
@@ -1351,8 +1357,8 @@ class _CollaborationPageState extends State<CollaborationPage>
                         maxLines: 4,
                         decoration: InputDecoration(
                           hintText: '请输入评价内容...',
-                          hintStyle: TextStyle(
-                              color: Colors.grey[400], fontSize: 13),
+                          hintStyle:
+                              TextStyle(color: Colors.grey[400], fontSize: 13),
                           filled: true,
                           fillColor: Colors.grey.withValues(alpha: 0.06),
                           border: OutlineInputBorder(

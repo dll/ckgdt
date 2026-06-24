@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:excel/excel.dart' as xl;
@@ -20,6 +20,35 @@ import '../../../../core/error_handler.dart';
 import '../../../widgets/markdown_bubble.dart';
 import '../achievement_shared.dart';
 import '../achievement_config.dart';
+
+double _asDouble(Object? value, [double fallback = 0.0]) {
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value) ?? fallback;
+  return fallback;
+}
+
+int _asInt(Object? value, [int fallback = 0]) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? fallback;
+  return fallback;
+}
+
+List<Map<String, dynamic>> _asMapList(Object? value) {
+  if (value is! List) return const [];
+  return [
+    for (final item in value)
+      if (item is Map) Map<String, dynamic>.from(item),
+  ];
+}
+
+Map<String, int> _asStringIntMap(Object? value) {
+  if (value is! Map) return const {};
+  return {
+    for (final entry in value.entries)
+      entry.key.toString(): _asInt(entry.value),
+  };
+}
 
 class ReportTab extends StatefulWidget {
   final AuthService authService;
@@ -73,15 +102,16 @@ class _ReportTabState extends State<ReportTab> {
   void initState() {
     super.initState();
     _loadBatches();
-    _loadConfig();
   }
 
   Future<void> _loadConfig([String? courseName]) async {
     try {
       final rows = await widget.achievementDao
           .getCourseObjectives(courseName ?? '移动应用开发');
-      if (mounted && rows.isNotEmpty) {
-        setState(() => _config = AchievementConfig.fromObjectiveRows(rows));
+      if (mounted) {
+        setState(() => _config = rows.isNotEmpty
+            ? AchievementConfig.fromObjectiveRows(rows)
+            : AchievementConfig.defaults);
       }
     } catch (e, st) {
       swallowDebug(e, tag: 'ReportTab.loadConfig', stack: st);
@@ -91,14 +121,19 @@ class _ReportTabState extends State<ReportTab> {
   Future<void> _loadBatches() async {
     try {
       final batches = await widget.achievementDao.getBatches();
+      String? courseToLoad;
       if (mounted) {
         setState(() {
           _batches = batches;
           _loadingBatches = false;
           if (_batches.isNotEmpty && _selectedBatchId == null) {
             _selectedBatchId = _batches.first['id'] as int;
+            courseToLoad = _batches.first['course_name']?.toString();
           }
         });
+      }
+      if (courseToLoad != null && courseToLoad!.trim().isNotEmpty) {
+        await _loadConfig(courseToLoad);
       }
     } catch (e) {
       if (mounted) setState(() => _loadingBatches = false);
@@ -566,21 +601,18 @@ class _ReportTabState extends State<ReportTab> {
       buffer.writeln('### 2. 定性评价情况分析');
       buffer.writeln();
       if (_surveySummary?['hasSurveyData'] == true) {
-        final totalResp = _surveySummary!['totalResponses'] as int? ?? 0;
-        final overallSat =
-            (_surveySummary!['overallSatisfaction'] as double?) ?? 0;
+        final totalResp = _asInt(_surveySummary!['totalResponses']);
+        final overallSat = _asDouble(_surveySummary!['overallSatisfaction']);
         buffer.writeln(
             '共回收有效问卷 **$totalResp** 份，综合满意度为 **${(overallSat * 100).toStringAsFixed(1)}%**。');
         buffer.writeln();
-        final qStats =
-            (_surveySummary!['questionStats'] as List<Map<String, dynamic>>?) ??
-                [];
+        final qStats = _asMapList(_surveySummary!['questionStats']);
         for (final qs in qStats) {
           final question = qs['question'] as String? ?? '';
           buffer.writeln('**$question**');
           if (qs['type'] == 'single_choice') {
-            final counts = qs['counts'] as Map<String, int>? ?? {};
-            final total = (qs['total'] as int?) ?? 1;
+            final counts = _asStringIntMap(qs['counts']);
+            final total = _asInt(qs['total'], 1);
             for (final entry in counts.entries) {
               final pct = total > 0
                   ? (entry.value / total * 100).toStringAsFixed(1)
@@ -589,7 +621,7 @@ class _ReportTabState extends State<ReportTab> {
             }
           } else if (qs['type'] == 'rating') {
             buffer.writeln(
-                '- 平均评分：${(qs['average'] as double? ?? 0).toStringAsFixed(2)} / 5.0');
+                '- 平均评分：${_asDouble(qs['average']).toStringAsFixed(2)} / 5.0');
           }
           buffer.writeln();
         }
@@ -793,10 +825,9 @@ class _ReportTabState extends State<ReportTab> {
         classStats: {
           'studentCount': scores.length,
           'avgTotal': _weightedAchievement * 100,
-          'maxTotal': _maxOf(scores, (s) => (s['total_score'] as double?) ?? 0),
-          'minTotal': _minOf(scores, (s) => (s['total_score'] as double?) ?? 0),
-          'stdDev':
-              _stdDevOf(scores, (s) => (s['total_score'] as double?) ?? 0),
+          'maxTotal': _maxOf(scores, (s) => _asDouble(s['total_score'])),
+          'minTotal': _minOf(scores, (s) => _asDouble(s['total_score'])),
+          'stdDev': _stdDevOf(scores, (s) => _asDouble(s['total_score'])),
         },
         students: scores,
         barChartPng: await _generateBarChartPng(scores),
@@ -826,8 +857,8 @@ class _ReportTabState extends State<ReportTab> {
   /// 由 docx 服务回退到通用模板文案。
   String? _qualitativeFromSurvey() {
     if (_surveySummary?['hasSurveyData'] != true) return null;
-    final totalResp = _surveySummary!['totalResponses'] as int? ?? 0;
-    final overallSat = (_surveySummary!['overallSatisfaction'] as double?) ?? 0;
+    final totalResp = _asInt(_surveySummary!['totalResponses']);
+    final overallSat = _asDouble(_surveySummary!['overallSatisfaction']);
     return '共回收有效问卷 $totalResp 份，综合满意度为 '
         '${(overallSat * 100).toStringAsFixed(1)}%。问卷结果与定量评价结果基本一致，'
         '表明学生自我评价与实际能力达成情况基本相符。';
@@ -906,6 +937,7 @@ class _ReportTabState extends State<ReportTab> {
           className: className,
           semester: semester,
           objectiveWeights: _objectiveWeights,
+          objectiveFullMarks: cf.fullMarks,
           objectiveAchievements: _objectiveAchievements,
           objectiveNames: cf.objectiveNames,
           indicators: cf.indicators,
@@ -916,6 +948,7 @@ class _ReportTabState extends State<ReportTab> {
           pingshiAverage: avgMap(ps),
           experimentAverage: avgMap(es),
           examAverage: avgMap(xs),
+          envWeightsByObjective: envWeightsByObjective,
           weightedAchievement: _weightedAchievement,
         );
         final filled = AchievementTemplateExcelService.instance.fillTemplate(
@@ -1133,10 +1166,15 @@ class _ReportTabState extends State<ReportTab> {
       s4.appendRow(r);
       r = rowOf(18);
       r[0] = t('权重');
-      for (final offset in [2, 6, 10, 14]) {
-        r[offset] = n(0.2, 1);
-        r[offset + 1] = n(0.3, 1);
-        r[offset + 2] = n(0.5, 1);
+      for (final entry in [2, 6, 10, 14].asMap().entries) {
+        final i = entry.key;
+        final offset = entry.value;
+        final envWeight = i < envWeightsByObjective.length
+            ? envWeightsByObjective[i]
+            : const {};
+        r[offset] = n(envWeight['pingshi'] ?? 0, 1);
+        r[offset + 1] = n(envWeight['experiment'] ?? 0, 1);
+        r[offset + 2] = n(envWeight['exam'] ?? 0, 1);
         r[offset + 3] = n(1, 0);
       }
       s4.appendRow(r);
@@ -1203,9 +1241,18 @@ class _ReportTabState extends State<ReportTab> {
         t('达成度')
       ]);
       const envNames = ['平时', '实验', '期末考试'];
-      const envWeights = [0.2, 0.3, 0.5];
-      const envFull = [20.0, 30.0, 50.0];
       for (int i = 0; i < 4; i++) {
+        final envWeight = i < envWeightsByObjective.length
+            ? envWeightsByObjective[i]
+            : const {};
+        final envWeights = [
+          envWeight['pingshi'] ?? 0,
+          envWeight['experiment'] ?? 0,
+          envWeight['exam'] ?? 0,
+        ];
+        final envFull = [
+          for (final weight in envWeights) weight > 0 ? cf.fullMarks[i] : 0.0
+        ];
         final envAch = [mapVal(ps, i), mapVal(es, i), mapVal(xs, i)];
         for (int j = 0; j < 3; j++) {
           r = rowOf(10);
@@ -1603,9 +1650,8 @@ class _ReportTabState extends State<ReportTab> {
 
       // 满意度数据
       final hasSurvey = _surveySummary?['hasSurveyData'] == true;
-      final overallSat =
-          (_surveySummary?['overallSatisfaction'] as double?) ?? 0;
-      final totalResp = _surveySummary?['totalResponses'] as int? ?? 0;
+      final overallSat = _asDouble(_surveySummary?['overallSatisfaction']);
+      final totalResp = _asInt(_surveySummary?['totalResponses']);
 
       pdf.addPage(
         pw.MultiPage(

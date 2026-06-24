@@ -58,24 +58,21 @@ class AchievementConfig {
   /// 从 course_objectives 表行（按 idx 升序）构建完整配置。缺字段回落默认。
   static AchievementConfig fromObjectiveRows(List<Map<String, dynamic>> rows) {
     if (rows.isEmpty) return defaults;
-    final sorted = [...rows]..sort((a, b) => ((a['idx'] as num?)?.toInt() ?? 0)
-        .compareTo((b['idx'] as num?)?.toInt() ?? 0));
+    final sorted = [...rows]
+      ..sort((a, b) => _asInt(a['idx']).compareTo(_asInt(b['idx'])));
     final byIdx = <int, Map<String, dynamic>>{
       for (final row in sorted)
-        if (((row['idx'] as num?)?.toInt() ?? 0) > 0)
-          (row['idx'] as num).toInt(): row
+        if (_asInt(row['idx']) > 0) _asInt(row['idx']): row
     };
     try {
       List<T> pick<T>(T Function(Map<String, dynamic>?, int) f) =>
           List<T>.generate(4, (i) => f(byIdx[i + 1], i));
       return AchievementConfig(
-        weights: pick((r, i) => r == null
-            ? 0
-            : (r['weight'] as num?)?.toDouble() ?? _at(defaults.weights, i)),
+        weights: pick((r, i) =>
+            r == null ? 0 : _asRatio(r['weight'], _at(defaults.weights, i))),
         fullMarks: pick((r, i) => r == null
             ? 0
-            : (r['full_mark'] as num?)?.toDouble() ??
-                _at(defaults.fullMarks, i)),
+            : _asDouble(r['full_mark'], _at(defaults.fullMarks, i))),
         objectiveNames: pick((r, i) =>
             (r?['name'] as String?)?.trim().isNotEmpty == true
                 ? r!['name'] as String
@@ -94,14 +91,35 @@ class AchievementConfig {
 
   static T _at<T>(List<T> list, int i) => i < list.length ? list[i] : list.last;
 
+  static int _asInt(Object? value, [int fallback = 0]) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value.trim()) ?? fallback;
+    return fallback;
+  }
+
+  static double _asDouble(Object? value, [double fallback = 0]) {
+    if (value is num) return value.toDouble();
+    if (value is String) {
+      final text = value.trim().replaceAll('%', '');
+      return double.tryParse(text) ?? fallback;
+    }
+    return fallback;
+  }
+
+  static double _asRatio(Object? value, [double fallback = 0]) {
+    final ratio = _asDouble(value, fallback);
+    return ratio > 1 ? ratio / 100 : ratio;
+  }
+
   static Map<String, double> _averageAssessmentWeights(
       List<Map<String, dynamic>> rows) {
     double p = 0, e = 0, x = 0;
     var count = 0;
     for (final row in rows) {
-      final rp = (row['pingshi_ratio'] as num?)?.toDouble() ?? 0;
-      final re = (row['experiment_ratio'] as num?)?.toDouble() ?? 0;
-      final rx = (row['exam_ratio'] as num?)?.toDouble() ?? 0;
+      final rp = _asRatio(row['pingshi_ratio']);
+      final re = _asRatio(row['experiment_ratio']);
+      final rx = _asRatio(row['exam_ratio']);
       final sum = rp + re + rx;
       if (sum <= 0) continue;
       p += rp / sum;

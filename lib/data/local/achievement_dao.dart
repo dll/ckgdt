@@ -6,6 +6,7 @@ import 'database_helper.dart';
 import 'ordinary_score_dao.dart';
 import '../../core/error_handler.dart';
 import '../../services/course_context_service.dart';
+import '../../services/achievement_context.dart';
 
 /// 课程达成度 DAO — 达成度批次管理、成绩录入、计算、报告生成
 class AchievementDao {
@@ -15,6 +16,27 @@ class AchievementDao {
   /// DAO 属数据层，不能依赖 presentation 层的 AchievementConfig，故在此独立维护；
   /// 两处数值必须同步（大纲权威值 15/25/30/30）。
   static const List<double> _kFullMarks = [15.0, 25.0, 30.0, 30.0];
+
+  static int _asInt(Object? value, [int fallback = 0]) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value.trim()) ?? fallback;
+    return fallback;
+  }
+
+  static double _asDouble(Object? value, [double fallback = 0]) {
+    if (value is num) return value.toDouble();
+    if (value is String) {
+      final text = value.trim().replaceAll('%', '');
+      return double.tryParse(text) ?? fallback;
+    }
+    return fallback;
+  }
+
+  static double _asRatio(Object? value, [double fallback = 0]) {
+    final ratio = _asDouble(value, fallback);
+    return ratio > 1 ? ratio / 100 : ratio;
+  }
 
   // ═══════════════════════════════════════════════════════════════════════
   // 课程目标定义（course_objectives，权威源来自大纲导入）
@@ -35,20 +57,27 @@ class AchievementDao {
       String courseName, List<Map<String, dynamic>> objectives) async {
     final db = await DatabaseHelper.instance.database;
     final now = DateTime.now().toIso8601String();
+    final normalizedCourseName = courseName.trim().isNotEmpty
+        ? courseName.trim()
+        : CourseContextService.defaultCourseName;
     await db.transaction((txn) async {
       await txn.delete('course_objectives',
-          where: 'course_name = ?', whereArgs: [courseName]);
-      for (final o in objectives) {
+          where: 'course_name = ?', whereArgs: [normalizedCourseName]);
+      for (var i = 0; i < objectives.length; i++) {
+        final o = objectives[i];
+        final idx = _asInt(o['idx'], i + 1);
         await txn.insert('course_objectives', {
-          'course_name': courseName,
-          'idx': o['idx'],
-          'name': o['name'],
+          'course_name': normalizedCourseName,
+          'idx': idx,
+          'name': o['name']?.toString().trim().isNotEmpty == true
+              ? o['name']
+              : '课程目标$idx',
           'indicator': o['indicator'],
-          'weight': o['weight'],
-          'full_mark': o['full_mark'],
-          'pingshi_ratio': o['pingshi_ratio'] ?? 0,
-          'experiment_ratio': o['experiment_ratio'] ?? 0,
-          'exam_ratio': o['exam_ratio'] ?? 0,
+          'weight': _asDouble(o['weight']),
+          'full_mark': _asDouble(o['full_mark']),
+          'pingshi_ratio': _asRatio(o['pingshi_ratio']),
+          'experiment_ratio': _asRatio(o['experiment_ratio']),
+          'exam_ratio': _asRatio(o['exam_ratio']),
           'chapters': o['chapters'],
           'description': o['description'],
           'assess_content': o['assess_content'],
@@ -56,6 +85,7 @@ class AchievementDao {
           'pingshi_standard': o['pingshi_standard'],
           'experiment_standard': o['experiment_standard'],
           'assessment_items_json': o['assessment_items_json'],
+          'extra_columns_json': o['extra_columns_json'],
           'created_at': now,
           'updated_at': now,
         });
@@ -67,10 +97,23 @@ class AchievementDao {
   // 批次 CRUD
   // ═══════════════════════════════════════════════════════════════════════
 
-  /// 获取所有批次（含学生人数子查询）
-  Future<List<Map<String, dynamic>>> getAllBatches() async {
+  /// 获取批次列表，默认按当前激活课程过滤。
+  /// [courseName] 为 null 时使用课程管理中的活动课程。
+  /// 管理页需跨课程查询时传 courseName='' 或使用 [getAllBatchesUnscoped]。
+  Future<List<Map<String, dynamic>>> getAllBatches({
+    String? courseName,
+  }) async {
+    final effective = courseName ??
+        await _courseContext.activeCourseName(
+          fallback: CourseContextService.defaultCourseName,
+        );
+    if (effective.isNotEmpty) {
+      AchievementContext.instance.courseName = effective;
+    }
     final db = await DatabaseHelper.instance.database;
     final activeWhere = ActiveStudentScope.where(alias: 'u');
+    final courseWhere = effective.isNotEmpty ? 'WHERE ab.course_name = ?' : '';
+    final args = effective.isNotEmpty ? <Object?>[effective] : <Object?>[];
     try {
       return db.rawQuery('''
         SELECT ab.*,
@@ -82,18 +125,31 @@ class AchievementDao {
               AND (u.user_id IS NULL OR ($activeWhere))
           ) AS student_count
         FROM achievement_batches ab
+        $courseWhere
         ORDER BY ab.created_at DESC
-      ''');
+      ''', args);
     } catch (e, st) {
       swallowDebug(e, tag: 'AchievementDao.getAllBatches.active', stack: st);
       return db.rawQuery('''
         SELECT ab.*,
           (SELECT COUNT(*) FROM achievement_scores WHERE batch_id = ab.id) AS student_count
         FROM achievement_batches ab
+        $courseWhere
         ORDER BY ab.created_at DESC
-      ''');
+      ''', args);
     }
   }
+
+  /// 获取所有课程的全部批次（管理用，无课程过滤）
+  Future<List<Map<String, dynamic>>> getAllBatchesUnscoped() =>
+      getAllBatches(courseName: '');
+
+  /// 按课程获取批次（显式指定课程名）
+  Future<List<Map<String, dynamic>>> getBatchesByCourse(String courseName) =>
+      getAllBatches(courseName: courseName);
+
+  /// 兼容旧调用：默认用当前课程
+  Future<List<Map<String, dynamic>>> getBatches() => getAllBatches();
 
   /// 获取单个批次
   Future<Map<String, dynamic>?> getBatch(int id) async {
@@ -332,8 +388,7 @@ class AchievementDao {
     final objectiveRows = await getCourseObjectives(courseName.toString());
     final objectiveByIdx = <int, Map<String, dynamic>>{
       for (final row in objectiveRows)
-        if (((row['idx'] as num?)?.toInt() ?? 0) > 0)
-          (row['idx'] as num).toInt(): row
+        if (_asInt(row['idx']) > 0) _asInt(row['idx']): row
     };
     final activeIndexes = [
       for (var i = 0; i < 4; i++)
@@ -465,9 +520,6 @@ class AchievementDao {
   // 页面适配方法（别名 & 便捷方法）
   // ═══════════════════════════════════════════════════════════════════════
 
-  /// getBatches — 别名，等价于 getAllBatches()
-  Future<List<Map<String, dynamic>>> getBatches() => getAllBatches();
-
   /// getScoresByBatch — 别名，等价于 getScores(batchId)
   Future<List<Map<String, dynamic>>> getScoresByBatch(int batchId) =>
       getScores(batchId);
@@ -573,8 +625,8 @@ class AchievementDao {
       if (objs.isNotEmpty) {
         final w = List<double>.filled(4, 0);
         for (final o in objs) {
-          final idx = (o['idx'] as num?)?.toInt() ?? 0;
-          final weight = (o['weight'] as num?)?.toDouble() ?? 0;
+          final idx = _asInt(o['idx']);
+          final weight = _asDouble(o['weight']);
           if (idx >= 1 && idx <= 4 && weight > 0) {
             w[idx - 1] = weight;
           }
@@ -586,10 +638,10 @@ class AchievementDao {
       if (json != null && json.isNotEmpty) {
         final m = jsonDecode(json) as Map<String, dynamic>;
         final w = [
-          (m['目标1'] as num?)?.toDouble() ?? fallback[0],
-          (m['目标2'] as num?)?.toDouble() ?? fallback[1],
-          (m['目标3'] as num?)?.toDouble() ?? fallback[2],
-          (m['目标4'] as num?)?.toDouble() ?? fallback[3],
+          _asDouble(m['目标1'], fallback[0]),
+          _asDouble(m['目标2'], fallback[1]),
+          _asDouble(m['目标3'], fallback[2]),
+          _asDouble(m['目标4'], fallback[3]),
         ];
         if (w.every((x) => x > 0)) return w;
       }
@@ -610,8 +662,8 @@ class AchievementDao {
         final marks = List<double>.filled(4, 0);
         var hasMark = false;
         for (final o in objs) {
-          final idx = (o['idx'] as num?)?.toInt() ?? 0;
-          final mark = (o['full_mark'] as num?)?.toDouble() ?? 0;
+          final idx = _asInt(o['idx']);
+          final mark = _asDouble(o['full_mark']);
           if (idx >= 1 && idx <= 4 && mark > 0) {
             marks[idx - 1] = mark;
             hasMark = true;
@@ -650,12 +702,12 @@ class AchievementDao {
         (_) => {'pingshi': 0, 'experiment': 0, 'exam': 0},
       );
       for (final o in objs) {
-        final idx = (o['idx'] as num?)?.toInt() ?? 0;
+        final idx = _asInt(o['idx']);
         if (idx < 1 || idx > 4) continue;
         result[idx - 1] = _normalizeAssessmentWeights({
-          'pingshi': (o['pingshi_ratio'] as num?)?.toDouble() ?? 0,
-          'experiment': (o['experiment_ratio'] as num?)?.toDouble() ?? 0,
-          'exam': (o['exam_ratio'] as num?)?.toDouble() ?? 0,
+          'pingshi': _asRatio(o['pingshi_ratio']),
+          'experiment': _asRatio(o['experiment_ratio']),
+          'exam': _asRatio(o['exam_ratio']),
         });
       }
       return result;
@@ -1616,8 +1668,7 @@ class AchievementDao {
     final envWeights = await resolveObjectiveAssessmentWeights(batchId);
     final objectiveByIdx = <int, Map<String, dynamic>>{
       for (final row in objectives)
-        if (((row['idx'] as num?)?.toInt() ?? 0) > 0)
-          (row['idx'] as num).toInt(): row
+        if (_asInt(row['idx']) > 0) _asInt(row['idx']): row
     };
     final activeIndexes = [
       for (var i = 0; i < 4; i++)
@@ -2224,6 +2275,8 @@ class AchievementDao {
     ) async {
       final usesEnv = envWeights.any((w) => (w[env] ?? 0) > 0.0001);
       if (!usesEnv) return {};
+      final dynamicAverage = await _dynamicComponentClassAverage(batchId, env);
+      if (dynamicAverage.isNotEmpty) return dynamicAverage;
       final synthetic = await _componentRowsAreAggregateBackfill(batchId, env);
       if (!synthetic) return loadLegacyAverage();
       return _aggregateAverageForEnv(aggregateAvg, envWeights, env);
@@ -2263,6 +2316,54 @@ class AchievementDao {
         if (i - 1 < envWeights.length &&
             ((envWeights[i - 1][env] ?? 0) > 0.0001))
           'obj$i': aggregateAvg['课程目标$i'] ?? 0,
+    };
+  }
+
+  Future<void> _ensureDynamicComponentScoresTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS achievement_component_scores(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        batch_id INTEGER NOT NULL,
+        student_id TEXT NOT NULL,
+        student_name TEXT,
+        kind TEXT NOT NULL,
+        objective INTEGER NOT NULL,
+        label TEXT,
+        score REAL DEFAULT 0,
+        achievement REAL DEFAULT 0,
+        ratio REAL DEFAULT 0,
+        created_at TEXT,
+        updated_at TEXT,
+        UNIQUE(batch_id, student_id, kind, objective, label)
+      )
+    ''');
+  }
+
+  Future<Map<String, double>> _dynamicComponentClassAverage(
+      int batchId, String env) async {
+    final db = await DatabaseHelper.instance.database;
+    await _ensureDynamicComponentScoresTable(db);
+    final rows = await db.rawQuery('''
+      SELECT objective, AVG(student_achievement) AS achievement
+      FROM (
+        SELECT student_id,
+               objective,
+               CASE
+                 WHEN SUM(ratio) > 0
+                 THEN SUM(achievement * ratio) / SUM(ratio)
+                 ELSE AVG(achievement)
+               END AS student_achievement
+        FROM achievement_component_scores
+        WHERE batch_id = ? AND kind = ?
+        GROUP BY student_id, objective
+      )
+      GROUP BY objective
+    ''', [batchId, env]);
+    return {
+      for (final row in rows)
+        if (_asInt(row['objective']) >= 1 && _asInt(row['objective']) <= 4)
+          'obj${_asInt(row['objective'])}':
+              _asDouble(row['achievement']).clamp(0.0, 1.0).toDouble()
     };
   }
 

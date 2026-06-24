@@ -70,7 +70,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 31,
+      version: 32,
       singleInstance: true, // 启用单例模式
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
@@ -129,7 +129,7 @@ class DatabaseHelper {
         // 重新打开（版本号必须与主初始化一致）
         final db2 = await openDatabase(
           dbName,
-          version: 31,
+          version: 32,
           singleInstance: true, // 启用单例模式
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
@@ -212,8 +212,8 @@ class DatabaseHelper {
     Database db;
     db = await openDatabase(
       dbPath,
-      version: 31,
-      singleInstance: true, // 启用单例模式，防止多实例同时访问
+      version: 32,
+      singleInstance: true, // 启用单例模式
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
     );
@@ -942,6 +942,9 @@ class DatabaseHelper {
     if (oldVersion < 31) {
       await _migrateToV31(db);
     }
+    if (oldVersion < 32) {
+      await _migrateToV32(db);
+    }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
   }
@@ -1048,6 +1051,7 @@ class DatabaseHelper {
       'pingshi_standard',
       'experiment_standard',
       'assessment_items_json',
+      'extra_columns_json',
     ]) {
       try {
         await db.rawQuery('SELECT $col FROM course_objectives LIMIT 1');
@@ -1578,6 +1582,7 @@ class DatabaseHelper {
         pingshi_standard TEXT,
         experiment_standard TEXT,
         assessment_items_json TEXT,
+        extra_columns_json TEXT,
         created_at TEXT,
         updated_at TEXT,
         UNIQUE(course_name, idx)
@@ -1747,6 +1752,27 @@ class DatabaseHelper {
         updated_at TEXT,
         FOREIGN KEY (batch_id) REFERENCES achievement_batches(id) ON DELETE CASCADE,
         UNIQUE(batch_id, student_id)
+      )
+    ''');
+
+    // ── 动态大纲考核项分项表 ────────────────────────────────────
+    // 用于保存由课程目标对照表生成的动态成绩模板明细，避免报告分环节
+    // 达成度只能从目标汇总值反推。
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS achievement_component_scores(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        batch_id INTEGER NOT NULL,
+        student_id TEXT NOT NULL,
+        student_name TEXT,
+        kind TEXT NOT NULL,
+        objective INTEGER NOT NULL,
+        label TEXT,
+        score REAL DEFAULT 0,
+        achievement REAL DEFAULT 0,
+        ratio REAL DEFAULT 0,
+        created_at TEXT,
+        updated_at TEXT,
+        UNIQUE(batch_id, student_id, kind, objective, label)
       )
     ''');
 
@@ -2662,6 +2688,11 @@ class DatabaseHelper {
     } catch (e) {
       swallow(e, tag: 'assessment_reports.add_print_count');
     }
+  }
+
+  /// V32: course_objectives 增加 extra_columns_json（自定义列）
+  Future<void> _migrateToV32(Database db) async {
+    await _ensureCourseObjectivesColumns(db);
   }
 
   Future<void> _addTextColumnIfMissing(

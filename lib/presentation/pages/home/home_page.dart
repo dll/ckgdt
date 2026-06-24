@@ -42,6 +42,7 @@ import '../admin/release_center_page.dart';
 import '../admin/teaching_manage_page.dart';
 import '../admin/lab_task_manage_page.dart';
 import '../admin/repo_analytics_page.dart';
+import '../admin/course_objectives_manage_page.dart';
 import '../admin/teacher_manage_page.dart';
 import '../admin/teacher_application_manage_page.dart';
 import '../analytics/learning_analytics_page.dart';
@@ -1403,6 +1404,11 @@ class _AdminToolsPage extends StatelessWidget {
       // Demo 录制专用 — 仅管理员可见（kDebugMode 守卫已撤，评比时也能演示）
       _AdminTool(Icons.movie_creation_outlined, 'Demo 数据种子',
           () => _showDemoSeedSheet(context)),
+      _AdminTool(
+          Icons.flag_circle_outlined,
+          '课程目标管理',
+          () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const CourseObjectivesManagePage()))),
     ];
 
     return Scaffold(

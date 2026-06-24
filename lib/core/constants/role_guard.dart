@@ -69,6 +69,7 @@ class RoleGuard {
   static const Set<String> _teacherOnlySubPages = {
     'archive',
     'course_manage',
+    'course_objectives_manage',
     'data_export',
     'data_import',
     'feedback',

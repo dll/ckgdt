@@ -703,12 +703,22 @@ class AchievementExcelService {
       if (!_isDataRow(sid)) continue;
       final name = _cellStr(row, 1);
       final ach = List<double>.filled(4, 0);
+      final components = <Map<String, dynamic>>[];
 
       for (final entry in columns.entries) {
         final item = entry.value;
         if (item.objective < 1 || item.objective > 4) continue;
         final score = _cell(row, entry.key).clamp(0.0, 100.0).toDouble();
-        ach[item.objective - 1] += score / 100.0 * item.ratio;
+        final itemAchievement = score / 100.0;
+        ach[item.objective - 1] += itemAchievement * item.ratio;
+        components.add({
+          'kind': item.kind,
+          'label': item.label,
+          'objective': item.objective,
+          'score': score,
+          'achievement': itemAchievement,
+          'ratio': item.ratio,
+        });
       }
 
       final grade = <String, dynamic>{
@@ -724,6 +734,7 @@ class AchievementExcelService {
         total += value * full;
       }
       grade['total_score'] = total;
+      if (components.isNotEmpty) grade['_components'] = components;
       results.add(grade);
     }
     return results;
@@ -826,6 +837,9 @@ class AchievementExcelService {
   "chapters": "第1章、第2章",
   "experiments": "实验1、实验2",
   "assess_content": "期末考核该目标的评价内容",
+  "pingshi_ratio": 0.20,
+  "experiment_ratio": 0.30,
+  "exam_ratio": 0.50,
   "pingshi_standard": "平时成绩该目标的评价标准要点",
   "experiment_standard": "实验成绩该目标的评价标准要点"
 }]
@@ -845,22 +859,64 @@ $rawText
       if (match == null) return [];
       final list =
           (jsonDecode(match.group(0)!) as List).cast<Map<String, dynamic>>();
+      final tableRows = <int, Map<String, dynamic>>{};
+      try {
+        final parsed =
+            parseSyllabusBytes(Uint8List.fromList(utf8.encode(rawText)), 'md');
+        for (final row in syllabusToObjectiveRows(parsed)) {
+          final idx = _intValue(row['idx']);
+          if (idx > 0) tableRows[idx] = row;
+        }
+      } catch (e, st) {
+        swallowDebug(e,
+            tag: 'AchievementExcel.aiExtractSyllabus.table', stack: st);
+      }
+
+      double numeric(Object? value, [double fallback = 0]) {
+        if (value is num) return value.toDouble();
+        if (value is String) {
+          final text = value.trim().replaceAll('%', '');
+          return double.tryParse(text) ?? fallback;
+        }
+        return fallback;
+      }
+
+      double ratio(Object? value, [double fallback = 0]) {
+        final v = numeric(value, fallback);
+        return v > 1 ? v / 100 : v;
+      }
+
+      double fromTableOrAi(
+          Map<String, dynamic>? table, Map<String, dynamic> ai, String key,
+          {bool asRatio = false}) {
+        final tableValue = asRatio ? ratio(table?[key]) : numeric(table?[key]);
+        if (tableValue > 0) return tableValue;
+        return asRatio ? ratio(ai[key]) : numeric(ai[key]);
+      }
+
       // 规范化字段
       return list
           .map((o) {
-            final idx = (o['idx'] as num?)?.toInt() ?? 0;
+            final idx = _intValue(o['idx']);
+            final table = tableRows[idx];
             return {
               'idx': idx,
               'name': (o['name'] as String?) ?? '课程目标$idx',
-              'indicator': (o['indicator'] ?? '').toString(),
-              'weight': (o['weight'] as num?)?.toDouble() ?? 0,
-              'full_mark': (o['full_mark'] as num?)?.toDouble() ?? 0,
+              'indicator':
+                  (o['indicator'] ?? table?['indicator'] ?? '').toString(),
+              'weight': fromTableOrAi(table, o, 'weight', asRatio: true),
+              'full_mark': fromTableOrAi(table, o, 'full_mark'),
               'description': (o['description'] ?? '').toString(),
               'chapters': (o['chapters'] ?? '').toString(),
               'assess_content': (o['assess_content'] ?? '').toString(),
-              'pingshi_ratio': 0.20,
-              'experiment_ratio': 0.30,
-              'exam_ratio': 0.50,
+              'pingshi_ratio':
+                  fromTableOrAi(table, o, 'pingshi_ratio', asRatio: true),
+              'experiment_ratio':
+                  fromTableOrAi(table, o, 'experiment_ratio', asRatio: true),
+              'exam_ratio':
+                  fromTableOrAi(table, o, 'exam_ratio', asRatio: true),
+              'assessment_items_json':
+                  (table?['assessment_items_json'] ?? '').toString(),
               // 额外信息打包进 standards（course_objectives 未必有这些列，调用方自取）
               'experiments': (o['experiments'] ?? '').toString(),
               'pingshi_standard': (o['pingshi_standard'] ?? '').toString(),
@@ -1462,6 +1518,13 @@ $rawText
     ].join('、');
   }
 
+  int _intValue(Object? value, [int fallback = 0]) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value.trim()) ?? fallback;
+    return fallback;
+  }
+
   double? _parseWeightCell(String text) {
     final trimmed = _normalizeSyllabusText(text);
     final value = double.tryParse(trimmed);
@@ -1522,9 +1585,9 @@ $rawText
             (w['exam_full'] as num?)?.toDouble() ??
             (w['pingshi_full'] as num?)?.toDouble() ??
             0,
-        'pingshi_ratio': (w['pingshi_ratio'] as num?)?.toDouble() ?? 0.20,
-        'experiment_ratio': (w['experiment_ratio'] as num?)?.toDouble() ?? 0.30,
-        'exam_ratio': (w['exam_ratio'] as num?)?.toDouble() ?? 0.50,
+        'pingshi_ratio': (w['pingshi_ratio'] as num?)?.toDouble() ?? 0,
+        'experiment_ratio': (w['experiment_ratio'] as num?)?.toDouble() ?? 0,
+        'exam_ratio': (w['exam_ratio'] as num?)?.toDouble() ?? 0,
         'assessment_items_json': (w['assessment_items_json'] ?? '').toString(),
       };
     }
@@ -1650,12 +1713,19 @@ $rawText
   Future<int> importToDatabase(
       int batchId, List<Map<String, dynamic>> grades) async {
     final db = await DatabaseHelper.instance.database;
+    final hasDynamicComponents = grades.any((g) {
+      final components = g['_components'];
+      return components is List && components.isNotEmpty;
+    });
+    await _ensureDynamicComponentScoresTable(db);
     final fm = await _resolveFullMarks(db, batchId);
     final now = DateTime.now().toIso8601String();
     int count = 0;
 
     // 单事务批量写入：避免每行一次 fsync/commit（N 行 → 1 次提交）
     await db.transaction((txn) async {
+      await txn.delete('achievement_component_scores',
+          where: 'batch_id = ?', whereArgs: [batchId]);
       for (final g in grades) {
         final studentId = g['student_id'] as String;
         if (studentId.isEmpty) continue;
@@ -1702,6 +1772,33 @@ $rawText
             },
             conflictAlgorithm: ConflictAlgorithm.replace,
           );
+          if (hasDynamicComponents) {
+            final components = (g['_components'] as List?) ?? const [];
+            for (final component in components) {
+              final map = component as Map;
+              final kind = (map['kind'] ?? '').toString();
+              final objective = (map['objective'] as num?)?.toInt() ?? 0;
+              final label = (map['label'] ?? '').toString();
+              if (kind.isEmpty || objective < 1 || objective > 4) continue;
+              await txn.insert(
+                'achievement_component_scores',
+                {
+                  'batch_id': batchId,
+                  'student_id': studentId,
+                  'student_name': g['student_name'] ?? '',
+                  'kind': kind,
+                  'objective': objective,
+                  'label': label,
+                  'score': (map['score'] as num?)?.toDouble() ?? 0,
+                  'achievement': (map['achievement'] as num?)?.toDouble() ?? 0,
+                  'ratio': (map['ratio'] as num?)?.toDouble() ?? 0,
+                  'created_at': now,
+                  'updated_at': now,
+                },
+                conflictAlgorithm: ConflictAlgorithm.replace,
+              );
+            }
+          }
           count++;
         } catch (e, st) {
           swallowDebug(e, tag: 'ExcelImport.$studentId', stack: st);
@@ -1710,6 +1807,26 @@ $rawText
     });
 
     return count;
+  }
+
+  Future<void> _ensureDynamicComponentScoresTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS achievement_component_scores(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        batch_id INTEGER NOT NULL,
+        student_id TEXT NOT NULL,
+        student_name TEXT,
+        kind TEXT NOT NULL,
+        objective INTEGER NOT NULL,
+        label TEXT,
+        score REAL DEFAULT 0,
+        achievement REAL DEFAULT 0,
+        ratio REAL DEFAULT 0,
+        created_at TEXT,
+        updated_at TEXT,
+        UNIQUE(batch_id, student_id, kind, objective, label)
+      )
+    ''');
   }
 
   /// 生成成绩导入模板。

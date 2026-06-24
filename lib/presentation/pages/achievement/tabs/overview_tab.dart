@@ -1,14 +1,35 @@
-﻿import 'dart:convert';
-import 'dart:typed_data';
-import 'package:file_picker/file_picker.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
 import '../../../../core/error_handler.dart';
 import '../../../../data/local/achievement_dao.dart';
 import '../../../../data/local/course_dao.dart';
-import '../../../../services/achievement/achievement_excel_service.dart';
+import '../../../../data/models/course_model.dart';
+import '../../../../services/achievement_context.dart';
 import '../../../../services/auth_service.dart';
+import '../../admin/course_objectives_manage_page.dart';
+import '../../../widgets/agent_chat_overlay.dart';
 import '../achievement_shared.dart';
+
+int _objectiveInt(Object? value, [int fallback = 0]) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value.trim()) ?? fallback;
+  return fallback;
+}
+
+double _objectiveDouble(Object? value, [double fallback = 0]) {
+  if (value is num) return value.toDouble();
+  if (value is String) {
+    final text = value.trim().replaceAll('%', '');
+    return double.tryParse(text) ?? fallback;
+  }
+  return fallback;
+}
+
+double _objectiveRatio(Object? value, [double fallback = 0]) {
+  final ratio = _objectiveDouble(value, fallback);
+  return ratio > 1 ? ratio / 100 : ratio;
+}
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Tab 1 — 达成度概览
@@ -46,11 +67,13 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
       if (activeCourse != null && activeCourse.name.trim().isNotEmpty) {
         _currentCourseName = activeCourse.name.trim();
       }
+      AchievementContext.instance.courseName = _currentCourseName;
       final batches = await widget.achievementDao.getBatches();
       // 从已有批次推断当前课程名；无批次时使用课程管理中的激活课程
       if (batches.isNotEmpty && activeCourse == null) {
         _currentCourseName =
             batches.first['course_name']?.toString() ?? '移动应用开发';
+        AchievementContext.instance.courseName = _currentCourseName;
       }
       // 课程大纲(课程目标)是课程级数据，已导入则常驻显示
       final objectives =
@@ -58,273 +81,154 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
       if (mounted) {
         setState(() {
           _batches = batches;
-          _objectives = objectives
-              .where((o) => ((o['idx'] as num?)?.toInt() ?? 0) <= 4)
-              .toList();
+          _objectives = objectives.where((o) {
+            final idx = _objectiveInt(o['idx']);
+            return idx >= 1 && idx <= 4;
+          }).toList();
           _loading = false;
         });
-      }
-      // 数据不完整(chapters/experiments为空)时自动用内置大纲AI解析补全（仅默认课程）
-      final needsAi = objectives.isEmpty ||
-          objectives.every((o) => (o['chapters'] ?? '').toString().isEmpty);
-      if (needsAi && _currentCourseName == '移动应用开发') {
-        _autoParseBundledSyllabus();
       }
     } catch (e) {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  /// 从内置资源自动 AI 解析大纲（数据不完整时自动触发，无需用户操作）
-  Future<void> _autoParseBundledSyllabus() async {
+  Future<void> _activateCourse(String courseName) async {
+    final name = courseName.trim();
+    if (name.isEmpty) return;
     try {
-      final raw = await rootBundle
-          .loadString('assets/syllabus/软件+6+《移动应用开发》+教学大纲+刘东良+new.md');
-      if (raw.trim().isEmpty) return;
-      setState(() => _importing = true);
-      final svc = AchievementExcelService.instance;
-      var rows = await svc.aiExtractSyllabus(raw);
-      // AI 不可用(无网络/超时)时回退正则解析，确保首次启动就有大纲数据
-      if (rows.isEmpty) {
-        rows = svc.syllabusToObjectiveRows(
-            svc.parseSyllabusBytes(Uint8List.fromList(raw.codeUnits), 'md'));
-      }
-      if (rows.isNotEmpty) {
-        await widget.achievementDao
-            .saveCourseObjectives(_currentCourseName, rows);
-        final objectives = (await widget.achievementDao
-                .getCourseObjectives(_currentCourseName))
-            .where((o) => ((o['idx'] as num?)?.toInt() ?? 0) <= 4)
-            .toList();
-        if (mounted) setState(() => _objectives = objectives);
+      final dao = CourseDao();
+      final courses = await dao.getAllCourses();
+      final matched = courses.where((c) => c.name == name);
+      if (matched.isNotEmpty) {
+        await dao.setActiveCourse(matched.first.id);
       }
     } catch (e, st) {
-      swallowDebug(e, tag: 'Overview.autoParse', stack: st);
-    } finally {
-      if (mounted) setState(() => _importing = false);
+      swallowDebug(e, tag: 'Overview.activateCourse', stack: st);
     }
   }
 
-  bool _importing = false;
+  Future<void> _openCourseObjectivesManager() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const CourseObjectivesManagePage()),
+    );
+    if (mounted) await _loadBatches();
+  }
 
-  /// 上传课程大纲（md/docx）→ 提取课程目标+权重 → 落库 course_objectives。
-  Future<void> _uploadSyllabus() async {
-    final svc = AchievementExcelService.instance;
-    try {
-      final res = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['md', 'docx'],
-        withData: true,
+  Future<void> _showCreateBatchDialog() async {
+    final courses = await CourseDao().getAllCourses();
+    if (!mounted) return;
+    if (courses.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先在课程管理中创建课程')),
       );
-      if (res == null || res.files.isEmpty) return;
-      final f = res.files.first;
-      final ext = (f.extension ?? '').toLowerCase();
-      setState(() => _importing = true);
-      Map<String, dynamic> parsed;
-      if (f.bytes != null) {
-        parsed = svc.parseSyllabusBytes(f.bytes!, ext);
-      } else if (f.path != null) {
-        parsed = await svc.parseSyllabus(f.path!);
-      } else {
-        throw StateError('无法读取文件内容');
-      }
-      if (parsed['error'] != null) throw StateError(parsed['error'] as String);
-      // 先用平台确定性解析提取表格字段；AI 只补充缺失字段，不能覆盖权重/满分等关键值。
-      final deterministicRows = svc.syllabusToObjectiveRows(parsed);
-      List<Map<String, dynamic>> aiRows = const [];
-      if (f.bytes != null) {
-        final raw = svc.syllabusRawText(f.bytes!, ext);
-        aiRows = await svc.aiExtractSyllabus(raw);
-      }
-      final rows = svc.mergeSyllabusRows(deterministicRows, aiRows);
-      if (rows.isEmpty) throw StateError('未从大纲中识别到课程目标/权重');
-      // 尝试从解析结果推断课程名（parsed 中可能含 'courseName' 字段）
-      final parsedCourseName = parsed['courseName']?.toString().trim();
-      if (parsedCourseName != null && parsedCourseName.isNotEmpty) {
-        _currentCourseName = parsedCourseName;
-      }
-      if (!mounted) return;
-      final edited = await _showSyllabusPreview(rows);
-      if (edited == null) return; // 用户取消
-      await _saveObjectiveRows(_currentCourseName, edited);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('大纲解析成功，已保存 ${edited.length} 个课程目标'),
-              backgroundColor: Colors.green),
-        );
-      }
-    } catch (e, st) {
-      swallowDebug(e, tag: 'Overview.uploadSyllabus', stack: st);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('大纲上传失败：$e，可手动录入关键对照表'),
-              backgroundColor: Colors.red),
-        );
-      }
-      if (mounted) {
-        setState(() => _importing = false);
-        await _openAssessmentMatrixEditor(
-          initialRows: _defaultManualObjectiveRows(),
-          title: '手动录入课程目标达成考核与评价方式及成绩评定对照表',
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _importing = false);
+      return;
     }
-  }
-
-  Future<List<Map<String, dynamic>>?> _showSyllabusPreview(
-      List<Map<String, dynamic>> rows) {
-    return showDialog<List<Map<String, dynamic>>>(
-      context: context,
-      builder: (ctx) => SyllabusPreviewDialog(rows: rows),
-    );
-  }
-
-  Future<void> _saveObjectiveRows(
-      String courseName, List<Map<String, dynamic>> rows) async {
-    final normalizedCourseName =
-        courseName.trim().isNotEmpty ? courseName.trim() : _currentCourseName;
-    await widget.achievementDao
-        .saveCourseObjectives(normalizedCourseName, rows);
-    final batches = await widget.achievementDao.getBatches();
-    final objectives =
-        (await widget.achievementDao.getCourseObjectives(normalizedCourseName))
-            .where((o) => ((o['idx'] as num?)?.toInt() ?? 0) <= 4)
-            .toList();
-    if (!mounted) return;
-    setState(() {
-      _currentCourseName = normalizedCourseName;
-      _batches = batches;
-      _objectives = objectives;
-    });
-  }
-
-  List<Map<String, dynamic>> _defaultManualObjectiveRows() {
-    return List.generate(4, (i) {
-      final idx = i + 1;
-      return {
-        'idx': idx,
-        'name': '课程目标$idx',
-        'indicator': '',
-        'weight': 0.0,
-        'full_mark': 0.0,
-        'pingshi_ratio': 0.20,
-        'experiment_ratio': 0.30,
-        'exam_ratio': 0.50,
-        'description': '',
-        'chapters': '',
-        'experiments': '',
-        'assess_content': '',
-      };
-    });
-  }
-
-  Future<void> _openAssessmentMatrixEditor({
-    List<Map<String, dynamic>>? initialRows,
-    String title = '编辑课程目标达成考核与评价方式及成绩评定对照表',
-  }) async {
-    final result = await showDialog<_SyllabusMatrixEditResult>(
-      context: context,
-      builder: (_) => SyllabusAssessmentMatrixDialog(
-        title: title,
-        courseName: _currentCourseName,
-        rows: initialRows ?? _objectives,
-      ),
-    );
-    if (result == null || result.rows.isEmpty) return;
-    await _saveObjectiveRows(result.courseName, result.rows);
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('已保存 ${result.rows.length} 个课程目标对照表信息'),
-        backgroundColor: Colors.green,
-      ),
-    );
-  }
-
-  void _showCreateBatchDialog() {
     final nameCtrl = TextEditingController();
-    final courseCtrl = TextEditingController(text: _currentCourseName);
     final classCtrl = TextEditingController();
     final semesterCtrl = TextEditingController(text: '2024-2025-2');
+    CourseModel selectedCourse = courses.firstWhere(
+      (course) => course.name == _currentCourseName,
+      orElse: () => courses.firstWhere(
+        (course) => course.isActive,
+        orElse: () => courses.first,
+      ),
+    );
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('新建达成度批次'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameCtrl,
-                decoration: const InputDecoration(
-                  labelText: '批次名称',
-                  hintText: '如：2024春季班',
-                  border: OutlineInputBorder(),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('新建达成度轮次'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(
+                    labelText: '轮次名称',
+                    hintText: '如：2026春季达成评价',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: courseCtrl,
-                decoration: const InputDecoration(
-                  labelText: '课程名称',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: selectedCourse.id,
+                  decoration: const InputDecoration(
+                    labelText: '课程',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: courses
+                      .map((course) => DropdownMenuItem(
+                            value: course.id,
+                            child: Text(course.name),
+                          ))
+                      .toList(),
+                  onChanged: (id) {
+                    final matched = courses.where((course) => course.id == id);
+                    if (matched.isEmpty) return;
+                    setDialogState(() => selectedCourse = matched.first);
+                  },
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: classCtrl,
-                decoration: const InputDecoration(
-                  labelText: '班级名称',
-                  hintText: '如：软件工程2201',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: classCtrl,
+                  decoration: const InputDecoration(
+                    labelText: '班级名称',
+                    hintText: '如：软件工程2201',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: semesterCtrl,
-                decoration: const InputDecoration(
-                  labelText: '学期',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: semesterCtrl,
+                  decoration: const InputDecoration(
+                    labelText: '学期',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              if (nameCtrl.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('请输入批次名称')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                if (nameCtrl.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('请输入轮次名称')),
+                  );
+                  return;
+                }
+                final teacherId =
+                    widget.authService.currentUser?.userId ?? 'unknown';
+                await widget.achievementDao.addBatch(
+                  batchName: nameCtrl.text.trim(),
+                  courseName: selectedCourse.name,
+                  className: classCtrl.text.trim(),
+                  semester: semesterCtrl.text.trim(),
+                  teacherId: teacherId,
                 );
-                return;
-              }
-              final teacherId =
-                  widget.authService.currentUser?.userId ?? 'unknown';
-              await widget.achievementDao.addBatch(
-                batchName: nameCtrl.text.trim(),
-                courseName: courseCtrl.text.trim(),
-                className: classCtrl.text.trim(),
-                semester: semesterCtrl.text.trim(),
-                teacherId: teacherId,
-              );
-              if (ctx.mounted) Navigator.pop(ctx);
-              _loadBatches();
-            },
-            child: const Text('创建'),
-          ),
-        ],
+                await _activateCourse(selectedCourse.name);
+                AchievementContext.instance.courseName = selectedCourse.name;
+                if (ctx.mounted) Navigator.pop(ctx);
+                await _loadBatches();
+              },
+              child: const Text('创建'),
+            ),
+          ],
+        ),
       ),
-    );
+    ).whenComplete(() {
+      nameCtrl.dispose();
+      classCtrl.dispose();
+      semesterCtrl.dispose();
+    });
   }
 
   Future<void> _deleteBatch(int batchId, String batchName) async {
@@ -384,7 +288,6 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
     return Stack(
       children: [
         Column(children: [
-          if (_importing) LinearProgressIndicator(color: primary),
           Expanded(
             child: RefreshIndicator(
               onRefresh: _loadBatches,
@@ -400,18 +303,18 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
           child: PopupMenuButton<String>(
             onSelected: (v) {
               if (v == 'create') _showCreateBatchDialog();
-              if (v == 'syllabus') _uploadSyllabus();
+              if (v == 'objectives') _openCourseObjectivesManager();
             },
             itemBuilder: (_) => const [
               PopupMenuItem(
                   value: 'create',
                   child:
-                      ListTile(leading: Icon(Icons.add), title: Text('新建批次'))),
+                      ListTile(leading: Icon(Icons.add), title: Text('新建轮次'))),
               PopupMenuItem(
-                  value: 'syllabus',
+                  value: 'objectives',
                   child: ListTile(
-                      leading: Icon(Icons.description_outlined),
-                      title: Text('上传课程大纲'))),
+                      leading: Icon(Icons.fact_check_outlined),
+                      title: Text('课程目标管理'))),
             ],
             child: Container(
               width: 56,
@@ -452,25 +355,25 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
               ),
               const SizedBox(height: 8),
               const Text(
-                '上传课程大纲与成绩 Excel 开始使用',
+                '选择已建课程创建达成度轮次后开始使用',
                 style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
               const SizedBox(height: 24),
               OutlinedButton.icon(
                 onPressed: _showCreateBatchDialog,
                 icon: const Icon(Icons.add),
-                label: const Text('新建批次'),
+                label: const Text('新建轮次'),
               ),
               const SizedBox(height: 12),
               const Divider(height: 1, indent: 40, endIndent: 40),
               const SizedBox(height: 12),
-              const Text('从真实文档导入',
+              const Text('课程目标由课程管理维护，概览只读取结果',
                   style: TextStyle(fontSize: 13, color: Colors.grey)),
               const SizedBox(height: 8),
               OutlinedButton.icon(
-                onPressed: _importing ? null : _uploadSyllabus,
-                icon: const Icon(Icons.description_outlined),
-                label: const Text('上传课程大纲（md/docx）'),
+                onPressed: _openCourseObjectivesManager,
+                icon: const Icon(Icons.fact_check_outlined),
+                label: const Text('课程目标管理'),
               ),
               const SizedBox(height: 8),
               const Text('成绩导入请在「成绩管理」标签页操作',
@@ -495,19 +398,14 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
             Icon(Icons.menu_book_outlined, color: primary, size: 20),
             const SizedBox(width: 8),
             const Expanded(
-              child: Text('尚未导入课程大纲，点击右下角「上传课程大纲」导入大纲',
+              child: Text('当前课程尚未维护课程目标，请到课程目标管理中确定大纲对照表',
                   style: TextStyle(fontSize: 12, color: Colors.grey)),
             ),
             const SizedBox(width: 8),
             TextButton.icon(
-              onPressed: _importing
-                  ? null
-                  : () => _openAssessmentMatrixEditor(
-                        initialRows: _defaultManualObjectiveRows(),
-                        title: '手动录入课程目标达成考核与评价方式及成绩评定对照表',
-                      ),
-              icon: const Icon(Icons.edit_note, size: 16),
-              label: const Text('手动录入', style: TextStyle(fontSize: 12)),
+              onPressed: _openCourseObjectivesManager,
+              icon: const Icon(Icons.fact_check_outlined, size: 16),
+              label: const Text('去维护', style: TextStyle(fontSize: 12)),
             ),
           ]),
         ),
@@ -524,17 +422,13 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
             const SizedBox(width: 8),
             Expanded(
               child: Text('课程大纲 · $_currentCourseName',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold)),
             ),
             TextButton.icon(
-              onPressed: _importing ? null : _openAssessmentMatrixEditor,
-              icon: const Icon(Icons.edit_note, size: 16),
-              label: const Text('编辑对照表', style: TextStyle(fontSize: 12)),
-            ),
-            TextButton.icon(
-              onPressed: _importing ? null : _uploadSyllabus,
-              icon: const Icon(Icons.refresh, size: 16),
-              label: const Text('重新上传', style: TextStyle(fontSize: 12)),
+              onPressed: _openCourseObjectivesManager,
+              icon: const Icon(Icons.fact_check_outlined, size: 16),
+              label: const Text('课程目标管理', style: TextStyle(fontSize: 12)),
             ),
           ]),
           const Divider(height: 16),
@@ -551,7 +445,7 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
 
   Widget _buildObjectiveRow(Map<String, dynamic> o, int i) {
     final color = kObjectiveColors[i % kObjectiveColors.length];
-    final weight = (o['weight'] as num?)?.toDouble() ?? 0;
+    final weight = _objectiveDouble(o['weight']);
     final indicator = (o['indicator'] ?? '').toString();
     final desc = (o['description'] ?? '').toString();
     final assess = (o['assess_content'] ?? '').toString();
@@ -601,18 +495,15 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
 
   Widget _buildAssessmentMatrixSummary(Color primary) {
     final totalWeight = _objectives.fold<double>(
-        0, (s, r) => s + ((r['weight'] as num?)?.toDouble() ?? 0));
+        0, (s, r) => s + _objectiveDouble(r['weight']));
     final totalFull = _objectives.fold<double>(
-        0, (s, r) => s + ((r['full_mark'] as num?)?.toDouble() ?? 0));
+        0, (s, r) => s + _objectiveDouble(r['full_mark']));
     final envColumns = <(String, String)>[
-      if (_objectives
-          .any((r) => ((r['pingshi_ratio'] as num?)?.toDouble() ?? 0) > 0))
+      if (_objectives.any((r) => _objectiveRatio(r['pingshi_ratio']) > 0))
         ('平时', 'pingshi_ratio'),
-      if (_objectives
-          .any((r) => ((r['experiment_ratio'] as num?)?.toDouble() ?? 0) > 0))
+      if (_objectives.any((r) => _objectiveRatio(r['experiment_ratio']) > 0))
         ('实验', 'experiment_ratio'),
-      if (_objectives
-          .any((r) => ((r['exam_ratio'] as num?)?.toDouble() ?? 0) > 0))
+      if (_objectives.any((r) => _objectiveRatio(r['exam_ratio']) > 0))
         ('考核', 'exam_ratio'),
     ];
     if (envColumns.isEmpty) envColumns.add(('考核', 'exam_ratio'));
@@ -667,7 +558,7 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
   }
 
   String _formatWeight(Object? value) {
-    final v = (value as num?)?.toDouble() ?? 0;
+    final v = _objectiveDouble(value);
     if (v == 0) return '-';
     return _compactNumber(v);
   }
@@ -679,8 +570,8 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
   }
 
   String _formatAssessmentCell(Map<String, dynamic> row, String ratioKey) {
-    final full = (row['full_mark'] as num?)?.toDouble() ?? 0;
-    final ratio = (row[ratioKey] as num?)?.toDouble() ?? 0;
+    final full = _objectiveDouble(row['full_mark']);
+    final ratio = _objectiveRatio(row[ratioKey]);
     if (full == 0 || ratio <= 0) return '-';
     return '${_compactNumber(full)} (${_compactNumber(ratio * 100)}%)';
   }
@@ -691,8 +582,8 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
     var full = 0.0;
     var weightedRatio = 0.0;
     for (final row in rows) {
-      final rowFull = (row['full_mark'] as num?)?.toDouble() ?? 0;
-      final ratio = (row[ratioKey] as num?)?.toDouble() ?? 0;
+      final rowFull = _objectiveDouble(row['full_mark']);
+      final ratio = _objectiveRatio(row[ratioKey]);
       if (rowFull <= 0 || ratio <= 0) continue;
       full += rowFull;
       weightedRatio += rowFull * ratio;
@@ -1191,7 +1082,7 @@ class _SyllabusMatrixEditResult {
 
 class _ObjectiveEditRow {
   _ObjectiveEditRow(Map<String, dynamic> row)
-      : idx = ((row['idx'] as num?)?.toInt() ?? 0).clamp(1, 4),
+      : idx = _objectiveInt(row['idx']).clamp(1, 4),
         description =
             TextEditingController(text: (row['description'] ?? '').toString()),
         weight = TextEditingController(text: (row['weight'] ?? 0).toString()),
@@ -1225,7 +1116,7 @@ class _ObjectiveEditRow {
   final TextEditingController assessContent;
 
   static String _ratioText(Object value) {
-    final ratio = (value as num?)?.toDouble() ?? 0;
+    final ratio = _objectiveDouble(value);
     final percent = ratio <= 1 ? ratio * 100 : ratio;
     if ((percent - percent.roundToDouble()).abs() < 0.0001) {
       return percent.round().toString();
@@ -1572,9 +1463,8 @@ class SyllabusPreviewDialog extends StatefulWidget {
 class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
   late final List<Map<String, dynamic>> _rows = widget.rows
       .map((e) => Map<String, dynamic>.from(e))
-      .where((o) =>
-          ((o['idx'] as num?)?.toInt() ?? 0) >= 1 &&
-          ((o['idx'] as num?)?.toInt() ?? 0) <= 4)
+      .where(
+          (o) => _objectiveInt(o['idx']) >= 1 && _objectiveInt(o['idx']) <= 4)
       .toList();
   late final List<TextEditingController> _weightCtrls;
   late final List<TextEditingController> _indicatorCtrls;
@@ -1637,7 +1527,7 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
       'experiment' => 'experiment_ratio',
       _ => 'exam_ratio',
     };
-    var value = (row[directKey] as num?)?.toDouble() ?? 0;
+    var value = _objectiveDouble(row[directKey]);
     if (value <= 0) {
       final rawJson = (row['assessment_items_json'] ?? '').toString();
       if (rawJson.trim().isNotEmpty) {
@@ -1647,7 +1537,7 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
             final map = item as Map;
             final kind = (map['kind'] ?? '').toString();
             if (kind == key) {
-              value += (map['ratio'] as num?)?.toDouble() ?? 0;
+              value += _objectiveDouble(map['ratio']);
             }
           }
         } catch (e, st) {
@@ -1672,7 +1562,7 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
   String _envCell(Map<String, dynamic> row, String key) {
     final ratio = _ratioFor(row, key);
     if (ratio <= 0) return '—';
-    final fullMark = (row['full_mark'] as num?)?.toDouble() ?? 0;
+    final fullMark = _objectiveDouble(row['full_mark']);
     return '${fullMark.toInt()}分 / ${(ratio * 100).toStringAsFixed(0)}%';
   }
 
@@ -1780,9 +1670,7 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
                                           horizontal: 8, vertical: 3),
                                       decoration: BoxDecoration(
                                         color: kObjectiveColors[
-                                                (((r['idx'] as num?)?.toInt() ??
-                                                            1) -
-                                                        1)
+                                                (_objectiveInt(r['idx'], 1) - 1)
                                                     .clamp(0, 3)]
                                             .withValues(alpha: 0.08),
                                         borderRadius: BorderRadius.circular(4),
@@ -1825,9 +1713,7 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
                                           horizontal: 8, vertical: 3),
                                       decoration: BoxDecoration(
                                         color: kObjectiveColors[
-                                                (((r['idx'] as num?)?.toInt() ??
-                                                            1) -
-                                                        1)
+                                                (_objectiveInt(r['idx'], 1) - 1)
                                                     .clamp(0, 3)]
                                             .withValues(alpha: 0.08),
                                         borderRadius: BorderRadius.circular(4),
@@ -1952,6 +1838,27 @@ class _SyllabusPreviewDialogState extends State<SyllabusPreviewDialog> {
       actions: [
         TextButton(
             onPressed: () => Navigator.pop(context), child: const Text('取消')),
+        TextButton.icon(
+          icon: const Icon(Icons.auto_awesome, size: 16),
+          label: const Text('智能分析'),
+          onPressed: () {
+            final rawBuf = StringBuffer();
+            for (int i = 0; i < _rows.length; i++) {
+              rawBuf.writeln('目标${_rows[i]['idx'] ?? i + 1}:');
+              rawBuf.writeln('  权重: ${_rows[i]['weight']}');
+              rawBuf.writeln('  指标点: ${_rows[i]['indicator']}');
+              rawBuf.writeln('  描述: ${_rows[i]['description']}');
+            }
+            showDialog(
+              context: context,
+              builder: (_) => AgentChatOverlay(
+                initialAgentId: 'achievement',
+                initialContext:
+                    '请分析以下课程目标解析草稿，帮我确认每条目标的权重、指标点是否准确。如有需要请用 clarify_objective 工具修正，确认后用 submit_syllabus 提交。当前课程：${AchievementContext.instance.courseName}。\n\n$rawBuf',
+              ),
+            );
+          },
+        ),
         FilledButton(
           onPressed: () {
             for (int i = 0; i < _rows.length; i++) {

@@ -19,6 +19,7 @@ class AchievementExcelTemplatePayload {
   final String className;
   final String semester;
   final List<double> objectiveWeights;
+  final List<double> objectiveFullMarks;
   final List<double> objectiveAchievements;
   final List<String> objectiveNames;
   final List<String> indicators;
@@ -29,6 +30,7 @@ class AchievementExcelTemplatePayload {
   final Map<String, double> pingshiAverage;
   final Map<String, double> experimentAverage;
   final Map<String, double> examAverage;
+  final List<Map<String, double>> envWeightsByObjective;
   final double weightedAchievement;
   final double expectation;
 
@@ -37,6 +39,7 @@ class AchievementExcelTemplatePayload {
     required this.className,
     required this.semester,
     required this.objectiveWeights,
+    this.objectiveFullMarks = const [],
     required this.objectiveAchievements,
     required this.objectiveNames,
     required this.indicators,
@@ -47,6 +50,7 @@ class AchievementExcelTemplatePayload {
     required this.pingshiAverage,
     required this.experimentAverage,
     required this.examAverage,
+    this.envWeightsByObjective = const [],
     required this.weightedAchievement,
     this.expectation = 0.6,
   });
@@ -537,9 +541,12 @@ class AchievementTemplateExcelService {
     _editSheet(files, sheetPaths, profile.objectiveSheet, (ws) {
       ws.text(2, 0, '${p.semester}${p.className}《${p.courseName}》课程目标达成度计算表');
       const envNames = ['平时', '实验', '期末考试'];
-      const envWeights = [0.2, 0.3, 0.5];
-      const envFull = [20.0, 30.0, 50.0];
       for (int obj = 0; obj < 4; obj++) {
+        final envWeights = _envWeights(p, obj);
+        final envFull = [
+          for (final weight in envWeights)
+            weight > 0 ? _objectiveFullMark(p, obj) : 0.0
+        ];
         final envAch = [
           _avg(p.pingshiAverage, obj),
           _avg(p.experimentAverage, obj),
@@ -1098,8 +1105,29 @@ class AchievementTemplateExcelService {
   }
 
   static double _fullMarkFor(AchievementExcelTemplatePayload p, int index) {
+    if (index >= 0 && index < p.objectiveFullMarks.length) {
+      return p.objectiveFullMarks[index];
+    }
     final weight = _weight(p, index);
     return weight > 0 ? weight * 100 : [10, 20, 30, 40][index].toDouble();
+  }
+
+  static double _objectiveFullMark(
+      AchievementExcelTemplatePayload p, int index) {
+    return _fullMarkFor(p, index);
+  }
+
+  static List<double> _envWeights(
+      AchievementExcelTemplatePayload p, int index) {
+    if (index >= 0 && index < p.envWeightsByObjective.length) {
+      final row = p.envWeightsByObjective[index];
+      return [
+        row['pingshi'] ?? 0,
+        row['experiment'] ?? 0,
+        row['exam'] ?? 0,
+      ];
+    }
+    return const [0.2, 0.3, 0.5];
   }
 
   static String _fmtInt(num value) => value.round().toString();

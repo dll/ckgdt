@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../data/local/ai_history_dao.dart';
@@ -31,7 +31,18 @@ class AgentChatOverlay extends StatefulWidget {
   /// 初始激活的智能体 ID（可选）
   final String? initialAgentId;
 
-  const AgentChatOverlay({super.key, this.initialAgentId});
+  /// 初始上下文（注入为系统消息，让 agent 一打开就知道任务）
+  final String? initialContext;
+
+  /// 智能体提交结果后的回调（页面可据此刷新数据）
+  final void Function(Map<String, dynamic> result)? onAgentResult;
+
+  const AgentChatOverlay({
+    super.key,
+    this.initialAgentId,
+    this.initialContext,
+    this.onAgentResult,
+  });
 
   /// 便捷打开方法
   static Future<void> show(BuildContext context, {String? agentId}) async {
@@ -85,6 +96,11 @@ class _AgentChatOverlayState extends State<AgentChatOverlay> {
       // 添加欢迎消息
       final welcome = _registry.getWelcomeMessage();
       _registry.session.messages.add(welcome);
+    }
+
+    // 自动发送 initialContext 作为首条用户消息，触发 agent 分析
+    if (widget.initialContext != null && widget.initialContext!.isNotEmpty) {
+      Future.microtask(() => _sendMessage(widget.initialContext));
     }
   }
 
@@ -194,6 +210,9 @@ class _AgentChatOverlayState extends State<AgentChatOverlay> {
       case 'exit_app':
         if (mounted) Navigator.of(context).pop(); // 先关闭面板
         navService.exitApp();
+        break;
+      case 'agent_result':
+        widget.onAgentResult?.call(action.params);
         break;
       default:
         break;
@@ -401,7 +420,10 @@ $dialogText
       );
 
       // 解析 AI 返回的 JSON
-      final jsonStr = response.replaceAll(RegExp(r'```json?\s*'), '').replaceAll('```', '').trim();
+      final jsonStr = response
+          .replaceAll(RegExp(r'```json?\s*'), '')
+          .replaceAll('```', '')
+          .trim();
       final List<dynamic> concepts = _tryParseJsonArray(jsonStr);
 
       if (concepts.isEmpty) {
@@ -506,11 +528,16 @@ $dialogText
         ],
       );
 
-      final jsonStr = response.replaceAll(RegExp(r'```json?\s*'), '').replaceAll('```', '').trim();
+      final jsonStr = response
+          .replaceAll(RegExp(r'```json?\s*'), '')
+          .replaceAll('```', '')
+          .trim();
       Map<String, dynamic>? parsed;
       try {
         parsed = _tryParseJsonMap(jsonStr);
-      } catch (e) { swallowDebug(e, tag: 'agent_chat_overlay'); }
+      } catch (e) {
+        swallowDebug(e, tag: 'agent_chat_overlay');
+      }
 
       if (parsed == null) {
         if (mounted) {
@@ -569,8 +596,7 @@ $dialogText
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-                '图谱生成完成：${nameToId.length} 个概念，$relCount 条关系'),
+            content: Text('图谱生成完成：${nameToId.length} 个概念，$relCount 条关系'),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 3),
           ),
@@ -599,7 +625,9 @@ $dialogText
         final result = _jsonDecode(jsonStr);
         if (result is List) return result;
       }
-    } catch (e) { swallowDebug(e, tag: 'agent_chat_overlay'); }
+    } catch (e) {
+      swallowDebug(e, tag: 'agent_chat_overlay');
+    }
     return [];
   }
 
@@ -613,7 +641,9 @@ $dialogText
         final result = _jsonDecode(jsonStr);
         if (result is Map<String, dynamic>) return result;
       }
-    } catch (e) { swallowDebug(e, tag: 'agent_chat_overlay'); }
+    } catch (e) {
+      swallowDebug(e, tag: 'agent_chat_overlay');
+    }
     return null;
   }
 
@@ -665,11 +695,13 @@ $dialogText
                         children: [
                           Text(
                             config.name,
-                            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                            style: theme.textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                           Text(
                             config.description,
-                            style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
+                            style: theme.textTheme.bodySmall
+                                ?.copyWith(color: Colors.grey),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -701,9 +733,11 @@ $dialogText
                           runSpacing: 6,
                           children: config.capabilities.map((cap) {
                             return Chip(
-                              label: Text(cap, style: const TextStyle(fontSize: 11)),
+                              label: Text(cap,
+                                  style: const TextStyle(fontSize: 11)),
                               visualDensity: VisualDensity.compact,
-                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
                               padding: EdgeInsets.zero,
                             );
                           }).toList(),
@@ -716,21 +750,27 @@ $dialogText
                         _infoSectionTitle('使用步骤', Icons.format_list_numbered),
                         const SizedBox(height: 8),
                         Card(
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
                           child: Padding(
                             padding: const EdgeInsets.all(14),
                             child: Column(
-                              children: config.usageSteps.asMap().entries.map((entry) {
+                              children: config.usageSteps
+                                  .asMap()
+                                  .entries
+                                  .map((entry) {
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 8),
                                   child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Container(
                                         width: 22,
                                         height: 22,
                                         decoration: BoxDecoration(
-                                          color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                          color: theme.colorScheme.primary
+                                              .withValues(alpha: 0.1),
                                           shape: BoxShape.circle,
                                         ),
                                         child: Center(
@@ -748,7 +788,8 @@ $dialogText
                                       Expanded(
                                         child: Text(
                                           entry.value,
-                                          style: const TextStyle(fontSize: 13, height: 1.4),
+                                          style: const TextStyle(
+                                              fontSize: 13, height: 1.4),
                                         ),
                                       ),
                                     ],
@@ -767,12 +808,18 @@ $dialogText
                         const SizedBox(height: 8),
                         ...config.classicCases.map((c) {
                           return Card(
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
                             margin: const EdgeInsets.only(bottom: 8),
                             child: ExpansionTile(
-                              leading: const Icon(Icons.chat_bubble_outline, size: 18),
-                              title: Text(c.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                              childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                              leading: const Icon(Icons.chat_bubble_outline,
+                                  size: 18),
+                              title: Text(c.title,
+                                  style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600)),
+                              childrenPadding:
+                                  const EdgeInsets.fromLTRB(16, 0, 16, 12),
                               children: [
                                 // 用户输入
                                 Container(
@@ -782,14 +829,22 @@ $dialogText
                                   decoration: BoxDecoration(
                                     color: Colors.blue.withValues(alpha: 0.05),
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+                                    border: Border.all(
+                                        color:
+                                            Colors.blue.withValues(alpha: 0.2)),
                                   ),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Text('用户输入', style: TextStyle(fontSize: 11, color: Colors.grey[500], fontWeight: FontWeight.w600)),
+                                      Text('用户输入',
+                                          style: TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.grey[500],
+                                              fontWeight: FontWeight.w600)),
                                       const SizedBox(height: 4),
-                                      Text(c.userInput, style: const TextStyle(fontSize: 13)),
+                                      Text(c.userInput,
+                                          style: const TextStyle(fontSize: 13)),
                                     ],
                                   ),
                                 ),
@@ -800,14 +855,23 @@ $dialogText
                                   decoration: BoxDecoration(
                                     color: Colors.green.withValues(alpha: 0.05),
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
+                                    border: Border.all(
+                                        color: Colors.green
+                                            .withValues(alpha: 0.2)),
                                   ),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Text('智能体回复', style: TextStyle(fontSize: 11, color: Colors.grey[500], fontWeight: FontWeight.w600)),
+                                      Text('智能体回复',
+                                          style: TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.grey[500],
+                                              fontWeight: FontWeight.w600)),
                                       const SizedBox(height: 4),
-                                      Text(c.agentReply, style: const TextStyle(fontSize: 13, height: 1.4)),
+                                      Text(c.agentReply,
+                                          style: const TextStyle(
+                                              fontSize: 13, height: 1.4)),
                                     ],
                                   ),
                                 ),
@@ -821,12 +885,19 @@ $dialogText
                                       _sendMessage(c.userInput); // 发送案例输入
                                     },
                                     icon: const Icon(Icons.send, size: 14),
-                                    label: const Text('发送这条消息', style: TextStyle(fontSize: 12)),
+                                    label: const Text('发送这条消息',
+                                        style: TextStyle(fontSize: 12)),
                                     style: OutlinedButton.styleFrom(
-                                      foregroundColor: theme.colorScheme.primary,
-                                      side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.5)),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                      foregroundColor:
+                                          theme.colorScheme.primary,
+                                      side: BorderSide(
+                                          color: theme.colorScheme.primary
+                                              .withValues(alpha: 0.5)),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8)),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 8),
                                     ),
                                   ),
                                 ),
@@ -846,12 +917,17 @@ $dialogText
                           runSpacing: 6,
                           children: config.keywords.map((kw) {
                             return Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                                color: theme.colorScheme.primary
+                                    .withValues(alpha: 0.08),
                                 borderRadius: BorderRadius.circular(6),
                               ),
-                              child: Text(kw, style: TextStyle(fontSize: 11, color: theme.colorScheme.primary)),
+                              child: Text(kw,
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      color: theme.colorScheme.primary)),
                             );
                           }).toList(),
                         ),
@@ -977,7 +1053,8 @@ $dialogText
                             ),
                           ),
                           const SizedBox(width: 4),
-                          Icon(Icons.info_outline, size: 14, color: Colors.grey[400]),
+                          Icon(Icons.info_outline,
+                              size: 14, color: Colors.grey[400]),
                         ],
                       ),
                       if (active != null)
@@ -1067,7 +1144,8 @@ $dialogText
                     value: 'gen_graph',
                     child: Row(
                       children: [
-                        Icon(Icons.account_tree, size: 18, color: Colors.purple),
+                        Icon(Icons.account_tree,
+                            size: 18, color: Colors.purple),
                         SizedBox(width: 8),
                         Text('生成问答图谱'),
                       ],
@@ -1128,12 +1206,17 @@ $dialogText
                     onTap: () => setState(() => _agentPanelExpanded = false),
                     borderRadius: BorderRadius.circular(12),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('收起', style: TextStyle(fontSize: 12, color: theme.colorScheme.primary)),
-                          Icon(Icons.keyboard_arrow_up, size: 16, color: theme.colorScheme.primary),
+                          Text('收起',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: theme.colorScheme.primary)),
+                          Icon(Icons.keyboard_arrow_up,
+                              size: 16, color: theme.colorScheme.primary),
                         ],
                       ),
                     ),
@@ -1153,7 +1236,8 @@ $dialogText
                       '${cfg.emoji} ${cfg.name}',
                       style: TextStyle(
                         fontSize: 11,
-                        fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                        fontWeight:
+                            isActive ? FontWeight.bold : FontWeight.normal,
                       ),
                     ),
                     onSelected: (_) {
@@ -1195,7 +1279,8 @@ $dialogText
                     '${cfg.emoji} ${cfg.name}',
                     style: TextStyle(
                       fontSize: 12,
-                      fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                      fontWeight:
+                          isActive ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
                   onSelected: (_) {
@@ -1222,11 +1307,15 @@ $dialogText
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.grid_view, size: 14, color: theme.colorScheme.primary),
+                  Icon(Icons.grid_view,
+                      size: 14, color: theme.colorScheme.primary),
                   const SizedBox(width: 2),
                   Text(
                     '${configs.length}',
-                    style: TextStyle(fontSize: 11, color: theme.colorScheme.primary, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -1333,13 +1422,13 @@ $dialogText
   /// 聊天气泡
   Widget _buildBubble(AgentMessage msg, ThemeData theme, bool isDark) {
     final isUser = msg.role == MessageRole.user;
-    final alignment = isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final alignment =
+        isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start;
     final bgColor = isUser
         ? theme.colorScheme.primary
         : (isDark ? const Color(0xFF2A2A2A) : Colors.grey[100]!);
-    final textColor = isUser
-        ? Colors.white
-        : (isDark ? Colors.white : Colors.black87);
+    final textColor =
+        isUser ? Colors.white : (isDark ? Colors.white : Colors.black87);
     final borderRadius = BorderRadius.only(
       topLeft: const Radius.circular(16),
       topRight: const Radius.circular(16),
@@ -1374,7 +1463,8 @@ $dialogText
             child: isUser
                 ? SelectableText(
                     msg.content,
-                    style: TextStyle(fontSize: 14, color: textColor, height: 1.5),
+                    style:
+                        TextStyle(fontSize: 14, color: textColor, height: 1.5),
                   )
                 : MarkdownBubble(
                     content: msg.content,
@@ -1521,7 +1611,8 @@ $dialogText
                     borderSide: BorderSide.none,
                   ),
                   filled: true,
-                  fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey[100],
+                  fillColor:
+                      isDark ? const Color(0xFF2A2A2A) : Colors.grey[100],
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 8,

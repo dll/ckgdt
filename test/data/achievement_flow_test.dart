@@ -13,6 +13,7 @@ import 'package:excel/excel.dart' as xl;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:knowledge_graph_app/data/local/database_helper.dart';
 import 'package:knowledge_graph_app/data/local/achievement_dao.dart';
+import 'package:knowledge_graph_app/presentation/pages/achievement/achievement_config.dart';
 import 'package:knowledge_graph_app/presentation/pages/achievement/achievement_shared.dart';
 import 'package:knowledge_graph_app/services/achievement/achievement_excel_service.dart';
 
@@ -75,7 +76,8 @@ Future<Database> _createAchievementDb() async {
       name TEXT, indicator TEXT, weight REAL, full_mark REAL,
       description TEXT, chapters TEXT, assess_content TEXT,
       pingshi_ratio REAL, experiment_ratio REAL, exam_ratio REAL,
-      assessment_items_json TEXT,
+      experiments TEXT, pingshi_standard TEXT, experiment_standard TEXT,
+      assessment_items_json TEXT, extra_columns_json TEXT,
       created_at TEXT, updated_at TEXT, UNIQUE(course_name, idx))''');
   await db.execute('''
     CREATE TABLE courses(
@@ -213,6 +215,95 @@ void main() {
           closeTo(0.86, 0.0001));
     }
     expect((parsed.first['obj4_achievement'] as num).toDouble(), 0);
+  });
+
+  test('动态成绩模板导入保留分环节明细，报告计算优先读取真实分项', () async {
+    const courseName = '大学英语';
+    final objectiveRows = [
+      for (var i = 1; i <= 3; i++)
+        {
+          'idx': i,
+          'name': '课程目标$i',
+          'indicator': '$i.1',
+          'weight': i == 1 ? 0.3 : (i == 2 ? 0.3 : 0.4),
+          'full_mark': 100.0,
+          'description': '英语课程目标$i',
+          'pingshi_ratio': 0.4,
+          'experiment_ratio': 0.0,
+          'exam_ratio': 0.6,
+        }
+    ];
+    await dao.saveCourseObjectives(courseName, objectiveRows);
+    final batchId = await dao.addBatch(
+      batchName: '英语达成轮次',
+      courseName: courseName,
+      className: '英语23',
+      semester: '2025-2026-2',
+      teacherId: 't1',
+    );
+
+    final templateBytes = AchievementExcelService.instance.buildGradeTemplate(
+      objectiveRows: objectiveRows,
+      students: const [
+        {'student_id': '2023001', 'student_name': '张三'}
+      ],
+    );
+    final workbook = xl.Excel.decodeBytes(templateBytes);
+    final sheet = workbook.tables['成绩录入']!;
+    final headers =
+        sheet.rows.first.map((cell) => cell?.value?.toString() ?? '').toList();
+    for (var c = 2; c < headers.length; c++) {
+      final score = headers[c].contains('平时成绩') ? 80.0 : 90.0;
+      sheet.updateCell(
+        xl.CellIndex.indexByColumnRow(columnIndex: c, rowIndex: 1),
+        xl.DoubleCellValue(score),
+      );
+    }
+
+    final grades = AchievementExcelService.instance.parseDynamicGradeTemplate(
+      Uint8List.fromList(workbook.save()!),
+      objectiveRows: objectiveRows,
+    );
+    await AchievementExcelService.instance.importToDatabase(batchId, grades);
+
+    final combined = await dao.calculateCombinedAchievement(batchId);
+    final pingshi = combined['pingshi'] as Map<String, double>;
+    final exam = combined['exam'] as Map<String, double>;
+    final aggregate = combined['combined'] as Map<String, double>;
+
+    expect(pingshi['obj1'], closeTo(0.8, 0.0001));
+    expect(exam['obj1'], closeTo(0.9, 0.0001));
+    expect(aggregate['obj1'], closeTo(0.86, 0.0001));
+  });
+
+  test('课程目标配置兼容旧库字符串数字和百分号', () {
+    final cfg = AchievementConfig.fromObjectiveRows([
+      {
+        'idx': '1',
+        'name': '课程目标1',
+        'weight': '20%',
+        'full_mark': '20',
+        'pingshi_ratio': '40%',
+        'experiment_ratio': '0',
+        'exam_ratio': '60%',
+      },
+      {
+        'idx': '2',
+        'name': '课程目标2',
+        'weight': '0.30',
+        'full_mark': '30',
+        'pingshi_ratio': '0.5',
+        'experiment_ratio': '0',
+        'exam_ratio': '0.5',
+      },
+    ]);
+
+    expect(cfg.weights[0], closeTo(0.2, 0.0001));
+    expect(cfg.weights[1], closeTo(0.3, 0.0001));
+    expect(cfg.fullMarks[0], closeTo(20, 0.0001));
+    expect(cfg.assessmentWeights['平时'], closeTo(0.45, 0.0001));
+    expect(cfg.assessmentWeights['实验'], closeTo(0, 0.0001));
+    expect(cfg.assessmentWeights['期末'], closeTo(0.55, 0.0001));
   });
 
   test('无实验三目标课程不输出实验建议，也不暴露目标4', () async {
