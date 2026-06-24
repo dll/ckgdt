@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:io' show File;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -341,12 +341,23 @@ class _CourseObjectivesManagePageState
         throw StateError('无法读取文件内容');
       }
       if (rawText.trim().isEmpty) throw StateError('大纲文本为空');
-      if (mounted) setState(() => _importing = false);
-      await _openAgentWithText(
-        '以下是一份课程大纲原始文本。请重点识别“课程目标达成考核与评价方式及成绩评定对照表”，'
-        '提取课程目标、权重、满分、指标点、平时/实验/期末占比、支撑章节、实验和考核内容。'
-        '当前课程：$_courseName。\n\n$rawText',
-      );
+
+      // 解析大纲 → 自动保存 → 自动刷新，全程无需人工确认
+      final rows = await _svc.extractSyllabusRowsFromRawText(rawText);
+      if (rows.isEmpty) throw StateError('未能从大纲中识别课程目标');
+      await _dao.saveCourseObjectives(_courseName, rows);
+      _ctx.courseName = _courseName;
+
+      if (mounted) {
+        await _loadObjectives();
+        setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('已解析并保存 ${rows.length} 个课程目标'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e, st) {
       swallowDebug(e, tag: 'CourseObjectives.importDocx', stack: st);
       if (mounted) {
@@ -456,8 +467,7 @@ class _CourseObjectivesManagePageState
           children: [
             SizedBox(
               width: 200,
-              child: DropdownButtonFormField<String>(
-                initialValue: _allCourses.any((c) => c.name == _courseName)
+              child: DropdownButtonFormField<String>(value: _allCourses.any((c) => c.name == _courseName)
                     ? _courseName
                     : null,
                 decoration: const InputDecoration(

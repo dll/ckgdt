@@ -28,7 +28,9 @@ class AchievementDao {
     if (value is num) return value.toDouble();
     if (value is String) {
       final text = value.trim().replaceAll('%', '');
-      return double.tryParse(text) ?? fallback;
+      return double.tryParse(text) ??
+          double.tryParse(RegExp(r'-?\d+(?:\.\d+)?').firstMatch(text)?.group(0) ?? '') ??
+          fallback;
     }
     return fallback;
   }
@@ -73,7 +75,7 @@ class AchievementDao {
               ? o['name']
               : '课程目标$idx',
           'indicator': o['indicator'],
-          'weight': _asDouble(o['weight']),
+          'weight': _asRatio(o['weight']),
           'full_mark': _asDouble(o['full_mark']),
           'pingshi_ratio': _asRatio(o['pingshi_ratio']),
           'experiment_ratio': _asRatio(o['experiment_ratio']),
@@ -311,9 +313,15 @@ class AchievementDao {
   double calculateWeightedAchievement(Map<String, double> avgAchievements,
       Map<String, double> objectiveWeights) {
     double weighted = 0;
+    double weightSum = 0;
     for (final entry in objectiveWeights.entries) {
       final key = entry.key;
       weighted += (avgAchievements[key] ?? 0) * entry.value;
+      weightSum += entry.value;
+    }
+    // 权重之和不为 1 时做归一化，与 generateMarkdownReport() 口径一致
+    if (weightSum > 0 && (weightSum - 1.0).abs() > 0.0001) {
+      weighted /= weightSum;
     }
     return weighted;
   }
@@ -744,8 +752,15 @@ class AchievementDao {
     if (avg.isEmpty) return {};
     final weights = await resolveObjectiveWeights(batchId);
     double weighted = 0;
+    double weightSum = 0;
     for (int i = 1; i <= 4; i++) {
-      weighted += (avg['课程目标$i'] ?? 0) * weights[i - 1];
+      final w = weights[i - 1];
+      weighted += (avg['课程目标$i'] ?? 0) * w;
+      weightSum += w;
+    }
+    // 权重之和不为 1 时做归一化，与 generateMarkdownReport() 口径一致
+    if (weightSum > 0 && (weightSum - 1.0).abs() > 0.0001) {
+      weighted /= weightSum;
     }
     await saveCalculationResults(
       batchId: batchId,
