@@ -784,8 +784,9 @@ class AchievementExcelService {
     return {'error': '不支持的文件格式: $ext'};
   }
 
-  /// 提取大纲原始纯文本（MD 直接 utf8；docx 抽 word/document.xml 的所有 w:t）。
-  /// 供 AI 全面解析使用。
+  /// 提取大纲原始纯文本。
+  /// MD 直接 utf8；docx 同时保留段落文本与表格的 Markdown 行，避免
+  /// 课程目标达成考核对照表在纯段落抽取时丢失列关系。
   String syllabusRawText(Uint8List bytes, String ext) {
     final e = ext.toLowerCase();
     if (e == 'md') return utf8.decode(bytes);
@@ -799,7 +800,23 @@ class AchievementExcelService {
         final buf = StringBuffer();
         for (final p in d.findAllElements('w:p')) {
           final line = p.findAllElements('w:t').map((t) => t.innerText).join();
-          buf.writeln(line);
+          if (line.trim().isNotEmpty) buf.writeln(line);
+        }
+        buf.writeln();
+        buf.writeln('--- DOCX 表格结构 ---');
+        for (final tbl in d.findAllElements('w:tbl')) {
+          for (final tr in tbl.findAllElements('w:tr')) {
+            final cells = <String>[];
+            for (final tc in tr.findAllElements('w:tc')) {
+              final text = _normalizeSyllabusText(
+                  tc.findAllElements('w:t').map((t) => t.innerText).join());
+              cells.add(text);
+            }
+            if (cells.any((c) => c.trim().isNotEmpty)) {
+              buf.writeln('| ${cells.join(' | ')} |');
+            }
+          }
+          buf.writeln();
         }
         return buf.toString();
       } catch (e, st) {
@@ -808,6 +825,27 @@ class AchievementExcelService {
       }
     }
     return '';
+  }
+
+  /// 从上传大纲原始文本提取课程目标行。
+  /// 本地确定性解析优先锁定对照表中的权重/满分/比例，AI 只补充描述、
+  /// 支撑章节、实验和评价文字，避免 AI 失败时整个导入流程不可用。
+  Future<List<Map<String, dynamic>>> extractSyllabusRowsFromRawText(
+      String rawText) async {
+    final deterministicRows = deterministicSyllabusRowsFromRawText(rawText);
+    final aiRows = await aiExtractSyllabus(rawText);
+    return mergeSyllabusRows(deterministicRows, aiRows);
+  }
+
+  List<Map<String, dynamic>> deterministicSyllabusRowsFromRawText(
+      String rawText) {
+    if (rawText.trim().isEmpty) return [];
+    final parsed =
+        parseSyllabusBytes(Uint8List.fromList(utf8.encode(rawText)), 'md');
+    final markdownRows = syllabusToObjectiveRows(parsed);
+    final looseRows = _parseLooseAssessmentMatrixRows(rawText);
+    if (looseRows.isEmpty) return markdownRows;
+    return mergeSyllabusRows(looseRows, markdownRows);
   }
 
   /// 用 AI 全面解析大纲原始文本，提取课程目标的完整信息：
@@ -861,9 +899,7 @@ $rawText
           (jsonDecode(match.group(0)!) as List).cast<Map<String, dynamic>>();
       final tableRows = <int, Map<String, dynamic>>{};
       try {
-        final parsed =
-            parseSyllabusBytes(Uint8List.fromList(utf8.encode(rawText)), 'md');
-        for (final row in syllabusToObjectiveRows(parsed)) {
+        for (final row in deterministicSyllabusRowsFromRawText(rawText)) {
           final idx = _intValue(row['idx']);
           if (idx > 0) tableRows[idx] = row;
         }
@@ -975,29 +1011,38 @@ $rawText
     }
     result['objectives'] = objectives;
 
-    // 解析考核权重表
+    // 解析课程目标达成考核与评价方式及成绩评定对照表。
     final weightItems = <Map<String, dynamic>>[];
     var inWeightTable = false;
+    final matrixRows = <List<String>>[];
     for (final line in lines) {
-      if (line.contains('权重') && line.contains('毕业要求')) {
+      if (!inWeightTable &&
+          line.contains('课程目标') &&
+          line.contains('权重') &&
+          (line.contains('毕业要求') || line.contains('指标点'))) {
         inWeightTable = true;
+        final cells = _splitMarkdownCells(line);
+        if (cells.isNotEmpty) matrixRows.add(cells);
         continue;
       }
       if (inWeightTable) {
-        final match = RegExp(
-                r'\|\s*课程目标\s*(\d)\s*\|\s*([\d.]+)\s*\|.*?\|\s*(\d+)\s*.*?\|\s*(\d+)\s*.*?\|\s*(\d+)\s*.*?\|')
-            .firstMatch(line);
-        if (match != null) {
-          weightItems.add({
-            'objective': int.parse(match.group(1)!),
-            'weight': double.parse(match.group(2)!),
-            'pingshi_full': int.parse(match.group(3)!),
-            'experiment_full': int.parse(match.group(4)!),
-            'exam_full': int.parse(match.group(5)!),
-          });
+        final trimmed = line.trim();
+        if (trimmed.isEmpty) {
+          if (weightItems.isNotEmpty) inWeightTable = false;
+          continue;
         }
-        if (line.trim().isEmpty && weightItems.isNotEmpty) {
-          inWeightTable = false;
+        if (!trimmed.contains('|')) {
+          if (weightItems.isNotEmpty) inWeightTable = false;
+          continue;
+        }
+        final cells = _splitMarkdownCells(line);
+        if (cells.isEmpty || _isMarkdownSeparatorRow(cells)) continue;
+        matrixRows.add(cells);
+        final parsed =
+            _parseAssessmentMatrixWeightRow(matrixRows, matrixRows.length - 1);
+        if (parsed != null) {
+          weightItems.removeWhere((w) => w['objective'] == parsed['objective']);
+          weightItems.add(parsed);
         }
       }
     }
@@ -1366,6 +1411,198 @@ $rawText
     }
   }
 
+  List<String> _splitMarkdownCells(String line) {
+    var text = line.trim();
+    if (!text.contains('|')) return const [];
+    if (text.startsWith('|')) text = text.substring(1);
+    if (text.endsWith('|')) text = text.substring(0, text.length - 1);
+    return text.split('|').map(_normalizeSyllabusText).toList();
+  }
+
+  bool _isMarkdownSeparatorRow(List<String> cells) {
+    if (cells.isEmpty) return false;
+    return cells.every((cell) {
+      final text = cell.replaceAll(' ', '');
+      return RegExp(r'^:?-{2,}:?$').hasMatch(text);
+    });
+  }
+
+  Map<String, dynamic>? _parseAssessmentMatrixWeightRow(
+    List<List<String>> tableRows,
+    int rowIndex,
+  ) {
+    if (rowIndex < 0 || rowIndex >= tableRows.length) return null;
+    final cells = tableRows[rowIndex];
+    if (cells.length < 3) return null;
+    final m = RegExp(r'课程目标\s*(\d+)').firstMatch(cells.join('|'));
+    if (m == null) return null;
+    final idx = int.tryParse(m.group(1)!);
+    if (idx == null || idx <= 0) return null;
+
+    final explicitWeight = cells.length > 1 ? _parseWeightCell(cells[1]) : null;
+    final componentStart = explicitWeight != null ? 3 : 2;
+    final items = <Map<String, dynamic>>[];
+    final ratioByKind = <String, double>{
+      'pingshi': 0,
+      'experiment': 0,
+      'exam': 0,
+    };
+    final fullByKind = <String, double>{};
+    for (int i = componentStart; i < cells.length; i++) {
+      final parsed = _parseFullAndRatio(cells[i]);
+      if (parsed == null || parsed.full <= 1) continue;
+      final label =
+          _assessmentLabelForCell(tableRows, rowIndex, i, items.length);
+      final kind = _assessmentKind(label);
+      final ratio = parsed.ratio ?? 0;
+      ratioByKind[kind] = (ratioByKind[kind] ?? 0) + ratio;
+      fullByKind[kind] = parsed.full;
+      items.add({
+        'label': label,
+        'kind': kind,
+        'full': parsed.full,
+        'ratio': ratio,
+      });
+    }
+    if (items.isEmpty) return null;
+
+    final fullMark = (items.first['full'] as num).toDouble();
+    final requirement = cells.firstWhere(
+      (cell) => _extractIndicator(cell) != null && _parseWeightCell(cell) == null,
+      orElse: () => '',
+    );
+    return {
+      'objective': idx,
+      'weight': explicitWeight ?? (fullMark / 100.0),
+      'requirement': requirement,
+      'full_mark': fullMark,
+      'pingshi_full': fullByKind['pingshi'] ?? fullMark,
+      'experiment_full': fullByKind['experiment'] ?? 0,
+      'exam_full': fullByKind['exam'] ?? fullMark,
+      'pingshi_ratio': ratioByKind['pingshi'] ?? 0,
+      'experiment_ratio': ratioByKind['experiment'] ?? 0,
+      'exam_ratio': ratioByKind['exam'] ?? 0,
+      'assessment_items_json': jsonEncode(items),
+    };
+  }
+
+  List<Map<String, dynamic>> _parseLooseAssessmentMatrixRows(String rawText) {
+    final markerPatterns = [
+      '课程目标达成考核',
+      '成绩评定对照表',
+      '达成考核与评价方式',
+    ];
+    var start = -1;
+    for (final marker in markerPatterns) {
+      final idx = rawText.indexOf(marker);
+      if (idx >= 0 && (start < 0 || idx < start)) start = idx;
+    }
+    if (start < 0) return [];
+
+    var section = rawText.substring(start);
+    final endMarkers = ['平时成绩评价标准', '实验成绩评价标准', '期末考核评价内容'];
+    var end = section.length;
+    for (final marker in endMarkers) {
+      final idx = section.indexOf(marker);
+      if (idx > 0 && idx < end) end = idx;
+    }
+    section = section.substring(0, end);
+
+    final lines = section
+        .split(RegExp(r'\r?\n'))
+        .map(_normalizeSyllabusText)
+        .where((line) => line.isNotEmpty && !line.contains('|'))
+        .toList();
+    final rows = <Map<String, dynamic>>[];
+
+    int i = 0;
+    while (i < lines.length) {
+      final m = RegExp(r'课程目标\s*(\d+)').firstMatch(lines[i]);
+      if (m == null) {
+        i++;
+        continue;
+      }
+      final idx = int.tryParse(m.group(1)!);
+      if (idx == null || idx <= 0) {
+        i++;
+        continue;
+      }
+
+      final segment = <String>[lines[i]];
+      i++;
+      while (i < lines.length &&
+          !RegExp(r'课程目标\s*\d+').hasMatch(lines[i]) &&
+          !lines[i].contains('合计')) {
+        segment.add(lines[i]);
+        i++;
+      }
+
+      double? weight;
+      for (final part in segment) {
+        weight = _parseWeightCell(part);
+        if (weight != null) break;
+      }
+      final requirement = segment.firstWhere(
+        (line) =>
+            _extractIndicator(line) != null && _parseWeightCell(line) == null,
+        orElse: () => '',
+      );
+      final items = <Map<String, dynamic>>[];
+      final ratioByKind = <String, double>{
+        'pingshi': 0,
+        'experiment': 0,
+        'exam': 0,
+      };
+      final fullByKind = <String, double>{};
+      for (final part in segment) {
+        final parsed = _parseFullAndRatio(part);
+        if (parsed == null || parsed.full <= 1) continue;
+        final kind = _kindForComponentOrdinal(items.length);
+        final label = switch (kind) {
+          'pingshi' => '平时成绩',
+          'experiment' => '实验成绩',
+          _ => '考核成绩',
+        };
+        final ratio = parsed.ratio ?? 0;
+        ratioByKind[kind] = (ratioByKind[kind] ?? 0) + ratio;
+        fullByKind[kind] = parsed.full;
+        items.add({
+          'label': label,
+          'kind': kind,
+          'full': parsed.full,
+          'ratio': ratio,
+        });
+      }
+      if (weight == null && items.isEmpty && requirement.isEmpty) continue;
+      final fullMark =
+          items.isNotEmpty ? (items.first['full'] as num).toDouble() : 0.0;
+      rows.add({
+        'idx': idx,
+        'name': '课程目标$idx',
+        'indicator': _extractIndicator(requirement) ?? '',
+        'weight': weight ?? (fullMark > 0 ? fullMark / 100.0 : 0),
+        'full_mark': fullMark,
+        'pingshi_ratio': ratioByKind['pingshi'] ?? 0,
+        'experiment_ratio': ratioByKind['experiment'] ?? 0,
+        'exam_ratio': ratioByKind['exam'] ?? 0,
+        'assessment_items_json': items.isEmpty ? '' : jsonEncode(items),
+      });
+    }
+
+    return rows
+        .where((row) =>
+            ((row['idx'] as int?) ?? 0) >= 1 &&
+            ((row['idx'] as int?) ?? 0) <= 4)
+        .toList()
+      ..sort((a, b) => (a['idx'] as int).compareTo(b['idx'] as int));
+  }
+
+  String _kindForComponentOrdinal(int ordinal) {
+    if (ordinal == 0) return 'pingshi';
+    if (ordinal == 1) return 'experiment';
+    return 'exam';
+  }
+
   bool _looksLikeAssessmentMatrix(
       List<List<String>> tableRows, String headerText) {
     if (!headerText.contains('课程目标')) return false;
@@ -1397,6 +1634,14 @@ $rawText
       final text = _normalizeSyllabusText(tableRows[r][colIndex]);
       if (text.isEmpty) continue;
       if (_parseFullAndRatio(text) != null) continue;
+      if (_assessmentKind(text) != 'exam' ||
+          text.contains('考核') ||
+          text.contains('考试') ||
+          text.contains('期末') ||
+          text.contains('项目') ||
+          text.contains('设计')) {
+        return text;
+      }
       if (text.contains('课程目标') ||
           text.contains('毕业要求') ||
           text.contains('指标点') ||
@@ -1405,7 +1650,7 @@ $rawText
       }
       return text;
     }
-    const fallback = ['平时成绩', '考核成绩', '考核项3'];
+    const fallback = ['平时成绩', '实验成绩', '考核成绩'];
     if (componentOrdinal >= 0 && componentOrdinal < fallback.length) {
       return fallback[componentOrdinal];
     }

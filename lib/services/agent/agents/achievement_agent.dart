@@ -309,15 +309,15 @@ class AchievementAgent extends BaseAgent {
     }
     try {
       final svc = AchievementExcelService.instance;
-      final aiRows = await svc.aiExtractSyllabus(raw);
-      if (aiRows.isEmpty) {
+      final rows = await svc.extractSyllabusRowsFromRawText(raw);
+      if (rows.isEmpty) {
         return '无法从文本中识别课程目标。请检查文本是否包含完整的“课程目标达成考核与评价方式及成绩评定对照表”。';
       }
       final buf = StringBuffer('### 📋 初步解析结果\n\n');
       buf.writeln('课程：$courseName\n');
       final pending = <String>[];
-      for (int i = 0; i < aiRows.length; i++) {
-        final o = aiRows[i];
+      for (int i = 0; i < rows.length; i++) {
+        final o = rows[i];
         final idx = o['idx'] ?? i + 1;
         buf.writeln('**目标$idx**：${o['name'] ?? ''}');
         final w = _ratioFromText(o['weight']);
@@ -340,7 +340,7 @@ class AchievementAgent extends BaseAgent {
         }
       }
       final sum =
-          aiRows.fold<double>(0, (s, o) => s + _ratioFromText(o['weight']));
+          rows.fold<double>(0, (s, o) => s + _ratioFromText(o['weight']));
       buf.writeln('\n**权重合计**：${sum.toStringAsFixed(2)} '
           '${(sum - 1.0).abs() < 0.01 ? '✅' : '⚠️ 不等于1'}');
       if (pending.isNotEmpty) {
@@ -353,7 +353,7 @@ class AchievementAgent extends BaseAgent {
       } else {
         buf.writeln('\n所有关键字段均已识别。确认无误请输入“提交”。');
       }
-      _pendingObjectives = aiRows;
+      _pendingObjectives = rows;
       _currentAnalysisCourse = courseName;
       return buf.toString();
     } catch (e, st) {

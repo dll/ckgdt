@@ -1,9 +1,12 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../../../core/error_handler.dart';
 import '../../../../data/local/achievement_dao.dart';
 import '../../../../data/local/course_dao.dart';
-import '../../../../data/models/course_model.dart';
+import '../../../../services/achievement/achievement_excel_service.dart';
 import '../../../../services/achievement_context.dart';
 import '../../../../services/auth_service.dart';
 import '../../admin/course_objectives_manage_page.dart';
@@ -53,6 +56,7 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
   List<Map<String, dynamic>> _batches = [];
   List<Map<String, dynamic>> _objectives = [];
   bool _loading = true;
+  bool _uploadingSyllabus = false;
   String _currentCourseName = '移动应用开发';
 
   @override
@@ -93,21 +97,6 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
     }
   }
 
-  Future<void> _activateCourse(String courseName) async {
-    final name = courseName.trim();
-    if (name.isEmpty) return;
-    try {
-      final dao = CourseDao();
-      final courses = await dao.getAllCourses();
-      final matched = courses.where((c) => c.name == name);
-      if (matched.isNotEmpty) {
-        await dao.setActiveCourse(matched.first.id);
-      }
-    } catch (e, st) {
-      swallowDebug(e, tag: 'Overview.activateCourse', stack: st);
-    }
-  }
-
   Future<void> _openCourseObjectivesManager() async {
     await Navigator.push(
       context,
@@ -116,119 +105,59 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
     if (mounted) await _loadBatches();
   }
 
-  Future<void> _showCreateBatchDialog() async {
-    final courses = await CourseDao().getAllCourses();
-    if (!mounted) return;
-    if (courses.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请先在课程管理中创建课程')),
+  Future<void> _uploadSyllabus() async {
+    try {
+      final res = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['docx', 'md'],
+        withData: true,
       );
-      return;
-    }
-    final nameCtrl = TextEditingController();
-    final classCtrl = TextEditingController();
-    final semesterCtrl = TextEditingController(text: '2024-2025-2');
-    CourseModel selectedCourse = courses.firstWhere(
-      (course) => course.name == _currentCourseName,
-      orElse: () => courses.firstWhere(
-        (course) => course.isActive,
-        orElse: () => courses.first,
-      ),
-    );
+      if (res == null || res.files.isEmpty) return;
+      final f = res.files.first;
+      final ext = (f.extension ?? '').toLowerCase();
+      Uint8List bytes;
+      if (f.bytes != null) {
+        bytes = f.bytes!;
+      } else if (f.path != null) {
+        bytes = await File(f.path!).readAsBytes();
+      } else {
+        throw StateError('无法读取文件内容');
+      }
 
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('新建达成度轮次'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: '轮次名称',
-                    hintText: '如：2026春季达成评价',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: selectedCourse.id,
-                  decoration: const InputDecoration(
-                    labelText: '课程',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: courses
-                      .map((course) => DropdownMenuItem(
-                            value: course.id,
-                            child: Text(course.name),
-                          ))
-                      .toList(),
-                  onChanged: (id) {
-                    final matched = courses.where((course) => course.id == id);
-                    if (matched.isEmpty) return;
-                    setDialogState(() => selectedCourse = matched.first);
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: classCtrl,
-                  decoration: const InputDecoration(
-                    labelText: '班级名称',
-                    hintText: '如：软件工程2201',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: semesterCtrl,
-                  decoration: const InputDecoration(
-                    labelText: '学期',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('取消'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                if (nameCtrl.text.trim().isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('请输入轮次名称')),
-                  );
-                  return;
-                }
-                final teacherId =
-                    widget.authService.currentUser?.userId ?? 'unknown';
-                await widget.achievementDao.addBatch(
-                  batchName: nameCtrl.text.trim(),
-                  courseName: selectedCourse.name,
-                  className: classCtrl.text.trim(),
-                  semester: semesterCtrl.text.trim(),
-                  teacherId: teacherId,
-                );
-                await _activateCourse(selectedCourse.name);
-                AchievementContext.instance.courseName = selectedCourse.name;
-                if (ctx.mounted) Navigator.pop(ctx);
-                await _loadBatches();
-              },
-              child: const Text('创建'),
-            ),
-          ],
+      if (!mounted) return;
+      setState(() => _uploadingSyllabus = true);
+      final rawText =
+          AchievementExcelService.instance.syllabusRawText(bytes, ext);
+      if (rawText.trim().isEmpty) throw StateError('大纲文本为空或格式不支持');
+
+      await showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-      ),
-    ).whenComplete(() {
-      nameCtrl.dispose();
-      classCtrl.dispose();
-      semesterCtrl.dispose();
-    });
+        builder: (_) => AgentChatOverlay(
+          initialAgentId: 'achievement',
+          initialContext: '以下是一份课程大纲原始文本。请重点识别“课程目标达成考核与评价方式及成绩评定对照表”，'
+              '提取课程目标、权重、满分、指标点、平时/实验/期末占比、支撑章节、实验和考核内容。'
+              '当前课程：$_currentCourseName。\n\n$rawText',
+          onAgentResult: (_) {
+            _loadBatches();
+          },
+        ),
+      );
+      if (mounted) await _loadBatches();
+    } catch (e, st) {
+      swallowDebug(e, tag: 'AchievementOverview.uploadSyllabus', stack: st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('上传大纲失败: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingSyllabus = false);
+    }
   }
 
   Future<void> _deleteBatch(int batchId, String batchName) async {
@@ -285,103 +214,9 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
 
     final primary = Theme.of(context).colorScheme.primary;
 
-    return Stack(
-      children: [
-        Column(children: [
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: _loadBatches,
-              child: _batches.isEmpty
-                  ? _buildEmptyState(primary)
-                  : _buildBatchList(primary),
-            ),
-          ),
-        ]),
-        Positioned(
-          right: 16,
-          bottom: 16,
-          child: PopupMenuButton<String>(
-            onSelected: (v) {
-              if (v == 'create') _showCreateBatchDialog();
-              if (v == 'objectives') _openCourseObjectivesManager();
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(
-                  value: 'create',
-                  child:
-                      ListTile(leading: Icon(Icons.add), title: Text('新建轮次'))),
-              PopupMenuItem(
-                  value: 'objectives',
-                  child: ListTile(
-                      leading: Icon(Icons.fact_check_outlined),
-                      title: Text('课程目标管理'))),
-            ],
-            child: Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: primary,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 6,
-                      offset: const Offset(0, 3))
-                ],
-              ),
-              child: const Icon(Icons.add, color: Colors.white),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildEmptyState(Color primary) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-      children: [
-        _buildSyllabusCard(primary),
-        const SizedBox(height: 40),
-        Center(
-          child: Column(
-            children: [
-              Icon(Icons.analytics_outlined,
-                  size: 80, color: Colors.grey.withValues(alpha: 0.5)),
-              const SizedBox(height: 16),
-              const Text(
-                '暂无达成度批次',
-                style: TextStyle(fontSize: 18, color: Colors.grey),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                '选择已建课程创建达成度轮次后开始使用',
-                style: TextStyle(fontSize: 14, color: Colors.grey),
-              ),
-              const SizedBox(height: 24),
-              OutlinedButton.icon(
-                onPressed: _showCreateBatchDialog,
-                icon: const Icon(Icons.add),
-                label: const Text('新建轮次'),
-              ),
-              const SizedBox(height: 12),
-              const Divider(height: 1, indent: 40, endIndent: 40),
-              const SizedBox(height: 12),
-              const Text('课程目标由课程管理维护，概览只读取结果',
-                  style: TextStyle(fontSize: 13, color: Colors.grey)),
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: _openCourseObjectivesManager,
-                icon: const Icon(Icons.fact_check_outlined),
-                label: const Text('课程目标管理'),
-              ),
-              const SizedBox(height: 8),
-              const Text('成绩导入请在「成绩管理」标签页操作',
-                  style: TextStyle(fontSize: 12, color: Colors.grey)),
-            ],
-          ),
-        ),
-      ],
+    return RefreshIndicator(
+      onRefresh: _loadBatches,
+      child: _buildBatchList(primary),
     );
   }
 
@@ -402,6 +237,17 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
                   style: TextStyle(fontSize: 12, color: Colors.grey)),
             ),
             const SizedBox(width: 8),
+            TextButton.icon(
+              onPressed: _uploadingSyllabus ? null : _uploadSyllabus,
+              icon: _uploadingSyllabus
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.upload_file, size: 16),
+              label: const Text('上传', style: TextStyle(fontSize: 12)),
+            ),
             TextButton.icon(
               onPressed: _openCourseObjectivesManager,
               icon: const Icon(Icons.fact_check_outlined, size: 16),
@@ -424,6 +270,17 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
               child: Text('课程大纲 · $_currentCourseName',
                   style: const TextStyle(
                       fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+            TextButton.icon(
+              onPressed: _uploadingSyllabus ? null : _uploadSyllabus,
+              icon: _uploadingSyllabus
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.upload_file, size: 16),
+              label: const Text('上传大纲', style: TextStyle(fontSize: 12)),
             ),
             TextButton.icon(
               onPressed: _openCourseObjectivesManager,
@@ -608,9 +465,8 @@ class _AchievementOverviewTabState extends State<AchievementOverviewTab> {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
       itemCount: _batches.length + 1,
       itemBuilder: (context, i) {
-        // 批次列表在上，课程大纲卡片在末尾（上下互换）
-        if (i == _batches.length) return _buildSyllabusCard(primary);
-        final index = i;
+        if (i == 0) return _buildSyllabusCard(primary);
+        final index = i - 1;
         final batch = _batches[index];
         final status = batch['status'] as String? ?? 'draft';
         final studentCount = batch['student_count'] ?? 0;

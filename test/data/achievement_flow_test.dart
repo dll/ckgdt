@@ -7,6 +7,7 @@ library;
 
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:excel/excel.dart' as xl;
@@ -162,6 +163,69 @@ void main() {
   tearDown(() async {
     DatabaseHelper.databaseForTest = null;
     await db.close();
+  });
+
+  test('Markdown 大纲可确定性解析课程目标对照表', () async {
+    final file = File('data/达成/软件+6+《移动应用开发》+教学大纲+刘东良+new.md');
+    expect(await file.exists(), isTrue, reason: '测试大纲样例必须存在');
+
+    final rows = AchievementExcelService.instance
+        .deterministicSyllabusRowsFromRawText(await file.readAsString());
+
+    expect(rows.length, 4);
+    expect((rows[0]['weight'] as num).toDouble(), closeTo(0.15, 0.0001));
+    expect((rows[1]['weight'] as num).toDouble(), closeTo(0.25, 0.0001));
+    expect((rows[2]['weight'] as num).toDouble(), closeTo(0.30, 0.0001));
+    expect((rows[3]['weight'] as num).toDouble(), closeTo(0.30, 0.0001));
+    expect(rows[0]['indicator'], '1.4');
+    expect((rows[0]['full_mark'] as num).toDouble(), closeTo(15, 0.0001));
+    expect((rows[0]['pingshi_ratio'] as num).toDouble(), closeTo(0.20, 0.0001));
+    expect(
+        (rows[0]['experiment_ratio'] as num).toDouble(), closeTo(0.30, 0.0001));
+    expect((rows[0]['exam_ratio'] as num).toDouble(), closeTo(0.50, 0.0001));
+
+    final items =
+        jsonDecode(rows[0]['assessment_items_json'] as String) as List;
+    expect(items.length, 3);
+    expect(items.map((item) => item['kind']).toList(),
+        ['pingshi', 'experiment', 'exam']);
+  });
+
+  test('旧 docx 单元格纯文本也能恢复课程目标对照表', () {
+    const raw = '''
+课程目标达成考核与评价方式及成绩评定对照表
+课程目标
+权重
+毕业要求
+平时 支撑课程目标的满分（比例%）
+实验 支撑课程目标的满分（比例%）
+期末 支撑课程目标的满分（比例%）
+课程目标 1
+0.15
+支撑毕业要求 1.4
+15（20%）
+15（30%）
+15（50%）
+课程目标 2
+0.25
+支撑毕业要求 3.2
+25（20%）
+25（30%）
+25（50%）
+平时成绩评价标准
+''';
+
+    final rows = AchievementExcelService.instance
+        .deterministicSyllabusRowsFromRawText(raw);
+
+    expect(rows.length, 2);
+    expect((rows[0]['weight'] as num).toDouble(), closeTo(0.15, 0.0001));
+    expect((rows[0]['full_mark'] as num).toDouble(), closeTo(15, 0.0001));
+    expect((rows[0]['pingshi_ratio'] as num).toDouble(), closeTo(0.20, 0.0001));
+    expect(
+        (rows[0]['experiment_ratio'] as num).toDouble(), closeTo(0.30, 0.0001));
+    expect((rows[0]['exam_ratio'] as num).toDouble(), closeTo(0.50, 0.0001));
+    expect(rows[0]['indicator'], '1.4');
   });
 
   test('无实验课程动态成绩模板不生成实验列，并按大纲比例合成达成度', () {
