@@ -1,9 +1,10 @@
 ﻿import 'package:flutter/material.dart';
 import '../learning/learning_hub_page.dart';
+import '../learning/ordinary_score_tab.dart';
 import '../classroom/classroom_page.dart';
 import '../../../services/navigation_service.dart';
 
-/// 教学中心 — 聚合教学与课堂两个模块（教师端 Tab 精简）
+/// 教学中心 — 聚合教学、课堂、平时成绩三个模块（教师端 Tab 精简）
 class TeachingHubPage extends StatefulWidget {
   const TeachingHubPage({super.key});
 
@@ -14,7 +15,7 @@ class TeachingHubPage extends StatefulWidget {
 class _TeachingHubPageState extends State<TeachingHubPage> {
   int _subIndex = 0;
 
-  static const _subLabels = ['教学', '课堂'];
+  static const _subLabels = ['教学', '课堂', '平时成绩'];
 
   @override
   void initState() {
@@ -57,6 +58,7 @@ class _TeachingHubPageState extends State<TeachingHubPage> {
                   segments: const [
                     ButtonSegment(value: 0, icon: Icon(Icons.menu_book, size: 16), label: Text('教学')),
                     ButtonSegment(value: 1, icon: Icon(Icons.cast_for_education, size: 16), label: Text('课堂')),
+                    ButtonSegment(value: 2, icon: Icon(Icons.assignment_turned_in, size: 16), label: Text('平时成绩')),
                   ],
                   selected: {_subIndex},
                   onSelectionChanged: (s) => setState(() => _subIndex = s.first),
@@ -77,6 +79,7 @@ class _TeachingHubPageState extends State<TeachingHubPage> {
             children: const [
               LearningHubPage(),
               ClassroomPage(),
+              OrdinaryScoreTab(),
             ],
           ),
         ),

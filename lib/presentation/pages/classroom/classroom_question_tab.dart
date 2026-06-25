@@ -1,6 +1,8 @@
 ﻿import 'package:flutter/material.dart';
+import 'dart:convert';
 import '../../../data/local/classroom_dao.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/ai_service.dart';
 import '../../../core/error_handler.dart';
 
 // ╔══════════════════════════════════════════════════════════════════════════════╗
@@ -173,7 +175,7 @@ class _ClassroomQuestionTabState extends State<ClassroomQuestionTab> {
               FloatingActionButton(
                 heroTag: 'add',
                 onPressed: () => _showAddDialog(context),
-                tooltip: '手动添加题目',
+                tooltip: 'AI辅助添加题目',
                 child: const Icon(Icons.add),
               ),
             ],
@@ -1250,10 +1252,29 @@ class _ClassroomQuestionTabState extends State<ClassroomQuestionTab> {
                     controller: questionCtrl,
                     maxLines: 3,
                     decoration: const InputDecoration(
-                      labelText: '题目内容',
+                      labelText: '题目内容 / 输入题干后点击 AI 补齐',
                       border: OutlineInputBorder(),
                     ),
                     style: const TextStyle(fontSize: 13),
+                  ),
+                  const SizedBox(height: 6),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      icon: const Icon(Icons.auto_awesome, size: 16),
+                      label: const Text('AI 补齐'),
+                      onPressed: () => _aiFillQuestion(
+                        questionCtrl: questionCtrl,
+                        optACtrl: optACtrl,
+                        optBCtrl: optBCtrl,
+                        optCCtrl: optCCtrl,
+                        optDCtrl: optDCtrl,
+                        refCtrl: refCtrl,
+                        ds: setDialogState,
+                        setAnswerIdx: (v) => answerIdx = v,
+                        setQuestionType: (v) => questionType = v,
+                      ),
+                    ),
                   ),
                   // 选项
                   if (questionType == 'choice') ...[
@@ -1372,6 +1393,73 @@ class _ClassroomQuestionTabState extends State<ClassroomQuestionTab> {
         ),
       ),
     );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  //  AI 补齐题目
+  // ══════════════════════════════════════════════════════════════════════════
+
+  Future<void> _aiFillQuestion({
+    required TextEditingController questionCtrl,
+    required TextEditingController optACtrl,
+    required TextEditingController optBCtrl,
+    required TextEditingController optCCtrl,
+    required TextEditingController optDCtrl,
+    required TextEditingController refCtrl,
+    required StateSetter ds,
+    required void Function(int idx) setAnswerIdx,
+    required void Function(String type) setQuestionType,
+  }) async {
+    final stem = questionCtrl.text.trim();
+    if (stem.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先输入题干')),
+      );
+      return;
+    }
+    try {
+      final raw = await AiService().chat([
+        {
+          'role': 'user',
+          'content': '根据以下题干生成一道完整的四选一选择题（JSON格式）：\n\n'
+              '{"options":["A选项内容","B选项内容","C选项内容","D选项内容"],'
+              '"answer_index":0,"reference_answer":"答案解析","difficulty":"easy|medium|hard"}\n\n'
+              '题目：$stem'
+        }
+      ], systemPrompt: '你是教学题目设计专家。只返回JSON，不要任何解释文字。');
+      final match = RegExp(r'\{[\s\S]*\}').firstMatch(raw);
+      if (match == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('AI返回格式异常，请重试')),
+        );
+        return;
+      }
+      final json = jsonDecode(match.group(0)!) as Map<String, dynamic>;
+      final opts = (json['options'] as List?)?.cast<String>() ?? [];
+      if (opts.length >= 4) {
+        optACtrl.text = opts[0];
+        optBCtrl.text = opts[1];
+        optCCtrl.text = opts[2];
+        optDCtrl.text = opts[3];
+      }
+      final aiAnswerIdx = (json['answer_index'] as num?)?.toInt() ?? -1;
+      if (aiAnswerIdx >= 0 && aiAnswerIdx <= 3) {
+        ds(() => setAnswerIdx(aiAnswerIdx));
+        ds(() => setQuestionType('choice'));
+      }
+      final refAnswer = (json['reference_answer'] ?? '').toString();
+      if (refAnswer.isNotEmpty) refCtrl.text = refAnswer;
+      if (opts.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('AI 已补齐题目选项和答案'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ClassroomQuestion.aiFill', stack: st);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('AI补齐失败: $e'), backgroundColor: Colors.red),
+      );
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════════════
