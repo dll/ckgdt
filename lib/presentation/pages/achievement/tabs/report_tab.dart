@@ -12,6 +12,7 @@ import '../../../../data/local/achievement_dao.dart';
 import '../../../../services/achievement/achievement_docx_service.dart';
 import '../../../../services/achievement/achievement_template_excel_service.dart';
 import '../../../../services/achievement/excel_chart_injector.dart';
+import '../../../../services/achievement_context.dart';
 import '../../../../services/archive/native_docx_service.dart';
 import '../../../../services/output_path_service.dart';
 import '../../../../services/auth_service.dart';
@@ -73,6 +74,11 @@ class _ReportTabState extends State<ReportTab> {
   // 计算结果
   Map<String, dynamic>? _calcResults;
   List<double> _objectiveAchievements = [0, 0, 0, 0];
+
+  String get _fallbackCourseName =>
+      AchievementContext.instance.courseName.isNotEmpty
+          ? AchievementContext.instance.courseName
+          : '移动应用开发';
   List<double> _objectiveWeights = List<double>.from(kDefaultWeights);
   double _weightedAchievement = 0.0;
   Map<String, List<double>> _statistics =
@@ -106,7 +112,7 @@ class _ReportTabState extends State<ReportTab> {
   Future<void> _loadConfig([String? courseName]) async {
     try {
       final rows = await widget.achievementDao
-          .getCourseObjectives(courseName ?? '移动应用开发');
+          .getCourseObjectives(courseName ?? _fallbackCourseName);
       if (mounted) {
         setState(() => _config = rows.isNotEmpty
             ? AchievementConfig.fromObjectiveRows(rows)
@@ -280,7 +286,7 @@ class _ReportTabState extends State<ReportTab> {
       final now = DateTime.now();
       final dateStr =
           '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-      final courseName = batch['course_name'] ?? '移动应用开发';
+      final courseName = batch['course_name'] ?? _fallbackCourseName;
       final className = batch['class_name'] ?? '软件23';
       final semester = batch['semester'] ?? '-';
       final teacherId = batch['teacher_id'] ?? '';
@@ -783,7 +789,7 @@ class _ReportTabState extends State<ReportTab> {
       // 修复此前传空 {} 导致 docx 一/二/三表表头空白的 bug。
       final syllabus = <String, dynamic>{
         'info': <String, String>{
-          '英文名称': (batch['course_name'] ?? '移动应用开发').toString(),
+          '英文名称': (batch['course_name'] ?? _fallbackCourseName).toString(),
           '考核方式': '考查',
           '开课学期': (batch['semester'] ?? '').toString(),
         },
@@ -814,7 +820,7 @@ class _ReportTabState extends State<ReportTab> {
 
       final path = await AchievementDocxService.instance.generateReport(
         batchName: batch['batch_name'] ?? '达成评价',
-        courseName: batch['course_name'] ?? '移动应用开发',
+        courseName: batch['course_name'] ?? _fallbackCourseName,
         className: batch['class_name'] ?? '班级',
         semester: batch['semester'] ?? DateTime.now().year.toString(),
         teacherName: teacherName,
@@ -868,7 +874,7 @@ class _ReportTabState extends State<ReportTab> {
     try {
       final batch = _batches.firstWhere((b) => b['id'] == _selectedBatchId,
           orElse: () => <String, dynamic>{});
-      final courseName = (batch['course_name'] ?? '移动应用开发').toString();
+      final courseName = (batch['course_name'] ?? _fallbackCourseName).toString();
       final className = (batch['class_name'] ?? '班级').toString();
       final semester = (batch['semester'] ?? '').toString();
       final scores = await widget.achievementDao.getScores(_selectedBatchId!);
@@ -1511,7 +1517,7 @@ class _ReportTabState extends State<ReportTab> {
       );
       final scores =
           await widget.achievementDao.getScoresByBatch(_selectedBatchId!);
-      final courseName = batch['course_name'] ?? '移动应用开发';
+      final courseName = batch['course_name'] ?? _fallbackCourseName;
       final className = batch['class_name'] ?? '软件23';
       final semester = batch['semester'] ?? '-';
       final teacherId = batch['teacher_id'] ?? '';

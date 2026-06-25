@@ -117,7 +117,8 @@ class AchievementDocxService {
   Future<File?> _findTemplateForCourse(String courseName) async {
     final roots = await AchievementTemplateAssets.templateRoots();
     final seen = <String>{};
-    final candidates = <File>[];
+    final courseFiles = <File>[];
+    final anyFiles = <File>[];
     for (final root in roots) {
       if (!await root.exists()) continue;
       await for (final entity
@@ -129,10 +130,13 @@ class AchievementDocxService {
         if (name.startsWith('~\$')) continue;
         if (!name.toLowerCase().endsWith('.docx')) continue;
         if (!name.contains('达成')) continue;
-        if (courseName.isNotEmpty && !name.contains(courseName)) continue;
-        candidates.add(entity);
+        anyFiles.add(entity);
+        if (courseName.isNotEmpty && name.contains(courseName)) {
+          courseFiles.add(entity);
+        }
       }
     }
+    final candidates = courseFiles.isNotEmpty ? courseFiles : anyFiles;
     if (candidates.isEmpty) return null;
     candidates.sort((a, b) {
       final an = a.path.contains('评价报告') ? 0 : 1;

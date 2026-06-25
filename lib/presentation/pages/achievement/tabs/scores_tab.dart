@@ -275,7 +275,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
           ? await widget.achievementDao.getScoresByBatch(_selectedBatchId!)
           : <Map<String, dynamic>>[];
       // 从当前批次获取课程名，加载对应课程目标配置
-      String courseName = '移动应用开发';
+      String courseName = AchievementContext.instance.courseName;
       if (_selectedBatchId != null) {
         final batch = _batches.firstWhere(
           (b) => b['id'] == _selectedBatchId,
@@ -338,7 +338,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
       if (f.bytes == null) throw StateError('无法读取文件内容');
       setState(() => _generating = true);
 
-      String courseName = '移动应用开发';
+      String courseName = AchievementContext.instance.courseName;
       final batch = _batches.firstWhere(
         (b) => b['id'] == _selectedBatchId,
         orElse: () => {},

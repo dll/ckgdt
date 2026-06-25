@@ -142,7 +142,8 @@ class AchievementTemplateExcelService {
     final profile = AchievementExcelTemplateProfile.schoolMobile48();
     final roots = await AchievementTemplateAssets.templateRoots();
     final seen = <String>{};
-    final candidates = <File>[];
+    final courseFiles = <File>[];
+    final anyFiles = <File>[];
     for (final root in roots) {
       if (!await root.exists()) continue;
       await for (final entity
@@ -154,10 +155,14 @@ class AchievementTemplateExcelService {
         if (name.startsWith('~\$')) continue;
         if (!name.toLowerCase().endsWith('.xlsx')) continue;
         if (!name.contains('达成')) continue;
-        if (courseName.isNotEmpty && !name.contains(courseName)) continue;
-        candidates.add(entity);
+        anyFiles.add(entity);
+        if (courseName.isNotEmpty && name.contains(courseName)) {
+          courseFiles.add(entity);
+        }
       }
     }
+    // 优先课程专用模板，找不到则用任意模板
+    final candidates = courseFiles.isNotEmpty ? courseFiles : anyFiles;
     final templates = <File>[];
     for (final file in candidates) {
       if (await _isSupportedTemplate(file, profile)) {
