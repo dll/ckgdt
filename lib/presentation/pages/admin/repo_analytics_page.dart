@@ -140,8 +140,8 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: testResult!.startsWith('✅')
-                          ? Colors.green.withOpacity(0.1)
-                          : Colors.red.withOpacity(0.1),
+                          ? Colors.green.withValues(alpha: 0.1)
+                          : Colors.red.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -759,9 +759,9 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
       trailing: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         decoration: BoxDecoration(
-          color: roleColor.withOpacity(0.1),
+          color: roleColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: roleColor.withOpacity(0.3)),
+          border: Border.all(color: roleColor.withValues(alpha: 0.3)),
         ),
         child: Text(role,
             style: TextStyle(
@@ -787,7 +787,7 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
           color: Theme.of(context)
               .colorScheme
               .primaryContainer
-              .withOpacity(0.3),
+              .withValues(alpha: 0.3),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -830,7 +830,7 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 6, vertical: 1),
                         decoration: BoxDecoration(
-                          color: Colors.amber.withOpacity(0.15),
+                          color: Colors.amber.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text('管理员',
@@ -858,7 +858,7 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
+                    color: Colors.blue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -998,7 +998,7 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
                       height: 30,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: rankColor.withOpacity(0.2),
+                        color: rankColor.withValues(alpha: 0.2),
                       ),
                       child: Center(
                         child: Text('$rank',
@@ -1030,10 +1030,10 @@ class _RepoAnalyticsPageState extends State<RepoAnalyticsPage>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: activityColor.withOpacity(0.1),
+                          color: activityColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                              color: activityColor.withOpacity(0.3)),
+                              color: activityColor.withValues(alpha: 0.3)),
                         ),
                         child: Text(activityLevel,
                             style: TextStyle(

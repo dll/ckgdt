@@ -221,7 +221,7 @@ class _ClassQaDetailPageState extends State<ClassQaDetailPage> {
       {required bool isAuthor, required ClassQaModel qa}) {
     final isAccepted = qa.acceptedReplyId == r.id;
     final highlight = r.isTeacher
-        ? Colors.amber.withOpacity(0.10)
+        ? Colors.amber.withValues(alpha: 0.10)
         : Colors.transparent;
     return Card(
       color: highlight == Colors.transparent ? null : highlight,

@@ -161,7 +161,7 @@ class _StudentTokenPageState extends State<StudentTokenPage> {
                     show: true,
                     drawVerticalLine: false,
                     getDrawingHorizontalLine: (value) =>
-                        FlLine(color: Colors.grey.withOpacity(0.15), strokeWidth: 1),
+                        FlLine(color: Colors.grey.withValues(alpha: 0.15), strokeWidth: 1),
                   ),
                   titlesData: FlTitlesData(
                     leftTitles: AxisTitles(
@@ -204,7 +204,7 @@ class _StudentTokenPageState extends State<StudentTokenPage> {
                       isCurved: true,
                       color: primary,
                       barWidth: 2.5,
-                      belowBarData: BarAreaData(show: true, color: primary.withOpacity(0.1)),
+                      belowBarData: BarAreaData(show: true, color: primary.withValues(alpha: 0.1)),
                     ),
                   ],
                 ),
@@ -325,7 +325,7 @@ class _StudentTokenPageState extends State<StudentTokenPage> {
                 borderRadius: BorderRadius.circular(3),
                 child: LinearProgressIndicator(
                   value: ratio,
-                  backgroundColor: primary.withOpacity(0.08),
+                  backgroundColor: primary.withValues(alpha: 0.08),
                   valueColor: AlwaysStoppedAnimation(primary),
                   minHeight: 4,
                 ),

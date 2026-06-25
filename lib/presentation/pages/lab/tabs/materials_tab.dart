@@ -303,7 +303,7 @@ class _MaterialsTabState extends State<_MaterialsTab> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: cat.color.withOpacity(0.1),
+                  color: cat.color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(cat.icon, color: cat.color, size: 22),
@@ -318,7 +318,7 @@ class _MaterialsTabState extends State<_MaterialsTab> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                     decoration: BoxDecoration(
-                      color: cat.color.withOpacity(0.1),
+                      color: cat.color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text('${allFiles.length}',

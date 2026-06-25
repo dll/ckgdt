@@ -68,10 +68,16 @@ class _AchievementPageState extends State<AchievementPage>
     _tabController = TabController(length: _tabSpecs.length, vsync: this);
     bindInnerTabRequest();
     _refreshVisibleTabs();
+    dataRevision.addListener(_onDataRevision);
+  }
+
+  void _onDataRevision() {
+    _refreshVisibleTabs();
   }
 
   @override
   void dispose() {
+    dataRevision.removeListener(_onDataRevision);
     unbindInnerTabRequest();
     _tabController.dispose();
     dataRevision.dispose();
@@ -93,7 +99,8 @@ class _AchievementPageState extends State<AchievementPage>
       final hasExperiment = objectives.isEmpty ||
           objectives.any(
             (row) =>
-                ((row['experiment_ratio'] as num?)?.toDouble() ?? 0) > 0.0001,
+                ((row['experiment_ratio'] as num?)?.toDouble() ?? 0) > 0.0001 ||
+                (row['experiments']?.toString().trim().isNotEmpty == true),
           );
       final nextSpecs = hasExperiment
           ? _allTabSpecs
@@ -279,7 +286,7 @@ class _AchievementPageState extends State<AchievementPage>
                   isScrollable: true,
                   tabAlignment: TabAlignment.start,
                   labelColor: Colors.white,
-                  unselectedLabelColor: Colors.white.withOpacity(0.55),
+                  unselectedLabelColor: Colors.white.withValues(alpha: 0.55),
                   indicatorColor: Colors.white,
                   indicatorWeight: 2,
                   indicatorSize: TabBarIndicatorSize.label,
@@ -304,7 +311,7 @@ class _AchievementPageState extends State<AchievementPage>
                             Text(serial,
                                 style: NoirTokens.serial(
                                     color:
-                                        Colors.white.withOpacity(0.85))),
+                                        Colors.white.withValues(alpha: 0.85))),
                             const SizedBox(width: 8),
                             Icon(icon, size: 16),
                             const SizedBox(width: 6),
@@ -364,6 +371,7 @@ class _AchievementPageState extends State<AchievementPage>
         return AchievementOverviewTab(
           authService: _authService,
           achievementDao: _achievementDao,
+          dataRevision: dataRevision,
         );
       case '成绩管理':
         return ScoreManagementTab(

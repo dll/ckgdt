@@ -204,7 +204,7 @@ class _OrdinaryScoreTabState extends State<OrdinaryScoreTab> {
                 Text(
                   snapshot?.courseName ?? '当前课程',
                   style: TextStyle(
-                    color: NoirTokens.paper.withOpacity(0.58),
+                    color: NoirTokens.paper.withValues(alpha: 0.58),
                     fontSize: 12,
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -254,7 +254,7 @@ class _OrdinaryScoreTabState extends State<OrdinaryScoreTab> {
       height: 42,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        border: Border.all(color: NoirTokens.paper.withOpacity(0.16)),
+        border: Border.all(color: NoirTokens.paper.withValues(alpha: 0.16)),
         borderRadius: BorderRadius.circular(8),
       ),
       child: DropdownButtonHideUnderline(
@@ -265,7 +265,7 @@ class _OrdinaryScoreTabState extends State<OrdinaryScoreTab> {
           iconEnabledColor: NoirTokens.paper,
           hint: Text(
             '选择达成度批次',
-            style: TextStyle(color: NoirTokens.paper.withOpacity(0.58)),
+            style: TextStyle(color: NoirTokens.paper.withValues(alpha: 0.58)),
           ),
           style: const TextStyle(color: NoirTokens.paper, fontSize: 13),
           items: _batches.map((batch) {
@@ -353,7 +353,7 @@ class _OrdinaryScoreTabState extends State<OrdinaryScoreTab> {
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: NoirTokens.accent.withOpacity(0.16),
+                color: NoirTokens.accent.withValues(alpha: 0.16),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(icon, color: NoirTokens.accent, size: 21),
@@ -365,7 +365,7 @@ class _OrdinaryScoreTabState extends State<OrdinaryScoreTab> {
                 children: [
                   Text(label,
                       style: TextStyle(
-                        color: NoirTokens.paper.withOpacity(0.64),
+                        color: NoirTokens.paper.withValues(alpha: 0.64),
                         fontSize: 12,
                       )),
                   const SizedBox(height: 3),
@@ -379,7 +379,7 @@ class _OrdinaryScoreTabState extends State<OrdinaryScoreTab> {
                   Text(caption,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: NoirTokens.paper.withOpacity(0.45),
+                        color: NoirTokens.paper.withValues(alpha: 0.45),
                         fontSize: 11,
                       )),
                 ],
@@ -466,8 +466,8 @@ class _OrdinaryScoreTabState extends State<OrdinaryScoreTab> {
             data: Theme.of(context).copyWith(
               dividerColor: Colors.transparent,
               expansionTileTheme: ExpansionTileThemeData(
-                iconColor: NoirTokens.paper.withOpacity(0.8),
-                collapsedIconColor: NoirTokens.paper.withOpacity(0.55),
+                iconColor: NoirTokens.paper.withValues(alpha: 0.8),
+                collapsedIconColor: NoirTokens.paper.withValues(alpha: 0.55),
               ),
             ),
             child: ExpansionTile(
@@ -476,7 +476,7 @@ class _OrdinaryScoreTabState extends State<OrdinaryScoreTab> {
               title: Text(
                 '细项权重',
                 style: TextStyle(
-                  color: NoirTokens.paper.withOpacity(0.82),
+                  color: NoirTokens.paper.withValues(alpha: 0.82),
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -556,9 +556,9 @@ class _OrdinaryScoreTabState extends State<OrdinaryScoreTab> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: NoirTokens.paper.withOpacity(0.04),
+        color: NoirTokens.paper.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: NoirTokens.paper.withOpacity(0.08)),
+        border: Border.all(color: NoirTokens.paper.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -587,7 +587,7 @@ class _OrdinaryScoreTabState extends State<OrdinaryScoreTab> {
             max: 100,
             divisions: 100,
             activeColor: NoirTokens.accent,
-            inactiveColor: NoirTokens.paper.withOpacity(0.16),
+            inactiveColor: NoirTokens.paper.withValues(alpha: 0.16),
             onChanged: onChanged,
           ),
         ],
@@ -606,7 +606,7 @@ class _OrdinaryScoreTabState extends State<OrdinaryScoreTab> {
             child: Text(
               title,
               style: TextStyle(
-                color: NoirTokens.paper.withOpacity(0.66),
+                color: NoirTokens.paper.withValues(alpha: 0.66),
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),
@@ -643,7 +643,7 @@ class _OrdinaryScoreTabState extends State<OrdinaryScoreTab> {
           child: Text(
             label,
             style: TextStyle(
-              color: NoirTokens.paper.withOpacity(0.76),
+              color: NoirTokens.paper.withValues(alpha: 0.76),
               fontSize: 12,
             ),
             overflow: TextOverflow.ellipsis,
@@ -656,7 +656,7 @@ class _OrdinaryScoreTabState extends State<OrdinaryScoreTab> {
             max: 100,
             divisions: 100,
             activeColor: NoirTokens.accent,
-            inactiveColor: NoirTokens.paper.withOpacity(0.16),
+            inactiveColor: NoirTokens.paper.withValues(alpha: 0.16),
             onChanged: onChanged,
           ),
         ),
@@ -725,17 +725,17 @@ class _OrdinaryScoreTabState extends State<OrdinaryScoreTab> {
                   decoration: InputDecoration(
                     hintText: '按学号/姓名筛选',
                     hintStyle: TextStyle(
-                      color: NoirTokens.paper.withOpacity(0.42),
+                      color: NoirTokens.paper.withValues(alpha: 0.42),
                     ),
                     prefixIcon: Icon(Icons.search,
                         size: 18,
-                        color: NoirTokens.paper.withOpacity(0.56)),
+                        color: NoirTokens.paper.withValues(alpha: 0.56)),
                     suffixIcon: _studentFilter.isEmpty
                         ? null
                         : IconButton(
                             tooltip: '清除筛选',
                             icon: const Icon(Icons.close, size: 18),
-                            color: NoirTokens.paper.withOpacity(0.62),
+                            color: NoirTokens.paper.withValues(alpha: 0.62),
                             onPressed: () {
                               _studentFilterCtrl.clear();
                               setState(() => _studentFilter = '');
@@ -743,16 +743,16 @@ class _OrdinaryScoreTabState extends State<OrdinaryScoreTab> {
                           ),
                     isDense: true,
                     filled: true,
-                    fillColor: NoirTokens.paper.withOpacity(0.04),
+                    fillColor: NoirTokens.paper.withValues(alpha: 0.04),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: BorderSide(
-                          color: NoirTokens.paper.withOpacity(0.14)),
+                          color: NoirTokens.paper.withValues(alpha: 0.14)),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: BorderSide(
-                          color: NoirTokens.paper.withOpacity(0.14)),
+                          color: NoirTokens.paper.withValues(alpha: 0.14)),
                     ),
                     focusedBorder: const OutlineInputBorder(
                       borderRadius: BorderRadius.all(Radius.circular(8)),
@@ -804,19 +804,19 @@ class _OrdinaryScoreTabState extends State<OrdinaryScoreTab> {
                       data: Theme.of(context).copyWith(
                         dataTableTheme: DataTableThemeData(
                           headingTextStyle: TextStyle(
-                            color: NoirTokens.paper.withOpacity(0.7),
+                            color: NoirTokens.paper.withValues(alpha: 0.7),
                             fontWeight: FontWeight.w800,
                             fontSize: 12,
                           ),
                           dataTextStyle: const TextStyle(
                               color: NoirTokens.paper, fontSize: 12),
                           headingRowColor: WidgetStatePropertyAll(
-                            NoirTokens.paper.withOpacity(0.06),
+                            NoirTokens.paper.withValues(alpha: 0.06),
                           ),
                           dataRowColor:
                               WidgetStateProperty.resolveWith((states) {
                             return states.contains(WidgetState.hovered)
-                                ? NoirTokens.accent.withOpacity(0.08)
+                                ? NoirTokens.accent.withValues(alpha: 0.08)
                                 : null;
                           }),
                           dividerThickness: 0.4,
@@ -934,7 +934,7 @@ class _OrdinaryScoreTabState extends State<OrdinaryScoreTab> {
         Text(
           '${_fmt(percent)}%',
           style: TextStyle(
-            color: NoirTokens.paper.withOpacity(0.48),
+            color: NoirTokens.paper.withValues(alpha: 0.48),
             fontSize: 11,
           ),
         ),
@@ -949,9 +949,9 @@ class _OrdinaryScoreTabState extends State<OrdinaryScoreTab> {
     return Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: NoirTokens.paper.withOpacity(0.055),
+        color: NoirTokens.paper.withValues(alpha: 0.055),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: NoirTokens.paper.withOpacity(0.10)),
+        border: Border.all(color: NoirTokens.paper.withValues(alpha: 0.10)),
       ),
       child: child,
     );
@@ -963,7 +963,7 @@ class _OrdinaryScoreTabState extends State<OrdinaryScoreTab> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: NoirTokens.paper.withOpacity(0.45), size: 42),
+          Icon(icon, color: NoirTokens.paper.withValues(alpha: 0.45), size: 42),
           const SizedBox(height: 10),
           Text(title,
               style: const TextStyle(
@@ -974,7 +974,7 @@ class _OrdinaryScoreTabState extends State<OrdinaryScoreTab> {
           const SizedBox(height: 4),
           Text(subtitle,
               style: TextStyle(
-                color: NoirTokens.paper.withOpacity(0.52),
+                color: NoirTokens.paper.withValues(alpha: 0.52),
                 fontSize: 12,
               )),
         ],

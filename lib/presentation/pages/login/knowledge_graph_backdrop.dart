@@ -145,7 +145,7 @@ class _GraphPainter extends CustomPainter {
 
     // 静态模式 → 呼吸/脉冲项归零，alpha 用中位常量。
     final breath = animated ? 0.5 + 0.5 * math.sin(t * 2 * math.pi) : 0.5;
-    _linePaint.color = lineColor.withOpacity(0.18 + 0.10 * breath);
+    _linePaint.color = lineColor.withValues(alpha: 0.18 + 0.10 * breath);
     for (final (a, b) in edges) {
       canvas.drawLine(nodes[a], nodes[b], _linePaint);
     }
@@ -157,14 +157,14 @@ class _GraphPainter extends CustomPainter {
           ? 0.5 + 0.5 * math.sin(((i * 0.137 + t) % 1.0) * 2 * math.pi)
           : 0.5;
 
-      _glowPaint.color = base.withOpacity(0.10 + 0.10 * pulse);
+      _glowPaint.color = base.withValues(alpha: 0.10 + 0.10 * pulse);
       canvas.drawCircle(nodes[i], 5 + pulse * 5, _glowPaint);
 
-      _corePaint.color = base.withOpacity(0.85);
+      _corePaint.color = base.withValues(alpha: 0.85);
       canvas.drawCircle(nodes[i], 2.0 + (isAccent ? 0.8 : 0), _corePaint);
     }
 
-    _refPaint.color = lineColor.withOpacity(0.10);
+    _refPaint.color = lineColor.withValues(alpha: 0.10);
     canvas.drawLine(const Offset(40, 80), Offset(w - 40, 80), _refPaint);
     canvas.drawLine(Offset(40, h - 80), Offset(w - 40, h - 80), _refPaint);
   }

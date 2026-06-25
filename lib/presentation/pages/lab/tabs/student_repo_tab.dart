@@ -533,7 +533,7 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.15),
+                            color: Colors.orange.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Text('管理员',
@@ -605,8 +605,8 @@ class _StudentRepoTabState extends State<_StudentRepoTab>
                           fontWeight: FontWeight.w500,
                         )),
                     backgroundColor:
-                        isSelected ? color : color.withOpacity(0.1),
-                    side: BorderSide(color: color.withOpacity(0.3)),
+                        isSelected ? color : color.withValues(alpha: 0.1),
+                    side: BorderSide(color: color.withValues(alpha: 0.3)),
                     onPressed: () => _switchBranch(isSelected ? null : name),
                   ),
                 );

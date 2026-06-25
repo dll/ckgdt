@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -3474,7 +3474,7 @@ ${_templateExcerpt(parsed.content)}
     Widget chip(IconData icon, String label, bool enabled, [Color? color]) {
       final c = color ?? primary;
       return Material(
-        color: enabled ? c.withOpacity(0.1) : Colors.grey.shade100,
+        color: enabled ? c.withValues(alpha: 0.1) : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
@@ -3501,7 +3501,7 @@ ${_templateExcerpt(parsed.content)}
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: primary.withOpacity(0.03),
+        color: primary.withValues(alpha: 0.03),
         border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
       ),
       child: Row(
@@ -3799,8 +3799,8 @@ class _OrdinalBadge extends StatelessWidget {
       height: 26,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: primary.withOpacity(0.10),
-        border: Border.all(color: primary.withOpacity(0.35), width: 0.8),
+        color: primary.withValues(alpha: 0.10),
+        border: Border.all(color: primary.withValues(alpha: 0.35), width: 0.8),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
@@ -3916,9 +3916,9 @@ class _StatusBadge {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withOpacity(0.3), width: 0.5),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 0.5),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

@@ -193,16 +193,14 @@ class AchievementDocxService {
     );
 
     files['word/document.xml'] = utf8.encode(doc.toXmlString());
+
+    // 更新图表缓存数据 — 使用模板的 OOXML 原生图表而非程序生成的 PNG
+    _updateAllChartCaches(files, objectives, students, classStats, expectation);
+
     var out = Archive();
     files.forEach((name, content) {
       out.addFile(ArchiveFile(name, content.length, content));
     });
-
-    // 嵌入图表 PNG → 返回合并后的新 archive
-    if (barChartPng != null || scatterChartPngs.isNotEmpty) {
-      out = _embedChartImages(out,
-          barChartPng: barChartPng, scatterChartPngs: scatterChartPngs);
-    }
 
     final dir = await OutputPathService.getOutputDirectory();
     final safeName = '${courseName}_${className}_达成评价报告'
@@ -386,7 +384,8 @@ class AchievementDocxService {
     final chartCellXml =
         _chartsCellXml(barChartPng, scatterChartPngs, quantitative);
     if (chartCellXml.isEmpty) {
-      _setCell(table, 1, 1, quantitative);
+      // 保留模板原有图表（Excel 截图），只追加定量分析文本
+      _appendTextToCell(table, 1, 1, '\n$quantitative');
     } else {
       _setCellXml(table, 1, 1, chartCellXml);
     }
@@ -399,6 +398,18 @@ class AchievementDocxService {
         '$teacherName　　日期：${DateTime.now().toString().substring(0, 10)}');
     _setCell(table, 5, 0, '课程群建设工作组意见');
     _setCell(table, 5, 1, '课程群建设工作组组长签字：　　　　日期：　 年　 月　 日');
+  }
+
+  /// 向单元格追加文本段落，保留原有内容（含图片）。
+  void _appendTextToCell(XmlElement table, int rowIndex, int cellIndex, String text) {
+    final rows = _children(table, 'tr');
+    if (rowIndex < 0 || rowIndex >= rows.length) return;
+    final cells = _children(rows[rowIndex], 'tc');
+    if (cellIndex < 0 || cellIndex >= cells.length) return;
+    final cell = cells[cellIndex];
+    for (final line in text.split('\n')) {
+      cell.children.add(_textParagraphElement(line));
+    }
   }
 
   String _requirementText(Map<String, dynamic> obj) {
@@ -606,36 +617,7 @@ class AchievementDocxService {
     return null;
   }
 
-  /// 生成"可视化图表"正文段落 XML（标题 + 各图 inline drawing + 图注）。
-  /// relId 顺序必须与 _embedChartImages 写 rels 的顺序一致：条形图优先、散点图其后。
-  String _chartsBodyXml(
-      Uint8List? barChartPng, List<Uint8List?> scatterChartPngs) {
-    final hasBar = barChartPng != null;
-    final scatters = scatterChartPngs.whereType<Uint8List>().toList();
-    if (!hasBar && scatters.isEmpty) return '';
-    final b = StringBuffer();
-    b.write('<w:p><w:pPr><w:spacing w:before="240" w:after="120"/>'
-        '<w:rPr><w:b/><w:sz w:val="28"/></w:rPr></w:pPr>'
-        '<w:r><w:rPr><w:b/><w:sz w:val="28"/></w:rPr>'
-        '<w:t>五、课程目标达成度可视化图表</w:t></w:r></w:p>');
-    var rel = 1;
-    var picId = 1000;
-    const cx = 5029200; // ≈5.5 inch
-    const cy = 3018600; // ≈3.3 inch
-    void img(String caption) {
-      b.write(_imageParagraph(_chartRelId(rel), picId, cx, cy));
-      b.write(_captionParagraphXml(caption));
-      rel++;
-      picId++;
-    }
-
-    if (hasBar) img('图1 课程目标达成度对比');
-    for (var i = 0; i < scatters.length; i++) {
-      img('图${hasBar ? i + 2 : i + 1} 课程目标${i + 1}学生个体达成度分布与趋势');
-    }
-    return b.toString();
-  }
-
+  /// 生成图片+文字混排的单元格 XML。保留模板原有图表时不用此方法。
   String _chartsCellXml(
     Uint8List? barChartPng,
     List<Uint8List?> scatterChartPngs,
@@ -777,8 +759,7 @@ class AchievementDocxService {
     _buildAnalysisTable(b, objectives, classStats, analysisText,
         qualitativeText, improvementText, teacherName);
 
-    b.write(_chartsBodyXml(barChartPng, scatterChartPngs));
-
+    // 不插入程序生成的图表 — 应当插入 Excel 截图（由用户手动或后续扩展实现）
     b.write('</w:body></w:document>');
     return b.toString();
   }
@@ -891,6 +872,172 @@ class AchievementDocxService {
       return '${full.toInt()}（${(weight * 100).toStringAsFixed(0)}%）';
     }
     return '—';
+  }
+
+  // ── OOXML 图表缓存数据更新 ────────────────────────────────────
+
+  void _updateAllChartCaches(
+    Map<String, List<int>> files,
+    List<Map<String, dynamic>> objectives,
+    List<Map<String, dynamic>> students,
+    Map<String, dynamic> classStats,
+    double expectation,
+  ) {
+    _updateBarChartFile(files, 'word/charts/chart1.xml', objectives);
+    for (int i = 0; i < 4 && i < objectives.length; i++) {
+      _updateScatterChartFile(files, 'word/charts/chart${i + 2}.xml',
+          objectives[i], students, expectation, i + 1);
+    }
+  }
+
+  void _updateBarChartFile(Map<String, List<int>> files, String path,
+      List<Map<String, dynamic>> objectives) {
+    final bytes = files[path];
+    if (bytes == null) return;
+    final doc = XmlDocument.parse(utf8.decode(bytes));
+
+    final categories = <String>[];
+    final values = <double>[];
+    for (int i = 0; i < objectives.length && i < 4; i++) {
+      final idx = (objectives[i]['objective'] as num?)?.toInt() ?? (i + 1);
+      final ach = (objectives[i]['achievement'] as num?)?.toDouble() ?? 0;
+      categories.add('\u8bfe\u7a0b\u76ee\u6807$idx');
+      values.add(ach);
+    }
+
+    // 更新 strCache (类别标签)
+    final strCaches = _findElementsLocal(doc, 'strCache');
+    if (strCaches.isNotEmpty) {
+      _setStrCacheData(strCaches.first, categories);
+    }
+
+    // 更新 numCache (数值)
+    final numCaches = _findElementsLocal(doc, 'numCache');
+    if (numCaches.isNotEmpty) {
+      _setNumCacheData(numCaches.first, values);
+    }
+
+    files[path] = utf8.encode(doc.toXmlString());
+  }
+
+  void _updateScatterChartFile(
+      Map<String, List<int>> files,
+      String path,
+      Map<String, dynamic> objective,
+      List<Map<String, dynamic>> students,
+      double expectation,
+      int objIdx) {
+    final bytes = files[path];
+    if (bytes == null) return;
+    final doc = XmlDocument.parse(utf8.decode(bytes));
+
+    final studentValues = <double>[];
+    for (final s in students) {
+      studentValues.add(_studentObjectiveAchievement(s, objIdx));
+    }
+    final avgAch = studentValues.isEmpty
+        ? 0.0
+        : studentValues.reduce((a, b) => a + b) / studentValues.length;
+    final idxVals = List<double>.generate(
+        studentValues.length, (i) => (i + 1).toDouble());
+
+    // 更新每个 series 的 numCache: x1,y1(平均线), x2,y2(期望线), x3,y3(学生数据)
+    final allNumCaches = _findElementsLocal(doc, 'numCache');
+    final cacheData = <List<double>>[
+      idxVals, List<double>.filled(studentValues.length, avgAch),
+      idxVals, List<double>.filled(studentValues.length, expectation),
+      idxVals, studentValues,
+    ];
+    for (int i = 0; i < cacheData.length && i < allNumCaches.length; i++) {
+      _setNumCacheData(allNumCaches[i], cacheData[i]);
+    }
+
+    // 更新系列名称 (strCache)
+    final allStrCaches = _findElementsLocal(doc, 'strCache');
+    final serNames = <String>[
+      '\u5e73\u5747\u8fbe\u6210\u5ea6(${avgAch.toStringAsFixed(2)})',  // 平均达成度
+      '\u671f\u671b\u8fbe\u6210\u5ea6(${expectation.toStringAsFixed(2)})',  // 期望达成度
+      '\u5b66\u751f\u8fbe\u6210\u5ea6',  // 学生达成度
+    ];
+    for (int i = 0; i < serNames.length && i < allStrCaches.length; i++) {
+      _setStrCacheData(allStrCaches[i], [serNames[i]]);
+    }
+
+    files[path] = utf8.encode(doc.toXmlString());
+  }
+
+  /// 查找所有指定 localName 的元素（递归遍历）
+  List<XmlElement> _findElementsLocal(XmlNode root, String localName) {
+    return root.descendants
+        .whereType<XmlElement>()
+        .where((e) => e.name.local == localName)
+        .toList();
+  }
+
+  /// 设置 strCache 的数据（类别名称列表）
+  void _setStrCacheData(XmlElement cache, List<String> values) {
+    // 更新或创建 ptCount
+    final existingCounts = cache.children
+        .whereType<XmlElement>()
+        .where((e) => e.name.local == 'ptCount')
+        .toList();
+    for (final c in existingCounts) {
+      c.setAttribute('val', values.length.toString());
+    }
+
+    // 移除旧 pt 子元素
+    cache.children.removeWhere(
+        (n) => n is XmlElement && n.name.local == 'pt');
+
+    // 添加新 pt 元素
+    for (int i = 0; i < values.length; i++) {
+      final ptEl = XmlElement(XmlName.fromString('c:pt'));
+      ptEl.setAttribute('idx', i.toString());
+      final vEl = XmlElement(XmlName.fromString('c:v'));
+      vEl.innerText = values[i];
+      ptEl.children.add(vEl);
+      cache.children.add(ptEl);
+    }
+  }
+
+  /// 设置 numCache 的数据（数值列表）
+  void _setNumCacheData(XmlElement cache, List<double> values) {
+    // 更新 ptCount
+    final existingCounts = cache.children
+        .whereType<XmlElement>()
+        .where((e) => e.name.local == 'ptCount')
+        .toList();
+    for (final c in existingCounts) {
+      c.setAttribute('val', values.length.toString());
+    }
+
+    // 移除旧 pt 子元素
+    cache.children.removeWhere(
+        (n) => n is XmlElement && n.name.local == 'pt');
+
+    // 添加新 pt 元素
+    for (int i = 0; i < values.length; i++) {
+      final ptEl = XmlElement(XmlName.fromString('c:pt'));
+      ptEl.setAttribute('idx', i.toString());
+      final vEl = XmlElement(XmlName.fromString('c:v'));
+      vEl.innerText = values[i].toStringAsFixed(4);
+      ptEl.children.add(vEl);
+      cache.children.add(ptEl);
+    }
+  }
+
+  double _studentObjectiveAchievement(Map<String, dynamic> student, int objIdx) {
+    // 尝试 field "obj{objIdx}_achievement" 或从 score 计算
+    final ach = student['obj${objIdx}_achievement'];
+    if (ach is num) return ach.toDouble();
+    final score = student['obj${objIdx}_score'] ?? student['obj${objIdx}_total'];
+    if (score is num) {
+      final fullMark = student['obj${objIdx}_full'] is num
+          ? (student['obj${objIdx}_full'] as num).toDouble()
+          : 100.0;
+      return score.toDouble() / (fullMark > 0 ? fullMark : 100.0);
+    }
+    return 0.0;
   }
 
   bool _usesEnv(Map<String, dynamic> objective, String label) {

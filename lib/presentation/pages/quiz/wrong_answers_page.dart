@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../data/local/wrong_answer_dao.dart';
 import '../../../data/local/learning_path_dao.dart';
 import '../../../services/ai_service.dart';
@@ -248,11 +248,11 @@ class _WrongAnswersPageState extends State<WrongAnswersPage> {
                                       width: double.infinity,
                                       padding: const EdgeInsets.all(12),
                                       decoration: BoxDecoration(
-                                        color: primary.withOpacity(0.06),
+                                        color: primary.withValues(alpha: 0.06),
                                         borderRadius: BorderRadius.circular(10),
                                         border: Border.all(
                                           color:
-                                              primary.withOpacity(0.15),
+                                              primary.withValues(alpha: 0.15),
                                         ),
                                       ),
                                       child: Column(

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../lab/lab_tasks_page.dart';
 import '../assessment/assessment_page.dart';
 import '../works/works_page.dart';
@@ -50,7 +50,7 @@ class _EvaluationHubPageState extends State<EvaluationHubPage> {
     return Column(
       children: [
         Container(
-          color: primary.withOpacity(0.05),
+          color: primary.withValues(alpha: 0.05),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [

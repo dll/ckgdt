@@ -1,4 +1,4 @@
-﻿import 'dart:math' as math;
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../services/auth_service.dart';
 import '../../widgets/agent_entry_button.dart';
@@ -295,7 +295,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                   fontWeight: FontWeight.bold)),
           Text(label,
               style: TextStyle(
-                  color: Colors.white.withOpacity(0.7), fontSize: 11)),
+                  color: Colors.white.withValues(alpha: 0.7), fontSize: 11)),
         ],
       ),
     );
@@ -305,7 +305,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
     return Container(
       width: 1,
       height: 40,
-      color: Colors.white.withOpacity(0.2),
+      color: Colors.white.withValues(alpha: 0.2),
     );
   }
 
@@ -329,7 +329,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
+                      color: color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(Icons.route, color: color, size: 22),
@@ -357,7 +357,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
+                      color: color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text('${path.nodeIds.length}节点',
@@ -424,9 +424,9 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
         Container(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.05),
+            color: color.withValues(alpha: 0.05),
             border: Border(
-                bottom: BorderSide(color: color.withOpacity(0.15))),
+                bottom: BorderSide(color: color.withValues(alpha: 0.15))),
           ),
           child: Row(
             children: [
@@ -507,7 +507,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                     Expanded(
                       child: Container(
                         width: isFirst ? 0 : 2,
-                        color: pathColor.withOpacity(0.3),
+                        color: pathColor.withValues(alpha: 0.3),
                       ),
                     ),
                     // 圆点
@@ -515,7 +515,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                       width: 20,
                       height: 20,
                       decoration: BoxDecoration(
-                        color: nodeColor.withOpacity(0.15),
+                        color: nodeColor.withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                         border: Border.all(color: nodeColor, width: 2),
                       ),
@@ -531,7 +531,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                     Expanded(
                       child: Container(
                         width: isLast ? 0 : 2,
-                        color: pathColor.withOpacity(0.3),
+                        color: pathColor.withValues(alpha: 0.3),
                       ),
                     ),
                   ],
@@ -564,7 +564,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 6, vertical: 1),
                               decoration: BoxDecoration(
-                                color: nodeColor.withOpacity(0.1),
+                                color: nodeColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text('L${node.level}',
@@ -639,7 +639,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
@@ -756,7 +756,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                   height: 36,
                   decoration: BoxDecoration(
                     color: (_parseColor(node.color) ?? Colors.blue)
-                        .withOpacity(0.1),
+                        .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Center(
@@ -883,7 +883,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
     required VoidCallback onTap,
   }) {
     return Material(
-      color: color.withOpacity(0.08),
+      color: color.withValues(alpha: 0.08),
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
@@ -967,13 +967,13 @@ class _PathGraphPainter extends CustomPainter {
 
     // 绘制连接线
     final linePaint = Paint()
-      ..color = color.withOpacity(0.25)
+      ..color = color.withValues(alpha: 0.25)
       ..strokeWidth = 3.0
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
     final arrowPaint = Paint()
-      ..color = color.withOpacity(0.5)
+      ..color = color.withValues(alpha: 0.5)
       ..strokeWidth = 2.5
       ..style = PaintingStyle.fill;
 
@@ -1022,7 +1022,7 @@ class _PathGraphPainter extends CustomPainter {
       if (isFirst || isLast) {
         final glowPaint = Paint()
           ..color =
-              (isFirst ? Colors.green : Colors.red).withOpacity(0.15)
+              (isFirst ? Colors.green : Colors.red).withValues(alpha: 0.15)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
         canvas.drawCircle(pos, radius + 6, glowPaint);
       }
@@ -1034,7 +1034,7 @@ class _PathGraphPainter extends CustomPainter {
           pos,
           radius - 3,
           Paint()
-            ..color = Colors.white.withOpacity(0.3)
+            ..color = Colors.white.withValues(alpha: 0.3)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1.5);
 

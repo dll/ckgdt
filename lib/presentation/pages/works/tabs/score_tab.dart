@@ -1,4 +1,4 @@
-﻿part of '../works_page.dart';
+part of '../works_page.dart';
 
 class _WorksScoreTab extends StatefulWidget {
   final AuthService authService;
@@ -94,7 +94,7 @@ class _WorksScoreTabState extends State<_WorksScoreTab> {
                       Text(
                         '已提交 $submitted · 教师已评 ${scored.length}',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.78),
+                          color: Colors.white.withValues(alpha: 0.78),
                           fontSize: 12,
                         ),
                       ),
@@ -149,9 +149,9 @@ class _WorksScoreTabState extends State<_WorksScoreTab> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: primary.withOpacity(0.06),
+        color: primary.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: primary.withOpacity(0.10)),
+        border: Border.all(color: primary.withValues(alpha: 0.10)),
       ),
       child: Column(
         children: [
@@ -227,7 +227,7 @@ class _WorksScoreTabState extends State<_WorksScoreTab> {
               child: LinearProgressIndicator(
                 value: ratio.toDouble(),
                 minHeight: 8,
-                backgroundColor: color.withOpacity(0.08),
+                backgroundColor: color.withValues(alpha: 0.08),
                 valueColor: AlwaysStoppedAnimation<Color>(color),
               ),
             ),
@@ -267,7 +267,7 @@ class _WorksScoreTabState extends State<_WorksScoreTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.10),
+        color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
@@ -282,7 +282,7 @@ class _WorksScoreTabState extends State<_WorksScoreTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.grey.withOpacity(0.08),
+        color: Colors.grey.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(

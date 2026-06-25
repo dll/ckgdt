@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
@@ -302,7 +302,7 @@ class _StudentLabPageState extends State<StudentLabPage> {
                           height: 40,
                           decoration: BoxDecoration(
                             color:
-                                (cat['color'] as Color).withOpacity(0.1),
+                                (cat['color'] as Color).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(cat['icon'] as IconData,
@@ -355,7 +355,7 @@ class _StudentLabPageState extends State<StudentLabPage> {
                     : hasSubmitted
                         ? Colors.green
                         : Colors.blue)
-                .withOpacity(0.1),
+                .withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
@@ -383,7 +383,7 @@ class _StudentLabPageState extends State<StudentLabPage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
               decoration: BoxDecoration(
-                color: diffColor.withOpacity(0.1),
+                color: diffColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(difficulty,
@@ -613,13 +613,13 @@ class _StudentLabPageState extends State<StudentLabPage> {
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       color: selectedFilePath != null
-                          ? accentColor.withOpacity(0.05)
-                          : Colors.grey.withOpacity(0.05),
+                          ? accentColor.withValues(alpha: 0.05)
+                          : Colors.grey.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: selectedFilePath != null
-                            ? accentColor.withOpacity(0.3)
-                            : Colors.grey.withOpacity(0.3),
+                            ? accentColor.withValues(alpha: 0.3)
+                            : Colors.grey.withValues(alpha: 0.3),
                         style: BorderStyle.solid,
                       ),
                     ),
@@ -953,7 +953,7 @@ class _StudentMaterialsPageState extends State<_StudentMaterialsPage> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
+                        color: color.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child:
@@ -969,7 +969,7 @@ class _StudentMaterialsPageState extends State<_StudentMaterialsPage> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 1),
                           decoration: BoxDecoration(
-                            color: color.withOpacity(0.1),
+                            color: color.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text('${files.length}',

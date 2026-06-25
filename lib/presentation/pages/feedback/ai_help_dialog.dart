@@ -178,7 +178,7 @@ class _AiHelpDialogState extends State<AiHelpDialog> {
                           width: 36,
                           height: 36,
                           decoration: BoxDecoration(
-                            color: primary.withOpacity(0.1),
+                            color: primary.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(Icons.support_agent,
@@ -241,7 +241,7 @@ class _AiHelpDialogState extends State<AiHelpDialog> {
                   color: Theme.of(context).scaffoldBackgroundColor,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 8,
                       offset: const Offset(0, -2),
                     ),
@@ -301,7 +301,7 @@ class _AiHelpDialogState extends State<AiHelpDialog> {
             width: 64,
             height: 64,
             decoration: BoxDecoration(
-              color: primary.withOpacity(0.1),
+              color: primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(Icons.support_agent, color: primary, size: 36),

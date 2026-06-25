@@ -62,7 +62,17 @@ class AchievementAgent extends BaseAgent {
 - 数值精确到小数点后两位''',
         priority: 5,
         keywords: ['达成', '目标', '达成度', '改进', '课程目标', 'OBE', '持续改进', '大纲', '对照表'],
-        capabilities: ['达成度查询', '报告生成', '改进建议', '目标分析'],
+        capabilities: [
+          '达成度查询',
+          '报告生成',
+          '改进建议',
+          '目标分析',
+          '课程目标管理',
+          '一键生课',
+          '成绩管理',
+          '导出Word报告',
+          '导出Excel',
+        ],
         requiresAi: true,
         tools: [
           // ── 大纲分析工具 ──────────────────────────────────────
@@ -176,9 +186,11 @@ class AchievementAgent extends BaseAgent {
         ],
         usageSteps: [
           '选择 🏆 达成分析师',
-          '查询课程目标达成情况',
-          '获取达成度分析报告',
-          '了解改进建议和提升方向',
+          '导入课程大纲（docx/md），AI 自动提取课程目标',
+          '确认并提交目标 → 自动创建达成度批次',
+          '上传学生成绩（Excel）或手动录入',
+          '查询达成度概览、薄弱分析、改进建议',
+          '导出 Word 报告 + Excel 数据',
         ],
         classicCases: [
           const AgentCase(
@@ -186,11 +198,28 @@ class AchievementAgent extends BaseAgent {
               userInput: '我的课程目标达成情况如何？',
               agentReply:
                   '## 课程目标达成度\n\n| 目标 | 权重 | 达成度 | 等级 |\n|------|------|--------|------|\n| 目标1 | 0.15 | 0.88 | 优秀 |\n| 目标2 | 0.25 | 0.72 | 良好 |\n| 目标3 | 0.30 | 0.65 | 中等 |\n| 目标4 | 0.30 | 0.58 | 未达成 |\n\n**综合达成度：0.68（良好）**'),
+          const AgentCase(
+              title: '导入大纲',
+              userInput: '导入课程大纲 docx',
+              agentReply:
+                  '请选择大纲文件（docx/md），我将自动提取课程目标…'),
+          const AgentCase(
+              title: '导出报告',
+              userInput: '生成达成度报告',
+              agentReply:
+                  '已生成 Word 达成度评价报告，可在"达成 → 报告"页查看和下载。'),
         ],
       );
 
   @override
-  List<String> get quickCommands => ['达成度概览', '改进建议', '课程目标', '评价标准'];
+  List<String> get quickCommands => [
+    '达成度概览',
+    '导入大纲',
+    '生成报告',
+    '改进建议',
+    '课程目标',
+    '一键生课',
+  ];
 
   @override
   Future<AgentMessage> handleMessage(
@@ -202,6 +231,23 @@ class AchievementAgent extends BaseAgent {
           ? explicitCourse
           : AchievementContext.instance.courseName;
       final reply = await _analyzeSyllabusText(userMessage, course);
+      // 所有字段已识别 → 自动提交，无需用户输入"提交"
+      if (_pendingObjectives.isNotEmpty && _allObjectivesComplete()) {
+        final result = await _submitSyllabus(explicitCourse);
+        return buildReply(
+          '${reply}\n\n${result.message}',
+          action: result.success
+              ? AgentAction(
+                  type: 'agent_result',
+                  params: {
+                    'kind': 'syllabus_submitted',
+                    'course_name': result.courseName,
+                    'count': result.count,
+                  },
+                )
+              : null,
+        );
+      }
       return buildReply(reply);
     }
 
@@ -213,6 +259,13 @@ class AchievementAgent extends BaseAgent {
         directClarify.value,
       );
       return buildReply(reply);
+    }
+
+    if (_pendingObjectives.isNotEmpty &&
+        RegExp(r'(取消|重置|放弃|重来|不要了)').hasMatch(userMessage)) {
+      _pendingObjectives = [];
+      _currentAnalysisCourse = '';
+      return buildReply('已取消当前大纲分析。请重新导入大纲或提出其他问题。');
     }
 
     if (_pendingObjectives.isNotEmpty &&
@@ -238,9 +291,36 @@ class AchievementAgent extends BaseAgent {
       try {
         final batchId = _extractBatchId(userMessage);
         final reply = await tools.generateAchievementReport(batchId: batchId);
-        return buildReply(reply);
+        return buildReply(
+          reply,
+          action: AgentAction(
+            type: 'inner_tab',
+            params: {'page': 'achievement', 'tab': '报告生成'},
+          ),
+        );
       } catch (e) {
         return buildReply('达成度报告生成失败：$e');
+      }
+    }
+
+    // ── 页面导航 / 快捷跳转 ────────────────────────────────────
+    final nav = _tryNavigateIntent(userMessage);
+    if (nav != null) return buildReply(nav.message, action: nav.action);
+
+    // 手动触发报告生成（导出/生成 + 报告）
+    if (RegExp(r'(导出|生成).*报告|报告.*(导出|生成)').hasMatch(userMessage) &&
+        userMessage.contains('达成')) {
+      try {
+        final reply = await tools.generateAchievementReport(batchId: null);
+        return buildReply(
+          reply,
+          action: AgentAction(
+            type: 'inner_tab',
+            params: {'page': 'achievement', 'tab': '报告生成'},
+          ),
+        );
+      } catch (e) {
+        return buildReply('报告生成失败：$e');
       }
     }
 
@@ -284,12 +364,13 @@ class AchievementAgent extends BaseAgent {
   }
 
   bool _looksLikeSyllabusContext(String text) {
+    // 智能分析"已手动填好的数据不应走大纲解析通道
     if (text.contains('analyze_syllabus_text') ||
-        text.contains('课程目标对照表草稿') ||
         text.contains('成绩评定对照表')) {
       return true;
     }
-    if (text.length < 300) return false;
+    // 大纲原始文本需达到一定长度且包含关键标识
+    if (text.length < 500) return false;
     return text.contains('课程大纲') ||
         text.contains('大纲原始文本') ||
         text.contains('课程目标达成考核');
@@ -305,13 +386,22 @@ class AchievementAgent extends BaseAgent {
         ? course.trim()
         : AchievementContext.instance.courseName;
     if (raw.trim().isEmpty) {
-      return '⚠️ 请提供大纲文本';
+      return '📄 请先提供课程大纲文档。\n\n'
+          '点击 📎 按钮上传 docx/md 文件，或直接将大纲中“课程目标达成考核与评价方式及成绩评定对照表”部分粘贴过来，我来帮你提取课程目标结构。';
+    }
+    if (raw.trim().length < 50) {
+      return '⚠️ 输入文本太短，无法从中提取课程目标。请上传完整的课程大纲文档（docx/md）或粘贴大纲中的“课程目标达成考核与评价方式及成绩评定对照表”表格内容。';
     }
     try {
       final svc = AchievementExcelService.instance;
       final rows = await svc.extractSyllabusRowsFromRawText(raw);
       if (rows.isEmpty) {
-        return '无法从文本中识别课程目标。请检查文本是否包含完整的“课程目标达成考核与评价方式及成绩评定对照表”。';
+        return '⚠️ 未能从输入文本中自动识别出课程目标。\n\n'
+            '**请确认：**\n'
+            '1. 文档是否包含“课程目标达成考核与评价方式及成绩评定对照表”\n'
+            '2. 该表是否含有课程目标名称、权重、满分、指标点等字段\n'
+            '3. 表格内容是否为纯文本（非图片扫描件）\n\n'
+            '💡 **提示**：可直接打开大纲 docx，复制对照表区域的内容粘贴过来，我能更准确地提取。';
       }
       final buf = StringBuffer('### 📋 初步解析结果\n\n');
       buf.writeln('课程：$courseName\n');
@@ -322,9 +412,15 @@ class AchievementAgent extends BaseAgent {
         buf.writeln('**目标$idx**：${o['name'] ?? ''}');
         final w = _ratioFromText(o['weight']);
         final fm = _numberFromText(o['full_mark']);
+        final pingshi = _ratioFromText(o['pingshi_ratio']);
+        final experiment = _ratioFromText(o['experiment_ratio']);
+        final exam = _ratioFromText(o['exam_ratio']);
         buf.writeln('  权重=${w > 0 ? w.toStringAsFixed(2) : '❓'}  '
             '满分=${fm > 0 ? fm.toStringAsFixed(0) : '❓'}  '
             '指标点=${o['indicator'] ?? '❓'}');
+        buf.writeln('  平时占比=${pingshi > 0 ? pingshi.toStringAsFixed(2) : '—'}  '
+            '实验占比=${experiment > 0 ? experiment.toStringAsFixed(2) : '—'}  '
+            '期末占比=${exam > 0 ? exam.toStringAsFixed(2) : '—'}');
         final chapters = (o['chapters'] ?? '').toString();
         final experiments = (o['experiments'] ?? '').toString();
         final assessContent = (o['assess_content'] ?? '').toString();
@@ -421,23 +517,24 @@ class AchievementAgent extends BaseAgent {
       final count = _pendingObjectives.length;
       await dao.saveCourseObjectives(courseName, _pendingObjectives);
       await _activateCourse(courseName);
+      // 自动创建默认达成度批次
+      try {
+        await dao.addBatch(
+          batchName: '$courseName 达成度评价',
+          courseName: courseName,
+          semester: _semesterFromNow(),
+        );
+      } catch (e, st) {
+        swallowDebug(e, tag: 'AchievementAgent.autoCreateBatch', stack: st);
+      }
       AchievementContext.instance.courseName = courseName;
-      // 重新计算该课程下所有已有批次的达成度
-      await _recalculateBatchesForCourse(dao, courseName);
       _pendingObjectives = [];
       _currentAnalysisCourse = '';
-      // 验证写入是否成功
-      final saved =
-          await dao.getCourseObjectives(courseName);
-      final verifyMsg = saved.isEmpty
-          ? '⚠️ 保存后查询返回空！course_name=「$courseName」'
-          : '✅ 验证：DB 中有 ${saved.length} 条记录，'
-              '权重=[${saved.map((r) => r['weight']).join(', ')}]';
       return _SubmitResult(
         true,
         courseName,
         count,
-        '✅ 已成功提交 $count 个课程目标到「$courseName」。\n$verifyMsg',
+        '✅ 已成功提交 $count 个课程目标到「$courseName」。页面将自动刷新。',
       );
     } catch (e, st) {
       swallowDebug(e, tag: 'AchievementAgent.submit', stack: st);
@@ -461,6 +558,17 @@ class AchievementAgent extends BaseAgent {
     return number > 1 ? number / 100 : number;
   }
 
+  /// 检查所有待提交目标的关键字段是否已完整（权重>0、满分>0、指标点非空）
+  bool _allObjectivesComplete() {
+    if (_pendingObjectives.isEmpty) return false;
+    for (final o in _pendingObjectives) {
+      if (_ratioFromText(o['weight']) <= 0) return false;
+      if (_numberFromText(o['full_mark']) <= 0) return false;
+      if ((o['indicator'] ?? '').toString().trim().isEmpty) return false;
+    }
+    return true;
+  }
+
   Future<void> _activateCourse(String courseName) async {
     final name = courseName.trim();
     if (name.isEmpty) return;
@@ -476,21 +584,45 @@ class AchievementAgent extends BaseAgent {
     }
   }
 
-  /// 重新计算该课程所有已有批次的达成度（权重更新后同步刷新）
-  Future<void> _recalculateBatchesForCourse(
-      AchievementDao dao, String courseName) async {
-    try {
-      final batches = await dao.getAllBatches(courseName: courseName);
-      for (final b in batches) {
-        final id = b['id'];
-        if (id is int && id > 0) {
-          await dao.recalculateAndSaveBatch(id);
-        }
-      }
-    } catch (e, st) {
-      swallowDebug(
-          e, tag: 'AchievementAgent.recalculateBatches', stack: st);
+  String _semesterFromNow() {
+    final now = DateTime.now();
+    final sem = now.month >= 2 && now.month <= 7 ? '2' : '1';
+    final year = now.month >= 2 ? now.year : now.year - 1;
+    return '$year-$sem';
+  }
+
+  /// 检测导航意图并返回对应的 AgentAction。
+  _NavResult? _tryNavigateIntent(String text) {
+    if (RegExp(r'一键生课|生成课程|课程生成|新建课程').hasMatch(text)) {
+      return _NavResult('可在首页右上角菜单选择"一键生课"创建新课程。',
+          AgentAction(type: 'navigate_home'));
     }
+    if (RegExp(r'课程目标管理|管理课程目标|编辑课程目标|维护课程目标').hasMatch(text)) {
+      return _NavResult(
+          '正在打开课程目标管理页…',
+          AgentAction(
+              type: 'navigate_sub_page',
+              params: {'keyword': '课程目标管理'}));
+    }
+    if (RegExp(r'成绩管理|录入成绩|导入成绩|成绩导入').hasMatch(text)) {
+      return _NavResult(
+          '正在打开成绩管理页…',
+          AgentAction(
+              type: 'inner_tab', params: {'page': 'achievement', 'tab': '成绩管理'}));
+    }
+    if (RegExp(r'达成度概览|达成概览|查看达成').hasMatch(text)) {
+      return _NavResult(
+          '正在打开达成度概览…',
+          AgentAction(
+              type: 'inner_tab', params: {'page': 'achievement', 'tab': '达成度概览'}));
+    }
+    if (RegExp(r'改进建议|持续改进|CQI').hasMatch(text)) {
+      return _NavResult(
+          '正在打开持续改进页…',
+          AgentAction(
+              type: 'inner_tab', params: {'page': 'achievement', 'tab': '持续改进'}));
+    }
+    return null;
   }
 
   int? _extractBatchId(String text) {
@@ -514,4 +646,10 @@ class _SubmitResult {
   final int count;
   final String message;
   const _SubmitResult(this.success, this.courseName, this.count, this.message);
+}
+
+class _NavResult {
+  final String message;
+  final AgentAction action;
+  const _NavResult(this.message, this.action);
 }

@@ -265,6 +265,49 @@ class _CourseObjectivesManagePageState
     setState(() => _hasUnsaved = true);
   }
 
+  void _deleteRow(int ri) {
+    _readCtrls();
+    if (ri < 0 || ri >= _objectives.length) return;
+    _objectives.removeAt(ri);
+    _rebuildCtrls();
+    setState(() => _hasUnsaved = true);
+  }
+
+  Future<void> _deleteAll() async {
+    if (_objectives.isEmpty) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除全部课程目标'),
+        content: Text('确定删除「$_courseName」的全部 ${_objectives.length} 个课程目标吗？此操作不可撤销。'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('删除全部')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await _activateCourse(_courseName);
+      await _dao.deleteAllCourseObjectives(_courseName);
+      _objectives = [];
+      _rebuildCtrls();
+      _hasUnsaved = false;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('已删除全部课程目标'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'CourseObjectives.deleteAll', stack: st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('删除失败: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   Future<void> _addColumn() async {
     final nameCtrl = TextEditingController();
     final result = await showDialog<String>(
@@ -409,8 +452,10 @@ class _CourseObjectivesManagePageState
       buf.writeln('目标${o['idx']}: ${o['name'] ?? ''}');
       buf.writeln('  权重: ${o['weight']}  满分: ${o['full_mark']}');
       buf.writeln('  指标点: ${o['indicator']}');
+      buf.writeln('  平时占比: ${o['pingshi_ratio']}  实验占比: ${o['experiment_ratio']}  期末占比: ${o['exam_ratio']}');
       buf.writeln('  描述: ${o['description']}');
       buf.writeln('  章节: ${o['chapters']}  实验: ${o['experiments']}');
+      buf.writeln('  考核内容: ${o['assess_content']}');
       buf.writeln();
     }
     return buf.toString();
@@ -533,6 +578,12 @@ class _CourseObjectivesManagePageState
               label: '新增列',
               onPressed: _addColumn,
             ),
+            const SizedBox(width: 8),
+            _ActionChip(
+              icon: Icons.delete_outline,
+              label: '删除全部',
+              onPressed: _objectives.isEmpty ? null : _deleteAll,
+            ),
             const SizedBox(width: 12),
             Text(
               '权重: ${_weightSum.toStringAsFixed(2)}',
@@ -606,6 +657,7 @@ class _CourseObjectivesManagePageState
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
+            const DataColumn(label: SizedBox.shrink()),
           ],
           rows: [
             for (var ri = 0; ri < _objectives.length; ri++)
@@ -613,6 +665,17 @@ class _CourseObjectivesManagePageState
                 cells: [
                   for (var ci = 0; ci < displayColumns.length; ci++)
                     DataCell(_buildCell(ri, ci)),
+                  DataCell(
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 18),
+                      color: Colors.red.shade400,
+                      tooltip: '删除此行',
+                      onPressed: () {
+                        _deleteRow(ri);
+                        setState(() {});
+                      },
+                    ),
+                  ),
                 ],
               ),
           ],

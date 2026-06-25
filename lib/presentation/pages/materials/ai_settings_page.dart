@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../data/local/ai_config_dao.dart';
 import '../../../data/models/ai_config_model.dart';
@@ -313,7 +313,8 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
   // ── 服务商下拉选择（分组）──────────────────────────────────────────────────
 
   Widget _buildProviderDropdown(Color primary, bool isDark) {
-    return DropdownButtonFormField<String>(value: _provider,
+    return DropdownButtonFormField<String>(
+      initialValue: _provider,
       isExpanded: true,
       decoration: InputDecoration(
         prefixIcon: const Icon(Icons.cloud_outlined),
@@ -391,7 +392,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.12),
+                  color: Colors.green.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -444,7 +445,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.25),
+                      color: Colors.white.withValues(alpha: 0.25),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -500,13 +501,13 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: hasKey
-            ? Colors.green.withOpacity(0.08)
-            : Colors.orange.withOpacity(0.08),
+            ? Colors.green.withValues(alpha: 0.08)
+            : Colors.orange.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: hasKey
-              ? Colors.green.withOpacity(0.3)
-              : Colors.orange.withOpacity(0.3),
+              ? Colors.green.withValues(alpha: 0.3)
+              : Colors.orange.withValues(alpha: 0.3),
         ),
       ),
       child: Row(
@@ -552,9 +553,9 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: primary.withOpacity(0.06),
+        color: primary.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: primary.withOpacity(0.15)),
+        border: Border.all(color: primary.withValues(alpha: 0.15)),
       ),
       child: Row(
         children: [
@@ -643,10 +644,10 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
             duration: const Duration(milliseconds: 150),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: selected ? primary : primary.withOpacity(0.08),
+              color: selected ? primary : primary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: selected ? primary : primary.withOpacity(0.25),
+                color: selected ? primary : primary.withValues(alpha: 0.25),
                 width: selected ? 1.5 : 1,
               ),
             ),
@@ -668,8 +669,8 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                         const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                     decoration: BoxDecoration(
                       color: selected
-                          ? Colors.white.withOpacity(0.25)
-                          : Colors.green.withOpacity(0.15),
+                          ? Colors.white.withValues(alpha: 0.25)
+                          : Colors.green.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -879,9 +880,9 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
               child: SliderTheme(
                 data: SliderThemeData(
                   activeTrackColor: primary,
-                  inactiveTrackColor: primary.withOpacity(0.15),
+                  inactiveTrackColor: primary.withValues(alpha: 0.15),
                   thumbColor: primary,
-                  overlayColor: primary.withOpacity(0.12),
+                  overlayColor: primary.withValues(alpha: 0.12),
                   valueIndicatorColor: primary,
                   valueIndicatorTextStyle: const TextStyle(
                     color: Colors.white,

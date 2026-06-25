@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -215,7 +215,7 @@ class _AiDataPageState extends State<AiDataPage> {
                     const SizedBox(height: 4),
                     LinearProgressIndicator(
                       value: ratio,
-                      backgroundColor: primary.withOpacity(0.1),
+                      backgroundColor: primary.withValues(alpha: 0.1),
                       valueColor: AlwaysStoppedAnimation(primary),
                       minHeight: 4,
                       borderRadius: BorderRadius.circular(2),
@@ -269,7 +269,7 @@ class _AiDataPageState extends State<AiDataPage> {
               child: Center(
                 child: Column(
                   children: [
-                    Icon(Icons.chat_bubble_outline, size: 48, color: Colors.grey.withOpacity(0.3)),
+                    Icon(Icons.chat_bubble_outline, size: 48, color: Colors.grey.withValues(alpha: 0.3)),
                     const SizedBox(height: 8),
                     const Text('暂无对话记录', style: TextStyle(color: Colors.grey)),
                   ],
@@ -330,7 +330,7 @@ class _AiDataPageState extends State<AiDataPage> {
         dense: true,
         leading: CircleAvatar(
           radius: 18,
-          backgroundColor: color.withOpacity(0.1),
+          backgroundColor: color.withValues(alpha: 0.1),
           child: Icon(icon, size: 18, color: color),
         ),
         title: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
@@ -441,8 +441,8 @@ class _AiDataPageState extends State<AiDataPage> {
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(
                             color: isUser
-                                ? Theme.of(ctx).colorScheme.primary.withOpacity(0.1)
-                                : Colors.grey.withOpacity(0.1),
+                                ? Theme.of(ctx).colorScheme.primary.withValues(alpha: 0.1)
+                                : Colors.grey.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: SelectableText(

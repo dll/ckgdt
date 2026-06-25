@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../data/local/user_dao.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/local/class_dao.dart';
@@ -227,7 +227,7 @@ class _TeacherManagePageState extends State<TeacherManagePage> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.08),
+                color: Colors.red.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Row(
@@ -299,7 +299,7 @@ class _TeacherManagePageState extends State<TeacherManagePage> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.3),
+                  color: Colors.grey.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -321,7 +321,7 @@ class _TeacherManagePageState extends State<TeacherManagePage> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -345,12 +345,12 @@ class _TeacherManagePageState extends State<TeacherManagePage> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.school_outlined,
-                                size: 56, color: Colors.grey.withOpacity(0.4)),
+                                size: 56, color: Colors.grey.withValues(alpha: 0.4)),
                             const SizedBox(height: 12),
                             Text(
                               '暂未分配班级',
                               style: TextStyle(
-                                color: Colors.grey.withOpacity(0.7),
+                                color: Colors.grey.withValues(alpha: 0.7),
                                 fontSize: 15,
                               ),
                             ),
@@ -371,21 +371,21 @@ class _TeacherManagePageState extends State<TeacherManagePage> {
                               borderRadius: BorderRadius.circular(12),
                               side: BorderSide(
                                 color: isArchived
-                                    ? Colors.grey.withOpacity(0.3)
+                                    ? Colors.grey.withValues(alpha: 0.3)
                                     : Theme.of(context)
                                         .colorScheme
                                         .primary
-                                        .withOpacity(0.2),
+                                        .withValues(alpha: 0.2),
                               ),
                             ),
                             child: ListTile(
                               leading: CircleAvatar(
                                 backgroundColor: isArchived
-                                    ? Colors.grey.withOpacity(0.2)
+                                    ? Colors.grey.withValues(alpha: 0.2)
                                     : Theme.of(context)
                                         .colorScheme
                                         .primary
-                                        .withOpacity(0.1),
+                                        .withValues(alpha: 0.1),
                                 child: Icon(
                                   isArchived ? Icons.archive_outlined : Icons.groups,
                                   color: isArchived
@@ -415,7 +415,7 @@ class _TeacherManagePageState extends State<TeacherManagePage> {
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 8, vertical: 2),
                                       decoration: BoxDecoration(
-                                        color: Colors.grey.withOpacity(0.15),
+                                        color: Colors.grey.withValues(alpha: 0.15),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: const Text(
@@ -428,7 +428,7 @@ class _TeacherManagePageState extends State<TeacherManagePage> {
                                   Text(
                                     '${cls['student_count'] ?? 0} 人',
                                     style: TextStyle(
-                                      color: Colors.grey.withOpacity(0.7),
+                                      color: Colors.grey.withValues(alpha: 0.7),
                                       fontSize: 13,
                                     ),
                                   ),
@@ -652,7 +652,7 @@ class _TeacherManagePageState extends State<TeacherManagePage> {
         onChanged: _onSearchChanged,
         decoration: InputDecoration(
           hintText: '搜索教师姓名、工号或角色…',
-          prefixIcon: Icon(Icons.search, color: primaryColor.withOpacity(0.6)),
+          prefixIcon: Icon(Icons.search, color: primaryColor.withValues(alpha: 0.6)),
           suffixIcon: _searchQuery.isNotEmpty
               ? IconButton(
                   icon: const Icon(Icons.clear, size: 20),
@@ -660,14 +660,14 @@ class _TeacherManagePageState extends State<TeacherManagePage> {
                 )
               : null,
           filled: true,
-          fillColor: primaryColor.withOpacity(0.05),
+          fillColor: primaryColor.withValues(alpha: 0.05),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: primaryColor.withOpacity(0.12)),
+            borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.12)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -690,14 +690,14 @@ class _TeacherManagePageState extends State<TeacherManagePage> {
           Icon(
             hasFilter ? Icons.search_off : Icons.people_outline,
             size: 64,
-            color: Colors.grey.withOpacity(0.4),
+            color: Colors.grey.withValues(alpha: 0.4),
           ),
           const SizedBox(height: 16),
           Text(
             hasFilter ? '未找到匹配的教师' : '暂无教师数据',
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey.withOpacity(0.7),
+              color: Colors.grey.withValues(alpha: 0.7),
             ),
           ),
           if (hasFilter) ...[
@@ -735,8 +735,8 @@ class _TeacherManagePageState extends State<TeacherManagePage> {
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
           color: teacher.isActive
-              ? roleColor.withOpacity(0.2)
-              : Colors.grey.withOpacity(0.2),
+              ? roleColor.withValues(alpha: 0.2)
+              : Colors.grey.withValues(alpha: 0.2),
         ),
       ),
       child: InkWell(
@@ -781,7 +781,7 @@ class _TeacherManagePageState extends State<TeacherManagePage> {
                       '工号: ${teacher.userId}',
                       style: TextStyle(
                         fontSize: 13,
-                        color: Colors.grey.withOpacity(0.7),
+                        color: Colors.grey.withValues(alpha: 0.7),
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -789,7 +789,7 @@ class _TeacherManagePageState extends State<TeacherManagePage> {
                     Row(
                       children: [
                         Icon(Icons.class_outlined,
-                            size: 14, color: Colors.grey.withOpacity(0.6)),
+                            size: 14, color: Colors.grey.withValues(alpha: 0.6)),
                         const SizedBox(width: 4),
                         Text(
                           activeClasses > 0
@@ -797,7 +797,7 @@ class _TeacherManagePageState extends State<TeacherManagePage> {
                               : '暂无班级',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey.withOpacity(0.6),
+                            color: Colors.grey.withValues(alpha: 0.6),
                           ),
                         ),
                         const Spacer(),
@@ -806,7 +806,7 @@ class _TeacherManagePageState extends State<TeacherManagePage> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.1),
+                              color: Colors.red.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Text(
@@ -839,8 +839,8 @@ class _TeacherManagePageState extends State<TeacherManagePage> {
         CircleAvatar(
           radius: 24,
           backgroundColor: teacher.isActive
-              ? roleColor.withOpacity(0.15)
-              : Colors.grey.withOpacity(0.15),
+              ? roleColor.withValues(alpha: 0.15)
+              : Colors.grey.withValues(alpha: 0.15),
           child: Text(
             initial,
             style: TextStyle(
@@ -875,7 +875,7 @@ class _TeacherManagePageState extends State<TeacherManagePage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -898,7 +898,7 @@ class _TeacherManagePageState extends State<TeacherManagePage> {
 
   Widget _buildPopupMenu(UserModel teacher) {
     return PopupMenuButton<String>(
-      icon: Icon(Icons.more_vert, color: Colors.grey.withOpacity(0.6)),
+      icon: Icon(Icons.more_vert, color: Colors.grey.withValues(alpha: 0.6)),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       offset: const Offset(0, 40),
       onSelected: (value) {
@@ -990,7 +990,7 @@ class _StatCard extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: color.withOpacity(0.15)),
+        side: BorderSide(color: color.withValues(alpha: 0.15)),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
@@ -1011,7 +1011,7 @@ class _StatCard extends StatelessWidget {
               label,
               style: TextStyle(
                 fontSize: 11,
-                color: Colors.grey.withOpacity(0.7),
+                color: Colors.grey.withValues(alpha: 0.7),
               ),
             ),
           ],
@@ -1111,7 +1111,7 @@ class _AddTeacherDialogState extends State<_AddTeacherDialog> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.06),
+                  color: Colors.blue.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Row(
@@ -1220,7 +1220,7 @@ class _EditTeacherDialogState extends State<_EditTeacherDialog> {
                   prefixIcon: Icon(Icons.badge_outlined),
                   border: OutlineInputBorder(),
                 ),
-                style: TextStyle(color: Colors.grey.withOpacity(0.7)),
+                style: TextStyle(color: Colors.grey.withValues(alpha: 0.7)),
               ),
               const SizedBox(height: 16),
               // 姓名
@@ -1275,7 +1275,7 @@ class _EditTeacherDialogState extends State<_EditTeacherDialog> {
                   margin: const EdgeInsets.only(top: 8),
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.08),
+                    color: Colors.orange.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Row(

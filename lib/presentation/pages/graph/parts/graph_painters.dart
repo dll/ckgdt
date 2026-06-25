@@ -113,10 +113,10 @@ class _KnowledgeGraphPainter extends CustomPainter {
         edgeWidth = 2.0;
       } else if (selectedNode != null || highlightedNodeIds.isNotEmpty) {
         // 有选中或高亮时，非相关边减淡
-        edgeColor = rStyle.color.withOpacity(0.15);
+        edgeColor = rStyle.color.withValues(alpha: 0.15);
         edgeWidth = 1.0;
       } else {
-        edgeColor = rStyle.color.withOpacity(0.5);
+        edgeColor = rStyle.color.withValues(alpha: 0.5);
         edgeWidth = 1.5;
       }
 
@@ -173,13 +173,13 @@ class _KnowledgeGraphPainter extends CustomPainter {
       if (isAdjacentEdge || (!_hasSelection() && !_hasHighlight())) {
         final labelText = edge.label ?? rStyle.label;
         if (labelText.isNotEmpty) {
-          final labelBg = Paint()..color = Colors.white.withOpacity(0.85);
+          final labelBg = Paint()..color = Colors.white.withValues(alpha: 0.85);
           final tp = TextPainter(
             text: TextSpan(
               text: labelText,
               style: TextStyle(
                 fontSize: 9,
-                color: edgeColor.withOpacity(0.9),
+                color: edgeColor.withValues(alpha: 0.9),
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -249,7 +249,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
       // 搜索高亮光晕（黄色）
       if (isHighlighted && !isSelected) {
         final glowPaint = Paint()
-          ..color = const Color(0xFFFFF176).withOpacity(0.6)
+          ..color = const Color(0xFFFFF176).withValues(alpha: 0.6)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14);
         canvas.drawCircle(center, radius + 12, glowPaint);
       }
@@ -257,7 +257,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
       // 邻居高亮光晕
       if (isAdjacent && !isSelected) {
         final adjGlow = Paint()
-          ..color = nodeColor.withOpacity(0.2)
+          ..color = nodeColor.withValues(alpha: 0.2)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
         canvas.drawCircle(center, radius + 8, adjGlow);
       }
@@ -265,7 +265,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
       // 选中光晕
       if (isSelected) {
         final selGlow = Paint()
-          ..color = const Color(0xFF1677FF).withOpacity(0.3)
+          ..color = const Color(0xFF1677FF).withValues(alpha: 0.3)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16);
         canvas.drawCircle(center, radius + 14, selGlow);
       }
@@ -273,7 +273,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
       // 焦点中心标记
       if (isFocusCenter) {
         final focusGlow = Paint()
-          ..color = const Color(0xFF1677FF).withOpacity(0.15)
+          ..color = const Color(0xFF1677FF).withValues(alpha: 0.15)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
         canvas.drawCircle(center, radius + 20, focusGlow);
 
@@ -291,14 +291,14 @@ class _KnowledgeGraphPainter extends CustomPainter {
       // 阴影
       if (!dimmed) {
         final shadowPaint = Paint()
-          ..color = Colors.black.withOpacity(0.12)
+          ..color = Colors.black.withValues(alpha: 0.12)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
         canvas.drawCircle(
             Offset(center.dx + 1.5, center.dy + 2.5), radius, shadowPaint);
       }
 
       // 节点圆
-      final fillColor = dimmed ? nodeColor.withOpacity(0.2) : nodeColor;
+      final fillColor = dimmed ? nodeColor.withValues(alpha: 0.2) : nodeColor;
       final nodePaint = Paint()
         ..color = fillColor
         ..style = PaintingStyle.fill;
@@ -446,13 +446,13 @@ class _KnowledgeGraphPainter extends CustomPainter {
       // 背景
       canvas.drawRRect(
         bgRect,
-        Paint()..color = color.withOpacity(0.05),
+        Paint()..color = color.withValues(alpha: 0.05),
       );
       // 边框
       canvas.drawRRect(
         bgRect,
         Paint()
-          ..color = color.withOpacity(0.2)
+          ..color = color.withValues(alpha: 0.2)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.5,
       );
@@ -469,7 +469,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.bold,
-            color: color.withOpacity(0.7),
+            color: color.withValues(alpha: 0.7),
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -527,7 +527,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
           style: TextStyle(
             fontSize: fontSize,
             fontWeight: FontWeight.w900,
-            color: color.withOpacity(0.06),
+            color: color.withValues(alpha: 0.06),
             letterSpacing: 2,
           ),
         ),
@@ -551,7 +551,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
             fontSize: 120,
             fontFamily: iconData.fontFamily,
             package: iconData.fontPackage,
-            color: color.withOpacity(0.04),
+            color: color.withValues(alpha: 0.04),
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -615,7 +615,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
             style: TextStyle(
               fontSize: fontSize,
               fontWeight: FontWeight.w900,
-              color: color.withOpacity(0.05),
+              color: color.withValues(alpha: 0.05),
               letterSpacing: 2,
             ),
           ),
@@ -727,7 +727,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
     canvas.drawPath(
       maskPath!,
       Paint()
-        ..color = Colors.deepPurple.withOpacity(0.04)
+        ..color = Colors.deepPurple.withValues(alpha: 0.04)
         ..style = PaintingStyle.fill,
     );
 
@@ -735,7 +735,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
     canvas.drawPath(
       maskPath!,
       Paint()
-        ..color = Colors.deepPurple.withOpacity(0.25)
+        ..color = Colors.deepPurple.withValues(alpha: 0.25)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.5,
     );
@@ -752,7 +752,7 @@ class _KnowledgeGraphPainter extends CustomPainter {
         style: TextStyle(
           fontSize: labelFontSize,
           fontWeight: FontWeight.w900,
-          color: Colors.deepPurple.withOpacity(0.05),
+          color: Colors.deepPurple.withValues(alpha: 0.05),
           letterSpacing: 8,
         ),
       ),
@@ -820,7 +820,7 @@ class _MinimapPainter extends CustomPainter {
       canvas.drawPath(
         scaledMask,
         Paint()
-          ..color = Colors.deepPurple.withOpacity(0.1)
+          ..color = Colors.deepPurple.withValues(alpha: 0.1)
           ..style = PaintingStyle.fill,
       );
     }
@@ -835,7 +835,7 @@ class _MinimapPainter extends CustomPainter {
         Offset(src.x * sx, src.y * sy),
         Offset(tgt.x * sx, tgt.y * sy),
         Paint()
-          ..color = Colors.grey.withOpacity(0.25)
+          ..color = Colors.grey.withValues(alpha: 0.25)
           ..strokeWidth = 0.5,
       );
     }
@@ -847,7 +847,7 @@ class _MinimapPainter extends CustomPainter {
       canvas.drawCircle(
         center,
         r,
-        Paint()..color = node.color.withOpacity(0.8),
+        Paint()..color = node.color.withValues(alpha: 0.8),
       );
     }
 
@@ -855,7 +855,7 @@ class _MinimapPainter extends CustomPainter {
     canvas.drawRect(
       viewportRect,
       Paint()
-        ..color = const Color(0xFF1677FF).withOpacity(0.3)
+        ..color = const Color(0xFF1677FF).withValues(alpha: 0.3)
         ..style = PaintingStyle.fill,
     );
     canvas.drawRect(

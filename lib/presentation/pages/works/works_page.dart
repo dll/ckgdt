@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -294,7 +294,7 @@ class _WorksPageState extends State<WorksPage>
         Container(
           margin: const EdgeInsets.fromLTRB(12, 6, 12, 2),
           decoration: BoxDecoration(
-            color: primary.withOpacity(0.06),
+            color: primary.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(10),
           ),
           child: TabBar(
@@ -362,9 +362,9 @@ class _WorksPageState extends State<WorksPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.3)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
       ),
       child: Text(
         isTeacher ? '教师端' : '学生端',
@@ -404,7 +404,7 @@ class _WorksPageState extends State<WorksPage>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(s['icon'] as IconData,
-                        color: Colors.white.withOpacity(0.8), size: 14),
+                        color: Colors.white.withValues(alpha: 0.8), size: 14),
                     const SizedBox(width: 3),
                     Text('${s['value']}',
                         style: const TextStyle(
@@ -414,7 +414,7 @@ class _WorksPageState extends State<WorksPage>
                     const SizedBox(width: 2),
                     Text(s['label'] as String,
                         style: TextStyle(
-                            color: Colors.white.withOpacity(0.7),
+                            color: Colors.white.withValues(alpha: 0.7),
                             fontSize: 10)),
                   ],
                 ),
@@ -479,7 +479,7 @@ Widget _statChip(IconData icon, String value, String label, Color color) {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
     decoration: BoxDecoration(
-      color: color.withOpacity(0.08),
+      color: color.withValues(alpha: 0.08),
       borderRadius: BorderRadius.circular(8),
     ),
     child: Row(

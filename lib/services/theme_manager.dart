@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../core/constants/app_theme.dart';
 import '../core/design/noir_tokens.dart';
 
@@ -29,7 +29,7 @@ class ThemeManager {
     final onCard = isDark ? NoirTokens.paper : NoirTokens.ink;
     final hairline = isDark
         ? const Color(0x33F7F4EE)
-        : NoirTokens.ink.withOpacity(0.10);
+        : NoirTokens.ink.withValues(alpha: 0.10);
 
     final colorScheme = ColorScheme.fromSeed(
       seedColor: preset.primary,
@@ -122,7 +122,7 @@ class ThemeManager {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: accent,
-          side: BorderSide(color: accent.withOpacity(0.6), width: 1),
+          side: BorderSide(color: accent.withValues(alpha: 0.6), width: 1),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           textStyle: const TextStyle(
             fontSize: 12,
@@ -164,26 +164,26 @@ class ThemeManager {
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 10),
         labelStyle: TextStyle(
-          color: onCard.withOpacity(0.55),
+          color: onCard.withValues(alpha: 0.55),
           fontSize: 11,
           fontWeight: FontWeight.w600,
           letterSpacing: 1.5,
         ),
         floatingLabelStyle: TextStyle(
-          color: onCard.withOpacity(0.7),
+          color: onCard.withValues(alpha: 0.7),
           fontSize: 10,
           fontWeight: FontWeight.w700,
           letterSpacing: 2,
         ),
         hintStyle: TextStyle(
-          color: onCard.withOpacity(0.35),
+          color: onCard.withValues(alpha: 0.35),
           fontSize: 13,
         ),
         border: UnderlineInputBorder(
-          borderSide: BorderSide(color: onCard.withOpacity(0.25)),
+          borderSide: BorderSide(color: onCard.withValues(alpha: 0.25)),
         ),
         enabledBorder: UnderlineInputBorder(
-          borderSide: BorderSide(color: onCard.withOpacity(0.25)),
+          borderSide: BorderSide(color: onCard.withValues(alpha: 0.25)),
         ),
         focusedBorder: UnderlineInputBorder(
           borderSide: BorderSide(color: onCard, width: 1.5),
@@ -213,7 +213,7 @@ class ThemeManager {
           letterSpacing: 1,
         ),
         contentTextStyle: TextStyle(
-          color: onCard.withOpacity(0.85),
+          color: onCard.withValues(alpha: 0.85),
           fontSize: 13,
           height: 1.5,
         ),
@@ -236,7 +236,7 @@ class ThemeManager {
       // ── Tab ──────────────────────────────────────────────────────────
       tabBarTheme: TabBarThemeData(
         labelColor: onCard,
-        unselectedLabelColor: onCard.withOpacity(0.45),
+        unselectedLabelColor: onCard.withValues(alpha: 0.45),
         indicatorColor: accent,
         indicatorSize: TabBarIndicatorSize.label,
         dividerColor: hairline,
@@ -257,11 +257,11 @@ class ThemeManager {
         backgroundColor: cardBg,
         elevation: 0,
         height: 64,
-        indicatorColor: accent.withOpacity(0.22),
+        indicatorColor: accent.withValues(alpha: 0.22),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return TextStyle(
-            color: selected ? accent : onCard.withOpacity(0.6),
+            color: selected ? accent : onCard.withValues(alpha: 0.6),
             fontSize: 11,
             fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
             letterSpacing: 1.2,
@@ -270,7 +270,7 @@ class ThemeManager {
         iconTheme: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return IconThemeData(
-            color: selected ? accent : onCard.withOpacity(0.6),
+            color: selected ? accent : onCard.withValues(alpha: 0.6),
             size: 22,
           );
         }),
@@ -292,7 +292,7 @@ class ThemeManager {
 
       // ── ListTile ─────────────────────────────────────────────────────
       listTileTheme: ListTileThemeData(
-        iconColor: onCard.withOpacity(0.7),
+        iconColor: onCard.withValues(alpha: 0.7),
         textColor: onCard,
         titleTextStyle: TextStyle(
           color: onCard,
@@ -301,7 +301,7 @@ class ThemeManager {
           letterSpacing: 0.5,
         ),
         subtitleTextStyle: TextStyle(
-          color: onCard.withOpacity(0.6),
+          color: onCard.withValues(alpha: 0.6),
           fontSize: 12,
           letterSpacing: 0.5,
           height: 1.4,
@@ -322,7 +322,7 @@ class ThemeManager {
         trackColor: WidgetStateProperty.resolveWith((s) =>
             s.contains(WidgetState.selected)
                 ? NoirTokens.ink
-                : onCard.withOpacity(0.2)),
+                : onCard.withValues(alpha: 0.2)),
         thumbColor: WidgetStateProperty.resolveWith((s) =>
             s.contains(WidgetState.selected)
                 ? NoirTokens.accent
@@ -336,7 +336,7 @@ class ThemeManager {
       // ── 进度 ─────────────────────────────────────────────────────────
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: accent,
-        linearTrackColor: accent.withOpacity(0.15),
+        linearTrackColor: accent.withValues(alpha: 0.15),
       ),
 
       // ── 文本基础 ────────────────────────────────────────────────────
@@ -371,7 +371,7 @@ class ThemeManager {
             fontWeight: FontWeight.w700,
             letterSpacing: 1.5),
         labelSmall: TextStyle(
-            color: onCard.withOpacity(0.6),
+            color: onCard.withValues(alpha: 0.6),
             fontSize: 10,
             fontWeight: FontWeight.w600,
             letterSpacing: 1.5),

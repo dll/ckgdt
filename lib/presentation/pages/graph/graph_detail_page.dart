@@ -1,4 +1,4 @@
-﻿import 'dart:math' as math;
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../data/local/graph_dao.dart';
 import '../../../data/local/learning_record_dao.dart';
@@ -572,7 +572,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
   Widget _statCard(String label, String value, Color color) {
     return Expanded(
       child: Card(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Column(
@@ -973,7 +973,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
   Widget _buildSearchResultBar(Color primary) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      color: primary.withOpacity(0.1),
+      color: primary.withValues(alpha: 0.1),
       child: Row(
         children: [
           Icon(Icons.search, size: 16, color: primary),
@@ -1012,7 +1012,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
             decoration: BoxDecoration(
-              color: primary.withOpacity(0.1),
+              color: primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(_currentLayout.label,
@@ -1023,7 +1023,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
+                color: Colors.orange.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -1049,7 +1049,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
+                color: Colors.green.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -1113,7 +1113,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      color: color.withOpacity(0.08),
+      color: color.withValues(alpha: 0.08),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1156,7 +1156,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
                     if (i > 0)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 2),
-                        child: Icon(Icons.chevron_right, size: 14, color: color.withOpacity(0.5)),
+                        child: Icon(Icons.chevron_right, size: 14, color: color.withValues(alpha: 0.5)),
                       ),
                     InkWell(
                       onTap: () => _scrollToNode(_ancestorPath[i].id),
@@ -1164,8 +1164,8 @@ class _GraphDetailPageState extends State<GraphDetailPage>
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: i == _ancestorPath.length - 1
-                              ? color.withOpacity(0.2)
-                              : color.withOpacity(0.08),
+                              ? color.withValues(alpha: 0.2)
+                              : color.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(6),
                           border: i == _ancestorPath.length - 1
                               ? Border.all(color: color, width: 1)
@@ -1197,7 +1197,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  Icon(Icons.eco, size: 12, color: Colors.teal.withOpacity(0.6)),
+                  Icon(Icons.eco, size: 12, color: Colors.teal.withValues(alpha: 0.6)),
                   const SizedBox(width: 4),
                   for (int i = 0; i < _descendantLeaves.length && i < 8; i++) ...[
                     if (i > 0) const SizedBox(width: 4),
@@ -1206,7 +1206,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                         decoration: BoxDecoration(
-                          color: Colors.teal.withOpacity(0.08),
+                          color: Colors.teal.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
@@ -1306,7 +1306,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.12),
+                color: Colors.black.withValues(alpha: 0.12),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -1521,12 +1521,12 @@ class _GraphDetailPageState extends State<GraphDetailPage>
             width: mapW,
             height: mapH,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.92),
+              color: Colors.white.withValues(alpha: 0.92),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: Colors.grey.shade300),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
+                  color: Colors.black.withValues(alpha: 0.15),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
@@ -1761,7 +1761,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.3),
+            color: Colors.grey.withValues(alpha: 0.3),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -1928,7 +1928,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
       margin: const EdgeInsets.only(right: 6),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(text, style: TextStyle(fontSize: 11, color: color)),
@@ -1992,7 +1992,7 @@ class _DetailMinimapPainter extends CustomPainter {
     canvas.drawRect(
       viewportRect,
       Paint()
-        ..color = const Color(0xFF1677FF).withOpacity(0.3)
+        ..color = const Color(0xFF1677FF).withValues(alpha: 0.3)
         ..style = PaintingStyle.fill,
     );
     canvas.drawRect(

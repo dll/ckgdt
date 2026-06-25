@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -640,9 +640,9 @@ class _ArchiveMaterialsChecklistState extends State<ArchiveMaterialsChecklist> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.08),
+            color: color.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: color.withOpacity(0.20)),
+            border: Border.all(color: color.withValues(alpha: 0.20)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -747,9 +747,9 @@ class _ArchiveMaterialsChecklistState extends State<ArchiveMaterialsChecklist> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.10),
+        color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withOpacity(0.25)),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
       child: Text(
         label,
@@ -841,9 +841,9 @@ class _ArchiveMaterialsChecklistState extends State<ArchiveMaterialsChecklist> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
-            color: metricColor.withOpacity(0.08),
+            color: metricColor.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: metricColor.withOpacity(0.20)),
+            border: Border.all(color: metricColor.withValues(alpha: 0.20)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -902,7 +902,7 @@ class _ArchiveMaterialsChecklistState extends State<ArchiveMaterialsChecklist> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(

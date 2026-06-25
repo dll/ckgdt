@@ -118,9 +118,9 @@ class _ContributionTabState extends State<_ContributionTab>
           margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-            color: green.withOpacity(0.06),
+            color: green.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: green.withOpacity(0.10)),
+            border: Border.all(color: green.withValues(alpha: 0.10)),
           ),
           child: TabBar(
             controller: _subTabController,
@@ -133,7 +133,7 @@ class _ContributionTabState extends State<_ContributionTab>
               borderRadius: BorderRadius.circular(11),
               boxShadow: [
                 BoxShadow(
-                  color: green.withOpacity(0.10),
+                  color: green.withValues(alpha: 0.10),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -251,8 +251,8 @@ class _ContributionTabState extends State<_ContributionTab>
           borderRadius: BorderRadius.circular(14),
           gradient: LinearGradient(
             colors: [
-              scoreColor.withOpacity(0.1),
-              scoreColor.withOpacity(0.03),
+              scoreColor.withValues(alpha: 0.1),
+              scoreColor.withValues(alpha: 0.03),
             ],
           ),
         ),
@@ -339,7 +339,7 @@ class _ContributionTabState extends State<_ContributionTab>
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
             colors: [
-              Colors.indigo.withOpacity(0.04),
+              Colors.indigo.withValues(alpha: 0.04),
               Colors.white,
             ],
             begin: Alignment.topLeft,
@@ -355,7 +355,7 @@ class _ContributionTabState extends State<_ContributionTab>
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: Colors.indigo.withOpacity(0.1),
+                    color: Colors.indigo.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(Icons.radar, size: 16, color: Colors.indigo[400]),
@@ -447,9 +447,9 @@ class _ContributionTabState extends State<_ContributionTab>
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           children: [
@@ -507,7 +507,7 @@ class _ContributionTabState extends State<_ContributionTab>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: typeColor.withOpacity(0.1),
+                    color: typeColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(typeLabel,
@@ -521,7 +521,7 @@ class _ContributionTabState extends State<_ContributionTab>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.1),
+                    color: Colors.grey.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(dimLabel,
@@ -628,8 +628,8 @@ class _ContributionTabState extends State<_ContributionTab>
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
             colors: [
-              Colors.green.withOpacity(0.08),
-              Colors.teal.withOpacity(0.03),
+              Colors.green.withValues(alpha: 0.08),
+              Colors.teal.withValues(alpha: 0.03),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -644,7 +644,7 @@ class _ContributionTabState extends State<_ContributionTab>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.12),
+                    color: Colors.green.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(Icons.school, color: Colors.green[700], size: 20),
@@ -673,17 +673,17 @@ class _ContributionTabState extends State<_ContributionTab>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.6),
+                color: Colors.white.withValues(alpha: 0.6),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.green.withOpacity(0.1)),
+                border: Border.all(color: Colors.green.withValues(alpha: 0.1)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   _miniStat('学生总数', '$totalStudents', Icons.person, Colors.blue),
-                  Container(width: 1, height: 30, color: Colors.grey.withOpacity(0.15)),
+                  Container(width: 1, height: 30, color: Colors.grey.withValues(alpha: 0.15)),
                   _miniStat('已覆盖', '$scoredStudents', Icons.check_circle, Colors.green),
-                  Container(width: 1, height: 30, color: Colors.grey.withOpacity(0.15)),
+                  Container(width: 1, height: 30, color: Colors.grey.withValues(alpha: 0.15)),
                   _miniStat('评分条数', '$teacherScores', Icons.rate_review, Colors.orange),
                 ],
               ),
@@ -723,8 +723,8 @@ class _ContributionTabState extends State<_ContributionTab>
                 CircleAvatar(
                   radius: 18,
                   backgroundColor: isMe
-                      ? Colors.orange.withOpacity(0.2)
-                      : Colors.blue.withOpacity(0.15),
+                      ? Colors.orange.withValues(alpha: 0.2)
+                      : Colors.blue.withValues(alpha: 0.15),
                   child: Text(
                     name.isNotEmpty ? name.substring(0, 1) : '?',
                     style: TextStyle(
@@ -806,13 +806,13 @@ class _ContributionTabState extends State<_ContributionTab>
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
             color: done
-                ? color.withOpacity(0.1)
-                : Colors.grey.withOpacity(0.06),
+                ? color.withValues(alpha: 0.1)
+                : Colors.grey.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: done
-                  ? color.withOpacity(0.3)
-                  : Colors.grey.withOpacity(0.15),
+                  ? color.withValues(alpha: 0.3)
+                  : Colors.grey.withValues(alpha: 0.15),
             ),
           ),
           child: Column(
@@ -911,7 +911,7 @@ class _ContributionTabState extends State<_ContributionTab>
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.08),
+                      color: Colors.green.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Row(
@@ -1066,8 +1066,8 @@ class _ContributionTabState extends State<_ContributionTab>
             data: SliderThemeData(
               activeTrackColor: color,
               thumbColor: color,
-              inactiveTrackColor: color.withOpacity(0.15),
-              overlayColor: color.withOpacity(0.1),
+              inactiveTrackColor: color.withValues(alpha: 0.15),
+              overlayColor: color.withValues(alpha: 0.1),
               trackHeight: 4,
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
             ),
@@ -1489,10 +1489,10 @@ class _ContributionTabState extends State<_ContributionTab>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.grey.withOpacity(0.06),
+        color: Colors.grey.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(10),
         border: Border(
-          left: BorderSide(color: Colors.indigo.withOpacity(0.5), width: 3),
+          left: BorderSide(color: Colors.indigo.withValues(alpha: 0.5), width: 3),
         ),
       ),
       child: Row(
@@ -1518,7 +1518,7 @@ class _ContributionTabState extends State<_ContributionTab>
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.06),
+                color: Colors.grey.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Icon(Icons.inbox_outlined, size: 48, color: Colors.grey[300]),

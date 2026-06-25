@@ -243,25 +243,25 @@ class _LabMaterialPreviewPageState extends State<LabMaterialPreviewPage> {
         fontSize: baseFontSize - 1,
         color: isDark ? Colors.amber[300] : Colors.deepPurple[700],
         backgroundColor: isDark
-            ? Colors.white.withOpacity(0.08)
-            : Colors.deepPurple.withOpacity(0.06),
+            ? Colors.white.withValues(alpha: 0.08)
+            : Colors.deepPurple.withValues(alpha: 0.06),
       ),
       codeblockPadding: const EdgeInsets.all(14),
       codeblockDecoration: BoxDecoration(
         color: isDark
-            ? Colors.white.withOpacity(0.06)
-            : Colors.grey.withOpacity(0.08),
+            ? Colors.white.withValues(alpha: 0.06)
+            : Colors.grey.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: isDark
-              ? Colors.white.withOpacity(0.1)
-              : Colors.grey.withOpacity(0.2),
+              ? Colors.white.withValues(alpha: 0.1)
+              : Colors.grey.withValues(alpha: 0.2),
         ),
       ),
       blockquoteDecoration: BoxDecoration(
         color: isDark
-            ? accentColor.withOpacity(0.08)
-            : accentColor.withOpacity(0.04),
+            ? accentColor.withValues(alpha: 0.08)
+            : accentColor.withValues(alpha: 0.04),
         border: const Border(left: BorderSide(color: accentColor, width: 4)),
       ),
       blockquotePadding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
@@ -275,8 +275,8 @@ class _LabMaterialPreviewPageState extends State<LabMaterialPreviewPage> {
           TextStyle(fontSize: baseFontSize - 1, color: baseTextColor),
       tableBorder: TableBorder.all(
         color: isDark
-            ? Colors.white.withOpacity(0.15)
-            : Colors.grey.withOpacity(0.3),
+            ? Colors.white.withValues(alpha: 0.15)
+            : Colors.grey.withValues(alpha: 0.3),
       ),
       tableCellsPadding:
           const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -284,8 +284,8 @@ class _LabMaterialPreviewPageState extends State<LabMaterialPreviewPage> {
         border: Border(
           top: BorderSide(
             color: isDark
-                ? Colors.white.withOpacity(0.15)
-                : Colors.grey.withOpacity(0.3),
+                ? Colors.white.withValues(alpha: 0.15)
+                : Colors.grey.withValues(alpha: 0.3),
           ),
         ),
       ),
