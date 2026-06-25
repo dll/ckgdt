@@ -13,6 +13,7 @@ import '../../../../services/achievement/achievement_docx_service.dart';
 import '../../../../services/achievement/achievement_template_excel_service.dart';
 import '../../../../services/achievement/excel_chart_injector.dart';
 import '../../../../services/achievement_context.dart';
+import '../../../../services/achievement_context.dart';
 import '../../../../services/archive/native_docx_service.dart';
 import '../../../../services/output_path_service.dart';
 import '../../../../services/auth_service.dart';
@@ -919,18 +920,6 @@ class _ReportTabState extends State<ReportTab> {
       final dir = await OutputPathService.getOutputDirectory();
       final safeName = '$className《$courseName》课程达成度评价表格.xlsx';
       final file = File('${dir.path}/$safeName');
-      if (!standardThreePart) {
-        await _exportDynamicExcelReport(
-          file: file,
-          courseName: courseName,
-          className: className,
-          semester: semester,
-          scores: scores,
-          combined: comb,
-          config: cf,
-        );
-        return;
-      }
       final templateFile =
           await AchievementTemplateExcelService.instance.findTemplateForCourse(
         courseName,
@@ -963,11 +952,23 @@ class _ReportTabState extends State<ReportTab> {
         await file.writeAsBytes(filled);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text('Excel模板已填充:${file.path}'),
+              content: Text('Excel已导出:${file.path}'),
               duration: const Duration(seconds: 4),
               action: SnackBarAction(
                   label: '打开', onPressed: () => OpenFilex.open(file.path))));
         }
+        return;
+      }
+      if (!standardThreePart) {
+        await _exportDynamicExcelReport(
+          file: file,
+          courseName: courseName,
+          className: className,
+          semester: semester,
+          scores: scores,
+          combined: comb,
+          config: cf,
+        );
         return;
       }
 
