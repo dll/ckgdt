@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/build_info.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../core/error_handler.dart';
+import '../../../services/achievement_context.dart';
 import '../../../main.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/settings_service.dart';
@@ -605,17 +606,17 @@ class _SettingsPageState extends State<SettingsPage> {
           children: [
             Icon(Icons.school, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 12),
-            const Text(BuildInfo.appBrand),
+            Text(BuildInfo.displayFullName(AchievementContext.instance.courseName)),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('版本：${BuildInfo.appVersion}'),
+            Text('版本：${BuildInfo.appVersion}'),
             const SizedBox(height: 8),
-            const Text(
-              '${BuildInfo.appFullName}（${BuildInfo.appEnglishName}）。',
+            Text(
+              '${BuildInfo.displayFullName(AchievementContext.instance.courseName)}（${BuildInfo.appEnglishName}）。',
             ),
             const SizedBox(height: 8),
             Text('当前课程：$courseName。'),

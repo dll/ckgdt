@@ -43,4 +43,24 @@ class BuildInfo {
 
   /// 拼成 "V{version}  ·  EDITION 2026"，给登录页副标题用。
   static const String appVersionLine = 'V$appVersion  ·  $appEdition';
+
+  /// 根据当前课程名构造动态标题。
+  /// 有课程名 → 《软件工程》课程知识图谱与数字孪生平台
+  /// 无课程 → 课程知识图谱与数字孪生平台
+  static String displayFullName([String? courseName]) {
+    if (courseName != null && courseName.trim().isNotEmpty) {
+      return '\u300a${courseName.trim()}\u300b$appFullName';
+    }
+    return appFullName;
+  }
+
+  /// 根据当前课程名构造动态窗体标题。
+  /// 有课程名 → 《软件工程》CKGDTv2.1.2
+  /// 无课程 → CKGDTv2.1.2
+  static String displayBrandWithVersion([String? courseName]) {
+    if (courseName != null && courseName.trim().isNotEmpty) {
+      return '\u300a${courseName.trim()}\u300b$appBrandWithVersion';
+    }
+    return appBrandWithVersion;
+  }
 }

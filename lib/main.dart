@@ -14,6 +14,7 @@ import 'data/local/database_helper.dart';
 import 'services/data_loading_service.dart';
 import 'services/theme_manager.dart';
 import 'services/settings_service.dart';
+import 'services/achievement_context.dart';
 import 'presentation/pages/login/login_page.dart';
 import 'presentation/pages/feedback/feedback_dialog.dart';
 import 'presentation/pages/feedback/ai_help_dialog.dart';
@@ -285,8 +286,10 @@ class _MyAppState extends State<MyApp> {
       );
     }
 
-    return MaterialApp(
-      title: BuildInfo.appBrandWithVersion,
+    return ValueListenableBuilder<String>(
+      valueListenable: AchievementContext.instance.courseNameNotifier,
+      builder: (context, courseName, child) => MaterialApp(
+      title: BuildInfo.displayBrandWithVersion(courseName),
       debugShowCheckedModeBanner: false,
       themeMode: _themeMode,
       theme: ThemeManager.light(_colorIndex),
@@ -313,6 +316,7 @@ class _MyAppState extends State<MyApp> {
           ),
         );
       },
+    ),
     );
   }
 }

@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import '../../../core/design/noir_tokens.dart';
 import '../../../core/design/noir_components.dart';
 import '../../../core/error_handler.dart';
+import '../../../core/build_info.dart';
+import '../../../services/achievement_context.dart';
 import '../../widgets/noir_page_shell.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/screenshot_service.dart';
@@ -150,10 +152,17 @@ class _HomePageState extends State<HomePage> {
         setState(() => _selectedIndex = index);
       }
     };
+    // 课程切换时刷新 AppBar 标题
+    AchievementContext.instance.courseNameNotifier.addListener(_onCourseChanged);
+  }
+
+  void _onCourseChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    AchievementContext.instance.courseNameNotifier.removeListener(_onCourseChanged);
     _defensePollTimer?.cancel();
     NavigationService.instance.dispose();
     super.dispose();
@@ -297,8 +306,9 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  /// 当前平台显示名称：AppBar 内部居中标题（完整名称，无版本号）
-  String get _platformTitle => '课程知识图谱与数字孪生平台';
+  /// 当前平台显示名称：包含当前课程名的完整标题
+  String get _platformTitle => BuildInfo.displayFullName(
+      AchievementContext.instance.courseName);
 
   @override
   Widget build(BuildContext context) {
