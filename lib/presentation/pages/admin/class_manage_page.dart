@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:excel/excel.dart' as xl;
 import '../../../core/error_handler.dart';
 import '../../../data/local/class_dao.dart';
+import '../../../data/local/database_helper.dart';
 import '../../../data/local/user_dao.dart';
 import '../../../data/models/user_model.dart';
 
@@ -1235,6 +1238,15 @@ class _ClassMemberSheetState extends State<_ClassMemberSheet> {
                           foregroundColor: theme.colorScheme.primary,
                         ),
                       ),
+                    if (!widget.isArchived)
+                      TextButton.icon(
+                        onPressed: _importStudentsFromExcel,
+                        icon: const Icon(Icons.upload_file, size: 18),
+                        label: const Text('导入'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: theme.colorScheme.primary,
+                        ),
+                      ),
                     // 关闭
                     IconButton(
                       onPressed: () => Navigator.pop(context),
@@ -1433,6 +1445,102 @@ class _ClassMemberSheetState extends State<_ClassMemberSheet> {
         );
         _loadMembers();
         widget.onMembersChanged();
+      }
+    }
+  }
+
+  Future<void> _importStudentsFromExcel() async {
+    try {
+      final res = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx', 'xls'],
+        withData: true,
+      );
+      if (res == null || res.files.isEmpty) return;
+      final f = res.files.first;
+      if (f.bytes == null) throw StateError('无法读取文件');
+
+      final excel = xl.Excel.decodeBytes(f.bytes!);
+      final sheet = excel.tables[excel.tables.keys.first];
+      if (sheet == null || sheet.maxRows < 2) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Excel文件为空'), backgroundColor: Colors.red),
+          );
+        }
+        return;
+      }
+
+      final header = sheet.row(0);
+      int idCol = -1, nameCol = -1;
+      for (int i = 0; i < header.length; i++) {
+        final h = (header[i]?.value?.toString() ?? '').replaceAll(RegExp(r'[\r\n]'), '');
+        if (h.contains('学号') || h.contains('工号')) idCol = i;
+        if (h.contains('姓名')) nameCol = i;
+      }
+      if (idCol < 0 || nameCol < 0) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('未找到学号/姓名列，请确保Excel包含"学号"和"姓名"列'),
+                backgroundColor: Colors.red),
+          );
+        }
+        return;
+      }
+
+      final db = await DatabaseHelper.instance.database;
+      int created = 0, skipped = 0;
+      final newUserIds = <String>[];
+
+      for (int r = 1; r < sheet.maxRows; r++) {
+        final row = sheet.row(r);
+        final sid = row[idCol]?.value?.toString().trim() ?? '';
+        final name = row[nameCol]?.value?.toString().trim() ?? '';
+        if (sid.isEmpty) continue;
+
+        final existing = await db.query('users',
+            where: 'user_id = ?', whereArgs: [sid]);
+        if (existing.isEmpty) {
+          await db.insert('users', {
+            'user_id': sid,
+            'real_name': name,
+            'role': 'student',
+            'is_active': 1,
+            'created_at': DateTime.now().toIso8601String(),
+          });
+          created++;
+        } else {
+          final oldName = existing.first['real_name'] as String? ?? '';
+          if (oldName.trim().isEmpty || oldName == sid) {
+            await db.update('users', {'real_name': name},
+                where: 'user_id = ?', whereArgs: [sid]);
+          }
+          skipped++;
+        }
+        newUserIds.add(sid);
+      }
+
+      int added = 0;
+      if (newUserIds.isNotEmpty) {
+        added = await widget.classDao.addMembers(widget.classId, newUserIds);
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('导入完成：新增 $created 人，已存在 $skipped 人，加入班级 $added 人'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _loadMembers();
+        widget.onMembersChanged();
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ClassManage.importStudents', stack: st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('导入失败: $e'), backgroundColor: Colors.red),
+        );
       }
     }
   }
