@@ -8,6 +8,7 @@ import '../../../../data/local/score_audit_dao.dart';
 import '../../../../services/auth_service.dart';
 import '../../../../services/achievement/achievement_excel_service.dart';
 import '../../../../services/output_path_service.dart';
+import '../../../../services/achievement_context.dart';
 import '../../../../core/error_handler.dart';
 import '../achievement_shared.dart';
 import '../achievement_config.dart';
@@ -1021,6 +1022,34 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
   }
 
   Widget _buildBatchDropdown(Color primary) {
+    if (_batches.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.orange.shade300),
+          borderRadius: BorderRadius.circular(12),
+          color: Colors.orange.shade50,
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.warning_amber, size: 18, color: Colors.orange.shade700),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text('暂无达成度批次，请先创建',
+                  style: TextStyle(fontSize: 13, color: Colors.black87)),
+            ),
+            FilledButton.tonal(
+              onPressed: _createBatch,
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                visualDensity: VisualDensity.compact,
+              ),
+              child: const Text('创建批次', style: TextStyle(fontSize: 12)),
+            ),
+          ],
+        ),
+      );
+    }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
@@ -1045,6 +1074,66 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
         ),
       ),
     );
+  }
+
+  Future<void> _createBatch() async {
+    final courseName = AchievementContext.instance.courseName;
+    final nameCtrl = TextEditingController(text: '$courseName 达成度评价');
+    final classNameCtrl = TextEditingController();
+    final semCtrl = TextEditingController(text: '${DateTime.now().year}-${DateTime.now().month > 6 ? 1 : 2}');
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('创建达成度批次'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: nameCtrl,
+                decoration: const InputDecoration(labelText: '批次名称', isDense: true)),
+            const SizedBox(height: 8),
+            TextField(controller: classNameCtrl,
+                decoration: const InputDecoration(labelText: '班级', isDense: true,
+                    hintText: '如：软件23')),
+            const SizedBox(height: 8),
+            TextField(controller: semCtrl,
+                decoration: const InputDecoration(labelText: '学期', isDense: true,
+                    hintText: '如：2025-1')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, {
+            'name': nameCtrl.text.trim(),
+            'className': classNameCtrl.text.trim(),
+            'semester': semCtrl.text.trim(),
+          }), child: const Text('创建')),
+        ],
+      ),
+    );
+    if (result == null || result['name']?.isEmpty == true) return;
+    try {
+      final id = await widget.achievementDao.addBatch(
+        batchName: result['name']!,
+        courseName: courseName,
+        className: result['className'] ?? '',
+        semester: result['semester'] ?? '',
+      );
+      await _loadBatches();
+      setState(() => _selectedBatchId = id);
+      _loadComponentScores();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('批次已创建'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ScoresTab.createBatch', stack: st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('创建失败: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   Widget _buildActionChip({
