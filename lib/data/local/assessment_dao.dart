@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'dart:math';
 import 'database_helper.dart';
+import '../../services/course_context_service.dart';
 import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 考核管理 DAO — 分组 / 项目 / 评分 / 答辩
 class AssessmentDao {
   static const finalAssessmentReportType = '课程考核大作业报告';
+  final CourseContextService _courseContext = CourseContextService();
 
   // ══════════════════════════════════════════════════════════
   //  分组管理
@@ -13,7 +15,9 @@ class AssessmentDao {
 
   Future<List<Map<String, dynamic>>> getGroups() async {
     final db = await DatabaseHelper.instance.database;
-    return db.query('assessment_groups', orderBy: 'id ASC');
+    final scope = await _courseContext.scopedWhere();
+    return db.query('assessment_groups',
+        where: scope.where, whereArgs: scope.args, orderBy: 'id ASC');
   }
 
   Future<Map<String, dynamic>?> getGroup(int id) async {
@@ -31,7 +35,9 @@ class AssessmentDao {
     String? projectName,
   }) async {
     final db = await DatabaseHelper.instance.database;
+    final courseId = await _courseContext.activeCourseId();
     return db.insert('assessment_groups', {
+      'course_id': courseId,
       'name': name,
       'leader': leader,
       'member_ids': memberIds != null ? jsonEncode(memberIds) : null,
@@ -82,12 +88,15 @@ class AssessmentDao {
 
   Future<List<Map<String, dynamic>>> getProjects() async {
     final db = await DatabaseHelper.instance.database;
+    final scope = await _courseContext.scopedWhere();
+    final where = scope.where.isNotEmpty ? 'WHERE ${scope.where}' : '';
     return db.rawQuery('''
       SELECT p.*, g.name as group_name
       FROM assessment_projects p
       LEFT JOIN assessment_groups g ON p.group_id = g.id
+      $where
       ORDER BY p.id ASC
-    ''');
+    ''', scope.args);
   }
 
   Future<int> addProject({
@@ -99,7 +108,9 @@ class AssessmentDao {
     double progress = 0,
   }) async {
     final db = await DatabaseHelper.instance.database;
+    final courseId = await _courseContext.activeCourseId();
     return db.insert('assessment_projects', {
+      'course_id': courseId,
       'group_id': groupId,
       'name': name,
       'description': description,

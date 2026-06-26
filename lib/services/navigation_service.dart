@@ -57,6 +57,7 @@ import '../presentation/pages/analytics/class_token_page.dart';
 import '../presentation/pages/analytics/agent_calls_dashboard_page.dart';
 import '../presentation/pages/privacy/privacy_policy_page.dart';
 import '../presentation/pages/privacy/my_data_page.dart';
+import '../presentation/pages/cases/cases_page.dart';
 import '../services/auth_service.dart';
 
 /// 全局导航服务 — 跨页面 Tab 切换 + 子页面跳转 + 返回
@@ -535,6 +536,10 @@ class NavigationService {
         return const PrivacyPolicyPage();
       case 'my_data':
         return const MyDataPage();
+      case 'case_manage':
+      case '教学案例':
+      case '案例':
+        return const CasesPage();
       case 'archive':
         return const ArchivePage();
       default:

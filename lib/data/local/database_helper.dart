@@ -70,7 +70,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 32,
+      version: 33,
       singleInstance: true, // 启用单例模式
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
@@ -129,7 +129,7 @@ class DatabaseHelper {
         // 重新打开（版本号必须与主初始化一致）
         final db2 = await openDatabase(
           dbName,
-          version: 32,
+          version: 33,
           singleInstance: true, // 启用单例模式
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
@@ -212,7 +212,7 @@ class DatabaseHelper {
     Database db;
     db = await openDatabase(
       dbPath,
-      version: 32,
+      version: 33,
       singleInstance: true, // 启用单例模式
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
@@ -945,6 +945,9 @@ class DatabaseHelper {
     if (oldVersion < 32) {
       await _migrateToV32(db);
     }
+    if (oldVersion < 33) {
+      await _migrateToV33(db);
+    }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
   }
@@ -1143,6 +1146,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS assessment_groups(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT,
         name TEXT NOT NULL,
         leader TEXT,
         member_ids TEXT,
@@ -1158,6 +1162,7 @@ class DatabaseHelper {
       CREATE TABLE IF NOT EXISTS assessment_projects(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         group_id INTEGER,
+        course_id TEXT,
         name TEXT NOT NULL,
         description TEXT,
         tech_stack TEXT,
@@ -2693,6 +2698,11 @@ class DatabaseHelper {
   /// V32: course_objectives 增加 extra_columns_json（自定义列）
   Future<void> _migrateToV32(Database db) async {
     await _ensureCourseObjectivesColumns(db);
+  }
+
+  Future<void> _migrateToV33(Database db) async {
+    await _addTextColumnIfMissing(db, 'assessment_groups', 'course_id', 'V33');
+    await _addTextColumnIfMissing(db, 'assessment_projects', 'course_id', 'V33');
   }
 
   Future<void> _addTextColumnIfMissing(

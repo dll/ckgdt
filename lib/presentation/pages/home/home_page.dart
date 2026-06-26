@@ -67,6 +67,7 @@ import '../practice/growth_curve_page.dart';
 import '../cross_platform/cross_platform_hub_page.dart';
 import '../settings/course_manage_page.dart';
 import '../course/course_objectives_page.dart';
+import '../cases/cases_page.dart';
 import '../profile/virtual_twin_page.dart';
 import '../../widgets/course_generator_sheet.dart';
 import '../../../data/local/course_dao.dart';
@@ -88,6 +89,7 @@ const _cardColors = {
   '数据同步': Color(0xFF84fab0),
   '多端互通': Color(0xFF8fd3f4),
   '数字孪生': Color(0xFFa1c4fd),
+  '教学案例': Color(0xFF2d6a4f),
   '学习进度': Color(0xFFc2e9fb),
   '错题本': Color(0xFFfccb90),
   '我的收藏': Color(0xFFd57eeb),
@@ -338,8 +340,16 @@ class _HomePageState extends State<HomePage> {
     bodyMap[1] = () => widget.graphPageOverride ?? const KnowledgeGraphPage();
 
     if (isTeacherOrAdmin) {
-      // ── 教师/管理员导航（精简 6 Tab）────────────────────────────
-      // 2: 教学中心（教学 + 课堂聚合）
+      // ── 教师/管理员导航 ─────────────────────────────────────────
+      // 2: 案例
+      destinations.add(const NavigationDestination(
+        icon: Icon(Icons.folder_outlined),
+        selectedIcon: Icon(Icons.folder),
+        label: '案例',
+      ));
+      bodyMap[destinations.length - 1] = () => const CasesPage();
+
+      // 3: 教学中心（教学 + 课堂聚合）
       destinations.add(const NavigationDestination(
         icon: Icon(Icons.menu_book_outlined),
         selectedIcon: Icon(Icons.menu_book),
@@ -382,37 +392,45 @@ class _HomePageState extends State<HomePage> {
       }
     } else {
       // ── 学生导航 ────────────────────────────────────────────────
-      // 2: 学习
+      // 2: 案例
+      destinations.add(const NavigationDestination(
+        icon: Icon(Icons.folder_outlined),
+        selectedIcon: Icon(Icons.folder),
+        label: '案例',
+      ));
+      bodyMap[2] = () => const CasesPage();
+
+      // 3: 学习
       destinations.add(const NavigationDestination(
         icon: Icon(Icons.menu_book_outlined),
         selectedIcon: Icon(Icons.menu_book),
         label: '学习',
       ));
-      bodyMap[2] = () => const LearningHubPage();
+      bodyMap[3] = () => const LearningHubPage();
 
-      // 3: 实验
+      // 4: 实验
       destinations.add(const NavigationDestination(
         icon: Icon(Icons.science_outlined),
         selectedIcon: Icon(Icons.science),
         label: '实验',
       ));
-      bodyMap[3] = () => const LabTasksPage();
+      bodyMap[4] = () => const LabTasksPage();
 
-      // 4: 考核
+      // 5: 考核
       destinations.add(const NavigationDestination(
         icon: Icon(Icons.assessment_outlined),
         selectedIcon: Icon(Icons.assessment),
         label: '考核',
       ));
-      bodyMap[4] = () => const AssessmentPage();
+      bodyMap[5] = () => const AssessmentPage();
 
-      // 5: 作品
+      // 6: 作品
       destinations.add(const NavigationDestination(
         icon: Icon(Icons.workspace_premium_outlined),
         selectedIcon: Icon(Icons.workspace_premium),
         label: '作品',
       ));
-      bodyMap[5] = () => const WorksPage();
+      bodyMap[6] = () => const WorksPage();
     }
 
     // 确保 _selectedIndex 不越界
@@ -773,6 +791,13 @@ class _HomePageState extends State<HomePage> {
                       : const StudentRepoPage(),
                   cardColor: _cardColors['Git仓库'],
                   description: '代码版本管理',
+                ),
+                _buildMenuCard(
+                  icon: Icons.folder_special,
+                  title: '教学案例',
+                  onTap: () => setState(() => _selectedIndex = 2),
+                  cardColor: _cardColors['教学案例'],
+                  description: '课程案例项目管理',
                 ),
                 _buildMenuCard(
                   icon: Icons.tips_and_updates,
