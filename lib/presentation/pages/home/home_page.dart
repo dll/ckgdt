@@ -40,6 +40,7 @@ import '../admin/survey_manage_page.dart';
 import '../admin/question_manage_page.dart';
 import '../admin/data_export_page.dart';
 import '../admin/grade_entry_center_page.dart';
+import '../admin/ai_trial_settings_page.dart';
 import '../admin/release_center_page.dart';
 import '../admin/teaching_manage_page.dart';
 import '../admin/lab_task_manage_page.dart';
@@ -1425,6 +1426,11 @@ class _AdminToolsPage extends StatelessWidget {
           '成绩录入中心',
           () => Navigator.push(context,
               MaterialPageRoute(builder: (_) => const GradeEntryCenterPage()))),
+      _AdminTool(
+          Icons.smart_toy_outlined,
+          'AI 试用额度',
+          () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const AiTrialSettingsPage()))),
       _AdminTool(
           Icons.settings,
           '系统设置',

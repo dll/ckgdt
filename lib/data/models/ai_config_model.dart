@@ -34,7 +34,7 @@ class ProviderPreset {
 /// 如果只有 'provider' 则适用于该 provider 的所有模型
 const bool kUseBuiltinTrialApiKeys = bool.fromEnvironment(
   'USE_BUILTIN_TRIAL_API_KEYS',
-  defaultValue: true,
+  defaultValue: false,
 );
 
 const bool kShowApiKeyInput = bool.fromEnvironment(

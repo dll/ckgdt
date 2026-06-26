@@ -70,7 +70,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 33,
+      version: 34,
       singleInstance: true, // 启用单例模式
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
@@ -129,7 +129,7 @@ class DatabaseHelper {
         // 重新打开（版本号必须与主初始化一致）
         final db2 = await openDatabase(
           dbName,
-          version: 33,
+          version: 34,
           singleInstance: true, // 启用单例模式
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
@@ -212,7 +212,7 @@ class DatabaseHelper {
     Database db;
     db = await openDatabase(
       dbPath,
-      version: 33,
+      version: 34,
       singleInstance: true, // 启用单例模式
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
@@ -947,6 +947,7 @@ class DatabaseHelper {
     }
     if (oldVersion < 33) {
       await _migrateToV33(db);
+      await _migrateToV34(db);
     }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
@@ -2703,6 +2704,23 @@ class DatabaseHelper {
   Future<void> _migrateToV33(Database db) async {
     await _addTextColumnIfMissing(db, 'assessment_groups', 'course_id', 'V33');
     await _addTextColumnIfMissing(db, 'assessment_projects', 'course_id', 'V33');
+  }
+
+  /// V34: ai_trial_settings 表 — AI 免费试用额度管理
+  Future<void> _migrateToV34(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ai_trial_settings(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        trial_enabled INTEGER DEFAULT 1,
+        trial_max_calls INTEGER DEFAULT 10,
+        trial_max_tokens INTEGER DEFAULT 50000,
+        updated_at TEXT
+      )
+    ''');
+    await db.execute('''
+      INSERT OR IGNORE INTO ai_trial_settings(id, trial_enabled, trial_max_calls, trial_max_tokens)
+      VALUES(1, 1, 10, 50000)
+    ''');
   }
 
   Future<void> _addTextColumnIfMissing(

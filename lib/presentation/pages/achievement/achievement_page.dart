@@ -14,6 +14,7 @@ import 'tabs/overview_tab.dart';
 import 'tabs/scores_tab.dart';
 import 'tabs/report_tab.dart';
 import 'tabs/analysis_tab.dart';
+import 'tabs/ab_comparison_tab.dart';
 import 'tabs/achievement_help_page.dart';
 
 /// 课程达成度计算系统 — 8 Tab 壳页面
@@ -49,6 +50,7 @@ class _AchievementPageState extends State<AchievementPage>
     (Icons.assignment_outlined, '考核达成', '06', 'exam'),
     (Icons.build_outlined, '持续改进', '07', null),
     (Icons.summarize_outlined, '报告生成', '08', null),
+    (Icons.compare_arrows_outlined, 'AB 对照', '09', null),
   ];
   List<(IconData, String, String, String?)> _tabSpecs = _allTabSpecs;
 
@@ -410,6 +412,11 @@ class _AchievementPageState extends State<AchievementPage>
         return ReportTab(
           authService: _authService,
           achievementDao: _achievementDao,
+        );
+      case 'AB 对照':
+        return AbComparisonTab(
+          achievementDao: _achievementDao,
+          dataRevision: dataRevision,
         );
       default:
         return const SizedBox.shrink();
