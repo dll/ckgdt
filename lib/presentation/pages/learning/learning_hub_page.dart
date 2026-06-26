@@ -79,7 +79,7 @@ class _LearningHubPageState extends State<LearningHubPage>
   @override
   void initState() {
     super.initState();
-    const tabLength = 6;
+    final tabLength = innerTabLabels().length;
     _tabController = TabController(
       length: tabLength,
       vsync: this,
@@ -97,7 +97,7 @@ class _LearningHubPageState extends State<LearningHubPage>
   TabController get innerTabController => _tabController;
   @override
   List<String> innerTabLabels() => _isTeacherOrAdmin
-      ? const ['视频', 'PPT', 'PDF', '测验', '助手', '平时成绩']
+      ? const ['视频', 'PPT', 'PDF', '测验', '助手']
       : const ['视频', 'PPT', 'PDF', '测验', '助手', '成绩'];
 
   @override
@@ -527,10 +527,8 @@ class _LearningHubPageState extends State<LearningHubPage>
                 text: 'PDF (${_pdfLoading ? "..." : _pdfFiles.length})'),
             const Tab(icon: Icon(Icons.quiz_outlined), text: '测验'),
             const Tab(icon: Icon(Icons.assistant_outlined), text: '助手'),
-            Tab(
-              icon: const Icon(Icons.fact_check_outlined),
-              text: _isTeacherOrAdmin ? '平时成绩' : '成绩',
-            ),
+            if (!_isTeacherOrAdmin)
+              const Tab(icon: Icon(Icons.fact_check_outlined), text: '成绩'),
           ],
         ),
       ),
@@ -553,9 +551,7 @@ class _LearningHubPageState extends State<LearningHubPage>
                         _pdfFiles, _pdfLoading, '📄', 'PDF', _loadPDFs),
                     const QuizPage(embedded: true),
                     _buildAiAssistTab(),
-                    if (_isTeacherOrAdmin)
-                      const OrdinaryScoreTab()
-                    else
+                    if (!_isTeacherOrAdmin)
                       const StudentOrdinaryScoreTab(),
                   ],
                 ),
