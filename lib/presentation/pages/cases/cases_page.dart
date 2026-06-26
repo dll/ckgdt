@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../data/local/case_dao.dart';
 import '../../../services/achievement_context.dart';
@@ -174,13 +174,31 @@ class _CasesPageState extends State<CasesPage> {
     );
   }
 
+  /// 解析可执行文件：如果是目录则查找 .exe/.bat/.cmd，如果是文件则直接返回
+  String? _resolveExe(String path) {
+    if (path.isEmpty) return null;
+    final f = File(path);
+    if (f.existsSync()) return path;
+    final d = Directory(path);
+    if (d.existsSync()) {
+      for (final ext in ['.exe', '.bat', '.cmd']) {
+        try {
+          final files = d.listSync().whereType<File>().where((f) =>
+              f.path.toLowerCase().endsWith(ext)).toList();
+          if (files.isNotEmpty) return files.first.path;
+        } catch (_) {}
+      }
+    }
+    return null;
+  }
+
   Widget _buildCaseCard(Map<String, dynamic> c) {
     final name = c['name'] ?? '';
     final fullName = c['full_name']?.toString();
     final desc = c['description']?.toString();
     final path = c['project_path']?.toString() ?? '';
     final repoUrl = c['repo_url']?.toString();
-    final dirExists = path.isNotEmpty && Directory(path).existsSync();
+    final ready = path.isNotEmpty && Directory(path).existsSync();
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -191,8 +209,8 @@ class _CasesPageState extends State<CasesPage> {
           children: [
             Row(
               children: [
-                Icon(dirExists ? Icons.folder : Icons.folder_off,
-                    color: dirExists ? const Color(0xFF4CAF50) : Colors.grey, size: 28),
+                Icon(ready ? Icons.folder : Icons.folder_off,
+                    color: ready ? const Color(0xFF4CAF50) : Colors.grey, size: 28),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -225,24 +243,24 @@ class _CasesPageState extends State<CasesPage> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: dirExists ? Colors.green.shade50 : Colors.red.shade50,
+                      color: ready ? Colors.green.shade50 : Colors.red.shade50,
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(dirExists ? Icons.check_circle : Icons.error,
-                            size: 14, color: dirExists ? const Color(0xFF4CAF50) : Colors.red),
+                        Icon(ready ? Icons.check_circle : Icons.error,
+                            size: 14, color: ready ? const Color(0xFF4CAF50) : Colors.red),
                         const SizedBox(width: 4),
-                        Text(dirExists ? '就绪' : '文件不存在',
+                        Text(ready ? '就绪' : '文件不存在',
                             style: TextStyle(
                                 fontSize: 12,
-                                color: dirExists ? Colors.green.shade700 : Colors.red.shade700)),
+                                color: ready ? Colors.green.shade700 : Colors.red.shade700)),
                       ],
                     ),
                   ),
                 const Spacer(),
-                if (path.isNotEmpty && dirExists)
+                if (path.isNotEmpty && ready)
                   FilledButton.icon(
                     icon: const Icon(Icons.play_arrow, size: 18),
                     label: const Text('启动演示'),
@@ -254,7 +272,7 @@ class _CasesPageState extends State<CasesPage> {
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     ),
                   ),
-                if (path.isNotEmpty && !dirExists)
+                if (path.isNotEmpty && !ready)
                   OutlinedButton.icon(
                     icon: const Icon(Icons.folder_open, size: 16),
                     label: const Text('定位文件'),
