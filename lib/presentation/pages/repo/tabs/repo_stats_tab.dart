@@ -319,7 +319,7 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
             _buildFlowItem(
               icon: Icons.phone_android,
               color: Colors.deepPurple,
-              title: 'mad-fd 仓库 (osgisOne/mad-fd)',
+              title: 'mad-kgdt 仓库 (chzcldl/mad-kgdt)',
               subtitle: '系统代码仓库 — Flutter 应用 + SQLite 数据库',
               items: [
                 'assets/learning_data.db → 预置 SQLite 数据库',

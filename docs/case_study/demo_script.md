@@ -123,7 +123,7 @@
 
 | 时间 | 画面 | 旁白 / 字幕 |
 |------|------|-----------|
-| 0-3s | OBS 三屏分割：Windows EXE（左）+ Android 真机镜像（中）+ Chrome 打开 https://dll.github.io/mad-fd/（右）| "Flutter 一套代码，4 端同时运行" |
+| 0-3s | OBS 三屏分割：Windows EXE（左）+ Android 真机镜像（中）+ Chrome 打开 https://dll.github.io/mad-kgdt/（右）| "Flutter 一套代码，4 端同时运行" |
 | 4-9s | 三端首页同时刷新 → UI 风格一致（noir 编辑感）→ 切到第 4 端 HarmonyOS 鸿蒙模拟器 | "Android / Windows / Web / HarmonyOS 四端真机可跑" |
 | 10-15s | Windows 端按下吉祥物语音按钮 → 说"打开图谱第 3 章" → 0.5s 内画面跳转到第 3 章节点 | "语音导航：< 500ms 全链路响应" |
 | 16-21s | 学生端 Android 完成测验 → Windows 端 5 秒后看到错题本同步出现 | "Gitee 双向同步，零服务器成本" |
@@ -152,7 +152,7 @@
 |------|------|-----------|
 | 0-5s | 全屏文字大字：**137 名学生 · 4 个学期 · 92% 满意度**| "2024 秋 - 2026 春，四学期持续迭代" |
 | 6-10s | 数据卡片快闪：达成度 0.68→0.76 ↑12% / AI 批阅效率 5×↑ / 数字孪生认可度 87% | "课程目标达成度 +12% / AI 批阅效率 5×↑" |
-| 11-15s | 收尾：MIT License logo + Gitee URL `gitee.com/osgisOne/mad-fd` + GitHub URL `github.com/dll/mad-fd` | "MIT 开源，欢迎兄弟院校共建" |
+| 11-15s | 收尾：MIT License logo + Gitee URL `gitee.com/chzcldl/mad-kgdt` + GitHub URL `github.com/dll/mad-kgdt` | "MIT 开源，欢迎兄弟院校共建" |
 
 ### Checklist
 - [ ] 数据来自 PPT Slide 14（不要编造其它数字）

@@ -64,7 +64,7 @@ grep -E "version:|app_name|BINARY_OUTPUT_NAME|window\.Create|FileDescription|Int
 # 4 端可并行（用 background task）
 flutter build apk --release &
 flutter build windows --release &
-MSYS_NO_PATHCONV=1 flutter build web --release --base-href "/mad-fd/" &
+MSYS_NO_PATHCONV=1 flutter build web --release --base-href "/mad-kgdt/" &
 ./build_ohos.bat &
 wait
 ```
@@ -76,7 +76,7 @@ wait
 |------|------|
 | Windows | `build/windows/x64/runner/Release/移动图谱与数字孪生v0.14.0.exe` + 全部 dll |
 | Android | `build/app/outputs/flutter-apk/app-release.apk` |
-| Web | `build/web/`（base=`/mad-fd/`）|
+| Web | `build/web/`（base=`/mad-kgdt/`）|
 | HarmonyOS | `ohos/entry/build/default/outputs/default/entry-default-signed.hap`（已签名）|
 
 ### Step 4：Web 部署 GitHub Pages
@@ -89,14 +89,14 @@ git -C D:/FlutterProjects/knowledge_graph_app/build/_gh-pages-deploy config core
 git -C D:/FlutterProjects/knowledge_graph_app/build/_gh-pages-deploy add -A
 git -C D:/FlutterProjects/knowledge_graph_app/build/_gh-pages-deploy \
     -c user.email="ldl@github" -c user.name="ldl" \
-    commit -q -m "deploy: web v0.14.0 base=/mad-fd/"
+    commit -q -m "deploy: web v0.14.0 base=/mad-kgdt/"
 git -C D:/FlutterProjects/knowledge_graph_app/build/_gh-pages-deploy \
-    remote add origin git@github.com:dll/mad-fd.git
+    remote add origin git@github.com:dll/mad-kgdt.git
 git -C D:/FlutterProjects/knowledge_graph_app/build/_gh-pages-deploy push -u --force origin gh-pages
 rm -rf D:/FlutterProjects/knowledge_graph_app/build/_gh-pages-deploy
 ```
 
-访问：`https://dll.github.io/mad-fd/`（5-10 分钟生效）
+访问：`https://dll.github.io/mad-kgdt/`（5-10 分钟生效）
 
 ### Step 5：打 4 个 zip 入 dist/
 
@@ -185,7 +185,7 @@ git push origin master
 - [ ] 4 端构建 SUCCESS（看构建日志最后是否有 ✓ Built）
 - [ ] dist/ 出 4 个 zip
 - [ ] gh-pages 推送成功
-- [ ] 访问 `https://dll.github.io/mad-fd/` 看到新版（等 5-10 分钟）
+- [ ] 访问 `https://dll.github.io/mad-kgdt/` 看到新版（等 5-10 分钟）
 - [ ] 鸿蒙 HAP 用真机装一次确认能跑
 
 ---

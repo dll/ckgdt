@@ -7,7 +7,7 @@ import 'package:knowledge_graph_app/core/error_handler.dart';
 
 /// 数据同步管理页面
 ///
-/// 直接使用本项目 Gitee 仓库 osgisOne/mad-fd，无需额外配置。
+/// 直接使用本项目 Gitee 仓库 chzcldl/mad-kgdt，无需额外配置。
 /// 学生：手动/自动上传学习数据
 /// 教师：手动/自动拉取学生数据 + 查看已同步学生列表
 class DataSyncPage extends StatefulWidget {

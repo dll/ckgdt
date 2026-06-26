@@ -70,7 +70,7 @@ class _InAppPdfViewerPageState extends State<InAppPdfViewerPage> {
     try {
       final gitee = GiteeService();
       // 与 SyncService._downloadSubmissionFile 同步策略：先 实验/ 后 files/
-      // 仓库参数与 SyncService 同源（osgisOne/mad-fd master sync/students）
+      // 仓库参数与 SyncService 同源（chzcldl/mad-kgdt master sync/students）
       List<int>? bytes;
       for (final subDir in ['实验', 'files']) {
         final remotePath = 'sync/students/$userId/$subDir/$fileName';

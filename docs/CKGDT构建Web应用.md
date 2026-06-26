@@ -15,8 +15,8 @@ CKGDT 是 Flutter 全平台项目，Web 端编译为 **JavaScript（dart2js）**
 | 触发方式 | push `master` 分支自动构建 + 自动部署 gh-pages |
 | 产物格式 | 静态 HTML/CSS/JS 文件 |
 | 产物命名 | `课程知识图谱与数字孪生+web+v{版本}.zip`（含启动说明） |
-| 公网地址 | https://dll.github.io/mad-fd/ |
-| Base Href | `/mad-fd/`（**首尾必须各有一个斜杠**） |
+| 公网地址 | https://dll.github.io/mad-kgdt/ |
+| Base Href | `/mad-kgdt/`（**首尾必须各有一个斜杠**） |
 | Flutter 版本 | 3.35.1 |
 | 包大小 | ~39 MB（zip） |
 
@@ -36,7 +36,7 @@ flutter doctor -v
 
 ### 2.2 GitHub Pages 配置
 
-仓库 `git@github.com:dll/mad-fd.git`，部署分支 `gh-pages`，本机需配置 SSH key：
+仓库 `git@github.com:dll/mad-kgdt.git`，部署分支 `gh-pages`，本机需配置 SSH key：
 ```bash
 ssh -T git@github.com   # 应回复 "Hi dll!"
 ```
@@ -50,12 +50,12 @@ ssh -T git@github.com   # 应回复 "Hi dll!"
 ```bash
 # Windows PowerShell：用 $env: 绕过 Git Bash 路径转换
 $env:MSYS_NO_PATHCONV = '1'
-flutter build web --release --base-href "/mad-fd/"
+flutter build web --release --base-href "/mad-kgdt/"
 ```
 
 **关键参数**：
-- `--base-href "/mad-fd/"` — 必须带首尾斜杠，否则资源 404
-- `MSYS_NO_PATHCONV=1` — 防止 Git Bash 把 `/mad-fd/` 转成 Windows 路径
+- `--base-href "/mad-kgdt/"` — 必须带首尾斜杠，否则资源 404
+- `MSYS_NO_PATHCONV=1` — 防止 Git Bash 把 `/mad-kgdt/` 转成 Windows 路径
 
 产物：`build/web/` 整个目录。
 
@@ -64,7 +64,7 @@ flutter build web --release --base-href "/mad-fd/"
 ```bash
 cd build/web
 python -m http.server 8080
-# 浏览器访问：http://localhost:8080/mad-fd/  ← 注意 /mad-fd/ 子路径
+# 浏览器访问：http://localhost:8080/mad-kgdt/  ← 注意 /mad-kgdt/ 子路径
 ```
 
 或用 Node.js：
@@ -83,9 +83,9 @@ git -C build/_gh-pages-deploy config core.longpaths true
 git -C build/_gh-pages-deploy add -A
 git -C build/_gh-pages-deploy \
     -c user.email="ldl@github" -c user.name="ldl" \
-    commit -q -m "deploy: web v1.17.0 base=/mad-fd/"
+    commit -q -m "deploy: web v1.17.0 base=/mad-kgdt/"
 
-git -C build/_gh-pages-deploy remote add origin git@github.com:dll/mad-fd.git
+git -C build/_gh-pages-deploy remote add origin git@github.com:dll/mad-kgdt.git
 git -C build/_gh-pages-deploy push -u --force origin gh-pages
 
 rm -rf build/_gh-pages-deploy
@@ -98,7 +98,7 @@ rm -rf build/_gh-pages-deploy
 `.github/workflows/ci.yml` 已配置 `deploy-web` job：push master 自动：
 1. 构建 `build/web`
 2. force-push 到 `gh-pages` 分支
-3. 5-10 分钟后 https://dll.github.io/mad-fd/ 生效
+3. 5-10 分钟后 https://dll.github.io/mad-kgdt/ 生效
 
 ---
 
@@ -106,7 +106,7 @@ rm -rf build/_gh-pages-deploy
 
 ### 4.1 在线访问（推荐）
 
-**https://dll.github.io/mad-fd/** — 手机/电脑浏览器直接打开，无需安装。
+**https://dll.github.io/mad-kgdt/** — 手机/电脑浏览器直接打开，无需安装。
 
 ### 4.2 离线本地启动
 
@@ -116,7 +116,7 @@ rm -rf build/_gh-pages-deploy
 ```bash
 cd 解压目录
 python -m http.server 8080
-# 访问 http://localhost:8080/mad-fd/
+# 访问 http://localhost:8080/mad-kgdt/
 ```
 
 **方法 2 — Node.js**：
@@ -145,8 +145,8 @@ build-web:
         channel: stable
         cache: true
     - run: flutter pub get
-    - name: Build web with /mad-fd/ base
-      run: flutter build web --release --base-href "/mad-fd/"
+    - name: Build web with /mad-kgdt/ base
+      run: flutter build web --release --base-href "/mad-kgdt/"
     - uses: actions/upload-artifact@v4
       with:
         name: web-build
@@ -196,12 +196,12 @@ deploy-web:
 ### Q1：访问白屏 / Console 报 `Failed to load main.dart.js`
 
 **根因**：`--base-href` 写错。
-- ❌ `/mad-fd`（缺尾斜杠） → 404
-- ✅ `/mad-fd/`（带尾斜杠）
+- ❌ `/mad-kgdt`（缺尾斜杠） → 404
+- ✅ `/mad-kgdt/`（带尾斜杠）
 
 ### Q2：`MSYS_NO_PATHCONV=1` 报错
 
-在 Git Bash 中 `/mad-fd/` 被转换为 Windows 路径。用 PowerShell 或 CMD 构建，或在命令前加 `MSYS_NO_PATHCONV=1`。
+在 Git Bash 中 `/mad-kgdt/` 被转换为 Windows 路径。用 PowerShell 或 CMD 构建，或在命令前加 `MSYS_NO_PATHCONV=1`。
 
 ### Q3：Web 构建报 `dart:ffi` 警告
 
@@ -213,7 +213,7 @@ GitHub Pages CDN 有 5-10 分钟缓存。强制刷新：`Ctrl+Shift+R` 或等待
 
 ### Q5：本地测试看不到资源
 
-必须从 `/mad-fd/` 子路径访问。`http://localhost:8080/` 会导致资源路径错误。
+必须从 `/mad-kgdt/` 子路径访问。`http://localhost:8080/` 会导致资源路径错误。
 
 ---
 
@@ -223,8 +223,8 @@ GitHub Pages CDN 有 5-10 分钟缓存。强制刷新：`Ctrl+Shift+R` 或等待
 |------|:----:|------|
 | 本地构建 | ✅ | `flutter build web --release` 持续通过 |
 | CI 构建 | ✅ | GitHub Actions `ubuntu-latest` + 自动部署 |
-| GitHub Pages | ✅ | https://dll.github.io/mad-fd/ 可访问 |
-| Base href | ✅ | `/mad-fd/` 首尾斜杠正确 |
+| GitHub Pages | ✅ | https://dll.github.io/mad-kgdt/ 可访问 |
+| Base href | ✅ | `/mad-kgdt/` 首尾斜杠正确 |
 | Renderer | ✅ | HTML renderer（已从 canvaskit 切换） |
 | 版本号 | ✅ | 3 处同步（index.html + manifest.json） |
 | 包大小 | 39 MB | zip 后 ~39 MB |
@@ -233,8 +233,8 @@ GitHub Pages CDN 有 5-10 分钟缓存。强制刷新：`Ctrl+Shift+R` 或等待
 
 | # | 问题 | 根因 | 修复 |
 |---|------|------|------|
-| 1 | 资源 404 | base href 缺尾斜杠 | 固定 `/mad-fd/` |
-| 2 | Git Bash 路径转换 | MSYS 自动转换 `/mad-fd/` | `MSYS_NO_PATHCONV=1` |
+| 1 | 资源 404 | base href 缺尾斜杠 | 固定 `/mad-kgdt/` |
+| 2 | Git Bash 路径转换 | MSYS 自动转换 `/mad-kgdt/` | `MSYS_NO_PATHCONV=1` |
 | 3 | CI deploy-web 硬编码版本 | commit message 写死 `v0.12.0` | 改为动态消息 |
 | 4 | canvaskit 渲染问题 | 默认 renderer 在某些浏览器异常 | 改为 html renderer |
 
@@ -243,8 +243,8 @@ GitHub Pages CDN 有 5-10 分钟缓存。强制刷新：`Ctrl+Shift+R` 或等待
 ## 八、快速检查清单
 
 - [ ] `flutter doctor` 显示 Web 端 ✓
-- [ ] `flutter build web --release --base-href "/mad-fd/"` 本地通过
+- [ ] `flutter build web --release --base-href "/mad-kgdt/"` 本地通过
 - [ ] 本地 `python -m http.server 8080` 能访问
 - [ ] GitHub Actions `build-web` + `deploy-web` job 绿灯
-- [ ] https://dll.github.io/mad-fd/ 能打开
+- [ ] https://dll.github.io/mad-kgdt/ 能打开
 - [ ] `web/index.html` + `web/manifest.json` 版本号对齐

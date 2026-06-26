@@ -8,8 +8,8 @@
 | 版本 | v0.12.0 |
 | 状态 | 已上线（教学使用中） |
 | 平台 | Android / Windows / Web / HarmonyOS |
-| 仓库 | https://gitee.com/osgisOne/mad-fd |
-| Web 公网 | https://dll.github.io/mad-fd/ |
+| 仓库 | https://gitee.com/chzcldl/mad-kgdt |
+| Web 公网 | https://dll.github.io/mad-kgdt/ |
 | 维护者 | ldl @ 教育部高校 IT 课程组 |
 
 ---

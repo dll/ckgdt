@@ -64,7 +64,8 @@ class _CasesPageState extends State<CasesPage> {
                 labelText: '项目名称（如：TingChengGIS）', isDense: true)),
             const SizedBox(height: 8),
             TextField(controller: pathCtrl, decoration: const InputDecoration(
-                labelText: '项目路径（如：D:\\development\\TingChengGIS）', isDense: true)),
+                labelText: '演示程序路径（.exe）', isDense: true,
+                hintText: '如：D:\\projects\\Demo.exe')),
             const SizedBox(height: 8),
             TextField(controller: descCtrl, maxLines: 2, decoration: const InputDecoration(
                 labelText: '描述', isDense: true)),
@@ -231,9 +232,9 @@ class _CasesPageState extends State<CasesPage> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(dirExists ? Icons.check_circle : Icons.error,
-                            size: 14, color: dirExists ? Colors.green : Colors.red),
+                            size: 14, color: dirExists ? const Color(0xFF4CAF50) : Colors.red),
                         const SizedBox(width: 4),
-                        Text(dirExists ? '项目已就绪' : '路径不存在',
+                        Text(dirExists ? '就绪' : '文件不存在',
                             style: TextStyle(
                                 fontSize: 12,
                                 color: dirExists ? Colors.green.shade700 : Colors.red.shade700)),
@@ -241,26 +242,38 @@ class _CasesPageState extends State<CasesPage> {
                     ),
                   ),
                 const Spacer(),
-                if (path.isNotEmpty)
-                  FilledButton.tonalIcon(
-                    icon: const Icon(Icons.open_in_new, size: 16),
-                    label: const Text('打开项目'),
+                if (path.isNotEmpty && dirExists)
+                  FilledButton.icon(
+                    icon: const Icon(Icons.play_arrow, size: 18),
+                    label: const Text('启动演示'),
                     onPressed: () {
-                      Process.run('explorer', [path]);
+                      Process.run(path, [], runInShell: true);
                     },
                     style: FilledButton.styleFrom(
                       visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    ),
+                  ),
+                if (path.isNotEmpty && !dirExists)
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.folder_open, size: 16),
+                    label: const Text('定位文件'),
+                    onPressed: () {
+                      final dir = File(path).parent.path;
+                      if (Directory(dir).existsSync()) {
+                        Process.run('explorer', ['/select,', path]);
+                      }
+                    },
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
                     ),
                   ),
                 if (repoUrl != null && repoUrl.isNotEmpty) ...[
                   const SizedBox(width: 8),
                   IconButton(
                     icon: const Icon(Icons.link, size: 20),
-                    tooltip: '打开仓库',
-                    onPressed: () {
-                      Process.run('start', [repoUrl]);
-                    },
+                    tooltip: '仓库地址',
+                    onPressed: () => Process.run('start', [repoUrl]),
                   ),
                 ],
               ],

@@ -30,9 +30,9 @@
 
 ## 4. 相关网址
 
-- 开源仓库（Gitee 主）：https://gitee.com/osgisOne/mad-fd
-- 开源仓库（GitHub 镜像）：https://github.com/dll/mad-fd
-- Web 在线体验：https://dll.github.io/mad-fd/
+- 开源仓库（Gitee 主）：https://gitee.com/chzcldl/mad-kgdt
+- 开源仓库（GitHub 镜像）：https://github.com/dll/mad-kgdt
+- Web 在线体验：https://dll.github.io/mad-kgdt/
 
 ## 5. 配套资源
 

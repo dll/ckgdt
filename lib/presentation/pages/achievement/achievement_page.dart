@@ -89,7 +89,7 @@ class _AchievementPageState extends State<AchievementPage>
 
   /// GitHub Release 视频下载地址
   static const _videoDownloadUrl =
-      'https://github.com/dll/mad-fd/releases/download/video-assets/default.mp4';
+      'https://github.com/dll/mad-kgdt/releases/download/video-assets/default.mp4';
 
   Future<void> _refreshVisibleTabs() async {
     try {

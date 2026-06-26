@@ -40,7 +40,7 @@ class UpdateInfo {
 
 /// 自动更新服务 — 检查 GitHub Release、下载、安装
 ///
-/// 仓库：https://github.com/dll/mad-fd
+/// 仓库：https://github.com/dll/mad-kgdt
 /// API：GitHub Releases API v3
 class UpdateService {
   static final UpdateService _instance = UpdateService._internal();
@@ -48,7 +48,7 @@ class UpdateService {
   UpdateService._internal();
 
   static const String _githubOwner = 'dll';
-  static const String _githubRepo = 'mad-fd';
+  static const String _githubRepo = 'mad-kgdt';
   static const String _prefLastCheckKey = 'update_last_check_date';
   static const String _prefIgnoredVersionKey = 'update_ignored_version';
 

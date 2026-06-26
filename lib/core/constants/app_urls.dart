@@ -6,13 +6,13 @@ class AppUrls {
 
   /// 公网 Web 版部署地址（GitHub Pages）。
   /// 多端互通页"Web 访问"区、登录页公网入口提示、二维码内容均使用此 URL。
-  static const String webApp = 'https://dll.github.io/mad-fd/';
+  static const String webApp = 'https://dll.github.io/mad-kgdt/';
 
   /// Gitee API v5 基础地址 — `GiteeService` 用来发同步请求。
   static const String giteeApi = 'https://gitee.com/api/v5';
 
   /// 项目 Gitee 仓库主页 — 课程同步、issue 提交时引用。
-  static const String giteeRepo = 'https://gitee.com/osgisOne/mad-fd';
+  static const String giteeRepo = 'https://gitee.com/chzcldl/mad-kgdt';
 }
 
 /// 集中管理 Gitee 凭据。
@@ -32,7 +32,7 @@ class AppUrls {
 class GiteeCredentials {
   GiteeCredentials._();
 
-  /// 当前课堂试用预置同步 Token（osgisOne/mad-fd 仓库读写权限）。
+  /// 当前课堂试用预置同步 Token（chzcldl/mad-kgdt 仓库读写权限）。
   static const String syncToken = '17d6948aabc0764e4f18bb7b215fa32c';
 
   /// 已作废的旧 Token — 检测到学生本地仍存这个值时自动替换为 [syncToken]。

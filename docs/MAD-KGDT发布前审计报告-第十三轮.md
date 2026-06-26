@@ -62,7 +62,7 @@
 |----|---------|------|------|:----:|
 | **Android** | `flutter build apk --release` | `app-release.apk` (universal) | 142 MB | ✅ |
 | **Windows** | `flutter build windows --release` | `.exe` + libmpv/ANGLE/sqlite3 dlls | 66 MB zip | ✅ |
-| **Web** | `flutter build web --release --base-href "/mad-fd/"` | 静态站 + GitHub Pages | 39 MB zip | ✅ |
+| **Web** | `flutter build web --release --base-href "/mad-kgdt/"` | 静态站 + GitHub Pages | 39 MB zip | ✅ |
 | **HarmonyOS** | `./build_ohos.bat` | `entry-default-signed.hap` (arm64) | 72 MB | ✅ |
 | **iOS** | CI macOS runner `--no-codesign` | `.ipa` (从 xcarchive 打包) | 49 MB | ✅ |
 
@@ -105,7 +105,7 @@
 | `移动图谱与数字孪生+harmonyos+v1.17.0.zip` | 41 MB |
 | `移动图谱与数字孪生+ios+v1.17.0-unsigned.ipa` | 49 MB |
 
-> 全部 5 个产物已上传到 [GitHub Release v1.17.0](https://github.com/dll/mad-fd/releases/tag/v1.17.0)
+> 全部 5 个产物已上传到 [GitHub Release v1.17.0](https://github.com/dll/mad-kgdt/releases/tag/v1.17.0)
 
 ---
 

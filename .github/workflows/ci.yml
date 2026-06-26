@@ -90,8 +90,8 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - name: Build web with /mad-fd/ base
-        run: flutter build web --release --base-href "/mad-fd/"
+      - name: Build web with /mad-kgdt/ base
+        run: flutter build web --release --base-href "/mad-kgdt/"
       - uses: actions/upload-artifact@v4
         with:
           name: web-build

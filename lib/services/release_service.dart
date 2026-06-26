@@ -75,7 +75,7 @@ class ReleaseService {
         ReleaseStep(id: 'bump', label: '升版（自动 +patch 重发）'),
         ReleaseStep(id: 'check_windows', label: '检查 Windows 构建产物'),
         ReleaseStep(id: 'build_android', label: '构建 Android (apk)'),
-        ReleaseStep(id: 'build_web', label: '构建 Web (--base-href /mad-fd/)'),
+        ReleaseStep(id: 'build_web', label: '构建 Web (--base-href /mad-kgdt/)'),
         ReleaseStep(id: 'build_ohos', label: '构建 HarmonyOS (hap)'),
         ReleaseStep(id: 'pack_zips', label: '打包 4 端 zip + ASCII alias'),
         ReleaseStep(id: 'git_push', label: 'git 提交 + tag + 双推'),
@@ -306,11 +306,11 @@ class ReleaseService {
   }
 
   Future<void> _stepBuildWeb() async {
-    // base-href 必须 /mad-fd/ 且斜杠尾，否则 GitHub Pages 资源 404。
+    // base-href 必须 /mad-kgdt/ 且斜杠尾，否则 GitHub Pages 资源 404。
     // bash 的 MSYS 不需要在这里管——Process.start 直接调 flutter，不经 shell 转换。
     await _runShell(
       'flutter',
-      ['build', 'web', '--release', '--base-href', '/mad-fd/'],
+      ['build', 'web', '--release', '--base-href', '/mad-kgdt/'],
       tag: 'build:web',
       timeout: const Duration(minutes: 10),
     );
@@ -677,14 +677,14 @@ class ReleaseService {
         'commit',
         '-q',
         '-m',
-        'deploy: web v$ver base=/mad-fd/',
+        'deploy: web v$ver base=/mad-kgdt/',
       ],
       tag: 'ghpages',
       cwd: deployDir.path,
     );
     await _runShell(
       'git',
-      ['remote', 'add', 'origin', 'git@github.com:dll/mad-fd.git'],
+      ['remote', 'add', 'origin', 'git@github.com:dll/mad-kgdt.git'],
       tag: 'ghpages',
       cwd: deployDir.path,
     );
@@ -976,7 +976,7 @@ $_brand — Web 启动说明
 ========================================
 版本：v$ver
 
-本目录是 Flutter Web 编译产物（base href: /mad-fd/），需要本地 HTTP 服务器才能访问：
+本目录是 Flutter Web 编译产物（base href: /mad-kgdt/），需要本地 HTTP 服务器才能访问：
 
 方法 1（Python，推荐）：
   cd 本目录
@@ -989,7 +989,7 @@ $_brand — Web 启动说明
   浏览器访问 http://localhost:8080/
 
 方法 3（在线访问）：
-  https://dll.github.io/mad-fd/
+  https://dll.github.io/mad-kgdt/
 
 $defaults
 ''';
@@ -1041,7 +1041,7 @@ $defaults
 
 ## Web 在线访问
 
-部署在 GitHub Pages：https://dll.github.io/mad-fd/
+部署在 GitHub Pages：https://dll.github.io/mad-kgdt/
 ''';
   }
 

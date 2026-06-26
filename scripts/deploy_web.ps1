@@ -1,7 +1,7 @@
 # deploy_web.ps1 — Build Flutter Web + patch renderer + push gh-pages
 param(
   [string]$Version = "v1.16.0",
-  [string]$BaseHref = "/mad-fd/"
+  [string]$BaseHref = "/mad-kgdt/"
 )
 
 $ErrorActionPreference = "Stop"
@@ -28,7 +28,7 @@ git -C $DeployDir add -A
 git -C $DeployDir -c user.email="ldl@github" -c user.name="ldl" `
   commit -q -m "deploy: web $Version base=$BaseHref renderer=html"
 
-git -C $DeployDir remote add origin git@github.com:dll/mad-fd.git
+git -C $DeployDir remote add origin git@github.com:dll/mad-kgdt.git
 git -C $DeployDir push -u --force origin gh-pages
 
 Write-Host "=== Clean up ==="
