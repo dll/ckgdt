@@ -7,19 +7,38 @@ class CaseDao {
 
   Future<void> _ensureTable() async {
     final db = await DatabaseHelper.instance.database;
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS teaching_cases(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        course_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        full_name TEXT,
-        description TEXT,
-        project_path TEXT,
-        repo_url TEXT,
-        created_at TEXT,
-        updated_at TEXT
-      )
-    ''');
+    try {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS teaching_cases(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          course_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          full_name TEXT,
+          description TEXT,
+          project_path TEXT,
+          repo_url TEXT,
+          created_at TEXT,
+          updated_at TEXT
+        )
+      ''');
+      // 验证表已创建
+      await db.rawQuery('SELECT 1 FROM teaching_cases LIMIT 0');
+    } catch (e) {
+      // 如果上面的快速验证失败，用完整SQL再试一次
+      await db.execute(
+        'CREATE TABLE teaching_cases('
+        'id INTEGER PRIMARY KEY AUTOINCREMENT,'
+        'course_id TEXT NOT NULL,'
+        'name TEXT NOT NULL,'
+        'full_name TEXT,'
+        'description TEXT,'
+        'project_path TEXT,'
+        'repo_url TEXT,'
+        'created_at TEXT,'
+        'updated_at TEXT'
+        ')',
+      );
+    }
   }
 
   /// 获取当前课程的教学案例列表
