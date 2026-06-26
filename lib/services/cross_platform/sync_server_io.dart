@@ -429,13 +429,13 @@ class SyncServerImpl {
     var filePath = request.uri.path;
     if (filePath == '/') filePath = '/index.html';
 
-    // build/web 是用 --base-href "/mad-kgdt/" 构建的（GitHub Pages 子路径），
-    // index.html 内的所有资源引用形如 /mad-kgdt/flutter_bootstrap.js。
-    // 当用户在 LAN 模式访问 http://<ip>:8765/mad-kgdt/... 时，把这个前缀剥掉，
-    // 让 /mad-kgdt/foo.js 与 /foo.js 都映射到同一份文件。
-    if (filePath.startsWith('/mad-kgdt/')) {
-      filePath = filePath.substring('/mad-fd'.length); // 保留前导 /
-    } else if (filePath == '/mad-fd') {
+    // build/web 是用 --base-href "/ckgdt/" 构建的（GitHub Pages 子路径），
+    // index.html 内的所有资源引用形如 /ckgdt/flutter_bootstrap.js。
+    // 当用户在 LAN 模式访问 http://<ip>:8765/ckgdt/... 时，把这个前缀剥掉，
+    // 让 /ckgdt/foo.js 与 /foo.js 都映射到同一份文件。
+    if (filePath.startsWith('/ckgdt/')) {
+      filePath = filePath.substring('/ckgdt'.length); // 保留前导 /
+    } else if (filePath == '/ckgdt') {
       filePath = '/index.html';
     }
 

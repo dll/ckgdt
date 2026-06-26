@@ -6,7 +6,7 @@ class AppUrls {
 
   /// 公网 Web 版部署地址（GitHub Pages）。
   /// 多端互通页"Web 访问"区、登录页公网入口提示、二维码内容均使用此 URL。
-  static const String webApp = 'https://dll.github.io/mad-kgdt/';
+  static const String webApp = 'https://dll.github.io/ckgdt/';
 
   /// Gitee API v5 基础地址 — `GiteeService` 用来发同步请求。
   static const String giteeApi = 'https://gitee.com/api/v5';

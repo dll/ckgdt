@@ -521,7 +521,7 @@ def render_demo_slide(slide: SlideSpec, idx: int, total: int) -> Image.Image:
             # License + URLs
             draw.text((RSTART + 30, CBOT - 70), "MIT License", font=_font(24, True), fill=GREEN)
             draw.text((RSTART + 30, CBOT - 40), "gitee.com/osgisOne/mad-fd", font=FK, fill=TEXT_MUTE)
-            draw.text((RSTART + 360, CBOT - 40), "github.com/dll/mad-fd", font=FK, fill=TEXT_MUTE)
+            draw.text((RSTART + 360, CBOT - 40), "github.com/dll/ckgdt", font=FK, fill=TEXT_MUTE)
 
     # ── subtitle area placeholder ─────────────────────────────────────────
     draw.rectangle((0, CONTENT_H, W, H), fill=SUB_BG)
@@ -616,7 +616,7 @@ SEGMENTS = [
                 bullets=[
                     "Windows：55MB EXE，libmpv 视频解码，noir 设计主题",
                     "Android：35MB APK，minSdk 21，arm64-v8a + armeabi-v7a",
-                    "Web：10MB 静态站，base-href /mad-fd/ 适配 GitHub Pages",
+                    "Web：10MB 静态站，base-href /ckgdt/ 适配 GitHub Pages",
                     "HarmonyOS：64MB HAP，OpenHarmony 调试签名，arm64-v8a 真机",
                 ],
                 narration="四个平台的构建产物均已优化到最小体积。"
@@ -1043,8 +1043,8 @@ SEGMENTS = [
                 subtitle="MIT License · Gitee + GitHub 双平台",
                 bullets=[
                     "Gitee: gitee.com/osgisOne/mad-fd   (主仓库)",
-                    "GitHub: github.com/dll/mad-fd   (镜像)",
-                    "Web 在线: dll.github.io/mad-fd",
+                    "GitHub: github.com/dll/ckgdt   (镜像)",
+                    "Web 在线: dll.github.io/ckgdt",
                     "6 轮 AI 自审，评分 4.4/5，完整 audit 报告公开",
                 ],
                 narration="项目采用MIT开源协议，在Gitee和GitHub双平台维护。"

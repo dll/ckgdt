@@ -4,7 +4,7 @@
 
 **课程知识图谱与数字孪生平台（CKGDT）** 是面向多课程的 Flutter 全平台教学平台。系统围绕"教—学—练—评—管"五个维度构建：知识图谱浏览、章节测验、视频教程、课程资料、实验管理、作品展示、成绩达成、AI 多智能体辅助。支持教师端和学生端差异化导航，通过 Gitee 仓库实现师生数据双向同步。
 
-- **代码仓库**：Gitee `https://gitee.com/chzcldl/mad-kgdt`（主） · GitHub `dll/mad-fd`（镜像 + gh-pages + Release）
+- **代码仓库**：Gitee `https://gitee.com/chzcldl/mad-kgdt`（主） · GitHub `dll/ckgdt`（镜像 + gh-pages + Release）
 - **数据仓库**：`chzcldl/mad-data`（课程资源/通知） · 学生项目组仓库 `chzuczldl/cg*-*`（**详见 `docs/项目仓库设计.md`**）
 - **当前版本**：`2.1.0`（`pubspec.yaml` → `version: 2.1.0+1`）
 - **Flutter SDK**：`>=3.0.0 <4.0.0`
@@ -591,7 +591,7 @@ flutter build windows --release
 
 # Web — 必须带 base href 适配 GitHub Pages 子路径，否则资源 404。
 # bash 下需要 MSYS_NO_PATHCONV=1 防止路径转换。
-MSYS_NO_PATHCONV=1 flutter build web --release --base-href "/mad-fd/"
+MSYS_NO_PATHCONV=1 flutter build web --release --base-href "/ckgdt/"
 # ⚠ 构建完成后必须改 renderer canvaskit → html（见"Web 空白"坑）
 powershell -Command "(Get-Content build/web/flutter_bootstrap.js -Raw) -replace '\"renderer\":\"canvaskit\"', '\"renderer\":\"html\"' | Set-Content build/web/flutter_bootstrap.js"
 ```
@@ -602,13 +602,13 @@ powershell -Command "(Get-Content build/web/flutter_bootstrap.js -Raw) -replace 
 |------|------|------|
 | Android | `build/app/outputs/flutter-apk/app-release.apk` | 默认（不可改）|
 | Windows | `build/windows/x64/runner/Release/CKGDTv{版本}.exe` | 由 `BINARY_OUTPUT_NAME` 控制 |
-| Web | `build/web/`（base=`/mad-fd/`）| 静态站 |
+| Web | `build/web/`（base=`/ckgdt/`）| 静态站 |
 
 ### Web 公网部署（GitHub Pages）
 
-仓库：`git@github.com:dll/mad-fd.git`，部署分支：`gh-pages`，访问地址：`https://dll.github.io/mad-fd/`
+仓库：`git@github.com:dll/ckgdt.git`，部署分支：`gh-pages`，访问地址：`https://dll.github.io/ckgdt/`
 
-**每次 `flutter build web --base-href "/mad-fd/"` 完成后，按以下流程推送 gh-pages**（不动 master）：
+**每次 `flutter build web --base-href "/ckgdt/"` 完成后，按以下流程推送 gh-pages**（不动 master）：
 
 ```bash
 # 1. 用独立目录组装（避免污染主仓库 .git）
@@ -620,17 +620,17 @@ git -C build/_gh-pages-deploy init -q -b gh-pages
 git -C build/_gh-pages-deploy config core.longpaths true
 git -C build/_gh-pages-deploy add -A
 git -C build/_gh-pages-deploy -c user.email="ldl@github" -c user.name="ldl" \
-    commit -q -m "deploy: web v{版本} base=/mad-fd/"
+    commit -q -m "deploy: web v{版本} base=/ckgdt/"
 
 # 3. 推送（首次新分支用普通 push，后续覆盖用 --force）
-git -C build/_gh-pages-deploy remote add origin git@github.com:dll/mad-fd.git
+git -C build/_gh-pages-deploy remote add origin git@github.com:dll/ckgdt.git
 git -C build/_gh-pages-deploy push -u --force origin gh-pages
 
 # 4. 清理（占用解除后）
 rm -rf build/_gh-pages-deploy
 ```
 
-> **注意**：base href = `/mad-fd/`（带斜杠尾），**不能写 `/mad-fd`**，否则资源加载 404。
+> **注意**：base href = `/ckgdt/`（带斜杠尾），**不能写 `/ckgdt`**，否则资源加载 404。
 > Gitee 仓库的 `gh-pages` 分支也保留着但 Gitee 个人版没 Pages 服务，不部署。
 
 ### 升版三件套（每次升 minor 或 major）
@@ -737,13 +737,13 @@ cd /d/FlutterProjects/knowledge_graph_app
 ```bash
 # Gitee 主仓（已配置为 origin）
 git remote -v
-# origin  https://...@gitee.com/osgisOne/mad-fd.git (push)
+# origin  https://...@gitee.com/chzcldl/mad-kgdt.git (push)
 
 # 添加 GitHub 镜像（一次性，配完之后不动）
-git remote add github git@github.com:dll/mad-fd.git
+git remote add github git@github.com:dll/ckgdt.git
 git remote -v
-# origin  https://...@gitee.com/osgisOne/mad-fd.git (push)
-# github  git@github.com:dll/mad-fd.git (push)
+# origin  https://...@gitee.com/chzcldl/mad-kgdt.git (push)
+# github  git@github.com:dll/ckgdt.git (push)
 ```
 
 ### 打 tag 与双推
@@ -767,7 +767,7 @@ git push github v0.13.1
 
 ```bash
 gh release create v0.13.1 \
-  --repo dll/mad-fd \
+  --repo dll/ckgdt \
   --title "v0.13.1 — 修测验空题真凶 + 统一版本号" \
   --notes-file dist/RELEASE_NOTES_v0.13.1.md \
   dist/CKGDT+windows+v0.13.1.zip \
@@ -808,7 +808,7 @@ python scripts/gitee_upload_assets.py
 - [ ] 当前 master 已 commit + push 到 origin
 - [ ] tag 推到两个 remote（`origin` + `github`）
 - [ ] 两个仓库都创建了 Release + 上传 7 个资产
-- [ ] gh-pages 重新部署了新构建（`base-href "/mad-fd/"`）
+- [ ] gh-pages 重新部署了新构建（`base-href "/ckgdt/"`）
 
 > **历史教训**：`dist/` 不入库（gitignore 不动），release 资产走平台 Release API；这样仓库 master 历史不会因为二进制膨胀。
 
