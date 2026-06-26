@@ -91,14 +91,14 @@ Widget objectiveRadarChart(List<double> values, Color color,
         radarShape: RadarShape.polygon,
         tickCount: 4,
         ticksTextStyle: const TextStyle(fontSize: 0, color: Colors.transparent),
-        radarBorderData: BorderSide(color: Colors.grey.withValues(alpha: 0.3)),
-        gridBorderData: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
-        tickBorderData: BorderSide(color: Colors.grey.withValues(alpha: 0.15)),
+        radarBorderData: BorderSide(color: Colors.grey.withOpacity(0.3)),
+        gridBorderData: BorderSide(color: Colors.grey.withOpacity(0.2)),
+        tickBorderData: BorderSide(color: Colors.grey.withOpacity(0.15)),
         titlePositionPercentageOffset: 0.15,
         getTitle: (index, angle) => RadarChartTitle(text: '目标${index + 1}'),
         dataSets: [
           RadarDataSet(
-            fillColor: color.withValues(alpha: 0.2),
+            fillColor: color.withOpacity(0.2),
             borderColor: color,
             borderWidth: 2,
             entryRadius: 3,
@@ -235,7 +235,7 @@ Widget achievementScoreTable(
   final cs = Theme.of(context).colorScheme;
   final onSurface = cs.onSurface;
   final surface = cs.surface;
-  final hairline = cs.outline.withValues(alpha: 0.4);
+  final hairline = cs.outline.withOpacity(0.4);
   final primary = cs.primary;
 
   final headerStyle = TextStyle(
@@ -246,7 +246,7 @@ Widget achievementScoreTable(
   );
   final cellStyle = TextStyle(
     fontSize: 13,
-    color: onSurface.withValues(alpha: 0.85),
+    color: onSurface.withOpacity(0.85),
     fontFeatures: const [FontFeature.tabularFigures()],
   );
 
@@ -269,7 +269,7 @@ Widget achievementScoreTable(
         idW + nameW + colW * columns.length + (onEdit != null ? opW : 0);
 
     final header = Container(
-      color: primary.withValues(alpha: 0.06),
+      color: primary.withOpacity(0.06),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Row(children: [
         SizedBox(
@@ -299,11 +299,11 @@ Widget achievementScoreTable(
       shrinkWrap: true,
       itemCount: rows.length,
       separatorBuilder: (_, __) =>
-          Divider(height: 1, color: hairline.withValues(alpha: 0.5)),
+          Divider(height: 1, color: hairline.withOpacity(0.5)),
       itemBuilder: (context, index) {
         final r = rows[index];
         return Container(
-          color: index.isEven ? surface : primary.withValues(alpha: 0.025),
+          color: index.isEven ? surface : primary.withOpacity(0.025),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
           child: Row(children: [
             SizedBox(

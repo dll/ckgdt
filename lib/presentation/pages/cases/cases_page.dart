@@ -1,178 +1,280 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/material.dart';
-import '../../../core/design/noir_tokens.dart';
-import '../../../core/design/noir_components.dart';
-import '../../widgets/noir_page_shell.dart';
+import '../../../data/local/case_dao.dart';
+import '../../../services/achievement_context.dart';
 import '../../../core/error_handler.dart';
+import '../../widgets/noir_page_shell.dart';
 
-const _projectRoot = r'D:\development\TingChengGIS';
+/// 教学案例页 — 展示当前课程的教师演示项目（课程隔离）
+class CasesPage extends StatefulWidget {
+  const CasesPage({super.key});
 
-const _subsystems = [
-  _Subsystem('g1-textgis', '文本 GIS', '文本分析与地理信息系统结合', Icons.text_fields),
-  _Subsystem('g2-audiogis', '音频 GIS', '音频采集与地理信息处理', Icons.headphones),
-  _Subsystem('g3-videogis', '视频 GIS', '视频数据与空间信息融合', Icons.videocam),
-  _Subsystem('g4-virtualgis', '虚拟 GIS', '虚拟现实与 GIS 交互', Icons.view_in_ar),
-  _Subsystem('g5-mixedgis', '混合 GIS', '多模态数据混合处理', Icons.blend),
-  _Subsystem('g6-aigis', 'AI GIS', 'AI 驱动的智能地理信息系统', Icons.psychology),
-  _Subsystem('g7-opsgis', '运维 GIS', '系统运维与基础设施监控', Icons.dns),
-  _Subsystem('g8-portalgis', '门户 GIS', '统一门户与数据可视化', Icons.dashboard),
-];
-
-class _Subsystem {
-  final String dirName;
-  final String name;
-  final String description;
-  final IconData icon;
-  const _Subsystem(this.dirName, this.name, this.description, this.icon);
+  @override
+  State<CasesPage> createState() => _CasesPageState();
 }
 
-class CasesPage extends StatelessWidget {
-  const CasesPage({super.key});
+class _CasesPageState extends State<CasesPage> {
+  final CaseDao _caseDao = CaseDao();
+  List<Map<String, dynamic>> _cases = [];
+  bool _loading = true;
+  String _courseName = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCases();
+    AchievementContext.instance.courseNameNotifier.addListener(_onCourseChanged);
+  }
+
+  @override
+  void dispose() {
+    AchievementContext.instance.courseNameNotifier.removeListener(_onCourseChanged);
+    super.dispose();
+  }
+
+  void _onCourseChanged() {
+    _loadCases();
+  }
+
+  Future<void> _loadCases() async {
+    setState(() => _loading = true);
+    try {
+      _courseName = AchievementContext.instance.courseName;
+      _cases = await _caseDao.getCases();
+    } catch (e, st) {
+      swallowDebug(e, tag: 'CasesPage.loadCases', stack: st);
+      _cases = [];
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _addCase() async {
+    final nameCtrl = TextEditingController();
+    final pathCtrl = TextEditingController();
+    final descCtrl = TextEditingController();
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('添加教学案例'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: nameCtrl, decoration: const InputDecoration(
+                labelText: '项目名称（如：TingChengGIS）', isDense: true)),
+            const SizedBox(height: 8),
+            TextField(controller: pathCtrl, decoration: const InputDecoration(
+                labelText: '项目路径（如：D:\\development\\TingChengGIS）', isDense: true)),
+            const SizedBox(height: 8),
+            TextField(controller: descCtrl, maxLines: 2, decoration: const InputDecoration(
+                labelText: '描述', isDense: true)),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, {
+            'name': nameCtrl.text.trim(),
+            'path': pathCtrl.text.trim(),
+            'desc': descCtrl.text.trim(),
+          }), child: const Text('添加')),
+        ],
+      ),
+    );
+    if (result == null || result['name']?.isEmpty == true) return;
+    try {
+      await _caseDao.addCase(
+        name: result['name']!,
+        projectPath: result['path'],
+        description: result['desc'],
+      );
+      await _loadCases();
+    } catch (e, st) {
+      swallowDebug(e, tag: 'CasesPage.addCase', stack: st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('添加失败: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteCase(int id) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除案例'),
+        content: const Text('确定删除此教学案例吗？'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('删除')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await _caseDao.deleteCase(id);
+    await _loadCases();
+  }
 
   @override
   Widget build(BuildContext context) {
     return NoirPageShell(
       title: '教学案例',
       eyebrow: 'TEACHING CASES',
-      body: _buildBody(context),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _cases.isEmpty
+              ? _buildEmpty()
+              : _buildCaseList(),
     );
   }
 
-  Widget _buildBody(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(4, 22, 4, 28),
+  Widget _buildEmpty() {
+    return Center(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          _buildProjectHeader(context),
-          const SizedBox(height: 26),
-          NoirSectionTitle(
-            eyebrow: 'SUBSYSTEMS',
-            title: '子系统列表',
-            subtitle: '${_subsystems.length} 个子系统 · 均实现三大国产 AI 模型',
-            margin: EdgeInsets.zero,
-          ),
-          const SizedBox(height: NoirTokens.spaceMd),
-          ..._subsystems.map((s) => _buildSubsystemCard(context, s)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProjectHeader(BuildContext context) {
-    final dir = Directory(_projectRoot);
-    final exists = dir.existsSync();
-    return NoirCard(
-      padding: const EdgeInsets.all(NoirTokens.spaceLg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.folder_open, color: NoirTokens.accent, size: 20),
-              const SizedBox(width: 10),
-              Text('TingChengGIS', style: NoirTokens.title(color: NoirTokens.accent)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Container(width: 36, height: 2, color: NoirTokens.accent),
-          const SizedBox(height: 12),
+          Icon(Icons.folder_open, size: 64,
+              color: Colors.grey.shade500),
+          const SizedBox(height: 16),
           Text(
-            _projectRoot,
-            style: NoirTokens.body(color: NoirTokens.ink.withValues(alpha: 0.7)),
+            _courseName.isEmpty
+                ? '暂无教学案例'
+                : '「$_courseName」暂无教学案例',
+            style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Icon(
-                exists ? Icons.check_circle : Icons.warning,
-                size: 14,
-                color: exists ? NoirTokens.success : NoirTokens.danger,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                exists ? '项目目录存在' : '项目目录不可用',
-                style: NoirTokens.muted(size: 11),
-              ),
-              const Spacer(),
-              NoirButton(
-                label: '打开文件夹',
-                icon: Icons.open_in_new,
-                onPressed: exists
-                    ? () => _openInExplorer(_projectRoot, context)
-                    : null,
-                variant: NoirButtonVariant.accent,
-                height: 36,
-              ),
-            ],
+          const SizedBox(height: 16),
+          FilledButton.tonalIcon(
+            icon: const Icon(Icons.add),
+            label: const Text('添加教学案例'),
+            onPressed: _addCase,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSubsystemCard(BuildContext context, _Subsystem sub) {
-    final dir = Directory('$_projectRoot\\${sub.dirName}');
-    final exists = dir.existsSync();
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: NoirCard(
-        padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
-        onTap: exists ? () => _openInExplorer('$_projectRoot\\${sub.dirName}', context) : null,
-        child: Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: NoirTokens.inkAlpha(0.06),
-                borderRadius: BorderRadius.circular(NoirTokens.radius),
-              ),
-              child: Icon(sub.icon, size: 20, color: NoirTokens.ink),
+  Widget _buildCaseList() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _cases.length + 1, // +1 for add button
+      itemBuilder: (ctx, i) {
+        if (i == _cases.length) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.add),
+              label: const Text('添加教学案例'),
+              onPressed: _addCase,
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(sub.name, style: NoirTokens.title()),
-                  const SizedBox(height: 2),
-                  Text(
-                    sub.description,
-                    style: NoirTokens.muted(),
+          );
+        }
+        return _buildCaseCard(_cases[i]);
+      },
+    );
+  }
+
+  Widget _buildCaseCard(Map<String, dynamic> c) {
+    final name = c['name'] ?? '';
+    final fullName = c['full_name']?.toString();
+    final desc = c['description']?.toString();
+    final path = c['project_path']?.toString() ?? '';
+    final repoUrl = c['repo_url']?.toString();
+    final dirExists = path.isNotEmpty && Directory(path).existsSync();
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(dirExists ? Icons.folder : Icons.folder_off,
+                    color: dirExists ? const Color(0xFF4CAF50) : Colors.grey, size: 28),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(name,
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      if (fullName != null && fullName.isNotEmpty)
+                        Text(fullName,
+                            style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+                    ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    sub.dirName,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: NoirTokens.ink.withValues(alpha: 0.35),
-                      fontFamily: 'monospace',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, size: 20),
+                  color: Colors.red.shade400,
+                  tooltip: '删除',
+                  onPressed: () => _deleteCase(c['id'] as int),
+                ),
+              ],
+            ),
+            if (desc != null && desc.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(desc, style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+            ],
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                if (path.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: dirExists ? Colors.green.shade50 : Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(dirExists ? Icons.check_circle : Icons.error,
+                            size: 14, color: dirExists ? Colors.green : Colors.red),
+                        const SizedBox(width: 4),
+                        Text(dirExists ? '项目已就绪' : '路径不存在',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: dirExists ? Colors.green.shade700 : Colors.red.shade700)),
+                      ],
                     ),
                   ),
+                const Spacer(),
+                if (path.isNotEmpty)
+                  FilledButton.tonalIcon(
+                    icon: const Icon(Icons.open_in_new, size: 16),
+                    label: const Text('打开项目'),
+                    onPressed: () {
+                      Process.run('explorer', [path]);
+                    },
+                    style: FilledButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                  ),
+                if (repoUrl != null && repoUrl.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.link, size: 20),
+                    tooltip: '打开仓库',
+                    onPressed: () {
+                      Process.run('start', [repoUrl]);
+                    },
+                  ),
                 ],
-              ),
+              ],
             ),
-            if (exists)
-              Icon(Icons.chevron_right, color: NoirTokens.ink.withValues(alpha: 0.25))
-            else
-              Icon(Icons.folder_off, size: 16, color: NoirTokens.danger),
+            if (path.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(path,
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500,
+                        fontFamily: 'monospace')),
+              ),
           ],
         ),
       ),
     );
-  }
-
-  void _openInExplorer(String path, BuildContext context) {
-    try {
-      Process.run('explorer', [path]);
-    } catch (e, st) {
-      swallowDebug(e, tag: 'CasesPage.openExplorer', stack: st);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('无法打开文件夹: $e')),
-        );
-      }
-    }
   }
 }

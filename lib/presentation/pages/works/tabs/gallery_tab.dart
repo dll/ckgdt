@@ -1,4 +1,4 @@
-part of '../works_page.dart';
+﻿part of '../works_page.dart';
 
 class _GalleryTab extends StatefulWidget {
   final AuthService authService;
@@ -130,7 +130,7 @@ class _GalleryTabState extends State<_GalleryTab> {
                           setState(() => _currentDim = dim);
                         },
                         showCheckmark: false,
-                        selectedColor: dim.color.withValues(alpha: 0.15),
+                        selectedColor: dim.color.withOpacity(0.15),
                         padding: EdgeInsets.zero,
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
@@ -212,7 +212,7 @@ class _GalleryTabState extends State<_GalleryTab> {
         _loadWorks();
       },
       showCheckmark: false,
-      selectedColor: primary.withValues(alpha: 0.15),
+      selectedColor: primary.withOpacity(0.15),
       padding: EdgeInsets.zero,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
@@ -282,7 +282,7 @@ class _GalleryTabState extends State<_GalleryTab> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: _currentDim.color.withValues(alpha: 0.06),
+        color: _currentDim.color.withOpacity(0.06),
         borderRadius: BorderRadius.circular(10),
         border: Border(left: BorderSide(color: _currentDim.color, width: 3)),
       ),
@@ -300,7 +300,7 @@ class _GalleryTabState extends State<_GalleryTab> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
-              color: _currentDim.color.withValues(alpha: 0.12),
+              color: _currentDim.color.withOpacity(0.12),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text('$count人',
@@ -343,14 +343,14 @@ class _GalleryTabState extends State<_GalleryTab> {
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: primary.withValues(alpha: 0.08),
+                  color: primary.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
                     Icon(Icons.play_circle_fill,
-                        color: primary.withValues(alpha: 0.6), size: 26),
+                        color: primary.withOpacity(0.6), size: 26),
                     if (duration.isNotEmpty)
                       Positioned(
                         bottom: 2,
@@ -359,7 +359,7 @@ class _GalleryTabState extends State<_GalleryTab> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 3, vertical: 1),
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.5),
+                            color: Colors.black.withOpacity(0.5),
                             borderRadius: BorderRadius.circular(3),
                           ),
                           child: Text(duration,
@@ -394,7 +394,7 @@ class _GalleryTabState extends State<_GalleryTab> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 1),
                             decoration: BoxDecoration(
-                              color: Colors.orange.withValues(alpha: 0.1),
+                              color: Colors.orange.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
@@ -497,8 +497,8 @@ class _GalleryTabState extends State<_GalleryTab> {
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              primary.withValues(alpha: 0.15),
-                              primary.withValues(alpha: 0.05),
+                              primary.withOpacity(0.15),
+                              primary.withOpacity(0.05),
                             ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
@@ -506,7 +506,7 @@ class _GalleryTabState extends State<_GalleryTab> {
                         ),
                         child: Center(
                           child: Icon(Icons.play_circle_outline,
-                              size: 52, color: primary.withValues(alpha: 0.3)),
+                              size: 52, color: primary.withOpacity(0.3)),
                         ),
                       ),
                       Center(
@@ -514,7 +514,7 @@ class _GalleryTabState extends State<_GalleryTab> {
                           width: 48,
                           height: 48,
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.5),
+                            color: Colors.black.withOpacity(0.5),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(Icons.play_arrow,
@@ -529,7 +529,7 @@ class _GalleryTabState extends State<_GalleryTab> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.7),
+                              color: Colors.black.withOpacity(0.7),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(duration,
@@ -644,7 +644,7 @@ class _GalleryTabState extends State<_GalleryTab> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: Colors.orange.withValues(alpha: 0.1),
+                                color: Colors.orange.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
@@ -683,7 +683,7 @@ class _GalleryTabState extends State<_GalleryTab> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: primary.withValues(alpha: 0.08),
+                                color: primary.withOpacity(0.08),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(

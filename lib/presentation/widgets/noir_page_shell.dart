@@ -18,7 +18,7 @@ final _vignetteDecoration = BoxDecoration(
     end: Alignment.bottomCenter,
     colors: [
       Colors.transparent,
-      NoirTokens.inkDeep.withValues(alpha: 0.55),
+      NoirTokens.inkDeep.withOpacity(0.55),
     ],
     stops: const [0.55, 1.0],
   ),

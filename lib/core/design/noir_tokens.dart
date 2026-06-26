@@ -15,8 +15,8 @@ class NoirTokens {
   static const Color success = Color(0xFF2E7D32);
   static const Color danger = Color(0xFFB71C1C);
 
-  static Color inkAlpha(double a) => ink.withValues(alpha: a);
-  static Color paperAlpha(double a) => paper.withValues(alpha: a);
+  static Color inkAlpha(double a) => ink.withOpacity(a);
+  static Color paperAlpha(double a) => paper.withOpacity(a);
 
   // ── 字距 ──────────────────────────────────────────────────────────
   static const double letterCaps = 4.0;
@@ -42,13 +42,13 @@ class NoirTokens {
   static const double spaceXxl = 48;
 
   // ── 边框/圆角 ────────────────────────────────────────────────────
-  static Color get hairline => ink.withValues(alpha: 0.10);
+  static Color get hairline => ink.withOpacity(0.10);
   static const double radius = 2.0;
 
   // ── 投影 ──────────────────────────────────────────────────────────
   static List<BoxShadow> get cardShadow => [
         BoxShadow(
-          color: inkDeep.withValues(alpha: 0.55),
+          color: inkDeep.withOpacity(0.55),
           blurRadius: 50,
           offset: const Offset(0, 24),
         ),
@@ -56,7 +56,7 @@ class NoirTokens {
 
   static List<BoxShadow> get smallShadow => [
         BoxShadow(
-          color: inkDeep.withValues(alpha: 0.18),
+          color: inkDeep.withOpacity(0.18),
           blurRadius: 18,
           offset: const Offset(0, 6),
         ),
@@ -103,7 +103,7 @@ class NoirTokens {
       );
 
   static TextStyle muted({double size = fsCaption}) => TextStyle(
-        color: ink.withValues(alpha: 0.5),
+        color: ink.withOpacity(0.5),
         fontSize: size,
         letterSpacing: 1,
       );

@@ -66,7 +66,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                  color: theme.colorScheme.onSurface.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -85,7 +85,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
             Text(
               'AI 自动生成完整课程体系：大纲、章节、题库、资源',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
               ),
               textAlign: TextAlign.center,
             ),
@@ -125,10 +125,10 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                   ),
                   borderRadius: BorderRadius.circular(12),
                   color: _parsedSyllabus != null
-                      ? Colors.green.withValues(alpha: 0.1)
+                      ? Colors.green.withOpacity(0.1)
                       : (_outlineContent != null
                           ? theme.colorScheme.primaryContainer
-                              .withValues(alpha: 0.3)
+                              .withOpacity(0.3)
                           : null),
                 ),
                 child: Row(
@@ -144,7 +144,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                           : (_outlineContent != null
                               ? theme.colorScheme.primary
                               : theme.colorScheme.onSurface
-                                  .withValues(alpha: 0.5)),
+                                  .withOpacity(0.5)),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -173,7 +173,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                               color: _parsedSyllabus != null
                                   ? Colors.green.shade600
                                   : theme.colorScheme.onSurface
-                                      .withValues(alpha: 0.5),
+                                      .withOpacity(0.5),
                             ),
                           ),
                         ],
@@ -304,7 +304,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
                               _logs[_logs.length - 1 - i],
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.onSurface
-                                    .withValues(alpha: 0.6),
+                                    .withOpacity(0.6),
                                 fontSize: 11,
                               ),
                             ),
@@ -349,9 +349,9 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.green.withValues(alpha: 0.1),
+        color: Colors.green.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+        border: Border.all(color: Colors.green.withOpacity(0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

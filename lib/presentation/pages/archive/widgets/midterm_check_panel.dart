@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../../../../data/local/archive_dao.dart';
 import '../../../../data/models/archive_document_model.dart';
@@ -227,8 +227,7 @@ class _MidtermCheckPanelState extends State<MidtermCheckPanel> {
             _checkbox('已组织期中考试或阶段考核', _examConducted,
                 (v) => setState(() => _examConducted = v)),
             const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              initialValue: _examMode,
+            DropdownButtonFormField<String>(value: _examMode,
               decoration: const InputDecoration(
                 labelText: '考核方式',
                 isDense: true,

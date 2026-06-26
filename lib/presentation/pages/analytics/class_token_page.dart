@@ -155,7 +155,7 @@ class _ClassTokenPageState extends State<ClassTokenPage> {
                   ),
                   borderData: FlBorderData(show: false),
                   gridData: FlGridData(show: true, drawVerticalLine: false,
-                      getDrawingHorizontalLine: (_) => FlLine(color: Colors.grey.withValues(alpha: 0.15), strokeWidth: 1)),
+                      getDrawingHorizontalLine: (_) => FlLine(color: Colors.grey.withOpacity(0.15), strokeWidth: 1)),
                 ),
               ),
             ),
@@ -204,7 +204,7 @@ class _ClassTokenPageState extends State<ClassTokenPage> {
             ClipRRect(
               borderRadius: BorderRadius.circular(3),
               child: LinearProgressIndicator(value: ratio, minHeight: 6,
-                  backgroundColor: primary.withValues(alpha: 0.08), valueColor: AlwaysStoppedAnimation(primary)),
+                  backgroundColor: primary.withOpacity(0.08), valueColor: AlwaysStoppedAnimation(primary)),
             ),
             const SizedBox(height: 8),
             Row(children: [

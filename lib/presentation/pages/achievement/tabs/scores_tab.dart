@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:flutter/material.dart';
@@ -768,7 +768,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
                 color: Theme.of(context)
                     .colorScheme
                     .onSurface
-                    .withValues(alpha: 0.3)),
+                    .withOpacity(0.3)),
             const SizedBox(height: 12),
             Text('暂无数据，请先从平台聚合或导入成绩',
                 style: TextStyle(
@@ -776,7 +776,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
                     color: Theme.of(context)
                         .colorScheme
                         .onSurface
-                        .withValues(alpha: 0.5))),
+                        .withOpacity(0.5))),
           ],
         ),
       );
@@ -796,7 +796,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
     );
     final cellStyle = TextStyle(
       fontSize: 13,
-      color: onSurface.withValues(alpha: 0.85),
+      color: onSurface.withOpacity(0.85),
     );
 
     return RefreshIndicator(
@@ -841,7 +841,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
                   final r = rows[index];
                   final isEven = index.isEven;
                   return Container(
-                    color: isEven ? surface : surface.withValues(alpha: 0.7),
+                    color: isEven ? surface : surface.withOpacity(0.7),
                     padding:
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Row(
@@ -1053,7 +1053,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        border: Border.all(color: primary.withValues(alpha: 0.3)),
+        border: Border.all(color: primary.withOpacity(0.3)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: DropdownButtonHideUnderline(
@@ -1145,7 +1145,7 @@ class _ScoreManagementTabState extends State<ScoreManagementTab>
     return ActionChip(
       avatar: Icon(icon, size: 16, color: color),
       label: Text(label, style: TextStyle(fontSize: 12, color: color)),
-      side: BorderSide(color: color.withValues(alpha: 0.4)),
+      side: BorderSide(color: color.withOpacity(0.4)),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       onPressed: onTap,
     );
@@ -1471,7 +1471,7 @@ class _ComponentAchievementTabState extends State<ComponentAchievementTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        border: Border.all(color: primary.withValues(alpha: 0.3)),
+        border: Border.all(color: primary.withOpacity(0.3)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: DropdownButtonHideUnderline(
@@ -1504,7 +1504,7 @@ class _ComponentAchievementTabState extends State<ComponentAchievementTab> {
     ];
     return Card(
       margin: EdgeInsets.zero,
-      color: color.withValues(alpha: 0.08),
+      color: color.withOpacity(0.08),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -1540,7 +1540,7 @@ class _ComponentAchievementTabState extends State<ComponentAchievementTab> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(_envIcon(), size: 64, color: color.withValues(alpha: 0.35)),
+          Icon(_envIcon(), size: 64, color: color.withOpacity(0.35)),
           const SizedBox(height: 16),
           Text('当前批次未设置${_envLabel()}环节',
               style: const TextStyle(color: Colors.grey)),
@@ -1652,8 +1652,7 @@ class _PingshiAchievementTabState extends State<PingshiAchievementTab> {
           child: Row(
             children: [
               Expanded(
-                child: DropdownButtonFormField<int>(
-                  initialValue: _selectedBatchId,
+                child: DropdownButtonFormField<int>(value: _selectedBatchId,
                   decoration: const InputDecoration(
                     labelText: '选择批次',
                     border: OutlineInputBorder(),
@@ -1895,8 +1894,7 @@ class _ExperimentAchievementTabState extends State<ExperimentAchievementTab> {
           child: Row(
             children: [
               Expanded(
-                child: DropdownButtonFormField<int>(
-                  initialValue: _selectedBatchId,
+                child: DropdownButtonFormField<int>(value: _selectedBatchId,
                   decoration: const InputDecoration(
                     labelText: '选择批次',
                     border: OutlineInputBorder(),
@@ -2129,8 +2127,7 @@ class _ExamAchievementTabState extends State<ExamAchievementTab> {
           child: Row(
             children: [
               Expanded(
-                child: DropdownButtonFormField<int>(
-                  initialValue: _selectedBatchId,
+                child: DropdownButtonFormField<int>(value: _selectedBatchId,
                   decoration: const InputDecoration(
                     labelText: '选择批次',
                     border: OutlineInputBorder(),
@@ -2367,7 +2364,7 @@ class _ComponentExpandTileState extends State<_ComponentExpandTile> {
                       : Theme.of(context)
                           .colorScheme
                           .surface
-                          .withValues(alpha: 0.6)),
+                          .withOpacity(0.6)),
                   cells: [
                     DataCell(Text('${r['student_id'] ?? ''}',
                         style: TextStyle(
@@ -2375,14 +2372,14 @@ class _ComponentExpandTileState extends State<_ComponentExpandTile> {
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface
-                                .withValues(alpha: 0.85)))),
+                                .withOpacity(0.85)))),
                     DataCell(Text('${r['student_name'] ?? ''}',
                         style: TextStyle(
                             fontSize: 11,
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface
-                                .withValues(alpha: 0.85)))),
+                                .withOpacity(0.85)))),
                     for (final k in widget.colKeys)
                       DataCell(Text(
                           ((r[k] as num?)?.toDouble() ?? 0).toStringAsFixed(1),
@@ -2391,7 +2388,7 @@ class _ComponentExpandTileState extends State<_ComponentExpandTile> {
                               color: Theme.of(context)
                                   .colorScheme
                                   .onSurface
-                                  .withValues(alpha: 0.85)))),
+                                  .withOpacity(0.85)))),
                   ],
                 );
               }),

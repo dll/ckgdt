@@ -23,7 +23,7 @@ class _MaskDropdownButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.deepPurple.withValues(alpha: 0.30),
+              color: Colors.deepPurple.withOpacity(0.30),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -215,7 +215,7 @@ class _MaskGridPanel extends StatelessWidget {
                                 ? [
                                     BoxShadow(
                                       color: Colors.deepPurple
-                                          .withValues(alpha: 0.25),
+                                          .withOpacity(0.25),
                                       blurRadius: 6,
                                       offset: const Offset(0, 2),
                                     ),

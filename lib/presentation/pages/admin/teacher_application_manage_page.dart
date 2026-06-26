@@ -151,7 +151,7 @@ class _TeacherApplicationManagePageState
             Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: statusColor.withValues(alpha: 0.15),
+                  backgroundColor: statusColor.withOpacity(0.15),
                   child: Icon(Icons.person, color: statusColor),
                 ),
                 const SizedBox(width: 12),
@@ -172,7 +172,7 @@ class _TeacherApplicationManagePageState
                   avatar: Icon(statusIcon, size: 16, color: statusColor),
                   label: Text(statusLabel,
                       style: TextStyle(color: statusColor, fontSize: 12)),
-                  backgroundColor: statusColor.withValues(alpha: 0.1),
+                  backgroundColor: statusColor.withOpacity(0.1),
                   side: BorderSide.none,
                   padding: EdgeInsets.zero,
                   visualDensity: VisualDensity.compact,

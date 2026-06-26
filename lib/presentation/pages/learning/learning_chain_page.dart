@@ -294,7 +294,7 @@ class _LearningChainPageState extends State<LearningChainPage>
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
-            colors: [chColor, chColor.withValues(alpha: 0.7)],
+            colors: [chColor, chColor.withOpacity(0.7)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -308,7 +308,7 @@ class _LearningChainPageState extends State<LearningChainPage>
                   width: 52,
                   height: 52,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
+                    color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(icon, color: Colors.white, size: 28),
@@ -333,7 +333,7 @@ class _LearningChainPageState extends State<LearningChainPage>
                         Text(
                           ChapterHelper.fullTitle(ch),
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.85),
+                            color: Colors.white.withOpacity(0.85),
                             fontSize: 13,
                           ),
                         ),
@@ -349,7 +349,7 @@ class _LearningChainPageState extends State<LearningChainPage>
               Text(
                 widget.description!,
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.9),
+                  color: Colors.white.withOpacity(0.9),
                   fontSize: 13,
                   height: 1.5,
                 ),
@@ -369,7 +369,7 @@ class _LearningChainPageState extends State<LearningChainPage>
                       vertical: 3,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -436,7 +436,7 @@ class _LearningChainPageState extends State<LearningChainPage>
                   child: LinearProgressIndicator(
                     value: progress,
                     minHeight: 10,
-                    backgroundColor: chColor.withValues(alpha: 0.1),
+                    backgroundColor: chColor.withOpacity(0.1),
                     valueColor: AlwaysStoppedAnimation<Color>(chColor),
                   ),
                 ),
@@ -543,7 +543,7 @@ class _LearningChainPageState extends State<LearningChainPage>
                         ? [
                             BoxShadow(
                               color: (step.isCompleted ? Colors.green : chColor)
-                                  .withValues(alpha: 0.3),
+                                  .withOpacity(0.3),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
@@ -594,7 +594,7 @@ class _LearningChainPageState extends State<LearningChainPage>
                     ? const BorderSide(color: Colors.green, width: 1.5)
                     : isActive
                         ? BorderSide(
-                            color: chColor.withValues(alpha: 0.3),
+                            color: chColor.withOpacity(0.3),
                             width: 1,
                           )
                         : BorderSide.none,
@@ -628,7 +628,7 @@ class _LearningChainPageState extends State<LearningChainPage>
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.green.withValues(alpha: 0.1),
+                              color: Colors.green.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Text(
@@ -657,7 +657,7 @@ class _LearningChainPageState extends State<LearningChainPage>
                       step.resourceInfo,
                       style: TextStyle(
                         fontSize: 12,
-                        color: chColor.withValues(alpha: 0.8),
+                        color: chColor.withOpacity(0.8),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
