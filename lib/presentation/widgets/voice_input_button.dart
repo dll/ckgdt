@@ -1,4 +1,4 @@
-﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../services/navigation_service.dart';
 import '../../services/voice_service.dart';
@@ -480,10 +480,11 @@ class _VoiceRecordDialogState extends State<_VoiceRecordDialog>
         _isListening = false;
       });
       _pulseController.stop();
-      // 持续交互模式：识别一句话就自动跳。后续在 _navigateByVoice 那侧
-      // 把 dialog 关掉并跳到目标页（不再要求用户手动点"导航"按钮）。
       if (text.trim().isNotEmpty) {
-        Navigator.of(context).maybePop(text);
+        // 关键：先强制释放 native 录音器 + WebSocket，再 pop 回登录页，
+        // 避免登录成功后跳转主页时与 HomePage 并发初始化产生原生崩溃。
+        final navigator = Navigator.of(context);
+        _voiceService.forceStop().whenComplete(() => navigator.maybePop(text));
       }
     };
     _voiceService.onError = (error) {
