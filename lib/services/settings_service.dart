@@ -12,7 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// 关闭后系统不再回退到内置语音凭据，用户需要在系统设置中自行填写。
 const bool kUseBuiltinTrialVoiceKeys = bool.fromEnvironment(
   'USE_BUILTIN_TRIAL_VOICE_KEYS',
-  defaultValue: false,
+  defaultValue: true,
 );
 
 class SettingsService {
