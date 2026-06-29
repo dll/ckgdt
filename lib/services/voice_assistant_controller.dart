@@ -169,6 +169,7 @@ class VoiceAssistantController {
 
   static const _tabKeywords = <String, String>{
     '图谱': 'graph', '知识图谱': 'graph', '知识': 'graph',
+    '案例': '案例', '案例中心': '案例', '案例管理': '案例', '优秀案例': '案例',
     '教学': 'learning', '教学中心': 'learning', '学习': 'learning',
     '学习中心': 'learning', '课堂': 'learning', '课堂管理': 'learning',
     '课程': 'learning', '上课': 'learning',
