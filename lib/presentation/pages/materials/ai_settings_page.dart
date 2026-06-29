@@ -1,8 +1,9 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../data/local/ai_config_dao.dart';
 import '../../../data/models/ai_config_model.dart';
 import '../../../services/ai_service.dart';
+import '../../../services/auth_service.dart';
 
 import '../../widgets/back_button_bar.dart';
 import '../../../core/error_handler.dart';
@@ -32,6 +33,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
   bool _testing = false;
   String? _testResult;
   bool _testSuccess = false;
+  bool _isAdminOrTeacher = false;
 
   // 新增参数
   double _temperature = 0.7;
@@ -72,6 +74,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
   @override
   void initState() {
     super.initState();
+    _isAdminOrTeacher = AuthService().isAdmin || AuthService().isTeacher;
     _loadConfig();
   }
 
@@ -175,9 +178,12 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
 
     final config = AiConfigModel(
       provider: _provider,
-      apiKey: _apiKeyController.text.trim().isEmpty
+      // 管理员/教师强制使用内置 Key，不保存个人 Key
+      apiKey: _isAdminOrTeacher
           ? null
-          : _apiKeyController.text.trim(),
+          : _apiKeyController.text.trim().isEmpty
+              ? null
+              : _apiKeyController.text.trim(),
       model: _modelController.text.trim().isEmpty
           ? defaultModel
           : _modelController.text.trim(),
@@ -262,8 +268,11 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
                   _buildInfoCard(primary, gradient),
                   const SizedBox(height: 20),
 
-                  // ── API Key：课堂试用 Key 兜底，个人 Key 优先 ───────────
-                  if (kShowApiKeyInput) ...[
+                  // ── API Key：管理员/教师自动使用内置 Key，无需填写 ──────
+                  if (_isAdminOrTeacher) ...[
+                    _buildAdminKeyBanner(primary),
+                    const SizedBox(height: 20),
+                  ] else if (kShowApiKeyInput) ...[
                     _buildBuiltinKeyBanner(primary),
                     const SizedBox(height: 12),
                     _sectionTitle('个人 API Key（可选）'),
@@ -495,7 +504,7 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
     final hasKey = builtinApiKeys.containsKey(_provider) ||
         builtinApiKeys
             .containsKey('$_provider:${_modelController.text.trim()}');
-    const trialEnabled = kUseBuiltinTrialApiKeys;
+    const trialEnabled = true;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
@@ -527,6 +536,35 @@ class _AiSettingsPageState extends State<AiSettingsPage> {
               style: TextStyle(
                 fontSize: 13,
                 color: hasKey ? Colors.green.shade700 : Colors.orange.shade700,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── 管理员/教师自带 Key 提示横幅 ────────────────────────────────────────────
+
+  Widget _buildAdminKeyBanner(Color primary) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.green.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.green.withOpacity(0.35)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.shield_outlined, size: 20, color: Colors.green),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '系统已为您自动配置默认 AI 服务，无需填写 API Key。',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.green.shade800,
                 fontWeight: FontWeight.w500,
               ),
             ),

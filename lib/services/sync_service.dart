@@ -1,45 +1,38 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../core/constants/app_urls.dart';
-import '../core/error_handler.dart';
 import '../data/local/database_helper.dart';
-import 'course_context_service.dart';
+import '../core/error_handler.dart';
 import 'gitee_service.dart';
 
-/// 数据同步服务（分组项目仓库模型）
+/// 数据同步服务
 ///
-/// 学生数据**分散存储**在各自的"分组项目仓库"中，不再集中到单一仓库（避免仓库膨胀）。
-/// - 仓库归属：命名空间 [groupRepoOwner]（chzuczldl），仓库名来自实验分组 Excel 的
-///   "仓库"列（已导入 users.repository_url，如 cg1-cifms）。
-/// - 学生端：把本地学习数据写到**自己组仓库**的 `mad/{user_id}.json` + 附件
-///   `mad/files/{user_id}/{分类}/...`。
-/// - 教师端：遍历所有去重的组仓库，从每个仓库的 `mad/*.json` 拉取并合并到本地 DB。
-/// 同步使用独立的读写 Token（sync_gitee_token），需对 chzuczldl 命名空间有写权限。
-/// 通知广播 / 连接诊断仍走系统仓库 [systemRepoOwner]/[systemRepoName]（chzcldl/mad-data）。
+/// 直接使用本项目的 Gitee 仓库 osgisOne/mad-fd。
+/// 同步使用独立的读写 Token（sync_gitee_token），与 GiteeService 的只读 Token 分开。
+/// 学生端：定时将本地学习数据上传到 sync/students/{user_id}.json
+/// 教师端：定时从 sync/students/ 拉取所有学生数据合并到本地 DB
 class SyncService {
   static final SyncService _instance = SyncService._internal();
   factory SyncService() => _instance;
   SyncService._internal();
 
+  // ── 公开静态 getter（供其他文件引用）─────────────────────────────────
+
+  static String get systemRepoOwner => repoOwner;
+  static String get systemRepoName => repoName;
+  static String get madDir => 'mad';
+
   final GiteeService _gitee = GiteeService();
 
-  // ── 仓库配置 ──────────────────────────────────────────────────────────
+  // ── 固定仓库配置（本项目仓库）──────────────────────────────────────────
 
-  /// 学生分组仓库默认命名空间（"仓库"列仅给裸仓库名时拼到此命名空间下）
-  static const groupRepoOwner = 'chzuczldl';
-
-  /// 组仓库内存放 App 同步数据的目录（mad/{userId}.json + mad/files/...）
-  static const madDir = 'mad';
-
-  /// 系统仓库（通知广播 / 连接诊断等非学生数据用）
-  static const systemRepoOwner = 'chzcldl';
-  static const systemRepoName = 'mad-data';
+  static const repoOwner = 'osgisOne';
+  static const repoName = 'mad-fd';
   static const repoBranch = 'master';
+  static const _syncDir = 'sync/students';
 
   // ── SharedPreferences 键名 ──────────────────────────────────────────
 
@@ -59,35 +52,28 @@ class SyncService {
 
   // ── 同步专用 Token（读写权限）──────────────────────────────────────────
 
-  /// 预置读写 Token — 集中维护在 `lib/core/constants/app_urls.dart` 的
-  /// [GiteeCredentials.syncToken]。详见该常量的设计权衡说明。
-  static String get _defaultSyncToken => GiteeCredentials.syncToken;
+  /// 预置读写 Token（osgisOne/mad-fd 仓库，具有 projects 读写权限）
+  /// 如果没有配置过同步 Token，自动使用此默认值
+  static const _defaultSyncToken = '64a07762f8a3ab4415b8c943651bfb91';
 
   /// 确保同步 Token 已配置（首次使用时自动设置）
   Future<void> _ensureSyncToken() async {
     final prefs = await SharedPreferences.getInstance();
     final existing = prefs.getString(_syncTokenKey);
-    final shouldResetSyncToken = existing == null ||
-        existing.isEmpty ||
-        existing == GiteeCredentials.legacyTokenForMigration;
-    if (shouldResetSyncToken) {
+    if (existing == null || existing.isEmpty) {
       await prefs.setString(_syncTokenKey, _defaultSyncToken);
-    }
-
-    // 同时确保 GiteeService 也配置了此 Token。
-    final giteeToken = await _gitee.getToken();
-    if (giteeToken == null ||
-        giteeToken.isEmpty ||
-        giteeToken == GiteeCredentials.legacyTokenForMigration) {
-      await _gitee.saveToken(_defaultSyncToken);
+      // 同时确保 GiteeService 也配置了此 Token
+      final giteeToken = await _gitee.getToken();
+      if (giteeToken == null || giteeToken.isEmpty) {
+        await _gitee.saveToken(_defaultSyncToken);
+      }
     }
   }
 
-  /// 获取同步专用 Token（首次使用时自动 bootstrap，见 [_ensureSyncToken]）
+  /// 获取同步专用 Token
   Future<String?> getSyncToken() async {
-    await _ensureSyncToken();
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_syncTokenKey);
+    return prefs.getString(_syncTokenKey) ?? _defaultSyncToken;
   }
 
   /// 设置同步 Token
@@ -141,8 +127,7 @@ class SyncService {
   }
 
   /// 保存同步配置
-  Future<void> saveConfig(
-      {required bool enabled, required int interval}) async {
+  Future<void> saveConfig({required bool enabled, required int interval}) async {
     await setSyncEnabled(enabled);
     await setSyncInterval(interval);
   }
@@ -171,7 +156,7 @@ class SyncService {
       Duration(minutes: interval),
       (_) => _doAutoSync(userId, role),
     );
-    debugPrint('SyncService: 自动同步已启动 (每 $interval 分钟, 分组项目仓库模式)');
+    debugPrint('SyncService: 自动同步已启动 (每 $interval 分钟, 仓库: $repoOwner/$repoName)');
   }
 
   /// 停止自动同步
@@ -195,66 +180,6 @@ class SyncService {
     }
   }
 
-  // ── 分组项目仓库解析 ──────────────────────────────────────────────────
-
-  /// 把"仓库列"的值解析成 (owner, repo)。支持完整 Gitee URL、owner/repo、或裸仓库名。
-  ({String owner, String repo})? _parseRepoSpec(String? raw) {
-    final v = raw?.trim() ?? '';
-    if (v.isEmpty) return null;
-    if (v.contains('gitee.com')) {
-      final parsed = GiteeService.parseRepoUrl(v);
-      if (parsed != null) return (owner: parsed.owner, repo: parsed.repo);
-      return null;
-    }
-    if (v.contains('/')) {
-      final parts = v.split('/').where((s) => s.isNotEmpty).toList();
-      if (parts.length >= 2) {
-        return (
-          owner: parts[parts.length - 2],
-          repo: parts.last.replaceAll('.git', '')
-        );
-      }
-      return null;
-    }
-    // 裸仓库名（如 cg1-cifms）→ 默认命名空间下的该仓库
-    return (owner: groupRepoOwner, repo: v.replaceAll('.git', ''));
-  }
-
-  /// 解析某学生的分组项目仓库（来自 users.repository_url ← 实验分组 Excel 仓库列）。
-  Future<({String owner, String repo})?> _resolveRepoForUser(
-      dynamic db, String userId) async {
-    try {
-      final rows = await db.query('users',
-          columns: ['repository_url'],
-          where: 'user_id = ?',
-          whereArgs: [userId],
-          limit: 1);
-      final raw =
-          rows.isNotEmpty ? (rows.first['repository_url'] as String?) : null;
-      return _parseRepoSpec(raw);
-    } catch (e, st) {
-      swallowDebug(e, tag: 'SyncService.resolveRepo', stack: st);
-      return null;
-    }
-  }
-
-  /// 教师端：收集所有学生的去重分组仓库列表。
-  Future<List<({String owner, String repo})>> _allGroupRepos(dynamic db) async {
-    final repos = <String, ({String owner, String repo})>{};
-    try {
-      final rows = await db.query('users',
-          columns: ['repository_url'],
-          where: "repository_url IS NOT NULL AND repository_url != ''");
-      for (final r in rows) {
-        final spec = _parseRepoSpec(r['repository_url'] as String?);
-        if (spec != null) repos['${spec.owner}/${spec.repo}'] = spec;
-      }
-    } catch (e, st) {
-      swallowDebug(e, tag: 'SyncService.allGroupRepos', stack: st);
-    }
-    return repos.values.toList();
-  }
-
   // ── 学生端：上传数据 ──────────────────────────────────────────────────
 
   /// 将当前学生的学习数据上传到 Gitee 仓库
@@ -276,64 +201,76 @@ class SyncService {
           where: 'user_id = ?',
           whereArgs: [userId],
         );
-      } catch (e, st) {
-        swallowDebug(e, tag: 'SyncService', stack: st);
-      }
+      } catch (_) {}
 
       // 1. 收集本地数据
       final data = await _collectStudentData(userId);
       final jsonStr = const JsonEncoder.withIndent('  ').convert(data);
 
-      // 2. 校验数据是否变更（去重：无变化则跳过 commit）
-      final hash = sha256.convert(utf8.encode(jsonStr)).toString();
-      final prefs = await SharedPreferences.getInstance();
-      final lastHash = prefs.getString('sync_hash_$userId');
-      if (lastHash == hash) {
-        try {
-          await _uploadSubmissionFiles(userId, data);
-        } catch (e) {
-          debugPrint('SyncService: 附件补传失败（不影响主同步）: $e');
-        }
-        _isSyncing = false;
-        status.value = SyncStatus.idle;
-        debugPrint('SyncService: $userId 数据未变更，跳过同步');
-        return SyncResult(success: true, message: '数据未变更，已检查附件同步');
-      }
-
-      // 3. 解析该学生的分组项目仓库（来自实验分组 Excel 仓库列 → users.repository_url）
-      final repo = await _resolveRepoForUser(db, userId);
-      if (repo == null) {
-        status.value = SyncStatus.idle;
-        debugPrint('SyncService: $userId 未配置分组仓库(repository_url)，跳过上传');
-        return SyncResult(success: false, message: '未配置分组项目仓库，请联系教师导入实验分组');
-      }
-
-      // 4. 写入组仓库 mad/{userId}.json
-      final path = '$madDir/$userId.json';
+      // 2. 上传到课程共享仓库 (mad-fd)
+      final path = '$_syncDir/$userId.json';
       await _gitee.createOrUpdateFile(
-        owner: repo.owner,
-        repo: repo.repo,
+        owner: repoOwner,
+        repo: repoName,
         path: path,
         content: jsonStr,
         message: '同步学生数据: $userId (${DateTime.now().toIso8601String()})',
         branch: repoBranch,
       );
 
-      // 5. 上传实验/考核/作品附件到组仓库（静默失败，不影响主流程）
+      // 2.2 上传实验提交的 PDF 文件到仓库（静默失败，不影响主流程）
       try {
         await _uploadSubmissionFiles(userId, data);
       } catch (e) {
-        debugPrint('SyncService: 附件上传失败（不影响主同步）: $e');
+        debugPrint('SyncService: PDF 文件上传失败（不影响主同步）: $e');
+      }
+
+      // 2.5 同时备份到学生个人仓库（静默失败，不影响主流程）
+      try {
+        final userInfo = await db.query(
+          'users',
+          columns: ['repository_url'],
+          where: 'user_id = ?',
+          whereArgs: [userId],
+          limit: 1,
+        );
+        final repoUrl = userInfo.isNotEmpty
+            ? (userInfo.first['repository_url'] as String?)
+            : null;
+        if (repoUrl != null && repoUrl.isNotEmpty) {
+          final parsed = GiteeService.parseRepoUrl(repoUrl);
+          if (parsed != null) {
+            await _gitee.createOrUpdateFile(
+              owner: parsed.owner,
+              repo: parsed.repo,
+              path: 'sync/learning_data.json',
+              content: jsonStr,
+              message: '备份学习数据: $userId (${DateTime.now().toIso8601String()})',
+              branch: 'master',
+            );
+            debugPrint('SyncService: 已备份到个人仓库 ${parsed.owner}/${parsed.repo}');
+          }
+        }
+      } catch (e) {
+        debugPrint('SyncService: 个人仓库备份失败（不影响主同步）: $e');
       }
 
       // 3. 记录同步时间
+      final prefs = await SharedPreferences.getInstance();
       await prefs.setString(
           _lastUploadTimeKey, DateTime.now().toIso8601String());
-      await prefs.setString('sync_hash_$userId', hash);
 
-      final recordCount = data.values
-          .whereType<List>()
-          .fold<int>(0, (sum, rows) => sum + rows.length);
+      final recordCount = (data['quiz_results'] as List).length +
+          (data['learning_records'] as List).length +
+          (data['wrong_answers'] as List).length +
+          (data['favorites'] as List).length +
+          (data['feedback'] as List).length +
+          (data['learning_paths'] as List).length +
+          (data['lab_submissions'] as List).length +
+          (data['student_reports'] as List).length +
+          (data['student_works'] as List).length +
+          (data['survey_responses'] as List).length +
+          (data['checkin_records'] as List).length;
 
       debugPrint('SyncService: 上传成功 ($recordCount 条记录)');
       status.value = SyncStatus.idle;
@@ -363,21 +300,11 @@ class SyncService {
     try {
       await _ensureSyncToken();
 
-      final db = await DatabaseHelper.instance.database;
-      final repo = await _resolveRepoForUser(db, userId);
-      if (repo == null) {
-        status.value = SyncStatus.idle;
-        _isSyncing = false;
-        return SyncResult(success: true, message: '未配置分组仓库', recordCount: 0);
-      }
-
-      final path = '$madDir/$userId.json';
+      final path = '$_syncDir/$userId.json';
       String? content;
       try {
         content = await _gitee.getFileContent(
-          repo.owner,
-          repo.repo,
-          path,
+          repoOwner, repoName, path,
           ref: repoBranch,
         );
       } catch (e) {
@@ -403,6 +330,7 @@ class SyncService {
       }
 
       final data = jsonDecode(content) as Map<String, dynamic>;
+      final db = await DatabaseHelper.instance.database;
       final count = await _importStudentSyncData(db, data);
 
       debugPrint('SyncService: 学生 $userId 跨设备同步完成，$count 条记录');
@@ -421,107 +349,73 @@ class SyncService {
     }
   }
 
-  /// 上传提交引用的附件文件到组仓库
+  /// 上传实验提交中引用的 PDF 文件到 Gitee 仓库
   ///
-  /// 目录规范（写入学生自己的组仓库）：
-  ///   mad/files/{userId}/实验/{fileName}  — 实验报告
-  ///   mad/files/{userId}/考核/{fileName}  — 项目考核
-  ///   mad/files/{userId}/作品/{fileName}  — 学生作品
+  /// 目录规范：
+  ///   sync/students/{userId}/实验/{fileName}  — 实验报告
+  ///   sync/students/{userId}/考核/{fileName}  — 项目考核
+  ///   sync/students/{userId}/作品/{fileName}  — 学生作品
   Future<void> _uploadSubmissionFiles(
       String userId, Map<String, dynamic> data) async {
-    final db = await DatabaseHelper.instance.database;
-    final repo = await _resolveRepoForUser(db, userId);
-    if (repo == null) return;
     // 实验报告
     final submissions = data['lab_submissions'] as List? ?? [];
     for (final sub in submissions) {
-      await _uploadSingleFile(repo, userId, sub, '实验');
+      await _uploadSingleFile(userId, sub, '实验');
     }
-    // 考核报告（student_reports 表）
+    // 实验报告（student_reports 表）
     final reports = data['student_reports'] as List? ?? [];
     for (final report in reports) {
-      await _uploadSingleFile(repo, userId, report, '考核');
-    }
-    // 考核报告（assessment_reports 表 — 分离后的考核报告）
-    final assessmentReports = data['assessment_reports'] as List? ?? [];
-    for (final report in assessmentReports) {
-      await _uploadSingleFile(repo, userId, report, '考核');
+      await _uploadSingleFile(userId, report, '实验');
     }
     // 项目考核
     final projectScores = data['project_scores'] as List? ?? [];
     for (final score in projectScores) {
-      await _uploadSingleFile(repo, userId, score, '考核');
+      await _uploadSingleFile(userId, score, '考核');
     }
     // 学生作品
     final works = data['student_works'] as List? ?? [];
     for (final work in works) {
-      await _uploadSingleFile(repo, userId, work, '作品');
+      await _uploadSingleFile(userId, work, '作品');
     }
   }
 
-  /// 上传单个文件到组仓库的分类目录（mad/files/{userId}/{category}/）
-  Future<void> _uploadSingleFile(({String owner, String repo}) repo,
+  /// 上传单个文件到指定分类目录
+  Future<void> _uploadSingleFile(
       String userId, Map<String, dynamic> row, String category) async {
     final filePaths = (row['file_paths'] as String?) ??
         (row['file_path'] as String?) ??
-        (row['video_url'] as String?) ??
         (row['attachment_url'] as String?) ??
         '';
     final fileNames = (row['file_names'] as String?) ??
         (row['file_name'] as String?) ??
-        (row['content_json'] as String?) ??
         '';
     if (filePaths.isEmpty) return;
 
     final file = File(filePaths);
     if (!file.existsSync()) return;
 
-    final fileName =
-        fileNames.isNotEmpty ? fileNames : _fileNameFromPathOrUrl(filePaths);
-    final remotePath = '$madDir/files/$userId/$category/$fileName';
+    final fileName = fileNames.isNotEmpty
+        ? fileNames
+        : filePaths.split('/').last.split('\\').last;
+    final remotePath = '$_syncDir/$userId/$category/$fileName';
 
     try {
       final bytes = await file.readAsBytes();
-      // 作品视频会明显大于 PDF。与上传入口保持一致，100MB 以内尝试同步。
-      if (bytes.length > 100 * 1024 * 1024) {
-        debugPrint('SyncService: 跳过超大文件 $fileName (${bytes.length} bytes)');
+      // Gitee 单文件上限约 1MB，超大文件跳过
+      if (bytes.length > 1024 * 1024) {
+        debugPrint(
+            'SyncService: 跳过超大文件 $fileName (${bytes.length} bytes)');
         return;
       }
-      if (bytes.length <= 500 * 1024) {
-        // ≤500KB → Contents API（快速写入）
-        await _gitee.createOrUpdateBinaryFile(
-          owner: repo.owner,
-          repo: repo.repo,
-          path: remotePath,
-          bytes: bytes,
-          message: '上传$category文件: $fileName ($userId)',
-          branch: repoBranch,
-        );
-      } else {
-        // >500KB → Git Data API（绕过 Contents API 1MB 限制）
-        try {
-          await _gitee.uploadBinaryViaGitDataApi(
-            owner: repo.owner,
-            repo: repo.repo,
-            path: remotePath,
-            bytes: bytes,
-            message: '上传$category文件: $fileName ($userId)',
-            branch: repoBranch,
-          );
-        } catch (e2) {
-          debugPrint('Git Data API 上传 $fileName 失败，回退 Contents API: $e2');
-          // 回退：Git Data API 失败时尝试 Contents API（小文件或网络问题）
-          await _gitee.createOrUpdateBinaryFile(
-            owner: repo.owner,
-            repo: repo.repo,
-            path: remotePath,
-            bytes: bytes,
-            message: '上传$category文件: $fileName ($userId)',
-            branch: repoBranch,
-          );
-        }
-      }
-      debugPrint('SyncService: 已上传 $remotePath (${bytes.length} bytes)');
+      await _gitee.createOrUpdateBinaryFile(
+        owner: repoOwner,
+        repo: repoName,
+        path: remotePath,
+        bytes: bytes,
+        message: '上传$category文件: $fileName ($userId)',
+        branch: repoBranch,
+      );
+      debugPrint('SyncService: PDF 已上传 $remotePath');
     } catch (e) {
       debugPrint('SyncService: 上传 $fileName 失败: $e');
     }
@@ -530,7 +424,6 @@ class SyncService {
   /// 收集学生本地数据（全量）
   Future<Map<String, dynamic>> _collectStudentData(String userId) async {
     final db = await DatabaseHelper.instance.database;
-    await _ensureStudentSyncSchema(db);
 
     // 用户基本信息
     final userRows = await db.query(
@@ -542,8 +435,9 @@ class SyncService {
     final userName = userRows.isNotEmpty
         ? (userRows.first['real_name'] as String? ?? '')
         : '';
-    final lastActive =
-        userRows.isNotEmpty ? (userRows.first['last_active'] as String?) : null;
+    final lastActive = userRows.isNotEmpty
+        ? (userRows.first['last_active'] as String?)
+        : null;
 
     // ── 按 user_id 收集的表 ─────────────────────────────────────────
     // 表名 → 排序字段（null 则不排序）
@@ -556,14 +450,13 @@ class SyncService {
       'learning_paths': 'created_at DESC',
       'lab_submissions': 'submit_time DESC',
       'student_reports': 'updated_at DESC',
-      'assessment_reports': 'updated_at DESC',
       'student_works': 'created_at DESC',
       'survey_responses': 'submitted_at DESC',
       'checkin_records': 'checked_at DESC',
-      'ai_chat_history': 'created_at DESC',
-      'hot_video_favorites': 'favorite_time DESC',
-      // notification_recipients 不同步：notification_id 是本地自增主键，
-      // 跨设备导入会导致孤儿行（引用不存在的通知），造成 badge 计数与列表不一致
+      'work_comments': 'created_at DESC',
+      'work_likes': null,
+      'notification_recipients': null,
+      'work_views': 'viewed_at DESC',
     };
 
     final result = <String, dynamic>{
@@ -577,71 +470,43 @@ class SyncService {
 
     for (final entry in userIdTables.entries) {
       result[entry.key] = await _safeQuery(
-        db,
-        entry.key,
-        where: 'user_id = ?',
-        whereArgs: [userId],
+        db, entry.key,
+        where: 'user_id = ?', whereArgs: [userId],
         orderBy: entry.value,
       );
     }
 
-    // 作品互动表需要携带作品自然键，导入端不能直接复用本机自增 work_id。
-    result['work_comments'] = await _safeWorkScopedQuery(
-      db,
-      'work_comments',
-      userIdColumn: 'user_id',
-      userId: userId,
-      orderBy: 'created_at DESC',
-    );
-    result['work_likes'] = await _safeWorkScopedQuery(
-      db,
-      'work_likes',
-      userIdColumn: 'user_id',
-      userId: userId,
-    );
-    result['work_views'] = await _safeWorkScopedQuery(
-      db,
-      'work_views',
-      userIdColumn: 'user_id',
-      userId: userId,
-      orderBy: 'viewed_at DESC',
-    );
-
     // ── 按其他字段收集的表 ────────────────────────────────────────────
     // peer_reviews 使用 reviewer_id
     result['peer_reviews'] = await _safeQuery(
-      db,
-      'peer_reviews',
-      where: 'reviewer_id = ?',
-      whereArgs: [userId],
+      db, 'peer_reviews',
+      where: 'reviewer_id = ?', whereArgs: [userId],
     );
 
     // collaboration_messages 使用 sender_id
     result['collaboration_messages'] = await _safeQuery(
-      db,
-      'collaboration_messages',
-      where: 'sender_id = ?',
-      whereArgs: [userId],
+      db, 'collaboration_messages',
+      where: 'sender_id = ?', whereArgs: [userId],
     );
 
     // contribution_scores — 学生作为评分人或被评人
     result['contribution_scores'] = await _safeQuery(
-      db,
-      'contribution_scores',
+      db, 'contribution_scores',
       where: 'scorer_user_id = ? OR target_user_id = ?',
       whereArgs: [userId, userId],
     );
 
-    // work_scores — 学生互评 + 该学生作品上的教师/管理员评分。
-    // 教师审核后会把学生 JSON 更新回仓库，学生端导入时必须拿到教师评分。
-    result['work_scores'] = await _collectWorkScoresForStudent(db, userId);
+    // work_scores — 学生作为评分人（同学互评）
+    result['work_scores'] = await _safeQuery(
+      db, 'work_scores',
+      where: 'scorer_id = ?', whereArgs: [userId],
+      orderBy: 'scored_at DESC',
+    );
 
     // project_scores — 学生作为评分人（项目互评）
     result['project_scores'] = await _safeQuery(
-      db,
-      'project_scores',
-      where: 'scorer_id = ?',
-      whereArgs: [userId],
+      db, 'project_scores',
+      where: 'scorer_id = ?', whereArgs: [userId],
       orderBy: 'scored_at DESC',
     );
 
@@ -652,8 +517,7 @@ class SyncService {
       result['lab_tasks'] = (tasks as List)
           .map((r) => Map<String, dynamic>.from(r as Map))
           .toList();
-    } catch (e, st) {
-      swallowDebug(e, tag: 'SyncService.collectLabTasks', stack: st);
+    } catch (_) {
       result['lab_tasks'] = <Map<String, dynamic>>[];
     }
 
@@ -663,17 +527,14 @@ class SyncService {
       result['report_templates'] = (templates as List)
           .map((r) => Map<String, dynamic>.from(r as Map))
           .toList();
-    } catch (e, st) {
-      swallowDebug(e, tag: 'SyncService.collectReportTemplates', stack: st);
+    } catch (_) {
       result['report_templates'] = <Map<String, dynamic>>[];
     }
 
     // classroom_messages 使用 sender_id
     result['classroom_messages'] = await _safeQuery(
-      db,
-      'classroom_messages',
-      where: 'sender_id = ?',
-      whereArgs: [userId],
+      db, 'classroom_messages',
+      where: 'sender_id = ?', whereArgs: [userId],
     );
 
     // path_nodes — 通过 learning_paths 的 id 关联
@@ -684,10 +545,8 @@ class SyncService {
         final pathId = (p as Map)['id'];
         if (pathId != null) {
           final nodes = await _safeQuery(
-            db,
-            'path_nodes',
-            where: 'path_id = ?',
-            whereArgs: [pathId],
+            db, 'path_nodes',
+            where: 'path_id = ?', whereArgs: [pathId],
             orderBy: 'sort_order',
           );
           allPathNodes.addAll(nodes.cast<Map<String, dynamic>>());
@@ -719,115 +578,8 @@ class SyncService {
       return (rows as List)
           .map((r) => Map<String, dynamic>.from(r as Map)..remove('id'))
           .toList();
-    } catch (e, st) {
-      swallowDebug(e, tag: 'SyncService.safeQuery', stack: st);
+    } catch (_) {
       return []; // 表可能不存在
-    }
-  }
-
-  Future<void> _ensureStudentSyncSchema(dynamic db) async {
-    const alterSql = [
-      'ALTER TABLE work_scores ADD COLUMN scorer_role TEXT',
-      'ALTER TABLE ai_chat_history ADD COLUMN course_id TEXT',
-      'ALTER TABLE hot_videos ADD COLUMN course_id TEXT',
-      'ALTER TABLE hot_video_favorites ADD COLUMN course_id TEXT',
-      'ALTER TABLE checkin_sessions ADD COLUMN course_id TEXT',
-      'ALTER TABLE classroom_messages ADD COLUMN course_id TEXT',
-      'ALTER TABLE roll_call_sessions ADD COLUMN course_id TEXT',
-    ];
-    for (final sql in alterSql) {
-      try {
-        await db.execute(sql);
-      } catch (e) {
-        swallow(e, tag: 'SyncService.ensureSyncSchema');
-      }
-    }
-
-    for (final table in const [
-      'ai_chat_history',
-      'hot_videos',
-      'hot_video_favorites',
-      'checkin_sessions',
-      'classroom_messages',
-      'roll_call_sessions',
-    ]) {
-      try {
-        await db.update(
-          table,
-          {'course_id': CourseContextService.defaultCourseId},
-          where: "course_id IS NULL OR course_id = ''",
-        );
-      } catch (e) {
-        swallow(e, tag: 'SyncService.ensureSyncSchema.defaultCourse');
-      }
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> _collectWorkScoresForStudent(
-    dynamic db,
-    String userId,
-  ) async {
-    try {
-      final rows = await db.rawQuery('''
-        SELECT ws.id,
-               ws.work_id,
-               ws.scorer_id,
-               ws.scorer_name,
-               COALESCE(ws.scorer_role, u.role,
-                 CASE WHEN ws.scorer_id = ? THEN 'student' ELSE NULL END
-               ) AS scorer_role,
-               ws.score_functionality,
-               ws.score_tech_depth,
-               ws.score_integration,
-               ws.score_quality,
-               ws.score_documentation,
-               ws.total_score,
-               ws.comment,
-               ws.scored_at,
-               w.user_id AS work_user_id,
-               w.title AS work_title,
-               w.course_id AS work_course_id
-        FROM work_scores ws
-        LEFT JOIN student_works w ON w.id = ws.work_id
-        LEFT JOIN users u ON u.user_id = ws.scorer_id
-        WHERE ws.scorer_id = ?
-           OR (w.user_id = ? AND COALESCE(ws.scorer_role, u.role) IN ('teacher','admin'))
-        ORDER BY ws.scored_at DESC
-      ''', [userId, userId, userId]);
-      return (rows as List)
-          .map((r) => Map<String, dynamic>.from(r as Map)..remove('id'))
-          .toList();
-    } catch (e, st) {
-      swallowDebug(e, tag: 'SyncService.collectWorkScores', stack: st);
-      return [];
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> _safeWorkScopedQuery(
-    dynamic db,
-    String table, {
-    required String userIdColumn,
-    required String userId,
-    String? orderBy,
-  }) async {
-    try {
-      final orderSql = orderBy == null ? '' : 'ORDER BY i.$orderBy';
-      final rows = await db.rawQuery('''
-        SELECT i.*,
-               w.user_id AS work_user_id,
-               w.title AS work_title,
-               w.course_id AS work_course_id
-        FROM $table i
-        LEFT JOIN student_works w ON w.id = i.work_id
-        WHERE i.$userIdColumn = ?
-        $orderSql
-      ''', [userId]);
-      return (rows as List)
-          .map((r) => Map<String, dynamic>.from(r as Map)..remove('id'))
-          .toList();
-    } catch (e, st) {
-      swallowDebug(e, tag: 'SyncService.safeWorkScopedQuery', stack: st);
-      return [];
     }
   }
 
@@ -843,59 +595,64 @@ class SyncService {
     try {
       // 确保同步 Token 可用
       await _ensureSyncToken();
-      // 1. 收集所有去重的分组项目仓库（来自 users.repository_url ← 实验分组 Excel 仓库列）
-      final db = await DatabaseHelper.instance.database;
-      final groupRepos = await _allGroupRepos(db);
-      if (groupRepos.isEmpty) {
+      // 1. 列出 sync/students/ 目录下的所有文件
+      List<Map<String, dynamic>> files;
+      try {
+        files = await _gitee.listDir(
+            repoOwner, repoName, _syncDir, ref: repoBranch);
+      } catch (e) {
+        // 目录不存在说明还没有学生上传过数据
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(
             _lastDownloadTimeKey, DateTime.now().toIso8601String());
         status.value = SyncStatus.idle;
         return SyncResult(
           success: true,
-          message: '暂无分组仓库（请先导入实验分组 Excel 设置 repository_url）',
+          message: '暂无学生同步数据（sync 目录尚未创建）',
           recordCount: 0,
         );
       }
 
-      // 2. 逐个仓库拉取 mad/*.json 并导入
+      final jsonFiles = files
+          .where((f) =>
+              f['type'] == 'file' &&
+              (f['name']?.toString() ?? '').endsWith('.json'))
+          .toList();
+
+      if (jsonFiles.isEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+            _lastDownloadTimeKey, DateTime.now().toIso8601String());
+        status.value = SyncStatus.idle;
+        return SyncResult(
+          success: true,
+          message: '暂无学生数据',
+          recordCount: 0,
+        );
+      }
+
+      // 2. 逐个下载并解析
       int totalRecords = 0;
       int studentCount = 0;
+      final db = await DatabaseHelper.instance.database;
 
-      for (final repo in groupRepos) {
-        List<Map<String, dynamic>> files;
+      for (final file in jsonFiles) {
+        final filePath = file['path']?.toString() ?? '';
+        if (filePath.isEmpty) continue;
+
         try {
-          files = await _gitee.listDir(repo.owner, repo.repo, madDir,
-              ref: repoBranch);
+          final content = await _gitee.getFileContent(
+            repoOwner, repoName, filePath,
+            ref: repoBranch,
+          );
+          if (content == null) continue;
+
+          final data = jsonDecode(content) as Map<String, dynamic>;
+          final count = await _importStudentSyncData(db, data);
+          totalRecords += count;
+          studentCount++;
         } catch (e) {
-          // 该仓库还没有 mad/ 目录（学生未同步过）
-          swallow(e, tag: 'SyncService.downloadAll.listMadDir');
-          continue;
-        }
-        final jsonFiles = files
-            .where((f) =>
-                f['type'] == 'file' &&
-                (f['name']?.toString() ?? '').endsWith('.json'))
-            .toList();
-        for (final file in jsonFiles) {
-          final filePath = file['path']?.toString() ?? '';
-          if (filePath.isEmpty) continue;
-          try {
-            final content = await _gitee.getFileContent(
-              repo.owner,
-              repo.repo,
-              filePath,
-              ref: repoBranch,
-            );
-            if (content == null) continue;
-            final data = jsonDecode(content) as Map<String, dynamic>;
-            final count = await _importStudentSyncData(db, data);
-            totalRecords += count;
-            studentCount++;
-          } catch (e) {
-            debugPrint(
-                'SyncService: 解析 ${repo.owner}/${repo.repo}/$filePath 失败: $e');
-          }
+          debugPrint('SyncService: 解析 $filePath 失败: $e');
         }
       }
 
@@ -933,13 +690,11 @@ class SyncService {
                   owner: parsed.owner,
                   repo: parsed.repo,
                   path: 'sync/teacher_sync_log.json',
-                  content:
-                      const JsonEncoder.withIndent('  ').convert(backupData),
+                  content: const JsonEncoder.withIndent('  ').convert(backupData),
                   message: '教师同步备份 ($studentCount 学生, $totalRecords 条记录)',
-                  branch: repoBranch,
+                  branch: 'master',
                 );
-                debugPrint(
-                    'SyncService: 已备份到教师仓库 ${parsed.owner}/${parsed.repo}');
+                debugPrint('SyncService: 已备份到教师仓库 ${parsed.owner}/${parsed.repo}');
               }
             }
           }
@@ -974,8 +729,6 @@ class SyncService {
     final userId = data['user_id'] as String?;
     if (userId == null || userId.isEmpty) return 0;
 
-    await _ensureStudentSyncSchema(db);
-
     int count = 0;
 
     // ── 确保用户记录存在（INSERT OR UPDATE）────────────────────────────
@@ -1009,9 +762,7 @@ class SyncService {
         try {
           await db.update('users', updates,
               where: 'user_id = ?', whereArgs: [userId]);
-        } catch (e, st) {
-          swallowDebug(e, tag: 'SyncService', stack: st);
-        }
+        } catch (_) {}
       }
     }
 
@@ -1129,19 +880,16 @@ class SyncService {
           'learning_paths',
           'survey_responses',
           'checkin_records',
-          'ai_chat_history',
-          'hot_video_favorites',
-          // notification_recipients 不同步：notification_id 跨设备不匹配，导入会产生孤儿行
-          'assessment_reports',
+          'work_comments',
+          'work_likes',
+          'notification_recipients',
+          'work_views',
         ];
 
         for (final table in userIdTables) {
           txnCount += await _importTable(
-            txn,
-            data,
-            table,
-            userIdColumn: 'user_id',
-            userId: userId,
+            txn, data, table,
+            userIdColumn: 'user_id', userId: userId,
           );
         }
 
@@ -1149,69 +897,32 @@ class SyncService {
         // 1) task_id 重映射（学生端ID → 教师端ID）
         // 2) 保护教师已批改的评分数据不被覆盖
         txnCount += await _importLabSubmissions(
-          txn,
-          data,
-          userId,
-          taskIdRemap,
+          txn, data, userId, taskIdRemap,
         );
 
         // ── student_reports 特殊处理 ─────────────────────────────────
         // task_id / template_id 重映射
         txnCount += await _importStudentReports(
-          txn,
-          data,
-          userId,
-          taskIdRemap,
-          templateIdRemap,
+          txn, data, userId, taskIdRemap, templateIdRemap,
         );
 
         // ── 按其他字段导入的表 ──────────────────────────────────────
         txnCount += await _importTable(
-          txn,
-          data,
-          'peer_reviews',
-          userIdColumn: 'reviewer_id',
-          userId: userId,
+          txn, data, 'peer_reviews',
+          userIdColumn: 'reviewer_id', userId: userId,
         );
         txnCount += await _importTable(
-          txn,
-          data,
-          'collaboration_messages',
-          userIdColumn: 'sender_id',
-          userId: userId,
+          txn, data, 'collaboration_messages',
+          userIdColumn: 'sender_id', userId: userId,
         );
         txnCount += await _importTable(
-          txn,
-          data,
-          'classroom_messages',
-          userIdColumn: 'sender_id',
-          userId: userId,
+          txn, data, 'classroom_messages',
+          userIdColumn: 'sender_id', userId: userId,
         );
 
         // ── student_works 特殊处理 ──────────────────────────────────
         // 保护已评分的作品不被覆盖
         txnCount += await _importStudentWorks(txn, data, userId);
-
-        // ── 作品互动表：按作品自然键重映射 work_id ───────────────────
-        txnCount += await _importWorkInteractionTable(
-          txn,
-          data,
-          'work_comments',
-          userId,
-        );
-        txnCount += await _importWorkInteractionTable(
-          txn,
-          data,
-          'work_likes',
-          userId,
-        );
-        txnCount += await _importWorkInteractionTable(
-          txn,
-          data,
-          'work_views',
-          userId,
-        );
-        await _recalculateWorkInteractionCounts(txn);
 
         // ── work_scores — 学生互评（按 scorer_id 导入）────────────────
         // 保护教师评分不被覆盖
@@ -1233,13 +944,9 @@ class SyncService {
                 row.remove('id');
                 await txn.insert('contribution_scores', row);
                 txnCount++;
-              } catch (e, st) {
-                swallowDebug(e, tag: 'SyncService', stack: st);
-              }
+              } catch (_) {}
             }
-          } catch (e, st) {
-            swallowDebug(e, tag: 'SyncService', stack: st);
-          }
+          } catch (_) {}
         }
 
         // path_nodes — 先删除该用户所有 path 的节点，再导入
@@ -1258,13 +965,9 @@ class SyncService {
                 row.remove('id');
                 await txn.insert('path_nodes', row);
                 txnCount++;
-              } catch (e, st) {
-                swallowDebug(e, tag: 'SyncService', stack: st);
-              }
+              } catch (_) {}
             }
-          } catch (e, st) {
-            swallowDebug(e, tag: 'SyncService', stack: st);
-          }
+          } catch (_) {}
         }
 
         return txnCount;
@@ -1289,7 +992,8 @@ class SyncService {
 
     int count = 0;
     try {
-      await db.delete(table, where: '$userIdColumn = ?', whereArgs: [userId]);
+      await db.delete(table,
+          where: '$userIdColumn = ?', whereArgs: [userId]);
       for (final r in list) {
         try {
           final row = Map<String, dynamic>.from(r as Map);
@@ -1301,9 +1005,7 @@ class SyncService {
           debugPrint('SyncService: 导入 $table 失败: $e');
         }
       }
-    } catch (e, st) {
-      swallowDebug(e, tag: 'SyncService', stack: st);
-    } // 表可能不存在
+    } catch (_) {} // 表可能不存在
     return count;
   }
 
@@ -1325,7 +1027,8 @@ class SyncService {
       final existingGraded = <String, Map<String, dynamic>>{};
       try {
         final graded = await db.query('lab_submissions',
-            where: 'user_id = ? AND score IS NOT NULL', whereArgs: [userId]);
+            where: 'user_id = ? AND score IS NOT NULL',
+            whereArgs: [userId]);
         for (final g in graded) {
           // 以 task_id 为 key（已是教师端 ID）
           final taskId = g['task_id'] as int?;
@@ -1333,9 +1036,7 @@ class SyncService {
             existingGraded['$taskId'] = Map<String, dynamic>.from(g as Map);
           }
         }
-      } catch (e, st) {
-        swallowDebug(e, tag: 'SyncService', stack: st);
-      }
+      } catch (_) {}
 
       // 删除该学生的所有未批改提交（已批改的保留）
       await db.delete('lab_submissions',
@@ -1349,16 +1050,14 @@ class SyncService {
 
           // 重映射 task_id
           final originalTaskId = row['task_id'] as int?;
-          if (originalTaskId != null &&
-              taskIdRemap.containsKey(originalTaskId)) {
+          if (originalTaskId != null && taskIdRemap.containsKey(originalTaskId)) {
             row['task_id'] = taskIdRemap[originalTaskId];
           }
 
           final localTaskId = row['task_id'] as int?;
 
           // 检查教师端是否已有该任务的已批改提交
-          if (localTaskId != null &&
-              existingGraded.containsKey('$localTaskId')) {
+          if (localTaskId != null && existingGraded.containsKey('$localTaskId')) {
             // 已批改 → 只更新学生端字段（content/file_paths 等），保留评分
             final graded = existingGraded['$localTaskId']!;
             row['score'] = graded['score'];
@@ -1386,132 +1085,59 @@ class SyncService {
           debugPrint('SyncService: 导入 lab_submissions 失败: $e');
         }
       }
-    } catch (e, st) {
-      swallowDebug(e, tag: 'SyncService', stack: st);
-    }
+    } catch (_) {}
     return count;
   }
 
-  /// 确保作品演示视频在本机可用。
-  ///
-  /// 教师/同学端常见情况：`student_works` 已同步到提交状态，但
-  /// `file_path/video_url` 仍是学生设备上的本地路径或文件名。本方法会按
-  /// `mad/files/{userId}/作品/{fileName}` 从学生组仓库补下载，并回写本地路径。
-  Future<String?> ensureWorkVideoAvailable(Map<String, dynamic> work) async {
-    final userId = (work['user_id'] as String?)?.trim() ?? '';
-    if (userId.isEmpty) return null;
-
-    for (final path in [
-      work['video_url'] as String?,
-      work['file_path'] as String?,
-    ].whereType<String>().map((e) => e.trim()).where((e) => e.isNotEmpty)) {
-      if (path.startsWith('http')) return path;
-      if (File(path).existsSync()) return path;
-    }
-
-    final row = Map<String, dynamic>.from(work);
-    final localPath =
-        await _downloadSubmissionFile(row, userId, category: '作品');
-    if (localPath == null || localPath.isEmpty) return null;
-
-    final workId = work['id'] as int?;
-    if (workId != null) {
-      try {
-        final db = await DatabaseHelper.instance.database;
-        await db.update(
-          'student_works',
-          {
-            'file_path': localPath,
-            'video_url': localPath,
-            'updated_at': DateTime.now().toIso8601String(),
-          },
-          where: 'id = ?',
-          whereArgs: [workId],
-        );
-      } catch (e, st) {
-        swallowDebug(e, tag: 'SyncService.ensureWorkVideoAvailable', stack: st);
-      }
-    }
-    return localPath;
-  }
-
-  /// 从 Gitee 仓库下载提交附件到本地
+  /// 从 Gitee 仓库下载实验提交的 PDF 文件到本地
   ///
   /// 按新目录规范依次尝试：实验/ → files/（兼容旧数据）
-  Future<String?> _downloadSubmissionFile(
+  Future<void> _downloadSubmissionFile(
       Map<String, dynamic> row, String userId,
       {String category = '实验'}) async {
     try {
       final fileNames = (row['file_names'] as String?) ??
           (row['file_name'] as String?) ??
-          (row['content_json'] as String?) ??
           '';
+      if (fileNames.isEmpty) return;
 
       // 本地已存在则跳过
       final filePaths = (row['file_paths'] as String?) ??
           (row['file_path'] as String?) ??
-          (row['video_url'] as String?) ??
           '';
-      final fileName =
-          fileNames.isNotEmpty ? fileNames : _fileNameFromPathOrUrl(filePaths);
-      if (fileName.isEmpty) return null;
-      if (filePaths.isNotEmpty && File(filePaths).existsSync()) {
-        return filePaths;
-      }
+      if (filePaths.isNotEmpty && File(filePaths).existsSync()) return;
 
-      // 解析该学生的分组仓库，从 mad/files/{userId}/{category}/ 下载
-      final db = await DatabaseHelper.instance.database;
-      final repo = await _resolveRepoForUser(db, userId);
-      if (repo == null) return null;
-
+      // 按新目录规范下载，失败则回退旧路径
       List<int>? bytes;
-      final remotePath = '$madDir/files/$userId/$category/$fileName';
-      try {
-        bytes = await _gitee.downloadBinaryFile(
-          owner: repo.owner,
-          repo: repo.repo,
-          path: remotePath,
-          branch: repoBranch,
-        );
-      } catch (e, st) {
-        swallowDebug(e, tag: 'SyncService', stack: st);
+      for (final subDir in [category, 'files']) {
+        final remotePath = '$_syncDir/$userId/$subDir/$fileNames';
+        try {
+          bytes = await _gitee.downloadBinaryFile(
+            owner: repoOwner,
+            repo: repoName,
+            path: remotePath,
+            branch: repoBranch,
+          );
+          if (bytes != null && bytes.isNotEmpty) break;
+        } catch (_) {}
       }
-      if (bytes == null || bytes.isEmpty) return null;
+      if (bytes == null || bytes.isEmpty) return;
 
       // 保存到本地应用文档目录
       final appDir = await getApplicationDocumentsDirectory();
-      final syncFilesDir =
-          Directory('${appDir.path}/sync_files/$userId/$category');
+      final syncFilesDir = Directory('${appDir.path}/sync_files/$userId');
       if (!syncFilesDir.existsSync()) {
         syncFilesDir.createSync(recursive: true);
       }
-      final localFile = File('${syncFilesDir.path}/$fileName');
+      final localFile = File('${syncFilesDir.path}/$fileNames');
       await localFile.writeAsBytes(bytes);
 
-      // 更新 file_paths / file_path / video_url 为本地同步路径
+      // 更新 file_paths 为本地路径
       row['file_paths'] = localFile.path;
-      row['file_path'] = localFile.path;
-      row['video_url'] = localFile.path;
-      debugPrint('SyncService: 已下载 $fileName -> ${localFile.path}');
-      return localFile.path;
+      debugPrint('SyncService: 已下载 $fileNames -> ${localFile.path}');
     } catch (e) {
-      debugPrint('SyncService: 下载 $category 附件失败: $e');
-      return null;
+      debugPrint('SyncService: 下载 PDF 失败: $e');
     }
-  }
-
-  String _fileNameFromPathOrUrl(String raw) {
-    final value = raw.trim();
-    if (value.isEmpty) return '';
-    try {
-      final uri = Uri.parse(value);
-      if (uri.pathSegments.isNotEmpty) {
-        return Uri.decodeComponent(uri.pathSegments.last);
-      }
-    } catch (e, st) {
-      swallowDebug(e, tag: 'SyncService.fileNameFromUrl', stack: st);
-    }
-    return value.split('/').last.split('\\').last;
   }
 
   /// student_reports 特殊导入：
@@ -1533,16 +1159,14 @@ class SyncService {
       final existingScored = <String, Map<String, dynamic>>{};
       try {
         final scored = await db.query('student_reports',
-            where: 'user_id = ? AND score IS NOT NULL', whereArgs: [userId]);
+            where: 'user_id = ? AND score IS NOT NULL',
+            whereArgs: [userId]);
         for (final s in scored) {
           final title = s['title'] as String? ?? '';
           final taskId = s['task_id']?.toString() ?? '';
-          existingScored['$title|$taskId'] =
-              Map<String, dynamic>.from(s as Map);
+          existingScored['$title|$taskId'] = Map<String, dynamic>.from(s as Map);
         }
-      } catch (e, st) {
-        swallowDebug(e, tag: 'SyncService', stack: st);
-      }
+      } catch (_) {}
 
       // 删除该学生的未评分报告
       await db.delete('student_reports',
@@ -1556,22 +1180,19 @@ class SyncService {
 
           // 重映射 task_id
           final originalTaskId = row['task_id'] as int?;
-          if (originalTaskId != null &&
-              taskIdRemap.containsKey(originalTaskId)) {
+          if (originalTaskId != null && taskIdRemap.containsKey(originalTaskId)) {
             row['task_id'] = taskIdRemap[originalTaskId];
           }
 
           // 重映射 template_id
           final originalTemplateId = row['template_id'] as int?;
-          if (originalTemplateId != null &&
-              templateIdRemap.containsKey(originalTemplateId)) {
+          if (originalTemplateId != null && templateIdRemap.containsKey(originalTemplateId)) {
             row['template_id'] = templateIdRemap[originalTemplateId];
           }
 
           final title = row['title'] as String? ?? '';
           final taskId = row['task_id']?.toString() ?? '';
           final key = '$title|$taskId';
-          await _downloadSubmissionFile(row, userId, category: '考核');
 
           if (existingScored.containsKey(key)) {
             // 已评分 → 保留评分，更新内容
@@ -1589,9 +1210,7 @@ class SyncService {
           debugPrint('SyncService: 导入 student_reports 失败: $e');
         }
       }
-    } catch (e, st) {
-      swallowDebug(e, tag: 'SyncService', stack: st);
-    }
+    } catch (_) {}
     return count;
   }
 
@@ -1619,26 +1238,28 @@ class SyncService {
           final id = r['id'] as int?;
           if (id != null) scoredWorkIds.add(id);
         }
-      } catch (e, st) {
-        swallowDebug(e, tag: 'SyncService', stack: st);
-      }
+      } catch (_) {}
 
       // 构建已有作品的 title → id 映射（用于匹配跨设备数据）
-      final existingById = <int, Map<String, dynamic>>{};
-      final existingByTitle = <String, int>{};
+      final existingByTitle = <String, Map<String, dynamic>>{};
       try {
-        final existing = await db
-            .query('student_works', where: 'user_id = ?', whereArgs: [userId]);
+        final existing = await db.query('student_works',
+            where: 'user_id = ?', whereArgs: [userId]);
         for (final r in existing) {
-          final id = r['id'] as int?;
           final title = r['title'] as String? ?? '';
-          if (id != null) {
-            existingById[id] = Map<String, dynamic>.from(r as Map);
-            if (title.isNotEmpty) existingByTitle[title] = id;
-          }
+          existingByTitle[title] = Map<String, dynamic>.from(r as Map);
         }
-      } catch (e, st) {
-        swallowDebug(e, tag: 'SyncService', stack: st);
+      } catch (_) {}
+
+      // 删除未评分的作品（已评分的保留）
+      if (scoredWorkIds.isEmpty) {
+        await db.delete('student_works',
+            where: 'user_id = ?', whereArgs: [userId]);
+      } else {
+        final placeholders = scoredWorkIds.map((_) => '?').join(',');
+        await db.delete('student_works',
+            where: 'user_id = ? AND id NOT IN ($placeholders)',
+            whereArgs: [userId, ...scoredWorkIds]);
       }
 
       for (final r in list) {
@@ -1648,24 +1269,12 @@ class SyncService {
           row['user_id'] = userId;
 
           final title = row['title'] as String? ?? '';
-          await _downloadSubmissionFile(row, userId, category: '作品');
+          final existing = existingByTitle[title];
 
-          final existingId = existingByTitle[title];
-          if (existingId != null) {
-            final isScored = scoredWorkIds.contains(existingId);
-            if (!isScored) {
-              // 未评分 → 全量更新，保持本地 id 不变
-              await db.update('student_works', row,
-                  where: 'id = ?', whereArgs: [existingId]);
-            } else {
-              // 已评分 → 只更新非评分字段（评分由 work_scores 管理）
-              row.remove('score');
-              row.remove('score_comment');
-              row.remove('scorer_name');
-              row.remove('scored_at');
-              await db.update('student_works', row,
-                  where: 'id = ?', whereArgs: [existingId]);
-            }
+          if (existing != null && scoredWorkIds.contains(existing['id'])) {
+            // 已评分 → 更新内容字段，保留 id 不变（work_scores 外键依赖）
+            await db.update('student_works', row,
+                where: 'id = ?', whereArgs: [existing['id']]);
             count++;
           } else {
             await db.insert('student_works', row);
@@ -1675,199 +1284,47 @@ class SyncService {
           debugPrint('SyncService: 导入 student_works 失败: $e');
         }
       }
-    } catch (e, st) {
-      swallowDebug(e, tag: 'SyncService', stack: st);
-    }
+    } catch (_) {}
     return count;
-  }
-
-  Future<int?> _resolveLocalWorkId(
-    dynamic db,
-    Map<String, dynamic> row,
-  ) async {
-    final workUserId = (row['work_user_id'] as String?)?.trim() ?? '';
-    final workTitle = (row['work_title'] as String?)?.trim() ?? '';
-    final workCourseId = (row['work_course_id'] as String?)?.trim() ?? '';
-
-    if (workUserId.isNotEmpty && workTitle.isNotEmpty) {
-      final where = workCourseId.isEmpty
-          ? 'user_id = ? AND title = ?'
-          : "user_id = ? AND title = ? AND (course_id = ? OR course_id IS NULL OR course_id = '')";
-      final args = workCourseId.isEmpty
-          ? <Object?>[workUserId, workTitle]
-          : <Object?>[workUserId, workTitle, workCourseId];
-      final matches = await db.query(
-        'student_works',
-        columns: ['id'],
-        where: where,
-        whereArgs: args,
-        limit: 1,
-      );
-      if (matches.isNotEmpty) return matches.first['id'] as int?;
-
-      final now = DateTime.now().toIso8601String();
-      return db.insert('student_works', {
-        'course_id': workCourseId.isNotEmpty
-            ? workCourseId
-            : CourseContextService.defaultCourseId,
-        'title': workTitle,
-        'user_id': workUserId,
-        'status': '待提交',
-        'created_at': now,
-        'updated_at': now,
-      });
-    }
-
-    final rawWorkId = row['work_id'];
-    final workId = rawWorkId is int ? rawWorkId : int.tryParse('$rawWorkId');
-    if (workId == null) return null;
-    final exists = await db.query(
-      'student_works',
-      columns: ['id'],
-      where: 'id = ?',
-      whereArgs: [workId],
-      limit: 1,
-    );
-    return exists.isNotEmpty ? workId : null;
-  }
-
-  void _stripWorkSyncMetadata(Map<String, dynamic> row) {
-    row
-      ..remove('work_user_id')
-      ..remove('work_title')
-      ..remove('work_course_id');
-  }
-
-  Future<int> _importWorkInteractionTable(
-    dynamic db,
-    Map<String, dynamic> data,
-    String table,
-    String userId,
-  ) async {
-    final list = data[table] as List?;
-    if (list == null) return 0;
-
-    int count = 0;
-    try {
-      await db.delete(table, where: 'user_id = ?', whereArgs: [userId]);
-      if (list.isEmpty) return 0;
-      for (final r in list) {
-        try {
-          final row = Map<String, dynamic>.from(r as Map);
-          row.remove('id');
-          row['user_id'] = userId;
-          final localWorkId = await _resolveLocalWorkId(db, row);
-          if (localWorkId == null) continue;
-          row['work_id'] = localWorkId;
-          _stripWorkSyncMetadata(row);
-          await db.insert(table, row);
-          count++;
-        } catch (e) {
-          debugPrint('SyncService: 导入 $table 失败: $e');
-        }
-      }
-    } catch (e, st) {
-      swallowDebug(e,
-          tag: 'SyncService.importWorkInteraction.$table', stack: st);
-    }
-    return count;
-  }
-
-  Future<void> _recalculateWorkInteractionCounts(dynamic db) async {
-    try {
-      await db.rawUpdate('''
-        UPDATE student_works
-        SET view_count = (
-              SELECT COUNT(*) FROM work_views v WHERE v.work_id = student_works.id
-            ),
-            like_count = (
-              SELECT COUNT(*) FROM work_likes l WHERE l.work_id = student_works.id
-            ),
-            comment_count = (
-              SELECT COUNT(*) FROM work_comments c WHERE c.work_id = student_works.id
-            )
-      ''');
-    } catch (e, st) {
-      swallowDebug(e,
-          tag: 'SyncService.recalculateWorkInteractionCounts', stack: st);
-    }
   }
 
   /// work_scores 导入：
-  /// - 导入该学生作为评分人的互评记录
-  /// - 同时导入该学生作品上的教师/管理员评分，供学生端展示最终成绩
-  /// - 保留真实 scorer_id / scorer_role，避免教师评分被误写成学生互评
+  /// - 仅导入该学生作为评分人（scorer_id）的互评记录
+  /// - 不删除/覆盖其他评分人（教师或其他同学）的评分
   Future<int> _importWorkScores(
     dynamic db,
     Map<String, dynamic> data,
     String userId,
   ) async {
     final list = data['work_scores'] as List?;
-    if (list == null) return 0;
+    if (list == null || list.isEmpty) return 0;
 
     int count = 0;
     try {
-      await _ensureStudentSyncSchema(db);
-      // 删除该学生作为评分人的旧互评；再删除该学生作品上的旧教师评分，重新导入同步包版本。
-      await db
-          .delete('work_scores', where: 'scorer_id = ?', whereArgs: [userId]);
-      await db.rawDelete('''
-        DELETE FROM work_scores
-        WHERE work_id IN (SELECT id FROM student_works WHERE user_id = ?)
-          AND (
-            scorer_role IN ('teacher','admin')
-            OR scorer_id IN (
-              SELECT user_id FROM users WHERE role IN ('teacher','admin')
-            )
-          )
-      ''', [userId]);
-      if (list.isEmpty) return 0;
-      final incomingTeacherScorers = list
-          .whereType<Map>()
-          .map((r) => (
-                id: (r['scorer_id']?.toString() ?? '').trim(),
-                role: (r['scorer_role']?.toString() ?? '').trim(),
-              ))
-          .where(
-              (s) => s.id.isNotEmpty && s.id != userId && s.role != 'student')
-          .map((s) => s.id)
-          .toSet()
-          .toList();
-      if (incomingTeacherScorers.isNotEmpty) {
-        final placeholders =
-            List.filled(incomingTeacherScorers.length, '?').join(',');
-        await db.rawDelete('''
-          DELETE FROM work_scores
-          WHERE work_id IN (SELECT id FROM student_works WHERE user_id = ?)
-            AND scorer_id IN ($placeholders)
-        ''', [userId, ...incomingTeacherScorers]);
-      }
+      // 删除该学生作为评分人的旧评分（重新导入）
+      await db.delete('work_scores',
+          where: 'scorer_id = ?', whereArgs: [userId]);
 
       for (final r in list) {
         try {
           final row = Map<String, dynamic>.from(r as Map);
           row.remove('id');
-          final scorerId = (row['scorer_id']?.toString() ?? '').trim();
-          row['scorer_id'] = scorerId.isNotEmpty ? scorerId : userId;
-          final role = (row['scorer_role']?.toString() ?? '').trim();
-          if (role.isEmpty) {
-            row['scorer_role'] =
-                row['scorer_id'] == userId ? 'student' : 'teacher';
-          }
+          row['scorer_id'] = userId; // 确保 scorer_id 一致
 
-          final localWorkId = await _resolveLocalWorkId(db, row);
-          if (localWorkId == null) continue;
-          row['work_id'] = localWorkId;
-          _stripWorkSyncMetadata(row);
+          // work_id 需要匹配本地的 student_works.id
+          // 通过 work_id 对应的作品标题来重映射
+          final remoteWorkId = row['work_id'];
+          if (remoteWorkId == null) continue;
+
+          // 尝试直接插入（如果 work_id 在本地存在）
+          // ON DELETE CASCADE 保证外键完整性
           await db.insert('work_scores', row);
           count++;
         } catch (e) {
           debugPrint('SyncService: 导入 work_scores 失败: $e');
         }
       }
-    } catch (e, st) {
-      swallowDebug(e, tag: 'SyncService', stack: st);
-    }
+    } catch (_) {}
     return count;
   }
 
@@ -1900,9 +1357,7 @@ class SyncService {
           debugPrint('SyncService: 导入 project_scores 失败: $e');
         }
       }
-    } catch (e, st) {
-      swallowDebug(e, tag: 'SyncService', stack: st);
-    }
+    } catch (_) {}
     return count;
   }
 
@@ -1911,62 +1366,51 @@ class SyncService {
   /// 列出已同步的学生文件概览
   Future<List<Map<String, dynamic>>> listSyncedStudents() async {
     try {
-      final db = await DatabaseHelper.instance.database;
-      final groupRepos = await _allGroupRepos(db);
+      final files = await _gitee.listDir(
+          repoOwner, repoName, _syncDir, ref: repoBranch);
+      final jsonFiles = files
+          .where((f) =>
+              f['type'] == 'file' &&
+              (f['name']?.toString() ?? '').endsWith('.json'))
+          .toList();
+
       final students = <Map<String, dynamic>>[];
 
-      for (final repo in groupRepos) {
-        List<Map<String, dynamic>> files;
+      for (final file in jsonFiles) {
+        final filePath = file['path']?.toString() ?? '';
+        if (filePath.isEmpty) continue;
+
         try {
-          files = await _gitee.listDir(repo.owner, repo.repo, madDir,
-              ref: repoBranch);
+          final content = await _gitee.getFileContent(
+              repoOwner, repoName, filePath, ref: repoBranch);
+          if (content == null) continue;
+
+          final data = jsonDecode(content) as Map<String, dynamic>;
+          students.add({
+            'user_id': data['user_id'] ?? '',
+            'user_name': data['user_name'] ?? '',
+            'synced_at': data['synced_at'] ?? '',
+            'last_active': data['last_active'] ?? '',
+            'quiz_count': (data['quiz_results'] as List?)?.length ?? 0,
+            'record_count':
+                (data['learning_records'] as List?)?.length ?? 0,
+            'wrong_count': (data['wrong_answers'] as List?)?.length ?? 0,
+            'feedback_count': (data['feedback'] as List?)?.length ?? 0,
+            'favorite_count': (data['favorites'] as List?)?.length ?? 0,
+            'path_count': (data['learning_paths'] as List?)?.length ?? 0,
+            'lab_count': (data['lab_submissions'] as List?)?.length ?? 0,
+            'report_count': (data['student_reports'] as List?)?.length ?? 0,
+            'work_count': (data['student_works'] as List?)?.length ?? 0,
+            'checkin_count': (data['checkin_records'] as List?)?.length ?? 0,
+            'survey_count': (data['survey_responses'] as List?)?.length ?? 0,
+          });
         } catch (e) {
-          // 该仓库还没有 mad/ 目录（学生未同步过）
-          swallow(e, tag: 'SyncService.listSynced.listMadDir');
-          continue;
-        }
-        final jsonFiles = files
-            .where((f) =>
-                f['type'] == 'file' &&
-                (f['name']?.toString() ?? '').endsWith('.json'))
-            .toList();
-
-        for (final file in jsonFiles) {
-          final filePath = file['path']?.toString() ?? '';
-          if (filePath.isEmpty) continue;
-
-          try {
-            final content = await _gitee.getFileContent(
-                repo.owner, repo.repo, filePath,
-                ref: repoBranch);
-            if (content == null) continue;
-
-            final data = jsonDecode(content) as Map<String, dynamic>;
-            students.add({
-              'user_id': data['user_id'] ?? '',
-              'user_name': data['user_name'] ?? '',
-              'synced_at': data['synced_at'] ?? '',
-              'last_active': data['last_active'] ?? '',
-              'quiz_count': (data['quiz_results'] as List?)?.length ?? 0,
-              'record_count': (data['learning_records'] as List?)?.length ?? 0,
-              'wrong_count': (data['wrong_answers'] as List?)?.length ?? 0,
-              'feedback_count': (data['feedback'] as List?)?.length ?? 0,
-              'favorite_count': (data['favorites'] as List?)?.length ?? 0,
-              'path_count': (data['learning_paths'] as List?)?.length ?? 0,
-              'lab_count': (data['lab_submissions'] as List?)?.length ?? 0,
-              'report_count': (data['student_reports'] as List?)?.length ?? 0,
-              'work_count': (data['student_works'] as List?)?.length ?? 0,
-              'checkin_count': (data['checkin_records'] as List?)?.length ?? 0,
-              'survey_count': (data['survey_responses'] as List?)?.length ?? 0,
-            });
-          } catch (e) {
-            debugPrint('SyncService: 读取 $filePath 概览失败: $e');
-          }
+          debugPrint('SyncService: 读取 $filePath 概览失败: $e');
         }
       }
 
-      students.sort(
-          (a, b) => (a['user_id'] as String).compareTo(b['user_id'] as String));
+      students.sort((a, b) =>
+          (a['user_id'] as String).compareTo(b['user_id'] as String));
       return students;
     } catch (e) {
       debugPrint('SyncService: 列出已同步学生失败: $e');
@@ -1974,182 +1418,12 @@ class SyncService {
     }
   }
 
-  // ── 通知同步 ────────────────────────────────────────────────────────
-
-  /// 上传单个通知到 Gitee
-  Future<void> uploadNotification(int notificationId) async {
-    try {
-      await _ensureSyncToken();
-      final db = await DatabaseHelper.instance.database;
-
-      // 查询通知详情
-      final notifRows = await db
-          .query('notifications', where: 'id = ?', whereArgs: [notificationId]);
-      if (notifRows.isEmpty) {
-        debugPrint('SyncService: 通知 $notificationId 不存在');
-        return;
-      }
-
-      final notif = notifRows.first;
-
-      // 查询接收人列表
-      final recipientRows = await db.query(
-        'notification_recipients',
-        where: 'notification_id = ?',
-        whereArgs: [notificationId],
-      );
-
-      // 构建 JSON
-      final data = {
-        ...notif,
-        'recipients': recipientRows,
-      };
-
-      // 生成文件名：notif_{id}_{timestamp}.json
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final fileName = 'notif_${notificationId}_$timestamp.json';
-      final content = jsonEncode(data);
-
-      // 上传到 sync/notifications/
-      await _gitee.createOrUpdateFile(
-        owner: systemRepoOwner,
-        repo: systemRepoName,
-        path: 'sync/notifications/$fileName',
-        content: content,
-        message: 'upload notification $notificationId',
-        branch: repoBranch,
-      );
-
-      debugPrint('SyncService: 通知 $notificationId 已上传到 Gitee');
-    } catch (e, st) {
-      swallowDebug(e, tag: 'SyncService.uploadNotification', stack: st);
-    }
-  }
-
-  /// 从 Gitee 下载所有通知
-  Future<void> downloadNotifications() async {
-    try {
-      await _ensureSyncToken();
-
-      // 列出 sync/notifications/ 目录下的所有文件
-      final files = await _gitee.listDir(
-        systemRepoOwner,
-        systemRepoName,
-        'sync/notifications',
-        ref: repoBranch,
-      );
-
-      for (final file in files) {
-        final path = file['path'] as String?;
-        if (path == null || !path.endsWith('.json')) continue;
-
-        try {
-          // 下载文件内容
-          final content = await _gitee.getFileContent(
-            systemRepoOwner,
-            systemRepoName,
-            path,
-            ref: repoBranch,
-          );
-
-          if (content != null) {
-            final data = jsonDecode(content) as Map<String, dynamic>;
-            await _importNotification(data);
-          }
-        } catch (e, st) {
-          swallowDebug(e, tag: 'SyncService.downloadNotification', stack: st);
-        }
-      }
-
-      debugPrint('SyncService: 通知下载完成');
-    } catch (e, st) {
-      swallowDebug(e, tag: 'SyncService.downloadNotifications', stack: st);
-    }
-  }
-
-  /// 导入单个通知到本地数据库（使用自然键去重）
-  Future<void> _importNotification(Map<String, dynamic> data) async {
-    try {
-      final db = await DatabaseHelper.instance.database;
-
-      // 提取通知数据
-      final notif = Map<String, dynamic>.from(data);
-      final recipients = notif.remove('recipients') as List<dynamic>? ?? [];
-
-      // 使用自然键检查是否已存在：(entity_type, entity_id, created_at, target_id)
-      final entityType = notif['related_entity_type'] as String?;
-      final entityId = notif['related_entity_id'] as String?;
-      final createdAt = notif['created_at'] as String?;
-      final targetId = notif['target_id'] as String?;
-
-      if (entityType == null || entityId == null || createdAt == null) {
-        return; // 缺少自然键字段
-      }
-
-      // 检查是否已存在
-      final existing = await db.query(
-        'notifications',
-        where:
-            'related_entity_type = ? AND related_entity_id = ? AND created_at = ? AND target_type = ? AND target_id = ?',
-        whereArgs: [
-          entityType,
-          entityId,
-          createdAt,
-          notif['target_type'],
-          targetId
-        ],
-        limit: 1,
-      );
-
-      int notificationId;
-      if (existing.isNotEmpty) {
-        // 已存在，使用现有 ID
-        notificationId = existing.first['id'] as int;
-        debugPrint('SyncService: 通知已存在，跳过 (id=$notificationId)');
-      } else {
-        // 插入新通知（不指定 id，让数据库自动生成）
-        final insertData = Map<String, dynamic>.from(notif);
-        insertData.remove('id'); // 移除原 ID
-        notificationId = await db.insert('notifications', insertData);
-        debugPrint('SyncService: 导入通知 id=$notificationId');
-      }
-
-      // 导入接收人记录（使用自然键去重）
-      for (final r in recipients) {
-        final recipient = r as Map<String, dynamic>;
-        final recipientId = recipient['recipient_id'] as String?;
-        if (recipientId == null) continue;
-
-        // 检查是否已存在
-        final existingRecipient = await db.query(
-          'notification_recipients',
-          where: 'notification_id = ? AND recipient_id = ?',
-          whereArgs: [notificationId, recipientId],
-          limit: 1,
-        );
-
-        if (existingRecipient.isEmpty) {
-          await db.insert('notification_recipients', {
-            'notification_id': notificationId,
-            'recipient_id': recipientId,
-            'is_read': recipient['is_read'] ?? 0,
-            'read_at': recipient['read_at'],
-          });
-        }
-      }
-    } catch (e, st) {
-      swallowDebug(e, tag: 'SyncService.importNotification', stack: st);
-    }
-  }
-
   /// 测试同步仓库连接
   Future<SyncResult> testConnection() async {
     try {
       await _ensureSyncToken();
-      final detail =
-          await _gitee.getRepoDetail(systemRepoOwner, systemRepoName);
-      final fullName =
-          detail['full_name'] ?? '$systemRepoOwner/$systemRepoName';
+      final detail = await _gitee.getRepoDetail(repoOwner, repoName);
+      final fullName = detail['full_name'] ?? '$repoOwner/$repoName';
       final isPrivate = detail['private'] == true ? '私有' : '公开';
 
       return SyncResult(
@@ -2164,6 +1438,45 @@ class SyncService {
     } catch (e) {
       return SyncResult(success: false, message: '连接失败: $e');
     }
+  }
+
+  /// 确保作品视频文件本地可用；如果远程存在则下载到本地并回写数据库。
+  Future<String?> ensureWorkVideoAvailable(Map<String, dynamic> work) async {
+    final userId = (work['user_id'] as String?)?.trim() ?? '';
+    if (userId.isEmpty) return null;
+
+    for (final path in [
+      work['video_url'] as String?,
+      work['file_path'] as String?,
+    ].whereType<String>().map((e) => e.trim()).where((e) => e.isNotEmpty)) {
+      if (path.startsWith('http')) return path;
+      if (File(path).existsSync()) return path;
+    }
+
+    final row = Map<String, dynamic>.from(work);
+    await _downloadSubmissionFile(row, userId, category: '作品');
+    final localPath = row['file_paths'] as String?;
+    if (localPath == null || localPath.isEmpty) return null;
+
+    final workId = work['id'] as int?;
+    if (workId != null) {
+      try {
+        final db = await DatabaseHelper.instance.database;
+        await db.update(
+          'student_works',
+          {
+            'file_path': localPath,
+            'video_url': localPath,
+            'updated_at': DateTime.now().toIso8601String(),
+          },
+          where: 'id = ?',
+          whereArgs: [workId],
+        );
+      } catch (e, st) {
+        swallowDebug(e, tag: 'SyncService.ensureWorkVideoAvailable', stack: st);
+      }
+    }
+    return localPath;
   }
 }
 
