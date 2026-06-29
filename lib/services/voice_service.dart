@@ -426,13 +426,16 @@ class VoiceService {
     _cleanupTimer?.cancel();
     _cleanupTimer = null;
     _isListening = false;
+    // 先停 native 录音器，再取消 Dart 流订阅。
+    // record_windows 插件中若先 cancel 流再 stop recorder，
+    // 可能导致原生层音频句柄状态不一致而闪退。
+    final rec = _recorder;
+    _recorder = null;
+    await _cleanupRecorder(rec);
     try {
       await _audioSub?.cancel();
     } catch (e) { swallowDebug(e, tag: 'voice_service'); }
     _audioSub = null;
-    final rec = _recorder;
-    _recorder = null;
-    await _cleanupRecorder(rec);
     try {
       await _wsChannel?.sink.close();
     } catch (e) { swallowDebug(e, tag: 'voice_service'); }
