@@ -47,7 +47,9 @@ class DevPaths {
   static String get ffmpegPath {
     if (_ffmpegCached != null) return _ffmpegCached!;
     if (Platform.isWindows) {
-      const candidates = [
+      final exeDir = File(Platform.resolvedExecutable).parent.path;
+      final candidates = [
+        p.join(exeDir, 'ffmpeg.exe'),
         r'D:\development\ffmpeg-8.0.1-full_build\bin\ffmpeg.exe',
         r'C:\ffmpeg\bin\ffmpeg.exe',
       ];

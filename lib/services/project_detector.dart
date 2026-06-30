@@ -5,6 +5,8 @@ enum ProjectType {
   flutter,
   java,
   node,
+  android,
+  harmony,
   executable,
   packaged,
   unknown,
@@ -36,9 +38,9 @@ class ProjectInfo {
 
 /// Lightweight entry-point descriptor found in a directory.
 class _EntryPoint {
-  final String path;       // absolute path to the entry file
-  final String label;      // display label, e.g. "打包应用", "Python 脚本"
-  final String? runExe;    // interpreter or null (null = run path directly)
+  final String path; // absolute path to the entry file
+  final String label; // display label, e.g. "打包应用", "Python 脚本"
+  final String? runExe; // interpreter or null (null = run path directly)
   final List<String>? runArgs; // args to pass to the interpreter
 
   const _EntryPoint({
@@ -63,6 +65,7 @@ class ProjectDetector {
 
     // ── File path: detect by extension ──────────────────────────────
     if (PathUtils.fileExists(p)) {
+      if (p.toLowerCase().endsWith('.hap')) return ProjectType.harmony;
       if (_isEntryPointFile(p)) return ProjectType.packaged;
     }
 
@@ -80,6 +83,8 @@ class ProjectDetector {
 
     if (names.contains('pubspec.yaml')) return ProjectType.flutter;
     if (names.contains('pom.xml')) return ProjectType.java;
+    if (_isAndroidGradleProject(p, names)) return ProjectType.android;
+    if (_isHarmonyProject(names)) return ProjectType.harmony;
     if (names.contains('package.json') && _isRealNodeProject(p)) {
       return ProjectType.node;
     }
@@ -99,6 +104,15 @@ class ProjectDetector {
         label: 'APK',
       );
     }
+    if (p.toLowerCase().endsWith('.hap')) {
+      return ProjectInfo(
+        type: ProjectType.harmony,
+        path: p,
+        runCommand: 'explorer',
+        runArgs: [p],
+        label: 'HarmonyOS HAP',
+      );
+    }
 
     final type = detectType(p);
     switch (type) {
@@ -116,6 +130,10 @@ class ProjectDetector {
         return _getJavaInfo(p);
       case ProjectType.node:
         return _getNodeInfo(p);
+      case ProjectType.android:
+        return _getAndroidInfo(p);
+      case ProjectType.harmony:
+        return _getHarmonyInfo(p);
       case ProjectType.packaged:
         return _getPackagedInfo(p);
       case ProjectType.executable:
@@ -144,9 +162,29 @@ class ProjectDetector {
     try {
       final content = file.readAsStringSync();
       return content.contains('"start"') &&
-          (content.contains('"dependencies"') || content.contains('"devDependencies"'));
+          (content.contains('"dependencies"') ||
+              content.contains('"devDependencies"'));
     } catch (_) {}
     return false;
+  }
+
+  static bool _isAndroidGradleProject(String projectPath, Set<String> names) {
+    if (!names.contains('build.gradle') &&
+        !names.contains('build.gradle.kts') &&
+        !names.contains('settings.gradle') &&
+        !names.contains('settings.gradle.kts')) {
+      return false;
+    }
+    final sep = Platform.pathSeparator;
+    return File(
+            '$projectPath${sep}app${sep}src${sep}main${sep}AndroidManifest.xml')
+        .existsSync();
+  }
+
+  static bool _isHarmonyProject(Set<String> names) {
+    return names.contains('oh-package.json5') ||
+        names.contains('hvigorfile.ts') ||
+        names.contains('build-profile.json5');
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -161,6 +199,7 @@ class ProjectDetector {
         lower.endsWith('.cmd') ||
         lower.endsWith('.jar') ||
         lower.endsWith('.py') ||
+        lower.endsWith('.hap') ||
         lower.endsWith('.ps1');
   }
 
@@ -235,39 +274,66 @@ class ProjectDetector {
     if (lower.endsWith('.exe')) {
       return _EntryPoint(path: filePath, label: '打包应用');
     }
+    if (lower.endsWith('.hap')) {
+      return _EntryPoint(
+        path: filePath,
+        label: 'HarmonyOS HAP',
+        runExe: 'explorer',
+        runArgs: [filePath],
+      );
+    }
     if (lower.endsWith('.bat') || lower.endsWith('.cmd')) {
-      return _EntryPoint(path: filePath, label: '脚本 (bat)',
-        runExe: 'cmd', runArgs: ['/c', filePath],
+      return _EntryPoint(
+        path: filePath,
+        label: '脚本 (bat)',
+        runExe: 'cmd',
+        runArgs: ['/c', filePath],
       );
     }
     if (lower.endsWith('.jar')) {
       // Use system java as fallback
       final sep = Platform.pathSeparator;
-      final parent = filePath.split(sep).sublist(0, filePath.split(sep).length - 1).join(sep);
+      final parent = filePath
+          .split(sep)
+          .sublist(0, filePath.split(sep).length - 1)
+          .join(sep);
       final embeddedJre = '$parent${sep}jre${sep}bin${sep}java.exe';
       final javaExe = File(embeddedJre).existsSync() ? embeddedJre : 'java';
-      return _EntryPoint(path: filePath, label: 'Java 应用',
-        runExe: javaExe, runArgs: ['-jar', filePath],
+      return _EntryPoint(
+        path: filePath,
+        label: 'Java 应用',
+        runExe: javaExe,
+        runArgs: ['-jar', filePath],
       );
     }
     if (lower.endsWith('.py')) {
-      return _EntryPoint(path: filePath, label: 'Python 脚本',
-        runExe: 'python', runArgs: [filePath],
+      return _EntryPoint(
+        path: filePath,
+        label: 'Python 脚本',
+        runExe: 'python',
+        runArgs: [filePath],
       );
     }
     if (lower.endsWith('.ps1')) {
-      return _EntryPoint(path: filePath, label: 'PowerShell 脚本',
-        runExe: 'powershell', runArgs: ['-ExecutionPolicy', 'Bypass', '-File', filePath],
+      return _EntryPoint(
+        path: filePath,
+        label: 'PowerShell 脚本',
+        runExe: 'powershell',
+        runArgs: ['-ExecutionPolicy', 'Bypass', '-File', filePath],
       );
     }
     return null;
   }
 
   static _EntryPoint _entryForExe(List<File> exes, String dirName) {
-    final best = _pickBest(exes, dirName, '.exe');
+    final best = _pickBest(exes, dirName, '.exe', preferRuntimeNames: true);
     // Check for companion JRE to refine label
-    final parent = best.path.split(Platform.pathSeparator).sublist(0, best.path.split(Platform.pathSeparator).length - 1).join(Platform.pathSeparator);
-    final jreExe = '$parent${Platform.pathSeparator}jre${Platform.pathSeparator}bin${Platform.pathSeparator}java.exe';
+    final parent = best.path
+        .split(Platform.pathSeparator)
+        .sublist(0, best.path.split(Platform.pathSeparator).length - 1)
+        .join(Platform.pathSeparator);
+    final jreExe =
+        '$parent${Platform.pathSeparator}jre${Platform.pathSeparator}bin${Platform.pathSeparator}java.exe';
     final hasJre = File(jreExe).existsSync();
     return _EntryPoint(
       path: best.path,
@@ -278,19 +344,23 @@ class ProjectDetector {
   static _EntryPoint _entryForBat(List<File> bats, String dirName) {
     final best = _pickBest(bats, dirName, '.bat');
     return _EntryPoint(
-      path: best.path, label: '脚本 (bat)',
-      runExe: 'cmd', runArgs: ['/c', best.path],
+      path: best.path,
+      label: '脚本 (bat)',
+      runExe: 'cmd',
+      runArgs: ['/c', best.path],
     );
   }
 
-  static _EntryPoint _entryForJar(List<File> jars, String dirName, String projectPath) {
+  static _EntryPoint _entryForJar(
+      List<File> jars, String dirName, String projectPath) {
     final best = _pickBest(jars, dirName, '.jar');
     final sep = Platform.pathSeparator;
 
     // Look for embedded JRE (projectPath/jre, deploy/jre)
     String javaExe = 'java';
     final rootJre = '$projectPath${sep}jre${sep}bin${sep}java.exe';
-    final deployJre = '$projectPath${sep}deploy${sep}jre${sep}bin${sep}java.exe';
+    final deployJre =
+        '$projectPath${sep}deploy${sep}jre${sep}bin${sep}java.exe';
     if (File(rootJre).existsSync()) {
       javaExe = rootJre;
     } else if (File(deployJre).existsSync()) {
@@ -300,37 +370,75 @@ class ProjectDetector {
     final hasEmbeddedJre = javaExe != 'java';
 
     return _EntryPoint(
-      path: best.path, label: hasEmbeddedJre ? '打包应用 (Java)' : 'Java 应用',
-      runExe: javaExe, runArgs: ['-jar', best.path],
+      path: best.path,
+      label: hasEmbeddedJre ? '打包应用 (Java)' : 'Java 应用',
+      runExe: javaExe,
+      runArgs: ['-jar', best.path],
     );
   }
 
   static _EntryPoint _entryForPython(List<File> pys, String dirName) {
     final best = _pickBest(pys, dirName, '.py');
     return _EntryPoint(
-      path: best.path, label: 'Python 脚本',
-      runExe: 'python', runArgs: [best.path],
+      path: best.path,
+      label: 'Python 脚本',
+      runExe: 'python',
+      runArgs: [best.path],
     );
   }
 
   static _EntryPoint _entryForPs1(List<File> ps1s, String dirName) {
     final best = _pickBest(ps1s, dirName, '.ps1');
     return _EntryPoint(
-      path: best.path, label: 'PowerShell 脚本',
-      runExe: 'powershell', runArgs: ['-ExecutionPolicy', 'Bypass', '-File', best.path],
+      path: best.path,
+      label: 'PowerShell 脚本',
+      runExe: 'powershell',
+      runArgs: ['-ExecutionPolicy', 'Bypass', '-File', best.path],
     );
   }
 
   /// From a list of files, pick the one whose basename matches `dirName`,
   /// otherwise return the first.
-  static File _pickBest(List<File> files, String dirName, String suffix) {
+  static File _pickBest(
+    List<File> files,
+    String dirName,
+    String suffix, {
+    bool preferRuntimeNames = false,
+  }) {
     if (files.length == 1) return files.first;
     final target = '$dirName$suffix'.toLowerCase();
     final match = files.cast<File?>().firstWhere(
-      (f) => f!.path.split(Platform.pathSeparator).last.toLowerCase() == target,
-      orElse: () => null,
-    );
-    return match ?? files.first;
+          (f) =>
+              f!.path.split(Platform.pathSeparator).last.toLowerCase() ==
+              target,
+          orElse: () => null,
+        );
+    if (match != null) return match;
+
+    if (preferRuntimeNames) {
+      int score(File file) {
+        final name = file.path
+            .split(Platform.pathSeparator)
+            .last
+            .toLowerCase()
+            .replaceAll(suffix, '');
+        var s = 0;
+        if (name.contains('server')) s += 5;
+        if (name.contains('start')) s += 4;
+        if (name.contains('main')) s += 3;
+        if (name.contains(dirName.toLowerCase())) s += 3;
+        if (name.contains('test')) s -= 4;
+        if (name.contains('stress')) s -= 4;
+        if (name.contains('eval')) s -= 4;
+        return s;
+      }
+
+      final sorted = List<File>.from(files)
+        ..sort((a, b) => score(b).compareTo(score(a)));
+      return sorted.first;
+    }
+
+    return files.first;
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -341,7 +449,8 @@ class ProjectDetector {
     final entry = _findBestEntryPoint(projectPath);
 
     if (entry == null) {
-      return ProjectInfo(type: ProjectType.packaged, path: projectPath, label: '未知');
+      return ProjectInfo(
+          type: ProjectType.packaged, path: projectPath, label: '未知');
     }
 
     // Determine working directory
@@ -355,16 +464,19 @@ class ProjectDetector {
 
     // Detect port / URL from config files and entry script
     final sep = Platform.pathSeparator;
-    final port = _detectPort('$projectPath${sep}deploy${sep}application-demo.yml') ??
-        _detectPort('$projectPath${sep}application-demo.yml') ??
-        _detectPort('$projectPath${sep}application.yml') ??
-        _detectPortFromBatContent(entry.path);
+    final port =
+        _detectPort('$projectPath${sep}deploy${sep}application-demo.yml') ??
+            _detectPort('$projectPath${sep}application-demo.yml') ??
+            _detectPort('$projectPath${sep}application.yml') ??
+            _detectPortFromBatContent(entry.path);
     final explicitUrl = _detectUrlFromBatContent(entry.path) ??
         (port != null ? 'http://localhost:$port' : null);
 
     // Web 应用标签优化
     final label = explicitUrl != null && !entry.label.contains('APK')
-        ? entry.label.replaceFirst('脚本', 'Web 脚本').replaceFirst('打包应用', 'Web 应用')
+        ? entry.label
+            .replaceFirst('脚本', 'Web 脚本')
+            .replaceFirst('打包应用', 'Web 应用')
         : entry.label;
 
     return ProjectInfo(
@@ -397,7 +509,9 @@ class ProjectDetector {
     if (deployDir.existsSync()) {
       try {
         for (final f in deployDir.listSync()) {
-          if (f is File && f.path.endsWith('.jar') && !f.path.endsWith('.jar.original')) {
+          if (f is File &&
+              f.path.endsWith('.jar') &&
+              !f.path.endsWith('.jar.original')) {
             jarPath = f.path;
             jarDir = deployDir.path;
             break;
@@ -408,7 +522,9 @@ class ProjectDetector {
     if (jarPath == null) {
       try {
         for (final f in Directory(projectPath).listSync()) {
-          if (f is File && f.path.endsWith('.jar') && !f.path.endsWith('.jar.original')) {
+          if (f is File &&
+              f.path.endsWith('.jar') &&
+              !f.path.endsWith('.jar.original')) {
             jarPath = f.path;
             jarDir = projectPath;
             break;
@@ -421,7 +537,9 @@ class ProjectDetector {
       if (targetDir.existsSync()) {
         try {
           for (final f in targetDir.listSync()) {
-            if (f is File && f.path.endsWith('.jar') && !f.path.endsWith('.jar.original')) {
+            if (f is File &&
+                f.path.endsWith('.jar') &&
+                !f.path.endsWith('.jar.original')) {
               jarPath = f.path;
               jarDir = targetDir.path;
               break;
@@ -433,7 +551,8 @@ class ProjectDetector {
 
     // 2. Find JRE: deploy/jre > project/jre > system java
     String? javaExe;
-    final embeddedJre = '$projectPath${sep}deploy${sep}jre${sep}bin${sep}java.exe';
+    final embeddedJre =
+        '$projectPath${sep}deploy${sep}jre${sep}bin${sep}java.exe';
     if (File(embeddedJre).existsSync()) {
       javaExe = embeddedJre;
     } else {
@@ -457,7 +576,8 @@ class ProjectDetector {
 
     // 4. Detect port
     final port = _detectPort(configPath) ??
-        _detectPort('$projectPath${sep}src${sep}main${sep}resources${sep}application.yml') ??
+        _detectPort(
+            '$projectPath${sep}src${sep}main${sep}resources${sep}application.yml') ??
         _detectPort('$projectPath${sep}application.yml');
 
     // 5. Build java command
@@ -465,7 +585,8 @@ class ProjectDetector {
       final args = <String>[
         '-Dfile.encoding=UTF-8',
         '-Xmx1024m',
-        '-jar', jarPath,
+        '-jar',
+        jarPath,
       ];
       if (configPath != null) {
         final configName = configPath.split(sep).last;
@@ -524,6 +645,34 @@ class ProjectDetector {
       buildArgs: ['run', 'build'],
       label: 'Node.js',
       url: port != null ? 'http://localhost:$port' : null,
+    );
+  }
+
+  static ProjectInfo _getAndroidInfo(String projectPath) {
+    final sep = Platform.pathSeparator;
+    final gradlew = '$projectPath${sep}gradlew.bat';
+    final command = File(gradlew).existsSync() ? gradlew : 'gradle';
+    return ProjectInfo(
+      type: ProjectType.android,
+      path: projectPath,
+      runCommand: command,
+      runArgs: ['installDebug'],
+      buildCommand: command,
+      buildArgs: ['assembleDebug'],
+      label: 'Android/Gradle',
+      workingDir: projectPath,
+    );
+  }
+
+  static ProjectInfo _getHarmonyInfo(String projectPath) {
+    final isHap = projectPath.toLowerCase().endsWith('.hap');
+    return ProjectInfo(
+      type: ProjectType.harmony,
+      path: projectPath,
+      runCommand: 'explorer',
+      runArgs: [isHap ? projectPath : Directory(projectPath).absolute.path],
+      label: isHap ? 'HarmonyOS HAP' : 'HarmonyOS/ArkTS',
+      workingDir: isHap ? File(projectPath).parent.path : projectPath,
     );
   }
 
@@ -609,10 +758,11 @@ class ProjectDetector {
   static ProjectInfo _buildPackagedFromBat(
       String batPath, String dirPath, String projectPath) {
     final sep = Platform.pathSeparator;
-    final port = _detectPort('$dirPath${sep}deploy${sep}application-demo.yml') ??
-        _detectPort('$dirPath${sep}application-demo.yml') ??
-        _detectPort('$dirPath${sep}application.yml') ??
-        _detectPortFromBatContent(batPath);
+    final port =
+        _detectPort('$dirPath${sep}deploy${sep}application-demo.yml') ??
+            _detectPort('$dirPath${sep}application-demo.yml') ??
+            _detectPort('$dirPath${sep}application.yml') ??
+            _detectPortFromBatContent(batPath);
     final explicitUrl = _detectUrlFromBatContent(batPath) ??
         (port != null ? 'http://localhost:$port' : null);
     final batName = batPath.split(sep).last;
@@ -631,13 +781,14 @@ class ProjectDetector {
   static ProjectInfo _buildPackagedFromEntry(
       _EntryPoint entry, String dirPath, String projectPath) {
     final sep = Platform.pathSeparator;
-    final port = _detectPort('$dirPath${sep}deploy${sep}application-demo.yml') ??
-        _detectPort('$dirPath${sep}application-demo.yml') ??
-        _detectPort('$dirPath${sep}application.yml') ??
-        (entry.path.toLowerCase().endsWith('.bat') ||
-                entry.path.toLowerCase().endsWith('.cmd')
-            ? _detectPortFromBatContent(entry.path)
-            : null);
+    final port =
+        _detectPort('$dirPath${sep}deploy${sep}application-demo.yml') ??
+            _detectPort('$dirPath${sep}application-demo.yml') ??
+            _detectPort('$dirPath${sep}application.yml') ??
+            (entry.path.toLowerCase().endsWith('.bat') ||
+                    entry.path.toLowerCase().endsWith('.cmd')
+                ? _detectPortFromBatContent(entry.path)
+                : null);
     final explicitUrl = _detectUrlFromBatContent(entry.path) ??
         (port != null ? 'http://localhost:$port' : null);
     final isWeb = explicitUrl != null;
@@ -675,12 +826,18 @@ class ProjectDetector {
       bool inServerBlock = false;
       for (final line in lines) {
         final trimmed = line.trim();
-        if (trimmed == 'server:') { inServerBlock = true; continue; }
+        if (trimmed == 'server:') {
+          inServerBlock = true;
+          continue;
+        }
         if (inServerBlock && trimmed.startsWith('port:')) {
           final portStr = trimmed.replaceFirst('port:', '').trim();
           return int.tryParse(portStr);
         }
-        if (inServerBlock && trimmed.isNotEmpty && !trimmed.startsWith(' ') && !trimmed.startsWith('#')) {
+        if (inServerBlock &&
+            trimmed.isNotEmpty &&
+            !trimmed.startsWith(' ') &&
+            !trimmed.startsWith('#')) {
           inServerBlock = false;
         }
       }
@@ -721,9 +878,9 @@ class ProjectDetector {
     try {
       final content = file.readAsStringSync();
       // 1. --server.port=8080 / -Dserver.port=8080
-      final explicit = RegExp(r'(?:server\.port|port)[:=]\s*(\d{4,5})',
-              caseSensitive: false)
-          .firstMatch(content);
+      final explicit =
+          RegExp(r'(?:server\.port|port)[:=]\s*(\d{4,5})', caseSensitive: false)
+              .firstMatch(content);
       if (explicit != null) return int.tryParse(explicit.group(1)!);
       // 2. 常见的教学场景端口（如果脚本中多处提到取第一个）
       final common = RegExp(r'\b(8080|8090|8443|3000|5000|8000|9000|9090)\b')
@@ -754,7 +911,8 @@ class ProjectDetector {
           for (final f in rootDir.listSync()) {
             if (f is File) {
               final name = f.path.split(sep).last.toLowerCase();
-              if (name.contains('start') && (name.endsWith('.bat') || name.endsWith('.cmd'))) {
+              if (name.contains('start') &&
+                  (name.endsWith('.bat') || name.endsWith('.cmd'))) {
                 return f.path;
               }
             }
@@ -767,7 +925,8 @@ class ProjectDetector {
       for (final f in dir.listSync()) {
         if (f is File) {
           final name = f.path.split(sep).last.toLowerCase();
-          if (name.contains('start') && (name.endsWith('.bat') || name.endsWith('.cmd'))) {
+          if (name.contains('start') &&
+              (name.endsWith('.bat') || name.endsWith('.cmd'))) {
             return f.path;
           }
         }

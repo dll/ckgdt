@@ -22,6 +22,7 @@ import 'agents/safety_agent.dart';
 import 'agents/archive_agent.dart';
 import 'agents/grading_agent.dart';
 import 'agents/digital_twin_agent.dart';
+import 'agents/case_demo_agent.dart';
 
 /// 智能体注册表 + Director 编排
 ///
@@ -69,6 +70,8 @@ class AgentRegistry {
     _register(GradingAgent());
     // 数字孪生智能体
     _register(DigitalTwinAgent());
+    // 教学案例演示智能体
+    _register(CaseDemoAgent());
     _register(AssistantAgent()); // 兜底，最后注册
 
     _initialized = true;
@@ -231,10 +234,14 @@ class AgentRegistry {
 
   /// 异步保存消息到历史（静默失败，含 Token 用量）
   void _saveToHistory(String agentId, String role, String content,
-      {int promptTokens = 0, int completionTokens = 0, int totalTokens = 0,
-       String? provider, String? model}) {
+      {int promptTokens = 0,
+      int completionTokens = 0,
+      int totalTokens = 0,
+      String? provider,
+      String? model}) {
     final userId = AuthService().currentUser?.userId;
-    _historyDao.saveMessage(
+    _historyDao
+        .saveMessage(
       sessionId: _session.id,
       agentId: agentId,
       role: role,
@@ -245,7 +252,8 @@ class AgentRegistry {
       provider: provider,
       model: model,
       userId: userId,
-    ).catchError((e) {
+    )
+        .catchError((e) {
       debugPrint('AgentRegistry: 保存历史失败: $e');
       return 0;
     });
