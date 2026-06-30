@@ -15,6 +15,7 @@ import '../../../services/cross_platform/session_manager.dart';
 import '../../widgets/styled_qr.dart';
 import '../cross_platform/qr_scan_page.dart';
 import '../privacy/privacy_policy_page.dart';
+import '../../../services/voice_service.dart';
 import '../../widgets/voice_input_button.dart';
 import '../home/home_page.dart';
 import 'knowledge_graph_backdrop.dart';
@@ -240,6 +241,10 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       _userIdController.text = digits;
       _passwordController.text =
           digits.length >= 6 ? digits.substring(digits.length - 6) : digits;
+      // 语音识别完成后、导航到主页之前必须等待 native 录音器完全释放。
+      // 否则 dispose 里的 fire-and-forget forceStop 来不及在 pushReplacement 之前完成，
+      // native AudioRecorder 异步销毁与 HomePage 构建并发 => record_windows 原生崩溃。
+      await VoiceService().forceStop();
       _login();
       return;
     }

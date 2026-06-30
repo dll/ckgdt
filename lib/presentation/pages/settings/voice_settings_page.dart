@@ -1,8 +1,9 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../services/settings_service.dart';
 import '../../../services/voice_service.dart';
 
 import '../../widgets/back_button_bar.dart';
+
 /// 讯飞语音配置页面
 ///
 /// 配置讯飞开放平台的 AppID、APIKey、APISecret，
@@ -128,6 +129,7 @@ class _VoiceSettingsPageState extends State<VoiceSettingsPage> {
 
     // 等待结果
     await Future.delayed(const Duration(seconds: 2));
+    await voiceService.forceStop();
 
     if (mounted) {
       setState(() {
@@ -198,8 +200,7 @@ class _VoiceSettingsPageState extends State<VoiceSettingsPage> {
                     Text(
                       '使用讯飞开放平台的语音听写 (IAT) 服务，'
                       '支持语音输入学号、语音导航等功能。',
-                      style: TextStyle(
-                          fontSize: 13, color: Colors.grey[600]),
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                     ),
                     const SizedBox(height: 8),
                     InkWell(
@@ -267,8 +268,7 @@ class _VoiceSettingsPageState extends State<VoiceSettingsPage> {
                 suffixIcon: IconButton(
                   icon: Icon(
                       _obscureKey ? Icons.visibility : Icons.visibility_off),
-                  onPressed: () =>
-                      setState(() => _obscureKey = !_obscureKey),
+                  onPressed: () => setState(() => _obscureKey = !_obscureKey),
                 ),
               ),
             ),
@@ -283,9 +283,8 @@ class _VoiceSettingsPageState extends State<VoiceSettingsPage> {
                 prefixIcon: const Icon(Icons.lock),
                 border: const OutlineInputBorder(),
                 suffixIcon: IconButton(
-                  icon: Icon(_obscureSecret
-                      ? Icons.visibility
-                      : Icons.visibility_off),
+                  icon: Icon(
+                      _obscureSecret ? Icons.visibility : Icons.visibility_off),
                   onPressed: () =>
                       setState(() => _obscureSecret = !_obscureSecret),
                 ),
@@ -376,11 +375,9 @@ class _VoiceSettingsPageState extends State<VoiceSettingsPage> {
                         style: TextStyle(
                             fontSize: 15, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 12),
-                    _buildStep(
-                        '1', '注册讯飞开放平台账号', 'console.xfyun.cn'),
+                    _buildStep('1', '注册讯飞开放平台账号', 'console.xfyun.cn'),
                     _buildStep('2', '创建应用', '获取 AppID'),
-                    _buildStep('3', '开通语音听写服务',
-                        '免费版支持 500次/天'),
+                    _buildStep('3', '开通语音听写服务', '免费版支持 500次/天'),
                     _buildStep('4', '填入上方参数并保存', '测试通过即可使用'),
                     const SizedBox(height: 12),
                     Container(
@@ -388,8 +385,8 @@ class _VoiceSettingsPageState extends State<VoiceSettingsPage> {
                       decoration: BoxDecoration(
                         color: Colors.amber.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                            color: Colors.amber.withOpacity(0.3)),
+                        border:
+                            Border.all(color: Colors.amber.withOpacity(0.3)),
                       ),
                       child: const Row(
                         children: [
@@ -441,8 +438,7 @@ class _VoiceSettingsPageState extends State<VoiceSettingsPage> {
                     style: const TextStyle(
                         fontSize: 13, fontWeight: FontWeight.w500)),
                 Text(desc,
-                    style:
-                        TextStyle(fontSize: 11, color: Colors.grey[500])),
+                    style: TextStyle(fontSize: 11, color: Colors.grey[500])),
               ],
             ),
           ),

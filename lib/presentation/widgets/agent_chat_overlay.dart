@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../data/local/ai_history_dao.dart';
@@ -272,11 +272,13 @@ class _AgentChatOverlayState extends State<AgentChatOverlay> {
           });
         }
       };
-      voice.onComplete = (finalText) {
+      voice.onComplete = (finalText) async {
+        final text = finalText.trim();
+        await voice.forceStop();
         if (mounted) {
           setState(() => _isVoiceListening = false);
-          if (finalText.trim().isNotEmpty) {
-            _sendMessage(finalText.trim()).catchError((Object e) {
+          if (text.isNotEmpty) {
+            _sendMessage(text).catchError((Object e) {
               debugPrint('Voice onComplete _sendMessage error: $e');
             });
           }
@@ -294,7 +296,7 @@ class _AgentChatOverlayState extends State<AgentChatOverlay> {
   }
 
   Future<void> _stopVoiceInput() async {
-    await VoiceService().stopListening();
+    await VoiceService().forceStop();
     if (mounted) setState(() => _isVoiceListening = false);
   }
 
@@ -830,8 +832,7 @@ $dialogText
                                     color: Colors.blue.withOpacity(0.05),
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
-                                        color:
-                                            Colors.blue.withOpacity(0.2)),
+                                        color: Colors.blue.withOpacity(0.2)),
                                   ),
                                   child: Column(
                                     crossAxisAlignment:
@@ -856,8 +857,7 @@ $dialogText
                                     color: Colors.green.withOpacity(0.05),
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
-                                        color: Colors.green
-                                            .withOpacity(0.2)),
+                                        color: Colors.green.withOpacity(0.2)),
                                   ),
                                   child: Column(
                                     crossAxisAlignment:
@@ -920,8 +920,8 @@ $dialogText
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: theme.colorScheme.primary
-                                    .withOpacity(0.08),
+                                color:
+                                    theme.colorScheme.primary.withOpacity(0.08),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(kw,

@@ -1,4 +1,4 @@
-﻿part of '../classroom_page.dart';
+part of '../classroom_page.dart';
 
 class _ClassroomToolsTab extends StatefulWidget {
   final ClassroomDao classroomDao;
@@ -359,8 +359,7 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                             label: Text(_difficultyLabel(d),
                                 style: const TextStyle(fontSize: 12)),
                             selected: _selectedDifficulty == d,
-                            selectedColor:
-                                _difficultyColor(d).withOpacity(0.2),
+                            selectedColor: _difficultyColor(d).withOpacity(0.2),
                             onSelected: _isRolling || _showResult
                                 ? null
                                 : (v) {
@@ -379,8 +378,8 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: _difficultyColor(_selectedDifficulty)
-                        .withOpacity(0.06),
+                    color:
+                        _difficultyColor(_selectedDifficulty).withOpacity(0.06),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -774,8 +773,7 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
                             child: LinearProgressIndicator(
                               value: pct,
                               minHeight: 6,
-                              backgroundColor:
-                                  Colors.grey.withOpacity(0.1),
+                              backgroundColor: Colors.grey.withOpacity(0.1),
                               valueColor: AlwaysStoppedAnimation(
                                   Colors.blue.withOpacity(0.7)),
                             ),
@@ -830,8 +828,7 @@ class _ClassroomToolsTabState extends State<_ClassroomToolsTab> {
             alignment: WrapAlignment.center,
             children: [1, 2, 3, 5, 10, 15, 20, 30]
                 .map((m) => ChoiceChip(
-                      label:
-                          Text('$m分钟', style: const TextStyle(fontSize: 12)),
+                      label: Text('$m分钟', style: const TextStyle(fontSize: 12)),
                       selected: _timerSeconds == m * 60,
                       onSelected: (v) => setState(() => _timerSeconds = m * 60),
                     ))
@@ -997,7 +994,8 @@ class _VoiceTimerDialogState extends State<_VoiceTimerDialog> {
       if (!mounted) return;
       setState(() => _heard = text);
     };
-    _voice.onComplete = (finalText) {
+    _voice.onComplete = (finalText) async {
+      await _voice.forceStop();
       if (!mounted) return;
       final mins = _parseMinutes(finalText);
       setState(() {
@@ -1020,7 +1018,7 @@ class _VoiceTimerDialogState extends State<_VoiceTimerDialog> {
 
   @override
   void dispose() {
-    _voice.stopListening();
+    _voice.forceStop();
     _idCtrl.dispose();
     super.dispose();
   }
@@ -1128,14 +1126,14 @@ class _VoiceTimerDialogState extends State<_VoiceTimerDialog> {
       actions: [
         TextButton(
           onPressed: () async {
-            await _voice.stopListening();
+            await _voice.forceStop();
             if (context.mounted) Navigator.pop(context);
           },
           child: const Text('取消'),
         ),
         FilledButton(
           onPressed: () async {
-            await _voice.stopListening();
+            await _voice.forceStop();
             if (context.mounted) Navigator.pop(context, _idCtrl.text.trim());
           },
           child: const Text('确认'),

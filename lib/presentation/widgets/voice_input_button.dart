@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../core/init_logger.dart';
 import '../../services/navigation_service.dart';
 import '../../services/voice_service.dart';
 import '../pages/settings/voice_settings_page.dart';
@@ -112,6 +115,10 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
     );
 
     if (result != null && result.isNotEmpty) {
+      // 关键：语音识别完成后、使用结果导航之前，必须等待 native 录音器完全释放。
+      // dispose() 不能 await，调用方在这里显式等待 native AudioRecorder 停止+释放。
+      // 否则 native 销毁与页面并发 => record_windows 原生崩溃。
+      await VoiceService().forceStop();
       widget.controller?.text = result;
       widget.onTextRecognized?.call(result);
     }
@@ -173,51 +180,7 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
       if (mounted) setState(() => _recognizedText = text);
     };
     _voiceService.onComplete = (text) {
-      if (!mounted) return;
-      final sentence = text.trim();
-
-      if (sentence.isEmpty) {
-        // 无语音输入：持续模式自动重试，单句模式提示用户
-        if (widget.continuousMode) {
-          setState(() {
-            _errorMsg = '未检测到语音，正在重新聆听…';
-            _isListening = false;
-          });
-          _pulseController.stop();
-          _restartListening();
-        } else {
-          setState(() {
-            _errorMsg = '未检测到语音，请点击重试';
-            _isListening = false;
-          });
-          _pulseController.stop();
-        }
-        return;
-      }
-
-      if (widget.continuousMode) {
-        // 持续模式：把一句加入历史 → 触发回调 → 自动重启监听
-        setState(() {
-          _history.add(sentence);
-          _recognizedText = '';
-          _isListening = false;
-          _errorMsg = null;
-        });
-        _pulseController.stop();
-        widget.onSentence?.call(sentence);
-        _restartListening();
-      } else {
-        // 单句模式：先同步释放原生录音器，再 pop 返回这句。
-        // 必须在导航前 forceStop——dispose 里的 forceStop 是 fire-and-forget，
-        // 不能保证"跳转主页前句柄已释放"，会与 HomePage 构建并发触发 record 原生崩溃。
-        setState(() {
-          _recognizedText = sentence;
-          _isListening = false;
-        });
-        _pulseController.stop();
-        final navigator = Navigator.of(context);
-        _voiceService.forceStop().whenComplete(() => navigator.maybePop(sentence));
-      }
+      unawaited(_handleComplete(text));
     };
     _voiceService.onError = (error) {
       if (mounted) {
@@ -237,18 +200,51 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
 
   @override
   void dispose() {
-    // 关键：清掉所有 voice callbacks，避免 dialog 销毁后 ws 残余消息
-    // 仍调用旧闭包导致 navigator 多 pop 一次（"导航后退出"根因）。
+    InitLogger.logFlush('voice', 'VoiceNavigationDialogState.dispose');
     _voiceService.onResult = null;
     _voiceService.onComplete = null;
     _voiceService.onError = null;
     _voiceService.onStateChanged = null;
     _pulseController.dispose();
-    // 同步强制释放原生录音器：识别成功后 _isListening 已为 false，
-    // 不能只靠 stopListening 的 1s 延迟清理——它会与登录跳转并发触发
-    // record 包原生崩溃（语音登录成功即闪退的根因）。
-    _voiceService.forceStop();
+    unawaited(_voiceService.forceStop());
     super.dispose();
+  }
+
+  Future<void> _handleComplete(String text) async {
+    if (!mounted) return;
+    final sentence = text.trim();
+    _pulseController.stop();
+
+    if (sentence.isEmpty) {
+      await _voiceService.forceStop();
+      if (!mounted) return;
+      setState(() {
+        _errorMsg = widget.continuousMode ? '未检测到语音，正在重新聆听…' : '未检测到语音，请点击重试';
+        _isListening = false;
+      });
+      if (widget.continuousMode) {
+        await _restartListening();
+      }
+      return;
+    }
+
+    if (widget.continuousMode) {
+      setState(() {
+        _history.add(sentence);
+        _recognizedText = '';
+        _isListening = false;
+        _errorMsg = null;
+      });
+      await _voiceService.forceStop();
+      if (!mounted) return;
+      widget.onSentence?.call(sentence);
+      await _restartListening();
+      return;
+    }
+
+    await _voiceService.forceStop();
+    if (!mounted) return;
+    Navigator.pop(context, sentence);
   }
 
   Future<void> _startListening() async {
@@ -257,6 +253,7 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
       _recognizedText = '';
     });
     final ok = await _voiceService.startListening();
+    if (!mounted) return;
     if (ok) _pulseController.repeat(reverse: true);
   }
 
@@ -266,12 +263,12 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
   }
 
   /// 持续模式下，一句识别完后自动启动下一轮。
-  /// 等待 _delayedCleanup (1s) 跑完，确保旧 ws / 旧 audio sub 已释放。
+  /// 等待 forceStop 完成后再启动下一轮，避免 record_windows 资源并发。
   Future<void> _restartListening() async {
     if (_restarting) return;
     _restarting = true;
     try {
-      await Future<void>.delayed(const Duration(milliseconds: 1100));
+      await Future<void>.delayed(const Duration(milliseconds: 200));
       if (!mounted || !widget.continuousMode) return;
       await _startListening();
     } finally {
@@ -304,9 +301,7 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
             ),
             const SizedBox(height: 8),
             Text(
-              continuous
-                  ? '说一句执行一次操作。'
-                  : '说一句话即可，识别完成自动关闭。',
+              continuous ? '说一句执行一次操作。' : '说一句话即可，识别完成自动关闭。',
               style: TextStyle(fontSize: 12, color: Colors.grey[500]),
             ),
             const SizedBox(height: 16),
@@ -349,8 +344,7 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
             Text(
               _isListening ? '正在聆听...' : '点击开始',
               style: TextStyle(
-                  fontSize: 12,
-                  color: _isListening ? Colors.red : Colors.grey),
+                  fontSize: 12, color: _isListening ? Colors.red : Colors.grey),
             ),
             const SizedBox(height: 12),
             // 当前识别中的部分文本
@@ -359,8 +353,8 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
               constraints: const BoxConstraints(minHeight: 50),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest
-                    .withOpacity(0.3),
+                color:
+                    theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: _recognizedText.isNotEmpty
@@ -385,8 +379,8 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
               Container(
                 width: double.infinity,
                 constraints: const BoxConstraints(maxHeight: 120),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
                   color: primary.withOpacity(0.06),
                   borderRadius: BorderRadius.circular(8),
@@ -402,8 +396,7 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
                           child: Row(
                             children: [
                               Icon(Icons.check_circle,
-                                  color: primary.withOpacity(0.7),
-                                  size: 14),
+                                  color: primary.withOpacity(0.7), size: 14),
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(s,
@@ -425,18 +418,29 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
         if (continuous)
           // 持续模式：唯一关闭路径 = 用户主动点完成
           FilledButton.icon(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () async {
+              await _voiceService.forceStop();
+              if (context.mounted) Navigator.pop(context);
+            },
             icon: const Icon(Icons.check, size: 18),
             label: const Text('完成'),
           )
         else ...[
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () async {
+              await _voiceService.forceStop();
+              if (context.mounted) Navigator.pop(context);
+            },
             child: const Text('取消'),
           ),
           FilledButton(
             onPressed: _recognizedText.isNotEmpty
-                ? () => Navigator.pop(context, _recognizedText)
+                ? () async {
+                    await _voiceService.forceStop();
+                    if (context.mounted) {
+                      Navigator.pop(context, _recognizedText);
+                    }
+                  }
                 : null,
             child: const Text('确认'),
           ),
@@ -474,18 +478,7 @@ class _VoiceRecordDialogState extends State<_VoiceRecordDialog>
       if (mounted) setState(() => _recognizedText = text);
     };
     _voiceService.onComplete = (text) {
-      if (!mounted) return;
-      setState(() {
-        _recognizedText = text;
-        _isListening = false;
-      });
-      _pulseController.stop();
-      if (text.trim().isNotEmpty) {
-        // 关键：先强制释放 native 录音器 + WebSocket，再 pop 回登录页，
-        // 避免登录成功后跳转主页时与 HomePage 并发初始化产生原生崩溃。
-        final navigator = Navigator.of(context);
-        _voiceService.forceStop().whenComplete(() => navigator.maybePop(text));
-      }
+      unawaited(_handleComplete(text));
     };
     _voiceService.onError = (error) {
       if (mounted) {
@@ -506,13 +499,25 @@ class _VoiceRecordDialogState extends State<_VoiceRecordDialog>
 
   @override
   void dispose() {
+    InitLogger.logFlush('voice', 'VoiceRecordDialogState.dispose');
     _voiceService.onResult = null;
     _voiceService.onComplete = null;
     _voiceService.onError = null;
     _voiceService.onStateChanged = null;
     _pulseController.dispose();
-    _voiceService.forceStop();
+    unawaited(_voiceService.forceStop());
     super.dispose();
+  }
+
+  Future<void> _handleComplete(String text) async {
+    _pulseController.stop();
+    final finalText = text.trim();
+    await _voiceService.forceStop();
+    if (!mounted) return;
+    setState(() {
+      _recognizedText = finalText;
+      _isListening = false;
+    });
   }
 
   Future<void> _startListening() async {
@@ -521,6 +526,7 @@ class _VoiceRecordDialogState extends State<_VoiceRecordDialog>
       _recognizedText = '';
     });
     final ok = await _voiceService.startListening();
+    if (!mounted) return;
     if (ok) {
       _pulseController.repeat(reverse: true);
     }
@@ -562,9 +568,8 @@ class _VoiceRecordDialogState extends State<_VoiceRecordDialog>
               child: AnimatedBuilder(
                 animation: _pulseController,
                 builder: (context, child) {
-                  final scale = _isListening
-                      ? 1.0 + _pulseController.value * 0.15
-                      : 1.0;
+                  final scale =
+                      _isListening ? 1.0 + _pulseController.value * 0.15 : 1.0;
                   return Transform.scale(
                     scale: scale,
                     child: Container(
@@ -572,9 +577,7 @@ class _VoiceRecordDialogState extends State<_VoiceRecordDialog>
                       height: 80,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: _isListening
-                            ? Colors.red
-                            : primary,
+                        color: _isListening ? Colors.red : primary,
                         boxShadow: _isListening
                             ? [
                                 BoxShadow(
@@ -611,8 +614,8 @@ class _VoiceRecordDialogState extends State<_VoiceRecordDialog>
               constraints: const BoxConstraints(minHeight: 60),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest
-                    .withOpacity(0.3),
+                color:
+                    theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: _recognizedText.isNotEmpty
@@ -639,12 +642,18 @@ class _VoiceRecordDialogState extends State<_VoiceRecordDialog>
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: () async {
+            await _voiceService.forceStop();
+            if (context.mounted) Navigator.pop(context);
+          },
           child: const Text('取消'),
         ),
         FilledButton(
           onPressed: _recognizedText.isNotEmpty
-              ? () => Navigator.pop(context, _recognizedText)
+              ? () async {
+                  await _voiceService.forceStop();
+                  if (context.mounted) Navigator.pop(context, _recognizedText);
+                }
               : null,
           child: const Text('确认'),
         ),
