@@ -1,14 +1,11 @@
 import '../../../core/error_handler.dart';
+import '../../../data/models/course_model.dart';
 
 /// 达成度配置单一来源（SSOT）。
 ///
 /// 历史上权重/满分散落在 5+ 处且互相矛盾（UI 0.10/0.20/0.30/0.40、
 /// DAO 0.15/0.25/0.30/0.30、满分 15/25/30/30、report_tab 又是 10/20/30/40），
 /// 同一份成绩在不同代码路径算出不同达成度。此类收敛为唯一来源。
-///
-/// 权威基准取自《移动应用开发》教学大纲第六节「课程成绩评定」：
-/// 目标权重 0.15/0.25/0.30/0.30、满分 15/25/30/30、指标点 1.4/3.2/4.2/5.1、
-/// 三环节权重 平时0.20/实验0.30/期末0.50。
 ///
 /// 取值优先级：course_objectives 表（大纲导入）> 批次 objective_weights_json > 此处默认。
 class AchievementConfig {
@@ -40,24 +37,50 @@ class AchievementConfig {
     objectiveNames: ['课程目标1', '课程目标2', '课程目标3', '课程目标4'],
     indicators: ['1.4', '3.2', '4.2', '5.1'],
     descriptions: [
-      '掌握移动应用开发技术体系（原生/混合/跨平台）及主流平台特性，理解技术选型逻辑，熟悉跨平台开发框架和 AI 编程工具的基本使用',
-      '运用跨平台开发框架及小程序技术，结合 AI 编程工具与后端 API 交互，设计实现跨平台应用，具备需求建模与创新应用能力',
-      '调研对比多端开发方案，分析不同技术栈在跨设备适配场景中的优劣，具备技术方案评估与选型能力',
-      '遵循软件工程规范，使用现代开发工具（含 AI 编程工具、Git 版本控制）完成应用测试与优化，具备工程实践能力',
+      '理解课程知识图谱与数字孪生的核心概念，掌握课程目标、知识点、资源和评价数据之间的建模关系',
+      '能够围绕当前课程组织教学资源、实验任务和学习路径，形成可复用、可迁移的平台化课程建设方案',
+      '能够采集和分析学习过程、实验实践、考核评价与作品成果数据，识别学习问题并提出改进建议',
+      '能够结合 AI 工具和持续改进流程完成课程运行、质量评价和教学反馈闭环，具备规范化课程治理能力',
     ],
-    chapters: ['第1章 + 第2章', '第3章 + 第4章', '第5章', '第6章'],
+    chapters: ['第1章 + 第2章', '第3章', '第4章 + 第5章', '第6章'],
     assessContents: [
-      '课堂表现、实验1-2、期末项目',
-      '期间测验、实验3-4、小组评价',
-      '实验5-6、个人考核',
-      '课外学习、实验7、答辩',
+      '课堂表现、知识图谱建模任务',
+      '实验实践、资源建设与学习路径设计',
+      '过程测验、学习分析报告与作品成果',
+      '课程运行报告、答辩与持续改进方案',
     ],
     assessmentWeights: {'平时': 0.20, '实验': 0.30, '期末': 0.50},
   );
 
+  /// 基于课程模型动态生成默认配置，替代硬编码的 MAD 默认值。
+  static Map<String, dynamic> defaultsForCourse(CourseModel course) {
+    final chapterCount = course.chapters.isNotEmpty
+        ? course.chapters.length
+        : course.chapterCount;
+    final objectiveCount = chapterCount <= 3 ? chapterCount : 4;
+    return {
+      'objectiveCount': objectiveCount,
+      'chapterCount': chapterCount,
+      'weights': [0.15, 0.25, 0.30, 0.30].sublist(0, objectiveCount),
+      'fullMarks': [15.0, 25.0, 30.0, 30.0].sublist(0, objectiveCount),
+      'pingshi_ratio': 0.20,
+      'experiment_ratio': 0.30,
+      'exam_ratio': 0.50,
+      'descriptions':
+          List.generate(objectiveCount, (i) => '目标${i + 1}：掌握课程相关知识与技能'),
+      'chapters': _splitChaptersIntoObjectives(chapterCount, objectiveCount),
+      'indicators':
+          List.generate(objectiveCount, (i) => _defaultIndicator(i + 1)),
+      'assessContents': List.generate(objectiveCount, (i) => '考核内容${i + 1}'),
+      'assessmentWeights': {'平时': 0.20, '实验': 0.30, '期末': 0.50},
+    };
+  }
+
   /// 从 course_objectives 表行（按 idx 升序）构建完整配置。缺字段回落默认。
-  static AchievementConfig fromObjectiveRows(List<Map<String, dynamic>> rows) {
-    if (rows.isEmpty) return defaults;
+  static AchievementConfig fromObjectiveRows(List<Map<String, dynamic>> rows,
+      {CourseModel? course}) {
+    final fallback = _buildFallback(course);
+    if (rows.isEmpty) return fallback;
     final sorted = [...rows]
       ..sort((a, b) => _asInt(a['idx']).compareTo(_asInt(b['idx'])));
     final byIdx = <int, Map<String, dynamic>>{
@@ -66,17 +89,17 @@ class AchievementConfig {
     };
     try {
       List<T> pick<T>(T Function(Map<String, dynamic>?, int) f) =>
-          List<T>.generate(4, (i) => f(byIdx[i + 1], i));
+          List<T>.generate(fallback.weights.length, (i) => f(byIdx[i + 1], i));
       return AchievementConfig(
         weights: pick((r, i) =>
-            r == null ? 0 : _asRatio(r['weight'], _at(defaults.weights, i))),
+            r == null ? 0 : _asRatio(r['weight'], _at(fallback.weights, i))),
         fullMarks: pick((r, i) => r == null
             ? 0
-            : _asDouble(r['full_mark'], _at(defaults.fullMarks, i))),
+            : _asDouble(r['full_mark'], _at(fallback.fullMarks, i))),
         objectiveNames: pick((r, i) =>
             (r?['name'] as String?)?.trim().isNotEmpty == true
                 ? r!['name'] as String
-                : _at(defaults.objectiveNames, i)),
+                : _at(fallback.objectiveNames, i)),
         indicators: pick((r, i) => (r?['indicator'] as String?) ?? ''),
         descriptions: pick((r, i) => (r?['description'] as String?) ?? ''),
         chapters: pick((r, i) => (r?['chapters'] as String?) ?? ''),
@@ -85,8 +108,25 @@ class AchievementConfig {
       );
     } catch (e, st) {
       swallowDebug(e, tag: 'AchievementConfig.fromObjectiveRows', stack: st);
-      return defaults;
+      return fallback;
     }
+  }
+
+  static AchievementConfig _buildFallback(CourseModel? course) {
+    if (course == null) return defaults;
+    final d = defaultsForCourse(course);
+    final oc = d['objectiveCount'] as int;
+    return AchievementConfig(
+      weights: List<double>.from(d['weights'] as List<double>),
+      fullMarks: List<double>.from(d['fullMarks'] as List<double>),
+      objectiveNames: List.generate(oc, (i) => '课程目标${i + 1}'),
+      indicators: List<String>.from(d['indicators'] as List<String>),
+      descriptions: List<String>.from(d['descriptions'] as List<String>),
+      chapters: List<String>.from(d['chapters'] as List<String>),
+      assessContents: List<String>.from(d['assessContents'] as List<String>),
+      assessmentWeights:
+          Map<String, double>.from(d['assessmentWeights'] as Map),
+    );
   }
 
   static T _at<T>(List<T> list, int i) => i < list.length ? list[i] : list.last;
@@ -133,5 +173,28 @@ class AchievementConfig {
       '实验': e / count,
       '期末': x / count,
     };
+  }
+
+  static String _defaultIndicator(int idx) {
+    final major = ((idx - 1) ~/ 3) + 1;
+    final minor = ((idx - 1) % 3) + 1;
+    return '$major.$minor';
+  }
+
+  static List<String> _splitChaptersIntoObjectives(
+      int chapterCount, int objectiveCount) {
+    if (objectiveCount <= 0) return [];
+    final perGroup = (chapterCount / objectiveCount).ceil();
+    final result = <String>[];
+    for (var i = 0; i < objectiveCount; i++) {
+      final start = i * perGroup + 1;
+      final end = (start + perGroup - 1).clamp(1, chapterCount);
+      if (start == end) {
+        result.add('第$start章');
+      } else {
+        result.add('第$start章 - 第$end章');
+      }
+    }
+    return result;
   }
 }

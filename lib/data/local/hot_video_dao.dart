@@ -22,9 +22,10 @@ class HotVideoDao {
     }
     for (final table in const ['hot_videos', 'hot_video_favorites']) {
       try {
+        final courseId = await _courseContext.activeCourseId();
         await db.update(
           table,
-          {'course_id': CourseContextService.defaultCourseId},
+          {'course_id': courseId},
           where: "course_id IS NULL OR course_id = ''",
         );
       } catch (e) {

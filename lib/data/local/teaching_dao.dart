@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import 'package:sqflite/sqflite.dart';
+
 import 'database_helper.dart';
 import 'package:knowledge_graph_app/core/error_handler.dart';
 
@@ -70,88 +74,41 @@ class TeachingDao {
     };
   }
 
-  /// 初始化默认大纲（6章）
-  Future<void> initDefaultSyllabus() async {
+  /// 初始化默认大纲（从当前课程动态生成）
+  Future<void> initDefaultSyllabus({String? courseId, String? courseName}) async {
     final db = await DatabaseHelper.instance.database;
     final count = await db.rawQuery('SELECT COUNT(*) as c FROM syllabus_items');
     if (((count.first['c'] as int?) ?? 0) > 0) return;
 
-    final chapters = [
-      {
-        'chapter_number': 1,
-        'title': '移动应用开发技术体系',
-        'description': '移动应用分类（原生/混合/小程序/多端）、主流开发平台对比、技术选型方法论、AI编程工具在移动开发中的应用',
-        'objectives': '目标1：掌握移动应用开发技术体系及主流平台特性，理解技术选型逻辑',
-        'hours': 8,
-        'week_start': 1,
-        'week_end': 2,
-      },
-      {
-        'chapter_number': 2,
-        'title': '原生开发基础',
-        'description': 'Android开发（Kotlin语言基础、Activity生命周期、UI控件与Logcat调试）；iOS开发概述（ViewController架构、SwiftUI基础）',
-        'objectives': '目标1：掌握Android/iOS原生开发环境搭建与基础编程',
-        'hours': 8,
-        'week_start': 3,
-        'week_end': 4,
-      },
-      {
-        'chapter_number': 3,
-        'title': '跨平台应用开发',
-        'description': 'Flutter框架（Dart语法、Widget组件）、React Native（JSX语法）、Uniapp（Vue语法）、MAUI（C#跨平台）；后端交互（RESTful API、JSON解析）',
-        'objectives': '目标2：运用跨平台开发框架，结合AI编程工具与后端API交互，设计实现跨平台应用',
-        'hours': 8,
-        'week_start': 5,
-        'week_end': 6,
-      },
-      {
-        'chapter_number': 4,
-        'title': '微信小程序开发',
-        'description': 'MINA框架、WXML/WXSS语法、生命周期与页面路由、小程序云开发、Taro跨平台框架',
-        'objectives': '目标2：掌握小程序开发技术，具备需求建模与创新应用能力',
-        'hours': 8,
-        'week_start': 7,
-        'week_end': 8,
-      },
-      {
-        'chapter_number': 5,
-        'title': '鸿蒙多端应用开发',
-        'description': 'HarmonyOS NEXT架构、ArkUI框架（ArkTS声明式UI）、多端部署与自适应布局、分布式能力与物联网扩展',
-        'objectives': '目标3：调研对比多端开发方案，分析不同技术栈优劣，具备技术方案评估与选型能力',
-        'hours': 8,
-        'week_start': 9,
-        'week_end': 10,
-      },
-      {
-        'chapter_number': 6,
-        'title': '综合开发实践',
-        'description': '项目架构设计（MVP/MVVM模式）、数据存储方案、Git版本控制、性能优化、AI工具深度应用、代码重构与测试',
-        'objectives': '目标4：遵循软件工程规范，使用现代开发工具完成应用测试与优化，具备工程实践能力',
-        'hours': 16,
-        'week_start': 11,
-        'week_end': 16,
-      },
-    ];
+    courseId ??= await _resolveActiveCourseId(db);
+    courseName ??= await _resolveActiveCourseName(db, courseId);
+
+    final chapters = await _getCourseChapters(db, courseId);
 
     final now = DateTime.now().toIso8601String();
     final batch = db.batch();
-    for (final ch in chapters) {
+    for (var i = 0; i < chapters.length; i++) {
+      final chapterNo = i + 1;
       batch.insert('syllabus_items', {
-        ...ch,
-        'course_name': '移动应用开发',
+        'course_name': courseName,
+        'chapter_number': chapterNo,
+        'title': chapters[i],
+        'hours': chapterNo == chapters.length ? 16 : 8,
+        'week_start': (chapterNo - 1) * 2 + 1,
+        'week_end': chapterNo == chapters.length ? chapterNo * 2 + 4 : chapterNo * 2,
         'status': 'planned',
         'created_at': now,
         'updated_at': now,
-      });
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
     await batch.commit(noResult: true);
   }
 
-  /// 初始化默认教案（理论12讲 + 实验6个）
-  Future<void> initDefaultLessonPlans() async {
+  /// 初始化默认教案（从当前课程动态生成）
+  Future<void> initDefaultLessonPlans({String? courseName}) async {
     final db = await DatabaseHelper.instance.database;
 
-    // Ensure plan_type and hours columns exist
+    // Ensure plan_type, hours, and course_name columns exist
     try {
       await db.rawQuery('SELECT plan_type FROM lesson_plans LIMIT 1');
     } catch (e) {
@@ -164,62 +121,124 @@ class TeachingDao {
       swallow(e, tag: 'TeachingDao.initDefaultLessonPlans');
       try { await db.execute('ALTER TABLE lesson_plans ADD COLUMN hours INTEGER DEFAULT 2'); } catch (e2) { swallowDebug(e2, tag: 'TeachingDao.initDefaultLessonPlans'); }
     }
+    try {
+      await db.rawQuery('SELECT course_name FROM lesson_plans LIMIT 1');
+    } catch (e) {
+      swallow(e, tag: 'TeachingDao.initDefaultLessonPlans');
+      try { await db.execute('ALTER TABLE lesson_plans ADD COLUMN course_name TEXT'); } catch (e2) { swallowDebug(e2, tag: 'TeachingDao.initDefaultLessonPlans'); }
+    }
 
     final count = await db.rawQuery('SELECT COUNT(*) as c FROM lesson_plans');
     if (((count.first['c'] as int?) ?? 0) > 0) return;
 
+    final courseResult = await db.rawQuery('SELECT * FROM courses WHERE is_active = 1 LIMIT 1');
+    if (courseResult.isEmpty) return;
+
+    final courseId = courseResult.first['id'] as String;
+    courseName ??= await _resolveActiveCourseName(db, courseId);
+    final chapters = await _getCourseChapters(db, courseId);
+
     final now = DateTime.now().toIso8601String();
     final batch = db.batch();
 
-    // 理论教案 12 讲（每章2讲）
-    final theoryLessons = [
-      {'chapter': 1, 'title': '第一章 移动应用开发技术体系(1)', 'objectives': '移动应用分类：原生应用、混合应用、小程序、多端应用；主流开发平台对比', 'key_points': '移动应用分类标准；Android/iOS/小程序/鸿蒙平台特性', 'difficult_points': '技术选型方法论', 'content': '介绍移动应用开发的技术全景，对比各平台特点', 'homework': '调研主流移动应用开发平台'},
-      {'chapter': 1, 'title': '第一章 移动应用开发技术体系(2)', 'objectives': '技术选型方法论；跨平台技术路线对比；AI编程工具应用', 'key_points': '跨平台技术路线；AI辅助编程', 'difficult_points': '技术选型决策', 'content': '深入分析跨平台技术路线，介绍AI编程工具', 'homework': '完成开发环境搭建报告'},
-      {'chapter': 2, 'title': '第二章 原生开发基础(1)', 'objectives': 'Android开发：Kotlin语言基础、Activity生命周期、UI控件与Logcat调试', 'key_points': 'Kotlin语法基础；Activity生命周期', 'difficult_points': 'Activity状态管理', 'content': 'Android Studio开发环境，Kotlin语言入门', 'homework': 'Android登录页面实现'},
-      {'chapter': 2, 'title': '第二章 原生开发基础(2)', 'objectives': 'iOS开发概述；ViewController架构；SwiftUI基础', 'key_points': 'ViewController架构；SwiftUI声明式语法', 'difficult_points': 'iOS与Android开发模式对比', 'content': 'iOS开发基础，Xcode使用，SwiftUI入门', 'homework': 'iOS登录页面实现'},
-      {'chapter': 3, 'title': '第三章 跨平台应用开发(1)', 'objectives': 'Flutter框架：Dart语法、Widget组件；React Native：JSX语法；Uniapp：Vue语法；MAUI：C#跨平台', 'key_points': 'Flutter Widget组件体系；Dart语言核心语法', 'difficult_points': '声明式UI与命令式UI的思维转换', 'content': '四大跨平台框架对比教学', 'homework': '跨平台列表页实现'},
-      {'chapter': 3, 'title': '第三章 跨平台应用开发(2)', 'objectives': '后端交互：RESTful API、JSON解析；移动硬件能力调用', 'key_points': 'HTTP请求与JSON解析；移动设备API调用', 'difficult_points': '异步编程与状态管理', 'content': '后端API交互，硬件能力调用，AI辅助开发', 'homework': 'API交互功能实现'},
-      {'chapter': 4, 'title': '第四章 微信小程序开发(1)', 'objectives': 'MINA框架、WXML/WXSS语法、生命周期与页面路由', 'key_points': '小程序框架结构；WXML模板语法', 'difficult_points': '小程序与Web开发的差异', 'content': '微信小程序开发基础，开发者工具使用', 'homework': '小程序列表页实现'},
-      {'chapter': 4, 'title': '第四章 微信小程序开发(2)', 'objectives': '小程序云开发；Taro跨平台框架；AI工具辅助', 'key_points': '云开发数据库与存储；Taro多端适配', 'difficult_points': '云函数与数据安全', 'content': '小程序云开发，跨平台适配', 'homework': '小程序完整功能实现'},
-      {'chapter': 5, 'title': '第五章 鸿蒙多端应用开发(1)', 'objectives': 'HarmonyOS NEXT架构；ArkUI框架：ArkTS声明式UI；多端部署', 'key_points': 'ArkTS语法；ArkUI组件', 'difficult_points': '鸿蒙与Android开发思维差异', 'content': '鸿蒙开发环境搭建，ArkTS语言入门', 'homework': '鸿蒙应用页面实现'},
-      {'chapter': 5, 'title': '第五章 鸿蒙多端应用开发(2)', 'objectives': '分布式能力原理；物联网扩展；传感器数据采集', 'key_points': '分布式软总线；设备协同', 'difficult_points': '分布式数据管理', 'content': '鸿蒙分布式能力，多端适配实战', 'homework': '鸿蒙多端适配实现'},
-      {'chapter': 6, 'title': '第六章 综合开发实践(1)', 'objectives': '项目架构设计（MVP/MVVM模式）；数据存储方案；Git版本控制', 'key_points': 'MVVM架构模式；Git基本操作', 'difficult_points': '架构设计决策', 'content': '项目架构设计，Git团队协作', 'homework': '项目需求文档撰写'},
-      {'chapter': 6, 'title': '第六章 综合开发实践(2)', 'objectives': '性能优化；代码审查；AI工具深度应用；项目测试', 'key_points': '性能优化策略；代码审查规范', 'difficult_points': '性能瓶颈分析', 'content': '项目优化，AI辅助，测试与调试', 'homework': '项目核心功能开发'},
-    ];
+    for (var i = 0; i < chapters.length; i++) {
+      final chapterNo = i + 1;
+      final chapterTitle = chapters[i];
 
-    for (final lesson in theoryLessons) {
       batch.insert('lesson_plans', {
-        ...lesson,
+        'course_name': courseName,
+        'chapter': chapterNo,
+        'title': '第${_toChineseNumber(chapterNo)}章 $chapterTitle(1)',
+        'objectives': '掌握$chapterTitle核心知识（上）',
+        'key_points': '$chapterTitle基础概念与技术要点',
+        'difficult_points': '$chapterTitle重难点分析',
+        'content': '讲授$chapterTitle第一部分',
+        'homework': '$chapterTitle相关实践练习（上）',
         'plan_type': 'theory',
         'status': 'ready',
         'ai_generated': 0,
         'created_at': now,
         'updated_at': now,
-      });
-    }
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
 
-    // 实验教案 6 个
-    final experimentLessons = [
-      {'chapter': 1, 'title': '实验一 开发环境搭建', 'objectives': '搭建Android/iOS/Flutter等开发环境', 'key_points': '各平台SDK安装与配置', 'difficult_points': '环境兼容性问题排查', 'content': '完成至少一个移动开发平台的环境搭建，运行Hello World程序', 'homework': '提交环境搭建截图与报告', 'hours': 2},
-      {'chapter': 2, 'title': '实验二 原生应用开发', 'objectives': '开发Android/iOS原生应用', 'key_points': 'Activity/ViewController使用；UI布局', 'difficult_points': '原生API调用与调试', 'content': '实现登录页面（含输入验证、页面跳转）', 'homework': '提交完整项目代码', 'hours': 4},
-      {'chapter': 3, 'title': '实验三 跨平台应用开发', 'objectives': '使用跨平台框架开发应用', 'key_points': '框架组件使用；API交互', 'difficult_points': '平台差异适配', 'content': '使用Flutter/RN/Uniapp/MAUI之一实现列表+详情功能', 'homework': '提交项目代码与技术对比报告', 'hours': 4},
-      {'chapter': 4, 'title': '实验四 微信小程序开发', 'objectives': '开发微信小程序', 'key_points': '小程序组件与云开发', 'difficult_points': '小程序审核与发布流程', 'content': '实现一个完整的微信小程序（含云数据库）', 'homework': '提交小程序代码与功能演示', 'hours': 4},
-      {'chapter': 5, 'title': '实验五 鸿蒙多端应用开发', 'objectives': '开发鸿蒙多端应用', 'key_points': 'ArkUI组件；多端适配', 'difficult_points': '分布式能力开发', 'content': '使用DevEco Studio开发鸿蒙应用', 'homework': '提交鸿蒙应用与多端适配报告', 'hours': 4},
-      {'chapter': 6, 'title': '实验六 跨平台综合项目实战', 'objectives': '团队协作完成综合项目', 'key_points': 'Git协作；项目管理；功能集成', 'difficult_points': '团队分工与代码合并', 'content': '6人一组，每人选择一个技术栈，完成综合项目开发', 'homework': '提交团队项目代码、文档与演示视频', 'hours': 6},
-    ];
-
-    for (final lesson in experimentLessons) {
       batch.insert('lesson_plans', {
-        ...lesson,
+        'course_name': courseName,
+        'chapter': chapterNo,
+        'title': '第${_toChineseNumber(chapterNo)}章 $chapterTitle(2)',
+        'objectives': '掌握$chapterTitle核心知识（下）',
+        'key_points': '$chapterTitle进阶技术与综合应用',
+        'difficult_points': '$chapterTitle进阶难点解析',
+        'content': '讲授$chapterTitle第二部分',
+        'homework': '$chapterTitle相关实践练习（下）',
+        'plan_type': 'theory',
+        'status': 'ready',
+        'ai_generated': 0,
+        'created_at': now,
+        'updated_at': now,
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+
+      batch.insert('lesson_plans', {
+        'course_name': courseName,
+        'chapter': chapterNo,
+        'title': '第${_toChineseNumber(chapterNo)}章 $chapterTitle 实验',
+        'objectives': '实践$chapterTitle的核心技术',
+        'key_points': '$chapterTitle实践操作要点',
+        'difficult_points': '$chapterTitle实践中的常见问题',
+        'content': '$chapterTitle实验实践',
+        'homework': '提交$chapterTitle实验报告',
+        'hours': chapterNo == chapters.length ? 6 : 4,
         'plan_type': 'experiment',
         'status': 'ready',
         'ai_generated': 0,
         'created_at': now,
         'updated_at': now,
-      });
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
 
     await batch.commit(noResult: true);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 动态课程辅助方法
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  Future<String> _resolveActiveCourseId(Database db) async {
+    final result = await db.rawQuery('SELECT id FROM courses WHERE is_active = 1 LIMIT 1');
+    if (result.isNotEmpty) return result.first['id'] as String;
+    return 'default';
+  }
+
+  Future<String> _resolveActiveCourseName(Database db, String courseId) async {
+    final result = await db.rawQuery('SELECT name FROM courses WHERE id = ?', [courseId]);
+    if (result.isNotEmpty) return result.first['name'] as String? ?? '当前课程';
+    return '当前课程';
+  }
+
+  Future<List<String>> _getCourseChapters(Database db, String courseId) async {
+    final result = await db.rawQuery('SELECT chapters FROM courses WHERE id = ?', [courseId]);
+    if (result.isNotEmpty) {
+      final chaptersJson = result.first['chapters'] as String?;
+      if (chaptersJson != null && chaptersJson.isNotEmpty) {
+        final list = List<String>.from(
+          (jsonDecode(chaptersJson) as List).map((e) => e.toString()),
+        );
+        if (list.isNotEmpty) return list;
+      }
+    }
+    final chapterCount = await _getChapterCount(db, courseId);
+    return List.generate(chapterCount, (i) => '第${i + 1}章');
+  }
+
+  Future<int> _getChapterCount(Database db, String courseId) async {
+    final result = await db.rawQuery('SELECT chapter_count FROM courses WHERE id = ?', [courseId]);
+    if (result.isNotEmpty) return (result.first['chapter_count'] as int?) ?? 1;
+    return 1;
+  }
+
+  String _toChineseNumber(int n) {
+    const digits = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+    if (n <= 10) return digits[n];
+    return '十${digits[n - 10]}';
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -413,9 +432,8 @@ class TeachingDao {
   }
 
   /// 将教学周转换为大致日期（以学期第1周为基准）
-  String _weekToDate(int week) {
-    // 春季学期从3月2日开始 (2025-2026学年第二学期)
-    final semesterStart = DateTime(2026, 3, 2);
+  String _weekToDate(int week, {DateTime? semesterStart}) {
+    semesterStart ??= DateTime(2026, 3, 2);
     final targetDate = semesterStart.add(Duration(days: (week - 1) * 7));
     return '${targetDate.year}-${targetDate.month.toString().padLeft(2, '0')}-${targetDate.day.toString().padLeft(2, '0')}';
   }

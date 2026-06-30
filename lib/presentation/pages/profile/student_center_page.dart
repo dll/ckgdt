@@ -1,5 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/course_context_service.dart';
 import '../../../data/local/quiz_dao.dart';
 import '../../../data/local/learning_record_dao.dart';
 import '../../../core/constants/app_theme.dart';
@@ -7,9 +8,12 @@ import '../quiz/wrong_answers_page.dart';
 import '../graph/favorites_page.dart';
 import '../learning/learning_plan_page.dart';
 import '../learning/progress_page.dart';
+import '../learning/student_ordinary_score_tab.dart';
 import '../learning/weakness_diagnosis_page.dart';
 import '../lab/lab_tasks_page.dart';
 import '../lab/productization_guide_page.dart';
+import '../assessment/assessment_page.dart';
+import '../works/works_page.dart';
 import '../privacy/privacy_policy_page.dart';
 import '../privacy/my_data_page.dart';
 
@@ -24,6 +28,7 @@ class StudentCenterPage extends StatefulWidget {
 
 class _StudentCenterPageState extends State<StudentCenterPage> {
   final _authService = AuthService();
+  final _courseContext = CourseContextService();
   final _quizDao = QuizDao();
   final _learningRecordDao = LearningRecordDao();
 
@@ -34,6 +39,7 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
   int _quizCount = 0;
   double _avgScore = 0.0;
   int _learningDays = 0;
+  String _courseName = CourseContextService.defaultCourseName;
 
   // 成长轨迹数据
   List<Map<String, dynamic>> _recentRecords = [];
@@ -51,6 +57,7 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
     setState(() => _isLoading = true);
     try {
       final user = _authService.currentUser;
+      final course = await _courseContext.getActiveCourse();
       if (user != null) {
         final userId = user.userId;
 
@@ -88,12 +95,20 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
           _quizCount = (quizSummary['total_count'] as int?) ?? 0;
           _avgScore = avgScore;
           _learningDays = daySet.length;
+          _courseName = course.name.trim().isNotEmpty
+              ? course.name.trim()
+              : CourseContextService.defaultCourseName;
           _recentRecords = records.take(10).toList();
           _achievementLevel = level;
           _isLoading = false;
         });
       } else {
-        setState(() => _isLoading = false);
+        setState(() {
+          _courseName = course.name.trim().isNotEmpty
+              ? course.name.trim()
+              : CourseContextService.defaultCourseName;
+          _isLoading = false;
+        });
       }
     } catch (e) {
       setState(() => _isLoading = false);
@@ -198,7 +213,7 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.25),
+                color: Colors.white.withValues(alpha: 0.25),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.person, size: 28, color: Colors.white),
@@ -222,7 +237,7 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -236,6 +251,16 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
                   const SizedBox(height: 6),
                   Text(
                     '学号：${user?.userId ?? ''}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.white70,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '当前课程：$_courseName',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 13,
                       color: Colors.white70,
@@ -395,7 +420,7 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
                                   ? Theme.of(context)
                                       .colorScheme
                                       .primary
-                                      .withOpacity(0.3)
+                                      .withValues(alpha: 0.3)
                                   : Colors.grey[300]!,
                               width: 2,
                             ),
@@ -480,7 +505,7 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
             borderRadius: BorderRadius.circular(12),
             side: BorderSide(
               color: isUnlocked
-                  ? badge.color.withOpacity(0.5)
+                  ? badge.color.withValues(alpha: 0.5)
                   : Colors.grey[300]!,
               width: isUnlocked ? 2 : 1,
             ),
@@ -560,11 +585,34 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
       ),
       _QuickAction(
         icon: Icons.trending_up,
-        label: '测验记录',
+        label: '学习进度',
         color: Colors.green,
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const ProgressPage()),
+        ),
+      ),
+      _QuickAction(
+        icon: Icons.fact_check_outlined,
+        label: '平时成绩',
+        color: Colors.cyan,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const Scaffold(
+              appBar: BackButtonBar(title: '我的平时成绩'),
+              body: StudentOrdinaryScoreTab(),
+            ),
+          ),
+        ),
+      ),
+      _QuickAction(
+        icon: Icons.assignment_turned_in,
+        label: '考核中心',
+        color: Colors.deepOrange,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AssessmentPage()),
         ),
       ),
       _QuickAction(
@@ -587,11 +635,20 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
       ),
       _QuickAction(
         icon: Icons.checklist,
-        label: '产品化',
+        label: '实验产出',
         color: Colors.teal,
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const ProductizationGuidePage()),
+        ),
+      ),
+      _QuickAction(
+        icon: Icons.workspaces_outline,
+        label: '我的作品',
+        color: Colors.pink,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const WorksPage()),
         ),
       ),
       _QuickAction(
@@ -642,7 +699,7 @@ class _StudentCenterPageState extends State<StudentCenterPage> {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: action.color.withOpacity(0.1),
+                      color: action.color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(

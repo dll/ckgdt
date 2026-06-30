@@ -4,6 +4,9 @@ import 'dart:math' as math;
 import '../../core/error_handler.dart';
 import '../../data/local/achievement_dao.dart';
 import '../../data/local/knowledge_graph_dao.dart';
+import '../../data/local/lab_task_dao.dart';
+import '../../data/local/quiz_dao.dart';
+import '../../data/models/question_model.dart';
 import '../achievement/achievement_docx_service.dart';
 import '../ai_service.dart';
 import '../auth_service.dart';
@@ -384,6 +387,191 @@ ${pptxPath == null ? pptxNote : '- PPTX：$pptxPath'}
 可在“课件工坊/教学资料”中继续编辑、预览和导出。''';
   }
 
+  Future<String> generateQuizQuestions({
+    required String userRequest,
+    String? topic,
+    int? count,
+  }) async {
+    final course = await _courseContext.getActiveCourse();
+    final chapters = await _courseContext.chapterTitles();
+    final resolvedTopic = _cleanTopic(
+      topic?.trim().isNotEmpty == true ? topic! : userRequest,
+      removeWords: const [
+        '请',
+        '帮我',
+        '生成',
+        '创建',
+        '出',
+        '道',
+        '题',
+        '选择题',
+        '测验',
+        '练习',
+        '导入',
+        '保存',
+        '题库',
+      ],
+      fallback: course.name,
+    );
+    final questionCount = count ?? _extractCount(userRequest) ?? 5;
+    final chapter = _extractChapterText(userRequest) ?? _guessChapter(chapters);
+
+    final prompt = '''
+请为《${course.name}》课程生成 "$resolvedTopic" 主题的 $questionCount 道四选一选择题。
+
+当前课程章节：
+${chapters.asMap().entries.map((e) => '${e.key + 1}. ${e.value}').join('\n')}
+
+只输出合法 JSON 对象，不要 Markdown，不要解释。格式：
+{
+  "questions": [
+    {
+      "source": "第1章 章节名",
+      "question": "题干",
+      "options": ["A选项", "B选项", "C选项", "D选项"],
+      "answer_index": 0,
+      "explanation": "解析"
+    }
+  ]
+}
+
+要求：
+1. 题干清晰，选项互斥，干扰项来自常见误解。
+2. answer_index 使用 0-3。
+3. source 优先使用 "$chapter"，否则使用最相关章节。
+4. 覆盖记忆、理解、应用三个层次。
+''';
+
+    final result = await _aiService.chatWithMeta(
+      [
+        {'role': 'user', 'content': prompt}
+      ],
+      systemPrompt: '你是高校课程命题专家，输出必须是可解析 JSON。',
+      temperature: 0.2,
+    );
+
+    final parsed = _tryParseJsonMap(result.content);
+    final list = (parsed?['questions'] as List?) ?? const [];
+    if (list.isEmpty) return '题目生成失败：AI 未返回有效题目。';
+
+    final dao = QuizDao();
+    var inserted = 0;
+    for (final raw in list) {
+      if (raw is! Map) continue;
+      final options = (raw['options'] as List?)
+              ?.map((e) => e.toString().trim())
+              .where((e) => e.isNotEmpty)
+              .toList() ??
+          const [];
+      if (options.length < 4) continue;
+      final text = raw['question']?.toString().trim() ?? '';
+      if (text.isEmpty) continue;
+      final source = raw['source']?.toString().trim().isNotEmpty == true
+          ? raw['source'].toString().trim()
+          : chapter;
+      final id = await dao.addQuestion(QuestionModel(
+        source: source,
+        question: text,
+        optionA: options[0],
+        optionB: options[1],
+        optionC: options[2],
+        optionD: options[3],
+        answerIndex: _intInRange(raw['answer_index'], 0, 3),
+      ));
+      if (id > 0) inserted++;
+    }
+
+    return '''
+已为《${course.name}》生成并写入题库。
+
+- 主题：$resolvedTopic
+- 章节：$chapter
+- 新增题目：$inserted 道
+
+请到“题库管理”或“测验”页面刷新查看；如需继续扩展，可说“再生成进阶题/应用题”。''';
+  }
+
+  Future<String> generateLabTask({
+    required String userRequest,
+    String? topic,
+  }) async {
+    final course = await _courseContext.getActiveCourse();
+    final chapters = await _courseContext.chapterTitles();
+    final resolvedTopic = _cleanTopic(
+      topic?.trim().isNotEmpty == true ? topic! : userRequest,
+      removeWords: const [
+        '请',
+        '帮我',
+        '生成',
+        '创建',
+        '设计',
+        '发布',
+        '实验',
+        '任务',
+      ],
+      fallback: course.name,
+    );
+    final chapter = _extractChapterText(userRequest) ?? _guessChapter(chapters);
+
+    final prompt = '''
+请为《${course.name}》课程设计一个 "$resolvedTopic" 实验任务。
+
+当前课程章节：
+${chapters.asMap().entries.map((e) => '${e.key + 1}. ${e.value}').join('\n')}
+
+只输出合法 JSON 对象，不要 Markdown，不要解释。格式：
+{
+  "title": "实验名称",
+  "chapter": "$chapter",
+  "description": "实验简介",
+  "requirements": "实验要求，分条写",
+  "deliverables": "提交物清单",
+  "difficulty": "简单|中等|较难",
+  "max_score": 100
+}
+
+要求：
+1. 任务可课堂直接发布，目标、步骤、验收标准清晰。
+2. 必须体现知识图谱驱动：说明关联知识点与前置概念。
+3. 提交物至少包含实验报告、运行截图或结果说明。
+''';
+
+    final result = await _aiService.chatWithMeta(
+      [
+        {'role': 'user', 'content': prompt}
+      ],
+      systemPrompt: '你是高校课程实验设计专家，输出必须是可解析 JSON。',
+      temperature: 0.2,
+    );
+    final parsed = _tryParseJsonMap(result.content);
+    if (parsed == null) return '实验任务生成失败：AI 返回内容不是合法 JSON。';
+
+    final title = parsed['title']?.toString().trim() ?? '';
+    if (title.isEmpty) return '实验任务生成失败：缺少实验名称。';
+    final id = await LabTaskDao().addTask(
+      title: title,
+      chapter: parsed['chapter']?.toString().trim().isNotEmpty == true
+          ? parsed['chapter'].toString().trim()
+          : chapter,
+      description: parsed['description']?.toString() ?? '',
+      requirements: parsed['requirements']?.toString() ?? '',
+      deliverables: parsed['deliverables']?.toString() ?? '',
+      difficulty: _normalizeDifficulty(parsed['difficulty']?.toString()),
+      maxScore: _intInRange(parsed['max_score'], 1, 100),
+      creatorId: AuthService().currentUser?.userId,
+    );
+
+    return '''
+已发布实验任务。
+
+- 课程：《${course.name}》
+- 实验：$title
+- 章节：${parsed['chapter'] ?? chapter}
+- 任务 ID：$id
+
+请到“实验管理/实验任务”页面刷新查看，并根据班级进度调整截止时间。''';
+  }
+
   bool isGraphGenerationIntent(String text) =>
       text.contains('图谱') && RegExp(r'生成|创建|构建|补充|扩展').hasMatch(text);
 
@@ -393,6 +581,13 @@ ${pptxPath == null ? pptxNote : '- PPTX：$pptxPath'}
   bool isCoursewareGenerationIntent(String text) =>
       RegExp(r'课件|PPT|ppt|幻灯片|教案').hasMatch(text) &&
       RegExp(r'生成|制作|创建').hasMatch(text);
+
+  bool isQuizGenerationIntent(String text) =>
+      RegExp(r'题|测验|练习').hasMatch(text) &&
+      RegExp(r'生成|创建|出|导入|保存').hasMatch(text);
+
+  bool isLabTaskGenerationIntent(String text) =>
+      text.contains('实验') && RegExp(r'生成|创建|设计|发布').hasMatch(text);
 
   Map<String, dynamic>? _tryParseJsonMap(String text) {
     final cleaned = text
@@ -555,6 +750,25 @@ ${pptxPath == null ? pptxNote : '- PPTX：$pptxPath'}
     final match = RegExp(r'第\s*([一二三四五六七八九十\d]+)\s*章').firstMatch(text);
     if (match == null) return null;
     return '第${match.group(1)}章';
+  }
+
+  int? _extractCount(String text) {
+    final match = RegExp(r'(\d+)\s*(道|个|题)').firstMatch(text);
+    if (match == null) return null;
+    final value = int.tryParse(match.group(1)!);
+    if (value == null) return null;
+    return value.clamp(1, 20).toInt();
+  }
+
+  String _guessChapter(List<String> chapters) {
+    return chapters.isNotEmpty ? chapters.first : '第1章';
+  }
+
+  String _normalizeDifficulty(String? value) {
+    final v = value?.trim() ?? '';
+    if (v.contains('简单') || v.toLowerCase() == 'easy') return '简单';
+    if (v.contains('难') || v.toLowerCase() == 'hard') return '较难';
+    return '中等';
   }
 
   int? _extractClassHours(String text) {

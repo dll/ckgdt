@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:excel/excel.dart' as xl;
 import '../../../core/error_handler.dart';
@@ -221,13 +221,13 @@ class _ClassManagePageState extends State<ClassManagePage>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            primary.withOpacity(0.08),
-            primary.withOpacity(0.06),
+            primary.withValues(alpha: 0.08),
+            primary.withValues(alpha: 0.06),
           ],
         ),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: primary.withOpacity(0.15),
+          color: primary.withValues(alpha: 0.15),
         ),
       ),
       child: Row(
@@ -299,7 +299,7 @@ class _ClassManagePageState extends State<ClassManagePage>
     return Container(
       width: 1,
       height: 36,
-      color: Colors.grey.withOpacity(0.2),
+      color: Colors.grey.withValues(alpha: 0.2),
     );
   }
 
@@ -307,7 +307,7 @@ class _ClassManagePageState extends State<ClassManagePage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
@@ -339,7 +339,8 @@ class _ClassManagePageState extends State<ClassManagePage>
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
         itemCount: _activeClasses.length,
         itemBuilder: (context, index) {
-          return _buildClassCard(_activeClasses[index], theme, isArchived: false);
+          return _buildClassCard(_activeClasses[index], theme,
+              isArchived: false);
         },
       ),
     );
@@ -363,7 +364,8 @@ class _ClassManagePageState extends State<ClassManagePage>
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
         itemCount: _archivedClasses.length,
         itemBuilder: (context, index) {
-          return _buildClassCard(_archivedClasses[index], theme, isArchived: true);
+          return _buildClassCard(_archivedClasses[index], theme,
+              isArchived: true);
         },
       ),
     );
@@ -386,9 +388,8 @@ class _ClassManagePageState extends State<ClassManagePage>
     final studentCount = (cls['student_count'] as int?) ?? 0;
     final createdAt = cls['created_at'] as String?;
 
-    final cardColor = isArchived
-        ? Colors.grey.withOpacity(0.06)
-        : theme.cardColor;
+    final cardColor =
+        isArchived ? Colors.grey.withValues(alpha: 0.06) : theme.cardColor;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -396,7 +397,7 @@ class _ClassManagePageState extends State<ClassManagePage>
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
         side: isArchived
-            ? BorderSide(color: Colors.grey.withOpacity(0.2))
+            ? BorderSide(color: Colors.grey.withValues(alpha: 0.2))
             : BorderSide.none,
       ),
       color: cardColor,
@@ -417,8 +418,8 @@ class _ClassManagePageState extends State<ClassManagePage>
                     height: 42,
                     decoration: BoxDecoration(
                       color: isArchived
-                          ? Colors.grey.withOpacity(0.15)
-                          : primary.withOpacity(0.12),
+                          ? Colors.grey.withValues(alpha: 0.15)
+                          : primary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
@@ -466,7 +467,7 @@ class _ClassManagePageState extends State<ClassManagePage>
                         vertical: 3,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.12),
+                        color: Colors.orange.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: const Text(
@@ -590,7 +591,8 @@ class _ClassManagePageState extends State<ClassManagePage>
           const PopupMenuItem(
             value: 'archive',
             child: ListTile(
-              leading: Icon(Icons.archive_outlined, size: 20, color: Colors.orange),
+              leading:
+                  Icon(Icons.archive_outlined, size: 20, color: Colors.orange),
               title: Text('归档班级', style: TextStyle(color: Colors.orange)),
               contentPadding: EdgeInsets.zero,
               dense: true,
@@ -600,7 +602,8 @@ class _ClassManagePageState extends State<ClassManagePage>
           const PopupMenuItem(
             value: 'unarchive',
             child: ListTile(
-              leading: Icon(Icons.unarchive_outlined, size: 20, color: Colors.green),
+              leading:
+                  Icon(Icons.unarchive_outlined, size: 20, color: Colors.green),
               title: Text('取消归档', style: TextStyle(color: Colors.green)),
               contentPadding: EdgeInsets.zero,
               dense: true,
@@ -991,7 +994,7 @@ class _ClassFormDialogState extends State<_ClassFormDialog> {
                   controller: _nameController,
                   decoration: const InputDecoration(
                     labelText: '班级名称 *',
-                    hintText: '例如：移动应用开发 2024-A班',
+                    hintText: '例如：课程名称 2024-A班',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.class_outlined),
                   ),
@@ -1022,7 +1025,8 @@ class _ClassFormDialogState extends State<_ClassFormDialog> {
                         padding: EdgeInsets.symmetric(vertical: 8),
                         child: LinearProgressIndicator(),
                       )
-                    : DropdownButtonFormField<String>(value: _selectedTeacherId,
+                    : DropdownButtonFormField<String>(
+                        value: _selectedTeacherId,
                         decoration: const InputDecoration(
                           labelText: '授课教师',
                           border: OutlineInputBorder(),
@@ -1033,7 +1037,8 @@ class _ClassFormDialogState extends State<_ClassFormDialog> {
                         items: [
                           const DropdownMenuItem(
                             value: null,
-                            child: Text('未指定', style: TextStyle(color: Colors.grey)),
+                            child: Text('未指定',
+                                style: TextStyle(color: Colors.grey)),
                           ),
                           ..._teachers.map((t) => DropdownMenuItem(
                                 value: t.userId,
@@ -1190,7 +1195,7 @@ class _ClassMemberSheetState extends State<_ClassMemberSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.3),
+                  color: Colors.grey.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -1272,17 +1277,17 @@ class _ClassMemberSheetState extends State<_ClassMemberSheet> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide(
-                          color: Colors.grey.withOpacity(0.3),
+                          color: Colors.grey.withValues(alpha: 0.3),
                         ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide(
-                          color: Colors.grey.withOpacity(0.3),
+                          color: Colors.grey.withValues(alpha: 0.3),
                         ),
                       ),
                       filled: true,
-                      fillColor: Colors.grey.withOpacity(0.06),
+                      fillColor: Colors.grey.withValues(alpha: 0.06),
                     ),
                   ),
                 ),
@@ -1345,7 +1350,8 @@ class _ClassMemberSheetState extends State<_ClassMemberSheet> {
     final joinedAt = member['joined_at'] as String?;
     final displayName = realName ?? userId;
 
-    final isTeacherMember = memberRole == 'teacher' || userRole == 'teacher' || userRole == 'admin';
+    final isTeacherMember =
+        memberRole == 'teacher' || userRole == 'teacher' || userRole == 'admin';
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 3, horizontal: 4),
@@ -1359,16 +1365,14 @@ class _ClassMemberSheetState extends State<_ClassMemberSheet> {
         leading: CircleAvatar(
           radius: 18,
           backgroundColor: isTeacherMember
-              ? Colors.orange.withOpacity(0.15)
-              : primary.withOpacity(0.12),
+              ? Colors.orange.withValues(alpha: 0.15)
+              : primary.withValues(alpha: 0.12),
           child: Text(
             displayName.isNotEmpty ? displayName[0] : '?',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: isTeacherMember
-                  ? Colors.orange[700]
-                  : primary,
+              color: isTeacherMember ? Colors.orange[700] : primary,
             ),
           ),
         ),
@@ -1377,7 +1381,8 @@ class _ClassMemberSheetState extends State<_ClassMemberSheet> {
             Flexible(
               child: Text(
                 displayName,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                style:
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -1386,7 +1391,7 @@ class _ClassMemberSheetState extends State<_ClassMemberSheet> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.12),
+                  color: Colors.orange.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: const Text(
@@ -1410,7 +1415,7 @@ class _ClassMemberSheetState extends State<_ClassMemberSheet> {
             : IconButton(
                 icon: Icon(
                   Icons.remove_circle_outline,
-                  color: Colors.red.withOpacity(0.7),
+                  color: Colors.red.withValues(alpha: 0.7),
                   size: 20,
                 ),
                 tooltip: '移除成员',
@@ -1465,7 +1470,8 @@ class _ClassMemberSheetState extends State<_ClassMemberSheet> {
       if (sheet == null || sheet.maxRows < 2) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Excel文件为空'), backgroundColor: Colors.red),
+            const SnackBar(
+                content: Text('Excel文件为空'), backgroundColor: Colors.red),
           );
         }
         return;
@@ -1474,14 +1480,16 @@ class _ClassMemberSheetState extends State<_ClassMemberSheet> {
       final header = sheet.row(0);
       int idCol = -1, nameCol = -1;
       for (int i = 0; i < header.length; i++) {
-        final h = (header[i]?.value?.toString() ?? '').replaceAll(RegExp(r'[\r\n]'), '');
+        final h = (header[i]?.value?.toString() ?? '')
+            .replaceAll(RegExp(r'[\r\n]'), '');
         if (h.contains('学号') || h.contains('工号')) idCol = i;
         if (h.contains('姓名')) nameCol = i;
       }
       if (idCol < 0 || nameCol < 0) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('未找到学号/姓名列，请确保Excel包含"学号"和"姓名"列'),
+            const SnackBar(
+                content: Text('未找到学号/姓名列，请确保Excel包含"学号"和"姓名"列'),
                 backgroundColor: Colors.red),
           );
         }
@@ -1498,8 +1506,8 @@ class _ClassMemberSheetState extends State<_ClassMemberSheet> {
         final name = row[nameCol]?.value?.toString().trim() ?? '';
         if (sid.isEmpty) continue;
 
-        final existing = await db.query('users',
-            where: 'user_id = ?', whereArgs: [sid]);
+        final existing =
+            await db.query('users', where: 'user_id = ?', whereArgs: [sid]);
         if (existing.isEmpty) {
           await db.insert('users', {
             'user_id': sid,
@@ -1676,7 +1684,7 @@ class _AddMembersDialogState extends State<_AddMembersDialog> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withOpacity(0.12),
+                color: theme.colorScheme.primary.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
@@ -1733,7 +1741,7 @@ class _AddMembersDialogState extends State<_AddMembersDialog> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           filled: true,
-                          fillColor: Colors.grey.withOpacity(0.06),
+                          fillColor: Colors.grey.withValues(alpha: 0.06),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -1812,8 +1820,8 @@ class _AddMembersDialogState extends State<_AddMembersDialog> {
                                       radius: 16,
                                       backgroundColor: isSelected
                                           ? theme.colorScheme.primary
-                                              .withOpacity(0.15)
-                                          : Colors.grey.withOpacity(0.1),
+                                              .withValues(alpha: 0.15)
+                                          : Colors.grey.withValues(alpha: 0.1),
                                       child: Text(
                                         (student.realName ?? student.userId)
                                             .substring(0, 1),

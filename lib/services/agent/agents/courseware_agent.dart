@@ -8,7 +8,7 @@ class CoursewareAgent extends BaseAgent {
   final AiService _ai = AiService();
 
   @override
-  AgentConfig get config => const AgentConfig(
+  AgentConfig get config => AgentConfig(
         id: 'courseware',
         name: '课程管家',
         emoji: '\u{1F4DA}',
@@ -160,9 +160,9 @@ class CoursewareAgent extends BaseAgent {
                   '## Flutter Widget 体系 教案\n\n**教学目标**：掌握 Widget 分类和常用组件\n**重点**：StatelessWidget vs StatefulWidget\n**难点**：Widget 树的构建和更新机制\n\n**教学过程**：\n1. 导入（5分钟）：展示一个 Flutter 应用截图\n2. 讲授（25分钟）：Widget 分类和生命周期\n3. 实践（15分钟）：编写计数器应用'),
           AgentCase(
               title: '生成新课程',
-              userInput: '帮我生成一门《Web 前端开发》课程大纲',
+              userInput: '帮我生成一门新课程大纲',
               agentReply:
-                  '## 《Web 前端开发》课程大纲\n\n**学时**：48学时（理论32 + 实验16）\n\n| 章节 | 主题 | 学时 |\n|------|------|------|\n| 第1章 | Web 技术体系全景 | 4 |\n| 第2章 | HTML5 + CSS3 基础 | 8 |\n| 第3章 | JavaScript 核心 | 8 |\n| 第4章 | Vue.js 框架开发 | 8 |\n| 第5章 | React 框架开发 | 8 |\n| 第6章 | 综合项目实践 | 12 |'),
+                  '## 课程大纲\n\n**学时**：按课程需求设定（理论+实验）\n\n| 章节 | 主题 | 学时 |\n|------|------|------|\n| 第1章 | 课程导论与技术体系 | 4 |\n| 第2章 | 核心技术基础 | 8 |\n| 第3章 | 进阶开发框架 | 8 |\n| 第4章 | 高级应用实践 | 8 |\n| 第5章 | 综合项目实战 | 12 |\n\n各章节主题将根据具体课程方向自动生成。'),
         ],
       );
 

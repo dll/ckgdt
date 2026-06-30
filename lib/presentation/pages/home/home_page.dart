@@ -105,6 +105,7 @@ const _cardColors = {
   '一键生课': Color(0xFFa18cd1),
   '课程管理': Color(0xFFfbc2eb),
   '通知管理': Color(0xFF667eea),
+  '通知中心': Color(0xFF667eea),
   '学生管理': Color(0xFF84fab0),
   '数据导入': Color(0xFF8fd3f4),
   '数据导出': Color(0xFFa1c4fd),
@@ -131,6 +132,7 @@ class _HomePageState extends State<HomePage> {
   final _authService = AuthService();
   final _courseDao = CourseDao();
   late int _selectedIndex;
+  Map<String, int> _tabIndexByLabel = {};
 
   String? _defenseServerIp;
   int _defenseServerPort = 8766;
@@ -266,8 +268,8 @@ class _HomePageState extends State<HomePage> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
             gradient: LinearGradient(colors: [
-              Colors.orange.withOpacity(0.9),
-              Colors.red.withOpacity(0.85),
+              Colors.orange.withValues(alpha: 0.9),
+              Colors.red.withValues(alpha: 0.85),
             ]),
           ),
           child: const Row(
@@ -444,6 +446,7 @@ class _HomePageState extends State<HomePage> {
     for (var i = 0; i < destinations.length; i++) {
       tabMapping[destinations[i].label] = i;
     }
+    _tabIndexByLabel = tabMapping;
     NavigationService.instance.registerTabMapping(tabMapping);
 
     return Scaffold(
@@ -642,7 +645,7 @@ class _HomePageState extends State<HomePage> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
-        indicatorColor: NoirTokens.accent.withOpacity(0.35),
+        indicatorColor: NoirTokens.accent.withValues(alpha: 0.35),
         surfaceTintColor: Colors.transparent,
         onDestinationSelected: (index) {
           setState(() => _selectedIndex = index);
@@ -711,7 +714,7 @@ class _HomePageState extends State<HomePage> {
                           ? '教学视角 · 班级 / 实验 / 考核 / 达成'
                           : '学习视角 · 图谱 / 路径 / 实验 / 测验',
                   style: TextStyle(
-                    color: NoirTokens.paper.withOpacity(0.85),
+                    color: NoirTokens.paper.withValues(alpha: 0.85),
                     fontSize: 12,
                     letterSpacing: 1.6,
                     fontWeight: FontWeight.w500,
@@ -752,288 +755,17 @@ class _HomePageState extends State<HomePage> {
 
               final isTeacher = _authService.isTeacher;
               final isAdmin = _authService.isAdmin;
-              final isTeacherOrAdmin = isTeacher || isAdmin;
 
-              final menuItems = <Widget>[
-                // ── 核心功能卡片（所有角色）──────────────────────────
-                _buildMenuCard(
-                  icon: Icons.account_tree,
-                  title: '知识图谱',
-                  onTap: () => setState(() => _selectedIndex = 1),
-                  cardColor: _cardColors['知识图谱'],
-                  description: '可视化学科知识结构',
-                ),
-                _buildMenuCard(
-                  icon: Icons.flag_circle_outlined,
-                  title: '课程目标',
-                  destinationPage: const CourseObjectivesPage(),
-                  cardColor: _cardColors['课程目标'],
-                  description: '目标与毕业要求支撑',
-                ),
-                _buildMenuCard(
-                  icon: Icons.route,
-                  title: '学习路径',
-                  destinationPage: const LearningPlanPage(),
-                  cardColor: _cardColors['学习路径'],
-                  description: '智能规划学习路线',
-                ),
-                _buildMenuCard(
-                  icon: Icons.quiz,
-                  title: '章节测验',
-                  destinationPage: const QuizPage(),
-                  cardColor: _cardColors['章节测验'],
-                  description: '章节知识点自测',
-                ),
-                _buildMenuCard(
-                  icon: Icons.source,
-                  title: 'Git仓库',
-                  destinationPage: isTeacherOrAdmin
-                      ? const GitRepoPage()
-                      : const StudentRepoPage(),
-                  cardColor: _cardColors['Git仓库'],
-                  description: '代码版本管理',
-                ),
-                _buildMenuCard(
-                  icon: Icons.folder_special,
-                  title: '教学案例',
-                  onTap: () => setState(() => _selectedIndex = 2),
-                  cardColor: _cardColors['教学案例'],
-                  description: '课程案例项目管理',
-                ),
-                _buildMenuCard(
-                  icon: Icons.tips_and_updates,
-                  title: '技能工具',
-                  destinationPage: const SkillsHubPage(),
-                  cardColor: _cardColors['技能工具'],
-                  description: 'AI 教学辅助工具',
-                ),
-                _buildMenuCard(
-                  icon: Icons.auto_awesome,
-                  title: '数字孪生',
-                  destinationPage: const VirtualTwinPage(),
-                  cardColor: _cardColors['数字孪生'],
-                  description: 'AI 数字分身',
-                ),
-                _buildMenuCard(
-                  icon: Icons.chat_bubble_outline,
-                  title: '智慧问答',
-                  onTap: () => AgentChatOverlay.show(context),
-                  cardColor: _cardColors['智慧问答'],
-                  description: 'AI 智能答疑解惑',
-                ),
-                _buildMenuCard(
-                  icon: Icons.biotech,
-                  title: '深度实践',
-                  destinationPage: const DeepPracticePage(),
-                  cardColor: _cardColors['深度实践'],
-                  description: '项目实战训练',
-                ),
-                _buildMenuCard(
-                  icon: Icons.show_chart,
-                  title: '成长曲线',
-                  destinationPage: const GrowthCurvePage(),
-                  cardColor: _cardColors['成长曲线'],
-                  description: '学习轨迹分析',
-                ),
-                _buildMenuCard(
-                  icon: Icons.token,
-                  title: 'Token统计',
-                  destinationPage: const TokenStatsPage(),
-                  cardColor: _cardColors['Token统计'],
-                  description: 'Token 消耗统计',
-                ),
-                _buildMenuCard(
-                  icon: Icons.sync,
-                  title: '数据同步',
-                  destinationPage: const DataSyncPage(),
-                  cardColor: _cardColors['数据同步'],
-                  description: '跨设备数据同步',
-                ),
-                _buildMenuCard(
-                  icon: Icons.devices,
-                  title: '多端互通',
-                  destinationPage: const CrossPlatformHubPage(),
-                  cardColor: _cardColors['多端互通'],
-                  description: '多平台无缝衔接',
-                ),
-                _buildMenuCard(
-                  icon: Icons.notifications_active,
-                  title: '通知管理',
-                  destinationPage: const NotificationManagePage(),
-                  cardColor: _cardColors['通知管理'],
-                  description: '通知列表与数据统计',
-                ),
-
-                // ── 学生专属功能 ──────────────────────────────────
-                if (!isTeacherOrAdmin) ...[
-                  _buildMenuCard(
-                    icon: Icons.trending_up,
-                    title: '学习进度',
-                    destinationPage: const ProgressPage(),
-                    cardColor: _cardColors['学习进度'],
-                    description: '个人学习进度',
-                  ),
-                  _buildMenuCard(
-                    icon: Icons.error,
-                    title: '错题本',
-                    destinationPage: const WrongAnswersPage(),
-                    cardColor: _cardColors['错题本'],
-                    description: '错题回顾巩固',
-                  ),
-                  _buildMenuCard(
-                    icon: Icons.star,
-                    title: '我的收藏',
-                    destinationPage: const FavoritesPage(),
-                    cardColor: _cardColors['我的收藏'],
-                    description: '收藏的知识点',
-                  ),
-                  _buildMenuCard(
-                    icon: Icons.poll,
-                    title: '问卷调查',
-                    destinationPage: const SurveyPage(),
-                    cardColor: _cardColors['问卷调查'],
-                    description: '教学反馈问卷',
-                  ),
-                  _buildMenuCard(
-                    icon: Icons.forum_outlined,
-                    title: '班级问答',
-                    destinationPage: const ClassQaPage(),
-                    cardColor: _cardColors['班级问答'],
-                    description: '班级互动问答',
-                  ),
-                ],
-
-                // ── 教师/管理员功能 ──────────────────────────────
-                if (isTeacherOrAdmin) ...[
-                  _buildMenuCard(
-                    icon: Icons.bar_chart,
-                    title: '成绩统计',
-                    destinationPage: const LearningAnalyticsPage(),
-                    cardColor: _cardColors['成绩统计'],
-                    description: '班级成绩分析',
-                  ),
-                  _buildMenuCard(
-                    icon: Icons.class_,
-                    title: '班级管理',
-                    destinationPage: const ClassManagePage(),
-                    cardColor: _cardColors['班级管理'],
-                    description: '班级信息管理',
-                  ),
-                  _buildMenuCard(
-                    icon: Icons.school,
-                    title: '教学管理',
-                    destinationPage: const TeachingManagePage(),
-                    cardColor: _cardColors['教学管理'],
-                    description: '教学进度管理',
-                  ),
-                  _buildMenuCard(
-                    icon: Icons.quiz_outlined,
-                    title: '题库管理',
-                    destinationPage: const QuestionManagePage(),
-                    cardColor: _cardColors['题库管理'],
-                    description: '试题库维护',
-                  ),
-                  _buildMenuCard(
-                    icon: Icons.poll,
-                    title: '问卷管理',
-                    destinationPage: const SurveyManagePage(),
-                    cardColor: _cardColors['问卷管理'],
-                    description: '调查问卷管理',
-                  ),
-                  _buildMenuCard(
-                    icon: Icons.feedback,
-                    title: '反馈管理',
-                    destinationPage: const FeedbackManagePage(),
-                    cardColor: _cardColors['反馈管理'],
-                    description: '用户反馈处理',
-                  ),
-                  _buildMenuCard(
-                    icon: Icons.forum,
-                    title: '班级问答',
-                    destinationPage: const ClassQaPage(),
-                    cardColor: _cardColors['班级问答'],
-                    description: '班级互动问答',
-                  ),
-                  _buildMenuCard(
-                    icon: Icons.add_box_outlined,
-                    title: '一键生课',
-                    onTap: () async {
-                      final result = await showModalBottomSheet<CourseModel>(
-                        context: context,
-                        isScrollControlled: true,
-                        shape: const RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.vertical(top: Radius.circular(2)),
-                        ),
-                        builder: (_) => const CourseGeneratorSheet(),
-                      );
-                      if (result != null) {
-                        await _courseDao.setActiveCourse(result.id);
-                        _loadActiveCourse();
-                      }
-                    },
-                    cardColor: _cardColors['一键生课'],
-                    description: '自动生成课程',
-                  ),
-                  _buildMenuCard(
-                    icon: Icons.school_outlined,
-                    title: '课程管理',
-                    onTap: () async {
-                      await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const CourseManagePage()));
-                      _loadActiveCourse();
-                    },
-                    cardColor: _cardColors['课程管理'],
-                    description: '课程信息配置',
-                  ),
-                ],
-
-                // ── 管理员专属功能 ──────────────────────────────
-                if (isAdmin) ...[
-                  _buildMenuCard(
-                    icon: Icons.people,
-                    title: '学生管理',
-                    destinationPage: const StudentManagePage(),
-                    cardColor: _cardColors['学生管理'],
-                    description: '学生账户管理',
-                  ),
-                  _buildMenuCard(
-                    icon: Icons.upload,
-                    title: '数据导入',
-                    destinationPage: const DataImportPage(),
-                    cardColor: _cardColors['数据导入'],
-                    description: '批量数据导入',
-                  ),
-                  _buildMenuCard(
-                    icon: Icons.download,
-                    title: '数据导出',
-                    destinationPage: const DataExportPage(),
-                    cardColor: _cardColors['数据导出'],
-                    description: '数据导出备份',
-                  ),
-                  _buildMenuCard(
-                    icon: Icons.analytics,
-                    title: '仓库分析',
-                    destinationPage: const RepoAnalyticsPage(),
-                    cardColor: _cardColors['仓库分析'],
-                    description: '代码仓库分析',
-                  ),
-                ],
-              ];
-
-              // 给每个卡片传入序号（编辑感）
-              final indexedItems = <Widget>[];
-              for (var i = 0; i < menuItems.length; i++) {
-                indexedItems.add(menuItems[i]);
-              }
+              final indexedItems = _homeModules(
+                isTeacher: isTeacher,
+                isAdmin: isAdmin,
+              ).map(_buildModuleCard).toList();
 
               return GridView.count(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisCount: cols,
-                childAspectRatio: 0.9,
+                childAspectRatio: 0.82,
                 mainAxisSpacing: 10,
                 crossAxisSpacing: 10,
                 children: indexedItems,
@@ -1060,7 +792,7 @@ class _HomePageState extends State<HomePage> {
           () => Navigator.push(context,
               MaterialPageRoute(builder: (_) => const LearningPlanPage()))),
       _FlowStep(Icons.menu_book, isTeacherOrAdmin ? '教学' : '学习', '03',
-          () => setState(() => _selectedIndex = 2)),
+          () => _switchToTab(isTeacherOrAdmin ? '教学' : '学习')),
       _FlowStep(
           Icons.biotech,
           '实践',
@@ -1145,6 +877,343 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _switchToTab(String label) {
+    final index = _tabIndexByLabel[label];
+    if (index == null || index < 0) return;
+    if (!mounted) return;
+    setState(() => _selectedIndex = index);
+  }
+
+  Future<void> _showCourseGenerator() async {
+    final result = await showModalBottomSheet<CourseModel>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(2)),
+      ),
+      builder: (_) => const CourseGeneratorSheet(),
+    );
+    if (result != null) {
+      await _courseDao.setActiveCourse(result.id);
+      _loadActiveCourse();
+    }
+  }
+
+  Future<void> _openCourseManage() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const CourseManagePage()),
+    );
+    _loadActiveCourse();
+  }
+
+  List<_HomeModule> _homeModules({
+    required bool isTeacher,
+    required bool isAdmin,
+  }) {
+    final isTeacherOrAdmin = isTeacher || isAdmin;
+    final modules = <_HomeModule>[
+      const _HomeModule.tab(
+        id: 'graph',
+        icon: Icons.account_tree,
+        title: '知识图谱',
+        description: '可视化学科知识结构',
+        tabLabel: '图谱',
+        status: _ModuleStatus.ready,
+      ),
+      const _HomeModule.page(
+        id: 'objectives',
+        icon: Icons.flag_circle_outlined,
+        title: '课程目标',
+        description: '目标与毕业要求支撑',
+        page: CourseObjectivesPage(),
+        status: _ModuleStatus.ready,
+      ),
+      const _HomeModule.page(
+        id: 'learning_plan',
+        icon: Icons.route,
+        title: '学习路径',
+        description: '智能规划学习路线',
+        page: LearningPlanPage(),
+        status: _ModuleStatus.ready,
+      ),
+      const _HomeModule.page(
+        id: 'quiz',
+        icon: Icons.quiz,
+        title: '章节测验',
+        description: '章节知识点自测',
+        page: QuizPage(),
+        status: _ModuleStatus.ready,
+      ),
+      _HomeModule.page(
+        id: 'repo',
+        icon: Icons.source,
+        title: 'Git仓库',
+        description: '代码版本管理',
+        page: isTeacherOrAdmin ? const GitRepoPage() : const StudentRepoPage(),
+        status: _ModuleStatus.ready,
+      ),
+      const _HomeModule.tab(
+        id: 'cases',
+        icon: Icons.folder_special,
+        title: '教学案例',
+        description: '课程案例项目管理',
+        tabLabel: '案例',
+        status: _ModuleStatus.ready,
+      ),
+      const _HomeModule.page(
+        id: 'skills',
+        icon: Icons.tips_and_updates,
+        title: '技能工具',
+        description: 'AI 教学辅助工具',
+        page: SkillsHubPage(),
+        status: _ModuleStatus.ready,
+      ),
+      const _HomeModule.page(
+        id: 'digital_twin',
+        icon: Icons.auto_awesome,
+        title: '数字孪生',
+        description: 'AI 数字分身',
+        page: VirtualTwinPage(),
+        status: _ModuleStatus.ready,
+      ),
+      _HomeModule.action(
+        id: 'agent_chat',
+        icon: Icons.chat_bubble_outline,
+        title: '智慧问答',
+        description: 'AI 智能答疑解惑',
+        onTap: () => AgentChatOverlay.show(context),
+        status: _ModuleStatus.ready,
+      ),
+      const _HomeModule.page(
+        id: 'deep_practice',
+        icon: Icons.biotech,
+        title: '深度实践',
+        description: '项目实战训练',
+        page: DeepPracticePage(),
+        status: _ModuleStatus.ready,
+      ),
+      const _HomeModule.page(
+        id: 'growth_curve',
+        icon: Icons.show_chart,
+        title: '成长曲线',
+        description: '学习轨迹分析',
+        page: GrowthCurvePage(),
+        status: _ModuleStatus.ready,
+      ),
+      const _HomeModule.page(
+        id: 'token_stats',
+        icon: Icons.token,
+        title: 'Token统计',
+        description: 'Token 消耗统计',
+        page: TokenStatsPage(),
+        status: _ModuleStatus.ready,
+      ),
+      const _HomeModule.page(
+        id: 'sync',
+        icon: Icons.sync,
+        title: '数据同步',
+        description: '跨设备数据同步',
+        page: DataSyncPage(),
+        status: _ModuleStatus.platform,
+      ),
+      const _HomeModule.page(
+        id: 'cross_platform',
+        icon: Icons.devices,
+        title: '多端互通',
+        description: '多平台无缝衔接',
+        page: CrossPlatformHubPage(),
+        status: _ModuleStatus.platform,
+      ),
+      _HomeModule.page(
+        id: 'notifications',
+        icon: isTeacherOrAdmin
+            ? Icons.notifications_active
+            : Icons.notifications_outlined,
+        title: isTeacherOrAdmin ? '通知管理' : '通知中心',
+        description: isTeacherOrAdmin ? '通知列表与数据统计' : '课程通知与答辩消息',
+        page: isTeacherOrAdmin
+            ? const NotificationManagePage()
+            : const NotificationListPage(),
+        status: _ModuleStatus.ready,
+      ),
+    ];
+
+    if (!isTeacherOrAdmin) {
+      modules.addAll(const [
+        _HomeModule.page(
+          id: 'progress',
+          icon: Icons.trending_up,
+          title: '学习进度',
+          description: '个人学习进度',
+          page: ProgressPage(),
+          status: _ModuleStatus.ready,
+        ),
+        _HomeModule.page(
+          id: 'wrong_answers',
+          icon: Icons.error,
+          title: '错题本',
+          description: '错题回顾巩固',
+          page: WrongAnswersPage(),
+          status: _ModuleStatus.ready,
+        ),
+        _HomeModule.page(
+          id: 'favorites',
+          icon: Icons.star,
+          title: '我的收藏',
+          description: '收藏的知识点',
+          page: FavoritesPage(),
+          status: _ModuleStatus.ready,
+        ),
+        _HomeModule.page(
+          id: 'survey',
+          icon: Icons.poll,
+          title: '问卷调查',
+          description: '教学反馈问卷',
+          page: SurveyPage(),
+          status: _ModuleStatus.ready,
+        ),
+        _HomeModule.page(
+          id: 'class_qa',
+          icon: Icons.forum_outlined,
+          title: '班级问答',
+          description: '班级互动问答',
+          page: ClassQaPage(),
+          status: _ModuleStatus.ready,
+        ),
+      ]);
+    }
+
+    if (isTeacherOrAdmin) {
+      modules.addAll([
+        const _HomeModule.page(
+          id: 'analytics',
+          icon: Icons.bar_chart,
+          title: '成绩统计',
+          description: '班级成绩分析',
+          page: LearningAnalyticsPage(),
+          status: _ModuleStatus.ready,
+        ),
+        const _HomeModule.page(
+          id: 'class_manage',
+          icon: Icons.class_,
+          title: '班级管理',
+          description: '班级信息管理',
+          page: ClassManagePage(),
+          status: _ModuleStatus.ready,
+        ),
+        const _HomeModule.page(
+          id: 'teaching_manage',
+          icon: Icons.school,
+          title: '教学管理',
+          description: '教学进度管理',
+          page: TeachingManagePage(),
+          status: _ModuleStatus.ready,
+        ),
+        const _HomeModule.page(
+          id: 'question_manage',
+          icon: Icons.quiz_outlined,
+          title: '题库管理',
+          description: '试题库维护',
+          page: QuestionManagePage(),
+          status: _ModuleStatus.ready,
+        ),
+        const _HomeModule.page(
+          id: 'survey_manage',
+          icon: Icons.poll,
+          title: '问卷管理',
+          description: '调查问卷管理',
+          page: SurveyManagePage(),
+          status: _ModuleStatus.ready,
+        ),
+        const _HomeModule.page(
+          id: 'feedback_manage',
+          icon: Icons.feedback,
+          title: '反馈管理',
+          description: '用户反馈处理',
+          page: FeedbackManagePage(),
+          status: _ModuleStatus.ready,
+        ),
+        const _HomeModule.page(
+          id: 'class_qa',
+          icon: Icons.forum,
+          title: '班级问答',
+          description: '班级互动问答',
+          page: ClassQaPage(),
+          status: _ModuleStatus.ready,
+        ),
+        _HomeModule.action(
+          id: 'course_generate',
+          icon: Icons.add_box_outlined,
+          title: '一键生课',
+          description: '自动生成课程',
+          onTap: _showCourseGenerator,
+          status: _ModuleStatus.ready,
+        ),
+        _HomeModule.action(
+          id: 'course_manage',
+          icon: Icons.school_outlined,
+          title: '课程管理',
+          description: '课程信息配置',
+          onTap: _openCourseManage,
+          status: _ModuleStatus.ready,
+        ),
+      ]);
+    }
+
+    if (isAdmin) {
+      modules.addAll(const [
+        _HomeModule.page(
+          id: 'students',
+          icon: Icons.people,
+          title: '学生管理',
+          description: '学生账户管理',
+          page: StudentManagePage(),
+          status: _ModuleStatus.ready,
+        ),
+        _HomeModule.page(
+          id: 'data_import',
+          icon: Icons.upload,
+          title: '数据导入',
+          description: '批量数据导入',
+          page: DataImportPage(),
+          status: _ModuleStatus.ready,
+        ),
+        _HomeModule.page(
+          id: 'data_export',
+          icon: Icons.download,
+          title: '数据导出',
+          description: '数据导出备份',
+          page: DataExportPage(),
+          status: _ModuleStatus.ready,
+        ),
+        _HomeModule.page(
+          id: 'repo_analytics',
+          icon: Icons.analytics,
+          title: '仓库分析',
+          description: '代码仓库分析',
+          page: RepoAnalyticsPage(),
+          status: _ModuleStatus.ready,
+        ),
+      ]);
+    }
+    return modules;
+  }
+
+  Widget _buildModuleCard(_HomeModule module) {
+    return _buildMenuCard(
+      icon: module.icon,
+      title: module.title,
+      onTap: module.resolveTap(this),
+      imageAsset: module.imageAsset,
+      description: module.description,
+      cardColor: _cardColors[module.title],
+      captureKey: module.captureKey,
+      statusLabel: module.status.label,
+      statusColor: module.status.color,
+    );
+  }
+
   static void _noOp() {}
 
   Widget _buildMenuCard({
@@ -1156,6 +1225,8 @@ class _HomePageState extends State<HomePage> {
     Color? cardColor,
     String? captureKey,
     Widget? destinationPage,
+    String? statusLabel,
+    Color? statusColor,
   }) {
     final effectiveColor = cardColor ?? Theme.of(context).colorScheme.primary;
     final effectiveOnTap = destinationPage != null
@@ -1186,22 +1257,35 @@ class _HomePageState extends State<HomePage> {
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 9),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.4,
-                        color: NoirTokens.ink,
-                        height: 1.1,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.4,
+                              color: NoirTokens.ink,
+                              height: 1.1,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ),
+                        if (statusLabel != null) ...[
+                          const SizedBox(width: 4),
+                          _ModuleStatusPill(
+                            label: statusLabel,
+                            color: statusColor ?? effectiveColor,
+                          ),
+                        ],
+                      ],
                     ),
                     if (description != null) ...[
                       const SizedBox(height: 4),
@@ -1341,6 +1425,145 @@ class _FlowStep {
   const _FlowStep(this.icon, this.label, this.serial, this.onTap);
 }
 
+enum _ModuleStatus {
+  ready('可用', Color(0xFF2D6A4F)),
+  platform('平台化', Color(0xFF5A4FCF));
+
+  final String label;
+  final Color color;
+  const _ModuleStatus(this.label, this.color);
+}
+
+class _HomeModule {
+  final String id;
+  final IconData icon;
+  final String title;
+  final String description;
+  final _ModuleStatus status;
+  final String? tabLabel;
+  final Widget? page;
+  final VoidCallback? onTap;
+  final String? imageAsset;
+  final String? captureKey;
+
+  const _HomeModule._({
+    required this.id,
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.status,
+    this.tabLabel,
+    this.page,
+    this.onTap,
+    this.imageAsset,
+    this.captureKey,
+  });
+
+  const _HomeModule.tab({
+    required String id,
+    required IconData icon,
+    required String title,
+    required String description,
+    required String tabLabel,
+    _ModuleStatus status = _ModuleStatus.ready,
+    String? imageAsset,
+    String? captureKey,
+  }) : this._(
+          id: id,
+          icon: icon,
+          title: title,
+          description: description,
+          status: status,
+          tabLabel: tabLabel,
+          imageAsset: imageAsset,
+          captureKey: captureKey,
+        );
+
+  const _HomeModule.page({
+    required String id,
+    required IconData icon,
+    required String title,
+    required String description,
+    required Widget page,
+    _ModuleStatus status = _ModuleStatus.ready,
+    String? imageAsset,
+    String? captureKey,
+  }) : this._(
+          id: id,
+          icon: icon,
+          title: title,
+          description: description,
+          status: status,
+          page: page,
+          imageAsset: imageAsset,
+          captureKey: captureKey,
+        );
+
+  const _HomeModule.action({
+    required String id,
+    required IconData icon,
+    required String title,
+    required String description,
+    required VoidCallback onTap,
+    _ModuleStatus status = _ModuleStatus.ready,
+    String? imageAsset,
+    String? captureKey,
+  }) : this._(
+          id: id,
+          icon: icon,
+          title: title,
+          description: description,
+          status: status,
+          onTap: onTap,
+          imageAsset: imageAsset,
+          captureKey: captureKey,
+        );
+
+  VoidCallback resolveTap(_HomePageState state) {
+    if (tabLabel != null) {
+      return () => state._switchToTab(tabLabel!);
+    }
+    if (page != null) {
+      return () => state._pushWithScreenshot(captureKey ?? title, page!);
+    }
+    return onTap ?? _HomePageState._noOp;
+  }
+}
+
+class _ModuleStatusPill extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _ModuleStatusPill({
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 52),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: color,
+          fontSize: 9,
+          fontWeight: FontWeight.w800,
+          height: 1,
+        ),
+      ),
+    );
+  }
+}
+
 /// 管理员工具面板 — 以网格方式集中管理功能入口
 class _AdminToolsPage extends StatelessWidget {
   const _AdminToolsPage();
@@ -1475,7 +1698,7 @@ class _AdminToolsPage extends StatelessWidget {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(NoirTokens.radius),
                     ),
                     child: const Icon(Icons.admin_panel_settings,
@@ -1503,7 +1726,7 @@ class _AdminToolsPage extends StatelessWidget {
                         Text(
                           '系统级权限 · 管理各项功能与数据',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.85),
+                            color: Colors.white.withValues(alpha: 0.85),
                             fontSize: 12,
                             letterSpacing: 1.4,
                           ),
@@ -1714,14 +1937,14 @@ class _MenuCardImage extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             cardColor,
-            cardColor.withOpacity(0.6),
+            cardColor.withValues(alpha: 0.6),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
       ),
       child: Center(
-        child: Icon(icon, size: 40, color: Colors.white.withOpacity(0.8)),
+        child: Icon(icon, size: 40, color: Colors.white.withValues(alpha: 0.8)),
       ),
     );
   }

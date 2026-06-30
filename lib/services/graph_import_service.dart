@@ -36,16 +36,12 @@ class GraphImportService {
   Future<void> importAll() async {
     final db = await _dbHelper.database;
     final course = await _courseContext.getActiveCourse();
-    if (!CourseContextService.isDefaultMobileCourseName(course.name)) {
-      debugPrint(
-          '=== GraphImportService: Skip default MD graphs for ${course.name}');
-      return;
-    }
 
     // 检查是否已导入（用 graph_type='md_import' 标记）
+    final scope = await _courseContext.scopedWhere();
     final existing = await db.rawQuery(
-      "SELECT COUNT(*) as c FROM graphs WHERE graph_type = 'md_import' AND (course_id = ? OR course_id IS NULL OR course_id = '')",
-      [CourseContextService.defaultCourseId],
+      "SELECT COUNT(*) as c FROM graphs WHERE graph_type = 'md_import' AND ${scope.where}",
+      scope.args,
     );
     final count = (existing.first['c'] as int?) ?? 0;
     if (count > 0) {
@@ -56,12 +52,14 @@ class GraphImportService {
 
     debugPrint('=== GraphImportService: Starting import of MD graphs...');
 
+    final courseId = course.id;
+
     // 1) 创建总图谱（包含6大分类的根图谱）
-    await _importMainGraph(db);
+    await _importMainGraph(db, courseId, course.name);
 
     // 2) 为每个分类创建详细图谱
     for (final cat in _categories) {
-      await _importCategoryGraph(db, cat);
+      await _importCategoryGraph(db, cat, courseId);
     }
 
     debugPrint('=== GraphImportService: Import complete');
@@ -69,7 +67,8 @@ class GraphImportService {
 
   // ── 总图谱 ──────────────────────────────────────────────────────────────
 
-  Future<void> _importMainGraph(Database db) async {
+  Future<void> _importMainGraph(
+      Database db, String courseId, String courseName) async {
     const graphId = 'graph_main_overview';
     const rootId = 'node_root_main';
 
@@ -78,15 +77,15 @@ class GraphImportService {
         'graphs',
         {
           'id': graphId,
-          'title': '移动应用开发课程总图谱',
-          'course_id': CourseContextService.defaultCourseId,
+          'title': '${courseName}课程总图谱',
+          'course_id': courseId,
           'graph_type': 'md_import',
           'layout': 'tree',
         },
         conflictAlgorithm: ConflictAlgorithm.ignore);
 
     // 根节点
-    await _insertNode(db, rootId, graphId, '课程：移动应用开发', '', 'root', 0,
+    await _insertNode(db, rootId, graphId, '课程：$courseName', '', 'root', 0,
         color: '#2E7D32');
 
     // 6 大分类节点 + 边
@@ -132,7 +131,8 @@ class GraphImportService {
 
   // ── 分类详细图谱 ────────────────────────────────────────────────────────
 
-  Future<void> _importCategoryGraph(Database db, _Category cat) async {
+  Future<void> _importCategoryGraph(
+      Database db, _Category cat, String courseId) async {
     final graphId = 'graph_detail_${cat.dir}';
 
     await db.insert(
@@ -140,7 +140,7 @@ class GraphImportService {
         {
           'id': graphId,
           'title': '${cat.label}详细图谱',
-          'course_id': CourseContextService.defaultCourseId,
+          'course_id': courseId,
           'graph_type': 'md_import',
           'layout': 'tree',
         },

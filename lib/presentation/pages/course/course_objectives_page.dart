@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../../core/design/noir_tokens.dart';
 import '../../../data/local/achievement_dao.dart';
@@ -56,7 +56,7 @@ class _CourseObjectivesPageState extends State<CourseObjectivesPage> {
   }
 
   static const _intro =
-      '通过本课程的学习，掌握移动应用开发的多元技术体系（原生/混合/小程序/多端），理解不同开发模式的适用场景，熟悉主流跨平台开发框架及 AI 编程工具的使用，具备跨平台应用系统分析、设计和开发能力，能够运用 RESTful API 实现移动端与后端的数据交互，培养学生科学思维、创新意识和良好的职业道德，为从事移动开发工作及毕业设计奠定基础。';
+      '通过本课程的学习，理解课程知识图谱与数字孪生的基本原理，掌握课程资源建模、学习过程数据治理、智能教学场景设计与评价反馈方法，能够结合 AI 工具完成课程知识组织、学习路径生成、实验实践支撑和持续改进分析，形成面向不同课程的平台化建设与应用能力。';
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +73,7 @@ class _CourseObjectivesPageState extends State<CourseObjectivesPage> {
       actions: [
         Text(_courseName,
             style: TextStyle(
-                color: NoirTokens.paper.withOpacity(0.6), fontSize: 12)),
+                color: NoirTokens.paper.withValues(alpha: 0.6), fontSize: 12)),
         if (canManage)
           IconButton(
             tooltip: '管理课程目标',
@@ -87,11 +87,11 @@ class _CourseObjectivesPageState extends State<CourseObjectivesPage> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.flag_outlined,
-                      size: 64, color: NoirTokens.paper.withOpacity(0.3)),
+                      size: 64, color: NoirTokens.paper.withValues(alpha: 0.3)),
                   const SizedBox(height: 16),
                   Text('暂无课程目标数据',
                       style: TextStyle(
-                          color: NoirTokens.paper.withOpacity(0.5))),
+                          color: NoirTokens.paper.withValues(alpha: 0.5))),
                   if (canManage) ...[
                     const SizedBox(height: 16),
                     FilledButton.icon(
@@ -116,7 +116,7 @@ class _CourseObjectivesPageState extends State<CourseObjectivesPage> {
                       Text(
                         _intro,
                         style: TextStyle(
-                          color: NoirTokens.paper.withOpacity(0.82),
+                          color: NoirTokens.paper.withValues(alpha: 0.82),
                           fontSize: 13,
                           height: 1.7,
                         ),
@@ -303,9 +303,9 @@ class _CourseObjectivesPageState extends State<CourseObjectivesPage> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: NoirTokens.paper.withOpacity(0.055),
+        color: NoirTokens.paper.withValues(alpha: 0.055),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: NoirTokens.paper.withOpacity(0.10)),
+        border: Border.all(color: NoirTokens.paper.withValues(alpha: 0.10)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -314,7 +314,7 @@ class _CourseObjectivesPageState extends State<CourseObjectivesPage> {
             width: 90,
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.14),
+              color: color.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Column(
@@ -331,7 +331,7 @@ class _CourseObjectivesPageState extends State<CourseObjectivesPage> {
                 Text(
                   '权重${w.toStringAsFixed(2)}',
                   style: TextStyle(
-                    color: NoirTokens.paper.withOpacity(0.62),
+                    color: NoirTokens.paper.withValues(alpha: 0.62),
                     fontSize: 11,
                   ),
                 ),
@@ -356,7 +356,7 @@ class _CourseObjectivesPageState extends State<CourseObjectivesPage> {
                 Text(
                   '支撑毕业要求 ${o['indicator'] ?? ''} · 考核：${o['assess_content'] ?? ''}',
                   style: TextStyle(
-                    color: NoirTokens.paper.withOpacity(0.64),
+                    color: NoirTokens.paper.withValues(alpha: 0.64),
                     fontSize: 12,
                     height: 1.45,
                   ),
@@ -365,7 +365,7 @@ class _CourseObjectivesPageState extends State<CourseObjectivesPage> {
                 Text(
                   '章节：${o['chapters'] ?? ''}    实验：${o['experiments'] ?? ''}',
                   style: TextStyle(
-                    color: color.withOpacity(0.86),
+                    color: color.withValues(alpha: 0.86),
                     fontSize: 12,
                     height: 1.35,
                   ),
@@ -381,17 +381,17 @@ class _CourseObjectivesPageState extends State<CourseObjectivesPage> {
   DataTableThemeData _darkTableTheme() {
     return DataTableThemeData(
       headingTextStyle: TextStyle(
-        color: NoirTokens.paper.withOpacity(0.86),
+        color: NoirTokens.paper.withValues(alpha: 0.86),
         fontWeight: FontWeight.w800,
         fontSize: 13,
       ),
       dataTextStyle: TextStyle(
-        color: NoirTokens.paper.withOpacity(0.82),
+        color: NoirTokens.paper.withValues(alpha: 0.82),
         fontSize: 13,
         height: 1.4,
       ),
       headingRowColor: WidgetStatePropertyAll(
-        NoirTokens.paper.withOpacity(0.06),
+        NoirTokens.paper.withValues(alpha: 0.06),
       ),
       dividerThickness: 0.4,
     );
@@ -404,9 +404,9 @@ class _CourseObjectivesPageState extends State<CourseObjectivesPage> {
     return Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: NoirTokens.paper.withOpacity(0.055),
+        color: NoirTokens.paper.withValues(alpha: 0.055),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: NoirTokens.paper.withOpacity(0.10)),
+        border: Border.all(color: NoirTokens.paper.withValues(alpha: 0.10)),
       ),
       child: child,
     );

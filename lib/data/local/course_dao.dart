@@ -1,4 +1,5 @@
 import '../models/course_model.dart';
+import '../../services/achievement_context.dart';
 import 'database_helper.dart';
 
 /// 课程数据访问对象
@@ -20,7 +21,9 @@ class CourseDao {
       limit: 1,
     );
     if (maps.isEmpty) return null;
-    return CourseModel.fromMap(maps.first);
+    final course = CourseModel.fromMap(maps.first);
+    _syncAchievementContext(course);
+    return course;
   }
 
   /// 获取单个课程
@@ -40,6 +43,7 @@ class CourseDao {
   Future<void> addCourse(CourseModel course) async {
     final db = await DatabaseHelper.instance.database;
     await db.insert('courses', course.toMap());
+    if (course.isActive) _syncAchievementContext(course);
   }
 
   /// 更新课程
@@ -51,11 +55,13 @@ class CourseDao {
       where: 'id = ?',
       whereArgs: [course.id],
     );
+    if (course.isActive) _syncAchievementContext(course);
   }
 
   /// 切换激活课程（先取消全部激活，再激活指定课程）
   Future<void> setActiveCourse(String courseId) async {
     final db = await DatabaseHelper.instance.database;
+    CourseModel? activeCourse;
     await db.transaction((txn) async {
       await txn.update('courses', {'is_active': 0});
       await txn.update(
@@ -64,7 +70,17 @@ class CourseDao {
         where: 'id = ?',
         whereArgs: [courseId],
       );
+      final rows = await txn.query(
+        'courses',
+        where: 'id = ?',
+        whereArgs: [courseId],
+        limit: 1,
+      );
+      if (rows.isNotEmpty) {
+        activeCourse = CourseModel.fromMap(rows.first);
+      }
     });
+    if (activeCourse != null) _syncAchievementContext(activeCourse!);
   }
 
   /// 删除课程（不能删除激活中的课程）
@@ -85,5 +101,12 @@ class CourseDao {
     final db = await DatabaseHelper.instance.database;
     final result = await db.rawQuery('SELECT COUNT(*) as cnt FROM courses');
     return result.first['cnt'] as int? ?? 0;
+  }
+
+  void _syncAchievementContext(CourseModel course) {
+    final name = course.name.trim();
+    if (name.isNotEmpty) {
+      AchievementContext.instance.courseName = name;
+    }
   }
 }

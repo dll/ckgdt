@@ -4,6 +4,7 @@ import '../../../data/local/quiz_dao.dart';
 import '../../../data/local/wrong_answer_dao.dart';
 import '../agent_model.dart';
 import '../base_agent.dart';
+import '../special_agent_tools.dart';
 
 /// 📝 测验智能体 — 出题/批改/错题分析
 class QuizAgent extends BaseAgent {
@@ -156,6 +157,24 @@ D. Text
   @override
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
+    final tools = SpecialAgentTools.instance;
+    if (tools.isQuizGenerationIntent(userMessage)) {
+      try {
+        final reply = await tools.generateQuizQuestions(
+          userRequest: userMessage,
+        );
+        return buildReply(
+          reply,
+          action: const AgentAction(
+            type: 'navigate_sub_page',
+            params: {'keyword': '题库管理'},
+          ),
+        );
+      } catch (e) {
+        return buildReply('题库生成失败：$e');
+      }
+    }
+
     final messages = buildAiMessages(userMessage, session);
     final result =
         await safeAiChatWithTools(userMessage, messages, aiService: _ai);

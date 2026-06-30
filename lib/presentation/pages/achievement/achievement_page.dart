@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
@@ -95,8 +95,8 @@ class _AchievementPageState extends State<AchievementPage>
 
   Future<void> _refreshVisibleTabs() async {
     try {
-      final courseName = await _courseContext.activeCourseName(
-          fallback: CourseContextService.defaultCourseName);
+      final courseName =
+          await _courseContext.activeCourseName(fallback: '当前课程');
       final objectives = await _achievementDao.getCourseObjectives(courseName);
       final hasExperiment = objectives.isEmpty ||
           objectives.any(
@@ -266,7 +266,9 @@ class _AchievementPageState extends State<AchievementPage>
         if (tempFile != null && await tempFile.exists()) {
           await tempFile.delete();
         }
-      } catch (e) { swallowDebug(e, tag: 'achievement_page'); }
+      } catch (e) {
+        swallowDebug(e, tag: 'achievement_page');
+      }
       return null;
     }
   }
@@ -288,7 +290,7 @@ class _AchievementPageState extends State<AchievementPage>
                   isScrollable: true,
                   tabAlignment: TabAlignment.start,
                   labelColor: Colors.white,
-                  unselectedLabelColor: Colors.white.withOpacity(0.55),
+                  unselectedLabelColor: Colors.white.withValues(alpha: 0.55),
                   indicatorColor: Colors.white,
                   indicatorWeight: 2,
                   indicatorSize: TabBarIndicatorSize.label,
@@ -313,7 +315,7 @@ class _AchievementPageState extends State<AchievementPage>
                             Text(serial,
                                 style: NoirTokens.serial(
                                     color:
-                                        Colors.white.withOpacity(0.85))),
+                                        Colors.white.withValues(alpha: 0.85))),
                             const SizedBox(width: 8),
                             Icon(icon, size: 16),
                             const SizedBox(width: 6),

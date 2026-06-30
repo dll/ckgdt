@@ -113,9 +113,10 @@ class ClassroomDao {
       'roll_call_sessions',
     ]) {
       try {
+        final courseId = await _courseContext.activeCourseId();
         await db.update(
           table,
-          {'course_id': CourseContextService.defaultCourseId},
+          {'course_id': courseId},
           where: "course_id IS NULL OR course_id = ''",
         );
       } catch (e) {
@@ -153,9 +154,10 @@ class ClassroomDao {
       swallow(e, tag: 'ClassroomDao.migrate.classroom_questions_course_id');
     }
     try {
+      final courseId = await _courseContext.activeCourseId();
       await db.update(
         'classroom_questions',
-        {'course_id': CourseContextService.defaultCourseId},
+        {'course_id': courseId},
         where: "course_id IS NULL OR course_id = ''",
       );
     } catch (e) {

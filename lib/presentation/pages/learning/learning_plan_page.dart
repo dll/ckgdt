@@ -1,6 +1,7 @@
-﻿import 'dart:math' as math;
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/course_context_service.dart';
 import '../../widgets/agent_entry_button.dart';
 import '../../widgets/back_button_bar.dart';
 import '../../../data/local/learning_path_dao.dart';
@@ -37,11 +38,13 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
   LearningPathModel? _selectedPath;
   List<_UnifiedNode> _pathNodes = []; // 路径中各节点的完整信息
   bool _loadingDetail = false;
+  List<String> _chapterNames = [];
 
   @override
   void initState() {
     super.initState();
     _loadPaths();
+    _loadChapterNames();
   }
 
   Future<void> _loadPaths() async {
@@ -62,6 +65,18 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadChapterNames() async {
+    try {
+      final ctx = CourseContextService();
+      final titles = await ctx.shortChapterTitles();
+      if (titles.isNotEmpty && mounted) {
+        setState(() => _chapterNames = titles);
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'LearningPlanPage.loadChapterNames', stack: st);
     }
   }
 
@@ -295,7 +310,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                   fontWeight: FontWeight.bold)),
           Text(label,
               style: TextStyle(
-                  color: Colors.white.withOpacity(0.7), fontSize: 11)),
+                  color: Colors.white.withValues(alpha: 0.7), fontSize: 11)),
         ],
       ),
     );
@@ -305,7 +320,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
     return Container(
       width: 1,
       height: 40,
-      color: Colors.white.withOpacity(0.2),
+      color: Colors.white.withValues(alpha: 0.2),
     );
   }
 
@@ -329,7 +344,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
+                      color: color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(Icons.route, color: color, size: 22),
@@ -357,7 +372,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
+                      color: color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text('${path.nodeIds.length}节点',
@@ -424,9 +439,9 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
         Container(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.05),
+            color: color.withValues(alpha: 0.05),
             border: Border(
-                bottom: BorderSide(color: color.withOpacity(0.15))),
+                bottom: BorderSide(color: color.withValues(alpha: 0.15))),
           ),
           child: Row(
             children: [
@@ -507,7 +522,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                     Expanded(
                       child: Container(
                         width: isFirst ? 0 : 2,
-                        color: pathColor.withOpacity(0.3),
+                        color: pathColor.withValues(alpha: 0.3),
                       ),
                     ),
                     // 圆点
@@ -515,7 +530,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                       width: 20,
                       height: 20,
                       decoration: BoxDecoration(
-                        color: nodeColor.withOpacity(0.15),
+                        color: nodeColor.withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                         border: Border.all(color: nodeColor, width: 2),
                       ),
@@ -531,7 +546,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                     Expanded(
                       child: Container(
                         width: isLast ? 0 : 2,
-                        color: pathColor.withOpacity(0.3),
+                        color: pathColor.withValues(alpha: 0.3),
                       ),
                     ),
                   ],
@@ -564,7 +579,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 6, vertical: 1),
                               decoration: BoxDecoration(
-                                color: nodeColor.withOpacity(0.1),
+                                color: nodeColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text('L${node.level}',
@@ -639,7 +654,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
@@ -692,49 +707,70 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
 
   /// 节点到章节的映射 — 根据节点标题模糊匹配章节名
   String? _matchChapterByTitle(String title, String? content) {
-    const chapterKeywords = {
-      '移动应用开发技术': '第一章',
-      '技术体系': '第一章',
-      '原生开发': '第二章',
-      'Android': '第二章',
-      'iOS': '第二章',
-      '混合开发': '第三章',
-      'Flutter': '第三章',
-      'React Native': '第三章',
-      '跨平台': '第三章',
-      '小程序': '第四章',
-      '微信': '第四章',
-      'UniApp': '第四章',
-      '华为': '第五章',
-      'HarmonyOS': '第五章',
-      '鸿蒙': '第五章',
-      '综合开发': '第六章',
-      '综合实践': '第六章',
-      '实战': '第六章',
+    final c = content ?? '';
+    final haystack = '$title\n$c';
+
+    for (var i = 0; i < _chapterNames.length; i++) {
+      final chapterName = _chapterNames[i].trim();
+      final chapterNo = '第${i + 1}章';
+      if (chapterName.isNotEmpty && haystack.contains(chapterName)) {
+        return chapterName;
+      }
+      if (haystack.contains(chapterNo)) return _chapterLabel(i + 1);
+
+      final normalized = chapterName
+          .replaceFirst(RegExp(r'^第\s*[一二三四五六七八九十百\d]+\s*章'), '')
+          .trim();
+      final keywords = normalized
+          .split(RegExp(r'[\s、，,；;：:（）()《》]+'))
+          .map((s) => s.trim())
+          .where((s) => s.length >= 2);
+      for (final keyword in keywords) {
+        if (haystack.contains(keyword)) return chapterName;
+      }
+    }
+
+    // 兼容旧版 MAD 图谱数据，避免历史节点无法归章。
+    const legacyChapterKeywords = {
+      '移动应用开发技术': 1,
+      '技术体系': 1,
+      '原生开发': 2,
+      'Android': 2,
+      'iOS': 2,
+      '混合开发': 3,
+      'Flutter': 3,
+      'React Native': 3,
+      '跨平台': 3,
+      '小程序': 4,
+      '微信': 4,
+      'UniApp': 4,
+      '华为': 5,
+      'HarmonyOS': 5,
+      '鸿蒙': 5,
+      '综合开发': 6,
+      '综合实践': 6,
+      '实战': 6,
     };
 
-    final c = content ?? '';
-
-    for (final entry in chapterKeywords.entries) {
-      if (title.contains(entry.key) || c.contains(entry.key)) {
-        return entry.value;
+    for (final entry in legacyChapterKeywords.entries) {
+      if (haystack.contains(entry.key)) {
+        return _chapterLabel(entry.value);
       }
     }
     return null;
   }
 
+  String _chapterLabel(int chapter) {
+    return chapter >= 1 && chapter <= _chapterNames.length
+        ? _chapterNames[chapter - 1]
+        : '第$chapter章';
+  }
+
   void _showNodeInfo(_UnifiedNode node) {
     String? chapter;
     if (node.isConcept && node.chapter != null) {
-      const chapterNames = {
-        1: '第一章',
-        2: '第二章',
-        3: '第三章',
-        4: '第四章',
-        5: '第五章',
-        6: '第六章'
-      };
-      chapter = chapterNames[node.chapter];
+      final ch = node.chapter!;
+      chapter = _chapterLabel(ch);
     } else {
       chapter = _matchChapterByTitle(node.title, node.content);
     }
@@ -756,7 +792,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
                   height: 36,
                   decoration: BoxDecoration(
                     color: (_parseColor(node.color) ?? Colors.blue)
-                        .withOpacity(0.1),
+                        .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Center(
@@ -883,7 +919,7 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
     required VoidCallback onTap,
   }) {
     return Material(
-      color: color.withOpacity(0.08),
+      color: color.withValues(alpha: 0.08),
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
@@ -967,13 +1003,13 @@ class _PathGraphPainter extends CustomPainter {
 
     // 绘制连接线
     final linePaint = Paint()
-      ..color = color.withOpacity(0.25)
+      ..color = color.withValues(alpha: 0.25)
       ..strokeWidth = 3.0
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
     final arrowPaint = Paint()
-      ..color = color.withOpacity(0.5)
+      ..color = color.withValues(alpha: 0.5)
       ..strokeWidth = 2.5
       ..style = PaintingStyle.fill;
 
@@ -1022,7 +1058,7 @@ class _PathGraphPainter extends CustomPainter {
       if (isFirst || isLast) {
         final glowPaint = Paint()
           ..color =
-              (isFirst ? Colors.green : Colors.red).withOpacity(0.15)
+              (isFirst ? Colors.green : Colors.red).withValues(alpha: 0.15)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
         canvas.drawCircle(pos, radius + 6, glowPaint);
       }
@@ -1034,7 +1070,7 @@ class _PathGraphPainter extends CustomPainter {
           pos,
           radius - 3,
           Paint()
-            ..color = Colors.white.withOpacity(0.3)
+            ..color = Colors.white.withValues(alpha: 0.3)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1.5);
 

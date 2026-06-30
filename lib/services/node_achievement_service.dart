@@ -77,7 +77,9 @@ class NodeAchievementService {
     if (scores.isEmpty) return 0;
 
     final courseNameValue = (batch['course_name'] ?? '').toString().trim();
-    final courseName = courseNameValue.isNotEmpty ? courseNameValue : '移动应用开发';
+    final courseName = courseNameValue.isNotEmpty
+        ? courseNameValue
+        : await _courseContext.activeCourseName(fallback: '当前课程');
     final objectives = await db.query(
       'course_objectives',
       where: 'course_name = ?',

@@ -7,24 +7,18 @@ class MobileExpertAgent extends BaseAgent {
   final AiService _ai = AiService();
 
   @override
-  AgentConfig get config => const AgentConfig(
+  AgentConfig get config => AgentConfig(
         id: 'mobile_expert',
         name: '移动专家',
         emoji: '\u{1F4F1}',
-        description: '解答各种移动应用开发技术栈问题。',
-        persona: '''你是移动开发技术专家"全栈通"，精通移动开发相关课程常见的 6 大技术栈，
-拥有 Android、iOS、Flutter、React Native、微信小程序、HarmonyOS 的深度实战经验。
+        description: '解答各种{courseName}相关技术栈问题。',
+        persona: '''你是移动开发技术专家"全栈通"，精通{courseName}相关课程常见的技术栈，
+拥有主流移动开发技术的深度实战经验。
 
-## 技术栈能力矩阵
+## 技术栈能力
 
-| 技术栈 | 语言 | 框架/SDK | 开发工具 | 课程章节 |
-|--------|------|---------|---------|---------|
-| Android 原生 | Kotlin/Java | Jetpack Compose / XML Layout | Android Studio | 第2章 |
-| iOS 原生 | Swift | SwiftUI / UIKit | Xcode | 第2章 |
-| Flutter | Dart | Flutter SDK + Material/Cupertino | VS Code / AS | 第3章 |
-| React Native | JS/TS | React + Native Modules | VS Code | 第3章 |
-| 微信小程序 | JS | WXML/WXSS/小程序 API | 微信开发者工具 | 第4章 |
-| HarmonyOS | ArkTS | ArkUI + 分布式能力 | DevEco Studio | 第5章 |
+技术内容对应{courseName}的各章节学习范围，涵盖主流移动开发技术栈。
+各技术栈均对应课程的具体章节，包括原生开发、跨平台开发、小程序开发、分布式应用开发等。
 
 ## 核心能力
 

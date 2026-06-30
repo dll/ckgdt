@@ -1,10 +1,12 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../widgets/back_button_bar.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../services/ai_service.dart';
+import '../../../services/agent/special_agent_tools.dart';
+import '../../../services/agent/teaching_context_service.dart';
 import '../../../services/plantuml_service.dart';
 import '../../../data/local/skill_dao.dart';
 import '../../../data/local/ai_history_dao.dart';
@@ -306,12 +308,7 @@ const _skills = <_SkillDef>[
       '权重分配和总分计算方案',
       '支持 OBE 达成度映射',
     ],
-    examples: [
-      '移动应用开发期末项目考核',
-      'Flutter App 开发实践评分',
-      '小组协作项目答辩评分',
-      '课程综合达成度评价方案'
-    ],
+    examples: ['课程期末项目考核方案设计', 'App 开发实践评分', '小组协作项目答辩评分', '课程综合达成度评价方案'],
     systemPrompt: '你是课程考核设计专家，熟悉 OBE（成果导向教育）理念。'
         '请根据用户给出的考核主题，设计一份考核方案。'
         '输出格式为 Markdown，包含：\n'
@@ -331,7 +328,7 @@ const _skills = <_SkillDef>[
     classicCases: [
       _SkillCase(
           title: '期末项目考核',
-          userInput: '移动应用开发期末项目考核',
+          userInput: '课程期末项目考核方案设计',
           resultSummary:
               '设计 6 维考核方案：功能完整性(25%)、代码质量(20%)、UI 设计(15%)、技术难度(15%)、文档规范(15%)、答辩表现(10%)，每维度含 4 级评分标准。'),
     ],
@@ -651,7 +648,7 @@ class _SkillsHubPageState extends State<SkillsHubPage> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: skill.color.withOpacity(0.1),
+                  color: skill.color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(skill.icon, color: skill.color, size: 26),
@@ -677,7 +674,7 @@ class _SkillsHubPageState extends State<SkillsHubPage> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: skill.color.withOpacity(0.1),
+                    color: skill.color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text('$count 条',
@@ -761,12 +758,19 @@ class _AiSkillPageState extends State<AiSkillPage>
     });
 
     try {
-      final chatResult = await _aiService.chatWithMeta(
-        [
-          {'role': 'user', 'content': topic}
-        ],
-        systemPrompt: _skill.systemPrompt,
-      );
+      final localResult = await _tryRunConcreteSkill(topic);
+      final chatResult = localResult == null
+          ? await _aiService.chatWithMeta(
+              [
+                {'role': 'user', 'content': topic}
+              ],
+              systemPrompt: await _buildSkillSystemPrompt(topic),
+            )
+          : AiChatResult(
+              content: localResult,
+              provider: 'CKGDT 本地能力',
+              model: _skill.id,
+            );
       if (mounted) {
         setState(() {
           _result = chatResult.content;
@@ -800,6 +804,46 @@ class _AiSkillPageState extends State<AiSkillPage>
       }
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<String> _buildSkillSystemPrompt(String topic) async {
+    final context = await AgentTeachingContextService.instance
+        .buildPromptContext(userMessage: topic);
+    return '''
+${_skill.systemPrompt}
+
+$context
+
+## 技能执行要求
+- 必须围绕当前课程生成内容，优先使用本地课程章节、知识图谱、题库、实验、作品、考核和达成数据。
+- 不要沿用固定的《移动应用开发》示例，除非用户明确要求。
+- 面向教师时给出可落地的教学、评价、资源或改进动作；面向学生时给出可执行的学习、实验、考核和作品动作。
+''';
+  }
+
+  Future<String?> _tryRunConcreteSkill(String topic) async {
+    final tools = SpecialAgentTools.instance;
+    switch (_skill.id) {
+      case 'graph':
+        return tools.generateKnowledgeGraph(userRequest: topic);
+      case 'quiz':
+        if (tools.isQuizGenerationIntent(topic)) {
+          return tools.generateQuizQuestions(userRequest: topic);
+        }
+        return null;
+      case 'lab':
+        if (tools.isLabTaskGenerationIntent(topic)) {
+          return tools.generateLabTask(userRequest: topic);
+        }
+        return null;
+      case 'achievement':
+        if (tools.isAchievementReportIntent(topic)) {
+          return tools.generateAchievementReport();
+        }
+        return null;
+      default:
+        return null;
     }
   }
 
@@ -909,7 +953,7 @@ class _AiSkillPageState extends State<AiSkillPage>
                 gradient: LinearGradient(
                   colors: [
                     _skill.color,
-                    _skill.color.withOpacity(0.7),
+                    _skill.color.withValues(alpha: 0.7),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -921,7 +965,7 @@ class _AiSkillPageState extends State<AiSkillPage>
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Icon(_skill.icon, color: Colors.white, size: 36),
@@ -1025,7 +1069,7 @@ class _AiSkillPageState extends State<AiSkillPage>
                             width: 24,
                             height: 24,
                             decoration: BoxDecoration(
-                              color: _skill.color.withOpacity(0.1),
+                              color: _skill.color.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
                             child: Center(
@@ -1077,9 +1121,10 @@ class _AiSkillPageState extends State<AiSkillPage>
                       padding: const EdgeInsets.all(10),
                       margin: const EdgeInsets.only(bottom: 8),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.05),
+                        color: Colors.blue.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                        border: Border.all(
+                            color: Colors.blue.withValues(alpha: 0.2)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1100,10 +1145,10 @@ class _AiSkillPageState extends State<AiSkillPage>
                       width: double.infinity,
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.05),
+                        color: Colors.green.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                            color: Colors.green.withOpacity(0.2)),
+                            color: Colors.green.withValues(alpha: 0.2)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1135,7 +1180,7 @@ class _AiSkillPageState extends State<AiSkillPage>
                         style: OutlinedButton.styleFrom(
                           foregroundColor: _skill.color,
                           side: BorderSide(
-                              color: _skill.color.withOpacity(0.5)),
+                              color: _skill.color.withValues(alpha: 0.5)),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8)),
                           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1186,7 +1231,7 @@ class _AiSkillPageState extends State<AiSkillPage>
             color: Theme.of(context).cardColor,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
@@ -1243,7 +1288,7 @@ class _AiSkillPageState extends State<AiSkillPage>
                               horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             border: Border.all(
-                                color: _skill.color.withOpacity(0.3)),
+                                color: _skill.color.withValues(alpha: 0.3)),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Text(e,
@@ -1290,7 +1335,7 @@ class _AiSkillPageState extends State<AiSkillPage>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(_skill.icon,
-                          size: 64, color: _skill.color.withOpacity(0.2)),
+                          size: 64, color: _skill.color.withValues(alpha: 0.2)),
                       const SizedBox(height: 12),
                       Text('输入主题，点击 AI 生成',
                           style: TextStyle(color: Colors.grey[400])),
@@ -1392,7 +1437,7 @@ class _AiSkillPageState extends State<AiSkillPage>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.download_done,
-                size: 64, color: Colors.grey.withOpacity(0.3)),
+                size: 64, color: Colors.grey.withValues(alpha: 0.3)),
             const SizedBox(height: 12),
             const Text('暂无保存的生成结果', style: TextStyle(color: Colors.grey)),
             const SizedBox(height: 6),
@@ -1409,7 +1454,7 @@ class _AiSkillPageState extends State<AiSkillPage>
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          color: _skill.color.withOpacity(0.05),
+          color: _skill.color.withValues(alpha: 0.05),
           child: Row(
             children: [
               Icon(Icons.folder, color: _skill.color, size: 20),
@@ -1637,7 +1682,7 @@ class _AiSkillPageState extends State<AiSkillPage>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          border: Border.all(color: c.withOpacity(0.3)),
+          border: Border.all(color: c.withValues(alpha: 0.3)),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(

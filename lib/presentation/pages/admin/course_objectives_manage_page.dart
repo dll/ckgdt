@@ -35,7 +35,7 @@ class _CourseObjectivesManagePageState
 
   List<Map<String, dynamic>> _objectives = [];
   List<CourseModel> _allCourses = [];
-  String _courseName = '移动应用开发';
+  String _courseName = '当前课程';
   bool _loading = true;
   bool _importing = false;
   bool _hasUnsaved = false;

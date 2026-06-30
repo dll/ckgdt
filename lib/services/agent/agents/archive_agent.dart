@@ -511,8 +511,8 @@ ${doc.content ?? '（文档无内容）'}''';
 
     // Extract real teacher name and course info from context dynamically
     String teacherName = '(从参考数据中提取实际教师名)';
-    String courseName = '移动应用开发';
-    String classInfo = '软件231,软件232';
+    String courseName = '{courseName}';
+    String classInfo = '示例班级';
     const semesterLabel = '2025-2026学年第二学期';
     String totalHours = '96';
     String theoryHours = '24';

@@ -1,10 +1,13 @@
 import 'package:sqflite/sqflite.dart';
+import '../../core/error_handler.dart';
+import '../../services/course_context_service.dart';
 import 'database_helper.dart';
 
 /// AI 技能生成结果 DAO
 /// 使用 _ensureTable 模式，不修改 database_helper.dart
 class SkillDao {
   static bool _tableReady = false;
+  final CourseContextService _courseContext = CourseContextService();
 
   Future<Database> get _db async => DatabaseHelper.instance.database;
 
@@ -16,6 +19,7 @@ class SkillDao {
       CREATE TABLE IF NOT EXISTS skill_results (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         skill_id TEXT NOT NULL,
+        course_id TEXT,
         title TEXT NOT NULL,
         content TEXT NOT NULL,
         content_type TEXT DEFAULT 'markdown',
@@ -23,6 +27,21 @@ class SkillDao {
         created_at TEXT
       )
     ''');
+    try {
+      await db.execute('ALTER TABLE skill_results ADD COLUMN course_id TEXT');
+    } catch (e) {
+      swallow(e, tag: 'SkillDao.courseColumn');
+    }
+    try {
+      final courseId = await _courseContext.activeCourseId();
+      await db.update(
+        'skill_results',
+        {'course_id': courseId},
+        where: "course_id IS NULL OR course_id = ''",
+      );
+    } catch (e) {
+      swallow(e, tag: 'SkillDao.backfillCourse');
+    }
     _tableReady = true;
   }
 
@@ -36,8 +55,10 @@ class SkillDao {
   }) async {
     await _ensureTable();
     final db = await _db;
+    final courseId = await _courseContext.activeCourseId();
     return db.insert('skill_results', {
       'skill_id': skillId,
+      'course_id': courseId,
       'title': title,
       'content': content,
       'content_type': contentType,
@@ -50,10 +71,14 @@ class SkillDao {
   Future<List<Map<String, dynamic>>> getResults(String skillId) async {
     await _ensureTable();
     final db = await _db;
+    final scope = await _courseContext.scopedWhere(
+      extraWhere: 'skill_id = ?',
+      extraArgs: [skillId],
+    );
     return db.query(
       'skill_results',
-      where: 'skill_id = ?',
-      whereArgs: [skillId],
+      where: scope.where,
+      whereArgs: scope.args,
       orderBy: 'created_at DESC',
     );
   }
@@ -81,8 +106,11 @@ class SkillDao {
   Future<Map<String, int>> getResultCounts() async {
     await _ensureTable();
     final db = await _db;
+    final scope = await _courseContext.scopedWhere();
     final rows = await db.rawQuery(
-      'SELECT skill_id, COUNT(*) as cnt FROM skill_results GROUP BY skill_id',
+      'SELECT skill_id, COUNT(*) as cnt FROM skill_results '
+      'WHERE ${scope.where} GROUP BY skill_id',
+      scope.args,
     );
     final map = <String, int>{};
     for (final row in rows) {

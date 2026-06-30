@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../data/local/database_helper.dart';
 import '../data/local/quiz_dao.dart';
 import '../data/local/puml_dao.dart';
+import 'course_context_service.dart';
 import 'graph_import_service.dart';
 import 'gitee_service.dart';
 import 'course_resource_service.dart';
@@ -83,24 +84,8 @@ class DataLoadingService {
 
   // ── 资源文件初始化（视频/PDF/PPT）────────────────────────────────────────
 
-  /// 章节名列表（15个章节，视频/PDF/PPT 共用）
-  static const _chapterNames = [
-    '第一章 移动应用开发技术体系1',
-    '第一章 移动应用开发技术体系2',
-    '第二章 原生开发基础1',
-    '第二章 原生开发基础2',
-    '第三章 混合开发技术1',
-    '第三章 混合开发技术2',
-    '第三章 混合开发技术3',
-    '第四章 小程序开发1',
-    '第四章 小程序开发2',
-    '第五章 华为多端应用开发1',
-    '第五章 华为多端应用开发2',
-    '第五章 华为多端应用开发3',
-    '第六章 综合开发实践1',
-    '第六章 综合开发实践2',
-    '第六章 综合开发实践3',
-  ];
+  /// 每章子部分数（视频/PDF/PPT 按章节生成子条目）
+  static const _subPartCounts = [2, 2, 3, 2, 3, 3];
 
   Future<void> _loadResourceFiles() async {
     try {
@@ -138,9 +123,23 @@ class DataLoadingService {
       await db.delete('resource_files');
       debugPrint('=== DataLoadingService: Cleared old resource_files, re-inserting with correct paths');
 
+      // 从课程上下文动态加载章节名
+      final courseCtx = CourseContextService();
+      final chapterTitles = await courseCtx.chapterTitles();
+      final chapterNames = <String>[];
+      for (var i = 0; i < chapterTitles.length && i < _subPartCounts.length; i++) {
+        for (var p = 1; p <= _subPartCounts[i]; p++) {
+          chapterNames.add('${chapterTitles[i]}$p');
+        }
+      }
+      if (chapterNames.isEmpty) {
+        debugPrint('=== DataLoadingService: No chapters from course context, skipping resource insert');
+        return;
+      }
+
       final batch = db.batch();
 
-      for (final chapter in _chapterNames) {
+      for (final chapter in chapterNames) {
         // 视频
         batch.insert('resource_files', {
           'file_name': '$chapter.mp4',
@@ -173,7 +172,7 @@ class DataLoadingService {
       }
 
       await batch.commit(noResult: true);
-      debugPrint('=== DataLoadingService: Inserted ${_chapterNames.length * 3} resource files');
+      debugPrint('=== DataLoadingService: Inserted ${chapterNames.length * 3} resource files');
 
       // 验证插入结果
       final verify = await db.rawQuery(

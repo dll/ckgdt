@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -16,6 +16,7 @@ import '../../../services/settings_service.dart';
 import '../../../services/agent/agents/grading_agent.dart';
 import '../../../services/gitee_service.dart';
 import '../../../services/course_resource_service.dart';
+import '../../../services/course_context_service.dart';
 import '../../../services/pdf_text_service.dart';
 import '../../../services/lab_report_validation_service.dart';
 import '../../../core/constants/app_theme.dart';
@@ -488,7 +489,7 @@ class _LabTasksPageState extends State<LabTasksPage>
       children: [
         // Tab 栏 + Agent 入口
         Container(
-          color: primary.withOpacity(0.05),
+          color: primary.withValues(alpha: 0.05),
           child: Row(
             children: [
               Expanded(

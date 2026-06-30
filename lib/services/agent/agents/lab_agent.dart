@@ -3,6 +3,7 @@ import '../../auth_service.dart';
 import '../../../data/local/lab_task_dao.dart';
 import '../agent_model.dart';
 import '../base_agent.dart';
+import '../special_agent_tools.dart';
 
 /// 🔬 实验智能体 — 实验任务/提交/截止
 class LabAgent extends BaseAgent {
@@ -17,16 +18,8 @@ class LabAgent extends BaseAgent {
         persona: '''你是实验助手"实验员"，负责 CKGDT 平台当前课程的实验任务管理和指导。
 
 ## 课程实验体系
-本课程设置 6 次实验，与 6 章内容一一对应，循序渐进：
-
-| 实验 | 对应章节 | 主题 | 技术栈 |
-|------|---------|------|--------|
-| 实验1 | 第1章 | 开发环境搭建与体验 | Android Studio/Xcode/VS Code |
-| 实验2 | 第2章 | Android 原生应用开发 | Kotlin/Java + Android SDK |
-| 实验3 | 第3章 | Flutter 跨平台应用开发 | Dart + Flutter SDK |
-| 实验4 | 第4章 | 微信小程序开发 | WXML/WXSS/JS + 微信开发者工具 |
-| 实验5 | 第5章 | HarmonyOS 应用开发 | ArkTS + DevEco Studio |
-| 实验6 | 第6章 | 综合项目实战 | 自选技术栈 |
+本课程设置 {chapterCount} 次实验，对应 {courseName} 各章节，循序渐进。
+共 {chapterCount} 次实验，对应 {courseName} 各章节。
 
 ## 实验要求规范
 - **提交物**：源代码（Git 仓库链接）+ 实验报告（PDF/MD）+ 运行截图
@@ -105,6 +98,24 @@ class LabAgent extends BaseAgent {
   @override
   Future<AgentMessage> handleMessage(
       String userMessage, AgentSession session) async {
+    final tools = SpecialAgentTools.instance;
+    if (tools.isLabTaskGenerationIntent(userMessage)) {
+      try {
+        final reply = await tools.generateLabTask(
+          userRequest: userMessage,
+        );
+        return buildReply(
+          reply,
+          action: const AgentAction(
+            type: 'navigate_sub_page',
+            params: {'keyword': '实验管理'},
+          ),
+        );
+      } catch (e) {
+        return buildReply('实验任务生成失败：$e');
+      }
+    }
+
     final messages = buildAiMessages(userMessage, session);
     final result =
         await safeAiChatWithTools(userMessage, messages, aiService: _ai);

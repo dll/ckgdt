@@ -1,0 +1,75 @@
+{
+  "chapterTemplate": {
+    "sections": [
+      {
+        "type": "extension",
+        "title": "知识拓展：{chapterTitle}背景与发展",
+        "icon": "history_edu",
+        "content": "深入了解{chapterTitle}的发展历程、技术背景和行业应用场景，建立宏观认知。",
+        "keyPoints": [
+          "了解{chapterTitle}的核心概念与发展脉络",
+          "掌握关键技术点和最佳实践",
+          "认识行业应用场景和未来趋势",
+          "建立系统性知识框架"
+        ],
+        "practiceQuestions": [
+          "当前章节的核心技术解决了什么问题？",
+          "与其他技术方案相比有哪些优劣势？",
+          "你如何看待该领域的发展趋势？"
+        ]
+      },
+      {
+        "type": "concepts",
+        "title": "核心概念：{chapterTitle}关键知识点",
+        "icon": "psychology",
+        "content": "系统梳理{chapterTitle}的核心知识点、技术原理和设计理念，构建扎实的理论基础。",
+        "keyPoints": [
+          "理解核心概念的定义和作用",
+          "掌握关键技术原理",
+          "熟悉常用工具和框架",
+          "了解常见设计模式"
+        ],
+        "practiceQuestions": [
+          "请用自己的话解释本章最核心的3个概念。",
+          "这些概念之间存在哪些关联？",
+          "它们在真实项目中如何应用？"
+        ]
+      },
+      {
+        "type": "practice",
+        "title": "动手练习：{chapterTitle}实践项目",
+        "icon": "assignment",
+        "content": "通过实践项目巩固{chapterTitle}所学知识，培养动手解决问题的能力。",
+        "keyPoints": [
+          "步骤1：需求分析与设计",
+          "步骤2：环境搭建与配置",
+          "步骤3：核心功能实现",
+          "步骤4：测试与优化",
+          "步骤5：总结与反思"
+        ],
+        "practiceQuestions": [
+          "在实现过程中遇到了哪些困难？如何解决的？",
+          "还有哪些可以优化的地方？",
+          "如何将本章知识应用到实际项目中？"
+        ]
+      },
+      {
+        "type": "challenge",
+        "title": "实战挑战：{chapterTitle}综合应用",
+        "icon": "rocket_launch",
+        "content": "综合运用{chapterTitle}知识解决一个具有挑战性的实际问题，提升综合应用能力。",
+        "keyPoints": [
+          "综合运用本章核心知识",
+          "考虑性能、可维护性和扩展性",
+          "关注代码质量和工程实践",
+          "尝试不同方案并进行对比"
+        ],
+        "practiceQuestions": [
+          "你的方案有哪些优缺点？",
+          "如果数据量扩大100倍，你的方案还能工作吗？",
+          "如何对方案进行单元测试？"
+        ]
+      }
+    ]
+  }
+}

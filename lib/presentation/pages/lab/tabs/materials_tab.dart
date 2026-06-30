@@ -1,4 +1,4 @@
-﻿part of '../lab_tasks_page.dart';
+part of '../lab_tasks_page.dart';
 
 class _MaterialCategory {
   final String title;
@@ -36,11 +36,11 @@ class _MaterialsTabState extends State<_MaterialsTab> {
       description: '6 个实验的详细步骤教程，包含核心任务、操作指南和成功标准',
     ),
     _MaterialCategory(
-      title: '移动技术栈',
+      title: '技术栈资源',
       icon: Icons.layers,
       color: Color(0xFF0958D9),
       assetDir: 'data/实验/移动技术栈/',
-      description: '覆盖 Kotlin/Swift/Flutter/ArkUI/Uniapp/MAUI 等主流技术的完整手册',
+      description: '覆盖课程实验可用的开发框架、工具链和工程实践手册',
     ),
     _MaterialCategory(
       title: '实验指导',
@@ -61,6 +61,7 @@ class _MaterialsTabState extends State<_MaterialsTab> {
 
   /// 每个分类下发现的文件列表
   final Map<int, List<_MaterialFile>> _files = {};
+
   /// 教师新增的指导文件（存储在本地）
   List<_MaterialFile> _localGuides = [];
   bool _isLoading = true;
@@ -99,28 +100,25 @@ class _MaterialsTabState extends State<_MaterialsTab> {
           // Gitee 仓库路径去掉 'data/' 前缀
           final giteePrefix = dir.startsWith('data/') ? dir.substring(5) : dir;
 
-          final files = tree
-              .where((e) {
-                final path = e['path'] as String? ?? '';
-                final type = e['type'] as String? ?? '';
-                return type == 'blob' &&
-                    path.startsWith(giteePrefix) &&
-                    (path.endsWith('.md') || path.endsWith('.puml'));
-              })
-              .map((e) {
-                final path = e['path'] as String;
-                final name = path.split('/').last;
-                final displayName = name
-                    .replaceAll('_new.md', '')
-                    .replaceAll('.md', '')
-                    .replaceAll('.puml', '');
-                return _MaterialFile(
-                  giteePath: path,
-                  fileName: name,
-                  displayName: displayName,
-                );
-              })
-              .toList();
+          final files = tree.where((e) {
+            final path = e['path'] as String? ?? '';
+            final type = e['type'] as String? ?? '';
+            return type == 'blob' &&
+                path.startsWith(giteePrefix) &&
+                (path.endsWith('.md') || path.endsWith('.puml'));
+          }).map((e) {
+            final path = e['path'] as String;
+            final name = path.split('/').last;
+            final displayName = name
+                .replaceAll('_new.md', '')
+                .replaceAll('.md', '')
+                .replaceAll('.puml', '');
+            return _MaterialFile(
+              giteePath: path,
+              fileName: name,
+              displayName: displayName,
+            );
+          }).toList();
 
           files.sort((a, b) => a.displayName.compareTo(b.displayName));
           _files[i] = files;
@@ -151,7 +149,9 @@ class _MaterialsTabState extends State<_MaterialsTab> {
       try {
         final content = await rootBundle.loadString('AssetManifest.json');
         manifest = json.decode(content) as Map<String, dynamic>;
-      } catch (e) { swallowDebug(e, tag: 'materials_tab'); }
+      } catch (e) {
+        swallowDebug(e, tag: 'materials_tab');
+      }
 
       for (int i = 0; i < _categories.length; i++) {
         final dir = _categories[i].assetDir;
@@ -205,7 +205,9 @@ class _MaterialsTabState extends State<_MaterialsTab> {
                 ))
             .toList();
       }
-    } catch (e) { swallowDebug(e, tag: 'materials_tab'); }
+    } catch (e) {
+      swallowDebug(e, tag: 'materials_tab');
+    }
   }
 
   /// 当 AssetManifest 匹配失败时，尝试直接加载已知的 asset 文件
@@ -251,16 +253,14 @@ class _MaterialsTabState extends State<_MaterialsTab> {
     final fileNames = knownFiles[dir];
     if (fileNames == null) return [];
 
+    final courseName = await CourseContextService().activeCourseName();
     final result = <_MaterialFile>[];
     for (final fn in fileNames) {
       final assetPath = '$dir$fn';
       // 验证 asset 确实存在
       try {
         await rootBundle.loadString(assetPath);
-        final displayName = fn
-            .replaceAll('_new.md', '')
-            .replaceAll('.md', '')
-            .replaceAll('.puml', '');
+        final displayName = _displayNameForKnownAsset(fn, courseName);
         result.add(_MaterialFile(
           assetPath: assetPath,
           fileName: fn,
@@ -271,6 +271,17 @@ class _MaterialsTabState extends State<_MaterialsTab> {
       }
     }
     return result;
+  }
+
+  String _displayNameForKnownAsset(String fileName, String courseName) {
+    final baseName = fileName
+        .replaceAll('_new.md', '')
+        .replaceAll('.md', '')
+        .replaceAll('.puml', '');
+    if (baseName == '移动应用开发实验指导书') {
+      return '$courseName实验指导书';
+    }
+    return baseName;
   }
 
   @override
@@ -289,21 +300,19 @@ class _MaterialsTabState extends State<_MaterialsTab> {
           final files = _files[catIdx] ?? [];
 
           // 实验指导分类合并本地文件
-          final allFiles = catIdx == 2
-              ? [...files, ..._localGuides]
-              : files;
+          final allFiles = catIdx == 2 ? [...files, ..._localGuides] : files;
 
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             clipBehavior: Clip.antiAlias,
             child: ExpansionTile(
               leading: Container(
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: cat.color.withOpacity(0.1),
+                  color: cat.color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(cat.icon, color: cat.color, size: 22),
@@ -318,7 +327,7 @@ class _MaterialsTabState extends State<_MaterialsTab> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                     decoration: BoxDecoration(
-                      color: cat.color.withOpacity(0.1),
+                      color: cat.color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text('${allFiles.length}',
@@ -349,8 +358,8 @@ class _MaterialsTabState extends State<_MaterialsTab> {
                 if (allFiles.isEmpty)
                   Padding(
                     padding: const EdgeInsets.all(20),
-                    child: Text('暂无材料',
-                        style: TextStyle(color: Colors.grey[400])),
+                    child:
+                        Text('暂无材料', style: TextStyle(color: Colors.grey[400])),
                   ),
               ],
             ),
@@ -418,8 +427,8 @@ class _MaterialsTabState extends State<_MaterialsTab> {
           // 教师：删除 Gitee 文件或本地文件
           if (_isTeacherOrAdmin && (file.giteePath != null || file.isLocal))
             IconButton(
-              icon: const Icon(Icons.delete_outline,
-                  size: 18, color: Colors.red),
+              icon:
+                  const Icon(Icons.delete_outline, size: 18, color: Colors.red),
               tooltip: '删除',
               onPressed: () {
                 if (file.isLocal) {
@@ -476,7 +485,9 @@ class _MaterialsTabState extends State<_MaterialsTab> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('取消')),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('上传'),
@@ -528,7 +539,9 @@ class _MaterialsTabState extends State<_MaterialsTab> {
     try {
       final gitee = GiteeService();
       currentContent = await gitee.getFileContent(
-        _dataRepoOwner, _dataRepoName, file.giteePath!,
+        _dataRepoOwner,
+        _dataRepoName,
+        file.giteePath!,
         ref: _dataRepoBranch,
       );
     } catch (e) {
@@ -562,7 +575,9 @@ class _MaterialsTabState extends State<_MaterialsTab> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('取消')),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('保存'),
@@ -609,7 +624,9 @@ class _MaterialsTabState extends State<_MaterialsTab> {
         title: const Text('确认删除'),
         content: Text('确定要删除「${file.displayName}」吗？此操作不可撤销。'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('取消')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(ctx, true),
@@ -652,7 +669,9 @@ class _MaterialsTabState extends State<_MaterialsTab> {
       if (file.giteePath != null) {
         final gitee = GiteeService();
         content = await gitee.getFileContent(
-              _dataRepoOwner, _dataRepoName, file.giteePath!,
+              _dataRepoOwner,
+              _dataRepoName,
+              file.giteePath!,
               ref: _dataRepoBranch,
             ) ??
             '';
@@ -720,6 +739,7 @@ class _MaterialsTabState extends State<_MaterialsTab> {
 class _MaterialFile {
   final String? assetPath;
   final String? filePath;
+
   /// Gitee 远程仓库中的路径（如 'data/实验/实验教程/xxx.md'）
   final String? giteePath;
   final String fileName;

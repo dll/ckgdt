@@ -128,9 +128,10 @@ class OrdinaryScoreDao {
       'hot_video_favorites',
     ]) {
       try {
+        final courseId = await _courseContext.activeCourseId();
         await db.update(
           table,
-          {'course_id': CourseContextService.defaultCourseId},
+          {'course_id': courseId},
           where: "course_id IS NULL OR course_id = ''",
         );
       } catch (e) {
@@ -175,8 +176,7 @@ class OrdinaryScoreDao {
     await _ensureTables();
     final settings = await getSettings();
     final courseId = await _courseContext.activeCourseId();
-    final courseName =
-        await _courseContext.activeCourseName(fallback: '移动应用开发');
+    final courseName = await _courseContext.activeCourseName();
 
     final students = await _loadStudents();
     final classroom = await _loadClassroomMetrics();

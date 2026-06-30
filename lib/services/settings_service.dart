@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/error_handler.dart';
+import 'course_context_service.dart';
 
 /// 课堂试用内置讯飞语音凭据。
 ///
@@ -43,7 +45,7 @@ class SettingsService {
   static const String _courseNameKey = 'assessment_course_name';
   static const String _defaultAdvisorName = '刘东良';
   static const String _defaultCollegeName = '计算机与信息工程学院';
-  static const String _defaultCourseName = '移动应用开发';
+  static const String _defaultCourseName = '课程知识图谱与数字孪生';
 
   // ═════════════════════════════════════════════════════════════════════════
   // 显示模式  ThemeMode（跟随系统 / 浅色 / 深色）
@@ -336,7 +338,15 @@ class SettingsService {
 
   static Future<String> getCourseName() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_courseNameKey) ?? _defaultCourseName;
+    final saved = prefs.getString(_courseNameKey);
+    if (saved != null && saved.isNotEmpty) return saved;
+    try {
+      final ctx = CourseContextService();
+      return await ctx.activeCourseName(fallback: _defaultCourseName);
+    } catch (e, st) {
+      swallowDebug(e, tag: 'SettingsService.getCourseName', stack: st);
+      return _defaultCourseName;
+    }
   }
 
   static Future<void> setCourseName(String value) async {

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/services.dart' show rootBundle;
 import '../../core/error_handler.dart';
+import '../course_context_service.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -14,11 +15,21 @@ class AchievementTemplateAssets {
   AchievementTemplateAssets._();
 
   static const _assetDir = 'assets/achievement_templates';
-  static const _bundledTemplates = {
-    'mobile_achievement_template_48.xlsx': '计科22《移动应用开发》课程达成评价表格48.xlsx',
-    'mobile_achievement_report_template.docx':
-        '计科22《移动应用开发》课程达成评价表格-课程目标达成评价报告.docx',
-  };
+
+  static Future<Map<String, String>> getBundledTemplates() async {
+    final courseName = await CourseContextService()
+        .activeCourseName(fallback: '当前课程');
+    // ignore: unused_local_variable
+    final shortName = courseName.length > 6
+        ? '${courseName.substring(0, 6)}…'
+        : courseName;
+    return {
+      'mobile_achievement_template_48.xlsx':
+          '计科22《$courseName》课程达成评价表格48.xlsx',
+      'mobile_achievement_report_template.docx':
+          '计科22《$courseName》课程达成评价表格-课程目标达成评价报告.docx',
+    };
+  }
 
   static Future<List<Directory>> templateRoots() async {
     final roots = <Directory>[];
@@ -65,7 +76,8 @@ class AchievementTemplateAssets {
 
   static Future<void> _extractBundledTemplates(Directory targetDir) async {
     await targetDir.create(recursive: true);
-    for (final entry in _bundledTemplates.entries) {
+    final bundled = await getBundledTemplates();
+    for (final entry in bundled.entries) {
       final assetPath = '$_assetDir/${entry.key}';
       try {
         final data = await rootBundle.load(assetPath);

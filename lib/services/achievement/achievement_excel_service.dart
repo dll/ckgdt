@@ -128,7 +128,7 @@ class AchievementExcelService {
   }
 
   /// 解析课程成绩模板的三张明细表（平时/实验/期末成绩），返回分项原始分。
-  /// 对应模板：data/达成/计科22《移动应用开发》课程达成评价表格48.xlsx
+  /// 对应模板从 bundled assets 动态生成，文件名包含当前课程名
   ///
   /// 返回 {pingshi: [...], experiment: [...], exam: [...]}，每项是
   /// 与 achievement_pingshi/experiment/exam_scores 表字段对齐的行列表。
@@ -1934,8 +1934,8 @@ $rawText
     final batch = await db.query('achievement_batches',
         columns: ['course_name'], where: 'id = ?', whereArgs: [batchId]);
     final courseName = batch.isNotEmpty
-        ? (batch.first['course_name'] ?? '移动应用开发').toString()
-        : '移动应用开发';
+        ? (batch.first['course_name'] ?? '当前课程').toString()
+        : '当前课程';
     final rows = await db.query('course_objectives',
         where: 'course_name = ?', whereArgs: [courseName], orderBy: 'idx ASC');
     if (rows.isNotEmpty) {

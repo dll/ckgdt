@@ -4,10 +4,19 @@ import '../data/models/course_model.dart';
 /// 当前课程上下文。
 ///
 /// 平台化后，题库、图谱、实验、资料等数据都应优先绑定当前课程。
-/// 旧种子库默认课程 ID 为 `mad`，用于兼容历史的《移动应用开发》数据。
 class CourseContextService {
-  static const defaultCourseId = 'mad';
-  static const defaultCourseName = '移动应用开发';
+  static const String defaultCourseId = 'ckgdt';
+  static const String defaultCourseName = '课程知识图谱与数字孪生';
+  static const String defaultCourseDescription =
+      '面向课程知识建模、数字孪生教学、学习评价与持续改进的平台化课程';
+  static const List<String> defaultCourseChapters = [
+    '课程知识图谱基础',
+    '课程数据建模与资源治理',
+    '数字孪生教学场景设计',
+    '智能学习路径与学习分析',
+    '实验实践与作品评价',
+    '课程持续改进与平台应用',
+  ];
 
   final CourseDao _courseDao;
 
@@ -17,16 +26,9 @@ class CourseContextService {
   static CourseModel fallbackCourse() => CourseModel(
         id: defaultCourseId,
         name: defaultCourseName,
-        description: '默认课程',
-        chapterCount: 6,
-        chapters: const [
-          '移动应用开发技术体系全景',
-          'Android 与 iOS 原生开发基础',
-          'Flutter、React Native 等混合开发技术',
-          '微信小程序开发流程',
-          '华为 HarmonyOS 多端应用开发',
-          '综合开发实践',
-        ],
+        description: defaultCourseDescription,
+        chapterCount: defaultCourseChapters.length,
+        chapters: defaultCourseChapters,
         isActive: true,
         createdAt: '',
       );
@@ -37,14 +39,13 @@ class CourseContextService {
 
   Future<String> activeCourseId() async => (await getActiveCourse()).id;
 
-  Future<String> activeCourseName({String fallback = '课程'}) async {
+  Future<String> activeCourseName({String fallback = defaultCourseName}) async {
     final name = (await getActiveCourse()).name.trim();
     return name.isEmpty ? fallback : name;
   }
 
   /// 生成课程作用域 where 片段。
-  ///
-  /// 默认课程保留空 course_id 兼容；其它课程必须显式匹配，避免串课。
+  /// 所有课程使用严格匹配，scopedWhere 只返回该课程的数据。
   Future<({String where, List<Object?> args})> scopedWhere({
     String column = 'course_id',
     String? extraWhere,
@@ -54,11 +55,7 @@ class CourseContextService {
     final parts = <String>[];
     final args = <Object?>[];
 
-    if (courseId == defaultCourseId) {
-      parts.add("($column = ? OR $column IS NULL OR $column = '')");
-    } else {
-      parts.add('$column = ?');
-    }
+    parts.add('$column = ?');
     args.add(courseId);
 
     if (extraWhere != null && extraWhere.trim().isNotEmpty) {
@@ -124,10 +121,6 @@ class CourseContextService {
       return '第$index章 $withoutNumber';
     }
     return '第$index章 $trimmed';
-  }
-
-  static bool isDefaultMobileCourseName(String name) {
-    return name.trim().isEmpty || name.contains(defaultCourseName);
   }
 
   static String buildStableCourseId(String name) {

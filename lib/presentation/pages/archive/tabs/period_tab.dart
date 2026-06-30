@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -24,6 +24,7 @@ import '../../../../services/archive/importers/archive_importers.dart';
 import '../../../../services/archive_package_service.dart';
 import '../../../../data/local/course_dao.dart';
 import '../../../../data/local/archive_dao.dart';
+import '../../../../services/course_context_service.dart';
 import '../../../../data/models/archive_document_model.dart';
 import '../../../../presentation/widgets/markdown_bubble.dart';
 import '../archive_constants.dart';
@@ -2411,6 +2412,10 @@ ${_templateExcerpt(parsed.content)}
     String filename;
     String mimeType;
 
+    final courseName =
+        await CourseContextService().activeCourseName(fallback: '课程');
+    final chapterTitles = await CourseContextService().shortChapterTitles();
+
     if (def.key.startsWith('final_')) {
       content = _finalArchiveTemplate(def);
       filename = '${_ordinalFor(def, 0)}-${def.label}模板.md';
@@ -2428,7 +2433,7 @@ ${_templateExcerpt(parsed.content)}
   <th>课程名称</th><th>课程类别</th><th>总学时</th><th>讲授</th><th>实验</th><th>实践</th><th>课外自主</th><th>教学班级</th><th>计划人数</th><th>备注</th>
 </tr>
 <tr>
-  <td>移动应用开发</td><td>考试</td><td>64</td><td>32</td><td>16</td><td>8</td><td>8</td><td>计科22</td><td>40</td><td></td>
+  <td>$courseName</td><td>考试</td><td>64</td><td>32</td><td>16</td><td>8</td><td>8</td><td>计科22</td><td>40</td><td></td>
 </tr>
 </table>
 </body>
@@ -2526,7 +2531,7 @@ ${_templateExcerpt(parsed.content)}
 <head><meta charset="utf-8"><title>教学日历模板</title></head>
 <body>
 <h2>教学日历</h2>
-<p><b>课程名称：</b>移动应用开发</p>
+<p><b>课程名称：</b>$courseName</p>
 <p><b>学期：</b>[请填写]</p>
 <p><b>授课教师：</b>[请填写]</p>
 <table border="1" cellpadding="4" style="border-collapse:collapse;width:100%">
@@ -2548,7 +2553,7 @@ ${_templateExcerpt(parsed.content)}
 
 | 列名 | 说明 | 示例 |
 |------|------|------|
-| 课程名称 | 课程全称 | 移动应用开发 |
+| 课程名称 | 课程全称 | $courseName |
 | 课程类型 | 理论课/实验课 | 理论课 |
 | 授课教师 | 教师姓名 | 张三 |
 | 上课时间 | 时间安排 | 周一1-2节 |
@@ -2559,14 +2564,14 @@ ${_templateExcerpt(parsed.content)}
 **注意事项：**
 1. 请从教务系统直接导出XLSX文件
 2. 课程类型列应包含"理论"字段
-3. 课程名称列应包含"移动应用开发"''';
+3. 课程名称列应包含"$courseName"''';
           filename = '课程课表导入说明.md';
           mimeType = 'text/markdown';
           break;
         case 'teaching_schedule':
           content = '''# 教学进度表模板
 
-**课程名称**：移动应用开发
+**课程名称**：$courseName
 **学期**：[请填写]
 **授课教师**：[请填写]
 
@@ -2647,7 +2652,7 @@ ${_templateExcerpt(parsed.content)}
 <head><meta charset="utf-8"><title>学生点名册模板</title></head>
 <body>
 <h2>学生点名册</h2>
-<p><b>课程名称：</b>移动应用开发</p>
+<p><b>课程名称：</b>$courseName</p>
 <p><b>学期：</b>[请填写]</p>
 <table border="1" cellpadding="4" style="border-collapse:collapse;width:100%">
 <tr><th>序号</th><th>学号</th><th>姓名</th><th>班级</th><th>第1周</th><th>第2周</th><th>...</th><th>备注</th></tr>
@@ -2663,7 +2668,7 @@ ${_templateExcerpt(parsed.content)}
           content = '''# 教师教学指导手册模板
 
 ## 课程定位与目标
-**课程名称**：移动应用开发
+**课程名称**：$courseName
 **适用专业**：[请填写]
 **总学时**：[请填写]（理论[ ]学时 + 实验[ ]学时）
 **学分**：[请填写]
@@ -2682,12 +2687,7 @@ ${_templateExcerpt(parsed.content)}
 ## 教学内容与学时分配
 | 章节 | 内容 | 理论学时 | 实验学时 |
 |------|------|----------|----------|
-| 第1章 | 移动应用开发技术体系全景 | | |
-| 第2章 | Android与iOS原生开发基础 | | |
-| 第3章 | 混合开发技术（Flutter等） | | |
-| 第4章 | 微信小程序开发 | | |
-| 第5章 | 华为HarmonyOS多端应用开发 | | |
-| 第6章 | 综合开发实践 | | |
+${chapterTitles.map((t) => '| $t | [章节内容] | | |').join('\n')}
 
 ## 教学方法建议
 [请填写教学方法建议]
@@ -2708,41 +2708,19 @@ ${_templateExcerpt(parsed.content)}
           content = '''# 学生学习指导手册模板
 
 ## 课程概述
-**课程名称**：移动应用开发
+**课程名称**：$courseName
 **总学时**：[请填写]
 **学分**：[请填写]
 
 ## 课程结构
 | 模块 | 内容 | 学时 |
 |------|------|------|
-| 理论教学 | 6章系统知识 | 24 |
-| 实验实践 | 7个综合项目 | 24 |
-| 综合考核 | 团队项目 | 15天 |
+| 理论教学 | 多章系统知识 | 多媒体 |
+| 实验实践 | 多个综合项目 | 多媒体 |
+| 综合考核 | 团队项目 | 多天 |
 
 ## 各章学习要点
-### 第1章 移动应用开发技术体系全景
-- 学习重点：[请填写]
-- 学习建议：[请填写]
-
-### 第2章 Android与iOS原生开发基础
-- 学习重点：[请填写]
-- 学习建议：[请填写]
-
-### 第3章 混合开发技术
-- 学习重点：[请填写]
-- 学习建议：[请填写]
-
-### 第4章 微信小程序开发
-- 学习重点：[请填写]
-- 学习建议：[请填写]
-
-### 第5章 华为HarmonyOS多端应用开发
-- 学习重点：[请填写]
-- 学习建议：[请填写]
-
-### 第6章 综合开发实践
-- 学习重点：[请填写]
-- 学习建议：[请填写]
+${chapterTitles.map((t) => '### $t\n- 学习重点：[请填写]\n- 学习建议：[请填写]').join('\n\n')}
 
 ## 实验指导
 [请填写各实验项目说明]
@@ -3474,7 +3452,7 @@ ${_templateExcerpt(parsed.content)}
     Widget chip(IconData icon, String label, bool enabled, [Color? color]) {
       final c = color ?? primary;
       return Material(
-        color: enabled ? c.withOpacity(0.1) : Colors.grey.shade100,
+        color: enabled ? c.withValues(alpha: 0.1) : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
@@ -3501,7 +3479,7 @@ ${_templateExcerpt(parsed.content)}
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: primary.withOpacity(0.03),
+        color: primary.withValues(alpha: 0.03),
         border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
       ),
       child: Row(
@@ -3799,8 +3777,8 @@ class _OrdinalBadge extends StatelessWidget {
       height: 26,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: primary.withOpacity(0.10),
-        border: Border.all(color: primary.withOpacity(0.35), width: 0.8),
+        color: primary.withValues(alpha: 0.10),
+        border: Border.all(color: primary.withValues(alpha: 0.35), width: 0.8),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
@@ -3916,9 +3894,9 @@ class _StatusBadge {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withOpacity(0.3), width: 0.5),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 0.5),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

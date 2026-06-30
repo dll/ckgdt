@@ -388,11 +388,6 @@ class DatabaseHelper {
             filtered[entry.key] = entry.value;
           }
         }
-        if (targetColNames.contains('course_id') &&
-            _isDefaultSeedCourseTable(table) &&
-            ((filtered['course_id']?.toString().trim().isEmpty) ?? true)) {
-          filtered['course_id'] = 'mad';
-        }
         if (filtered.isNotEmpty) {
           batch.insert(table, filtered,
               conflictAlgorithm: ConflictAlgorithm.ignore);
@@ -1379,7 +1374,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS syllabus_items(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        course_name TEXT DEFAULT '移动应用开发',
+        course_name TEXT DEFAULT '',
         chapter_number INTEGER NOT NULL,
         title TEXT NOT NULL,
         description TEXT,
@@ -1553,7 +1548,7 @@ class DatabaseHelper {
       CREATE TABLE IF NOT EXISTS achievement_batches(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         batch_name TEXT NOT NULL,
-        course_name TEXT DEFAULT '移动应用开发',
+        course_name TEXT DEFAULT '',
         class_name TEXT DEFAULT '软件23',
         semester TEXT,
         teacher_id TEXT,
@@ -1572,7 +1567,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS course_objectives(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        course_name TEXT NOT NULL DEFAULT '移动应用开发',
+        course_name TEXT NOT NULL DEFAULT '',
         idx INTEGER NOT NULL,
         name TEXT,
         indicator TEXT,
@@ -2053,30 +2048,53 @@ class DatabaseHelper {
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         description TEXT,
-        chapter_count INTEGER DEFAULT 6,
+        chapter_count INTEGER DEFAULT 1,
         chapters TEXT,
         is_active INTEGER DEFAULT 0,
         created_at TEXT NOT NULL
       )
     ''');
 
-    // 插入默认课程（移动应用开发）
-    final existing =
-        await db.query('courses', where: 'id = ?', whereArgs: ['mad']);
+    // 插入平台默认课程。旧库中已有的 mad 课程保留，不再作为新库默认课程。
+    final active = await db.query(
+      'courses',
+      where: 'is_active = ?',
+      whereArgs: [1],
+      limit: 1,
+    );
+    final existing = await db.query(
+      'courses',
+      where: 'id = ?',
+      whereArgs: ['ckgdt'],
+      limit: 1,
+    );
     if (existing.isEmpty) {
       await db.insert(
           'courses',
           {
-            'id': 'mad',
-            'name': '移动应用开发',
-            'description': '涵盖 Android、iOS、Flutter、小程序、HarmonyOS 等移动应用开发技术',
+            'id': 'ckgdt',
+            'name': '课程知识图谱与数字孪生',
+            'description': '面向课程知识建模、数字孪生教学、学习评价与持续改进的平台化课程',
             'chapter_count': 6,
-            'chapters':
-                '["移动应用开发技术体系全景","Android 与 iOS 原生开发基础","Flutter、React Native 等混合开发技术","微信小程序开发流程","华为 HarmonyOS 多端应用开发","综合开发实践"]',
-            'is_active': 1,
+            'chapters': jsonEncode([
+              '课程知识图谱基础',
+              '课程数据建模与资源治理',
+              '数字孪生教学场景设计',
+              '智能学习路径与学习分析',
+              '实验实践与作品评价',
+              '课程持续改进与平台应用'
+            ]),
+            'is_active': active.isEmpty ? 1 : 0,
             'created_at': DateTime.now().toIso8601String(),
           },
           conflictAlgorithm: ConflictAlgorithm.ignore);
+    } else if (active.isEmpty) {
+      await db.update(
+        'courses',
+        {'is_active': 1},
+        where: 'id = ?',
+        whereArgs: ['ckgdt'],
+      );
     }
   }
 
@@ -2484,16 +2502,6 @@ class DatabaseHelper {
     }
   }
 
-  bool _isDefaultSeedCourseTable(String table) {
-    return const {
-      'graphs',
-      'questions',
-      'resource_files',
-      'generated_materials',
-      'puml_files',
-    }.contains(table);
-  }
-
   /// V29: 知识概念图谱绑定统一课程 ID。
   ///
   /// 平台从单一《移动应用开发》扩展为多课程后，`knowledge_concepts` 不能再
@@ -2703,7 +2711,8 @@ class DatabaseHelper {
 
   Future<void> _migrateToV33(Database db) async {
     await _addTextColumnIfMissing(db, 'assessment_groups', 'course_id', 'V33');
-    await _addTextColumnIfMissing(db, 'assessment_projects', 'course_id', 'V33');
+    await _addTextColumnIfMissing(
+        db, 'assessment_projects', 'course_id', 'V33');
   }
 
   /// V34: ai_trial_settings 表 — AI 免费试用额度管理
@@ -2740,7 +2749,7 @@ class DatabaseHelper {
     try {
       await db.execute('''
         UPDATE $table
-        SET course_id = 'mad'
+        SET course_id = (SELECT id FROM courses WHERE is_active = 1 LIMIT 1)
         WHERE course_id IS NULL OR course_id = ''
       ''');
     } catch (e, st) {
@@ -2752,9 +2761,7 @@ class DatabaseHelper {
     try {
       await db.execute('''
         UPDATE graphs
-        SET course_id = (
-          SELECT c.id FROM courses c WHERE graphs.id = 'g_' || c.id LIMIT 1
-        )
+        SET course_id = (SELECT id FROM courses WHERE is_active = 1 LIMIT 1)
         WHERE course_id IS NULL OR course_id = ''
       ''');
     } catch (e, st) {
@@ -2794,7 +2801,6 @@ class DatabaseHelper {
           final variants = <String>{
             chapters[i],
             _formatChapterForMigration(chapters[i], chapterNo),
-            if (courseId == 'mad') '第$chapterNo章',
           }..removeWhere((s) => s.trim().isEmpty);
 
           for (final source in variants) {

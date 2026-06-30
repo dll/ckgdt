@@ -7,7 +7,7 @@ class AchievementContext {
   static final AchievementContext instance = AchievementContext._();
 
   final ValueNotifier<String> _courseNameNotifier =
-      ValueNotifier<String>('移动应用开发');
+      ValueNotifier<String>('课程知识图谱与数字孪生');
 
   String get courseName => _courseNameNotifier.value;
 

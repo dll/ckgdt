@@ -3,8 +3,10 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'agent_model.dart';
 import 'prompt_loader.dart';
+import 'teaching_context_service.dart';
 import '../ai_service.dart';
 import '../rag_service.dart';
+import '../course_context_service.dart';
 import '../../data/local/agent_call_log_dao.dart';
 
 /// 智能体抽象基类
@@ -16,8 +18,7 @@ abstract class BaseAgent {
   AgentConfig get config;
 
   /// 处理用户消息，返回智能体回复
-  Future<AgentMessage> handleMessage(
-      String userMessage, AgentSession session);
+  Future<AgentMessage> handleMessage(String userMessage, AgentSession session);
 
   /// 优先从 `assets/agent_prompts/{config.id}.md` 加载 persona；
   /// 若 assets 中没有该文件则回退到代码中的 `config.persona`。
@@ -25,7 +26,40 @@ abstract class BaseAgent {
   /// 用 [PromptLoader] 内存缓存，二次调用零成本。
   Future<String> loadEffectivePersona() async {
     final fromAssets = await PromptLoader.load(config.id);
-    return fromAssets ?? config.persona;
+    final raw = fromAssets ?? config.persona;
+    return promptWithCourse(raw);
+  }
+
+  /// 将 {key} 占位符替换为当前课程上下文的实际值。
+  ///
+  /// 支持的占位符：
+  /// - `{courseName}` — 当前课程名称
+  /// - `{chapterCount}` — 当前课程章节数
+  /// - `{chapterName}` — 章节名称占位
+  /// - `{topicName}` — 主题名称占位
+  /// - 其它 `{key}` 可传入 [extraVars] 覆盖。
+  Future<String> promptWithCourse(String text,
+      {Map<String, String>? extraVars}) async {
+    if (!text.contains('{')) return text;
+    try {
+      final ctx = CourseContextService();
+      final course = await ctx.getActiveCourse();
+
+      var result = text
+          .replaceAll('{courseName}', course.name)
+          .replaceAll('{chapterCount}', course.chapterCount.toString())
+          .replaceAll('{chapterName}', 'X')
+          .replaceAll('{topicName}', '课程主题');
+
+      if (extraVars != null) {
+        for (final e in extraVars.entries) {
+          result = result.replaceAll('{${e.key}}', e.value);
+        }
+      }
+      return result;
+    } catch (_) {
+      return text;
+    }
   }
 
   /// 判断此智能体是否能处理该消息（0.0 ~ 1.0）
@@ -92,7 +126,8 @@ abstract class BaseAgent {
   }
 
   /// 从 AiChatResult 构建回复消息（自动提取 Token 用量）
-  AgentMessage buildReplyFromResult(AiChatResult result, {AgentAction? action}) {
+  AgentMessage buildReplyFromResult(AiChatResult result,
+      {AgentAction? action}) {
     return buildReply(
       result.content,
       action: action,
@@ -149,10 +184,16 @@ abstract class BaseAgent {
     double? temperature,
   }) async {
     final stopwatch = Stopwatch()..start();
-    final effectivePrompt = systemPrompt ?? await loadEffectivePersona();
-    final lastUserMsg = messages.isNotEmpty
-        ? (messages.last['content'] ?? '')
-        : '';
+    final basePrompt = systemPrompt ?? await loadEffectivePersona();
+    final lastUserMsg =
+        messages.isNotEmpty ? (messages.last['content'] ?? '') : '';
+    final teachingContext =
+        await AgentTeachingContextService.instance.buildPromptContext(
+      userMessage: lastUserMsg,
+    );
+    final effectivePrompt = teachingContext.trim().isEmpty
+        ? basePrompt
+        : '$basePrompt\n\n$teachingContext';
     final promptChars = effectivePrompt.length + lastUserMsg.length;
     AiChatResult? result;
     String? error;
@@ -296,20 +337,68 @@ abstract class BaseAgent {
   /// 返回 `null` 表示回复中没有工具调用。
   Map<String, dynamic>? parseToolCall(String aiReply) {
     // 匹配 JSON 块：{"tool": "...", "params": {...}}
-    final pattern = RegExp(
-      r'\{\s*"tool"\s*:\s*"([^"]+)"\s*,\s*"params"\s*:\s*(\{[^}]*\})\s*\}',
-    );
-    final match = pattern.firstMatch(aiReply);
-    if (match == null) return null;
-
-    try {
-      final toolName = match.group(1)!;
-      final params = jsonDecode(match.group(2)!) as Map<String, dynamic>;
-      return {'tool': toolName, 'params': params};
-    } catch (e) {
-      debugPrint('${config.name}: 工具调用解析失败: $e');
-      return null;
+    for (final candidate in _jsonObjectCandidates(aiReply)) {
+      try {
+        final decoded = jsonDecode(candidate);
+        if (decoded is! Map<String, dynamic>) continue;
+        final toolName = decoded['tool']?.toString();
+        if (toolName == null || toolName.isEmpty) continue;
+        final rawParams = decoded['params'];
+        final params = rawParams is Map<String, dynamic>
+            ? rawParams
+            : rawParams is Map
+                ? rawParams.map((k, v) => MapEntry(k.toString(), v))
+                : <String, dynamic>{};
+        return {'tool': toolName, 'params': params};
+      } catch (e) {
+        debugPrint('${config.name}: 工具调用候选解析失败: $e');
+      }
     }
+    return null;
+  }
+
+  List<String> _jsonObjectCandidates(String text) {
+    final candidates = <String>[];
+    final fenced = RegExp(
+      r'```(?:json)?\s*([\s\S]*?)\s*```',
+      caseSensitive: false,
+    ).allMatches(text);
+    for (final match in fenced) {
+      final content = match.group(1)?.trim();
+      if (content != null && content.startsWith('{')) {
+        candidates.add(content);
+      }
+    }
+
+    for (var i = 0; i < text.length; i++) {
+      if (text.codeUnitAt(i) != 123) continue; // {
+      var depth = 0;
+      var inString = false;
+      var escaped = false;
+      for (var j = i; j < text.length; j++) {
+        final ch = text[j];
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (ch == '\\') {
+          escaped = true;
+          continue;
+        }
+        if (ch == '"') {
+          inString = !inString;
+          continue;
+        }
+        if (inString) continue;
+        if (ch == '{') depth++;
+        if (ch == '}') depth--;
+        if (depth == 0) {
+          candidates.add(text.substring(i, j + 1));
+          break;
+        }
+      }
+    }
+    return candidates;
   }
 
   /// 执行工具调用并返回结果

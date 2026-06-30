@@ -57,7 +57,7 @@ class KnowledgeSeedService {
     if (course == null) return false;
     final name = course.name.trim();
     if (name.isEmpty) return false;
-    if (name.contains('移动应用开发')) return false;
+    if (course.id.trim().toLowerCase() == 'mad') return false;
     return course.chapters.isNotEmpty;
   }
 

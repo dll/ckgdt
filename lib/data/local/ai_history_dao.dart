@@ -20,9 +20,10 @@ class AiHistoryDao {
       swallow(e, tag: 'AiHistoryDao.courseColumn');
     }
     try {
+      final courseId = await _courseContext.activeCourseId();
       await db.update(
         'ai_chat_history',
-        {'course_id': CourseContextService.defaultCourseId},
+        {'course_id': courseId},
         where: "course_id IS NULL OR course_id = ''",
       );
     } catch (e) {

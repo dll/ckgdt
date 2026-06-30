@@ -1,7 +1,8 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../core/error_handler.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/course_context_service.dart';
 import '../../../services/twin_service.dart';
 import '../../../services/agent/agent_registry.dart';
 import '../../../data/models/twin_profile_model.dart';
@@ -9,6 +10,7 @@ import '../../widgets/agent_chat_overlay.dart';
 import '../../widgets/markdown_bubble.dart';
 
 import '../../../core/constants/app_theme.dart';
+
 /// 数字孪生仪表盘 — 教育教学数字镜像
 ///
 /// 高保真、实时动态映射师生教学全过程。
@@ -21,7 +23,7 @@ class VirtualTwinPage extends StatefulWidget {
 }
 
 class _VirtualTwinPageState extends State<VirtualTwinPage>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final _authService = AuthService();
   final _twinService = TwinService();
 
@@ -46,8 +48,10 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
   String _quickTopic = '';
 
   late AnimationController _headerAnimCtrl;
+  late AnimationController _pulseCtrl;
   late Animation<double> _headerFade;
 
+  List<String> _chapterNames = [];
   Color primary = const Color(0xFF1677FF);
 
   @override
@@ -57,6 +61,11 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+    _loadChapterNames();
     _headerFade = CurvedAnimation(
       parent: _headerAnimCtrl,
       curve: Curves.easeInOut,
@@ -67,7 +76,20 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
   @override
   void dispose() {
     _headerAnimCtrl.dispose();
+    _pulseCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadChapterNames() async {
+    try {
+      final ctx = CourseContextService();
+      final titles = await ctx.shortChapterTitles();
+      if (titles.isNotEmpty && mounted) {
+        setState(() => _chapterNames = titles);
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'VirtualTwinPage.loadChapterNames', stack: st);
+    }
   }
 
   Future<void> _loadProfile() async {
@@ -171,8 +193,9 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
     final nextLevel = idx < 3 ? levels[idx + 1] : '';
 
     final p = _studentProfile ?? StudentTwinProfile.empty();
-    final score = (p.quizAvg * 0.3 + p.labCompletionRate * 0.4 + p.conceptCoverage * 0.3)
-        .clamp(0.0, 100.0);
+    final score =
+        (p.quizAvg * 0.3 + p.labCompletionRate * 0.4 + p.conceptCoverage * 0.3)
+            .clamp(0.0, 100.0);
     final thresholds = [0.0, 40.0, 60.0, 80.0, 100.0];
     final rangeStart = thresholds[idx];
     final rangeEnd = thresholds[idx + 1];
@@ -214,8 +237,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
           IconButton(
             icon: const Icon(Icons.chat_bubble_outline),
             tooltip: '深度对话',
-            onPressed: () =>
-                AgentChatOverlay.show(context, agentId: _agentId),
+            onPressed: () => AgentChatOverlay.show(context, agentId: _agentId),
           ),
         ],
       ),
@@ -241,6 +263,10 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
 
                     // ── 指标卡片 ──
                     _buildStatCards(),
+                    const SizedBox(height: 16),
+
+                    // ── 数字生命体：身体隐喻 + 图谱健康 ──
+                    _buildLifeTwinSection(isDark),
                     const SizedBox(height: 16),
 
                     // ── 风险/预警卡片 ──
@@ -336,9 +362,8 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
               children: [
                 Icon(_getTimeIcon(),
                     size: 20,
-                    color: isDark
-                        ? Colors.amber.shade200
-                        : Colors.amber.shade700),
+                    color:
+                        isDark ? Colors.amber.shade200 : Colors.amber.shade700),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -365,11 +390,10 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
             if (trend != null && trend.summary.isNotEmpty) ...[
               const SizedBox(height: 6),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: (isDark ? Colors.white : Colors.black)
-                      .withOpacity(0.08),
+                      .withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -383,7 +407,8 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                       '趋势：${trend.summary}',
                       style: TextStyle(
                         fontSize: 11,
-                        color: isDark ? Colors.greenAccent : Colors.green.shade700,
+                        color:
+                            isDark ? Colors.greenAccent : Colors.green.shade700,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -399,9 +424,11 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                 children: [
                   _miniTag('${pattern.style}学习者', Icons.psychology, isDark),
                   if (pattern.streakDays > 0)
-                    _miniTag('连续${pattern.streakDays}天', Icons.local_fire_department, isDark),
+                    _miniTag('连续${pattern.streakDays}天',
+                        Icons.local_fire_department, isDark),
                   if (pattern.activeDaysLast7 > 0)
-                    _miniTag('周活${pattern.activeDaysLast7}天', Icons.calendar_today, isDark),
+                    _miniTag('周活${pattern.activeDaysLast7}天',
+                        Icons.calendar_today, isDark),
                 ],
               ),
             ],
@@ -420,7 +447,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: primary.withOpacity(0.12),
+        color: primary.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
@@ -444,7 +471,8 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
       final parts = <String>[];
       if (p.pendingGrading > 0) parts.add('${p.pendingGrading}份待批阅');
       parts.add('均分${p.classAvg.toStringAsFixed(1)}');
-      if (p.classEngagement > 0) parts.add('参与度${p.classEngagement.toStringAsFixed(0)}%');
+      if (p.classEngagement > 0)
+        parts.add('参与度${p.classEngagement.toStringAsFixed(0)}%');
       if (p.deadlineWarnings > 0) parts.add('${p.deadlineWarnings}个截止预警');
       return parts.join(' · ');
     }
@@ -479,8 +507,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
     final pct = (progress * 100).toInt();
     return Row(
       children: [
-        Icon(Icons.trending_up,
-            size: 14, color: (info['color'] as Color)),
+        Icon(Icons.trending_up, size: 14, color: (info['color'] as Color)),
         const SizedBox(width: 4),
         Text(
           '距离「$next」还差 ${100 - pct}%',
@@ -497,8 +524,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
               value: progress,
               minHeight: 4,
               backgroundColor: Colors.grey.shade300,
-              valueColor:
-                  AlwaysStoppedAnimation(info['color'] as Color),
+              valueColor: AlwaysStoppedAnimation(info['color'] as Color),
             ),
           ),
         ),
@@ -550,7 +576,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: primary.withOpacity(0.3),
+            color: primary.withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -567,13 +593,11 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                      color: Colors.white.withOpacity(0.4),
-                      width: 2),
+                      color: Colors.white.withValues(alpha: 0.4), width: 2),
                 ),
                 child: CircleAvatar(
                   radius: 32,
-                  backgroundColor:
-                      Colors.white.withOpacity(0.15),
+                  backgroundColor: Colors.white.withValues(alpha: 0.15),
                   child: Text(
                     _isTeacher ? '🧑‍🏫' : '🧑‍🎓',
                     style: const TextStyle(fontSize: 28),
@@ -593,7 +617,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                     border: Border.all(color: Colors.white, width: 2),
                     boxShadow: [
                       BoxShadow(
-                        color: pulseColor.withOpacity(0.5),
+                        color: pulseColor.withValues(alpha: 0.5),
                         blurRadius: 6,
                       ),
                     ],
@@ -609,9 +633,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                 _authService.currentUser?.userId ??
                 '',
             style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white),
+                fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
           ),
           const SizedBox(height: 4),
           // 状态文字
@@ -623,13 +645,11 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
           const SizedBox(height: 6),
           // 等级徽章
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
             decoration: BoxDecoration(
-              color: levelColor.withOpacity(0.3),
+              color: levelColor.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(14),
-              border:
-                  Border.all(color: Colors.white.withOpacity(0.3)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -654,10 +674,8 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                 child: LinearProgressIndicator(
                   value: progress,
                   minHeight: 4,
-                  backgroundColor:
-                      Colors.white.withOpacity(0.2),
-                  valueColor:
-                      const AlwaysStoppedAnimation(Colors.white),
+                  backgroundColor: Colors.white.withValues(alpha: 0.2),
+                  valueColor: const AlwaysStoppedAnimation(Colors.white),
                 ),
               ),
             ),
@@ -724,7 +742,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: color, size: 18),
@@ -732,9 +750,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
               const SizedBox(height: 6),
               Text(value,
                   style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: color)),
+                      fontSize: 16, fontWeight: FontWeight.bold, color: color)),
               // 趋势箭头
               if (delta != null && delta.abs() > 0.5)
                 Row(
@@ -767,6 +783,434 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // 数字生命体：课程图谱 × 人体隐喻
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  Widget _buildLifeTwinSection(bool isDark) {
+    final organs = _buildLifeOrgans();
+    final lifeScore = _lifeScore(organs);
+    final lifeColor = _healthColor(lifeScore);
+    final graphLabel = _isTeacher ? '课程图谱' : '我的图谱';
+    final roleSubtitle = _isTeacher
+        ? '把班级学习状态映射为课程生命体，快速发现教学器官的健康变化'
+        : '把知识节点、学习连接和实践行为映射为个人课程生命体';
+
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: lifeColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.monitor_heart, color: lifeColor, size: 22),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _isTeacher ? '班级数字生命体' : '个人数字生命体',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        roleSubtitle,
+                        style: TextStyle(
+                          fontSize: 11,
+                          height: 1.35,
+                          color: isDark ? Colors.white60 : Colors.black54,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilledButton.icon(
+                  onPressed: () => AgentChatOverlay.show(
+                    context,
+                    agentId: _agentId,
+                    initialContext: _isTeacher
+                        ? '请用适合语音朗读的方式，基于我的教师数字孪生画像，做一次班级课程生命体体检：先说生命指数，再说最健康的器官、最需要修复的器官和下一步教学动作。'
+                        : '请用适合语音朗读的方式，基于我的学生数字孪生画像，做一次个人课程生命体体检：先说生命指数，再说最健康的器官、最需要修复的器官和今天学习动作。',
+                  ),
+                  icon: const Icon(Icons.mic, size: 16),
+                  label: const Text('语音体检'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _vitalPill('生命指数', '${lifeScore.toStringAsFixed(0)}%',
+                    Icons.favorite, lifeColor, isDark),
+                _vitalPill(
+                    graphLabel, _graphVitalText(), Icons.hub, primary, isDark),
+                _vitalPill('健康状态', _healthText(lifeScore),
+                    Icons.health_and_safety, lifeColor, isDark),
+              ],
+            ),
+            const SizedBox(height: 12),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final wide = constraints.maxWidth >= 620;
+                final body = _buildTwinBody(organs, isDark);
+                final legend = _buildOrganLegend(organs, isDark);
+                if (wide) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(width: 260, child: body),
+                      const SizedBox(width: 16),
+                      Expanded(child: legend),
+                    ],
+                  );
+                }
+                return Column(
+                  children: [
+                    body,
+                    const SizedBox(height: 12),
+                    legend,
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTwinBody(List<_TwinOrgan> organs, bool isDark) {
+    return AnimatedBuilder(
+      animation: _pulseCtrl,
+      builder: (context, _) {
+        return Container(
+          height: 260,
+          decoration: BoxDecoration(
+            color:
+                isDark ? Colors.white.withValues(alpha: 0.04) : Colors.grey[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isDark ? Colors.white10 : Colors.black12,
+            ),
+          ),
+          child: CustomPaint(
+            painter: _TwinBodyPainter(
+              organs: organs,
+              pulse: _pulseCtrl.value,
+              isDark: isDark,
+              primary: primary,
+            ),
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Text(
+                  '节点是器官，连接是神经，数据变化形成健康体征',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isDark ? Colors.white54 : Colors.black45,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildOrganLegend(List<_TwinOrgan> organs, bool isDark) {
+    return Column(
+      children: organs.map((organ) => _organRow(organ, isDark)).toList(),
+    );
+  }
+
+  Widget _organRow(_TwinOrgan organ, bool isDark) {
+    final color = _healthColor(organ.value);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: isDark ? 0.12 : 0.07),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withValues(alpha: 0.22)),
+        ),
+        child: Row(
+          children: [
+            Icon(organ.icon, color: color, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        organ.name,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          organ.metaphor,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark ? Colors.white54 : Colors.black45,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 5),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: (organ.value / 100).clamp(0.0, 1.0),
+                      minHeight: 6,
+                      backgroundColor: isDark ? Colors.white12 : Colors.black12,
+                      valueColor: AlwaysStoppedAnimation(color),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    organ.detail,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: isDark ? Colors.white60 : Colors.black54,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '${organ.value.toStringAsFixed(0)}%',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  _healthText(organ.value),
+                  style: TextStyle(fontSize: 10, color: color),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _vitalPill(
+      String label, String value, IconData icon, Color color, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: isDark ? 0.16 : 0.09),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: color),
+          const SizedBox(width: 6),
+          Text(
+            '$label：$value',
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? Colors.white70 : Colors.black87,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<_TwinOrgan> _buildLifeOrgans() {
+    if (_isTeacher) {
+      final p = _teacherProfile ?? TeacherTwinProfile.empty();
+      final nodeScore = _average(p.nodeCoverage.values);
+      final riskControl =
+          (100 - p.alerts.length * 8 - p.weakSpots.length * 6).clamp(0, 100);
+      final feedback = (p.gradingTimeliness - p.pendingGrading * 1.5)
+          .clamp(0, 100)
+          .toDouble();
+      return [
+        _TwinOrgan(
+          name: '大脑',
+          metaphor: '课程图谱',
+          detail: p.nodeCoverage.isEmpty
+              ? '等待节点达成数据'
+              : '图谱节点达成均值 ${nodeScore.toStringAsFixed(0)}%',
+          value: nodeScore,
+          icon: Icons.psychology,
+        ),
+        _TwinOrgan(
+          name: '神经',
+          metaphor: '师生连接',
+          detail: '班级均分 ${p.classAvg.toStringAsFixed(1)}',
+          value: p.classAvg.clamp(0, 100).toDouble(),
+          icon: Icons.hub,
+        ),
+        _TwinOrgan(
+          name: '心脏',
+          metaphor: '班级活力',
+          detail: '近7天参与度 ${p.classEngagement.toStringAsFixed(0)}%',
+          value: p.classEngagement.clamp(0, 100).toDouble(),
+          icon: Icons.favorite,
+        ),
+        _TwinOrgan(
+          name: '双手',
+          metaphor: '反馈批阅',
+          detail:
+              '待批 ${p.pendingGrading} 份，及时率 ${p.gradingTimeliness.toStringAsFixed(0)}%',
+          value: feedback,
+          icon: Icons.rate_review,
+        ),
+        _TwinOrgan(
+          name: '骨骼',
+          metaphor: '教学进度',
+          detail: '大纲执行 ${p.teachingProgress.toStringAsFixed(0)}%',
+          value: p.teachingProgress.clamp(0, 100).toDouble(),
+          icon: Icons.account_tree,
+        ),
+        _TwinOrgan(
+          name: '免疫',
+          metaphor: '风险处置',
+          detail: '${p.alerts.length} 个学生预警，${p.weakSpots.length} 个薄弱节点',
+          value: riskControl.toDouble(),
+          icon: Icons.health_and_safety,
+        ),
+      ];
+    }
+
+    final p = _studentProfile ?? StudentTwinProfile.empty();
+    final chapterAvg = _average(p.chapterMastery.values);
+    final activePulse =
+        (p.learningPattern.activeDaysLast7 / 7 * 100).clamp(0, 100).toDouble();
+    final connection = (chapterAvg * 0.45 +
+            p.conceptCoverage * 0.35 +
+            p.wrongDigestRate * 0.20)
+        .clamp(0, 100)
+        .toDouble();
+    return [
+      _TwinOrgan(
+        name: '大脑',
+        metaphor: '知识节点',
+        detail: '概念覆盖 ${p.conceptCoverage.toStringAsFixed(0)}%',
+        value: p.conceptCoverage.clamp(0, 100).toDouble(),
+        icon: Icons.psychology,
+      ),
+      _TwinOrgan(
+        name: '神经',
+        metaphor: '图谱连接',
+        detail: '章节掌握、覆盖与错题修复综合映射',
+        value: connection,
+        icon: Icons.hub,
+      ),
+      _TwinOrgan(
+        name: '心脏',
+        metaphor: '学习脉搏',
+        detail: '近7天活跃 ${p.learningPattern.activeDaysLast7} 天',
+        value: activePulse,
+        icon: Icons.favorite,
+      ),
+      _TwinOrgan(
+        name: '双手',
+        metaphor: '实验实践',
+        detail: '实验完成 ${p.labCompletionRate.toStringAsFixed(0)}%',
+        value: p.labCompletionRate.clamp(0, 100).toDouble(),
+        icon: Icons.science,
+      ),
+      _TwinOrgan(
+        name: '骨骼',
+        metaphor: '课程骨架',
+        detail: p.chapterMastery.isEmpty
+            ? '等待章节测验数据'
+            : '章节掌握均值 ${chapterAvg.toStringAsFixed(0)}%',
+        value: chapterAvg,
+        icon: Icons.account_tree,
+      ),
+      _TwinOrgan(
+        name: '免疫',
+        metaphor: '错题修复',
+        detail: '错题消化 ${p.wrongDigestRate.toStringAsFixed(0)}%',
+        value: p.wrongDigestRate.clamp(0, 100).toDouble(),
+        icon: Icons.auto_fix_high,
+      ),
+    ];
+  }
+
+  double _lifeScore(List<_TwinOrgan> organs) {
+    if (organs.isEmpty) return 0;
+    return organs.fold(0.0, (sum, organ) => sum + organ.value) / organs.length;
+  }
+
+  double _average(Iterable<double> values) {
+    final list = values.toList();
+    if (list.isEmpty) return 0;
+    return list.fold(0.0, (sum, value) => sum + value) / list.length;
+  }
+
+  String _graphVitalText() {
+    if (_isTeacher) {
+      final p = _teacherProfile ?? TeacherTwinProfile.empty();
+      return p.nodeCoverage.isEmpty ? '待采集' : '${p.nodeCoverage.length} 节点';
+    }
+    final p = _studentProfile ?? StudentTwinProfile.empty();
+    return '覆盖 ${p.conceptCoverage.toStringAsFixed(0)}%';
+  }
+
+  String _healthText(double value) {
+    if (value >= 85) return '强健';
+    if (value >= 70) return '健康';
+    if (value >= 45) return '待增强';
+    if (value > 0) return '需修复';
+    return '待唤醒';
+  }
+
+  Color _healthColor(double value) {
+    if (value >= 85) return Colors.green;
+    if (value >= 70) return Colors.teal;
+    if (value >= 45) return Colors.orange;
+    if (value > 0) return Colors.deepOrange;
+    return Colors.grey;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // 风险/预警区
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -786,10 +1230,10 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
         padding: const EdgeInsets.only(bottom: 16),
         child: Card(
           elevation: 1,
-          color: color.withOpacity(0.06),
+          color: color.withValues(alpha: 0.06),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: color.withOpacity(0.3)),
+            side: BorderSide(color: color.withValues(alpha: 0.3)),
           ),
           child: Padding(
             padding: const EdgeInsets.all(12),
@@ -842,10 +1286,10 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
       padding: const EdgeInsets.only(bottom: 16),
       child: Card(
         elevation: 1,
-        color: Colors.orange.withOpacity(0.06),
+        color: Colors.orange.withValues(alpha: 0.06),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: Colors.orange.withOpacity(0.3)),
+          side: BorderSide(color: Colors.orange.withValues(alpha: 0.3)),
         ),
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -866,8 +1310,8 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
               ),
               const SizedBox(height: 6),
               if (p.deadlineWarnings > 0)
-                _alertRow('${p.deadlineWarnings} 个实验任务即将截止（3天内）',
-                    Colors.red, isDark),
+                _alertRow(
+                    '${p.deadlineWarnings} 个实验任务即将截止（3天内）', Colors.red, isDark),
               if (p.pendingGrading > 0)
                 _alertRow('${p.pendingGrading} 份报告待批阅', Colors.orange, isDark),
               if (p.gradingTimeliness < 70 && p.gradingTimeliness > 0)
@@ -909,16 +1353,16 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
         ? [
             const _QuickAction('进度汇报', Icons.assessment, Colors.blue,
                 '请汇报全班学习进度，包括成绩分布、薄弱环节和需要关注的学生'),
-            const _QuickAction('教学建议', Icons.lightbulb, Colors.amber,
-                '根据当前班级数据，给出教学改进建议'),
+            const _QuickAction(
+                '教学建议', Icons.lightbulb, Colors.amber, '根据当前班级数据，给出教学改进建议'),
             const _QuickAction('批阅提醒', Icons.notifications_active, Colors.red,
                 '列出需要批阅的内容和优先级建议'),
             const _QuickAction('班级诊断', Icons.analytics, Colors.green,
                 '分析班级整体表现趋势和优劣势，给出精准教学建议'),
           ]
         : [
-            const _QuickAction('今日计划', Icons.today, Colors.blue,
-                '根据我的学习进度和薄弱环节，帮我制定今天的学习计划'),
+            const _QuickAction(
+                '今日计划', Icons.today, Colors.blue, '根据我的学习进度和薄弱环节，帮我制定今天的学习计划'),
             const _QuickAction('进度汇报', Icons.assessment, Colors.green,
                 '汇报我的整体学习进度，包括各章节掌握度和趋势变化'),
             const _QuickAction('薄弱诊断', Icons.warning_amber, Colors.orange,
@@ -934,11 +1378,10 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
           .map((a) => ActionChip(
                 avatar: Icon(a.icon, size: 16, color: a.color),
                 label: Text(a.label, style: const TextStyle(fontSize: 12)),
-                onPressed: _quickLoading
-                    ? null
-                    : () => _quickChat(a.label, a.prompt),
-                backgroundColor: a.color.withOpacity(0.08),
-                side: BorderSide(color: a.color.withOpacity(0.2)),
+                onPressed:
+                    _quickLoading ? null : () => _quickChat(a.label, a.prompt),
+                backgroundColor: a.color.withValues(alpha: 0.08),
+                side: BorderSide(color: a.color.withValues(alpha: 0.2)),
               ))
           .toList(),
     );
@@ -979,8 +1422,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                       _quickReply = '';
                       _quickTopic = '';
                     }),
-                    child: Icon(Icons.close,
-                        size: 16, color: Colors.grey[400]),
+                    child: Icon(Icons.close, size: 16, color: Colors.grey[400]),
                   ),
               ],
             ),
@@ -1010,14 +1452,11 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
 
   Widget _buildChapterMastery(bool isDark) {
     final mastery = _studentProfile?.chapterMastery ?? {};
-    final chapterNames = {
-      1: '技术体系',
-      2: '原生开发',
-      3: '混合开发',
-      4: '小程序',
-      5: 'HarmonyOS',
-      6: '综合实践',
-    };
+    final resolved = _chapterNames.isNotEmpty
+        ? _chapterNames
+        : CourseContextService.defaultCourseChapters;
+    final rowCount =
+        mastery.length > resolved.length ? mastery.length : resolved.length;
 
     return Card(
       elevation: 1,
@@ -1039,7 +1478,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
               ],
             ),
             const SizedBox(height: 12),
-            ...List.generate(6, (i) {
+            ...List.generate(rowCount, (i) {
               final ch = i + 1;
               final score = mastery[ch] ?? 0;
               final color = score >= 80
@@ -1065,12 +1504,12 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                   children: [
                     SizedBox(
                       width: 72,
-                      child: Text('${chapterNames[ch]}',
+                      child: Text(
+                          ch <= resolved.length ? resolved[ch - 1] : '第${ch}章',
                           style: TextStyle(
                               fontSize: 12,
-                              color: isDark
-                                  ? Colors.white60
-                                  : Colors.grey[600])),
+                              color:
+                                  isDark ? Colors.white60 : Colors.grey[600])),
                     ),
                     Expanded(
                       child: ClipRRect(
@@ -1078,9 +1517,8 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                         child: LinearProgressIndicator(
                           value: (score / 100).clamp(0.0, 1.0),
                           minHeight: 10,
-                          backgroundColor: isDark
-                              ? Colors.white12
-                              : Colors.grey.shade200,
+                          backgroundColor:
+                              isDark ? Colors.white12 : Colors.grey.shade200,
                           valueColor: AlwaysStoppedAnimation(color),
                         ),
                       ),
@@ -1110,7 +1548,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
             }),
             const SizedBox(height: 4),
             Text(
-              '各章节对应：🧠大脑 → 💪双臂 → 🦵双腿 → ❤️心脏',
+              '章节是课程骨架，知识节点和学习记录会同步影响数字生命体健康状态',
               style: TextStyle(fontSize: 10, color: Colors.grey[500]),
             ),
           ],
@@ -1215,8 +1653,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
         Text('$count人',
             style: TextStyle(
                 fontSize: 13, fontWeight: FontWeight.bold, color: color)),
-        Text('$pct%',
-            style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+        Text('$pct%', style: TextStyle(fontSize: 10, color: Colors.grey[500])),
         Text(label, style: TextStyle(fontSize: 9, color: Colors.grey[500])),
       ],
     );
@@ -1270,8 +1707,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                           )!;
                     return Expanded(
                       child: Tooltip(
-                        message:
-                            '${30 - i}天前：${val.toStringAsFixed(0)}分钟',
+                        message: '${30 - i}天前：${val.toStringAsFixed(0)}分钟',
                         child: Container(
                           margin: const EdgeInsets.all(1),
                           decoration: BoxDecoration(
@@ -1290,13 +1726,11 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('30天前',
-                    style:
-                        TextStyle(fontSize: 9, color: Colors.grey[500])),
+                    style: TextStyle(fontSize: 9, color: Colors.grey[500])),
                 Row(
                   children: [
                     Text('少 ',
-                        style: TextStyle(
-                            fontSize: 9, color: Colors.grey[500])),
+                        style: TextStyle(fontSize: 9, color: Colors.grey[500])),
                     ...List.generate(
                       4,
                       (i) => Container(
@@ -1314,13 +1748,11 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                       ),
                     ),
                     Text(' 多',
-                        style: TextStyle(
-                            fontSize: 9, color: Colors.grey[500])),
+                        style: TextStyle(fontSize: 9, color: Colors.grey[500])),
                   ],
                 ),
                 Text('今天',
-                    style:
-                        TextStyle(fontSize: 9, color: Colors.grey[500])),
+                    style: TextStyle(fontSize: 9, color: Colors.grey[500])),
               ],
             ),
           ],
@@ -1350,7 +1782,8 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
           children: [
             Row(
               children: [
-                Icon(Icons.emoji_events, size: 18, color: Colors.amber.shade700),
+                Icon(Icons.emoji_events,
+                    size: 18, color: Colors.amber.shade700),
                 const SizedBox(width: 6),
                 Text('里程碑成就',
                     style: TextStyle(
@@ -1387,12 +1820,12 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: achieved
-            ? Colors.amber.withOpacity(0.12)
+            ? Colors.amber.withValues(alpha: 0.12)
             : (isDark ? Colors.white10 : Colors.grey.shade100),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: achieved
-              ? Colors.amber.withOpacity(0.4)
+              ? Colors.amber.withValues(alpha: 0.4)
               : Colors.transparent,
         ),
       ),
@@ -1467,15 +1900,13 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                 contentPadding: EdgeInsets.zero,
                 leading: CircleAvatar(
                   radius: 14,
-                  backgroundColor: typeColor.withOpacity(0.1),
+                  backgroundColor: typeColor.withValues(alpha: 0.1),
                   child: Icon(typeIcon, size: 14, color: typeColor),
                 ),
-                title: Text(
-                    a.realName.isNotEmpty ? a.realName : a.userId,
+                title: Text(a.realName.isNotEmpty ? a.realName : a.userId,
                     style: const TextStyle(fontSize: 13)),
                 subtitle: Text(a.message,
-                    style:
-                        TextStyle(fontSize: 11, color: Colors.grey[600])),
+                    style: TextStyle(fontSize: 11, color: Colors.grey[600])),
               );
             }),
           ],
@@ -1545,10 +1976,9 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                   dataSets: [
                     RadarDataSet(
                       dataEntries: values
-                          .map((v) =>
-                              RadarEntry(value: v.clamp(0, 100)))
+                          .map((v) => RadarEntry(value: v.clamp(0, 100)))
                           .toList(),
-                      fillColor: primary.withOpacity(0.2),
+                      fillColor: primary.withValues(alpha: 0.2),
                       borderColor: primary,
                       borderWidth: 2,
                     ),
@@ -1559,8 +1989,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                   ),
                   titleTextStyle: TextStyle(
                       fontSize: 11,
-                      color:
-                          isDark ? Colors.white70 : Colors.black54),
+                      color: isDark ? Colors.white70 : Colors.black54),
                   tickCount: 4,
                   ticksTextStyle: const TextStyle(fontSize: 0),
                   tickBorderData: BorderSide(
@@ -1570,8 +1999,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                     color: isDark ? Colors.white12 : Colors.black12,
                   ),
                   radarBorderData: BorderSide(
-                      color:
-                          isDark ? Colors.white24 : Colors.black26),
+                      color: isDark ? Colors.white24 : Colors.black26),
                 ),
               ),
             ),
@@ -1596,8 +2024,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
               Icon(Icons.show_chart, color: Colors.grey[400]),
               const SizedBox(width: 8),
               Text('暂无学习时长数据，开始学习以解锁成长曲线',
-                  style:
-                      TextStyle(color: Colors.grey[500], fontSize: 13)),
+                  style: TextStyle(color: Colors.grey[500], fontSize: 13)),
             ],
           ),
         ),
@@ -1650,9 +2077,7 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                           'W${value.toInt() + 1}',
                           style: TextStyle(
                               fontSize: 10,
-                              color: isDark
-                                  ? Colors.white54
-                                  : Colors.black45),
+                              color: isDark ? Colors.white54 : Colors.black45),
                         ),
                       ),
                     ),
@@ -1663,15 +2088,14 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                       spots: weekly
                           .asMap()
                           .entries
-                          .map((e) =>
-                              FlSpot(e.key.toDouble(), e.value))
+                          .map((e) => FlSpot(e.key.toDouble(), e.value))
                           .toList(),
                       isCurved: true,
                       color: primary,
                       barWidth: 3,
                       belowBarData: BarAreaData(
                         show: true,
-                        color: primary.withOpacity(0.1),
+                        color: primary.withValues(alpha: 0.1),
                       ),
                       dotData: const FlDotData(show: true),
                     ),
@@ -1705,8 +2129,8 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                     size: 18, color: Colors.orange.shade700),
                 const SizedBox(width: 6),
                 const Text('薄弱节点 Top 5',
-                    style: TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.bold)),
+                    style:
+                        TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
               ],
             ),
             const SizedBox(height: 8),
@@ -1716,20 +2140,18 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
                   leading: CircleAvatar(
                     radius: 14,
                     backgroundColor: s.avgScore >= 60
-                        ? Colors.orange.withOpacity(0.2)
-                        : Colors.red.withOpacity(0.2),
+                        ? Colors.orange.withValues(alpha: 0.2)
+                        : Colors.red.withValues(alpha: 0.2),
                     child: Text(
                       s.avgScore.toStringAsFixed(0),
                       style: TextStyle(
                           fontSize: 11,
-                          color: s.avgScore >= 60
-                              ? Colors.orange
-                              : Colors.red,
+                          color: s.avgScore >= 60 ? Colors.orange : Colors.red,
                           fontWeight: FontWeight.bold),
                     ),
                   ),
-                  title: Text(s.nodeTitle,
-                      style: const TextStyle(fontSize: 13)),
+                  title:
+                      Text(s.nodeTitle, style: const TextStyle(fontSize: 13)),
                 )),
           ],
         ),
@@ -1748,12 +2170,11 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
       child: Column(
         children: [
           ListTile(
-            leading:
-                Icon(Icons.psychology, color: primary),
+            leading: Icon(Icons.psychology, color: primary),
             title: const Text('AI 智能诊断',
                 style: TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: const Text('基于全量数据的深度分析与个性化建议',
-                style: TextStyle(fontSize: 11)),
+            subtitle:
+                const Text('基于全量数据的深度分析与个性化建议', style: TextStyle(fontSize: 11)),
             trailing: Icon(_aiExpanded
                 ? Icons.keyboard_arrow_up
                 : Icons.keyboard_arrow_down),
@@ -1771,14 +2192,12 @@ class _VirtualTwinPageState extends State<VirtualTwinPage>
               child: _aiLoading
                   ? const Padding(
                       padding: EdgeInsets.symmetric(vertical: 20),
-                      child: Center(
-                          child: CircularProgressIndicator()),
+                      child: Center(child: CircularProgressIndicator()),
                     )
                   : _aiReply.isEmpty
                       ? Text('点击展开获取 AI 智能诊断',
                           style: TextStyle(color: Colors.grey[500]))
-                      : MarkdownBubble(
-                          content: _aiReply, compact: true),
+                      : MarkdownBubble(content: _aiReply, compact: true),
             ),
         ],
       ),
@@ -1793,4 +2212,178 @@ class _QuickAction {
   final Color color;
   final String prompt;
   const _QuickAction(this.label, this.icon, this.color, this.prompt);
+}
+
+class _TwinOrgan {
+  final String name;
+  final String metaphor;
+  final String detail;
+  final double value;
+  final IconData icon;
+
+  const _TwinOrgan({
+    required this.name,
+    required this.metaphor,
+    required this.detail,
+    required this.value,
+    required this.icon,
+  });
+}
+
+class _TwinBodyPainter extends CustomPainter {
+  final List<_TwinOrgan> organs;
+  final double pulse;
+  final bool isDark;
+  final Color primary;
+
+  const _TwinBodyPainter({
+    required this.organs,
+    required this.pulse,
+    required this.isDark,
+    required this.primary,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final bodyPaint = Paint()
+      ..color = isDark ? Colors.white24 : Colors.black26
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+    final nervePaint = Paint()
+      ..color = primary.withValues(alpha: 0.22 + pulse * 0.16)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4
+      ..strokeCap = StrokeCap.round;
+    final center = Offset(size.width / 2, size.height * 0.46);
+
+    final head = Offset(size.width * 0.5, size.height * 0.17);
+    final chest = Offset(size.width * 0.5, size.height * 0.34);
+    final leftHand = Offset(size.width * 0.28, size.height * 0.43);
+    final rightHand = Offset(size.width * 0.72, size.height * 0.43);
+    final pelvis = Offset(size.width * 0.5, size.height * 0.66);
+    final leftFoot = Offset(size.width * 0.36, size.height * 0.84);
+    final rightFoot = Offset(size.width * 0.64, size.height * 0.84);
+
+    canvas
+      ..drawCircle(head, size.width * 0.085, bodyPaint)
+      ..drawLine(
+          Offset(size.width * 0.5, size.height * 0.25), pelvis, bodyPaint)
+      ..drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(
+            center: center,
+            width: size.width * 0.26,
+            height: size.height * 0.34,
+          ),
+          const Radius.circular(26),
+        ),
+        bodyPaint,
+      )
+      ..drawLine(chest, leftHand, bodyPaint)
+      ..drawLine(chest, rightHand, bodyPaint)
+      ..drawLine(pelvis, leftFoot, bodyPaint)
+      ..drawLine(pelvis, rightFoot, bodyPaint);
+
+    final organPositions = [
+      head,
+      Offset(size.width * 0.5, size.height * 0.27),
+      Offset(size.width * 0.5, size.height * 0.39),
+      leftHand,
+      Offset(size.width * 0.5, size.height * 0.61),
+      Offset(size.width * 0.5, size.height * 0.51),
+    ];
+
+    for (var i = 0; i < organPositions.length; i++) {
+      final from = i == 0 ? chest : organPositions[i];
+      final to = i == 0 ? organPositions[i] : chest;
+      canvas.drawLine(from, to, nervePaint);
+    }
+
+    _drawGraphHalo(canvas, size, head, nervePaint);
+
+    for (var i = 0; i < organPositions.length && i < organs.length; i++) {
+      _drawOrgan(canvas, organPositions[i], organs[i], i);
+    }
+  }
+
+  void _drawGraphHalo(Canvas canvas, Size size, Offset anchor, Paint paint) {
+    final nodes = [
+      anchor + Offset(-size.width * 0.17, size.height * 0.02),
+      anchor + Offset(size.width * 0.17, size.height * 0.02),
+      anchor + Offset(-size.width * 0.11, -size.height * 0.10),
+      anchor + Offset(size.width * 0.11, -size.height * 0.10),
+      anchor + Offset(0, -size.height * 0.14),
+    ];
+    for (var i = 0; i < nodes.length; i++) {
+      canvas.drawLine(anchor, nodes[i], paint);
+      canvas.drawCircle(
+        nodes[i],
+        3.5 + pulse * 1.5,
+        Paint()
+          ..color = primary.withValues(alpha: 0.28 + pulse * 0.18)
+          ..style = PaintingStyle.fill,
+      );
+    }
+  }
+
+  void _drawOrgan(Canvas canvas, Offset center, _TwinOrgan organ, int index) {
+    final color = _organColor(organ.value);
+    final radius = 11.0 + organ.value.clamp(0, 100) / 100 * 7 + pulse * 2;
+    final fill = Paint()
+      ..color = color.withValues(alpha: 0.20 + pulse * 0.10)
+      ..style = PaintingStyle.fill;
+    final stroke = Paint()
+      ..color = color.withValues(alpha: 0.85)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    canvas
+      ..drawCircle(center, radius + 5, fill)
+      ..drawCircle(center, radius, stroke)
+      ..drawArc(
+        Rect.fromCircle(center: center, radius: radius + 3),
+        -1.57,
+        6.28 * (organ.value / 100).clamp(0.0, 1.0),
+        false,
+        Paint()
+          ..color = color
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3
+          ..strokeCap = StrokeCap.round,
+      );
+
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: organ.name,
+        style: TextStyle(
+          color: isDark ? Colors.white70 : Colors.black54,
+          fontSize: 9,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    )..layout(maxWidth: 42);
+    textPainter.paint(
+      canvas,
+      center.translate(-textPainter.width / 2, radius + 8),
+    );
+  }
+
+  Color _organColor(double value) {
+    if (value >= 85) return Colors.green;
+    if (value >= 70) return Colors.teal;
+    if (value >= 45) return Colors.orange;
+    if (value > 0) return Colors.deepOrange;
+    return Colors.grey;
+  }
+
+  @override
+  bool shouldRepaint(covariant _TwinBodyPainter oldDelegate) {
+    return oldDelegate.pulse != pulse ||
+        oldDelegate.organs != organs ||
+        oldDelegate.isDark != isDark ||
+        oldDelegate.primary != primary;
+  }
 }

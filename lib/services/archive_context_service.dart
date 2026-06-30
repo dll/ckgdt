@@ -5,7 +5,6 @@ import '../data/local/lab_task_dao.dart';
 import '../data/local/achievement_dao.dart';
 import '../data/local/assessment_dao.dart';
 import '../data/local/database_helper.dart';
-import '../presentation/pages/achievement/achievement_config.dart';
 import 'auth_service.dart';
 
 /// 归档生成上下文收集器。
@@ -213,12 +212,14 @@ class ArchiveContextService {
       final avg = await _achievementDao.calculateClassAverage(batchId);
       final b = StringBuffer('### 7. 成绩达成\n');
       b.writeln('- 批次：${latest['batch_name'] ?? '未命名'}');
-      const cfg = AchievementConfig.defaults;
+      final weights = await _achievementDao.resolveObjectiveWeights(batchId);
+      final cfg = weights.length >= 4 ? weights : [0.15, 0.25, 0.30, 0.30];
       double weighted = 0;
-      for (int i = 1; i <= 4; i++) {
-        final a = avg['课程目标$i'] ?? 0;
-        weighted += a * cfg.weights[i - 1];
-        b.writeln('- 课程目标$i 班级平均达成度：${a.toStringAsFixed(4)}（权重 ${cfg.weights[i - 1]}）');
+      final count = cfg.length;
+      for (int i = 0; i < count; i++) {
+        final a = avg['课程目标${i + 1}'] ?? 0;
+        weighted += a * cfg[i];
+        b.writeln('- 课程目标${i + 1} 班级平均达成度：${a.toStringAsFixed(4)}（权重 ${cfg[i].toStringAsFixed(2)}）');
       }
       b.writeln('- 加权总达成度：${weighted.toStringAsFixed(4)}');
       return b.toString();

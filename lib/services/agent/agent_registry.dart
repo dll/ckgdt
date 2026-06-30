@@ -165,10 +165,12 @@ class AgentRegistry {
 
   /// Director 选择逻辑
   BaseAgent _selectAgent(String userMessage) {
+    final role = AuthService().currentUser?.role ?? 'student';
+
     // 1) 如果当前有活跃智能体且匹配度 > 0.5，继续用它
     if (_session.activeAgentId != null) {
       final active = _agents[_session.activeAgentId!];
-      if (active != null) {
+      if (active != null && active.config.isAllowedFor(role)) {
         final score = active.matchScore(userMessage, _session);
         if (score > 0.5) return active;
       }
@@ -178,6 +180,7 @@ class AgentRegistry {
     BaseAgent? best;
     double bestScore = 0;
     for (final agent in _agents.values) {
+      if (!agent.config.isAllowedFor(role)) continue;
       final score = agent.matchScore(userMessage, _session);
       if (score > bestScore) {
         bestScore = score;

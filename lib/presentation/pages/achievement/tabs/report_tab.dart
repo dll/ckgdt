@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:excel/excel.dart' as xl;
@@ -13,7 +13,7 @@ import '../../../../services/achievement/achievement_docx_service.dart';
 import '../../../../services/achievement/achievement_template_excel_service.dart';
 import '../../../../services/achievement/excel_chart_injector.dart';
 import '../../../../services/achievement_context.dart';
-import '../../../../services/achievement_context.dart';
+import '../../../../services/course_context_service.dart';
 import '../../../../services/archive/native_docx_service.dart';
 import '../../../../services/output_path_service.dart';
 import '../../../../services/auth_service.dart';
@@ -79,7 +79,7 @@ class _ReportTabState extends State<ReportTab> {
   String get _fallbackCourseName =>
       AchievementContext.instance.courseName.isNotEmpty
           ? AchievementContext.instance.courseName
-          : '移动应用开发';
+          : '当前课程';
   List<double> _objectiveWeights = List<double>.from(kDefaultWeights);
   double _weightedAchievement = 0.0;
   Map<String, List<double>> _statistics =
@@ -115,9 +115,9 @@ class _ReportTabState extends State<ReportTab> {
       final rows = await widget.achievementDao
           .getCourseObjectives(courseName ?? _fallbackCourseName);
       if (mounted) {
-        setState(() => _config = rows.isNotEmpty
-            ? AchievementConfig.fromObjectiveRows(rows)
-            : AchievementConfig.defaults);
+        final activeCourse = await CourseContextService().getActiveCourse();
+        setState(() => _config =
+            AchievementConfig.fromObjectiveRows(rows, course: activeCourse));
       }
     } catch (e, st) {
       swallowDebug(e, tag: 'ReportTab.loadConfig', stack: st);
@@ -875,7 +875,8 @@ class _ReportTabState extends State<ReportTab> {
     try {
       final batch = _batches.firstWhere((b) => b['id'] == _selectedBatchId,
           orElse: () => <String, dynamic>{});
-      final courseName = (batch['course_name'] ?? _fallbackCourseName).toString();
+      final courseName =
+          (batch['course_name'] ?? _fallbackCourseName).toString();
       final className = (batch['class_name'] ?? '班级').toString();
       final semester = (batch['semester'] ?? '').toString();
       final scores = await widget.achievementDao.getScores(_selectedBatchId!);
@@ -2325,7 +2326,7 @@ class _ReportTabState extends State<ReportTab> {
                 child: Column(
                   children: [
                     Icon(Icons.bar_chart,
-                        size: 80, color: Colors.grey.withOpacity(0.3)),
+                        size: 80, color: Colors.grey.withValues(alpha: 0.3)),
                     const SizedBox(height: 16),
                     const Text(
                       '选择批次后点击"生成报告"查看结果',
@@ -2344,7 +2345,7 @@ class _ReportTabState extends State<ReportTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        border: Border.all(color: primary.withOpacity(0.3)),
+        border: Border.all(color: primary.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: DropdownButtonHideUnderline(
@@ -2466,7 +2467,7 @@ class _ReportTabState extends State<ReportTab> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: primary.withOpacity(0.1),
+                    color: primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -2496,7 +2497,7 @@ class _ReportTabState extends State<ReportTab> {
             Container(
               margin: const EdgeInsets.symmetric(vertical: 8),
               height: 1,
-              color: Colors.grey.withOpacity(0.2),
+              color: Colors.grey.withValues(alpha: 0.2),
             ),
 
             // 加权总达成度
@@ -2519,15 +2520,15 @@ class _ReportTabState extends State<ReportTab> {
                   gradient: LinearGradient(
                     colors: [
                       achievementLevelColor(_weightedAchievement)
-                          .withOpacity(0.15),
+                          .withValues(alpha: 0.15),
                       achievementLevelColor(_weightedAchievement)
-                          .withOpacity(0.05),
+                          .withValues(alpha: 0.05),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: achievementLevelColor(_weightedAchievement)
-                        .withOpacity(0.3),
+                        .withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
@@ -2593,7 +2594,7 @@ class _ReportTabState extends State<ReportTab> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.1),
+                  color: Colors.grey.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
@@ -2611,7 +2612,7 @@ class _ReportTabState extends State<ReportTab> {
                       Container(
                         height: isBold ? 24 : 20,
                         decoration: BoxDecoration(
-                          color: Colors.grey.withOpacity(0.12),
+                          color: Colors.grey.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(isBold ? 6 : 4),
                         ),
                       ),
@@ -2621,8 +2622,8 @@ class _ReportTabState extends State<ReportTab> {
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              color.withOpacity(0.8),
-                              color.withOpacity(0.5),
+                              color.withValues(alpha: 0.8),
+                              color.withValues(alpha: 0.5),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(isBold ? 6 : 4),
@@ -2680,7 +2681,7 @@ class _ReportTabState extends State<ReportTab> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: primary.withOpacity(0.08),
+                color: primary.withValues(alpha: 0.08),
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(8)),
               ),
@@ -2731,7 +2732,7 @@ class _ReportTabState extends State<ReportTab> {
             Container(
               height: 8,
               decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.04),
+                color: Colors.grey.withValues(alpha: 0.04),
                 borderRadius:
                     const BorderRadius.vertical(bottom: Radius.circular(8)),
               ),
@@ -2754,10 +2755,10 @@ class _ReportTabState extends State<ReportTab> {
                         right: i == activeObjectives.last ? 0 : 8),
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: kObjectiveColors[i].withOpacity(0.06),
+                      color: kObjectiveColors[i].withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: kObjectiveColors[i].withOpacity(0.15),
+                        color: kObjectiveColors[i].withValues(alpha: 0.15),
                       ),
                     ),
                     child: Column(
@@ -2781,7 +2782,7 @@ class _ReportTabState extends State<ReportTab> {
                                 value: achievement.clamp(0.0, 1.0),
                                 strokeWidth: 4,
                                 backgroundColor:
-                                    Colors.grey.withOpacity(0.15),
+                                    Colors.grey.withValues(alpha: 0.15),
                                 color: kObjectiveColors[i],
                               ),
                               Text(
@@ -2801,7 +2802,7 @@ class _ReportTabState extends State<ReportTab> {
                               horizontal: 4, vertical: 1),
                           decoration: BoxDecoration(
                             color: achievementLevelColor(achievement)
-                                .withOpacity(0.15),
+                                .withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -2830,11 +2831,11 @@ class _ReportTabState extends State<ReportTab> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color:
-            i.isEven ? Colors.transparent : Colors.grey.withOpacity(0.04),
+            i.isEven ? Colors.transparent : Colors.grey.withValues(alpha: 0.04),
         border: isLast
             ? null
             : Border(
-                bottom: BorderSide(color: Colors.grey.withOpacity(0.1)),
+                bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.1)),
               ),
       ),
       child: Row(
@@ -3029,7 +3030,7 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog> {
                         decoration: InputDecoration(
                           border: const OutlineInputBorder(),
                           filled: true,
-                          fillColor: Colors.grey.withOpacity(0.06),
+                          fillColor: Colors.grey.withValues(alpha: 0.06),
                           hintText: '编辑 Markdown 源码，切回「预览」查看效果，导出 Word 使用此处内容',
                         ),
                       ),

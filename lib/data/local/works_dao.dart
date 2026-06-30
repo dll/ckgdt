@@ -63,9 +63,10 @@ class WorksDao {
       } // 列已存在则静默跳过
     }
     try {
+      final courseId = await _courseContext.activeCourseId();
       await db.update(
         'student_works',
-        {'course_id': CourseContextService.defaultCourseId},
+        {'course_id': courseId},
         where: "course_id IS NULL OR course_id = ''",
       );
     } catch (e) {

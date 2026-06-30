@@ -1,8 +1,10 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../data/local/puml_dao.dart';
 import '../../../data/models/puml_file_model.dart';
+import '../../../services/course_context_service.dart';
 import '../../../services/plantuml_service.dart';
+import '../../../core/error_handler.dart';
 
 class PumlManagerPage extends StatefulWidget {
   final PumlFileModel? pumlFile;
@@ -15,12 +17,21 @@ class PumlManagerPage extends StatefulWidget {
 
 class _PumlManagerPageState extends State<PumlManagerPage>
     with SingleTickerProviderStateMixin {
-  static const _defaultChapters = [
-    '第1章', '第2章', '第3章', '第4章', '第5章', '第6章',
+  static const _fallbackChapters = [
+    '第1章',
+    '第2章',
+    '第3章',
+    '第4章',
+    '第5章',
+    '第6章',
   ];
 
   static const _defaultDiagramTypes = [
-    'class', 'sequence', 'activity', 'component', 'usecase',
+    'class',
+    'sequence',
+    'activity',
+    'component',
+    'usecase',
   ];
 
   static const _diagramTypeLabels = {
@@ -106,8 +117,8 @@ stop
 
   String _selectedChapter = '第1章';
   String _selectedDiagramType = 'class';
-  Uint8List? _renderedBytes;        // PNG 字节数据
-  String? _renderedUrl;             // 用于保存到数据库
+  Uint8List? _renderedBytes; // PNG 字节数据
+  String? _renderedUrl; // 用于保存到数据库
   bool _rendering = false;
   bool _saving = false;
   String? _renderError;
@@ -123,8 +134,9 @@ stop
     _tabController = TabController(length: 2, vsync: this);
 
     // 初始化列表副本
-    _chapters = List<String>.from(_defaultChapters);
+    _chapters = List<String>.from(_fallbackChapters);
     _diagramTypes = List<String>.from(_defaultDiagramTypes);
+    _loadCourseChapters();
 
     // 加载现有数据或初始化新建默认值
     if (widget.pumlFile != null) {
@@ -150,6 +162,23 @@ stop
     } else {
       _titleController.text = '新建 UML 图';
       _codeController.text = _classTemplate;
+    }
+  }
+
+  Future<void> _loadCourseChapters() async {
+    try {
+      final ctx = CourseContextService();
+      final chapters = await ctx.shortChapterTitles();
+      if (chapters.isNotEmpty && mounted) {
+        setState(() {
+          _chapters = chapters;
+          if (!_chapters.contains(_selectedChapter)) {
+            _selectedChapter = _chapters.first;
+          }
+        });
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'PumlManagerPage._loadCourseChapters', stack: st);
     }
   }
 
@@ -288,8 +317,7 @@ stop
   void _showSnack(String msg, {bool success = false}) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor:
-          success ? Colors.green.shade600 : Colors.redAccent,
+      backgroundColor: success ? Colors.green.shade600 : Colors.redAccent,
       behavior: SnackBarBehavior.floating,
       duration: const Duration(seconds: 2),
     ));
@@ -301,9 +329,8 @@ stop
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
     final screenHeight = MediaQuery.of(context).size.height;
-    final appBarHeight = kToolbarHeight +
-        MediaQuery.of(context).padding.top +
-        kTextTabBarHeight;
+    final appBarHeight =
+        kToolbarHeight + MediaQuery.of(context).padding.top + kTextTabBarHeight;
     final bodyHeight = screenHeight - appBarHeight;
 
     return Scaffold(
@@ -370,8 +397,7 @@ stop
           children: [
             CircularProgressIndicator(color: primary),
             const SizedBox(height: 12),
-            const Text('正在渲染中，请稍候…',
-                style: TextStyle(color: Colors.grey)),
+            const Text('正在渲染中，请稍候…', style: TextStyle(color: Colors.grey)),
           ],
         ),
       );
@@ -422,7 +448,7 @@ stop
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.play_circle_outline,
-                    size: 48, color: primary.withOpacity(0.5)),
+                    size: 48, color: primary.withValues(alpha: 0.5)),
                 const SizedBox(height: 10),
                 Text(
                   '点击右上角 ▶ 按钮渲染预览',
@@ -432,10 +458,10 @@ stop
                 Text(
                   '或点击此处快速渲染',
                   style: TextStyle(
-                    color: primary.withOpacity(0.7),
+                    color: primary.withValues(alpha: 0.7),
                     fontSize: 13,
                     decoration: TextDecoration.underline,
-                    decorationColor: primary.withOpacity(0.7),
+                    decorationColor: primary.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -532,8 +558,7 @@ stop
       children: [
         // 模板快捷按钮工具栏
         Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           decoration: BoxDecoration(
             color: Colors.grey.shade50,
             border: Border(
@@ -559,8 +584,8 @@ stop
                 label: const Text('清空', style: TextStyle(fontSize: 12)),
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.redAccent,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
@@ -604,8 +629,7 @@ stop
                 ValueListenableBuilder<TextEditingValue>(
                   valueListenable: _codeController,
                   builder: (_, value, __) {
-                    final lineCount =
-                        '\n'.allMatches(value.text).length + 1;
+                    final lineCount = '\n'.allMatches(value.text).length + 1;
                     return Container(
                       width: 36,
                       padding: const EdgeInsets.only(top: 12),
@@ -664,16 +688,14 @@ stop
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: primary.withOpacity(0.10),
+          color: primary.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: primary.withOpacity(0.3)),
+          border: Border.all(color: primary.withValues(alpha: 0.3)),
         ),
         child: Text(
           label,
           style: TextStyle(
-              fontSize: 12,
-              color: primary,
-              fontWeight: FontWeight.w500),
+              fontSize: 12, color: primary, fontWeight: FontWeight.w500),
         ),
       ),
     );
@@ -695,8 +717,8 @@ stop
             decoration: InputDecoration(
               hintText: '输入图的标题',
               prefixIcon: const Icon(Icons.title),
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             ),
@@ -717,8 +739,7 @@ stop
                 value: _selectedChapter,
                 isExpanded: true,
                 items: _chapters
-                    .map((c) =>
-                        DropdownMenuItem(value: c, child: Text(c)))
+                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                     .toList(),
                 onChanged: (v) {
                   if (v != null) setState(() => _selectedChapter = v);
@@ -744,8 +765,7 @@ stop
                 items: _diagramTypes
                     .map((t) => DropdownMenuItem(
                           value: t,
-                          child: Text(
-                              _diagramTypeLabels[t] ?? t),
+                          child: Text(_diagramTypeLabels[t] ?? t),
                         ))
                     .toList(),
                 onChanged: (v) {
@@ -765,8 +785,8 @@ stop
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: primary.withOpacity(0.05),
-                border: Border.all(color: primary.withOpacity(0.2)),
+                color: primary.withValues(alpha: 0.05),
+                border: Border.all(color: primary.withValues(alpha: 0.2)),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
@@ -774,8 +794,8 @@ stop
                   Expanded(
                     child: Text(
                       _renderedUrl!,
-                      style: TextStyle(
-                          fontSize: 11, color: Colors.grey.shade600),
+                      style:
+                          TextStyle(fontSize: 11, color: Colors.grey.shade600),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -786,8 +806,7 @@ stop
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     onPressed: () {
-                      Clipboard.setData(
-                          ClipboardData(text: _renderedUrl!));
+                      Clipboard.setData(ClipboardData(text: _renderedUrl!));
                       _showSnack('URL 已复制', success: true);
                     },
                   ),
@@ -844,8 +863,7 @@ stop
   Widget _sectionLabel(String text) {
     return Text(
       text,
-      style: const TextStyle(
-          fontWeight: FontWeight.w600, fontSize: 14),
+      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
     );
   }
 }

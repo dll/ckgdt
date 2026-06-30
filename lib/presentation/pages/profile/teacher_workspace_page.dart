@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../core/error_handler.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/course_context_service.dart';
@@ -15,7 +15,9 @@ import '../analytics/agent_calls_dashboard_page.dart';
 import '../graph/knowledge_graph_page.dart';
 import '../admin/teaching_manage_page.dart';
 import '../admin/lab_task_manage_page.dart';
+import '../admin/grade_entry_center_page.dart';
 import '../achievement/achievement_page.dart';
+import '../assessment/assessment_page.dart';
 import '../materials/slide_generator_page.dart';
 import '../materials/puml_manager_page.dart';
 import '../materials/materials_hub_page.dart';
@@ -23,6 +25,8 @@ import '../admin/repo_analytics_page.dart';
 import '../materials/courseware_workshop_page.dart';
 import '../classroom/classroom_page.dart';
 import '../sync/data_sync_page.dart';
+import '../settings/course_manage_page.dart';
+import '../works/works_page.dart';
 
 import '../../../core/constants/role_guard.dart';
 
@@ -46,6 +50,8 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
   int _graphCount = 0;
   int _questionCount = 0;
   int _resourceCount = 0;
+  String _courseName = CourseContextService.defaultCourseName;
+  int _chapterCount = CourseContextService.defaultCourseChapters.length;
 
   // ── 教师工作量数据 ─────────────────────────────────────────────────
   /// 我已批阅的实验/作业总数（含 lab_submissions、project_scores 中我打过分的）
@@ -70,6 +76,7 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
     setState(() => _isLoading = true);
     try {
       final db = await DatabaseHelper.instance.database;
+      final course = await _courseContext.getActiveCourse();
 
       final studentResult = await db.rawQuery(
         "SELECT COUNT(*) as count FROM users WHERE role='student'",
@@ -95,6 +102,12 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
         _graphCount = (graphResult.first['count'] as int?) ?? 0;
         _questionCount = (questionResult.first['count'] as int?) ?? 0;
         _resourceCount = (resourceResult.first['count'] as int?) ?? 0;
+        _courseName = course.name.trim().isNotEmpty
+            ? course.name.trim()
+            : CourseContextService.defaultCourseName;
+        _chapterCount = course.chapters.isNotEmpty
+            ? course.chapters.length
+            : course.chapterCount;
         _isLoading = false;
       });
 
@@ -141,7 +154,8 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
         _avgScorePercent = s.clamp(0, 100).toInt();
       });
     } catch (e, st) {
-      swallowDebug(e, tag: 'teacher_workspace_page._loadTeacherWorkload', stack: st);
+      swallowDebug(e,
+          tag: 'teacher_workspace_page._loadTeacherWorkload', stack: st);
     }
   }
 
@@ -259,7 +273,7 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.25),
+                color: Colors.white.withValues(alpha: 0.25),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.school, size: 28, color: Colors.white),
@@ -283,7 +297,7 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Text(
@@ -297,6 +311,16 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
                   const SizedBox(height: 6),
                   Text(
                     '工号：${user?.userId ?? ''}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.white70,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '当前课程：$_courseName',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 13,
                       color: Colors.white70,
@@ -453,6 +477,15 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
           ),
         ),
       _ToolItem(
+        icon: Icons.tune,
+        label: '课程管理',
+        color: Colors.blueGrey,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const CourseManagePage()),
+        ),
+      ),
+      _ToolItem(
         icon: Icons.quiz,
         label: '题库管理',
         color: Colors.orange,
@@ -479,6 +512,15 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const LearningAnalyticsPage()),
+        ),
+      ),
+      _ToolItem(
+        icon: Icons.grading,
+        label: '成绩录入',
+        color: Colors.green[700]!,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const GradeEntryCenterPage()),
         ),
       ),
       _ToolItem(
@@ -560,6 +602,24 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const LabTaskManagePage()),
+        ),
+      ),
+      _ToolItem(
+        icon: Icons.assignment_turned_in,
+        label: '考核管理',
+        color: Colors.deepPurple[600]!,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AssessmentPage()),
+        ),
+      ),
+      _ToolItem(
+        icon: Icons.workspaces_outline,
+        label: '作品评价',
+        color: Colors.pink[600]!,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const WorksPage()),
         ),
       ),
       _ToolItem(
@@ -645,7 +705,7 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: tool.color.withOpacity(0.1),
+                    color: tool.color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
@@ -687,7 +747,7 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
       _ActivityItem(
         icon: Icons.quiz,
         title: '题库已就绪',
-        subtitle: '共 $_questionCount 道题目覆盖 6 个章节',
+        subtitle: '共 $_questionCount 道题目覆盖 $_chapterCount 个章节',
         time: '系统统计',
         color: Colors.orange,
       ),
@@ -721,7 +781,7 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: activity.color.withOpacity(0.1),
+                color: activity.color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(

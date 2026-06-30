@@ -6,6 +6,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import '../../ai_service.dart';
 import '../../auth_service.dart';
 import '../../video_frame_extractor.dart';
+import '../../course_context_service.dart';
 import '../../../core/dev_paths.dart';
 import '../../../data/local/ai_history_dao.dart';
 import '../../../data/local/assessment_dao.dart';
@@ -668,8 +669,9 @@ class GradingAgent extends BaseAgent {
     int maxScore = 100,
     String? requirements,
   }) async {
-    final guidance = await _loadGuidanceSnippet(const [
-      'data/courseout/移动应用开发_模板/实验任务.md',
+    final courseId = await CourseContextService().activeCourseId();
+    final guidance = await _loadGuidanceSnippet([
+      'data/courseout/${courseId}_模板/实验任务.md',
       'assets/graphs/06-学习图谱/实验学习指导图谱.md',
     ]);
     final prompt = StringBuffer();
@@ -802,8 +804,9 @@ class GradingAgent extends BaseAgent {
     String? projectName,
     String? groupName,
   }) async {
+    final courseId = await CourseContextService().activeCourseId();
     final guidance = await _loadGuidanceSnippet([
-      'data/考核/移动应用开发综合考核方案.md',
+      'data/考核/$courseId综合考核方案.md',
       _reportGuidePath(reportType),
       'data/考核/考核报告体系说明.md',
     ]);
@@ -1078,9 +1081,10 @@ class GradingAgent extends BaseAgent {
     int frameCount = 5,
   }) async {
     // 1. 加载考核材料（任意一份失败都 fallback 空）
+    final courseId = await CourseContextService().activeCourseId();
     String? materialMd;
     try {
-      materialMd = await rootBundle.loadString('data/考核/移动应用开发综合考核方案.md');
+      materialMd = await rootBundle.loadString('data/考核/$courseId综合考核方案.md');
       // 太长截断（保留头尾）—— GLM-4V 上下文有限
       if (materialMd.length > 6000) {
         final head = materialMd.substring(0, 3500);

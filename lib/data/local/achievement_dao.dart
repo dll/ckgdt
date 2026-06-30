@@ -44,7 +44,7 @@ class AchievementDao {
 
   /// 读取某课程的目标定义行（按 idx 升序）。无则返回空列表。
   Future<List<Map<String, dynamic>>> getCourseObjectives(
-      [String courseName = '移动应用开发']) async {
+      String courseName) async {
     final db = await DatabaseHelper.instance.database;
     return db.query('course_objectives',
         where: 'course_name = ?', whereArgs: [courseName], orderBy: 'idx ASC');
@@ -59,7 +59,7 @@ class AchievementDao {
     final now = DateTime.now().toIso8601String();
     final normalizedCourseName = courseName.trim().isNotEmpty
         ? courseName.trim()
-        : CourseContextService.defaultCourseName;
+        : '当前课程';
     await db.transaction((txn) async {
       await txn.delete('course_objectives',
           where: 'course_name = ?', whereArgs: [normalizedCourseName]);
@@ -120,7 +120,7 @@ class AchievementDao {
   }) async {
     final effective = courseName ??
         await _courseContext.activeCourseName(
-          fallback: CourseContextService.defaultCourseName,
+          fallback: '当前课程',
         );
     if (effective.isNotEmpty) {
       AchievementContext.instance.courseName = effective;
@@ -393,7 +393,7 @@ class AchievementDao {
     final batch = await getBatch(batchId);
     if (batch == null) return '批次不存在';
 
-    final courseName = batch['course_name'] ?? '移动应用开发';
+    final courseName = batch['course_name'] ?? '当前课程';
     final className = batch['class_name'] ?? '软件23';
     final scores = await getScores(batchId);
     final avgAchievements = await calculateClassAverage(batchId);
@@ -542,14 +542,17 @@ class AchievementDao {
   /// addBatch — 命名参数便捷方法
   Future<int> addBatch({
     required String batchName,
-    String courseName = '移动应用开发',
+    String courseName = '',
     String className = '软件23',
     String semester = '',
     String teacherId = '',
-  }) {
+  }) async {
+    final effectiveCourseName = courseName.isNotEmpty
+        ? courseName
+        : await _courseContext.activeCourseName();
     return createBatch({
       'batch_name': batchName,
-      'course_name': courseName,
+      'course_name': effectiveCourseName,
       'class_name': className,
       'semester': semester,
       'teacher_id': teacherId,
@@ -635,7 +638,7 @@ class AchievementDao {
     try {
       final batch = await getBatch(batchId);
       // 1. course_objectives（大纲权威源）
-      final courseName = batch?['course_name'] as String? ?? '移动应用开发';
+      final courseName = batch?['course_name'] as String? ?? '当前课程';
       final objs = await getCourseObjectives(courseName);
       if (objs.isNotEmpty) {
         final w = List<double>.filled(4, 0);
@@ -671,7 +674,7 @@ class AchievementDao {
   Future<List<double>> resolveObjectiveFullMarks(int batchId) async {
     try {
       final batch = await getBatch(batchId);
-      final courseName = batch?['course_name'] as String? ?? '移动应用开发';
+      final courseName = batch?['course_name'] as String? ?? '当前课程';
       final objs = await getCourseObjectives(courseName);
       if (objs.isNotEmpty) {
         final marks = List<double>.filled(4, 0);
@@ -708,7 +711,7 @@ class AchievementDao {
     );
     try {
       final batch = await getBatch(batchId);
-      final courseName = batch?['course_name'] as String? ?? '移动应用开发';
+      final courseName = batch?['course_name'] as String? ?? '当前课程';
       final objs = await getCourseObjectives(courseName);
       if (objs.isEmpty) return fallback;
 
@@ -1445,6 +1448,73 @@ class AchievementDao {
     ''', scope.args);
   }
 
+  /// MAD 课程默认章节关键词（回落用）。
+  static const Map<int, List<String>> _defaultChapterKeywords = {
+    1: ['技术体系', '移动应用', '全景', '概述', '第一章', '开发环境'],
+    2: ['原生开发', 'Android', 'iOS', 'Kotlin', 'Swift', '第二章'],
+    3: ['跨平台', 'Flutter', 'React Native', 'Uniapp', 'MAUI', '混合开发', '第三章'],
+    4: ['小程序', '微信', 'WXML', 'WXSS', 'Taro', '第四章'],
+    5: ['鸿蒙', 'HarmonyOS', 'ArkUI', 'ArkTS', '分布式', '多端', '第五章'],
+    6: ['综合', '实践', '项目', 'Git', '团队', '第六章'],
+  };
+
+  /// 根据课程动态生成章节关键词映射。非 MAD 课程按章节标题提取。
+  static Future<Map<int, List<String>>> chapterKeywords(
+      Database db, String courseId) async {
+    final chapters = await _getCourseChapters(db, courseId);
+    if (chapters.isEmpty) return _defaultChapterKeywords;
+    if (chapters.length == _defaultChapterKeywords.length) {
+      final isMad = chapters.every((c) =>
+          _defaultChapterKeywords.values.any((kws) => kws.any((kw) => c.contains(kw))));
+      if (isMad) return _defaultChapterKeywords;
+    }
+    final result = <int, List<String>>{};
+    for (var i = 0; i < chapters.length; i++) {
+      final keywords = _extractKeywords(chapters[i]);
+      result[i + 1] = ['第${i + 1}章', ...keywords];
+    }
+    return result;
+  }
+
+  static Future<List<String>> _getCourseChapters(
+      Database db, String courseId) async {
+    try {
+      final rows = await db.query('courses',
+          columns: ['chapters'],
+          where: courseId.isNotEmpty ? 'id = ?' : 'is_active = 1',
+          whereArgs: courseId.isNotEmpty ? [courseId] : null,
+          limit: 1);
+      if (rows.isEmpty) return [];
+      final raw = rows.first['chapters'];
+      if (raw == null) return [];
+      if (raw is List) return raw.cast<String>();
+      if (raw is String && raw.trim().startsWith('[')) {
+        try {
+          final decoded = jsonDecode(raw);
+          if (decoded is List) {
+            return decoded.map((e) => e.toString().trim()).where((s) => s.isNotEmpty).toList();
+          }
+        } catch (_) {
+          // ignore parse error, return empty
+        }
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static List<String> _extractKeywords(String chapterTitle) {
+    final keywords = <String>[];
+    for (final word in chapterTitle.split(RegExp(r'[\s、，,./]'))) {
+      final trimmed = word.trim();
+      if (trimmed.length >= 2 && !RegExp(r'^[第\d章]+$').hasMatch(trimmed)) {
+        keywords.add(trimmed);
+      }
+    }
+    return keywords;
+  }
+
   /// 自动建立资源-章节关联（基于关键词匹配）
   Future<int> autoMapResources() async {
     final db = await DatabaseHelper.instance.database;
@@ -1455,15 +1525,8 @@ class AchievementDao {
       whereArgs: scope.args,
     );
 
-    // 章节关键词映射
-    final chapterKeywords = {
-      1: ['技术体系', '移动应用', '全景', '概述', '第一章', '开发环境'],
-      2: ['原生开发', 'Android', 'iOS', 'Kotlin', 'Swift', '第二章'],
-      3: ['跨平台', 'Flutter', 'React Native', 'Uniapp', 'MAUI', '混合开发', '第三章'],
-      4: ['小程序', '微信', 'WXML', 'WXSS', 'Taro', '第四章'],
-      5: ['鸿蒙', 'HarmonyOS', 'ArkUI', 'ArkTS', '分布式', '多端', '第五章'],
-      6: ['综合', '实践', '项目', 'Git', '团队', '第六章'],
-    };
+    final courseId = await _courseContext.activeCourseId();
+    final chapterKeywordsMap = await chapterKeywords(db, courseId);
 
     int count = 0;
     final now = DateTime.now().toIso8601String();
@@ -1475,7 +1538,7 @@ class AchievementDao {
       final desc = (res['description'] as String? ?? '').toLowerCase();
       final combined = '$fileName $filePath $desc';
 
-      for (final entry in chapterKeywords.entries) {
+      for (final entry in chapterKeywordsMap.entries) {
         final chapter = entry.key;
         final keywords = entry.value;
 
@@ -1676,7 +1739,7 @@ class AchievementDao {
     if (scores.isEmpty) return [];
 
     final batch = await getBatch(batchId);
-    final courseName = batch?['course_name']?.toString() ?? '移动应用开发';
+    final courseName = batch?['course_name']?.toString() ?? '当前课程';
     final objectives = await getCourseObjectives(courseName);
     final weights = await resolveObjectiveWeights(batchId);
     final fullMarks = await resolveObjectiveFullMarks(batchId);
