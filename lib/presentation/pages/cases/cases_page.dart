@@ -136,7 +136,8 @@ class _CasesPageState extends State<CasesPage> {
               isWeb ? (line) => _tryOpenBrowserFromLog(line, info.url!) : null,
         );
       }
-    } catch (e) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'CasesPage.startCase', stack: st);
       _toast('启动失败: $e', color: Colors.red);
     }
     if (mounted) setState(() {});
@@ -187,7 +188,9 @@ class _CasesPageState extends State<CasesPage> {
       await _procMgr.stop(_procKey(caseId));
       // 停止后清除 URL 打开记录，方便下次重新启动自动打开浏览器
       _openedUrls.clear();
-    } catch (_) {}
+    } catch (e, st) {
+      swallowDebug(e, tag: 'CasesPage.stopCase', stack: st);
+    }
     if (mounted) setState(() {});
   }
 
@@ -417,7 +420,9 @@ class _CasesPageState extends State<CasesPage> {
                       detectType();
                       setDialogState(() {});
                     }
-                  } catch (_) {}
+                  } catch (e, st) {
+                    swallowDebug(e, tag: 'CasesPage.pickCaseDir', stack: st);
+                  }
                 },
                 child: const Text('浏览...',
                     style: TextStyle(color: Colors.white70)),
@@ -451,7 +456,9 @@ class _CasesPageState extends State<CasesPage> {
     await _stopCase(id);
     try {
       await _caseDao.deleteCase(id);
-    } catch (_) {}
+    } catch (e, st) {
+      swallowDebug(e, tag: 'CasesPage.deleteCase', stack: st);
+    }
     await _loadCases();
   }
 
@@ -624,7 +631,8 @@ class _CasesPageState extends State<CasesPage> {
           runInShell: true);
       final path = (picked.stdout as String).trim();
       return path.isEmpty ? null : path;
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'CasesPage.pickScreenshot', stack: st);
       return null;
     }
   }

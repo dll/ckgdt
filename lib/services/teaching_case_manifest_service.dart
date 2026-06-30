@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import '../core/error_handler.dart';
 import '../core/utils/path_utils.dart';
 
 class TeachingCaseManifest {
@@ -53,7 +54,8 @@ class TeachingCaseManifestService {
       final baseDir = File(manifest).parent.path;
       final parsed = _parse(content, manifest, baseDir);
       return parsed.isEmpty ? null : parsed;
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'TeachingCaseManifestService.load', stack: st);
       return null;
     }
   }

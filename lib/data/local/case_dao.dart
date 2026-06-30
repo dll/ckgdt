@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../core/error_handler.dart';
 import 'database_helper.dart';
 import '../../services/course_context_service.dart';
 import '../../services/project_detector.dart';
@@ -31,8 +32,9 @@ class CaseDao {
           updated_at TEXT
         )
       ''');
-    } catch (e) {
+    } catch (e, st) {
       // 表已存在或创建失败，尝试用旧 schema 重建
+      swallowDebug(e, tag: 'CaseDao.ensureTable.create', stack: st);
       debugPrint(
           '=== CaseDao._ensureTable: $e — falling back to minimal schema');
       try {
@@ -57,56 +59,115 @@ class CaseDao {
           'updated_at TEXT'
           ')',
         );
-      } catch (_) {}
+      } catch (e2, st2) {
+        swallowDebug(e2, tag: 'CaseDao.ensureTable.fallback', stack: st2);
+      }
     }
     // 兼容旧表：补齐缺失列
+    await _addColumnIfMissing('course_id', 'TEXT');
     try {
       await db.execute(
           'ALTER TABLE teaching_cases ADD COLUMN project_type TEXT DEFAULT ""');
-    } catch (_) {}
+    } catch (e) {
+      swallow(e, tag: 'CaseDao.addProjectType');
+    }
     try {
       await db.execute(
           'ALTER TABLE teaching_cases ADD COLUMN auto_detect INTEGER DEFAULT 1');
-    } catch (_) {}
+    } catch (e) {
+      swallow(e, tag: 'CaseDao.addAutoDetect');
+    }
     try {
       await db
           .execute('ALTER TABLE teaching_cases ADD COLUMN entry_command TEXT');
-    } catch (_) {}
+    } catch (e) {
+      swallow(e, tag: 'CaseDao.addEntryCommand');
+    }
     try {
       await db.execute('ALTER TABLE teaching_cases ADD COLUMN full_name TEXT');
-    } catch (_) {}
+    } catch (e) {
+      swallow(e, tag: 'CaseDao.addFullName');
+    }
     try {
       await db
           .execute('ALTER TABLE teaching_cases ADD COLUMN description TEXT');
-    } catch (_) {}
+    } catch (e) {
+      swallow(e, tag: 'CaseDao.addDescription');
+    }
     try {
       await db.execute('ALTER TABLE teaching_cases ADD COLUMN repo_url TEXT');
-    } catch (_) {}
+    } catch (e) {
+      swallow(e, tag: 'CaseDao.addRepoUrl');
+    }
     try {
       await db
           .execute('ALTER TABLE teaching_cases ADD COLUMN demo_app_type TEXT');
-    } catch (_) {}
+    } catch (e) {
+      swallow(e, tag: 'CaseDao.addDemoAppType');
+    }
     try {
       await db
           .execute('ALTER TABLE teaching_cases ADD COLUMN launch_method TEXT');
-    } catch (_) {}
+    } catch (e) {
+      swallow(e, tag: 'CaseDao.addLaunchMethod');
+    }
     try {
       await db.execute('ALTER TABLE teaching_cases ADD COLUMN view_steps TEXT');
-    } catch (_) {}
+    } catch (e) {
+      swallow(e, tag: 'CaseDao.addViewSteps');
+    }
     try {
       await db
           .execute('ALTER TABLE teaching_cases ADD COLUMN feature_intro TEXT');
-    } catch (_) {}
+    } catch (e) {
+      swallow(e, tag: 'CaseDao.addFeatureIntro');
+    }
     try {
       await db.execute(
           'ALTER TABLE teaching_cases ADD COLUMN screenshot_path TEXT');
-    } catch (_) {}
+    } catch (e) {
+      swallow(e, tag: 'CaseDao.addScreenshotPath');
+    }
     try {
       await db.execute('ALTER TABLE teaching_cases ADD COLUMN created_at TEXT');
-    } catch (_) {}
+    } catch (e) {
+      swallow(e, tag: 'CaseDao.addCreatedAt');
+    }
     try {
       await db.execute('ALTER TABLE teaching_cases ADD COLUMN updated_at TEXT');
-    } catch (_) {}
+    } catch (e) {
+      swallow(e, tag: 'CaseDao.addUpdatedAt');
+    }
+
+    await _backfillCourseId();
+  }
+
+  Future<void> _addColumnIfMissing(String name, String definition) async {
+    final db = await DatabaseHelper.instance.database;
+    try {
+      final cols = await db.rawQuery('PRAGMA table_info(teaching_cases)');
+      final exists = cols.any((c) => c['name'] == name);
+      if (!exists) {
+        await db
+            .execute('ALTER TABLE teaching_cases ADD COLUMN $name $definition');
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'CaseDao.addColumn.$name', stack: st);
+    }
+  }
+
+  Future<void> _backfillCourseId() async {
+    final db = await DatabaseHelper.instance.database;
+    final courseId = await _courseContext.activeCourseId();
+    try {
+      await db.update(
+        'teaching_cases',
+        {'course_id': courseId},
+        where: "course_id IS NULL OR course_id = ''",
+      );
+    } catch (e, st) {
+      swallowDebug(e, tag: 'CaseDao.backfillCourseId', stack: st);
+    }
   }
 
   Future<List<Map<String, dynamic>>> getCases() async {
@@ -163,13 +224,28 @@ class CaseDao {
   }
 
   Future<int> updateCase(int id, Map<String, dynamic> data) async {
+    await _ensureTable();
     final db = await DatabaseHelper.instance.database;
+    final courseId = await _courseContext.activeCourseId();
+    data.remove('id');
+    data['course_id'] = courseId;
     data['updated_at'] = DateTime.now().toIso8601String();
-    return db.update('teaching_cases', data, where: 'id = ?', whereArgs: [id]);
+    return db.update(
+      'teaching_cases',
+      data,
+      where: 'id = ? AND course_id = ?',
+      whereArgs: [id, courseId],
+    );
   }
 
   Future<int> deleteCase(int id) async {
+    await _ensureTable();
     final db = await DatabaseHelper.instance.database;
-    return db.delete('teaching_cases', where: 'id = ?', whereArgs: [id]);
+    final courseId = await _courseContext.activeCourseId();
+    return db.delete(
+      'teaching_cases',
+      where: 'id = ? AND course_id = ?',
+      whereArgs: [id, courseId],
+    );
   }
 }

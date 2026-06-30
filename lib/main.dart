@@ -29,6 +29,7 @@ import 'services/auth_service.dart';
 import 'services/update_service.dart';
 import 'services/notification_service.dart';
 import 'presentation/pages/profile/virtual_twin_page.dart';
+import 'l10n/gen/app_localizations.dart';
 
 // 条件导入：Web 端使用 ffi_web，桌面端使用 ffi
 import 'platform/platform_init_stub.dart'
@@ -223,6 +224,8 @@ class _MyAppState extends State<MyApp> {
         theme: ThemeManager.light(_colorIndex),
         darkTheme: ThemeManager.dark(_colorIndex),
         themeMode: _themeMode,
+        supportedLocales: AppL10n.supportedLocales,
+        localizationsDelegates: AppL10n.localizationsDelegates,
         home: Scaffold(
           body: Container(
             decoration: BoxDecoration(
@@ -295,8 +298,8 @@ class _MyAppState extends State<MyApp> {
         darkTheme: ThemeManager.dark(_colorIndex),
         navigatorKey: _navigatorKey,
         locale: _locale,
-        supportedLocales: const [Locale("zh"), Locale("en")],
-        localizationsDelegates: const [],
+        supportedLocales: AppL10n.supportedLocales,
+        localizationsDelegates: AppL10n.localizationsDelegates,
         home: const LoginPage(),
         builder: (context, child) {
           // 用 RepaintBoundary 包裹，供截图用

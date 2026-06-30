@@ -55,4 +55,15 @@ if [ "${added_withopacity:-0}" -gt 0 ]; then
   fail "暂存改动新增了 ${added_withopacity} 处 .withOpacity( —— 应为 .withValues(alpha:)（疑似 ohos_patch 降级）。"
 fi
 
+# 5) MaterialApp 本地化代理契约：登录页 TextField 依赖
+#    GlobalMaterialLocalizations。历史上多次把 localizationsDelegates 改成
+#    const []，analyze 不报错，但运行期登录页出现灰色错误占位。
+#    只在相关文件进入暂存区时运行，避免所有提交都被 Flutter 测试拖慢。
+staged_l10n_contract=$(git diff --cached --name-only -- \
+  lib/main.dart test/app_localization_contract_test.dart)
+if [ -n "$staged_l10n_contract" ]; then
+  echo "• [localization-contract] checking MaterialApp localization delegates..."
+  flutter test test/app_localization_contract_test.dart || exit 1
+fi
+
 exit 0
