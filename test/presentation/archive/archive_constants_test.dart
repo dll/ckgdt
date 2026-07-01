@@ -60,7 +60,9 @@ void main() {
 
     expect(examDocs.map((d) => d.key), isNot(contains('all_materials')));
     expect(assessDocs.map((d) => d.key), isNot(contains('all_materials')));
+    expect(examDocs.map((d) => d.key), contains('print_report'));
     expect(examDocs.map((d) => d.key), contains('archive_form'));
+    expect(assessDocs.map((d) => d.key), isNot(contains('print_report')));
     expect(assessDocs.map((d) => d.key), contains('archive_form'));
   });
 }

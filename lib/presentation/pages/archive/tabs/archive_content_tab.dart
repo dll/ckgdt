@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -70,10 +70,20 @@ class _ArchiveContentTabState extends State<ArchiveContentTab> {
       // 最近修改的排前面
       files.sort((a, b) => b.modified.compareTo(a.modified));
 
-      if (mounted) setState(() { _files = files; _loading = false; });
+      if (mounted) {
+        setState(() {
+          _files = files;
+          _loading = false;
+        });
+      }
     } catch (e, st) {
       swallowDebug(e, tag: 'ArchiveContentTab._loadFiles', stack: st);
-      if (mounted) setState(() { _error = '读取归档目录失败：$e'; _loading = false; });
+      if (mounted) {
+        setState(() {
+          _error = '读取归档目录失败：$e';
+          _loading = false;
+        });
+      }
     }
   }
 
@@ -86,26 +96,48 @@ class _ArchiveContentTabState extends State<ArchiveContentTab> {
   IconData _iconForFile(String name) {
     final ext = name.split('.').last.toLowerCase();
     switch (ext) {
-      case 'docx': return Icons.description;
-      case 'doc': return Icons.description;
-      case 'xlsx': return Icons.table_chart;
-      case 'xls': return Icons.table_chart;
-      case 'md': return Icons.code;
-      case 'webp': case 'png': case 'jpg': case 'jpeg': return Icons.image;
-      case 'zip': return Icons.folder_zip;
-      default: return Icons.insert_drive_file;
+      case 'docx':
+        return Icons.description;
+      case 'doc':
+        return Icons.description;
+      case 'xlsx':
+        return Icons.table_chart;
+      case 'xls':
+        return Icons.table_chart;
+      case 'md':
+        return Icons.code;
+      case 'webp':
+      case 'png':
+      case 'jpg':
+      case 'jpeg':
+        return Icons.image;
+      case 'zip':
+        return Icons.folder_zip;
+      default:
+        return Icons.insert_drive_file;
     }
   }
 
   Color _colorForFile(String name) {
     final ext = name.split('.').last.toLowerCase();
     switch (ext) {
-      case 'docx': case 'doc': return Colors.blue;
-      case 'xlsx': case 'xls': return Colors.green;
-      case 'md': return Colors.orange;
-      case 'webp': case 'png': case 'jpg': case 'jpeg': return Colors.purple;
-      case 'zip': return Colors.brown;
-      default: return Colors.grey;
+      case 'docx':
+      case 'doc':
+        return Colors.blue;
+      case 'xlsx':
+      case 'xls':
+        return Colors.green;
+      case 'md':
+        return Colors.orange;
+      case 'webp':
+      case 'png':
+      case 'jpg':
+      case 'jpeg':
+        return Colors.purple;
+      case 'zip':
+        return Colors.brown;
+      default:
+        return Colors.grey;
     }
   }
 
@@ -124,7 +156,9 @@ class _ArchiveContentTabState extends State<ArchiveContentTab> {
             children: [
               Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
               const SizedBox(height: 12),
-              Text(_error!, style: const TextStyle(fontSize: 14), textAlign: TextAlign.center),
+              Text(_error!,
+                  style: const TextStyle(fontSize: 14),
+                  textAlign: TextAlign.center),
               const SizedBox(height: 12),
               FilledButton.icon(
                 onPressed: _loadFiles,
@@ -144,7 +178,8 @@ class _ArchiveContentTabState extends State<ArchiveContentTab> {
           children: [
             Icon(Icons.folder_open, size: 48, color: Colors.grey[400]),
             const SizedBox(height: 12),
-            Text('归档目录为空', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+            Text('归档目录为空',
+                style: TextStyle(fontSize: 14, color: Colors.grey[600])),
           ],
         ),
       );
@@ -163,11 +198,17 @@ class _ArchiveContentTabState extends State<ArchiveContentTab> {
                 children: [
                   Icon(Icons.archive, size: 40, color: primary),
                   const SizedBox(height: 8),
-                  Text('归档材料总览', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: primary)),
+                  Text('归档材料总览',
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: primary)),
                   const SizedBox(height: 4),
-                  Text('共 ${_files.length} 个文件', style: TextStyle(fontSize: 13, color: Colors.grey[600])),
+                  Text('共 ${_files.length} 个文件',
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600])),
                   const SizedBox(height: 4),
-                  Text(_archiveRoot, style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                  Text(_archiveRoot,
+                      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                       textAlign: TextAlign.center),
                 ],
               ),
@@ -185,11 +226,12 @@ class _ArchiveContentTabState extends State<ArchiveContentTab> {
                 dense: true,
                 leading: CircleAvatar(
                   radius: 18,
-                  backgroundColor: color.withOpacity(0.15),
+                  backgroundColor: color.withValues(alpha: 0.15),
                   child: Icon(icon, size: 18, color: color),
                 ),
                 title: Text(entry.name,
-                    style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis),
+                    style: const TextStyle(fontSize: 12),
+                    overflow: TextOverflow.ellipsis),
                 subtitle: Text(
                     '${entry.relPath} · ${_formatSize(entry.size)} · ${entry.modified.toString().substring(0, 16)}',
                     style: TextStyle(fontSize: 11, color: Colors.grey[500]),

@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -280,7 +280,7 @@ class _ArchiveMaterialsChecklistState extends State<ArchiveMaterialsChecklist> {
         filePaths: outputPaths,
         prefix: '一键结课',
       );
-      await _saveClosureForm(
+      await _saveClosureDocuments(
         docs: selectedDocs,
         outputPaths: outputPaths,
         zipPath: zipPath,
@@ -323,30 +323,59 @@ class _ArchiveMaterialsChecklistState extends State<ArchiveMaterialsChecklist> {
     }
   }
 
-  Future<void> _saveClosureForm({
+  Future<void> _saveClosureDocuments({
     required List<ArchiveDocument> docs,
     required List<String> outputPaths,
     required String zipPath,
   }) async {
+    final archiveDefs = docsForPeriod(widget.courseType, 'archive');
+    if (archiveDefs.any((def) => def.key == 'print_report')) {
+      await _saveClosureSummaryDoc(
+        documentType: 'print_report',
+        title: '结课印刷审批表',
+        content: _printReportContent(
+          docs: docs,
+          outputPaths: outputPaths,
+          zipPath: zipPath,
+          now: DateTime.now(),
+        ),
+        materialCount: docs.length,
+      );
+    }
+    if (archiveDefs.any((def) => def.key == 'archive_form')) {
+      await _saveClosureSummaryDoc(
+        documentType: 'archive_form',
+        title: '结课归档确认表',
+        content: _closureFormContent(
+          docs: docs,
+          outputPaths: outputPaths,
+          zipPath: zipPath,
+          now: DateTime.now(),
+        ),
+        materialCount: docs.length,
+      );
+    }
+  }
+
+  Future<void> _saveClosureSummaryDoc({
+    required String documentType,
+    required String title,
+    required String content,
+    required int materialCount,
+  }) async {
     final existing = await widget.dao.getDocuments(
       period: 'archive',
-      documentType: 'archive_form',
+      documentType: documentType,
     );
     for (final duplicate in existing.skip(1)) {
       final id = duplicate.id;
       if (id != null) await widget.dao.deleteDocument(id);
     }
     final now = DateTime.now();
-    final content = _closureFormContent(
-      docs: docs,
-      outputPaths: outputPaths,
-      zipPath: zipPath,
-      now: now,
-    );
     final doc = ArchiveDocument(
       id: existing.isNotEmpty ? existing.first.id : null,
-      title: '结课归档确认表',
-      documentType: 'archive_form',
+      title: title,
+      documentType: documentType,
       period: 'archive',
       courseType: widget.courseType,
       status: 'archived',
@@ -360,7 +389,7 @@ class _ArchiveMaterialsChecklistState extends State<ArchiveMaterialsChecklist> {
             key: 'closure.all_selected_reviewed',
             dimension: '结课审核',
             level: '✅ 通过',
-            evidence: '所选 ${docs.length} 份材料均已审核通过或已归档。',
+            evidence: '所选 $materialCount 份材料均已审核通过或已归档。',
             suggestion: '结课包已生成，可按学校要求提交。',
           ),
         ],
@@ -370,6 +399,48 @@ class _ArchiveMaterialsChecklistState extends State<ArchiveMaterialsChecklist> {
       updatedAt: now.toIso8601String(),
     );
     await widget.dao.saveDocument(doc);
+  }
+
+  String _printReportContent({
+    required List<ArchiveDocument> docs,
+    required List<String> outputPaths,
+    required String zipPath,
+    required DateTime now,
+  }) {
+    final typeCounts = <String, int>{};
+    for (final doc in docs) {
+      typeCounts[doc.period] = (typeCounts[doc.period] ?? 0) + 1;
+    }
+    return '''
+# 结课印刷审批表
+
+**申请时间**：${now.toIso8601String().substring(0, 16)}
+**课程类型**：${isExamCourse(widget.courseType) ? '考试' : '考查'}
+**申请材料数**：${docs.length} 份
+**输出文件数**：${outputPaths.length} 个
+**结课压缩包**：$zipPath
+
+## 一、印刷/提交范围
+
+| 阶段 | 材料数量 | 说明 |
+|------|----------|------|
+| 期初 | ${typeCounts['beginning'] ?? 0} | 教学任务、大纲、进度、教案等期初材料 |
+| 期中 | ${typeCounts['midterm'] ?? 0} | 进度检查、作业批阅统计、阶段考核材料 |
+| 期末 | ${typeCounts['final'] ?? 0} | 课程档案袋 00-12 正式材料 |
+
+## 二、审批核验
+
+| 核验项 | 结论 | 说明 |
+|--------|------|------|
+| 材料完整性 | 通过 | 所选材料已覆盖期初、期中、期末必备项 |
+| 审核状态 | 通过 | 所选材料均已审核通过或已归档 |
+| 文件输出 | 通过 | 已按学校命名规则输出并生成结课包 |
+| 原件保真 | 通过 | Word/PDF/Excel 等正式原件按原格式纳入归档 |
+
+## 三、审批意见
+
+同意按结课归档包提交/印刷。若学院另有纸质签字盖章要求，请以本表为清单依据，结合原始 Word/PDF/Excel 文件完成线下审批。
+''';
   }
 
   String _closureFormContent({
@@ -640,9 +711,9 @@ class _ArchiveMaterialsChecklistState extends State<ArchiveMaterialsChecklist> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.08),
+            color: color.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: color.withOpacity(0.20)),
+            border: Border.all(color: color.withValues(alpha: 0.20)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -747,9 +818,9 @@ class _ArchiveMaterialsChecklistState extends State<ArchiveMaterialsChecklist> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.10),
+        color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withOpacity(0.25)),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
       child: Text(
         label,
@@ -841,9 +912,9 @@ class _ArchiveMaterialsChecklistState extends State<ArchiveMaterialsChecklist> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
-            color: metricColor.withOpacity(0.08),
+            color: metricColor.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: metricColor.withOpacity(0.20)),
+            border: Border.all(color: metricColor.withValues(alpha: 0.20)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -902,7 +973,7 @@ class _ArchiveMaterialsChecklistState extends State<ArchiveMaterialsChecklist> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
