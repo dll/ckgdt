@@ -62,9 +62,7 @@ void main() {
   });
 
   group('ArchivePackageService selected zip', () {
-    test(
-        'adaptive final catalog archives generated docx instead of old template',
-        () async {
+    test('adaptive final catalog preserves official Word original', () async {
       final oldRoot = ArchivePackageService.outputRoot;
       final temp =
           Directory.systemTemp.createTempSync('archive_adaptive_catalog_');
@@ -95,7 +93,7 @@ void main() {
         );
 
         expect(out, endsWith('.docx'));
-        expect(File(out).readAsBytesSync(), isNot(equals([1, 2, 3])));
+        expect(File(out).readAsBytesSync(), equals([1, 2, 3]));
       } finally {
         ArchivePackageService.outputRoot = oldRoot;
         if (temp.existsSync()) temp.deleteSync(recursive: true);

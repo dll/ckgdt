@@ -421,8 +421,13 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
   bool _canEditMarkdown(ArchiveDocument doc) {
     if ((doc.content ?? '').trim().isEmpty) return false;
     if (doc.documentType == 'teaching_task') return true;
-    if (_shouldUseOriginalSource(doc.documentType, content: doc.content) &&
-        _hasArchiveOriginal(doc.filePath)) {
+    if (_shouldUseOriginalSource(
+          doc.documentType,
+          content: doc.content,
+          sourcePath: doc.filePath,
+        ) &&
+        _hasArchiveOriginal(doc.filePath) &&
+        ArchiveDocumentPolicy.isOriginalReferenceContent(doc.content)) {
       return false;
     }
     return true;
@@ -451,6 +456,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     final loadingText = _shouldUseOriginalSource(
               doc.documentType,
               content: doc.content,
+              sourcePath: doc.filePath,
             ) &&
             _canPreviewOriginalAsPdf(doc.filePath)
         ? '正在按原件版式生成 PDF...'
@@ -514,6 +520,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     if (_shouldUseOriginalSource(
           doc.documentType,
           content: doc.content,
+          sourcePath: sourcePath,
         ) &&
         _canPreviewOriginalAsPdf(sourcePath)) {
       return PandocService.instance.officeFileToPdf(sourcePath!);
@@ -521,6 +528,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     if (_shouldUseOriginalSource(
           doc.documentType,
           content: doc.content,
+          sourcePath: sourcePath,
         ) &&
         _canPreviewOriginalAsImage(sourcePath)) {
       return NativePdfService.instance.imageFileToPdf(sourcePath!);
@@ -876,6 +884,7 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     final loadingText = _shouldUseOriginalSource(
               doc.documentType,
               content: doc.content,
+              sourcePath: doc.filePath,
             ) &&
             _hasArchiveOriginal(doc.filePath)
         ? '正在按学校命名保存原件...'
@@ -948,15 +957,24 @@ class _ArchivePeriodTabState extends State<ArchivePeriodTab> {
     return ArchiveDocumentPolicy.hasArchiveOriginal(sourcePath);
   }
 
-  bool _shouldUseOriginalSource(String docType, {String? content}) {
+  bool _shouldUseOriginalSource(
+    String docType, {
+    String? content,
+    String? sourcePath,
+  }) {
     return ArchiveDocumentPolicy.shouldUseOriginalSource(
       docType,
       content: content,
+      sourcePath: sourcePath,
     );
   }
 
   String _archiveSuccessMessage(ArchiveDocument doc) {
-    if (_shouldUseOriginalSource(doc.documentType, content: doc.content) &&
+    if (_shouldUseOriginalSource(
+          doc.documentType,
+          content: doc.content,
+          sourcePath: doc.filePath,
+        ) &&
         _hasArchiveOriginal(doc.filePath)) {
       final ext =
           p.extension(doc.filePath!).replaceFirst('.', '').toUpperCase();
@@ -2356,6 +2374,11 @@ ${_templateExcerpt(parsed.content)}
     final sourcePath = doc.filePath?.trim() ?? '';
     if (sourcePath.isNotEmpty) {
       final lower = sourcePath.toLowerCase();
+      if (def.key.startsWith('final_') &&
+          _hasArchiveOriginal(sourcePath) &&
+          (doc.content ?? '').trim().isNotEmpty) {
+        return '原件保留，另生成 Markdown 工作稿';
+      }
       if (lower.contains('.fetched.')) return '网页登录自动获取';
       if (lower.contains('${p.separator}模板${p.separator}')) {
         return '模板目录自动识别';
@@ -2984,6 +3007,11 @@ ${chapterTitles.map((t) => '### $t\n- 学习重点：[请填写]\n- 学习建议
     final sourcePath = doc.filePath?.trim() ?? '';
     if (sourcePath.isNotEmpty) {
       final lower = sourcePath.toLowerCase();
+      if (def.key.startsWith('final_') &&
+          _hasArchiveOriginal(sourcePath) &&
+          (doc.content ?? '').trim().isNotEmpty) {
+        return '原件保留 + Markdown编辑';
+      }
       if (lower.contains('.fetched.')) return '网页登录';
       if (lower.contains('${p.separator}模板${p.separator}')) return '模板识别';
       if (lower.contains('${p.separator}源文件${p.separator}')) return '源文件识别';
@@ -4158,6 +4186,7 @@ class _DocumentPreviewSheet extends StatelessWidget {
     if (!ArchiveDocumentPolicy.shouldUseOriginalSource(
       doc.documentType,
       content: doc.content,
+      sourcePath: doc.filePath,
     )) {
       return false;
     }

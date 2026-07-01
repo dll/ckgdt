@@ -56,6 +56,42 @@ void main() {
         ),
         isTrue,
       );
+      expect(
+        ArchiveDocumentPolicy.shouldKeepOriginalTemplate(
+          documentType: 'final_archive_catalog',
+          extension: '.docx',
+        ),
+        isFalse,
+      );
+    });
+
+    test('final archive documents preserve original office file for output',
+        () {
+      final temp = Directory.systemTemp.createTempSync('archive_policy_final_');
+      try {
+        final docx = File(p.join(temp.path, '00-课程档案袋目录.docx'))
+          ..writeAsBytesSync([1, 2, 3]);
+        final doc = ArchiveDocument(
+          title: '期末课程档案袋目录',
+          documentType: 'final_archive_catalog',
+          period: 'final',
+          courseType: 'assess',
+          content: '# 课程档案袋目录\n\n当前课程 Markdown 工作稿',
+          filePath: docx.path,
+        );
+
+        expect(
+          ArchiveDocumentPolicy.shouldUseOriginalSource(
+            doc.documentType,
+            content: doc.content,
+            sourcePath: doc.filePath,
+          ),
+          isTrue,
+        );
+        expect(ArchiveDocumentPolicy.sourceOriginalFile(doc)?.path, docx.path);
+      } finally {
+        if (temp.existsSync()) temp.deleteSync(recursive: true);
+      }
     });
 
     test(

@@ -27,6 +27,9 @@ class ArchiveDocumentPolicy {
     'midterm_exam',
     'midterm_check',
     'midterm_analysis',
+  };
+
+  static const Set<String> finalArchiveDocumentTypes = {
     'final_archive_catalog',
     'final_syllabus',
     'final_syllabus_evaluation',
@@ -34,7 +37,22 @@ class ArchiveDocumentPolicy {
     'final_lesson_plan',
     'final_syllabus_review',
     'final_assessment_review',
+    'final_grade_book',
+    'final_score_register',
     'final_assessment_description',
+    'final_achievement_report',
+    'final_textbook_guide',
+    'final_sample_works',
+  };
+
+  static const Set<String> editableOriginalExtensions = {
+    '.docx',
+    '.md',
+    '.txt',
+    '.html',
+    '.htm',
+    '.mhtml',
+    '.mht',
   };
 
   static const Set<String> preservedOriginalExtensions = {
@@ -83,6 +101,10 @@ class ArchiveDocumentPolicy {
     required String documentType,
     required String extension,
   }) {
+    if (finalArchiveDocumentTypes.contains(documentType) &&
+        editableOriginalExtensions.contains(extension)) {
+      return false;
+    }
     if (contentFirstDocumentTypes.contains(documentType)) return false;
     if (textLikeExtensions.contains(extension)) return false;
     return preservedOriginalExtensions.contains(extension);
@@ -91,7 +113,12 @@ class ArchiveDocumentPolicy {
   static bool shouldUseOriginalSource(
     String documentType, {
     String? content,
+    String? sourcePath,
   }) {
+    if (finalArchiveDocumentTypes.contains(documentType) &&
+        originalFile(sourcePath) != null) {
+      return true;
+    }
     if (contentFirstDocumentTypes.contains(documentType) &&
         !isOriginalReferenceContent(content)) {
       return false;
@@ -124,7 +151,11 @@ class ArchiveDocumentPolicy {
   }
 
   static File? sourceOriginalFile(ArchiveDocument doc) {
-    if (!shouldUseOriginalSource(doc.documentType, content: doc.content)) {
+    if (!shouldUseOriginalSource(
+      doc.documentType,
+      content: doc.content,
+      sourcePath: doc.filePath,
+    )) {
       return null;
     }
     return originalFile(doc.filePath);
