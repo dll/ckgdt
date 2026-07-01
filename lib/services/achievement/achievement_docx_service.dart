@@ -68,7 +68,8 @@ class AchievementDocxService {
           scatterChartPngs: scatterChartPngs,
         );
       } catch (e, st) {
-        swallowDebug(e, tag: 'AchievementDocxService.generateReport', stack: st);
+        swallowDebug(e,
+            tag: 'AchievementDocxService.generateReport', stack: st);
       }
     }
 
@@ -136,7 +137,7 @@ class AchievementDocxService {
         }
       }
     }
-    final candidates = courseFiles.isNotEmpty ? courseFiles : anyFiles;
+    final candidates = courseName.trim().isEmpty ? anyFiles : courseFiles;
     if (candidates.isEmpty) return null;
     candidates.sort((a, b) {
       final an = a.path.contains('评价报告') ? 0 : 1;
@@ -205,6 +206,13 @@ class AchievementDocxService {
     files.forEach((name, content) {
       out.addFile(ArchiveFile(name, content.length, content));
     });
+    if (barChartPng != null || scatterChartPngs.isNotEmpty) {
+      out = _embedChartImages(
+        out,
+        barChartPng: barChartPng,
+        scatterChartPngs: scatterChartPngs,
+      );
+    }
 
     final dir = await OutputPathService.getOutputDirectory();
     final safeName = '${courseName}_${className}_达成评价报告'
@@ -405,7 +413,8 @@ class AchievementDocxService {
   }
 
   /// 向单元格追加文本段落，保留原有内容（含图片）。
-  void _appendTextToCell(XmlElement table, int rowIndex, int cellIndex, String text) {
+  void _appendTextToCell(
+      XmlElement table, int rowIndex, int cellIndex, String text) {
     final rows = _children(table, 'tr');
     if (rowIndex < 0 || rowIndex >= rows.length) return;
     final cells = _children(rows[rowIndex], 'tc');
@@ -763,7 +772,14 @@ class AchievementDocxService {
     _buildAnalysisTable(b, objectives, classStats, analysisText,
         qualitativeText, improvementText, teacherName);
 
-    // 不插入程序生成的图表 — 应当插入 Excel 截图（由用户手动或后续扩展实现）
+    final hasChartImages =
+        barChartPng != null || scatterChartPngs.any((png) => png != null);
+    if (hasChartImages) {
+      _empty(b);
+      _heading(b, '五、课程目标达成度可视化图表');
+      b.write(_chartsCellXml(barChartPng, scatterChartPngs, ''));
+    }
+
     b.write('</w:body></w:document>');
     return b.toString();
   }
@@ -942,15 +958,18 @@ class AchievementDocxService {
     final avgAch = studentValues.isEmpty
         ? 0.0
         : studentValues.reduce((a, b) => a + b) / studentValues.length;
-    final idxVals = List<double>.generate(
-        studentValues.length, (i) => (i + 1).toDouble());
+    final idxVals =
+        List<double>.generate(studentValues.length, (i) => (i + 1).toDouble());
 
     // 更新每个 series 的 numCache: x1,y1(平均线), x2,y2(期望线), x3,y3(学生数据)
     final allNumCaches = _findElementsLocal(doc, 'numCache');
     final cacheData = <List<double>>[
-      idxVals, List<double>.filled(studentValues.length, avgAch),
-      idxVals, List<double>.filled(studentValues.length, expectation),
-      idxVals, studentValues,
+      idxVals,
+      List<double>.filled(studentValues.length, avgAch),
+      idxVals,
+      List<double>.filled(studentValues.length, expectation),
+      idxVals,
+      studentValues,
     ];
     for (int i = 0; i < cacheData.length && i < allNumCaches.length; i++) {
       _setNumCacheData(allNumCaches[i], cacheData[i]);
@@ -959,9 +978,9 @@ class AchievementDocxService {
     // 更新系列名称 (strCache)
     final allStrCaches = _findElementsLocal(doc, 'strCache');
     final serNames = <String>[
-      '\u5e73\u5747\u8fbe\u6210\u5ea6(${avgAch.toStringAsFixed(2)})',  // 平均达成度
-      '\u671f\u671b\u8fbe\u6210\u5ea6(${expectation.toStringAsFixed(2)})',  // 期望达成度
-      '\u5b66\u751f\u8fbe\u6210\u5ea6',  // 学生达成度
+      '\u5e73\u5747\u8fbe\u6210\u5ea6(${avgAch.toStringAsFixed(2)})', // 平均达成度
+      '\u671f\u671b\u8fbe\u6210\u5ea6(${expectation.toStringAsFixed(2)})', // 期望达成度
+      '\u5b66\u751f\u8fbe\u6210\u5ea6', // 学生达成度
     ];
     for (int i = 0; i < serNames.length && i < allStrCaches.length; i++) {
       _setStrCacheData(allStrCaches[i], [serNames[i]]);
@@ -990,8 +1009,7 @@ class AchievementDocxService {
     }
 
     // 移除旧 pt 子元素
-    cache.children.removeWhere(
-        (n) => n is XmlElement && n.name.local == 'pt');
+    cache.children.removeWhere((n) => n is XmlElement && n.name.local == 'pt');
 
     // 添加新 pt 元素
     for (int i = 0; i < values.length; i++) {
@@ -1016,8 +1034,7 @@ class AchievementDocxService {
     }
 
     // 移除旧 pt 子元素
-    cache.children.removeWhere(
-        (n) => n is XmlElement && n.name.local == 'pt');
+    cache.children.removeWhere((n) => n is XmlElement && n.name.local == 'pt');
 
     // 添加新 pt 元素
     for (int i = 0; i < values.length; i++) {
@@ -1030,11 +1047,13 @@ class AchievementDocxService {
     }
   }
 
-  double _studentObjectiveAchievement(Map<String, dynamic> student, int objIdx) {
+  double _studentObjectiveAchievement(
+      Map<String, dynamic> student, int objIdx) {
     // 尝试 field "obj{objIdx}_achievement" 或从 score 计算
     final ach = student['obj${objIdx}_achievement'];
     if (ach is num) return ach.toDouble();
-    final score = student['obj${objIdx}_score'] ?? student['obj${objIdx}_total'];
+    final score =
+        student['obj${objIdx}_score'] ?? student['obj${objIdx}_total'];
     if (score is num) {
       final fullMark = student['obj${objIdx}_full'] is num
           ? (student['obj${objIdx}_full'] as num).toDouble()

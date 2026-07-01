@@ -9,6 +9,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../../../../data/local/achievement_dao.dart';
+import '../../../../services/achievement/achievement_audit_context_service.dart';
 import '../../../../services/achievement/achievement_docx_service.dart';
 import '../../../../services/achievement/achievement_template_excel_service.dart';
 import '../../../../services/achievement/excel_chart_injector.dart';
@@ -683,6 +684,11 @@ class _ReportTabState extends State<ReportTab> {
       }
       buffer.writeln();
 
+      final auditMarkdown = await AchievementAuditContextService.instance
+          .buildAuditMarkdown(batchId: _selectedBatchId, compact: true);
+      buffer.writeln(auditMarkdown);
+      buffer.writeln();
+
       buffer.writeln('---');
       buffer.writeln();
       buffer.writeln('评价教师签字：____________　　日期：$dateStr');
@@ -713,6 +719,25 @@ class _ReportTabState extends State<ReportTab> {
       context: context,
       builder: (ctx) => ReportPreviewDialog(reportText: reportText),
     );
+  }
+
+  Future<void> _showAchievementAudit() async {
+    setState(() => _generatingReport = true);
+    try {
+      final reportText = await AchievementAuditContextService.instance
+          .buildAuditMarkdown(batchId: _selectedBatchId);
+      if (mounted) {
+        setState(() => _generatingReport = false);
+        _showReportDialog(reportText);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _generatingReport = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('达成归档审核失败：$e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   Future<void> _exportDocx() async {
@@ -2419,6 +2444,11 @@ class _ReportTabState extends State<ReportTab> {
                 )
               : const Icon(Icons.description_outlined, size: 18),
           label: const Text('生成Markdown报告'),
+        ),
+        OutlinedButton.icon(
+          onPressed: _generatingReport ? null : _showAchievementAudit,
+          icon: const Icon(Icons.fact_check_outlined, size: 18),
+          label: const Text('达成归档审核'),
         ),
         OutlinedButton.icon(
           onPressed: (_calcResults != null && !_generatingReport)

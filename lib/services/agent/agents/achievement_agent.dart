@@ -2,6 +2,7 @@ import '../../ai_service.dart';
 import '../../../data/local/achievement_dao.dart';
 import '../../../data/local/course_dao.dart';
 import '../../../core/error_handler.dart';
+import '../../achievement/achievement_audit_context_service.dart';
 import '../../achievement/achievement_excel_service.dart';
 import '../agent_model.dart';
 import '../base_agent.dart';
@@ -34,8 +35,8 @@ class AchievementAgent extends BaseAgent {
 
 ### 达成度计算
 - **达成度 = Σ(评价环节成绩 × 环节权重) / 满分**
-- 评价环节：平时(15%) + 实验(30%) + 项目(35%) + 测验(20%)
-- 每个课程目标由不同评价环节的子指标支撑
+- 评价环节、权重、满分必须以当前课程大纲和 course_objectives 表为准
+- 每个课程目标由不同评价环节的子指标支撑，不套用旧课程固定比例
 
 ### 达成等级
 | 等级 | 达成度 | 说明 |
@@ -51,6 +52,7 @@ class AchievementAgent extends BaseAgent {
 3. **改进建议**：针对薄弱目标给出可操作的改进方案
 4. **趋势分析**：对比历届数据，分析达成度变化趋势
 5. **报告生成**：生成符合审核要求的达成度分析报告
+6. **归档审核**：联动期初、期中、期末、结课材料，检查大纲、进度表、课程表、成绩和达成报告是否支撑一键打印归档
 
 ## 输出规范
 - 达成度用表格展示，含目标、权重、得分、等级
@@ -69,6 +71,7 @@ class AchievementAgent extends BaseAgent {
           '成绩管理',
           '导出Word报告',
           '导出Excel',
+          '达成归档审核',
         ],
         requiresAi: true,
         tools: [
@@ -180,6 +183,16 @@ class AchievementAgent extends BaseAgent {
               return buf.toString();
             },
           ),
+          AgentTool(
+            name: 'audit_achievement_readiness',
+            description: '审核当前课程达成材料是否满足期初、期中、期末、结课一键生成、审核、打印、归档要求。',
+            parameters: {'batch_id': '可选，达成度批次 id'},
+            execute: (params) async {
+              final batchId = int.tryParse('${params['batch_id'] ?? ''}');
+              return AchievementAuditContextService.instance
+                  .buildAuditMarkdown(batchId: batchId);
+            },
+          ),
         ],
         usageSteps: [
           '选择 🏆 达成分析师',
@@ -188,6 +201,7 @@ class AchievementAgent extends BaseAgent {
           '上传学生成绩（Excel）或手动录入',
           '查询达成度概览、薄弱分析、改进建议',
           '导出 Word 报告 + Excel 数据',
+          '执行达成归档审核，补齐大纲、进度表、课程表、达成报告和结课审批材料',
         ],
         classicCases: [
           const AgentCase(
@@ -198,25 +212,24 @@ class AchievementAgent extends BaseAgent {
           const AgentCase(
               title: '导入大纲',
               userInput: '导入课程大纲 docx',
-              agentReply:
-                  '请选择大纲文件（docx/md），我将自动提取课程目标…'),
+              agentReply: '请选择大纲文件（docx/md），我将自动提取课程目标…'),
           const AgentCase(
               title: '导出报告',
               userInput: '生成达成度报告',
-              agentReply:
-                  '已生成 Word 达成度评价报告，可在"达成 → 报告"页查看和下载。'),
+              agentReply: '已生成 Word 达成度评价报告，可在"达成 → 报告"页查看和下载。'),
         ],
       );
 
   @override
   List<String> get quickCommands => [
-    '达成度概览',
-    '导入大纲',
-    '生成报告',
-    '改进建议',
-    '课程目标',
-    '一键生课',
-  ];
+        '达成度概览',
+        '导入大纲',
+        '生成报告',
+        '改进建议',
+        '课程目标',
+        '一键生课',
+        '达成材料审核',
+      ];
 
   @override
   Future<AgentMessage> handleMessage(
@@ -232,7 +245,7 @@ class AchievementAgent extends BaseAgent {
       if (_pendingObjectives.isNotEmpty && _allObjectivesComplete()) {
         final result = await _submitSyllabus(explicitCourse);
         return buildReply(
-          '${reply}\n\n${result.message}',
+          '$reply\n\n${result.message}',
           action: result.success
               ? AgentAction(
                   type: 'agent_result',
@@ -284,13 +297,26 @@ class AchievementAgent extends BaseAgent {
     }
 
     final tools = SpecialAgentTools.instance;
+    if (_looksLikeAuditIntent(userMessage)) {
+      final batchId = _extractBatchId(userMessage);
+      final reply = await AchievementAuditContextService.instance
+          .buildAuditMarkdown(batchId: batchId);
+      return buildReply(
+        reply,
+        action: const AgentAction(
+          type: 'inner_tab',
+          params: {'page': 'achievement', 'tab': '报告生成'},
+        ),
+      );
+    }
+
     if (tools.isAchievementReportIntent(userMessage)) {
       try {
         final batchId = _extractBatchId(userMessage);
         final reply = await tools.generateAchievementReport(batchId: batchId);
         return buildReply(
           reply,
-          action: AgentAction(
+          action: const AgentAction(
             type: 'inner_tab',
             params: {'page': 'achievement', 'tab': '报告生成'},
           ),
@@ -311,7 +337,7 @@ class AchievementAgent extends BaseAgent {
         final reply = await tools.generateAchievementReport(batchId: null);
         return buildReply(
           reply,
-          action: AgentAction(
+          action: const AgentAction(
             type: 'inner_tab',
             params: {'page': 'achievement', 'tab': '报告生成'},
           ),
@@ -324,25 +350,8 @@ class AchievementAgent extends BaseAgent {
     // 动态加载课程目标，注入 AI prompt（支持任意课程）
     String objectivesContext = '';
     try {
-      final batches = await AchievementDao().getBatches();
-      if (batches.isNotEmpty) {
-        final courseName = batches.first['course_name']?.toString() ?? '';
-        if (courseName.isNotEmpty) {
-          final objectives =
-              await AchievementDao().getCourseObjectives(courseName);
-          if (objectives.isNotEmpty) {
-            final buf = StringBuffer('当前课程：$courseName\n课程目标：\n');
-            for (final o in objectives) {
-              final idx = o['idx'] ?? '?';
-              final weight = o['weight'] ?? 0;
-              final desc = o['description'] ?? '';
-              final indicator = o['indicator'] ?? '';
-              buf.writeln('- 目标$idx（权重$weight，指标点$indicator）：$desc');
-            }
-            objectivesContext = buf.toString();
-          }
-        }
-      }
+      objectivesContext = await AchievementAuditContextService.instance
+          .buildAuditMarkdown(compact: true);
     } catch (e) {
       // 加载失败时使用通用 prompt，不阻塞对话
     }
@@ -360,10 +369,16 @@ class AchievementAgent extends BaseAgent {
     return buildReplyFromResult(result);
   }
 
+  bool _looksLikeAuditIntent(String text) {
+    if (!RegExp(r'(达成|OBE|课程目标|材料|归档|期末|结课)').hasMatch(text)) {
+      return false;
+    }
+    return RegExp(r'(审核|检查|一键|归档|打印|材料|闭环|是否满足|能否)').hasMatch(text);
+  }
+
   bool _looksLikeSyllabusContext(String text) {
     // 智能分析"已手动填好的数据不应走大纲解析通道
-    if (text.contains('analyze_syllabus_text') ||
-        text.contains('成绩评定对照表')) {
+    if (text.contains('analyze_syllabus_text') || text.contains('成绩评定对照表')) {
       return true;
     }
     // 大纲原始文本需达到一定长度且包含关键标识
@@ -591,33 +606,35 @@ class AchievementAgent extends BaseAgent {
   /// 检测导航意图并返回对应的 AgentAction。
   _NavResult? _tryNavigateIntent(String text) {
     if (RegExp(r'一键生课|生成课程|课程生成|新建课程').hasMatch(text)) {
-      return _NavResult('可在首页右上角菜单选择"一键生课"创建新课程。',
-          AgentAction(type: 'navigate_home'));
+      return const _NavResult(
+          '可在首页右上角菜单选择"一键生课"创建新课程。', AgentAction(type: 'navigate_home'));
     }
     if (RegExp(r'课程目标管理|管理课程目标|编辑课程目标|维护课程目标').hasMatch(text)) {
-      return _NavResult(
+      return const _NavResult(
           '正在打开课程目标管理页…',
           AgentAction(
-              type: 'navigate_sub_page',
-              params: {'keyword': '课程目标管理'}));
+              type: 'navigate_sub_page', params: {'keyword': '课程目标管理'}));
     }
     if (RegExp(r'成绩管理|录入成绩|导入成绩|成绩导入').hasMatch(text)) {
-      return _NavResult(
+      return const _NavResult(
           '正在打开成绩管理页…',
           AgentAction(
-              type: 'inner_tab', params: {'page': 'achievement', 'tab': '成绩管理'}));
+              type: 'inner_tab',
+              params: {'page': 'achievement', 'tab': '成绩管理'}));
     }
     if (RegExp(r'达成度概览|达成概览|查看达成').hasMatch(text)) {
-      return _NavResult(
+      return const _NavResult(
           '正在打开达成度概览…',
           AgentAction(
-              type: 'inner_tab', params: {'page': 'achievement', 'tab': '达成度概览'}));
+              type: 'inner_tab',
+              params: {'page': 'achievement', 'tab': '达成度概览'}));
     }
     if (RegExp(r'改进建议|持续改进|CQI').hasMatch(text)) {
-      return _NavResult(
+      return const _NavResult(
           '正在打开持续改进页…',
           AgentAction(
-              type: 'inner_tab', params: {'page': 'achievement', 'tab': '持续改进'}));
+              type: 'inner_tab',
+              params: {'page': 'achievement', 'tab': '持续改进'}));
     }
     return null;
   }

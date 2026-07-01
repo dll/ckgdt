@@ -5,6 +5,7 @@ import '../../widgets/back_button_bar.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../core/constants/app_theme.dart';
 import '../../../services/ai_service.dart';
+import '../../../services/achievement/achievement_audit_context_service.dart';
 import '../../../services/agent/special_agent_tools.dart';
 import '../../../services/agent/teaching_context_service.dart';
 import '../../../services/plantuml_service.dart';
@@ -422,42 +423,44 @@ const _skills = <_SkillDef>[
   _SkillDef(
     id: 'achievement',
     name: '达成技能',
-    subtitle: 'AI 达成度分析',
+    subtitle: '达成审核与归档闭环',
     icon: Icons.emoji_events,
     color: Colors.deepOrange,
-    description: '输入课程目标和学生表现数据描述，AI 生成 OBE 达成度分析报告。'
-        '包含各课程目标的达成情况评估、薄弱环节诊断、'
-        '持续改进建议和教学策略优化方案。',
+    description: '面向当前课程生成 OBE 达成度分析、材料审核和归档闭环建议。'
+        '联动大纲、进度表、课程表、成绩、达成报告和结课材料，'
+        '辅助教师完成生成、审核、编辑、预览、打印、归档。',
     features: [
       '课程目标达成度量化分析',
+      '期初、期中、期末、结课材料一致性审核',
+      '模板、样例、填写、预览、打印、归档流程建议',
       '薄弱环节诊断和原因分析',
       '持续改进措施（CQI）建议',
       '教学策略优化方案',
     ],
-    examples: ['课程达成度分析', '程序设计基础课程改进报告', 'OBE 课程目标与毕业要求映射分析', '实践教学环节达成度评价'],
+    examples: ['达成材料一键审核', '课程达成度分析', 'OBE 课程目标与毕业要求映射分析', '期末归档前检查'],
     systemPrompt: '你是 OBE（成果导向教育）达成度分析专家。'
-        '请根据用户给出的课程信息，生成一份达成度分析报告。'
+        '请根据当前课程信息和本地达成归档审核上下文，生成面向教师的达成闭环报告。'
         '输出格式为 Markdown，包含：\n'
-        '1. 课程目标梳理（3-5个课程目标）\n'
-        '2. 达成度评价方法（考核方式与目标对应关系矩阵）\n'
-        '3. 达成度计算模板（公式 + 示例数据）\n'
-        '4. 薄弱环节诊断（可能的问题 + 原因分析）\n'
-        '5. 持续改进措施（CQI，3-5条具体建议）\n'
-        '6. 教学优化方案（下一轮教学调整建议）\n'
-        '请用中文回答，符合工程教育认证标准。',
+        '1. 课程目标与考核依据梳理\n'
+        '2. 期初、期中、期末、结课材料状态审核\n'
+        '3. 达成度评价方法和计算依据\n'
+        '4. 缺口与风险清单（不得编造不存在的数据）\n'
+        '5. 一键生成、审核、打印、归档前的操作建议\n'
+        '6. 持续改进措施（CQI）和下一轮教学优化\n'
+        '请用中文回答，符合课程档案和工程教育认证审核习惯。',
     usageSteps: [
       '进入 AI 技能中心，选择"达成技能"',
-      '输入课程信息和学生表现数据描述',
-      'AI 生成 OBE 达成度分析报告',
-      '查看各目标达成情况和薄弱环节诊断',
-      '保存报告用于持续改进（CQI）',
+      '输入“达成材料一键审核”或具体课程问题',
+      'AI 读取当前课程达成和归档上下文',
+      '查看材料缺口、审核风险和达成度结果',
+      '保存报告用于打印、归档和持续改进（CQI）',
     ],
     classicCases: [
       _SkillCase(
           title: '课程达成度',
-          userInput: '课程达成度分析',
+          userInput: '达成材料一键审核',
           resultSummary:
-              '生成 5 个课程目标的达成度分析：含评价方法矩阵、计算公式模板、3 个薄弱环节诊断、5 条 CQI 改进措施。'),
+              '生成当前课程达成材料审核：含大纲、进度表、课程表、成绩、达成报告、结课归档材料状态和 CQI 改进建议。'),
     ],
   ),
   _SkillDef(
@@ -810,10 +813,16 @@ class _AiSkillPageState extends State<AiSkillPage>
   Future<String> _buildSkillSystemPrompt(String topic) async {
     final context = await AgentTeachingContextService.instance
         .buildPromptContext(userMessage: topic);
+    final achievementAuditContext = _skill.id == 'achievement'
+        ? await AchievementAuditContextService.instance
+            .buildAuditMarkdown(compact: true)
+        : '';
     return '''
 ${_skill.systemPrompt}
 
 $context
+
+$achievementAuditContext
 
 ## 技能执行要求
 - 必须围绕当前课程生成内容，优先使用本地课程章节、知识图谱、题库、实验、作品、考核和达成数据。
@@ -838,6 +847,9 @@ $context
         }
         return null;
       case 'achievement':
+        if (RegExp(r'(审核|检查|一键|归档|打印|材料|闭环|是否满足|能否)').hasMatch(topic)) {
+          return AchievementAuditContextService.instance.buildAuditMarkdown();
+        }
         if (tools.isAchievementReportIntent(topic)) {
           return tools.generateAchievementReport();
         }

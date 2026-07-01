@@ -8,6 +8,7 @@ import '../../data/local/lab_task_dao.dart';
 import '../../data/local/quiz_dao.dart';
 import '../../data/models/question_model.dart';
 import '../achievement/achievement_docx_service.dart';
+import '../achievement/achievement_audit_context_service.dart';
 import '../ai_service.dart';
 import '../auth_service.dart';
 import '../course_context_service.dart';
@@ -302,6 +303,9 @@ ${chapters.asMap().entries.map((e) => '${e.key + 1}. ${e.value}').join('\n')}
       improvementText: _formatImprovementText(improvements),
     );
 
+    final audit = await AchievementAuditContextService.instance
+        .buildAuditMarkdown(batchId: id, compact: true);
+
     return '''
 达成度 Word 报告已生成。
 
@@ -310,6 +314,8 @@ ${chapters.asMap().entries.map((e) => '${e.key + 1}. ${e.value}').join('\n')}
 - 班级：$className
 - 学生数：${scores.length}
 - 文件：$path
+
+$audit
 
 可在“达成 → 报告”页继续预览、导出 Excel 或重新生成。''';
   }
