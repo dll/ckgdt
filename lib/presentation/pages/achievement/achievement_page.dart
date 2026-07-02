@@ -16,14 +16,16 @@ import 'tabs/report_tab.dart';
 import 'tabs/analysis_tab.dart';
 import 'tabs/ab_comparison_tab.dart';
 import 'tabs/achievement_help_page.dart';
+import 'tabs/exam_analysis_tab.dart';
 
-/// 课程达成度计算系统 — 8 Tab 壳页面
+/// 课程达成度计算系统 — 9 Tab 壳页面
 ///
 /// 各 Tab 实现已拆分至 tabs/ 子目录：
 /// - overview_tab.dart: 达成度概览 + 批次详情
 /// - scores_tab.dart: 成绩管理 + 平时/实验/考核达成
 /// - report_tab.dart: 报告生成 + 预览对话框
 /// - analysis_tab.dart: 计算过程 + 持续改进
+/// - exam_analysis_tab.dart: 试卷分析（成绩录入/分布图/统计/分析）
 class AchievementPage extends StatefulWidget {
   const AchievementPage({super.key});
 
@@ -48,9 +50,10 @@ class _AchievementPageState extends State<AchievementPage>
     (Icons.school_outlined, '平时达成', '04', 'pingshi'),
     (Icons.science_outlined, '实验达成', '05', 'experiment'),
     (Icons.assignment_outlined, '考核达成', '06', 'exam'),
-    (Icons.build_outlined, '持续改进', '07', null),
-    (Icons.summarize_outlined, '报告生成', '08', null),
-    (Icons.compare_arrows_outlined, 'AB 对照', '09', null),
+    (Icons.quiz_outlined, '试卷分析', '07', 'examAnalysis'),
+    (Icons.build_outlined, '持续改进', '08', null),
+    (Icons.summarize_outlined, '报告生成', '09', null),
+    (Icons.compare_arrows_outlined, 'AB 对照', '10', null),
   ];
   List<(IconData, String, String, String?)> _tabSpecs = _allTabSpecs;
 
@@ -406,6 +409,8 @@ class _AchievementPageState extends State<AchievementPage>
           env: 'exam',
           dataRevision: dataRevision,
         );
+      case '试卷分析':
+        return const ExamAnalysisTab();
       case '持续改进':
         return ContinuousImprovementTab(
           achievementDao: _achievementDao,

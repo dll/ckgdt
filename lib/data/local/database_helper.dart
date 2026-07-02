@@ -129,7 +129,7 @@ class DatabaseHelper {
         // 重新打开（版本号必须与主初始化一致）
         final db2 = await openDatabase(
           dbName,
-          version: 34,
+      version: 35,
           singleInstance: true, // 启用单例模式
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
@@ -944,6 +944,9 @@ class DatabaseHelper {
       await _migrateToV33(db);
       await _migrateToV34(db);
     }
+    if (oldVersion < 35) {
+      await _migrateToV35(db);
+    }
     // 确保从 asset 复制的旧 DB 中缺失的表被创建（IF NOT EXISTS 安全）
     await _ensureAllTables(db);
   }
@@ -1021,6 +1024,7 @@ class DatabaseHelper {
     await _migrateToV29(db);
     await _migrateToV30(db);
     await _migrateToV31(db);
+    await _migrateToV35(db);
     await _ensureAchievementColumns(db);
     await _ensureCourseObjectivesColumns(db);
   }
@@ -2729,6 +2733,29 @@ class DatabaseHelper {
     await db.execute('''
       INSERT OR IGNORE INTO ai_trial_settings(id, trial_enabled, trial_max_calls, trial_max_tokens)
       VALUES(1, 1, 10, 50000)
+    ''');
+  }
+
+  /// V35: exam_analysis 表 — 试卷分析数据存储
+  Future<void> _migrateToV35(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS exam_analysis(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT,
+        course_name TEXT,
+        class_name TEXT,
+        speciality TEXT,
+        exam_time TEXT,
+        exam_style TEXT DEFAULT '闭卷',
+        source TEXT,
+        item_count INTEGER DEFAULT 0,
+        student_count INTEGER DEFAULT 0,
+        grades_json TEXT,
+        distribution_json TEXT,
+        analysis_text TEXT,
+        created_at TEXT,
+        updated_at TEXT
+      )
     ''');
   }
 
