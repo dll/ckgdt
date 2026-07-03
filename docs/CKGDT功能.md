@@ -36,7 +36,7 @@
 - `learning_data.db`：主 SQLite 数据库，共 **59 张表**，种子数据版本 `user_version = 20`。
 - `assets/graphs/`：6 大类 32 个知识图谱 Markdown 源文件。
 - `assets/students.json`：学生名单种子数据。
-- `data/course_config/`：课程配置（manifest、chapters、assessment、lab_tasks、report_templates、resource_index）。
+- `data/配置/`：课程配置（manifest、chapters、assessment、lab_tasks、report_templates、资源索引）。
 
 ### 2.2 数据管理
 - `database_helper.dart`：数据库单例，管理 59 张表的创建、迁移与种子数据加载。

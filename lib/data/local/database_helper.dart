@@ -70,7 +70,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       dbName,
-      version: 34,
+      version: 35,
       singleInstance: true, // 启用单例模式
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
@@ -129,7 +129,7 @@ class DatabaseHelper {
         // 重新打开（版本号必须与主初始化一致）
         final db2 = await openDatabase(
           dbName,
-      version: 35,
+          version: 35,
           singleInstance: true, // 启用单例模式
           onCreate: _createTables,
           onUpgrade: _onUpgrade,
@@ -212,7 +212,7 @@ class DatabaseHelper {
     Database db;
     db = await openDatabase(
       dbPath,
-      version: 34,
+      version: 35,
       singleInstance: true, // 启用单例模式
       onCreate: _createTables,
       onUpgrade: _onUpgrade,
@@ -2751,12 +2751,24 @@ class DatabaseHelper {
         item_count INTEGER DEFAULT 0,
         student_count INTEGER DEFAULT 0,
         grades_json TEXT,
+        full_marks_json TEXT,
         distribution_json TEXT,
         analysis_text TEXT,
+        teacher_sign_path TEXT,
+        director_sign_path TEXT,
+        dean_sign_path TEXT,
         created_at TEXT,
         updated_at TEXT
       )
     ''');
+    await _addTextColumnIfMissing(
+        db, 'exam_analysis', 'full_marks_json', 'V35.exam_analysis');
+    await _addTextColumnIfMissing(
+        db, 'exam_analysis', 'teacher_sign_path', 'V35.exam_analysis');
+    await _addTextColumnIfMissing(
+        db, 'exam_analysis', 'director_sign_path', 'V35.exam_analysis');
+    await _addTextColumnIfMissing(
+        db, 'exam_analysis', 'dean_sign_path', 'V35.exam_analysis');
   }
 
   Future<void> _addTextColumnIfMissing(

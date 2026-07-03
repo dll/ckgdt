@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math' show sqrt;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
+import 'course_dao.dart';
 import 'database_helper.dart';
 import '../../core/error_handler.dart';
 
@@ -20,12 +21,13 @@ class ExamAnalysisDao {
 
   Future<List<Map<String, dynamic>>> getAll({String? courseId}) async {
     final db = await _db;
-    final where = courseId != null ? 'WHERE course_id = ?' : '';
-    final whereArgs = courseId != null ? [courseId] : [];
+    final where = courseId != null && courseId.trim().isNotEmpty
+        ? '(course_id = ? OR course_id IS NULL OR course_id = \'\')'
+        : null;
+    final whereArgs =
+        courseId != null && courseId.trim().isNotEmpty ? [courseId] : null;
     return db.query('exam_analysis',
-        where: where,
-        whereArgs: whereArgs,
-        orderBy: 'updated_at DESC');
+        where: where, whereArgs: whereArgs, orderBy: 'updated_at DESC');
   }
 
   Future<Map<String, dynamic>?> getById(int id) async {
@@ -39,6 +41,7 @@ class ExamAnalysisDao {
     final db = await _db;
     final now = DateTime.now().toIso8601String();
     data['updated_at'] = now;
+    data['course_id'] ??= await activeCourseId();
 
     if (data['grades_json'] is List) {
       data['grades_json'] = jsonEncode(data['grades_json']);
@@ -46,10 +49,13 @@ class ExamAnalysisDao {
     if (data['distribution_json'] is Map) {
       data['distribution_json'] = jsonEncode(data['distribution_json']);
     }
+    if (data['full_marks_json'] is List) {
+      data['full_marks_json'] = jsonEncode(data['full_marks_json']);
+    }
 
     if (data['id'] != null && (data['id'] as int) > 0) {
-      await db.update(
-          'exam_analysis', data, where: 'id = ?', whereArgs: [data['id']]);
+      await db.update('exam_analysis', data,
+          where: 'id = ?', whereArgs: [data['id']]);
       return data['id'] as int;
     } else {
       data['created_at'] = now;
@@ -82,14 +88,58 @@ class ExamAnalysisDao {
     return jsonEncode(grades);
   }
 
+  List<double> parseFullMarks(String? fullMarksJson, int itemCount) {
+    if (fullMarksJson == null || fullMarksJson.isEmpty) {
+      return defaultFullMarks(itemCount);
+    }
+    try {
+      final raw = jsonDecode(fullMarksJson);
+      if (raw is! List) return defaultFullMarks(itemCount);
+      final marks = [
+        for (final item in raw)
+          if (item is num) item.toDouble() else double.tryParse('$item') ?? 0.0
+      ];
+      return normalizeFullMarks(marks, itemCount);
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ExamAnalysisDao.parseFullMarks', stack: st);
+      return defaultFullMarks(itemCount);
+    }
+  }
+
+  static String encodeFullMarks(List<double> fullMarks) {
+    return jsonEncode(fullMarks);
+  }
+
+  static List<double> defaultFullMarks(int itemCount) =>
+      List<double>.filled(itemCount, 10.0);
+
+  static List<double> normalizeFullMarks(List<double> marks, int itemCount) {
+    return List<double>.generate(itemCount, (i) {
+      if (i >= marks.length) return 10.0;
+      final mark = marks[i];
+      return mark > 0 ? mark : 10.0;
+    });
+  }
+
+  Future<String> activeCourseId() async {
+    try {
+      return (await CourseDao().getActiveCourse())?.id ?? '';
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ExamAnalysisDao.activeCourseId', stack: st);
+      return '';
+    }
+  }
+
   static double _stdDev(List<double> values, double mean) {
     if (values.length < 2) return 0;
-    final sumSq =
-        values.fold<double>(0, (a, b) => a + (b - mean) * (b - mean));
+    final sumSq = values.fold<double>(0, (a, b) => a + (b - mean) * (b - mean));
     return sqrt(sumSq / (values.length - 1));
   }
 
-  static Map<String, dynamic> computeStatistics(List<List<double>> grades) {
+  static Map<String, dynamic> computeStatistics(
+    List<List<double>> grades, {
+    List<double>? fullMarks,
+  }) {
     if (grades.isEmpty || grades[0].isEmpty) {
       return {
         'studentCount': 0,
@@ -115,10 +165,14 @@ class ExamAnalysisDao {
     }
 
     final studentCount = grades.length;
-    final itemCount = grades[0].length;
+    final itemCount = grades.fold<int>(
+      0,
+      (max, row) => row.length > max ? row.length : max,
+    );
+    final itemFullMarks =
+        normalizeFullMarks(fullMarks ?? defaultFullMarks(itemCount), itemCount);
 
-    // 每题满分 = 实际出现的最高分
-    final itemMaxScores = List<double>.generate(itemCount, (i) {
+    final itemObservedMaxScores = List<double>.generate(itemCount, (i) {
       double max = 0;
       for (final row in grades) {
         if (i < row.length && row[i] > max) max = row[i];
@@ -158,7 +212,7 @@ class ExamAnalysisDao {
       totals.add(t);
     }
     if (grades.isNotEmpty) {
-      totalMax = itemMaxScores.fold<double>(0, (a, b) => a + b);
+      totalMax = itemFullMarks.fold<double>(0, (a, b) => a + b);
     }
 
     final max = totals.isEmpty ? 0.0 : totals.reduce((a, b) => a > b ? a : b);
@@ -191,17 +245,18 @@ class ExamAnalysisDao {
     final dist = [0, 0, 0, 0, 0, 0, 0];
     if (totalMax > 0) {
       for (final t in totals) {
-        if (t < 40) {
+        final pct = t / totalMax * 100;
+        if (pct < 40) {
           dist[0]++;
-        } else if (t < 50) {
+        } else if (pct < 50) {
           dist[1]++;
-        } else if (t < 60) {
+        } else if (pct < 60) {
           dist[2]++;
-        } else if (t < 70) {
+        } else if (pct < 70) {
           dist[3]++;
-        } else if (t < 80) {
+        } else if (pct < 80) {
           dist[4]++;
-        } else if (t < 90) {
+        } else if (pct < 90) {
           dist[5]++;
         } else {
           dist[6]++;
@@ -215,14 +270,16 @@ class ExamAnalysisDao {
     // 各题区分度（简单：高分组前27% vs 低分组后27% 的平均分差/满分）
     final itemDiscriminations = List<double>.generate(itemCount, (i) {
       if (studentCount < 4) return 0.0;
-      final groupSize = (studentCount * 0.27).round().clamp(1, studentCount ~/ 2);
+      final groupSize =
+          (studentCount * 0.27).round().clamp(1, studentCount ~/ 2);
       final indexed = <_IndexedScore>[];
       for (var r = 0; r < studentCount; r++) {
         indexed.add(_IndexedScore(totals[r], r));
       }
       indexed.sort((a, b) => b.total.compareTo(a.total));
       final highIdx = indexed.take(groupSize).map((e) => e.index).toSet();
-      final lowIdx = indexed.skip(studentCount - groupSize).map((e) => e.index).toSet();
+      final lowIdx =
+          indexed.skip(studentCount - groupSize).map((e) => e.index).toSet();
 
       double highSum = 0, lowSum = 0;
       int highCount = 0, lowCount = 0;
@@ -239,20 +296,21 @@ class ExamAnalysisDao {
       }
       final highAvg = highCount > 0 ? highSum / highCount : 0.0;
       final lowAvg = lowCount > 0 ? lowSum / lowCount : 0.0;
-      final maxScore = itemMaxScores[i];
+      final maxScore = itemFullMarks[i];
       return maxScore > 0 ? (highAvg - lowAvg) / maxScore : 0.0;
     });
 
     // 各题难度
     final itemDifficulties = List<double>.generate(itemCount, (i) {
-      final maxScore = itemMaxScores[i];
+      final maxScore = itemFullMarks[i];
       return maxScore > 0 ? (itemAverages[i] / maxScore) : 0.0;
     });
 
     // 考试效度：各题区分度的平均值（反映试卷整体区分能力）
     final avgDiscrimination = itemDiscriminations.isEmpty
         ? 0.0
-        : itemDiscriminations.reduce((a, b) => a + b) / itemDiscriminations.length;
+        : itemDiscriminations.reduce((a, b) => a + b) /
+            itemDiscriminations.length;
 
     // 考试信度：KR-20 公式简化版（内部一致性）
     // α = (n / (n-1)) * (1 - Σ(p_i * q_i) / σ²)
@@ -261,7 +319,8 @@ class ExamAnalysisDao {
       final n = itemCount;
       double sumPQ = 0;
       for (var i = 0; i < itemCount; i++) {
-        final p = itemMaxScores[i] > 0 ? itemAverages[i] / itemMaxScores[i] : 0.0;
+        final p =
+            itemFullMarks[i] > 0 ? itemAverages[i] / itemFullMarks[i] : 0.0;
         final q = 1.0 - p;
         sumPQ += p * q;
       }
@@ -277,16 +336,18 @@ class ExamAnalysisDao {
       for (final row in grades) {
         if (i < row.length) scores.add(row[i]);
       }
-      final itemMin = scores.isEmpty ? 0.0 : scores.reduce((a, b) => a < b ? a : b);
+      final itemMin =
+          scores.isEmpty ? 0.0 : scores.reduce((a, b) => a < b ? a : b);
       return {
         'index': i,
-        'fullMark': itemMaxScores[i],
-        'max': itemMaxScores[i],
+        'fullMark': itemFullMarks[i],
+        'max': itemObservedMaxScores[i],
         'min': itemMin,
         'avg': double.parse(itemAverages[i].toStringAsFixed(2)),
         'stdDev': double.parse(itemStdDevs[i].toStringAsFixed(2)),
         'difficulty': double.parse(itemDifficulties[i].toStringAsFixed(3)),
-        'discrimination': double.parse(itemDiscriminations[i].toStringAsFixed(3)),
+        'discrimination':
+            double.parse(itemDiscriminations[i].toStringAsFixed(3)),
         'label': '题${i + 1}',
       };
     });
@@ -301,15 +362,19 @@ class ExamAnalysisDao {
       'stdDev': double.parse(stdDev.toStringAsFixed(2)),
       'median': double.parse(median.toStringAsFixed(1)),
       'passCount': passCount,
-      'passRate': double.parse((passCount / studentCount * 100).toStringAsFixed(1)),
+      'passRate':
+          double.parse((passCount / studentCount * 100).toStringAsFixed(1)),
       'goodCount': goodCount,
-      'goodRate': double.parse((goodCount / studentCount * 100).toStringAsFixed(1)),
+      'goodRate':
+          double.parse((goodCount / studentCount * 100).toStringAsFixed(1)),
       'excellentCount': excellentCount,
-      'excellentRate': double.parse((excellentCount / studentCount * 100).toStringAsFixed(1)),
+      'excellentRate': double.parse(
+          (excellentCount / studentCount * 100).toStringAsFixed(1)),
       'failCount': studentCount - passCount,
       'difficulty': double.parse(difficulty.toStringAsFixed(3)),
       'distribution': dist,
-      'distributionPct': distPct.map((v) => double.parse(v.toStringAsFixed(1))).toList(),
+      'distributionPct':
+          distPct.map((v) => double.parse(v.toStringAsFixed(1))).toList(),
       'itemStats': itemStats,
       'examValidity': double.parse(avgDiscrimination.toStringAsFixed(3)),
       'examReliability': double.parse(examReliability.toStringAsFixed(3)),
