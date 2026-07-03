@@ -27,37 +27,77 @@ class _MaterialsTab extends StatefulWidget {
 }
 
 class _MaterialsTabState extends State<_MaterialsTab> {
-  static const _categories = [
-    _MaterialCategory(
-      title: '实验教程',
-      icon: Icons.school,
-      color: Color(0xFF1677FF),
-      assetDir: 'data/实验/实验教程/',
-      description: '6 个实验的详细步骤教程，包含核心任务、操作指南和成功标准',
-    ),
-    _MaterialCategory(
-      title: '技术栈资源',
-      icon: Icons.layers,
-      color: Color(0xFF0958D9),
-      assetDir: 'data/实验/移动技术栈/',
-      description: '覆盖课程实验可用的开发框架、工具链和工程实践手册',
-    ),
-    _MaterialCategory(
-      title: '实验指导',
-      icon: Icons.menu_book,
-      color: Colors.teal,
-      assetDir: 'data/实验/实验指导/',
-      description: '实验指导书及 UML 设计文档参考',
-      teacherCanAdd: true,
-    ),
-    _MaterialCategory(
-      title: '报告模板',
-      icon: Icons.assignment,
-      color: Colors.orange,
-      assetDir: 'data/实验/报告模板/',
-      description: '每个实验对应的报告模板，按格式填写后提交',
-    ),
-  ];
+  /// 课程感知的分类列表
+  List<_MaterialCategory> _categories = [];
+  String _courseId = 'ckgdt';
+
+  /// 根据课程 ID 返回对应分类
+  static List<_MaterialCategory> _categoriesForCourse(String courseId) {
+    if (courseId == 'ckgdt') {
+      return [
+        _MaterialCategory(
+          title: '实验教程',
+          icon: Icons.school,
+          color: const Color(0xFF1677FF),
+          assetDir: 'data/CKGDT/实验/实验教程/',
+          description: '8 个实验的详细步骤教程，包含核心任务、操作指南和成功标准',
+        ),
+        _MaterialCategory(
+          title: '技术栈资源',
+          icon: Icons.layers,
+          color: const Color(0xFF0958D9),
+          assetDir: 'data/CKGDT/实验/平台技术栈/',
+          description: '覆盖课程实验可用的平台技术、工具链和工程实践手册',
+        ),
+        _MaterialCategory(
+          title: '实验指导',
+          icon: Icons.menu_book,
+          color: Colors.teal,
+          assetDir: 'data/CKGDT/实验/实验指导/',
+          description: '实验指导书及设计文档参考',
+          teacherCanAdd: true,
+        ),
+        _MaterialCategory(
+          title: '报告模板',
+          icon: Icons.assignment,
+          color: Colors.orange,
+          assetDir: 'data/CKGDT/实验/报告模板/',
+          description: '每个实验对应的报告模板，按格式填写后提交',
+        ),
+      ];
+    }
+    return [
+      _MaterialCategory(
+        title: '实验教程',
+        icon: Icons.school,
+        color: const Color(0xFF1677FF),
+        assetDir: 'data/实验/实验教程/',
+        description: '6 个实验的详细步骤教程，包含核心任务、操作指南和成功标准',
+      ),
+      _MaterialCategory(
+        title: '技术栈资源',
+        icon: Icons.layers,
+        color: const Color(0xFF0958D9),
+        assetDir: 'data/实验/移动技术栈/',
+        description: '覆盖课程实验可用的开发框架、工具链和工程实践手册',
+      ),
+      _MaterialCategory(
+        title: '实验指导',
+        icon: Icons.menu_book,
+        color: Colors.teal,
+        assetDir: 'data/实验/实验指导/',
+        description: '实验指导书及 UML 设计文档参考',
+        teacherCanAdd: true,
+      ),
+      _MaterialCategory(
+        title: '报告模板',
+        icon: Icons.assignment,
+        color: Colors.orange,
+        assetDir: 'data/实验/报告模板/',
+        description: '每个实验对应的报告模板，按格式填写后提交',
+      ),
+    ];
+  }
 
   /// 每个分类下发现的文件列表
   final Map<int, List<_MaterialFile>> _files = {};
@@ -72,66 +112,76 @@ class _MaterialsTabState extends State<_MaterialsTab> {
   @override
   void initState() {
     super.initState();
+    _initCourse();
+  }
+
+  Future<void> _initCourse() async {
+    _courseId = await CourseContextService().activeCourseId();
+    _categories = _categoriesForCourse(_courseId);
     _loadMaterials();
   }
 
   /// Gitee 资料仓库配置
-  static const _dataRepoOwner = 'osgisOne';
+  static const _dataRepoOwner = 'chzcldl';
   static const _dataRepoName = 'mad-data';
   static const _dataRepoBranch = 'master';
 
   Future<void> _loadMaterials() async {
     setState(() => _isLoading = true);
     try {
-      // 用 getTree 一次性获取整个仓库文件树（contents API 对中文路径返回空）
-      final gitee = GiteeService();
-      bool loadedFromGitee = false;
-
-      try {
-        final tree = await gitee.getTree(
-          _dataRepoOwner,
-          _dataRepoName,
-          sha: _dataRepoBranch,
-          recursive: true,
-        );
-
-        for (int i = 0; i < _categories.length; i++) {
-          final dir = _categories[i].assetDir;
-          // Gitee 仓库路径去掉 'data/' 前缀
-          final giteePrefix = dir.startsWith('data/') ? dir.substring(5) : dir;
-
-          final files = tree.where((e) {
-            final path = e['path'] as String? ?? '';
-            final type = e['type'] as String? ?? '';
-            return type == 'blob' &&
-                path.startsWith(giteePrefix) &&
-                (path.endsWith('.md') || path.endsWith('.puml'));
-          }).map((e) {
-            final path = e['path'] as String;
-            final name = path.split('/').last;
-            final displayName = name
-                .replaceAll('_new.md', '')
-                .replaceAll('.md', '')
-                .replaceAll('.puml', '');
-            return _MaterialFile(
-              giteePath: path,
-              fileName: name,
-              displayName: displayName,
-            );
-          }).toList();
-
-          files.sort((a, b) => a.displayName.compareTo(b.displayName));
-          _files[i] = files;
-          if (files.isNotEmpty) loadedFromGitee = true;
-        }
-      } catch (e) {
-        debugPrint('从 Gitee getTree 加载失败: $e');
-      }
-
-      // Gitee 全部失败时回退到本地 asset
-      if (!loadedFromGitee) {
-        debugPrint('Gitee 加载失败，回退到本地 asset');
+      // CKGDT 课程直接用本地 assets，不走 Gitee（远程仓库只有 MAD 材料）
+      if (_courseId == 'ckgdt') {
+        debugPrint('CKGDT 课程：直接加载本地 assets');
         await _loadMaterialsFromAssets();
+      } else {
+        // 其他课程尝试 Gitee 远程加载
+        final gitee = GiteeService();
+        bool loadedFromGitee = false;
+
+        try {
+          final tree = await gitee.getTree(
+            _dataRepoOwner,
+            _dataRepoName,
+            sha: _dataRepoBranch,
+            recursive: true,
+          );
+
+          for (int i = 0; i < _categories.length; i++) {
+            final dir = _categories[i].assetDir;
+            final giteePrefix = dir.startsWith('data/') ? dir.substring(5) : dir;
+
+            final files = tree.where((e) {
+              final path = e['path'] as String? ?? '';
+              final type = e['type'] as String? ?? '';
+              return type == 'blob' &&
+                  path.startsWith(giteePrefix) &&
+                  (path.endsWith('.md') || path.endsWith('.puml'));
+            }).map((e) {
+              final path = e['path'] as String;
+              final name = path.split('/').last;
+              final displayName = name
+                  .replaceAll('_new.md', '')
+                  .replaceAll('.md', '')
+                  .replaceAll('.puml', '');
+              return _MaterialFile(
+                giteePath: path,
+                fileName: name,
+                displayName: displayName,
+              );
+            }).toList();
+
+            files.sort((a, b) => a.displayName.compareTo(b.displayName));
+            _files[i] = files;
+            if (files.isNotEmpty) loadedFromGitee = true;
+          }
+        } catch (e) {
+          debugPrint('从 Gitee getTree 加载失败: $e');
+        }
+
+        if (!loadedFromGitee) {
+          debugPrint('Gitee 加载失败，回退到本地 asset');
+          await _loadMaterialsFromAssets();
+        }
       }
 
       // 加载教师新增的本地指导文件

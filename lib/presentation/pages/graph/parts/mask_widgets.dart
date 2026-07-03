@@ -23,7 +23,7 @@ class _MaskDropdownButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.deepPurple.withOpacity(0.30),
+              color: Colors.deepPurple.withValues(alpha: 0.30),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -97,10 +97,10 @@ class _MaskDropdownButton extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// _MaskGridPanel — 弹窗内的蒙版网格面板
+// _MaskGridPanel — 弹窗内的蒙版网格面板（课程感知分类）
 // ══════════════════════════════════════════════════════════════════════════════
 
-class _MaskGridPanel extends StatelessWidget {
+class _MaskGridPanel extends StatefulWidget {
   final List<MaskShape> allShapes;
   final MaskShape selectedShape;
   final ValueChanged<MaskShape> onSelected;
@@ -112,9 +112,41 @@ class _MaskGridPanel extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    // 按类别分组
-    final groups = <String, List<MaskShape>>{
+  State<_MaskGridPanel> createState() => _MaskGridPanelState();
+}
+
+class _MaskGridPanelState extends State<_MaskGridPanel> {
+  String _courseId = 'ckgdt';
+
+  /// 课程感知的蒙版分类
+  static Map<String, List<MaskShape>> _groupsForCourse(String courseId) {
+    if (courseId == 'ckgdt') {
+      return {
+        '教育技术': [
+          MaskShape.harmonyOS, MaskShape.flutter,
+          MaskShape.python, MaskShape.java,
+        ],
+        '平台功能': [
+          MaskShape.brain, MaskShape.avatar,
+          MaskShape.docker, MaskShape.gitHub,
+        ],
+        '开发工具': [
+          MaskShape.vsCode, MaskShape.dart,
+          MaskShape.typeScript, MaskShape.linux,
+        ],
+        '移动生态': [
+          MaskShape.android, MaskShape.apple,
+          MaskShape.kotlin, MaskShape.swift,
+        ],
+        '个性装扮': [
+          MaskShape.wechat, MaskShape.reactNative,
+          MaskShape.uniapp, MaskShape.maui,
+          MaskShape.cordova, MaskShape.golang,
+        ],
+      };
+    }
+    // MAD 默认分类
+    return {
       '移动平台': [
         MaskShape.android, MaskShape.apple, MaskShape.harmonyOS,
       ],
@@ -135,6 +167,22 @@ class _MaskGridPanel extends StatelessWidget {
         MaskShape.avatar, MaskShape.brain,
       ],
     };
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCourseId();
+  }
+
+  Future<void> _loadCourseId() async {
+    final id = await CourseContextService().activeCourseId();
+    if (mounted) setState(() => _courseId = id);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final groups = _groupsForCourse(_courseId);
 
     return SizedBox(
       width: MediaQuery.of(context).size.width * 0.84,
@@ -144,7 +192,6 @@ class _MaskGridPanel extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // 标题
             Row(
               children: [
                 const Icon(Icons.auto_awesome,
@@ -160,7 +207,7 @@ class _MaskGridPanel extends StatelessWidget {
                 ),
                 const Spacer(),
                 Text(
-                  '共 ${allShapes.length} 个',
+                  '共 ${widget.allShapes.length} 个',
                   style: TextStyle(
                     fontSize: 11,
                     color: Colors.grey.shade500,
@@ -169,12 +216,10 @@ class _MaskGridPanel extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            // 按分类显示
             ...groups.entries.map((entry) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 分类标签
                   Padding(
                     padding: const EdgeInsets.only(bottom: 6, top: 4),
                     child: Text(
@@ -187,14 +232,13 @@ class _MaskGridPanel extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // 网格
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: entry.value.map((shape) {
-                      final isSelected = shape == selectedShape;
+                      final isSelected = shape == widget.selectedShape;
                       return GestureDetector(
-                        onTap: () => onSelected(shape),
+                        onTap: () => widget.onSelected(shape),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 150),
                           width: 76,
@@ -215,7 +259,7 @@ class _MaskGridPanel extends StatelessWidget {
                                 ? [
                                     BoxShadow(
                                       color: Colors.deepPurple
-                                          .withOpacity(0.25),
+                                          .withValues(alpha: 0.25),
                                       blurRadius: 6,
                                       offset: const Offset(0, 2),
                                     ),

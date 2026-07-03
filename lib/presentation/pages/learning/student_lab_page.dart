@@ -1,11 +1,14 @@
 ﻿import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../data/local/lab_task_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/auto_grading_service.dart';
+import '../../../services/course_context_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../services/sync_service.dart';
 import '../../../services/gitee_service.dart';
@@ -14,6 +17,7 @@ import '../../../services/lab_report_validation_service.dart';
 import '../../../services/settings_service.dart';
 import '../lab/lab_material_preview_page.dart';
 import '../../widgets/agent_entry_button.dart';
+import '../../../core/error_handler.dart';
 
 /// 学生实验中心 — 查看实验任务、提交作业、查看成绩
 class StudentLabPage extends StatefulWidget {
@@ -839,88 +843,185 @@ class _StudentMaterialsPage extends StatefulWidget {
 }
 
 class _StudentMaterialsPageState extends State<_StudentMaterialsPage> {
-  static const _dataRepoOwner = 'osgisOne';
+  static const _dataRepoOwner = 'chzcldl';
   static const _dataRepoName = 'mad-data';
   static const _dataRepoBranch = 'master';
 
-  static final _categories = [
-    {
-      'title': '实验教程',
-      'icon': Icons.school,
-      'color': const Color(0xFF1677FF),
-      'giteeDir': '实验/实验教程/',
-      'desc': '6 个实验的详细步骤教程'
-    },
-    {
-      'title': '移动技术栈',
-      'icon': Icons.layers,
-      'color': const Color(0xFF1677FF),
-      'giteeDir': '实验/移动技术栈/',
-      'desc': '覆盖 Kotlin/Swift/Flutter/ArkUI 等主流技术手册'
-    },
-    {
-      'title': '实验指导',
-      'icon': Icons.menu_book,
-      'color': Colors.teal,
-      'giteeDir': '实验/实验指导/',
-      'desc': '实验指导书及 UML 设计文档参考'
-    },
-    {
-      'title': '报告模板',
-      'icon': Icons.assignment,
-      'color': Colors.orange,
-      'giteeDir': '实验/报告模板/',
-      'desc': '每个实验对应的报告模板'
-    },
-  ];
+  static List<Map<String, dynamic>> _categoriesForCourse(String courseId) {
+    if (courseId == 'ckgdt') {
+      return [
+        {
+          'title': '实验教程',
+          'icon': Icons.school,
+          'color': const Color(0xFF1677FF),
+          'giteeDir': '实验/实验教程/',
+          'assetDir': 'data/CKGDT/实验/实验教程/',
+          'desc': '8 个实验的详细步骤教程',
+        },
+        {
+          'title': '平台技术栈',
+          'icon': Icons.layers,
+          'color': const Color(0xFF0958D9),
+          'giteeDir': '实验/平台技术栈/',
+          'assetDir': 'data/CKGDT/实验/平台技术栈/',
+          'desc': '覆盖课程实验可用的平台技术、工具链和工程实践手册',
+        },
+        {
+          'title': '实验指导',
+          'icon': Icons.menu_book,
+          'color': Colors.teal,
+          'giteeDir': '实验/实验指导/',
+          'assetDir': 'data/CKGDT/实验/实验指导/',
+          'desc': '实验指导书及设计文档参考',
+        },
+        {
+          'title': '报告模板',
+          'icon': Icons.assignment,
+          'color': Colors.orange,
+          'giteeDir': '实验/报告模板/',
+          'assetDir': 'data/CKGDT/实验/报告模板/',
+          'desc': '每个实验对应的报告模板',
+        },
+      ];
+    }
+    return [
+      {
+        'title': '实验教程',
+        'icon': Icons.school,
+        'color': const Color(0xFF1677FF),
+        'giteeDir': '实验/实验教程/',
+        'assetDir': 'data/实验/实验教程/',
+        'desc': '6 个实验的详细步骤教程',
+      },
+      {
+        'title': '移动技术栈',
+        'icon': Icons.layers,
+        'color': const Color(0xFF1677FF),
+        'giteeDir': '实验/移动技术栈/',
+        'assetDir': 'data/实验/移动技术栈/',
+        'desc': '覆盖 Kotlin/Swift/Flutter/ArkUI 等主流技术手册',
+      },
+      {
+        'title': '实验指导',
+        'icon': Icons.menu_book,
+        'color': Colors.teal,
+        'giteeDir': '实验/实验指导/',
+        'assetDir': 'data/实验/实验指导/',
+        'desc': '实验指导书及 UML 设计文档参考',
+      },
+      {
+        'title': '报告模板',
+        'icon': Icons.assignment,
+        'color': Colors.orange,
+        'giteeDir': '实验/报告模板/',
+        'assetDir': 'data/实验/报告模板/',
+        'desc': '每个实验对应的报告模板',
+      },
+    ];
+  }
 
+  List<Map<String, dynamic>> _categories = [];
+  String _courseId = 'ckgdt';
   final Map<int, List<Map<String, String>>> _files = {};
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
+    _initCourse();
+  }
+
+  Future<void> _initCourse() async {
+    _courseId = await CourseContextService().activeCourseId();
+    _categories = _categoriesForCourse(_courseId);
     _loadMaterials();
   }
 
   Future<void> _loadMaterials() async {
     try {
-      final gitee = GiteeService();
-      final tree = await gitee.getTree(
-        _dataRepoOwner,
-        _dataRepoName,
-        sha: _dataRepoBranch,
-        recursive: true,
-      );
+      // CKGDT 课程直接用本地 assets，不走 Gitee
+      if (_courseId == 'ckgdt') {
+        await _loadMaterialsFromAssets();
+      } else {
+        final gitee = GiteeService();
+        final tree = await gitee.getTree(
+          _dataRepoOwner,
+          _dataRepoName,
+          sha: _dataRepoBranch,
+          recursive: true,
+        );
 
-      for (int i = 0; i < _categories.length; i++) {
-        final prefix = _categories[i]['giteeDir'] as String;
-        final files = tree.where((e) {
-          final path = e['path'] as String? ?? '';
-          final type = e['type'] as String? ?? '';
-          return type == 'blob' &&
-              path.startsWith(prefix) &&
-              (path.endsWith('.md') || path.endsWith('.puml'));
-        }).map((e) {
-          final path = e['path'] as String;
-          final name = path.split('/').last;
-          final displayName = name
-              .replaceAll('_new.md', '')
-              .replaceAll('.md', '')
-              .replaceAll('.puml', '');
-          return {
-            'giteePath': path,
-            'displayName': displayName,
-            'fileName': name
-          };
-        }).toList();
-        files.sort((a, b) => a['displayName']!.compareTo(b['displayName']!));
-        _files[i] = files;
+        for (int i = 0; i < _categories.length; i++) {
+          final prefix = _categories[i]['giteeDir'] as String;
+          final files = tree.where((e) {
+            final path = e['path'] as String? ?? '';
+            final type = e['type'] as String? ?? '';
+            return type == 'blob' &&
+                path.startsWith(prefix) &&
+                (path.endsWith('.md') || path.endsWith('.puml'));
+          }).map((e) {
+            final path = e['path'] as String;
+            final name = path.split('/').last;
+            final displayName = name
+                .replaceAll('_new.md', '')
+                .replaceAll('.md', '')
+                .replaceAll('.puml', '');
+            return {
+              'giteePath': path,
+              'displayName': displayName,
+              'fileName': name,
+            };
+          }).toList();
+          files.sort((a, b) => a['displayName']!.compareTo(b['displayName']!));
+          _files[i] = List<Map<String, String>>.from(
+            files.map((e) => Map<String, String>.from(e)),
+          );
+        }
       }
     } catch (e) {
       debugPrint('加载实验材料失败: $e');
     }
     if (mounted) setState(() => _isLoading = false);
+  }
+
+  /// 从 Flutter assets 加载（CKGDT 课程离线加载）
+  Future<void> _loadMaterialsFromAssets() async {
+    try {
+      Map<String, dynamic> manifest = {};
+      try {
+        final content = await rootBundle.loadString('AssetManifest.json');
+        manifest = json.decode(content) as Map<String, dynamic>;
+      } catch (e) {
+        swallowDebug(e, tag: 'student_lab_page');
+      }
+
+      for (int i = 0; i < _categories.length; i++) {
+        final dir = _categories[i]['assetDir'] as String? ?? '';
+        if (dir.isEmpty) continue;
+        var files = manifest.keys.where((k) {
+          final decoded = Uri.decodeFull(k);
+          return (decoded.startsWith(dir) || k.startsWith(dir)) &&
+              (k.endsWith('.md') || k.endsWith('.puml'));
+        }).map((assetPath) {
+          final fileName = Uri.decodeFull(assetPath.split('/').last);
+          final displayName = fileName
+              .replaceAll('_new.md', '')
+              .replaceAll('.md', '')
+              .replaceAll('.puml', '');
+          return {
+            'assetPath': assetPath,
+            'displayName': displayName,
+            'fileName': fileName,
+          };
+        }).toList();
+        files.sort((a, b) => a['displayName']!.compareTo(b['displayName']!));
+        _files[i] = List<Map<String, String>>.from(
+          files.map((e) => Map<String, String>.from(e)),
+        );
+      }
+    } catch (e) {
+      debugPrint('本地 asset 加载实验材料失败: $e');
+    }
   }
 
   @override
