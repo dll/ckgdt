@@ -498,7 +498,7 @@ ${item.referenceAnswer != null ? '参考答案：${item.referenceAnswer}' : ''}
     // 同步作业分数到达成度计算
     try {
       await _dao.syncToAchievementScores(widget.homework.courseId);
-    } catch (e, st) { swallowDebug(e, tag: 'HomeworkDetail', stack: st); }
+    } catch (_) {}
   }
 
   dynamic _parseJson(String? text) {
@@ -507,11 +507,11 @@ ${item.referenceAnswer != null ? '参考答案：${item.referenceAnswer}' : ''}
     if (match != null) {
       try {
         return _safeDecode(match.group(1)!);
-      } catch (e, st) { swallowDebug(e, tag: 'HomeworkDetail', stack: st); }
+      } catch (_) {}
     }
     try {
       return _safeDecode(text);
-    } catch (e, st) { swallowDebug(e, tag: 'HomeworkDetail', stack: st); }
+    } catch (_) {}
     return null;
   }
 
@@ -528,6 +528,8 @@ ${item.referenceAnswer != null ? '参考答案：${item.referenceAnswer}' : ''}
   dynamic _doDecode(String s) {
     try {
       return jsonDecode(s);
-    } catch (e, st) { swallowDebug(e, tag: 'HomeworkDetail', stack: st);  }
+    } catch (_) {
+      return null;
+    }
   }
 }

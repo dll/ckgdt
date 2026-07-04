@@ -585,6 +585,7 @@ class SyncService {
           .map((r) => Map<String, dynamic>.from(r as Map)..remove('id'))
           .toList();
     } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st);  }
+    return [];
   }
 
   // ── 教师端：下载数据 ──────────────────────────────────────────────────

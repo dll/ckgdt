@@ -485,7 +485,7 @@ class CoursePackageLoader {
       final raw = await rootBundle.loadString(path);
       return jsonDecode(raw) as Map<String, dynamic>;
     } catch (e, st) { swallowDebug(e, tag: 'CoursePackageLoader', stack: st);  }
-    }
+    return {};
   }
 
   Future<List<Map<String, dynamic>>> _loadJsonList(String path) async {
@@ -538,6 +538,7 @@ class CoursePackageLoader {
       }
       return _knownCourseAssetPaths(courseId);
     } catch (e, st) { swallowDebug(e, tag: 'CoursePackageLoader', stack: st);  }
+    return [];
   }
 
   Future<List<String>> _knownCourseAssetPaths(String courseId) async {
@@ -675,6 +676,7 @@ class CoursePackageLoader {
     try {
       return Uri.decodeFull(value);
     } catch (e, st) { swallowDebug(e, tag: 'CoursePackageLoader', stack: st);  }
+    return value;
   }
 }
 

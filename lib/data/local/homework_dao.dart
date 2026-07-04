@@ -95,7 +95,9 @@ class HomeworkDao {
       if (omRaw != null && omRaw.isNotEmpty) {
         try {
           m['objective_mapping'] = jsonDecode(omRaw);
-        } catch (e, st) { swallowDebug(e, tag: 'HomeworkDao', stack: st); m['objective_mapping'] = []; }
+        } catch (_) {
+          m['objective_mapping'] = [];
+        }
       }
       return HomeworkItemModel.fromMap(m);
     }).toList();

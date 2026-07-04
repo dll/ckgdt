@@ -51,12 +51,12 @@ class _CourseObjectivesPageState extends State<CourseObjectivesPage> {
       _objectives = (await _dao.getCourseObjectives(_courseName))
           .where((o) => _asInt(o['idx']) >= 1)
           .toList();
-    } catch (e, st) { swallowDebug(e, tag: 'CourseObjectives', stack: st); }
+    } catch (_) {}
     if (mounted) setState(() => _loading = false);
   }
 
   static const _intro =
-      '通过本课程的学习，理解课程知识图谱与数字孪生的基本原理，掌握课程资源建模、学习过程数据治理、智能教学场景设计与评价反馈方法，能够结合 AI 工具完成课程知识组织、学习路径生成、实验实践支撑和持续改进分析，形成面向不同课程的平台化建设与应用能力。';
+      '通过本课程的学习，掌握移动应用开发的多元技术体系（原生/混合/小程序/多端），理解不同开发模式的适用场景，熟悉主流跨平台开发框架及 AI 编程工具的使用，具备跨平台应用系统分析、设计和开发能力，能够运用 RESTful API 实现移动端与后端的数据交互，培养学生科学思维、创新意识和良好的职业道德，为从事移动开发工作及毕业设计奠定基础。';
 
   @override
   Widget build(BuildContext context) {
@@ -282,7 +282,8 @@ class _CourseObjectivesPageState extends State<CourseObjectivesPage> {
     try {
       return Map<String, String>.from((jsonDecode(json) as Map)
           .map((k, v) => MapEntry(k.toString(), v.toString())));
-    } catch (e, st) { swallowDebug(e, tag: 'CourseObjectives', stack: st);  }
+    } catch (_) {
+      return {};
     }
   }
 

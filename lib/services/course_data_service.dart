@@ -258,6 +258,7 @@ class CourseDataService {
     try {
       return Uri.decodeFull(value);
     } catch (e, st) { swallowDebug(e, tag: 'CourseDataService', stack: st);  }
+    return value;
   }
 
   /// 从 MD 内容提取标题

@@ -35,7 +35,7 @@ class _CourseObjectivesManagePageState
 
   List<Map<String, dynamic>> _objectives = [];
   List<CourseModel> _allCourses = [];
-  String _courseName = '当前课程';
+  String _courseName = '移动应用开发';
   bool _loading = true;
   bool _importing = false;
   bool _hasUnsaved = false;
@@ -121,7 +121,7 @@ class _CourseObjectivesManagePageState
       try {
         final map = jsonDecode(json) as Map<String, dynamic>;
         names.addAll(map.keys);
-      } catch (e, st) { swallowDebug(e, tag: 'CourseObjectivesManage', stack: st); }
+      } catch (_) {}
     }
     _extraColumns = names.toList()..sort();
   }
@@ -151,7 +151,7 @@ class _CourseObjectivesManagePageState
         if (json.trim().isNotEmpty) {
           try {
             val = (jsonDecode(json) as Map)[col]?.toString() ?? '';
-          } catch (e, st) { swallowDebug(e, tag: 'CourseObjectivesManage', stack: st); }
+          } catch (_) {}
         }
         _ctrls.add(TextEditingController(text: val));
       }
@@ -359,7 +359,8 @@ class _CourseObjectivesManagePageState
     try {
       return Map<String, String>.from((jsonDecode(json) as Map)
           .map((k, v) => MapEntry(k.toString(), v.toString())));
-    } catch (e, st) { swallowDebug(e, tag: 'CourseObjectivesManage', stack: st);  }
+    } catch (_) {
+      return {};
     }
   }
 
