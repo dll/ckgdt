@@ -14,6 +14,7 @@ import '../presentation/pages/learning/document_page.dart';
 import '../presentation/pages/learning/progress_page.dart';
 import '../presentation/pages/learning/learning_plan_page.dart';
 import '../presentation/pages/learning/weakness_diagnosis_page.dart';
+import '../presentation/pages/learning/homework_list_page.dart';
 import '../presentation/pages/materials/ai_settings_page.dart';
 import '../presentation/pages/materials/courseware_workshop_page.dart';
 import '../presentation/pages/home/settings_page.dart';
@@ -435,6 +436,8 @@ class NavigationService {
         return const QuizPage();
       case 'wrong_answers':
         return const WrongAnswersPage();
+      case 'homework':
+        return const HomeworkListPage();
       case 'video':
         return const VideoListPage();
       case 'document':

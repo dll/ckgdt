@@ -702,12 +702,12 @@ class AchievementExcelService {
       final sid = _cellStr(row, 0);
       if (!_isDataRow(sid)) continue;
       final name = _cellStr(row, 1);
-      final ach = List<double>.filled(4, 0);
+      final ach = List<double>.filled(10, 0);
       final components = <Map<String, dynamic>>[];
 
       for (final entry in columns.entries) {
         final item = entry.value;
-        if (item.objective < 1 || item.objective > 4) continue;
+        if (item.objective < 1 || item.objective > 10) continue;
         final score = _cell(row, entry.key).clamp(0.0, 100.0).toDouble();
         final itemAchievement = score / 100.0;
         ach[item.objective - 1] += itemAchievement * item.ratio;
@@ -726,7 +726,7 @@ class AchievementExcelService {
         'student_name': name,
       };
       var total = 0.0;
-      for (var i = 0; i < 4; i++) {
+      for (var i = 0; i < fullMarks.length; i++) {
         final full = fullMarks[i];
         final value = ach[i].clamp(0.0, 1.0);
         grade['obj${i + 1}_achievement'] = value;
@@ -855,7 +855,7 @@ class AchievementExcelService {
   Future<List<Map<String, dynamic>>> aiExtractSyllabus(String rawText) async {
     if (rawText.trim().isEmpty) return [];
     const system = '你是高校课程达成度评价专家，精通工程教育认证。'
-        '请仔细阅读课程教学大纲，提取 4 个课程目标的完整结构化信息，只返回 JSON，不要任何解释文字。';
+        '请仔细阅读课程教学大纲，提取所有课程目标（数量由大纲决定，可能是4个、5个或更多）的完整结构化信息，只返回 JSON，不要任何解释文字。';
     final prompt = '''
 阅读以下课程教学大纲，提取每个课程目标的信息。
 重点全面解析：
@@ -864,7 +864,7 @@ class AchievementExcelService {
 3. 哪些实验项目支撑该目标(实验序号)；
 4. 平时成绩评价标准、实验成绩评价标准、期末考核评价内容中该目标对应的考核要点。
 
-返回 JSON 数组，4 个元素，格式：
+返回 JSON 数组，元素数量与大纲中的课程目标数量一致（可能为4、5或更多），格式：
 [{
   "idx": 1,
   "name": "课程目标1",
@@ -1592,7 +1592,7 @@ $rawText
     return rows
         .where((row) =>
             ((row['idx'] as int?) ?? 0) >= 1 &&
-            ((row['idx'] as int?) ?? 0) <= 4)
+            ((row['idx'] as int?) ?? 0) <= 10)
         .toList()
       ..sort((a, b) => (a['idx'] as int).compareTo(b['idx'] as int));
   }
@@ -1878,7 +1878,7 @@ $rawText
     mergeMapToField('chapterMap', 'chapters');
     final rows = byIdx.values
         .where((r) =>
-            ((r['idx'] as int?) ?? 0) >= 1 && ((r['idx'] as int?) ?? 0) <= 4)
+            ((r['idx'] as int?) ?? 0) >= 1 && ((r['idx'] as int?) ?? 0) <= 10)
         .toList()
       ..sort((a, b) => (a['idx'] as int).compareTo(b['idx'] as int));
     return rows;
@@ -1939,12 +1939,12 @@ $rawText
     final rows = await db.query('course_objectives',
         where: 'course_name = ?', whereArgs: [courseName], orderBy: 'idx ASC');
     if (rows.isNotEmpty) {
-      final marks = List<double>.filled(4, 0);
+      final marks = List<double>.filled(10, 0);
       var hasMark = false;
       for (final r in rows) {
         final idx = (r['idx'] as num?)?.toInt() ?? 0;
         final mark = (r['full_mark'] as num?)?.toDouble() ?? 0;
-        if (idx >= 1 && idx <= 4 && mark > 0) {
+        if (idx >= 1 && idx <= 10 && mark > 0) {
           marks[idx - 1] = mark;
           hasMark = true;
         }
@@ -2126,7 +2126,7 @@ $rawText
       xl.TextCellValue('考核项'),
       xl.TextCellValue('考核项比例'),
     ]);
-    for (var i = 0; i < 4; i++) {
+    for (var i = 0; i < fullMarks.length; i++) {
       final objective = i + 1;
       final items = activeItems.where((item) => item.objective == objective);
       if (items.isEmpty && fullMarks[i] <= 0) continue;
@@ -2146,7 +2146,7 @@ $rawText
   }
 
   List<double> _fullMarksFromRows(List<Map<String, dynamic>> rows) {
-    final marks = List<double>.filled(4, 0);
+    final marks = List<double>.filled(10, 0);
     for (final row in rows) {
       final idx = (row['idx'] as num?)?.toInt() ?? 0;
       if (idx < 1 || idx > 4) continue;
@@ -2210,8 +2210,7 @@ $rawText
     final e = cfg.assessmentWeights['实验'] ?? 0.30;
     final x = cfg.assessmentWeights['期末'] ?? 0.50;
     final items = <_TemplateAssessmentItem>[];
-    for (var i = 0; i < 4; i++) {
-      if (i < cfg.fullMarks.length && cfg.fullMarks[i] <= 0) continue;
+    for (var i = 0; i < cfg.fullMarks.length; i++) {
       if (p > 0) {
         items.add(_TemplateAssessmentItem(
             label: '平时成绩', kind: 'pingshi', objective: i + 1, ratio: p));

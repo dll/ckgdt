@@ -1,10 +1,14 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import '../data/local/database_helper.dart';
 import '../data/local/quiz_dao.dart';
 import '../data/local/puml_dao.dart';
+import '../data/local/homework_dao.dart';
 import 'course_context_service.dart';
 import 'graph_import_service.dart';
+import 'course_package_loader.dart';
+import 'ckgdt_quiz_importer.dart';
 import 'gitee_service.dart';
 import 'course_resource_service.dart';
 
@@ -26,8 +30,10 @@ class DataLoadingService {
     try {
       await _dbHelper.database;
       await _loadResourceFiles();
+      await _importActiveCoursePackage();
       await _initPumlSamples();
       await _importMdGraphs();
+      await _importCkgdtQuizzes();
       await _cleanEmptyGraphs();
       await _initGiteeToken();
       await _prefetchRemoteConfigs();
@@ -78,7 +84,8 @@ class DataLoadingService {
       ]);
       debugPrint('=== DataLoadingService: Remote configs pre-fetched');
     } catch (e) {
-      debugPrint('=== DataLoadingService: Remote config prefetch error (non-fatal): $e');
+      debugPrint(
+          '=== DataLoadingService: Remote config prefetch error (non-fatal): $e');
     }
   }
 
@@ -101,39 +108,45 @@ class DataLoadingService {
       debugPrint('=== DataLoadingService: videoDir=$videoDir');
 
       // 检查是否已有数据 且 路径正确（包含当前 dataDir 前缀）
-      final existing = await db.rawQuery(
-          'SELECT COUNT(*) as c FROM resource_files');
+      final existing =
+          await db.rawQuery('SELECT COUNT(*) as c FROM resource_files');
       final count = existing.first['c'] as int? ?? 0;
 
       if (count > 0) {
         // 取一行样本检查路径是否和当前 dataDir 一致
-        final sample = await db.rawQuery(
-            "SELECT file_path FROM resource_files LIMIT 1");
+        final sample =
+            await db.rawQuery("SELECT file_path FROM resource_files LIMIT 1");
         final samplePath = sample.isNotEmpty
             ? (sample.first['file_path'] as String? ?? '')
             : '';
         if (samplePath.startsWith(dataDir)) {
-          debugPrint('=== DataLoadingService: resource_files paths OK ($count rows, prefix=$dataDir)');
+          debugPrint(
+              '=== DataLoadingService: resource_files paths OK ($count rows, prefix=$dataDir)');
           return;
         }
-        debugPrint('=== DataLoadingService: Paths mismatch! sample=$samplePath, expected prefix=$dataDir');
+        debugPrint(
+            '=== DataLoadingService: Paths mismatch! sample=$samplePath, expected prefix=$dataDir');
       }
 
       // 清空旧数据（无论是 assets/ 前缀还是其他错误路径）
       await db.delete('resource_files');
-      debugPrint('=== DataLoadingService: Cleared old resource_files, re-inserting with correct paths');
+      debugPrint(
+          '=== DataLoadingService: Cleared old resource_files, re-inserting with correct paths');
 
       // 从课程上下文动态加载章节名
       final courseCtx = CourseContextService();
       final chapterTitles = await courseCtx.chapterTitles();
       final chapterNames = <String>[];
-      for (var i = 0; i < chapterTitles.length && i < _subPartCounts.length; i++) {
+      for (var i = 0;
+          i < chapterTitles.length && i < _subPartCounts.length;
+          i++) {
         for (var p = 1; p <= _subPartCounts[i]; p++) {
           chapterNames.add('${chapterTitles[i]}$p');
         }
       }
       if (chapterNames.isEmpty) {
-        debugPrint('=== DataLoadingService: No chapters from course context, skipping resource insert');
+        debugPrint(
+            '=== DataLoadingService: No chapters from course context, skipping resource insert');
         return;
       }
 
@@ -172,13 +185,15 @@ class DataLoadingService {
       }
 
       await batch.commit(noResult: true);
-      debugPrint('=== DataLoadingService: Inserted ${chapterNames.length * 3} resource files');
+      debugPrint(
+          '=== DataLoadingService: Inserted ${chapterNames.length * 3} resource files');
 
       // 验证插入结果
-      final verify = await db.rawQuery(
-          "SELECT file_path FROM resource_files LIMIT 1");
+      final verify =
+          await db.rawQuery("SELECT file_path FROM resource_files LIMIT 1");
       if (verify.isNotEmpty) {
-        debugPrint('=== DataLoadingService: Verify → ${verify.first['file_path']}');
+        debugPrint(
+            '=== DataLoadingService: Verify → ${verify.first['file_path']}');
       }
     } catch (e) {
       debugPrint('=== DataLoadingService: Error loading resource files: $e');
@@ -191,8 +206,8 @@ class DataLoadingService {
     if (kIsWeb) return 'data';
     try {
       // 可执行文件所在目录
-      final exeDir = File(Platform.resolvedExecutable).parent.path
-          .replaceAll('\\', '/');
+      final exeDir =
+          File(Platform.resolvedExecutable).parent.path.replaceAll('\\', '/');
 
       // 策略 1: 开发模式 — 项目根目录/data
       // 从 exe 目录向上查找 data/ 文件夹
@@ -201,7 +216,7 @@ class DataLoadingService {
         final candidate = '$dir/data';
         if (Directory(candidate).existsSync() &&
             (Directory('$candidate/视频').existsSync() ||
-             Directory('$candidate/课件').existsSync())) {
+                Directory('$candidate/课件').existsSync())) {
           debugPrint('=== DataLoadingService: Found data dir: $candidate');
           return candidate;
         }
@@ -240,6 +255,44 @@ class DataLoadingService {
     }
   }
 
+  Future<void> _importCkgdtQuizzes() async {
+    try {
+      await CkgdtQuizImporter.instance.importCkgdtQuizzes();
+    } catch (e) {
+      debugPrint('=== DataLoadingService: Error importing CKGDT quizzes: $e');
+    }
+    // 导入作业数据
+    await _importCkgdtHomework();
+  }
+
+  Future<void> _importCkgdtHomework() async {
+    try {
+      final db = await _dbHelper.database;
+      // 检查是否已导入
+      final existing = await db.rawQuery(
+        "SELECT COUNT(*) as c FROM homeworks WHERE course_id = 'ckgdt'",
+      );
+      final count = (existing.first['c'] as int?) ?? 0;
+      if (count > 0) return;
+
+      // 读取 homework.json
+      final content = await rootBundle.loadString('data/CKGDT/配置/homework.json');
+      final homeworkDao = HomeworkDao();
+      final imported = await homeworkDao.importFromJson('ckgdt', content);
+      debugPrint('=== DataLoadingService: Imported $imported homework sets for CKGDT');
+    } catch (e) {
+      debugPrint('=== DataLoadingService: Error importing CKGDT homework: $e');
+    }
+  }
+
+  Future<void> _importActiveCoursePackage() async {
+    try {
+      await CoursePackageLoader.instance.importActiveCourse();
+    } catch (e) {
+      debugPrint('=== DataLoadingService: Error importing course package: $e');
+    }
+  }
+
   // ── 清理空图谱 ──────────────────────────────────────────────────────────
 
   Future<void> _cleanEmptyGraphs() async {
@@ -255,7 +308,8 @@ class DataLoadingService {
       ''');
       if (emptyGraphs.isNotEmpty) {
         final ids = emptyGraphs.map((r) => "'${r['id']}'").join(',');
-        final deleted = await db.rawDelete('DELETE FROM graphs WHERE id IN ($ids)');
+        final deleted =
+            await db.rawDelete('DELETE FROM graphs WHERE id IN ($ids)');
         debugPrint('=== DataLoadingService: Cleaned $deleted empty graphs');
       }
 
@@ -269,8 +323,10 @@ class DataLoadingService {
         // 先删除关联的节点和边
         await db.rawDelete('DELETE FROM edges WHERE graph_id IN ($ids)');
         await db.rawDelete('DELETE FROM nodes WHERE graph_id IN ($ids)');
-        final deleted = await db.rawDelete('DELETE FROM graphs WHERE id IN ($ids)');
-        debugPrint('=== DataLoadingService: Cleaned $deleted old non-md_import graphs');
+        final deleted =
+            await db.rawDelete('DELETE FROM graphs WHERE id IN ($ids)');
+        debugPrint(
+            '=== DataLoadingService: Cleaned $deleted old non-md_import graphs');
       }
     } catch (e) {
       debugPrint('=== DataLoadingService: Error cleaning graphs: $e');

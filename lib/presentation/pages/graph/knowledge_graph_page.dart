@@ -27,6 +27,7 @@ import 'graph_properties_page.dart';
 import '../../../core/design/noir_tokens.dart';
 import '../../widgets/noir_page_shell.dart';
 import 'package:knowledge_graph_app/core/error_handler.dart';
+import '../../../services/course_data_service.dart';
 
 // ── 私有类拆分到 parts/ 子目录（part / part of 模式）─────────
 part 'parts/concept_model.dart';

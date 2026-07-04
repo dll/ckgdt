@@ -116,73 +116,92 @@ class _MaskGridPanel extends StatefulWidget {
 }
 
 class _MaskGridPanelState extends State<_MaskGridPanel> {
-  String _courseId = 'ckgdt';
+  List<ChapterDef> _chapterDefs = [];
+  bool _loading = true;
 
-  /// 课程感知的蒙版分类
-  static Map<String, List<MaskShape>> _groupsForCourse(String courseId) {
-    if (courseId == 'ckgdt') {
-      return {
-        '教育技术': [
-          MaskShape.harmonyOS, MaskShape.flutter,
-          MaskShape.python, MaskShape.java,
-        ],
-        '平台功能': [
-          MaskShape.brain, MaskShape.avatar,
-          MaskShape.docker, MaskShape.gitHub,
-        ],
-        '开发工具': [
-          MaskShape.vsCode, MaskShape.dart,
-          MaskShape.typeScript, MaskShape.linux,
-        ],
-        '移动生态': [
-          MaskShape.android, MaskShape.apple,
-          MaskShape.kotlin, MaskShape.swift,
-        ],
-        '个性装扮': [
-          MaskShape.wechat, MaskShape.reactNative,
-          MaskShape.uniapp, MaskShape.maui,
-          MaskShape.cordova, MaskShape.golang,
-        ],
-      };
+  /// 从 chapters.json 动态加载图标和颜色，不硬编码
+  Map<String, List<MaskShape>> _buildGroups() {
+    if (_chapterDefs.isEmpty) {
+      // 兜底：使用全部图标池
+      return {'全部': List.of(MaskShape.values.where((s) => s != MaskShape.none))};
     }
-    // MAD 默认分类
-    return {
-      '移动平台': [
-        MaskShape.android, MaskShape.apple, MaskShape.harmonyOS,
-      ],
-      '跨平台框架': [
-        MaskShape.flutter, MaskShape.reactNative, MaskShape.uniapp,
-        MaskShape.maui, MaskShape.cordova,
-      ],
-      '编程语言': [
-        MaskShape.dart, MaskShape.kotlin, MaskShape.swift,
-        MaskShape.java, MaskShape.python, MaskShape.typeScript,
-        MaskShape.golang,
-      ],
-      '工具与平台': [
-        MaskShape.wechat, MaskShape.docker, MaskShape.gitHub,
-        MaskShape.vsCode, MaskShape.linux,
-      ],
-      '个性化': [
-        MaskShape.avatar, MaskShape.brain,
-      ],
-    };
+    final groups = <String, List<MaskShape>>{};
+    // 每2-3章分一组，保证每组至少2个图标
+    final chunkSize = _chapterDefs.length <= 4 ? 1 : (_chapterDefs.length <= 8 ? 2 : 3);
+    for (var i = 0; i < _chapterDefs.length; i += chunkSize) {
+      final end = (i + chunkSize).clamp(0, _chapterDefs.length);
+      final chapterRange = _chapterDefs.sublist(i, end);
+      // 用第一章的简短名称作为分类标签
+      final label = _shortLabel(chapterRange.first.title);
+      // 从章节定义中提取图标（动态）
+      final icons = <MaskShape>[];
+      for (final ch in chapterRange) {
+        icons.add(_iconFromChapterDef(ch));
+      }
+      groups[label] = icons;
+    }
+    // 剩余图标归入"个性化"
+    if (groups.length < _chapterDefs.length) {
+      final usedCount = groups.values.fold(0, (sum, list) => sum + list.length);
+      if (usedCount < MaskShape.values.length - 1) {
+        groups['个性化'] = MaskShape.values.where((s) => s != MaskShape.none).toList();
+      }
+    }
+    return groups;
+  }
+
+  /// 从章节定义的 icon 字段映射到 MaskShape
+  MaskShape _iconFromChapterDef(ChapterDef ch) {
+    // chapters.json icon: "account_tree", "storage", "laptop", etc.
+    // 映射到 MaskShape 枚举
+    final iconName = ch.icon.toLowerCase();
+    for (final shape in MaskShape.values) {
+      if (shape.name.toLowerCase() == iconName) return shape;
+    }
+    // 回退：按章节序号从池中取
+    final pool = [MaskShape.book, MaskShape.lightbulb, MaskShape.compass,
+      MaskShape.microscope, MaskShape.globe, MaskShape.pencil,
+      MaskShape.monitor, MaskShape.chart, MaskShape.puzzle,
+      MaskShape.graduationCap, MaskShape.brain, MaskShape.avatar];
+    return pool[ch.number % pool.length];
+  }
+
+  /// 章节名缩短为标签
+  String _shortLabel(String title) {
+    // "第1章 课程知识图谱基础" → "知识图谱基础"
+    var s = title.replaceFirst(RegExp(r'第\d+章\s*'), '').trim();
+    if (s.length > 8) s = s.substring(0, 8);
+    return s;
   }
 
   @override
   void initState() {
     super.initState();
-    _loadCourseId();
+    _loadData();
   }
 
-  Future<void> _loadCourseId() async {
-    final id = await CourseContextService().activeCourseId();
-    if (mounted) setState(() => _courseId = id);
+  Future<void> _loadData() async {
+    final ctx = CourseContextService();
+    final id = await ctx.activeCourseId();
+    // 从 CourseDataService 加载章节定义（含颜色/图标）
+    final pkg = await CourseDataService.instance.getPackage(id);
+    if (mounted) {
+      setState(() {
+        _chapterDefs = pkg.chapters;
+        _loading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final groups = _groupsForCourse(_courseId);
+    if (_loading) {
+      return const SizedBox(
+        width: 200, height: 100,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    final groups = _buildGroups();
 
     return SizedBox(
       width: MediaQuery.of(context).size.width * 0.84,

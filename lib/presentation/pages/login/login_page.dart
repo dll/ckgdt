@@ -18,6 +18,7 @@ import '../privacy/privacy_policy_page.dart';
 import '../../../services/voice_service.dart';
 import '../../widgets/voice_input_button.dart';
 import '../home/home_page.dart';
+import '../home/login_progress_dialog.dart';
 import 'knowledge_graph_backdrop.dart';
 
 class LoginPage extends StatefulWidget {
@@ -137,6 +138,17 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
       if (success) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        // 显示登录进度弹窗
+        final user = _authService.currentUser;
+        if (user != null) {
+          await LoginProgressDialog.showAfterLogin(
+            context,
+            userId: user.userId,
+            userName: user.realName ?? user.userId,
+            role: user.role,
+          );
+        }
+        if (!mounted) return;
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const HomePage(initialTabIndex: 0)),
         );
@@ -531,6 +543,14 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         );
       }
 
+      if (!mounted) return;
+      // 显示登录进度弹窗
+      await LoginProgressDialog.showAfterLogin(
+        context,
+        userId: user.userId,
+        userName: user.realName ?? user.userId,
+        role: user.role,
+      );
       if (!mounted) return;
       // 移动端登录成功，跳转首页
       Navigator.of(context).pushReplacement(

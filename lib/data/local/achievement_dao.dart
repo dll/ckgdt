@@ -12,9 +12,9 @@ import '../../services/achievement_context.dart';
 class AchievementDao {
   final CourseContextService _courseContext = CourseContextService();
 
-  /// 4 个课程目标满分（与大纲第六节、AchievementConfig.defaults 一致）。
-  /// DAO 属数据层，不能依赖 presentation 层的 AchievementConfig，故在此独立维护；
-  /// 两处数值必须同步（大纲权威值 15/25/30/30）。
+  /// 默认课程目标满分数值（与大纲第六节、AchievementConfig.defaults 一致）。
+  /// DAO 属数据层，不能依赖 presentation 层的 AchievementConfig，故在此独立维护。
+  /// 优先使用 course_objectives 表中的满分值，此处仅作兜底。
   static const List<double> _kFullMarks = [15.0, 25.0, 30.0, 30.0];
 
   static int _asInt(Object? value, [int fallback = 0]) {
@@ -596,21 +596,30 @@ class AchievementDao {
   }
 
   /// saveCalculationResults — 将计算后的达成度保存到批次
+  /// 支持任意数量的课程目标（通过 Map 传入）
   Future<void> saveCalculationResults({
     required int batchId,
-    required double objective1Achievement,
-    required double objective2Achievement,
-    required double objective3Achievement,
-    required double objective4Achievement,
     required double weightedAchievement,
+    double? objective1Achievement,
+    double? objective2Achievement,
+    double? objective3Achievement,
+    double? objective4Achievement,
+    Map<int, double>? objectiveAchievements,
   }) async {
-    final results = {
-      'objective1_achievement': objective1Achievement,
-      'objective2_achievement': objective2Achievement,
-      'objective3_achievement': objective3Achievement,
-      'objective4_achievement': objective4Achievement,
+    final results = <String, dynamic>{
       'weighted_achievement': weightedAchievement,
     };
+    // 兼容旧的4参数调用
+    if (objective1Achievement != null) results['objective1_achievement'] = objective1Achievement;
+    if (objective2Achievement != null) results['objective2_achievement'] = objective2Achievement;
+    if (objective3Achievement != null) results['objective3_achievement'] = objective3Achievement;
+    if (objective4Achievement != null) results['objective4_achievement'] = objective4Achievement;
+    // 新的动态数量支持
+    if (objectiveAchievements != null) {
+      for (final entry in objectiveAchievements.entries) {
+        results['objective${entry.key}_achievement'] = entry.value;
+      }
+    }
     await updateBatch(batchId, {
       'calc_results_json': jsonEncode(results),
       'updated_at': DateTime.now().toIso8601String(),
@@ -641,15 +650,20 @@ class AchievementDao {
       final courseName = batch?['course_name'] as String? ?? '当前课程';
       final objs = await getCourseObjectives(courseName);
       if (objs.isNotEmpty) {
-        final w = List<double>.filled(4, 0);
+        final w = List<double>.filled(10, 0);
         for (final o in objs) {
           final idx = _asInt(o['idx']);
           final weight = _asDouble(o['weight']);
-          if (idx >= 1 && idx <= 4 && weight > 0) {
+          if (idx >= 1 && idx <= 10 && weight > 0) {
             w[idx - 1] = weight;
           }
         }
-        if (w.any((x) => x > 0)) return w;
+        // 只返回实际有值的部分
+        final maxIdx = objs.fold<int>(0, (m, o) {
+          final idx = _asInt(o['idx']);
+          return idx > m ? idx : m;
+        });
+        if (maxIdx > 0 && w.any((x) => x > 0)) return w.sublist(0, maxIdx);
       }
       // 2. 批次快照
       final json = batch?['objective_weights_json'] as String?;
@@ -677,12 +691,12 @@ class AchievementDao {
       final courseName = batch?['course_name'] as String? ?? '当前课程';
       final objs = await getCourseObjectives(courseName);
       if (objs.isNotEmpty) {
-        final marks = List<double>.filled(4, 0);
+        final marks = List<double>.filled(10, 0);
         var hasMark = false;
         for (final o in objs) {
           final idx = _asInt(o['idx']);
           final mark = _asDouble(o['full_mark']);
-          if (idx >= 1 && idx <= 4 && mark > 0) {
+          if (idx >= 1 && idx <= 10 && mark > 0) {
             marks[idx - 1] = mark;
             hasMark = true;
           }
@@ -715,13 +729,18 @@ class AchievementDao {
       final objs = await getCourseObjectives(courseName);
       if (objs.isEmpty) return fallback;
 
+      final maxIdx = objs.fold<int>(0, (m, o) {
+        final idx = _asInt(o['idx']);
+        return idx > m ? idx : m;
+      });
+      final count = maxIdx > 0 ? maxIdx : 4;
       final result = List<Map<String, double>>.generate(
-        4,
+        count,
         (_) => {'pingshi': 0, 'experiment': 0, 'exam': 0},
       );
       for (final o in objs) {
         final idx = _asInt(o['idx']);
-        if (idx < 1 || idx > 4) continue;
+        if (idx < 1 || idx > count) continue;
         result[idx - 1] = _normalizeAssessmentWeights({
           'pingshi': _asRatio(o['pingshi_ratio']),
           'experiment': _asRatio(o['experiment_ratio']),
@@ -756,22 +775,21 @@ class AchievementDao {
 
   /// 从已导入的 achievement_scores 计算班级达成度并保存到批次。
   /// 供「导入成绩后自动计算」与「报告生成」复用，保证两处算法一致。
-  /// 返回 {课程目标1..4, weighted}；批次无成绩返回空 Map。
   Future<Map<String, double>> recalculateAndSaveBatch(int batchId) async {
     final avg = await calculateClassAverage(batchId);
     if (avg.isEmpty) return {};
     final weights = await resolveObjectiveWeights(batchId);
     double weighted = 0;
-    for (int i = 1; i <= 4; i++) {
-      weighted += (avg['课程目标$i'] ?? 0) * weights[i - 1];
+    final objAch = <int, double>{};
+    for (int i = 1; i <= weights.length; i++) {
+      final v = avg['课程目标$i'] ?? 0;
+      weighted += v * weights[i - 1];
+      objAch[i] = v;
     }
     await saveCalculationResults(
       batchId: batchId,
-      objective1Achievement: avg['课程目标1'] ?? 0,
-      objective2Achievement: avg['课程目标2'] ?? 0,
-      objective3Achievement: avg['课程目标3'] ?? 0,
-      objective4Achievement: avg['课程目标4'] ?? 0,
       weightedAchievement: weighted,
+      objectiveAchievements: objAch,
     );
     await updateBatchStatus(batchId, 'completed');
     return {...avg, 'weighted': weighted};

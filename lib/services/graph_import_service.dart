@@ -5,6 +5,7 @@ import 'package:sqflite/sqflite.dart';
 import '../core/error_handler.dart';
 import '../data/local/database_helper.dart';
 import 'course_context_service.dart';
+import 'course_data_service.dart';
 
 /// 从 assets/graphs/ 目录导入 Markdown 图谱文件到 SQLite
 class GraphImportService {
@@ -14,23 +15,63 @@ class GraphImportService {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
   final CourseContextService _courseContext = CourseContextService();
 
-  /// 6 大分类目录
-  static const _categories = [
-    _Category('01-课程图谱', '课程图谱', '#E53935'),
-    _Category('02-技术栈图谱', '技术栈图谱', '#1E88E5'),
-    _Category('03-实验图谱', '实验图谱', '#FB8C00'),
-    _Category('04-项目图谱', '项目图谱', '#43A047'),
-    _Category('05-教学图谱', '教学图谱', '#8E24AA'),
-    _Category('06-学习图谱', '学习图谱', '#00897B'),
-  ];
+  /// 从 data/{courseId}/配置/graph_categories.json 动态加载分类
+  Future<List<_Category>> _getCategories(String courseId) async {
+    try {
+      final content = await rootBundle.loadString('data/$courseId/配置/graph_categories.json');
+      final data = jsonDecode(content) as Map<String, dynamic>;
+      final cats = data['categories'] as List? ?? [];
+      return cats.map((c) => _Category(
+        c['dir'] as String,
+        c['label'] as String,
+        c['color'] as String? ?? '#667eea',
+      )).toList();
+    } catch (_) {
+      // 回退：从 chapters.json 动态生成分类
+      return _generateCategoriesFromChapters(courseId);
+    }
+  }
 
-  /// 分类间交叉引用
-  static const _crossRefs = [
-    _CrossRef('01-课程图谱', '02-技术栈图谱', 'requires', '需要'),
-    _CrossRef('02-技术栈图谱', '03-实验图谱', 'implements', '实现'),
-    _CrossRef('03-实验图谱', '04-项目图谱', 'supports', '支撑'),
-    _CrossRef('05-教学图谱', '06-学习图谱', 'guides', '指导'),
-  ];
+  /// 从 chapters.json 动态生成图谱分类（回退方案）
+  Future<List<_Category>> _generateCategoriesFromChapters(String courseId) async {
+    final pkg = await CourseDataService.instance.getPackage(courseId);
+    if (pkg.chapters.isEmpty) return [];
+    final cats = <_Category>[];
+    final colors = ['#E53935', '#1E88E5', '#FB8C00', '#43A047', '#8E24AA', '#00897B', '#C62828', '#5C6BC0'];
+    for (var i = 0; i < pkg.chapters.length && i < 8; i++) {
+      final ch = pkg.chapters[i];
+      final dir = '${(i + 1).toString().padLeft(2, '0')}-${ch.title}图谱';
+      cats.add(_Category(dir, '${ch.title}图谱', colors[i % colors.length]));
+    }
+    return cats;
+  }
+
+  /// 从 data/{courseId}/配置/graph_categories.json 动态加载交叉引用
+  Future<List<_CrossRef>> _getCrossRefs(String courseId) async {
+    try {
+      final content = await rootBundle.loadString('data/$courseId/配置/graph_categories.json');
+      final data = jsonDecode(content) as Map<String, dynamic>;
+      final refs = data['cross_refs'] as List? ?? [];
+      return refs.map((r) => _CrossRef(
+        r['from'] as String,
+        r['to'] as String,
+        r['type'] as String? ?? 'related',
+        r['label'] as String? ?? '',
+      )).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// 从 graph_categories.json 或 chapters.json 动态加载分类对应的 MD 文件列表
+  Future<List<String>> _getCategoryFiles(String courseId, String dir) async {
+    return _categoryFilesForCourse(courseId)[dir] ?? [];
+  }
+
+  /// 获取资产路径前缀
+  String _getAssetPrefix(String courseId) {
+    return courseId == 'ckgdt' ? 'assets/graphs/ckgdt' : 'assets/graphs';
+  }
 
   /// 入口方法：检查并导入全部图谱
   Future<void> importAll() async {
@@ -53,14 +94,19 @@ class GraphImportService {
     debugPrint('=== GraphImportService: Starting import of MD graphs...');
 
     final courseId = course.id;
+    final categories = await _getCategories(courseId);
+    final crossRefs = await _getCrossRefs(courseId);
 
-    // 1) 创建总图谱（包含6大分类的根图谱）
-    await _importMainGraph(db, courseId, course.name);
+    // 1) 创建总图谱（包含所有分类的根图谱）
+    await _importMainGraph(db, courseId, course.name, categories);
 
     // 2) 为每个分类创建详细图谱
-    for (final cat in _categories) {
+    for (final cat in categories) {
       await _importCategoryGraph(db, cat, courseId);
     }
+
+    // 3) 创建分类间交叉引用边
+    await _importCrossRefs(db, courseId, crossRefs);
 
     debugPrint('=== GraphImportService: Import complete');
   }
@@ -68,7 +114,7 @@ class GraphImportService {
   // ── 总图谱 ──────────────────────────────────────────────────────────────
 
   Future<void> _importMainGraph(
-      Database db, String courseId, String courseName) async {
+      Database db, String courseId, String courseName, List<_Category> categories) async {
     const graphId = 'graph_main_overview';
     const rootId = 'node_root_main';
 
@@ -77,7 +123,7 @@ class GraphImportService {
         'graphs',
         {
           'id': graphId,
-          'title': '${courseName}课程总图谱',
+          'title': '$courseName课程总图谱',
           'course_id': courseId,
           'graph_type': 'md_import',
           'layout': 'tree',
@@ -88,9 +134,9 @@ class GraphImportService {
     await _insertNode(db, rootId, graphId, '课程：$courseName', '', 'root', 0,
         color: '#2E7D32');
 
-    // 6 大分类节点 + 边
-    for (var i = 0; i < _categories.length; i++) {
-      final cat = _categories[i];
+    // 分类节点 + 边
+    for (var i = 0; i < categories.length; i++) {
+      final cat = categories[i];
       final catNodeId = 'node_cat_${cat.dir}';
       await _insertNode(db, catNodeId, graphId, cat.label, '', 'category', 1,
           color: cat.color, parentId: rootId);
@@ -108,22 +154,6 @@ class GraphImportService {
         await _insertEdge(db, 'edge_cat${i}_file$j', graphId, catNodeId,
             fileNodeId, 'contains', '包含');
       }
-    }
-
-    // 交叉引用边
-    for (var i = 0; i < _crossRefs.length; i++) {
-      final ref = _crossRefs[i];
-      await _insertEdge(
-        db,
-        'edge_cross_$i',
-        graphId,
-        'node_cat_${ref.from}',
-        'node_cat_${ref.to}',
-        ref.type,
-        ref.label,
-        color: '#FF5722',
-        style: 'dashed',
-      );
     }
 
     debugPrint('=== GraphImportService: Main overview graph created');
@@ -152,7 +182,8 @@ class GraphImportService {
         color: cat.color);
 
     // 加载并解析每个 MD 文件
-    final fileNames = await _listMdFiles(cat.dir);
+    final assetPrefix = _getAssetPrefix(courseId);
+    final fileNames = await _getCategoryFiles(courseId, cat.dir);
     for (var fi = 0; fi < fileNames.length; fi++) {
       final fileName = fileNames[fi];
       final fileTitle = fileName.replaceAll('.md', '');
@@ -160,7 +191,7 @@ class GraphImportService {
 
       try {
         final content =
-            await rootBundle.loadString('assets/graphs/${cat.dir}/$fileName');
+            await rootBundle.loadString('$assetPrefix/${cat.dir}/$fileName');
         final sections = _parseMdSections(content);
 
         // 文件节点
@@ -199,6 +230,27 @@ class GraphImportService {
         debugPrint(
             '=== GraphImportService: Error loading ${cat.dir}/$fileName: $e');
       }
+    }
+  }
+
+  // ── 交叉引用 ──────────────────────────────────────────────────────────
+
+  Future<void> _importCrossRefs(
+      Database db, String courseId, List<_CrossRef> crossRefs) async {
+    const graphId = 'graph_main_overview';
+    for (var i = 0; i < crossRefs.length; i++) {
+      final ref = crossRefs[i];
+      await _insertEdge(
+        db,
+        'edge_cross_$i',
+        graphId,
+        'node_cat_${ref.from}',
+        'node_cat_${ref.to}',
+        ref.type,
+        ref.label,
+        color: '#FF5722',
+        style: 'dashed',
+      );
     }
   }
 
@@ -282,7 +334,7 @@ class GraphImportService {
     return _categoryFiles[dir] ?? [];
   }
 
-  /// 所有 MD 文件名（排除总结文件）
+  /// 所有 MD 文件名（排除总结文件）— 默认MAD
   static const _categoryFiles = {
     '01-课程图谱': [
       '知识体系图谱.md',
@@ -327,6 +379,58 @@ class GraphImportService {
       '学习方法指导图谱.md',
     ],
   };
+
+  /// CKGDT 课程文件列表
+  static const _ckgdtCategoryFiles = {
+    '01-课程图谱': [
+      '知识体系图谱.md',
+      '课程目标图谱.md',
+      '学习问题图谱.md',
+      '能力培养图谱.md',
+    ],
+    '02-平台技术图谱': [
+      '知识图谱技术.md',
+      '数字孪生技术.md',
+      '学习分析技术.md',
+      '多智能体系统.md',
+    ],
+    '03-实验图谱': [
+      '实验一 平台基础操作.md',
+      '实验二 知识图谱建模.md',
+      '实验三 数字孪生场景设计.md',
+      '实验四 学习分析仪表盘.md',
+      '实验五 实验管理与AI批阅.md',
+      '实验六 综合项目.md',
+      '实验七 教师端教学管理.md',
+      '实验八 学生端自主学习.md',
+    ],
+    '04-项目图谱': [
+      '课程知识图谱构建项目.md',
+      '数字孪生教学设计项目.md',
+      '学习分析实践项目.md',
+    ],
+    '05-教学图谱': [
+      '教学内容体系图谱.md',
+      '教学方法策略图谱.md',
+      '考核实施指导图谱.md',
+      '教学资源配置图谱.md',
+    ],
+    '06-学习图谱': [
+      '学习内容导航图谱.md',
+      '实验学习指导图谱.md',
+      '考核应对策略图谱.md',
+      '学习方法指导图谱.md',
+    ],
+    '07-思政图谱': [
+      '课程思政图谱.md',
+    ],
+  };
+
+  /// 根据课程ID获取文件列表
+  Map<String, List<String>> _categoryFilesForCourse(String courseId) {
+    if (courseId == 'ckgdt') return _ckgdtCategoryFiles;
+    return _categoryFiles;
+  }
 
   Future<void> _insertNode(
     Database db,

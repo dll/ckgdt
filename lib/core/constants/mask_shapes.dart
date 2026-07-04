@@ -25,7 +25,18 @@ enum MaskShape {
   golang('Go', 'Go 地鼠'),
   linux('Linux', 'Linux 企鹅'),
   avatar('我的画像', '个人知识画像'),
-  brain('知识脑图', '大脑思维图谱');
+  brain('知识脑图', '大脑思维图谱'),
+  // CKGDT 教育类专属
+  book('书本', '知识与学习'),
+  globe('地球', '全球化教育'),
+  microscope('显微镜', '科学研究'),
+  graduationCap('毕业帽', '学业成就'),
+  lightbulb('灯泡', '创新思维'),
+  puzzle('拼图', '知识构建'),
+  compass('指南针', '学习导航'),
+  pencil('铅笔', '教学记录'),
+  monitor('显示器', '数字化教学'),
+  chart('图表', '数据分析');
 
   final String label;
   final String description;
@@ -91,6 +102,26 @@ class MaskShapeBuilder {
         return _buildAvatar(ox, oy, w, h);
       case MaskShape.brain:
         return _buildBrain(ox, oy, w, h);
+      case MaskShape.book:
+        return _buildBook(ox, oy, w, h);
+      case MaskShape.globe:
+        return _buildGlobe(ox, oy, w, h);
+      case MaskShape.microscope:
+        return _buildMicroscope(ox, oy, w, h);
+      case MaskShape.graduationCap:
+        return _buildGraduationCap(ox, oy, w, h);
+      case MaskShape.lightbulb:
+        return _buildLightbulb(ox, oy, w, h);
+      case MaskShape.puzzle:
+        return _buildPuzzle(ox, oy, w, h);
+      case MaskShape.compass:
+        return _buildCompass(ox, oy, w, h);
+      case MaskShape.pencil:
+        return _buildPencil(ox, oy, w, h);
+      case MaskShape.monitor:
+        return _buildMonitor(ox, oy, w, h);
+      case MaskShape.chart:
+        return _buildChart(ox, oy, w, h);
     }
   }
 
@@ -1178,6 +1209,134 @@ class MaskShapeBuilder {
       width: w * 0.18, height: h * 0.16,
     ));
 
+    return path;
+  }
+
+  // ── CKGDT 教育类蒙版路径 ──────────────────────────────────────────────
+
+  static Path _buildBook(double ox, double oy, double w, double h) {
+    final path = Path();
+    final cx = ox + w / 2;
+    final cy = oy + h / 2;
+    // 书本：两个矩形对称展开
+    path.addRect(Rect.fromCenter(center: Offset(cx - w * 0.15, cy), width: w * 0.35, height: h * 0.70));
+    path.addRect(Rect.fromCenter(center: Offset(cx + w * 0.15, cy), width: w * 0.35, height: h * 0.70));
+    return path;
+  }
+
+  static Path _buildGlobe(double ox, double oy, double w, double h) {
+    final path = Path();
+    final cx = ox + w / 2;
+    final cy = oy + h / 2;
+    // 地球：大圆 + 横线 + 竖线
+    path.addOval(Rect.fromCenter(center: Offset(cx, cy), width: w * 0.80, height: h * 0.80));
+    path.addOval(Rect.fromCenter(center: Offset(cx, cy), width: w * 0.80, height: h * 0.20));
+    path.addOval(Rect.fromCenter(center: Offset(cx, cy), width: w * 0.20, height: h * 0.80));
+    return path;
+  }
+
+  static Path _buildMicroscope(double ox, double oy, double w, double h) {
+    final path = Path();
+    final cx = ox + w / 2;
+    final cy = oy + h / 2;
+    // 显微镜：底座 + 镜筒 + 目镜
+    path.addRect(Rect.fromCenter(center: Offset(cx, cy + h * 0.30), width: w * 0.50, height: h * 0.12));
+    path.addRect(Rect.fromCenter(center: Offset(cx, cy), width: w * 0.12, height: h * 0.50));
+    path.addOval(Rect.fromCenter(center: Offset(cx, cy - h * 0.28), width: w * 0.24, height: h * 0.16));
+    return path;
+  }
+
+  static Path _buildGraduationCap(double ox, double oy, double w, double h) {
+    final path = Path();
+    final cx = ox + w / 2;
+    final cy = oy + h / 2;
+    // 毕业帽：菱形帽顶 + 矩形帽身
+    final top = Path()
+      ..moveTo(cx, cy - h * 0.35)
+      ..lineTo(cx + w * 0.40, cy - h * 0.05)
+      ..lineTo(cx, cy + h * 0.10)
+      ..lineTo(cx - w * 0.40, cy - h * 0.05)
+      ..close();
+    path.addPath(top, Offset.zero);
+    path.addRect(Rect.fromCenter(center: Offset(cx, cy + h * 0.22), width: w * 0.24, height: h * 0.24));
+    return path;
+  }
+
+  static Path _buildLightbulb(double ox, double oy, double w, double h) {
+    final path = Path();
+    final cx = ox + w / 2;
+    final cy = oy + h / 2;
+    // 灯泡：圆形灯体 + 矩形灯座
+    path.addOval(Rect.fromCenter(center: Offset(cx, cy - h * 0.08), width: w * 0.56, height: h * 0.56));
+    path.addRect(Rect.fromCenter(center: Offset(cx, cy + h * 0.30), width: w * 0.28, height: h * 0.16));
+    return path;
+  }
+
+  static Path _buildPuzzle(double ox, double oy, double w, double h) {
+    final path = Path();
+    final cx = ox + w / 2;
+    final cy = oy + h / 2;
+    // 拼图：四个方块交错
+    final s = w * 0.22;
+    path.addRect(Rect.fromCenter(center: Offset(cx - s, cy - s), width: s * 2, height: s * 2));
+    path.addRect(Rect.fromCenter(center: Offset(cx + s, cy - s), width: s * 2, height: s * 2));
+    path.addRect(Rect.fromCenter(center: Offset(cx - s, cy + s), width: s * 2, height: s * 2));
+    path.addRect(Rect.fromCenter(center: Offset(cx + s, cy + s), width: s * 2, height: s * 2));
+    return path;
+  }
+
+  static Path _buildCompass(double ox, double oy, double w, double h) {
+    final path = Path();
+    final cx = ox + w / 2;
+    final cy = oy + h / 2;
+    // 指南针：外圆 + 内三角
+    path.addOval(Rect.fromCenter(center: Offset(cx, cy), width: w * 0.80, height: h * 0.80));
+    final needle = Path()
+      ..moveTo(cx, cy - h * 0.30)
+      ..lineTo(cx + w * 0.10, cy)
+      ..lineTo(cx, cy + h * 0.30)
+      ..lineTo(cx - w * 0.10, cy)
+      ..close();
+    path.addPath(needle, Offset.zero);
+    return path;
+  }
+
+  static Path _buildPencil(double ox, double oy, double w, double h) {
+    final path = Path();
+    final cx = ox + w / 2;
+    final cy = oy + h / 2;
+    // 铅笔：矩形笔身 + 三角形笔尖
+    path.addRect(Rect.fromCenter(center: Offset(cx, cy - h * 0.10), width: w * 0.16, height: h * 0.55));
+    final tip = Path()
+      ..moveTo(cx, cy + h * 0.38)
+      ..lineTo(cx - w * 0.08, cy + h * 0.20)
+      ..lineTo(cx + w * 0.08, cy + h * 0.20)
+      ..close();
+    path.addPath(tip, Offset.zero);
+    return path;
+  }
+
+  static Path _buildMonitor(double ox, double oy, double w, double h) {
+    final path = Path();
+    final cx = ox + w / 2;
+    final cy = oy + h / 2;
+    // 显示器：屏幕 + 底座
+    path.addRRect(RRect.fromRectAndRadius(
+      Rect.fromCenter(center: Offset(cx, cy - h * 0.08), width: w * 0.70, height: h * 0.50),
+      const Radius.circular(8),
+    ));
+    path.addRect(Rect.fromCenter(center: Offset(cx, cy + h * 0.30), width: w * 0.30, height: h * 0.12));
+    return path;
+  }
+
+  static Path _buildChart(double ox, double oy, double w, double h) {
+    final path = Path();
+    final cx = ox + w / 2;
+    final cy = oy + h / 2;
+    // 图表：三个柱状条
+    path.addRect(Rect.fromCenter(center: Offset(cx - w * 0.22, cy + h * 0.10), width: w * 0.18, height: h * 0.50));
+    path.addRect(Rect.fromCenter(center: Offset(cx, cy - h * 0.02), width: w * 0.18, height: h * 0.74));
+    path.addRect(Rect.fromCenter(center: Offset(cx + w * 0.22, cy + h * 0.18), width: w * 0.18, height: h * 0.34));
     return path;
   }
 }

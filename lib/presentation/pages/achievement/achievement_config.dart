@@ -57,7 +57,7 @@ class AchievementConfig {
     final chapterCount = course.chapters.isNotEmpty
         ? course.chapters.length
         : course.chapterCount;
-    final objectiveCount = chapterCount <= 3 ? chapterCount : 4;
+    final objectiveCount = chapterCount <= 3 ? chapterCount : chapterCount.clamp(4, 10);
     return {
       'objectiveCount': objectiveCount,
       'chapterCount': chapterCount,
@@ -87,9 +87,16 @@ class AchievementConfig {
       for (final row in sorted)
         if (_asInt(row['idx']) > 0) _asInt(row['idx']): row
     };
+    // 动态目标数量：取实际行数与 fallback 中较大者
+    final objCount = byIdx.isNotEmpty
+        ? byIdx.keys.fold<int>(0, (m, k) => k > m ? k : m)
+        : fallback.weights.length;
+    final count = objCount > fallback.weights.length
+        ? objCount
+        : fallback.weights.length;
     try {
       List<T> pick<T>(T Function(Map<String, dynamic>?, int) f) =>
-          List<T>.generate(fallback.weights.length, (i) => f(byIdx[i + 1], i));
+          List<T>.generate(count, (i) => f(byIdx[i + 1], i));
       return AchievementConfig(
         weights: pick((r, i) =>
             r == null ? 0 : _asRatio(r['weight'], _at(fallback.weights, i))),

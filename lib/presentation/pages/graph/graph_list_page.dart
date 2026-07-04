@@ -38,20 +38,24 @@ class _GraphListPageState extends State<GraphListPage>
   static const _categoryColors = <String, Color>{
     '课程图谱': Color(0xFFE53935),
     '技术栈图谱': Color(0xFF1E88E5),
+    '平台技术图谱': Color(0xFF1E88E5),
     '实验图谱': Color(0xFFFB8C00),
     '项目图谱': Color(0xFF43A047),
     '教学图谱': Color(0xFF8E24AA),
     '学习图谱': Color(0xFF00897B),
+    '思政图谱': Color(0xFFC62828),
   };
 
   // 分类图标映射
   static const _categoryIcons = <String, IconData>{
     '课程图谱': Icons.school,
     '技术栈图谱': Icons.layers,
+    '平台技术图谱': Icons.layers,
     '实验图谱': Icons.science,
     '项目图谱': Icons.work,
     '教学图谱': Icons.cast_for_education,
     '学习图谱': Icons.auto_stories,
+    '思政图谱': Icons.volunteer_activism,
   };
 
   @override

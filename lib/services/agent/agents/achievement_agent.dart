@@ -96,7 +96,7 @@ class AchievementAgent extends BaseAgent {
             description: '用户回答一个待澄清问题后，更新对应课程目标的字段值。'
                 'AI根据用户的自然语言回答，自动判断要更新哪个目标的哪个字段。',
             parameters: {
-              'objective_idx': '目标序号（1-4）',
+              'objective_idx': '目标序号（1-N，由大纲决定）',
               'field': '字段名（weight/full_mark/indicator）',
               'value': '用户确认的字段值',
             },

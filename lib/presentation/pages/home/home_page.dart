@@ -25,6 +25,7 @@ import '../login/login_page.dart';
 import '../graph/knowledge_graph_page.dart';
 import '../graph/favorites_page.dart';
 import '../quiz/quiz_page.dart';
+import '../learning/homework_list_page.dart';
 import '../quiz/wrong_answers_page.dart';
 import '../learning/progress_page.dart';
 import '../learning/learning_hub_page.dart';
@@ -75,6 +76,7 @@ import '../../../data/local/course_dao.dart';
 import '../../../data/models/course_model.dart';
 import 'settings_page.dart';
 import 'search_page.dart';
+import 'logout_report_dialog.dart';
 
 const _cardColors = {
   '知识图谱': Color(0xFF667eea),
@@ -502,6 +504,17 @@ class _HomePageState extends State<HomePage> {
             onSelected: (value) async {
               if (value == 'logout') {
                 final navigator = Navigator.of(context);
+                // 显示退出报告弹窗
+                final user = _authService.currentUser;
+                if (user != null && mounted) {
+                  final shouldLogout = await LogoutReportDialog.showBeforeLogout(
+                    context,
+                    userId: user.userId,
+                    userName: user.realName ?? user.userId,
+                    role: user.role,
+                  );
+                  if (shouldLogout != true) return;
+                }
                 await _authService.logout();
                 if (mounted) {
                   navigator.pushReplacement(
@@ -943,6 +956,14 @@ class _HomePageState extends State<HomePage> {
         title: '章节测验',
         description: '章节知识点自测',
         page: QuizPage(),
+        status: _ModuleStatus.ready,
+      ),
+      const _HomeModule.page(
+        id: 'homework',
+        icon: Icons.assignment,
+        title: '课程作业',
+        description: '作业布置与提交',
+        page: HomeworkListPage(),
         status: _ModuleStatus.ready,
       ),
       _HomeModule.page(

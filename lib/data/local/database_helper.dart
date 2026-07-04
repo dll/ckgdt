@@ -784,6 +784,7 @@ class DatabaseHelper {
     await _migrateToV21(db);
     await _migrateToV22(db);
     await _migrateToV23(db);
+    await _ensureCoursePackageVersionTable(db);
     await _ensureResourceFileColumns(db);
 
     // Add admin user (ignore if already exists from asset DB)
@@ -1025,8 +1026,22 @@ class DatabaseHelper {
     await _migrateToV30(db);
     await _migrateToV31(db);
     await _migrateToV35(db);
+    await _ensureCoursePackageVersionTable(db);
     await _ensureAchievementColumns(db);
     await _ensureCourseObjectivesColumns(db);
+  }
+
+  Future<void> _ensureCoursePackageVersionTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS course_package_versions(
+        course_id TEXT PRIMARY KEY,
+        package_version TEXT,
+        imported_at TEXT,
+        manifest_hash TEXT,
+        status TEXT,
+        message TEXT
+      )
+    ''');
   }
 
   /// 补齐 achievement_batches 表可能缺少的 calc_results_json 列
@@ -2079,14 +2094,16 @@ class DatabaseHelper {
             'id': 'ckgdt',
             'name': '课程知识图谱与数字孪生',
             'description': '面向课程知识建模、数字孪生教学、学习评价与持续改进的平台化课程',
-            'chapter_count': 6,
+            'chapter_count': 8,
             'chapters': jsonEncode([
               '课程知识图谱基础',
               '课程数据建模与资源治理',
+              '学生端学习体验与自主学习',
               '数字孪生教学场景设计',
               '智能学习路径与学习分析',
               '实验实践与作品评价',
-              '课程持续改进与平台应用'
+              '达成度评价与教学归档',
+              '教师与管理员平台操作'
             ]),
             'is_active': active.isEmpty ? 1 : 0,
             'created_at': DateTime.now().toIso8601String(),
@@ -3073,6 +3090,57 @@ class DatabaseHelper {
         model TEXT DEFAULT 'deepseek-v4-pro',
         base_url TEXT,
         updated_at TEXT
+      )
+    ''');
+
+    // ── 作业模块 ──────────────────────────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS homeworks(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT DEFAULT '',
+        chapter TEXT DEFAULT '',
+        chapter_title TEXT DEFAULT '',
+        course_objective TEXT DEFAULT '',
+        total_score INTEGER DEFAULT 100,
+        deadline TEXT,
+        status TEXT DEFAULT 'published',
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS homework_items(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        homework_id INTEGER NOT NULL,
+        item_index INTEGER NOT NULL,
+        type TEXT NOT NULL,
+        type_label TEXT NOT NULL,
+        question TEXT NOT NULL,
+        reference_answer TEXT,
+        max_score INTEGER DEFAULT 100,
+        objective_mapping TEXT DEFAULT '[]',
+        FOREIGN KEY (homework_id) REFERENCES homeworks(id) ON DELETE CASCADE
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS homework_submissions(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        homework_id INTEGER NOT NULL,
+        item_id INTEGER NOT NULL,
+        user_id TEXT NOT NULL,
+        answer_text TEXT,
+        answer_file_path TEXT,
+        score INTEGER,
+        ai_comment TEXT,
+        teacher_comment TEXT,
+        status TEXT DEFAULT 'submitted',
+        submitted_at TEXT NOT NULL,
+        graded_at TEXT,
+        FOREIGN KEY (homework_id) REFERENCES homeworks(id) ON DELETE CASCADE,
+        FOREIGN KEY (item_id) REFERENCES homework_items(id) ON DELETE CASCADE
       )
     ''');
   }

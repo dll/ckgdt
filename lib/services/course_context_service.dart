@@ -12,10 +12,12 @@ class CourseContextService {
   static const List<String> defaultCourseChapters = [
     '课程知识图谱基础',
     '课程数据建模与资源治理',
+    '学生端学习体验与自主学习',
     '数字孪生教学场景设计',
     '智能学习路径与学习分析',
     '实验实践与作品评价',
-    '课程持续改进与平台应用',
+    '达成度评价与教学归档',
+    '教师与管理员平台操作',
   ];
 
   final CourseDao _courseDao;
