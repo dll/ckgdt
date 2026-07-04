@@ -102,6 +102,26 @@ class _TechLogoPainter extends CustomPainter {
         _paintAvatar(canvas, size);
       case MaskShape.brain:
         _paintBrain(canvas, size);
+      case MaskShape.book:
+        _paintBook(canvas, size);
+      case MaskShape.globe:
+        _paintGlobe(canvas, size);
+      case MaskShape.microscope:
+        _paintMicroscope(canvas, size);
+      case MaskShape.graduationCap:
+        _paintGraduationCap(canvas, size);
+      case MaskShape.lightbulb:
+        _paintLightbulb(canvas, size);
+      case MaskShape.puzzle:
+        _paintPuzzle(canvas, size);
+      case MaskShape.compass:
+        _paintCompass(canvas, size);
+      case MaskShape.pencil:
+        _paintPencil(canvas, size);
+      case MaskShape.monitor:
+        _paintMonitor(canvas, size);
+      case MaskShape.chart:
+        _paintChart(canvas, size);
     }
   }
 
@@ -1264,9 +1284,405 @@ class _TechLogoPainter extends CustomPainter {
       Offset(cx, cy + h * 0.28),
       Paint()
         ..color = (selected ? const Color(0xFFFF6B9D) : Colors.white)
-            .withOpacity(0.6)
+            .withValues(alpha: 0.6)
         ..strokeWidth = w * 0.04
         ..strokeCap = StrokeCap.round,
     );
+  }
+
+  // ── Book ──────────────────────────────────────────────────────────────────
+
+  void _paintBook(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final cx = w * 0.5;
+    final cy = h * 0.5;
+
+    final paint = Paint()
+      ..color = selected ? const Color(0xFF667eea) : const Color(0xFF5C6BC0)
+      ..style = PaintingStyle.fill;
+
+    // Book cover (left page)
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(cx - w * 0.15, cy),
+          width: w * 0.42, height: h * 0.72,
+        ),
+        const Radius.circular(4),
+      ),
+      paint,
+    );
+
+    // Book cover (right page)
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(cx + w * 0.15, cy),
+          width: w * 0.42, height: h * 0.72,
+        ),
+        const Radius.circular(4),
+      ),
+      paint..color = (selected ? const Color(0xFF764ba2) : const Color(0xFF7E57C2)),
+    );
+
+    // Spine
+    canvas.drawRect(
+      Rect.fromCenter(
+        center: Offset(cx, cy),
+        width: w * 0.06, height: h * 0.72,
+      ),
+      paint..color = (selected ? const Color(0xFF4a5093) : const Color(0xFF4527A0)),
+    );
+
+    // Page lines (left)
+    final linePaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.5)
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round;
+
+    for (var i = 0; i < 4; i++) {
+      final y = cy - h * 0.24 + i * h * 0.14;
+      canvas.drawLine(
+        Offset(cx - w * 0.30, y),
+        Offset(cx - w * 0.06, y),
+        linePaint,
+      );
+    }
+
+    // Page lines (right)
+    for (var i = 0; i < 4; i++) {
+      final y = cy - h * 0.24 + i * h * 0.14;
+      canvas.drawLine(
+        Offset(cx + w * 0.06, y),
+        Offset(cx + w * 0.30, y),
+        linePaint,
+      );
+    }
+  }
+
+  // ── Globe ─────────────────────────────────────────────────────────────────
+
+  void _paintGlobe(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final cx = w * 0.5;
+    final cy = h * 0.5;
+
+    final paint = Paint()
+      ..color = selected ? const Color(0xFF667eea) : const Color(0xFF42A5F5)
+      ..style = PaintingStyle.fill;
+
+    // Main circle
+    canvas.drawCircle(
+      Offset(cx, cy),
+      math.min(w, h) * 0.38,
+      paint,
+    );
+
+    // Horizontal line
+    canvas.drawLine(
+      Offset(cx - w * 0.36, cy),
+      Offset(cx + w * 0.36, cy),
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.7)
+        ..strokeWidth = 2.0,
+    );
+
+    // Vertical line
+    canvas.drawLine(
+      Offset(cx, cy - h * 0.36),
+      Offset(cx, cy + h * 0.36),
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.7)
+        ..strokeWidth = 2.0,
+    );
+  }
+
+  // ── Microscope ────────────────────────────────────────────────────────────
+
+  void _paintMicroscope(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final cx = w * 0.5;
+    final cy = h * 0.5;
+
+    final paint = Paint()
+      ..color = selected ? const Color(0xFF667eea) : const Color(0xFF78909C)
+      ..style = PaintingStyle.fill;
+
+    // Base
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(cx, cy + h * 0.32),
+          width: w * 0.50, height: h * 0.10,
+        ),
+        const Radius.circular(4),
+      ),
+      paint,
+    );
+
+    // Column
+    canvas.drawRect(
+      Rect.fromCenter(
+        center: Offset(cx, cy + h * 0.10),
+        width: w * 0.10, height: h * 0.44,
+      ),
+      paint,
+    );
+
+    // Eyepiece
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(cx, cy - h * 0.26),
+        width: w * 0.20, height: h * 0.14,
+      ),
+      paint,
+    );
+  }
+
+  // ── Graduation Cap ────────────────────────────────────────────────────────
+
+  void _paintGraduationCap(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final cx = w * 0.5;
+    final cy = h * 0.5;
+
+    final paint = Paint()
+      ..color = selected ? const Color(0xFF667eea) : const Color(0xFF37474F)
+      ..style = PaintingStyle.fill;
+
+    // Diamond top
+    final diamond = Path()
+      ..moveTo(cx, cy - h * 0.30)
+      ..lineTo(cx + w * 0.38, cy - h * 0.05)
+      ..lineTo(cx, cy + h * 0.10)
+      ..lineTo(cx - w * 0.38, cy - h * 0.05)
+      ..close();
+    canvas.drawPath(diamond, paint);
+
+    // Tassel
+    canvas.drawLine(
+      Offset(cx + w * 0.10, cy - h * 0.05),
+      Offset(cx + w * 0.20, cy + h * 0.20),
+      Paint()
+        ..color = selected ? const Color(0xFFFFD54F) : const Color(0xFFFFC107)
+        ..strokeWidth = 2.0,
+    );
+  }
+
+  // ── Lightbulb ─────────────────────────────────────────────────────────────
+
+  void _paintLightbulb(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final cx = w * 0.5;
+    final cy = h * 0.5;
+
+    final paint = Paint()
+      ..color = selected ? const Color(0xFFFFD54F) : const Color(0xFFFFC107)
+      ..style = PaintingStyle.fill;
+
+    // Bulb
+    canvas.drawCircle(
+      Offset(cx, cy - h * 0.08),
+      math.min(w, h) * 0.28,
+      paint,
+    );
+
+    // Base
+    canvas.drawRect(
+      Rect.fromCenter(
+        center: Offset(cx, cy + h * 0.26),
+        width: w * 0.22, height: h * 0.14,
+      ),
+      paint..color = selected ? const Color(0xFFBDBDBD) : const Color(0xFF9E9E9E),
+    );
+  }
+
+  // ── Puzzle ────────────────────────────────────────────────────────────────
+
+  void _paintPuzzle(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final cx = w * 0.5;
+    final cy = h * 0.5;
+
+    final paint = Paint()
+      ..color = selected ? const Color(0xFF667eea) : const Color(0xFF5C6BC0)
+      ..style = PaintingStyle.fill;
+
+    // Four puzzle pieces
+    final s = w * 0.20;
+    canvas.drawRect(
+      Rect.fromCenter(center: Offset(cx - s, cy - s), width: s * 1.8, height: s * 1.8),
+      paint,
+    );
+    canvas.drawRect(
+      Rect.fromCenter(center: Offset(cx + s, cy - s), width: s * 1.8, height: s * 1.8),
+      paint..color = selected ? const Color(0xFF764ba2) : const Color(0xFF7E57C2),
+    );
+    canvas.drawRect(
+      Rect.fromCenter(center: Offset(cx - s, cy + s), width: s * 1.8, height: s * 1.8),
+      paint..color = selected ? const Color(0xFF43A047) : const Color(0xFF66BB6A),
+    );
+    canvas.drawRect(
+      Rect.fromCenter(center: Offset(cx + s, cy + s), width: s * 1.8, height: s * 1.8),
+      paint..color = selected ? const Color(0xFFE53935) : const Color(0xFFEF5350),
+    );
+  }
+
+  // ── Compass ───────────────────────────────────────────────────────────────
+
+  void _paintCompass(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final cx = w * 0.5;
+    final cy = h * 0.5;
+
+    final paint = Paint()
+      ..color = selected ? const Color(0xFF667eea) : const Color(0xFF78909C)
+      ..style = PaintingStyle.fill;
+
+    // Outer circle
+    canvas.drawCircle(
+      Offset(cx, cy),
+      math.min(w, h) * 0.38,
+      paint,
+    );
+
+    // Needle (triangle)
+    final needle = Path()
+      ..moveTo(cx, cy - h * 0.28)
+      ..lineTo(cx + w * 0.08, cy)
+      ..lineTo(cx, cy + h * 0.28)
+      ..lineTo(cx - w * 0.08, cy)
+      ..close();
+    canvas.drawPath(
+      needle,
+      Paint()
+        ..color = selected ? const Color(0xFFE53935) : const Color(0xFFEF5350)
+        ..style = PaintingStyle.fill,
+    );
+  }
+
+  // ── Pencil ────────────────────────────────────────────────────────────────
+
+  void _paintPencil(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final cx = w * 0.5;
+    final cy = h * 0.5;
+
+    final paint = Paint()
+      ..color = selected ? const Color(0xFFFFD54F) : const Color(0xFFFFC107)
+      ..style = PaintingStyle.fill;
+
+    // Body
+    canvas.drawRect(
+      Rect.fromCenter(
+        center: Offset(cx, cy - h * 0.10),
+        width: w * 0.14, height: h * 0.50,
+      ),
+      paint,
+    );
+
+    // Tip (triangle)
+    final tip = Path()
+      ..moveTo(cx, cy + h * 0.38)
+      ..lineTo(cx - w * 0.07, cy + h * 0.18)
+      ..lineTo(cx + w * 0.07, cy + h * 0.18)
+      ..close();
+    canvas.drawPath(
+      tip,
+      Paint()
+        ..color = selected ? const Color(0xFF8D6E63) : const Color(0xFF795548)
+        ..style = PaintingStyle.fill,
+    );
+  }
+
+  // ── Monitor ───────────────────────────────────────────────────────────────
+
+  void _paintMonitor(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final cx = w * 0.5;
+    final cy = h * 0.5;
+
+    final paint = Paint()
+      ..color = selected ? const Color(0xFF667eea) : const Color(0xFF546E7A)
+      ..style = PaintingStyle.fill;
+
+    // Screen
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(cx, cy - h * 0.08),
+          width: w * 0.70, height: h * 0.50,
+        ),
+        const Radius.circular(6),
+      ),
+      paint,
+    );
+
+    // Stand
+    canvas.drawRect(
+      Rect.fromCenter(
+        center: Offset(cx, cy + h * 0.28),
+        width: w * 0.08, height: h * 0.18,
+      ),
+      paint,
+    );
+
+    // Base
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(cx, cy + h * 0.38),
+          width: w * 0.28, height: h * 0.06,
+        ),
+        const Radius.circular(3),
+      ),
+      paint,
+    );
+  }
+
+  // ── Chart ─────────────────────────────────────────────────────────────────
+
+  void _paintChart(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final cx = w * 0.5;
+    final cy = h * 0.5;
+
+    final paint = Paint()
+      ..color = selected ? const Color(0xFF667eea) : const Color(0xFF42A5F5)
+      ..style = PaintingStyle.fill;
+
+    // Bar chart
+    final barW = w * 0.12;
+    final bars = [
+      (0.50, const Color(0xFF42A5F5)),
+      (0.75, const Color(0xFF66BB6A)),
+      (0.60, const Color(0xFFFFA726)),
+      (0.90, const Color(0xFFEF5350)),
+    ];
+
+    for (var i = 0; i < bars.length; i++) {
+      final x = cx - w * 0.30 + i * (barW + w * 0.04);
+      final barH = h * 0.50 * bars[i].$1;
+      canvas.drawRect(
+        Rect.fromCenter(
+          center: Offset(x + barW / 2, cy + h * 0.15 - barH / 2),
+          width: barW,
+          height: barH,
+        ),
+        Paint()
+          ..color = bars[i].$2
+          ..style = PaintingStyle.fill,
+      );
+    }
   }
 }
