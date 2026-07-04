@@ -26,9 +26,9 @@ import '../../widgets/inner_tab_request_mixin.dart';
 import '../../widgets/markdown_bubble.dart';
 import '../admin/data_import_page.dart';
 import '../quiz/quiz_page.dart';
+import 'homework_list_page.dart';
 import 'video_player_page.dart';
 import 'pdf_viewer_page.dart';
-import 'ordinary_score_tab.dart';
 import 'student_ordinary_score_tab.dart';
 
 /// 学习中心页面 — 合并原"视频"和"课件"菜单
@@ -97,8 +97,8 @@ class _LearningHubPageState extends State<LearningHubPage>
   TabController get innerTabController => _tabController;
   @override
   List<String> innerTabLabels() => _isTeacherOrAdmin
-      ? const ['视频', 'PPT', 'PDF', '测验', '助手']
-      : const ['视频', 'PPT', 'PDF', '测验', '助手', '成绩'];
+      ? const ['视频', 'PPT', 'PDF', '测验', '作业', '助手']
+      : const ['视频', 'PPT', 'PDF', '测验', '作业', '助手', '成绩'];
 
   @override
   void dispose() {
@@ -550,6 +550,7 @@ class _LearningHubPageState extends State<LearningHubPage>
                     _buildFileListTab(
                         _pdfFiles, _pdfLoading, '📄', 'PDF', _loadPDFs),
                     const QuizPage(embedded: true),
+                    const HomeworkListPage(embedded: true),
                     _buildAiAssistTab(),
                     if (!_isTeacherOrAdmin)
                       const StudentOrdinaryScoreTab(),

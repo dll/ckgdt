@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../data/local/homework_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/course_context_service.dart';
@@ -6,9 +6,11 @@ import '../../../data/models/homework_model.dart';
 import 'homework_detail_page.dart';
 
 /// 作业列表页（学生端 + 教师端复用）
+/// [embedded] = true 时去掉 Scaffold/AppBar，嵌入 TabBarView
 class HomeworkListPage extends StatefulWidget {
   final bool isTeacher;
-  const HomeworkListPage({super.key, this.isTeacher = false});
+  final bool embedded;
+  const HomeworkListPage({super.key, this.isTeacher = false, this.embedded = false});
 
   @override
   State<HomeworkListPage> createState() => _HomeworkListPageState();
@@ -30,7 +32,6 @@ class _HomeworkListPageState extends State<HomeworkListPage> {
     try {
       final user = AuthService().currentUser;
       if (user == null) return;
-      // courseId 从 CourseContextService 获取
       final ctx = CourseContextService();
       _courseId = await ctx.activeCourseId();
       final homeworks = await _dao.getHomeworks(_courseId);
@@ -49,36 +50,44 @@ class _HomeworkListPageState extends State<HomeworkListPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    final body = _loading
+        ? const Center(child: CircularProgressIndicator())
+        : _homeworks.isEmpty
+            ? Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.assignment_outlined,
+                        size: 64, color: Colors.grey.shade300),
+                    const SizedBox(height: 12),
+                    Text('暂无作业',
+                        style: TextStyle(
+                            fontSize: 16, color: Colors.grey.shade500)),
+                    const SizedBox(height: 8),
+                    Text('教师布置作业后将在此显示',
+                        style: TextStyle(
+                            fontSize: 13, color: Colors.grey.shade400)),
+                  ],
+                ),
+              )
+            : RefreshIndicator(
+                onRefresh: _loadData,
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: _homeworks.length,
+                  itemBuilder: (context, index) =>
+                      _buildCard(theme, _homeworks[index]),
+                ),
+              );
+
+    if (widget.embedded) return body;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.isTeacher ? '作业管理' : '我的作业'),
         elevation: 0,
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _homeworks.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.assignment_outlined,
-                          size: 64, color: Colors.grey.shade300),
-                      const SizedBox(height: 12),
-                      Text('暂无作业',
-                          style: TextStyle(
-                              fontSize: 16, color: Colors.grey.shade500)),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadData,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(12),
-                    itemCount: _homeworks.length,
-                    itemBuilder: (context, index) =>
-                        _buildCard(theme, _homeworks[index]),
-                  ),
-                ),
+      body: body,
     );
   }
 
@@ -124,7 +133,7 @@ class _HomeworkListPageState extends State<HomeworkListPage> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.1),
+                      color: statusColor.withAlpha(25),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(statusText,

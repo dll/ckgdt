@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../services/course_context_service.dart';
 
@@ -180,8 +180,8 @@ class _LoginProgressDialogState extends State<LoginProgressDialog>
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                 decoration: BoxDecoration(
                   color: isStudent
-                      ? Colors.blue.withValues(alpha: 0.1)
-                      : Colors.orange.withValues(alpha: 0.1),
+                      ? Colors.blue.withOpacity(0.1)
+                      : Colors.orange.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
@@ -303,7 +303,7 @@ class _LoginProgressDialogState extends State<LoginProgressDialog>
       width: 130,
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
       decoration: BoxDecoration(
-        color: item.color.withValues(alpha: 0.08),
+        color: item.color.withOpacity(0.08),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(

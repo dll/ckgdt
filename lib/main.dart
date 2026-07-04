@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -29,7 +29,6 @@ import 'services/auth_service.dart';
 import 'services/update_service.dart';
 import 'services/notification_service.dart';
 import 'presentation/pages/profile/virtual_twin_page.dart';
-import 'l10n/gen/app_localizations.dart';
 
 // 条件导入：Web 端使用 ffi_web，桌面端使用 ffi
 import 'platform/platform_init_stub.dart'
@@ -224,8 +223,8 @@ class _MyAppState extends State<MyApp> {
         theme: ThemeManager.light(_colorIndex),
         darkTheme: ThemeManager.dark(_colorIndex),
         themeMode: _themeMode,
-        supportedLocales: AppL10n.supportedLocales,
-        localizationsDelegates: AppL10n.localizationsDelegates,
+        supportedLocales: const [Locale("zh"), Locale("en")],
+        localizationsDelegates: const [],
         home: Scaffold(
           body: Container(
             decoration: BoxDecoration(
@@ -234,7 +233,7 @@ class _MyAppState extends State<MyApp> {
                 end: Alignment.bottomRight,
                 colors: [
                   const Color(0xFF1677FF),
-                  const Color(0xFF0958D9).withValues(alpha: 0.9),
+                  const Color(0xFF0958D9).withOpacity(0.9),
                 ],
               ),
             ),
@@ -298,8 +297,8 @@ class _MyAppState extends State<MyApp> {
         darkTheme: ThemeManager.dark(_colorIndex),
         navigatorKey: _navigatorKey,
         locale: _locale,
-        supportedLocales: AppL10n.supportedLocales,
-        localizationsDelegates: AppL10n.localizationsDelegates,
+        supportedLocales: const [Locale("zh"), Locale("en")],
+        localizationsDelegates: const [],
         home: const LoginPage(),
         builder: (context, child) {
           // 用 RepaintBoundary 包裹，供截图用
@@ -598,7 +597,7 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
+                      color: Colors.black.withOpacity(0.2),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -671,7 +670,7 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
         borderRadius: BorderRadius.circular(6),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: Colors.black.withOpacity(0.1),
             blurRadius: 4,
           ),
         ],
@@ -689,7 +688,7 @@ class _FloatingHelpFabState extends State<_FloatingHelpFab>
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
+            color: Colors.black.withOpacity(0.15),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),

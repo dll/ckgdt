@@ -1,4 +1,4 @@
-import 'package:fl_chart/fl_chart.dart';
+﻿import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../../../../data/local/achievement_dao.dart';
 import '../../../../services/course_context_service.dart';
@@ -172,7 +172,7 @@ class _AbComparisonTabState extends State<AbComparisonTab> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.compare_arrows,
-                size: 64, color: cs.error.withValues(alpha: 0.4)),
+                size: 64, color: cs.error.withOpacity(0.4)),
             const SizedBox(height: 12),
             Text('至少需要两个批次才能进行 AB 对照', style: TextStyle(color: cs.error)),
           ],
@@ -236,7 +236,7 @@ class _AbComparisonTabState extends State<AbComparisonTab> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8),
           decoration: BoxDecoration(
-              border: Border.all(color: primary.withValues(alpha: 0.3)),
+              border: Border.all(color: primary.withOpacity(0.3)),
               borderRadius: BorderRadius.circular(8)),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<int>(
@@ -285,7 +285,7 @@ class _AbComparisonTabState extends State<AbComparisonTab> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
           decoration: BoxDecoration(
-              color: primary.withValues(alpha: 0.04),
+              color: primary.withOpacity(0.04),
               borderRadius: BorderRadius.circular(8)),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -389,11 +389,11 @@ class _AbComparisonTabState extends State<AbComparisonTab> {
                   ticksTextStyle:
                       const TextStyle(fontSize: 9, color: Colors.grey),
                   radarBorderData:
-                      BorderSide(color: Colors.grey.withValues(alpha: 0.3)),
+                      BorderSide(color: Colors.grey.withOpacity(0.3)),
                   gridBorderData:
-                      BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
+                      BorderSide(color: Colors.grey.withOpacity(0.2)),
                   tickBorderData:
-                      BorderSide(color: Colors.grey.withValues(alpha: 0.15)),
+                      BorderSide(color: Colors.grey.withOpacity(0.15)),
                   titlePositionPercentageOffset: 0.15,
                   titleTextStyle: const TextStyle(
                       fontSize: 11, fontWeight: FontWeight.bold),
@@ -408,7 +408,7 @@ class _AbComparisonTabState extends State<AbComparisonTab> {
                   },
                   dataSets: [
                     RadarDataSet(
-                      fillColor: Colors.blue.withValues(alpha: 0.15),
+                      fillColor: Colors.blue.withOpacity(0.15),
                       borderColor: Colors.blue,
                       borderWidth: 2,
                       entryRadius: 3,
@@ -418,7 +418,7 @@ class _AbComparisonTabState extends State<AbComparisonTab> {
                       ],
                     ),
                     RadarDataSet(
-                      fillColor: Colors.orange.withValues(alpha: 0.15),
+                      fillColor: Colors.orange.withOpacity(0.15),
                       borderColor: Colors.orange,
                       borderWidth: 2,
                       entryRadius: 3,
@@ -554,7 +554,7 @@ class _AbComparisonTabState extends State<AbComparisonTab> {
                     drawVerticalLine: false,
                     horizontalInterval: 0.2,
                     getDrawingHorizontalLine: (v) => FlLine(
-                      color: Colors.grey.withValues(alpha: 0.15),
+                      color: Colors.grey.withOpacity(0.15),
                       strokeWidth: 0.5,
                     ),
                   ),
@@ -639,7 +639,7 @@ class _AbComparisonTabState extends State<AbComparisonTab> {
                           (e.value['total_score'] as num?)?.toDouble() ?? 0,
                           dotPainter: FlDotCirclePainter(
                             radius: 3.5,
-                            color: Colors.blue.withValues(alpha: 0.6),
+                            color: Colors.blue.withOpacity(0.6),
                           ),
                         )),
                     ..._scoresB.asMap().entries.map((e) => ScatterSpot(
@@ -647,7 +647,7 @@ class _AbComparisonTabState extends State<AbComparisonTab> {
                           (e.value['total_score'] as num?)?.toDouble() ?? 0,
                           dotPainter: FlDotCirclePainter(
                             radius: 3.5,
-                            color: Colors.orange.withValues(alpha: 0.6),
+                            color: Colors.orange.withOpacity(0.6),
                           ),
                         )),
                   ],
@@ -660,7 +660,7 @@ class _AbComparisonTabState extends State<AbComparisonTab> {
                             color: Colors.red, strokeWidth: 1.5);
                       }
                       return FlLine(
-                        color: Colors.grey.withValues(alpha: 0.15),
+                        color: Colors.grey.withOpacity(0.15),
                         strokeWidth: 0.5,
                       );
                     },
@@ -704,7 +704,7 @@ class _AbComparisonTabState extends State<AbComparisonTab> {
                   borderData: FlBorderData(
                     show: true,
                     border:
-                        Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+                        Border.all(color: Colors.grey.withOpacity(0.3)),
                   ),
                 ),
               ),
@@ -713,9 +713,9 @@ class _AbComparisonTabState extends State<AbComparisonTab> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _legendDot(Colors.blue.withValues(alpha: 0.6), '批次 A'),
+                _legendDot(Colors.blue.withOpacity(0.6), '批次 A'),
                 const SizedBox(width: 16),
-                _legendDot(Colors.orange.withValues(alpha: 0.6), '批次 B'),
+                _legendDot(Colors.orange.withOpacity(0.6), '批次 B'),
                 const SizedBox(width: 16),
                 Container(
                   width: 24,

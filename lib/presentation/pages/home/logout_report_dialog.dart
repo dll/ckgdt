@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../data/local/homework_dao.dart';
 import '../../../services/course_context_service.dart';
@@ -248,12 +248,12 @@ class _LogoutReportDialogState extends State<LogoutReportDialog>
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                levelColor.withValues(alpha: 0.1),
-                levelColor.withValues(alpha: 0.05),
+                levelColor.withOpacity(0.1),
+                levelColor.withOpacity(0.05),
               ],
             ),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: levelColor.withValues(alpha: 0.2)),
+            border: Border.all(color: levelColor.withOpacity(0.2)),
           ),
           child: Column(
             children: [
@@ -269,7 +269,7 @@ class _LogoutReportDialogState extends State<LogoutReportDialog>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
                 decoration: BoxDecoration(
-                  color: levelColor.withValues(alpha: 0.15),
+                  color: levelColor.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
@@ -385,7 +385,7 @@ class _LogoutReportDialogState extends State<LogoutReportDialog>
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
+        color: color.withOpacity(0.08),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(

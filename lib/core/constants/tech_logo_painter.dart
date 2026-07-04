@@ -1284,7 +1284,7 @@ class _TechLogoPainter extends CustomPainter {
       Offset(cx, cy + h * 0.28),
       Paint()
         ..color = (selected ? const Color(0xFFFF6B9D) : Colors.white)
-            .withValues(alpha: 0.6)
+            .withOpacity(0.6)
         ..strokeWidth = w * 0.04
         ..strokeCap = StrokeCap.round,
     );
@@ -1337,7 +1337,7 @@ class _TechLogoPainter extends CustomPainter {
 
     // Page lines (left)
     final linePaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.5)
+      ..color = Colors.white.withOpacity(0.5)
       ..strokeWidth = 2.0
       ..strokeCap = StrokeCap.round;
 
@@ -1385,7 +1385,7 @@ class _TechLogoPainter extends CustomPainter {
       Offset(cx - w * 0.36, cy),
       Offset(cx + w * 0.36, cy),
       Paint()
-        ..color = Colors.white.withValues(alpha: 0.7)
+        ..color = Colors.white.withOpacity(0.7)
         ..strokeWidth = 2.0,
     );
 
@@ -1394,7 +1394,7 @@ class _TechLogoPainter extends CustomPainter {
       Offset(cx, cy - h * 0.36),
       Offset(cx, cy + h * 0.36),
       Paint()
-        ..color = Colors.white.withValues(alpha: 0.7)
+        ..color = Colors.white.withOpacity(0.7)
         ..strokeWidth = 2.0,
     );
   }

@@ -278,6 +278,25 @@ class CoursePackageLoader {
           'objective_mapping': jsonEncode(item['objective_mapping'] ?? []),
         });
       }
+
+      // 添加作业概念到知识图谱
+      try {
+        final conceptName = '$chapterTitle - 作业';
+        final conceptDesc = items.map((item) => item['question']?.toString() ?? '').where((q) => q.isNotEmpty).join('\n');
+        await txn.insert('knowledge_concepts', {
+          'concept_name': conceptName,
+          'concept_type': 'homework',
+          'chapter': chapter.replaceAll(RegExp(r'[^0-9]'), ''),
+          'description': conceptDesc,
+          'importance': 'important',
+          'course_id': courseId,
+          'created_at': now,
+          'updated_at': now,
+        }, conflictAlgorithm: ConflictAlgorithm.ignore);
+      } catch (e) {
+        // 忽略概念添加失败
+      }
+
       count++;
     }
     return count;

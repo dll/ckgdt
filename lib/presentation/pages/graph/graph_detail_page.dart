@@ -418,6 +418,9 @@ class _GraphDetailPageState extends State<GraphDetailPage>
       'section': '章节',
       'concept': '概念',
       'topic': '主题',
+      'homework': '作业',
+      'quiz': '测验',
+      'experiment': '实验',
     };
     return labels[type] ?? type;
   }

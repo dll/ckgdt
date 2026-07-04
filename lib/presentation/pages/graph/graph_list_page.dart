@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../data/local/graph_dao.dart';
 import '../../../data/models/graph_model.dart';
 import '../../../services/course_context_service.dart';
@@ -210,7 +210,7 @@ class _GraphListPageState extends State<GraphListPage>
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             gradient: LinearGradient(
-              colors: [primary, primary.withValues(alpha: 0.7)],
+              colors: [primary, primary.withOpacity(0.7)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -226,7 +226,7 @@ class _GraphListPageState extends State<GraphListPage>
                     width: 50,
                     height: 50,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: const Icon(Icons.hub, color: Colors.white, size: 28),
@@ -252,7 +252,7 @@ class _GraphListPageState extends State<GraphListPage>
                               ? '${mainStats['nodes'] ?? 0}个节点 · ${mainStats['edges'] ?? 0}条关系'
                               : '${_categoryGraphs.length}个子图谱 · $_totalNodes个节点',
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.8),
+                            color: Colors.white.withOpacity(0.8),
                             fontSize: 13,
                           ),
                         ),
@@ -264,7 +264,7 @@ class _GraphListPageState extends State<GraphListPage>
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: Colors.white.withOpacity(0.2),
                       shape: BoxShape.circle,
                     ),
                     child: AnimatedRotation(
@@ -306,7 +306,7 @@ class _GraphListPageState extends State<GraphListPage>
                         style: TextStyle(color: Colors.white)),
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(
-                          color: Colors.white.withValues(alpha: 0.5)),
+                          color: Colors.white.withOpacity(0.5)),
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10)),
@@ -325,7 +325,7 @@ class _GraphListPageState extends State<GraphListPage>
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.15),
+          color: Colors.white.withOpacity(0.15),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
@@ -339,7 +339,7 @@ class _GraphListPageState extends State<GraphListPage>
                     fontWeight: FontWeight.bold)),
             Text(label,
                 style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.7), fontSize: 10)),
+                    color: Colors.white.withOpacity(0.7), fontSize: 10)),
           ],
         ),
       ),
@@ -379,7 +379,7 @@ class _GraphListPageState extends State<GraphListPage>
                 Container(
                   width: 2,
                   height: isLast ? 40 : 90,
-                  color: primary.withValues(alpha: 0.3),
+                  color: primary.withOpacity(0.3),
                 ),
                 if (isLast)
                   const SizedBox(
@@ -398,7 +398,7 @@ class _GraphListPageState extends State<GraphListPage>
                   Container(
                     width: 16,
                     height: 2,
-                    color: primary.withValues(alpha: 0.3),
+                    color: primary.withOpacity(0.3),
                   ),
                   Container(
                     width: 10,
@@ -432,7 +432,7 @@ class _GraphListPageState extends State<GraphListPage>
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.1),
+                          color: color.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(icon, color: color, size: 24),
@@ -476,7 +476,7 @@ class _GraphListPageState extends State<GraphListPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
+        color: color.withOpacity(0.08),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(

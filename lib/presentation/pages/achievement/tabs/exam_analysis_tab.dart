@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:io';
 import 'package:charset/charset.dart' show gbk;
 import 'package:flutter/material.dart';
@@ -389,7 +389,7 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
               height: 36,
               padding: const EdgeInsets.symmetric(horizontal: 8),
               decoration: BoxDecoration(
-                border: Border.all(color: cs.outline.withValues(alpha: 0.3)),
+                border: Border.all(color: cs.outline.withOpacity(0.3)),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Image.file(File(path), height: 32, fit: BoxFit.contain),
@@ -399,14 +399,14 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
               height: 36,
               width: 120,
               decoration: BoxDecoration(
-                border: Border.all(color: cs.outline.withValues(alpha: 0.3)),
+                border: Border.all(color: cs.outline.withOpacity(0.3)),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Center(
                   child: Text('未上传',
                       style: TextStyle(
                           fontSize: 11,
-                          color: cs.onSurface.withValues(alpha: 0.4)))),
+                          color: cs.onSurface.withOpacity(0.4)))),
             ),
           const SizedBox(width: 8),
           _btn(Icons.upload_outlined, '上传',
@@ -442,7 +442,7 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
   Widget _toolbar(ColorScheme cs) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: cs.primary.withValues(alpha: 0.06),
+      color: cs.primary.withOpacity(0.06),
       child: Row(children: [
         _btn(Icons.file_open_outlined, '导入', _importIni),
         const SizedBox(width: 8),
@@ -493,7 +493,7 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
                 label: Text(labels[i], style: const TextStyle(fontSize: 13)),
                 selected: _tab == i,
                 onSelected: (_) => setState(() => _tab = i),
-                selectedColor: cs.primary.withValues(alpha: 0.15),
+                selectedColor: cs.primary.withOpacity(0.15),
                 labelStyle: TextStyle(
                     color: _tab == i ? cs.primary : null,
                     fontWeight: FontWeight.w600),
@@ -534,7 +534,7 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
                 label: Text(s),
                 selected: _examStyle == s,
                 onSelected: (_) => setState(() => _examStyle = s),
-                selectedColor: cs.primary.withValues(alpha: 0.15),
+                selectedColor: cs.primary.withOpacity(0.15),
                 labelStyle: TextStyle(
                     fontSize: 13,
                     color: _examStyle == s ? cs.primary : null,
@@ -574,7 +574,7 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
       Text(
           '成绩矩阵：${_grades.length}名学生 x ${_grades.isNotEmpty ? _grades[0].length : 0}题',
           style: TextStyle(
-              fontSize: 13, color: cs.onSurface.withValues(alpha: 0.6))),
+              fontSize: 13, color: cs.onSurface.withOpacity(0.6))),
       const SizedBox(height: 20),
       Text('电子签名（可选，用于PDF报告）',
           style: TextStyle(
@@ -688,10 +688,10 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
       return Center(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.table_chart_outlined,
-            size: 64, color: cs.onSurface.withValues(alpha: 0.2)),
+            size: 64, color: cs.onSurface.withOpacity(0.2)),
         const SizedBox(height: 16),
         Text('请先在「基本信息」中设置学生数和题数',
-            style: TextStyle(color: cs.onSurface.withValues(alpha: 0.5))),
+            style: TextStyle(color: cs.onSurface.withOpacity(0.5))),
         const SizedBox(height: 12),
         _btn(Icons.upload_file_outlined, '批量导入成绩', _batchImportGrades),
       ]));
@@ -717,7 +717,7 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
       Container(
         decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: cs.outline.withValues(alpha: 0.3))),
+            border: Border.all(color: cs.outline.withOpacity(0.3))),
         clipBehavior: Clip.antiAlias,
         child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -738,9 +738,9 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
           width: 60,
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           decoration: BoxDecoration(
-              color: cs.primary.withValues(alpha: 0.08),
+              color: cs.primary.withOpacity(0.08),
               border: Border(
-                  right: BorderSide(color: cs.outline.withValues(alpha: 0.2)))),
+                  right: BorderSide(color: cs.outline.withOpacity(0.2)))),
           child: const Text('学生',
               style: TextStyle(fontWeight: FontWeight.w700, fontSize: 11),
               textAlign: TextAlign.center))
@@ -750,9 +750,9 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
           width: 48,
           padding: const EdgeInsets.symmetric(vertical: 6),
           decoration: BoxDecoration(
-              color: cs.primary.withValues(alpha: 0.08),
+              color: cs.primary.withOpacity(0.08),
               border: Border(
-                  right: BorderSide(color: cs.outline.withValues(alpha: 0.2)))),
+                  right: BorderSide(color: cs.outline.withOpacity(0.2)))),
           child: Text('题${c + 1}',
               style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11),
               textAlign: TextAlign.center)));
@@ -760,7 +760,7 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
     cells.add(Container(
         width: 56,
         padding: const EdgeInsets.symmetric(vertical: 6),
-        decoration: BoxDecoration(color: cs.primary.withValues(alpha: 0.08)),
+        decoration: BoxDecoration(color: cs.primary.withOpacity(0.08)),
         child: const Text('总分',
             style: TextStyle(fontWeight: FontWeight.w700, fontSize: 11),
             textAlign: TextAlign.center)));
@@ -778,7 +778,7 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
               color: bg,
               border: Border(
                   right:
-                      BorderSide(color: cs.outline.withValues(alpha: 0.15)))),
+                      BorderSide(color: cs.outline.withOpacity(0.15)))),
           child: Text('${ri + 1}',
               style: const TextStyle(fontSize: 11),
               textAlign: TextAlign.center))
@@ -817,7 +817,7 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
     return _ScoreCell(
         initialValue: _grades[ri][ci],
         bgColor: bg,
-        borderColor: cs.outline.withValues(alpha: 0.15),
+        borderColor: cs.outline.withOpacity(0.15),
         onSubmitted: (v) {
           setState(() {
             _grades[ri][ci] = v;
@@ -831,10 +831,10 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
       return Center(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.analytics_outlined,
-            size: 64, color: cs.onSurface.withValues(alpha: 0.2)),
+            size: 64, color: cs.onSurface.withOpacity(0.2)),
         const SizedBox(height: 16),
         Text('暂无成绩数据',
-            style: TextStyle(color: cs.onSurface.withValues(alpha: 0.5))),
+            style: TextStyle(color: cs.onSurface.withOpacity(0.5))),
       ]));
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       _overviewStats(cs),
@@ -891,7 +891,7 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(label,
                 style: TextStyle(
-                    fontSize: 9, color: cs.onSurface.withValues(alpha: 0.5))),
+                    fontSize: 9, color: cs.onSurface.withOpacity(0.5))),
             const SizedBox(height: 1),
             Text(value,
                 style: TextStyle(
@@ -953,7 +953,7 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
                   children: [
                     TableRow(
                       decoration: BoxDecoration(
-                          color: cs.primary.withValues(alpha: 0.08)),
+                          color: cs.primary.withOpacity(0.08)),
                       children: [
                         _th(cs, '分数段'),
                         _th(cs, '人数'),
@@ -965,7 +965,7 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
                         decoration: BoxDecoration(
                           color: i.isEven
                               ? cs.surfaceContainerHighest
-                                  .withValues(alpha: 0.3)
+                                  .withOpacity(0.3)
                               : null,
                         ),
                         children: [
@@ -976,7 +976,7 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
                       ),
                     TableRow(
                       decoration: BoxDecoration(
-                          color: cs.primary.withValues(alpha: 0.05)),
+                          color: cs.primary.withOpacity(0.05)),
                       children: [
                         _td(cs, '合计', bold: true),
                         _td(cs, '$total', bold: true),
@@ -1029,7 +1029,7 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
                                 style: TextStyle(
                                     fontSize: 9,
                                     color:
-                                        cs.onSurface.withValues(alpha: 0.6))),
+                                        cs.onSurface.withOpacity(0.6))),
                           ],
                         ),
                       );
@@ -1122,7 +1122,7 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
         child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             decoration: BoxDecoration(
-                color: c.withValues(alpha: 0.1),
+                color: c.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(3)),
             child: Text(v.toStringAsFixed(2),
                 style: TextStyle(
@@ -1147,7 +1147,7 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
                   Text('${_analysisCtrl.text.length}字',
                       style: TextStyle(
                           fontSize: 11,
-                          color: cs.onSurface.withValues(alpha: 0.4))),
+                          color: cs.onSurface.withOpacity(0.4))),
                 ]),
                 const SizedBox(height: 8),
                 TextField(
@@ -1156,7 +1156,7 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
                     decoration: InputDecoration(
                         hintText: '请输入试卷分析内容...',
                         hintStyle: TextStyle(
-                            color: cs.onSurface.withValues(alpha: 0.35)),
+                            color: cs.onSurface.withOpacity(0.35)),
                         border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8)),
                         contentPadding: const EdgeInsets.all(10)),

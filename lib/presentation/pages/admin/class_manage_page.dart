@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:excel/excel.dart' as xl;
 import '../../../core/error_handler.dart';
@@ -221,13 +221,13 @@ class _ClassManagePageState extends State<ClassManagePage>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            primary.withValues(alpha: 0.08),
-            primary.withValues(alpha: 0.06),
+            primary.withOpacity(0.08),
+            primary.withOpacity(0.06),
           ],
         ),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: primary.withValues(alpha: 0.15),
+          color: primary.withOpacity(0.15),
         ),
       ),
       child: Row(
@@ -299,7 +299,7 @@ class _ClassManagePageState extends State<ClassManagePage>
     return Container(
       width: 1,
       height: 36,
-      color: Colors.grey.withValues(alpha: 0.2),
+      color: Colors.grey.withOpacity(0.2),
     );
   }
 
@@ -307,7 +307,7 @@ class _ClassManagePageState extends State<ClassManagePage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
+        color: color.withOpacity(0.15),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
@@ -389,7 +389,7 @@ class _ClassManagePageState extends State<ClassManagePage>
     final createdAt = cls['created_at'] as String?;
 
     final cardColor =
-        isArchived ? Colors.grey.withValues(alpha: 0.06) : theme.cardColor;
+        isArchived ? Colors.grey.withOpacity(0.06) : theme.cardColor;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -397,7 +397,7 @@ class _ClassManagePageState extends State<ClassManagePage>
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
         side: isArchived
-            ? BorderSide(color: Colors.grey.withValues(alpha: 0.2))
+            ? BorderSide(color: Colors.grey.withOpacity(0.2))
             : BorderSide.none,
       ),
       color: cardColor,
@@ -418,8 +418,8 @@ class _ClassManagePageState extends State<ClassManagePage>
                     height: 42,
                     decoration: BoxDecoration(
                       color: isArchived
-                          ? Colors.grey.withValues(alpha: 0.15)
-                          : primary.withValues(alpha: 0.12),
+                          ? Colors.grey.withOpacity(0.15)
+                          : primary.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
@@ -467,7 +467,7 @@ class _ClassManagePageState extends State<ClassManagePage>
                         vertical: 3,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.orange.withValues(alpha: 0.12),
+                        color: Colors.orange.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: const Text(
@@ -1195,7 +1195,7 @@ class _ClassMemberSheetState extends State<_ClassMemberSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.withValues(alpha: 0.3),
+                  color: Colors.grey.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -1277,17 +1277,17 @@ class _ClassMemberSheetState extends State<_ClassMemberSheet> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide(
-                          color: Colors.grey.withValues(alpha: 0.3),
+                          color: Colors.grey.withOpacity(0.3),
                         ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide(
-                          color: Colors.grey.withValues(alpha: 0.3),
+                          color: Colors.grey.withOpacity(0.3),
                         ),
                       ),
                       filled: true,
-                      fillColor: Colors.grey.withValues(alpha: 0.06),
+                      fillColor: Colors.grey.withOpacity(0.06),
                     ),
                   ),
                 ),
@@ -1365,8 +1365,8 @@ class _ClassMemberSheetState extends State<_ClassMemberSheet> {
         leading: CircleAvatar(
           radius: 18,
           backgroundColor: isTeacherMember
-              ? Colors.orange.withValues(alpha: 0.15)
-              : primary.withValues(alpha: 0.12),
+              ? Colors.orange.withOpacity(0.15)
+              : primary.withOpacity(0.12),
           child: Text(
             displayName.isNotEmpty ? displayName[0] : '?',
             style: TextStyle(
@@ -1391,7 +1391,7 @@ class _ClassMemberSheetState extends State<_ClassMemberSheet> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.12),
+                  color: Colors.orange.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: const Text(
@@ -1415,7 +1415,7 @@ class _ClassMemberSheetState extends State<_ClassMemberSheet> {
             : IconButton(
                 icon: Icon(
                   Icons.remove_circle_outline,
-                  color: Colors.red.withValues(alpha: 0.7),
+                  color: Colors.red.withOpacity(0.7),
                   size: 20,
                 ),
                 tooltip: '移除成员',
@@ -1684,7 +1684,7 @@ class _AddMembersDialogState extends State<_AddMembersDialog> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                color: theme.colorScheme.primary.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
@@ -1741,7 +1741,7 @@ class _AddMembersDialogState extends State<_AddMembersDialog> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           filled: true,
-                          fillColor: Colors.grey.withValues(alpha: 0.06),
+                          fillColor: Colors.grey.withOpacity(0.06),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -1820,8 +1820,8 @@ class _AddMembersDialogState extends State<_AddMembersDialog> {
                                       radius: 16,
                                       backgroundColor: isSelected
                                           ? theme.colorScheme.primary
-                                              .withValues(alpha: 0.15)
-                                          : Colors.grey.withValues(alpha: 0.1),
+                                              .withOpacity(0.15)
+                                          : Colors.grey.withOpacity(0.1),
                                       child: Text(
                                         (student.realName ?? student.userId)
                                             .substring(0, 1),
