@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import '../../../data/local/teaching_dao.dart';
 import '../../../services/auth_service.dart';
+import '../../widgets/agent_entry_button.dart';
 
 /// 教学管理中心 — 大纲管理 / 教案管理 / 教学进度
 class TeachingManagePage extends StatefulWidget {
@@ -562,6 +563,8 @@ class _LessonPlanTabState extends State<_LessonPlanTab>
                   onPressed: () => _showPlanEditor(null),
                   child: const Icon(Icons.add),
                 ),
+                const SizedBox(width: 8),
+                const AgentEntryButton(agentId: 'case_demo', tooltip: '教学案例演示'),
               ],
             ),
           ),

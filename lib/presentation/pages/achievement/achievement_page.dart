@@ -352,7 +352,7 @@ class _AchievementPageState extends State<AchievementPage>
                               builder: (_) => const AchievementHelpPage()),
                         ),
                       ),
-                      const AgentEntryButton(agentId: 'achievement'),
+                      const AgentEntryButton(agentId: 'achievement', color: Colors.white),
                     ],
                   ),
                 ),

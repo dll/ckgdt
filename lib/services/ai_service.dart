@@ -57,24 +57,27 @@ class AiService {
     final effectiveKey = config.effectiveApiKey;
     final isLocal = config.provider == 'ollama' || config.provider == 'vllm';
 
-    // 免费试用额度检查（适用于所有调用，无论是否有自有 Key）
-    final trialDao = AiTrialDao();
-    final trialSettings = await trialDao.getSettings();
-    final trialEnabled = trialSettings != null && trialSettings['trial_enabled'] == 1;
-    if (trialEnabled) {
-      final remaining = await trialDao.getRemaining();
-      final remainingCalls = remaining['remainingCalls'] as int;
-      final remainingTokens = remaining['remainingTokens'] as int;
-      if (remainingCalls <= 0 || remainingTokens <= 0) {
-        throw '免费 AI 试用额度已用完（每日 ${remaining['remainingCalls'] < 0 ? "∞" : "${remaining['remainingCalls']}"} 次调用 / ${remaining['remainingTokens'] < 0 ? "∞" : "${remaining['remainingTokens']}"} Token）。'
-            '请在「设置 → AI 配置」中配置自己的 API Key，或联系管理员调整额度。';
+    // 检查用户角色：管理员/教师自动使用内置 Key，不受试用限制
+    final currentUser = AuthService().currentUser;
+    final isTeacherOrAdmin = currentUser?.role == 'teacher' || currentUser?.role == 'admin';
+
+    // 免费试用额度检查（仅对学生生效）
+    if (!isTeacherOrAdmin) {
+      final trialDao = AiTrialDao();
+      final trialSettings = await trialDao.getSettings();
+      final trialEnabled = trialSettings != null && trialSettings['trial_enabled'] == 1;
+      if (trialEnabled) {
+        final remaining = await trialDao.getRemaining();
+        final remainingCalls = remaining['remainingCalls'] as int;
+        final remainingTokens = remaining['remainingTokens'] as int;
+        if (remainingCalls <= 0 || remainingTokens <= 0) {
+          throw '免费 AI 试用额度已用完（累计 ${remaining['remainingCalls'] < 0 ? "∞" : "${remaining['remainingCalls']}"} 次调用 / ${remaining['remainingTokens'] < 0 ? "∞" : "${remaining['remainingTokens']}"} Token）。'
+              '请在「设置 → AI 配置」中配置自己的 API Key，或联系管理员调整额度。';
+        }
       }
     }
 
     if (!isLocal && (effectiveKey == null || effectiveKey.isEmpty)) {
-      if (trialEnabled) {
-        throw '暂无可用的 AI 免费额度，请在「设置 → AI 配置」中配置自己的 API Key，或联系管理员增加额度。';
-      }
       throw '抱歉，AI 服务暂时不可用。请在「设置 → AI 配置」中配置 API Key。';
     }
 
@@ -251,6 +254,9 @@ class AiService {
   void _autoSaveTokenHistory(AiChatResult result) {
     try {
       final userId = AuthService().currentUser?.userId;
+      final userRole = AuthService().currentUser?.role;
+      // 仅记录学生 Token 用量（管理员/教师不受试用限制）
+      if (userRole == 'teacher' || userRole == 'admin') return;
       AiHistoryDao()
           .saveMessage(
         sessionId: 'auto_${DateTime.now().millisecondsSinceEpoch}',

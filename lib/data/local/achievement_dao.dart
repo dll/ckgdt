@@ -1512,14 +1512,10 @@ class AchievementDao {
           if (decoded is List) {
             return decoded.map((e) => e.toString().trim()).where((s) => s.isNotEmpty).toList();
           }
-        } catch (_) {
-          // ignore parse error, return empty
-        }
+        } catch (e, st) { swallowDebug(e, tag: 'AchievementDao', stack: st); // ignore parse error, return empty }
       }
       return [];
-    } catch (_) {
-      return [];
-    }
+    } catch (e, st) { swallowDebug(e, tag: 'AchievementDao', stack: st); return []; }
   }
 
   static List<String> _extractKeywords(String chapterTitle) {

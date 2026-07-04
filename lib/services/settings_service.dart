@@ -195,11 +195,10 @@ class SettingsService {
   // 讯飞语音配置（AppID / APIKey / APISecret）
   // ═════════════════════════════════════════════════════════════════════════
 
-  // 讯飞课堂试用配置。用户填写的配置始终优先于内置试用值。
-  static const String _trialXunfeiAppId = 'ae4a0e4a';
-  static const String _trialXunfeiApiKey = '7385e5cb32d3465474e613dfbfc69310';
-  static const String _trialXunfeiApiSecret =
-      'NTI2NzVlOWQ0ZTM5YTgzNGYzZDI5NjQx';
+  // 讯飞试用配置（用户需自行填写，不在源码中硬编码）
+  static const String _trialXunfeiAppId = '';
+  static const String _trialXunfeiApiKey = '';
+  static const String _trialXunfeiApiSecret = '';
 
   static String get _defaultXunfeiAppId =>
       kUseBuiltinTrialVoiceKeys ? _trialXunfeiAppId : '';

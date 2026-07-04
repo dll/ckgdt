@@ -295,9 +295,7 @@ class AchievementAuditContextService {
     if (path == null || path.isEmpty) return false;
     try {
       return File(path).existsSync();
-    } catch (_) {
-      return false;
-    }
+    } catch (e, st) { swallowDebug(e, tag: 'AchievementAudit', stack: st); return false; }
   }
 
   static List<String> _assessmentParts(Map<String, dynamic> row) {

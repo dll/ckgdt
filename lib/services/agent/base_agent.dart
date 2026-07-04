@@ -57,9 +57,7 @@ abstract class BaseAgent {
         }
       }
       return result;
-    } catch (_) {
-      return text;
-    }
+    } catch (e, st) { swallowDebug(e, tag: 'BaseAgent', stack: st); return text; }
   }
 
   /// 判断此智能体是否能处理该消息（0.0 ~ 1.0）

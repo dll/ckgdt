@@ -128,8 +128,7 @@ class ProcessManagerService {
         // Kill entire process tree (cmd.exe + child java.exe)
         await Process.run('taskkill', ['/F', '/T', '/PID', '$pid']);
         mp.addOutput('--- 进程已停止 ---\n');
-      } catch (_) {
-        try { mp.process?.kill(); } catch (_) {}
+      } catch (e, st) { swallowDebug(e, tag: 'ProcessManager', stack: st);  }
       }
     }
     mp.status = ProcessStatus.stopped;
@@ -143,8 +142,7 @@ class ProcessManagerService {
       if (pid != null) {
         try {
           Process.run('taskkill', ['/F', '/T', '/PID', '$pid']);
-        } catch (_) {
-          try { entry.value.process?.kill(); } catch (_) {}
+        } catch (e, st) { swallowDebug(e, tag: 'ProcessManager', stack: st);  }
         }
       }
       entry.value.close();

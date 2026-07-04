@@ -583,12 +583,12 @@ ${syllabusContent != null ? '相关教学内容：\n$syllabusContent' : ''}
     if (jsonMatch != null) {
       try {
         return jsonDecode(jsonMatch.group(1)!);
-      } catch (_) {}
+      } catch (e, st) { swallowDebug(e, tag: 'CourseGeneration', stack: st); }
     }
     // 直接尝试解析
     try {
       return jsonDecode(text);
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'CourseGeneration', stack: st); }
     return null;
   }
 

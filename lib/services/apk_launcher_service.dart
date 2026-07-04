@@ -25,9 +25,7 @@ class ApkLauncherService {
     try {
       final r = await Process.run('where', ['adb'], runInShell: true);
       return r.exitCode == 0 && (r.stdout as String).trim().isNotEmpty;
-    } catch (_) {
-      return false;
-    }
+    } catch (e, st) { swallowDebug(e, tag: 'ApkLauncher', stack: st);  }
   }
 
   /// 检测 emulator 命令是否可用
@@ -35,9 +33,7 @@ class ApkLauncherService {
     try {
       final r = await Process.run('where', ['emulator'], runInShell: true);
       return r.exitCode == 0 && (r.stdout as String).trim().isNotEmpty;
-    } catch (_) {
-      return false;
-    }
+    } catch (e, st) { swallowDebug(e, tag: 'ApkLauncher', stack: st);  }
   }
 
   /// 检测 aapt / aapt2 是否可用（用于读取 APK 包名/入口）
@@ -48,7 +44,7 @@ class ApkLauncherService {
         if (r.exitCode == 0 && (r.stdout as String).trim().isNotEmpty) {
           return exe;
         }
-      } catch (_) {}
+      } catch (e, st) { swallowDebug(e, tag: 'ApkLauncher', stack: st); }
     }
     return null;
   }
@@ -74,9 +70,7 @@ class ApkLauncherService {
               !s.startsWith('INFO') &&
               !s.startsWith('WARNING'))
           .toList();
-    } catch (_) {
-      return [];
-    }
+    } catch (e, st) { swallowDebug(e, tag: 'ApkLauncher', stack: st);  }
   }
 
   /// 启动指定 AVD
@@ -101,7 +95,7 @@ class ApkLauncherService {
   Future<void> stopEmulator() async {
     try {
       _runningEmulator?.kill();
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'ApkLauncher', stack: st); }
     _runningEmulator = null;
     _runningAvd = null;
   }
@@ -131,9 +125,7 @@ class ApkLauncherService {
         }
       }
       return result;
-    } catch (_) {
-      return [];
-    }
+    } catch (e, st) { swallowDebug(e, tag: 'ApkLauncher', stack: st);  }
   }
 
   /// 等待任意设备连接
@@ -142,9 +134,7 @@ class ApkLauncherService {
       final r = await Process.run('adb', ['wait-for-device'], runInShell: true)
           .timeout(timeout);
       return r.exitCode == 0;
-    } catch (_) {
-      return false;
-    }
+    } catch (e, st) { swallowDebug(e, tag: 'ApkLauncher', stack: st);  }
   }
 
   /// 等待设备启动完成（boot_completed == 1）
@@ -162,7 +152,7 @@ class ApkLauncherService {
           await Future.delayed(const Duration(seconds: 2));
           return true;
         }
-      } catch (_) {}
+      } catch (e, st) { swallowDebug(e, tag: 'ApkLauncher', stack: st); }
       await Future.delayed(const Duration(seconds: 3));
     }
     return false;
@@ -268,7 +258,7 @@ class ApkLauncherService {
           hasReadyDevice = true;
           break;
         }
-      } catch (_) {}
+      } catch (e, st) { swallowDebug(e, tag: 'ApkLauncher', stack: st); }
     }
 
     // 2. 无就绪设备 → 启动模拟器

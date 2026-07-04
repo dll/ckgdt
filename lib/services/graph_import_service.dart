@@ -26,10 +26,8 @@ class GraphImportService {
         c['label'] as String,
         c['color'] as String? ?? '#667eea',
       )).toList();
-    } catch (_) {
-      // 回退：从 chapters.json 动态生成分类
-      return _generateCategoriesFromChapters(courseId);
-    }
+    } catch (e, st) { swallowDebug(e, tag: 'GraphImport', stack: st); // 回退：从 chapters.json 动态生成分类
+      return _generateCategoriesFromChapters(courseId); }
   }
 
   /// 从 chapters.json 动态生成图谱分类（回退方案）
@@ -58,9 +56,7 @@ class GraphImportService {
         r['type'] as String? ?? 'related',
         r['label'] as String? ?? '',
       )).toList();
-    } catch (_) {
-      return [];
-    }
+    } catch (e, st) { swallowDebug(e, tag: 'GraphImport', stack: st); return []; }
   }
 
   /// 从 graph_categories.json 或 chapters.json 动态加载分类对应的 MD 文件列表

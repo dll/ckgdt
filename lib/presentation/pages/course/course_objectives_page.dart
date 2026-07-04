@@ -51,7 +51,7 @@ class _CourseObjectivesPageState extends State<CourseObjectivesPage> {
       _objectives = (await _dao.getCourseObjectives(_courseName))
           .where((o) => _asInt(o['idx']) >= 1)
           .toList();
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'CourseObjectives', stack: st); }
     if (mounted) setState(() => _loading = false);
   }
 
@@ -282,8 +282,7 @@ class _CourseObjectivesPageState extends State<CourseObjectivesPage> {
     try {
       return Map<String, String>.from((jsonDecode(json) as Map)
           .map((k, v) => MapEntry(k.toString(), v.toString())));
-    } catch (_) {
-      return {};
+    } catch (e, st) { swallowDebug(e, tag: 'CourseObjectives', stack: st);  }
     }
   }
 

@@ -45,9 +45,7 @@ class PathUtils {
     if (p.isEmpty) return false;
     try {
       return Directory(p).existsSync();
-    } catch (_) {
-      return false;
-    }
+    } catch (e, st) { swallowDebug(e, tag: 'PathUtils', stack: st); return false; }
   }
 
   /// 安全检查文件是否存在（捕获异常）
@@ -56,9 +54,7 @@ class PathUtils {
     if (p.isEmpty) return false;
     try {
       return File(p).existsSync();
-    } catch (_) {
-      return false;
-    }
+    } catch (e, st) { swallowDebug(e, tag: 'PathUtils', stack: st); return false; }
   }
 
   /// 路径是否可访问（目录或文件任一存在）

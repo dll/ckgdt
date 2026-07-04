@@ -11,6 +11,7 @@ import '../../../services/courseware_download_service.dart';
 import '../../../services/video_source/video_source_manager.dart';
 import 'video_player_page.dart';
 import '../../widgets/back_button_bar.dart';
+import '../materials/courseware_workshop_page.dart';
 import 'video_source_selector.dart';
 import '../../../core/error_handler.dart';
 
@@ -67,16 +68,24 @@ class _VideoListPageState extends State<VideoListPage> {
     try {
       final db = await _dbHelper.database;
 
-      final whereParts = <String>['file_type = ?'];
-      final whereArgs = <Object?>['video'];
+      final whereParts = <String>[];
+      final whereArgs = <Object?>[];
 
-      await _appendChapterFilter(whereParts, whereArgs);
-
-      if (_resourceMode == 'preset') {
+      // 根据筛选模式决定 file_type 条件
+      if (_resourceMode == 'script') {
+        whereParts.add("file_type = 'video_script'");
+      } else if (_resourceMode == 'preset') {
+        whereParts.add("file_type = 'video'");
         whereParts.add("(source_type = 'preset' OR source_type IS NULL)");
       } else if (_resourceMode == 'extended') {
+        whereParts.add("file_type = 'video'");
         whereParts.add("source_type = 'extended'");
+      } else {
+        // 全部：视频 + 视频脚本
+        whereParts.add("file_type IN ('video', 'video_script')");
       }
+
+      await _appendChapterFilter(whereParts, whereArgs);
 
       if (_selectedPlatformId != null) {
         try {
@@ -149,23 +158,38 @@ class _VideoListPageState extends State<VideoListPage> {
                         itemBuilder: (context, index) {
                           final video = _videos[index];
                           final isExtended = video['source_type'] == 'extended';
+                          final isScript = video['file_type'] == 'video_script';
                           return Card(
                             margin: const EdgeInsets.only(bottom: 12),
                             child: ListTile(
                               leading: CircleAvatar(
-                                backgroundColor:
-                                    isExtended ? Colors.purple : Colors.red,
+                                backgroundColor: isScript
+                                    ? Colors.teal
+                                    : isExtended
+                                        ? Colors.purple
+                                        : Colors.red,
                                 child: Icon(
-                                  isExtended
-                                      ? Icons.auto_awesome
-                                      : Icons.play_arrow,
+                                  isScript
+                                      ? Icons.description
+                                      : isExtended
+                                          ? Icons.auto_awesome
+                                          : Icons.play_arrow,
                                   color: Colors.white,
                                 ),
                               ),
                               title: Text(video['chapter'] ?? '视频'),
                               subtitle: Row(
                                 children: [
-                                  if (isExtended) ...[
+                                  if (isScript) ...[
+                                    Icon(Icons.auto_awesome,
+                                        size: 12, color: Colors.teal[300]),
+                                    const SizedBox(width: 4),
+                                    Text('视频脚本',
+                                        style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.teal[300])),
+                                    const SizedBox(width: 8),
+                                  ] else if (isExtended) ...[
                                     Icon(Icons.auto_awesome,
                                         size: 12, color: Colors.purple[300]),
                                     const SizedBox(width: 4),
@@ -178,7 +202,7 @@ class _VideoListPageState extends State<VideoListPage> {
                                   const Icon(Icons.access_time,
                                       size: 14, color: Colors.grey),
                                   const SizedBox(width: 4),
-                                  const Text('点击播放'),
+                                  Text(isScript ? '点击进入课件工坊' : '点击播放'),
                                 ],
                               ),
                               trailing: const Icon(Icons.chevron_right),
@@ -200,6 +224,7 @@ class _VideoListPageState extends State<VideoListPage> {
         segments: const [
           ButtonSegment(value: 'all', label: Text('全部')),
           ButtonSegment(value: 'preset', label: Text('预制')),
+          ButtonSegment(value: 'script', label: Text('脚本')),
           ButtonSegment(value: 'extended', label: Text('扩展')),
         ],
         selected: {_resourceMode},
@@ -445,6 +470,45 @@ class _VideoListPageState extends State<VideoListPage> {
     final fileType = video['file_type'] as String? ?? 'video';
     final chapter = video['chapter'] as String? ?? '';
     final isExtended = video['source_type'] == 'extended';
+    final isScript = fileType == 'video_script';
+
+    // 视频脚本 → 显示引导对话框，跳转课件工坊
+    if (isScript) {
+      if (!mounted) return;
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          icon: Icon(Icons.description, size: 48, color: Colors.teal),
+          title: const Text('视频脚本'),
+          content: Text(
+            '「$chapter」的视频脚本已就绪。\n\n'
+            '可通过「课件工坊」一键生成：幻灯片 → 语音 → 视频。\n\n'
+            '是否跳转到课件工坊？',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('取消'),
+            ),
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(ctx, true),
+              icon: const Icon(Icons.open_in_new),
+              label: const Text('打开课件工坊'),
+              style: FilledButton.styleFrom(backgroundColor: Colors.teal),
+            ),
+          ],
+        ),
+      );
+      if (proceed == true && mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const CoursewareWorkshopPage(),
+          ),
+        );
+      }
+      return;
+    }
 
     if (filePath.isEmpty) {
       if (isExtended) {

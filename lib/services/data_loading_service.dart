@@ -9,6 +9,7 @@ import 'course_context_service.dart';
 import 'graph_import_service.dart';
 import 'course_package_loader.dart';
 import 'ckgdt_quiz_importer.dart';
+import 'ckgdt_resource_importer.dart';
 import 'gitee_service.dart';
 import 'course_resource_service.dart';
 
@@ -31,6 +32,7 @@ class DataLoadingService {
       await _dbHelper.database;
       await _loadResourceFiles();
       await _importActiveCoursePackage();
+      await _importCkgdtResources();
       await _initPumlSamples();
       await _importMdGraphs();
       await _importCkgdtQuizzes();
@@ -46,22 +48,16 @@ class DataLoadingService {
 
   // ── Gitee Token 自动初始化 ──────────────────────────────────────────
 
-  /// 如果 Gitee Token 尚未配置或为旧令牌，则自动设置预置 Token
+  /// 如果 Gitee Token 尚未配置，提示用户在设置中配置
   Future<void> _initGiteeToken() async {
     try {
       final gitee = GiteeService();
       final existing = await gitee.getToken();
-      const defaultToken = '64a07762f8a3ab4415b8c943651bfb91';
-      const oldToken = '17d6948aabc0764e4f18bb7b215fa32c';
-      if (existing == null || existing.isEmpty || existing == oldToken) {
-        // 预置 Token（mad-data / mad-fd 仓库的访问令牌）
-        await gitee.saveToken(defaultToken);
-        await gitee.saveDefaultOwner('chzuczldl');
-        await gitee.saveRepoPrefix('cg1-,cg2-,cg3-');
-        debugPrint('=== DataLoadingService: Gitee token auto-configured');
+      if (existing == null || existing.isEmpty) {
+        debugPrint('=== DataLoadingService: Gitee token not configured, sync disabled');
       }
     } catch (e) {
-      debugPrint('=== DataLoadingService: Gitee token init error: $e');
+      debugPrint('=== DataLoadingService: Gitee token check error: $e');
     }
   }
 
@@ -290,6 +286,15 @@ class DataLoadingService {
       await CoursePackageLoader.instance.importActiveCourse();
     } catch (e) {
       debugPrint('=== DataLoadingService: Error importing course package: $e');
+    }
+  }
+
+  Future<void> _importCkgdtResources() async {
+    try {
+      final count = await CkgdtResourceImporter.instance.importCkgdtResources();
+      debugPrint('=== DataLoadingService: Imported $count course resources');
+    } catch (e) {
+      debugPrint('=== DataLoadingService: Error importing course resources: $e');
     }
   }
 

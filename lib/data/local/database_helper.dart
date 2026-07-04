@@ -943,6 +943,8 @@ class DatabaseHelper {
     }
     if (oldVersion < 33) {
       await _migrateToV33(db);
+    }
+    if (oldVersion < 34) {
       await _migrateToV34(db);
     }
     if (oldVersion < 35) {
@@ -3091,6 +3093,26 @@ class DatabaseHelper {
         base_url TEXT,
         updated_at TEXT
       )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ai_trial_settings(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        trial_enabled INTEGER DEFAULT 1,
+        trial_max_calls INTEGER DEFAULT 10,
+        trial_max_tokens INTEGER DEFAULT 50000,
+        updated_at TEXT
+      )
+    ''');
+    await db.execute('''
+      INSERT OR IGNORE INTO ai_trial_settings(id, trial_enabled, trial_max_calls, trial_max_tokens)
+      VALUES(1, 1, 10, 1000000)
+    ''');
+
+    // 内置试用 AI 配置（管理员/教师自动使用，学生受试用额度限制）
+    await db.execute('''
+      INSERT OR IGNORE INTO ai_configs(id, provider, api_key, model, base_url)
+      VALUES(1, 'deepseek', 'sk-717ef9146311424daa2fbead8ed4682b', 'deepseek-v4-pro', 'https://api.deepseek.com')
     ''');
 
     // ── 作业模块 ──────────────────────────────────────────────────────────

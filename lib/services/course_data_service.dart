@@ -93,9 +93,7 @@ class CourseDataService {
         chapters: chapters,
         source: CourseSource.localDir,
       );
-    } catch (_) {
-      return null;
-    }
+    } catch (e, st) { swallowDebug(e, tag: 'CourseDataService', stack: st);  }
   }
 
   /// 从 Gitee 远程仓库加载
@@ -111,9 +109,7 @@ class CourseDataService {
         chapters: result.chapters.map((e) => ChapterDef.fromMap(e)).toList(),
         source: CourseSource.gitee,
       );
-    } catch (_) {
-      return null;
-    }
+    } catch (e, st) { swallowDebug(e, tag: 'CourseDataService', stack: st);  }
   }
 
   /// 加载单个 JSON 文件
@@ -171,9 +167,7 @@ class CourseDataService {
           fileName: fileName,
           title: _extractTitle(content),
         ));
-      } catch (_) {
-        // 文件不可读时跳过，避免单个资源破坏课程包加载。
-      }
+      } catch (e, st) { swallowDebug(e, tag: 'CourseDataService', stack: st);  }
     }
     return files;
   }
@@ -185,7 +179,7 @@ class CourseDataService {
       if (decoded is Map) {
         return decoded.keys.map((e) => e.toString()).toList();
       }
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'CourseDataService', stack: st); }
     return const [];
   }
 
@@ -263,9 +257,7 @@ class CourseDataService {
   String _safeDecode(String value) {
     try {
       return Uri.decodeFull(value);
-    } catch (_) {
-      return value;
-    }
+    } catch (e, st) { swallowDebug(e, tag: 'CourseDataService', stack: st);  }
   }
 
   /// 从 MD 内容提取标题
@@ -286,9 +278,7 @@ class CourseDataService {
       if (!await file.exists()) return null;
       final content = await file.readAsString(encoding: utf8);
       return jsonDecode(content) as Map<String, dynamic>;
-    } catch (_) {
-      return null;
-    }
+    } catch (e, st) { swallowDebug(e, tag: 'CourseDataService', stack: st);  }
   }
 
   /// 从文件系统加载 JSON 数组
@@ -299,9 +289,7 @@ class CourseDataService {
       final content = await file.readAsString(encoding: utf8);
       final list = jsonDecode(content) as List;
       return list.cast<Map<String, dynamic>>();
-    } catch (_) {
-      return null;
-    }
+    } catch (e, st) { swallowDebug(e, tag: 'CourseDataService', stack: st);  }
   }
 }
 

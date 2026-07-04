@@ -484,8 +484,7 @@ class CoursePackageLoader {
     try {
       final raw = await rootBundle.loadString(path);
       return jsonDecode(raw) as Map<String, dynamic>;
-    } catch (_) {
-      return const {};
+    } catch (e, st) { swallowDebug(e, tag: 'CoursePackageLoader', stack: st);  }
     }
   }
 
@@ -496,7 +495,7 @@ class CoursePackageLoader {
       if (decoded is List) {
         return decoded.whereType<Map>().map(Map<String, dynamic>.from).toList();
       }
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'CoursePackageLoader', stack: st); }
     return const [];
   }
 
@@ -538,9 +537,7 @@ class CoursePackageLoader {
         return {...manifestPaths, ...knownPaths}.toList()..sort();
       }
       return _knownCourseAssetPaths(courseId);
-    } catch (_) {
-      return _knownCourseAssetPaths(courseId);
-    }
+    } catch (e, st) { swallowDebug(e, tag: 'CoursePackageLoader', stack: st);  }
   }
 
   Future<List<String>> _knownCourseAssetPaths(String courseId) async {
@@ -601,7 +598,7 @@ class CoursePackageLoader {
     try {
       await rootBundle.loadString(path);
       paths.add(path);
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'CoursePackageLoader', stack: st); }
   }
 
   String _cnChapter(int value) {
@@ -677,9 +674,7 @@ class CoursePackageLoader {
   String _safeDecode(String value) {
     try {
       return Uri.decodeFull(value);
-    } catch (_) {
-      return value;
-    }
+    } catch (e, st) { swallowDebug(e, tag: 'CoursePackageLoader', stack: st);  }
   }
 }
 

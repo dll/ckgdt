@@ -26,11 +26,8 @@ const bool kShowApiKeyInput = bool.fromEnvironment(
   defaultValue: false,
 );
 
-const Map<String, String> builtinApiKeys = {
-  'deepseek': 'sk-717ef9146311424daa2fbead8ed4682b',
-  'zhipu': '5dc44da8d9dd4c28bf38cde316950f1e.nNIf7AXWrJXIcSyQ',
-  'zhipu:glm-4.6v': '20322a4a95bf4bd68161b1f705aa6603.yHEHABcNAcOWy8WH',
-};
+/// 空映射 — API Key 通过数据库 ai_configs 表存储，不在源码中硬编码
+const Map<String, String> builtinApiKeys = {};
 
 class AiConfigModel {
   final String provider;

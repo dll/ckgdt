@@ -31,22 +31,20 @@ class AiTrialDao {
     );
   }
 
+  /// 获取学生累计调用次数（一次性总量，非每日重置）
   Future<int> getCurrentCalls() async {
     final db = await _db;
-    final today = DateTime.now().toIso8601String().substring(0, 10);
     final result = await db.rawQuery(
-      'SELECT COUNT(*) as cnt FROM ai_chat_history WHERE created_at >= ?',
-      ['$today 00:00:00'],
+      'SELECT COUNT(*) as cnt FROM ai_chat_history',
     );
     return (result.first['cnt'] as int?) ?? 0;
   }
 
+  /// 获取学生累计 Token 用量（一次性总量，非每日重置）
   Future<int> getCurrentTokens() async {
     final db = await _db;
-    final today = DateTime.now().toIso8601String().substring(0, 10);
     final result = await db.rawQuery(
-      'SELECT COALESCE(SUM(prompt_tokens), 0) + COALESCE(SUM(completion_tokens), 0) as total FROM ai_chat_history WHERE created_at >= ?',
-      ['$today 00:00:00'],
+      'SELECT COALESCE(SUM(prompt_tokens), 0) + COALESCE(SUM(completion_tokens), 0) as total FROM ai_chat_history',
     );
     return (result.first['total'] as int?) ?? 0;
   }

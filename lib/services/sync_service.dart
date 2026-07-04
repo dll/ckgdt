@@ -201,7 +201,7 @@ class SyncService {
           where: 'user_id = ?',
           whereArgs: [userId],
         );
-      } catch (_) {}
+      } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
 
       // 1. 收集本地数据
       final data = await _collectStudentData(userId);
@@ -517,7 +517,8 @@ class SyncService {
       result['lab_tasks'] = (tasks as List)
           .map((r) => Map<String, dynamic>.from(r as Map))
           .toList();
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'SyncService', stack: st);
       result['lab_tasks'] = <Map<String, dynamic>>[];
     }
 
@@ -527,14 +528,17 @@ class SyncService {
       result['report_templates'] = (templates as List)
           .map((r) => Map<String, dynamic>.from(r as Map))
           .toList();
-    } catch (_) {
+    } catch (e, st) {
+      swallowDebug(e, tag: 'SyncService', stack: st);
       result['report_templates'] = <Map<String, dynamic>>[];
     }
 
     // classroom_messages 使用 sender_id
     result['classroom_messages'] = await _safeQuery(
-      db, 'classroom_messages',
-      where: 'sender_id = ?', whereArgs: [userId],
+      db,
+      'classroom_messages',
+      where: 'sender_id = ?',
+      whereArgs: [userId],
     );
 
     // path_nodes — 通过 learning_paths 的 id 关联
@@ -545,8 +549,10 @@ class SyncService {
         final pathId = (p as Map)['id'];
         if (pathId != null) {
           final nodes = await _safeQuery(
-            db, 'path_nodes',
-            where: 'path_id = ?', whereArgs: [pathId],
+            db,
+            'path_nodes',
+            where: 'path_id = ?',
+            whereArgs: [pathId],
             orderBy: 'sort_order',
           );
           allPathNodes.addAll(nodes.cast<Map<String, dynamic>>());
@@ -578,9 +584,7 @@ class SyncService {
       return (rows as List)
           .map((r) => Map<String, dynamic>.from(r as Map)..remove('id'))
           .toList();
-    } catch (_) {
-      return []; // 表可能不存在
-    }
+    } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st);  }
   }
 
   // ── 教师端：下载数据 ──────────────────────────────────────────────────
@@ -762,7 +766,7 @@ class SyncService {
         try {
           await db.update('users', updates,
               where: 'user_id = ?', whereArgs: [userId]);
-        } catch (_) {}
+        } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
       }
     }
 
@@ -944,9 +948,9 @@ class SyncService {
                 row.remove('id');
                 await txn.insert('contribution_scores', row);
                 txnCount++;
-              } catch (_) {}
+              } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
             }
-          } catch (_) {}
+          } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
         }
 
         // path_nodes — 先删除该用户所有 path 的节点，再导入
@@ -965,9 +969,9 @@ class SyncService {
                 row.remove('id');
                 await txn.insert('path_nodes', row);
                 txnCount++;
-              } catch (_) {}
+              } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
             }
-          } catch (_) {}
+          } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
         }
 
         return txnCount;
@@ -1005,7 +1009,7 @@ class SyncService {
           debugPrint('SyncService: 导入 $table 失败: $e');
         }
       }
-    } catch (_) {} // 表可能不存在
+    } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); } // 表可能不存在
     return count;
   }
 
@@ -1036,7 +1040,7 @@ class SyncService {
             existingGraded['$taskId'] = Map<String, dynamic>.from(g as Map);
           }
         }
-      } catch (_) {}
+      } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
 
       // 删除该学生的所有未批改提交（已批改的保留）
       await db.delete('lab_submissions',
@@ -1085,7 +1089,7 @@ class SyncService {
           debugPrint('SyncService: 导入 lab_submissions 失败: $e');
         }
       }
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
     return count;
   }
 
@@ -1119,7 +1123,7 @@ class SyncService {
             branch: repoBranch,
           );
           if (bytes != null && bytes.isNotEmpty) break;
-        } catch (_) {}
+        } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
       }
       if (bytes == null || bytes.isEmpty) return;
 
@@ -1166,7 +1170,7 @@ class SyncService {
           final taskId = s['task_id']?.toString() ?? '';
           existingScored['$title|$taskId'] = Map<String, dynamic>.from(s as Map);
         }
-      } catch (_) {}
+      } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
 
       // 删除该学生的未评分报告
       await db.delete('student_reports',
@@ -1210,7 +1214,7 @@ class SyncService {
           debugPrint('SyncService: 导入 student_reports 失败: $e');
         }
       }
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
     return count;
   }
 
@@ -1238,7 +1242,7 @@ class SyncService {
           final id = r['id'] as int?;
           if (id != null) scoredWorkIds.add(id);
         }
-      } catch (_) {}
+      } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
 
       // 构建已有作品的 title → id 映射（用于匹配跨设备数据）
       final existingByTitle = <String, Map<String, dynamic>>{};
@@ -1249,7 +1253,7 @@ class SyncService {
           final title = r['title'] as String? ?? '';
           existingByTitle[title] = Map<String, dynamic>.from(r as Map);
         }
-      } catch (_) {}
+      } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
 
       // 删除未评分的作品（已评分的保留）
       if (scoredWorkIds.isEmpty) {
@@ -1284,7 +1288,7 @@ class SyncService {
           debugPrint('SyncService: 导入 student_works 失败: $e');
         }
       }
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
     return count;
   }
 
@@ -1324,7 +1328,7 @@ class SyncService {
           debugPrint('SyncService: 导入 work_scores 失败: $e');
         }
       }
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
     return count;
   }
 
@@ -1357,7 +1361,7 @@ class SyncService {
           debugPrint('SyncService: 导入 project_scores 失败: $e');
         }
       }
-    } catch (_) {}
+    } catch (e, st) { swallowDebug(e, tag: 'SyncService', stack: st); }
     return count;
   }
 

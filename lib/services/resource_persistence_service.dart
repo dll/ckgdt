@@ -822,9 +822,7 @@ $chapterLines
     if (content == null) return null;
     try {
       return jsonDecode(content) as Map<String, dynamic>;
-    } catch (_) {
-      return null;
-    }
+    } catch (e, st) { swallowDebug(e, tag: 'ResourcePersistence', stack: st); return null; }
   }
 
   Future<List<Map<String, dynamic>>?> _readGiteeJsonList(
@@ -834,8 +832,6 @@ $chapterLines
     try {
       final list = jsonDecode(content) as List;
       return list.cast<Map<String, dynamic>>();
-    } catch (_) {
-      return null;
-    }
+    } catch (e, st) { swallowDebug(e, tag: 'ResourcePersistence', stack: st); return null; }
   }
 }

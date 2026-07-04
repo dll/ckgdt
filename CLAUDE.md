@@ -6,7 +6,7 @@
 
 - **代码仓库**：Gitee `https://gitee.com/chzcldl/mad-kgdt`（主） · GitHub `dll/ckgdt`（镜像 + gh-pages + Release）
 - **数据仓库**：`chzcldl/mad-data`（课程资源/通知） · 学生项目组仓库 `chzuczldl/cg*-*`（**详见 `docs/项目仓库设计.md`**）
-- **当前版本**：`2.1.0`（`pubspec.yaml` → `version: 2.1.0+1`）
+- **当前版本**：`2.5.0`（`pubspec.yaml` → `version: 2.5.0+0`）
 - **Flutter SDK**：`>=3.0.0 <4.0.0`
 - **主题色**：`#667eea`（紫蓝渐变 `[0xFF667eea, 0xFF764ba2]`）
 - **用户角色**：学生 / 教师 / 管理员
@@ -19,9 +19,9 @@
 | 层级 | 技术 |
 |------|------|
 | UI 框架 | Flutter 3 + Material Design 3 |
-| 本地数据库 | sqflite + 自定义 DAO（59 张表） |
+| 本地数据库 | sqflite + 自定义 DAO（87 张表） |
 | AI 服务 | DeepSeek / 智谱 GLM-4（多 provider） |
-| 多智能体 | 18 个专业 Agent + RAG 检索增强 |
+| 多智能体 | 19 个专业 Agent + RAG 检索增强 |
 | 语音交互 | 讯飞 WebSocket STT + AI 意图识别 |
 | 数据同步 | Gitee 仓库 JSON 双向同步 |
 | 图谱绘制 | CustomPainter + InteractiveViewer |
@@ -80,7 +80,7 @@
 
 ### 二级页面（Navigator.push）
 
-通过 `NavigationService.resolveSubPage(routeId)` 统一路由，支持 30+ 子页面：
+通过 `NavigationService.resolveSubPage(routeId)` 统一路由，支持 53+ 子页面：
 `QuizPage`、`WrongAnswersPage`、`VideoListPage`、`DocumentListPage`、`FavoritesPage`、`GraphDetailPage`、`LearningPlanPage`、`ProgressPage`、`HandbookPage`、`AiSkillPage`、`DataSyncPage`、`VoiceSettingsPage`、`CourseManagePage`、`StudentCenterPage`、`TeacherWorkspacePage`、`ChatHistoryPage` 等。
 
 ---
@@ -195,20 +195,20 @@ lib/
 
 ---
 
-## 数据库设计（59 张表）
+## 数据库设计（87 张表）
 
 数据库由 `DatabaseHelper`（单例）管理，首次启动从 `assets/learning_data.db` 复制。
 
 ### 种子数据库初始化流程（关键）
 
-种子 DB `assets/learning_data.db` 已预置 `user_version = 20`，包含 52 道测验题、23 个图谱等种子数据。**应用 DB 当前 version = 24**（migrations 21-24 是增量加表 / 加列，不删数据），seed 打开时会触发 `_onUpgrade(20→24)`，结果是 schema 升级后数据保持。初始化流程：
+种子 DB `assets/learning_data.db` 已预置 `user_version = 20`，包含 52 道测验题、23 个图谱等种子数据。**应用 DB 当前 version = 35**（migrations 21-35 是增量加表 / 加列，不删数据），seed 打开时会触发 `_onUpgrade(20→35)`，结果是 schema 升级后数据保持。初始化流程：
 
 ```
 1. platform_init_native.dart 显式 setDatabasesPath = ApplicationSupportDirectory/databases
    （桌面端 sqflite_common_ffi 默认是 CWD 相对路径，不同启动场景会变成"多次首次安装"）
 2. 复制 seed DB → assets/learning_data.db → <support>/databases/knowledge_graph.db（仅首次）
 3. 打开 DB（version: 24）→ 触发 _onUpgrade(20→24) 增量迁移
-4. _ensureAllTables() → 始终执行，确保 66 张表存在
+4. _ensureAllTables() → 始终执行，确保 87 张表存在
 5. _verifyAndRepairSeedData() → 检查 questions/graphs 是否低于阈值（<30/<5），若是则 SQL 级重导
 ```
 
@@ -330,6 +330,7 @@ AgentRegistry (单例)
 | `madkg` | 系统使用指南 | — |
 | `works` | 作品展示指导 | — |
 | `assessment` | 考核管理（分组/答辩/成绩查询） | assessment_dao |
+| `case_demo` | 教学案例演示 | case_dao |
 | `virtual_student` | 数字孪生-学生人格模拟 | — |
 | `virtual_teacher` | 数字孪生-教师督导辅助 | — |
 
@@ -398,9 +399,10 @@ AgentRegistry (单例)
 ### Provider 配置
 
 - API Key 存入 `ai_configs` 表，通过 `AiConfigDao` 读写
-- 数据库初始化时插入默认配置（DeepSeek）
+- 数据库初始化时插入内置试用配置（DeepSeek，含 API Key）
 - 支持 DeepSeek / 智谱 GLM-4 / GLM-4.6v 多 provider 切换
-- **不在代码中硬编码 API Key**（默认配置通过 DB 迁移写入）
+- **管理员/教师**：自动使用内置试用 Key，无需配置即可使用 AI 功能
+- **学生**：受试用额度限制（一次性 1M 词元总量），可在「设置 → AI 配置」配置自己的 Key 解除限制
 
 ### RAG 检索增强
 

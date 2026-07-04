@@ -34,13 +34,15 @@ class CkgdtResourceImporter {
     for (final vf in pkg.videoFiles) {
       try {
         final chapter = _chapterLabel(vf.chapterNumber);
+        final title = vf.title.isNotEmpty ? vf.title : vf.fileName;
         await db.insert('resource_files', {
           'course_id': courseId,
-          'file_name': '$chapter ${vf.title.isNotEmpty ? vf.title : vf.fileName}',
+          'file_name': '$chapter $title',
           'file_path': vf.path,
-          'file_type': 'video',
+          'file_type': 'video_script',
           'chapter': chapter,
-          'description': vf.title.isNotEmpty ? vf.title : '$chapter 视频脚本',
+          'description': '$title — 视频脚本(.md)，可通过课件工坊生成视频',
+          'source_type': 'script',
         }, conflictAlgorithm: ConflictAlgorithm.replace);
         totalImported++;
       } catch (e, st) {
@@ -52,13 +54,15 @@ class CkgdtResourceImporter {
     for (final pf in pkg.pptFiles) {
       try {
         final chapter = _chapterLabel(pf.chapterNumber);
+        final title = pf.title.isNotEmpty ? pf.title : pf.fileName;
         await db.insert('resource_files', {
           'course_id': courseId,
-          'file_name': '$chapter ${pf.title.isNotEmpty ? pf.title : pf.fileName}',
+          'file_name': '$chapter $title',
           'file_path': pf.path,
           'file_type': 'ppt',
           'chapter': chapter,
-          'description': pf.title.isNotEmpty ? pf.title : '$chapter 课件',
+          'description': '$title — 课件脚本(.md)',
+          'source_type': 'script',
         }, conflictAlgorithm: ConflictAlgorithm.replace);
         totalImported++;
       } catch (e, st) {

@@ -44,6 +44,8 @@ class _GraphListPageState extends State<GraphListPage>
     '教学图谱': Color(0xFF8E24AA),
     '学习图谱': Color(0xFF00897B),
     '思政图谱': Color(0xFFC62828),
+    '作业图谱': Color(0xFFFF6F00),
+    '作品图谱': Color(0xFF6A1B9A),
   };
 
   // 分类图标映射
@@ -56,6 +58,8 @@ class _GraphListPageState extends State<GraphListPage>
     '教学图谱': Icons.cast_for_education,
     '学习图谱': Icons.auto_stories,
     '思政图谱': Icons.volunteer_activism,
+    '作业图谱': Icons.assignment,
+    '作品图谱': Icons.inventory,
   };
 
   @override

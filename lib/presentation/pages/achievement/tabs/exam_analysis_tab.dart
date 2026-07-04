@@ -156,10 +156,12 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
       String content;
       try {
         content = utf8.decode(bytes);
-      } catch (_) {
+      } catch (e, st) {
+        swallowDebug(e, tag: 'ExamAnalysisTab', stack: st);
         try {
           content = gbk.decode(bytes);
-        } catch (_) {
+        } catch (e2, st2) {
+          swallowDebug(e2, tag: 'ExamAnalysisTab', stack: st2);
           content = latin1.decode(bytes);
         }
       }
@@ -638,10 +640,12 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
       String content;
       try {
         content = utf8.decode(bytes);
-      } catch (_) {
+      } catch (e, st) {
+        swallowDebug(e, tag: 'ExamAnalysisTab', stack: st);
         try {
           content = gbk.decode(bytes);
-        } catch (_) {
+        } catch (e2, st2) {
+          swallowDebug(e2, tag: 'ExamAnalysisTab', stack: st2);
           content = latin1.decode(bytes);
         }
       }
@@ -1433,7 +1437,7 @@ class _ExamAnalysisTabState extends State<ExamAnalysisTab> {
           signImg = pw.Image(pw.MemoryImage(bytes),
               height: 28, fit: pw.BoxFit.contain);
         }
-      } catch (_) {}
+      } catch (e, st) { swallowDebug(e, tag: 'ExamAnalysisTab', stack: st); }
     }
 
     return pw.Column(

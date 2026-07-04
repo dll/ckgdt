@@ -61,10 +61,8 @@ class _DeepPracticePageState extends State<DeepPracticePage>
       try {
         jsonContent =
             await rootBundle.loadString('assets/deep_practice/$courseId.json');
-      } catch (_) {
-        jsonContent =
-            await rootBundle.loadString('assets/deep_practice/default.json');
-      }
+      } catch (e, st) { swallowDebug(e, tag: 'DeepPractice', stack: st); jsonContent =
+            await rootBundle.loadString('assets/deep_practice/default.json'); }
 
       final parsed = jsonDecode(jsonContent) as Map<String, dynamic>;
 

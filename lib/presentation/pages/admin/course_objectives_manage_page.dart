@@ -121,7 +121,7 @@ class _CourseObjectivesManagePageState
       try {
         final map = jsonDecode(json) as Map<String, dynamic>;
         names.addAll(map.keys);
-      } catch (_) {}
+      } catch (e, st) { swallowDebug(e, tag: 'CourseObjectivesManage', stack: st); }
     }
     _extraColumns = names.toList()..sort();
   }
@@ -151,7 +151,7 @@ class _CourseObjectivesManagePageState
         if (json.trim().isNotEmpty) {
           try {
             val = (jsonDecode(json) as Map)[col]?.toString() ?? '';
-          } catch (_) {}
+          } catch (e, st) { swallowDebug(e, tag: 'CourseObjectivesManage', stack: st); }
         }
         _ctrls.add(TextEditingController(text: val));
       }
@@ -359,8 +359,7 @@ class _CourseObjectivesManagePageState
     try {
       return Map<String, String>.from((jsonDecode(json) as Map)
           .map((k, v) => MapEntry(k.toString(), v.toString())));
-    } catch (_) {
-      return {};
+    } catch (e, st) { swallowDebug(e, tag: 'CourseObjectivesManage', stack: st);  }
     }
   }
 
