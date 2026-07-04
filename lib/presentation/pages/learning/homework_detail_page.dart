@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import '../../../data/local/homework_dao.dart';
 import '../../../services/auth_service.dart';
@@ -105,12 +107,13 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(widget.homework.chapterTitle,
-                style: const TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.bold)),
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
             Row(
               children: [
-                _tag(Icons.track_changes, '目标: ${widget.homework.courseObjective}'),
+                _tag(Icons.track_changes,
+                    '目标: ${widget.homework.courseObjective}'),
                 const SizedBox(width: 12),
                 _tag(Icons.score, '总分 ${widget.homework.totalScore}'),
                 const SizedBox(width: 12),
@@ -138,13 +141,15 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
     // 查看该题的提交记录
     final sub = _submissions.where((s) => s.itemId == item.id).firstOrNull;
     final hasSubmitted = sub != null;
-    final isGraded = sub?.status == 'ai_graded' || sub?.status == 'teacher_reviewed';
+    final isGraded =
+        sub?.status == 'ai_graded' || sub?.status == 'teacher_reviewed';
 
     final typeColor = {
-      'basic': Colors.blue,
-      'practice': Colors.green,
-      'thinking': Colors.orange,
-    }[item.type] ?? Colors.grey;
+          'basic': Colors.blue,
+          'practice': Colors.green,
+          'thinking': Colors.orange,
+        }[item.type] ??
+        Colors.grey;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
@@ -172,8 +177,8 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
                 ),
                 const SizedBox(width: 8),
                 Text('第 ${item.itemIndex} 题',
-                    style: TextStyle(
-                        fontSize: 12, color: Colors.grey.shade500)),
+                    style:
+                        TextStyle(fontSize: 12, color: Colors.grey.shade500)),
                 const Spacer(),
                 Text('${item.maxScore} 分',
                     style: TextStyle(
@@ -185,8 +190,7 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
             const SizedBox(height: 10),
             // 题目内容
             Text(item.question,
-                style:
-                    const TextStyle(fontSize: 14, height: 1.5)),
+                style: const TextStyle(fontSize: 14, height: 1.5)),
             // 目标映射
             if (item.objectiveMapping.isNotEmpty) ...[
               const SizedBox(height: 8),
@@ -194,7 +198,8 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
                 spacing: 6,
                 children: item.objectiveMapping.map((om) {
                   return Chip(
-                    label: Text('目标${om.objectiveId}: ${(om.contribution * 100).toInt()}%',
+                    label: Text(
+                        '目标${om.objectiveId}: ${(om.contribution * 100).toInt()}%',
                         style: const TextStyle(fontSize: 10)),
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     visualDensity: VisualDensity.compact,
@@ -228,8 +233,8 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
             maxLines: 4,
             decoration: InputDecoration(
               hintText: '请输入你的答案...',
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               contentPadding: const EdgeInsets.all(12),
             ),
           ),
@@ -271,7 +276,8 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
             Text(sub!.aiComment!, style: const TextStyle(fontSize: 13)),
           ],
           // 教师评语
-          if (sub?.teacherComment != null && sub!.teacherComment!.isNotEmpty) ...[
+          if (sub?.teacherComment != null &&
+              sub!.teacherComment!.isNotEmpty) ...[
             const SizedBox(height: 8),
             Row(
               children: [
@@ -307,8 +313,7 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
             },
             child: Row(
               children: [
-                Icon(Icons.visibility,
-                    size: 16, color: Colors.indigo.shade600),
+                Icon(Icons.visibility, size: 16, color: Colors.indigo.shade600),
                 const SizedBox(width: 4),
                 Text(_showAnswer[item.id] == true ? '隐藏参考答案' : '查看参考答案',
                     style: TextStyle(
@@ -360,7 +365,8 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
             children: [
               Expanded(
                 child: TextField(
-                  controller: TextEditingController(text: sub.teacherComment ?? ''),
+                  controller:
+                      TextEditingController(text: sub.teacherComment ?? ''),
                   maxLines: 2,
                   decoration: InputDecoration(
                     hintText: '教师评语...',
@@ -396,8 +402,7 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
           ),
         ] else ...[
           Text('暂无提交',
-              style:
-                  TextStyle(fontSize: 12, color: Colors.grey.shade400)),
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
         ],
       ],
     );
@@ -436,8 +441,8 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
 
       // AI 批阅
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('提交成功，正在 AI 批阅...')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('提交成功，正在 AI 批阅...')));
       }
       await _aiGradeAll();
       await _loadData();
@@ -522,7 +527,7 @@ ${item.referenceAnswer != null ? '参考答案：${item.referenceAnswer}' : ''}
 
   dynamic _doDecode(String s) {
     try {
-      return Uri.decodeComponent(Uri.encodeComponent(s));
+      return jsonDecode(s);
     } catch (_) {
       return null;
     }

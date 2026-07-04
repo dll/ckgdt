@@ -25,28 +25,34 @@ class CourseGenerationService {
     Map<String, dynamic>? existingConfig,
   }) async {
     final courseId = CourseContextService.buildStableCourseId(courseName);
-    final result = CourseGenerationResult(courseId: courseId, courseName: courseName);
+    final result =
+        CourseGenerationResult(courseId: courseId, courseName: courseName);
 
     try {
       // 1. 基础配置
       _report('生成基础配置', 0.0);
-      result.config = await _generateConfig(courseName, chapters, existingConfig);
+      result.config =
+          await _generateConfig(courseName, chapters, existingConfig);
 
       // 2. 章节配置
       _report('生成章节配置', 0.1);
-      result.chapters = await _generateChapters(courseName, chapters, syllabusContent);
+      result.chapters =
+          await _generateChapters(courseName, chapters, syllabusContent);
 
       // 3. 测验题目（每章 10 题）
       _report('生成测验题目', 0.2);
-      result.quizzes = await _generateQuizzes(courseName, chapters, syllabusContent);
+      result.quizzes =
+          await _generateQuizzes(courseName, chapters, syllabusContent);
 
       // 4. 视频脚本（每章 1 个）
       _report('生成视频脚本', 0.4);
-      result.videoScripts = await _generateVideoScripts(courseName, chapters, syllabusContent);
+      result.videoScripts =
+          await _generateVideoScripts(courseName, chapters, syllabusContent);
 
       // 5. 课件内容（每章 1 个）
       _report('生成课件内容', 0.5);
-      result.courseware = await _generateCourseware(courseName, chapters, syllabusContent);
+      result.courseware =
+          await _generateCourseware(courseName, chapters, syllabusContent);
 
       // 6. 图谱定义（7 类）
       _report('生成图谱定义', 0.6);
@@ -54,19 +60,27 @@ class CourseGenerationService {
 
       // 7. 实验任务
       _report('生成实验任务', 0.7);
-      result.labTasks = await _generateLabTasks(courseName, chapters, syllabusContent);
+      result.labTasks =
+          await _generateLabTasks(courseName, chapters, syllabusContent);
 
-      // 8. 报告模板
+      // 8. 课后作业
+      _report('生成课后作业', 0.78);
+      result.homeworks = _generateHomeworks(courseName, chapters);
+
+      // 9. 报告模板
       _report('生成报告模板', 0.8);
-      result.reportTemplates = await _generateReportTemplates(courseName, chapters);
+      result.reportTemplates =
+          await _generateReportTemplates(courseName, chapters);
 
-      // 9. 达成配置
+      // 10. 达成配置
       _report('生成达成配置', 0.9);
-      result.achievementConfig = await _generateAchievementConfig(courseName, chapters);
+      result.achievementConfig =
+          await _generateAchievementConfig(courseName, chapters);
 
-      // 10. 考核配置
+      // 11. 考核配置
       _report('生成考核配置', 0.95);
-      result.assessmentConfig = await _generateAssessmentConfig(courseName, chapters);
+      result.assessmentConfig =
+          await _generateAssessmentConfig(courseName, chapters);
 
       _report('生成完成', 1.0);
     } catch (e, st) {
@@ -104,11 +118,14 @@ class CourseGenerationService {
 }
 ''';
 
-    final response = await _ai.chat([{'role': 'user', 'content': prompt}]);
-    return _parseJson(response) ?? {
-      'course_name': courseName,
-      'objectives': [],
-    };
+    final response = await _ai.chat([
+      {'role': 'user', 'content': prompt}
+    ]);
+    return _parseJson(response) ??
+        {
+          'course_name': courseName,
+          'objectives': [],
+        };
   }
 
   /// 生成章节配置
@@ -135,7 +152,9 @@ ${syllabusContent != null ? '教学大纲摘要：\n$syllabusContent' : ''}
 }
 ''';
 
-    final response = await _ai.chat([{'role': 'user', 'content': prompt}]);
+    final response = await _ai.chat([
+      {'role': 'user', 'content': prompt}
+    ]);
     final List? list = _parseJsonArray(response);
     return list?.cast<Map<String, dynamic>>() ?? [];
   }
@@ -167,7 +186,9 @@ ${syllabusContent != null ? '相关教学内容：\n$syllabusContent' : ''}
 }
 ''';
 
-      final response = await _ai.chat([{'role': 'user', 'content': prompt}]);
+      final response = await _ai.chat([
+        {'role': 'user', 'content': prompt}
+      ]);
       final List? list = _parseJsonArray(response);
       if (list != null) {
         for (final q in list) {
@@ -231,7 +252,9 @@ ${syllabusContent != null ? '相关教学内容：\n$syllabusContent' : ''}
 }
 ''';
 
-      final response = await _ai.chat([{'role': 'user', 'content': prompt}]);
+      final response = await _ai.chat([
+        {'role': 'user', 'content': prompt}
+      ]);
       final data = _parseJson(response);
       if (data != null) {
         data['chapter_number'] = i + 1;
@@ -299,7 +322,9 @@ ${syllabusContent != null ? '相关教学内容：\n$syllabusContent' : ''}
 }
 ''';
 
-      final response = await _ai.chat([{'role': 'user', 'content': prompt}]);
+      final response = await _ai.chat([
+        {'role': 'user', 'content': prompt}
+      ]);
       final data = _parseJson(response);
       if (data != null) {
         data['chapter_number'] = i + 1;
@@ -339,7 +364,9 @@ ${syllabusContent != null ? '相关教学内容：\n$syllabusContent' : ''}
 }
 ''';
 
-      final response = await _ai.chat([{'role': 'user', 'content': prompt}]);
+      final response = await _ai.chat([
+        {'role': 'user', 'content': prompt}
+      ]);
       final data = _parseJson(response);
       if (data != null) {
         graphs.add(data);
@@ -377,7 +404,9 @@ ${syllabusContent != null ? '相关教学内容：\n$syllabusContent' : ''}
 }
 ''';
 
-      final response = await _ai.chat([{'role': 'user', 'content': prompt}]);
+      final response = await _ai.chat([
+        {'role': 'user', 'content': prompt}
+      ]);
       final data = _parseJson(response);
       if (data != null) {
         data['chapter_number'] = i + 1;
@@ -386,6 +415,53 @@ ${syllabusContent != null ? '相关教学内容：\n$syllabusContent' : ''}
     }
 
     return tasks;
+  }
+
+  List<Map<String, dynamic>> _generateHomeworks(
+    String courseName,
+    List<String> chapters,
+  ) {
+    return List.generate(chapters.length, (index) {
+      final chapterNumber = index + 1;
+      final chapter = chapters[index];
+      final objectiveId = (index % 4) + 1;
+      final objectiveMapping = [
+        {'objective_id': objectiveId, 'contribution': 1.0}
+      ];
+      return {
+        'chapter': '第$chapterNumber章',
+        'chapter_number': chapterNumber,
+        'chapter_title': chapter,
+        'course_objective': '目标$objectiveId',
+        'description': '围绕《$courseName》"$chapter"章节完成知识理解、实践应用与反思提升。',
+        'items': [
+          {
+            'type_code': 'basic',
+            'type': '基础题',
+            'question': '梳理"$chapter"的核心概念、关键关系和易混点，形成结构化说明。',
+            'reference_answer': '能够覆盖本章核心概念，说明概念之间的先后、包含、依赖或支撑关系。',
+            'max_score': 30,
+            'objective_mapping': objectiveMapping,
+          },
+          {
+            'type_code': 'practice',
+            'type': '实践题',
+            'question': '结合课程平台或真实教学场景，设计一个"$chapter"相关的应用任务，并说明操作步骤和预期结果。',
+            'reference_answer': '任务目标清晰，步骤可执行，能体现章节知识在教学、学习、实验或评价中的应用。',
+            'max_score': 40,
+            'objective_mapping': objectiveMapping,
+          },
+          {
+            'type_code': 'reflection',
+            'type': '思考题',
+            'question': '分析"$chapter"在课程知识图谱与数字化教学中的价值，提出一个可改进点。',
+            'reference_answer': '能够联系课程图谱、学习数据或教学评价，提出具体、可验证的改进建议。',
+            'max_score': 30,
+            'objective_mapping': objectiveMapping,
+          },
+        ],
+      };
+    });
   }
 
   /// 生成报告模板
@@ -405,7 +481,9 @@ ${syllabusContent != null ? '相关教学内容：\n$syllabusContent' : ''}
 ]
 ''';
 
-    final response = await _ai.chat([{'role': 'user', 'content': prompt}]);
+    final response = await _ai.chat([
+      {'role': 'user', 'content': prompt}
+    ]);
     final List? list = _parseJsonArray(response);
     return list?.cast<Map<String, dynamic>>() ?? [];
   }
@@ -433,7 +511,9 @@ ${syllabusContent != null ? '相关教学内容：\n$syllabusContent' : ''}
 }
 ''';
 
-    final response = await _ai.chat([{'role': 'user', 'content': prompt}]);
+    final response = await _ai.chat([
+      {'role': 'user', 'content': prompt}
+    ]);
     return _parseJson(response) ?? {};
   }
 
@@ -482,7 +562,9 @@ ${syllabusContent != null ? '相关教学内容：\n$syllabusContent' : ''}
 }
 ''';
 
-    final response = await _ai.chat([{'role': 'user', 'content': prompt}]);
+    final response = await _ai.chat([
+      {'role': 'user', 'content': prompt}
+    ]);
     return _parseJson(response) ?? {};
   }
 
@@ -490,7 +572,8 @@ ${syllabusContent != null ? '相关教学内容：\n$syllabusContent' : ''}
 
   void _report(String step, double progress) {
     onProgress?.call(step, progress);
-    debugPrint('=== CourseGeneration: $step (${(progress * 100).toStringAsFixed(0)}%)');
+    debugPrint(
+        '=== CourseGeneration: $step (${(progress * 100).toStringAsFixed(0)}%)');
   }
 
   dynamic _parseJson(String? text) {
@@ -528,6 +611,7 @@ class CourseGenerationResult {
   List<Map<String, dynamic>> courseware = [];
   List<Map<String, dynamic>> graphs = [];
   List<Map<String, dynamic>> labTasks = [];
+  List<Map<String, dynamic>> homeworks = [];
   List<Map<String, dynamic>> reportTemplates = [];
   Map<String, dynamic> achievementConfig = {};
   Map<String, dynamic> assessmentConfig = {};
@@ -542,18 +626,19 @@ class CourseGenerationResult {
 
   /// 转换为可序列化的 Map（用于存储/上传）
   Map<String, dynamic> toMap() => {
-    'course_id': courseId,
-    'course_name': courseName,
-    'config': config,
-    'chapters': chapters,
-    'quizzes': quizzes,
-    'video_scripts': videoScripts,
-    'courseware': courseware,
-    'graphs': graphs,
-    'lab_tasks': labTasks,
-    'report_templates': reportTemplates,
-    'achievement_config': achievementConfig,
-    'assessment_config': assessmentConfig,
-    'generated_at': DateTime.now().toIso8601String(),
-  };
+        'course_id': courseId,
+        'course_name': courseName,
+        'config': config,
+        'chapters': chapters,
+        'quizzes': quizzes,
+        'video_scripts': videoScripts,
+        'courseware': courseware,
+        'graphs': graphs,
+        'lab_tasks': labTasks,
+        'homeworks': homeworks,
+        'report_templates': reportTemplates,
+        'achievement_config': achievementConfig,
+        'assessment_config': assessmentConfig,
+        'generated_at': DateTime.now().toIso8601String(),
+      };
 }

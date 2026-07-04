@@ -47,6 +47,7 @@ class ResourcePersistenceService {
         'config': {'file': 'config.json', 'version': '1.0.0'},
         'assessment': {'file': 'assessment.json', 'version': '1.0.0'},
         'lab_tasks': {'file': 'lab_tasks.json', 'version': '1.0.0'},
+        'homework': {'file': 'homework.json', 'version': '1.0.0'},
         'quiz_config': {'file': 'quiz_config.json', 'version': '1.0.0'},
         'achievement_calc': {
           'file': 'achievement_calc.json',
@@ -88,6 +89,9 @@ class ResourcePersistenceService {
 
     // lab_tasks.json
     await _writeJson('$courseDir/配置/lab_tasks.json', result.labTasks);
+
+    // homework.json
+    await _writeJson('$courseDir/配置/homework.json', result.homeworks);
 
     // 2. 保存测验题目
     final theoryDir = Directory('$courseDir/理论');
@@ -147,7 +151,8 @@ class ResourcePersistenceService {
         'achievement_calc.json',
         'report_templates.json',
         'quiz_config.json',
-        'lab_tasks.json'
+        'lab_tasks.json',
+        'homework.json',
       ];
 
       for (final file in configFiles) {
@@ -227,6 +232,8 @@ class ResourcePersistenceService {
           owner, repoName, '配置/report_templates.json', null);
       final labTasks =
           await _readGiteeJsonList(owner, repoName, '配置/lab_tasks.json', null);
+      final homeworks =
+          await _readGiteeJsonList(owner, repoName, '配置/homework.json', null);
 
       // 读取测验题目
       final quizzes = <Map<String, dynamic>>[];
@@ -247,6 +254,7 @@ class ResourcePersistenceService {
         ..achievementConfig = achievement ?? {}
         ..reportTemplates = reportTemplates ?? []
         ..labTasks = labTasks ?? []
+        ..homeworks = homeworks ?? []
         ..quizzes = quizzes
         ..videoScripts = videoScripts
         ..courseware = courseware
@@ -351,6 +359,7 @@ class ResourcePersistenceService {
         'chapters_config': {'file': '配置/chapters.json', 'format': 'json'},
         'assessment_config': {'file': '配置/assessment.json', 'format': 'json'},
         'lab_tasks_config': {'file': '配置/lab_tasks.json', 'format': 'json'},
+        'homework_config': {'file': '配置/homework.json', 'format': 'json'},
         'quiz_config': {'file': '配置/quiz_config.json', 'format': 'json'},
         'achievement_config': {
           'file': '配置/achievement_calc.json',
@@ -362,6 +371,8 @@ class ResourcePersistenceService {
           'courses',
           'questions',
           'lab_tasks',
+          'homeworks',
+          'homework_items',
           'resource_files',
           'graphs',
           'nodes',
@@ -376,6 +387,7 @@ class ResourcePersistenceService {
     await _saveTheoryOutlines(courseDir, result);
     await _saveSyllabusAndSchedule(courseDir, result);
     await _saveLabMaterials(courseDir, result);
+    await _saveHomeworkMaterials(courseDir, result);
     await _saveAssessmentMaterials(courseDir, result);
     await _saveAchievementMaterials(courseDir, result);
     await _saveArchiveMaterials(courseDir, result);
@@ -499,6 +511,55 @@ class ResourcePersistenceService {
         '## 实验过程\n\n\n## 结果截图\n\n\n## 问题与改进\n';
   }
 
+  Future<void> _saveHomeworkMaterials(
+    String courseDir,
+    CourseGenerationResult result,
+  ) async {
+    for (var i = 0; i < result.homeworks.length; i++) {
+      final homework = result.homeworks[i];
+      final chapterNumber = homework['chapter_number'] ?? i + 1;
+      final chapterTitle = homework['chapter_title']?.toString() ??
+          homework['chapter']?.toString() ??
+          '第$chapterNumber章';
+      await _writeText(
+        '$courseDir/作业/第$chapterNumber章 $chapterTitle-作业.md',
+        _homeworkMd(result.courseName, homework),
+      );
+    }
+  }
+
+  String _homeworkMd(String courseName, Map<String, dynamic> homework) {
+    final chapter = homework['chapter'] ?? '';
+    final chapterTitle = homework['chapter_title'] ?? '';
+    final buffer = StringBuffer()
+      ..writeln('# $chapter $chapterTitle 作业')
+      ..writeln()
+      ..writeln('## 作业信息')
+      ..writeln()
+      ..writeln('- 课程：$courseName')
+      ..writeln('- 章节：$chapter $chapterTitle')
+      ..writeln('- 对应目标：${homework['course_objective'] ?? ''}')
+      ..writeln()
+      ..writeln(homework['description'] ?? '')
+      ..writeln()
+      ..writeln('## 作业题目');
+    final items = homework['items'] as List? ?? const [];
+    for (var i = 0; i < items.length; i++) {
+      final item = Map<String, dynamic>.from(items[i] as Map);
+      buffer
+        ..writeln()
+        ..writeln('### ${i + 1}. ${item['type'] ?? '作业题'}')
+        ..writeln()
+        ..writeln('- 分值：${item['max_score'] ?? 100}')
+        ..writeln('- 题目：${item['question'] ?? ''}')
+        ..writeln()
+        ..writeln('#### 参考要点')
+        ..writeln()
+        ..writeln(item['reference_answer'] ?? '');
+    }
+    return buffer.toString();
+  }
+
   Future<void> _saveAssessmentMaterials(
     String courseDir,
     CourseGenerationResult result,
@@ -557,9 +618,116 @@ class ResourcePersistenceService {
       '# 智能体目录\n\n围绕${result.courseName}生成课程辅导、实验批阅、达成分析和归档助手上下文。\n',
     );
     await _writeText(
+      '$courseDir/文档/数智课程特色设计.md',
+      _smartCourseFeatureMd(result),
+    );
+    await _writeText(
+      '$courseDir/文档/知识图谱与数字孪生闭环.md',
+      _graphTwinLoopMd(result),
+    );
+    await _writeText(
+      '$courseDir/文档/智慧课程审核清单.md',
+      _smartCourseChecklistMd(result),
+    );
+    await _writeText(
       '$courseDir/推荐/学习路径模板.md',
       '# 学习路径模板\n\n基于课程图谱、测验结果和数字孪生画像生成个性化学习路径。\n',
     );
+  }
+
+  String _smartCourseFeatureMd(CourseGenerationResult result) {
+    return '''# ${result.courseName} 数智课程特色设计
+
+## 课程定位
+
+本课程按智慧课程标准组织资源，以知识图谱、数字孪生、AI 智能体、学习分析和达成评价构成数智课程能力底座。
+
+## 核心特色
+
+| 特色 | 建设内容 | 平台体现 |
+| --- | --- | --- |
+| 知识图谱组织课程 | 章节、知识点、资源、目标、评价建立关联 | 图谱、学习路径、资源推荐 |
+| 数字孪生刻画师生 | 学生学习画像与教师教学画像 | 数字孪生、学习分析、AI 解读 |
+| 智能体服务全过程 | 答疑、导学、实验、评价、归档辅助 | 智慧问答、技能工具、智能体 |
+| 数据驱动达成评价 | 测验、作业、实验、项目、试卷分析支撑达成 | 达成模块、归档材料 |
+| 一键生课平台化 | 生成资源包、清单和可编辑模板 | 课程资源包清单 |
+
+## 建设要求
+
+- 每章至少有理论资源、测验、作业和学习建议。
+- 每个实验有教程、报告模板和评分要求。
+- 每个课程目标能追踪到评价数据。
+- 每门课程能形成可审核、可打印、可归档材料。
+''';
+  }
+
+  String _graphTwinLoopMd(CourseGenerationResult result) {
+    final chapterLines = result.chapters.asMap().entries.map((entry) {
+      final number = entry.key + 1;
+      final title = entry.value['title']?.toString() ?? '第$number章';
+      return '| 第$number章 $title | 知识节点 | 掌握度/风险 | 推荐资源/任务 |';
+    }).join('\n');
+    return '''# ${result.courseName} 知识图谱与数字孪生闭环
+
+## 闭环模型
+
+```text
+课程目标 -> 知识节点 -> 资源与活动 -> 学习行为数据 -> 师生数字孪生
+  -> 风险诊断与学习推荐 -> 教学干预 -> 达成评价 -> 图谱与资源持续改进
+```
+
+## 人体隐喻
+
+| 图谱元素 | 数字孪生隐喻 | 教学含义 |
+| --- | --- | --- |
+| 核心节点 | 器官 | 关键知识或核心能力 |
+| 前置关系 | 血管/神经 | 学习依赖和认知通路 |
+| 节点掌握度 | 健康指标 | 学生掌握情况 |
+| 薄弱节点 | 风险部位 | 需要补救的知识点 |
+| 学习路径 | 训练方案 | 个性化学习建议 |
+| 教学干预 | 调节方案 | 教师讲解、反馈、资源推送 |
+
+## 章节映射
+
+| 章节 | 图谱对象 | 孪生指标 | 干预动作 |
+| --- | --- | --- | --- |
+$chapterLines
+''';
+  }
+
+  String _smartCourseChecklistMd(CourseGenerationResult result) {
+    return '''# ${result.courseName} 智慧课程审核清单
+
+## 资源完整度
+
+| 检查项 | 要求 | 状态 |
+| --- | --- | --- |
+| 教学大纲 | 明确课程目标、章节、评价方式 | 待审核 |
+| 教学进度 | 与章节、实验、作业、考核对应 | 待审核 |
+| 理论资源 | 每章有教案、测验、作业 | 待审核 |
+| 实验资源 | 有实验教程、报告模板、评分要求 | 待审核 |
+| 归档资源 | 期初、期中、期末、结课材料齐全 | 待审核 |
+
+## 知识图谱与数字孪生
+
+| 检查项 | 要求 | 状态 |
+| --- | --- | --- |
+| 课程图谱 | 覆盖课程目标、章节和核心知识点 | 待审核 |
+| 关系类型 | 包含前置、包含、相关、支撑等关系 | 待审核 |
+| 学生画像 | 体现掌握度、活跃度、任务完成度 | 待审核 |
+| 教师画像 | 体现教学覆盖、反馈、班级健康度 | 待审核 |
+| AI 解读 | 给出可执行建议 | 待审核 |
+
+## 评价闭环
+
+| 检查项 | 要求 | 状态 |
+| --- | --- | --- |
+| 测验 | 支撑章节知识检测 | 待审核 |
+| 作业 | 支撑基础、实践、思考能力评价 | 待审核 |
+| 实验 | 支撑实践能力评价 | 待审核 |
+| 试卷分析 | 能分析课程目标达成 | 待审核 |
+| 达成报告 | 能形成持续改进建议 | 待审核 |
+''';
   }
 
   Future<void> _writePackageInventory(
@@ -592,6 +760,7 @@ class ResourcePersistenceService {
         'courseware': result.courseware.length,
         'graphs': result.graphs.length,
         'lab_tasks': result.labTasks.length,
+        'homeworks': result.homeworks.length,
         'report_templates': result.reportTemplates.length,
         'files': files.length,
       },
@@ -616,6 +785,7 @@ class ResourcePersistenceService {
       ..writeln('- 课件：${result.courseware.length}')
       ..writeln('- 图谱：${result.graphs.length}')
       ..writeln('- 实验任务：${result.labTasks.length}')
+      ..writeln('- 作业：${result.homeworks.length}')
       ..writeln('- 报告模板：${result.reportTemplates.length}')
       ..writeln('- 文件总数：${files.length}')
       ..writeln()
@@ -641,6 +811,7 @@ class ResourcePersistenceService {
       'report_templates.json': 'reportTemplates',
       'quiz_config.json': 'quizzes',
       'lab_tasks.json': 'labTasks',
+      'homework.json': 'homeworks',
     };
     return map[fileName] ?? 'config';
   }

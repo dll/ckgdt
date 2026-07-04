@@ -47,28 +47,35 @@ class HomeworkDao {
   /// 删除作业
   Future<void> deleteHomework(int id) async {
     final db = await _db;
-    await db.delete('homework_submissions', where: 'homework_id = ?', whereArgs: [id]);
-    await db.delete('homework_items', where: 'homework_id = ?', whereArgs: [id]);
+    await db.delete('homework_submissions',
+        where: 'homework_id = ?', whereArgs: [id]);
+    await db
+        .delete('homework_items', where: 'homework_id = ?', whereArgs: [id]);
     await db.delete('homeworks', where: 'id = ?', whereArgs: [id]);
   }
 
   /// ── 题目 ──────────────────────────────────────────────────────────────────
 
   /// 批量插入题目
-  Future<void> insertItems(int homeworkId, List<HomeworkItemModel> items) async {
+  Future<void> insertItems(
+      int homeworkId, List<HomeworkItemModel> items) async {
     final db = await _db;
     for (var i = 0; i < items.length; i++) {
       final item = items[i];
-      await db.insert('homework_items', {
-        'homework_id': homeworkId,
-        'item_index': i + 1,
-        'type': item.type,
-        'type_label': item.typeLabel,
-        'question': item.question,
-        'reference_answer': item.referenceAnswer,
-        'max_score': item.maxScore,
-        'objective_mapping': jsonEncode(item.objectiveMapping.map((e) => e.toMap()).toList()),
-      }, conflictAlgorithm: ConflictAlgorithm.replace);
+      await db.insert(
+          'homework_items',
+          {
+            'homework_id': homeworkId,
+            'item_index': i + 1,
+            'type': item.type,
+            'type_label': item.typeLabel,
+            'question': item.question,
+            'reference_answer': item.referenceAnswer,
+            'max_score': item.maxScore,
+            'objective_mapping': jsonEncode(
+                item.objectiveMapping.map((e) => e.toMap()).toList()),
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace);
     }
   }
 
@@ -135,7 +142,8 @@ class HomeworkDao {
   }
 
   /// 获取某次作业所有学生的提交
-  Future<List<HomeworkSubmissionModel>> getAllSubmissions(int homeworkId) async {
+  Future<List<HomeworkSubmissionModel>> getAllSubmissions(
+      int homeworkId) async {
     final db = await _db;
     final rows = await db.query(
       'homework_submissions',
@@ -147,7 +155,8 @@ class HomeworkDao {
   }
 
   /// AI 批阅后更新分数和评语
-  Future<void> updateAiGrade(int submissionId, int score, String comment) async {
+  Future<void> updateAiGrade(
+      int submissionId, int score, String comment) async {
     final db = await _db;
     await db.update(
       'homework_submissions',
@@ -208,7 +217,8 @@ class HomeworkDao {
 
   /// 获取学生某课程所有作业的平均分（用于达成度计算）
   /// 返回 0-100 分值
-  Future<double> getStudentHomeworkAverage(String courseId, String userId) async {
+  Future<double> getStudentHomeworkAverage(
+      String courseId, String userId) async {
     final db = await _db;
     final result = await db.rawQuery('''
       SELECT AVG(hs.score) as avg_score
@@ -262,6 +272,14 @@ class HomeworkDao {
   /// 导入作业数据到 achievement_pingshi_scores 表（兼容旧达成度系统）
   Future<void> syncToAchievementScores(String courseId) async {
     final db = await _db;
+    final columns = (await db.rawQuery(
+      'PRAGMA table_info(achievement_pingshi_scores)',
+    ))
+        .map((row) => row['name']?.toString())
+        .whereType<String>()
+        .toSet();
+    if (columns.isEmpty) return;
+
     // 获取所有有提交的学生
     final students = await db.rawQuery('''
       SELECT DISTINCT hs.user_id
@@ -273,11 +291,34 @@ class HomeworkDao {
     for (final student in students) {
       final userId = student['user_id'] as String;
       final avg = await getStudentHomeworkAverage(courseId, userId);
-      // 写入 achievement_pingshi_scores（type=homework）
-      await db.rawInsert('''
-        INSERT OR REPLACE INTO achievement_pingshi_scores (user_id, type, score, updated_at)
-        VALUES (?, 'homework', ?, ?)
-      ''', [userId, avg.round(), DateTime.now().toIso8601String()]);
+      final now = DateTime.now().toIso8601String();
+
+      if (columns.containsAll({'user_id', 'type', 'score', 'updated_at'})) {
+        await db.rawInsert('''
+          INSERT OR REPLACE INTO achievement_pingshi_scores (user_id, type, score, updated_at)
+          VALUES (?, 'homework', ?, ?)
+        ''', [userId, avg.round(), now]);
+        continue;
+      }
+
+      if (columns.containsAll({
+        'student_id',
+        'quiz_homework_score',
+        'quiz_homework_achievement',
+        'updated_at',
+      })) {
+        final achievement = (avg / 100).clamp(0.0, 1.0);
+        await db.update(
+          'achievement_pingshi_scores',
+          {
+            'quiz_homework_score': avg,
+            'quiz_homework_achievement': achievement,
+            'updated_at': now,
+          },
+          where: 'student_id = ?',
+          whereArgs: [userId],
+        );
+      }
     }
   }
 
@@ -285,7 +326,6 @@ class HomeworkDao {
 
   /// 从 homework.json 导入作业到数据库
   Future<int> importFromJson(String courseId, String jsonContent) async {
-    final db = await _db;
     final List<dynamic> homeworkList = jsonDecode(jsonContent);
     int count = 0;
 
@@ -307,7 +347,8 @@ class HomeworkDao {
       final items = (hw['items'] as List?) ?? [];
       final itemModels = items.map((item) {
         final om = (item['objective_mapping'] as List?)
-                ?.map((e) => ObjectiveMapping.fromMap(e as Map<String, dynamic>))
+                ?.map(
+                    (e) => ObjectiveMapping.fromMap(e as Map<String, dynamic>))
                 .toList() ??
             [];
         return HomeworkItemModel(

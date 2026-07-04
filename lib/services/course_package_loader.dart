@@ -61,6 +61,7 @@ class CoursePackageLoader {
       await db.transaction((txn) async {
         summary.courseUpdated = await _syncCourse(txn, package);
         summary.labTasksImported = await _syncLabTasks(txn, courseId);
+        summary.homeworksImported = await _syncHomeworks(txn, courseId);
         summary.resourcesImported = await _syncResourceFiles(txn, courseId);
         summary.usersImported = await _syncMockUsers(txn, courseId);
         summary.classesImported = await _syncMockClasses(txn, courseId);
@@ -201,6 +202,82 @@ class CoursePackageLoader {
         'created_at': now,
         'updated_at': now,
       });
+      count++;
+    }
+    return count;
+  }
+
+  Future<int> _syncHomeworks(DatabaseExecutor txn, String courseId) async {
+    final homeworkList = await _loadJsonList('data/$courseId/配置/homework.json');
+    if (homeworkList.isEmpty) return 0;
+
+    var count = 0;
+    final now = DateTime.now().toIso8601String();
+    for (final raw in homeworkList) {
+      final chapter = raw['chapter']?.toString() ?? '';
+      final chapterTitle = raw['chapter_title']?.toString() ?? '';
+      final title = '$chapterTitle作业';
+      final items = (raw['items'] as List?)?.whereType<Map>().toList() ??
+          const <Map<dynamic, dynamic>>[];
+      if (title.trim().isEmpty || items.isEmpty) continue;
+
+      final totalScore = items.fold<int>(
+        0,
+        (sum, item) => sum + _asInt(item['max_score'], fallback: 100),
+      );
+      final existing = await txn.query(
+        'homeworks',
+        where: 'course_id = ? AND title = ?',
+        whereArgs: [courseId, title],
+        limit: 1,
+      );
+
+      int homeworkId;
+      final data = {
+        'course_id': courseId,
+        'title': title,
+        'description': raw['description']?.toString() ?? '',
+        'chapter': chapter,
+        'chapter_title': chapterTitle,
+        'course_objective': raw['course_objective']?.toString() ?? '',
+        'total_score': totalScore == 0 ? 100 : totalScore,
+        'deadline': raw['deadline']?.toString(),
+        'status': 'published',
+        'created_at': existing.isEmpty
+            ? now
+            : existing.first['created_at']?.toString() ?? now,
+      };
+
+      if (existing.isEmpty) {
+        homeworkId = await txn.insert('homeworks', data);
+      } else {
+        homeworkId = existing.first['id'] as int;
+        await txn.update(
+          'homeworks',
+          data,
+          where: 'id = ?',
+          whereArgs: [homeworkId],
+        );
+        await txn.delete(
+          'homework_items',
+          where: 'homework_id = ?',
+          whereArgs: [homeworkId],
+        );
+      }
+
+      for (var i = 0; i < items.length; i++) {
+        final item = Map<String, dynamic>.from(items[i]);
+        await txn.insert('homework_items', {
+          'homework_id': homeworkId,
+          'item_index': i + 1,
+          'type': item['type_code']?.toString() ?? 'basic',
+          'type_label': item['type']?.toString() ?? '基础题',
+          'question': item['question']?.toString() ?? '',
+          'reference_answer': item['reference_answer']?.toString(),
+          'max_score': _asInt(item['max_score'], fallback: 100),
+          'objective_mapping': jsonEncode(item['objective_mapping'] ?? []),
+        });
+      }
       count++;
     }
     return count;
@@ -416,6 +493,7 @@ class CoursePackageLoader {
         '理论',
         '课件',
         '视频',
+        '作业',
         '实验',
         '考核',
         '达成',
@@ -436,7 +514,10 @@ class CoursePackageLoader {
             .hasMatch(decodedPath);
       }).toList()
         ..sort();
-      if (manifestPaths.isNotEmpty) return manifestPaths;
+      if (manifestPaths.isNotEmpty) {
+        final knownPaths = await _knownCourseAssetPaths(courseId);
+        return {...manifestPaths, ...knownPaths}.toList()..sort();
+      }
       return _knownCourseAssetPaths(courseId);
     } catch (_) {
       return _knownCourseAssetPaths(courseId);
@@ -475,6 +556,8 @@ class CoursePackageLoader {
           paths, 'data/$courseId/理论/第$number章 $title-测验.md');
       await _addIfAssetExists(
           paths, 'data/$courseId/理论/第$number章 $title-作业.md');
+      await _addIfAssetExists(
+          paths, 'data/$courseId/作业/第$number章 $title-作业.md');
       await _addIfAssetExists(paths, 'data/$courseId/课件/第$number章 $title.md');
       await _addIfAssetExists(
           paths, 'data/$courseId/视频/${_cnChapter(number)} $title-视频脚本.md');
@@ -489,6 +572,9 @@ class CoursePackageLoader {
 
     await _addIfAssetExists(paths, 'data/$courseId/实验/实验指导/README.md');
     await _addIfAssetExists(paths, 'data/$courseId/实验/平台技术栈/README.md');
+    await _addIfAssetExists(paths, 'data/$courseId/文档/数智课程特色设计.md');
+    await _addIfAssetExists(paths, 'data/$courseId/文档/知识图谱与数字孪生闭环.md');
+    await _addIfAssetExists(paths, 'data/$courseId/文档/智慧课程审核清单.md');
     return paths..sort();
   }
 
@@ -538,6 +624,7 @@ class CoursePackageLoader {
     if (lower.endsWith('.puml')) return 'puml';
     if (category == '视频') return 'video';
     if (category == '课件') return 'ppt';
+    if (category == '作业') return 'homework';
     if (category == '实验') return 'lab';
     if (category == '归档') return 'archive';
     if (category == '达成') return 'achievement';
@@ -586,6 +673,7 @@ class CoursePackageImportResult {
   final String? reason;
   bool courseUpdated = false;
   int labTasksImported = 0;
+  int homeworksImported = 0;
   int resourcesImported = 0;
   int usersImported = 0;
   int classesImported = 0;
@@ -627,6 +715,7 @@ class CoursePackageImportResult {
     if (failed) return 'course=$courseId failed: $reason';
     return 'course=$courseId version=$packageVersion '
         'courseUpdated=$courseUpdated labs=$labTasksImported '
+        'homeworks=$homeworksImported '
         'resources=$resourcesImported users=$usersImported '
         'classes=$classesImported';
   }

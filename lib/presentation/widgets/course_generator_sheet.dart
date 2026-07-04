@@ -315,6 +315,7 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
       _log('包含 ${result.courseware.length} 个课件');
       _log('包含 ${result.graphs.length} 个图谱');
       _log('包含 ${result.labTasks.length} 个实验任务');
+      _log('包含 ${result.homeworks.length} 章作业');
       _log('包含 ${result.reportTemplates.length} 个报告模板');
       if (generatedFileCount > 0) {
         _log('课程资源包共 $generatedFileCount 个文件');
@@ -395,6 +396,67 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
         requirements: (lab['requirements'] as List?)?.join('\n'),
         deliverables: (lab['deliverables'] as List?)?.join('\n'),
       );
+    }
+
+    // 保存作业
+    final now = DateTime.now().toIso8601String();
+    final oldHomeworks = await db.query(
+      'homeworks',
+      columns: ['id'],
+      where: 'course_id = ?',
+      whereArgs: [result.courseId],
+    );
+    for (final old in oldHomeworks) {
+      await db.delete(
+        'homework_items',
+        where: 'homework_id = ?',
+        whereArgs: [old['id']],
+      );
+      await db.delete(
+        'homework_submissions',
+        where: 'homework_id = ?',
+        whereArgs: [old['id']],
+      );
+    }
+    await db.delete(
+      'homeworks',
+      where: 'course_id = ?',
+      whereArgs: [result.courseId],
+    );
+    for (final homework in result.homeworks) {
+      final items = (homework['items'] as List? ?? const [])
+          .whereType<Map>()
+          .map(Map<String, dynamic>.from)
+          .toList();
+      final homeworkId = await db.insert('homeworks', {
+        'course_id': result.courseId,
+        'title': '${homework['chapter_title'] ?? ''}作业',
+        'description': homework['description']?.toString() ?? '',
+        'chapter': homework['chapter']?.toString() ?? '',
+        'chapter_title': homework['chapter_title']?.toString() ?? '',
+        'course_objective': homework['course_objective']?.toString() ?? '',
+        'total_score': items.fold<int>(
+          0,
+          (sum, item) =>
+              sum + (int.tryParse(item['max_score']?.toString() ?? '') ?? 100),
+        ),
+        'deadline': homework['deadline']?.toString(),
+        'status': 'published',
+        'created_at': now,
+      });
+      for (var i = 0; i < items.length; i++) {
+        final item = items[i];
+        await db.insert('homework_items', {
+          'homework_id': homeworkId,
+          'item_index': i + 1,
+          'type': item['type_code']?.toString() ?? 'basic',
+          'type_label': item['type']?.toString() ?? '基础题',
+          'question': item['question']?.toString() ?? '',
+          'reference_answer': item['reference_answer']?.toString(),
+          'max_score': int.tryParse(item['max_score']?.toString() ?? '') ?? 100,
+          'objective_mapping': jsonEncode(item['objective_mapping'] ?? []),
+        });
+      }
     }
 
     await db.delete(

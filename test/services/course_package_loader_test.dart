@@ -55,6 +55,50 @@ void main() {
       )
     ''');
     await db.execute('''
+      CREATE TABLE homeworks(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT,
+        chapter TEXT,
+        chapter_title TEXT,
+        course_objective TEXT,
+        total_score INTEGER DEFAULT 100,
+        deadline TEXT,
+        status TEXT DEFAULT 'draft',
+        created_at TEXT
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE homework_items(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        homework_id INTEGER NOT NULL,
+        item_index INTEGER,
+        type TEXT,
+        type_label TEXT,
+        question TEXT,
+        reference_answer TEXT,
+        max_score INTEGER DEFAULT 100,
+        objective_mapping TEXT
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE homework_submissions(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        homework_id INTEGER,
+        item_id INTEGER,
+        user_id TEXT,
+        answer_text TEXT,
+        answer_file_path TEXT,
+        score INTEGER,
+        ai_comment TEXT,
+        teacher_comment TEXT,
+        status TEXT DEFAULT 'submitted',
+        submitted_at TEXT,
+        graded_at TEXT
+      )
+    ''');
+    await db.execute('''
       CREATE TABLE resource_files(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         course_id TEXT,
@@ -114,6 +158,7 @@ void main() {
     expect(result.skipped, isFalse);
     expect(result.courseUpdated, isTrue);
     expect(result.labTasksImported, 8);
+    expect(result.homeworksImported, 8);
     expect(result.usersImported, greaterThanOrEqualTo(7));
     expect(result.classesImported, 1);
 
@@ -129,6 +174,19 @@ void main() {
 
     final packageRows = await db.query('course_package_versions');
     expect(packageRows.single['status'], 'imported');
+
+    final homeworkCount = (await db.rawQuery(
+      'SELECT COUNT(*) AS c FROM homeworks WHERE course_id = ?',
+      ['ckgdt'],
+    ))
+        .single['c'] as int;
+    expect(homeworkCount, 8);
+
+    final homeworkItemCount = (await db.rawQuery(
+      'SELECT COUNT(*) AS c FROM homework_items',
+    ))
+        .single['c'] as int;
+    expect(homeworkItemCount, 24);
 
     final resourceCount = (await db.rawQuery(
       'SELECT COUNT(*) AS c FROM resource_files WHERE course_id = ? AND source_type = ?',
