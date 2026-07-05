@@ -160,6 +160,7 @@ class DatabaseHelper {
     await _ensureAllTables(db);
     await _importStudents(db);
     await _importTeacherRoster(db);
+    await _importStudentRoster(db);
 
     return db;
   }
@@ -230,6 +231,7 @@ class DatabaseHelper {
     // Import students if needed
     await _importStudents(db);
     await _importTeacherRoster(db);
+    await _importStudentRoster(db);
 
     return db;
   }
@@ -552,6 +554,175 @@ class DatabaseHelper {
       return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
     } catch (e) {
       swallow(e, tag: 'DatabaseHelper.teacherRosterAsset');
+      return null;
+    }
+  }
+
+  // ── CKGDT 学生名单导入 ──────────────────────────────────────────────────
+
+  Future<void> _importStudentRoster(Database db) async {
+    try {
+      final bytes = await _loadStudentRosterBytes();
+      if (bytes == null || bytes.isEmpty) {
+        InitLogger.log(
+            'db', 'CKGDT student roster not found, keep existing students');
+        return;
+      }
+
+      final excel = xl.Excel.decodeBytes(bytes);
+      if (excel.tables.isEmpty) return;
+
+      var imported = 0;
+      final now = DateTime.now().toIso8601String();
+      final batch = db.batch();
+
+      for (final sheet in excel.tables.values) {
+        var idCol = -1;
+        var nameCol = -1;
+        var classCol = -1;
+        var headerRow = -1;
+
+        for (var r = 0; r < sheet.rows.length && r < 20; r++) {
+          final cells = sheet.rows[r].map(_excelText).toList();
+          for (var c = 0; c < cells.length; c++) {
+            final text = cells[c];
+            if (text.contains('学号') ||
+                text.contains('账号') ||
+                text.contains('工号')) idCol = c;
+            if (text == '姓名' || text.contains('学生姓名')) nameCol = c;
+            if (text.contains('班级') || text.contains('教学班')) classCol = c;
+          }
+          if (idCol >= 0 && nameCol >= 0) {
+            headerRow = r;
+            break;
+          }
+        }
+
+        if (headerRow < 0) continue;
+        for (var r = headerRow + 1; r < sheet.rows.length; r++) {
+          final row = sheet.rows[r];
+          final userId = _normalizeRosterUserId(_cellAt(row, idCol));
+          final realName = _cellAt(row, nameCol).trim();
+          if (userId.isEmpty || realName.isEmpty) continue;
+          if (!RegExp(r'^\d{3,}$').hasMatch(userId)) continue;
+
+          final className = classCol >= 0 ? _cellAt(row, classCol).trim() : '';
+          final existing = await db.query(
+            'users',
+            columns: ['user_id'],
+            where: 'user_id = ?',
+            whereArgs: [userId],
+            limit: 1,
+          );
+          final values = {
+            'user_id': userId,
+            'real_name': realName,
+            'role': 'student',
+            'is_active': 1,
+            'created_at': now,
+          };
+          if (existing.isEmpty) {
+            batch.insert('users', values,
+                conflictAlgorithm: ConflictAlgorithm.ignore);
+          } else {
+            batch.update(
+              'users',
+              {
+                'real_name': realName,
+                'role': 'student',
+                'is_active': 1,
+              },
+              where: 'user_id = ?',
+              whereArgs: [userId],
+            );
+          }
+
+          // 自动创建班级并分配学生
+          if (className.isNotEmpty) {
+            final classRows = await db.query(
+              'classes',
+              columns: ['id'],
+              where: 'name = ?',
+              whereArgs: [className],
+              limit: 1,
+            );
+            final classId = classRows.isEmpty
+                ? await db.insert('classes', {
+                    'name': className,
+                    'semester': '2025-2026学年第二学期',
+                    'teacher_id': '',
+                    'teacher_name': '',
+                    'description': '$className — CKGDT课程班级',
+                    'student_count': 0,
+                    'is_archived': 0,
+                    'created_at': now,
+                    'updated_at': now,
+                  })
+                : classRows.first['id'] as int;
+            await db.insert(
+              'class_members',
+              {
+                'class_id': classId,
+                'user_id': userId,
+                'role': 'student',
+                'joined_at': now,
+              },
+              conflictAlgorithm: ConflictAlgorithm.ignore,
+            );
+            final countRows = await db.rawQuery(
+              'SELECT COUNT(*) AS c FROM class_members WHERE class_id = ? AND role = ?',
+              [classId, 'student'],
+            );
+            await db.update(
+              'classes',
+              {
+                'student_count': (countRows.first['c'] as int?) ?? 0,
+                'updated_at': now,
+              },
+              where: 'id = ?',
+              whereArgs: [classId],
+            );
+          }
+
+          imported++;
+        }
+      }
+
+      if (imported > 0) {
+        await batch.commit(noResult: true);
+      }
+      InitLogger.log('db', 'CKGDT student roster imported/updated=$imported');
+    } catch (e, st) {
+      InitLogger.error('db', 'importing CKGDT student roster failed: $e', st);
+    }
+  }
+
+  Future<Uint8List?> _loadStudentRosterBytes() async {
+    const relative = ['data', 'CKGDT', '用户', '学生名单.xlsx'];
+    final candidates = <String>{
+      p.joinAll(relative),
+      p.joinAll([Directory.current.path, ...relative]),
+      p.joinAll([p.dirname(Platform.resolvedExecutable), ...relative]),
+    };
+
+    for (final path in candidates) {
+      try {
+        final file = File(path);
+        if (await file.exists()) {
+          InitLogger.log('db', 'loading CKGDT student roster from $path');
+          return Uint8List.fromList(await file.readAsBytes());
+        }
+      } catch (e) {
+        swallow(e, tag: 'DatabaseHelper.studentRosterFile');
+      }
+    }
+
+    try {
+      final data = await rootBundle.load('data/CKGDT/用户/学生名单.xlsx');
+      InitLogger.log('db', 'loading CKGDT student roster from bundled asset');
+      return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    } catch (e) {
+      swallow(e, tag: 'DatabaseHelper.studentRosterAsset');
       return null;
     }
   }

@@ -377,7 +377,9 @@ ${syllabusContent != null ? '相关教学内容：\n$syllabusContent' : ''}
     return graphs;
   }
 
-  /// 生成实验任务
+  /// 生成实践任务。数据库沿用 labTasks 字段，但内容面向各类高校课程：
+  /// 文科可生成研读/赏析/讨论，体育可生成训练/技评，艺术可生成创作/展演，
+  /// 理工可生成实验/项目。
   Future<List<Map<String, dynamic>>> _generateLabTasks(
     String courseName,
     List<String> chapters,
@@ -388,17 +390,26 @@ ${syllabusContent != null ? '相关教学内容：\n$syllabusContent' : ''}
     for (var i = 0; i < chapters.length; i++) {
       final chapter = chapters[i];
       final prompt = '''
-为《$courseName》课程的"$chapter"章节设计一个实验任务。
+为《$courseName》课程的"$chapter"章节设计一个适配课程类型的实践任务。
 
 ${syllabusContent != null ? '相关教学内容：\n$syllabusContent' : ''}
 
+要求：
+1. 如果是文学、历史、哲学、法学、教育学等文科课程，任务应是文本细读、案例研讨、观点辨析、读书报告、课堂讨论或田野/资料分析。
+2. 如果是体育课程，如足球专项，任务应是技术动作训练、体能与战术练习、比赛观察、技能测试、训练反思或视频动作分析。
+3. 如果是艺术课程，任务应是创作、赏析、展演、作品集、技法练习或评述。
+4. 如果是理工、医学、农学等课程，可使用实验、实训、项目、仿真、案例分析。
+5. 不要默认所有课程都是计算机实验课。
+
 返回 JSON：
 {
-  "title": "${chapter}实验",
-  "description": "实验目的和背景",
-  "objectives": ["实验目标1", "实验目标2"],
+  "title": "${chapter}实践任务",
+  "activity_type": "研讨/训练/创作/实验/项目/案例分析等",
+  "description": "任务目的和背景",
+  "objectives": ["目标1", "目标2"],
   "requirements": ["要求1", "要求2", "要求3"],
-  "deliverables": ["交付物1", "交付物2"],
+  "deliverables": ["提交物1", "提交物2"],
+  "assessment_rubric": ["评价维度1", "评价维度2", "评价维度3"],
   "duration_hours": 4,
   "difficulty": "medium"
 }
@@ -583,12 +594,16 @@ ${syllabusContent != null ? '相关教学内容：\n$syllabusContent' : ''}
     if (jsonMatch != null) {
       try {
         return jsonDecode(jsonMatch.group(1)!);
-      } catch (e, st) { swallowDebug(e, tag: 'CourseGeneration', stack: st); }
+      } catch (e, st) {
+        swallowDebug(e, tag: 'CourseGeneration', stack: st);
+      }
     }
     // 直接尝试解析
     try {
       return jsonDecode(text);
-    } catch (e, st) { swallowDebug(e, tag: 'CourseGeneration', stack: st); }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'CourseGeneration', stack: st);
+    }
     return null;
   }
 

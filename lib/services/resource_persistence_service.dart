@@ -466,7 +466,7 @@ class ResourcePersistenceService {
   ) async {
     for (var i = 0; i < result.labTasks.length; i++) {
       final lab = result.labTasks[i];
-      final title = lab['title'] ?? '实验${i + 1}';
+      final title = lab['title'] ?? '实践任务${i + 1}';
       await _writeText(
         '$courseDir/实验/实验教程/$title教程.md',
         _labTutorialMd(title, lab),
@@ -478,22 +478,26 @@ class ResourcePersistenceService {
     }
     await _writeText(
       '$courseDir/实验/实验指导/README.md',
-      '# ${result.courseName}实验指导\n\n本目录存放实验组织、提交规范、评分量规和常见问题。\n',
+      '# ${result.courseName}实践指导\n\n本目录存放课程实践、实验、研讨、训练、创作、案例分析等活动的组织规范、提交要求、评价量规和常见问题。\n',
     );
     await _writeText(
       '$courseDir/实验/平台技术栈/README.md',
-      '# 平台技术栈参考\n\n围绕${result.courseName}的课程图谱、学习分析、AI辅助教学、达成评价和归档工具链。\n',
+      '# 数智课程工具链参考\n\n围绕${result.courseName}的课程图谱、学习分析、数字孪生、AI辅助教学、达成评价和归档工具链。文科课程可用于文本分析与主题图谱，体育课程可用于训练记录与技能画像，艺术课程可用于作品集与评审，理工课程可用于实验和项目管理。\n',
     );
   }
 
   String _labTutorialMd(String title, Map<String, dynamic> lab) {
+    final activityType = lab['activity_type']?.toString();
     final buffer = StringBuffer()
       ..writeln('# $title 教程')
       ..writeln()
-      ..writeln('## 实验目的')
+      ..writeln('## 活动类型')
+      ..writeln(activityType?.isNotEmpty == true ? activityType : '实践任务')
+      ..writeln()
+      ..writeln('## 任务目的')
       ..writeln(lab['description'] ?? '')
       ..writeln()
-      ..writeln('## 实验要求');
+      ..writeln('## 任务要求');
     for (final item in (lab['requirements'] as List? ?? const [])) {
       buffer.writeln('- $item');
     }
@@ -501,14 +505,22 @@ class ResourcePersistenceService {
     for (final item in (lab['deliverables'] as List? ?? const [])) {
       buffer.writeln('- $item');
     }
+    final rubric = lab['assessment_rubric'] as List? ?? const [];
+    if (rubric.isNotEmpty) {
+      buffer.writeln('\n## 评价量规');
+      for (final item in rubric) {
+        buffer.writeln('- $item');
+      }
+    }
     return buffer.toString();
   }
 
   String _labReportMd(String title, Map<String, dynamic> lab) {
     return '# $title 报告模板\n\n'
         '## 基本信息\n\n- 姓名：\n- 学号：\n- 班级：\n\n'
-        '## 实验目标\n\n${lab['description'] ?? ''}\n\n'
-        '## 实验过程\n\n\n## 结果截图\n\n\n## 问题与改进\n';
+        '## 任务目标\n\n${lab['description'] ?? ''}\n\n'
+        '## 完成过程\n\n\n## 成果证据\n\n可填写文本分析、课堂讨论记录、训练数据、动作视频截图、作品图片、实验结果或项目运行截图。\n\n'
+        '## 反思与改进\n';
   }
 
   Future<void> _saveHomeworkMaterials(
@@ -822,7 +834,10 @@ $chapterLines
     if (content == null) return null;
     try {
       return jsonDecode(content) as Map<String, dynamic>;
-    } catch (e, st) { swallowDebug(e, tag: 'ResourcePersistence', stack: st); return null; }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ResourcePersistence', stack: st);
+      return null;
+    }
   }
 
   Future<List<Map<String, dynamic>>?> _readGiteeJsonList(
@@ -832,6 +847,9 @@ $chapterLines
     try {
       final list = jsonDecode(content) as List;
       return list.cast<Map<String, dynamic>>();
-    } catch (e, st) { swallowDebug(e, tag: 'ResourcePersistence', stack: st); return null; }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'ResourcePersistence', stack: st);
+      return null;
+    }
   }
 }

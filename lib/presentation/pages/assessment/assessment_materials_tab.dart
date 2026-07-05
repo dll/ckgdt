@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../lab/lab_material_preview_page.dart';
 
 /// 考核材料 Tab — 展示 4 份过程报告材料 + 4 份最终报告材料 + 制度说明
@@ -115,8 +115,8 @@ class AssessmentMaterialsTab extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           gradient: LinearGradient(
             colors: [
-              Colors.indigo.withOpacity(0.08),
-              Colors.purple.withOpacity(0.04),
+              Colors.indigo.withValues(alpha: 0.08),
+              Colors.purple.withValues(alpha: 0.04),
             ],
           ),
         ),
@@ -161,10 +161,10 @@ class AssessmentMaterialsTab extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: accent.withOpacity(0.06),
+            color: accent.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(10),
             border: Border(
-              left: BorderSide(color: accent.withOpacity(0.5), width: 3),
+              left: BorderSide(color: accent.withValues(alpha: 0.5), width: 3),
             ),
           ),
           child: Row(
@@ -218,7 +218,7 @@ class AssessmentMaterialsTab extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: m.color.withOpacity(0.12),
+                  color: m.color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(m.icon, color: m.color, size: 20),
@@ -238,7 +238,7 @@ class AssessmentMaterialsTab extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 1),
                           decoration: BoxDecoration(
-                            color: m.color.withOpacity(0.1),
+                            color: m.color.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(m.week,

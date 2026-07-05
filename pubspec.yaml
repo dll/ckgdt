@@ -82,6 +82,7 @@ flutter:
     - assets/graphs/ckgdt/07-思政图谱/
     - assets/graphs/ckgdt/08-作业图谱/
     - assets/graphs/ckgdt/09-作品图谱/
+    - assets/graphs/ckgdt/10-考核图谱/
     - assets/agent_prompts/
     - assets/archive_templates/beginning/
     - assets/archive_templates/beginning/_ref/syllabus/

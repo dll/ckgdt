@@ -1,4 +1,4 @@
-﻿import 'dart:math' as math;
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../core/constants/chapter_helper.dart';
 import '../../../core/constants/mask_shapes.dart';
@@ -1133,7 +1133,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 6),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -1189,7 +1189,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                 return ChoiceChip(
                   label: Text(chapter == null ? '全部' : '第$chapter章'),
                   selected: isSelected,
-                  selectedColor: primary.withOpacity(0.2),
+                  selectedColor: primary.withValues(alpha: 0.2),
                   onSelected: (_) {
                     Navigator.pop(ctx);
                     _setChapterFilter(chapters[i]);
@@ -1276,7 +1276,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: node.color.withOpacity(0.3),
+                            color: node.color.withValues(alpha: 0.3),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -1374,10 +1374,10 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: primary.withOpacity(0.08),
+                          color: primary.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: primary.withOpacity(0.2),
+                            color: primary.withValues(alpha: 0.2),
                           ),
                         ),
                         child: Text(
@@ -1691,7 +1691,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
@@ -2047,7 +2047,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
     required VoidCallback onTap,
   }) {
     return Material(
-      color: color.withOpacity(0.08),
+      color: color.withValues(alpha: 0.08),
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
@@ -2116,7 +2116,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                 hintText: '搜索概念...',
                 border: InputBorder.none,
                 hintStyle:
-                    TextStyle(color: NoirTokens.paper.withOpacity(0.7)),
+                    TextStyle(color: NoirTokens.paper.withValues(alpha: 0.7)),
               ),
               style: const TextStyle(color: NoirTokens.paper),
               onChanged: _performSearch,
@@ -2125,7 +2125,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
       bottom: TabBar(
         controller: _topTabController,
         labelColor: NoirTokens.paper,
-        unselectedLabelColor: NoirTokens.paper.withOpacity(0.5),
+        unselectedLabelColor: NoirTokens.paper.withValues(alpha: 0.5),
         indicatorColor: primary,
         tabs: const [
           Tab(icon: Icon(Icons.bubble_chart), text: '知识图谱'),
@@ -2220,7 +2220,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
           Text(
             '正在加载知识图谱...',
             style: TextStyle(
-                color: NoirTokens.paper.withOpacity(0.7), fontSize: 14),
+                color: NoirTokens.paper.withValues(alpha: 0.7), fontSize: 14),
           ),
         ],
       ),
@@ -2239,7 +2239,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
             Text(
               _errorMessage!,
               textAlign: TextAlign.center,
-              style: TextStyle(color: NoirTokens.danger.withOpacity(0.9)),
+              style: TextStyle(color: NoirTokens.danger.withValues(alpha: 0.9)),
             ),
             const SizedBox(height: 16),
             FilledButton.icon(
@@ -2267,13 +2267,13 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                   children: [
                     Icon(Icons.hub_outlined,
                         size: 80,
-                        color: NoirTokens.paper.withOpacity(0.2)),
+                        color: NoirTokens.paper.withValues(alpha: 0.2)),
                     const SizedBox(height: 16),
                     Text(
                       '暂无知识图谱数据',
                       style: TextStyle(
                         fontSize: 18,
-                        color: NoirTokens.paper.withOpacity(0.6),
+                        color: NoirTokens.paper.withValues(alpha: 0.6),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -2282,7 +2282,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                       '点击下方按钮初始化知识图谱',
                       style: TextStyle(
                           fontSize: 14,
-                          color: NoirTokens.paper.withOpacity(0.4)),
+                          color: NoirTokens.paper.withValues(alpha: 0.4)),
                     ),
                     const SizedBox(height: 24),
                     FilledButton.icon(
@@ -2297,7 +2297,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                           borderRadius:
                               BorderRadius.circular(NoirTokens.radius),
                           side: BorderSide(
-                              color: NoirTokens.paper.withOpacity(0.15)),
+                              color: NoirTokens.paper.withValues(alpha: 0.15)),
                         ),
                       ),
                     ),
@@ -2400,10 +2400,10 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.deepPurple.withOpacity(0.05),
+        color: Colors.deepPurple.withValues(alpha: 0.05),
         border: Border(
           bottom: BorderSide(
-            color: Colors.deepPurple.withOpacity(0.12),
+            color: Colors.deepPurple.withValues(alpha: 0.12),
             width: 1,
           ),
         ),
@@ -2452,7 +2452,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
             '${allShapes.indexOf(_selectedMask) + 1}/${allShapes.length}',
             style: TextStyle(
               fontSize: 11,
-              color: Colors.deepPurple.withOpacity(0.6),
+              color: Colors.deepPurple.withValues(alpha: 0.6),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -2483,7 +2483,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
         width: 28,
         height: 28,
         decoration: BoxDecoration(
-          color: Colors.deepPurple.withOpacity(0.08),
+          color: Colors.deepPurple.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Icon(icon, size: 18, color: Colors.deepPurple),
@@ -2496,7 +2496,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   Widget _buildSearchResultBar() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      color: primary.withOpacity(0.1),
+      color: primary.withValues(alpha: 0.1),
       child: Row(
         children: [
           Icon(Icons.search, size: 16, color: primary),
@@ -2527,7 +2527,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   Widget _buildFilterBar() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      color: const Color(0xFFFF9800).withOpacity(0.08),
+      color: const Color(0xFFFF9800).withValues(alpha: 0.08),
       child: Row(
         children: [
           const Icon(Icons.filter_list, size: 16, color: Color(0xFFFF9800)),
@@ -2554,7 +2554,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   Widget _buildRelationInfoBar() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      color: const Color(0xFF9C27B0).withOpacity(0.08),
+      color: const Color(0xFF9C27B0).withValues(alpha: 0.08),
       child: Row(
         children: [
           const Icon(Icons.device_hub, size: 16, color: Color(0xFF9C27B0)),
@@ -2635,13 +2635,13 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            primary.withOpacity(0.08),
-            const Color(0xFF4CAF50).withOpacity(0.06),
+            primary.withValues(alpha: 0.08),
+            const Color(0xFF4CAF50).withValues(alpha: 0.06),
           ],
         ),
         border: Border(
           bottom: BorderSide(
-            color: primary.withOpacity(0.15),
+            color: primary.withValues(alpha: 0.15),
           ),
         ),
       ),
@@ -2671,13 +2671,13 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(15),
                           borderSide: BorderSide(
-                            color: primary.withOpacity(0.3),
+                            color: primary.withValues(alpha: 0.3),
                           ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(15),
                           borderSide: BorderSide(
-                            color: primary.withOpacity(0.2),
+                            color: primary.withValues(alpha: 0.2),
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
@@ -2689,7 +2689,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 0),
                         filled: true,
-                        fillColor: primary.withOpacity(0.04),
+                        fillColor: primary.withValues(alpha: 0.04),
                       ),
                       onChanged: (v) => setState(() => _studentSearchQuery = v),
                     ),
@@ -2776,10 +2776,10 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: primary.withOpacity(0.1),
+                      color: primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: primary.withOpacity(0.3),
+                        color: primary.withValues(alpha: 0.3),
                       ),
                     ),
                     child: Row(
@@ -2844,10 +2844,10 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: isSelected ? primary : primary.withOpacity(0.08),
+            color: isSelected ? primary : primary.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: primary.withOpacity(0.3),
+              color: primary.withValues(alpha: 0.3),
             ),
           ),
           child: Text(
@@ -2867,7 +2867,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -3008,7 +3008,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
                   decoration: BoxDecoration(
                     color: Colors.grey.shade50,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: primary.withOpacity(0.15)),
+                    border: Border.all(color: primary.withValues(alpha: 0.15)),
                   ),
                   child: MarkdownBubble(
                     content: result.content,
@@ -3306,7 +3306,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.12),
+                color: Colors.black.withValues(alpha: 0.12),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -3454,12 +3454,12 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
             width: mapW,
             height: mapH,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.92),
+              color: Colors.white.withValues(alpha: 0.92),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: Colors.grey.shade300),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
+                  color: Colors.black.withValues(alpha: 0.15),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
@@ -3495,7 +3495,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.15),
+            color: Colors.grey.withValues(alpha: 0.15),
             blurRadius: 4,
             offset: const Offset(0, -1),
           ),

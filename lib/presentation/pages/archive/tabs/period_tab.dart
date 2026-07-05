@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -3480,7 +3480,7 @@ ${chapterTitles.map((t) => '### $t\n- 学习重点：[请填写]\n- 学习建议
     Widget chip(IconData icon, String label, bool enabled, [Color? color]) {
       final c = color ?? primary;
       return Material(
-        color: enabled ? c.withOpacity(0.1) : Colors.grey.shade100,
+        color: enabled ? c.withValues(alpha: 0.1) : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
@@ -3507,7 +3507,7 @@ ${chapterTitles.map((t) => '### $t\n- 学习重点：[请填写]\n- 学习建议
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: primary.withOpacity(0.03),
+        color: primary.withValues(alpha: 0.03),
         border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
       ),
       child: Row(
@@ -3805,8 +3805,8 @@ class _OrdinalBadge extends StatelessWidget {
       height: 26,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: primary.withOpacity(0.10),
-        border: Border.all(color: primary.withOpacity(0.35), width: 0.8),
+        color: primary.withValues(alpha: 0.10),
+        border: Border.all(color: primary.withValues(alpha: 0.35), width: 0.8),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
@@ -3922,9 +3922,9 @@ class _StatusBadge {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withOpacity(0.3), width: 0.5),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 0.5),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -3997,6 +3997,8 @@ class _MarkdownEditDialog extends StatefulWidget {
 
 class _MarkdownEditDialogState extends State<_MarkdownEditDialog> {
   int _chars = 0;
+  bool _showPreview = true;
+  final FocusNode _editorFocus = FocusNode();
 
   @override
   void initState() {
@@ -4008,11 +4010,35 @@ class _MarkdownEditDialogState extends State<_MarkdownEditDialog> {
   @override
   void dispose() {
     widget.controller.removeListener(_syncChars);
+    _editorFocus.dispose();
     super.dispose();
   }
 
   void _syncChars() {
     if (mounted) setState(() => _chars = widget.controller.text.length);
+  }
+
+  void _insertMarkdown(String prefix, [String suffix = '']) {
+    final text = widget.controller.text;
+    final sel = widget.controller.selection;
+    final start = sel.start.clamp(0, text.length);
+    final end = sel.end.clamp(0, text.length);
+    final selected = text.substring(start, end);
+    final replacement = '$prefix$selected$suffix';
+    widget.controller.text = text.substring(0, start) + replacement + text.substring(end);
+    widget.controller.selection = TextSelection.collapsed(
+      offset: start + prefix.length + selected.length + suffix.length,
+    );
+    _editorFocus.requestFocus();
+  }
+
+  void _insertTable() {
+    final text = widget.controller.text;
+    final pos = widget.controller.selection.start.clamp(0, text.length);
+    const table = '\n| 列1 | 列2 | 列3 |\n|------|------|------|\n| 内容 | 内容 | 内容 |\n';
+    widget.controller.text = text.substring(0, pos) + table + text.substring(pos);
+    widget.controller.selection = TextSelection.collapsed(offset: pos + table.length);
+    _editorFocus.requestFocus();
   }
 
   void _submit({required bool previewPdf}) {
@@ -4027,67 +4053,131 @@ class _MarkdownEditDialogState extends State<_MarkdownEditDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isWide = MediaQuery.of(context).size.width > 900;
+
     return Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1120, maxHeight: 760),
+        constraints: const BoxConstraints(maxWidth: 1400, maxHeight: 860),
         child: Column(
           children: [
+            // ── 标题栏 ──────────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(18, 14, 10, 8),
+              padding: const EdgeInsets.fromLTRB(16, 12, 8, 6),
               child: Row(
                 children: [
-                  Icon(Icons.edit_note, color: theme.colorScheme.primary),
+                  Icon(Icons.edit_note, color: theme.colorScheme.primary, size: 20),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       widget.title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  // 预览切换
+                  IconButton(
+                    tooltip: _showPreview ? '隐藏预览' : '显示预览',
+                    onPressed: () => setState(() => _showPreview = !_showPreview),
+                    icon: Icon(_showPreview ? Icons.view_column : Icons.text_fields, size: 18),
+                  ),
                   Text(
                     '$_chars 字',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                   ),
                   IconButton(
                     tooltip: '关闭',
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close),
+                    icon: const Icon(Icons.close, size: 18),
                   ),
                 ],
               ),
             ),
             const Divider(height: 1),
-            Expanded(
-              child: TextField(
-                controller: widget.controller,
-                expands: true,
-                maxLines: null,
-                minLines: null,
-                textAlignVertical: TextAlignVertical.top,
-                style: const TextStyle(
-                  fontFamily: 'Consolas',
-                  fontSize: 13,
-                  height: 1.35,
-                ),
-                decoration: const InputDecoration(
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(16),
-                ),
+
+            // ── 工具栏 ──────────────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                border: Border(bottom: BorderSide(color: theme.dividerColor, width: 0.5)),
+              ),
+              child: Wrap(
+                spacing: 2,
+                runSpacing: 2,
+                children: [
+                  _toolBtn(Icons.title, '标题', () => _insertMarkdown('# ')),
+                  _toolBtn(Icons.format_bold, '粗体', () => _insertMarkdown('**', '**')),
+                  _toolBtn(Icons.format_italic, '斜体', () => _insertMarkdown('*', '*')),
+                  _toolBtn(Icons.code, '代码', () => _insertMarkdown('`', '`')),
+                  _toolBtn(Icons.format_list_bulleted, '列表', () => _insertMarkdown('- ')),
+                  _toolBtn(Icons.format_list_numbered, '编号', () => _insertMarkdown('1. ')),
+                  _toolBtn(Icons.table_chart, '表格', _insertTable),
+                  _toolBtn(Icons.horizontal_rule, '分割线', () => _insertMarkdown('\n---\n')),
+                  _toolBtn(Icons.link, '链接', () => _insertMarkdown('[', '](url)')),
+                ],
               ),
             ),
+
+            // ── 编辑区 + 预览区 ─────────────────────────────────────
+            Expanded(
+              child: Row(
+                children: [
+                  // 左：源码编辑
+                  Expanded(
+                    flex: _showPreview ? 1 : 2,
+                    child: TextField(
+                      controller: widget.controller,
+                      focusNode: _editorFocus,
+                      expands: true,
+                      maxLines: null,
+                      minLines: null,
+                      textAlignVertical: TextAlignVertical.top,
+                      style: const TextStyle(
+                        fontFamily: 'Consolas',
+                        fontSize: 13,
+                        height: 1.4,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: '在此编辑 Markdown 内容...',
+                        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.all(14),
+                      ),
+                    ),
+                  ),
+                  // 分割线
+                  if (_showPreview)
+                    VerticalDivider(width: 1, color: theme.dividerColor),
+                  // 右：实时预览
+                  if (_showPreview)
+                    Expanded(
+                      flex: 1,
+                      child: Container(
+                        color: theme.colorScheme.surface,
+                        padding: const EdgeInsets.all(14),
+                        child: SingleChildScrollView(
+                        child: MarkdownBubble(
+                          content: widget.controller.text,
+                          compact: false,
+                        ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
             const Divider(height: 1),
+
+            // ── 底部操作栏 ──────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
               child: Row(
                 children: [
                   Text(
-                    '保存后旧审核结果失效，需要重新审核或直接预览确认。',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    '保存后旧审核结果失效，需重新审核或直接预览确认。',
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
                   ),
                   const Spacer(),
                   TextButton(
@@ -4097,19 +4187,33 @@ class _MarkdownEditDialogState extends State<_MarkdownEditDialog> {
                   const SizedBox(width: 8),
                   OutlinedButton.icon(
                     onPressed: () => _submit(previewPdf: false),
-                    icon: const Icon(Icons.save_outlined, size: 18),
+                    icon: const Icon(Icons.save_outlined, size: 16),
                     label: const Text('保存'),
                   ),
                   const SizedBox(width: 8),
                   FilledButton.icon(
                     onPressed: () => _submit(previewPdf: true),
-                    icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+                    icon: const Icon(Icons.picture_as_pdf_outlined, size: 16),
                     label: const Text('保存并预览PDF'),
                   ),
                 ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _toolBtn(IconData icon, String tooltip, VoidCallback onPressed) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(4),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          child: Icon(icon, size: 16, color: Colors.grey.shade700),
         ),
       ),
     );

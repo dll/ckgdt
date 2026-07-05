@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import '../../../data/local/homework_dao.dart';
@@ -166,7 +166,7 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: typeColor.withOpacity(0.1),
+                    color: typeColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(item.typeLabel,
@@ -244,9 +244,9 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.05),
+              color: Colors.green.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.green.withOpacity(0.2)),
+              border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
             ),
             child: Text(sub?.answerText ?? '',
                 style: const TextStyle(fontSize: 14)),
@@ -329,7 +329,7 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
               width: double.infinity,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.indigo.withOpacity(0.05),
+                color: Colors.indigo.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(item.referenceAnswer!,
@@ -349,7 +349,7 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
             width: double.infinity,
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.05),
+              color: Colors.grey.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(sub.answerText ?? '(未填写)',

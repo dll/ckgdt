@@ -1,4 +1,4 @@
-﻿part of '../works_page.dart';
+part of '../works_page.dart';
 
 class _LeaderboardTab extends StatefulWidget {
   final AuthService authService;
@@ -148,7 +148,7 @@ class _LeaderboardTabState extends State<_LeaderboardTab> {
         _loadData();
       },
       showCheckmark: false,
-      selectedColor: primary.withOpacity(0.15),
+      selectedColor: primary.withValues(alpha: 0.15),
       padding: EdgeInsets.zero,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
@@ -167,7 +167,7 @@ class _LeaderboardTabState extends State<_LeaderboardTab> {
                 fontWeight: FontWeight.bold)),
         Text(label,
             style: TextStyle(
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
                 fontSize: 11)),
       ],
     );
@@ -222,7 +222,7 @@ class _LeaderboardTabState extends State<_LeaderboardTab> {
               color: Colors.amber, size: 32),
         CircleAvatar(
           radius: rank == 1 ? 24 : 20,
-          backgroundColor: color.withOpacity(0.15),
+          backgroundColor: color.withValues(alpha: 0.15),
           child: Text(
             _avatarChar(entry, showReal),
             style: TextStyle(
@@ -251,8 +251,8 @@ class _LeaderboardTabState extends State<_LeaderboardTab> {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                color.withOpacity(0.3),
-                color.withOpacity(0.1),
+                color.withValues(alpha: 0.3),
+                color.withValues(alpha: 0.1),
               ],
             ),
             borderRadius: const BorderRadius.vertical(
