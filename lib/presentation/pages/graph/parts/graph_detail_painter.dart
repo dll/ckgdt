@@ -1,4 +1,4 @@
-part of '../graph_detail_page.dart';
+﻿part of '../graph_detail_page.dart';
 
 class GraphPainter extends CustomPainter {
   final List<NodeModel> nodes;
@@ -132,7 +132,7 @@ class GraphPainter extends CustomPainter {
           ..strokeCap = StrokeCap.round;
 
         final ancestorGlow = Paint()
-          ..color = const Color(0xFFFF8F00).withValues(alpha: 0.15)
+          ..color = const Color(0xFFFF8F00).withOpacity(0.15)
           ..strokeWidth = 16.0
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round;
@@ -206,7 +206,7 @@ class GraphPainter extends CustomPainter {
           Offset(pNode.x, pNode.y),
           38,
           Paint()
-            ..color = const Color(0xFFFF8F00).withValues(alpha: 0.2)
+            ..color = const Color(0xFFFF8F00).withOpacity(0.2)
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
         );
       }
@@ -221,7 +221,7 @@ class GraphPainter extends CustomPainter {
         ..strokeCap = StrokeCap.round;
 
       final pathGlowPaint = Paint()
-        ..color = const Color(0xFF4CAF50).withValues(alpha: 0.15)
+        ..color = const Color(0xFF4CAF50).withOpacity(0.15)
         ..strokeWidth = 14.0
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round;
@@ -326,7 +326,7 @@ class GraphPainter extends CustomPainter {
       // 上溯/下钻路径光晕（琥珀色）
       if (isDrillNode && !isSelected) {
         final drillGlow = Paint()
-          ..color = const Color(0xFFFF8F00).withValues(alpha: 0.25)
+          ..color = const Color(0xFFFF8F00).withOpacity(0.25)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
         canvas.drawCircle(center, radius + 8, drillGlow);
         // 琥珀色边框
@@ -342,7 +342,7 @@ class GraphPainter extends CustomPainter {
       // 搜索高亮光晕（黄色）
       if (isHighlighted) {
         final glowPaint = Paint()
-          ..color = Colors.yellow.withValues(alpha: 0.3)
+          ..color = Colors.yellow.withOpacity(0.3)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
         canvas.drawCircle(center, radius + 10, glowPaint);
       }
@@ -350,7 +350,7 @@ class GraphPainter extends CustomPainter {
       // 邻居高亮光晕（红色/橙色）
       if (isAdjacent && !isSelected) {
         final adjGlow = Paint()
-          ..color = Colors.red.withValues(alpha: 0.2)
+          ..color = Colors.red.withOpacity(0.2)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
         canvas.drawCircle(center, radius + 8, adjGlow);
         // 邻居虚线边框
@@ -363,7 +363,7 @@ class GraphPainter extends CustomPainter {
 
       // 阴影
       final shadowPaint = Paint()
-        ..color = Colors.black.withValues(alpha: 0.15)
+        ..color = Colors.black.withOpacity(0.15)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
       canvas.drawCircle(Offset(center.dx + 2, center.dy + 3), radius, shadowPaint);
 
@@ -451,7 +451,7 @@ class GraphPainter extends CustomPainter {
             center,
             radius - 4,
             Paint()
-              ..color = Colors.white.withValues(alpha: 0.3)
+              ..color = Colors.white.withOpacity(0.3)
               ..style = PaintingStyle.stroke
               ..strokeWidth = 2);
         break;

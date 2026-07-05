@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../services/course_context_service.dart';
@@ -247,13 +247,13 @@ class _LoginProgressDialogState extends State<LoginProgressDialog>
             shape: BoxShape.circle,
             gradient: LinearGradient(
               colors: [
-                roleColor.withValues(alpha: 0.3),
-                roleColor.withValues(alpha: 0.1),
+                roleColor.withOpacity(0.3),
+                roleColor.withOpacity(0.1),
               ],
             ),
             boxShadow: [
               BoxShadow(
-                color: roleColor.withValues(alpha: 0.3),
+                color: roleColor.withOpacity(0.3),
                 blurRadius: 16,
                 spreadRadius: 2,
               ),
@@ -264,7 +264,7 @@ class _LoginProgressDialogState extends State<LoginProgressDialog>
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
-                colors: [roleColor, roleColor.withValues(alpha: 0.7)],
+                colors: [roleColor, roleColor.withOpacity(0.7)],
               ),
             ),
             child: Icon(icon, color: Colors.white, size: 26),
@@ -287,9 +287,9 @@ class _LoginProgressDialogState extends State<LoginProgressDialog>
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
           decoration: BoxDecoration(
-            color: roleColor.withValues(alpha: 0.1),
+            color: roleColor.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: roleColor.withValues(alpha: 0.3)),
+            border: Border.all(color: roleColor.withOpacity(0.3)),
           ),
           child: Text(
             roleLabel,
@@ -323,7 +323,7 @@ class _LoginProgressDialogState extends State<LoginProgressDialog>
               radarTouchData: RadarTouchData(enabled: false),
               radarBorderData: const BorderSide(color: Colors.transparent),
               gridBorderData: BorderSide(
-                color: Colors.grey.withValues(alpha: 0.15),
+                color: Colors.grey.withOpacity(0.15),
               ),
               titlePositionPercentageOffset: 0.12,
               titleTextStyle: TextStyle(
@@ -337,7 +337,7 @@ class _LoginProgressDialogState extends State<LoginProgressDialog>
               ),
               dataSets: [
                 RadarDataSet(
-                  fillColor: Colors.blue.withValues(alpha: 0.15),
+                  fillColor: Colors.blue.withOpacity(0.15),
                   borderColor: Colors.blue,
                   borderWidth: 2,
                   entryRadius: 4,
@@ -432,7 +432,7 @@ class _LoginProgressDialogState extends State<LoginProgressDialog>
           width: double.infinity,
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: Colors.blue.withValues(alpha: 0.05),
+            color: Colors.blue.withOpacity(0.05),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
@@ -483,7 +483,7 @@ class _LoginProgressDialogState extends State<LoginProgressDialog>
               radarTouchData: RadarTouchData(enabled: false),
               radarBorderData: const BorderSide(color: Colors.transparent),
               gridBorderData: BorderSide(
-                color: Colors.grey.withValues(alpha: 0.15),
+                color: Colors.grey.withOpacity(0.15),
               ),
               titlePositionPercentageOffset: 0.12,
               titleTextStyle: TextStyle(
@@ -497,7 +497,7 @@ class _LoginProgressDialogState extends State<LoginProgressDialog>
               ),
               dataSets: [
                 RadarDataSet(
-                  fillColor: Colors.orange.withValues(alpha: 0.15),
+                  fillColor: Colors.orange.withOpacity(0.15),
                   borderColor: Colors.orange,
                   borderWidth: 2,
                   entryRadius: 4,
@@ -566,9 +566,9 @@ class _LoginProgressDialogState extends State<LoginProgressDialog>
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.06),
+          color: color.withOpacity(0.06),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.15)),
+          border: Border.all(color: color.withOpacity(0.15)),
         ),
         child: Column(
           children: [
@@ -601,7 +601,7 @@ class _LoginProgressDialogState extends State<LoginProgressDialog>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(

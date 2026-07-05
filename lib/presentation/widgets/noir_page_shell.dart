@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../core/design/noir_tokens.dart';
 import '../../core/design/noir_components.dart';
 import '../pages/login/knowledge_graph_backdrop.dart';
@@ -18,7 +18,7 @@ final _vignetteDecoration = BoxDecoration(
     end: Alignment.bottomCenter,
     colors: [
       Colors.transparent,
-      NoirTokens.inkDeep.withValues(alpha: 0.55),
+      NoirTokens.inkDeep.withOpacity(0.55),
     ],
     stops: const [0.55, 1.0],
   ),

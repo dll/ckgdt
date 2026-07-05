@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../core/constants/role_guard.dart';
 import '../../../data/local/agent_call_log_dao.dart';
 import '../../../services/auth_service.dart';
@@ -166,7 +166,7 @@ class _AgentCallsDashboardPageState extends State<AgentCallsDashboardPage>
                     const SizedBox(height: 4),
                     LinearProgressIndicator(
                       value: percent,
-                      backgroundColor: Colors.grey.withValues(alpha: 0.2),
+                      backgroundColor: Colors.grey.withOpacity(0.2),
                     ),
                     const SizedBox(height: 4),
                     Text(

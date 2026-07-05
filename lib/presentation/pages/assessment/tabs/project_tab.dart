@@ -1,4 +1,4 @@
-part of '../assessment_page.dart';
+﻿part of '../assessment_page.dart';
 
 class _ProjectTab extends StatefulWidget {
   final AuthService authService;
@@ -327,9 +327,9 @@ class _ProjectTabState extends State<_ProjectTab> {
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.purple.withValues(alpha: 0.05),
+            color: Colors.purple.withOpacity(0.05),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.purple.withValues(alpha: 0.15)),
+            border: Border.all(color: Colors.purple.withOpacity(0.15)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -412,13 +412,13 @@ class _ProjectTabState extends State<_ProjectTab> {
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         color: isMe
-            ? Colors.orange.withValues(alpha: 0.06)
-            : Colors.grey.withValues(alpha: 0.04),
+            ? Colors.orange.withOpacity(0.06)
+            : Colors.grey.withOpacity(0.04),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: isMe
-              ? Colors.orange.withValues(alpha: 0.3)
-              : Colors.grey.withValues(alpha: 0.15),
+              ? Colors.orange.withOpacity(0.3)
+              : Colors.grey.withOpacity(0.15),
         ),
       ),
       child: Theme(
@@ -429,8 +429,8 @@ class _ProjectTabState extends State<_ProjectTab> {
           leading: CircleAvatar(
             radius: 16,
             backgroundColor: isMe
-                ? Colors.orange.withValues(alpha: 0.2)
-                : Colors.blue.withValues(alpha: 0.15),
+                ? Colors.orange.withOpacity(0.2)
+                : Colors.blue.withOpacity(0.15),
             child: Text(
               name.isNotEmpty ? name.substring(0, 1) : '?',
               style: TextStyle(
@@ -497,7 +497,7 @@ class _ProjectTabState extends State<_ProjectTab> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ExpansionTile(
         leading: CircleAvatar(
-          backgroundColor: Colors.purple.withValues(alpha: 0.1),
+          backgroundColor: Colors.purple.withOpacity(0.1),
           child: Text('$memberCount',
               style: const TextStyle(
                   fontWeight: FontWeight.bold,
@@ -533,7 +533,7 @@ class _ProjectTabState extends State<_ProjectTab> {
                         children: [
                           CircleAvatar(
                             radius: 12,
-                            backgroundColor: Colors.blue.withValues(alpha: 0.1),
+                            backgroundColor: Colors.blue.withOpacity(0.1),
                             child: Text(
                               (m['name'] as String?)?.substring(0, 1) ?? '?',
                               style: const TextStyle(

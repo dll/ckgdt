@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../services/gitee_service.dart';
@@ -602,7 +602,7 @@ class _RepoDetailPageState extends State<RepoDetailPage> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.15),
+                            color: Colors.orange.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Text('管理员',

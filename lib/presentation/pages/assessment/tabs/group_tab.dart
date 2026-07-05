@@ -1,4 +1,4 @@
-part of '../assessment_page.dart';
+﻿part of '../assessment_page.dart';
 
 enum _GroupDimension {
   repo('仓库', 'repo', Icons.folder_copy, Colors.blue),
@@ -181,18 +181,18 @@ class _GroupTabState extends State<_GroupTab>
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Colors.blue.withValues(alpha: 0.08),
-                  Colors.purple.withValues(alpha: 0.06),
+                  Colors.blue.withOpacity(0.08),
+                  Colors.purple.withOpacity(0.06),
                 ],
               ),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.blue.withValues(alpha: 0.15)),
+              border: Border.all(color: Colors.blue.withOpacity(0.15)),
             ),
             child: Row(
               children: [
                 CircleAvatar(
                   radius: 16,
-                  backgroundColor: Colors.blue.withValues(alpha: 0.2),
+                  backgroundColor: Colors.blue.withOpacity(0.2),
                   child: Text(
                     (_myInfo!['name'] as String? ?? '').isNotEmpty
                         ? (_myInfo!['name'] as String).substring(0, 1)
@@ -226,7 +226,7 @@ class _GroupTabState extends State<_GroupTab>
           ),
         // 维度选择 TabBar
         Container(
-          color: _currentDim.color.withValues(alpha: 0.05),
+          color: _currentDim.color.withOpacity(0.05),
           child: TabBar(
             controller: _dimTabController,
             isScrollable: true,
@@ -297,7 +297,7 @@ class _GroupTabState extends State<_GroupTab>
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
-          color: color.withValues(alpha: 0.06),
+          color: color.withOpacity(0.06),
         ),
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
         child: Row(
@@ -339,9 +339,9 @@ class _GroupTabState extends State<_GroupTab>
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.10),
+                color: color.withOpacity(0.10),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: color.withValues(alpha: 0.2)),
+                border: Border.all(color: color.withOpacity(0.2)),
               ),
               child: Center(
                 child: Text('${group.memberCount}',
@@ -392,13 +392,13 @@ class _GroupTabState extends State<_GroupTab>
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: isMe
-                ? Colors.orange.withValues(alpha: 0.06)
-                : Colors.grey.withValues(alpha: 0.03),
+                ? Colors.orange.withOpacity(0.06)
+                : Colors.grey.withOpacity(0.03),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: isMe
-                  ? Colors.orange.withValues(alpha: 0.25)
-                  : Colors.grey.withValues(alpha: 0.12),
+                  ? Colors.orange.withOpacity(0.25)
+                  : Colors.grey.withOpacity(0.12),
             ),
           ),
           child: Column(
@@ -410,8 +410,8 @@ class _GroupTabState extends State<_GroupTab>
                   CircleAvatar(
                     radius: 14,
                     backgroundColor: isMe
-                        ? Colors.orange.withValues(alpha: 0.2)
-                        : _currentDim.color.withValues(alpha: 0.15),
+                        ? Colors.orange.withOpacity(0.2)
+                        : _currentDim.color.withOpacity(0.15),
                     child: Text(
                       name.isNotEmpty ? name.substring(0, 1) : '?',
                       style: TextStyle(
@@ -485,7 +485,7 @@ class _GroupTabState extends State<_GroupTab>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: badgeColor.withValues(alpha: 0.1),
+        color: badgeColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(text,
@@ -628,7 +628,7 @@ class _GroupTabState extends State<_GroupTab>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: Colors.deepOrange.withValues(alpha: 0.1),
+                        color: Colors.deepOrange.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text('${group.memberCount}人',
@@ -646,10 +646,10 @@ class _GroupTabState extends State<_GroupTab>
                     width: double.infinity,
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.deepOrange.withValues(alpha: 0.04),
+                      color: Colors.deepOrange.withOpacity(0.04),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                          color: Colors.deepOrange.withValues(alpha: 0.12)),
+                          color: Colors.deepOrange.withOpacity(0.12)),
                     ),
                     child: Text(detailDesc,
                         style: const TextStyle(fontSize: 12, height: 1.5)),
@@ -669,10 +669,10 @@ class _GroupTabState extends State<_GroupTab>
                                   MaterialTapTargetSize.shrinkWrap,
                               visualDensity: VisualDensity.compact,
                               backgroundColor:
-                                  Colors.purple.withValues(alpha: 0.08),
+                                  Colors.purple.withOpacity(0.08),
                               side: BorderSide(
                                   color:
-                                      Colors.purple.withValues(alpha: 0.15)),
+                                      Colors.purple.withOpacity(0.15)),
                             ))
                         .toList(),
                   ),
@@ -690,13 +690,13 @@ class _GroupTabState extends State<_GroupTab>
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: isMe
-                            ? Colors.orange.withValues(alpha: 0.12)
-                            : Colors.grey.withValues(alpha: 0.08),
+                            ? Colors.orange.withOpacity(0.12)
+                            : Colors.grey.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(
                           color: isMe
-                              ? Colors.orange.withValues(alpha: 0.3)
-                              : Colors.grey.withValues(alpha: 0.15),
+                              ? Colors.orange.withOpacity(0.3)
+                              : Colors.grey.withOpacity(0.15),
                         ),
                       ),
                       child: Row(

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../data/local/homework_dao.dart';
@@ -287,7 +287,7 @@ class _LogoutReportDialogState extends State<LogoutReportDialog>
             gradient: LinearGradient(
               colors: [
                 theme.colorScheme.primary,
-                theme.colorScheme.primary.withValues(alpha: 0.6),
+                theme.colorScheme.primary.withOpacity(0.6),
               ],
             ),
           ),
@@ -330,7 +330,7 @@ class _LogoutReportDialogState extends State<LogoutReportDialog>
               radarTouchData: RadarTouchData(enabled: false),
               radarBorderData: const BorderSide(color: Colors.transparent),
               gridBorderData: BorderSide(
-                color: Colors.grey.withValues(alpha: 0.15),
+                color: Colors.grey.withOpacity(0.15),
               ),
               titlePositionPercentageOffset: 0.12,
               titleTextStyle: TextStyle(fontSize: 11, color: Colors.grey.shade600),
@@ -341,7 +341,7 @@ class _LogoutReportDialogState extends State<LogoutReportDialog>
               ),
               dataSets: [
                 RadarDataSet(
-                  fillColor: Colors.blue.withValues(alpha: 0.15),
+                  fillColor: Colors.blue.withOpacity(0.15),
                   borderColor: Colors.blue,
                   borderWidth: 2,
                   entryRadius: 4,
@@ -371,12 +371,12 @@ class _LogoutReportDialogState extends State<LogoutReportDialog>
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                levelColor.withValues(alpha: 0.12),
-                levelColor.withValues(alpha: 0.04),
+                levelColor.withOpacity(0.12),
+                levelColor.withOpacity(0.04),
               ],
             ),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: levelColor.withValues(alpha: 0.25)),
+            border: Border.all(color: levelColor.withOpacity(0.25)),
           ),
           child: Column(
             children: [
@@ -392,7 +392,7 @@ class _LogoutReportDialogState extends State<LogoutReportDialog>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
                 decoration: BoxDecoration(
-                  color: levelColor.withValues(alpha: 0.15),
+                  color: levelColor.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -468,7 +468,7 @@ class _LogoutReportDialogState extends State<LogoutReportDialog>
           child: LinearProgressIndicator(
             value: scoreVal / 100,
             minHeight: 6,
-            backgroundColor: color.withValues(alpha: 0.1),
+            backgroundColor: color.withOpacity(0.1),
             valueColor: AlwaysStoppedAnimation<Color>(color),
           ),
         ),
@@ -522,7 +522,7 @@ class _LogoutReportDialogState extends State<LogoutReportDialog>
               radarTouchData: RadarTouchData(enabled: false),
               radarBorderData: const BorderSide(color: Colors.transparent),
               gridBorderData: BorderSide(
-                color: Colors.grey.withValues(alpha: 0.15),
+                color: Colors.grey.withOpacity(0.15),
               ),
               titlePositionPercentageOffset: 0.12,
               titleTextStyle: TextStyle(fontSize: 11, color: Colors.grey.shade600),
@@ -533,7 +533,7 @@ class _LogoutReportDialogState extends State<LogoutReportDialog>
               ),
               dataSets: [
                 RadarDataSet(
-                  fillColor: Colors.orange.withValues(alpha: 0.15),
+                  fillColor: Colors.orange.withOpacity(0.15),
                   borderColor: Colors.orange,
                   borderWidth: 2,
                   entryRadius: 4,
@@ -603,9 +603,9 @@ class _LogoutReportDialogState extends State<LogoutReportDialog>
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.06),
+          color: color.withOpacity(0.06),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.15)),
+          border: Border.all(color: color.withOpacity(0.15)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

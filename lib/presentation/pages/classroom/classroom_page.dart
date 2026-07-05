@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../data/local/classroom_dao.dart';
@@ -110,7 +110,7 @@ class _ClassroomPageState extends State<ClassroomPage>
         _buildHeader(context, primary),
         // ── TabBar ────────────────────────────────────────────────
         Container(
-          color: primary.withValues(alpha: 0.04),
+          color: primary.withOpacity(0.04),
           child: TabBar(
             controller: _tabController,
             labelColor: primary,
@@ -175,7 +175,7 @@ class _ClassroomPageState extends State<ClassroomPage>
 
     // 直接构建渐变，避免 ThemeExtension 可能的延迟
     final headerGradient = LinearGradient(
-      colors: [primary, primary.withValues(alpha: 0.7)],
+      colors: [primary, primary.withOpacity(0.7)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     );
@@ -196,7 +196,7 @@ class _ClassroomPageState extends State<ClassroomPage>
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: Colors.white.withOpacity(0.2),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.cast_for_education,
@@ -218,7 +218,7 @@ class _ClassroomPageState extends State<ClassroomPage>
                   '$displayName${className.isNotEmpty ? ' · $className' : ''}',
                   style: TextStyle(
                       fontSize: 13,
-                      color: Colors.white.withValues(alpha: 0.85)),
+                      color: Colors.white.withOpacity(0.85)),
                 ),
               ],
             ),

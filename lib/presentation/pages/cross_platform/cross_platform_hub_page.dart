@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -488,7 +488,7 @@ class _CrossPlatformHubPageState extends State<CrossPlatformHubPage> {
         gradient: LinearGradient(
           colors: [
             theme.colorScheme.primary,
-            theme.colorScheme.primary.withValues(alpha: 0.7),
+            theme.colorScheme.primary.withOpacity(0.7),
           ],
         ),
         borderRadius: BorderRadius.circular(14),
@@ -522,8 +522,8 @@ class _CrossPlatformHubPageState extends State<CrossPlatformHubPage> {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color: (_isServerRunning || _isConnected)
-                  ? Colors.green.withValues(alpha: 0.3)
-                  : Colors.white.withValues(alpha: 0.2),
+                  ? Colors.green.withOpacity(0.3)
+                  : Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
@@ -632,7 +632,7 @@ class _CrossPlatformHubPageState extends State<CrossPlatformHubPage> {
               data: _qrData!,
               size: 200,
               padding: 12,
-              borderColor: theme.colorScheme.outline.withValues(alpha: 0.2),
+              borderColor: theme.colorScheme.outline.withOpacity(0.2),
               eyeColor: theme.colorScheme.primary,
               moduleColor: const Color(0xFF333333),
             ),
@@ -720,7 +720,7 @@ class _CrossPlatformHubPageState extends State<CrossPlatformHubPage> {
         children: [
           StyledQr(
             data: AppUrls.webApp,
-            borderColor: theme.colorScheme.outline.withValues(alpha: 0.2),
+            borderColor: theme.colorScheme.outline.withOpacity(0.2),
             eyeColor: theme.colorScheme.primary,
           ),
           const SizedBox(height: 8),

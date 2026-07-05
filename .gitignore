@@ -155,12 +155,16 @@ avd_features.ini
 # ── 草稿 / 计划文档 ──
 /drafts/
 sqlite-autoconf-*.zip
+/tools/cache/
 
 # ── 构建/运行残留日志（不入库）──
 *.err
 pubspec.lock.std
 /build_log*.txt
+/build_*_log*.txt
+/build_apk_log*.txt
 /build_win_log.txt
 /build_*.log
 /flutter_*.log
 /windows_build.log
+/logs/

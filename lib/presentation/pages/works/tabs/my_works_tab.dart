@@ -1,4 +1,4 @@
-// part of works_page.dart — 学生专属"我的作品"Tab
+﻿// part of works_page.dart — 学生专属"我的作品"Tab
 //
 // 仅显示当前学生本人的作品 + 教师评分历史 + 同学互评。
 // 教师/管理员视角不会看到这个 tab（works_page.dart 用 _isStudent 判断）。
@@ -160,7 +160,7 @@ class _MyWorksTabState extends State<_MyWorksTab> {
                   fontWeight: FontWeight.bold)),
           Text(label,
               style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.85), fontSize: 11)),
+                  color: Colors.white.withOpacity(0.85), fontSize: 11)),
         ],
       ),
     );
@@ -182,7 +182,7 @@ class _MyWorksTabState extends State<_MyWorksTab> {
       // 学生本人作品在自己的 tab 内统一加蓝边框（视觉一致性）
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: primary.withValues(alpha: 0.4), width: 1.5),
+        side: BorderSide(color: primary.withOpacity(0.4), width: 1.5),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -256,7 +256,7 @@ class _MyWorksTabState extends State<_MyWorksTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: color.withOpacity(0.12),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(status,

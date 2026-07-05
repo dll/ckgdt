@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../data/local/case_dao.dart';
 import '../../../services/achievement_context.dart';
@@ -364,7 +364,7 @@ class _CasesPageState extends State<CasesPage> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF4FC3F7).withValues(alpha: 0.15),
+                      color: const Color(0xFF4FC3F7).withOpacity(0.15),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Row(
@@ -384,7 +384,7 @@ class _CasesPageState extends State<CasesPage> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.05),
+                    color: Colors.white.withOpacity(0.05),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: const Text(
@@ -674,7 +674,7 @@ class _CasesPageState extends State<CasesPage> {
           TextButton.icon(
             onPressed: _addCase,
             style: TextButton.styleFrom(
-              backgroundColor: const Color(0xFF4FC3F7).withValues(alpha: 0.15),
+              backgroundColor: const Color(0xFF4FC3F7).withOpacity(0.15),
               foregroundColor: const Color(0xFF4FC3F7),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               shape: RoundedRectangleBorder(
@@ -755,7 +755,7 @@ class _CasesPageState extends State<CasesPage> {
               width: 96,
               height: 96,
               decoration: BoxDecoration(
-                color: const Color(0xFF4FC3F7).withValues(alpha: 0.1),
+                color: const Color(0xFF4FC3F7).withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.folder_open,
@@ -819,13 +819,13 @@ class _CasesPageState extends State<CasesPage> {
         borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.14),
+            color: Colors.black.withOpacity(0.14),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
         ],
         border: isRunning
-            ? Border.all(color: Colors.green.withValues(alpha: 0.5), width: 1)
+            ? Border.all(color: Colors.green.withOpacity(0.5), width: 1)
             : null,
       ),
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
@@ -1001,7 +1001,7 @@ class _CasesPageState extends State<CasesPage> {
       decoration: BoxDecoration(
         color: const Color(0xFF0E1620),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        border: Border.all(color: Colors.white.withOpacity(0.06)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1042,7 +1042,7 @@ class _CasesPageState extends State<CasesPage> {
       decoration: BoxDecoration(
         color: const Color(0xFF0E1620),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        border: Border.all(color: Colors.white.withOpacity(0.06)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1067,7 +1067,7 @@ class _CasesPageState extends State<CasesPage> {
                     height: 18,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF4FC3F7).withValues(alpha: 0.16),
+                      color: const Color(0xFF4FC3F7).withOpacity(0.16),
                       borderRadius: BorderRadius.circular(9),
                     ),
                     child: Text(
@@ -1106,7 +1106,7 @@ class _CasesPageState extends State<CasesPage> {
         color: const Color(0xFF10202A),
         borderRadius: BorderRadius.circular(8),
         border:
-            Border.all(color: const Color(0xFF4FC3F7).withValues(alpha: 0.18)),
+            Border.all(color: const Color(0xFF4FC3F7).withOpacity(0.18)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1146,7 +1146,7 @@ class _CasesPageState extends State<CasesPage> {
       decoration: BoxDecoration(
         color: const Color(0xFF0E1620),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        border: Border.all(color: Colors.white.withOpacity(0.06)),
       ),
       child: hasImage
           ? Stack(
@@ -1340,7 +1340,7 @@ class _CasesPageState extends State<CasesPage> {
     Color bg, fg;
     final custom = customColor;
     if (custom != null) {
-      bg = custom.withValues(alpha: 0.2);
+      bg = custom.withOpacity(0.2);
       fg = custom;
     } else if (label.contains('Java') || label.contains('打包')) {
       bg = Colors.orange.shade100;

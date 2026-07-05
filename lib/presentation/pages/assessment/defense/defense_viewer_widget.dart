@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -190,7 +190,7 @@ class _DefenseViewerWidgetState extends State<DefenseViewerWidget> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.6),
+                                color: Colors.black.withOpacity(0.6),
                                 borderRadius: BorderRadius.circular(4)),
                             child: Text(widget.label,
                                 style: const TextStyle(
@@ -206,8 +206,8 @@ class _DefenseViewerWidgetState extends State<DefenseViewerWidget> {
                               horizontal: 4, vertical: 2),
                           decoration: BoxDecoration(
                               color: _connected
-                                  ? Colors.green.withValues(alpha: 0.6)
-                                  : Colors.red.withValues(alpha: 0.6),
+                                  ? Colors.green.withOpacity(0.6)
+                                  : Colors.red.withOpacity(0.6),
                               borderRadius: BorderRadius.circular(4)),
                           child: Text(_connected ? 'LIVE' : 'OFF',
                               style: const TextStyle(
@@ -227,7 +227,7 @@ class _DefenseViewerWidgetState extends State<DefenseViewerWidget> {
                             child: Container(
                               padding: const EdgeInsets.all(4),
                               decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.5),
+                                  color: Colors.black.withOpacity(0.5),
                                   borderRadius: BorderRadius.circular(4)),
                               child: Icon(
                                   widget.isFullscreen
@@ -250,11 +250,11 @@ class _DefenseViewerWidgetState extends State<DefenseViewerWidget> {
       return Center(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
         Icon(_error ? Icons.error_outline : Icons.hourglass_empty,
-            size: 32, color: NoirTokens.paper.withValues(alpha: 0.3)),
+            size: 32, color: NoirTokens.paper.withOpacity(0.3)),
         const SizedBox(height: 8),
         Text(_status,
             style: TextStyle(
-                color: NoirTokens.paper.withValues(alpha: 0.4), fontSize: 12)),
+                color: NoirTokens.paper.withOpacity(0.4), fontSize: 12)),
       ]));
     });
   }

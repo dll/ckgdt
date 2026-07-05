@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -131,7 +131,7 @@ class _FeedbackManagePageState extends State<FeedbackManagePage> {
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [primary, primary.withValues(alpha: 0.7)],
+          colors: [primary, primary.withOpacity(0.7)],
         ),
         borderRadius: BorderRadius.circular(12),
       ),
@@ -193,7 +193,7 @@ class _FeedbackManagePageState extends State<FeedbackManagePage> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: isPending
-            ? BorderSide(color: Colors.orange.withValues(alpha: 0.3))
+            ? BorderSide(color: Colors.orange.withOpacity(0.3))
             : BorderSide.none,
       ),
       child: Padding(
@@ -206,7 +206,7 @@ class _FeedbackManagePageState extends State<FeedbackManagePage> {
               children: [
                 CircleAvatar(
                   radius: 16,
-                  backgroundColor: primary.withValues(alpha: 0.1),
+                  backgroundColor: primary.withOpacity(0.1),
                   child: Text(
                     (fb['user_name'] as String? ?? 'U').substring(0, 1),
                     style: TextStyle(
@@ -239,8 +239,8 @@ class _FeedbackManagePageState extends State<FeedbackManagePage> {
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: isPending
-                        ? Colors.orange.withValues(alpha: 0.1)
-                        : Colors.green.withValues(alpha: 0.1),
+                        ? Colors.orange.withOpacity(0.1)
+                        : Colors.green.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -270,7 +270,7 @@ class _FeedbackManagePageState extends State<FeedbackManagePage> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.05),
+                  color: Colors.blue.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -331,7 +331,7 @@ class _FeedbackManagePageState extends State<FeedbackManagePage> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.05),
+                  color: Colors.green.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -414,7 +414,7 @@ class _FeedbackManagePageState extends State<FeedbackManagePage> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.grey.withValues(alpha: 0.1),
+                color: Colors.grey.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(content,
