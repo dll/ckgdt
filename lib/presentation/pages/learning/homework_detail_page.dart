@@ -1,13 +1,15 @@
 ﻿import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../../data/local/homework_dao.dart';
 import '../../../services/auth_service.dart';
 import '../../../data/models/homework_model.dart';
 import '../../../services/ai_service.dart';
 
-/// 作业详情/提交页 — 学生端支持粘贴/清空/AI批阅/保存MD/重新提交
+/// 作业详情/提交页 — 学生端支持粘贴/清空/AI批阅/上传附件/重新提交
 class HomeworkDetailPage extends StatefulWidget {
   final HomeworkModel homework;
   final bool isTeacher;
@@ -28,6 +30,7 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
   List<HomeworkSubmissionModel> _submissions = [];
   final Map<int, TextEditingController> _answerControllers = {};
   final Map<int, bool> _showAnswer = {};
+  final Map<int, String> _attachedFiles = {}; // itemId → 文件路径
   bool _loading = true;
   bool _submitting = false;
   bool _aiGrading = false;
@@ -260,17 +263,42 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
             ),
         ] else ...[
           // ── 已提交答案展示 ────────────────────────────────
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.green.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
+          if (sub?.answerText != null && sub!.answerText!.isNotEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
+              ),
+              child: Text(sub!.answerText!,
+                  style: const TextStyle(fontSize: 14)),
             ),
-            child: Text(sub?.answerText ?? '',
-                style: const TextStyle(fontSize: 14)),
-          ),
+          // 已上传附件
+          if (sub?.answerFilePath != null && sub!.answerFilePath!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.blue.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.description, size: 16, color: Colors.blue.shade600),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      sub!.answerFilePath!.split(Platform.pathSeparator).last,
+                      style: TextStyle(fontSize: 13, color: Colors.blue.shade700),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           // AI 评语
           if (sub?.aiComment != null && sub!.aiComment!.isNotEmpty) ...[
@@ -328,73 +356,109 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
     );
   }
 
-  /// 答案工具栏：粘贴 / 清空 / AI批阅 / 保存MD
+  /// 答案工具栏：粘贴 / 清空 / AI批阅 / 上传附件
   Widget _buildToolbar(
       ThemeData theme, HomeworkItemModel item, TextEditingController? ctrl) {
+    final attachedFile = _attachedFiles[item.id];
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _toolBtn(
-            icon: Icons.content_paste,
-            label: '粘贴',
-            onTap: () async {
-              final data = await Clipboard.getData(Clipboard.kTextPlain);
-              if (data?.text != null && ctrl != null) {
-                ctrl.text = data!.text!;
-                ctrl.selection =
-                    TextSelection.collapsed(offset: ctrl.text.length);
-                if (mounted) {
-                  ScaffoldMessenger.of(context)
-                      .showSnackBar(const SnackBar(content: Text('已粘贴')));
-                }
-              }
-            },
+          Row(
+            children: [
+              _toolBtn(
+                icon: Icons.content_paste,
+                label: '粘贴',
+                onTap: () async {
+                  final data = await Clipboard.getData(Clipboard.kTextPlain);
+                  if (data?.text != null && ctrl != null) {
+                    ctrl.text = data!.text!;
+                    ctrl.selection =
+                        TextSelection.collapsed(offset: ctrl.text.length);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context)
+                          .showSnackBar(const SnackBar(content: Text('已粘贴')));
+                    }
+                  }
+                },
+              ),
+              _toolDivider(),
+              _toolBtn(
+                icon: Icons.clear_all,
+                label: '清空',
+                onTap: () {
+                  if (ctrl != null && ctrl.text.isNotEmpty) {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('确认清空'),
+                        content: const Text('清空后无法恢复，确定清空？'),
+                        actions: [
+                          TextButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              child: const Text('取消')),
+                          TextButton(
+                              onPressed: () {
+                                ctrl.clear();
+                                Navigator.pop(ctx);
+                              },
+                              child: const Text('确定',
+                                  style: TextStyle(color: Colors.red))),
+                        ],
+                      ),
+                    );
+                  }
+                },
+              ),
+              _toolDivider(),
+              _toolBtn(
+                icon: Icons.smart_toy,
+                label: 'AI批阅',
+                onTap: _aiGrading ? null : () => _aiGradeOne(item),
+              ),
+              _toolDivider(),
+              _toolBtn(
+                icon: Icons.attach_file,
+                label: '上传附件',
+                onTap: () => _uploadAttachment(item),
+              ),
+            ],
           ),
-          _toolDivider(),
-          _toolBtn(
-            icon: Icons.clear_all,
-            label: '清空',
-            onTap: () {
-              if (ctrl != null && ctrl.text.isNotEmpty) {
-                showDialog(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text('确认清空'),
-                    content: const Text('清空后无法恢复，确定清空？'),
-                    actions: [
-                      TextButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          child: const Text('取消')),
-                      TextButton(
-                          onPressed: () {
-                            ctrl.clear();
-                            Navigator.pop(ctx);
-                          },
-                          child: const Text('确定',
-                              style: TextStyle(color: Colors.red))),
-                    ],
+          // 已上传附件展示
+          if (attachedFile != null) ...[
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.blue.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.description, size: 14, color: Colors.blue.shade600),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      attachedFile.split(Platform.pathSeparator).last,
+                      style: TextStyle(fontSize: 11, color: Colors.blue.shade700),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                );
-              }
-            },
-          ),
-          _toolDivider(),
-          _toolBtn(
-            icon: Icons.smart_toy,
-            label: 'AI批阅',
-            onTap: _aiGrading ? null : () => _aiGradeOne(item),
-          ),
-          _toolDivider(),
-          _toolBtn(
-            icon: Icons.save_alt,
-            label: '保存MD',
-            onTap: () => _saveAsMarkdown(item),
-          ),
+                  InkWell(
+                    onTap: () {
+                      setState(() => _attachedFiles.remove(item.id));
+                    },
+                    child: Icon(Icons.close, size: 14, color: Colors.grey.shade500),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -542,14 +606,16 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
       int submitted = 0;
       for (final item in _items) {
         final answer = _answerControllers[item.id]?.text.trim() ?? '';
-        if (answer.isEmpty) continue;
+        final hasAttachment = _attachedFiles.containsKey(item.id);
+        if (answer.isEmpty && !hasAttachment) continue;
 
         final sub = HomeworkSubmissionModel(
           id: 0,
           homeworkId: widget.homework.id,
           itemId: item.id,
           userId: _userId,
-          answerText: answer,
+          answerText: answer.isNotEmpty ? answer : null,
+          answerFilePath: _attachedFiles[item.id],
           status: 'submitted',
           submittedAt: DateTime.now(),
         );
@@ -560,7 +626,7 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
       if (submitted == 0) {
         if (mounted) {
           ScaffoldMessenger.of(context)
-              .showSnackBar(const SnackBar(content: Text('请至少回答一道题')));
+              .showSnackBar(const SnackBar(content: Text('请至少回答一道题或上传附件')));
         }
         return;
       }
@@ -616,12 +682,29 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
   Future<void> _aiGradeOne(HomeworkItemModel item) async {
     if (_aiGrading) return;
     final answer = _answerControllers[item.id]?.text.trim() ?? '';
-    if (answer.isEmpty) {
+    final attachedPath = _attachedFiles[item.id];
+    final hasAttachment = attachedPath != null && attachedPath.isNotEmpty;
+
+    if (answer.isEmpty && !hasAttachment) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('请先输入答案')));
+            .showSnackBar(const SnackBar(content: Text('请先输入答案或上传附件')));
       }
       return;
+    }
+
+    // 如果有附件，尝试读取内容用于AI批阅
+    String answerForGrading = answer;
+    if (hasAttachment && answer.isEmpty) {
+      try {
+        final ext = attachedPath.split('.').last.toLowerCase();
+        if (ext == 'md' || ext == 'txt' || ext == 'mdg') {
+          final file = File(attachedPath);
+          if (await file.exists()) {
+            answerForGrading = await file.readAsString();
+          }
+        }
+      } catch (_) {}
     }
 
     setState(() => _aiGrading = true);
@@ -632,13 +715,14 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
         homeworkId: widget.homework.id,
         itemId: item.id,
         userId: _userId,
-        answerText: answer,
+        answerText: answer.isNotEmpty ? answer : null,
+        answerFilePath: attachedPath,
         status: 'submitted',
         submittedAt: DateTime.now(),
       );
       await _dao.submit(sub);
 
-      final prompt = _buildGradePrompt(item, answer);
+      final prompt = _buildGradePrompt(item, answerForGrading);
       final response = await _ai.chat([
         {'role': 'user', 'content': prompt}
       ]);
@@ -684,33 +768,29 @@ ${item.referenceAnswer != null ? '参考答案：${item.referenceAnswer}' : ''}
 返回 JSON：{"score": 分数, "comment": "评语"}''';
   }
 
-  // ── 保存为 Markdown ──────────────────────────────────────────────────────
-  Future<void> _saveAsMarkdown(HomeworkItemModel item) async {
-    final answer = _answerControllers[item.id]?.text.trim() ?? '';
-    if (answer.isEmpty) {
+  // ── 上传附件（.mdg / .md / .pdf / .docx）─────────────────────────────────
+  Future<void> _uploadAttachment(HomeworkItemModel item) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['mdg', 'md', 'pdf', 'docx', 'txt'],
+      );
+      if (result != null && result.files.isNotEmpty) {
+        final file = result.files.first;
+        final path = file.path;
+        if (path != null) {
+          setState(() => _attachedFiles[item.id] = path);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('已附件: ${file.name}')));
+          }
+        }
+      }
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('答案为空，无法保存')));
+            .showSnackBar(SnackBar(content: Text('选择文件失败: $e')));
       }
-      return;
-    }
-
-    final md = '''# ${widget.homework.title} - 第${item.itemIndex}题
-
-**题目**: ${item.question}
-**类型**: ${item.typeLabel}
-**目标**: ${item.objectiveMapping.map((om) => '目标${om.objectiveId}(${(om.contribution * 100).toInt()}%)').join(', ')}
-
----
-
-$answer
-''';
-
-    // 复制到剪贴板
-    await Clipboard.setData(ClipboardData(text: md));
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('已复制为 Markdown 格式到剪贴板')));
     }
   }
 
