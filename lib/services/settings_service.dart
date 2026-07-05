@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../data/local/xunfei_config_dao.dart';
 import '../core/error_handler.dart';
 import 'course_context_service.dart';
 
@@ -240,7 +241,9 @@ class SettingsService {
   static Future<String> getXunfeiAppId() async {
     final prefs = await SharedPreferences.getInstance();
     final v = prefs.getString(_xunfeiAppIdKey);
-    return (v == null || v.isEmpty) ? _defaultXunfeiAppId : v;
+    if (v != null && v.isNotEmpty) return v;
+    // SharedPreferences 为空时从数据库读取内置试用凭据
+    return await XunfeiConfigDao().getAppId();
   }
 
   static Future<void> setXunfeiAppId(String value) async {
@@ -251,7 +254,8 @@ class SettingsService {
   static Future<String> getXunfeiApiKey() async {
     final prefs = await SharedPreferences.getInstance();
     final v = prefs.getString(_xunfeiApiKeyKey);
-    return (v == null || v.isEmpty) ? _defaultXunfeiApiKey : v;
+    if (v != null && v.isNotEmpty) return v;
+    return await XunfeiConfigDao().getApiKey();
   }
 
   static Future<void> setXunfeiApiKey(String value) async {
@@ -262,7 +266,8 @@ class SettingsService {
   static Future<String> getXunfeiApiSecret() async {
     final prefs = await SharedPreferences.getInstance();
     final v = prefs.getString(_xunfeiApiSecretKey);
-    return (v == null || v.isEmpty) ? _defaultXunfeiApiSecret : v;
+    if (v != null && v.isNotEmpty) return v;
+    return await XunfeiConfigDao().getApiSecret();
   }
 
   static Future<void> setXunfeiApiSecret(String value) async {

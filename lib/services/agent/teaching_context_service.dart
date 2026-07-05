@@ -1,4 +1,5 @@
 import '../../core/error_handler.dart';
+import '../../core/build_info.dart';
 import '../../data/local/database_helper.dart';
 import '../auth_service.dart';
 import '../course_context_service.dart';
@@ -46,7 +47,7 @@ class AgentTeachingContextService {
       return '''
 ## 当前课程教学上下文
 
-- 平台：课程知识图谱与数字孪生（CKGDT）
+- 平台：${BuildInfo.appFullName}（${BuildInfo.appBrand}）
 - 当前课程：${course.name}
 - 课程 ID：${course.id}
 - 当前用户：${user?.realName ?? user?.userId ?? '未登录'}（${user?.role ?? 'unknown'}）

@@ -3336,6 +3336,22 @@ class DatabaseHelper {
         FOREIGN KEY (item_id) REFERENCES homework_items(id) ON DELETE CASCADE
       )
     ''');
+
+    // ── 讯飞语音配置（试用凭据）──────────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS xunfei_configs(
+        id INTEGER PRIMARY KEY,
+        app_id TEXT DEFAULT '',
+        api_key TEXT DEFAULT '',
+        api_secret TEXT DEFAULT '',
+        updated_at TEXT
+      )
+    ''');
+    // 内置试用凭据（所有用户开箱可用）
+    await db.execute('''
+      INSERT OR IGNORE INTO xunfei_configs(id, app_id, api_key, api_secret)
+      VALUES(1, '69622bbe', 'c072e757920a38f9645c874ac8822e9f', 'ZGRhY2JlMGFlNTFhMjBjMmMxYzYyNzY4')
+    ''');
   }
 
   Future<void> close() async {
