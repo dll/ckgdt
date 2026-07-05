@@ -10,7 +10,7 @@ import 'gitee_service.dart';
 
 /// 数据同步服务
 ///
-/// 直接使用本项目的 Gitee 仓库 osgisOne/mad-fd。
+/// 使用 Gitee 仓库进行师生数据双向同步。
 /// 同步使用独立的读写 Token（sync_gitee_token），与 GiteeService 的只读 Token 分开。
 /// 学生端：定时将本地学习数据上传到 sync/students/{user_id}.json
 /// 教师端：定时从 sync/students/ 拉取所有学生数据合并到本地 DB
@@ -52,7 +52,7 @@ class SyncService {
 
   // ── 同步专用 Token（读写权限）──────────────────────────────────────────
 
-  /// 预置读写 Token（osgisOne/mad-fd 仓库，具有 projects 读写权限）
+  /// 预置读写 Token（系统仓库，具有 projects 读写权限）
   /// 如果没有配置过同步 Token，自动使用此默认值
   static const _defaultSyncToken = '64a07762f8a3ab4415b8c943651bfb91';
 

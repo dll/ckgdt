@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,6 +6,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../services/clipboard_helper.dart';
 import '../../../services/gitee_service.dart';
+import '../../../services/course_resource_service.dart';
 import '../../widgets/agent_entry_button.dart';
 
 /// 实验材料 Markdown 在线预览页面
@@ -59,8 +60,8 @@ class _LabMaterialPreviewPageState extends State<LabMaterialPreviewPage> {
         // 从 Gitee 远程仓库加载
         final gitee = GiteeService();
         content = await gitee.getFileContent(
-              'osgisOne',
-              'mad-data',
+              CourseResourceService.sysOwner,
+              CourseResourceService.sysRepo,
               widget.giteePath!,
               ref: 'master',
             ) ??

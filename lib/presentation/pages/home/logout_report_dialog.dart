@@ -61,6 +61,8 @@ class _LogoutReportDialogState extends State<LogoutReportDialog>
     _radarAnim = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
     );
+    // 立即启动动画，让加载指示器可见
+    _controller.forward();
     _loadReport();
   }
 
@@ -153,7 +155,6 @@ class _LogoutReportDialogState extends State<LogoutReportDialog>
 
     if (mounted) {
       setState(() => _loading = false);
-      _controller.forward();
     }
   }
 
@@ -197,25 +198,43 @@ class _LogoutReportDialogState extends State<LogoutReportDialog>
                 // ── 数字孪生雷达 ──
                 if (_loading)
                   SizedBox(
-                    height: 180,
+                    height: 220,
                     child: Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const CircularProgressIndicator(),
-                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: 48,
+                            height: 48,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 3,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
                           Text(
-                            '正在生成学习报告...',
+                            '正在生成学习报告',
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '分析学习数据中，请稍候...',
+                            style: TextStyle(
+                              fontSize: 13,
                               color: Colors.grey.shade500,
                             ),
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 4),
                           Text(
-                            '分析学习数据中，请稍候',
+                            '成绩统计 · 知识画像 · 能力雷达',
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 11,
                               color: Colors.grey.shade400,
                             ),
                           ),

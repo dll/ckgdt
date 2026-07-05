@@ -1,4 +1,4 @@
-﻿part of '../git_repo_page.dart';
+part of '../git_repo_page.dart';
 
 class _SubmissionGuidelinesTab extends StatelessWidget {
   const _SubmissionGuidelinesTab();
@@ -93,16 +93,16 @@ class _SubmissionGuidelinesTab extends StatelessWidget {
             const Divider(height: 20),
             const Text('✅ 正确示例：', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
             const SizedBox(height: 6),
-            _buildCodeExample('feat-cjn     (陈佳宁 → cjn)'),
-            _buildCodeExample('feat-ldl     (刘东良 → ldl)'),
-            _buildCodeExample('feat-zwq     (张伟强 → zwq)'),
-            _buildCodeExample('feat-cs      (陈帅 → cs)'),
+            _buildCodeExample('feat-zs      (张三 → zs)'),
+            _buildCodeExample('feat-lw      (李伟 → lw)'),
+            _buildCodeExample('feat-wx      (王霞 → wx)'),
+            _buildCodeExample('feat-cl      (陈磊 → cl)'),
             const SizedBox(height: 8),
             const Text('❌ 错误示例（不会被读取）：',
                 style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.red)),
             const SizedBox(height: 6),
             _buildCodeExample('feat-CJN        (必须全小写)'),
-            _buildCodeExample('feat-陈佳宁     (必须用拼音首字母)'),
+            _buildCodeExample('feat-张三     (必须用拼音首字母)'),
             _buildCodeExample('feature-cjn     (前缀必须是 feat-)'),
             _buildCodeExample('cjn             (缺少 feat- 前缀)'),
             _buildCodeExample('feat-abcdef     (最多5个字母)'),

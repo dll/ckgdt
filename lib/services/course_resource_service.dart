@@ -16,7 +16,7 @@ class CourseResourceService {
 
   // ── 仓库常量（可通过配置覆盖） ──────────────────────────────────────
 
-  /// 系统资源仓库（mad-data — 课件数据独立仓库）
+  /// 系统资源仓库（课件数据独立仓库）
   static String sysOwner = 'chzcldl';
   static String sysRepo = 'mad-data';
   static const String configDir = 'course_config';

@@ -1,4 +1,4 @@
-﻿part of '../git_repo_page.dart';
+part of '../git_repo_page.dart';
 
 
 class _RepoStatsTab extends StatefulWidget {
@@ -293,8 +293,8 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
             _buildFlowItem(
               icon: Icons.cloud,
               color: Colors.indigo,
-              title: 'mad-data 仓库 (chzcldl/mad-data)',
-              subtitle: '系统课件仓库 — 教学视频/PPT/PDF/课程配置',
+              title: '${CourseResourceService.sysRepo} 仓库 (${CourseResourceService.sysOwner}/${CourseResourceService.sysRepo})',
+              subtitle: '系统资源仓库 — 教学视频/PPT/PDF/课程配置',
               items: [
                 'course_config/*.json → 实验定义、章节、考核方案、报告模板',
                 '视频/*.mp4 → 教学视频（CoursewareDownloadService 下载）',
@@ -306,7 +306,7 @@ class _RepoStatsTabState extends State<_RepoStatsTab>
             _buildFlowItem(
               icon: Icons.group_work,
               color: Colors.teal,
-              title: '学生项目仓库 (chzuczldl/cg{1-3}-*)',
+              title: '学生项目仓库 (${CourseResourceService.enterprise}/${CourseResourceService.cgPrefixes.first}*)',
               subtitle: '${_repos.length} 个仓库 — 学生项目代码和提交物',
               items: [
                 'src/ → 项目源代码（个人分支 feat-xxx）',

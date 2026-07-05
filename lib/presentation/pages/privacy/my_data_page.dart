@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../data/local/database_helper.dart';
 import '../../../services/auth_service.dart';
+import '../../../core/build_info.dart';
 import '../../widgets/back_button_bar.dart';
 import 'package:knowledge_graph_app/core/error_handler.dart';
 
@@ -127,8 +128,8 @@ class _MyDataPageState extends State<MyDataPage> {
       '_meta': {
         'exported_at': exportedAt.toIso8601String(),
         'user_id': userId,
-        'platform': 'CKGDT',
-        'note': '本文件包含您在 CKGDT 平台上的全部个人数据。请妥善保管。',
+        'platform': BuildInfo.appBrand,
+        'note': '本文件包含您在 ${BuildInfo.appBrand} 平台上的全部个人数据。请妥善保管。',
       },
     };
     // 并行 SELECT

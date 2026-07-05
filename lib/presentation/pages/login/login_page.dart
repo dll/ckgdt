@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
@@ -213,7 +213,20 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
       if (text == null || text.trim().isEmpty) {
         if (!mounted) return;
-        // 语音识别失败→弹出重试/手动选择
+        // 语音不可用或识别失败→检查是否已配置讯飞凭据
+        final appId = await SettingsService.getXunfeiAppId();
+        if (appId.isEmpty) {
+          // 讯飞未配置，直接手动输入，不弹重试框
+          final manualId = await _showManualIdDialog();
+          if (manualId == null || manualId.isEmpty || !mounted) return;
+          _userIdController.text = manualId;
+          _passwordController.text = manualId.length >= 6
+              ? manualId.substring(manualId.length - 6)
+              : manualId;
+          _login();
+          return;
+        }
+        // 有凭据但识别失败→弹出重试/手动选择
         final action = await _showVoiceRetryDialog();
         if (action == null || action == 'cancel' || !mounted) return;
         if (action == 'manual') {
@@ -401,7 +414,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       'host': _syncServer!.host,
       'port': _syncServer!.port,
       'qrToken': session.qrToken,
-      'app': 'CKGDT',
+      'app': BuildInfo.appBrand,
     });
 
     setState(() {
@@ -1048,8 +1061,8 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'CKGDT',
+                Text(
+                  BuildInfo.appBrand,
                   style: TextStyle(
                     color: _ink,
                     fontSize: 14,

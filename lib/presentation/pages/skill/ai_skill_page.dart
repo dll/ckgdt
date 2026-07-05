@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../widgets/back_button_bar.dart';
@@ -13,6 +13,7 @@ import '../../../data/local/skill_dao.dart';
 import '../../../data/local/ai_history_dao.dart';
 import '../../widgets/markdown_bubble.dart';
 import 'package:knowledge_graph_app/core/error_handler.dart';
+import '../../../core/build_info.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 技能定义
@@ -771,7 +772,7 @@ class _AiSkillPageState extends State<AiSkillPage>
             )
           : AiChatResult(
               content: localResult,
-              provider: 'CKGDT 本地能力',
+              provider: '${BuildInfo.appBrand} 本地能力',
               model: _skill.id,
             );
       if (mounted) {
@@ -826,7 +827,7 @@ $achievementAuditContext
 
 ## 技能执行要求
 - 必须围绕当前课程生成内容，优先使用本地课程章节、知识图谱、题库、实验、作品、考核和达成数据。
-- 不要沿用固定的《移动应用开发》示例，除非用户明确要求。
+- 不要沿用固定的旧课程示例，除非用户明确要求。
 - 面向教师时给出可落地的教学、评价、资源或改进动作；面向学生时给出可执行的学习、实验、考核和作品动作。
 ''';
   }

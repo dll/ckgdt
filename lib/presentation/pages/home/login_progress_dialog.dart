@@ -60,6 +60,8 @@ class _LoginProgressDialogState extends State<LoginProgressDialog>
     _radarAnim = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
     );
+    // 立即启动动画，让加载指示器可见
+    _controller.forward();
     _loadData();
   }
 
@@ -137,7 +139,6 @@ class _LoginProgressDialogState extends State<LoginProgressDialog>
 
     if (mounted) {
       setState(() => _loading = false);
-      _controller.forward();
     }
   }
 
@@ -173,17 +174,35 @@ class _LoginProgressDialogState extends State<LoginProgressDialog>
               // ── 数字孪生雷达 ──
               if (_loading)
                 SizedBox(
-                  height: 160,
+                  height: 200,
                   child: Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const CircularProgressIndicator(),
-                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 3,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
                         Text(
-                          '正在加载学习画像...',
+                          '正在加载学习画像',
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '分析个人数据中，请稍候...',
+                          style: TextStyle(
+                            fontSize: 12,
                             color: Colors.grey.shade500,
                           ),
                         ),

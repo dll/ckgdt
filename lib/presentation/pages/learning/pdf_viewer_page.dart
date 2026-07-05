@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:printing/printing.dart';
@@ -6,6 +6,7 @@ import 'package:pdf/pdf.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/file_opener_service.dart';
 import '../../../services/gitee_service.dart';
+import '../../../services/course_resource_service.dart';
 import '../../../services/tts_flutter_service.dart';
 import '../../pages/quiz/quiz_page.dart';
 import 'package:knowledge_graph_app/core/error_handler.dart';
@@ -76,8 +77,8 @@ class _InAppPdfViewerPageState extends State<InAppPdfViewerPage> {
         final remotePath = 'sync/students/$userId/$subDir/$fileName';
         try {
           bytes = await gitee.downloadBinaryFile(
-            owner: 'osgisOne',
-            repo: 'mad-fd',
+            owner: CourseResourceService.sysOwner,
+            repo: CourseResourceService.sysRepo,
             path: remotePath,
             branch: 'master',
           );

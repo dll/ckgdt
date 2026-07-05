@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +13,7 @@ import '../../widgets/styled_qr.dart';
 import 'qr_scan_page.dart';
 
 import '../../../core/constants/app_urls.dart';
+import '../../../core/build_info.dart';
 import '../../../services/clipboard_helper.dart';
 import '../../../core/error_handler.dart';
 
@@ -129,7 +130,7 @@ class _CrossPlatformHubPageState extends State<CrossPlatformHubPage> {
       'host': _syncServer!.host,
       'port': _syncServer!.port,
       'qrToken': session.qrToken,
-      'app': 'CKGDT',
+      'app': BuildInfo.appBrand,
     });
 
     setState(() {

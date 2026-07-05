@@ -122,7 +122,6 @@ class VoiceService {
         if (appId.isEmpty || apiKey.isEmpty || apiSecret.isEmpty) {
           // 开发阶段：讯飞凭据未配置时静默降级，不阻断用户
           InitLogger.log('voice', 'Xunfei credentials not configured, silently degrade');
-          onError?.call('语音功能需要讯飞凭据，请在系统设置中配置');
           return false;
         }
 

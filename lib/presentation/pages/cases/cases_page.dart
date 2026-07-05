@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../data/local/case_dao.dart';
 import '../../../services/achievement_context.dart';
@@ -1275,7 +1275,7 @@ class _CasesPageState extends State<CasesPage> {
     final desc = _caseString(c, 'description');
     if (desc.isNotEmpty) return desc;
     if (isApk) {
-      return '$name 用于展示 Android 端安装、启动和移动端交互效果，适合课堂演示 APK 交付物的运行结果。';
+      return '$name 用于展示应用安装、启动和交互效果，适合课堂演示应用交付物的运行结果。';
     }
     if (info?.url != null) {
       return '$name 用于展示 Web 服务启动后的业务页面、数据流转和浏览器端交互，适合演示完整应用流程。';

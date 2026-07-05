@@ -1,4 +1,4 @@
-﻿part of '../lab_tasks_page.dart';
+part of '../lab_tasks_page.dart';
 
 class _MaterialCategory {
   final String title;
@@ -40,7 +40,7 @@ class _MaterialsTabState extends State<_MaterialsTab> {
           icon: Icons.school,
           color: const Color(0xFF1677FF),
           assetDir: 'data/CKGDT/实验/实验教程/',
-          description: '8 个实验的详细步骤教程，包含核心任务、操作指南和成功标准',
+          description: '课程实验的详细步骤教程，包含核心任务、操作指南和成功标准',
         ),
         _MaterialCategory(
           title: '技术栈资源',
@@ -72,21 +72,21 @@ class _MaterialsTabState extends State<_MaterialsTab> {
         icon: Icons.school,
         color: const Color(0xFF1677FF),
         assetDir: 'data/实验/实验教程/',
-        description: '6 个实验的详细步骤教程，包含核心任务、操作指南和成功标准',
+        description: '课程实验的详细步骤教程，包含核心任务、操作指南和成功标准',
       ),
       _MaterialCategory(
-        title: '技术栈资源',
+        title: '技术资源',
         icon: Icons.layers,
         color: const Color(0xFF0958D9),
-        assetDir: 'data/实验/移动技术栈/',
-        description: '覆盖课程实验可用的开发框架、工具链和工程实践手册',
+        assetDir: 'data/实验/技术资源/',
+        description: '覆盖课程实验可用的技术、工具链和工程实践手册',
       ),
       _MaterialCategory(
         title: '实验指导',
         icon: Icons.menu_book,
         color: Colors.teal,
         assetDir: 'data/实验/实验指导/',
-        description: '实验指导书及 UML 设计文档参考',
+        description: '实验指导书及设计文档参考',
         teacherCanAdd: true,
       ),
       _MaterialCategory(
@@ -121,9 +121,7 @@ class _MaterialsTabState extends State<_MaterialsTab> {
     _loadMaterials();
   }
 
-  /// Gitee 资料仓库配置
-  static const _dataRepoOwner = 'chzcldl';
-  static const _dataRepoName = 'mad-data';
+  /// Gitee 资料仓库配置（使用 CourseResourceService 的可配置值）
   static const _dataRepoBranch = 'master';
 
   Future<void> _loadMaterials() async {
@@ -140,8 +138,8 @@ class _MaterialsTabState extends State<_MaterialsTab> {
 
         try {
           final tree = await gitee.getTree(
-            _dataRepoOwner,
-            _dataRepoName,
+            CourseResourceService.sysOwner,
+            CourseResourceService.sysRepo,
             sha: _dataRepoBranch,
             recursive: true,
           );
@@ -549,8 +547,8 @@ class _MaterialsTabState extends State<_MaterialsTab> {
       final remotePath = '$giteeDir/$fileName';
 
       await gitee.createOrUpdateFile(
-        owner: _dataRepoOwner,
-        repo: _dataRepoName,
+        owner: CourseResourceService.sysOwner,
+        repo: CourseResourceService.sysRepo,
         path: remotePath,
         content: content,
         message: '上传实验材料: $fileName',
@@ -581,8 +579,8 @@ class _MaterialsTabState extends State<_MaterialsTab> {
     try {
       final gitee = GiteeService();
       currentContent = await gitee.getFileContent(
-        _dataRepoOwner,
-        _dataRepoName,
+        CourseResourceService.sysOwner,
+        CourseResourceService.sysRepo,
         file.giteePath!,
         ref: _dataRepoBranch,
       );
@@ -634,8 +632,8 @@ class _MaterialsTabState extends State<_MaterialsTab> {
     try {
       final gitee = GiteeService();
       await gitee.createOrUpdateFile(
-        owner: _dataRepoOwner,
-        repo: _dataRepoName,
+        owner: CourseResourceService.sysOwner,
+        repo: CourseResourceService.sysRepo,
         path: file.giteePath!,
         content: newContent,
         message: '编辑实验材料: ${file.fileName}',
@@ -683,8 +681,8 @@ class _MaterialsTabState extends State<_MaterialsTab> {
     try {
       final gitee = GiteeService();
       await gitee.deleteFile(
-        owner: _dataRepoOwner,
-        repo: _dataRepoName,
+        owner: CourseResourceService.sysOwner,
+        repo: CourseResourceService.sysRepo,
         path: file.giteePath!,
         message: '删除实验材料: ${file.fileName}',
         branch: _dataRepoBranch,
@@ -711,8 +709,8 @@ class _MaterialsTabState extends State<_MaterialsTab> {
       if (file.giteePath != null) {
         final gitee = GiteeService();
         content = await gitee.getFileContent(
-              _dataRepoOwner,
-              _dataRepoName,
+              CourseResourceService.sysOwner,
+              CourseResourceService.sysRepo,
               file.giteePath!,
               ref: _dataRepoBranch,
             ) ??

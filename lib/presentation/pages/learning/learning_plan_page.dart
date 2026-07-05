@@ -1,4 +1,4 @@
-﻿import 'dart:math' as math;
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/course_context_service.dart';
@@ -730,7 +730,8 @@ class _LearningPlanPageState extends State<LearningPlanPage> {
       }
     }
 
-    // 兼容旧版 MAD 图谱数据，避免历史节点无法归章。
+    // 兼容旧版课程图谱数据（移动应用开发课程历史数据），避免历史节点无法归章。
+    // 新课程使用上面的 dynamic chapterTitles 匹配，此处仅作为兜底。
     const legacyChapterKeywords = {
       '移动应用开发技术': 1,
       '技术体系': 1,

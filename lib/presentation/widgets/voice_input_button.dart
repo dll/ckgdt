@@ -254,7 +254,13 @@ class _VoiceNavigationDialogState extends State<VoiceNavigationDialog>
     });
     final ok = await _voiceService.startListening();
     if (!mounted) return;
-    if (ok) _pulseController.repeat(reverse: true);
+    if (ok) {
+      _pulseController.repeat(reverse: true);
+    } else {
+      // 语音服务不可用（如讯飞凭据未配置），直接关闭 dialog 返回空值
+      // 调用方会自动降级到手动输入
+      if (mounted) Navigator.pop(context, '');
+    }
   }
 
   Future<void> _stopListening() async {

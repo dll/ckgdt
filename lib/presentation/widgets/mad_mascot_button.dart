@@ -1,5 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../services/auth_service.dart';
+import '../../../core/build_info.dart';
 import 'agent_chat_overlay.dart';
 import '../pages/profile/virtual_twin_page.dart';
 import '../pages/admin/teacher_application_page.dart';
@@ -114,7 +115,7 @@ class _MadMascotButtonState extends State<MadMascotButton>
           mini: true,
           heroTag: 'mad_mascot',
           backgroundColor: Theme.of(context).colorScheme.primary,
-          tooltip: 'CKGDT 助手',
+          tooltip: '${BuildInfo.appBrand} 助手',
           onPressed: _toggle,
           child: AnimatedBuilder(
             animation: _animController,

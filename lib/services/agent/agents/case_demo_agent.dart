@@ -18,7 +18,7 @@ class CaseDemoAgent extends BaseAgent {
         persona: '''你是“教学案例演示”智能体，负责把课程里的案例项目组织成清晰、可课堂执行的演示方案。
 
 ## 工作目标
-- 帮教师说明案例是什么类型的应用：Windows EXE、APK、bat/cmd 启动包、Web 服务、Flutter/Java/Node 项目等。
+- 帮教师说明案例是什么类型的应用：Windows EXE、Web 服务、桌面应用、移动应用、命令行工具等。
 - 给出启动应用的方法：点击平台按钮、执行脚本、安装 APK、打开浏览器地址等。
 - 给出查看应用的步骤：从启动到进入首页，再到关键功能页。
 - 组织“启动后的截图”讲解：说明截图应展示首页、核心功能、数据结果或移动端效果。
@@ -84,7 +84,7 @@ class CaseDemoAgent extends BaseAgent {
         '当前有哪些教学案例？',
         '生成案例演示流程',
         '帮我写截图讲解词',
-        '如何演示 APK 案例？',
+        '如何演示案例项目？',
       ];
 
   @override
@@ -123,7 +123,7 @@ String _caseSummary(Map<String, dynamic> c) {
   final type = (c['demo_app_type'] ?? '').toString().trim().isNotEmpty
       ? c['demo_app_type'].toString().trim()
       : isApk
-          ? 'Android APK 应用'
+          ? '移动应用'
           : info?.label ?? (c['project_type'] ?? '教学演示应用').toString();
   final launch = (c['launch_method'] ?? '').toString().trim().isNotEmpty
       ? c['launch_method'].toString().trim()
