@@ -59,14 +59,54 @@ class GraphImportService {
     } catch (e, st) { swallowDebug(e, tag: 'GraphImport', stack: st); return []; }
   }
 
-  /// 从 graph_categories.json 或 chapters.json 动态加载分类对应的 MD 文件列表
+  /// 从 data/{courseId}/配置/graph_files.json 动态加载分类对应的 MD 文件列表
   Future<List<String>> _getCategoryFiles(String courseId, String dir) async {
-    return _categoryFilesForCourse(courseId)[dir] ?? [];
+    try {
+      final content = await rootBundle.loadString('data/$courseId/配置/graph_files.json');
+      final data = jsonDecode(content) as Map<String, dynamic>;
+      final files = data[dir];
+      if (files is List) return files.cast<String>();
+    } catch (e, st) { swallowDebug(e, tag: 'GraphImport._getCategoryFiles', stack: st); }
+    // 回退：尝试从 assets/graphs/{courseId}/{dir}/ 加载（需要 manifest）
+    return _discoverAssetFiles(courseId, dir);
   }
 
-  /// 获取资产路径前缀
-  String _getAssetPrefix(String courseId) {
-    return courseId == 'ckgdt' ? 'assets/graphs/ckgdt' : 'assets/graphs';
+  /// 尝试从 assets manifest 发现指定目录下的 MD 文件
+  Future<List<String>> _discoverAssetFiles(String courseId, String dir) async {
+    final results = <String>[];
+    // 尝试两个可能的路径：assets/graphs/{courseId}/{dir}/ 和 assets/graphs/{dir}/
+    for (final prefix in ['assets/graphs/$courseId/$dir', 'assets/graphs/$dir']) {
+      try {
+        // Flutter asset manifest 在运行时可用
+        final manifestContent = await rootBundle.loadString('AssetManifest.json');
+        final manifest = jsonDecode(manifestContent) as Map<String, dynamic>;
+        for (final key in manifest.keys) {
+          if (key.startsWith('$prefix/') && key.endsWith('.md')) {
+            results.add(key.split('/').last);
+          }
+        }
+        if (results.isNotEmpty) return results;
+      } catch (e) {
+        // AssetManifest.json 可能不存在（Release 模式下格式不同），忽略
+        swallow(e, tag: 'GraphImport._discoverAssetFiles');
+      }
+    }
+    return results;
+  }
+
+  /// 获取资产路径前缀 — 动态检测课程目录是否存在
+  Future<String> _getAssetPrefix(String courseId) async {
+    // 优先检查 assets/graphs/{courseId}/ 是否存在
+    try {
+      final manifestContent = await rootBundle.loadString('AssetManifest.json');
+      final manifest = jsonDecode(manifestContent) as Map<String, dynamic>;
+      if (manifest.keys.any((k) => k.startsWith('assets/graphs/$courseId/'))) {
+        return 'assets/graphs/$courseId';
+      }
+    } catch (e) {
+      swallow(e, tag: 'GraphImport._getAssetPrefix');
+    }
+    return 'assets/graphs';
   }
 
   /// 入口方法：检查并导入全部图谱
@@ -140,7 +180,7 @@ class GraphImportService {
           db, 'edge_main_$i', graphId, rootId, catNodeId, 'contains', '包含');
 
       // 加载该分类下的 MD 文件名作为子节点
-      final fileNames = await _listMdFiles(cat.dir);
+      final fileNames = await _getCategoryFiles(courseId, cat.dir);
       for (var j = 0; j < fileNames.length; j++) {
         final fileName = fileNames[j];
         final fileTitle = fileName.replaceAll('.md', '');
@@ -178,7 +218,7 @@ class GraphImportService {
         color: cat.color);
 
     // 加载并解析每个 MD 文件
-    final assetPrefix = _getAssetPrefix(courseId);
+    final assetPrefix = await _getAssetPrefix(courseId);
     final fileNames = await _getCategoryFiles(courseId, cat.dir);
     for (var fi = 0; fi < fileNames.length; fi++) {
       final fileName = fileNames[fi];
@@ -324,109 +364,6 @@ class GraphImportService {
   }
 
   // ── 工具方法 ────────────────────────────────────────────────────────────
-
-  Future<List<String>> _listMdFiles(String dir) async {
-    // 由于 Flutter 无法直接列出 asset 目录，使用硬编码文件列表
-    return _categoryFiles[dir] ?? [];
-  }
-
-  /// 所有 MD 文件名（排除总结文件）— 默认MAD
-  static const _categoryFiles = {
-    '01-课程图谱': [
-      '知识体系图谱.md',
-      '课程目标图谱.md',
-      '课程思政图谱.md',
-      '学习问题图谱.md',
-      '能力培养图谱.md',
-    ],
-    '02-技术栈图谱': [
-      'Android原生开发图谱.md',
-      'iOS原生开发图谱.md',
-      '华为多端开发图谱.md',
-      '跨平台开发图谱.md',
-    ],
-    '03-实验图谱': [
-      '实验一 开发环境搭建.md',
-      '实验二 原生应用开发.md',
-      '实验三 跨平台应用开发.md',
-      '实验四 微信小程序开发.md',
-      '实验五 鸿蒙多端应用开发.md',
-      '实验六 跨平台综合项目实战.md',
-    ],
-    '04-项目图谱': [
-      '项目1-智慧校园生活服务平台.md',
-      '项目1-个人记账应用.md',
-      '项目2-在线学习辅助平台开发与整合.md',
-      '项目2-在线学习平台.md',
-      '项目3-智能健康运动记录平台开发与整合.md',
-      '项目3-智能健康助手.md',
-      '项目4-二手物品交易平台开发与整合.md',
-    ],
-    '05-教学图谱': [
-      '教学内容体系图谱.md',
-      '教学方法策略图谱.md',
-      '考核实施指导图谱.md',
-      '教学资源配置图谱.md',
-    ],
-    '06-学习图谱': [
-      '学习内容导航图谱.md',
-      '实验学习指导图谱.md',
-      '考核应对策略图谱.md',
-      '学习方法指导图谱.md',
-    ],
-  };
-
-  /// CKGDT 课程文件列表
-  static const _ckgdtCategoryFiles = {
-    '01-课程图谱': [
-      '知识体系图谱.md',
-      '课程目标图谱.md',
-      '学习问题图谱.md',
-      '能力培养图谱.md',
-    ],
-    '02-平台技术图谱': [
-      '知识图谱技术.md',
-      '数字孪生技术.md',
-      '学习分析技术.md',
-      '多智能体系统.md',
-    ],
-    '03-实验图谱': [
-      '实验一 平台基础操作.md',
-      '实验二 知识图谱建模.md',
-      '实验三 数字孪生场景设计.md',
-      '实验四 学习分析仪表盘.md',
-      '实验五 实验管理与AI批阅.md',
-      '实验六 综合项目.md',
-      '实验七 教师端教学管理.md',
-      '实验八 学生端自主学习.md',
-    ],
-    '04-项目图谱': [
-      '课程知识图谱构建项目.md',
-      '数字孪生教学设计项目.md',
-      '学习分析实践项目.md',
-    ],
-    '05-教学图谱': [
-      '教学内容体系图谱.md',
-      '教学方法策略图谱.md',
-      '考核实施指导图谱.md',
-      '教学资源配置图谱.md',
-    ],
-    '06-学习图谱': [
-      '学习内容导航图谱.md',
-      '实验学习指导图谱.md',
-      '考核应对策略图谱.md',
-      '学习方法指导图谱.md',
-    ],
-    '07-思政图谱': [
-      '课程思政图谱.md',
-    ],
-  };
-
-  /// 根据课程ID获取文件列表
-  Map<String, List<String>> _categoryFilesForCourse(String courseId) {
-    if (courseId == 'ckgdt') return _ckgdtCategoryFiles;
-    return _categoryFiles;
-  }
 
   Future<void> _insertNode(
     Database db,

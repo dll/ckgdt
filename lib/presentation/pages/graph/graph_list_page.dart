@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../../core/error_handler.dart';
 import '../../../data/local/graph_dao.dart';
 import '../../../data/models/graph_model.dart';
 import '../../../services/course_context_service.dart';
@@ -6,7 +9,7 @@ import 'graph_detail_page.dart';
 
 /// 图谱列表页 — 层级树形展示
 /// 根节点: 总图谱 (graph_main_overview)
-/// 子节点: 6 个分类图谱 (graph_detail_XX-...)
+/// 子节点: N 个分类图谱 (graph_detail_XX-...)
 class GraphListPage extends StatefulWidget {
   /// 内嵌模式：作为 Tab body 时为 true，不套 Scaffold/AppBar（外层已提供）。
   final bool embedded;
@@ -24,7 +27,7 @@ class _GraphListPageState extends State<GraphListPage>
 
   bool _isLoading = true;
   GraphModel? _mainGraph; // 总图谱
-  List<GraphModel> _categoryGraphs = []; // 6 个分类图谱
+  List<GraphModel> _categoryGraphs = []; // N 个分类图谱
   Map<String, Map<String, int>> _stats = {}; // graphId → {nodes, edges}
   bool _isExpanded = false; // 子图谱展开状态
   Color primary = const Color(0xFF1677FF);
@@ -34,34 +37,20 @@ class _GraphListPageState extends State<GraphListPage>
   int _totalEdges = 0;
   String _courseName = '课程';
 
-  // 分类颜色映射
-  static const _categoryColors = <String, Color>{
-    '课程图谱': Color(0xFFE53935),
-    '技术栈图谱': Color(0xFF1E88E5),
-    '平台技术图谱': Color(0xFF1E88E5),
-    '实验图谱': Color(0xFFFB8C00),
-    '项目图谱': Color(0xFF43A047),
-    '教学图谱': Color(0xFF8E24AA),
-    '学习图谱': Color(0xFF00897B),
-    '思政图谱': Color(0xFFC62828),
-    '作业图谱': Color(0xFFFF6F00),
-    '作品图谱': Color(0xFF6A1B9A),
-    '考核图谱': Color(0xFF00695C),
-  };
-
-  // 分类图标映射
-  static const _categoryIcons = <String, IconData>{
-    '课程图谱': Icons.school,
-    '技术栈图谱': Icons.layers,
-    '平台技术图谱': Icons.layers,
-    '实验图谱': Icons.science,
-    '项目图谱': Icons.work,
-    '教学图谱': Icons.cast_for_education,
-    '学习图谱': Icons.auto_stories,
-    '思政图谱': Icons.volunteer_activism,
-    '作业图谱': Icons.assignment,
-    '作品图谱': Icons.inventory,
-    '考核图谱': Icons.grading,
+  // 动态分类颜色（从 graph_categories.json 加载）
+  Map<String, Color> _categoryColors = {};
+  // 默认图标映射（基于关键词匹配）
+  static const _defaultIcons = <String, IconData>{
+    '课程': Icons.school,
+    '技术': Icons.layers,
+    '实验': Icons.science,
+    '项目': Icons.work,
+    '教学': Icons.cast_for_education,
+    '学习': Icons.auto_stories,
+    '思政': Icons.volunteer_activism,
+    '作业': Icons.assignment,
+    '作品': Icons.inventory,
+    '考核': Icons.grading,
   };
 
   @override
@@ -70,15 +59,54 @@ class _GraphListPageState extends State<GraphListPage>
     _loadData();
   }
 
+  /// 从 graph_categories.json 动态加载分类颜色
+  Future<void> _loadCategoryColors() async {
+    try {
+      final courseId = await _courseContext.activeCourseId();
+      final content = await rootBundle.loadString('data/$courseId/配置/graph_categories.json');
+      final data = jsonDecode(content) as Map<String, dynamic>;
+      final cats = data['categories'] as List? ?? [];
+      final colors = <String, Color>{};
+      for (final c in cats) {
+        final label = c['label'] as String? ?? '';
+        final hex = c['color'] as String? ?? '#667eea';
+        if (label.isNotEmpty) {
+          // 去掉"图谱"后缀作为匹配key
+          final key = label.replaceAll('图谱', '');
+          colors[key] = _hexToColor(hex);
+        }
+      }
+      if (colors.isNotEmpty && mounted) {
+        setState(() => _categoryColors = colors);
+      }
+    } catch (e, st) {
+      swallowDebug(e, tag: 'GraphListPage._loadCategoryColors', stack: st);
+    }
+  }
+
+  Color _hexToColor(String hex) {
+    try {
+      final h = hex.replaceFirst('#', '');
+      return Color(int.parse('FF$h', radix: 16));
+    } catch (e) {
+      return primary;
+    }
+  }
+
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
+      await _loadCategoryColors();
       final allGraphs = await _graphDao.getAllGraphs();
       _courseName = await _courseContext.activeCourseName();
 
       // 分离总图谱和分类图谱
-      _mainGraph =
-          allGraphs.where((g) => g.id == 'graph_main_overview').firstOrNull;
+      _mainGraph = allGraphs
+          .where((g) =>
+              g.id == 'graph_main_overview' ||
+              g.id.startsWith('graph_main_') ||
+              g.graphType == 'overview')
+          .firstOrNull;
       _mainGraph ??= allGraphs.isNotEmpty ? allGraphs.first : null;
       _categoryGraphs = allGraphs
           .where((g) =>
@@ -120,7 +148,8 @@ class _GraphListPageState extends State<GraphListPage>
   }
 
   IconData _getCategoryIcon(String title) {
-    for (final entry in _categoryIcons.entries) {
+    // 基于关键词匹配默认图标
+    for (final entry in _defaultIcons.entries) {
       if (title.contains(entry.key)) return entry.value;
     }
     return Icons.account_tree;
