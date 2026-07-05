@@ -264,20 +264,38 @@ class DataLoadingService {
   Future<void> _importCkgdtHomework() async {
     try {
       final db = await _dbHelper.database;
+      // 获取当前课程 ID
+      String courseId = 'ckgdt';
+      try {
+        courseId = await CourseContextService().activeCourseId();
+      } catch (_) {}
+
       // 检查是否已导入
       final existing = await db.rawQuery(
-        "SELECT COUNT(*) as c FROM homeworks WHERE course_id = 'ckgdt'",
+        "SELECT COUNT(*) as c FROM homeworks WHERE course_id = ?",
+        [courseId],
       );
       final count = (existing.first['c'] as int?) ?? 0;
       if (count > 0) return;
 
-      // 读取 homework.json
-      final content = await rootBundle.loadString('data/CKGDT/配置/homework.json');
+      // 尝试从当前课程目录读取 homework.json
+      String? content;
+      try {
+        content = await rootBundle.loadString('data/$courseId/配置/homework.json');
+      } catch (_) {
+        // 回退到 CKGDT 默认目录
+        try {
+          content = await rootBundle.loadString('data/CKGDT/配置/homework.json');
+        } catch (_) {}
+      }
+
+      if (content == null) return;
+
       final homeworkDao = HomeworkDao();
-      final imported = await homeworkDao.importFromJson('ckgdt', content);
-      debugPrint('=== DataLoadingService: Imported $imported homework sets for CKGDT');
+      final imported = await homeworkDao.importFromJson(courseId, content);
+      debugPrint('=== DataLoadingService: Imported $imported homework sets for $courseId');
     } catch (e) {
-      debugPrint('=== DataLoadingService: Error importing CKGDT homework: $e');
+      debugPrint('=== DataLoadingService: Error importing homework: $e');
     }
   }
 

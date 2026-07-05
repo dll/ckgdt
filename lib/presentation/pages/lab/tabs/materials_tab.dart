@@ -5,6 +5,7 @@ class _MaterialCategory {
   final IconData icon;
   final Color color;
   final String assetDir;
+  final String? fallbackDir;
   final String description;
   final bool teacherCanAdd;
 
@@ -13,6 +14,7 @@ class _MaterialCategory {
     required this.icon,
     required this.color,
     required this.assetDir,
+    this.fallbackDir,
     required this.description,
     this.teacherCanAdd = false,
   });
@@ -32,60 +34,34 @@ class _MaterialsTabState extends State<_MaterialsTab> {
   String _courseId = 'ckgdt';
 
   /// 根据课程 ID 返回对应分类
+  /// 路径格式：data/{courseId}/实验/{分类目录}/
+  /// 如果课程目录下没有对应 asset，回退到 data/实验/{分类目录}/
   static List<_MaterialCategory> _categoriesForCourse(String courseId) {
-    if (courseId == 'ckgdt') {
-      return [
-        _MaterialCategory(
-          title: '实验教程',
-          icon: Icons.school,
-          color: const Color(0xFF1677FF),
-          assetDir: 'data/CKGDT/实验/实验教程/',
-          description: '课程实验的详细步骤教程，包含核心任务、操作指南和成功标准',
-        ),
-        _MaterialCategory(
-          title: '技术栈资源',
-          icon: Icons.layers,
-          color: const Color(0xFF0958D9),
-          assetDir: 'data/CKGDT/实验/平台技术栈/',
-          description: '覆盖课程实验可用的平台技术、工具链和工程实践手册',
-        ),
-        _MaterialCategory(
-          title: '实验指导',
-          icon: Icons.menu_book,
-          color: Colors.teal,
-          assetDir: 'data/CKGDT/实验/实验指导/',
-          description: '实验指导书及设计文档参考',
-          teacherCanAdd: true,
-        ),
-        _MaterialCategory(
-          title: '报告模板',
-          icon: Icons.assignment,
-          color: Colors.orange,
-          assetDir: 'data/CKGDT/实验/报告模板/',
-          description: '每个实验对应的报告模板，按格式填写后提交',
-        ),
-      ];
-    }
+    final prefix = 'data/$courseId/实验';
+    final fallbackPrefix = 'data/实验';
     return [
       _MaterialCategory(
         title: '实验教程',
         icon: Icons.school,
         color: const Color(0xFF1677FF),
-        assetDir: 'data/实验/实验教程/',
+        assetDir: '$prefix/实验教程/',
+        fallbackDir: '$fallbackPrefix/实验教程/',
         description: '课程实验的详细步骤教程，包含核心任务、操作指南和成功标准',
       ),
       _MaterialCategory(
         title: '技术资源',
         icon: Icons.layers,
         color: const Color(0xFF0958D9),
-        assetDir: 'data/实验/技术资源/',
+        assetDir: '$prefix/技术资源/',
+        fallbackDir: '$fallbackPrefix/技术资源/',
         description: '覆盖课程实验可用的技术、工具链和工程实践手册',
       ),
       _MaterialCategory(
         title: '实验指导',
         icon: Icons.menu_book,
         color: Colors.teal,
-        assetDir: 'data/实验/实验指导/',
+        assetDir: '$prefix/实验指导/',
+        fallbackDir: '$fallbackPrefix/实验指导/',
         description: '实验指导书及设计文档参考',
         teacherCanAdd: true,
       ),
@@ -93,7 +69,8 @@ class _MaterialsTabState extends State<_MaterialsTab> {
         title: '报告模板',
         icon: Icons.assignment,
         color: Colors.orange,
-        assetDir: 'data/实验/报告模板/',
+        assetDir: '$prefix/报告模板/',
+        fallbackDir: '$fallbackPrefix/报告模板/',
         description: '每个实验对应的报告模板，按格式填写后提交',
       ),
     ];
@@ -203,22 +180,15 @@ class _MaterialsTabState extends State<_MaterialsTab> {
 
       for (int i = 0; i < _categories.length; i++) {
         final dir = _categories[i].assetDir;
-        var files = manifest.keys.where((k) {
-          final decoded = Uri.decodeFull(k);
-          return (decoded.startsWith(dir) || k.startsWith(dir)) &&
-              (k.endsWith('.md') || k.endsWith('.puml'));
-        }).map((assetPath) {
-          final fileName = Uri.decodeFull(assetPath.split('/').last);
-          final displayName = fileName
-              .replaceAll('_new.md', '')
-              .replaceAll('.md', '')
-              .replaceAll('.puml', '');
-          return _MaterialFile(
-            assetPath: assetPath,
-            fileName: fileName,
-            displayName: displayName,
-          );
-        }).toList();
+        final fallbackDir = _categories[i].fallbackDir;
+
+        // 先尝试课程专属目录
+        var files = _scanAssetsForDir(manifest, dir);
+
+        // 如果课程目录没有文件，尝试 fallback 目录
+        if (files.isEmpty && fallbackDir != null) {
+          files = _scanAssetsForDir(manifest, fallbackDir);
+        }
 
         if (files.isEmpty) {
           files = await _tryLoadKnownAssets(dir);
@@ -230,6 +200,26 @@ class _MaterialsTabState extends State<_MaterialsTab> {
     } catch (e) {
       debugPrint('本地 asset 加载失败: $e');
     }
+  }
+
+  /// 从 AssetManifest 扫描指定目录下的 .md/.puml 文件
+  List<_MaterialFile> _scanAssetsForDir(Map<String, dynamic> manifest, String dir) {
+    return manifest.keys.where((k) {
+      final decoded = Uri.decodeFull(k);
+      return (decoded.startsWith(dir) || k.startsWith(dir)) &&
+          (k.endsWith('.md') || k.endsWith('.puml'));
+    }).map((assetPath) {
+      final fileName = Uri.decodeFull(assetPath.split('/').last);
+      final displayName = fileName
+          .replaceAll('_new.md', '')
+          .replaceAll('.md', '')
+          .replaceAll('.puml', '');
+      return _MaterialFile(
+        assetPath: assetPath,
+        fileName: fileName,
+        displayName: displayName,
+      );
+    }).toList();
   }
 
   Future<void> _loadLocalGuides() async {

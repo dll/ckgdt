@@ -7,6 +7,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
 import '../../core/init_logger.dart';
 import '../../core/error_handler.dart';
+import '../../services/course_context_service.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -698,33 +699,50 @@ class DatabaseHelper {
   }
 
   Future<Uint8List?> _loadStudentRosterBytes() async {
-    const relative = ['data', 'CKGDT', '用户', '学生名单.xlsx'];
-    final candidates = <String>{
-      p.joinAll(relative),
-      p.joinAll([Directory.current.path, ...relative]),
-      p.joinAll([p.dirname(Platform.resolvedExecutable), ...relative]),
-    };
+    // 尝试从当前课程目录加载学生名单
+    String courseId = 'ckgdt';
+    try {
+      courseId = await CourseContextService().activeCourseId();
+    } catch (_) {}
 
-    for (final path in candidates) {
-      try {
-        final file = File(path);
-        if (await file.exists()) {
-          InitLogger.log('db', 'loading CKGDT student roster from $path');
-          return Uint8List.fromList(await file.readAsBytes());
+    // 候选路径：当前课程目录 → CKGDT 默认目录
+    final candidateSets = [
+      ['data', courseId, '用户', '学生名单.xlsx'],
+      ['data', 'CKGDT', '用户', '学生名单.xlsx'],
+      ['data', '用户', '学生名单.xlsx'],
+    ];
+
+    for (final relative in candidateSets) {
+      final candidates = <String>{
+        p.joinAll(relative),
+        p.joinAll([Directory.current.path, ...relative]),
+        p.joinAll([p.dirname(Platform.resolvedExecutable), ...relative]),
+      };
+
+      for (final path in candidates) {
+        try {
+          final file = File(path);
+          if (await file.exists()) {
+            InitLogger.log('db', 'loading student roster from $path');
+            return Uint8List.fromList(await file.readAsBytes());
+          }
+        } catch (e) {
+          swallow(e, tag: 'DatabaseHelper.studentRosterFile');
         }
+      }
+
+      try {
+        final assetPath = relative.join('/');
+        final data = await rootBundle.load(assetPath);
+        InitLogger.log('db', 'loading student roster from bundled asset $assetPath');
+        return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
       } catch (e) {
-        swallow(e, tag: 'DatabaseHelper.studentRosterFile');
+        swallow(e, tag: 'DatabaseHelper.studentRosterAsset');
       }
     }
 
-    try {
-      final data = await rootBundle.load('data/CKGDT/用户/学生名单.xlsx');
-      InitLogger.log('db', 'loading CKGDT student roster from bundled asset');
-      return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-    } catch (e) {
-      swallow(e, tag: 'DatabaseHelper.studentRosterAsset');
-      return null;
-    }
+    InitLogger.log('db', 'student roster not found, keep existing students');
+    return null;
   }
 
   static String _cellAt(List<xl.Data?> row, int index) {
