@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/local/xunfei_config_dao.dart';
 import '../core/error_handler.dart';
+import '../core/build_info.dart';
 import 'course_context_service.dart';
 
 /// 课堂试用内置讯飞语音凭据。
@@ -46,9 +47,9 @@ class SettingsService {
   static const String _advisorNameKey = 'assessment_advisor_name';
   static const String _collegeNameKey = 'assessment_college_name';
   static const String _courseNameKey = 'assessment_course_name';
-  static const String _defaultAdvisorName = '刘东良';
-  static const String _defaultCollegeName = '计算机与信息工程学院';
-  static const String _defaultCourseName = '课程知识图谱与数字孪生';
+  static const String _defaultAdvisorName = '';
+  static const String _defaultCollegeName = '';
+  static String _defaultCourseName = CourseContextService.defaultCourseName;
 
   // ═════════════════════════════════════════════════════════════════════════
   // 显示模式  ThemeMode（跟随系统 / 浅色 / 深色）

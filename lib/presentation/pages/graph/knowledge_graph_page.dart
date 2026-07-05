@@ -2389,6 +2389,7 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   // ── 蒙版形状选择器（当前选中 + 下拉弹出网格） ──────────────────────────
 
   Widget _buildMaskSelector() {
+    // 只传课程相关的形状（由 _MaskGridPanel 内部从 chapters.json 加载）
     final allShapes =
         MaskShape.values.where((s) => s != MaskShape.none).toList();
 

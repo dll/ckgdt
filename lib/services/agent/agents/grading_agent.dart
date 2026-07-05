@@ -599,14 +599,14 @@ class GradingAgent extends BaseAgent {
             userInput:
                 '请批改以下考核报告：\n报告类型：项目中期报告\n学生：张三\n内容：完成了后端接口设计和数据库构建，使用MVC架构，接入了第三方服务。',
             agentReply:
-                '{"total_score": 75, "summary": "完成了基础后端开发，但缺少跨模块整合和深度技术探索", "scores": {"functionality": {"score": 18, "max": 25, "comment": "实现了接口和数据库核心功能"}, "tech_depth": {"score": 14, "max": 20, "comment": "MVC架构选型合理"}, "integration": {"score": 12, "max": 25, "comment": "仅完成后端，缺少前端整合"}, "quality": {"score": 10, "max": 15, "comment": "基本可用"}, "documentation": {"score": 11, "max": 15, "comment": "报告描述简略"}}, "feedback": "你已经完成后端的基础功能开发，MVC架构选型合理。建议尽快启动前端模块的开发，增强前后端整合度。报告中应补充架构图、数据库设计和接口文档。"}',
+                '{"total_score": 75, "summary": "完成了基础工作，但缺少深度整合和细节打磨", "scores": {"functionality": {"score": 18, "max": 25, "comment": "核心功能基本完成"}, "tech_depth": {"score": 14, "max": 20, "comment": "方案选型合理"}, "integration": {"score": 12, "max": 25, "comment": "仅完成部分环节，缺少整体整合"}, "quality": {"score": 10, "max": 15, "comment": "基本可用"}, "documentation": {"score": 11, "max": 15, "comment": "报告描述简略"}}, "feedback": "你已经完成了基础工作，方案选型合理。建议加强各环节之间的整合，报告中应补充方案设计、实施过程和结果分析。"}',
           ),
           const AgentCase(
             title: '批改数据分析学生作品',
             userInput:
                 '请批改以下作品：\n标题：数据可视化看板\n技术栈：Web前端\n描述：使用前端技术开发的数据可视化看板，集成多种图表，支持数据筛选、多维度分析。',
             agentReply:
-                '{"total_score": 86, "relevance": "related", "summary": "优秀的数据可视化应用，功能完整且界面美观", "scores": {"functionality": {"score": 22, "max": 25, "comment": "核心功能完整，多维度分析是亮点"}, "tech_depth": {"score": 17, "max": 20, "comment": "前端架构合理，API集成规范"}, "integration": {"score": 17, "max": 20, "comment": "前后端整合良好，但缺少移动端适配"}, "quality": {"score": 17, "max": 20, "comment": "可视化效果提升了用户体验"}, "documentation": {"score": 13, "max": 15, "comment": "演示视频清晰完整"}}, "feedback": "这是一个完成度很高的数据可视化看板。图表效果和多维度分析功能是突出亮点。建议增加移动端适配或小程序版本以提升跨平台整合评分。"}',
+                '{"total_score": 86, "relevance": "related", "summary": "完成度较高的作品，功能完整且效果良好", "scores": {"functionality": {"score": 22, "max": 25, "comment": "核心功能完整，多维度分析是亮点"}, "tech_depth": {"score": 17, "max": 20, "comment": "架构合理，技术选型规范"}, "integration": {"score": 17, "max": 20, "comment": "整合良好，但缺少部分环节适配"}, "quality": {"score": 17, "max": 20, "comment": "效果提升了用户体验"}, "documentation": {"score": 13, "max": 15, "comment": "文档清晰完整"}}, "feedback": "这是一个完成度很高的作品。核心功能和效果是突出亮点。建议增加更多适配和优化以提升整合度评分。"}',
           ),
         ],
       );

@@ -1,4 +1,4 @@
-﻿part of '../lab_tasks_page.dart';
+part of '../lab_tasks_page.dart';
 
 class _TaskListTab extends StatefulWidget {
   final AuthService authService;
@@ -595,7 +595,7 @@ class _TaskListTabState extends State<_TaskListTab> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            '文件名格式：学号+姓名+任务名称.pdf\n示例：206004+刘东良+实验一 开发环境搭建.pdf',
+                            '文件名格式：学号+姓名+任务名称.pdf\n示例：2023001+张三+实验一 环境搭建.pdf',
                             style: TextStyle(
                               fontSize: 12,
                               height: 1.4,

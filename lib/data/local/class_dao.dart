@@ -317,8 +317,8 @@ class ClassDao {
       final classId = await createClass(
         name: '默认班级',
         semester: '2025-2026学年第二学期',
-        teacherId: '206004',
-        teacherName: '刘东良',
+        teacherId: '',
+        teacherName: '',
       );
       final allStudents = await db.query('users',
           where: 'role = ? AND is_active = 1',
@@ -345,8 +345,8 @@ class ClassDao {
       final classId = await createClass(
         name: className,
         semester: semester,
-        teacherId: '206004',
-        teacherName: '刘东良',
+        teacherId: '',
+        teacherName: '',
         description: '$className — ${studentIds.length}名学生',
       );
 

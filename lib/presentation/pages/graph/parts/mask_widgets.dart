@@ -119,33 +119,22 @@ class _MaskGridPanelState extends State<_MaskGridPanel> {
   List<ChapterDef> _chapterDefs = [];
   bool _loading = true;
 
-  /// 从 chapters.json 动态加载图标和颜色，不硬编码
+  /// 从章节定义中提取课程相关的蒙版形状（仅显示课程匹配的类型）
   Map<String, List<MaskShape>> _buildGroups() {
     if (_chapterDefs.isEmpty) {
-      // 兜底：使用全部图标池
-      return {'全部': List.of(MaskShape.values.where((s) => s != MaskShape.none))};
+      return {'课程蒙版': [MaskShape.book, MaskShape.lightbulb, MaskShape.compass, MaskShape.brain]};
     }
     final groups = <String, List<MaskShape>>{};
-    // 每2-3章分一组，保证每组至少2个图标
     final chunkSize = _chapterDefs.length <= 4 ? 1 : (_chapterDefs.length <= 8 ? 2 : 3);
     for (var i = 0; i < _chapterDefs.length; i += chunkSize) {
       final end = (i + chunkSize).clamp(0, _chapterDefs.length);
       final chapterRange = _chapterDefs.sublist(i, end);
-      // 用第一章的简短名称作为分类标签
       final label = _shortLabel(chapterRange.first.title);
-      // 从章节定义中提取图标（动态）
       final icons = <MaskShape>[];
       for (final ch in chapterRange) {
         icons.add(_iconFromChapterDef(ch));
       }
       groups[label] = icons;
-    }
-    // 剩余图标归入"个性化"
-    if (groups.length < _chapterDefs.length) {
-      final usedCount = groups.values.fold(0, (sum, list) => sum + list.length);
-      if (usedCount < MaskShape.values.length - 1) {
-        groups['个性化'] = MaskShape.values.where((s) => s != MaskShape.none).toList();
-      }
     }
     return groups;
   }
@@ -319,6 +308,41 @@ class _MaskGridPanelState extends State<_MaskGridPanel> {
                 ],
               );
             }),
+            // ── 创建蒙版按钮 ──────────────────────────────────
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('自定义蒙版功能即将上线，敬请期待')),
+                );
+              },
+              child: Container(
+                width: 76,
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade400, width: 1.5),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.add_circle_outline, size: 28, color: Colors.grey.shade500),
+                    const SizedBox(height: 4),
+                    Text(
+                      '创建蒙版',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey.shade600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),

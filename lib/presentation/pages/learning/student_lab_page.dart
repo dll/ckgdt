@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -12,6 +12,7 @@ import '../../../services/course_context_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../services/sync_service.dart';
 import '../../../services/gitee_service.dart';
+import '../../../services/course_resource_service.dart';
 import '../../../services/pdf_text_service.dart';
 import '../../../services/lab_report_validation_service.dart';
 import '../../../services/settings_service.dart';
@@ -846,8 +847,6 @@ class _StudentMaterialsPage extends StatefulWidget {
 }
 
 class _StudentMaterialsPageState extends State<_StudentMaterialsPage> {
-  static const _dataRepoOwner = 'chzcldl';
-  static const _dataRepoName = 'mad-data';
   static const _dataRepoBranch = 'master';
 
   static List<Map<String, dynamic>> _categoriesForCourse(String courseId) {
@@ -913,8 +912,8 @@ class _StudentMaterialsPageState extends State<_StudentMaterialsPage> {
       } else {
         final gitee = GiteeService();
         final tree = await gitee.getTree(
-          _dataRepoOwner,
-          _dataRepoName,
+          CourseResourceService.sysOwner,
+          CourseResourceService.sysRepo,
           sha: _dataRepoBranch,
           recursive: true,
         );
@@ -1105,8 +1104,8 @@ class _StudentMaterialsPageState extends State<_StudentMaterialsPage> {
     try {
       final gitee = GiteeService();
       final content = await gitee.getFileContent(
-            _dataRepoOwner,
-            _dataRepoName,
+            CourseResourceService.sysOwner,
+            CourseResourceService.sysRepo,
             file['giteePath']!,
             ref: _dataRepoBranch,
           ) ??

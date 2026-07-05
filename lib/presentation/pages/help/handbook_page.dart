@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../widgets/back_button_bar.dart';
 
 /// 用户手册页面 — 根据角色显示对应的操作指南
@@ -232,7 +232,7 @@ class HandbookPage extends StatelessWidget {
           _Step('字母要求', '分支名必须 2~5 个全小写字母，不含中文'),
           _Step('提交消息', '格式: <类型>: <描述>，如 feat: 完成实验一'),
           _Step('克隆仓库',
-              'git clone https://gitee.com/chzuczldl/cg1-xxx.git'),
+              'git clone https://gitee.com/{企业}/{仓库名}.git'),
           _Step('创建分支',
               'git checkout -b feat-xxx && git push -u origin feat-xxx'),
         ],
