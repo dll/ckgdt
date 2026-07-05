@@ -4,6 +4,7 @@ import 'package:excel/excel.dart' as xl;
 import '../lab/lab_tasks_page.dart';
 import '../assessment/assessment_page.dart';
 import '../works/works_page.dart';
+import '../learning/homework_grading_page.dart';
 import '../../../data/local/assessment_dao.dart';
 import '../../../data/local/classroom_dao.dart';
 import '../../../data/local/database_helper.dart';
@@ -22,7 +23,7 @@ class EvaluationHubPage extends StatefulWidget {
 class _EvaluationHubPageState extends State<EvaluationHubPage> {
   int _subIndex = 0;
 
-  static const _subLabels = ['实验', '考核', '作品'];
+  static const _subLabels = ['实验', '考核', '作业', '作品'];
 
   @override
   void initState() {

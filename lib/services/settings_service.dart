@@ -32,6 +32,8 @@ class SettingsService {
   static const String _evaluationPassScoreKey = 'evaluation_pass_score';
   static const String _teacherAiGradingEnabledKey =
       'teacher_ai_grading_enabled';
+  static const String _showLoginProgressKey = 'show_login_progress_dialog';
+  static const String _showLogoutReportKey = 'show_logout_report_dialog';
   static const int defaultEvaluationPassScore = 60;
 
   // ── 讯飞语音配置 ────────────────────────────────────────────────────────
@@ -189,6 +191,34 @@ class SettingsService {
   static Future<void> setTeacherAiGradingEnabled(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_teacherAiGradingEnabledKey, enabled);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 登录欢迎弹窗开关（默认开启）
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  static Future<bool> isLoginProgressDialogEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_showLoginProgressKey) ?? true;
+  }
+
+  static Future<void> setLoginProgressDialogEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_showLoginProgressKey, enabled);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 退出报告弹窗开关（默认开启）
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  static Future<bool> isLogoutReportDialogEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_showLogoutReportKey) ?? true;
+  }
+
+  static Future<void> setLogoutReportDialogEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_showLogoutReportKey, enabled);
   }
 
   // ═════════════════════════════════════════════════════════════════════════

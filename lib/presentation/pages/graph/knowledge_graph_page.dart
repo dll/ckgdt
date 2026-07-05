@@ -1851,15 +1851,10 @@ class _KnowledgeGraphPageState extends State<KnowledgeGraphPage>
   // ══════════════════════════════════════════════════════════════════════════
 
   String _chapterName(int chapter) {
-    const names = {
-      1: '第一章',
-      2: '第二章',
-      3: '第三章',
-      4: '第四章',
-      5: '第五章',
-      6: '第六章',
-    };
-    return names[chapter] ?? '第$chapter章';
+    // 使用中文数字回退（章节名由调用处从 CourseContextService 获取）
+    const digits = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+    if (chapter <= 10) return '第${digits[chapter]}章';
+    return '第$chapter章';
   }
 
   /// 从选中概念开始，沿 prerequisite 链向前追溯生成学习路径

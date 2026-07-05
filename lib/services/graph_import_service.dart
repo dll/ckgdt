@@ -113,6 +113,8 @@ class GraphImportService {
   Future<void> importAll() async {
     final db = await _dbHelper.database;
     final course = await _courseContext.getActiveCourse();
+    final courseId = course.id;
+    final categories = await _getCategories(courseId);
 
     // 检查是否已导入（用 graph_type='md_import' 标记）
     final scope = await _courseContext.scopedWhere();
@@ -122,15 +124,14 @@ class GraphImportService {
     );
     final count = (existing.first['c'] as int?) ?? 0;
     if (count > 0) {
+      // 已导入：同步图谱标题（处理分类名变更，如"平台技术图谱"→"技术图谱"）
+      await _syncGraphTitles(db, courseId, categories);
       debugPrint(
-          '=== GraphImportService: Already imported $count MD graphs, skip');
+          '=== GraphImportService: Already imported $count MD graphs, sync titles done');
       return;
     }
 
     debugPrint('=== GraphImportService: Starting import of MD graphs...');
-
-    final courseId = course.id;
-    final categories = await _getCategories(courseId);
     final crossRefs = await _getCrossRefs(courseId);
 
     // 1) 创建总图谱（包含所有分类的根图谱）
@@ -145,6 +146,31 @@ class GraphImportService {
     await _importCrossRefs(db, courseId, crossRefs);
 
     debugPrint('=== GraphImportService: Import complete');
+  }
+
+  /// 同步图谱标题（处理分类名变更，如"平台技术图谱"→"技术图谱"）
+  Future<void> _syncGraphTitles(
+      Database db, String courseId, List<_Category> categories) async {
+    for (final cat in categories) {
+      final graphId = 'graph_detail_${cat.dir}';
+      final expectedTitle = '${cat.label}详细图谱';
+      // 更新图谱标题
+      await db.update(
+        'graphs',
+        {'title': expectedTitle},
+        where: 'id = ? AND course_id = ?',
+        whereArgs: [graphId, courseId],
+      );
+      // 同时更新分类根节点标题
+      final catRootId = 'node_${cat.dir}_root';
+      await db.update(
+        'nodes',
+        {'title': cat.label},
+        where: 'id = ? AND graph_id = ?',
+        whereArgs: [catRootId, graphId],
+      );
+    }
+    debugPrint('=== GraphImportService: Graph titles synced');
   }
 
   // ── 总图谱 ──────────────────────────────────────────────────────────────

@@ -4,9 +4,18 @@ import 'package:sqflite/sqflite.dart';
 
 import 'database_helper.dart';
 import 'package:knowledge_graph_app/core/error_handler.dart';
+import '../../services/course_context_service.dart';
 
 /// 教学管理 DAO — 课程大纲 / 教案 / 教学进度
 class TeachingDao {
+  final _courseContext = CourseContextService();
+
+  /// 获取当前课程过滤条件
+  Future<Map<String, dynamic>> _courseFilter() async {
+    final courseId = await _courseContext.activeCourseId();
+    return {'where': 'course_name = ?', 'args': [courseId]};
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // 课程大纲 CRUD
   // ═══════════════════════════════════════════════════════════════════════════
@@ -14,7 +23,10 @@ class TeachingDao {
   /// 获取所有大纲条目（按章节号排序）
   Future<List<Map<String, dynamic>>> getAllSyllabusItems() async {
     final db = await DatabaseHelper.instance.database;
-    return db.query('syllabus_items', orderBy: 'chapter_number ASC');
+    final filter = await _courseFilter();
+    return db.query('syllabus_items',
+        where: filter['where'], whereArgs: filter['args'],
+        orderBy: 'chapter_number ASC');
   }
 
   /// 获取单个大纲条目
@@ -248,14 +260,20 @@ class TeachingDao {
   /// 获取所有教案（按章节排序）
   Future<List<Map<String, dynamic>>> getAllLessonPlans() async {
     final db = await DatabaseHelper.instance.database;
-    return db.query('lesson_plans', orderBy: 'chapter ASC, id ASC');
+    final filter = await _courseFilter();
+    return db.query('lesson_plans',
+        where: filter['where'], whereArgs: filter['args'],
+        orderBy: 'chapter ASC, id ASC');
   }
 
   /// 按章节获取教案
   Future<List<Map<String, dynamic>>> getLessonPlansByChapter(int chapter) async {
     final db = await DatabaseHelper.instance.database;
+    final filter = await _courseFilter();
     return db.query('lesson_plans',
-        where: 'chapter = ?', whereArgs: [chapter], orderBy: 'id ASC');
+        where: 'chapter = ? AND ${filter['where']}', 
+        whereArgs: [chapter, ...filter['args']],
+        orderBy: 'id ASC');
   }
 
   /// 获取单个教案
@@ -325,15 +343,19 @@ class TeachingDao {
   /// 获取所有教学进度（按计划日期排序）
   Future<List<Map<String, dynamic>>> getAllTeachingProgress() async {
     final db = await DatabaseHelper.instance.database;
-    return db.query('teaching_progress', orderBy: 'chapter ASC, planned_date ASC');
+    final filter = await _courseFilter();
+    return db.query('teaching_progress',
+        where: filter['where'], whereArgs: filter['args'],
+        orderBy: 'chapter ASC, planned_date ASC');
   }
 
   /// 按班级获取教学进度
   Future<List<Map<String, dynamic>>> getProgressByClass(int classId) async {
     final db = await DatabaseHelper.instance.database;
+    final filter = await _courseFilter();
     return db.query('teaching_progress',
-        where: 'class_id = ?',
-        whereArgs: [classId],
+        where: 'class_id = ? AND ${filter['where']}',
+        whereArgs: [classId, ...filter['args']],
         orderBy: 'chapter ASC, planned_date ASC');
   }
 

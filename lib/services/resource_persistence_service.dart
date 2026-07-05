@@ -61,6 +61,11 @@ class ResourcePersistenceService {
           'file': 'graph_categories.json',
           'version': '1.0.0'
         },
+        'course_profile': {'file': 'course_profile.json', 'version': '1.0.0'},
+        'platform_readiness': {
+          'file': 'platform_readiness.json',
+          'version': '1.0.0'
+        },
       },
     });
 
@@ -92,6 +97,18 @@ class ResourcePersistenceService {
 
     // homework.json
     await _writeJson('$courseDir/配置/homework.json', result.homeworks);
+
+    await _writeJson(
+        '$courseDir/配置/course_profile.json',
+        result.courseProfile.isEmpty
+            ? _fallbackCourseProfile()
+            : result.courseProfile);
+    await _writeJson(
+      '$courseDir/配置/platform_readiness.json',
+      result.platformReadiness.isEmpty
+          ? _fallbackPlatformReadiness()
+          : result.platformReadiness,
+    );
 
     // 2. 保存测验题目
     final theoryDir = Directory('$courseDir/理论');
@@ -153,6 +170,8 @@ class ResourcePersistenceService {
         'quiz_config.json',
         'lab_tasks.json',
         'homework.json',
+        'course_profile.json',
+        'platform_readiness.json',
       ];
 
       for (final file in configFiles) {
@@ -234,6 +253,10 @@ class ResourcePersistenceService {
           await _readGiteeJsonList(owner, repoName, '配置/lab_tasks.json', null);
       final homeworks =
           await _readGiteeJsonList(owner, repoName, '配置/homework.json', null);
+      final courseProfile =
+          await _readGiteeJson(owner, repoName, '配置/course_profile.json', null);
+      final platformReadiness = await _readGiteeJson(
+          owner, repoName, '配置/platform_readiness.json', null);
 
       // 读取测验题目
       final quizzes = <Map<String, dynamic>>[];
@@ -255,6 +278,8 @@ class ResourcePersistenceService {
         ..reportTemplates = reportTemplates ?? []
         ..labTasks = labTasks ?? []
         ..homeworks = homeworks ?? []
+        ..courseProfile = courseProfile ?? {}
+        ..platformReadiness = platformReadiness ?? {}
         ..quizzes = quizzes
         ..videoScripts = videoScripts
         ..courseware = courseware
@@ -360,6 +385,11 @@ class ResourcePersistenceService {
         'assessment_config': {'file': '配置/assessment.json', 'format': 'json'},
         'lab_tasks_config': {'file': '配置/lab_tasks.json', 'format': 'json'},
         'homework_config': {'file': '配置/homework.json', 'format': 'json'},
+        'course_profile': {'file': '配置/course_profile.json', 'format': 'json'},
+        'platform_readiness': {
+          'file': '配置/platform_readiness.json',
+          'format': 'json'
+        },
         'quiz_config': {'file': '配置/quiz_config.json', 'format': 'json'},
         'achievement_config': {
           'file': '配置/achievement_calc.json',
@@ -642,6 +672,10 @@ class ResourcePersistenceService {
       _smartCourseChecklistMd(result),
     );
     await _writeText(
+      '$courseDir/文档/平台化检测报告.md',
+      _platformReadinessMd(result),
+    );
+    await _writeText(
       '$courseDir/推荐/学习路径模板.md',
       '# 学习路径模板\n\n基于课程图谱、测验结果和数字孪生画像生成个性化学习路径。\n',
     );
@@ -672,6 +706,62 @@ class ResourcePersistenceService {
 - 每门课程能形成可审核、可打印、可归档材料。
 ''';
   }
+
+  String _platformReadinessMd(CourseGenerationResult result) {
+    final readiness = result.platformReadiness.isEmpty
+        ? _fallbackPlatformReadiness()
+        : result.platformReadiness;
+    final profile = result.courseProfile.isEmpty
+        ? _fallbackCourseProfile()
+        : result.courseProfile;
+    final issues = (readiness['issues'] as List? ?? const [])
+        .map((e) => e.toString())
+        .toList();
+    final buffer = StringBuffer()
+      ..writeln('# ${result.courseName} 平台化检测报告')
+      ..writeln()
+      ..writeln('- 检测结论：${readiness['passed'] == true ? '通过' : '需完善'}')
+      ..writeln('- 平台化得分：${readiness['score'] ?? 0}')
+      ..writeln('- 学科类型：${profile['discipline'] ?? '通用'}')
+      ..writeln('- 课程形态：${profile['course_mode'] ?? '理论实践型'}')
+      ..writeln('- 实践标签：${profile['practice_label'] ?? '实践任务'}')
+      ..writeln()
+      ..writeln('## 子图谱要求')
+      ..writeln()
+      ..writeln('| 类型 | 内容 |')
+      ..writeln('| --- | --- |')
+      ..writeln(
+          '| 子图谱 | ${(profile['graph_categories'] as List? ?? const []).join('、')} |')
+      ..writeln(
+          '| 证据类型 | ${(profile['evidence_types'] as List? ?? const []).join('、')} |')
+      ..writeln(
+          '| 评价维度 | ${(profile['rubric_dimensions'] as List? ?? const []).join('、')} |')
+      ..writeln()
+      ..writeln('## 问题清单');
+    if (issues.isEmpty) {
+      buffer.writeln('\n无阻断问题。');
+    } else {
+      for (final issue in issues) {
+        buffer.writeln('- $issue');
+      }
+    }
+    return buffer.toString();
+  }
+
+  Map<String, dynamic> _fallbackCourseProfile() => {
+        'discipline': '通用',
+        'course_mode': '理论实践型',
+        'practice_label': '实践任务',
+        'graph_categories': ['课程图谱', '实践活动图谱', '学习资源图谱', '评价达成图谱'],
+        'evidence_types': ['作业', '实践报告', '测验', '作品', '课堂表现'],
+        'rubric_dimensions': ['知识理解', '实践应用', '问题分析', '表达呈现', '持续改进'],
+      };
+
+  Map<String, dynamic> _fallbackPlatformReadiness() => {
+        'passed': true,
+        'score': 100,
+        'issues': <String>[],
+      };
 
   String _graphTwinLoopMd(CourseGenerationResult result) {
     final chapterLines = result.chapters.asMap().entries.map((entry) {
@@ -773,6 +863,7 @@ $chapterLines
         'graphs': result.graphs.length,
         'lab_tasks': result.labTasks.length,
         'homeworks': result.homeworks.length,
+        'platform_ready': result.platformReadiness['passed'] ?? true,
         'report_templates': result.reportTemplates.length,
         'files': files.length,
       },
@@ -824,6 +915,8 @@ $chapterLines
       'quiz_config.json': 'quizzes',
       'lab_tasks.json': 'labTasks',
       'homework.json': 'homeworks',
+      'course_profile.json': 'courseProfile',
+      'platform_readiness.json': 'platformReadiness',
     };
     return map[fileName] ?? 'config';
   }

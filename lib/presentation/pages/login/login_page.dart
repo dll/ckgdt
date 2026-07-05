@@ -138,9 +138,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
       if (success) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        // 显示登录进度弹窗
+        // 显示登录进度弹窗（可由系统设置关闭）
         final user = _authService.currentUser;
-        if (user != null) {
+        if (user != null && await SettingsService.isLoginProgressDialogEnabled()) {
           await LoginProgressDialog.showAfterLogin(
             context,
             userId: user.userId,
@@ -544,13 +544,15 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       }
 
       if (!mounted) return;
-      // 显示登录进度弹窗
-      await LoginProgressDialog.showAfterLogin(
-        context,
-        userId: user.userId,
-        userName: user.realName ?? user.userId,
-        role: user.role,
-      );
+      // 显示登录进度弹窗（可由系统设置关闭）
+      if (await SettingsService.isLoginProgressDialogEnabled()) {
+        await LoginProgressDialog.showAfterLogin(
+          context,
+          userId: user.userId,
+          userName: user.realName ?? user.userId,
+          role: user.role,
+        );
+      }
       if (!mounted) return;
       // 移动端登录成功，跳转首页
       Navigator.of(context).pushReplacement(

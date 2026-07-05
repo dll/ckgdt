@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../core/error_handler.dart';
 import 'ai_service.dart';
 import 'course_context_service.dart';
+import 'course_subgraph_service.dart';
 
 /// 课程资源统一生成服务
 /// 在用户输入课程名+章节后，生成完整的课程资源包（与 CKGDT 同等质量）
@@ -11,6 +12,7 @@ class CourseGenerationService {
   CourseGenerationService._();
 
   final AiService _ai = AiService();
+  final CourseSubgraphService _subgraphService = const CourseSubgraphService();
 
   /// 生成进度回调
   void Function(String step, double progress)? onProgress;
@@ -56,7 +58,37 @@ class CourseGenerationService {
 
       // 6. 图谱定义（7 类）
       _report('生成图谱定义', 0.6);
-      result.graphs = await _generateGraphDefinitions(courseName, chapters);
+      result.courseProfile = _subgraphService
+          .inferProfile(
+            courseName: courseName,
+            chapters: chapters,
+            syllabusContent: syllabusContent,
+          )
+          .toMap();
+      final aiGraphs = await _generateGraphDefinitions(courseName, chapters);
+      final platformSubgraphs = _subgraphService.generateSubgraphs(
+        courseName: courseName,
+        chapters: result.chapters,
+        syllabusContent: syllabusContent,
+        profile: _profileFromMap(result.courseProfile),
+      );
+      result.graphs = [
+        ...platformSubgraphs,
+        ...aiGraphs.where((graph) {
+          final category = graph['category']?.toString() ?? '';
+          return category.isNotEmpty &&
+              !platformSubgraphs.any((g) => g['category'] == category);
+        }),
+      ];
+      final readiness = _subgraphService.evaluateReadiness(
+        subgraphs: platformSubgraphs,
+        profile: _profileFromMap(result.courseProfile),
+      );
+      result.platformReadiness = {
+        'passed': readiness.passed,
+        'score': readiness.score,
+        'issues': readiness.issues,
+      };
 
       // 7. 实验任务
       _report('生成实验任务', 0.7);
@@ -612,6 +644,23 @@ ${syllabusContent != null ? '相关教学内容：\n$syllabusContent' : ''}
     if (result is List) return result;
     return null;
   }
+
+  CourseProfile _profileFromMap(Map<String, dynamic> map) {
+    return CourseProfile(
+      discipline: map['discipline']?.toString() ?? '通用',
+      courseMode: map['course_mode']?.toString() ?? '理论实践型',
+      practiceLabel: map['practice_label']?.toString() ?? '实践任务',
+      graphCategories: (map['graph_categories'] as List? ?? const [])
+          .map((e) => e.toString())
+          .toList(),
+      evidenceTypes: (map['evidence_types'] as List? ?? const [])
+          .map((e) => e.toString())
+          .toList(),
+      rubricDimensions: (map['rubric_dimensions'] as List? ?? const [])
+          .map((e) => e.toString())
+          .toList(),
+    );
+  }
 }
 
 /// 课程生成结果
@@ -625,6 +674,8 @@ class CourseGenerationResult {
   List<Map<String, dynamic>> videoScripts = [];
   List<Map<String, dynamic>> courseware = [];
   List<Map<String, dynamic>> graphs = [];
+  Map<String, dynamic> courseProfile = {};
+  Map<String, dynamic> platformReadiness = {};
   List<Map<String, dynamic>> labTasks = [];
   List<Map<String, dynamic>> homeworks = [];
   List<Map<String, dynamic>> reportTemplates = [];
@@ -649,6 +700,8 @@ class CourseGenerationResult {
         'video_scripts': videoScripts,
         'courseware': courseware,
         'graphs': graphs,
+        'course_profile': courseProfile,
+        'platform_readiness': platformReadiness,
         'lab_tasks': labTasks,
         'homeworks': homeworks,
         'report_templates': reportTemplates,

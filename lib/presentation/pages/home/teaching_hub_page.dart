@@ -81,7 +81,7 @@ class _TeachingHubPageState extends State<TeachingHubPage> {
             children: const [
               LearningHubPage(),
               ClassroomPage(),
-              HomeworkListPage(),
+              HomeworkListPage(isTeacher: true),
               OrdinaryScoreTab(),
             ],
           ),

@@ -14,6 +14,7 @@ import '../../../services/navigation_service.dart';
 import '../../../services/unread_count_service.dart';
 import '../../../services/sync_service.dart';
 import '../../../services/gitee_service.dart';
+import '../../../services/settings_service.dart';
 import '../assessment/defense/defense_broadcast_page.dart';
 import '../../../services/default_class_service.dart';
 import '../../../dev/demo_seed_service.dart';
@@ -429,13 +430,21 @@ class _HomePageState extends State<HomePage> {
       ));
       bodyMap[5] = () => const AssessmentPage();
 
-      // 6: 作品
+      // 6: 作业
+      destinations.add(const NavigationDestination(
+        icon: Icon(Icons.assignment_outlined),
+        selectedIcon: Icon(Icons.assignment),
+        label: '作业',
+      ));
+      bodyMap[6] = () => const HomeworkListPage();
+
+      // 7: 作品
       destinations.add(const NavigationDestination(
         icon: Icon(Icons.workspace_premium_outlined),
         selectedIcon: Icon(Icons.workspace_premium),
         label: '作品',
       ));
-      bodyMap[6] = () => const WorksPage();
+      bodyMap[7] = () => const WorksPage();
     }
 
     // 确保 _selectedIndex 不越界
@@ -504,9 +513,9 @@ class _HomePageState extends State<HomePage> {
             onSelected: (value) async {
               if (value == 'logout') {
                 final navigator = Navigator.of(context);
-                // 显示退出报告弹窗
+                // 显示退出报告弹窗（可由系统设置关闭）
                 final user = _authService.currentUser;
-                if (user != null && mounted) {
+                if (user != null && mounted && await SettingsService.isLogoutReportDialogEnabled()) {
                   final shouldLogout = await LogoutReportDialog.showBeforeLogout(
                     context,
                     userId: user.userId,

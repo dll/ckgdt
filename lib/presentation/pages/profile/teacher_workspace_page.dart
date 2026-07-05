@@ -123,26 +123,36 @@ class _TeacherWorkspacePageState extends State<TeacherWorkspacePage> {
       final user = _authService.currentUser;
       if (user == null) return;
       final db = await DatabaseHelper.instance.database;
+      final courseId = await CourseContextService().activeCourseId();
 
-      // 4 个独立查询并行执行
+      // 4 个独立查询并行执行（按课程过滤）
       final results = await Future.wait([
         db.rawQuery(
           "SELECT COUNT(*) as c FROM lab_submissions "
           "WHERE (score IS NOT NULL OR feedback IS NOT NULL) "
-          "AND (graded_by = ? OR graded_by IS NULL)",
-          [user.userId],
+          "AND (graded_by = ? OR graded_by IS NULL) "
+          "AND course_id = ?",
+          [user.userId, courseId],
         ),
         db.rawQuery(
           "SELECT COUNT(*) as c FROM lab_submissions "
           "WHERE score IS NULL AND feedback IS NULL "
-          "AND status = 'submitted'",
+          "AND status = 'submitted' "
+          "AND course_id = ?",
+          [courseId],
         ),
         db.rawQuery(
           "SELECT AVG((julianday(feedback_at) - julianday(submitted_at)) * 24 * 60) as m "
           "FROM lab_submissions "
-          "WHERE feedback_at IS NOT NULL AND submitted_at IS NOT NULL",
+          "WHERE feedback_at IS NOT NULL AND submitted_at IS NOT NULL "
+          "AND course_id = ?",
+          [courseId],
         ),
-        db.rawQuery("SELECT AVG(score) as s FROM work_scores"),
+        db.rawQuery(
+          "SELECT AVG(score) as s FROM work_scores "
+          "WHERE course_id = ?",
+          [courseId],
+        ),
       ]);
 
       if (!mounted) return;

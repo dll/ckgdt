@@ -58,6 +58,8 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _quickLoginEnabled = false;
   bool _feedbackEnabled = true;
   bool _teacherAiGradingEnabled = true;
+  bool _showLoginProgress = true;
+  bool _showLogoutReport = true;
 
   @override
   void initState() {
@@ -73,6 +75,10 @@ class _SettingsPageState extends State<SettingsPage> {
     final feedbackEnabled = await SettingsService.isFeedbackEnabled();
     final teacherAiGradingEnabled =
         await SettingsService.isTeacherAiGradingEnabled();
+    final showLoginProgress =
+        await SettingsService.isLoginProgressDialogEnabled();
+    final showLogoutReport =
+        await SettingsService.isLogoutReportDialogEnabled();
     if (mounted) {
       setState(() {
         _themeMode = mode;
@@ -81,6 +87,8 @@ class _SettingsPageState extends State<SettingsPage> {
         _quickLoginEnabled = quickLogin;
         _feedbackEnabled = feedbackEnabled;
         _teacherAiGradingEnabled = teacherAiGradingEnabled;
+        _showLoginProgress = showLoginProgress;
+        _showLogoutReport = showLogoutReport;
       });
     }
   }
@@ -158,6 +166,36 @@ class _SettingsPageState extends State<SettingsPage> {
               onChanged: (value) async {
                 await SettingsService.setNotificationEnabled(value);
                 setState(() => _notificationsEnabled = value);
+              },
+            ),
+          ),
+          _buildMenuItem(
+            context,
+            icon: Icons.waving_hand,
+            title: '登录欢迎弹窗',
+            subtitle: _showLoginProgress
+                ? '已开启：登录后显示数字孪生画像与学习进度'
+                : '已关闭：登录后直接进入首页',
+            trailing: Switch(
+              value: _showLoginProgress,
+              onChanged: (value) async {
+                await SettingsService.setLoginProgressDialogEnabled(value);
+                setState(() => _showLoginProgress = value);
+              },
+            ),
+          ),
+          _buildMenuItem(
+            context,
+            icon: Icons.exit_to_app,
+            title: '退出报告弹窗',
+            subtitle: _showLogoutReport
+                ? '已开启：退出前显示成绩报告与数字孪生画像'
+                : '已关闭：退出时直接弹出确认框',
+            trailing: Switch(
+              value: _showLogoutReport,
+              onChanged: (value) async {
+                await SettingsService.setLogoutReportDialogEnabled(value);
+                setState(() => _showLogoutReport = value);
               },
             ),
           ),

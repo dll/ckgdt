@@ -12,7 +12,6 @@ import '../../../services/auth_service.dart';
 import '../../../services/clipboard_helper.dart';
 import 'package:knowledge_graph_app/core/error_handler.dart';
 
-
 // ── Painter 拆分到 parts/（part / part of 模式）─────────────
 part 'parts/graph_detail_painter.dart';
 
@@ -188,9 +187,8 @@ class _GraphDetailPageState extends State<GraphDetailPage>
   }
 
   void _scrollToNode(String nodeId) {
-    final pNode = _visiblePositionedNodes
-        .where((p) => p.node.id == nodeId)
-        .firstOrNull;
+    final pNode =
+        _visiblePositionedNodes.where((p) => p.node.id == nodeId).firstOrNull;
     if (pNode == null) return;
 
     _animateCenterOnNode(pNode.x, pNode.y, scale: 1.5);
@@ -215,15 +213,16 @@ class _GraphDetailPageState extends State<GraphDetailPage>
       duration: Duration(milliseconds: durationMs),
       vsync: this,
     );
-    final animation = CurvedAnimation(parent: controller, curve: Curves.easeInOut);
+    final animation =
+        CurvedAnimation(parent: controller, curve: Curves.easeInOut);
 
     animation.addListener(() {
       final t = animation.value;
       // 线性插值每个矩阵元素
       final m = Matrix4.zero();
       for (int i = 0; i < 16; i++) {
-        m.storage[i] =
-            startMatrix.storage[i] + (endMatrix.storage[i] - startMatrix.storage[i]) * t;
+        m.storage[i] = startMatrix.storage[i] +
+            (endMatrix.storage[i] - startMatrix.storage[i]) * t;
       }
       _transformationController.value = m;
     });
@@ -456,8 +455,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
     // 中心度最高节点 (degree centrality)
     final totalDegree = <String, int>{};
     for (final n in _nodes) {
-      totalDegree[n.id] =
-          (inDegree[n.id] ?? 0) + (outDegree[n.id] ?? 0);
+      totalDegree[n.id] = (inDegree[n.id] ?? 0) + (outDegree[n.id] ?? 0);
     }
     final sortedByDegree = totalDegree.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
@@ -480,9 +478,8 @@ class _GraphDetailPageState extends State<GraphDetailPage>
       levelDistribution[n.level] = (levelDistribution[n.level] ?? 0) + 1;
     }
 
-    final avgDegree = nodeCount > 0
-        ? (edgeCount * 2 / nodeCount).toStringAsFixed(1)
-        : '0';
+    final avgDegree =
+        nodeCount > 0 ? (edgeCount * 2 / nodeCount).toStringAsFixed(1) : '0';
 
     // 生成 Markdown 报告
     final report = StringBuffer();
@@ -582,11 +579,8 @@ class _GraphDetailPageState extends State<GraphDetailPage>
             children: [
               Text(value,
                   style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: color)),
-              Text(label,
-                  style: TextStyle(fontSize: 11, color: color)),
+                      fontSize: 20, fontWeight: FontWeight.bold, color: color)),
+              Text(label, style: TextStyle(fontSize: 11, color: color)),
             ],
           ),
         ),
@@ -637,9 +631,14 @@ class _GraphDetailPageState extends State<GraphDetailPage>
     }
     buf.writeln('## 关系\n');
     for (final e in _edges) {
-      final srcName = _nodes.where((n) => n.id == e.sourceId).firstOrNull?.title ?? e.sourceId;
-      final tgtName = _nodes.where((n) => n.id == e.targetId).firstOrNull?.title ?? e.targetId;
-      buf.writeln('- $srcName → $tgtName ${e.label != null ? "(${e.label})" : ""}');
+      final srcName =
+          _nodes.where((n) => n.id == e.sourceId).firstOrNull?.title ??
+              e.sourceId;
+      final tgtName =
+          _nodes.where((n) => n.id == e.targetId).firstOrNull?.title ??
+              e.targetId;
+      buf.writeln(
+          '- $srcName → $tgtName ${e.label != null ? "(${e.label})" : ""}');
     }
 
     ClipboardHelper.copyWithToast(
@@ -677,7 +676,8 @@ class _GraphDetailPageState extends State<GraphDetailPage>
     final path = LearningPathModel(
       userId: userId,
       title: '学习路径: ${node.title}',
-      description: '从「${widget.graphTitle}」的「${node.title}」生成，包含 ${pathNodeIds.length} 个节点（根→选中→叶）',
+      description:
+          '从「${widget.graphTitle}」的「${node.title}」生成，包含 ${pathNodeIds.length} 个节点（根→选中→叶）',
       nodeIds: pathNodeIds,
     );
     await _learningPathDao.createPath(path);
@@ -797,13 +797,16 @@ class _GraphDetailPageState extends State<GraphDetailPage>
     final userId = _authService.getCurrentUserId();
     if (userId == null) return;
     try {
-      await _learningRecordDao.addRecord(userId: userId, nodeId: node.id, nodeTitle: node.title);
+      await _learningRecordDao.addRecord(
+          userId: userId, nodeId: node.id, nodeTitle: node.title);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('已记录学习: ${node.title}')),
         );
       }
-    } catch (e) { swallowDebug(e, tag: 'graph_detail_page'); }
+    } catch (e) {
+      swallowDebug(e, tag: 'graph_detail_page');
+    }
   }
 
   void _toggleFavorite(NodeModel node) async {
@@ -819,14 +822,17 @@ class _GraphDetailPageState extends State<GraphDetailPage>
           );
         }
       } else {
-        await _favoriteDao.addFavorite(userId: userId, nodeId: node.id, nodeTitle: node.title);
+        await _favoriteDao.addFavorite(
+            userId: userId, nodeId: node.id, nodeTitle: node.title);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('已收藏: ${node.title}')),
           );
         }
       }
-    } catch (e) { swallowDebug(e, tag: 'graph_detail_page'); }
+    } catch (e) {
+      swallowDebug(e, tag: 'graph_detail_page');
+    }
   }
 
   // ── Build ───────────────────────────────────────────────────────────────
@@ -920,6 +926,31 @@ class _GraphDetailPageState extends State<GraphDetailPage>
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'add_node',
+                child: ListTile(
+                  leading: Icon(Icons.add_circle_outline),
+                  title: Text('新增节点'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'edit_node',
+                child: ListTile(
+                  leading: Icon(Icons.edit_outlined),
+                  title: Text('编辑选中节点'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'delete_node',
+                child: ListTile(
+                  leading: Icon(Icons.delete_outline),
+                  title: Text('删除选中节点'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
             ],
           ),
         ],
@@ -937,8 +968,7 @@ class _GraphDetailPageState extends State<GraphDetailPage>
                     // 信息条
                     _buildInfoBar(primary),
                     // 上溯/下钻路径面包屑条
-                    if (_drillPathNodeIds.isNotEmpty)
-                      _buildDrillPathBar(),
+                    if (_drillPathNodeIds.isNotEmpty) _buildDrillPathBar(),
                     // 图谱视图
                     Expanded(flex: 3, child: _buildGraphView()),
                     // 节点详情
@@ -969,6 +999,23 @@ class _GraphDetailPageState extends State<GraphDetailPage>
         break;
       case 'learning_path':
         _toggleLearningPathOverlay();
+        break;
+      case 'add_node':
+        _showNodeEditor(parent: _selectedNode);
+        break;
+      case 'edit_node':
+        if (_selectedNode == null) {
+          _showGraphSnack('请先选择一个节点');
+        } else {
+          _showNodeEditor(node: _selectedNode);
+        }
+        break;
+      case 'delete_node':
+        if (_selectedNode == null) {
+          _showGraphSnack('请先选择一个节点');
+        } else {
+          _confirmDeleteNode(_selectedNode!);
+        }
         break;
     }
   }
@@ -1041,7 +1088,8 @@ class _GraphDetailPageState extends State<GraphDetailPage>
                       _filterNodeType = null;
                       _calculatePositions();
                     }),
-                    child: const Icon(Icons.close, size: 12, color: Colors.orange),
+                    child:
+                        const Icon(Icons.close, size: 12, color: Colors.orange),
                   ),
                 ],
               ),
@@ -1069,7 +1117,8 @@ class _GraphDetailPageState extends State<GraphDetailPage>
                       _showLearningPath = false;
                       _learningPathNodeIds = [];
                     }),
-                    child: const Icon(Icons.close, size: 12, color: Colors.green),
+                    child:
+                        const Icon(Icons.close, size: 12, color: Colors.green),
                   ),
                 ],
               ),
@@ -1139,7 +1188,8 @@ class _GraphDetailPageState extends State<GraphDetailPage>
                     : isAncestorMode
                         ? '上溯路径 · ${_ancestorPath.length} 个节点'
                         : '下钻 · ${_drillPathNodeIds.length} 节点（${_descendantLeaves.length} 叶节点）',
-                style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w500),
+                style: TextStyle(
+                    fontSize: 12, color: color, fontWeight: FontWeight.w500),
               ),
               const Spacer(),
               InkWell(
@@ -1159,12 +1209,14 @@ class _GraphDetailPageState extends State<GraphDetailPage>
                     if (i > 0)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 2),
-                        child: Icon(Icons.chevron_right, size: 14, color: color.withValues(alpha: 0.5)),
+                        child: Icon(Icons.chevron_right,
+                            size: 14, color: color.withValues(alpha: 0.5)),
                       ),
                     InkWell(
                       onTap: () => _scrollToNode(_ancestorPath[i].id),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: i == _ancestorPath.length - 1
                               ? color.withValues(alpha: 0.2)
@@ -1200,14 +1252,18 @@ class _GraphDetailPageState extends State<GraphDetailPage>
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  Icon(Icons.eco, size: 12, color: Colors.teal.withValues(alpha: 0.6)),
+                  Icon(Icons.eco,
+                      size: 12, color: Colors.teal.withValues(alpha: 0.6)),
                   const SizedBox(width: 4),
-                  for (int i = 0; i < _descendantLeaves.length && i < 8; i++) ...[
+                  for (int i = 0;
+                      i < _descendantLeaves.length && i < 8;
+                      i++) ...[
                     if (i > 0) const SizedBox(width: 4),
                     InkWell(
                       onTap: () => _scrollToNode(_descendantLeaves[i].id),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 5, vertical: 1),
                         decoration: BoxDecoration(
                           color: Colors.teal.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(4),
@@ -1216,14 +1272,16 @@ class _GraphDetailPageState extends State<GraphDetailPage>
                           _descendantLeaves[i].title.length > 5
                               ? '${_descendantLeaves[i].title.substring(0, 5)}…'
                               : _descendantLeaves[i].title,
-                          style: TextStyle(fontSize: 9, color: Colors.teal.shade700),
+                          style: TextStyle(
+                              fontSize: 9, color: Colors.teal.shade700),
                         ),
                       ),
                     ),
                   ],
                   if (_descendantLeaves.length > 8)
                     Text(' +${_descendantLeaves.length - 8}',
-                        style: TextStyle(fontSize: 9, color: Colors.teal.shade400)),
+                        style: TextStyle(
+                            fontSize: 9, color: Colors.teal.shade400)),
                 ],
               ),
             ),
@@ -1248,7 +1306,8 @@ class _GraphDetailPageState extends State<GraphDetailPage>
           child: GestureDetector(
             onTapDown: (d) => _handleTap(d.localPosition),
             onDoubleTapDown: (d) => _handleDoubleTap(d.localPosition),
-            onLongPressStart: (d) => _handleLongPressOrDragStart(d.localPosition),
+            onLongPressStart: (d) =>
+                _handleLongPressOrDragStart(d.localPosition),
             onLongPressMoveUpdate: (d) => _handleDragUpdate(d.localPosition),
             onLongPressEnd: (_) => _handleDragEnd(),
             child: InteractiveViewer(
@@ -1261,7 +1320,8 @@ class _GraphDetailPageState extends State<GraphDetailPage>
                 painter: GraphPainter(
                   nodes: _nodes,
                   edges: _edges.where((e) {
-                    final vis = _visiblePositionedNodes.map((p) => p.node.id).toSet();
+                    final vis =
+                        _visiblePositionedNodes.map((p) => p.node.id).toSet();
                     return vis.contains(e.sourceId) && vis.contains(e.targetId);
                   }).toList(),
                   selectedNode: _selectedNode,
@@ -1270,7 +1330,8 @@ class _GraphDetailPageState extends State<GraphDetailPage>
                   collapsedNodes: _collapsedNodes,
                   adjacentNodeIds: _adjacentNodeIds,
                   hasChildrenFn: _hasChildren,
-                  learningPathNodeIds: _showLearningPath ? _learningPathNodeIds : [],
+                  learningPathNodeIds:
+                      _showLearningPath ? _learningPathNodeIds : [],
                   drillPathNodeIds: _drillPathNodeIds,
                   ancestorPath: _ancestorPath,
                 ),
@@ -1325,12 +1386,16 @@ class _GraphDetailPageState extends State<GraphDetailPage>
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   border: Border.symmetric(
-                    horizontal: BorderSide(color: Colors.grey.shade200, width: 1),
+                    horizontal:
+                        BorderSide(color: Colors.grey.shade200, width: 1),
                   ),
                 ),
                 child: Text(
                   '$percent%',
-                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: Colors.grey.shade600),
+                  style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade600),
                 ),
               ),
               _toolBtn(Icons.remove, '缩小', _zoomOut),
@@ -1388,8 +1453,8 @@ class _GraphDetailPageState extends State<GraphDetailPage>
       if (p.y > maxY) maxY = p.y;
     }
     const pad = 100.0;
-    return Rect.fromLTWH(minX - pad, minY - pad,
-        (maxX - minX) + pad * 2, (maxY - minY) + pad * 2);
+    return Rect.fromLTWH(minX - pad, minY - pad, (maxX - minX) + pad * 2,
+        (maxY - minY) + pad * 2);
   }
 
   void _zoomIn() {
@@ -1467,9 +1532,9 @@ class _GraphDetailPageState extends State<GraphDetailPage>
   void _centerOnSelected() {
     if (_selectedNode == null) return;
     final pNode = _visiblePositionedNodes.cast<PositionedNode?>().firstWhere(
-      (p) => p!.node.id == _selectedNode!.id,
-      orElse: () => null,
-    );
+          (p) => p!.node.id == _selectedNode!.id,
+          orElse: () => null,
+        );
     if (pNode == null) return;
     final viewport = _getViewportSize();
     final s = _getCurrentScale().clamp(0.05, 5.0);
@@ -1594,8 +1659,8 @@ class _GraphDetailPageState extends State<GraphDetailPage>
     final canvasPos = MatrixUtils.transformPoint(matrix, position);
 
     // 更新被拖拽节点的位置
-    final idx = _visiblePositionedNodes.indexWhere(
-        (p) => p.node.id == _draggingNodeId);
+    final idx =
+        _visiblePositionedNodes.indexWhere((p) => p.node.id == _draggingNodeId);
     if (idx >= 0) {
       setState(() {
         _visiblePositionedNodes[idx] = PositionedNode(
@@ -1724,8 +1789,8 @@ class _GraphDetailPageState extends State<GraphDetailPage>
                       : Icons.unfold_less,
                   color: Colors.purple,
                 ),
-                title: Text(
-                    _collapsedNodes.contains(node.id) ? '展开子节点' : '折叠子节点'),
+                title:
+                    Text(_collapsedNodes.contains(node.id) ? '展开子节点' : '折叠子节点'),
                 onTap: () {
                   Navigator.pop(context);
                   setState(() {
@@ -1861,6 +1926,34 @@ class _GraphDetailPageState extends State<GraphDetailPage>
               ],
             ),
             const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showNodeEditor(parent: node),
+                    icon: const Icon(Icons.add_circle_outline, size: 16),
+                    label: const Text('添加子节点', style: TextStyle(fontSize: 12)),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showNodeEditor(node: node),
+                    icon: const Icon(Icons.edit_outlined, size: 16),
+                    label: const Text('编辑节点', style: TextStyle(fontSize: 12)),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _confirmDeleteNode(node),
+                    icon: const Icon(Icons.delete_outline, size: 16),
+                    label: const Text('删除节点', style: TextStyle(fontSize: 12)),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
             // 上溯/下钻按钮
             Row(
               children: [
@@ -1949,6 +2042,142 @@ class _GraphDetailPageState extends State<GraphDetailPage>
     ];
     return level < colors.length ? colors[level] : Colors.grey;
   }
+
+  Future<void> _showNodeEditor({NodeModel? node, NodeModel? parent}) async {
+    final titleCtrl = TextEditingController(text: node?.title ?? '');
+    final typeCtrl = TextEditingController(text: node?.nodeType ?? 'concept');
+    final contentCtrl = TextEditingController(text: node?.content ?? '');
+    final isEdit = node != null;
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(isEdit ? '编辑节点' : '新增节点'),
+        content: SizedBox(
+          width: 420,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleCtrl,
+                decoration: const InputDecoration(labelText: '节点名称'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: typeCtrl,
+                decoration: const InputDecoration(
+                  labelText: '节点类型',
+                  hintText: 'concept / activity / evidence / rubric',
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: contentCtrl,
+                maxLines: 4,
+                decoration: const InputDecoration(labelText: '说明'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+
+    if (saved != true) return;
+    final title = titleCtrl.text.trim();
+    if (title.isEmpty) {
+      _showGraphSnack('节点名称不能为空');
+      return;
+    }
+
+    if (isEdit) {
+      final updated = NodeModel(
+        id: node.id,
+        graphId: node.graphId,
+        title: title,
+        content: contentCtrl.text.trim(),
+        nodeType:
+            typeCtrl.text.trim().isEmpty ? 'concept' : typeCtrl.text.trim(),
+        level: node.level,
+        x: node.x,
+        y: node.y,
+        color: node.color,
+        parentId: node.parentId,
+        visible: node.visible,
+        metadata: node.metadata,
+      );
+      await _graphDao.updateNode(updated);
+      _showGraphSnack('节点已更新');
+    } else {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final parentNode = parent;
+      final newNode = NodeModel(
+        id: '${widget.graphId}_node_$now',
+        graphId: widget.graphId,
+        title: title,
+        content: contentCtrl.text.trim(),
+        nodeType:
+            typeCtrl.text.trim().isEmpty ? 'concept' : typeCtrl.text.trim(),
+        level: parentNode == null ? 0 : parentNode.level + 1,
+        parentId: parentNode?.id,
+        visible: true,
+      );
+      await _graphDao.insertNode(newNode);
+      if (parentNode != null) {
+        await _graphDao.insertEdge(EdgeModel(
+          id: '${widget.graphId}_edge_${parentNode.id}_${newNode.id}',
+          graphId: widget.graphId,
+          sourceId: parentNode.id,
+          targetId: newNode.id,
+          edgeType: 'contains',
+          label: '包含',
+        ));
+      }
+      _showGraphSnack('节点已新增');
+    }
+    await _loadGraphData();
+  }
+
+  Future<void> _confirmDeleteNode(NodeModel node) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('删除节点'),
+        content: Text('确定删除“${node.title}”及相关关系吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await _graphDao.deleteNode(node.id);
+    setState(() => _selectNode(null));
+    await _loadGraphData();
+    _showGraphSnack('节点已删除');
+  }
+
+  void _showGraphSnack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -2023,4 +2252,3 @@ class _DetailMinimapPainter extends CustomPainter {
   bool shouldRepaint(covariant _DetailMinimapPainter old) =>
       old.viewportRect != viewportRect || old.nodes != nodes;
 }
-

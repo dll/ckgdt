@@ -105,10 +105,13 @@ void main() {
     expect(File('$courseDir/大纲/演示课程-教学大纲.md').existsSync(), isTrue);
     expect(File('$courseDir/实验/报告模板/实验一 平台体验报告模板.md').existsSync(), isTrue);
     expect(File('$courseDir/配置/homework.json').existsSync(), isTrue);
+    expect(File('$courseDir/配置/course_profile.json').existsSync(), isTrue);
+    expect(File('$courseDir/配置/platform_readiness.json').existsSync(), isTrue);
     expect(File('$courseDir/作业/第1章 课程导论-作业.md').existsSync(), isTrue);
     expect(File('$courseDir/文档/数智课程特色设计.md').existsSync(), isTrue);
     expect(File('$courseDir/文档/知识图谱与数字孪生闭环.md').existsSync(), isTrue);
     expect(File('$courseDir/文档/智慧课程审核清单.md').existsSync(), isTrue);
+    expect(File('$courseDir/文档/平台化检测报告.md').existsSync(), isTrue);
     expect(File('$courseDir/归档/期末/模板/README.md').existsSync(), isTrue);
 
     final inventory = jsonDecode(
@@ -117,10 +120,13 @@ void main() {
     final files = (inventory['files'] as List).cast<String>();
     expect(files, contains('配置/manifest.json'));
     expect(files, contains('配置/homework.json'));
+    expect(files, contains('配置/course_profile.json'));
+    expect(files, contains('配置/platform_readiness.json'));
     expect(files, contains('作业/第1章 课程导论-作业.md'));
     expect(files, contains('文档/数智课程特色设计.md'));
     expect(files, contains('文档/知识图谱与数字孪生闭环.md'));
     expect(files, contains('文档/智慧课程审核清单.md'));
+    expect(files, contains('文档/平台化检测报告.md'));
     expect(files, contains('考核/试卷分析模板.md'));
     expect(files, contains('推荐/学习路径模板.md'));
 

@@ -317,6 +317,16 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
       _log('包含 ${result.labTasks.length} 个实验任务');
       _log('包含 ${result.homeworks.length} 章作业');
       _log('包含 ${result.reportTemplates.length} 个报告模板');
+      if (result.courseProfile.isNotEmpty) {
+        _log(
+          '课程画像: ${result.courseProfile['discipline'] ?? '通用'} / ${result.courseProfile['course_mode'] ?? '理论实践型'} / ${result.courseProfile['practice_label'] ?? '实践任务'}',
+        );
+      }
+      if (result.platformReadiness.isNotEmpty) {
+        _log(
+          '平台化检测: ${result.platformReadiness['passed'] == true ? '通过' : '需完善'}，得分 ${result.platformReadiness['score'] ?? 0}',
+        );
+      }
       if (generatedFileCount > 0) {
         _log('课程资源包共 $generatedFileCount 个文件');
       }
@@ -491,42 +501,107 @@ class _CourseGeneratorSheetState extends State<CourseGeneratorSheet> {
       });
     }
 
-    // 保存图谱
+    // 保存图谱：总图谱 + 按课程类型生成的可编辑子图谱
     final graphDao = GraphDao();
-    final graphId = 'g_${result.courseId}';
+    final existingGraphs = await db.query(
+      'graphs',
+      columns: ['id'],
+      where: 'course_id = ?',
+      whereArgs: [result.courseId],
+    );
+    for (final graph in existingGraphs) {
+      final id = graph['id']?.toString() ?? '';
+      if (id == 'g_${result.courseId}' ||
+          id.startsWith('graph_main_${result.courseId}') ||
+          id.startsWith('graph_detail_${result.courseId}_')) {
+        await graphDao.deleteGraph(id);
+      }
+    }
+
+    final mainGraphId = 'graph_main_${result.courseId}';
     await graphDao.createGraph(GraphModel(
-      id: graphId,
-      title: '${result.courseName}知识图谱',
+      id: mainGraphId,
+      title: '${result.courseName}总图谱',
       courseId: result.courseId,
-      graphType: 'knowledge',
+      graphType: 'overview',
       layout: 'force',
     ));
 
-    // 保存图谱节点和边
-    final graphNodeDao = GraphDao();
-    for (final graph in result.graphs) {
+    final mainRootId = '${mainGraphId}_root';
+    await graphDao.insertNode(NodeModel(
+      id: mainRootId,
+      graphId: mainGraphId,
+      title: result.courseName,
+      content: '课程总图谱，连接所有按大纲生成的子图谱。',
+      nodeType: 'course',
+      level: 0,
+    ));
+
+    for (var graphIndex = 0; graphIndex < result.graphs.length; graphIndex++) {
+      final graph = result.graphs[graphIndex];
+      final category = graph['category']?.toString().trim().isNotEmpty == true
+          ? graph['category'].toString().trim()
+          : '子图谱${graphIndex + 1}';
+      final graphId = 'graph_detail_${result.courseId}_${graphIndex + 1}';
+      await graphDao.createGraph(GraphModel(
+        id: graphId,
+        title: category,
+        courseId: result.courseId,
+        graphType: 'md_import',
+        layout: 'force',
+      ));
+
+      final categoryNodeId = '${mainGraphId}_cat_${graphIndex + 1}';
+      await graphDao.insertNode(NodeModel(
+        id: categoryNodeId,
+        graphId: mainGraphId,
+        title: category,
+        content: '子图谱：$category。可进入后编辑节点、关系和说明。',
+        nodeType: 'subgraph',
+        level: 1,
+        parentId: mainRootId,
+      ));
+      await graphDao.insertEdge(EdgeModel(
+        id: '${mainGraphId}_edge_${graphIndex + 1}',
+        graphId: mainGraphId,
+        sourceId: mainRootId,
+        targetId: categoryNodeId,
+        edgeType: 'contains',
+        label: '子图谱',
+      ));
+
       final nodes = graph['nodes'] as List? ?? [];
       final edges = graph['edges'] as List? ?? [];
-
+      final idMap = <String, String>{};
       for (final node in nodes) {
-        await graphNodeDao.insertNode(NodeModel(
-          id: node['id'] ?? '',
+        final sourceId = node['id']?.toString() ?? '';
+        if (sourceId.isEmpty) continue;
+        final nodeId = '${graphId}_$sourceId';
+        idMap[sourceId] = nodeId;
+        await graphDao.insertNode(NodeModel(
+          id: nodeId,
           graphId: graphId,
-          title: node['label'] ?? '',
-          nodeType: node['type'] ?? 'concept',
-          level: node['level'] ?? 0,
-          parentId: node['parent_id'],
+          title: node['label']?.toString() ?? '',
+          content: node['content']?.toString(),
+          nodeType: node['type']?.toString() ?? 'concept',
+          level: int.tryParse(node['level']?.toString() ?? '') ?? 0,
+          parentId: idMap[node['parent_id']?.toString()],
         ));
       }
 
       for (final edge in edges) {
-        await graphNodeDao.insertEdge(EdgeModel(
-          id: 'e_${edge['from']}_${edge['to']}',
+        final from = edge['from']?.toString() ?? '';
+        final to = edge['to']?.toString() ?? '';
+        final sourceId = idMap[from];
+        final targetId = idMap[to];
+        if (sourceId == null || targetId == null) continue;
+        await graphDao.insertEdge(EdgeModel(
+          id: '${graphId}_e_${from}_$to',
           graphId: graphId,
-          sourceId: edge['from'] ?? '',
-          targetId: edge['to'] ?? '',
-          edgeType: edge['type'] ?? 'related',
-          label: edge['label'] ?? '',
+          sourceId: sourceId,
+          targetId: targetId,
+          edgeType: edge['type']?.toString() ?? 'related',
+          label: edge['label']?.toString() ?? '',
         ));
       }
     }

@@ -30,11 +30,13 @@ class StudentLabPage extends StatefulWidget {
 class _StudentLabPageState extends State<StudentLabPage> {
   final _dao = LabTaskDao();
   final _authService = AuthService();
+  final _courseContext = CourseContextService();
 
   List<Map<String, dynamic>> _tasks = [];
   List<Map<String, dynamic>> _mySubmissions = [];
   Map<String, dynamic> _stats = {};
   bool _isLoading = true;
+  String _courseId = 'default';
 
   String get _userId => _authService.currentUser?.userId ?? '';
   Color accentColor = const Color(0xFF1677FF);
@@ -58,6 +60,7 @@ class _StudentLabPageState extends State<StudentLabPage> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
+      _courseId = await _courseContext.activeCourseId();
       await _dao.initDemoDataIfEmpty();
       final tasks = await _dao.getTasks(status: 'active');
       final subs = await _dao.getSubmissions(userId: _userId);
@@ -128,7 +131,7 @@ class _StudentLabPageState extends State<StudentLabPage> {
                   const SizedBox(height: 6),
                   Text(
                     '文件名格式：学号+姓名+任务名称.pdf\n'
-                    '示例：206004+刘东良+实验一 开发环境搭建.pdf\n'
+                    '示例：学号+姓名+实验名称.pdf\n'
                     '提交后自动同步到仓库目录：\n'
                     '  实验 → sync/students/$_userId/实验/\n'
                     '  考核 → sync/students/$_userId/考核/\n'
@@ -229,28 +232,28 @@ class _StudentLabPageState extends State<StudentLabPage> {
         'icon': Icons.school,
         'title': '实验教程',
         'color': accentColor,
-        'dir': 'data/实验/实验教程/',
-        'desc': '6个实验的步骤教程'
+        'dir': 'data/$_courseId/实验/实验教程/',
+        'desc': '实验的步骤教程'
       },
       {
         'icon': Icons.layers,
-        'title': '移动技术栈',
+        'title': '技术参考',
         'color': accentColor,
-        'dir': 'data/实验/移动技术栈/',
-        'desc': '主流技术手册'
+        'dir': 'data/$_courseId/实验/技术参考/',
+        'desc': '技术手册与工具链参考'
       },
       {
         'icon': Icons.menu_book,
         'title': '实验指导',
         'color': Colors.teal,
-        'dir': 'data/实验/实验指导/',
+        'dir': 'data/$_courseId/实验/实验指导/',
         'desc': '实验指导书'
       },
       {
         'icon': Icons.assignment,
         'title': '报告模板',
         'color': Colors.orange,
-        'dir': 'data/实验/报告模板/',
+        'dir': 'data/$_courseId/实验/报告模板/',
         'desc': '报告填写模板'
       },
     ];
@@ -574,7 +577,7 @@ class _StudentLabPageState extends State<StudentLabPage> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          '提交的PDF将同步到仓库：\nsync/students/$_userId/实验/文件名.pdf\n\n文件名格式：学号+姓名+任务名称.pdf\n示例：206004+刘东良+实验一 开发环境搭建.pdf',
+                          '提交的PDF将同步到仓库：\nsync/students/$_userId/实验/文件名.pdf\n\n文件名格式：学号+姓名+任务名称.pdf\n示例：2023001+张三+实验一.pdf',
                           style:
                               TextStyle(fontSize: 11, color: Colors.amber[900]),
                         ),
@@ -848,73 +851,38 @@ class _StudentMaterialsPageState extends State<_StudentMaterialsPage> {
   static const _dataRepoBranch = 'master';
 
   static List<Map<String, dynamic>> _categoriesForCourse(String courseId) {
-    if (courseId == 'ckgdt') {
-      return [
-        {
-          'title': '实验教程',
-          'icon': Icons.school,
-          'color': const Color(0xFF1677FF),
-          'giteeDir': '实验/实验教程/',
-          'assetDir': 'data/CKGDT/实验/实验教程/',
-          'desc': '8 个实验的详细步骤教程',
-        },
-        {
-          'title': '平台技术栈',
-          'icon': Icons.layers,
-          'color': const Color(0xFF0958D9),
-          'giteeDir': '实验/平台技术栈/',
-          'assetDir': 'data/CKGDT/实验/平台技术栈/',
-          'desc': '覆盖课程实验可用的平台技术、工具链和工程实践手册',
-        },
-        {
-          'title': '实验指导',
-          'icon': Icons.menu_book,
-          'color': Colors.teal,
-          'giteeDir': '实验/实验指导/',
-          'assetDir': 'data/CKGDT/实验/实验指导/',
-          'desc': '实验指导书及设计文档参考',
-        },
-        {
-          'title': '报告模板',
-          'icon': Icons.assignment,
-          'color': Colors.orange,
-          'giteeDir': '实验/报告模板/',
-          'assetDir': 'data/CKGDT/实验/报告模板/',
-          'desc': '每个实验对应的报告模板',
-        },
-      ];
-    }
+    // 通用材料分类模板（所有课程共用）
     return [
       {
         'title': '实验教程',
         'icon': Icons.school,
         'color': const Color(0xFF1677FF),
         'giteeDir': '实验/实验教程/',
-        'assetDir': 'data/实验/实验教程/',
-        'desc': '6 个实验的详细步骤教程',
+        'assetDir': 'data/$courseId/实验/实验教程/',
+        'desc': '实验的详细步骤教程',
       },
       {
-        'title': '移动技术栈',
+        'title': '技术参考',
         'icon': Icons.layers,
-        'color': const Color(0xFF1677FF),
-        'giteeDir': '实验/移动技术栈/',
-        'assetDir': 'data/实验/移动技术栈/',
-        'desc': '覆盖 Kotlin/Swift/Flutter/ArkUI 等主流技术手册',
+        'color': const Color(0xFF0958D9),
+        'giteeDir': '实验/技术参考/',
+        'assetDir': 'data/$courseId/实验/技术参考/',
+        'desc': '覆盖课程实验可用的技术、工具链和工程实践手册',
       },
       {
         'title': '实验指导',
         'icon': Icons.menu_book,
         'color': Colors.teal,
         'giteeDir': '实验/实验指导/',
-        'assetDir': 'data/实验/实验指导/',
-        'desc': '实验指导书及 UML 设计文档参考',
+        'assetDir': 'data/$courseId/实验/实验指导/',
+        'desc': '实验指导书及设计文档参考',
       },
       {
         'title': '报告模板',
         'icon': Icons.assignment,
         'color': Colors.orange,
         'giteeDir': '实验/报告模板/',
-        'assetDir': 'data/实验/报告模板/',
+        'assetDir': 'data/$courseId/实验/报告模板/',
         'desc': '每个实验对应的报告模板',
       },
     ];
