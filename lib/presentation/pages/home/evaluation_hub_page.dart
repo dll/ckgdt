@@ -180,6 +180,10 @@ class _EvaluationHubPageState extends State<EvaluationHubPage> {
                         label: Text('考核')),
                     ButtonSegment(
                         value: 2,
+                        icon: Icon(Icons.assignment, size: 16),
+                        label: Text('作业')),
+                    ButtonSegment(
+                        value: 3,
                         icon: Icon(Icons.workspace_premium, size: 16),
                         label: Text('作品')),
                   ],
@@ -210,6 +214,7 @@ class _EvaluationHubPageState extends State<EvaluationHubPage> {
             children: const [
               LabTasksPage(),
               AssessmentPage(),
+              HomeworkGradingPage(),
               WorksPage(),
             ],
           ),

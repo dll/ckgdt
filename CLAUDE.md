@@ -565,6 +565,8 @@ BuildInfo.appFullName          // '课程知识图谱与数字孪生平台' (关
 
 **升版时改一处**（`BuildInfo.appVersion`）就同步影响 lib/ 内所有显示，包括 `MaterialApp.title`（dbLocked + 正常两条分支）、登录页副标题、设置页关于对话框。
 
+> **完整文档**：`docs/版本号与品牌名单一来源文档.md` — 包含所有引用点、平台清单、升版操作清单和禁止事项。
+
 历史教训：之前散落 3 个硬编码（`lib/main.dart` × 2、`login_page.dart`、`settings_page.dart`），每次升版都漏改，登录页停在 `V0.12.0`、关于停在 `0.11.0`。**现在 lib/ 里 grep `0\.\d+\.\d+` 应只出现在 `build_info.dart` 一个文件里**。
 
 ### 升版同步表（每次升 minor 或 patch 必逐项过一遍）
