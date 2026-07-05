@@ -1,3 +1,4 @@
+﻿import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../../data/local/homework_dao.dart';
 import '../../../data/models/homework_model.dart';
@@ -101,7 +102,7 @@ class _HomeworkGradingPageState extends State<HomeworkGradingPage> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.12),
+                      color: statusColor.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(statusText,
@@ -210,7 +211,7 @@ class _HomeworkGradingDetailState extends State<_HomeworkGradingDetail> {
           if (item == null) continue;
           final prompt = '批阅以下作业回答，题目：${item.question}\n参考答案：${item.referenceAnswer ?? '无'}\n学生回答：${sub.answerText ?? '未作答'}\n满分${item.maxScore}分，请直接返回 JSON: {"score": 分数, "feedback": "评语"}';
           try {
-            final resp = await widget.ai.chat(prompt);
+            final resp = await widget.ai.chat([{'role': 'user', 'content': prompt}]);
             final json = _tryParseJson(resp);
             if (json != null) {
               final score = (json['score'] as num?)?.toInt() ?? 0;
@@ -242,7 +243,7 @@ class _HomeworkGradingDetailState extends State<_HomeworkGradingDetail> {
       final fenced = RegExp(r'```(?:json)?\s*([\s\S]*?)\s*```', caseSensitive: false).firstMatch(trimmed);
       final candidate = fenced != null ? fenced.group(1)!.trim() : trimmed;
       final decoded = Map<String, dynamic>.from(
-        const JsonDecoder().convert(candidate) as Map);
+        JsonDecoder().convert(candidate) as Map);
       if (decoded.containsKey('score') || decoded.containsKey('feedback')) return decoded;
     } catch (_) {}
     return null;
@@ -277,7 +278,7 @@ class _HomeworkGradingDetailState extends State<_HomeworkGradingDetail> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.how_to_submit, size: 64, color: Colors.grey.shade300),
+                      Icon(Icons.upload_file, size: 64, color: Colors.grey.shade300),
                       const SizedBox(height: 12),
                       Text('暂无提交', style: TextStyle(fontSize: 16, color: Colors.grey.shade500)),
                     ],
@@ -303,7 +304,7 @@ class _HomeworkGradingDetailState extends State<_HomeworkGradingDetail> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: ExpansionTile(
         leading: CircleAvatar(
-          backgroundColor: allGraded ? Colors.green.withValues(alpha: 0.15) : Colors.orange.withValues(alpha: 0.15),
+          backgroundColor: allGraded ? Colors.green.withOpacity(0.15) : Colors.orange.withOpacity(0.15),
           child: Text(allGraded ? '✓' : '$gradedCount/${_items.length}',
               style: TextStyle(fontSize: 12, color: allGraded ? Colors.green : Colors.orange)),
         ),

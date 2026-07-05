@@ -6,7 +6,7 @@
 
 - **代码仓库**：Gitee `https://gitee.com/chzcldl/mad-kgdt`（主） · GitHub `dll/ckgdt`（镜像 + gh-pages + Release）
 - **数据仓库**：`chzcldl/mad-data`（课程资源/通知） · 学生项目组仓库 `chzuczldl/cg*-*`（**详见 `docs/项目仓库设计.md`**）
-- **当前版本**：`2.5.0`（`pubspec.yaml` → `version: 2.5.0+0`）
+- **当前版本**：`2.5.2`（`pubspec.yaml` → `version: 2.5.2+0`）
 - **Flutter SDK**：`>=3.0.0 <4.0.0`
 - **主题色**：`#667eea`（紫蓝渐变 `[0xFF667eea, 0xFF764ba2]`）
 - **用户角色**：学生 / 教师 / 管理员
