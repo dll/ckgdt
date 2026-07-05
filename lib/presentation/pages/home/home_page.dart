@@ -414,29 +414,29 @@ class _HomePageState extends State<HomePage> {
       ));
       bodyMap[3] = () => const LearningHubPage();
 
-      // 4: 实验
-      destinations.add(const NavigationDestination(
-        icon: Icon(Icons.science_outlined),
-        selectedIcon: Icon(Icons.science),
-        label: '实验',
-      ));
-      bodyMap[4] = () => const LabTasksPage();
-
-      // 5: 考核
-      destinations.add(const NavigationDestination(
-        icon: Icon(Icons.assessment_outlined),
-        selectedIcon: Icon(Icons.assessment),
-        label: '考核',
-      ));
-      bodyMap[5] = () => const AssessmentPage();
-
-      // 6: 作业
+      // 4: 作业
       destinations.add(const NavigationDestination(
         icon: Icon(Icons.assignment_outlined),
         selectedIcon: Icon(Icons.assignment),
         label: '作业',
       ));
-      bodyMap[6] = () => const HomeworkListPage();
+      bodyMap[4] = () => const HomeworkListPage();
+
+      // 5: 实验
+      destinations.add(const NavigationDestination(
+        icon: Icon(Icons.science_outlined),
+        selectedIcon: Icon(Icons.science),
+        label: '实验',
+      ));
+      bodyMap[5] = () => const LabTasksPage();
+
+      // 6: 考核
+      destinations.add(const NavigationDestination(
+        icon: Icon(Icons.assessment_outlined),
+        selectedIcon: Icon(Icons.assessment),
+        label: '考核',
+      ));
+      bodyMap[6] = () => const AssessmentPage();
 
       // 7: 作品
       destinations.add(const NavigationDestination(
